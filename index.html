@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EBBLESS</title>
+<style>
+  :root{
+    --bg:#121212; --panel:#181818; --panel-2:#202020; --text:#f2f2f2; --faint:#9a9a9a;
+    --accent:#e0b26a; --good:#2fbf71; --bad:#e0645e; --border:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);padding-bottom:96px}
+  header{padding:28px 24px 18px;max-width:760px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 4px;font-weight:600}
+  p.sub{color:var(--faint);font-size:13px;margin:0 0 20px;line-height:1.5}
+  .input-row{display:flex;gap:8px}
+  input[type=text]{flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-size:14px}
+  input[type=text]:focus{outline:1px solid var(--accent)}
+  button{background:var(--accent);color:#1a1a1a;border:none;border-radius:8px;padding:11px 18px;font-weight:600;font-size:14px;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:500;padding:8px 12px;font-size:12.5px}
+  .status{max-width:760px;margin:14px auto 0;padding:0 24px;font-size:13px;color:var(--faint);min-height:18px}
+  .status.err{color:var(--bad)}
+  .status.ok{color:var(--good)}
+  main{max-width:760px;margin:10px auto 0;padding:0 24px}
+  .playlist-head{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px}
+  .playlist-head h2{font-size:16px;margin:0;font-weight:600}
+  .track{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer}
+  .track:hover{background:var(--panel)}
+  .track.is-active{background:var(--panel-2)}
+  .track.is-missing{opacity:.4;cursor:default}
+  .track img{width:44px;height:44px;border-radius:6px;object-fit:cover;flex:none;background:#000}
+  .track .meta{min-width:0;flex:1}
+  .track .title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track .artist{font-size:12.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .track .play-ico{flex:none;width:18px;height:18px;color:var(--faint)}
+  .track.is-active .play-ico{color:var(--accent)}
+  #player-bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--border);
+    display:none;align-items:center;gap:14px;padding:10px 20px;backdrop-filter:blur(10px)}
+  #player-bar.is-visible{display:flex}
+  #player-bar img{width:42px;height:42px;border-radius:6px;object-fit:cover;flex:none}
+  #player-bar .meta{min-width:0;flex:1}
+  #player-bar .title{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #player-bar .artist{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .transport{display:flex;align-items:center;gap:6px;flex:none}
+  .transport button{background:transparent;color:var(--text);padding:6px;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+  .transport button:hover{background:var(--panel-2)}
+  .transport button.main{background:var(--accent);color:#1a1a1a}
+  .ad-note{font-size:11px;color:var(--faint);flex:none;max-width:150px;line-height:1.3}
+  #yt-host{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+  .empty{color:var(--faint);font-size:13.5px;padding:30px 0;text-align:center}
+  code{background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EBBLESS</h1>
+  <p class="sub">Paste a public Spotify playlist link. Tracks are resolved from Spotify's public embed page and matched to YouTube videos (prioritizing official audio/Topic uploads) via a small backend, then played through the YouTube IFrame API with a mute-on-load / auto-unmute timer to blunt pre-roll ads — there's no way to detect or skip an ad through this API, so this is a delay heuristic, not a guarantee.</p>
+  <div class="input-row">
+    <input id="urlInput" type="text" placeholder="https://open.spotify.com/playlist/...">
+    <button id="loadBtn">Load</button>
+  </div>
+</header>
+
+<div class="status" id="status"></div>
+
+<main>
+  <div id="playlistHead" class="playlist-head" style="display:none">
+    <h2 id="playlistName"></h2>
+    <button class="ghost" id="refreshBtn">Re-resolve</button>
+  </div>
+  <div id="trackList"></div>
+</main>
+
+<div id="player-bar">
+  <img id="barArt" src="" alt="">
+  <div class="meta">
+    <div class="title" id="barTitle">—</div>
+    <div class="artist" id="barArtist">—</div>
+  </div>
+  <div class="ad-note" id="adNote"></div>
+  <div class="transport">
+    <button id="prevBtn" title="Previous" aria-label="Previous">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+    <button id="playBtn" class="main" title="Play/Pause" aria-label="Play or pause">
+      <svg id="playIco" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button id="nextBtn" title="Next" aria-label="Next">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="yt-host"></div>
+
+<script>
+(function(){
+
+// ---------- backend ----------
+// Neither Spotify's embed page nor YouTube's search page send CORS headers,
+// so the browser can't fetch them directly, and public CORS proxies get a
+// flat 401 from YouTube (verified against corsproxy.io, allorigins.win,
+// jina.ai, several Invidious mirrors - all blocked). This small dedicated
+// Cloudflare Worker does both fetches server-side and returns clean JSON.
+// See worker/src/index.js for the actual scraping/matching logic.
+const BACKEND = 'https://spotify-youtube-search.malgriot.workers.dev';
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ---------- Spotify: playlist URL -> track list ----------
+function parsePlaylistId(input){
+  input = input.trim();
+  let m = input.match(/playlist[/:]([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchSpotifyPlaylist(playlistId){
+  const res = await fetch(BACKEND + '/playlist?id=' + encodeURIComponent(playlistId));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+// ---------- YouTube: title+artist -> best video match ----------
+async function searchYouTube(title, artist){
+  const params = new URLSearchParams({ title, artist });
+  const res = await fetch(BACKEND + '/search?' + params.toString());
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+// ---------- resolve pipeline (with localStorage cache) ----------
+function cacheKey(playlistId){ return 'sy-player:' + playlistId; }
+
+async function resolvePlaylist(playlistId, onProgress){
+  const { name, tracks } = await fetchSpotifyPlaylist(playlistId);
+  const resolved = [];
+  for (let i = 0; i < tracks.length; i++){
+    const t = tracks[i];
+    onProgress(i + 1, tracks.length, t);
+    try{
+      const match = await searchYouTube(t.title, t.artist);
+      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId });
+    } catch(e){
+      resolved.push({ title: t.title, artist: t.artist, videoId: null });
+    }
+    if (i < tracks.length - 1) await sleep(350);
+  }
+  const payload = { name, tracks: resolved, ts: Date.now() };
+  try { localStorage.setItem(cacheKey(playlistId), JSON.stringify(payload)); } catch(e){}
+  return payload;
+}
+
+// ---------- UI wiring ----------
+const urlInput = document.getElementById('urlInput');
+const loadBtn = document.getElementById('loadBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const statusEl = document.getElementById('status');
+const playlistHead = document.getElementById('playlistHead');
+const playlistName = document.getElementById('playlistName');
+const trackListEl = document.getElementById('trackList');
+
+let currentPlaylistId = null;
+let currentTracks = [];
+
+function setStatus(msg, cls){
+  statusEl.textContent = msg || '';
+  statusEl.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function renderTracks(tracks){
+  trackListEl.innerHTML = '';
+  if (!tracks.length){ trackListEl.innerHTML = '<div class="empty">No tracks found.</div>'; return; }
+  tracks.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'track' + (t.videoId ? '' : ' is-missing');
+    row.dataset.index = i;
+    const thumb = t.videoId ? ('https://img.youtube.com/vi/' + t.videoId + '/mqdefault.jpg') : '';
+    row.innerHTML =
+      '<img src="' + thumb + '" alt="">' +
+      '<div class="meta"><div class="title"></div><div class="artist"></div></div>' +
+      '<svg class="play-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    row.querySelector('.title').textContent = t.title;
+    row.querySelector('.artist').textContent = t.videoId ? t.artist : t.artist + ' — no YouTube match found';
+    if (t.videoId) row.addEventListener('click', () => playIndex(i));
+    trackListEl.appendChild(row);
+  });
+}
+
+function highlightActive(idx){
+  Array.from(trackListEl.children).forEach((el, i) => el.classList.toggle('is-active', i === idx));
+}
+
+async function loadPlaylistFromUrl(force){
+  const id = parsePlaylistId(urlInput.value);
+  if (!id){ setStatus('That doesn\'t look like a Spotify playlist link.', 'err'); return; }
+  currentPlaylistId = id;
+  loadBtn.disabled = true;
+
+  if (!force){
+    try{
+      const cached = JSON.parse(localStorage.getItem(cacheKey(id)) || 'null');
+      if (cached){
+        currentTracks = cached.tracks;
+        playlistName.textContent = cached.name;
+        playlistHead.style.display = 'flex';
+        renderTracks(currentTracks);
+        setStatus('Loaded from cache (' + new Date(cached.ts).toLocaleString() + '). Hit "Re-resolve" for a fresh match.', 'ok');
+        loadBtn.disabled = false;
+        return;
+      }
+    } catch(e){}
+  }
+
+  try{
+    setStatus('Fetching playlist from Spotify…');
+    const result = await resolvePlaylist(id, (done, total, t) => {
+      setStatus('Matching track ' + done + ' / ' + total + ' on YouTube: "' + t.title + '"…');
+    });
+    currentTracks = result.tracks;
+    playlistName.textContent = result.name;
+    playlistHead.style.display = 'flex';
+    renderTracks(currentTracks);
+    const missing = currentTracks.filter(t => !t.videoId).length;
+    setStatus('Resolved ' + currentTracks.length + ' tracks' + (missing ? (' (' + missing + ' had no YouTube match)') : '') + '.', 'ok');
+  } catch(e){
+    setStatus('Failed: ' + e.message, 'err');
+  } finally {
+    loadBtn.disabled = false;
+  }
+}
+
+loadBtn.addEventListener('click', () => loadPlaylistFromUrl(false));
+urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadPlaylistFromUrl(false); });
+refreshBtn.addEventListener('click', () => loadPlaylistFromUrl(true));
+
+// ---------- YouTube playback with the same "ad filter" heuristic ----------
+// The IFrame Player API gives no signal that a pre-roll ad is playing (it
+// reports the target content's metadata immediately, even during an ad), so
+// there is no real way to detect or skip one. This mutes on every load and
+// unmutes after a flat delay, and ignores ENDED until that delay has passed
+// (an ad ending fires ENDED too) — a blunt timer, not a fix.
+const UNMUTE_DELAY_MS = 5000;
+
+const barEl = document.getElementById('player-bar');
+const barArt = document.getElementById('barArt');
+const barTitle = document.getElementById('barTitle');
+const barArtist = document.getElementById('barArtist');
+const adNote = document.getElementById('adNote');
+const playBtn = document.getElementById('playBtn');
+const playIco = document.getElementById('playIco');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+let player = null, playerReady = false, current = -1, pendingVideoId = null;
+let contentConfirmed = false, unmuteTimer = null;
+
+function confirmContent(){
+  if (contentConfirmed) return;
+  contentConfirmed = true;
+  if (unmuteTimer){ clearTimeout(unmuteTimer); unmuteTimer = null; }
+  if (player && player.unMute) player.unMute();
+  adNote.textContent = '';
+}
+
+function beginLoadGuards(){
+  contentConfirmed = false;
+  if (unmuteTimer) clearTimeout(unmuteTimer);
+  if (player && player.mute) player.mute();
+  adNote.textContent = 'Muted briefly in case of a pre-roll ad…';
+  unmuteTimer = setTimeout(confirmContent, UNMUTE_DELAY_MS);
+}
+
+const ICO_PLAY = '<path d="M8 5v14l11-7z"/>';
+const ICO_PAUSE = '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+
+function setPlayingUI(isPlaying){
+  playIco.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY;
+  highlightActive(isPlaying ? current : -1);
+}
+
+function loadIndex(idx, autoplay){
+  if (idx < 0 || idx >= currentTracks.length) return;
+  if (!currentTracks[idx].videoId){ return; }
+  current = idx;
+  const t = currentTracks[idx];
+  barEl.classList.add('is-visible');
+  barArt.src = 'https://img.youtube.com/vi/' + t.videoId + '/mqdefault.jpg';
+  barTitle.textContent = t.title;
+  barArtist.textContent = t.artist;
+  highlightActive(idx);
+
+  if (!playerReady || !player.loadVideoById){ pendingVideoId = t.videoId; return; }
+  beginLoadGuards();
+  player.loadVideoById(t.videoId);
+  if (autoplay === false) player.pauseVideo();
+}
+
+function ensurePlayer(idx){
+  if (player){ loadIndex(idx, true); return; }
+  if (typeof YT === 'undefined' || !YT.Player){ setTimeout(() => ensurePlayer(idx), 300); return; }
+
+  const t = currentTracks[idx];
+  current = idx;
+  barEl.classList.add('is-visible');
+  barArt.src = 'https://img.youtube.com/vi/' + t.videoId + '/mqdefault.jpg';
+  barTitle.textContent = t.title;
+  barArtist.textContent = t.artist;
+  highlightActive(idx);
+
+  const host = document.getElementById('yt-host');
+  host.innerHTML = '<div id="yt-player-el"></div>';
+  player = new YT.Player('yt-player-el', {
+    videoId: t.videoId,
+    playerVars: { autoplay: 1, playsinline: 1, mute: 1 },
+    events: {
+      onReady: function(){
+        playerReady = true;
+        beginLoadGuards();
+        if (pendingVideoId){ player.loadVideoById(pendingVideoId); pendingVideoId = null; }
+      },
+      onStateChange: function(e){
+        if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
+        else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
+        else if (e.data === YT.PlayerState.ENDED){ if (contentConfirmed) playNext(); }
+      }
+    }
+  });
+}
+
+function playIndex(idx){
+  if (!player){ ensurePlayer(idx); return; }
+  if (idx === current){
+    const state = player.getPlayerState ? player.getPlayerState() : -1;
+    if (state === 1) player.pauseVideo(); else player.playVideo();
+    return;
+  }
+  loadIndex(idx, true);
+}
+
+function playNext(){
+  let idx = current;
+  do { idx++; } while (idx < currentTracks.length && !currentTracks[idx].videoId);
+  if (idx < currentTracks.length) playIndex(idx);
+}
+function playPrev(){
+  let idx = current;
+  do { idx--; } while (idx >= 0 && !currentTracks[idx].videoId);
+  if (idx >= 0) playIndex(idx);
+}
+
+playBtn.addEventListener('click', () => { if (current >= 0) playIndex(current); });
+nextBtn.addEventListener('click', playNext);
+prevBtn.addEventListener('click', playPrev);
+
+// Load the IFrame API once, lazily.
+let ytApiRequested = false;
+function ensureYouTubeApi(){
+  if (ytApiRequested) return;
+  ytApiRequested = true;
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+window.onYouTubeIframeAPIReady = function(){};
+ensureYouTubeApi();
+
+})();
+</script>
+</body>
+</html>
