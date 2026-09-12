@@ -221,8 +221,8 @@ svg{display:block}
 .track-row .artist{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .track-row.is-missing{opacity:.42}
 .track-row.is-missing .title{text-decoration:none}
-.track-row .row-actions{flex:none;display:flex;align-items:center;gap:2px;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
-.track-row:hover .row-actions{opacity:1}
+.track-row .row-actions{flex:none;display:flex;align-items:center;gap:2px;opacity:.75;transition:opacity var(--dur-ui) var(--ease-out)}
+.track-row:hover .row-actions,.track-row .row-actions button:active{opacity:1}
 .track-row .row-actions button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .track-row .row-actions button:hover{background:var(--panel-3);color:var(--text)}
 .track-row .row-actions svg{width:13px;height:13px}
@@ -1441,9 +1441,8 @@ function wireQueueRowGestures(row, handle){
     const newIndex = siblings.indexOf(row);
     if (newIndex !== origIndex){
       const fromPos = parseInt(row.dataset.pos, 10);
-      const rows = Array.from(queueBody.querySelectorAll('.q-row'));
-      const toPos = parseInt(rows[newIndex].dataset.pos, 10);
-      queueReorder(fromPos, newIndex < origIndex ? toPos : toPos);
+      const toPos = state.queuePos + 1 + newIndex;
+      queueReorder(fromPos, toPos);
     }
   }
   handle.addEventListener('pointerup', endDrag);
@@ -1670,12 +1669,27 @@ function updateMediaSessionMeta(t){
   });
 }
 
+function bumpPlayCount(t){
+  if (!t) return;
+  t.plays = (t.plays || 0) + 1;
+  persistPlaylist();
+  if (state.sortMode === 'plays_desc' || state.sortMode === 'plays_asc'){
+    renderTrackList();
+  } else {
+    const idx = state.playlist ? state.playlist.tracks.indexOf(t) : -1;
+    const row = idx >= 0 ? trackListEl.querySelector('.track-row[data-index="' + idx + '"]') : null;
+    const playsEl = row && row.querySelector('.plays');
+    if (playsEl) playsEl.textContent = t.plays + (t.plays === 1 ? ' play' : ' plays');
+  }
+}
+
 function reflectCurrentTrackUI(t){
   updateTrackMetaUI(t);
   swapPlayerArt(t.videoId);
   swapFlowArt(t.videoId);
   setAmbient(t.videoId);
   attachArtworkFallback(miniArt, t.videoId);
+  bumpPlayCount(t);
   highlightActiveRow();
   renderQueuePanel();
   persistResume();
@@ -2014,6 +2028,8 @@ renderQueuePanel();
 setView('library');
 tryResume();
 if (!currentTrack()) updateMiniBarVisibility();
+
+window.__ebbless_debug = { state, decks, crossfadePrefs, get activeIdx(){ return activeIdx; }, get swapInProgress(){ return swapInProgress; } };
 
 })();
 </script>
