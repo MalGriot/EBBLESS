@@ -217,20 +217,95 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   display:flex;flex-direction:column;justify-content:center}
 .player-layout{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
 .player-stage{display:flex;flex-direction:column;align-items:center;padding-top:10px;min-height:0}
-.visual-tabs{display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:14px}
+.visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:14px}
 .visual-tabs .v-tab{width:34px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;
   color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .visual-tabs .v-tab svg{width:16px;height:16px}
 .visual-tabs .v-tab:hover{color:var(--text)}
 .visual-tabs .v-tab.is-active{background:var(--accent);color:#151107}
 
+.art-style-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translate(-50%,-6px);z-index:5;
+  min-width:196px;padding:6px;border-radius:14px;background:var(--panel-3);border:1px solid var(--border-2);
+  box-shadow:0 20px 44px -14px rgba(0,0,0,.6);opacity:0;pointer-events:none;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.art-style-menu.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.art-style-opt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;
+  color:var(--faint);font-size:13px;text-align:left;transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.art-style-opt:hover{background:var(--panel-2);color:var(--text)}
+.art-style-label{flex:1}
+.art-style-check{width:14px;height:14px;flex:none;opacity:0;color:var(--accent)}
+.art-style-opt.is-active{color:var(--text)}
+.art-style-opt.is-active .art-style-check{opacity:1}
+.art-style-swatch{width:22px;height:22px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);color:var(--faint-2);overflow:hidden}
+.art-style-swatch svg{width:13px;height:13px}
+.swatch-disc{width:16px;height:16px;border-radius:50%;background:#101010;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.swatch-label{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.swatch-cassette{position:relative;background:#101010;gap:3px}
+.swatch-hub{width:6px;height:6px;border-radius:50%;background:var(--faint-2);box-shadow:0 0 0 1px rgba(255,255,255,.1)}
+
 .artwork-wrap{position:relative;width:min(420px,72vw);aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;
   box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2);transition:height var(--dur-surface) var(--ease-in-out)}
 .artwork-wrap.mode-lyrics{aspect-ratio:auto;height:min(56vh,520px)}
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
-.artwork-wrap[data-mode="art"] .art.is-active{opacity:1}
+.artwork-wrap[data-mode="art"]:not([data-art-style="default"]) .art{opacity:0!important}
+.artwork-wrap[data-mode="art"][data-art-style="default"] .art.is-active{opacity:1}
 .artwork-wrap[data-mode="viz"] .art,.artwork-wrap[data-mode="lyrics"] .art{opacity:0!important}
+
+/* ---------- album art alt displays: spinning record / cassette tape ---------- */
+.art-record,.art-cassette{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  opacity:0;transition:opacity var(--dur-surface) var(--ease-in-out)}
+.artwork-wrap[data-mode="art"][data-art-style="record"] .art-record{display:flex;opacity:1}
+.artwork-wrap[data-mode="art"][data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
+
+.record-shadow,.record-disc{position:absolute;top:50%;left:50%;width:80%;aspect-ratio:1;border-radius:50%;
+  transform:translate(-50%,-50%)}
+.record-shadow{box-shadow:0 20px 46px -14px rgba(0,0,0,.7)}
+.record-disc{background:repeating-radial-gradient(circle at center,#161616 0 3px,#0c0c0c 3px 6px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+  animation:record-spin 3s linear infinite;animation-play-state:paused}
+.artwork-wrap.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
+.record-label{position:absolute;top:50%;left:50%;width:32%;aspect-ratio:1;border-radius:50%;
+  transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
+.record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
+  transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
+@keyframes record-spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+/* cassette: OR-WO K60-style shell — chamfered shoulders, paper label (replaced by
+   album art), open reel window with geared hubs, lower text stripe, base detailing */
+.art-cassette{padding:9% 6%}
+.cassette-body{position:relative;width:100%;height:58%;background:#161616;
+  clip-path:polygon(9% 0%,91% 0%,100% 9%,100% 96%,96% 100%,4% 100%,0% 96%,0% 9%);
+  box-shadow:0 20px 46px -14px rgba(0,0,0,.7);
+  display:flex;flex-direction:column}
+.cassette-body::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.05) 0%,transparent 18%,transparent 82%,rgba(0,0,0,.25) 100%)}
+.cassette-label{position:relative;flex:0 0 38%;min-height:0;background:#d8d3c4;overflow:hidden;margin:5px 4% 0;
+  clip-path:polygon(10% 0%,90% 0%,100% 22%,100% 100%,0% 100%,0% 22%)}
+.cassette-label img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cassette-window{position:relative;flex:0 0 27%;min-height:0;margin:4px 8% 0;border-radius:3px;background:#050505;
+  display:flex;align-items:center;justify-content:space-between;padding:0 9%;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 2px 6px rgba(0,0,0,.6)}
+.tape-ticks{position:absolute;top:50%;left:50%;width:26%;height:34%;transform:translate(-50%,-50%);
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.3) 0 1px,transparent 1px 7px);opacity:.4}
+.reel-hub{position:relative;height:78%;width:auto;aspect-ratio:1;border-radius:50%;
+  background:
+    radial-gradient(circle at center,#0a0a0a 0 8%,#8a5a35 8% 28%,#0a0a0a 28% 56%,transparent 56% 100%),
+    repeating-conic-gradient(#d9d4c4 0deg 20deg,transparent 20deg 60deg);
+  box-shadow:0 0 0 2px rgba(0,0,0,.6),inset 0 0 3px rgba(0,0,0,.4);
+  animation:reel-spin 2.4s linear infinite;animation-play-state:paused}
+.artwork-wrap.is-playing[data-art-style="cassette"] .reel-hub{animation-play-state:running}
+.cassette-footer{flex:0 0 13%;min-height:0;display:flex;align-items:center;justify-content:center;background:#1c1c1c}
+.cassette-footer span{font-size:10.5px;font-weight:700;letter-spacing:2px;color:var(--faint-2)}
+.cassette-base{flex:0 0 10%;min-height:0;display:flex;align-items:center;justify-content:space-between;padding:0 12%}
+.cassette-base .hole{width:6px;height:6px;border-radius:50%;background:#000;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.cassette-base .hole.sq{border-radius:1.5px}
+.cassette-base .arrow{width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;
+  border-left:6px solid #050505}
+@keyframes reel-spin{to{transform:rotate(360deg)}}
 
 .lyrics-wrap{position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;
   transition:opacity var(--dur-surface) var(--ease-in-out);
@@ -332,9 +407,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .missing-actions a:hover,.missing-actions button:hover{color:var(--accent)}
 
 /* ---------- mini bar ---------- */
-#mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:12px;
+#mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:42;display:flex;align-items:center;gap:12px;
   padding:8px 14px;background:var(--panel);border-top:1px solid var(--border);cursor:pointer;
-  transform:translateY(0);transition:transform var(--dur-surface) var(--ease-in-out),bottom var(--dur-ui)}
+  transform:translateY(0);transition:transform var(--dur-surface) var(--ease-in-out),bottom var(--dur-surface) var(--ease-in-out)}
 #mini-bar[hidden]{display:none}
 #mini-bar img{width:38px;height:38px;border-radius:5px;object-fit:cover;flex:none;background:var(--panel-2)}
 #mini-bar .meta{min-width:0;flex:1}
@@ -348,7 +423,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 }
 
 /* ---------- bottom nav (mobile) ---------- */
-#bottom-nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav-h) + var(--safe-b));z-index:25;
+#bottom-nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav-h) + var(--safe-b));z-index:45;
   display:none;align-items:stretch;background:var(--panel);border-top:1px solid var(--border);
   padding-bottom:var(--safe-b)}
 #bottom-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
@@ -376,6 +451,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .q-now .meta{min-width:0;flex:1}
 .q-now .title{font-size:13.5px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q-now .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#151107;
+  display:flex;align-items:center;justify-content:center;transition:transform var(--dur-ui) var(--ease-out)}
+.q-now .play-btn:active{transform:scale(.92)}
+.q-now .play-btn svg{width:15px;height:15px}
 .q-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--r-md);position:relative;
   background:var(--panel);touch-action:pan-y}
 .q-row + .q-row{margin-top:2px}
@@ -556,7 +635,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     <div class="view-scroll">
       <div class="player-stage">
         <div class="visual-tabs" id="visualTabs">
-          <button class="v-tab" data-mode="art" title="Album art" aria-label="Show album art">
+          <button class="v-tab" data-mode="art" title="Album art" aria-label="Show album art, choose display style">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg>
           </button>
           <button class="v-tab" data-mode="viz" title="Visualizer" aria-label="Show visualizer">
@@ -565,10 +644,52 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
           <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
           </button>
+          <div class="art-style-menu" id="artStyleMenu">
+            <button class="art-style-opt" data-style="default">
+              <span class="art-style-swatch swatch-default"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg></span>
+              <span class="art-style-label">Default</span>
+              <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+            </button>
+            <button class="art-style-opt" data-style="record">
+              <span class="art-style-swatch swatch-record"><span class="swatch-disc"><span class="swatch-label"></span></span></span>
+              <span class="art-style-label">Spinning Record</span>
+              <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+            </button>
+            <button class="art-style-opt" data-style="cassette">
+              <span class="art-style-swatch swatch-cassette"><span class="swatch-hub"></span><span class="swatch-hub"></span></span>
+              <span class="art-style-label">Cassette Tape</span>
+              <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+            </button>
+          </div>
         </div>
         <div class="artwork-wrap" id="artworkWrap">
           <img class="art" id="artA" alt="">
           <img class="art" id="artB" alt="">
+          <div class="art-record" id="artRecord">
+            <div class="record-shadow"></div>
+            <div class="record-disc">
+              <img class="record-label" id="recordLabelImg" alt="">
+              <div class="record-spindle"></div>
+            </div>
+          </div>
+          <div class="art-cassette" id="artCassette">
+            <div class="cassette-body">
+              <div class="cassette-label"><img id="cassetteLabelImg" alt=""></div>
+              <div class="cassette-window">
+                <div class="reel-hub"></div>
+                <div class="tape-ticks"></div>
+                <div class="reel-hub"></div>
+              </div>
+              <div class="cassette-footer"><span>EBBLESS</span></div>
+              <div class="cassette-base">
+                <div class="hole sq"></div>
+                <div class="hole"></div>
+                <div class="hole"></div>
+                <div class="hole sq"></div>
+                <div class="arrow"></div>
+              </div>
+            </div>
+          </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
         </div>
@@ -778,12 +899,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
   <div class="toast" id="toast"></div>
   <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div></div>
-  <!-- silent, unmuted loop: keeps the tab holding an active local media session
-       so mobile OSes grant lock-screen/notification controls to the page,
-       since the actual audible audio plays inside YouTube's cross-origin
-       iframe and doesn't count toward that on its own -->
+  <!-- near-silent (not truly zero-amplitude — Chromium's audible-source
+       heuristic ignores pure digital silence) loop: keeps the tab holding an
+       active local media session so mobile OSes grant lock-screen/
+       notification controls to the page, since the real audible audio plays
+       inside YouTube's cross-origin iframe and doesn't count toward that on
+       its own -->
   <audio id="keepAliveAudio" loop playsinline
-    src="data:audio/wav;base64,UklGRsQPAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAPAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA">
+    src="data:audio/wav;base64,UklGRmQfAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUAfAACAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgoGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgH9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f35/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f3+AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGCgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAf39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/fn9/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f4CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYKBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIB/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39+f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/gICAgICAgICAgICAgICAgA==">
   </audio>
 </div>
 
@@ -1064,22 +1187,22 @@ function withManualTracks(playlistId, resolvedTracks){
 
 async function resolvePlaylist(playlistId, type, onProgress){
   if (type === 'track' || type === 'sc_track' || type === 'am_track'){
-    let title, artist;
+    let title, artist, art = null;
     if (type === 'sc_track'){
       const t = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
       if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single track.");
-      title = t.title; artist = t.artist;
+      title = t.title; artist = t.artist; art = t.image || null;
     } else if (type === 'am_track'){
       const idx = playlistId.indexOf(':');
       const t = await fetchAppleMusicTrack(playlistId.slice(0, idx), playlistId.slice(idx + 1));
-      title = t.title; artist = t.artist;
+      title = t.title; artist = t.artist; art = t.image || null;
     } else {
-      ({ title, artist } = await fetchSpotifyTrack(playlistId));
+      ({ title, artist, image: art } = await fetchSpotifyTrack(playlistId));
     }
     onProgress({ stage: 'matching', done: 0, total: 1 });
     let match = { videoId: null, title: '', channel: '' };
     try { match = await searchYouTube(title, artist); } catch(e){}
-    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0 };
+    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: art || null };
     onProgress({ stage: 'matching', done: 1, total: 1, track });
     const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
     lsSet(LS_PL(playlistId), payload);
@@ -1089,7 +1212,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     const rawId = playlistId.replace(/^yt:/, '');
     if (type === 'yt_video'){
       const v = await fetchYouTubeVideo(rawId);
-      const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0 };
+      const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0, art: null };
       onProgress({ stage: 'matching', done: 0, total: 1 });
       onProgress({ stage: 'matching', done: 1, total: 1, track });
       const payload = { id: playlistId, type, name: v.title, image: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
@@ -1098,7 +1221,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     }
     const { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
-    const resolved = tracks.map(t => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0 }));
+    const resolved = tracks.map(t => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0, art: null }));
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
     // YouTube's public playlist feed (the only stable, unscraped source for a
     // full tracklist) only returns its ~15 most recent videos.
@@ -1123,9 +1246,9 @@ async function resolvePlaylist(playlistId, type, onProgress){
     const t = tracks[i];
     try{
       const match = await searchYouTube(t.title, t.artist);
-      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0 });
+      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: t.image || null });
     } catch(e){
-      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0 });
+      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art: t.image || null });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     if (i < tracks.length - 1) await sleep(350);
@@ -1173,15 +1296,24 @@ function currentTrackIndex(){
   return (e && e.plId === state.playlist.id) ? e.idx : -1;
 }
 
-function artworkUrls(videoId){
-  return [
-    'https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg',
-    'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg',
-    'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg',
-  ];
+// A track's `art` field (when present) is the album art from its original
+// source — Spotify/SoundCloud/Apple Music — and always takes priority.
+// YouTube's own thumbnail is only a fallback for YouTube-sourced tracks or
+// tracks whose source art couldn't be found.
+function artworkUrls(track){
+  const chain = [];
+  if (track && track.art) chain.push(track.art);
+  const videoId = track && track.videoId;
+  if (videoId){
+    chain.push('https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg');
+    chain.push('https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg');
+    chain.push('https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg');
+  }
+  return chain;
 }
-function attachArtworkFallback(img, videoId){
-  const chain = artworkUrls(videoId);
+function attachArtworkFallback(img, track){
+  const chain = artworkUrls(track);
+  if (!chain.length){ img.removeAttribute('src'); return; }
   let i = 0;
   img.onerror = function(){ i++; if (i < chain.length) img.src = chain[i]; else img.onerror = null; };
   img.src = chain[0];
@@ -1207,9 +1339,11 @@ const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
 const playlistListWrap = $('playlistListWrap'), plHeadName = $('plHeadName'), trackListEl = $('trackList'), reResolveBtn = $('reResolveBtn'), trackSortSel = $('trackSortSel'), plPlayBtn = $('plPlayBtn');
 const artA = $('artA'), artB = $('artB');
+const recordLabelImg = $('recordLabelImg'), cassetteLabelImg = $('cassetteLabelImg');
+const artStyleMenu = $('artStyleMenu'), artTabBtn = document.querySelector('#visualTabs .v-tab[data-mode="art"]');
 const seekTrack = $('seekTrack'), seekFill = $('seekFill'), seekKnob = $('seekKnob'), timeCur = $('timeCur'), timeDur = $('timeDur');
 const keepAliveAudio = $('keepAliveAudio');
-if (keepAliveAudio) keepAliveAudio.volume = 0.01;
+if (keepAliveAudio) keepAliveAudio.volume = 1;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn');
@@ -1247,6 +1381,7 @@ function showToast(msg){
 function setView(name){
   const prevView = state.currentView;
   state.currentView = name;
+  if (state.queueOpen) closeQueuePanel();
   if (name === 'player' && prevView !== 'player' && typeof setVisualMode === 'function'){
     setVisualMode('art');
   }
@@ -1259,7 +1394,7 @@ function setView(name){
 }
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
-  const showMini = hasTrack && state.currentView !== 'player';
+  const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen);
   miniBar.hidden = !showMini;
   if (showMini) miniBar.setAttribute('data-shown', '1'); else miniBar.removeAttribute('data-shown');
 }
@@ -1277,11 +1412,12 @@ $('wordmarkBtn').addEventListener('click', () => setView('library'));
    AMBIENT BACKGROUND (blurred artwork, crossfade)
    ========================================================================= */
 let ambientActive = 'a';
-function setAmbient(videoId){
+function setAmbient(track){
   const cur = ambientActive === 'a' ? ambientA : ambientB;
   const nxt = ambientActive === 'a' ? ambientB : ambientA;
-  const url = 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-  nxt.style.backgroundImage = "url('" + url + "')";
+  const chain = artworkUrls(track);
+  const url = chain[0] || '';
+  nxt.style.backgroundImage = url ? "url('" + url + "')" : 'none';
   requestAnimationFrame(() => {
     nxt.classList.add('is-active');
     cur.classList.remove('is-active');
@@ -1294,16 +1430,20 @@ function setAmbient(videoId){
    ========================================================================= */
 function makeArtSwapper(imgA, imgB){
   let active = 'a';
-  return function(videoId){
+  return function(track){
     const cur = active === 'a' ? imgA : imgB;
     const nxt = active === 'a' ? imgB : imgA;
-    attachArtworkFallback(nxt, videoId);
+    attachArtworkFallback(nxt, track);
     nxt.onload = () => { nxt.classList.add('is-active'); cur.classList.remove('is-active'); };
     active = active === 'a' ? 'b' : 'a';
   };
 }
 const swapPlayerArt = makeArtSwapper(artA, artB);
 const swapFlowArt = makeArtSwapper(flowArtA, flowArtB);
+function swapAltArt(track){
+  attachArtworkFallback(recordLabelImg, track);
+  attachArtworkFallback(cassetteLabelImg, track);
+}
 
 /* =========================================================================
    LIBRARY RENDER
@@ -1345,9 +1485,9 @@ function renderLibrary(){
     const gridFace = document.createElement('div');
     gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
     if (withArt.length === 1){
-      const img = document.createElement('img'); attachArtworkFallback(img, withArt[0].videoId); gridFace.appendChild(img);
+      const img = document.createElement('img'); attachArtworkFallback(img, withArt[0]); gridFace.appendChild(img);
     } else {
-      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t.videoId); gridFace.appendChild(img); });
+      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
     }
     if (pl.image){
       artDiv.classList.add('animated');
@@ -1442,7 +1582,7 @@ function addTracksToPlaylist(playlistId, tracks){
   tracks.forEach(t => {
     if (t.videoId && known.has(t.videoId)) return;
     if (t.videoId) known.add(t.videoId);
-    pl.tracks.push({ title: t.title, artist: t.artist, videoId: t.videoId || null, matchedTitle: t.matchedTitle || '', channel: t.channel || '', plays: 0, manual: true });
+    pl.tracks.push({ title: t.title, artist: t.artist, videoId: t.videoId || null, matchedTitle: t.matchedTitle || '', channel: t.channel || '', plays: 0, manual: true, art: t.art || null });
     added++;
   });
   if (!added) return 0;
@@ -1530,12 +1670,12 @@ async function resolveTracksFromLink(input, onProgress){
   if (yt){
     if (yt.type === 'video'){
       const v = await fetchYouTubeVideo(yt.id);
-      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '' }];
+      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', art: null }];
     }
     const { tracks } = await fetchYouTubePlaylist(yt.id);
     if (!tracks.length) throw new Error("That playlist has no videos.");
     return tracks.map((t, i) => {
-      const r = { title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist };
+      const r = { title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art: null };
       if (onProgress) onProgress(i + 1, tracks.length);
       return r;
     });
@@ -1543,10 +1683,10 @@ async function resolveTracksFromLink(input, onProgress){
   const sp = parseSpotifyLink(input);
   if (sp){
     if (sp.type === 'track'){
-      const { title, artist } = await fetchSpotifyTrack(sp.id);
+      const { title, artist, image } = await fetchSpotifyTrack(sp.id);
       const match = await searchYouTube(title, artist);
       if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
-      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' }];
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null }];
     }
     const { tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
     if (!tracks.length) throw new Error('That ' + sp.type + ' has no tracks.');
@@ -1555,9 +1695,9 @@ async function resolveTracksFromLink(input, onProgress){
       const t = tracks[i];
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '' });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null });
       }
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
@@ -1570,7 +1710,7 @@ async function resolveTracksFromLink(input, onProgress){
     if (data.kind === 'track'){
       const match = await searchYouTube(data.title, data.artist);
       if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
-      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' }];
+      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: data.image || null }];
     }
     if (!data.tracks.length) throw new Error('That playlist has no tracks.');
     const resolved = [];
@@ -1578,9 +1718,9 @@ async function resolveTracksFromLink(input, onProgress){
       const t = data.tracks[i];
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '' });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null });
       }
       if (onProgress) onProgress(i + 1, data.tracks.length);
       if (i < data.tracks.length - 1) await sleep(350);
@@ -1590,10 +1730,10 @@ async function resolveTracksFromLink(input, onProgress){
   const am = parseAppleMusicLink(input);
   if (am){
     if (am.type === 'track'){
-      const { title, artist } = await fetchAppleMusicTrack(am.storefront, am.id);
+      const { title, artist, image } = await fetchAppleMusicTrack(am.storefront, am.id);
       const match = await searchYouTube(title, artist);
       if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
-      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' }];
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null }];
     }
     const { tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
     if (!tracks.length) throw new Error('That ' + am.type + ' has no tracks.');
@@ -1602,9 +1742,9 @@ async function resolveTracksFromLink(input, onProgress){
       const t = tracks[i];
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '' });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null });
       }
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
@@ -1722,7 +1862,7 @@ function stageMatchingProgress(done, total, track){
     const row = document.createElement('div');
     row.className = 'import-preview-row';
     const img = document.createElement('img');
-    if (track.videoId) attachArtworkFallback(img, track.videoId);
+    if (track.videoId || track.art) attachArtworkFallback(img, track);
     const t = document.createElement('div'); t.className = 't'; t.textContent = track.title + ' — ' + track.artist;
     row.appendChild(img); row.appendChild(t);
     preview.insertBefore(row, preview.firstChild);
@@ -1909,7 +2049,7 @@ function renderTrackList(){
     handle.innerHTML = '<svg viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.4"/><circle cx="9" cy="2" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/></svg>';
     const num = document.createElement('div'); num.className = 'num'; num.textContent = pos + 1;
     const img = document.createElement('img');
-    if (t.videoId) attachArtworkFallback(img, t.videoId);
+    if (t.videoId || t.art) attachArtworkFallback(img, t);
     const meta = document.createElement('div'); meta.className = 'meta';
     const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
     const artist = document.createElement('div'); artist.className = 'artist';
@@ -2150,12 +2290,17 @@ function renderQueuePanel(){
   if (!now){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
   const nowLabel = document.createElement('div'); nowLabel.className = 'q-section-label'; nowLabel.textContent = 'Now';
   const nowRow = document.createElement('div'); nowRow.className = 'q-now';
-  const nowImg = document.createElement('img'); attachArtworkFallback(nowImg, now.videoId);
+  const nowImg = document.createElement('img'); attachArtworkFallback(nowImg, now);
   const nowMeta = document.createElement('div'); nowMeta.className = 'meta';
   nowMeta.innerHTML = '<div class="title"></div><div class="artist"></div>';
   nowMeta.querySelector('.title').textContent = now.title;
   nowMeta.querySelector('.artist').textContent = now.artist;
-  nowRow.appendChild(nowImg); nowRow.appendChild(nowMeta);
+  const nowPlayBtn = document.createElement('button'); nowPlayBtn.className = 'play-btn';
+  nowPlayBtn.setAttribute('aria-label', 'Play or pause');
+  const isPlaying = artworkWrap.classList.contains('is-playing');
+  nowPlayBtn.innerHTML = '<svg id="queueNowPlayIco" viewBox="0 0 24 24" fill="currentColor">' + (isPlaying ? ICO_PAUSE : ICO_PLAY) + '</svg>';
+  nowPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) playIndex(state.queuePos); });
+  nowRow.appendChild(nowImg); nowRow.appendChild(nowMeta); nowRow.appendChild(nowPlayBtn);
   queueBody.appendChild(nowLabel); queueBody.appendChild(nowRow);
 
   const upcoming = state.queue.slice(state.queuePos + 1);
@@ -2183,7 +2328,7 @@ function renderQueuePanel(){
 
     const handle = document.createElement('div'); handle.className = 'handle';
     handle.innerHTML = '<svg viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.4"/><circle cx="9" cy="2" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/></svg>';
-    const img = document.createElement('img'); attachArtworkFallback(img, t.videoId);
+    const img = document.createElement('img'); attachArtworkFallback(img, t);
     const meta = document.createElement('div'); meta.className = 'meta';
     meta.innerHTML = '<div class="title"></div><div class="artist"></div>';
     meta.querySelector('.title').textContent = t.title;
@@ -2285,12 +2430,14 @@ function openQueuePanel(){
   queuePanel.classList.add('is-open'); queueScrim.classList.add('is-open');
   document.body.classList.add('queue-open');
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.add('is-active'));
+  updateMiniBarVisibility();
 }
 function closeQueuePanel(){
   state.queueOpen = false;
   queuePanel.classList.remove('is-open'); queueScrim.classList.remove('is-open');
   document.body.classList.remove('queue-open');
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.remove('is-active'));
+  updateMiniBarVisibility();
 }
 queueScrim.addEventListener('click', closeQueuePanel);
 
@@ -2448,7 +2595,8 @@ const ICO_PLAY = '<path d="M8 5v14l11-7z"/>';
 const ICO_PAUSE = '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
 
 function setPlayingUI(isPlaying){
-  [playIco, flowPlayIco, miniPlayIco].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
+  [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
+  artworkWrap.classList.toggle('is-playing', isPlaying);
   highlightActiveRow();
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
@@ -2634,7 +2782,45 @@ function setVisualMode(mode){
   lsSet(LS_VIZ, mode);
   applyVisualMode();
 }
-visualTabs.forEach(btn => btn.addEventListener('click', () => setVisualMode(btn.dataset.mode)));
+
+/* ---------- album art display style: default / spinning record / cassette ---------- */
+const LS_ART_STYLE = 'ebbless:artstyle';
+let artStyle = lsGet(LS_ART_STYLE, 'default');
+if (artStyle !== 'default' && artStyle !== 'record' && artStyle !== 'cassette') artStyle = 'default';
+
+function applyArtStyle(){
+  artworkWrap.dataset.artStyle = artStyle;
+  artStyleMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.style === artStyle));
+}
+function setArtStyle(style){
+  artStyle = style;
+  lsSet(LS_ART_STYLE, style);
+  applyArtStyle();
+  closeArtStyleMenu();
+}
+function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
+function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
+function toggleArtStyleMenu(){ artStyleMenu.classList.toggle('is-open'); }
+artStyleMenu.querySelectorAll('.art-style-opt').forEach(btn => {
+  btn.addEventListener('click', (e) => { e.stopPropagation(); setArtStyle(btn.dataset.style); });
+});
+document.addEventListener('click', (e) => {
+  if (!artStyleMenu.classList.contains('is-open')) return;
+  if (artStyleMenu.contains(e.target) || artTabBtn.contains(e.target)) return;
+  closeArtStyleMenu();
+});
+applyArtStyle();
+
+visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
+  if (btn.dataset.mode === 'art'){
+    e.stopPropagation();
+    if (visualMode !== 'art'){ setVisualMode('art'); closeArtStyleMenu(); }
+    else toggleArtStyleMenu();
+    return;
+  }
+  closeArtStyleMenu();
+  setVisualMode(btn.dataset.mode);
+}));
 window.addEventListener('resize', () => { if (visualMode === 'viz') vizResize(); });
 applyVisualMode();
 
@@ -2777,10 +2963,11 @@ function reflectCurrentTrackUI(pos){
   const t = trackAt(pos);
   if (!t) return;
   updateTrackMetaUI(t);
-  swapPlayerArt(t.videoId);
-  swapFlowArt(t.videoId);
-  setAmbient(t.videoId);
-  attachArtworkFallback(miniArt, t.videoId);
+  swapPlayerArt(t);
+  swapFlowArt(t);
+  swapAltArt(t);
+  setAmbient(t);
+  attachArtworkFallback(miniArt, t);
   bumpPlayCount(entry);
   highlightActiveRow();
   renderQueuePanel();
@@ -3072,10 +3259,11 @@ function tryResume(){
   loadPlaylistIntoPlayer(pl);
   buildQueueFrom(r.trackIndex != null ? r.trackIndex : 0, pl.id);
   updateTrackMetaUI(currentTrack());
-  swapPlayerArt(currentTrack().videoId);
-  swapFlowArt(currentTrack().videoId);
-  setAmbient(currentTrack().videoId);
-  attachArtworkFallback(miniArt, currentTrack().videoId);
+  swapPlayerArt(currentTrack());
+  swapFlowArt(currentTrack());
+  swapAltArt(currentTrack());
+  setAmbient(currentTrack());
+  attachArtworkFallback(miniArt, currentTrack());
   highlightActiveRow();
 }
 

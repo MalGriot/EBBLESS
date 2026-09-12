@@ -57,6 +57,40 @@ const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/128.0 Safari/537.36';
 
+// Spotify's oembed endpoint returns a per-track thumbnail (the track's own
+// album art) from a lightweight JSON call — no HTML scrape needed. Used to
+// get real per-track art for playlist tracks, which otherwise only carry the
+// playlist's own cover (entity.trackList items have no art of their own).
+async function getSpotifyTrackThumb(uri) {
+  try {
+    const res = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(uri));
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.thumbnail_url || null;
+  } catch (e) { return null; }
+}
+
+// Runs fn across items with at most `limit` in flight at once — used for the
+// oembed art lookups above so a large playlist doesn't fire one request per
+// track simultaneously (Workers subrequest limits, Spotify rate limiting).
+async function mapWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length);
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+// Only look up per-track art for playlists up to this size — past it, tracks
+// fall back to the playlist's own cover rather than firing hundreds of
+// oembed requests for one resolve.
+const PER_TRACK_ART_CAP = 150;
+
 // ---------- GET /playlist?id=<spotify playlist id> ----------
 // ---------- GET /album?id=<spotify album id> ----------
 // Both are served by Spotify's generic embed app, which returns the same
@@ -92,10 +126,26 @@ async function handleEmbed(kind, url, ctx) {
   const coverSources = entity.coverArt && entity.coverArt.sources;
   const image = (coverSources && coverSources[0] && coverSources[0].url) || null;
 
+  let tracks;
+  if (kind === 'album') {
+    // Every track on an album shares the album's own cover — no per-track
+    // lookup needed, it's already correct.
+    tracks = entity.trackList.map(t => ({ title: t.title, artist: t.subtitle || '', image }));
+  } else {
+    // A playlist can span many albums, so each track needs its own art.
+    const inCap = entity.trackList.slice(0, PER_TRACK_ART_CAP);
+    const thumbs = await mapWithConcurrency(inCap, 6, t => getSpotifyTrackThumb(t.uri));
+    tracks = entity.trackList.map((t, i) => ({
+      title: t.title,
+      artist: t.subtitle || '',
+      image: (i < PER_TRACK_ART_CAP ? thumbs[i] : null) || image,
+    }));
+  }
+
   const payload = {
     name: entity.name || (kind === 'album' ? 'Album' : 'Playlist'),
     image,
-    tracks: entity.trackList.map(t => ({ title: t.title, artist: t.subtitle || '' })),
+    tracks,
   };
   const response = json(payload);
   const toCache = response.clone();
@@ -251,7 +301,10 @@ async function handleTrack(url, ctx) {
   if (cached) return applyCors(cached);
 
   const embedUrl = 'https://open.spotify.com/embed/track/' + id;
-  const res = await fetch(embedUrl, { headers: { 'User-Agent': DESKTOP_UA } });
+  const [res, image] = await Promise.all([
+    fetch(embedUrl, { headers: { 'User-Agent': DESKTOP_UA } }),
+    getSpotifyTrackThumb('spotify:track:' + id),
+  ]);
   if (!res.ok) return json({ error: 'spotify returned ' + res.status }, 502);
   const html = await res.text();
 
@@ -273,7 +326,7 @@ async function handleTrack(url, ctx) {
   const artist = entity.subtitle ||
     (Array.isArray(entity.artists) ? entity.artists.map(a => a && a.name).filter(Boolean).join(', ') : '') || '';
 
-  const payload = { title, artist };
+  const payload = { title, artist, image: image || null };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
@@ -544,11 +597,17 @@ async function handleAppleMusicList(url, ctx) {
 
   const name = headerItem.title || (kind === 'album' ? 'Album' : 'Playlist');
   const headerArtist = (headerItem.subtitleLinks && headerItem.subtitleLinks[0] && headerItem.subtitleLinks[0].title) || '';
-  const artTemplate = headerItem.artwork && headerItem.artwork.dictionary && headerItem.artwork.dictionary.url;
-  const image = artTemplate ? artTemplate.replace('{w}', '600').replace('{h}', '600').replace('{f}', 'jpg') : null;
+  const artworkUrl = (artwork) => {
+    const tpl = artwork && artwork.dictionary && artwork.dictionary.url;
+    return tpl ? tpl.replace('{w}', '600').replace('{h}', '600').replace('{f}', 'jpg') : null;
+  };
+  const image = artworkUrl(headerItem.artwork);
 
+  // Each track lockup carries its own artwork (a playlist/album can mix
+  // singles and songs from different releases), so use that per-track
+  // instead of falling back to the header's cover for every row.
   const tracks = (trackSection.items || [])
-    .map(t => ({ title: t.title || '', artist: t.artistName || headerArtist }))
+    .map(t => ({ title: t.title || '', artist: t.artistName || headerArtist, image: artworkUrl(t.artwork) || image }))
     .filter(t => t.title);
   if (!tracks.length) return json({ error: kind + ' has no tracks (private or invalid link?)' }, 404);
 
@@ -587,8 +646,10 @@ async function handleAppleMusicTrack(url, ctx) {
 
   const title = headerItem.title;
   const artist = headerItem.artists || (headerItem.artistLinks && headerItem.artistLinks[0] && headerItem.artistLinks[0].title) || '';
+  const artTemplate = headerItem.artwork && headerItem.artwork.dictionary && headerItem.artwork.dictionary.url;
+  const image = artTemplate ? artTemplate.replace('{w}', '600').replace('{h}', '600').replace('{f}', 'jpg') : null;
 
-  const payload = { title, artist };
+  const payload = { title, artist, image };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
@@ -630,10 +691,16 @@ async function getSoundCloudClientId(ctx, { forceRefresh } = {}) {
   return clientId;
 }
 
+// A track's own artwork_url is the real per-track art; tracks that don't set
+// one (common for uploads) fall back to the uploader's avatar, same as
+// SoundCloud's own clients do. "-large." -> "-t500x500." asks for a bigger,
+// square-cropped render instead of SoundCloud's default 100x100 thumbnail.
 function scTrackToTitleArtist(t) {
+  const rawArt = t.artwork_url || (t.user && t.user.avatar_url) || null;
   return {
     title: t.title || '',
     artist: (t.publisher_metadata && t.publisher_metadata.artist) || (t.user && t.user.username) || '',
+    image: rawArt ? rawArt.replace('-large.', '-t500x500.') : null,
   };
 }
 
@@ -671,7 +738,7 @@ async function handleSoundCloud(url, ctx) {
   if (data.kind === 'track') {
     const t = scTrackToTitleArtist(data);
     if (!t.title) return json({ error: 'track has no title' }, 404);
-    payload = { kind: 'track', title: t.title, artist: t.artist };
+    payload = { kind: 'track', title: t.title, artist: t.artist, image: t.image };
   } else if (data.kind === 'playlist') {
     const rawTracks = data.tracks || [];
     const stubIds = rawTracks.filter(t => !('title' in t)).map(t => t.id);
