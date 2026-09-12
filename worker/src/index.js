@@ -378,6 +378,22 @@ function parseLrc(lrc) {
   return out;
 }
 
+// lrclib's search is a fuzzy full-text match, not a lookup - it happily
+// returns tracks whose title only loosely resembles the query. Scoring by
+// artist overlap and "has synced lyrics" alone (the old approach) let an
+// unrelated song with synced lyrics outrank the correct song when the
+// correct song only had plain lyrics, so real requests came back with
+// lyrics for the wrong track entirely. Title match is now required, not
+// just rewarded: anything that doesn't match the requested title is
+// dropped before scoring.
+function normTitle(s) {
+  return (s || '')
+    .toLowerCase()
+    .replace(/[([][^)\]]*[)\]]/g, '') // drop "(feat. X)", "(Remastered 2011)", etc.
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 async function getLrclibMatch(title, artist) {
   const params = new URLSearchParams({ track_name: title, artist_name: artist || '' });
   const res = await fetch('https://lrclib.net/api/search?' + params.toString(), {
@@ -388,15 +404,21 @@ async function getLrclibMatch(title, artist) {
   try { list = JSON.parse(await res.text()); } catch (e) { return null; }
   if (!Array.isArray(list) || !list.length) return null;
 
+  const titleNorm = normTitle(title);
   const artistNorm = (artist || '').toLowerCase();
   const scored = list
     .filter(r => !r.instrumental)
     .map(r => {
-      let score = 0;
+      const rTitleNorm = normTitle(r.trackName);
+      let titleScore = 0;
+      if (titleNorm && rTitleNorm === titleNorm) titleScore = 4;
+      else if (titleNorm && rTitleNorm && (rTitleNorm.includes(titleNorm) || titleNorm.includes(rTitleNorm))) titleScore = 2;
+      let score = titleScore;
       if (artistNorm && (r.artistName || '').toLowerCase().includes(artistNorm)) score += 2;
-      if (r.syncedLyrics) score += 3;
-      return { r, score };
+      if (r.syncedLyrics) score += 1;
+      return { r, score, titleScore };
     })
+    .filter(s => s.titleScore > 0) // no title overlap at all -> not the same song, drop it
     .sort((a, b) => b.score - a.score);
   return (scored[0] && scored[0].r) || null;
 }
