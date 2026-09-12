@@ -112,7 +112,25 @@ async function handleEmbed(kind, url, ctx) {
 // music player shouldn't play.
 const AUDIO_HINTS = ['official audio', 'lyric video', 'lyrics', 'audio)', '(audio'];
 const MUSIC_VIDEO_HINTS = ['official music video', 'official video', 'music video'];
-const DEMOTE_HINTS = ['reaction', 'cover', 'karaoke', 'live at', 'live performance', 'sped up', 'slowed'];
+const DEMOTE_HINTS = ['reaction', 'sped up', 'slowed', 'clean version', 'clean edit', 'radio edit'];
+
+// Hard-disqualifying: these are never the album/single version a player
+// should default to, regardless of view count or channel authority, so they
+// are filtered out entirely (see activeExcludeHints in handleSearch) rather
+// than just penalized in scoreCandidate. Grouped by keyword so a group can be
+// waived when the source track's own title says that's the intended version
+// (e.g. the playlist track itself is "Song (X Remix)" - remix results should
+// not be excluded in that case).
+const EXCLUDE_GROUPS = [
+  { keyword: 'live', hints: ['live at', 'live from', 'live in', 'live performance', 'live session', '(live)', '[live]', '- live', 'live version'] },
+  { keyword: 'concert', hints: ['in concert', 'concert film', 'tour visualizer'] },
+  { keyword: 'unplugged', hints: ['unplugged', 'tiny desk'] },
+  { keyword: 'acoustic', hints: ['acoustic version', 'acoustic cover', '(acoustic)', '[acoustic]', '- acoustic'] },
+  { keyword: 'remix', hints: ['remix)', 'remix]', '- remix'] },
+  { keyword: 'rehearsal', hints: ['rehearsal'] },
+  { keyword: 'cover', hints: ['cover)', 'cover]', '- cover'] },
+  { keyword: 'karaoke', hints: ['karaoke'] },
+];
 
 // "1,062,839,758 views" -> 1062839758, "1.2M views" -> 1200000
 function parseViewCount(text) {
@@ -191,10 +209,25 @@ async function handleSearch(url, ctx) {
 
   if (!candidates.length) return json({ error: 'no video results' }, 404);
 
-  const maxViews = Math.max(...candidates.map(c => c.views), 0);
-  candidates.forEach(c => { c.score = scoreCandidate(c, firstArtist, maxViews); });
-  candidates.sort((a, b) => b.score - a.score);
-  const best = candidates[0];
+  // Drop concert/live/acoustic/remix/cover uploads outright: they're never
+  // the album or single version, so a hard filter beats a score penalty that
+  // a big view count or a "- Topic" channel could still out-rank. Except:
+  // if the playlist's own track title says that's the intended version
+  // (e.g. "Song (Radio Remix)"), don't exclude that group - it's the correct
+  // match, not a stray alternate cut. Only fall back to the unfiltered list
+  // if literally every result is disqualified (rare, but better than
+  // returning no match at all).
+  const lowerSourceTitle = title.toLowerCase();
+  const activeExcludeHints = EXCLUDE_GROUPS
+    .filter(g => !lowerSourceTitle.includes(g.keyword))
+    .flatMap(g => g.hints);
+  const clean = candidates.filter(c => !activeExcludeHints.some(h => c.title.toLowerCase().includes(h)));
+  const pool = clean.length ? clean : candidates;
+
+  const maxViews = Math.max(...pool.map(c => c.views), 0);
+  pool.forEach(c => { c.score = scoreCandidate(c, firstArtist, maxViews); });
+  pool.sort((a, b) => b.score - a.score);
+  const best = pool[0];
 
   const payload = { videoId: best.videoId, title: best.title, channel: best.channel };
   const response = json(payload);
