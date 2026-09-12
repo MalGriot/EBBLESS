@@ -98,6 +98,17 @@ svg{display:block}
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .lib-card .art img{width:100%;height:100%;object-fit:cover;display:block;background:var(--panel-2)}
 .lib-card .art.single img{grid-column:1/3;grid-row:1/3}
+.lib-card .art .face{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.lib-card .art .face.grid-face.single{grid-template-columns:1fr;grid-template-rows:1fr}
+.lib-card .art .face.spotify-face{display:block}
+.lib-card .art.animated .face{opacity:0;animation:lib-art-crossfade 9s ease-in-out infinite}
+.lib-card .art.animated .face.grid-face{opacity:1}
+.lib-card .art.animated .face.spotify-face{animation-delay:-4.5s}
+@keyframes lib-art-crossfade{0%,38%{opacity:1}50%,88%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){
+  .lib-card .art.animated .face{animation:none;opacity:1}
+  .lib-card .art.animated .face.spotify-face{opacity:0}
+}
 .lib-card .name{margin-top:9px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .remove{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
@@ -143,6 +154,8 @@ svg{display:block}
 .btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out)}
 .btn-ghost:hover{background:var(--panel-2)}
 .btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+select.btn-ghost{-webkit-appearance:none;appearance:none;background-color:var(--panel-2);color:var(--text)}
+select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #crossfadeDurRow{transition:opacity var(--dur-ui) var(--ease-out)}
 #import-overlay .close{position:absolute;top:calc(20px + var(--safe-t));right:20px;width:34px;height:34px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint)}
@@ -153,19 +166,42 @@ svg{display:block}
 #view-player .view-scroll{max-width:1040px;padding-top:6px}
 .player-layout{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
 .player-stage{display:flex;flex-direction:column;align-items:center;padding-top:10px}
+.visual-tabs{display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:14px}
+.visual-tabs .v-tab{width:34px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+  color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.visual-tabs .v-tab svg{width:16px;height:16px}
+.visual-tabs .v-tab:hover{color:var(--text)}
+.visual-tabs .v-tab.is-active{background:var(--accent);color:#151107}
+
 .artwork-wrap{position:relative;width:min(420px,72vw);aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;
-  box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2)}
+  box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2);transition:height var(--dur-surface) var(--ease-in-out)}
+.artwork-wrap.mode-lyrics{aspect-ratio:auto;height:min(56vh,520px)}
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
-.artwork-wrap .art.is-active{opacity:1}
+.artwork-wrap[data-mode="art"] .art.is-active{opacity:1}
+.artwork-wrap[data-mode="viz"] .art,.artwork-wrap[data-mode="lyrics"] .art{opacity:0!important}
+
+.lyrics-wrap{position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;
+  transition:opacity var(--dur-surface) var(--ease-in-out);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 10%,#000 88%,transparent 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 10%,#000 88%,transparent 100%)}
+.lyrics-wrap.is-active{opacity:1;pointer-events:auto}
+.lyrics-scroller{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:44% 22px;text-align:center}
+.artwork-wrap.mode-lyrics .lyrics-scroller{padding:40px 22px}
+.lyric-line{padding:9px 4px;font-size:16px;font-weight:600;color:var(--faint-2);line-height:1.45;
+  transition:color var(--dur-ui) var(--ease-out),opacity var(--dur-ui) var(--ease-out)}
+.lyric-line[data-time]{cursor:pointer}
+.lyric-line[data-time]:hover{color:var(--faint)}
+.lyric-line.is-current{color:var(--text);font-size:17.5px}
+.lyrics-empty{padding:0 24px;color:var(--faint);font-size:13.5px;text-align:center;line-height:1.6}
+.lyrics-credit{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;color:var(--faint-2);
+  pointer-events:none}
+.viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
+  transition:opacity var(--dur-surface) var(--ease-in-out);background:rgba(10,10,10,.55)}
+.viz-canvas.is-active{opacity:1}
 .track-meta{margin-top:26px;text-align:center;max-width:480px}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
-.match-tag{margin-top:10px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--faint-2);
-  border-radius:12px;padding:4px 10px;transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
-.match-tag:hover{background:var(--panel-2);color:var(--faint)}
-.match-tag svg{width:11px;height:11px}
-
 .playlist-ctx{margin-top:18px;font-size:12.5px;color:var(--faint-2);display:flex;align-items:center;gap:6px}
 .playlist-ctx button{color:var(--faint);text-decoration:none;font-weight:500}
 .playlist-ctx button:hover{color:var(--text)}
@@ -204,11 +240,12 @@ svg{display:block}
 .vol-wrap:hover .fill{background:var(--accent)}
 
 /* playlist list under player */
-.playlist-list-wrap{margin-top:48px}
-.playlist-list-head{display:flex;align-items:center;justify-content:space-between}
-.playlist-list-head h2{font-size:14px;font-weight:600;margin:0}
-.playlist-list-head .re{font-size:12px;color:var(--faint-2)}
+.playlist-list-wrap{margin-top:48px;width:100%;max-width:640px}
+.playlist-list-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 14px}
+.playlist-list-head h2{font-size:14px;font-weight:600;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.playlist-list-head .re{font-size:12px;color:var(--faint-2);flex:none}
 .playlist-list-head .re:hover{color:var(--faint)}
+.playlist-list-head .head-actions{display:flex;align-items:center;gap:10px;flex:none}
 .track-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:var(--r-md);cursor:pointer;position:relative}
 .track-row:hover{background:var(--panel)}
 .track-row.is-current{background:var(--panel-2)}
@@ -232,14 +269,17 @@ svg{display:block}
 .track-row.is-dragging{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.4);position:relative;z-index:3;background:var(--panel-2)}
 #trackList.sort-manual .track-row .drag-handle{display:flex}
 #trackList.sort-manual .track-row .num{display:none}
-#trackSortSel{font-size:11.5px;padding:6px 10px}
+#trackSortSel{font-size:11.5px;padding:6px 10px;max-width:132px}
+@media (max-width:380px){
+  #trackSortSel{font-size:11px;padding:6px 8px;max-width:112px}
+}
 .missing-note{font-size:11.5px;color:var(--faint-2);margin-top:2px}
 .missing-actions{display:flex;gap:10px;margin-top:4px}
 .missing-actions a,.missing-actions button{font-size:11.5px;color:var(--faint);text-decoration:underline;text-underline-offset:2px}
 .missing-actions a:hover,.missing-actions button:hover{color:var(--accent)}
 
 /* ---------- mini bar ---------- */
-#mini-bar{position:fixed;left:0;right:0;bottom:var(--nav-h);z-index:20;display:flex;align-items:center;gap:12px;
+#mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:12px;
   padding:8px 14px;background:var(--panel);border-top:1px solid var(--border);cursor:pointer;
   transform:translateY(0);transition:transform var(--dur-surface) var(--ease-in-out),bottom var(--dur-ui)}
 #mini-bar[hidden]{display:none}
@@ -323,7 +363,7 @@ svg{display:block}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
 #flow-layer .flow-chrome{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
-  padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:auto;
+  padding:26px 26px calc(30px + var(--safe-b));opacity:1;
   transition:opacity 600ms var(--ease-in-out)}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
@@ -334,31 +374,6 @@ svg{display:block}
 .flow-bottom{display:flex;flex-direction:column;align-items:center;gap:18px}
 .flow-seek{width:min(420px,80vw)}
 
-/* ---------- match popover ---------- */
-#match-sheet-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;
-  transition:opacity var(--dur-ui) var(--ease-out)}
-#match-sheet-scrim.is-open{opacity:1;pointer-events:auto}
-#match-sheet{position:fixed;z-index:71;left:50%;bottom:0;transform:translate(-50%,100%);width:min(400px,92vw);
-  background:var(--panel-2);border-radius:16px 16px 0 0;padding:22px 22px calc(22px + var(--safe-b));
-  transition:transform var(--dur-surface) var(--ease-in-out)}
-@media (max-width:639.98px){
-  #match-sheet.is-open{transform:translate(-50%,0)}
-}
-@media (min-width:640px){
-  #match-sheet{bottom:auto;top:50%;transform:translate(-50%,-46%);border-radius:16px;opacity:0;
-    transition:transform var(--dur-ui) var(--ease-out),opacity var(--dur-ui) var(--ease-out)}
-  #match-sheet.is-open{transform:translate(-50%,-50%);opacity:1}
-}
-#match-sheet h3{font-size:14.5px;margin:0 0 16px;display:flex;align-items:center;gap:8px}
-#match-sheet h3 svg{width:14px;height:14px;color:var(--faint)}
-.match-row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-top:1px solid var(--border);font-size:12.5px}
-.match-row:first-of-type{border-top:none}
-.match-row .k{color:var(--faint-2);flex:none}
-.match-row .v{text-align:right;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#match-sheet .link-row{margin-top:16px;text-align:center}
-#match-sheet .link-row a{font-size:12.5px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:5px}
-#match-sheet .link-row a:hover{text-decoration:underline}
-#match-sheet .link-row a svg{width:11px;height:11px}
 
 /* ---------- settings ---------- */
 .settings-block{margin:20px 0 34px}
@@ -370,6 +385,16 @@ svg{display:block}
 .settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
 .about-copy{font-size:13px;color:var(--faint);line-height:1.7;max-width:520px}
 .about-copy strong{color:var(--text);font-weight:600}
+
+.settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
+.slider-val{color:var(--faint);font-weight:400;margin-left:6px}
+.slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--border-2);outline:none;margin:4px 0}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform var(--dur-ui) var(--ease-out);border:none}
+.slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
+.slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+.slider::-moz-range-track{height:4px;border-radius:2px;background:var(--border-2)}
+.slider:disabled{opacity:.45;cursor:not-allowed}
+.slider:disabled::-webkit-slider-thumb{cursor:not-allowed}
 
 /* ---------- generic ---------- */
 .hidden{display:none!important}
@@ -387,12 +412,12 @@ svg{display:block}
   .view{bottom:var(--nav-h)}
   .view-scroll{padding:4px 18px calc(120px + var(--safe-b))}
   #bottom-nav{display:flex}
+  #mini-bar{bottom:var(--nav-h)}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw)}
   .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
 }
 @media (min-width:860px){
-  #mini-bar{display:none!important}
   #bottom-nav{display:none}
   .view{bottom:0}
   .player-stage{padding-top:30px}
@@ -435,19 +460,20 @@ svg{display:block}
   <main class="view" id="view-library">
     <div class="view-scroll">
       <form class="import-row" id="importForm">
-        <input id="urlInput" type="text" placeholder="Paste a playlist link" autocomplete="off" spellcheck="false">
+        <input id="urlInput" type="text" placeholder="Paste a Spotify, YouTube, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
         <button type="submit" id="loadBtn">Load</button>
       </form>
-      <p class="import-hint" id="importHint">Paste a public Spotify playlist link. EBBLESS finds each track and gets it playing.</p>
+      <p class="import-hint" id="importHint">Paste a public playlist, album, or track link from Spotify, YouTube, SoundCloud, or Apple Music. EBBLESS finds each track and gets it playing.</p>
       <div class="import-err" id="importErr"></div>
+      <button class="btn-ghost" id="newPlaylistBtn" style="margin:0 0 24px">+ New playlist</button>
 
       <div id="libraryEmpty" class="empty-lib hidden">
         <div class="line"><svg width="64" height="10" viewBox="0 0 64 10"><path d="M1 5 C 16 5, 24 2, 32 5 S 48 8, 63 5" fill="none" stroke="var(--faint-2)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-        Your playlists will show up here.<br>Paste one above to get started.
+        Your library will show up here.<br>Paste one above to get started.
       </div>
 
       <div id="libraryListWrap" class="hidden">
-        <div class="section-label">Your playlists</div>
+        <div class="section-label">Your library</div>
         <div class="lib-grid" id="libraryGrid"></div>
       </div>
     </div>
@@ -457,17 +483,26 @@ svg{display:block}
   <main class="view" id="view-player" hidden>
     <div class="view-scroll">
       <div class="player-stage">
+        <div class="visual-tabs" id="visualTabs">
+          <button class="v-tab" data-mode="art" title="Album art" aria-label="Show album art">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg>
+          </button>
+          <button class="v-tab" data-mode="viz" title="Visualizer" aria-label="Show visualizer">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h2v7H4zm4-6h2v13H8zm4 3h2v10h-2zm4-5h2v15h-2zm4 8h2v7h-2z"/></svg>
+          </button>
+          <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
+          </button>
+        </div>
         <div class="artwork-wrap" id="artworkWrap">
           <img class="art" id="artA" alt="">
           <img class="art" id="artB" alt="">
+          <canvas class="viz-canvas" id="vizCanvas"></canvas>
+          <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
         </div>
         <div class="track-meta">
           <div class="title" id="trackTitle">—</div>
           <div class="artist" id="trackArtist">—</div>
-          <button class="match-tag" id="matchTag" hidden>
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l-2.5 2.5-1-1L9 14l-2.5-2.5 1-1L10 13l2.5-2.5 1 1L11 14l2.5 2.5-1 1z" opacity="0"/><path d="M21.6 7.2l-9-4.2c-.4-.2-.8-.2-1.2 0l-9 4.2A1 1 0 0 0 2 8.1v7.8c0 .4.2.7.6.9l9 4.2c.4.2.8.2 1.2 0l9-4.2c.4-.2.6-.5.6-.9V8.1c0-.4-.2-.7-.6-.9zM12 4.9l6.8 3.2L12 11.3 5.2 8.1 12 4.9zM4 9.6l7 3.3v6.6l-7-3.3V9.6zm9 9.9v-6.6l7-3.3v6.6l-7 3.3z"/></svg>
-            <span id="matchTagText">Matched on YouTube</span>
-          </button>
         </div>
 
         <div class="playlist-ctx" id="playlistCtx" hidden>
@@ -512,13 +547,15 @@ svg{display:block}
         <div class="playlist-list-wrap" id="playlistListWrap" hidden>
           <div class="playlist-list-head">
             <h2 id="plHeadName">Playlist</h2>
-            <div style="display:flex;align-items:center;gap:10px">
+            <div class="head-actions">
+              <button class="re" id="plPlayBtn">Play</button>
               <select class="btn-ghost" id="trackSortSel" aria-label="Sort tracks">
                 <option value="custom">Manual order</option>
                 <option value="alpha">Alphabetical</option>
                 <option value="plays_desc">Most played</option>
                 <option value="plays_asc">Least played</option>
               </select>
+              <button class="re" id="addSongBtn">+ Add song</button>
               <button class="re" id="reResolveBtn">Re-match</button>
             </div>
           </div>
@@ -533,7 +570,7 @@ svg{display:block}
     <div class="view-scroll">
       <div class="settings-block">
         <h2>About</h2>
-        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist straight through, without the gaps. Paste a public Spotify playlist link — EBBLESS finds each track on YouTube and threads playback so the listening doesn't stop.</p>
+        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds each track on YouTube, or paste a YouTube playlist or video link directly. Either way, playback threads through so the listening doesn't stop.</p>
       </div>
       <div class="settings-block">
         <h2>Playback</h2>
@@ -550,17 +587,12 @@ svg{display:block}
           </div>
           <button class="btn-ghost" id="crossfadeBtn">Off</button>
         </div>
-        <div class="settings-row" id="crossfadeDurRow">
+        <div class="settings-row settings-row-slider" id="crossfadeDurRow">
           <div>
-            <div class="label">Crossfade length</div>
+            <div class="label">Crossfade length <span id="crossfadeDurVal" class="slider-val">4s</span></div>
             <div class="desc">How long the overlap lasts.</div>
           </div>
-          <select class="btn-ghost" id="crossfadeDurSel">
-            <option value="2000">2s</option>
-            <option value="4000" selected>4s</option>
-            <option value="6000">6s</option>
-            <option value="8000">8s</option>
-          </select>
+          <input type="range" class="slider" id="crossfadeDurSlider" min="1000" max="10000" step="500" value="4000">
         </div>
       </div>
       <div class="settings-block">
@@ -657,19 +689,6 @@ svg{display:block}
     </div>
   </div>
 
-  <!-- ===== MATCH SHEET ===== -->
-  <div id="match-sheet-scrim"></div>
-  <div id="match-sheet">
-    <h3><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2l-9-4.2c-.4-.2-.8-.2-1.2 0l-9 4.2A1 1 0 0 0 2 8.1v7.8c0 .4.2.7.6.9l9 4.2c.4.2.8.2 1.2 0l9-4.2c.4-.2.6-.5.6-.9V8.1c0-.4-.2-.7-.6-.9z"/></svg>Match details</h3>
-    <div class="match-row"><span class="k">Source</span><span class="v">YouTube</span></div>
-    <div class="match-row"><span class="k">Channel</span><span class="v" id="matchChannel">—</span></div>
-    <div class="match-row"><span class="k">Matched title</span><span class="v" id="matchTitleVal">—</span></div>
-    <div class="match-row"><span class="k">Artist</span><span class="v" id="matchArtistVal">—</span></div>
-    <div class="link-row"><a id="matchLink" href="#" target="_blank" rel="noopener">Open on YouTube
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3zM5 5v14h14v-7h-2v5H7V7h5V5z"/></svg>
-    </a></div>
-  </div>
-
   <div class="toast" id="toast"></div>
   <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div></div>
 </div>
@@ -689,14 +708,119 @@ const BACKEND = 'https://spotify-youtube-search.malgriot.workers.dev';
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-function parsePlaylistId(input){
+function parseSpotifyLink(input){
   input = (input || '').trim();
-  let m = input.match(/playlist[/:]([a-zA-Z0-9]+)/);
-  return m ? m[1] : null;
+  // Anchored to spotify.com/spotify: first - the bare capture below matches
+  // "playlist/ID" or "album/ID" anywhere in a string, which would otherwise
+  // false-positive on other services' URLs (e.g. Apple Music's own
+  // /playlist/ and /album/ path segments).
+  if (!/^spotify:|spotify\.com/i.test(input)) return null;
+  let m = input.match(/(playlist|album|track)[/:]([a-zA-Z0-9]+)/);
+  return m ? { type: m[1], id: m[2] } : null;
 }
 
-async function fetchSpotifyPlaylist(playlistId){
-  const res = await fetch(BACKEND + '/playlist?id=' + encodeURIComponent(playlistId));
+// Recognizes youtube.com/playlist, youtube.com/watch (with or without a
+// &list=), youtu.be short links, and /shorts/ links. A list param that looks
+// like an auto-generated mix/radio ("RD…") or "watch later"/"liked" ("WL",
+// "LL") is treated as a single video, not a real playlist.
+function parseYouTubeLink(input){
+  input = (input || '').trim();
+  if (!/youtube\.com|youtu\.be/i.test(input)) return null;
+  let url;
+  try { url = new URL(/^https?:\/\//i.test(input) ? input : 'https://' + input); }
+  catch(e){ return null; }
+  const host = url.hostname.replace(/^www\.|^m\.|^music\./i, '');
+  if (!/(^|\.)youtube\.com$/i.test(host) && host !== 'youtu.be') return null;
+
+  const list = url.searchParams.get('list');
+  const isRealPlaylist = list && !/^(RD|WL|LL)/i.test(list);
+
+  if (host === 'youtu.be'){
+    const id = url.pathname.slice(1).split('/')[0];
+    if (id) return { type: 'video', id };
+  }
+  if (url.pathname === '/playlist' && list) return { type: 'playlist', id: list };
+  if (url.pathname.startsWith('/shorts/')){
+    const id = url.pathname.split('/')[2];
+    if (id) return { type: 'video', id };
+  }
+  const v = url.searchParams.get('v');
+  if (v){
+    if (isRealPlaylist) return { type: 'playlist', id: list };
+    return { type: 'video', id: v };
+  }
+  if (isRealPlaylist) return { type: 'playlist', id: list };
+  return null;
+}
+
+// A soundcloud.com/{user}/{track} link is a track, /{user}/sets/{name} is a
+// playlist. Non-content top-level paths (the stream, search, account pages)
+// are excluded so they don't get misread as a user's track. Mobile share
+// links (on.soundcloud.com/...) aren't handled — they need a redirect
+// resolved before the path shape can be read at all.
+const SOUNDCLOUD_RESERVED_PATHS = new Set([
+  'you', 'stream', 'search', 'upload', 'discover', 'charts', 'stations', 'people',
+  'tags', 'pages', 'backstage', 'embed', 'pro', 'premium', 'settings',
+  'notifications', 'messages', 'mobile', 'jobs', 'about', 'terms-of-use',
+  'contact', 'creators', 'imprint', 'privacy',
+]);
+function parseSoundCloudLink(input){
+  input = (input || '').trim();
+  if (!/soundcloud\.com/i.test(input)) return null;
+  let url;
+  try { url = new URL(/^https?:\/\//i.test(input) ? input : 'https://' + input); }
+  catch(e){ return null; }
+  const host = url.hostname.replace(/^www\.|^m\./i, '').toLowerCase();
+  if (host !== 'soundcloud.com') return null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts.length < 2 || SOUNDCLOUD_RESERVED_PATHS.has(parts[0])) return null;
+  if (parts[1] === 'sets' && parts[2]) return { type: 'playlist', url: 'https://soundcloud.com/' + parts[0] + '/sets/' + parts[2] };
+  if (parts.length === 2) return { type: 'track', url: 'https://soundcloud.com/' + parts[0] + '/' + parts[1] };
+  return null;
+}
+
+// music.apple.com links are /{storefront}/{album|playlist|song}/{slug}/{id}.
+// An album link carrying ?i=<songId> points at one song within that album
+// (the id Apple shows in the URL bar when you play a single track from an
+// album view) — treated the same as a direct /song/ link.
+function parseAppleMusicLink(input){
+  input = (input || '').trim();
+  if (!/music\.apple\.com/i.test(input)) return null;
+  let url;
+  try { url = new URL(/^https?:\/\//i.test(input) ? input : 'https://' + input); }
+  catch(e){ return null; }
+  if (url.hostname.toLowerCase() !== 'music.apple.com') return null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts.length < 4) return null;
+  const storefront = parts[0].toLowerCase();
+  const kind = parts[1];
+  const id = parts[3];
+  if (!/^[a-z]{2}$/.test(storefront)) return null;
+  const i = url.searchParams.get('i');
+  if (kind === 'album' && i) return { type: 'track', id: i, storefront };
+  if (kind === 'album') return { type: 'album', id, storefront };
+  if (kind === 'playlist') return { type: 'playlist', id, storefront };
+  if (kind === 'song') return { type: 'track', id, storefront };
+  return null;
+}
+
+// Tries Spotify, then YouTube, then SoundCloud, then Apple Music.
+// Returns { source, type, id } (id already prefixed for sources whose
+// resolve pipeline needs more than a bare id) or null.
+function parseImportLink(input){
+  const sp = parseSpotifyLink(input);
+  if (sp) return { source: 'spotify', type: sp.type, id: sp.id };
+  const yt = parseYouTubeLink(input);
+  if (yt) return { source: 'youtube', type: yt.type, id: yt.id };
+  const sc = parseSoundCloudLink(input);
+  if (sc) return { source: 'soundcloud', type: sc.type, id: sc.url };
+  const am = parseAppleMusicLink(input);
+  if (am) return { source: 'applemusic', type: am.type, id: am.id, storefront: am.storefront };
+  return null;
+}
+
+async function fetchSpotifyPlaylist(playlistId, type){
+  const res = await fetch(BACKEND + '/' + (type || 'playlist') + '?id=' + encodeURIComponent(playlistId));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
   return data;
@@ -705,6 +829,53 @@ async function fetchSpotifyPlaylist(playlistId){
 async function searchYouTube(title, artist){
   const params = new URLSearchParams({ title, artist });
   const res = await fetch(BACKEND + '/search?' + params.toString());
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+async function fetchYouTubePlaylist(playlistId){
+  const res = await fetch(BACKEND + '/ytplaylist?id=' + encodeURIComponent(playlistId));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+async function fetchYouTubeVideo(videoId){
+  const res = await fetch(BACKEND + '/ytvideo?id=' + encodeURIComponent(videoId));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+async function fetchSpotifyTrack(trackId){
+  const res = await fetch(BACKEND + '/track?id=' + encodeURIComponent(trackId));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+// SoundCloud/Apple Music aren't played from directly — like Spotify, they're
+// just a source of {title, artist} pairs that get matched to a YouTube video
+// through searchYouTube(), same as everything else in this app.
+async function fetchSoundCloudLink(permalinkUrl){
+  const res = await fetch(BACKEND + '/soundcloud?url=' + encodeURIComponent(permalinkUrl));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+async function fetchAppleMusicList(kind, storefront, id){
+  const params = new URLSearchParams({ kind, storefront, id });
+  const res = await fetch(BACKEND + '/amlist?' + params.toString());
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
+
+async function fetchAppleMusicTrack(storefront, id){
+  const params = new URLSearchParams({ storefront, id });
+  const res = await fetch(BACKEND + '/amtrack?' + params.toString());
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
   return data;
@@ -719,6 +890,7 @@ const LS_VOL = 'ebbless:volume';
 const LS_RESUME = 'ebbless:resume';
 const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_SORT = (id) => 'ebbless:sort:' + id;    // per-playlist track sort mode
+const LS_VIZ = 'ebbless:visualizer';
 
 function lsGet(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
@@ -743,8 +915,72 @@ function isSaved(id){ return getLibrary().includes(id); }
 /* =========================================================================
    RESOLVE PIPELINE (Spotify playlist -> matched tracks, with cache)
    ========================================================================= */
-async function resolvePlaylist(playlistId, onProgress){
-  const { name, tracks } = await fetchSpotifyPlaylist(playlistId);
+// Re-matching/re-resolving a playlist re-fetches its tracklist from the
+// source and would otherwise silently drop any songs the user added by hand
+// (from another playlist or a pasted link) — carry those forward.
+function withManualTracks(playlistId, resolvedTracks){
+  const old = getCachedPlaylist(playlistId);
+  if (!old) return resolvedTracks;
+  const known = new Set(resolvedTracks.filter(t => t.videoId).map(t => t.videoId));
+  const manual = old.tracks.filter(t => t.manual && t.videoId && !known.has(t.videoId));
+  return manual.length ? resolvedTracks.concat(manual) : resolvedTracks;
+}
+
+async function resolvePlaylist(playlistId, type, onProgress){
+  if (type === 'track' || type === 'sc_track' || type === 'am_track'){
+    let title, artist;
+    if (type === 'sc_track'){
+      const t = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
+      if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single track.");
+      title = t.title; artist = t.artist;
+    } else if (type === 'am_track'){
+      const idx = playlistId.indexOf(':');
+      const t = await fetchAppleMusicTrack(playlistId.slice(0, idx), playlistId.slice(idx + 1));
+      title = t.title; artist = t.artist;
+    } else {
+      ({ title, artist } = await fetchSpotifyTrack(playlistId));
+    }
+    onProgress({ stage: 'matching', done: 0, total: 1 });
+    let match = { videoId: null, title: '', channel: '' };
+    try { match = await searchYouTube(title, artist); } catch(e){}
+    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0 };
+    onProgress({ stage: 'matching', done: 1, total: 1, track });
+    const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
+    lsSet(LS_PL(playlistId), payload);
+    return payload;
+  }
+  if (type === 'yt_playlist' || type === 'yt_video'){
+    const rawId = playlistId.replace(/^yt:/, '');
+    if (type === 'yt_video'){
+      const v = await fetchYouTubeVideo(rawId);
+      const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0 };
+      onProgress({ stage: 'matching', done: 0, total: 1 });
+      onProgress({ stage: 'matching', done: 1, total: 1, track });
+      const payload = { id: playlistId, type, name: v.title, image: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
+      lsSet(LS_PL(playlistId), payload);
+      return payload;
+    }
+    const { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
+    onProgress({ stage: 'matching', done: 0, total: tracks.length });
+    const resolved = tracks.map(t => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0 }));
+    resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
+    // YouTube's public playlist feed (the only stable, unscraped source for a
+    // full tracklist) only returns its ~15 most recent videos.
+    const payload = { id: playlistId, type, name, image: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now() };
+    lsSet(LS_PL(playlistId), payload);
+    return payload;
+  }
+  let name, image, tracks;
+  if (type === 'sc_playlist'){
+    const sc = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
+    if (sc.kind !== 'playlist') throw new Error("That SoundCloud link isn't a playlist.");
+    ({ name, image, tracks } = sc);
+  } else if (type === 'am_playlist' || type === 'am_album'){
+    const idx = playlistId.indexOf(':');
+    ({ name, image, tracks } = await fetchAppleMusicList(type === 'am_album' ? 'album' : 'playlist', playlistId.slice(0, idx), playlistId.slice(idx + 1)));
+  } else {
+    ({ name, image, tracks } = await fetchSpotifyPlaylist(playlistId, type));
+  }
   onProgress({ stage: 'matching', done: 0, total: tracks.length });
   const resolved = [];
   for (let i = 0; i < tracks.length; i++){
@@ -758,19 +994,29 @@ async function resolvePlaylist(playlistId, onProgress){
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     if (i < tracks.length - 1) await sleep(350);
   }
-  const payload = { id: playlistId, name, tracks: resolved, ts: Date.now() };
+  const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now() };
   lsSet(LS_PL(playlistId), payload);
   return payload;
 }
 
 function getCachedPlaylist(id){ return lsGet(LS_PL(id), null); }
 
+/* the playlist currently loaded in the player is kept in memory (state.playlist);
+   any other playlist referenced by the queue is read fresh from storage */
+function playlistById(id){
+  if (state.playlist && state.playlist.id === id) return state.playlist;
+  return getCachedPlaylist(id);
+}
+function persistPlaylistObj(pl){
+  if (pl) lsSet(LS_PL(pl.id), pl);
+}
+
 /* =========================================================================
    STATE
    ========================================================================= */
 const state = {
-  playlist: null,       // { id, name, tracks, ts }
-  queue: [],             // array of track indices, effective play order
+  playlist: null,       // { id, name, tracks, ts } — the playlist currently being viewed/browsed
+  queue: [],             // array of { plId, idx } pairs, effective play order (can span playlists)
   queuePos: -1,          // pointer into queue
   shuffle: false,
   repeat: 'off',          // off | all | one
@@ -781,12 +1027,14 @@ const state = {
 };
 
 function currentTrack(){
-  if (state.queuePos < 0 || !state.playlist) return null;
-  const idx = state.queue[state.queuePos];
-  return state.playlist.tracks[idx] || null;
+  return trackAt(state.queuePos);
 }
+/* index of the now-playing track within the *viewed* playlist's track list, for
+   row-highlighting; -1 if the queue isn't pointed at the viewed playlist at all */
 function currentTrackIndex(){
-  return state.queuePos >= 0 ? state.queue[state.queuePos] : -1;
+  if (state.queuePos < 0 || !state.playlist) return -1;
+  const e = state.queue[state.queuePos];
+  return (e && e.plId === state.playlist.id) ? e.idx : -1;
 }
 
 function artworkUrls(videoId){
@@ -818,14 +1066,16 @@ const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('imp
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-const matchTag = $('matchTag'), matchTagText = $('matchTagText');
 const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
-const playlistListWrap = $('playlistListWrap'), plHeadName = $('plHeadName'), trackListEl = $('trackList'), reResolveBtn = $('reResolveBtn'), trackSortSel = $('trackSortSel');
+const playlistListWrap = $('playlistListWrap'), plHeadName = $('plHeadName'), trackListEl = $('trackList'), reResolveBtn = $('reResolveBtn'), trackSortSel = $('trackSortSel'), plPlayBtn = $('plPlayBtn');
 const artA = $('artA'), artB = $('artB');
 const seekTrack = $('seekTrack'), seekFill = $('seekFill'), seekKnob = $('seekKnob'), timeCur = $('timeCur'), timeDur = $('timeDur');
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn');
+const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
+const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
+const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
       miniPlayBtn = $('miniPlayBtn'), miniPlayIco = $('miniPlayIco'), miniLineFill = $('miniLineFill');
 const bottomNav = $('bottom-nav');
@@ -833,12 +1083,10 @@ const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = 
 const flowLayer = $('flow-layer'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
-const matchSheetScrim = $('match-sheet-scrim'), matchSheet = $('match-sheet'), matchChannel = $('matchChannel'),
-      matchTitleVal = $('matchTitleVal'), matchArtistVal = $('matchArtistVal'), matchLink = $('matchLink');
 const ambientA = $('ambient-a'), ambientB = $('ambient-b');
 const toastEl = $('toast');
 const clearLibraryBtn = $('clearLibraryBtn');
-const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSel = $('crossfadeDurSel'), crossfadeDurRow = $('crossfadeDurRow');
+const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlider'), crossfadeDurRow = $('crossfadeDurRow'), crossfadeDurVal = $('crossfadeDurVal');
 
 /* =========================================================================
    TOAST
@@ -923,13 +1171,25 @@ function renderLibrary(){
     const card = document.createElement('div');
     card.className = 'lib-card';
     const artDiv = document.createElement('div');
-    artDiv.className = 'art' + (withArt.length <= 1 ? ' single' : '');
-    if (!withArt.length){
-      artDiv.innerHTML = '';
-    } else if (withArt.length === 1){
-      const img = document.createElement('img'); attachArtworkFallback(img, withArt[0].videoId); artDiv.appendChild(img);
+    artDiv.className = 'art';
+    const gridFace = document.createElement('div');
+    gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
+    if (withArt.length === 1){
+      const img = document.createElement('img'); attachArtworkFallback(img, withArt[0].videoId); gridFace.appendChild(img);
     } else {
-      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t.videoId); artDiv.appendChild(img); });
+      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t.videoId); gridFace.appendChild(img); });
+    }
+    if (pl.image){
+      artDiv.classList.add('animated');
+      const spotifyFace = document.createElement('div');
+      spotifyFace.className = 'face spotify-face';
+      const img = document.createElement('img'); img.src = pl.image; img.loading = 'lazy';
+      spotifyFace.appendChild(img);
+      artDiv.appendChild(gridFace);
+      artDiv.appendChild(spotifyFace);
+    } else {
+      if (withArt.length <= 1) artDiv.classList.add('single');
+      while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove'; removeBtn.setAttribute('aria-label','Remove from library');
@@ -944,13 +1204,261 @@ function renderLibrary(){
   });
 }
 
+/* =========================================================================
+   CUSTOM PLAYLISTS (user-built, not backed by a Spotify id)
+   ========================================================================= */
+function createCustomPlaylist(name){
+  const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const pl = { id, type: 'custom', name, image: null, tracks: [], ts: Date.now() };
+  lsSet(LS_PL(id), pl);
+  saveToLibrary(id);
+  renderLibrary();
+  return pl;
+}
+
+// Pushes any number of tracks onto a playlist in one go, skipping ones
+// already present by videoId. Returns how many were actually added. Tracks
+// that failed to match a video (videoId null) are still recorded, same as
+// the main import flow, so they show up as "couldn't be matched" rows.
+function addTracksToPlaylist(playlistId, tracks){
+  const pl = getCachedPlaylist(playlistId);
+  if (!pl) return 0;
+  const known = new Set(pl.tracks.filter(t => t.videoId).map(t => t.videoId));
+  let added = 0;
+  tracks.forEach(t => {
+    if (t.videoId && known.has(t.videoId)) return;
+    if (t.videoId) known.add(t.videoId);
+    pl.tracks.push({ title: t.title, artist: t.artist, videoId: t.videoId || null, matchedTitle: t.matchedTitle || '', channel: t.channel || '', plays: 0, manual: true });
+    added++;
+  });
+  if (!added) return 0;
+  lsSet(LS_PL(playlistId), pl);
+  renderLibrary();
+  if (state.playlist && state.playlist.id === playlistId){ state.playlist = pl; renderTrackList(); }
+  return added;
+}
+
+function addTrackToPlaylist(playlistId, track){
+  const pl = getCachedPlaylist(playlistId);
+  if (!pl) return;
+  const added = addTracksToPlaylist(playlistId, [track]);
+  showToast(added ? 'Added to ' + pl.name : 'Already in playlist');
+}
+
+function removeTrackFromCustomPlaylist(index){
+  const pl = state.playlist;
+  if (!pl || pl.type !== 'custom') return;
+  pl.tracks.splice(index, 1);
+  state.queue = state.queue
+    .filter(e => !(e.plId === pl.id && e.idx === index))
+    .map(e => (e.plId === pl.id && e.idx > index) ? { plId: e.plId, idx: e.idx - 1 } : e);
+  if (state.queuePos >= state.queue.length) state.queuePos = state.queue.length - 1;
+  persistPlaylist();
+  renderTrackList();
+  renderQueuePanel();
+  renderLibrary();
+  showToast('Removed from playlist');
+}
+
+function openCreatePlaylistFlow(trackToAdd){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Name your playlist</div>' +
+    '<input id="plNameInput" type="text" placeholder="Playlist name" autocomplete="off" spellcheck="false" ' +
+      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
+    '<button class="btn-ghost is-active" id="plCreateBtn" style="width:100%">Create</button>';
+  const input = $('plNameInput');
+  input.focus();
+  function submit(){
+    const name = input.value.trim();
+    if (!name) return;
+    const pl = createCustomPlaylist(name);
+    if (trackToAdd){
+      addTrackToPlaylist(pl.id, trackToAdd);
+      closeImportOverlay();
+      showToast('Playlist created');
+    } else {
+      openAddLinksFlow(pl.id);
+    }
+  }
+  $('plCreateBtn').addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+}
+$('newPlaylistBtn').addEventListener('click', () => openCreatePlaylistFlow());
+
+function openAddToPlaylistPicker(track){
+  openImportOverlay();
+  const customs = getLibrary().map(id => getCachedPlaylist(id)).filter(p => p && p.type === 'custom');
+  const rowsHtml = customs.map(p =>
+    '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
+      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span>' +
+    '</button>'
+  ).join('');
+  importStage.innerHTML =
+    '<div class="step">Add to playlist</div>' +
+    '<div style="width:100%;max-height:260px;overflow-y:auto;margin-bottom:16px">' +
+      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
+    '</div>' +
+    '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
+  importStage.querySelectorAll('.pl-pick').forEach(btn => {
+    btn.addEventListener('click', () => { addTrackToPlaylist(btn.dataset.id, track); closeImportOverlay(); });
+  });
+  $('plNewFromPickerBtn').addEventListener('click', () => openCreatePlaylistFlow(track));
+}
+
+// Resolves ANY pasted link down to a flat list of playable tracks: a single
+// song (Spotify track / YouTube video) becomes a one-item list, a whole
+// source (Spotify playlist/album / YouTube playlist) becomes all of its
+// tracks. onProgress(done, total) fires per-track for multi-track sources,
+// same shape as beginImport's matching-stage callback.
+async function resolveTracksFromLink(input, onProgress){
+  const yt = parseYouTubeLink(input);
+  if (yt){
+    if (yt.type === 'video'){
+      const v = await fetchYouTubeVideo(yt.id);
+      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '' }];
+    }
+    const { tracks } = await fetchYouTubePlaylist(yt.id);
+    if (!tracks.length) throw new Error("That playlist has no videos.");
+    return tracks.map((t, i) => {
+      const r = { title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist };
+      if (onProgress) onProgress(i + 1, tracks.length);
+      return r;
+    });
+  }
+  const sp = parseSpotifyLink(input);
+  if (sp){
+    if (sp.type === 'track'){
+      const { title, artist } = await fetchSpotifyTrack(sp.id);
+      const match = await searchYouTube(title, artist);
+      if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' }];
+    }
+    const { tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
+    if (!tracks.length) throw new Error('That ' + sp.type + ' has no tracks.');
+    const resolved = [];
+    for (let i = 0; i < tracks.length; i++){
+      const t = tracks[i];
+      try{
+        const match = await searchYouTube(t.title, t.artist);
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' });
+      } catch(e){
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '' });
+      }
+      if (onProgress) onProgress(i + 1, tracks.length);
+      if (i < tracks.length - 1) await sleep(350);
+    }
+    return resolved;
+  }
+  const sc = parseSoundCloudLink(input);
+  if (sc){
+    const data = await fetchSoundCloudLink(sc.url);
+    if (data.kind === 'track'){
+      const match = await searchYouTube(data.title, data.artist);
+      if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
+      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' }];
+    }
+    if (!data.tracks.length) throw new Error('That playlist has no tracks.');
+    const resolved = [];
+    for (let i = 0; i < data.tracks.length; i++){
+      const t = data.tracks[i];
+      try{
+        const match = await searchYouTube(t.title, t.artist);
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' });
+      } catch(e){
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '' });
+      }
+      if (onProgress) onProgress(i + 1, data.tracks.length);
+      if (i < data.tracks.length - 1) await sleep(350);
+    }
+    return resolved;
+  }
+  const am = parseAppleMusicLink(input);
+  if (am){
+    if (am.type === 'track'){
+      const { title, artist } = await fetchAppleMusicTrack(am.storefront, am.id);
+      const match = await searchYouTube(title, artist);
+      if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' }];
+    }
+    const { tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
+    if (!tracks.length) throw new Error('That ' + am.type + ' has no tracks.');
+    const resolved = [];
+    for (let i = 0; i < tracks.length; i++){
+      const t = tracks[i];
+      try{
+        const match = await searchYouTube(t.title, t.artist);
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '' });
+      } catch(e){
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '' });
+      }
+      if (onProgress) onProgress(i + 1, tracks.length);
+      if (i < tracks.length - 1) await sleep(350);
+    }
+    return resolved;
+  }
+  throw new Error("That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link.");
+}
+
+// "+ Add song" opens this: paste one link at a time — a song, a playlist, or
+// an album — and each resolves straight into the target playlist without
+// leaving the overlay, so several links can be dropped in back to back.
+function openAddLinksFlow(playlistId){
+  const pl = getCachedPlaylist(playlistId);
+  if (!pl) return;
+  openImportOverlay();
+  let addedCount = 0;
+  renderStep();
+  function renderStep(){
+    importStage.innerHTML =
+      '<div class="step">Add to ' + escapeHtml(pl.name) + '</div>' +
+      '<input id="linkInput" type="text" placeholder="Paste a song, playlist, or album link" autocomplete="off" spellcheck="false" ' +
+        'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
+      '<div class="import-err" id="linkErr"></div>' +
+      '<button class="btn-ghost is-active" id="linkAddBtn" style="width:100%;margin-top:4px">Add</button>' +
+      (addedCount ? '<div style="margin-top:14px;font-size:12.5px;color:var(--faint)">' + addedCount + (addedCount === 1 ? ' song' : ' songs') + ' added so far.</div>' : '') +
+      '<button class="btn-ghost" id="linkDoneBtn" style="width:100%;margin-top:14px">Done</button>';
+    const input = $('linkInput');
+    input.focus();
+    async function submit(){
+      const val = input.value.trim();
+      if (!val) return;
+      const errEl = $('linkErr'), btn = $('linkAddBtn');
+      if (!errEl || !btn) return;
+      errEl.textContent = '';
+      btn.disabled = true; btn.textContent = 'Finding…';
+      try{
+        const tracks = await resolveTracksFromLink(val, (done, total) => {
+          if (total > 1 && $('linkAddBtn')) $('linkAddBtn').textContent = 'Matching ' + done + ' / ' + total + '…';
+        });
+        const added = addTracksToPlaylist(playlistId, tracks);
+        addedCount += added;
+        showToast(added ? 'Added ' + added + (added === 1 ? ' song' : ' songs') : 'Already in playlist');
+        renderStep();
+      } catch(e){
+        errEl.textContent = e.message || "Couldn't add that.";
+        btn.disabled = false; btn.textContent = 'Add';
+      }
+    }
+    $('linkAddBtn').addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter'){ e.preventDefault(); submit(); } });
+    $('linkDoneBtn').addEventListener('click', () => closeImportOverlay());
+  }
+}
+$('addSongBtn').addEventListener('click', () => { if (state.playlist) openAddLinksFlow(state.playlist.id); });
+
 function openPlaylist(id){
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
   loadPlaylistIntoPlayer(pl);
-  buildQueueFrom(0);
-  loadIndex(state.queuePos, true);
   setView('player');
+  /* if nothing is playing yet, opening a playlist starts it, same as before;
+     if something is already playing, this just browses the playlist so its
+     tracks can be queued without interrupting playback */
+  if (state.queuePos < 0){
+    buildQueueFrom(0, pl.id);
+    loadIndex(state.queuePos, true);
+  }
 }
 
 /* =========================================================================
@@ -1001,6 +1509,7 @@ function stageReady(pl){
       '<div class="name">' + escapeHtml(pl.name) + '</div>' +
       '<div class="meta">' + pl.tracks.length + (pl.tracks.length === 1 ? ' track' : ' tracks') + '</div>' +
       (missing ? '<div class="missing-note">' + missing + " couldn't be matched.</div>" : '') +
+      (pl.truncated ? '<div class="missing-note">YouTube only exposes this playlist&rsquo;s ~15 most recent videos.</div>' : '') +
       '<button class="big-play" id="importPlayBtn" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>' +
     '</div>';
   $('importPlayBtn').addEventListener('click', () => {
@@ -1026,7 +1535,7 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-async function beginImport(id, force){
+async function beginImport(id, force, type){
   importErr.textContent = '';
   if (!force){
     const cached = getCachedPlaylist(id);
@@ -1038,10 +1547,14 @@ async function beginImport(id, force){
       return;
     }
   }
+  if (!type){
+    const cached = getCachedPlaylist(id);
+    type = (cached && cached.type) || 'playlist';
+  }
   openImportOverlay();
   stageFinding();
   try{
-    const pl = await resolvePlaylist(id, (p) => {
+    const pl = await resolvePlaylist(id, type, (p) => {
       if (p.stage === 'matching'){
         if (!$('matchFill')) stageMatching(null, p.total);
         stageMatchingProgress(p.done, p.total, p.track);
@@ -1051,22 +1564,31 @@ async function beginImport(id, force){
     renderLibrary();
     stageReady(pl);
   } catch(e){
-    stageError(e.message || 'Something went wrong.', () => beginImport(id, true));
+    stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type));
   }
 }
 
 importForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const id = parsePlaylistId(urlInput.value);
-  if (!id){ importErr.textContent = "That doesn't look like a Spotify playlist link."; return; }
+  const parsed = parseImportLink(urlInput.value);
+  if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
   importErr.textContent = '';
   urlInput.value = '';
-  beginImport(id, false);
+  if (parsed.source === 'youtube'){
+    beginImport('yt:' + parsed.id, false, parsed.type === 'video' ? 'yt_video' : 'yt_playlist');
+  } else if (parsed.source === 'soundcloud'){
+    beginImport('sc:' + encodeURIComponent(parsed.id), false, parsed.type === 'track' ? 'sc_track' : 'sc_playlist');
+  } else if (parsed.source === 'applemusic'){
+    const type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
+    beginImport(parsed.storefront + ':' + parsed.id, false, type);
+  } else {
+    beginImport(parsed.id, false, parsed.type);
+  }
 });
 
 reResolveBtn.addEventListener('click', () => {
   if (!state.playlist) return;
-  beginImport(state.playlist.id, true);
+  beginImport(state.playlist.id, true, state.playlist.type);
 });
 
 clearLibraryBtn.addEventListener('click', () => {
@@ -1076,11 +1598,16 @@ clearLibraryBtn.addEventListener('click', () => {
   showToast('Library cleared');
 });
 
+function fmtCrossfadeMs(ms){
+  const s = ms / 1000;
+  return (s % 1 === 0 ? s.toFixed(0) : s.toFixed(1)) + 's';
+}
 function renderCrossfadeUI(){
   crossfadeBtn.textContent = crossfadePrefs.on ? 'On' : 'Off';
   crossfadeBtn.classList.toggle('is-active', crossfadePrefs.on);
-  crossfadeDurSel.value = String(crossfadePrefs.ms);
-  crossfadeDurSel.disabled = !crossfadePrefs.on;
+  crossfadeDurSlider.value = String(crossfadePrefs.ms);
+  crossfadeDurSlider.disabled = !crossfadePrefs.on;
+  crossfadeDurVal.textContent = fmtCrossfadeMs(crossfadePrefs.ms);
   crossfadeDurRow.style.opacity = crossfadePrefs.on ? '1' : '.45';
 }
 crossfadeBtn.addEventListener('click', () => {
@@ -1089,8 +1616,9 @@ crossfadeBtn.addEventListener('click', () => {
   lsSet(LS_CROSSFADE, crossfadePrefs);
   renderCrossfadeUI();
 });
-crossfadeDurSel.addEventListener('change', () => {
-  crossfadePrefs.ms = parseInt(crossfadeDurSel.value, 10) || 4000;
+crossfadeDurSlider.addEventListener('input', () => {
+  crossfadePrefs.ms = parseInt(crossfadeDurSlider.value, 10) || 4000;
+  crossfadeDurVal.textContent = fmtCrossfadeMs(crossfadePrefs.ms);
   lsSet(LS_CROSSFADE, crossfadePrefs);
 });
 renderCrossfadeUI();
@@ -1108,8 +1636,15 @@ function loadPlaylistIntoPlayer(pl){
   playlistListWrap.hidden = false;
   state.sortMode = lsGet(LS_SORT(pl.id), 'custom');
   trackSortSel.value = state.sortMode;
+  reResolveBtn.style.display = pl.type === 'custom' ? 'none' : '';
   renderTrackList();
 }
+
+plPlayBtn.addEventListener('click', () => {
+  if (!state.playlist) return;
+  buildQueueFrom(0, state.playlist.id);
+  loadIndex(state.queuePos, true);
+});
 
 function computeViewOrder(pl){
   const order = pl.tracks.map((t, i) => i);
@@ -1127,7 +1662,12 @@ function computeViewOrder(pl){
 function renderTrackList(){
   trackListEl.innerHTML = '';
   const pl = state.playlist;
-  if (!pl || !pl.tracks.length){ trackListEl.innerHTML = '<div class="empty-lib">No tracks found.</div>'; return; }
+  if (!pl || !pl.tracks.length){
+    trackListEl.innerHTML = '<div class="empty-lib">' +
+      (pl && pl.type === 'custom' ? 'No tracks yet.<br>Browse a playlist and add tracks here.' : 'No tracks found.') +
+      '</div>';
+    return;
+  }
   trackListEl.classList.toggle('sort-manual', state.sortMode === 'custom');
   const order = computeViewOrder(pl);
   order.forEach((i, pos) => {
@@ -1166,15 +1706,24 @@ function renderTrackList(){
       const actions = document.createElement('div'); actions.className = 'row-actions';
       const nextBtnEl = document.createElement('button'); nextBtnEl.title = 'Play next'; nextBtnEl.setAttribute('aria-label','Play next');
       nextBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
-      nextBtnEl.addEventListener('click', (e) => { e.stopPropagation(); queuePlayNext(i); showToast('Playing next'); });
+      nextBtnEl.addEventListener('click', (e) => { e.stopPropagation(); queuePlayNext(i, pl.id); showToast('Playing next'); });
       const addBtnEl = document.createElement('button'); addBtnEl.title = 'Add to queue'; addBtnEl.setAttribute('aria-label','Add to queue');
       addBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10V4h-2v6H6v2h6v6h2v-6h6v-2z"/></svg>';
-      addBtnEl.addEventListener('click', (e) => { e.stopPropagation(); queueAddToEnd(i); showToast('Added to queue'); });
-      actions.appendChild(nextBtnEl); actions.appendChild(addBtnEl);
+      addBtnEl.addEventListener('click', (e) => { e.stopPropagation(); queueAddToEnd(i, pl.id); showToast('Added to queue'); });
+      const addToPlBtnEl = document.createElement('button'); addToPlBtnEl.title = 'Add to playlist'; addToPlBtnEl.setAttribute('aria-label','Add to playlist');
+      addToPlBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zM3 16h8v-2H3v2zm0-5h12v-2H3v2zm15 5v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>';
+      addToPlBtnEl.addEventListener('click', (e) => { e.stopPropagation(); openAddToPlaylistPicker(t); });
+      actions.appendChild(nextBtnEl); actions.appendChild(addBtnEl); actions.appendChild(addToPlBtnEl);
+      if (pl.type === 'custom'){
+        const removeFromPlBtnEl = document.createElement('button'); removeFromPlBtnEl.title = 'Remove from playlist'; removeFromPlBtnEl.setAttribute('aria-label','Remove from playlist');
+        removeFromPlBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>';
+        removeFromPlBtnEl.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
+        actions.appendChild(removeFromPlBtnEl);
+      }
       row.appendChild(actions);
       row.addEventListener('click', (e) => {
         if (e.target === handle || handle.contains(e.target)) return;
-        buildQueueFrom(i); loadIndex(state.queuePos, true);
+        buildQueueFrom(i, pl.id); loadIndex(state.queuePos, true);
       });
     }
     trackListEl.appendChild(row);
@@ -1194,7 +1743,7 @@ function reorderPlaylistTracks(fromIdx, toIdx){
   };
   const [item] = pl.tracks.splice(fromIdx, 1);
   pl.tracks.splice(toIdx, 0, item);
-  state.queue = state.queue.map(remap);
+  state.queue = state.queue.map(e => e.plId === pl.id ? { plId: e.plId, idx: remap(e.idx) } : e);
   persistPlaylist();
   renderTrackList();
   renderQueuePanel();
@@ -1261,16 +1810,21 @@ function updatePlaylistCtx(){
    QUEUE ENGINE
    NOW = queue[queuePos]; upcoming = queue[queuePos+1 ...]
    ========================================================================= */
-function validIndices(){
-  return state.playlist.tracks.map((t,i) => i).filter(i => state.playlist.tracks[i].videoId);
+function validIndices(pl){
+  return pl.tracks.map((t,i) => i).filter(i => pl.tracks[i].videoId);
 }
 
-function buildQueueFrom(startIndex){
-  const valid = validIndices();
+/* builds a fresh queue out of a single playlist, starting at startIndex.
+   plId defaults to the playlist currently being viewed. */
+function buildQueueFrom(startIndex, plId){
+  plId = plId || (state.playlist && state.playlist.id);
+  const pl = playlistById(plId);
+  if (!pl) return;
+  const valid = validIndices(pl);
   const startPos = valid.indexOf(startIndex);
   let order = startPos === -1 ? valid : valid.slice(startPos).concat(valid.slice(0, startPos));
   if (state.shuffle) order = shuffleTail(order, 1);
-  state.queue = order;
+  state.queue = order.map(idx => ({ plId, idx }));
   state.queuePos = 0;
   renderQueuePanel();
 }
@@ -1285,15 +1839,19 @@ function shuffleTail(arr, keepFromStart){
   return head.concat(tail);
 }
 
-function queuePlayNext(trackIndex){
-  if (state.queuePos < 0) { buildQueueFrom(trackIndex); loadIndex(state.queuePos, true); return; }
-  state.queue.splice(state.queuePos + 1, 0, trackIndex);
+/* trackIndex/plId identify a track in ANY playlist (not just the one being
+   viewed), so a track from playlist B can be queued while playlist A plays */
+function queuePlayNext(trackIndex, plId){
+  plId = plId || (state.playlist && state.playlist.id);
+  if (state.queuePos < 0) { buildQueueFrom(trackIndex, plId); loadIndex(state.queuePos, true); return; }
+  state.queue.splice(state.queuePos + 1, 0, { plId, idx: trackIndex });
   renderQueuePanel();
   schedulePreload(state.queuePos);
 }
-function queueAddToEnd(trackIndex){
-  if (state.queuePos < 0) { buildQueueFrom(trackIndex); loadIndex(state.queuePos, true); return; }
-  state.queue.push(trackIndex);
+function queueAddToEnd(trackIndex, plId){
+  plId = plId || (state.playlist && state.playlist.id);
+  if (state.queuePos < 0) { buildQueueFrom(trackIndex, plId); loadIndex(state.queuePos, true); return; }
+  state.queue.push({ plId, idx: trackIndex });
   renderQueuePanel();
   schedulePreload(state.queuePos);
 }
@@ -1329,12 +1887,16 @@ function toggleShuffle(){
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (state.shuffle){
     state.queue = state.queue.slice(0, state.queuePos + 1).concat(shuffleTail(upcoming, 0));
-  } else {
-    const valid = validIndices();
-    const played = new Set(state.queue.slice(0, state.queuePos + 1));
-    const rest = valid.filter(i => !played.has(i));
+  } else if (state.playlist && upcoming.every(e => e.plId === state.playlist.id)){
+    /* everything upcoming came from the viewed playlist: restore its natural order */
+    const pl = state.playlist;
+    const valid = validIndices(pl);
+    const played = new Set(state.queue.slice(0, state.queuePos + 1).filter(e => e.plId === pl.id).map(e => e.idx));
+    const rest = valid.filter(i => !played.has(i)).map(idx => ({ plId: pl.id, idx }));
     state.queue = state.queue.slice(0, state.queuePos + 1).concat(rest);
   }
+  /* otherwise the queue mixes tracks manually added from other playlists —
+     there's no single canonical order to restore, so leave it as-is */
   renderQueuePanel();
   schedulePreload(state.queuePos);
 }
@@ -1348,11 +1910,12 @@ function cycleRepeat(){
 
 function renderQueuePanel(){
   queueBody.innerHTML = '';
-  const pl = state.playlist;
-  if (!pl || state.queuePos < 0){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
+  if (state.queuePos < 0 || !state.queue.length){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
 
-  const nowIdx = state.queue[state.queuePos];
-  const now = pl.tracks[nowIdx];
+  const nowEntry = state.queue[state.queuePos];
+  const nowPl = playlistById(nowEntry.plId);
+  const now = nowPl && nowPl.tracks[nowEntry.idx];
+  if (!now){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
   const nowLabel = document.createElement('div'); nowLabel.className = 'q-section-label'; nowLabel.textContent = 'Now';
   const nowRow = document.createElement('div'); nowRow.className = 'q-now';
   const nowImg = document.createElement('img'); attachArtworkFallback(nowImg, now.videoId);
@@ -1371,8 +1934,11 @@ function renderQueuePanel(){
     return;
   }
 
-  upcoming.forEach((trackIdx, i) => {
+  upcoming.forEach((entry, i) => {
     const pos = state.queuePos + 1 + i;
+    const pl = playlistById(entry.plId);
+    const t = pl && pl.tracks[entry.idx];
+    if (!t) return;
     if (i === 0){
       const lbl = document.createElement('div'); lbl.className = 'q-section-label'; lbl.textContent = 'Next';
       queueBody.appendChild(lbl);
@@ -1380,7 +1946,6 @@ function renderQueuePanel(){
       const lbl = document.createElement('div'); lbl.className = 'q-section-label'; lbl.textContent = 'Later';
       queueBody.appendChild(lbl);
     }
-    const t = pl.tracks[trackIdx];
     const row = document.createElement('div');
     row.className = 'q-row'; row.dataset.pos = pos;
 
@@ -1390,7 +1955,10 @@ function renderQueuePanel(){
     const meta = document.createElement('div'); meta.className = 'meta';
     meta.innerHTML = '<div class="title"></div><div class="artist"></div>';
     meta.querySelector('.title').textContent = t.title;
-    meta.querySelector('.artist').textContent = t.artist;
+    /* show which playlist a track came from when it's not the one being viewed,
+       so it's clear the queue is mixing sources */
+    const showSource = !state.playlist || entry.plId !== state.playlist.id;
+    meta.querySelector('.artist').textContent = t.artist + (showSource ? ' · ' + pl.name : '');
     const remove = document.createElement('button'); remove.className = 'remove'; remove.setAttribute('aria-label','Remove from queue');
     remove.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 
@@ -1535,7 +2103,7 @@ queueScrim.addEventListener('click', closeQueuePanel);
    ========================================================================= */
 const UNMUTE_DELAY_MS = 5000;
 
-function makeDeck(id){ return { id, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, pos: -1, fadeRAF: null }; }
+function makeDeck(id){ return { id, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, pos: -1, fadeTimer: null }; }
 const decks = [ makeDeck('yt-deck-a'), makeDeck('yt-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
@@ -1547,8 +2115,10 @@ let crossfadeTriggered = false;
 let swapInProgress = false;
 
 function trackAt(pos){
-  if (!state.playlist || pos < 0 || pos >= state.queue.length) return null;
-  return state.playlist.tracks[state.queue[pos]];
+  if (pos < 0 || pos >= state.queue.length) return null;
+  const e = state.queue[pos];
+  const pl = playlistById(e.plId);
+  return pl ? (pl.tracks[e.idx] || null) : null;
 }
 function computeNextPos(fromPos, forPreload){
   if (forPreload && state.repeat === 'one') return fromPos;
@@ -1559,7 +2129,7 @@ function computeNextPos(fromPos, forPreload){
 
 function resetDeck(deck){
   if (deck.unmuteTimer){ clearTimeout(deck.unmuteTimer); deck.unmuteTimer = null; }
-  if (deck.fadeRAF){ cancelAnimationFrame(deck.fadeRAF); deck.fadeRAF = null; }
+  if (deck.fadeTimer){ clearInterval(deck.fadeTimer); deck.fadeTimer = null; }
   deck.confirmed = false;
   deck.pos = -1;
   deck.pendingVideoId = null;
@@ -1590,20 +2160,31 @@ function onDeckStateChange(deck, e){
   }
 }
 
+// EBBLESS only plays audio (artwork is rendered separately) so every deck is
+// pinned to YouTube's lowest video quality — it saves bandwidth/load time
+// with zero visible/audible cost. YouTube treats this as advisory, so we
+// re-force it on every ready/quality-change/load rather than setting once.
+const LOWEST_QUALITY = 'tiny';
+function forceLowestQuality(deck){
+  if (deck.player && deck.player.setPlaybackQuality) deck.player.setPlaybackQuality(LOWEST_QUALITY);
+}
+
 function createDeckPlayer(deck, videoId){
   deck.player = new YT.Player(deck.id, {
     videoId: videoId,
-    playerVars: { autoplay: 1, playsinline: 1, mute: 1 },
+    playerVars: { autoplay: 1, playsinline: 1, mute: 1, vq: LOWEST_QUALITY },
     events: {
       onReady: function(){
         deck.ready = true;
         deck.player.setVolume(deck === activeDeck() ? lsGet(LS_VOL, 80) : 0);
         if (deck === activeDeck()) setVolumeUI(lsGet(LS_VOL, 80));
-        if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById(v); }
+        forceLowestQuality(deck);
+        if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v, suggestedQuality: LOWEST_QUALITY }); }
         deck.confirmed = false;
         deck.unmuteTimer = setTimeout(() => onDeckConfirmed(deck), UNMUTE_DELAY_MS);
       },
-      onStateChange: function(e){ onDeckStateChange(deck, e); }
+      onStateChange: function(e){ onDeckStateChange(deck, e); },
+      onPlaybackQualityChange: function(){ forceLowestQuality(deck); }
     }
   });
 }
@@ -1614,7 +2195,8 @@ function loadIntoDeck(deck, videoId, isActive){
   if (deck.unmuteTimer) clearTimeout(deck.unmuteTimer);
   deck.confirmed = false;
   deck.player.mute();
-  deck.player.loadVideoById(videoId);
+  deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
+  forceLowestQuality(deck);
   deck.unmuteTimer = setTimeout(() => onDeckConfirmed(deck), UNMUTE_DELAY_MS);
 }
 
@@ -1638,6 +2220,183 @@ function setPlayingUI(isPlaying){
   highlightActiveRow();
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  vizSetPlaying(isPlaying);
+}
+
+/* =========================================================================
+   VISUALIZER
+   YouTube's iframe audio can't be tapped by the Web Audio API (cross-origin),
+   so there's no real frequency data to read. Instead this drives a bar
+   visualizer off the transport clock: each bar has its own frequency/phase,
+   and playing state gates whether it's animating or settling flat. It reads
+   as audio-reactive without pretending to analyze the actual signal.
+   ========================================================================= */
+let vizPlaying = false;
+let vizRAF = null;
+const vizCtx2d = vizCanvas.getContext('2d');
+const VIZ_BARS = 40;
+const vizBarPhase = Array.from({ length: VIZ_BARS }, () => Math.random() * Math.PI * 2);
+const vizBarFreq = Array.from({ length: VIZ_BARS }, () => 0.6 + Math.random() * 1.8);
+const vizBarLevel = new Array(VIZ_BARS).fill(0);
+
+function vizResize(){
+  const rect = artworkWrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  vizCanvas.width = Math.round(rect.width * dpr);
+  vizCanvas.height = Math.round(rect.height * dpr);
+  vizCtx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function vizDraw(t){
+  const w = vizCanvas.width / (window.devicePixelRatio || 1);
+  const h = vizCanvas.height / (window.devicePixelRatio || 1);
+  vizCtx2d.clearRect(0, 0, w, h);
+  const gap = w / VIZ_BARS;
+  const barW = gap * 0.55;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e0b26a';
+  for (let i = 0; i < VIZ_BARS; i++){
+    const target = vizPlaying
+      ? 0.12 + 0.44 * (0.5 + 0.5 * Math.sin(t * 0.0016 * vizBarFreq[i] + vizBarPhase[i])) +
+        0.14 * (0.5 + 0.5 * Math.sin(t * 0.0037 * vizBarFreq[i] * 1.7 + vizBarPhase[i] * 2))
+      : 0.04;
+    vizBarLevel[i] += (target - vizBarLevel[i]) * (vizPlaying ? 0.18 : 0.08);
+    const barH = Math.max(2, vizBarLevel[i] * h);
+    const x = i * gap + (gap - barW) / 2;
+    vizCtx2d.fillStyle = accent;
+    vizCtx2d.globalAlpha = 0.85;
+    vizCtx2d.fillRect(x, h - barH, barW, barH);
+  }
+  vizRAF = requestAnimationFrame(vizDraw);
+}
+
+function vizStart(){
+  if (vizRAF) return;
+  vizResize();
+  vizRAF = requestAnimationFrame(vizDraw);
+}
+function vizStop(){
+  if (vizRAF){ cancelAnimationFrame(vizRAF); vizRAF = null; }
+}
+function vizSetPlaying(isPlaying){
+  vizPlaying = isPlaying;
+}
+/* =========================================================================
+   VISUAL MODE — album art / visualizer / lyrics, one at a time
+   ========================================================================= */
+let visualMode = lsGet(LS_VIZ, 'art');
+if (visualMode !== 'art' && visualMode !== 'viz' && visualMode !== 'lyrics') visualMode = 'art';
+
+function applyVisualMode(){
+  visualTabs.forEach(b => b.classList.toggle('is-active', b.dataset.mode === visualMode));
+  artworkWrap.dataset.mode = visualMode;
+  artworkWrap.classList.toggle('mode-lyrics', visualMode === 'lyrics');
+  vizCanvas.classList.toggle('is-active', visualMode === 'viz');
+  lyricsWrap.classList.toggle('is-active', visualMode === 'lyrics');
+  if (visualMode === 'viz') vizStart(); else vizStop();
+  if (visualMode === 'lyrics'){
+    maybeLoadLyrics();
+    const ad = activeDeck();
+    updateLyricsHighlight(ad.player && ad.player.getCurrentTime ? (ad.player.getCurrentTime() || 0) : 0);
+  }
+}
+function setVisualMode(mode){
+  if (mode === visualMode) return;
+  visualMode = mode;
+  lsSet(LS_VIZ, mode);
+  applyVisualMode();
+}
+visualTabs.forEach(btn => btn.addEventListener('click', () => setVisualMode(btn.dataset.mode)));
+window.addEventListener('resize', () => { if (visualMode === 'viz') vizResize(); });
+applyVisualMode();
+
+/* =========================================================================
+   LYRICS
+   Fetched from the worker (/lyrics), which times YouTube's caption track
+   against Genius's lyric text - see worker/src/index.js for how the two are
+   cross-referenced. Cached per videoId so switching tabs back and forth
+   doesn't re-fetch.
+   ========================================================================= */
+const lyricsCache = new Map();
+let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
+
+async function fetchLyrics(t){
+  if (lyricsCache.has(t.videoId)) return lyricsCache.get(t.videoId);
+  const params = new URLSearchParams({ videoId: t.videoId, title: t.title || '', artist: t.artist || '' });
+  const res = await fetch(BACKEND + '/lyrics?' + params.toString());
+  if (!res.ok) throw new Error('lyrics fetch failed');
+  const data = await res.json();
+  lyricsCache.set(t.videoId, data);
+  return data;
+}
+
+function renderLyrics(data){
+  lyricsState = { videoId: data._videoId, lines: data.lines || [], synced: !!data.synced, activeIdx: -1 };
+  lyricsScroller.innerHTML = '';
+  if (!lyricsState.lines.length){
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">No lyrics found for this track.</div>';
+    return;
+  }
+  lyricsState.lines.forEach(ln => {
+    const div = document.createElement('div');
+    div.className = 'lyric-line';
+    div.textContent = ln.text;
+    if (lyricsState.synced && ln.t != null){
+      div.dataset.time = ln.t;
+      div.addEventListener('click', () => {
+        const ad = activeDeck();
+        if (ad.player && ad.player.seekTo) ad.player.seekTo(ln.t, true);
+      });
+    }
+    lyricsScroller.appendChild(div);
+  });
+  if (!lyricsState.synced){
+    const note = document.createElement('div');
+    note.className = 'lyrics-empty';
+    note.style.marginTop = '18px';
+    note.textContent = 'Lyrics found, but no synced timing for this track.';
+    lyricsScroller.appendChild(note);
+  }
+}
+
+function loadLyricsForTrack(t){
+  lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
+  lyricsScroller.innerHTML = '<div class="lyrics-empty">Loading lyrics…</div>';
+  fetchLyrics(t).then(data => {
+    const ct = currentTrack();
+    if (!ct || ct.videoId !== t.videoId) return;
+    renderLyrics(Object.assign({ _videoId: t.videoId }, data));
+  }).catch(() => {
+    const ct = currentTrack();
+    if (!ct || ct.videoId !== t.videoId) return;
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">Couldn\'t load lyrics for this track.</div>';
+  });
+}
+
+function maybeLoadLyrics(){
+  const t = currentTrack();
+  if (!t || !t.videoId) return;
+  if (lyricsState.videoId === t.videoId) return;
+  loadLyricsForTrack(t);
+}
+
+function updateLyricsHighlight(cur){
+  if (visualMode !== 'lyrics' || !lyricsState.synced || !lyricsState.lines.length) return;
+  const lines = lyricsState.lines;
+  let idx = -1;
+  for (let i = 0; i < lines.length; i++){
+    if (lines[i].t != null && lines[i].t <= cur) idx = i; else break;
+  }
+  if (idx === lyricsState.activeIdx) return;
+  const prevEl = lyricsState.activeIdx >= 0 ? lyricsScroller.children[lyricsState.activeIdx] : null;
+  if (prevEl) prevEl.classList.remove('is-current');
+  lyricsState.activeIdx = idx;
+  if (idx >= 0){
+    const el = lyricsScroller.children[idx];
+    if (el){
+      el.classList.add('is-current');
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
 }
 
 function updateTrackMetaUI(t){
@@ -1647,12 +2406,6 @@ function updateTrackMetaUI(t){
   flowArtist.textContent = t.artist;
   miniTitle.textContent = t.title;
   miniArtist.textContent = t.artist;
-  if (t.matchedTitle || t.channel){
-    matchTag.hidden = false;
-    matchTagText.textContent = 'Matched on YouTube';
-  } else {
-    matchTag.hidden = true;
-  }
   updateMediaSessionMeta(t);
 }
 
@@ -1669,37 +2422,46 @@ function updateMediaSessionMeta(t){
   });
 }
 
-function bumpPlayCount(t){
+/* bumps and persists the play count for the queue entry's OWN playlist, even
+   when that isn't the playlist currently being viewed */
+function bumpPlayCount(entry){
+  if (!entry) return;
+  const pl = playlistById(entry.plId);
+  const t = pl && pl.tracks[entry.idx];
   if (!t) return;
   t.plays = (t.plays || 0) + 1;
-  persistPlaylist();
+  persistPlaylistObj(pl);
+  if (pl !== state.playlist) return;
   if (state.sortMode === 'plays_desc' || state.sortMode === 'plays_asc'){
     renderTrackList();
   } else {
-    const idx = state.playlist ? state.playlist.tracks.indexOf(t) : -1;
-    const row = idx >= 0 ? trackListEl.querySelector('.track-row[data-index="' + idx + '"]') : null;
+    const row = trackListEl.querySelector('.track-row[data-index="' + entry.idx + '"]');
     const playsEl = row && row.querySelector('.plays');
     if (playsEl) playsEl.textContent = t.plays + (t.plays === 1 ? ' play' : ' plays');
   }
 }
 
-function reflectCurrentTrackUI(t){
+function reflectCurrentTrackUI(pos){
+  const entry = state.queue[pos];
+  const t = trackAt(pos);
+  if (!t) return;
   updateTrackMetaUI(t);
   swapPlayerArt(t.videoId);
   swapFlowArt(t.videoId);
   setAmbient(t.videoId);
   attachArtworkFallback(miniArt, t.videoId);
-  bumpPlayCount(t);
+  bumpPlayCount(entry);
   highlightActiveRow();
   renderQueuePanel();
   persistResume();
+  if (visualMode === 'lyrics') maybeLoadLyrics();
 }
 
 function cancelCrossfade(){
   if (!swapInProgress) return;
   swapInProgress = false;
   const ad = activeDeck(), nd = standbyDeck();
-  if (ad.fadeRAF){ cancelAnimationFrame(ad.fadeRAF); ad.fadeRAF = null; }
+  if (ad.fadeTimer){ clearInterval(ad.fadeTimer); ad.fadeTimer = null; }
   const vol = lsGet(LS_VOL, 80);
   if (ad.player && ad.player.setVolume) ad.player.setVolume(vol);
   if (nd.player){
@@ -1716,7 +2478,7 @@ function promoteDeckDirect(nd, pos, shouldPlay){
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
-  reflectCurrentTrackUI(trackAt(pos));
+  reflectCurrentTrackUI(pos);
 
   const vol = lsGet(LS_VOL, 80);
   nd.player.setVolume(vol);
@@ -1747,27 +2509,25 @@ function runCrossfade(nd, nextPos){
   if (nd.player.unMute) nd.player.unMute();
   nd.player.playVideo();
   const durationMs = crossfadePrefs.ms;
-  const start = performance.now();
-  function tick(now){
-    const p = Math.min(1, (now - start) / durationMs);
+  const start = Date.now();
+  old.fadeTimer = setInterval(() => {
+    const p = Math.min(1, (Date.now() - start) / durationMs);
     if (old.player && old.player.setVolume) old.player.setVolume(Math.round(targetVol * (1 - p)));
     if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(targetVol * p));
-    if (p < 1){ old.fadeRAF = requestAnimationFrame(tick); }
-    else finishCrossfade(old, nd, nextPos, targetVol);
-  }
-  old.fadeRAF = requestAnimationFrame(tick);
+    if (p >= 1){ clearInterval(old.fadeTimer); old.fadeTimer = null; finishCrossfade(old, nd, nextPos, targetVol); }
+  }, 100);
 }
 
 function finishCrossfade(old, nd, nextPos, targetVol){
   swapInProgress = false;
-  old.fadeRAF = null;
+  old.fadeTimer = null;
   if (old.player && old.player.pauseVideo) old.player.pauseVideo();
   if (nd.player && nd.player.setVolume) nd.player.setVolume(targetVol);
   activeIdx = 1 - activeIdx;
   state.queuePos = nextPos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
-  reflectCurrentTrackUI(trackAt(nextPos));
+  reflectCurrentTrackUI(nextPos);
   setPlayingUI(true);
   resetDeck(old);
   schedulePreload(nextPos);
@@ -1790,7 +2550,7 @@ function loadIndex(pos, autoplay){
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
-  reflectCurrentTrackUI(t);
+  reflectCurrentTrackUI(pos);
 
   const ad = activeDeck();
   if (!ad.player){
@@ -1871,6 +2631,7 @@ function updateSeekUI(){
   timeCur.textContent = formatTime(cur); timeDur.textContent = formatTime(dur);
   flowTimeCur.textContent = formatTime(cur); flowTimeDur.textContent = formatTime(dur);
   miniLineFill.style.width = pct + '%';
+  updateLyricsHighlight(cur);
   maybeStartCrossfade(cur, dur);
 }
 function seekFromClientX(trackEl, clientX){
@@ -1920,8 +2681,9 @@ ensureYouTubeApi();
    RESUME (continuity across reloads)
    ========================================================================= */
 function persistResume(){
-  if (!state.playlist) return;
-  lsSet(LS_RESUME, { playlistId: state.playlist.id, trackIndex: currentTrackIndex() });
+  const entry = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  if (!entry) return;
+  lsSet(LS_RESUME, { playlistId: entry.plId, trackIndex: entry.idx });
 }
 function tryResume(){
   const r = lsGet(LS_RESUME, null);
@@ -1929,7 +2691,7 @@ function tryResume(){
   const pl = getCachedPlaylist(r.playlistId);
   if (!pl) return;
   loadPlaylistIntoPlayer(pl);
-  buildQueueFrom(r.trackIndex != null ? r.trackIndex : 0);
+  buildQueueFrom(r.trackIndex != null ? r.trackIndex : 0, pl.id);
   updateTrackMetaUI(currentTrack());
   swapPlayerArt(currentTrack().videoId);
   swapFlowArt(currentTrack().videoId);
@@ -1995,25 +2757,12 @@ flowLayer.addEventListener('click', (e) => { if (e.target === flowLayer) armFlow
   });
 })();
 
-/* =========================================================================
-   MATCH DETAILS SHEET
-   ========================================================================= */
-function openMatchSheet(){
-  const t = currentTrack();
-  if (!t) return;
-  matchChannel.textContent = t.channel || '—';
-  matchTitleVal.textContent = t.matchedTitle || '—';
-  matchArtistVal.textContent = t.artist || '—';
-  matchLink.href = 'https://www.youtube.com/watch?v=' + t.videoId;
-  matchSheetScrim.classList.add('is-open');
-  matchSheet.classList.add('is-open');
-}
-function closeMatchSheet(){
-  matchSheetScrim.classList.remove('is-open');
-  matchSheet.classList.remove('is-open');
-}
-matchTag.addEventListener('click', openMatchSheet);
-matchSheetScrim.addEventListener('click', closeMatchSheet);
+/* tap album art -> play/pause */
+(function(){
+  function toggleActivePlayback(){ if (state.queuePos >= 0) playIndex(state.queuePos); }
+  $('artworkWrap').addEventListener('click', toggleActivePlayback);
+  $('flowArtWrap').addEventListener('click', toggleActivePlayback);
+})();
 
 /* =========================================================================
    MINI BAR TAP -> OPEN PLAYER
@@ -2028,8 +2777,6 @@ renderQueuePanel();
 setView('library');
 tryResume();
 if (!currentTrack()) updateMiniBarVisibility();
-
-window.__ebbless_debug = { state, decks, crossfadePrefs, get activeIdx(){ return activeIdx; }, get swapInProgress(){ return swapInProgress; } };
 
 })();
 </script>
