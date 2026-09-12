@@ -13,6 +13,10 @@ playlist and wrapped as a standalone app.
 - **`worker/`** — a small Cloudflare Worker at
   `https://spotify-youtube-search.malgriot.workers.dev` that does the actual
   Spotify + YouTube fetching server-side.
+- **`brand/`** — brand guidelines. [`brand/brand-guidelines.html`](brand/brand-guidelines.html)
+  is the visual brand manual; [`brand/BRAND.md`](brand/BRAND.md) is the
+  condensed source of truth for developers and future agents — read it
+  before changing copy, color, type, or the logo.
 
 ## Why there's a backend
 

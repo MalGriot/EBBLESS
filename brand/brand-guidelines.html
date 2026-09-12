@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EBBLESS — Brand Guidelines</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<meta name="description" content="EBBLESS brand guidelines: music without the ebb.">
+<style>
+  :root{
+    --bg:#121212; --panel:#181818; --panel-2:#202020; --text:#f2f2f2; --faint:#9a9a9a;
+    --accent:#e0b26a; --accent-dim:#a66e2e; --good:#2fbf71; --bad:#e0645e; --border:rgba(255,255,255,.08);
+    --serif-line: 1px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--accent);color:#121212}
+
+  a{color:var(--accent)}
+
+  /* ---------- layout shell ---------- */
+  .nav{
+    position:sticky;top:0;z-index:50;display:flex;gap:22px;align-items:center;
+    padding:14px 28px;background:rgba(18,18,18,.85);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap;
+  }
+  .nav .navmark{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:-.02em;font-size:14px;margin-right:8px;flex:none}
+  .nav a{color:var(--faint);text-decoration:none;font-size:12.5px;font-weight:500;transition:color .2s ease}
+  .nav a:hover{color:var(--text)}
+
+  section{max-width:920px;margin:0 auto;padding:96px 28px;border-bottom:1px solid var(--border)}
+  section:last-of-type{border-bottom:none}
+  section.hero{padding-top:120px;padding-bottom:120px;max-width:100%;text-align:left}
+  .hero-inner{max-width:920px;margin:0 auto}
+
+  .kicker{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 14px}
+  h1{font-size:clamp(40px,8vw,88px);line-height:.98;letter-spacing:-.02em;font-weight:700;margin:0 0 22px}
+  h2{font-size:clamp(24px,3.4vw,34px);line-height:1.1;letter-spacing:-.01em;font-weight:700;margin:0 0 8px}
+  h3{font-size:16px;font-weight:600;margin:0 0 10px;color:var(--text)}
+  .section-index{font-size:12px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;font-weight:600}
+  p.lead{font-size:19px;line-height:1.55;color:var(--text);max-width:640px;margin:0 0 8px}
+  p{font-size:14.5px;line-height:1.65;color:var(--faint);max-width:640px}
+  p.tight{max-width:none}
+  .grid{display:grid;gap:16px}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:760px){ .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr} .nav{gap:16px} section{padding:64px 20px} }
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px}
+  .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600}
+
+  /* ---------- hero ---------- */
+  .hero{background:
+      radial-gradient(60% 80% at 15% 0%, rgba(224,178,106,.08), transparent 60%),
+      var(--bg);
+    position:relative;overflow:hidden}
+  .hero-line{width:100%;height:64px;margin:8px 0 40px}
+  .hero-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+  .tag{font-size:12px;color:var(--faint);border:1px solid var(--border);padding:6px 12px;border-radius:100px}
+
+  /* ---------- flowing line, reused motif ---------- */
+  .flow-svg path{stroke:var(--accent);fill:none;stroke-linecap:round}
+  .flow-loop path{
+    stroke-dasharray:600;stroke-dashoffset:0;
+    animation:flowdraw 3.2s ease-in-out infinite;
+  }
+  @keyframes flowdraw{
+    0%{stroke-dashoffset:600}
+    45%{stroke-dashoffset:0}
+    100%{stroke-dashoffset:0}
+  }
+  @media (prefers-reduced-motion: reduce){ .flow-loop path{animation:none} }
+
+  /* ---------- logo section ---------- */
+  .logo-stage{display:flex;align-items:center;justify-content:center;border-radius:12px;padding:56px 20px;border:1px solid var(--border)}
+  .logo-stage.dark{background:#0c0c0c}
+  .logo-stage.light{background:#f7f5f2}
+  .logo-stage svg{max-width:280px;width:100%;height:auto}
+  .logo-caption{display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--faint)}
+  .dont-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--panel);border-radius:8px;border:1px solid var(--border)}
+  .dont-row .x{color:var(--bad);font-size:18px;flex:none;width:20px;text-align:center}
+  .dont-row .sample{font-weight:700;letter-spacing:-.01em;flex:1}
+
+  /* ---------- color ---------- */
+  .swatch{border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+  .swatch .fill{height:96px}
+  .swatch .info{padding:12px 14px;background:var(--panel)}
+  .swatch .name{font-size:13px;font-weight:600;margin-bottom:2px}
+  .swatch .hex{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .swatch .use{font-size:11.5px;color:var(--faint);margin-top:6px;line-height:1.4}
+
+  /* ---------- type ---------- */
+  .type-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:18px 0;border-bottom:1px solid var(--border)}
+  .type-row:last-child{border-bottom:none}
+  .type-row .sample{flex:1;min-width:0}
+  .type-row .meta{font-size:11.5px;color:var(--faint);flex:none;text-align:right;font-variant-numeric:tabular-nums;line-height:1.6}
+
+  /* ---------- motion demo ---------- */
+  .motion-demo{display:flex;gap:14px;align-items:center;padding:22px;background:var(--panel);border-radius:10px;border:1px solid var(--border)}
+  .motion-demo .art{width:52px;height:52px;border-radius:6px;flex:none;background:linear-gradient(135deg,#3a3a3a,#1c1c1c);transition:opacity .5s ease}
+  .motion-demo .meta{flex:1;min-width:0}
+  .motion-demo .t{font-size:14px;font-weight:500;transition:opacity .5s ease}
+  .motion-demo .a{font-size:12.5px;color:var(--faint);transition:opacity .5s ease}
+  .motion-demo.fading .art,.motion-demo.fading .t,.motion-demo.fading .a{opacity:0}
+  .seek{height:3px;background:var(--panel-2);border-radius:2px;overflow:hidden;margin-top:14px}
+  .seek .fill2{height:100%;width:0%;background:var(--accent);transition:width 4s linear}
+  button.ghostbtn{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:12.5px;cursor:pointer;font-weight:500}
+  button.ghostbtn:hover{background:var(--panel-2)}
+
+  /* ---------- voice table ---------- */
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;padding:0 14px 10px;border-bottom:1px solid var(--border)}
+  td{padding:14px;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:top}
+  td.good{color:var(--good)}
+  td.bad{color:var(--bad);text-decoration:line-through;text-decoration-color:rgba(224,100,94,.4)}
+
+  /* ---------- do/dont ---------- */
+  .dd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .dd-list li{display:flex;gap:10px;font-size:13.5px;color:var(--text);align-items:flex-start}
+  .dd-list li .ico{flex:none;width:18px;height:18px;margin-top:1px}
+  .dd-list.do li .ico{color:var(--good)}
+  .dd-list.dont li .ico{color:var(--bad)}
+
+  /* ---------- examples mockups ---------- */
+  .phone{width:100%;max-width:280px;margin:0 auto;background:#0c0c0c;border-radius:22px;border:1px solid var(--border);padding:14px;box-shadow:0 30px 60px -30px rgba(0,0,0,.6)}
+  .example-caption{text-align:center;font-size:12px;color:var(--faint);margin-top:12px}
+
+  footer{max-width:920px;margin:0 auto;padding:60px 28px 100px;color:var(--faint);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Section navigation">
+  <div class="navmark">
+    <svg width="26" height="14" viewBox="0 0 100 40" aria-hidden="true"><path d="M2 20 C 20 20, 30 8, 50 20 S 80 32, 98 20" fill="none" stroke="#e0b26a" stroke-width="8" stroke-linecap="round"/></svg>
+    EBBLESS
+  </div>
+  <a href="#essence">Essence</a>
+  <a href="#logo">Logo</a>
+  <a href="#color">Color</a>
+  <a href="#type">Type</a>
+  <a href="#visual">Visual</a>
+  <a href="#motion">Motion</a>
+  <a href="#voice">Voice</a>
+  <a href="#taglines">Taglines</a>
+  <a href="#examples">Examples</a>
+  <a href="#dodont">Do / Don't</a>
+  <a href="../index.html">← Back to app</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <p class="kicker">Brand guidelines · v1.0</p>
+    <h1>Music<br>without<br>the ebb.</h1>
+    <svg class="hero-line flow-svg flow-loop" viewBox="0 0 800 60" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 30 C 100 30, 140 8, 220 30 S 340 52, 420 30 S 540 8, 620 30 S 740 52, 800 30" stroke-width="2.5"/>
+    </svg>
+    <p class="lead">An ebb is a decline, a retreat, an interruption in the tide. EBBLESS is the music that doesn't do that — one playlist, one continuous listen, no gaps to manage.</p>
+    <div class="hero-tags">
+      <span class="tag">Continuous</span><span class="tag">Quiet confidence</span><span class="tag">Effortless</span><span class="tag">Anti-friction</span><span class="tag">Independent</span>
+    </div>
+  </div>
+</section>
+
+<section id="essence">
+  <p class="section-index">01 — Brand essence</p>
+  <h2>What EBBLESS is, in one breath.</h2>
+  <p class="lead">EBBLESS takes a Spotify playlist, finds each track on YouTube, and plays it back as one continuous queue. It's built to keep the listening going — not to fight the platforms it draws from.</p>
+
+  <div class="grid cols-2" style="margin-top:40px">
+    <div class="card">
+      <h3>The name</h3>
+      <p>EBBLESS = without ebb. Not a made-up tech word — a real one, subtracted from. It names the specific thing the product removes: the interruption, the dead air, the retreat back to a search bar.</p>
+    </div>
+    <div class="card">
+      <h3>Mission</h3>
+      <p>Keep the listening going. That's the whole job. Everything else — matching, caching, the mute timer — is in service of that one sentence.</p>
+    </div>
+    <div class="card">
+      <h3>Personality</h3>
+      <p>Quiet, precise, a little dry, unbothered. It explains itself once, plainly, and moves on. It does not perform enthusiasm.</p>
+    </div>
+    <div class="card">
+      <h3>Positioning</h3>
+      <p>Not an ad blocker. Not a Spotify alternative. A continuous player that sits on top of playlists you already have, built by one person who wanted the music to stop stopping.</p>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:16px">
+    <div class="card">
+      <h3>Emotional promise</h3>
+      <p class="tight">The music keeps going. You stop managing it.</p>
+    </div>
+    <div class="card">
+      <h3>Functional promise</h3>
+      <p class="tight">Paste a playlist link. Get continuous playback, matched and queued automatically.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:40px">
+    <h3>Naming &amp; pronunciation</h3>
+    <table>
+      <tr><th>Form</th><th>When</th></tr>
+      <tr><td><strong>EBBLESS</strong></td><td class="good">Default. Logotype, headings, app name, buttons, UI.</td></tr>
+      <tr><td>Ebbless</td><td>Only mid-sentence in running prose (press, blog) where all caps would shout.</td></tr>
+      <tr><td>ebbless</td><td>Lowercase only inside code/URLs (<code>ebbless.app</code>) — never as a brand mention.</td></tr>
+    </table>
+    <p style="margin-top:14px">Pronounced <strong>EB‑less</strong> — rhymes with "pebbless," stressed on the first syllable.</p>
+  </div>
+</section>
+
+<section id="logo">
+  <p class="section-index">02 — Logo system</p>
+  <h2>The wordmark is the logo.</h2>
+  <p class="lead">No music note, no headphone icon, no waveform badge sitting next to the name. The concept lives in the letterforms: one unbroken line running the full width of the word — because nothing in the mark is allowed to visually "ebb."</p>
+
+  <div class="grid cols-2" style="margin-top:32px">
+    <div>
+      <div class="logo-stage dark">
+        <svg viewBox="0 0 360 72" width="100%" style="max-width:280px">
+          <text x="0" y="46" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-weight="700" font-size="44" letter-spacing="-2" fill="#e0b26a">EBBLESS</text>
+          <path d="M2 60 C 60 60, 90 68, 150 60 S 240 52, 300 60 S 340 66, 358 60" fill="none" stroke="#e0b26a" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="logo-caption"><span>Primary — dark surface</span><span>#E0B26A on #0C0C0C</span></div>
+    </div>
+    <div>
+      <div class="logo-stage light">
+        <svg viewBox="0 0 360 72" width="100%" style="max-width:280px">
+          <text x="0" y="46" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-weight="700" font-size="44" letter-spacing="-2" fill="#141414">EBBLESS</text>
+          <path d="M2 60 C 60 60, 90 68, 150 60 S 240 52, 300 60 S 340 66, 358 60" fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="logo-caption"><span>Monochrome — light surface</span><span>#141414 on #F7F5F2</span></div>
+    </div>
+  </div>
+
+  <div class="grid cols-3" style="margin-top:16px">
+    <div>
+      <div class="logo-stage dark" style="padding:36px 20px">
+        <svg viewBox="0 0 100 40" width="90"><path d="M2 20 C 20 20, 30 8, 50 20 S 80 32, 98 20" fill="none" stroke="#e0b26a" stroke-width="6" stroke-linecap="round"/></svg>
+      </div>
+      <div class="logo-caption"><span>Compact mark</span><span>favicon / app icon</span></div>
+    </div>
+    <div>
+      <div class="logo-stage dark" style="padding:36px 20px">
+        <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#121212"/><path d="M10 34 C 20 34, 24 22, 32 22 S 44 46, 54 34" fill="none" stroke="#e0b26a" stroke-width="6" stroke-linecap="round"/></svg>
+      </div>
+      <div class="logo-caption"><span>Favicon, contained</span><span>16-64px</span></div>
+    </div>
+    <div>
+      <div class="logo-stage dark" style="padding:36px 20px">
+        <svg viewBox="0 0 100 40" width="90"><path d="M2 20 C 20 20, 30 8, 50 20 S 80 32, 98 20" fill="none" stroke="#4a4a4a" stroke-width="6" stroke-linecap="round"/></svg>
+      </div>
+      <div class="logo-caption"><span>Reduced / disabled</span><span>#4A4A4A</span></div>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:40px">
+    <div>
+      <h3>Minimum size &amp; clear space</h3>
+      <p>Wordmark: never below 14px cap-height. Below that, switch to the compact mark. Clear space on all sides equals the wordmark's own cap-height — don't let UI chrome or edges crowd it.</p>
+    </div>
+    <div>
+      <h3>Concept, not decoration</h3>
+      <p>The rule beneath the wordmark is one continuous stroke — it never breaks under the gap between the two Bs, never dashes, never lifts. That's the whole idea: an unbroken line under an unbroken word.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:32px">
+    <h3>Incorrect usage</h3>
+    <div class="grid cols-2">
+      <div class="dont-row"><span class="x">✕</span><span class="sample" style="text-decoration:line-through;text-decoration-color:rgba(224,100,94,.5)">Ebbless</span><span style="color:var(--faint);font-size:12px">lowercase / title-case in UI</span></div>
+      <div class="dont-row"><span class="x">✕</span><span class="sample" style="font-style:italic">EBBLESS</span><span style="color:var(--faint);font-size:12px">italicized</span></div>
+      <div class="dont-row"><span class="x">✕</span><span class="sample" style="background:linear-gradient(90deg,#e0b26a,#e0645e);-webkit-background-clip:text;-webkit-text-fill-color:transparent">EBBLESS</span><span style="color:var(--faint);font-size:12px">gradient fill</span></div>
+      <div class="dont-row"><span class="x">✕</span><span class="sample">▶ EBBLESS</span><span style="color:var(--faint);font-size:12px">paired with a music/play icon</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="color">
+  <p class="section-index">03 — Color</p>
+  <h2>One warm accent. Restraint everywhere else.</h2>
+  <p class="lead">Every color below already exists in the product. Nothing was replaced — the audit found a palette that was already doing its job: dark, quiet, one warm accent that never competes with anything.</p>
+
+  <div class="grid cols-3" style="margin-top:32px">
+    <div class="swatch"><div class="fill" style="background:#121212"></div><div class="info"><div class="name">Background</div><div class="hex">#121212 · rgb(18,18,18)</div><div class="use">App background. The default field EBBLESS sits in.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#181818"></div><div class="info"><div class="name">Panel</div><div class="hex">#181818 · rgb(24,24,24)</div><div class="use">Rows, cards, hover surface.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#202020"></div><div class="info"><div class="name">Panel 2</div><div class="hex">#202020 · rgb(32,32,32)</div><div class="use">Inputs, active row, elevated surface.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#e0b26a"></div><div class="info"><div class="name">Accent</div><div class="hex">#E0B26A · hsl(37,58%,65%)</div><div class="use">Logo, active states, primary button, focus. The one brand color.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#f2f2f2"></div><div class="info"><div class="name">Text</div><div class="hex">#F2F2F2 · rgb(242,242,242)</div><div class="use">Primary text on dark.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#9a9a9a"></div><div class="info"><div class="name">Faint</div><div class="hex">#9A9A9A · rgb(154,154,154)</div><div class="use">Secondary text, metadata, timestamps.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#2fbf71"></div><div class="info"><div class="name">Good</div><div class="hex">#2FBF71 · rgb(47,191,113)</div><div class="use">Success status only. Never decorative.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#e0645e"></div><div class="info"><div class="name">Bad</div><div class="hex">#E0645E · rgb(224,100,94)</div><div class="use">Error status only. Never decorative.</div></div></div>
+    <div class="swatch"><div class="fill" style="background:#f7f5f2"></div><div class="info"><div class="name">Light bg (marketing only)</div><div class="hex">#F7F5F2 · rgb(247,245,242)</div><div class="use">Press/marketing contexts. The app itself stays dark.</div></div></div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:28px">
+    <div class="card">
+      <h3>Contrast, checked</h3>
+      <p class="tight">Accent (#E0B26A) on background (#121212): <strong style="color:var(--text)">8.9:1</strong> — passes AAA for body text.<br>Accent on panel‑2 (#202020): <strong style="color:var(--text)">7.7:1</strong> — passes AAA.<br>Text (#F2F2F2) on background: <strong style="color:var(--text)">17.4:1</strong>.</p>
+    </div>
+    <div class="card">
+      <h3>The one rule</h3>
+      <p class="tight">Never two competing accents on screen at once. If a new feature seems to need a second brand color, that's usually a sign it doesn't belong in EBBLESS.</p>
+    </div>
+  </div>
+</section>
+
+<section id="type">
+  <p class="section-index">04 — Typography</p>
+  <h2>System type. On purpose.</h2>
+  <p class="lead">The product already runs on the OS system font — fast, native, zero download weight. That restraint is the brand decision, not a placeholder waiting for a "real" typeface.</p>
+
+  <div style="margin-top:32px">
+    <div class="type-row"><div class="sample" style="font-size:44px;font-weight:700;letter-spacing:-.02em;text-transform:uppercase">EBBLESS</div><div class="meta">Display / wordmark<br>700 · -1% tracking · caps</div></div>
+    <div class="type-row"><div class="sample" style="font-size:24px;font-weight:700;letter-spacing:-.01em">Music without the ebb</div><div class="meta">H1<br>600-700 · sentence case</div></div>
+    <div class="type-row"><div class="sample" style="font-size:16px;font-weight:600">Late Night Drive</div><div class="meta">H2 / playlist name<br>600</div></div>
+    <div class="type-row"><div class="sample" style="font-size:14px;font-weight:400;color:var(--text);max-width:480px">Paste a public Spotify playlist link and it plays straight through.</div><div class="meta">Body<br>400 · 1.5-1.65 line height</div></div>
+    <div class="type-row"><div class="sample" style="font-size:14px;font-weight:500;color:var(--text)">I Tried It</div><div class="meta">Track title<br>500</div></div>
+    <div class="type-row"><div class="sample" style="font-size:12.5px;color:var(--faint)">Mal Griot · Unnayanaa</div><div class="meta">Track artist / metadata<br>400</div></div>
+    <div class="type-row"><div class="sample" style="font-size:14px;font-weight:600">Load</div><div class="meta">Button label<br>600</div></div>
+    <div class="type-row"><div class="sample" style="font-size:11px;color:var(--faint);letter-spacing:.02em;font-variant-numeric:tabular-nums">03:41</div><div class="meta">Timestamp / numerals<br>tabular figures</div></div>
+  </div>
+</section>
+
+<section id="visual">
+  <p class="section-index">05 — Visual language</p>
+  <h2>Continuity, not wave clip‑art.</h2>
+  <p class="lead">The idea is a line that doesn't break — expressed sometimes literally (the wordmark's rule, a seek bar) and mostly abstractly (dark, quiet fields; album art left alone to be the visual hero). It is not a brand made of ocean-wave graphics.</p>
+
+  <div class="grid cols-2" style="margin-top:32px">
+    <div class="card">
+      <h3>Negative space is a feature</h3>
+      <p class="tight">Dark, quiet fields around small warm accents. Don't fill space to look "designed" — EBBLESS should feel like it has room to breathe between songs the way a good DJ set does.</p>
+    </div>
+    <div class="card">
+      <h3>Album art is the hero</h3>
+      <p class="tight">When something is playing, the track's own artwork carries the visual interest. Brand chrome recedes — no overlays, no colored filters on top of artwork.</p>
+    </div>
+    <div class="card">
+      <h3>One motif, used once</h3>
+      <p class="tight">The continuous stroke appears at most once per screen — a seek bar, a loading line, the wordmark rule. Never as a repeating background pattern.</p>
+    </div>
+    <div class="card">
+      <h3>Corners &amp; surfaces</h3>
+      <p class="tight">6-8px radius throughout, circular only for transport controls. One radius scale, no mixing. No glassmorphism beyond the player bar's existing blur.</p>
+    </div>
+  </div>
+</section>
+
+<section id="motion">
+  <p class="section-index">06 — Motion</p>
+  <h2>Always moving forward, never bouncing back.</h2>
+  <p class="lead">EBBLESS is fundamentally about continuity, so motion should feel continuous — not flashy. Nothing overshoots, springs, or calls attention to itself.</p>
+
+  <div class="grid cols-2" style="margin-top:32px">
+    <div>
+      <h3>Track crossfade — try it</h3>
+      <div class="motion-demo" id="motionDemo">
+        <div class="art"></div>
+        <div class="meta">
+          <div class="t" id="motionTitle">I Tried It</div>
+          <div class="a" id="motionArtist">Mal Griot · Unnayanaa</div>
+        </div>
+      </div>
+      <button class="ghostbtn" id="motionBtn" style="margin-top:12px">Crossfade to next track</button>
+    </div>
+    <div>
+      <h3>Loading line — try it</h3>
+      <div class="card">
+        <div class="label">Matching track 4 / 12…</div>
+        <div class="seek"><div class="fill2" id="seekFill"></div></div>
+      </div>
+      <button class="ghostbtn" id="seekBtn" style="margin-top:12px">Run loading line</button>
+      <p style="margin-top:10px">A single continuous line filling left-to-right — never a spinner, never a shimmer grid.</p>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:32px">
+    <div class="card">
+      <h3>Timing</h3>
+      <p class="tight">150-250ms for hover/active/panel-open. 400-600ms for track or view changes. <code>ease-out</code> for things entering, <code>ease-in-out</code> for things moving in place.</p>
+    </div>
+    <div class="card">
+      <h3>Never</h3>
+      <p class="tight">Bounce or elastic/spring easing. Particle effects. Waveform visualizers as chrome. Staggered bounce-ins. Animated gradients. Pulsing "AI is thinking" dots.</p>
+    </div>
+  </div>
+</section>
+
+<section id="voice">
+  <p class="section-index">07 — Voice &amp; language</p>
+  <h2>Say it once, plainly, and stop.</h2>
+  <p class="lead">The existing README already nails the tone — <em>"there's no way to detect or skip an ad through this API, so this is a delay heuristic, not a guarantee."</em> Exact about limits, no spin. That's the reference for everything EBBLESS writes.</p>
+
+  <table style="margin-top:24px">
+    <tr><th>Context</th><th>Good</th><th>Bad</th></tr>
+    <tr><td>Headline</td><td class="good">Keep listening.</td><td class="bad">Experience the future of seamless music streaming!</td></tr>
+    <tr><td>Button</td><td class="good">Load</td><td class="bad">Get Started Now</td></tr>
+    <tr><td>Loading</td><td class="good">Matching track 4 of 12…</td><td class="bad">AI is finding your perfect match...</td></tr>
+    <tr><td>Error</td><td class="good">That doesn't look like a Spotify playlist link.</td><td class="bad">Oops! Something went wrong 😅</td></tr>
+    <tr><td>Empty state</td><td class="good">No tracks found.</td><td class="bad">Looks like it's pretty empty in here!</td></tr>
+    <tr><td>Ad heuristic</td><td class="good">Muted briefly in case of a pre-roll ad.</td><td class="bad">Ads blocked.</td></tr>
+  </table>
+
+  <div class="grid cols-2" style="margin-top:24px">
+    <div class="card">
+      <h3>Avoid</h3>
+      <p class="tight">"Seamless," "revolutionary," "next-generation," "ecosystem," exclamation points, personifying the product, technical explanations unless necessary.</p>
+    </div>
+    <div class="card">
+      <h3>Legal / product-language constraint</h3>
+      <p class="tight">Never say EBBLESS "blocks," "skips," or "detects" ads — the YouTube API gives no such signal. Never claim affiliation with Spotify or YouTube. It streams; it doesn't download or convert.</p>
+    </div>
+  </div>
+</section>
+
+<section id="taglines">
+  <p class="section-index">08 — Tagline system</p>
+  <h2>A hierarchy, not a list to rotate through.</h2>
+  <div class="grid cols-2" style="margin-top:24px">
+    <div class="card"><div class="label">Primary</div><p class="tight" style="color:var(--text);font-size:20px;font-weight:600;margin-top:8px">Music without the ebb.</p></div>
+    <div class="card"><div class="label">Secondary</div><p class="tight" style="color:var(--text);font-size:20px;font-weight:600;margin-top:8px">Keep listening.</p></div>
+    <div class="card"><div class="label">Product descriptor</div><p class="tight" style="margin-top:8px">A continuous player for your playlists.</p></div>
+    <div class="card"><div class="label">App-store description</div><p class="tight" style="margin-top:8px">Play any playlist straight through — no gaps, no managing.</p></div>
+    <div class="card" style="grid-column:1/-1"><div class="label">One-sentence explanation</div><p class="tight" style="margin-top:8px">EBBLESS turns a Spotify playlist into one continuous listen, matched and queued automatically.</p></div>
+    <div class="card" style="grid-column:1/-1"><div class="label">One-paragraph explanation</div><p class="tight" style="margin-top:8px">EBBLESS takes a public Spotify playlist, finds each track on YouTube, and plays it back as one continuous queue — no re-searching, no re-pasting links, no dead air between songs. It's built to keep the listening going, not to fight the platforms it draws from.</p></div>
+  </div>
+</section>
+
+<section id="examples">
+  <p class="section-index">09 — Applied</p>
+  <h2>The system in place, not just on paper.</h2>
+
+  <div class="grid cols-3" style="margin-top:32px">
+    <div>
+      <div class="phone">
+        <div style="background:#0c0c0c;border-radius:16px;padding:20px 16px;min-height:340px">
+          <svg width="90" height="34" viewBox="0 0 100 40" style="margin-bottom:16px"><path d="M2 20 C 20 20, 30 8, 50 20 S 80 32, 98 20" fill="none" stroke="#e0b26a" stroke-width="7" stroke-linecap="round"/></svg>
+          <div style="font-size:11px;color:#9a9a9a;letter-spacing:.08em;text-transform:uppercase">Splash</div>
+        </div>
+      </div>
+      <div class="example-caption">Splash — mark only, no wordmark needed at this size</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div style="background:#0c0c0c;border-radius:16px;padding:16px;min-height:340px">
+          <div style="font-size:15px;font-weight:700;letter-spacing:-.02em;text-transform:uppercase;color:#e0b26a">EBBLESS</div>
+          <div style="font-size:10.5px;color:#9a9a9a;margin:6px 0 16px;line-height:1.4">Paste a public Spotify playlist link.</div>
+          <div style="background:#202020;border-radius:6px;padding:8px 10px;font-size:11px;color:#9a9a9a">open.spotify.com/playlist/…</div>
+          <div style="margin-top:18px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px;align-items:center"><div style="width:26px;height:26px;background:#333;border-radius:4px"></div><div style="flex:1"><div style="font-size:10.5px;color:#f2f2f2">I Tried It</div><div style="font-size:9px;color:#9a9a9a">Mal Griot · Unnayanaa</div></div></div>
+            <div style="display:flex;gap:8px;align-items:center;background:#202020;border-radius:6px;padding:4px"><div style="width:26px;height:26px;background:#333;border-radius:4px"></div><div style="flex:1"><div style="font-size:10.5px;color:#e0b26a">Now playing</div><div style="font-size:9px;color:#9a9a9a">Track two</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="example-caption">Player screen — album art as hero, one accent</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div style="background:#0c0c0c;border-radius:16px;padding:16px;min-height:340px;display:flex;align-items:center;justify-content:center;text-align:center">
+          <div>
+            <div style="font-size:24px;margin-bottom:10px">—</div>
+            <div style="font-size:11px;color:#9a9a9a">No tracks found.</div>
+          </div>
+        </div>
+      </div>
+      <div class="example-caption">Empty state — plain, no illustration</div>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:16px">
+    <div>
+      <div class="card" style="background:#0c0c0c">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <svg width="80" height="28" viewBox="0 0 100 40"><path d="M2 20 C 20 20, 30 8, 50 20 S 80 32, 98 20" fill="none" stroke="#e0b26a" stroke-width="6" stroke-linecap="round"/></svg>
+          <span style="font-size:11px;color:#9a9a9a">ebbless.app</span>
+        </div>
+        <p class="tight" style="color:var(--text);font-size:22px;font-weight:700;margin:24px 0 8px;letter-spacing:-.01em">Music without the ebb.</p>
+        <p class="tight" style="font-size:13px">A continuous player for your playlists.</p>
+      </div>
+      <div class="example-caption">Landing hero</div>
+    </div>
+    <div>
+      <div class="card" style="background:#0c0c0c">
+        <div class="label" style="margin-bottom:10px">Social post</div>
+        <p class="tight" style="color:var(--text);font-size:18px;font-weight:600;margin:0 0 10px">Keep listening.</p>
+        <p class="tight" style="font-size:13px;margin:0">No re-searching between songs. Paste a playlist, EBBLESS keeps it going.</p>
+      </div>
+      <div class="example-caption">Feature-release announcement</div>
+    </div>
+  </div>
+</section>
+
+<section id="dodont">
+  <p class="section-index">10 — Do / Don't</p>
+  <h2>Keep it short.</h2>
+  <div class="grid cols-2" style="margin-top:24px">
+    <ul class="dd-list do">
+      <li><span class="ico">✓</span>Keep one continuous accent color</li>
+      <li><span class="ico">✓</span>Let silence and dark space do the work</li>
+      <li><span class="ico">✓</span>Describe the mute/unmute heuristic honestly</li>
+      <li><span class="ico">✓</span>Keep the wordmark's underline unbroken</li>
+      <li><span class="ico">✓</span>Crossfade between tracks</li>
+    </ul>
+    <ul class="dd-list dont">
+      <li><span class="ico">✕</span>Call it an ad blocker</li>
+      <li><span class="ico">✕</span>Add a second accent color</li>
+      <li><span class="ico">✕</span>Add a mascot or symbol "for branding's sake"</li>
+      <li><span class="ico">✕</span>Animate with bounce or elastic easing</li>
+      <li><span class="ico">✕</span>Use Spotify green or YouTube red</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <span>EBBLESS — brand guidelines v1.0</span>
+  <span><a href="BRAND.md">BRAND.md</a> · source of truth for developers &amp; agents</span>
+</footer>
+
+<script>
+(function(){
+  var demo = document.getElementById('motionDemo');
+  var btn = document.getElementById('motionBtn');
+  var title = document.getElementById('motionTitle');
+  var artist = document.getElementById('motionArtist');
+  var tracks = [
+    ['I Tried It','Mal Griot · Unnayanaa'],
+    ['Late Night Drive','EBBLESS Radio'],
+    ['Stay In The Stream','EBBLESS Radio']
+  ];
+  var i = 0;
+  btn.addEventListener('click', function(){
+    demo.classList.add('fading');
+    setTimeout(function(){
+      i = (i + 1) % tracks.length;
+      title.textContent = tracks[i][0];
+      artist.textContent = tracks[i][1];
+      demo.classList.remove('fading');
+    }, 500);
+  });
+
+  var seekBtn = document.getElementById('seekBtn');
+  var seekFill = document.getElementById('seekFill');
+  seekBtn.addEventListener('click', function(){
+    seekFill.style.transition = 'none';
+    seekFill.style.width = '0%';
+    void seekFill.offsetWidth;
+    seekFill.style.transition = 'width 4s linear';
+    seekFill.style.width = '100%';
+  });
+})();
+</script>
+</body>
+</html>
