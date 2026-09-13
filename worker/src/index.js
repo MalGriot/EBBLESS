@@ -214,10 +214,38 @@ function parseDurationText(text) {
 // a modest audio-only upload rather than a popularity contest deciding.
 const VIEW_COUNT_WEIGHT = 2;
 
+// A report (see handleReport) once turned up a match that was a totally
+// different song by the same artist - a highly-viewed "Official Video" on
+// that artist's own channel out-scored the actual correct-but-obscure
+// result on channel/audio-hint/view signals alone, because nothing here
+// checked whether the candidate's title had anything to do with the track
+// we're searching for. TITLE_MATCH_WEIGHT makes that the dominant signal:
+// it outweighs every other bonus combined, so a title mismatch can't be
+// papered over by channel authority or popularity.
+const TITLE_MATCH_WEIGHT = 8;
+const TITLE_STOPWORDS = new Set([
+  'a', 'an', 'the', 'of', 'and', 'feat', 'ft', 'featuring', 'with', 'vs',
+  'remix', 'version', 'edit', 'radio', 'official', 'audio', 'video',
+  'lyrics', 'lyric', 'music',
+]);
+function titleTokens(t) {
+  return (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 1 && !TITLE_STOPWORDS.has(w));
+}
+// Fraction of the source track's significant words that show up in a
+// candidate's title. 1 if the source title has no significant words of its
+// own (nothing to compare against, so don't penalize).
+function titleOverlapRatio(sourceTokens, candidateTitle) {
+  if (!sourceTokens.length) return 1;
+  const set = new Set(titleTokens(candidateTitle));
+  return sourceTokens.filter(w => set.has(w)).length / sourceTokens.length;
+}
+
 function scoreCandidate(c, firstArtist, maxViews) {
   const title = (c.title || '').toLowerCase();
   const channel = (c.channel || '').toLowerCase();
   let score = 0;
+  score += c.titleOverlap * TITLE_MATCH_WEIGHT;
   if (channel.endsWith('- topic')) score += 5;
   if (AUDIO_HINTS.some(h => title.includes(h))) score += 4;
   if (channel.includes(firstArtist)) score += 3;
@@ -290,7 +318,18 @@ async function handleSearch(url, ctx) {
     .filter(g => !lowerSourceTitle.includes(g.keyword))
     .flatMap(g => g.hints);
   const clean = candidates.filter(c => !activeExcludeHints.some(h => c.title.toLowerCase().includes(h)));
-  const pool = clean.length ? clean : candidates;
+  let pool = clean.length ? clean : candidates;
+
+  // Same hard-filter-with-fallback pattern as the exclude groups above, but
+  // for title relevance: a candidate sharing none of the source title's
+  // significant words is almost certainly the wrong song, so drop it
+  // outright rather than let scoreCandidate's other signals outvote a
+  // mismatch. Fall back to the unfiltered pool only if every candidate
+  // fails (e.g. a title made entirely of stopwords/numbers).
+  const sourceTokens = titleTokens(title);
+  pool.forEach(c => { c.titleOverlap = titleOverlapRatio(sourceTokens, c.title); });
+  const titleMatched = pool.filter(c => c.titleOverlap > 0);
+  pool = titleMatched.length ? titleMatched : pool;
 
   const maxViews = Math.max(...pool.map(c => c.views), 0);
   pool.forEach(c => { c.score = scoreCandidate(c, firstArtist, maxViews); });
@@ -783,6 +822,34 @@ async function handleSoundCloud(url, ctx) {
   return response;
 }
 
+// ---------- POST /report ----------
+// Lets the client flag a track whose YouTube match isn't the plain
+// audio/lyric version it expected (e.g. a music video with skits, a wrong
+// song entirely). Stored in KV under a timestamp-prefixed key so a plain
+// key list comes back in chronological order with no separate index -
+// inspected later via `wrangler kv key list/get --binding=MATCH_REPORTS`
+// to fix scoreCandidate's scoring for whatever pattern keeps showing up.
+async function handleReport(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  const { videoId, title, artist, matchedTitle, channel, note } = body || {};
+  if (!videoId || !title) return json({ error: 'missing videoId or title' }, 400);
+  const report = {
+    videoId: String(videoId).slice(0, 64),
+    title: String(title).slice(0, 300),
+    artist: String(artist || '').slice(0, 300),
+    matchedTitle: String(matchedTitle || '').slice(0, 300),
+    channel: String(channel || '').slice(0, 300),
+    note: String(note || '').slice(0, 500),
+    ts: Date.now(),
+  };
+  const key = 'report:' + report.ts + ':' + crypto.randomUUID();
+  await env.MATCH_REPORTS.put(key, JSON.stringify(report));
+  return json({ ok: true });
+}
+
 function applyCors(res) {
   const headers = new Headers(res.headers);
   Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
@@ -804,7 +871,8 @@ export default {
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url='] }, 404);
+      if (url.pathname === '/report') return await handleReport(request, env, ctx);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/report (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

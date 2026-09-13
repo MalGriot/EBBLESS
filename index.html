@@ -42,12 +42,25 @@ svg{display:block}
 /* ---------- app shell ---------- */
 #app{position:relative;width:100%;height:100%;overflow:hidden}
 
-/* ambient background: blurred artwork, subtle, crossfading */
+/* ambient background: blurred artwork, subtle, crossfading, slowly drifting
+   like a lava lamp (position/scale + brightness/saturation breathing) */
 #ambient{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
-#ambient .layer{position:absolute;inset:-10%;background-size:cover;background-position:center;
+#ambient .layer{position:absolute;inset:-40%;background-size:cover;background-position:center;
   filter:blur(70px) saturate(1.15) brightness(.42);transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
-#ambient .layer.is-active{opacity:.85}
+#ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite}
+#ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+@keyframes ambient-drift{
+  0%{transform:translate(0,0) scale(1.2);filter:blur(64px) saturate(1.1) brightness(.32)}
+  20%{transform:translate(-9%,7%) scale(1.42);filter:blur(80px) saturate(1.55) brightness(.56)}
+  40%{transform:translate(8%,-9%) scale(1.5);filter:blur(70px) saturate(1.7) brightness(.62)}
+  60%{transform:translate(10%,9%) scale(1.28);filter:blur(88px) saturate(1.35) brightness(.38)}
+  80%{transform:translate(-7%,-6%) scale(1.46);filter:blur(74px) saturate(1.6) brightness(.58)}
+  100%{transform:translate(0,0) scale(1.2);filter:blur(64px) saturate(1.1) brightness(.32)}
+}
+@media (prefers-reduced-motion:reduce){
+  #ambient .layer.is-active{animation:none}
+}
 #ambient::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%);}
 
 /* ---------- topbar (desktop) ---------- */
@@ -70,7 +83,17 @@ svg{display:block}
 .view[hidden]{display:none}
 .view-scroll{max-width:920px;margin:0 auto;padding:8px 24px calc(140px + var(--safe-b))}
 
-/* ---------- library ---------- */
+/* ---------- library ----------
+   Accent on this view is re-scoped to the same Rosicrucian daily-period
+   color clock that drives the cymatics visualizer grains (see
+   vizRosicrucianColor() / updateLibraryClockColor() in the script) - a soft
+   tint wash plus the Load button / active-pin color drift with it through
+   the day rather than staying fixed on the global --accent. */
+#view-library{
+  --accent:var(--clock-accent, #e0b26a);
+  background:radial-gradient(ellipse 140% 60% at 50% -10%, var(--clock-tint, transparent) 0%, transparent 70%);
+  transition:background 4s linear;
+}
 .import-row{display:flex;gap:8px;margin:18px 0 8px;position:relative}
 .import-row input{
   flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -80,7 +103,8 @@ svg{display:block}
 .import-row input:focus{outline:none;border-color:var(--accent)}
 .import-row button{
   background:var(--accent);color:#151107;border-radius:var(--r-md);padding:0 22px;font-weight:600;
-  font-size:14px;white-space:nowrap;transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out);
+  font-size:14px;white-space:nowrap;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
 .import-row button:active{transform:scale(.97)}
 .import-hint{font-size:12px;color:var(--faint-2);margin:0 0 30px;line-height:1.5}
@@ -352,6 +376,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   backdrop-filter:blur(6px);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .art-fs-btn svg{width:15px;height:15px}
 .art-fs-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
+.track-meta .artist-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:5px}
+.track-meta .artist-row .artist{margin-top:0}
+.report-match-btn{flex:none;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--faint-2);
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.report-match-btn svg{width:12px;height:12px}
+.report-match-btn:hover{background:var(--panel-3);color:var(--text)}
+.report-match-btn.is-sent{color:var(--accent)}
 .track-meta{margin-top:26px;text-align:center;max-width:480px}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
@@ -828,7 +860,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
         </div>
         <div class="track-meta">
           <div class="title" id="trackTitle">—</div>
-          <div class="artist" id="trackArtist">—</div>
+          <div class="artist-row">
+            <div class="artist" id="trackArtist">—</div>
+            <button class="report-match-btn" id="reportMatchBtn" title="Report: this isn't just the audio" aria-label="Report this YouTube match">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+            </button>
+          </div>
         </div>
 
         <div class="playlist-ctx" id="playlistCtx" hidden>
@@ -1492,7 +1529,7 @@ const keepAliveAudio = $('keepAliveAudio');
 if (keepAliveAudio) keepAliveAudio.volume = 1;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
-const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn');
+const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
@@ -2928,6 +2965,19 @@ function vizRosicrucianColor(){
   return VIZ_LETTER_COLORS[currentLetter];
 }
 
+/* Library page accent/tint follows the same color-clock as the cymatics
+   grains above, independent of visualizer/playback state so it drifts even
+   when nothing is playing. */
+function updateLibraryClockColor(){
+  const solid = vizRosicrucianColor();
+  const m = solid.match(/\d+/g);
+  const tint = m ? `rgba(${m[0]},${m[1]},${m[2]},.22)` : 'transparent';
+  views.library.style.setProperty('--clock-accent', solid);
+  views.library.style.setProperty('--clock-tint', tint);
+}
+updateLibraryClockColor();
+setInterval(updateLibraryClockColor, 10000);
+
 /* Six genuinely different nodal-field families the grains can settle into.
    Each supplies its own field(x,y,params,t) -> scalar, plus a short list of
    parameter variants it drifts between while it's the active pattern.
@@ -3417,6 +3467,7 @@ function updateTrackMetaUI(t){
   flowArtist.textContent = t.artist;
   miniTitle.textContent = t.title;
   miniArtist.textContent = t.artist;
+  reportMatchBtn.classList.remove('is-sent');
   updateMediaSessionMeta(t);
 }
 
@@ -3840,6 +3891,22 @@ function armFlowChromeTimer(){
   flowHideTimer = setTimeout(() => flowLayer.classList.add('chrome-hidden'), 3200);
 }
 fsBtn.addEventListener('click', (e) => { e.stopPropagation(); if (currentTrack()) openFlow(); });
+reportMatchBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const t = currentTrack();
+  if (!t || !t.videoId || reportMatchBtn.classList.contains('is-sent')) return;
+  fetch(BACKEND + '/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      videoId: t.videoId, title: t.title, artist: t.artist,
+      matchedTitle: t.matchedTitle || '', channel: t.channel || '',
+      note: 'not just the audio',
+    }),
+  }).catch(() => {});
+  reportMatchBtn.classList.add('is-sent');
+  showToast('Reported, thanks - I\'ll take a look');
+});
 flowExitBtn.addEventListener('click', closeFlow);
 flowLayer.addEventListener('pointermove', armFlowChromeTimer);
 flowLayer.addEventListener('pointerdown', armFlowChromeTimer);
