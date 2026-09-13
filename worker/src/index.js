@@ -59,6 +59,7 @@ function deepFindKey(obj, key, out) {
 // days on some routes) after a deploy.
 const ART_CACHE_VERSION = 'v2';
 const LYRICS_CACHE_VERSION = 'v2';
+const SEARCH_CACHE_VERSION = 'v2';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -234,7 +235,7 @@ async function handleSearch(url, ctx) {
 
   const firstArtist = artist.split(',')[0].trim().toLowerCase();
   const cache = caches.default;
-  const cacheKeyStr = 'https://cache.internal/search/' + encodeURIComponent(title + '|' + artist);
+  const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist);
   const cacheKey = new Request(cacheKeyStr);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
