@@ -53,13 +53,16 @@ function deepFindKey(obj, key, out) {
   }
 }
 
-// Bump this when an endpoint's cached response *shape* changes (new/renamed
-// fields) — it's folded into that endpoint's cache key below so the edge
-// cache can't keep serving pre-change payloads for their old TTL (up to 30
-// days on some routes) after a deploy.
+// Bump this when an endpoint's cached response *shape* OR *selection logic*
+// changes (new/renamed fields, or a scoreCandidate/matching tweak that
+// should change which result wins) - it's folded into that endpoint's
+// cache key below so the edge cache can't keep serving pre-change payloads
+// for their old TTL (up to 30 days on some routes) after a deploy. Forgetting
+// this on a scoring change is exactly what let two already-cached tracks
+// keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v2';
 const LYRICS_CACHE_VERSION = 'v2';
-const SEARCH_CACHE_VERSION = 'v2';
+const SEARCH_CACHE_VERSION = 'v3';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
