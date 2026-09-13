@@ -613,10 +613,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @media (max-width:859.98px){
   #topbar{padding:0 18px}
   #topnav{display:none}
-  .view{bottom:var(--nav-h)}
+  .view{bottom:calc(var(--nav-h) + var(--safe-b))}
   .view-scroll{padding:4px 18px calc(120px + var(--safe-b))}
   #bottom-nav{display:flex}
-  #mini-bar{bottom:var(--nav-h)}
+  #mini-bar{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw)}
   .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
