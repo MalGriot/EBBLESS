@@ -53,6 +53,12 @@ function deepFindKey(obj, key, out) {
   }
 }
 
+// Bump this when an endpoint's cached response *shape* changes (new/renamed
+// fields) — it's folded into that endpoint's cache key below so the edge
+// cache can't keep serving pre-change payloads for their old TTL (up to 30
+// days on some routes) after a deploy.
+const ART_CACHE_VERSION = 'v2';
+
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/128.0 Safari/537.36';
@@ -100,7 +106,7 @@ async function handleEmbed(kind, url, ctx) {
   if (!id || !/^[a-zA-Z0-9]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/' + kind + '/' + id);
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/' + kind + '/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -192,6 +198,14 @@ function parseViewCount(text) {
   return num * mult;
 }
 
+// "lengthText.simpleText" is like "3:45" or "1:02:03".
+function parseDurationText(text) {
+  if (!text) return 0;
+  const parts = String(text).split(':').map(n => parseInt(n, 10));
+  if (parts.some(isNaN)) return 0;
+  return parts.reduce((acc, n) => acc * 60 + n, 0);
+}
+
 // View count is a tiebreaker, not a category override: it's scaled relative
 // to the most-viewed candidate in this search and capped well below the
 // audio/topic bonuses above, so a viral official music video still loses to
@@ -254,7 +268,9 @@ async function handleSearch(url, ctx) {
     try { channel = v.ownerText.runs[0].text; } catch (e) {}
     let views = 0;
     try { views = parseViewCount(v.viewCountText.simpleText); } catch (e) {}
-    return { videoId: v.videoId, title: vTitle, channel, views };
+    let duration = 0;
+    try { duration = parseDurationText(v.lengthText.simpleText); } catch (e) {}
+    return { videoId: v.videoId, title: vTitle, channel, views, duration };
   }).filter(v => v.videoId);
 
   if (!candidates.length) return json({ error: 'no video results' }, 404);
@@ -279,7 +295,7 @@ async function handleSearch(url, ctx) {
   pool.sort((a, b) => b.score - a.score);
   const best = pool[0];
 
-  const payload = { videoId: best.videoId, title: best.title, channel: best.channel };
+  const payload = { videoId: best.videoId, title: best.title, channel: best.channel, duration: best.duration || 0 };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
@@ -296,7 +312,7 @@ async function handleTrack(url, ctx) {
   if (!id || !/^[a-zA-Z0-9]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/track/' + id);
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/track/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -575,7 +591,7 @@ async function handleAppleMusicList(url, ctx) {
   if (!id || !/^[a-zA-Z0-9.]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/amlist/' + kind + '/' + storefront + '/' + id);
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/amlist/' + kind + '/' + storefront + '/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -627,7 +643,7 @@ async function handleAppleMusicTrack(url, ctx) {
   if (!id || !/^[a-zA-Z0-9.]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/amtrack/' + storefront + '/' + id);
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/amtrack/' + storefront + '/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -717,7 +733,7 @@ async function handleSoundCloud(url, ctx) {
   if (!permalinkUrl || !/^https:\/\/(www\.)?soundcloud\.com\//i.test(permalinkUrl)) return json({ error: 'missing or invalid url' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/soundcloud/' + encodeURIComponent(permalinkUrl));
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/soundcloud/' + encodeURIComponent(permalinkUrl));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 

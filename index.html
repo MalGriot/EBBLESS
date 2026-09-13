@@ -247,6 +247,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
 .artwork-wrap{position:relative;width:min(420px,72vw);aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;
   box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2);transition:height var(--dur-surface) var(--ease-in-out)}
+.artwork-wrap[data-mode="art"]{aspect-ratio:1!important;height:auto!important;flex-shrink:0}
 .artwork-wrap.mode-lyrics{aspect-ratio:auto;height:min(56vh,520px)}
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
@@ -325,6 +326,16 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out);background:rgba(10,10,10,.55)}
 .viz-canvas.is-active{opacity:1}
+.viz-controls{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;z-index:6;
+  opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out)}
+.artwork-wrap.mode-viz .viz-controls{opacity:1;pointer-events:auto}
+.viz-ctl-btn{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,10,10,.45);color:var(--faint);backdrop-filter:blur(6px);flex:none;
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.viz-ctl-btn svg{width:15px;height:15px}
+.viz-ctl-btn.viz-auto-btn{font-size:16px;font-weight:700;line-height:1}
+.viz-ctl-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
+.viz-ctl-btn.is-active{background:var(--accent);color:#151107}
 .track-meta{margin-top:26px;text-align:center;max-width:480px}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
@@ -492,16 +503,23 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transition:opacity var(--dur-surface) var(--ease-in-out);display:flex;flex-direction:column;align-items:center;justify-content:center}
 #flow-layer.is-open{opacity:1;pointer-events:auto}
 #flow-layer .flow-art{width:min(52vh,62vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
-  box-shadow:0 30px 80px -16px rgba(0,0,0,.7)}
+  box-shadow:0 30px 80px -16px rgba(0,0,0,.7);z-index:1}
 #flow-layer .flow-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #flow-layer .flow-art .art.is-active{opacity:1}
-#flow-layer .flow-meta{margin-top:28px;text-align:center}
+#flow-layer .flow-viz{position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;
+  background:var(--bg)}
+#flow-layer .flow-viz .viz-canvas{opacity:1}
+#flow-layer .flow-viz #vizAutoBtn{position:absolute;right:16px;bottom:calc(16px + var(--safe-b));z-index:6;
+  opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
+#flow-layer.chrome-hidden .flow-viz #vizAutoBtn{opacity:0;pointer-events:none}
+#flow-layer .flow-meta{margin-top:28px;text-align:center;position:relative;z-index:5;pointer-events:none}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
-#flow-layer .flow-chrome{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
-  padding:26px 26px calc(30px + var(--safe-b));opacity:1;
+#flow-layer .flow-chrome{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:space-between;
+  padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:none;
   transition:opacity 600ms var(--ease-in-out)}
+#flow-layer .flow-chrome>*{pointer-events:auto}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
 .flow-top{display:flex;justify-content:flex-end}
@@ -553,6 +571,13 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw)}
   .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
+  .ctl-btn{width:44px;height:44px}
+  .ctl-btn svg{width:18px;height:18px}
+  .ctl-btn.main{width:58px;height:58px}
+  .ctl-btn.main svg{width:22px;height:22px}
+  .ctl-btn.small{width:40px;height:40px}
+  .ctl-btn.small svg{width:16px;height:16px}
+  .track-row .row-actions button,.q-row .remove{width:34px;height:34px}
 }
 @media (min-width:860px){
   #bottom-nav{display:none}
@@ -579,7 +604,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     </button>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 3h2v18H4zm4 2h2v16H8zm4-2h2v18h-2zm4 3l6 15h-2l-6-15z" opacity=".01"/><path d="M6 4h1v16H6zm3 1h1v15H9zm3-1h1v16h-1zm3.2.3l3.8 14.6-1 .3L14.2 5.6z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
         <span>Library</span>
       </button>
       <button class="nav-btn" data-action="toggle-queue">
@@ -597,16 +622,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   <main class="view" id="view-library">
     <div class="view-scroll">
       <form class="import-row" id="importForm">
-        <input id="urlInput" type="text" placeholder="Paste a Spotify, YouTube, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
+        <input id="urlInput" type="text" placeholder="Paste a Spotify, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
         <button type="submit" id="loadBtn">Load</button>
       </form>
-      <p class="import-hint" id="importHint">Paste a public playlist, album, or track link from Spotify, YouTube, SoundCloud, or Apple Music. EBBLESS finds each track and gets it playing.</p>
+      <p class="import-hint" id="importHint">Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music. EBBLESS finds each track and gets it playing.</p>
       <div class="import-err" id="importErr"></div>
       <button class="btn-ghost" id="newPlaylistBtn" style="margin:0 0 24px">+ New playlist</button>
 
       <div id="libraryEmpty" class="empty-lib hidden">
-        <div class="line"><svg width="64" height="10" viewBox="0 0 64 10"><path d="M1 5 C 16 5, 24 2, 32 5 S 48 8, 63 5" fill="none" stroke="var(--faint-2)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-        Your library will show up here.<br>Paste one above to get started.
+        Paste a Spotify playlist to begin.
       </div>
 
       <div id="libraryListWrap" class="hidden">
@@ -642,7 +666,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h2v7H4zm4-6h2v13H8zm4 3h2v10h-2zm4-5h2v15h-2zm4 8h2v7h-2z"/></svg>
           </button>
           <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
           </button>
           <div class="art-style-menu" id="artStyleMenu">
             <button class="art-style-opt" data-style="default">
@@ -691,6 +715,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
             </div>
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
+          <div class="viz-controls" id="vizControls">
+            <button type="button" class="viz-ctl-btn" id="vizNextBtn" title="Next pattern" aria-label="Next cymatics pattern">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>
+            </button>
+            <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Auto-cycle patterns" aria-label="Toggle automatic pattern cycling">∞</button>
+          </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
         </div>
         <div class="track-meta">
@@ -710,7 +740,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
           </div>
           <div class="controls-row">
             <button class="ctl-btn small" id="shuffleBtn" title="Shuffle" aria-label="Shuffle">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3l4 4-4 4V8.5c-2 0-3 .7-4.2 2.4l-1-1.4C13.3 7.2 14.8 6 17 6zm4 14l-4 4v-3c-2.2 0-3.7-1.2-5.2-3.1L4 5H2V3h3l7.8 11.7C14 16.6 15 17.5 17 17.5V14z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
             </button>
             <button class="ctl-btn" id="prevBtn" title="Previous" aria-label="Previous">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
@@ -732,7 +762,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
               <div class="vol-track" id="volTrack"><div class="rail"></div><div class="fill" id="volFill"></div></div>
             </div>
             <button class="ctl-btn small" id="fsBtn" title="Fullscreen" aria-label="Enter flow mode">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9h2V5h4V3H4zm0 6v6h6v-2H6v-4zm14-8h-4v2h4v4h2V4h-2zM14 20h4v-4h2v6h-6z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
             </button>
           </div>
         </div>
@@ -745,7 +775,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     <div class="view-scroll">
       <div class="settings-block">
         <h2>About</h2>
-        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds each track on YouTube, or paste a YouTube playlist or video link directly. Either way, playback threads through so the listening doesn't stop.</p>
+        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track. Either way, playback threads through so the listening doesn't stop.</p>
       </div>
       <div class="settings-block">
         <h2>Playback</h2>
@@ -806,7 +836,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     </div>
     <div class="mini-ctl">
       <button class="ctl-btn small" id="miniShuffleBtn" title="Shuffle" aria-label="Shuffle">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3l4 4-4 4V8.5c-2 0-3 .7-4.2 2.4l-1-1.4C13.3 7.2 14.8 6 17 6zm4 14l-4 4v-3c-2.2 0-3.7-1.2-5.2-3.1L4 5H2V3h3l7.8 11.7C14 16.6 15 17.5 17 17.5V14z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
       <button class="ctl-btn small" id="miniPrevBtn" title="Previous" aria-label="Previous">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
@@ -827,7 +857,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   <!-- ===== BOTTOM NAV ===== -->
   <nav id="bottom-nav">
     <button data-view="library">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h1v16H6zm3 1h1v15H9zm3-1h1v16h-1zm3.2.3l3.8 14.6-1 .3L14.2 5.6z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
       Library
     </button>
     <button data-view="player">
@@ -891,6 +921,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
       </div>
     </div>
     <div class="flow-art" id="flowArtWrap"><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
+    <div class="flow-art flow-viz" id="flowVizWrap" hidden></div>
     <div class="flow-meta">
       <div class="title" id="flowTitle">—</div>
       <div class="artist" id="flowArtist">—</div>
@@ -1112,6 +1143,7 @@ const LS_RESUME = 'ebbless:resume';
 const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_SORT = (id) => 'ebbless:sort:' + id;    // per-playlist track sort mode
 const LS_VIZ = 'ebbless:visualizer';
+const LS_VIZ_AUTO = 'ebbless:vizAuto';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 
 function lsGet(key, fallback){
@@ -1202,7 +1234,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     onProgress({ stage: 'matching', done: 0, total: 1 });
     let match = { videoId: null, title: '', channel: '' };
     try { match = await searchYouTube(title, artist); } catch(e){}
-    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: art || null };
+    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: art || null, duration: match.duration || 0 };
     onProgress({ stage: 'matching', done: 1, total: 1, track });
     const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
     lsSet(LS_PL(playlistId), payload);
@@ -1246,9 +1278,9 @@ async function resolvePlaylist(playlistId, type, onProgress){
     const t = tracks[i];
     try{
       const match = await searchYouTube(t.title, t.artist);
-      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: t.image || null });
+      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: t.image || null, duration: match.duration || 0 });
     } catch(e){
-      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art: t.image || null });
+      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art: t.image || null, duration: 0 });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     if (i < tracks.length - 1) await sleep(350);
@@ -1325,6 +1357,18 @@ function formatTime(sec){
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
+// Total playlist runtime, e.g. "2h 49m" or "38m". Tracks with no known
+// duration (not yet matched against YouTube) are simply excluded from the sum.
+function totalPlaylistDuration(tracks){
+  return tracks.reduce((acc, t) => acc + (t.duration || 0), 0);
+}
+function formatTotalDuration(totalSec){
+  if (!totalSec) return '';
+  const h = Math.floor(totalSec / 3600), m = Math.round((totalSec % 3600) / 60);
+  if (h) return h + 'h ' + m + 'm';
+  return m + 'm';
+}
+
 /* =========================================================================
    DOM REFS
    ========================================================================= */
@@ -1348,6 +1392,7 @@ const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), ne
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
+const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
 const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
@@ -1356,7 +1401,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
       miniRepeatBtn = $('miniRepeatBtn'), miniRepeatOneBadge = $('miniRepeatOneBadge');
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueClearBtn = $('queueClearBtn');
-const flowLayer = $('flow-layer'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist');
+const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
 const ambientA = $('ambient-a'), ambientB = $('ambient-b');
@@ -1522,14 +1567,15 @@ function renderLibrary(){
     const pinBtn = document.createElement('button');
     pinBtn.className = 'pin' + (pinned ? ' is-active' : '');
     pinBtn.setAttribute('aria-label', pinned ? 'Unpin playlist' : 'Pin playlist to top');
-    pinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 3l5 5-4 2-1 1v4l-1 1-3-3-5 5-1-1 5-5-3-3 1-1h4l1-1z"/></svg>';
+    pinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>';
     pinBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); });
     artDiv.appendChild(pinBtn);
 
     const name = document.createElement('div'); name.className = 'name'; name.textContent = pl.name;
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
+    const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
-    count.textContent = pl.tracks.length + (pl.tracks.length === 1 ? ' track' : ' tracks') + (lastPlayedText ? ' · ' + lastPlayedText : '');
+    count.textContent = pl.tracks.length + (pl.tracks.length === 1 ? ' track' : ' tracks') + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
     const info = document.createElement('div'); info.className = 'info';
     info.appendChild(name); info.appendChild(count);
 
@@ -1542,7 +1588,7 @@ function renderLibrary(){
     const rowPinBtn = document.createElement('button');
     rowPinBtn.className = 'row-pin' + (pinned ? ' is-active' : '');
     rowPinBtn.setAttribute('aria-label', pinned ? 'Unpin playlist' : 'Pin playlist to top');
-    rowPinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 3l5 5-4 2-1 1v4l-1 1-3-3-5 5-1-1 5-5-3-3 1-1h4l1-1z"/></svg>';
+    rowPinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>';
     rowPinBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); });
     const rowRemoveBtn = document.createElement('button');
     rowRemoveBtn.className = 'row-remove'; rowRemoveBtn.setAttribute('aria-label', 'Remove from library');
@@ -1670,12 +1716,12 @@ async function resolveTracksFromLink(input, onProgress){
   if (yt){
     if (yt.type === 'video'){
       const v = await fetchYouTubeVideo(yt.id);
-      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', art: null }];
+      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', art: null, duration: 0 }];
     }
     const { tracks } = await fetchYouTubePlaylist(yt.id);
     if (!tracks.length) throw new Error("That playlist has no videos.");
     return tracks.map((t, i) => {
-      const r = { title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art: null };
+      const r = { title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art: null, duration: 0 };
       if (onProgress) onProgress(i + 1, tracks.length);
       return r;
     });
@@ -1685,8 +1731,8 @@ async function resolveTracksFromLink(input, onProgress){
     if (sp.type === 'track'){
       const { title, artist, image } = await fetchSpotifyTrack(sp.id);
       const match = await searchYouTube(title, artist);
-      if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
-      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null }];
+      if (!match.videoId) throw new Error("Couldn't find that song.");
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null, duration: match.duration || 0 }];
     }
     const { tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
     if (!tracks.length) throw new Error('That ' + sp.type + ' has no tracks.');
@@ -1695,9 +1741,9 @@ async function resolveTracksFromLink(input, onProgress){
       const t = tracks[i];
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null, duration: match.duration || 0 });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null, duration: 0 });
       }
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
@@ -1709,8 +1755,8 @@ async function resolveTracksFromLink(input, onProgress){
     const data = await fetchSoundCloudLink(sc.url);
     if (data.kind === 'track'){
       const match = await searchYouTube(data.title, data.artist);
-      if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
-      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: data.image || null }];
+      if (!match.videoId) throw new Error("Couldn't find that song.");
+      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: data.image || null, duration: match.duration || 0 }];
     }
     if (!data.tracks.length) throw new Error('That playlist has no tracks.');
     const resolved = [];
@@ -1718,9 +1764,9 @@ async function resolveTracksFromLink(input, onProgress){
       const t = data.tracks[i];
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null, duration: match.duration || 0 });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null, duration: 0 });
       }
       if (onProgress) onProgress(i + 1, data.tracks.length);
       if (i < data.tracks.length - 1) await sleep(350);
@@ -1732,8 +1778,8 @@ async function resolveTracksFromLink(input, onProgress){
     if (am.type === 'track'){
       const { title, artist, image } = await fetchAppleMusicTrack(am.storefront, am.id);
       const match = await searchYouTube(title, artist);
-      if (!match.videoId) throw new Error("Couldn't find that song on YouTube.");
-      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null }];
+      if (!match.videoId) throw new Error("Couldn't find that song.");
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null, duration: match.duration || 0 }];
     }
     const { tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
     if (!tracks.length) throw new Error('That ' + am.type + ' has no tracks.');
@@ -1742,16 +1788,16 @@ async function resolveTracksFromLink(input, onProgress){
       const t = tracks[i];
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null, duration: match.duration || 0 });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null, duration: 0 });
       }
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
     }
     return resolved;
   }
-  throw new Error("That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link.");
+  throw new Error("That doesn't look like a Spotify, SoundCloud, or Apple Music link.");
 }
 
 // "+ Add song" opens this: paste one link at a time — a song, a playlist, or
@@ -1870,26 +1916,6 @@ function stageMatchingProgress(done, total, track){
   }
 }
 
-function stageReady(pl){
-  const missing = pl.tracks.filter(t => !t.videoId).length;
-  importStage.innerHTML =
-    '<div class="import-ready">' +
-      '<div class="step" style="margin-bottom:2px">Ready.</div>' +
-      '<div class="name">' + escapeHtml(pl.name) + '</div>' +
-      '<div class="meta">' + pl.tracks.length + (pl.tracks.length === 1 ? ' track' : ' tracks') + '</div>' +
-      (missing ? '<div class="missing-note">' + missing + " couldn't be matched.</div>" : '') +
-      (pl.truncated ? '<div class="missing-note">YouTube only exposes this playlist&rsquo;s ~15 most recent videos.</div>' : '') +
-      '<button class="big-play" id="importPlayBtn" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>' +
-    '</div>';
-  $('importPlayBtn').addEventListener('click', () => {
-    closeImportOverlay();
-    loadPlaylistIntoPlayer(pl);
-    buildQueueFrom(0);
-    loadIndex(state.queuePos, true);
-    setView('player');
-  });
-}
-
 function stageError(msg, onRetry){
   importStage.innerHTML =
     '<div class="import-error">' +
@@ -1931,7 +1957,11 @@ async function beginImport(id, force, type){
     });
     saveToLibrary(id);
     renderLibrary();
-    stageReady(pl);
+    closeImportOverlay();
+    loadPlaylistIntoPlayer(pl);
+    buildQueueFrom(0);
+    loadIndex(state.queuePos, true);
+    setView('player');
   } catch(e){
     stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type));
   }
@@ -1940,7 +1970,7 @@ async function beginImport(id, force, type){
 importForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const parsed = parseImportLink(urlInput.value);
-  if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
+  if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, SoundCloud, or Apple Music link."; return; }
   importErr.textContent = '';
   urlInput.value = '';
   if (parsed.source === 'youtube'){
@@ -2085,7 +2115,7 @@ function renderTrackList(){
       actions.appendChild(nextBtnEl); actions.appendChild(addBtnEl); actions.appendChild(addToPlBtnEl);
       if (pl.type === 'custom'){
         const removeFromPlBtnEl = document.createElement('button'); removeFromPlBtnEl.title = 'Remove from playlist'; removeFromPlBtnEl.setAttribute('aria-label','Remove from playlist');
-        removeFromPlBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg>';
+        removeFromPlBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h12v2H3V6zm0 5h9v2H3v-2zm0 5h9v2H3v-2zm12.59-1.5L19 12.09l3.41 3.41L21 16.91l-2-2-2 2-1.41-1.41 2-2-2-2 1.41-1.41 2 2z"/></svg>';
         removeFromPlBtnEl.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
         actions.appendChild(removeFromPlBtnEl);
       }
@@ -2523,6 +2553,13 @@ function onDeckConfirmed(deck){
   deck.unmuteTimer = null;
   if (!deck.player) return;
   if (deck === activeDeck()){
+    if (pendingResume && deck.player.seekTo){
+      const entry = state.queue[state.queuePos];
+      if (entry && entry.plId === pendingResume.plId && entry.idx === pendingResume.idx){
+        deck.player.seekTo(pendingResume.position, true);
+      }
+      pendingResume = null;
+    }
     if (deck.player.unMute) deck.player.unMute();
   } else if (deck.player.pauseVideo){
     deck.player.pauseVideo();
@@ -2630,17 +2667,143 @@ let vizPlaying = false;
 let vizRAF = null;
 const vizCtx2d = vizCanvas.getContext('2d');
 const VIZ_GRAINS = 1600;
-const VIZ_MODES = [[3,5],[4,5],[5,6],[2,7],[6,7],[3,7],[2,3],[4,7],[5,8],[3,4],[7,8],[2,5]];
-let vizModeIdx = 0;
-let vizModeNext = 1;
-let vizModeMix = 0;          // 0..1 crossfade toward vizModeNext
-let vizModeTimer = 0;        // ms since last mode advance
-const VIZ_MODE_XFADE_MS = 1400;
+
+/* ---------- grain color: Rosicrucian (AMORC) sevenfold daily-period system,
+   per the CYCLES-OF-LIFE-APP reference (data/letters.ts, data/weeklyMatrix.ts,
+   lib/dailyCycle.ts). Each day is split into 7 periods (86400/7s each); the
+   letter a given period carries depends on the weekday's start letter. Colors
+   are that project's dark-theme --letter-a..g tokens (app/globals.css). A
+   symmetric 5-minute crossfade runs across each period boundary, matching
+   getLetterColorTransition there, so the palette shifts gradually rather than
+   snapping every ~3h25m. ---------- */
+const VIZ_LETTER_ORDER = ['A','B','C','D','E','F','G'];
+const VIZ_LETTER_COLORS = {
+  A: '#e0b45c', B: '#d98aa3', C: '#a89aef', D: '#d68a63',
+  E: '#9aa9bd', F: '#5fcabf', G: '#d17a72',
+};
+// Letter each weekday (JS getDay(): 0=Sun..6=Sat) begins on at period 1.
+const VIZ_START_LETTER_INDEX = [6, 2, 5, 1, 4, 0, 3]; // Sun=G, Mon=C, Tue=F, Wed=B, Thu=E, Fri=A, Sat=D
+const VIZ_SECONDS_PER_PERIOD = 86400 / 7;
+const VIZ_LETTER_WINDOW_S = 300;
+
+function vizLetterForWeekdayPeriod(weekday, periodIndex){
+  return VIZ_LETTER_ORDER[(VIZ_START_LETTER_INDEX[weekday] + periodIndex) % 7];
+}
+function vizHexToRgb(hex){
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function vizLerpColor(hexA, hexB, t){
+  const a = vizHexToRgb(hexA), b = vizHexToRgb(hexB);
+  const r = Math.round(a[0] + (b[0] - a[0]) * t);
+  const g = Math.round(a[1] + (b[1] - a[1]) * t);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+  return `rgb(${r},${g},${bl})`;
+}
+function vizRosicrucianColor(){
+  const now = new Date();
+  const weekday = now.getDay();
+  const s = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
+  const periodIndex = Math.min(6, Math.max(0, Math.floor(s / VIZ_SECONDS_PER_PERIOD)));
+  const periodStart = periodIndex * VIZ_SECONDS_PER_PERIOD;
+  const periodEnd = periodStart + VIZ_SECONDS_PER_PERIOD;
+  const currentLetter = vizLetterForWeekdayPeriod(weekday, periodIndex);
+
+  const distanceToNext = periodEnd - s;
+  if (distanceToNext <= VIZ_LETTER_WINDOW_S){
+    const isLast = periodIndex === 6;
+    const nextWeekday = isLast ? (weekday + 1) % 7 : weekday;
+    const nextPeriodIndex = isLast ? 0 : periodIndex + 1;
+    const nextLetter = vizLetterForWeekdayPeriod(nextWeekday, nextPeriodIndex);
+    const t = (VIZ_LETTER_WINDOW_S - distanceToNext) / (2 * VIZ_LETTER_WINDOW_S);
+    return vizLerpColor(VIZ_LETTER_COLORS[currentLetter], VIZ_LETTER_COLORS[nextLetter], t);
+  }
+  const distanceSincePrev = s - periodStart;
+  if (distanceSincePrev <= VIZ_LETTER_WINDOW_S){
+    const isFirst = periodIndex === 0;
+    const prevWeekday = isFirst ? (weekday + 6) % 7 : weekday;
+    const prevPeriodIndex = isFirst ? 6 : periodIndex - 1;
+    const prevLetter = vizLetterForWeekdayPeriod(prevWeekday, prevPeriodIndex);
+    const t = 0.5 + distanceSincePrev / (2 * VIZ_LETTER_WINDOW_S);
+    return vizLerpColor(VIZ_LETTER_COLORS[prevLetter], VIZ_LETTER_COLORS[currentLetter], t);
+  }
+  return VIZ_LETTER_COLORS[currentLetter];
+}
+
+/* Six genuinely different nodal-field families the grains can settle into.
+   Each supplies its own field(x,y,params,t) -> scalar, plus a short list of
+   parameter variants it drifts between while it's the active pattern.
+   Mixing two families is just a pointwise lerp of their scalar outputs, so
+   switching families reuses the same crossfade machinery as switching
+   variants within one. */
+const VIZ_PATTERNS = [
+  {
+    id: 'lattice', name: 'Lattice',
+    field: (x, y, [n, m]) =>
+      Math.cos(n * Math.PI * x) * Math.cos(m * Math.PI * y) -
+      Math.cos(m * Math.PI * x) * Math.cos(n * Math.PI * y),
+    modes: [[3,5],[4,5],[5,6],[2,7],[6,7],[3,7],[4,7],[5,8],[3,4],[7,8]],
+  },
+  {
+    id: 'mandala', name: 'Mandala',
+    field: (x, y, [a, b]) => {
+      const r = Math.sqrt(x*x + y*y), theta = Math.atan2(y, x);
+      return Math.cos(b * theta) * Math.cos(a * Math.PI * r);
+    },
+    modes: [[2,5],[3,6],[2,7],[3,8],[4,6],[2,9]],
+  },
+  {
+    id: 'rings', name: 'Rings',
+    field: (x, y, [a]) => Math.cos(a * Math.PI * Math.sqrt(x*x + y*y)),
+    modes: [[2],[2.5],[3],[3.5]],
+  },
+  {
+    id: 'flow', name: 'Flow',
+    field: (x, y, [k, count], t) => {
+      let s = 0;
+      for (let i = 0; i < count; i++){
+        const ang = (i / count) * Math.PI * 2 + t * 0.06 + i * 0.7;
+        s += Math.cos(k * Math.PI * (x * Math.cos(ang) + y * Math.sin(ang)) + t * 0.4 * Math.sin(i + 1));
+      }
+      return s / count;
+    },
+    modes: [[3,5],[4,5],[3,6],[4,4]],
+  },
+  {
+    id: 'sparse', name: 'Sparse',
+    field: (x, y, [a, b]) => Math.cos(a * Math.PI * x) + Math.cos(b * Math.PI * y),
+    modes: [[1,2],[2,3],[1,3],[2,2],[1,1],[3,2]],
+  },
+  {
+    id: 'kaleido', name: 'Kaleidoscope',
+    field: (x, y, [k, freq]) => {
+      let s = 0;
+      for (let i = 0; i < k; i++){
+        const ang = i * Math.PI / k;
+        s += Math.cos(freq * Math.PI * (x * Math.cos(ang) + y * Math.sin(ang)));
+      }
+      return s / k;
+    },
+    modes: [[5,4],[6,4],[7,3],[8,3],[5,5],[9,3]],
+  },
+];
+
+let vizFamilyIdx = 0;                          // current pattern family
+let vizParams = VIZ_PATTERNS[0].modes[0];      // current params within it
+let vizNextFamilyIdx = 0;
+let vizNextParams = VIZ_PATTERNS[0].modes[0];
+let vizMix = 0;               // 0..1 crossfade toward the next family/params
+let vizHoldTimer = 0;         // ms since last ambient drift within family
+let vizAutoTimer = 0;         // ms since last auto pattern switch
+let vizElapsed = 0;           // ms, feeds time-varying fields (e.g. Flow)
+const VIZ_XFADE_MS = 1600;
+const VIZ_AUTO_INTERVAL_MS = 9000;
+let vizAutoMode = lsGet(LS_VIZ_AUTO, false) === true;
 let vizLastT = 0;
 
-// Every mode change also rolls a fresh set of params - jitter/step scale,
-// hold duration, grain size - so the motion (not just the plate pattern)
-// drifts cycle to cycle. Color stays on brand (--accent). A/B are
+// Every transition also rolls a fresh set of cosmetic params - jitter/step
+// scale, hold duration, grain size - so the motion (not just the plate
+// pattern) drifts cycle to cycle. Color stays on brand (--accent). A/B are
 // crossfaded across the transition.
 function vizRandomParams(){
   return {
@@ -2660,13 +2823,35 @@ for (let i = 0; i < VIZ_GRAINS; i++){
   vizGy[i] = Math.random() * 2 - 1;
 }
 
-function vizField(n, m, x, y){
-  return Math.cos(n * Math.PI * x) * Math.cos(m * Math.PI * y) -
-         Math.cos(m * Math.PI * x) * Math.cos(n * Math.PI * y);
+function vizStartTransition(familyIdx, params){
+  if (vizMix > 0) return;   // already mid-transition; ignore
+  vizNextFamilyIdx = familyIdx;
+  vizNextParams = params;
+  vizParamsB = vizRandomParams();
+  vizMix = 0.0001;
+}
+function vizAdvanceWithinFamily(){
+  const fam = VIZ_PATTERNS[vizFamilyIdx];
+  const idx = Math.max(0, fam.modes.indexOf(vizParams));
+  const nextIdx = fam.modes.length > 1
+    ? (idx + 1 + Math.floor(Math.random() * (fam.modes.length - 1))) % fam.modes.length
+    : 0;
+  vizStartTransition(vizFamilyIdx, fam.modes[nextIdx]);
+}
+function vizAdvancePattern(){
+  const nextFam = (vizFamilyIdx + 1) % VIZ_PATTERNS.length;
+  const fam = VIZ_PATTERNS[nextFam];
+  vizStartTransition(nextFam, fam.modes[Math.floor(Math.random() * fam.modes.length)]);
+}
+function vizSetAutoMode(on){
+  vizAutoMode = on;
+  lsSet(LS_VIZ_AUTO, on);
+  vizAutoBtn.classList.toggle('is-active', on);
+  vizAutoTimer = 0;
 }
 
 function vizResize(){
-  const rect = artworkWrap.getBoundingClientRect();
+  const rect = vizCanvas.parentElement.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   vizCanvas.width = Math.round(rect.width * dpr);
   vizCanvas.height = Math.round(rect.height * dpr);
@@ -2680,35 +2865,39 @@ function vizDraw(t){
   const h = vizCanvas.height / (window.devicePixelRatio || 1);
   vizCtx2d.clearRect(0, 0, w, h);
 
+  vizElapsed += dt;
+  const tSec = vizElapsed / 1000;
   const holdMs = vizPlaying ? vizParamsA.holdMs : vizParamsA.holdMs * 3;
-  vizModeTimer += dt;
-  if (vizModeTimer > holdMs && vizModeMix === 0){
-    vizModeNext = (vizModeIdx + 1 + Math.floor(Math.random() * (VIZ_MODES.length - 1))) % VIZ_MODES.length;
-    vizParamsB = vizRandomParams();
-    vizModeMix = 0.0001;
+  vizHoldTimer += dt;
+  vizAutoTimer += dt;
+  if (vizMix === 0){
+    if (vizAutoMode && vizAutoTimer > VIZ_AUTO_INTERVAL_MS) vizAdvancePattern();
+    else if (!vizAutoMode && vizHoldTimer > holdMs) vizAdvanceWithinFamily();
   }
-  if (vizModeMix > 0){
-    vizModeMix += dt / VIZ_MODE_XFADE_MS;
-    if (vizModeMix >= 1){
-      vizModeIdx = vizModeNext;
+  if (vizMix > 0){
+    vizMix += dt / VIZ_XFADE_MS;
+    if (vizMix >= 1){
+      vizFamilyIdx = vizNextFamilyIdx;
+      vizParams = vizNextParams;
       vizParamsA = vizParamsB;
-      vizModeMix = 0;
-      vizModeTimer = 0;
+      vizMix = 0;
+      vizHoldTimer = 0;
+      vizAutoTimer = 0;
     }
   }
-  const [nA, mA] = VIZ_MODES[vizModeIdx];
-  const [nB, mB] = VIZ_MODES[vizModeNext];
-  const mix = vizModeMix;
+  const famA = VIZ_PATTERNS[vizFamilyIdx];
+  const famB = VIZ_PATTERNS[vizNextFamilyIdx];
+  const mix = vizMix;
   const lerp = (a, b) => a + (b - a) * mix;
   const jitterMul = mix > 0 ? lerp(vizParamsA.jitterMul, vizParamsB.jitterMul) : vizParamsA.jitterMul;
   const stepMul = mix > 0 ? lerp(vizParamsA.stepMul, vizParamsB.stepMul) : vizParamsA.stepMul;
   const grain = mix > 0 ? lerp(vizParamsA.grain, vizParamsB.grain) : vizParamsA.grain;
 
   const cx = w / 2, cy = h / 2;
-  const radius = Math.min(w, h) / 2 * 0.94;
+  const radius = Math.max(w, h) / 2 * 0.94;
   const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul;
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
-  const color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#e0b26a';
+  const color = vizRosicrucianColor();
 
   vizCtx2d.save();
   vizCtx2d.beginPath();
@@ -2723,8 +2912,8 @@ function vizDraw(t){
   const half = 0.7 * grain;
   for (let i = 0; i < VIZ_GRAINS; i++){
     let x = vizGx[i], y = vizGy[i];
-    const fA = vizField(nA, mA, x, y);
-    const f = mix > 0 ? fA * (1 - mix) + vizField(nB, mB, x, y) * mix : fA;
+    const fA = famA.field(x, y, vizParams, tSec);
+    const f = mix > 0 ? fA * (1 - mix) + famB.field(x, y, vizNextParams, tSec) * mix : fA;
     const amp = Math.min(1, Math.abs(f));
     x += (Math.random() - 0.5) * jitter * (0.15 + amp);
     y += (Math.random() - 0.5) * jitter * (0.15 + amp);
@@ -2757,6 +2946,9 @@ function vizStop(){
 function vizSetPlaying(isPlaying){
   vizPlaying = isPlaying;
 }
+vizNextBtn.addEventListener('click', (e) => { e.stopPropagation(); vizAdvancePattern(); });
+vizAutoBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetAutoMode(!vizAutoMode); });
+vizAutoBtn.classList.toggle('is-active', vizAutoMode);
 /* =========================================================================
    VISUAL MODE — album art / visualizer / lyrics, one at a time
    ========================================================================= */
@@ -2767,6 +2959,7 @@ function applyVisualMode(){
   visualTabs.forEach(b => b.classList.toggle('is-active', b.dataset.mode === visualMode));
   artworkWrap.dataset.mode = visualMode;
   artworkWrap.classList.toggle('mode-lyrics', visualMode === 'lyrics');
+  artworkWrap.classList.toggle('mode-viz', visualMode === 'viz');
   vizCanvas.classList.toggle('is-active', visualMode === 'viz');
   lyricsWrap.classList.toggle('is-active', visualMode === 'lyrics');
   if (visualMode === 'viz') vizStart(); else vizStop();
@@ -3130,6 +3323,33 @@ flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) playIndex
 flowNextBtn.addEventListener('click', () => playNext(false));
 flowPrevBtn.addEventListener('click', playPrev);
 miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) playIndex(state.queuePos); });
+
+/* ---------- desktop keyboard shortcuts ---------- */
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  const isTyping = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  if (isTyping) return;
+  switch (e.key){
+    case ' ':
+      e.preventDefault();
+      if (state.queuePos >= 0) playIndex(state.queuePos);
+      break;
+    case 'ArrowLeft':
+      playPrev();
+      break;
+    case 'ArrowRight':
+      playNext(false);
+      break;
+    case 'm': case 'M':
+      toggleMute();
+      break;
+    case 'f': case 'F':
+      if (state.flowOpen) closeFlow();
+      else if (currentTrack()) openFlow();
+      break;
+  }
+});
 miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); });
 miniNextBtn.addEventListener('click', (e) => { e.stopPropagation(); playNext(false); });
 miniShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
@@ -3150,11 +3370,19 @@ if ('serviceWorker' in navigator){
 }
 
 /* ---- seek / progress ---- */
+let positionSaveTimer = null;
 function startSeekPoll(){
   stopSeekPoll();
   seekPollTimer = setInterval(updateSeekUI, 250);
+  positionSaveTimer = setInterval(persistResume, 5000);
 }
-function stopSeekPoll(){ if (seekPollTimer){ clearInterval(seekPollTimer); seekPollTimer = null; } }
+function stopSeekPoll(){
+  if (seekPollTimer){ clearInterval(seekPollTimer); seekPollTimer = null; }
+  if (positionSaveTimer){ clearInterval(positionSaveTimer); positionSaveTimer = null; }
+  persistResume();
+}
+window.addEventListener('beforeunload', persistResume);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persistResume(); });
 function updateSeekUI(){
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
@@ -3184,8 +3412,8 @@ function seekFromClientX(trackEl, clientX){
 
 /* ---- volume ---- */
 const volIco = $('volIco');
-const VOL_ICO_ON = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/>';
-const VOL_ICO_MUTED = '<path d="M3 9v6h4l5 5V4L7 9H3zm14.59-1.41L16.17 9l1.42 1.41L19 8.83l1.41 1.41L21.83 9l-1.41-1.41L19 9zM19 12.17l1.41 1.42L21.83 12l-1.42-1.41L19 12z" fill-rule="evenodd" clip-rule="evenodd" transform="translate(0,0)"/>';
+const VOL_ICO_ON = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+const VOL_ICO_MUTED = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3z"/>';
 let volBeforeMute = lsGet(LS_VOL, 80);
 function setVolumeUI(v){ volFill.style.width = v + '%'; }
 function updateVolIcon(){
@@ -3249,15 +3477,20 @@ ensureYouTubeApi();
 function persistResume(){
   const entry = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
   if (!entry) return;
-  lsSet(LS_RESUME, { playlistId: entry.plId, trackIndex: entry.idx });
+  const ad = activeDeck();
+  const position = (ad.player && ad.player.getCurrentTime) ? (ad.player.getCurrentTime() || 0) : 0;
+  lsSet(LS_RESUME, { playlistId: entry.plId, trackIndex: entry.idx, position });
 }
+let pendingResume = null;
 function tryResume(){
   const r = lsGet(LS_RESUME, null);
   if (!r) return;
   const pl = getCachedPlaylist(r.playlistId);
   if (!pl) return;
   loadPlaylistIntoPlayer(pl);
-  buildQueueFrom(r.trackIndex != null ? r.trackIndex : 0, pl.id);
+  const trackIndex = r.trackIndex != null ? r.trackIndex : 0;
+  buildQueueFrom(trackIndex, pl.id);
+  if (r.position > 0) pendingResume = { plId: pl.id, idx: trackIndex, position: r.position };
   updateTrackMetaUI(currentTrack());
   swapPlayerArt(currentTrack());
   swapFlowArt(currentTrack());
@@ -3271,8 +3504,16 @@ function tryResume(){
    FULLSCREEN / FLOW MODE
    ========================================================================= */
 let flowHideTimer = null;
+const flowVizWrap = $('flowVizWrap');
+const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
+const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
 function openFlow(){
   state.flowOpen = true;
+  const showViz = visualMode === 'viz';
+  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); }
+  flowArtWrap.hidden = showViz;
+  flowVizWrap.hidden = !showViz;
+  if (showViz) vizResize();
   flowLayer.classList.add('is-open');
   armFlowChromeTimer();
 }
@@ -3281,6 +3522,11 @@ function closeFlow(){
   flowLayer.classList.remove('is-open');
   flowLayer.classList.remove('chrome-hidden');
   clearTimeout(flowHideTimer);
+  if (vizCanvas.parentElement === flowVizWrap){
+    vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
+    vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
+    vizResize();
+  }
 }
 function armFlowChromeTimer(){
   flowLayer.classList.remove('chrome-hidden');
@@ -3290,9 +3536,10 @@ function armFlowChromeTimer(){
 fsBtn.addEventListener('click', () => { if (currentTrack()) openFlow(); });
 flowExitBtn.addEventListener('click', closeFlow);
 flowLayer.addEventListener('pointermove', armFlowChromeTimer);
-flowLayer.addEventListener('click', (e) => { if (e.target === flowLayer) armFlowChromeTimer(); });
+flowLayer.addEventListener('pointerdown', armFlowChromeTimer);
+flowLayer.addEventListener('click', armFlowChromeTimer);
 
-/* swipe left/right on flow artwork -> prev/next; swipe down -> exit */
+/* swipe left/right on flow artwork -> prev/next (or next pattern in cymatics view); swipe down -> exit */
 (function(){
   const artWrap = $('flowArtWrap');
   let sx = null, sy = null;
@@ -3302,7 +3549,10 @@ flowLayer.addEventListener('click', (e) => { if (e.target === flowLayer) armFlow
     const p = e.changedTouches ? e.changedTouches[0] : e;
     const dx = p.clientX - sx, dy = p.clientY - sy;
     if (Math.abs(dy) > 80 && Math.abs(dy) > Math.abs(dx)) closeFlow();
-    else if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)){ dx < 0 ? playNext(false) : playPrev(); }
+    else if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)){
+      if (!flowVizWrap.hidden) vizAdvancePattern();
+      else{ dx < 0 ? playNext(false) : playPrev(); }
+    }
     sx = null; sy = null;
   }
   artWrap.addEventListener('touchstart', start, {passive:true});
@@ -3329,6 +3579,7 @@ flowLayer.addEventListener('click', (e) => { if (e.target === flowLayer) armFlow
   function toggleActivePlayback(){ if (state.queuePos >= 0) playIndex(state.queuePos); }
   $('artworkWrap').addEventListener('click', toggleActivePlayback);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
+  $('flowVizWrap').addEventListener('click', toggleActivePlayback);
 })();
 
 /* =========================================================================
