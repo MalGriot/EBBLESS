@@ -2512,7 +2512,7 @@ queueScrim.addEventListener('click', closeQueuePanel);
    ========================================================================= */
 const UNMUTE_DELAY_MS = 5000;
 
-function makeDeck(id){ return { id, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, pos: -1, fadeTimer: null }; }
+function makeDeck(id){ return { id, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null }; }
 const decks = [ makeDeck('yt-deck-a'), makeDeck('yt-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
@@ -2540,6 +2540,7 @@ function resetDeck(deck){
   if (deck.unmuteTimer){ clearTimeout(deck.unmuteTimer); deck.unmuteTimer = null; }
   if (deck.fadeTimer){ clearInterval(deck.fadeTimer); deck.fadeTimer = null; }
   deck.confirmed = false;
+  deck.muteStartTs = 0;
   deck.pos = -1;
   deck.pendingVideoId = null;
   if (deck.player){
@@ -2561,6 +2562,8 @@ function onDeckConfirmed(deck){
       pendingResume = null;
     }
     if (deck.player.unMute) deck.player.unMute();
+    const s = deck.player.getPlayerState ? deck.player.getPlayerState() : 1;
+    setPlayingUI(s === YT.PlayerState.PLAYING || s === undefined);
   } else if (deck.player.pauseVideo){
     deck.player.pauseVideo();
   }
@@ -2597,7 +2600,9 @@ function createDeckPlayer(deck, videoId){
         forceLowestQuality(deck);
         if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v, suggestedQuality: LOWEST_QUALITY }); }
         deck.confirmed = false;
+        deck.muteStartTs = Date.now();
         deck.unmuteTimer = setTimeout(() => onDeckConfirmed(deck), UNMUTE_DELAY_MS);
+        if (deck === activeDeck()) updateAdLoadingIcon();
       },
       onStateChange: function(e){ onDeckStateChange(deck, e); },
       onPlaybackQualityChange: function(){ forceLowestQuality(deck); }
@@ -2613,7 +2618,9 @@ function loadIntoDeck(deck, videoId, isActive){
   deck.player.mute();
   deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
   forceLowestQuality(deck);
+  deck.muteStartTs = Date.now();
   deck.unmuteTimer = setTimeout(() => onDeckConfirmed(deck), UNMUTE_DELAY_MS);
+  if (deck === activeDeck()) updateAdLoadingIcon();
 }
 
 function schedulePreload(afterPos){
@@ -2630,9 +2637,31 @@ function schedulePreload(afterPos){
 
 const ICO_PLAY = '<path d="M8 5v14l11-7z"/>';
 const ICO_PAUSE = '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>';
+const LOADING_RING_R = 9;
+const LOADING_RING_C = 2 * Math.PI * LOADING_RING_R;
+function loadingRingIcon(progress){
+  const offset = LOADING_RING_C * (1 - Math.min(1, Math.max(0, progress)));
+  return `<circle cx="12" cy="12" r="${LOADING_RING_R}" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="2.5"/>` +
+    `<circle cx="12" cy="12" r="${LOADING_RING_R}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ` +
+    `stroke-dasharray="${LOADING_RING_C.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" transform="rotate(-90 12 12)"/>`;
+}
+// Shows a filling ring in place of the play/pause icon while the active deck
+// is muted waiting out a possible pre-roll ad (see UNMUTE_DELAY_MS above).
+// Returns whether it drew the loading state, so callers can skip their own
+// icon update for that tick.
+function updateAdLoadingIcon(){
+  const ad = activeDeck();
+  if (!ad.player || ad.confirmed || !ad.muteStartTs) return false;
+  const svg = loadingRingIcon((Date.now() - ad.muteStartTs) / UNMUTE_DELAY_MS);
+  [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = svg; });
+  return true;
+}
 
 function setPlayingUI(isPlaying){
-  [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
+  const ad = activeDeck();
+  const adLoading = isPlaying && ad.player && !ad.confirmed && ad.muteStartTs;
+  if (adLoading) updateAdLoadingIcon();
+  else [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
   artworkWrap.classList.toggle('is-playing', isPlaying);
   highlightActiveRow();
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
@@ -3384,6 +3413,7 @@ function stopSeekPoll(){
 window.addEventListener('beforeunload', persistResume);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persistResume(); });
 function updateSeekUI(){
+  updateAdLoadingIcon();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
   const cur = ad.player.getCurrentTime() || 0;
@@ -3595,6 +3625,12 @@ renderQueuePanel();
 setView('library');
 tryResume();
 if (!currentTrack()) updateMiniBarVisibility();
+
+/* dev convenience: on localhost with an empty library, auto-load a test playlist */
+if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length === 0){
+  const parsed = parseImportLink('https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ?si=aUx0lxmHQumqjSJqcf8tOg');
+  if (parsed) beginImport(parsed.id, false, parsed.type);
+}
 
 })();
 </script>
