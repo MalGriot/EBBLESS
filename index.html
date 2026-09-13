@@ -551,6 +551,19 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer{position:fixed;inset:0;z-index:50;background:var(--bg);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out);display:flex;flex-direction:column;align-items:center;justify-content:center}
 #flow-layer.is-open{opacity:1;pointer-events:auto}
+/* own lava-lamp ambient (mirrors #ambient, driven by the same artwork) so the
+   fullscreen view blooms/fades/shifts with the album art's colors instead of
+   sitting on a flat --bg fill */
+#flow-layer .flow-ambient{position:absolute;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
+#flow-layer .flow-ambient .layer{position:absolute;inset:-40%;background-size:cover;background-position:center;
+  filter:blur(70px) saturate(1.15) brightness(.42);transform:scale(1.15);opacity:0;
+  transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
+#flow-layer .flow-ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite}
+#flow-layer .flow-ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+#flow-layer .flow-ambient::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%);}
+@media (prefers-reduced-motion:reduce){
+  #flow-layer .flow-ambient .layer.is-active{animation:none}
+}
 #flow-layer .flow-art{width:min(52vh,62vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
   box-shadow:0 30px 80px -16px rgba(0,0,0,.7);z-index:1}
 #flow-layer .flow-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
@@ -1040,6 +1053,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
   <!-- ===== FLOW / FULLSCREEN ===== -->
   <div id="flow-layer">
+    <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
     <div class="flow-chrome">
       <div class="flow-top"><button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>
       <div class="flow-bottom">
@@ -1544,6 +1558,7 @@ const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $(
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
 const ambientA = $('ambient-a'), ambientB = $('ambient-b');
+const flowAmbientA = $('flowAmbientA'), flowAmbientB = $('flowAmbientB');
 const toastEl = $('toast');
 const clearLibraryBtn = $('clearLibraryBtn');
 const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlider'), crossfadeDurRow = $('crossfadeDurRow'), crossfadeDurVal = $('crossfadeDurVal');
@@ -1595,7 +1610,7 @@ $('wordmarkBtn').addEventListener('click', () => setView('library'));
 /* =========================================================================
    AMBIENT BACKGROUND (blurred artwork, crossfade)
    ========================================================================= */
-let ambientActive = 'a';
+let ambientActive = 'a', flowAmbientActive = 'a';
 function setAmbient(track){
   const cur = ambientActive === 'a' ? ambientA : ambientB;
   const nxt = ambientActive === 'a' ? ambientB : ambientA;
@@ -1607,6 +1622,15 @@ function setAmbient(track){
     cur.classList.remove('is-active');
   });
   ambientActive = ambientActive === 'a' ? 'b' : 'a';
+
+  const flowCur = flowAmbientActive === 'a' ? flowAmbientA : flowAmbientB;
+  const flowNxt = flowAmbientActive === 'a' ? flowAmbientB : flowAmbientA;
+  flowNxt.style.backgroundImage = url ? "url('" + url + "')" : 'none';
+  requestAnimationFrame(() => {
+    flowNxt.classList.add('is-active');
+    flowCur.classList.remove('is-active');
+  });
+  flowAmbientActive = flowAmbientActive === 'a' ? 'b' : 'a';
 }
 
 /* =========================================================================
