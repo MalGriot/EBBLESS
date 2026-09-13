@@ -274,39 +274,45 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
 @keyframes record-spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 
-/* cassette: OR-WO K60-style shell — chamfered shoulders, paper label (replaced by
-   album art), open reel window with geared hubs, lower text stripe, base detailing */
-.art-cassette{padding:9% 6%}
-.cassette-body{position:relative;width:100%;height:58%;background:#161616;
-  clip-path:polygon(9% 0%,91% 0%,100% 9%,100% 96%,96% 100%,4% 100%,0% 96%,0% 9%);
-  box-shadow:0 20px 46px -14px rgba(0,0,0,.7);
-  display:flex;flex-direction:column}
-.cassette-body::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(115deg,rgba(255,255,255,.05) 0%,transparent 18%,transparent 82%,rgba(0,0,0,.25) 100%)}
-.cassette-label{position:relative;flex:0 0 38%;min-height:0;background:#d8d3c4;overflow:hidden;margin:5px 4% 0;
-  clip-path:polygon(10% 0%,90% 0%,100% 22%,100% 100%,0% 100%,0% 22%)}
-.cassette-label img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.cassette-window{position:relative;flex:0 0 27%;min-height:0;margin:4px 8% 0;border-radius:3px;background:#050505;
-  display:flex;align-items:center;justify-content:space-between;padding:0 9%;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 2px 6px rgba(0,0,0,.6)}
-.tape-ticks{position:absolute;top:50%;left:50%;width:26%;height:34%;transform:translate(-50%,-50%);
-  background:repeating-linear-gradient(90deg,rgba(255,255,255,.3) 0 1px,transparent 1px 7px);opacity:.4}
-.reel-hub{position:relative;height:78%;width:auto;aspect-ratio:1;border-radius:50%;
-  background:
-    radial-gradient(circle at center,#0a0a0a 0 8%,#8a5a35 8% 28%,#0a0a0a 28% 56%,transparent 56% 100%),
-    repeating-conic-gradient(#d9d4c4 0deg 20deg,transparent 20deg 60deg);
-  box-shadow:0 0 0 2px rgba(0,0,0,.6),inset 0 0 3px rgba(0,0,0,.4);
-  animation:reel-spin 2.4s linear infinite;animation-play-state:paused}
-.artwork-wrap.is-playing[data-art-style="cassette"] .reel-hub{animation-play-state:running}
-.cassette-footer{flex:0 0 13%;min-height:0;display:flex;align-items:center;justify-content:center;background:#1c1c1c}
-.cassette-footer span{font-size:10.5px;font-weight:700;letter-spacing:2px;color:var(--faint-2)}
-.cassette-base{flex:0 0 10%;min-height:0;display:flex;align-items:center;justify-content:space-between;padding:0 12%}
-.cassette-base .hole{width:6px;height:6px;border-radius:50%;background:#000;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.cassette-base .hole.sq{border-radius:1.5px}
-.cassette-base .arrow{width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;
-  border-left:6px solid #050505}
-@keyframes reel-spin{to{transform:rotate(360deg)}}
+/* cassette: physical-object rebuild — SVG shell/reels/tape driven by real
+   playback progress (see CASSETTE PHYSICAL OBJECT block in the script). The
+   wrap only positions the SVG; all geometry/material lives in the markup. */
+.art-cassette{padding:8% 4%}
+.cassette-svg{width:100%;height:100%;display:block;overflow:visible}
+.cs-shell-outer{fill:#161513}
+.cs-shell-face{fill:#1c1b18}
+.cs-shell-edge{fill:none;stroke:rgba(255,255,255,.05);stroke-width:1}
+.cs-shell-sheen{fill:url(#csSheenGrad);mix-blend-mode:screen;opacity:.5;pointer-events:none}
+.cs-label-panel{fill:#e7e2d3}
+.cs-label-panel.alt{fill:#dbd6c6}
+.cs-label-shade{fill:url(#csLabelShade);pointer-events:none}
+.cs-brand{fill:#2a2823;font-size:11px;font-weight:700;letter-spacing:2.5px}
+.cs-idx{fill:#6b675c;font-size:9px;font-weight:600;letter-spacing:1px}
+.cs-track{fill:#2a2823;font-size:10.5px;font-weight:600}
+.cs-label-rule{stroke:#c7c1ac;stroke-width:1}
+.cs-window{fill:#070706}
+.cs-window-edge{fill:none;stroke:rgba(255,255,255,.06);stroke-width:1}
+.cs-tape{fill:none;stroke:#161311;stroke-width:5;stroke-linecap:round}
+.cs-tape-sheen{fill:none;stroke:rgba(255,255,255,.05);stroke-width:1;stroke-linecap:round}
+.cs-guide{fill:#0c0c0b;stroke:rgba(255,255,255,.09);stroke-width:1}
+.cs-reel-bed{fill:#0e0e0c}
+.cs-reel-mass{fill:#1c1712;transition:r 90ms linear}
+.cs-reel-mass-line{fill:none;stroke:rgba(0,0,0,.35);stroke-width:1}
+.cs-hub{transform-box:fill-box;transform-origin:center}
+.cs-hub-ring{fill:#c9c3b0}
+.cs-hub-core{fill:#0a0a09}
+.cs-hub-spoke{fill:#0a0a09}
+.cs-hub-tooth{stroke:rgba(10,10,9,.55);stroke-width:1.6;stroke-linecap:round}
+.cs-mech{fill:#111110}
+.cs-mech-edge{fill:none;stroke:rgba(255,255,255,.05);stroke-width:1}
+.cs-mech-well{fill:#050504}
+.cs-screw{fill:#0b0b0a;stroke:rgba(255,255,255,.08);stroke-width:.75}
+.cs-screw-slot{stroke:rgba(255,255,255,.14);stroke-width:1;stroke-linecap:round}
+.cs-seam{fill:none;stroke:rgba(0,0,0,.4);stroke-width:1}
+.cs-arrow{fill:#3a362e}
+@media (prefers-reduced-motion:reduce){
+  .cs-hub{transition:none!important}
+}
 
 .lyrics-wrap{position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;
   transition:opacity var(--dur-surface) var(--ease-in-out);
@@ -607,6 +613,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
         <span>Library</span>
       </button>
+      <button class="nav-btn" data-view="player">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 100-6 3 3 0 000 6zm12-3a3 3 0 100-6 3 3 0 000 6z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span>Player</span>
+      </button>
       <button class="nav-btn" data-action="toggle-queue">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h11v2H4zm0 5h11v2H4zm0 5h7v2H4zm13-9v10.17a3 3 0 1 0 2 2.83V9h3V7z"/></svg>
         <span>Queue</span>
@@ -697,22 +707,99 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
             </div>
           </div>
           <div class="art-cassette" id="artCassette">
-            <div class="cassette-body">
-              <div class="cassette-label"><img id="cassetteLabelImg" alt=""></div>
-              <div class="cassette-window">
-                <div class="reel-hub"></div>
-                <div class="tape-ticks"></div>
-                <div class="reel-hub"></div>
-              </div>
-              <div class="cassette-footer"><span>EBBLESS</span></div>
-              <div class="cassette-base">
-                <div class="hole sq"></div>
-                <div class="hole"></div>
-                <div class="hole"></div>
-                <div class="hole sq"></div>
-                <div class="arrow"></div>
-              </div>
-            </div>
+            <svg class="cassette-svg" id="cassetteSvg" viewBox="0 0 400 256" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cassette tape, now playing">
+              <defs>
+                <linearGradient id="csSheenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fff" stop-opacity=".08"/>
+                  <stop offset="22%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="78%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".22"/>
+                </linearGradient>
+                <linearGradient id="csLabelShade" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+                  <stop offset="82%" stop-color="#000" stop-opacity="0"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".14"/>
+                </linearGradient>
+                <clipPath id="csLabelClip"><path d="M32,30 H354 L368,44 V112 H32 Z"/></clipPath>
+                <line id="csHubSpoke" x1="0" y1="-6.5" x2="0" y2="-12.5"/>
+              </defs>
+
+              <!-- shell -->
+              <rect class="cs-shell-outer" x="8" y="8" width="384" height="240" rx="14"/>
+              <rect class="cs-shell-face" x="15" y="15" width="370" height="226" rx="10"/>
+              <rect class="cs-shell-edge" x="15" y="15" width="370" height="226" rx="10"/>
+              <rect class="cs-shell-sheen" x="15" y="15" width="370" height="226" rx="10"/>
+
+              <!-- label -->
+              <g clip-path="url(#csLabelClip)">
+                <path class="cs-label-panel" d="M32,30 H354 L368,44 V112 H32 Z"/>
+                <path class="cs-label-shade" d="M32,30 H354 L368,44 V112 H32 Z"/>
+              </g>
+              <path class="cs-label-rule" d="M32,30 H354 L368,44 V112 H32 Z" fill="none"/>
+              <line class="cs-label-rule" x1="44" y1="61" x2="356" y2="61"/>
+              <text class="cs-brand" x="44" y="51">EBBLESS</text>
+              <text class="cs-idx" id="cassetteIdx" x="356" y="51" text-anchor="end">01 / 01</text>
+              <text class="cs-track" id="cassetteTrackTitle" x="44" y="90">—</text>
+
+              <!-- tape window -->
+              <rect class="cs-window" x="32" y="120" width="336" height="76" rx="4"/>
+              <rect class="cs-window-edge" x="32" y="120" width="336" height="76" rx="4"/>
+
+              <path class="cs-tape" d="M136,180 Q158,196 168,192 L232,192 Q242,196 264,180"/>
+              <path class="cs-tape-sheen" d="M136,180 Q158,196 168,192 L232,192 Q242,196 264,180"/>
+              <circle class="cs-guide" cx="168" cy="192" r="3.5"/>
+              <circle class="cs-guide" cx="232" cy="192" r="3.5"/>
+
+              <!-- left reel (supply) -->
+              <g id="cassetteReelL">
+                <circle class="cs-reel-bed" cx="112" cy="158" r="34"/>
+                <circle class="cs-reel-mass" id="reelMassL" cx="112" cy="158" r="32"/>
+                <circle class="cs-reel-mass-line" cx="112" cy="158" r="32"/>
+                <g class="cs-hub" id="hubL">
+                  <circle class="cs-hub-ring" cx="112" cy="158" r="14"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(0)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(60)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(120)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(180)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(240)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(300)"/>
+                  <circle class="cs-hub-core" cx="112" cy="158" r="4.5"/>
+                </g>
+              </g>
+
+              <!-- right reel (take-up) -->
+              <g id="cassetteReelR">
+                <circle class="cs-reel-bed" cx="288" cy="158" r="34"/>
+                <circle class="cs-reel-mass" id="reelMassR" cx="288" cy="158" r="13"/>
+                <circle class="cs-reel-mass-line" cx="288" cy="158" r="13"/>
+                <g class="cs-hub" id="hubR">
+                  <circle class="cs-hub-ring" cx="288" cy="158" r="14"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(0)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(60)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(120)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(180)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(240)"/>
+                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(300)"/>
+                  <circle class="cs-hub-core" cx="288" cy="158" r="4.5"/>
+                </g>
+              </g>
+
+              <!-- lower mechanical area -->
+              <rect class="cs-mech" x="32" y="200" width="336" height="34" rx="3"/>
+              <rect class="cs-mech-edge" x="32" y="200" width="336" height="34" rx="3"/>
+              <rect class="cs-mech-well" x="160" y="208" width="80" height="18" rx="2"/>
+              <circle class="cs-guide" cx="70" cy="217" r="7"/>
+              <circle class="cs-guide" cx="330" cy="217" r="7"/>
+              <path class="cs-arrow" d="M50,213 l8,4.5 -8,4.5 Z"/>
+
+              <!-- screws -->
+              <g>
+                <circle class="cs-screw" cx="30" cy="30" r="4.5"/><line class="cs-screw-slot" x1="27" y1="30" x2="33" y2="30"/>
+                <circle class="cs-screw" cx="370" cy="30" r="4.5"/><line class="cs-screw-slot" x1="367" y1="29" x2="373" y2="31"/>
+                <circle class="cs-screw" cx="30" cy="234" r="4.5"/><line class="cs-screw-slot" x1="27" y1="233" x2="33" y2="235"/>
+                <circle class="cs-screw" cx="370" cy="234" r="4.5"/><line class="cs-screw-slot" x1="368" y1="231" x2="372" y2="237"/>
+              </g>
+            </svg>
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
@@ -1383,7 +1470,7 @@ const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
 const playlistListWrap = $('playlistListWrap'), plHeadName = $('plHeadName'), trackListEl = $('trackList'), reResolveBtn = $('reResolveBtn'), trackSortSel = $('trackSortSel'), plPlayBtn = $('plPlayBtn');
 const artA = $('artA'), artB = $('artB');
-const recordLabelImg = $('recordLabelImg'), cassetteLabelImg = $('cassetteLabelImg');
+const recordLabelImg = $('recordLabelImg');
 const artStyleMenu = $('artStyleMenu'), artTabBtn = document.querySelector('#visualTabs .v-tab[data-mode="art"]');
 const seekTrack = $('seekTrack'), seekFill = $('seekFill'), seekKnob = $('seekKnob'), timeCur = $('timeCur'), timeDur = $('timeDur');
 const keepAliveAudio = $('keepAliveAudio');
@@ -1487,7 +1574,6 @@ const swapPlayerArt = makeArtSwapper(artA, artB);
 const swapFlowArt = makeArtSwapper(flowArtA, flowArtB);
 function swapAltArt(track){
   attachArtworkFallback(recordLabelImg, track);
-  attachArtworkFallback(cassetteLabelImg, track);
 }
 
 /* =========================================================================
@@ -2554,13 +2640,19 @@ function onDeckConfirmed(deck){
   deck.unmuteTimer = null;
   if (!deck.player) return;
   if (deck === activeDeck()){
+    let resumed = false;
     if (pendingResume && deck.player.seekTo){
       const entry = state.queue[state.queuePos];
       if (entry && entry.plId === pendingResume.plId && entry.idx === pendingResume.idx){
         deck.player.seekTo(pendingResume.position, true);
+        resumed = true;
       }
       pendingResume = null;
     }
+    // The video plays muted (silently) through the whole pre-ad wait, so by the
+    // time it's confirmed clean it has already drifted past the intro — snap
+    // back to the start so the listener hears the song from 0:00.
+    if (!resumed && deck.player.seekTo) deck.player.seekTo(0, true);
     if (deck.player.unMute) deck.player.unMute();
     const s = deck.player.getPlayerState ? deck.player.getPlayerState() : 1;
     setPlayingUI(s === YT.PlayerState.PLAYING || s === undefined);
@@ -2668,6 +2760,7 @@ function setPlayingUI(isPlaying){
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   setKeepAliveAudio(isPlaying);
   vizSetPlaying(isPlaying);
+  cassetteSetPlaying(isPlaying);
 }
 
 /* the real audio plays inside YouTube's cross-origin iframe, which mobile
@@ -3019,6 +3112,7 @@ function setArtStyle(style){
   lsSet(LS_ART_STYLE, style);
   applyArtStyle();
   closeArtStyleMenu();
+  if (style === 'cassette') cassetteRefreshLabel();
 }
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
 function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
@@ -3032,6 +3126,97 @@ document.addEventListener('click', (e) => {
   closeArtStyleMenu();
 });
 applyArtStyle();
+
+/* =========================================================================
+   CASSETTE — physical object driven by real playback state.
+   No separate timer: cassetteSetProgress() reads the same cur/dur that
+   drives the seek bar (see updateSeekUI), cassetteSetPlaying() mirrors
+   setPlayingUI(), and cassetteUpdateTrack() runs from reflectCurrentTrackUI.
+   ========================================================================= */
+const cassetteTitleEl = $('cassetteTrackTitle'), cassetteIdxEl = $('cassetteIdx');
+const reelMassL = $('reelMassL'), reelMassR = $('reelMassR');
+const hubL = $('hubL'), hubR = $('hubR');
+const CS_MIN_R = 13, CS_MAX_R = 32;
+const CS_ANG_K = 2600; /* deg·r / s — tape speed constant; angular speed = k / radius */
+let csLeftR = CS_MAX_R, csRightR = CS_MIN_R;
+let csLeftAngle = 0, csRightAngle = 0;
+let csRafId = null, csLastTs = 0;
+let csSpeedMul = 1, csDecel = false, csPlaying = false;
+let csPendingTitle = '—';
+const csReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+function cassetteVisible(){ return artStyle === 'cassette' && artworkWrap.dataset.mode === 'art'; }
+
+function cassetteSetProgress(cur, dur){
+  const p = dur ? Math.min(1, Math.max(0, cur / dur)) : 0;
+  csLeftR = CS_MAX_R - p * (CS_MAX_R - CS_MIN_R);
+  csRightR = CS_MIN_R + p * (CS_MAX_R - CS_MIN_R);
+  if (reelMassL){ reelMassL.setAttribute('r', csLeftR.toFixed(2)); reelMassR.setAttribute('r', csRightR.toFixed(2)); }
+}
+
+function cassetteApplyRotation(){
+  hubL.style.transform = 'rotate(' + (csLeftAngle % 360).toFixed(2) + 'deg)';
+  hubR.style.transform = 'rotate(' + (csRightAngle % 360).toFixed(2) + 'deg)';
+}
+
+function cassetteTick(ts){
+  if (!csLastTs) csLastTs = ts;
+  const dt = Math.min(64, ts - csLastTs);
+  csLastTs = ts;
+  if (csDecel){
+    csSpeedMul = Math.max(0, csSpeedMul - dt / 150);
+    if (csSpeedMul <= 0){ csDecel = false; csRafId = null; csLastTs = 0; return; }
+  } else if (csSpeedMul > 1){
+    csSpeedMul = Math.max(1, csSpeedMul - dt / 400);
+  }
+  const dtS = dt / 1000;
+  csLeftAngle += dtS * CS_ANG_K * csSpeedMul / csLeftR;
+  csRightAngle += dtS * CS_ANG_K * csSpeedMul / csRightR;
+  cassetteApplyRotation();
+  csRafId = requestAnimationFrame(cassetteTick);
+}
+
+function cassetteStart(){
+  if (csRafId || csReducedMotion) return;
+  csDecel = false; csSpeedMul = Math.max(csSpeedMul, 1); csLastTs = 0;
+  csRafId = requestAnimationFrame(cassetteTick);
+}
+function cassetteStop(immediate){
+  if (!csRafId) return;
+  if (immediate){ cancelAnimationFrame(csRafId); csRafId = null; csLastTs = 0; return; }
+  csDecel = true;
+}
+function cassetteSetPlaying(isPlaying){
+  csPlaying = isPlaying;
+  if (csReducedMotion) return;
+  if (isPlaying) cassetteStart(); else cassetteStop(false);
+}
+function cassetteSeekPulse(){
+  if (csReducedMotion) return;
+  csSpeedMul = 3.2;
+  if (csPlaying) cassetteStart();
+}
+
+function cassetteRefreshLabel(){
+  if (!cassetteVisible() || !cassetteTitleEl.getComputedTextLength) return;
+  const maxW = 312;
+  cassetteTitleEl.textContent = csPendingTitle;
+  if (cassetteTitleEl.getComputedTextLength() <= maxW) return;
+  let t = csPendingTitle;
+  while (t.length > 1 && cassetteTitleEl.getComputedTextLength() > maxW){
+    t = t.slice(0, -1);
+    cassetteTitleEl.textContent = t + '…';
+  }
+}
+function cassetteUpdateTrack(t, pos){
+  csPendingTitle = (t && t.title) || '—';
+  cassetteTitleEl.textContent = csPendingTitle;
+  const total = state.queue.length || 1;
+  const n = Math.max(1, (typeof pos === 'number' ? pos : state.queuePos) + 1);
+  cassetteIdxEl.textContent = String(n).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+  cassetteRefreshLabel();
+}
+cassetteSetProgress(0, 0);
 
 visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   if (btn.dataset.mode === 'art'){
@@ -3190,6 +3375,7 @@ function reflectCurrentTrackUI(pos){
   swapAltArt(t);
   setAmbient(t);
   attachArtworkFallback(miniArt, t);
+  cassetteUpdateTrack(t, pos);
   bumpPlayCount(entry);
   highlightActiveRow();
   renderQueuePanel();
@@ -3426,6 +3612,7 @@ function updateSeekUI(){
   miniLineFill.style.width = pct + '%';
   updateLyricsHighlight(cur);
   maybeStartCrossfade(cur, dur);
+  cassetteSetProgress(cur, dur);
 }
 function seekFromClientX(trackEl, clientX){
   const ad = activeDeck();
@@ -3434,6 +3621,7 @@ function seekFromClientX(trackEl, clientX){
   const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
   const dur = ad.player.getDuration() || 0;
   ad.player.seekTo(dur * pct, true);
+  cassetteSeekPulse();
   updateSeekUI();
 }
 [seekTrack, flowSeekTrack].forEach(el => {
@@ -3527,6 +3715,7 @@ function tryResume(){
   swapAltArt(currentTrack());
   setAmbient(currentTrack());
   attachArtworkFallback(miniArt, currentTrack());
+  cassetteUpdateTrack(currentTrack(), state.queuePos);
   highlightActiveRow();
 }
 

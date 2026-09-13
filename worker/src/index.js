@@ -58,6 +58,7 @@ function deepFindKey(obj, key, out) {
 // cache can't keep serving pre-change payloads for their old TTL (up to 30
 // days on some routes) after a deploy.
 const ART_CACHE_VERSION = 'v2';
+const LYRICS_CACHE_VERSION = 'v2';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -533,7 +534,7 @@ async function handleLyrics(url, ctx) {
   if (!title) return json({ error: 'missing title' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/lyrics/' + videoId);
+  const cacheKey = new Request('https://cache.internal/lyrics/' + LYRICS_CACHE_VERSION + '/' + videoId);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
