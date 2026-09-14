@@ -2725,7 +2725,7 @@ queueScrim.addEventListener('click', closeQueuePanel);
     if (dy > 90) closeQueuePanel();
     startY = null;
   }
-  [queuePanel, handleEl].forEach(el => {
+  [handleEl].forEach(el => {
     el.addEventListener('touchstart', down, {passive:true});
     el.addEventListener('touchmove', move, {passive:true});
     el.addEventListener('touchend', up);
