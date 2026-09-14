@@ -3504,14 +3504,14 @@ function updateTrackMetaUI(t){
 
 function updateMediaSessionMeta(t){
   if (!('mediaSession' in navigator)) return;
+  const artwork = t && t.art
+    ? [{ src: t.art, sizes: '512x512', type: 'image/jpeg' }]
+    : artworkUrls(t).map(src => ({ src, sizes: '480x360', type: 'image/jpeg' }));
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title || 'EBBLESS',
     artist: t.artist || '',
     album: 'EBBLESS',
-    artwork: [
-      { src: 'https://img.youtube.com/vi/' + t.videoId + '/mqdefault.jpg', sizes: '320x180', type: 'image/jpeg' },
-      { src: 'https://img.youtube.com/vi/' + t.videoId + '/hqdefault.jpg', sizes: '480x360', type: 'image/jpeg' }
-    ]
+    artwork
   });
 }
 
@@ -3963,19 +3963,6 @@ flowLayer.addEventListener('click', armFlowChromeTimer);
   artWrap.addEventListener('touchend', end);
   flowLayer.addEventListener('touchstart', start, {passive:true});
   flowLayer.addEventListener('touchend', end);
-})();
-
-/* mobile gesture: swipe up on player artwork -> open queue */
-(function(){
-  const wrap = $('artworkWrap');
-  let sy = null;
-  wrap.addEventListener('touchstart', (e) => { sy = e.touches[0].clientY; }, {passive:true});
-  wrap.addEventListener('touchend', (e) => {
-    if (sy === null) return;
-    const dy = e.changedTouches[0].clientY - sy;
-    if (dy < -70) openQueuePanel();
-    sy = null;
-  });
 })();
 
 /* tap album art -> play/pause */
