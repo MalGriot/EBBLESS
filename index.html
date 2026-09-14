@@ -1547,7 +1547,12 @@ const recordLabelImg = $('recordLabelImg');
 const artStyleMenu = $('artStyleMenu'), artTabBtn = document.querySelector('#visualTabs .v-tab[data-mode="art"]');
 const seekTrack = $('seekTrack'), seekFill = $('seekFill'), seekKnob = $('seekKnob'), timeCur = $('timeCur'), timeDur = $('timeDur');
 const keepAliveAudio = $('keepAliveAudio');
-if (keepAliveAudio) keepAliveAudio.volume = 1;
+/* Volume is intentionally near-zero, not 1: the loop's dither noise (see
+   keepAliveAudio's <audio> tag above) is only there so iOS doesn't treat the
+   stream as silent and suspend it — at full volume that dither is audible as
+   a buzz, especially during the muted pre-roll-skip window when nothing else
+   is making sound. */
+if (keepAliveAudio) keepAliveAudio.volume = 0.01;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn');
