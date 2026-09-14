@@ -4,11 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>EBBLESS</title>
-<link rel="icon" type="image/svg+xml" href="brand/assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/assets/icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="brand/assets/icons/favicon-16.png">
 <meta name="description" content="Music without the ebb. Paste a playlist, keep listening.">
 <meta name="theme-color" content="#121212">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="brand/assets/icons/apple-touch-icon.png">
+<meta property="og:title" content="EBBLESS">
+<meta property="og:description" content="Music without the ebb. Paste a playlist, keep listening.">
+<meta property="og:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="EBBLESS">
+<meta name="twitter:description" content="Music without the ebb. Paste a playlist, keep listening.">
+<meta name="twitter:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EBBLESS">
@@ -68,9 +77,8 @@ svg{display:block}
   position:relative;z-index:5;height:var(--topbar-h);display:flex;align-items:center;
   justify-content:space-between;padding:0 22px;padding-top:var(--safe-t);
 }
-.wordmark{display:flex;flex-direction:column;gap:3px;background:none;border:none;padding:0;cursor:pointer}
-.wordmark .word{font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text)}
-.wordmark svg{width:52px;height:6px}
+.wordmark{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
+.wordmark img{height:22px;width:auto;display:block}
 #topnav{display:flex;align-items:center;gap:4px}
 .nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
@@ -661,8 +669,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
-      <span class="word">EBBLESS</span>
-      <svg viewBox="0 0 360 12" preserveAspectRatio="none"><path d="M2 8 C 60 8, 90 10, 150 8 S 240 6, 300 8 S 340 9, 358 8" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <img src="brand/assets/logo-lockup.png" alt="EBBLESS">
     </button>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
