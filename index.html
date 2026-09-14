@@ -3965,12 +3965,11 @@ flowLayer.addEventListener('click', armFlowChromeTimer);
   flowLayer.addEventListener('touchend', end);
 })();
 
-/* tap album art -> play/pause */
+/* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
 (function(){
   function toggleActivePlayback(){ if (state.queuePos >= 0) playIndex(state.queuePos); }
   $('artworkWrap').addEventListener('click', toggleActivePlayback);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
-  $('flowVizWrap').addEventListener('click', toggleActivePlayback);
 })();
 
 /* =========================================================================
