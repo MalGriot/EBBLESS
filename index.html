@@ -826,6 +826,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop:not(.view-settings-active) #mini-bar{display:none!important}
   body.split-desktop:not(.view-settings-active) .view-scroll,
   body.split-desktop:not(.view-settings-active) #topbar{margin-right:0!important}
+  /* the library column is only 240-300px here - as narrow as the mobile
+     layout the filter/cycle split already handles, so reuse it - and let
+     the head-actions row wrap rather than clip when it still doesn't fit */
+  body.split-desktop:not(.view-settings-active) .lib-filter{display:none}
+  body.split-desktop:not(.view-settings-active) .lib-filter-cycle{display:inline-flex;align-items:center}
+  body.split-desktop:not(.view-settings-active) .section-label-row{flex-wrap:wrap;row-gap:8px}
 }
 /* short viewports (landscape phones, small windows): the vertical stack can't
    fit at normal sizes no matter how small the artwork gets, so collapse the
