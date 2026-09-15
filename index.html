@@ -1884,11 +1884,24 @@ function artworkUrls(track){
   }
   return chain;
 }
+// A missing maxresdefault/hqdefault thumbnail doesn't always 404 - YouTube
+// sometimes "succeeds" with a generic 120x90 gray placeholder instead, which
+// decodes fine and never fires onerror, so the fallback chain below would
+// otherwise get stuck showing it. Checking the decoded size on load catches
+// that case too.
+const YT_PLACEHOLDER_SIZE = { w: 120, h: 90 };
 function attachArtworkFallback(img, track){
   const chain = artworkUrls(track);
   if (!chain.length){ img.removeAttribute('src'); return; }
   let i = 0;
   img.onerror = function(){ i++; if (i < chain.length) img.src = chain[i]; else img.onerror = null; };
+  if (img._artLoadCheck) img.removeEventListener('load', img._artLoadCheck);
+  img._artLoadCheck = function(){
+    if (img.naturalWidth === YT_PLACEHOLDER_SIZE.w && img.naturalHeight === YT_PLACEHOLDER_SIZE.h && i < chain.length - 1){
+      i++; img.src = chain[i];
+    }
+  };
+  img.addEventListener('load', img._artLoadCheck);
   img.src = chain[0];
 }
 
