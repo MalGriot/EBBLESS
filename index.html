@@ -88,6 +88,8 @@ svg{display:block}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
+#mobileSettingsBtn{display:none;padding:8px;border-radius:50%}
+#mobileSettingsBtn svg{width:20px;height:20px}
 
 /* ---------- views ---------- */
 .view{position:absolute;inset:0;top:var(--topbar-h);bottom:0;overflow-y:auto;overflow-x:hidden;
@@ -173,6 +175,21 @@ svg{display:block}
 .lib-card .art .face.icon-face{display:flex;align-items:center;justify-content:center;background:#121212}
 .lib-card .art .face.icon-face svg{width:44%;height:44%}
 .lib-card .art .face.icon-face path{stroke:var(--clock-accent,#e0b26a)}
+/* Swell's own fallback for the same no-tracks-yet moment: a looping teaser
+   clip instead of the generic icon glyph. Swapped out for the standard
+   2x2 track grid the instant Swell's first generation lands. */
+.lib-card .art .face.video-face{display:block;background:#121212}
+.lib-card .art .face.video-face video{width:100%;height:100%;object-fit:cover;display:block}
+/* Liked Songs always gets a beating heart glyph instead of a track-art
+   grid - it's the one playlist whose identity is the "liked" action
+   itself, not its contents. */
+.lib-card .art .face.heart-face{display:flex;align-items:center;justify-content:center;background:#121212}
+.lib-card .art .face.heart-face svg{width:46%;height:46%;animation:lib-heart-beat 1.4s ease-in-out infinite}
+.lib-card .art .face.heart-face path{fill:var(--clock-accent,#e0576a)}
+@keyframes lib-heart-beat{0%,100%{transform:scale(1)}20%{transform:scale(1.15)}40%{transform:scale(0.98)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){
+  .lib-card .art .face.heart-face svg{animation:none}
+}
 .lib-card .art.animated .face{opacity:0;animation:lib-art-crossfade 9s ease-in-out infinite}
 .lib-card .art.animated .face.grid-face{opacity:1}
 .lib-card .art.animated .face.spotify-face{animation-delay:-4.5s}
@@ -722,6 +739,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @media (max-width:859.98px){
   #topbar{padding:0 18px}
   #topnav{display:none}
+  #mobileSettingsBtn{display:flex}
   .view{bottom:calc(var(--nav-h) + var(--safe-b))}
   .view-scroll{padding:4px 18px calc(120px + var(--safe-b))}
   #bottom-nav{display:flex}
@@ -788,7 +806,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #splash .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:grayscale(1) contrast(1.15) brightness(.9)}
 #splash .splash-tint{position:absolute;inset:0;z-index:-1;background:var(--clock-accent,#1db954);mix-blend-mode:color;transition:background 4s linear}
 #splash .splash-black{position:absolute;inset:0;z-index:0;background:#000;pointer-events:none;animation:splash-reveal 2600ms var(--ease-out) forwards}
-#splash img{width:120px;height:auto;position:relative;z-index:1;opacity:0;animation:splash-logo-in 1800ms var(--ease-out) 900ms forwards}
+#splash img{width:min(320px,70vw);height:auto;position:relative;z-index:1;opacity:0;animation:splash-logo-in 1800ms var(--ease-out) 900ms forwards}
 @keyframes splash-reveal{from{opacity:1}to{opacity:0}}
 @keyframes splash-logo-in{from{opacity:0}to{opacity:1}}
 </style>
@@ -799,7 +817,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   <video class="splash-video" autoplay muted loop playsinline src="brand/assets/splash-cymatics.mp4"></video>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
-  <img src="brand/assets/mark-white.png" alt="EBBLESS">
+  <img src="brand/assets/wordmark-white.png" alt="EBBLESS">
 </div>
 
 <div id="app">
@@ -807,7 +825,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
-      <img src="brand/assets/logo-lockup.png" alt="EBBLESS">
+      <img src="brand/assets/mark.png" alt="EBBLESS">
     </button>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
@@ -827,6 +845,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
         <span>Settings</span>
       </button>
     </nav>
+    <button class="nav-btn" id="mobileSettingsBtn" data-view="settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+    </button>
   </header>
 
   <!-- ===== LIBRARY ===== -->
@@ -1696,6 +1717,7 @@ const state = {
   shuffle: false,
   repeat: 'off',          // off | all | one
   currentView: 'player',
+  preSettingsView: 'library',
   queueOpen: false,
   flowOpen: false,
   sortMode: 'custom',    // custom | alpha | plays_desc | plays_asc (per-playlist track list order)
@@ -1818,6 +1840,7 @@ function showToast(msg){
    ========================================================================= */
 function setView(name){
   const prevView = state.currentView;
+  if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
   state.currentView = name;
   if (state.queueOpen) closeQueuePanel();
   if (name === 'player' && prevView !== 'player' && typeof setVisualMode === 'function'){
@@ -1838,8 +1861,12 @@ function updateMiniBarVisibility(){
   if (showMini) miniBar.setAttribute('data-shown', '1'); else miniBar.removeAttribute('data-shown');
 }
 
-document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-view]').forEach(btn => {
+document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-view], #mobileSettingsBtn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (btn.dataset.view === 'settings'){
+      setView(state.currentView === 'settings' ? state.preSettingsView : 'settings');
+      return;
+    }
     if (btn.dataset.view === 'player' && typeof setVisualMode === 'function') setVisualMode('art');
     setView(btn.dataset.view);
   });
@@ -1937,11 +1964,22 @@ function renderLibrary(){
     card.className = 'lib-card' + (pinned ? ' is-pinned' : '');
     const artDiv = document.createElement('div');
     artDiv.className = 'art';
-    if (withArt.length === 0 && !pl.image){
-      // No matched tracks yet and no source-provided image (a brand-new
-      // Swell before its first generation, or an empty manual playlist) -
-      // the app icon glyph, recolored to today's color-clock accent,
-      // instead of an empty tile.
+    if (isLiked){
+      // Liked Songs is always the heart glyph, never the track-art grid -
+      // its identity is the like action, not whatever's currently in it.
+      artDiv.classList.add('single');
+      artDiv.innerHTML = '<div class="face heart-face"><svg viewBox="0 0 24 24"><path d="M12 21s-6.7-4.35-9.3-8.2C.8 9.9 1.9 6 5.4 5.1 7.6 4.5 9.9 5.6 12 8c2.1-2.4 4.4-3.5 6.6-2.9 3.5.9 4.6 4.8 2.7 7.7C18.7 16.65 12 21 12 21z"/></svg></div>';
+    } else if (withArt.length === 0 && !pl.image && id === SWELL_ID){
+      // Swell before its first generation has no matched tracks yet - a
+      // looping teaser clip stands in for the tile until that first drop
+      // lands, at which point the branch below takes over with the same
+      // 2x2 track grid every other playlist uses.
+      artDiv.classList.add('single');
+      artDiv.innerHTML = '<div class="face video-face"><video autoplay muted loop playsinline src="brand/assets/swell-thumb.mp4"></video></div>';
+    } else if (withArt.length === 0 && !pl.image){
+      // No matched tracks yet and no source-provided image (an empty
+      // manual playlist) - the app icon glyph, recolored to today's
+      // color-clock accent, instead of an empty tile.
       artDiv.classList.add('single');
       artDiv.innerHTML = '<div class="face icon-face"><svg viewBox="0 0 512 512"><path d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272" fill="none" stroke-width="46" stroke-linecap="round"/></svg></div>';
     } else {
