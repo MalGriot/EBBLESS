@@ -3690,7 +3690,6 @@ function swellHasUnseenDrop(){
   return true;
 }
 async function generateSwell(){
-  console.log('[DEBUG] generateSwell called');
   const likedPl = getCachedPlaylist(LIKED_ID);
   const recentPls = getLibrary()
     .filter(id => id !== LIKED_ID && id !== SWELL_ID && !id.startsWith('discover-ext:'))
