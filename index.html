@@ -386,6 +386,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .viz-ctl-btn svg{width:15px;height:15px}
 .viz-ctl-btn.viz-auto-btn{font-size:16px;font-weight:700;line-height:1}
+.viz-ctl-btn.viz-speed-btn{width:auto;padding:0 9px;border-radius:15px;font-size:12px;font-weight:700;letter-spacing:.02em}
 .viz-ctl-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
 .viz-ctl-btn.is-active{background:var(--accent);color:#151107}
 .art-fs-btn{position:absolute;top:10px;right:10px;z-index:6;width:32px;height:32px;border-radius:50%;
@@ -605,7 +606,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer .flow-viz .viz-canvas{opacity:1}
 #flow-layer .flow-viz #vizAutoBtn{position:absolute;right:16px;bottom:calc(16px + var(--safe-b));z-index:6;
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
-#flow-layer.chrome-hidden .flow-viz #vizAutoBtn{opacity:0;pointer-events:none}
+#flow-layer .flow-viz #vizSpeedBtn{position:absolute;right:58px;bottom:calc(16px + var(--safe-b));z-index:6;
+  opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
+#flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
+#flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
 #flow-layer .flow-meta{margin-top:28px;text-align:center;position:relative;z-index:5;pointer-events:none}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
@@ -697,8 +701,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 #splash .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:grayscale(1) contrast(1.15) brightness(.9)}
 #splash .splash-tint{position:absolute;inset:0;z-index:-1;background:var(--clock-accent,#1db954);mix-blend-mode:color;transition:background 4s linear}
-#splash .splash-scrim{position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse 340px 160px at 50% 50%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.28) 55%, transparent 78%)}
-#splash img{width:120px;height:auto;filter:brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,.85)) drop-shadow(0 0 24px rgba(0,0,0,.6))}
+#splash img{width:120px;height:auto}
 </style>
 </head>
 <body>
@@ -706,8 +709,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 <div id="splash">
   <video class="splash-video" autoplay muted loop playsinline src="brand/assets/splash-cymatics.mp4"></video>
   <div class="splash-tint"></div>
-  <div class="splash-scrim"></div>
-  <img src="brand/assets/mark.png" alt="EBBLESS">
+  <img src="brand/assets/mark-white.png" alt="EBBLESS">
 </div>
 
 <div id="app">
@@ -926,6 +928,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>
             </button>
             <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Auto-cycle patterns" aria-label="Toggle automatic pattern cycling">∞</button>
+            <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Cymatics speed" aria-label="Change cymatics animation speed">1x</button>
           </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
           <button class="art-fs-btn" id="fsBtn" title="Fullscreen" aria-label="Enter flow mode">
@@ -1373,6 +1376,7 @@ const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_SORT = (id) => 'ebbless:sort:' + id;    // per-playlist track sort mode
 const LS_VIZ = 'ebbless:visualizer';
 const LS_VIZ_AUTO = 'ebbless:vizAuto';
+const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
@@ -1649,7 +1653,7 @@ const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), ne
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
-const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn');
+const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
 const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
@@ -3268,6 +3272,21 @@ const VIZ_AUTO_INTERVAL_MS = 9000;
 let vizAutoMode = lsGet(LS_VIZ_AUTO, false) === true;
 let vizLastT = 0;
 
+/* ---------- fullscreen speed control: scales the simulation dt fed into
+   grain motion, pattern holds, and time-varying fields, independent of the
+   real-time RAF cadence. ---------- */
+const VIZ_SPEEDS = [0.5, 1, 1.5, 2, 3];
+let vizSpeed = (() => {
+  const saved = lsGet(LS_VIZ_SPEED, 1);
+  return VIZ_SPEEDS.includes(saved) ? saved : 1;
+})();
+function vizSetSpeed(v){
+  vizSpeed = v;
+  lsSet(LS_VIZ_SPEED, v);
+  vizSpeedBtn.textContent = v + 'x';
+}
+vizSetSpeed(vizSpeed);
+
 // Every transition also rolls a fresh set of cosmetic params - jitter/step
 // scale, hold duration, grain size - so the motion (not just the plate
 // pattern) drifts cycle to cycle. Color stays on brand (--accent). A/B are
@@ -3326,7 +3345,7 @@ function vizResize(){
 }
 
 function vizDraw(t){
-  const dt = vizLastT ? Math.min(48, t - vizLastT) : 16;
+  const dt = (vizLastT ? Math.min(48, t - vizLastT) : 16) * vizSpeed;
   vizLastT = t;
   const w = vizCanvas.width / (window.devicePixelRatio || 1);
   const h = vizCanvas.height / (window.devicePixelRatio || 1);
@@ -3407,6 +3426,11 @@ function vizSetPlaying(isPlaying){
 vizNextBtn.addEventListener('click', (e) => { e.stopPropagation(); vizAdvancePattern(); });
 vizAutoBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetAutoMode(!vizAutoMode); });
 vizAutoBtn.classList.toggle('is-active', vizAutoMode);
+vizSpeedBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const idx = VIZ_SPEEDS.indexOf(vizSpeed);
+  vizSetSpeed(VIZ_SPEEDS[(idx + 1) % VIZ_SPEEDS.length]);
+});
 /* =========================================================================
    VISUAL MODE — album art / visualizer / lyrics, one at a time
    ========================================================================= */
@@ -4074,10 +4098,11 @@ let flowHideTimer = null;
 const flowVizWrap = $('flowVizWrap');
 const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
 const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
+const vizSpeedBtnHome = vizSpeedBtn.parentElement, vizSpeedBtnAnchor = vizSpeedBtn.nextElementSibling;
 function openFlow(){
   state.flowOpen = true;
   const showViz = visualMode === 'viz';
-  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); }
+  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); flowVizWrap.appendChild(vizSpeedBtn); }
   flowArtWrap.hidden = showViz;
   flowVizWrap.hidden = !showViz;
   if (showViz) vizResize();
@@ -4092,6 +4117,7 @@ function closeFlow(){
   if (vizCanvas.parentElement === flowVizWrap){
     vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
     vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
+    vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
     vizResize();
   }
 }
