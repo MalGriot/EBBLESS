@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="clock-color-init">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -106,9 +106,16 @@ svg{display:block}
   background:radial-gradient(ellipse 140% 60% at 50% -10%, var(--clock-tint, transparent) 0%, transparent 70%);
   transition:background 4s linear;
 }
+/* the color clock sets its CSS vars on load; without this guard the very
+   first paint transitions from the CSS fallback color to today's actual
+   color instead of just starting on it */
+.clock-color-init #view-library,
+.clock-color-init .lib-bg-tint,
+.clock-color-init #splash,
+.clock-color-init #splash .splash-tint{transition:none!important}
 /* Library background video - same time-of-day color clock as the splash
-   screen wash (see updateLibraryClockColor()), kept subtle so it stays a
-   mood rather than a distraction behind the playlist grid. */
+   screen wash (see updateLibraryClockColor()), blurred so it stays a mood
+   rather than a distraction behind the playlist grid. */
 .lib-bg{position:fixed;left:0;right:0;top:var(--topbar-h);bottom:0;overflow:hidden;pointer-events:none;container-type:size}
 .lib-bg-video{position:absolute;top:50%;left:50%;width:102cqh;height:102cqw;transform:translate(-50%,-50%) rotate(-90deg);
   object-fit:cover;filter:saturate(1.05) brightness(.5)}
@@ -261,13 +268,13 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #import-overlay .close svg{width:16px;height:16px}
 
 /* ---------- player view ---------- */
-#view-player{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+#view-player{overflow:hidden}
 #view-player:not([hidden]){display:flex}
-#view-player .view-scroll{max-width:1040px;padding-top:6px;padding-bottom:8px;width:100%;
+#view-player .view-scroll{max-width:1040px;padding-top:6px;padding-bottom:8px;width:100%;height:100%;
   display:flex;flex-direction:column;justify-content:safe center}
 .player-layout{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
-.player-stage{display:flex;flex-direction:column;align-items:center;padding-top:10px;min-height:0}
-.visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:14px}
+.player-stage{display:flex;flex-direction:column;align-items:center;padding-top:clamp(4px,2dvh,10px);min-height:0}
+.visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:clamp(6px,2dvh,14px)}
 .visual-tabs .v-tab{width:34px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;
   color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .visual-tabs .v-tab svg{width:16px;height:16px}
@@ -295,7 +302,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .swatch-cassette{position:relative;background:#101010;gap:3px}
 .swatch-hub{width:6px;height:6px;border-radius:50%;background:var(--faint-2);box-shadow:0 0 0 1px rgba(255,255,255,.1)}
 
-.artwork-wrap{position:relative;width:min(420px,72vw);aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;
+.artwork-wrap{position:relative;width:min(420px,72vw,44vh);aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;
   box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2);transition:height var(--dur-surface) var(--ease-in-out);
   flex-shrink:0}
 .artwork-wrap[data-mode="art"][data-art-style="record"],
@@ -427,14 +434,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .player-like-btn svg{width:14px;height:14px}
 .player-like-btn:hover{background:var(--panel-3);color:var(--text)}
 .player-like-btn.is-liked{color:var(--accent)}
-.track-meta{margin-top:26px;text-align:center;width:min(420px,72vw)}
+.track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
 .playlist-ctx{margin-top:18px;font-size:12.5px;color:var(--faint-2);display:flex;align-items:center;gap:6px}
 .playlist-ctx button{color:var(--faint);text-decoration:none;font-weight:500}
 .playlist-ctx button:hover{color:var(--text)}
 
-.transport-full{width:100%;max-width:480px;margin-top:26px}
+.transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
 .seek-track{flex:1;height:14px;display:flex;align-items:center;cursor:pointer;position:relative}
@@ -444,7 +451,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
 .seek-track:hover .knob{opacity:1}
 
-.controls-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:18px}
+.controls-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:clamp(8px,3dvh,18px)}
 .ctl-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .ctl-btn:hover{background:var(--panel-2)}
@@ -459,7 +466,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .repeat-badge{position:relative}
 .repeat-badge .one{position:absolute;bottom:3px;right:2px;font-size:8px;font-weight:800;color:var(--accent)}
 
-.secondary-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:16px}
+.secondary-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:clamp(6px,3dvh,16px)}
 .vol-wrap{display:flex;align-items:center;gap:8px;width:120px}
 .vol-wrap svg{width:15px;height:15px;color:var(--faint);flex:none}
 #volIco{cursor:pointer}
@@ -554,10 +561,16 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #queue-scrim.is-open{opacity:1;pointer-events:auto}
 #queue-panel{position:fixed;z-index:41;background:var(--panel);display:flex;flex-direction:column;
   box-shadow:0 0 60px rgba(0,0,0,.5)}
-.queue-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px;flex:none}
-.queue-head h2{font-size:15px;font-weight:700;margin:0}
-.queue-head .clear{font-size:12px;color:var(--faint-2)}
+.queue-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px;flex:none}
+.queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto}
+.queue-head .clear{font-size:12px;color:var(--faint-2);flex:none}
 .queue-head .clear:hover{color:var(--bad)}
+.queue-head .discover-toggle{flex:none;display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  padding:5px 10px 5px 8px;border-radius:20px;border:1px solid var(--border-2);color:var(--faint);
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out)}
+.queue-head .discover-toggle svg{width:13px;height:13px;flex:none}
+.queue-head .discover-toggle:hover{color:var(--text)}
+.queue-head .discover-toggle.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .queue-body{padding:4px 12px 24px}
 .queue-drag-handle{display:none}
@@ -708,7 +721,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   #bottom-nav{display:flex}
   #mini-bar{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
-  .artwork-wrap{width:min(340px,84vw)}
+  .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 308px)))}
   .track-meta{width:min(340px,84vw)}
   .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
   .ctl-btn{width:44px;height:44px}
@@ -718,17 +731,40 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .ctl-btn.small{width:40px;height:40px}
   .ctl-btn.small svg{width:16px;height:16px}
   .track-row .row-actions button,.q-row .remove{width:34px;height:34px}
-  #view-player .view-scroll{justify-content:flex-start;padding-bottom:calc(24px + var(--nav-h) + var(--safe-b))}
+  #view-player .view-scroll{justify-content:safe center;padding-bottom:12px}
 }
 @media (min-width:860px){
   #bottom-nav{display:none}
   .view{bottom:0}
-  .player-stage{padding-top:30px}
-  .artwork-wrap{width:min(440px,34vw)}
+  .player-stage{padding-top:clamp(10px,3dvh,30px)}
+  .artwork-wrap{width:min(440px,34vw,max(72px,calc(100dvh - var(--topbar-h) - 300px)))}
   .track-meta{width:min(440px,34vw)}
   .track-meta .title{font-size:26px}
   body.queue-open .view-scroll,body.queue-open #topbar{margin-right:380px;transition:margin var(--dur-surface) var(--ease-in-out)}
   #view-player{overflow-y:hidden}
+}
+/* short viewports (landscape phones, small windows): the vertical stack can't
+   fit at normal sizes no matter how small the artwork gets, so collapse the
+   chrome itself rather than let the player scroll or spill under the nav */
+@media (max-height:480px){
+  #view-player .view-scroll{padding-top:2px;padding-bottom:4px}
+  .player-stage{padding-top:2px}
+  .visual-tabs{transform:scale(.78);margin-bottom:0}
+  .artwork-wrap{width:min(20vh,100px)!important}
+  .track-meta{margin-top:6px}
+  .track-meta .title{font-size:14px;line-height:1.15}
+  .track-meta .artist{font-size:10px;margin-top:2px}
+  .playlist-ctx{display:none!important}
+  .transport-full{margin-top:8px}
+  .controls-row{margin-top:4px;gap:2px}
+  .secondary-row{margin-top:4px}
+  .ctl-btn{width:30px;height:30px}
+  .ctl-btn svg{width:13px;height:13px}
+  .ctl-btn.main{width:38px;height:38px}
+  .ctl-btn.main svg{width:15px;height:15px}
+  .ctl-btn.small{width:26px;height:26px}
+  .ctl-btn.small svg{width:12px;height:12px}
+  .vol-wrap{width:90px}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
@@ -745,7 +781,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 #splash .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:grayscale(1) contrast(1.15) brightness(.9)}
 #splash .splash-tint{position:absolute;inset:0;z-index:-1;background:var(--clock-accent,#1db954);mix-blend-mode:color;transition:background 4s linear}
-#splash img{width:120px;height:auto}
+#splash .splash-black{position:absolute;inset:0;z-index:0;background:#000;pointer-events:none;animation:splash-reveal 2600ms var(--ease-out) forwards}
+#splash img{width:120px;height:auto;position:relative;z-index:1;opacity:0;animation:splash-logo-in 1800ms var(--ease-out) 900ms forwards}
+@keyframes splash-reveal{from{opacity:1}to{opacity:0}}
+@keyframes splash-logo-in{from{opacity:0}to{opacity:1}}
 </style>
 </head>
 <body>
@@ -753,6 +792,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 <div id="splash">
   <video class="splash-video" autoplay muted loop playsinline src="brand/assets/splash-cymatics.mp4"></video>
   <div class="splash-tint"></div>
+  <div class="splash-black"></div>
   <img src="brand/assets/mark-white.png" alt="EBBLESS">
 </div>
 
@@ -1144,6 +1184,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     <div class="queue-drag-handle"></div>
     <div class="queue-head">
       <h2>Queue</h2>
+      <button class="discover-toggle" id="discoverToggleBtn" title="Keep playing similar songs when this queue ends" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-5.41L15.59 9 17 10.41 11 16.41 7 12.41 8.41 11z"/></svg>
+        Discover
+      </button>
       <button class="clear" id="queueClearBtn">Clear</button>
     </div>
     <div class="queue-scroll">
@@ -1447,6 +1491,10 @@ const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
+const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
+const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
+const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
+const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
 
 function lsGet(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
@@ -1498,12 +1546,17 @@ function sortLibraryIds(ids, mode){
   return withPl.map(x => x.id);
 }
 function orderedLibraryIds(){
-  const ids = getLibrary().filter(id => id !== LIKED_ID);
+  const lib = getLibrary();
+  const ids = lib.filter(id => id !== LIKED_ID && id !== SWELL_ID);
   const pinned = getPinnedLibrary().filter(id => ids.includes(id));
   const rest = ids.filter(id => !pinned.includes(id));
   const sortMode = getLibrarySort();
   const ordered = sortLibraryIds(pinned, sortMode).concat(sortLibraryIds(rest, sortMode));
-  return getLibrary().includes(LIKED_ID) ? [LIKED_ID].concat(ordered) : ordered;
+  // Swell and Liked Songs are system playlists - always pinned ahead of
+  // anything the listener chose to pin themselves, Swell first since it's
+  // the thing most worth surfacing today.
+  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(ordered) : ordered;
+  return lib.includes(SWELL_ID) ? [SWELL_ID].concat(withLiked) : withLiked;
 }
 
 function recordLastPlayed(plId){ if (plId) lsSet(LS_LASTPLAYED(plId), Date.now()); }
@@ -1729,6 +1782,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
       miniRepeatBtn = $('miniRepeatBtn'), miniRepeatOneBadge = $('miniRepeatOneBadge'), miniLikeBtn = $('miniLikeBtn');
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueClearBtn = $('queueClearBtn');
+const discoverToggleBtn = $('discoverToggleBtn');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
@@ -1867,6 +1921,7 @@ function renderLibrary(){
     const isAlbum = isAlbumType(pl.type);
     if (isAlbum) albumCount++;
     const isLiked = id === LIKED_ID;
+    const isSystemPl = isLiked || id === SWELL_ID;
     const pinned = isPinned(id);
     const withArt = pl.tracks.filter(t => t.videoId).slice(0, 4);
     const card = document.createElement('div');
@@ -1892,7 +1947,7 @@ function renderLibrary(){
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
-    if (!isLiked){
+    if (!isSystemPl){
       const removeBtn = document.createElement('button');
       removeBtn.className = 'remove'; removeBtn.setAttribute('aria-label','Remove from library');
       removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
@@ -1912,7 +1967,7 @@ function renderLibrary(){
     hoverActions.appendChild(playBtn); hoverActions.appendChild(openBtn);
     artDiv.appendChild(hoverActions);
 
-    if (!isLiked){
+    if (!isSystemPl){
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin' + (pinned ? ' is-active' : '');
       pinBtn.setAttribute('aria-label', pinned ? 'Unpin playlist' : 'Pin playlist to top');
@@ -2047,6 +2102,20 @@ function ensureLikedPlaylist(){
   saveToLibrary(LIKED_ID);
 }
 
+// Built-in "Swell" playlist - a daily discovery drop, regenerated once per
+// calendar day from a blend of Liked Songs and whatever's actually been
+// played recently (see generateSwell). Always pinned to the very front of
+// the library (see orderedLibraryIds), same mechanism as Liked Songs.
+function ensureSwellPlaylist(){
+  if (getCachedPlaylist(SWELL_ID)) return;
+  const pl = { id: SWELL_ID, type: 'custom', name: 'Swell', image: null, tracks: [], ts: Date.now() };
+  lsSet(LS_PL(SWELL_ID), pl);
+  saveToLibrary(SWELL_ID);
+}
+
+function isDiscoverOn(id){ return lsGet(LS_DISCOVER(id), true); }
+function setDiscoverOn(id, on){ lsSet(LS_DISCOVER(id), !!on); }
+
 function isTrackLiked(videoId){
   if (!videoId) return false;
   const pl = getCachedPlaylist(LIKED_ID);
@@ -2074,9 +2143,11 @@ function toggleLikeTrack(track){
   ensureLikedPlaylist();
   if (isTrackLiked(track.videoId)){
     removeTrackFromPlaylistByVideoId(LIKED_ID, track.videoId);
+    recordListenSignal(track, -1);
     showToast('Removed from Liked Songs');
   } else {
     addTracksToPlaylist(LIKED_ID, [track]);
+    recordListenSignal(track, 2);
     showToast('Added to Liked Songs');
   }
   renderTrackList();
@@ -2794,7 +2865,298 @@ function cycleRepeat(){
   if (state.queuePos >= 0) schedulePreload(state.queuePos);
 }
 
+/* =========================================================================
+   DISCOVER — the queue's "keep playing similar songs" toggle and the Swell
+   playlist share one engine: cascade through Last.fm -> ListenBrainz ->
+   YouTube's own "Up next" panel for candidates (worker /similar, /ytmix),
+   score them by tag overlap with the seed plus this listener's own local
+   graph, then fold the outcome of each play back into that graph and into
+   the pooled affinity data every listener contributes to (/pool/signal).
+   ========================================================================= */
+const DISCOVER_LOOKAHEAD = 3;   // extend once this few tracks remain in the queue
+const DISCOVER_BATCH = 6;       // tracks fetched per extension
+
+async function fetchSimilar(title, artist, limit){
+  try{
+    const params = new URLSearchParams({ title, artist: artist || '', limit: String(limit || 20) });
+    const res = await fetch(BACKEND + '/similar?' + params.toString());
+    if (!res.ok) return { source: 'none', seedTags: [], candidates: [] };
+    return await res.json();
+  } catch(e){ return { source: 'none', seedTags: [], candidates: [] }; }
+}
+async function fetchYtMix(videoId){
+  try{
+    const res = await fetch(BACKEND + '/ytmix?videoId=' + encodeURIComponent(videoId));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.tracks || [];
+  } catch(e){ return []; }
+}
+// Fire-and-forget: pooling is a bonus signal, never something playback
+// should wait on or fail over.
+function postPoolSignal(tags, weight){
+  if (!tags || tags.length < 2 || !weight) return;
+  try{
+    fetch(BACKEND + '/pool/signal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags, weight }),
+    }).catch(() => {});
+  } catch(e){}
+}
+
+/* ---------- local listening graph ---------- */
+// Every listener quietly builds their own tag-pair affinity table from what
+// they actually finish, like, or skip. It starts silent and grows more
+// influential the more data it has (see graphConfidence) - the "learns the
+// listener's own vibe over time" half of Discover, distinct from the
+// crowd-sourced pooled affinity the backend holds.
+function getGraph(){ return lsGet(LS_GRAPH, {}); }
+function graphPairKey(a, b){ return a < b ? a + '|' + b : b + '|' + a; }
+function bumpGraphPair(tagA, tagB, weight){
+  const graph = getGraph();
+  const key = graphPairKey(tagA, tagB);
+  graph[key] = (graph[key] || 0) + weight;
+  lsSet(LS_GRAPH, graph);
+}
+function graphPairScore(tagA, tagB){ return getGraph()[graphPairKey(tagA, tagB)] || 0; }
+function graphConfidence(){
+  const size = Object.keys(getGraph()).length;
+  return Math.min(0.4, size / (size + 20));
+}
+function graphBoostFor(seedTagNames, candidateTagNames){
+  if (!seedTagNames.length || !candidateTagNames.length) return 0;
+  let total = 0, n = 0;
+  seedTagNames.forEach(a => candidateTagNames.forEach(b => { total += graphPairScore(a, b); n++; }));
+  if (!n) return 0;
+  return Math.max(0, Math.min(1, (total / n) / 5));
+}
+
+/* ---------- tag scoring ---------- */
+// Tags Last.fm's folksonomy fills with noise, not vibe - describing the
+// listener (seen live, favorites) or a decade rather than the sound.
+const DISCOVER_TAG_BLACKLIST = new Set([
+  'seen live', 'favorites', 'favourite', 'favorite', 'spotify', 'awesome',
+  'good', 'love', 'beautiful', 'amazing', 'great', '00s', '90s', '80s',
+  '70s', '60s', '2010s', '2020s',
+]);
+function normalizeTagList(tags, limit){
+  const clean = (tags || []).filter(t => t && t.name && !DISCOVER_TAG_BLACKLIST.has(t.name.toLowerCase())).slice(0, limit || 15);
+  const max = Math.max.apply(null, clean.map(t => t.weight || 1).concat([1]));
+  const vec = new Map();
+  clean.forEach(t => vec.set(t.name.toLowerCase(), (t.weight || 1) / max));
+  return vec;
+}
+function tagCosineSimilarity(vecA, vecB){
+  let dot = 0, magA = 0, magB = 0;
+  vecA.forEach((wa, tag) => { magA += wa * wa; const wb = vecB.get(tag); if (wb) dot += wa * wb; });
+  vecB.forEach(wb => { magB += wb * wb; });
+  if (!magA || !magB) return 0;
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+// candidate: { title, artist, matchScore, tags:[{name,weight}], videoId? }
+function scoreCandidate(seedVec, candidate, seedArtist, recentArtists){
+  const candVec = normalizeTagList(candidate.tags, 15);
+  const tagSim = tagCosineSimilarity(seedVec, candVec);
+  let score = (tagSim * 0.7) + ((candidate.matchScore || 0) * 0.3);
+  const gc = graphConfidence();
+  if (gc){
+    const boost = graphBoostFor(Array.from(seedVec.keys()), (candidate.tags || []).map(t => t.name.toLowerCase()));
+    score = score * (1 - gc) + boost * gc;
+  }
+  const candArtist = (candidate.artist || '').toLowerCase();
+  if (candArtist && candArtist === (seedArtist || '').toLowerCase()) score += 0.05;
+  if (candArtist && recentArtists.has(candArtist)) score -= 0.15;
+  return score;
+}
+
+function libraryVideoIdSet(){
+  const ids = new Set();
+  getLibrary().forEach(plId => {
+    const pl = getCachedPlaylist(plId);
+    if (pl) pl.tracks.forEach(t => { if (t.videoId) ids.add(t.videoId); });
+  });
+  state.queue.forEach(e => {
+    const pl = playlistById(e.plId);
+    const t = pl && pl.tracks[e.idx];
+    if (t && t.videoId) ids.add(t.videoId);
+  });
+  return ids;
+}
+
+/* seedTracks: most-recently-played first. excludeVideoIds: Set already in
+   the library/queue, so Discover never resurfaces something the listener
+   already has. Returns resolved, playable track objects (same shape
+   resolvePlaylist produces), each carrying `.tags` for later signal use. */
+async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
+  const seed = seedTracks[0];
+  if (!seed) return [];
+  const recentArtists = new Set(seedTracks.slice(0, 5).map(t => (t.artist || '').toLowerCase()));
+
+  const similar = await fetchSimilar(seed.title, seed.artist, 25);
+  let pool = similar.candidates || [];
+  const seedTagVec = normalizeTagList(similar.seedTags, 15);
+
+  if (!pool.length && seed.videoId){
+    const mix = await fetchYtMix(seed.videoId);
+    pool = mix.map(t => Object.assign({}, t, { matchScore: 0.3, tags: [] }));
+  }
+  if (!pool.length) return [];
+
+  const scored = pool
+    .filter(c => c.title && c.artist)
+    .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists) }))
+    .sort((a, b) => b.score - a.score)
+    .map(x => x.c);
+
+  const resolved = [];
+  const seenTitles = new Set();
+  for (const c of scored){
+    if (resolved.length >= count) break;
+    const dupeKey = (c.title + '|' + c.artist).toLowerCase();
+    if (seenTitles.has(dupeKey)) continue;
+    seenTitles.add(dupeKey);
+    const tagNames = (c.tags || []).map(t => t.name);
+    if (c.videoId){
+      if (excludeVideoIds.has(c.videoId)) continue;
+      resolved.push({ title: c.title, artist: c.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: null, duration: 0, tags: tagNames });
+      continue;
+    }
+    try{
+      const match = await searchYouTube(c.title, c.artist);
+      if (!match.videoId || excludeVideoIds.has(match.videoId)) continue;
+      resolved.push({ title: c.title, artist: c.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: null, duration: match.duration || 0, tags: tagNames });
+    } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
+  }
+  return resolved;
+}
+
+/* ---------- implicit feedback: completed / liked / skipped ---------- */
+// Only discover-origin tracks carry `.tags` (a regular pasted-playlist
+// track never got a /similar lookup), so this is naturally scoped to
+// exactly the data that improves discovery, with no separate tag lookup
+// needed for every track a listener plays.
+function recordListenSignal(track, weight){
+  if (!track || !track.tags || track.tags.length < 2 || !weight) return;
+  const tags = track.tags.slice(0, 8);
+  for (let i = 0; i < tags.length; i++){
+    for (let j = i + 1; j < tags.length; j++) bumpGraphPair(tags[i], tags[j], weight);
+  }
+  postPoolSignal(tags, weight);
+}
+
+/* ---------- queue-toggle: endless continuation ---------- */
+// Discovered tracks live in a synthetic per-origin playlist (never saved to
+// the library) so the queue's existing {plId, idx} engine can reference
+// them without mutating the listener's real playlist.
+function discoverExtId(originPlId){ return 'discover-ext:' + originPlId; }
+function getOrCreateDiscoverExt(originPlId){
+  const id = discoverExtId(originPlId);
+  let pl = getCachedPlaylist(id);
+  if (!pl){ pl = { id, type: 'custom', name: 'Discover', image: null, tracks: [], ts: Date.now() }; }
+  return pl;
+}
+
+let discoverExtending = false;
+async function extendQueueWithDiscover(originPlId){
+  if (discoverExtending) return;
+  discoverExtending = true;
+  try{
+    const seedTracks = [];
+    for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
+      const t = trackAt(p);
+      if (t) seedTracks.push(t);
+    }
+    if (!seedTracks.length) return;
+    const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH);
+    if (!found.length) return;
+    const extId = discoverExtId(originPlId);
+    const ext = getOrCreateDiscoverExt(originPlId);
+    const startIdx = ext.tracks.length;
+    found.forEach(t => ext.tracks.push(t));
+    lsSet(LS_PL(extId), ext);
+    found.forEach((t, i) => queueAddToEnd(startIdx + i, extId));
+  } finally { discoverExtending = false; }
+}
+
+// The playlist a Discover-continued queue is "about" - queue[0] keeps
+// pointing at the real origin even once later entries are synthetic
+// discover-ext ones, so this stays stable across extensions.
+function discoverOriginId(){
+  return (state.queue[0] && state.queue[0].plId) || (state.playlist && state.playlist.id) || null;
+}
+
+// Called whenever a new track loads - tops the queue back up before it
+// actually runs out, so there's no dead air waiting on a network round trip.
+function maybeExtendDiscoverQueue(){
+  const originPlId = discoverOriginId();
+  if (!originPlId || !isDiscoverOn(originPlId)) return;
+  const remaining = state.queue.length - 1 - state.queuePos;
+  if (remaining <= DISCOVER_LOOKAHEAD) extendQueueWithDiscover(originPlId);
+}
+
+function renderDiscoverToggle(){
+  const originPlId = discoverOriginId();
+  const on = originPlId ? isDiscoverOn(originPlId) : true;
+  discoverToggleBtn.classList.toggle('is-active', on);
+  discoverToggleBtn.setAttribute('aria-pressed', String(on));
+}
+discoverToggleBtn.addEventListener('click', () => {
+  const originPlId = discoverOriginId();
+  if (!originPlId) return;
+  setDiscoverOn(originPlId, !isDiscoverOn(originPlId));
+  renderDiscoverToggle();
+  showToast(isDiscoverOn(originPlId) ? 'Discover on - this queue plays on after it ends' : 'Discover off');
+});
+
+/* ---------- Swell: the daily discovery drop ---------- */
+function isSameLocalDay(tsA, tsB){
+  const a = new Date(tsA), b = new Date(tsB);
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+async function generateSwell(){
+  const likedPl = getCachedPlaylist(LIKED_ID);
+  const recentPls = getLibrary()
+    .filter(id => id !== LIKED_ID && id !== SWELL_ID && !id.startsWith('discover-ext:'))
+    .map(id => ({ id, ts: getLastPlayed(id) || 0 }))
+    .filter(x => x.ts)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 5)
+    .map(x => getCachedPlaylist(x.id))
+    .filter(Boolean);
+
+  const seedPool = [];
+  if (likedPl) seedPool.push.apply(seedPool, likedPl.tracks.slice(-15));
+  recentPls.forEach(pl => seedPool.push.apply(seedPool, pl.tracks.slice(0, 5)));
+  const seeds = seedPool.filter(t => t && t.videoId).sort(() => Math.random() - 0.5).slice(0, 6);
+  if (!seeds.length) return;
+
+  const exclude = libraryVideoIdSet();
+  const collected = [];
+  const seen = new Set();
+  for (const seed of seeds){
+    if (collected.length >= 20) break;
+    const found = await fetchDiscoverCandidates([seed], exclude, 6);
+    found.forEach(t => {
+      if (t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); exclude.add(t.videoId); collected.push(t); }
+    });
+  }
+  if (!collected.length) return;
+
+  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'Swell', image: null, tracks: [], ts: Date.now() };
+  pl.tracks = collected;
+  lsSet(LS_PL(SWELL_ID), pl);
+  lsSet(LS_SWELL_GENERATED, Date.now());
+  if (state.playlist && state.playlist.id === SWELL_ID){ state.playlist = pl; renderTrackList(); }
+  renderLibrary();
+}
+function refreshSwellIfStale(){
+  const last = lsGet(LS_SWELL_GENERATED, 0);
+  if (last && isSameLocalDay(last, Date.now())) return;
+  generateSwell();
+}
+
 function renderQueuePanel(){
+  renderDiscoverToggle();
   queueBody.innerHTML = '';
   if (state.queuePos < 0 || !state.queue.length){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
 
@@ -3065,7 +3427,7 @@ function onDeckStateChange(deck, e){
   else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
-    if (deck.confirmed) playNext(true);
+    if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); playNext(true); }
   }
 }
 
@@ -3266,6 +3628,7 @@ function updateLibraryClockColor(){
   ambientEl.style.setProperty('--clock-tint-ambient', state.currentView === 'library' ? alpha(.3) : 'transparent');
 }
 updateLibraryClockColor();
+setTimeout(() => document.documentElement.classList.remove('clock-color-init'), 50);
 setInterval(updateLibraryClockColor, 10000);
 
 /* Six genuinely different nodal-field families the grains can settle into.
@@ -4006,6 +4369,7 @@ function loadIndex(pos, autoplay){
   const nd = standbyDeck();
   if (nd.pos === pos && nd.player && nd.ready){
     promoteDeckDirect(nd, pos, autoplay !== false);
+    maybeExtendDiscoverQueue();
     return;
   }
 
@@ -4022,6 +4386,7 @@ function loadIndex(pos, autoplay){
     if (autoplay === false && ad.player.pauseVideo) ad.player.pauseVideo();
   }
   schedulePreload(pos);
+  maybeExtendDiscoverQueue();
 }
 
 function resumePlayback(){
@@ -4046,12 +4411,40 @@ function playIndex(pos){
   loadIndex(pos, true);
 }
 
-function playNext(auto){
-  if (auto && state.repeat === 'one'){ loadIndex(state.queuePos, true); return; }
+// A manual skip within the first 15s (or first quarter of a known-duration
+// track) reads as "this wasn't the vibe" - the same implicit signal an
+// early completion doesn't send. Auto-advance (the track actually ending)
+// never counts as a skip.
+function recordSkipIfEarly(){
+  if (state.queuePos < 0) return;
+  const t = trackAt(state.queuePos);
+  if (!t) return;
+  const elapsed = Date.now() - (lastTrackStartTs || Date.now());
+  const durMs = (t.duration || 0) * 1000;
+  if (elapsed < 15000 && (!durMs || elapsed < durMs * 0.25)) recordListenSignal(t, -1);
+}
+
+function finishQueueAtEnd(){
   let pos = state.queuePos + 1;
   if (pos >= state.queue.length){
     if (state.repeat === 'all'){ pos = 0; if (state.shuffle) state.queue = shuffleTail(state.queue, 0); }
     else { setPlayingUI(false); return; }
+  }
+  playIndex(pos);
+}
+
+function playNext(auto){
+  if (!auto) recordSkipIfEarly();
+  if (auto && state.repeat === 'one'){ loadIndex(state.queuePos, true); return; }
+  let pos = state.queuePos + 1;
+  if (pos >= state.queue.length){
+    const originPlId = discoverOriginId();
+    if (originPlId && isDiscoverOn(originPlId)){
+      extendQueueWithDiscover(originPlId).then(finishQueueAtEnd);
+      return;
+    }
+    finishQueueAtEnd();
+    return;
   }
   playIndex(pos);
 }
@@ -4378,11 +4771,13 @@ miniBar.addEventListener('click', () => setView('player'));
    INIT
    ========================================================================= */
 ensureLikedPlaylist();
+ensureSwellPlaylist();
 renderLibrary();
 renderQueuePanel();
 setView('player');
 tryResume();
 if (!currentTrack()) updateMiniBarVisibility();
+refreshSwellIfStale();
 
 /* dev convenience: on localhost with an empty library, auto-load a test playlist */
 if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length === 0){
@@ -4391,7 +4786,7 @@ if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length
 }
 
 const splashEl = $('splash');
-const SPLASH_MS = 3000;
+const SPLASH_MS = 3400;
 if (splashEl) setTimeout(() => splashEl.classList.add('is-hidden'), SPLASH_MS);
 
 })();
