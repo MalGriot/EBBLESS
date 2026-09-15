@@ -187,6 +187,10 @@ svg{display:block}
 .lib-card .art .face.heart-face .heart-glyph{width:62%;height:62%;background:var(--clock-accent,#e0576a);
   -webkit-mask:url(brand/assets/liked-heart.png) center/contain no-repeat;
   mask:url(brand/assets/liked-heart.png) center/contain no-repeat;
+  /* the source art's own visual weight sits higher than its bounding box -
+     nudged down so it reads as centered in the tile instead of floating
+     toward the top; see brand/tmp-heart-center.html to re-tune by eye. */
+  transform:translateY(7.1%);
   animation:lib-heart-beat 1.4s ease-in-out infinite}
 @keyframes lib-heart-beat{0%,100%{transform:scale(1)}20%{transform:scale(1.15)}40%{transform:scale(0.98)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion: reduce){
