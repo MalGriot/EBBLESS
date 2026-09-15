@@ -123,6 +123,11 @@ svg{display:block}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .section-label-row .section-label{margin:28px 0 12px}
 .section-label-row:first-of-type .section-label{margin-top:8px}
+.lib-head-actions{display:flex;align-items:center;gap:8px;flex:none}
+#libSortSel{font-size:11.5px;padding:6px 10px;max-width:150px}
+@media (max-width:380px){
+  #libSortSel{font-size:11px;padding:6px 8px;max-width:112px}
+}
 .view-toggle{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
 .view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .view-toggle-btn svg{width:14px;height:14px}
@@ -243,7 +248,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #import-overlay .close svg{width:16px;height:16px}
 
 /* ---------- player view ---------- */
-#view-player{overflow:hidden}
+#view-player{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 #view-player:not([hidden]){display:flex}
 #view-player .view-scroll{max-width:1040px;padding-top:6px;padding-bottom:8px;width:100%;
   display:flex;flex-direction:column;justify-content:center}
@@ -603,7 +608,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer .flow-chrome{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:space-between;
   padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:none;
   transition:opacity 600ms var(--ease-in-out)}
-#flow-layer .flow-chrome>*{pointer-events:auto}
+#flow-layer.is-open .flow-chrome>*{pointer-events:auto}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
 .flow-top{display:flex;justify-content:flex-end}
@@ -662,6 +667,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .ctl-btn.small{width:40px;height:40px}
   .ctl-btn.small svg{width:16px;height:16px}
   .track-row .row-actions button,.q-row .remove{width:34px;height:34px}
+  #view-player .view-scroll{justify-content:flex-start;padding-bottom:calc(24px + var(--nav-h) + var(--safe-b))}
 }
 @media (min-width:860px){
   #bottom-nav{display:none}
@@ -674,9 +680,28 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
 }
+
+/* ---------- splash screen ---------- */
+#splash{
+  position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:var(--bg);transition:opacity 420ms var(--ease-out),visibility 420ms var(--ease-out);
+}
+#splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+#splash img{width:200px;height:auto;animation:splash-pulse 1.8s var(--ease-in-out) infinite}
+@keyframes splash-pulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.06);opacity:.82}
+}
+@media (prefers-reduced-motion:reduce){
+  #splash img{animation:none}
+}
 </style>
 </head>
 <body>
+
+<div id="splash">
+  <img src="brand/assets/logo-lockup.png" alt="EBBLESS">
+</div>
 
 <div id="app">
   <div id="ambient"><div class="layer" id="ambient-a"></div><div class="layer" id="ambient-b"></div></div>
@@ -723,13 +748,21 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
       <div id="libraryListWrap" class="hidden">
         <div class="section-label-row">
           <div class="section-label">Playlists</div>
-          <div class="view-toggle" id="libViewToggle" role="group" aria-label="Library layout">
-            <button type="button" class="view-toggle-btn" data-mode="grid" aria-label="Grid view">
-              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
-            </button>
-            <button type="button" class="view-toggle-btn" data-mode="list" aria-label="List view">
-              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="5" height="5" rx="1"/><rect x="3" y="14.5" width="5" height="5" rx="1"/><rect x="10.5" y="6" width="10.5" height="2" rx="1"/><rect x="10.5" y="16" width="10.5" height="2" rx="1"/></svg>
-            </button>
+          <div class="lib-head-actions">
+            <select class="btn-ghost" id="libSortSel" aria-label="Sort library">
+              <option value="custom">Manual order</option>
+              <option value="alpha">Alphabetical</option>
+              <option value="plays_desc">Most listened to</option>
+              <option value="tracks_desc">Most songs</option>
+            </select>
+            <div class="view-toggle" id="libViewToggle" role="group" aria-label="Library layout">
+              <button type="button" class="view-toggle-btn" data-mode="grid" aria-label="Grid view">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+              </button>
+              <button type="button" class="view-toggle-btn" data-mode="list" aria-label="List view">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="5" height="5" rx="1"/><rect x="3" y="14.5" width="5" height="5" rx="1"/><rect x="10.5" y="6" width="10.5" height="2" rx="1"/><rect x="10.5" y="16" width="10.5" height="2" rx="1"/></svg>
+              </button>
+            </div>
           </div>
         </div>
         <div class="lib-grid" id="libraryGrid"></div>
@@ -1246,12 +1279,29 @@ async function fetchSpotifyPlaylist(playlistId, type){
   return data;
 }
 
-async function searchYouTube(title, artist){
+// A failed match here (YouTube's scrape occasionally 502s with a consent/
+// bot-check page instead of results - transient, not title-related) used to
+// permanently drop the track from the queue on the first miss, which could
+// silently swap in the next track's title as "now playing" with no
+// indication anything was skipped. Retrying a couple of times before giving
+// up avoids that: the same query reliably succeeds moments later.
+const SEARCH_MAX_ATTEMPTS = 3;
+async function searchYouTube(title, artist, sourceDurationMs){
   const params = new URLSearchParams({ title, artist });
-  const res = await fetch(BACKEND + '/search?' + params.toString());
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
-  return data;
+  if (sourceDurationMs) params.set('durationMs', String(sourceDurationMs));
+  let lastErr;
+  for (let attempt = 1; attempt <= SEARCH_MAX_ATTEMPTS; attempt++){
+    try{
+      const res = await fetch(BACKEND + '/search?' + params.toString());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+      return data;
+    } catch(e){
+      lastErr = e;
+      if (attempt < SEARCH_MAX_ATTEMPTS) await sleep(400 * attempt);
+    }
+  }
+  throw lastErr;
 }
 
 async function fetchYouTubePlaylist(playlistId){
@@ -1317,6 +1367,7 @@ const LS_SORT = (id) => 'ebbless:sort:' + id;    // per-playlist track sort mode
 const LS_VIZ = 'ebbless:visualizer';
 const LS_VIZ_AUTO = 'ebbless:vizAuto';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
+const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 
 function lsGet(key, fallback){
@@ -1350,11 +1401,30 @@ function togglePin(id){
   if (!isPinned(id)) pinned.unshift(id);
   lsSet(LS_PINNED, pinned);
 }
+function getLibrarySort(){ return lsGet(LS_LIB_SORT, 'custom'); }
+function setLibrarySort(mode){ lsSet(LS_LIB_SORT, mode); }
+
+function totalPlaylistPlays(pl){
+  return pl.tracks.reduce((sum, t) => sum + (t.plays || 0), 0);
+}
+function sortLibraryIds(ids, mode){
+  if (mode === 'custom') return ids;
+  const withPl = ids.map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl);
+  if (mode === 'alpha'){
+    withPl.sort((a, b) => a.pl.name.localeCompare(b.pl.name, undefined, { sensitivity: 'base' }));
+  } else if (mode === 'plays_desc'){
+    withPl.sort((a, b) => totalPlaylistPlays(b.pl) - totalPlaylistPlays(a.pl));
+  } else if (mode === 'tracks_desc'){
+    withPl.sort((a, b) => b.pl.tracks.length - a.pl.tracks.length);
+  }
+  return withPl.map(x => x.id);
+}
 function orderedLibraryIds(){
   const ids = getLibrary().filter(id => id !== LIKED_ID);
   const pinned = getPinnedLibrary().filter(id => ids.includes(id));
   const rest = ids.filter(id => !pinned.includes(id));
-  const ordered = pinned.concat(rest);
+  const sortMode = getLibrarySort();
+  const ordered = sortLibraryIds(pinned, sortMode).concat(sortLibraryIds(rest, sortMode));
   return getLibrary().includes(LIKED_ID) ? [LIKED_ID].concat(ordered) : ordered;
 }
 
@@ -1393,7 +1463,7 @@ function withManualTracks(playlistId, resolvedTracks){
 
 async function resolvePlaylist(playlistId, type, onProgress){
   if (type === 'track' || type === 'sc_track' || type === 'am_track'){
-    let title, artist, art = null;
+    let title, artist, art = null, sourceDuration = 0;
     if (type === 'sc_track'){
       const t = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
       if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single track.");
@@ -1403,11 +1473,11 @@ async function resolvePlaylist(playlistId, type, onProgress){
       const t = await fetchAppleMusicTrack(playlistId.slice(0, idx), playlistId.slice(idx + 1));
       title = t.title; artist = t.artist; art = t.image || null;
     } else {
-      ({ title, artist, image: art } = await fetchSpotifyTrack(playlistId));
+      ({ title, artist, image: art, duration: sourceDuration } = await fetchSpotifyTrack(playlistId));
     }
     onProgress({ stage: 'matching', done: 0, total: 1 });
     let match = { videoId: null, title: '', channel: '' };
-    try { match = await searchYouTube(title, artist); } catch(e){}
+    try { match = await searchYouTube(title, artist, sourceDuration); } catch(e){}
     const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: art || null, duration: match.duration || 0 };
     onProgress({ stage: 'matching', done: 1, total: 1, track });
     const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
@@ -1485,7 +1555,7 @@ const state = {
   queuePos: -1,          // pointer into queue
   shuffle: false,
   repeat: 'off',          // off | all | one
-  currentView: 'library',
+  currentView: 'player',
   queueOpen: false,
   flowOpen: false,
   sortMode: 'custom',    // custom | alpha | plays_desc | plays_asc (per-playlist track list order)
@@ -1552,6 +1622,7 @@ const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('imp
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libViewToggle = $('libViewToggle');
+const libSortSel = $('libSortSel');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
@@ -1694,6 +1765,11 @@ function isAlbumType(type){ return type === 'album' || type === 'am_album'; }
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
+});
+libSortSel.value = getLibrarySort();
+libSortSel.addEventListener('change', () => {
+  setLibrarySort(libSortSel.value);
+  renderLibrary();
 });
 setLibraryView(getLibraryView());
 
@@ -3602,14 +3678,14 @@ function updateTrackMetaUI(t){
 
 function updateMediaSessionMeta(t){
   if (!('mediaSession' in navigator)) return;
-  const artwork = t && t.art
-    ? [{ src: t.art, sizes: '512x512', type: 'image/jpeg' }]
-    : artworkUrls(t).map(src => ({ src, sizes: '480x360', type: 'image/jpeg' }));
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title || 'EBBLESS',
     artist: t.artist || '',
     album: 'EBBLESS',
-    artwork
+    artwork: [
+      { src: 'https://img.youtube.com/vi/' + t.videoId + '/mqdefault.jpg', sizes: '320x180', type: 'image/jpeg' },
+      { src: 'https://img.youtube.com/vi/' + t.videoId + '/hqdefault.jpg', sizes: '480x360', type: 'image/jpeg' }
+    ]
   });
 }
 
@@ -4063,11 +4139,12 @@ flowLayer.addEventListener('click', armFlowChromeTimer);
   flowLayer.addEventListener('touchend', end);
 })();
 
-/* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
+/* tap album art -> play/pause */
 (function(){
   function toggleActivePlayback(){ if (state.queuePos >= 0) playIndex(state.queuePos); }
   $('artworkWrap').addEventListener('click', toggleActivePlayback);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
+  $('flowVizWrap').addEventListener('click', toggleActivePlayback);
 })();
 
 /* =========================================================================
@@ -4081,7 +4158,7 @@ miniBar.addEventListener('click', () => setView('player'));
 ensureLikedPlaylist();
 renderLibrary();
 renderQueuePanel();
-setView('library');
+setView('player');
 tryResume();
 if (!currentTrack()) updateMiniBarVisibility();
 
@@ -4090,6 +4167,9 @@ if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length
   const parsed = parseImportLink('https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ?si=aUx0lxmHQumqjSJqcf8tOg');
   if (parsed) beginImport(parsed.id, false, parsed.type);
 }
+
+const splashEl = $('splash');
+if (splashEl) setTimeout(() => splashEl.classList.add('is-hidden'), 500);
 
 })();
 </script>
