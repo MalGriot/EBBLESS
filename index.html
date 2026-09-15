@@ -106,6 +106,15 @@ svg{display:block}
   background:radial-gradient(ellipse 140% 60% at 50% -10%, var(--clock-tint, transparent) 0%, transparent 70%);
   transition:background 4s linear;
 }
+/* Library background video - same time-of-day color clock as the splash
+   screen wash (see updateLibraryClockColor()), blurred so it stays a mood
+   rather than a distraction behind the playlist grid. */
+.lib-bg{position:fixed;left:0;right:0;top:var(--topbar-h);bottom:0;overflow:hidden;pointer-events:none;container-type:size}
+.lib-bg-video{position:absolute;top:50%;left:50%;width:114cqh;height:114cqw;transform:translate(-50%,-50%) rotate(-90deg);
+  object-fit:cover;filter:blur(5px) saturate(1.05) brightness(.5)}
+.lib-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;
+  opacity:.55;transition:background 4s linear}
+.lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
 .import-row{display:flex;gap:8px;margin:18px 0 8px;position:relative}
 .import-row input{
   flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -394,15 +403,31 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   backdrop-filter:blur(6px);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .art-fs-btn svg{width:15px;height:15px}
 .art-fs-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
-.track-meta .artist-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:5px}
-.track-meta .artist-row .artist{margin-top:0}
+.track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
+.track-meta .title-row .title{flex:1;min-width:0}
+
+.marquee{overflow:hidden;white-space:nowrap;position:relative}
+.marquee>span{display:inline-block;white-space:nowrap}
+.marquee .marquee-track{display:inline-flex;white-space:nowrap;will-change:transform}
+.marquee .marquee-track>span{display:inline-block;white-space:nowrap;flex:none}
+.marquee.is-marquee .marquee-track{animation:marquee-scroll var(--marquee-dur,12s) linear infinite}
+@keyframes marquee-scroll{
+  0%,8%{transform:translateX(0)}
+  100%{transform:translateX(var(--marquee-shift,0))}
+}
 .report-match-btn{flex:none;width:22px;height:22px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint-2);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .report-match-btn svg{width:12px;height:12px}
 .report-match-btn:hover{background:var(--panel-3);color:var(--text)}
 .report-match-btn.is-sent{color:var(--accent)}
-.track-meta{margin-top:26px;text-align:center;max-width:480px}
+.player-like-btn{flex:none;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--faint-2);
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.player-like-btn svg{width:14px;height:14px}
+.player-like-btn:hover{background:var(--panel-3);color:var(--text)}
+.player-like-btn.is-liked{color:var(--accent)}
+.track-meta{margin-top:26px;text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
 .playlist-ctx{margin-top:18px;font-size:12.5px;color:var(--faint-2);display:flex;align-items:center;gap:6px}
@@ -610,9 +635,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
 #flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
 #flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
-#flow-layer .flow-meta{margin-top:28px;text-align:center;position:relative;z-index:5;pointer-events:none}
+#flow-layer .flow-meta{margin-top:28px;text-align:center;position:relative;z-index:5;pointer-events:none;width:min(52vh,62vw);margin-left:auto;margin-right:auto}
+#flow-layer .flow-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
+#flow-layer .flow-meta .title-row .title{flex:1;min-width:0}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
+#flow-layer .flow-meta .player-like-btn{pointer-events:auto}
 #flow-layer .flow-chrome{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:space-between;
   padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:none;
   transition:opacity 600ms var(--ease-in-out)}
@@ -667,6 +695,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   #mini-bar{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw)}
+  .track-meta{width:min(340px,84vw)}
   .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
   .ctl-btn{width:44px;height:44px}
   .ctl-btn svg{width:18px;height:18px}
@@ -682,6 +711,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .view{bottom:0}
   .player-stage{padding-top:30px}
   .artwork-wrap{width:min(440px,34vw)}
+  .track-meta{width:min(440px,34vw)}
   .track-meta .title{font-size:26px}
   body.queue-open .view-scroll,body.queue-open #topbar{margin-right:380px;transition:margin var(--dur-surface) var(--ease-in-out)}
   #view-player{overflow-y:hidden}
@@ -741,6 +771,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
   <!-- ===== LIBRARY ===== -->
   <main class="view" id="view-library">
+    <div class="lib-bg">
+      <video class="lib-bg-video" autoplay muted loop playsinline src="brand/assets/library-bg.mp4"></video>
+      <div class="lib-bg-tint"></div>
+    </div>
     <div class="view-scroll">
       <form class="import-row" id="importForm">
         <input id="urlInput" type="text" placeholder="Paste a Spotify, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
@@ -936,13 +970,16 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
           </button>
         </div>
         <div class="track-meta">
-          <div class="title" id="trackTitle">—</div>
-          <div class="artist-row">
-            <div class="artist" id="trackArtist">—</div>
+          <div class="title-row">
             <button class="report-match-btn" id="reportMatchBtn" title="Report: this isn't just the audio" aria-label="Report this YouTube match">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
             </button>
+            <div class="title marquee" id="trackTitle"><span>—</span></div>
+            <button class="player-like-btn" id="playerLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
+            </button>
           </div>
+          <div class="artist marquee" id="trackArtist"><span>—</span></div>
         </div>
 
         <div class="playlist-ctx" id="playlistCtx" hidden>
@@ -1045,10 +1082,13 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     <div class="mini-line"><div class="fill" id="miniLineFill"></div></div>
     <img id="miniArt" src="" alt="">
     <div class="meta">
-      <div class="title" id="miniTitle">—</div>
-      <div class="artist" id="miniArtist">—</div>
+      <div class="title marquee" id="miniTitle"><span>—</span></div>
+      <div class="artist marquee" id="miniArtist"><span>—</span></div>
     </div>
     <div class="mini-ctl">
+      <button class="ctl-btn small player-like-btn" id="miniLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
+      </button>
       <button class="ctl-btn small" id="miniShuffleBtn" title="Shuffle" aria-label="Shuffle">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
@@ -1138,8 +1178,13 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     <div class="flow-art" id="flowArtWrap"><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
     <div class="flow-art flow-viz" id="flowVizWrap" hidden></div>
     <div class="flow-meta">
-      <div class="title" id="flowTitle">—</div>
-      <div class="artist" id="flowArtist">—</div>
+      <div class="title-row">
+        <div class="title marquee" id="flowTitle"><span>—</span></div>
+        <button class="player-like-btn" id="flowLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
+        </button>
+      </div>
+      <div class="artist marquee" id="flowArtist"><span>—</span></div>
     </div>
   </div>
 
@@ -1651,7 +1696,7 @@ const keepAliveAudio = $('keepAliveAudio');
 if (keepAliveAudio) keepAliveAudio.volume = 0.01;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
-const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn');
+const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), playerLikeBtn = $('playerLikeBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
@@ -1659,10 +1704,10 @@ const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
       miniPlayBtn = $('miniPlayBtn'), miniPlayIco = $('miniPlayIco'), miniLineFill = $('miniLineFill'),
       miniPrevBtn = $('miniPrevBtn'), miniNextBtn = $('miniNextBtn'), miniShuffleBtn = $('miniShuffleBtn'),
-      miniRepeatBtn = $('miniRepeatBtn'), miniRepeatOneBadge = $('miniRepeatOneBadge');
+      miniRepeatBtn = $('miniRepeatBtn'), miniRepeatOneBadge = $('miniRepeatOneBadge'), miniLikeBtn = $('miniLikeBtn');
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueClearBtn = $('queueClearBtn');
-const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist');
+const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
 const ambientEl = $('ambient');
@@ -2517,8 +2562,8 @@ function renderTrackList(){
       likeBtnEl.title = liked ? 'Remove from Liked Songs' : 'Add to Liked Songs';
       likeBtnEl.setAttribute('aria-label', likeBtnEl.title);
       likeBtnEl.innerHTML = liked
-        ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 14.5-4-4 1.41-1.41L10.5 13.67l5.59-5.59L17.5 9.5l-7 7z"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>';
+        ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
       likeBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleLikeTrack(t); });
       const nextBtnEl = document.createElement('button'); nextBtnEl.title = 'Play next'; nextBtnEl.setAttribute('aria-label','Play next');
       nextBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
@@ -3694,15 +3739,55 @@ function updateLyricsHighlight(cur){
   }
 }
 
+function setMarqueeText(el, text){
+  el.classList.remove('is-marquee');
+  el.style.removeProperty('--marquee-shift');
+  el.style.removeProperty('--marquee-dur');
+  el.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = text;
+  el.appendChild(span);
+  requestAnimationFrame(() => {
+    const overflow = span.scrollWidth - el.clientWidth;
+    if (overflow > 4){
+      const gap = 48;
+      const track = document.createElement('span');
+      track.className = 'marquee-track';
+      const span2 = span.cloneNode(true);
+      span2.style.marginLeft = gap + 'px';
+      el.innerHTML = '';
+      track.appendChild(span);
+      track.appendChild(span2);
+      el.appendChild(track);
+      const dist = span.scrollWidth + gap;
+      el.style.setProperty('--marquee-shift', '-' + dist + 'px');
+      el.style.setProperty('--marquee-dur', Math.max(9, dist / 30) + 's');
+      el.classList.add('is-marquee');
+    }
+  });
+}
+
 function updateTrackMetaUI(t){
-  trackTitle.textContent = t.title;
-  trackArtist.textContent = t.artist;
-  flowTitle.textContent = t.title;
-  flowArtist.textContent = t.artist;
-  miniTitle.textContent = t.title;
-  miniArtist.textContent = t.artist;
+  setMarqueeText(trackTitle, t.title);
+  setMarqueeText(trackArtist, t.artist);
+  setMarqueeText(flowTitle, t.title);
+  setMarqueeText(flowArtist, t.artist);
+  setMarqueeText(miniTitle, t.title);
+  setMarqueeText(miniArtist, t.artist);
   reportMatchBtn.classList.remove('is-sent');
+  updatePlayerLikeBtn(t);
   updateMediaSessionMeta(t);
+}
+
+function updatePlayerLikeBtn(t){
+  const liked = isTrackLiked(t && t.videoId);
+  const title = liked ? 'Remove from Liked Songs' : 'Add to Liked Songs';
+  [playerLikeBtn, miniLikeBtn, flowLikeBtn].forEach(btn => {
+    btn.classList.toggle('is-liked', liked);
+    btn.title = title;
+    btn.setAttribute('aria-label', title);
+    btn.querySelector('svg').setAttribute('fill', liked ? 'currentColor' : 'none');
+  });
 }
 
 function updateMediaSessionMeta(t){
@@ -4127,6 +4212,16 @@ function armFlowChromeTimer(){
   flowHideTimer = setTimeout(() => flowLayer.classList.add('chrome-hidden'), 3200);
 }
 fsBtn.addEventListener('click', (e) => { e.stopPropagation(); if (currentTrack()) openFlow(); });
+function handleLikeBtnClick(e){
+  e.stopPropagation();
+  const t = currentTrack();
+  if (!t || !t.videoId) return;
+  toggleLikeTrack(t);
+  updatePlayerLikeBtn(t);
+}
+playerLikeBtn.addEventListener('click', handleLikeBtnClick);
+miniLikeBtn.addEventListener('click', handleLikeBtnClick);
+flowLikeBtn.addEventListener('click', handleLikeBtnClick);
 reportMatchBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   const t = currentTrack();
