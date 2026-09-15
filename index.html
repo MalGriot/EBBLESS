@@ -222,6 +222,20 @@ svg{display:block}
   background:var(--faint);vertical-align:middle}
 .lib-card .name .new-dot.is-active{background:var(--accent);animation:new-dot-blink 1.4s ease-in-out infinite}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
+.lib-card .name.current-label{animation:current-label-cycle 8s linear infinite}
+@keyframes current-label-cycle{
+  0%,100%{color:#ff5b5b}
+  12.5%{color:#ff9f43}
+  25%{color:#ffd93d}
+  37.5%{color:#6bcb77}
+  50%{color:#38d9e0}
+  62.5%{color:#5b8def}
+  75%{color:#a78bfa}
+  87.5%{color:#ff6bcb}
+}
+@media (prefers-reduced-motion: reduce){
+  .lib-card .name.current-label{animation:none;color:var(--accent)}
+}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
@@ -2223,7 +2237,7 @@ function renderLibrary(){
       artDiv.appendChild(pinBtn);
     }
 
-    const name = document.createElement('div'); name.className = 'name'; name.textContent = pl.name;
+    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = pl.name;
     if (id === SWELL_ID){
       const dot = document.createElement('span');
       dot.className = 'new-dot' + (swellHasUnseenDrop() ? ' is-active' : '');
@@ -3676,6 +3690,7 @@ function swellHasUnseenDrop(){
   return true;
 }
 async function generateSwell(){
+  console.log('[DEBUG] generateSwell called');
   const likedPl = getCachedPlaylist(LIKED_ID);
   const recentPls = getLibrary()
     .filter(id => id !== LIKED_ID && id !== SWELL_ID && !id.startsWith('discover-ext:'))
