@@ -181,7 +181,11 @@ svg{display:block}
    clip instead of the generic icon glyph. Swapped out for the standard
    2x2 track grid the instant Swell's first generation lands. */
 .lib-card .art .face.video-face{display:block;background:#121212}
-.lib-card .art .face.video-face video{width:100%;height:100%;object-fit:cover;display:block}
+.lib-card .art .face.video-face video{width:100%;height:100%;object-fit:cover;display:block;
+  /* the clip's swirl doesn't sit dead-center in its own frame - nudged so
+     its focal point lands in the middle of the square tile instead of
+     riding high and right. */
+  transform:scale(1.06) translate(-4.4%,1.8%)}
 /* Liked Songs always gets a heart glyph instead of a track-art grid -
    it's the one playlist whose identity is the "liked" action itself,
    not its contents. */
