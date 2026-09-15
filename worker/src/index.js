@@ -672,9 +672,84 @@ async function handleArtistSearch(url, ctx) {
 // ---------- GET /art?title=&artist= ----------
 // Discovered tracks (Current/Discover, sourced from /similar, /ytmix or
 // /artistsearch) carry no album art of their own - only a YouTube video,
-// whose thumbnail is a 16:9 crop rather than a proper square cover. iTunes'
-// public search API is keyless and needs no scraping, and its artwork URLs
-// can be upsized past the default 100x100 by swapping the size segment.
+// whose thumbnail is a 16:9 crop rather than a proper square cover.
+// iTunes' search API rate-limits Cloudflare's shared egress IPs hard enough
+// (a bare 429 on nearly every call, confirmed via wrangler tail) that it's
+// unusable from a Worker. MusicBrainz + the Cover Art Archive is the
+// standard keyless alternative: look up the recording to get candidate
+// releases, then ask the Archive for each release's front cover (which is
+// itself already a square scan/upload, not a crop).
+const COVER_ART_LIVE_HINTS = ['live', 'concert', 'unplugged', 'session', 'tour'];
+// coverartarchive.org's JSON sometimes hands back http:// image URLs, which
+// a page loaded over https (GitHub Pages) can't render - upgrade the scheme
+// rather than trust whatever it returns.
+function toHttps(u) { return u ? u.replace(/^http:\/\//, 'https://') : u; }
+async function getCoverArtArchiveImage(releaseId) {
+  try {
+    const res = await fetch('https://coverartarchive.org/release/' + releaseId, { headers: { 'User-Agent': APP_UA } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const images = data.images || [];
+    const front = images.find(i => i.front) || images[0];
+    if (!front) return null;
+    return toHttps((front.thumbnails && (front.thumbnails['500'] || front.thumbnails.large)) || front.image || null);
+  } catch (e) { return null; }
+}
+// Resolves as soon as the first candidate release turns up a cover, instead
+// of waiting on every parallel lookup (Promise.all) when a slow straggler
+// would otherwise hold up a result that's already been found.
+function firstTruthy(promises) {
+  return new Promise(resolve => {
+    let remaining = promises.length;
+    if (!remaining) { resolve(null); return; }
+    promises.forEach(p => p.then(v => {
+      remaining--;
+      if (v) resolve(v);
+      else if (remaining === 0) resolve(null);
+    }));
+  });
+}
+// MusicBrainz's public API is limited to ~1 request/second per IP and
+// occasionally hands back a 503 under load - one retry after a beat clears
+// most of those without meaningfully slowing down a miss.
+async function fetchMusicBrainz(qs) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch('https://musicbrainz.org/ws/2/recording/?' + qs.toString(), { headers: { 'User-Agent': APP_UA } });
+    if (res.ok) return res.json();
+    if (res.status !== 503 || attempt === 1) return null;
+    await new Promise(r => setTimeout(r, 400));
+  }
+  return null;
+}
+async function findCoverArt(title, artist) {
+  try {
+    const query = 'recording:"' + title.replace(/"/g, '') + '" AND artist:"' + (artist || '').replace(/"/g, '') + '"';
+    const qs = new URLSearchParams({ query, fmt: 'json', limit: '5', inc: 'releases' });
+    const data = await fetchMusicBrainz(qs);
+    if (!data) return null;
+    // Cast a wide net over matching recordings - MusicBrainz often lists
+    // several with the same top score (music-video-only or live-only takes
+    // with zero or filtered releases) before the actual studio recording
+    // that has real releases with cover art.
+    const recordings = (data.recordings || []).filter(r => r.score >= 80).slice(0, 8);
+
+    // A studio single/album cover beats a live-session release with the same
+    // title - filter those out before spending a lookup on them, then try
+    // the remaining candidate releases in parallel and take the first hit.
+    const releaseIds = [];
+    outer:
+    for (const rec of recordings) {
+      for (const rel of (rec.releases || [])) {
+        const label = (rel.title + ' ' + (rel.disambiguation || '')).toLowerCase();
+        if (COVER_ART_LIVE_HINTS.some(h => label.includes(h))) continue;
+        releaseIds.push(rel.id);
+        if (releaseIds.length >= 4) break outer;
+      }
+    }
+    if (!releaseIds.length) return null;
+    return await firstTruthy(releaseIds.map(getCoverArtArchiveImage));
+  } catch (e) { return null; }
+}
 async function handleArt(url, ctx) {
   const title = (url.searchParams.get('title') || '').trim();
   const artist = (url.searchParams.get('artist') || '').trim();
@@ -685,22 +760,14 @@ async function handleArt(url, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  const term = encodeURIComponent((title + ' ' + artist).trim());
-  const res = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=1&term=' + term);
-  let image = null;
-  if (res.ok) {
-    const data = await res.json();
-    const hit = data && data.results && data.results[0];
-    const rawArt = hit && hit.artworkUrl100;
-    if (rawArt) image = rawArt.replace('100x100bb', '600x600bb');
-  }
+  const image = await findCoverArt(title, artist);
 
   const payload = { image };
   const response = json(payload);
-  // iTunes rate-limits this Worker's shared egress IP (429) often enough that
-  // a miss is routine, not exceptional - only cache real hits for the long
-  // 30-day window. Caching a miss just as long would otherwise lock in "no
-  // artwork" for a track for a month over what's usually a transient 429.
+  // A miss (no matching release, or no cover uploaded to the Archive for
+  // it) is routine for a niche or unreleased-to-charts track - only cache
+  // real hits for the long 30-day window, so a transient miss doesn't lock
+  // a track out of ever getting art once it's actually catalogued.
   if (image) {
     const toCache = response.clone();
     ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
