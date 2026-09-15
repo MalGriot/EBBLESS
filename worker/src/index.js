@@ -697,10 +697,16 @@ async function handleArt(url, ctx) {
 
   const payload = { image };
   const response = json(payload);
-  const toCache = response.clone();
-  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
-  })));
+  // iTunes rate-limits this Worker's shared egress IP (429) often enough that
+  // a miss is routine, not exceptional - only cache real hits for the long
+  // 30-day window. Caching a miss just as long would otherwise lock in "no
+  // artwork" for a track for a month over what's usually a transient 429.
+  if (image) {
+    const toCache = response.clone();
+    ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
+    })));
+  }
   return response;
 }
 
