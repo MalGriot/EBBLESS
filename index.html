@@ -654,6 +654,20 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .flow-bottom{display:flex;flex-direction:column;align-items:center;gap:18px}
 .flow-seek{width:min(420px,80vw)}
 
+/* ---------- lyrics fullscreen ---------- */
+#lyricsFsLayer{position:fixed;inset:0;z-index:55;background:var(--bg);opacity:0;pointer-events:none;
+  transition:opacity var(--dur-surface) var(--ease-in-out)}
+#lyricsFsLayer.is-open{opacity:1;pointer-events:auto}
+.lyrics-fs-body{position:absolute;inset:0}
+.lyrics-fs-body .lyrics-wrap{position:absolute;inset:0}
+.lyrics-fs-body .lyrics-scroller{padding:46vh 28px 40vh}
+.lyrics-fs-body .lyric-line{font-size:19px}
+.lyrics-fs-body .lyric-line.is-current{font-size:21px}
+.lyrics-fs-exit{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:2;
+  width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.lyrics-fs-exit:hover{background:var(--panel-2);color:var(--text)}
+.lyrics-fs-exit svg{width:16px;height:16px}
+
 
 /* ---------- settings ---------- */
 .settings-block{margin:20px 0 34px}
@@ -4275,7 +4289,26 @@ function armFlowChromeTimer(){
   clearTimeout(flowHideTimer);
   flowHideTimer = setTimeout(() => flowLayer.classList.add('chrome-hidden'), 3200);
 }
-fsBtn.addEventListener('click', (e) => { e.stopPropagation(); if (currentTrack()) openFlow(); });
+fsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!currentTrack()) return;
+  if (visualMode === 'lyrics') openLyricsFs(); else openFlow();
+});
+
+/* ---------- lyrics fullscreen: no chrome but an exit X, same tap-to-seek
+   lines as the inline lyrics view (the real lyricsWrap element is moved in
+   and back out, so rendering/highlighting/click-to-seek all just work) ---------- */
+const lyricsFsLayer = $('lyricsFsLayer'), lyricsFsBody = $('lyricsFsBody'), lyricsFsExitBtn = $('lyricsFsExitBtn');
+const lyricsWrapHome = lyricsWrap.parentElement, lyricsWrapAnchor = lyricsWrap.nextElementSibling;
+function openLyricsFs(){
+  lyricsFsBody.appendChild(lyricsWrap);
+  lyricsFsLayer.classList.add('is-open');
+}
+function closeLyricsFs(){
+  lyricsFsLayer.classList.remove('is-open');
+  lyricsWrapHome.insertBefore(lyricsWrap, lyricsWrapAnchor);
+}
+lyricsFsExitBtn.addEventListener('click', closeLyricsFs);
 function handleLikeBtnClick(e){
   e.stopPropagation();
   const t = currentTrack();
