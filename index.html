@@ -156,11 +156,17 @@ svg{display:block}
 .view-toggle-btn svg{width:14px;height:14px}
 .view-toggle-btn:hover{color:var(--faint)}
 .view-toggle-btn.is-active{background:var(--panel-3);color:var(--text)}
+.lib-filter{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
+.lib-filter-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.lib-filter-btn:hover{color:var(--faint)}
+.lib-filter-btn.is-active{background:var(--panel-3);color:var(--text)}
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
 
 .lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:18px 16px}
+#libraryGrid{margin-top:14px}
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
+.lib-grid.is-compact{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:14px 12px}
 .lib-card{cursor:pointer;border-radius:var(--r-md);overflow:hidden;transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
 .lib-card .art{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);
@@ -207,11 +213,12 @@ svg{display:block}
 }
 .lib-card .name{margin-top:9px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
-.lib-card .remove{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
+.lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
-  opacity:.75;transition:opacity var(--dur-ui) var(--ease-out)}
-.lib-card:hover .remove,.lib-card .remove:active{opacity:1}
-.lib-card .remove svg{width:12px;height:12px;color:#fff}
+  opacity:0;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
+.lib-card:hover .menu-btn,.lib-card .menu-btn:active,.lib-card .menu-btn.is-active{opacity:1}
+.lib-card .menu-btn:hover{background:rgba(0,0,0,.75)}
+.lib-card .menu-btn svg{width:12px;height:12px;color:#fff}
 
 .lib-card .pin{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
@@ -239,7 +246,7 @@ svg{display:block}
 .lib-grid.is-list .lib-card .art{width:44px;height:44px;flex:none;aspect-ratio:unset}
 .lib-grid.is-list .lib-card .hover-actions,
 .lib-grid.is-list .lib-card .pin,
-.lib-grid.is-list .lib-card .remove{display:none}
+.lib-grid.is-list .lib-card .menu-btn{display:none}
 .lib-grid.is-list .lib-card .info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
 .lib-grid.is-list .lib-card .name{margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-grid.is-list .lib-card .count{margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -585,11 +592,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #bottom-nav button svg{width:20px;height:20px}
 #bottom-nav button.is-active{color:var(--accent)}
 
-/* ---------- queue panel ---------- */
-#queue-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;
+/* ---------- queue panel (and the library playlist panel, which shares
+   this same sliding-sheet/side-panel presentation) ---------- */
+#queue-scrim,#libpl-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
-#queue-scrim.is-open{opacity:1;pointer-events:auto}
-#queue-panel{position:fixed;z-index:41;background:var(--panel);display:flex;flex-direction:column;
+#queue-scrim.is-open,#libpl-scrim.is-open{opacity:1;pointer-events:auto}
+#queue-panel,#libpl-panel{position:fixed;z-index:41;background:var(--panel);display:flex;flex-direction:column;
   box-shadow:0 0 60px rgba(0,0,0,.5)}
 .queue-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px;flex:none}
 .queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto}
@@ -601,6 +609,11 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .queue-head .discover-toggle svg{width:13px;height:13px;flex:none}
 .queue-head .discover-toggle:hover{color:var(--text)}
 .queue-head .discover-toggle.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+.queue-head .re{font-size:12px;color:var(--faint-2);flex:none}
+.queue-head .re:hover{color:var(--faint)}
+.queue-head .close-btn{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.queue-head .close-btn:hover{background:var(--panel-2);color:var(--text)}
+.queue-head .close-btn svg{width:12px;height:12px}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .queue-body{padding:4px 12px 24px}
 .queue-drag-handle{display:none}
@@ -632,18 +645,18 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
 /* desktop: side panel */
 @media (min-width:860px){
-  #queue-panel{top:var(--topbar-h);right:0;bottom:0;width:380px;border-left:1px solid var(--border);
+  #queue-panel,#libpl-panel{top:var(--topbar-h);right:0;bottom:0;width:380px;border-left:1px solid var(--border);
     transform:translateX(100%);transition:transform var(--dur-surface) var(--ease-in-out)}
-  #queue-panel.is-open{transform:translateX(0)}
-  #queue-scrim{display:none}
+  #queue-panel.is-open,#libpl-panel.is-open{transform:translateX(0)}
+  #queue-scrim,#libpl-scrim{display:none}
 }
 /* mobile: bottom sheet (stops above the bottom nav so its buttons stay reachable) */
 @media (max-width:859.98px){
-  #queue-panel{left:0;right:0;bottom:calc(var(--nav-h) + var(--safe-b));
+  #queue-panel,#libpl-panel{left:0;right:0;bottom:calc(var(--nav-h) + var(--safe-b));
     max-height:calc(82vh - var(--nav-h) - var(--safe-b));border-radius:18px 18px 0 0;
     transform:translateY(calc(100% + var(--nav-h) + var(--safe-b)));transition:transform var(--dur-surface) var(--ease-in-out)}
-  #queue-panel.is-open{transform:translateY(0)}
-  #queue-scrim{bottom:calc(var(--nav-h) + var(--safe-b))}
+  #queue-panel.is-open,#libpl-panel.is-open{transform:translateY(0)}
+  #queue-scrim,#libpl-scrim{bottom:calc(var(--nav-h) + var(--safe-b))}
   .queue-drag-handle{display:block;width:36px;height:4px;border-radius:3px;background:var(--border-2);margin:10px auto 0}
 }
 
@@ -906,7 +919,11 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 
       <div id="libraryListWrap" class="hidden">
         <div class="section-label-row">
-          <div class="section-label">Playlists</div>
+          <div class="lib-filter" id="libFilter" role="group" aria-label="Filter library">
+            <button type="button" class="lib-filter-btn" data-filter="all">All</button>
+            <button type="button" class="lib-filter-btn" data-filter="playlists">Playlists</button>
+            <button type="button" class="lib-filter-btn" data-filter="albums">Albums</button>
+          </div>
           <div class="lib-head-actions">
             <button class="btn-ghost" id="newPlaylistBtn" style="padding:5px 14px;font-size:12.5px">+ New playlist</button>
             <div class="lib-sort">
@@ -936,6 +953,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
               <button type="button" class="view-toggle-btn" data-mode="grid" aria-label="Grid view">
                 <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
               </button>
+              <button type="button" class="view-toggle-btn" data-mode="compact" aria-label="Compact grid view">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.5" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="16" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="16" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="16" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="16" width="5.5" height="5.5" rx="1"/><rect x="16" y="16" width="5.5" height="5.5" rx="1"/></svg>
+              </button>
               <button type="button" class="view-toggle-btn" data-mode="list" aria-label="List view">
                 <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="5" height="5" rx="1"/><rect x="3" y="14.5" width="5" height="5" rx="1"/><rect x="10.5" y="6" width="10.5" height="2" rx="1"/><rect x="10.5" y="16" width="10.5" height="2" rx="1"/></svg>
               </button>
@@ -947,6 +967,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
           <div class="section-label">Albums</div>
         </div>
         <div class="lib-grid" id="libraryAlbumsGrid"></div>
+        <div class="empty-lib hidden" id="libraryFilterEmpty"></div>
       </div>
     </div>
   </main>
@@ -1294,6 +1315,23 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     </div>
   </div>
 
+  <!-- ===== LIBRARY PLAYLIST PANEL (opens a library playlist in the same
+       sliding sheet / side-panel style as the queue panel) ===== -->
+  <div id="libpl-scrim"></div>
+  <div id="libpl-panel">
+    <div class="queue-drag-handle"></div>
+    <div class="queue-head">
+      <h2 id="libplTitle">Playlist</h2>
+      <button class="re" id="libplPlayBtn">Play</button>
+      <button class="close-btn" id="libplCloseBtn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
+      </button>
+    </div>
+    <div class="queue-scroll">
+      <div class="queue-body" id="libplBody"></div>
+    </div>
+  </div>
+
   <!-- ===== FLOW / FULLSCREEN ===== -->
   <div id="flow-layer">
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
@@ -1571,6 +1609,7 @@ const LS_VIZ_AUTO = 'ebbless:vizAuto';
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
+const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'albums'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
@@ -1836,8 +1875,10 @@ const views = { library: $('view-library'), player: $('view-player'), settings: 
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr');
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
+const libraryFilterEmpty = $('libraryFilterEmpty');
 const libViewToggle = $('libViewToggle');
 const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
+const libFilter = $('libFilter');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
@@ -1997,6 +2038,18 @@ libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
 });
+function getLibraryFilter(){ return lsGet(LS_LIB_FILTER, 'all'); }
+function setLibraryFilter(mode){
+  lsSet(LS_LIB_FILTER, mode);
+  libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.filter === mode);
+  });
+  renderLibrary();
+}
+libFilter.addEventListener('click', (e) => {
+  const btn = e.target.closest('.lib-filter-btn');
+  if (btn) setLibraryFilter(btn.dataset.filter);
+});
 function applyLibSortUI(){
   const mode = getLibrarySort();
   libSortMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
@@ -2025,6 +2078,9 @@ document.addEventListener('click', (e) => {
 });
 applyLibSortUI();
 setLibraryView(getLibraryView());
+libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
+  btn.classList.toggle('is-active', btn.dataset.filter === getLibraryFilter());
+});
 
 function renderLibrary(){
   closeLibraryTrackDropdown();
@@ -2033,11 +2089,16 @@ function renderLibrary(){
   libraryEmpty.classList.add('hidden'); libraryListWrap.classList.remove('hidden');
   libraryGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
+  const filter = getLibraryFilter();
+  const showPlaylists = filter !== 'albums';
+  const showAlbums = filter !== 'playlists';
+  libraryGrid.classList.toggle('hidden', !showPlaylists);
   let albumCount = 0;
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
     const isAlbum = isAlbumType(pl.type);
+    if ((isAlbum && !showAlbums) || (!isAlbum && !showPlaylists)) return;
     if (isAlbum) albumCount++;
     const isLiked = id === LIKED_ID;
     const isSystemPl = isLiked || id === SWELL_ID;
@@ -2151,6 +2212,9 @@ function renderLibrary(){
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
+  const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length;
+  libraryFilterEmpty.textContent = filter === 'albums' ? 'No albums in your library yet.' : 'No playlists in your library yet.';
+  libraryFilterEmpty.classList.toggle('hidden', filter === 'all' || !nothingShown);
 }
 
 /* =========================================================================
