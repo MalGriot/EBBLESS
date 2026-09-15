@@ -474,6 +474,20 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .missing-actions a,.missing-actions button{font-size:11.5px;color:var(--faint);text-decoration:underline;text-underline-offset:2px}
 .missing-actions a:hover,.missing-actions button:hover{color:var(--accent)}
 
+/* ---------- library playlist dropdown (opens inline under the clicked card) ---------- */
+.lib-track-dropdown{grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);
+  margin:-6px 0 4px;padding:12px;animation:lib-dd-in .18s var(--ease-out)}
+@keyframes lib-dd-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.lib-dd-head{display:flex;align-items:center;gap:10px;padding:0 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.lib-dd-head h3{flex:1;min-width:0;font-size:14px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-dd-head .re{font-size:12px;color:var(--faint-2);flex:none}
+.lib-dd-head .re:hover{color:var(--faint)}
+.lib-dd-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.lib-dd-close:hover{background:var(--panel-2);color:var(--text)}
+.lib-dd-close svg{width:12px;height:12px}
+.lib-dd-body{max-height:340px;overflow-y:auto}
+.lib-dd-body .track-row{cursor:pointer}
+
 /* ---------- mini bar ---------- */
 #mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:42;display:flex;align-items:center;gap:12px;
   padding:8px 14px;background:var(--panel);border-top:1px solid var(--border);cursor:pointer;
@@ -1684,6 +1698,7 @@ libViewToggle.addEventListener('click', (e) => {
 setLibraryView(getLibraryView());
 
 function renderLibrary(){
+  closeLibraryTrackDropdown();
   const ids = orderedLibraryIds();
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
   libraryEmpty.classList.add('hidden'); libraryListWrap.classList.remove('hidden');
@@ -1779,12 +1794,90 @@ function renderLibrary(){
     }
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
-    card.addEventListener('click', () => openPlaylist(id));
+    card.addEventListener('click', () => toggleLibraryTrackDropdown(id, card));
     (isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
 }
+
+/* =========================================================================
+   LIBRARY TRACK DROPDOWN (clicking a card expands its tracklist inline,
+   right in the library grid — no navigating to the player view)
+   ========================================================================= */
+let openLibraryDropdown = null; // { id, el }
+
+function closeLibraryTrackDropdown(){
+  if (openLibraryDropdown){
+    openLibraryDropdown.el.remove();
+    openLibraryDropdown = null;
+  }
+}
+
+// starts playback of a library playlist without leaving the library view
+function playLibraryTrackInline(id, index){
+  const pl = getCachedPlaylist(id);
+  if (!pl) return;
+  loadPlaylistIntoPlayer(pl);
+  buildQueueFrom(index || 0, pl.id);
+  loadIndex(state.queuePos, true);
+}
+
+function toggleLibraryTrackDropdown(id, card){
+  if (openLibraryDropdown && openLibraryDropdown.id === id){
+    closeLibraryTrackDropdown();
+    return;
+  }
+  closeLibraryTrackDropdown();
+  const pl = getCachedPlaylist(id);
+  if (!pl){ showToast("Couldn't find that playlist."); return; }
+
+  const dd = document.createElement('div');
+  dd.className = 'lib-track-dropdown';
+
+  const head = document.createElement('div'); head.className = 'lib-dd-head';
+  const h = document.createElement('h3'); h.textContent = pl.name;
+  const playBtn = document.createElement('button'); playBtn.className = 're'; playBtn.textContent = 'Play';
+  playBtn.addEventListener('click', (e) => { e.stopPropagation(); playLibraryTrackInline(id, 0); });
+  const closeBtn = document.createElement('button'); closeBtn.className = 'lib-dd-close'; closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
+  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibraryTrackDropdown(); });
+  head.appendChild(h); head.appendChild(playBtn); head.appendChild(closeBtn);
+
+  const body = document.createElement('div'); body.className = 'lib-dd-body';
+  if (!pl.tracks.length){
+    body.innerHTML = '<div class="empty-lib">No tracks found.</div>';
+  } else {
+    pl.tracks.forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
+      const img = document.createElement('img');
+      if (t.videoId || t.art) attachArtworkFallback(img, t);
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
+      const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
+      meta.appendChild(title); meta.appendChild(artist);
+      row.appendChild(img); row.appendChild(meta);
+      if (t.videoId){
+        row.addEventListener('click', () => playLibraryTrackInline(id, i));
+      }
+      body.appendChild(row);
+    });
+  }
+
+  dd.appendChild(head); dd.appendChild(body);
+  card.insertAdjacentElement('afterend', dd);
+  openLibraryDropdown = { id, el: dd };
+}
+
+// clicking anywhere outside the open dropdown (or the card that owns it,
+// which manages its own toggle/close) closes it
+document.addEventListener('click', (e) => {
+  if (!openLibraryDropdown) return;
+  if (openLibraryDropdown.el.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('.lib-card')) return;
+  closeLibraryTrackDropdown();
+});
 
 /* =========================================================================
    CUSTOM PLAYLISTS (user-built, not backed by a Spotify id)
