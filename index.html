@@ -694,7 +694,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transition:opacity 420ms var(--ease-out),visibility 420ms var(--ease-out),background 4s linear;
 }
 #splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
-#splash .viz-canvas{z-index:-1}
+#splash .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:grayscale(1) contrast(1.15) brightness(.9)}
+#splash .splash-tint{position:absolute;inset:0;z-index:-1;background:var(--clock-accent,#1db954);mix-blend-mode:color;transition:background 4s linear}
 #splash img{width:200px;height:auto;animation:splash-pulse 1.8s var(--ease-in-out) infinite}
 @keyframes splash-pulse{
   0%,100%{transform:scale(1);opacity:1}
@@ -708,6 +709,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 <body>
 
 <div id="splash">
+  <video class="splash-video" autoplay muted loop playsinline src="brand/assets/splash-cymatics.mp4"></video>
+  <div class="splash-tint"></div>
   <img src="brand/assets/logo-lockup.png" alt="EBBLESS">
 </div>
 
@@ -4174,28 +4177,8 @@ if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length
 }
 
 const splashEl = $('splash');
-const SPLASH_MS = 3000, SPLASH_STATE_MS = 800;
-if (splashEl){
-  splashEl.insertBefore(vizCanvas, splashEl.firstChild);
-  vizCanvas.classList.add('is-active');
-  vizPlaying = true;
-  vizStart();
-  requestAnimationFrame(vizResize);
-  const splashCycle = setInterval(() => {
-    const idx = Math.floor(Math.random() * VIZ_PATTERNS.length);
-    const fam = VIZ_PATTERNS[idx];
-    vizFamilyIdx = vizNextFamilyIdx = idx;
-    vizParams = vizNextParams = fam.modes[Math.floor(Math.random() * fam.modes.length)];
-    vizMix = 0;
-  }, SPLASH_STATE_MS);
-  setTimeout(() => {
-    clearInterval(splashCycle);
-    splashEl.classList.add('is-hidden');
-    vizPlaying = false;
-    if (visualMode !== 'viz'){ vizStop(); vizCanvas.classList.remove('is-active'); }
-    vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
-  }, SPLASH_MS);
-}
+const SPLASH_MS = 3000;
+if (splashEl) setTimeout(() => splashEl.classList.add('is-hidden'), SPLASH_MS);
 
 })();
 </script>
