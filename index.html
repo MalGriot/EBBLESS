@@ -2221,6 +2221,12 @@ function renderLibrary(){
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
     card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
+    if (!isSystemPl){
+      attachLongPress(card, () => {
+        const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
+        if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
+      });
+    }
     (isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
@@ -2391,6 +2397,39 @@ function openLibCtxMenu(id, btn){
 function toggleLibCtxMenu(id, btn){
   if (openCtxMenu && openCtxMenu.btn === btn){ closeLibCtxMenu(); return; }
   openLibCtxMenu(id, btn);
+}
+
+// On touch devices there's no hover to reveal the 3-dot button, so holding
+// a card down opens the same context menu directly - the touch equivalent
+// of a right-click. A move past a small threshold, or releasing before the
+// hold completes, cancels it and lets the tap behave normally (opening the
+// playlist); a completed long-press suppresses the click that would
+// otherwise follow touchend so the playlist panel doesn't also open.
+function attachLongPress(el, onLongPress){
+  const HOLD_MS = 500, MOVE_TOLERANCE = 10;
+  let timer = null, startX = 0, startY = 0, fired = false;
+  el.addEventListener('touchstart', (e) => {
+    fired = false;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    timer = setTimeout(() => {
+      timer = null; fired = true;
+      if (navigator.vibrate) navigator.vibrate(12);
+      onLongPress(e);
+    }, HOLD_MS);
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!timer) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - startX) > MOVE_TOLERANCE || Math.abs(t.clientY - startY) > MOVE_TOLERANCE){
+      clearTimeout(timer); timer = null;
+    }
+  }, { passive: true });
+  el.addEventListener('touchend', (e) => {
+    if (timer){ clearTimeout(timer); timer = null; }
+    if (fired) e.preventDefault();
+  });
+  el.addEventListener('touchcancel', () => { if (timer){ clearTimeout(timer); timer = null; } });
 }
 
 document.addEventListener('click', (e) => {
