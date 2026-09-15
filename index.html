@@ -3431,7 +3431,7 @@ function vizDraw(t){
   const color = vizRosicrucianColor();
 
   vizCtx2d.fillStyle = color;
-  const half = 0.7 * grain;
+  const r = 0.5 * grain;
   for (let i = 0; i < VIZ_GRAINS; i++){
     let x = vizGx[i], y = vizGy[i];
     const fA = famA.field(x, y, vizParams, tSec);
@@ -3449,7 +3449,9 @@ function vizDraw(t){
     const px = cx + x * radius;
     const py = cy + y * radius;
     vizCtx2d.globalAlpha = 0.25 + 0.55 * (1 - amp);
-    vizCtx2d.fillRect(px - half, py - half, half * 2, half * 2);
+    vizCtx2d.beginPath();
+    vizCtx2d.arc(px, py, r, 0, Math.PI * 2);
+    vizCtx2d.fill();
   }
   vizCtx2d.globalAlpha = 1;
 
