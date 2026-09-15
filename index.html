@@ -688,7 +688,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 /* ---------- splash screen ---------- */
 #splash{
   position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-  background:radial-gradient(ellipse 120% 80% at 50% 42%, var(--clock-tint-splash, transparent) 0%, var(--bg) 78%);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 42%, var(--clock-tint-splash, transparent) 0%, transparent 78%),
+    var(--bg);
   transition:opacity 420ms var(--ease-out),visibility 420ms var(--ease-out),background 4s linear;
 }
 #splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
