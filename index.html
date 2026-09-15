@@ -25,7 +25,7 @@
 :root{
   --bg:#121212; --panel:#181818; --panel-2:#202020; --panel-3:#282828;
   --text:#f2f2f2; --faint:#9a9a9a; --faint-2:#6c6c6c;
-  --accent:#e0b26a; --accent-dim:rgba(224,178,106,.16);
+  --accent:var(--clock-accent, #e0b26a); --accent-dim:rgba(224,178,106,.16);
   --good:#2fbf71; --bad:#e0645e; --border:rgba(255,255,255,.08); --border-2:rgba(255,255,255,.14);
   --r-sm:6px; --r-md:8px; --r-lg:14px;
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
@@ -98,13 +98,11 @@ svg{display:block}
 .view-scroll{max-width:920px;margin:0 auto;padding:8px 24px calc(140px + var(--safe-b))}
 
 /* ---------- library ----------
-   Accent on this view is re-scoped to the same Rosicrucian daily-period
-   color clock that drives the cymatics visualizer grains (see
-   vizRosicrucianColor() / updateLibraryClockColor() in the script) - a soft
-   tint wash plus the Load button / active-pin color drift with it through
-   the day rather than staying fixed on the global --accent. */
+   --accent is already the Rosicrucian daily-period color clock (see
+   vizRosicrucianColor() / updateLibraryClockColor() in the script), so the
+   Load button / active-pin color drifts with it through the day like the
+   rest of the app; this view additionally gets a soft tint wash. */
 #view-library{
-  --accent:var(--clock-accent, #e0b26a);
   background:radial-gradient(ellipse 140% 60% at 50% -10%, var(--clock-tint, transparent) 0%, transparent 70%);
   transition:background 4s linear;
 }
@@ -258,6 +256,21 @@ svg{display:block}
 .lib-grid.is-list .lib-card .row-actions button:hover{background:var(--panel-3);color:var(--text)}
 .lib-grid.is-list .lib-card .row-actions button svg{width:14px;height:14px}
 .lib-grid.is-list .lib-card .row-actions .row-pin.is-active{color:var(--accent,#1db954)}
+
+/* ---------- playlist context menu (the 3-dot menu on each library card) ---------- */
+.lib-ctx-menu{position:fixed;z-index:60;min-width:200px;padding:6px;border-radius:14px;
+  background:var(--panel-3);border:1px solid var(--border-2);box-shadow:0 20px 44px -14px rgba(0,0,0,.6);
+  opacity:0;pointer-events:none;transform:translateY(-6px);
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.lib-ctx-menu.drop-up{transform:translateY(6px)}
+.lib-ctx-menu.is-open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.lib-ctx-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;
+  color:var(--faint);font-size:13px;text-align:left;transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.lib-ctx-item:hover{background:var(--panel-2);color:var(--text)}
+.lib-ctx-item svg{width:15px;height:15px;flex:none;opacity:.85}
+.lib-ctx-item.is-danger{color:var(--bad)}
+.lib-ctx-item.is-danger:hover{background:rgba(255,80,80,.12);color:var(--bad)}
+.lib-ctx-sep{height:1px;background:var(--border-2);margin:6px 4px}
 
 /* ---------- continuity loading line ---------- */
 .flow-line{width:100%;height:2px;background:var(--border);border-radius:2px;overflow:hidden;position:relative}
@@ -553,19 +566,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .missing-actions a,.missing-actions button{font-size:11.5px;color:var(--faint);text-decoration:underline;text-underline-offset:2px}
 .missing-actions a:hover,.missing-actions button:hover{color:var(--accent)}
 
-/* ---------- library playlist dropdown (opens inline under the clicked card) ---------- */
-.lib-track-dropdown{grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);
-  margin:-6px 0 4px;padding:12px;animation:lib-dd-in .18s var(--ease-out)}
-@keyframes lib-dd-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.lib-dd-head{display:flex;align-items:center;gap:10px;padding:0 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px}
-.lib-dd-head h3{flex:1;min-width:0;font-size:14px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lib-dd-head .re{font-size:12px;color:var(--faint-2);flex:none}
-.lib-dd-head .re:hover{color:var(--faint)}
-.lib-dd-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
-.lib-dd-close:hover{background:var(--panel-2);color:var(--text)}
-.lib-dd-close svg{width:12px;height:12px}
-.lib-dd-body{max-height:340px;overflow-y:auto}
-.lib-dd-body .track-row{cursor:pointer}
+/* ---------- library playlist panel track rows (see #libpl-panel, styled
+   alongside the queue panel further down) ---------- */
+#libplBody .track-row{cursor:pointer}
 
 /* ---------- mini bar ---------- */
 #mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:42;display:flex;align-items:center;gap:12px;
@@ -600,7 +603,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #queue-panel,#libpl-panel{position:fixed;z-index:41;background:var(--panel);display:flex;flex-direction:column;
   box-shadow:0 0 60px rgba(0,0,0,.5)}
 .queue-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px;flex:none}
-.queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto}
+.queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .queue-head .clear{font-size:12px;color:var(--faint-2);flex:none}
 .queue-head .clear:hover{color:var(--bad)}
 .queue-head .discover-toggle{flex:none;display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
@@ -1332,6 +1335,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
     </div>
   </div>
 
+  <!-- ===== PLAYLIST CONTEXT MENU (opened from the 3-dot button on each
+       library card; repositioned in JS next to whichever button opened it) ===== -->
+  <div class="lib-ctx-menu" id="libCtxMenu"></div>
+
   <!-- ===== FLOW / FULLSCREEN ===== -->
   <div id="flow-layer">
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
@@ -1908,6 +1915,8 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueClearBtn = $('queueClearBtn');
 const discoverToggleBtn = $('discoverToggleBtn');
+const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn');
+const libCtxMenu = $('libCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
@@ -1938,6 +1947,7 @@ function setView(name){
   state.currentView = name;
   document.body.classList.toggle('view-settings-active', name === 'settings');
   if (state.queueOpen) closeQueuePanel();
+  if (name !== 'library' && typeof closeLibraryPlaylistPanel === 'function') closeLibraryPlaylistPanel();
   if (name === 'player' && prevView !== 'player' && typeof setVisualMode === 'function'){
     setVisualMode('art');
   }
@@ -2028,7 +2038,9 @@ function getLibraryView(){ return lsGet(LS_LIB_VIEW, 'grid'); }
 function setLibraryView(mode){
   lsSet(LS_LIB_VIEW, mode);
   libraryGrid.classList.toggle('is-list', mode === 'list');
+  libraryGrid.classList.toggle('is-compact', mode === 'compact');
   libraryAlbumsGrid.classList.toggle('is-list', mode === 'list');
+  libraryAlbumsGrid.classList.toggle('is-compact', mode === 'compact');
   libViewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
@@ -2083,7 +2095,8 @@ libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
 });
 
 function renderLibrary(){
-  closeLibraryTrackDropdown();
+  closeLibraryPlaylistPanel();
+  if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
   const ids = orderedLibraryIds();
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
   libraryEmpty.classList.add('hidden'); libraryListWrap.classList.remove('hidden');
@@ -2150,11 +2163,11 @@ function renderLibrary(){
       }
     }
     if (!isSystemPl){
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'remove'; removeBtn.setAttribute('aria-label','Remove from library');
-      removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
-      removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeFromLibrary(id); renderLibrary(); showToast('Removed from library'); });
-      artDiv.appendChild(removeBtn);
+      const menuBtn = document.createElement('button');
+      menuBtn.className = 'menu-btn'; menuBtn.setAttribute('aria-label','Playlist options'); menuBtn.setAttribute('aria-haspopup','true'); menuBtn.setAttribute('aria-expanded','false');
+      menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+      menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibCtxMenu(id, menuBtn); });
+      artDiv.appendChild(menuBtn);
     }
 
     const hoverActions = document.createElement('div');
@@ -2165,7 +2178,7 @@ function renderLibrary(){
     playBtn.addEventListener('click', (e) => { e.stopPropagation(); playPlaylistNow(id); });
     const openBtn = document.createElement('button');
     openBtn.className = 'open-link'; openBtn.textContent = 'Open';
-    openBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibraryTrackDropdown(id, card); });
+    openBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibraryPlaylistPanel(id); });
     hoverActions.appendChild(playBtn); hoverActions.appendChild(openBtn);
     artDiv.appendChild(hoverActions);
 
@@ -2199,15 +2212,15 @@ function renderLibrary(){
       rowPinBtn.setAttribute('aria-label', pinned ? 'Unpin playlist' : 'Pin playlist to top');
       rowPinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>';
       rowPinBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); });
-      const rowRemoveBtn = document.createElement('button');
-      rowRemoveBtn.className = 'row-remove'; rowRemoveBtn.setAttribute('aria-label', 'Remove from library');
-      rowRemoveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
-      rowRemoveBtn.addEventListener('click', (e) => { e.stopPropagation(); removeFromLibrary(id); renderLibrary(); showToast('Removed from library'); });
-      rowActions.appendChild(rowPinBtn); rowActions.appendChild(rowRemoveBtn);
+      const rowMenuBtn = document.createElement('button');
+      rowMenuBtn.className = 'row-menu'; rowMenuBtn.setAttribute('aria-label','Playlist options'); rowMenuBtn.setAttribute('aria-haspopup','true'); rowMenuBtn.setAttribute('aria-expanded','false');
+      rowMenuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+      rowMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibCtxMenu(id, rowMenuBtn); });
+      rowActions.appendChild(rowPinBtn); rowActions.appendChild(rowMenuBtn);
     }
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
-    card.addEventListener('click', () => toggleLibraryTrackDropdown(id, card));
+    card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
     (isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
@@ -2218,16 +2231,17 @@ function renderLibrary(){
 }
 
 /* =========================================================================
-   LIBRARY TRACK DROPDOWN (clicking a card expands its tracklist inline,
-   right in the library grid — no navigating to the player view)
+   LIBRARY PLAYLIST PANEL (clicking a card opens its tracklist in the same
+   sliding-sheet / side-panel style the Queue button pulls up — a fixed
+   overlay that sits under the mini player bar but above everything else,
+   rather than navigating away from the library view)
    ========================================================================= */
-let openLibraryDropdown = null; // { id, el }
+let openLibraryPanelId = null;
 
-function closeLibraryTrackDropdown(){
-  if (openLibraryDropdown){
-    openLibraryDropdown.el.remove();
-    openLibraryDropdown = null;
-  }
+function closeLibraryPlaylistPanel(){
+  if (!openLibraryPanelId) return;
+  openLibraryPanelId = null;
+  libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
 }
 
 // starts playback of a library playlist without leaving the library view
@@ -2239,30 +2253,19 @@ function playLibraryTrackInline(id, index){
   loadIndex(state.queuePos, true);
 }
 
-function toggleLibraryTrackDropdown(id, card){
-  if (openLibraryDropdown && openLibraryDropdown.id === id){
-    closeLibraryTrackDropdown();
+function toggleLibraryPlaylistPanel(id){
+  if (openLibraryPanelId === id){
+    closeLibraryPlaylistPanel();
     return;
   }
-  closeLibraryTrackDropdown();
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
 
-  const dd = document.createElement('div');
-  dd.className = 'lib-track-dropdown';
-
-  const head = document.createElement('div'); head.className = 'lib-dd-head';
-  const h = document.createElement('h3'); h.textContent = pl.name;
-  const playBtn = document.createElement('button'); playBtn.className = 're'; playBtn.textContent = 'Play';
-  playBtn.addEventListener('click', (e) => { e.stopPropagation(); playLibraryTrackInline(id, 0); });
-  const closeBtn = document.createElement('button'); closeBtn.className = 'lib-dd-close'; closeBtn.setAttribute('aria-label', 'Close');
-  closeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
-  closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibraryTrackDropdown(); });
-  head.appendChild(h); head.appendChild(playBtn); head.appendChild(closeBtn);
-
-  const body = document.createElement('div'); body.className = 'lib-dd-body';
+  openLibraryPanelId = id;
+  libplTitle.textContent = pl.name;
+  libplBody.innerHTML = '';
   if (!pl.tracks.length){
-    body.innerHTML = '<div class="empty-lib">No tracks found.</div>';
+    libplBody.innerHTML = '<div class="empty-lib">No tracks found.</div>';
   } else {
     pl.tracks.forEach((t, i) => {
       const row = document.createElement('div');
@@ -2277,23 +2280,285 @@ function toggleLibraryTrackDropdown(id, card){
       if (t.videoId){
         row.addEventListener('click', () => playLibraryTrackInline(id, i));
       }
-      body.appendChild(row);
+      libplBody.appendChild(row);
     });
   }
 
-  dd.appendChild(head); dd.appendChild(body);
-  card.insertAdjacentElement('afterend', dd);
-  openLibraryDropdown = { id, el: dd };
+  libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
 }
 
-// clicking anywhere outside the open dropdown (or the card that owns it,
-// which manages its own toggle/close) closes it
+libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
+libplCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
+libplScrim.addEventListener('click', closeLibraryPlaylistPanel);
+attachSwipeToDismiss(libplPanel, closeLibraryPlaylistPanel);
+
+/* =========================================================================
+   PLAYLIST CONTEXT MENU (the 3-dot menu on each library card) — one shared
+   floating panel, repositioned next to whichever button opened it and
+   flipped to drop upward when it would otherwise overflow the bottom edge.
+   ========================================================================= */
+let openCtxMenu = null; // { id, btn }
+
+const CTX_ICON_RENAME = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
+const CTX_ICON_ART = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>';
+const CTX_ICON_DUPLICATE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4a2 2 0 00-2 2v14h2V3h12V1zm3 4H8a2 2 0 00-2 2v14a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2zm0 16H8V7h11v14z"/></svg>';
+const CTX_ICON_PIN = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>';
+const CTX_ICON_LINK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12a5 5 0 015-5h3v2h-3a3 3 0 000 6h3v2h-3a5 5 0 01-5-5zm6-1h4v2h-4v-2zm5-4h3a5 5 0 010 10h-3v-2h3a3 3 0 000-6h-3V7z"/></svg>';
+const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h6V4l-2.35 2.35z"/></svg>';
+const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
+
+// Reverses a resolved playlist's {type,id} back into the URL it was
+// imported from, for "Copy link". Custom playlists and the two system
+// playlists (Liked Songs, Swell) have no source link, so this returns null
+// for those and the menu hides "Copy link"/"Replace link" accordingly.
+function canonicalLinkForPlaylist(pl){
+  const t = pl.type;
+  if (t === 'playlist' || t === 'album' || t === 'track') return 'https://open.spotify.com/' + t + '/' + pl.id;
+  if (t === 'yt_playlist') return 'https://www.youtube.com/playlist?list=' + pl.id.replace(/^yt:/, '');
+  if (t === 'yt_video') return 'https://www.youtube.com/watch?v=' + pl.id.replace(/^yt:/, '');
+  if (t === 'sc_playlist' || t === 'sc_track') return decodeURIComponent(pl.id.replace(/^sc:/, ''));
+  if (t === 'am_playlist' || t === 'am_album' || t === 'am_track'){
+    const idx = pl.id.indexOf(':');
+    const storefront = pl.id.slice(0, idx), amId = pl.id.slice(idx + 1);
+    const kind = t === 'am_playlist' ? 'playlist' : t === 'am_album' ? 'album' : 'song';
+    return 'https://music.apple.com/' + storefront + '/' + kind + '/' + kind + '/' + amId;
+  }
+  return null;
+}
+
+function closeLibCtxMenu(){
+  if (!openCtxMenu) return;
+  if (openCtxMenu.btn) openCtxMenu.btn.classList.remove('is-active');
+  libCtxMenu.classList.remove('is-open');
+  openCtxMenu = null;
+}
+
+function positionLibCtxMenu(btn){
+  const r = btn.getBoundingClientRect();
+  const menuRect = libCtxMenu.getBoundingClientRect();
+  const margin = 8;
+  const spaceBelow = window.innerHeight - r.bottom;
+  const dropUp = spaceBelow < menuRect.height + margin && r.top > menuRect.height + margin;
+  libCtxMenu.classList.toggle('drop-up', dropUp);
+  let top = dropUp ? (r.top - menuRect.height - 6) : (r.bottom + 6);
+  top = Math.max(margin, Math.min(top, window.innerHeight - menuRect.height - margin));
+  let left = r.right - menuRect.width;
+  left = Math.max(margin, Math.min(left, window.innerWidth - menuRect.width - margin));
+  libCtxMenu.style.top = top + 'px';
+  libCtxMenu.style.left = left + 'px';
+}
+
+function openLibCtxMenu(id, btn){
+  const pl = getCachedPlaylist(id);
+  if (!pl) return;
+  const pinned = isPinned(id);
+  const link = canonicalLinkForPlaylist(pl);
+  const items = [
+    { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
+    { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
+    { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
+    { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
+  ];
+  if (link){
+    items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
+    items.push({ action: 'replacelink', label: 'Replace link', icon: CTX_ICON_REPLACE });
+  }
+  items.push({ sep: true });
+  items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
+
+  libCtxMenu.innerHTML = '';
+  items.forEach(item => {
+    if (item.sep){
+      const sep = document.createElement('div'); sep.className = 'lib-ctx-sep';
+      libCtxMenu.appendChild(sep);
+      return;
+    }
+    const b = document.createElement('button');
+    b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '');
+    b.innerHTML = item.icon + '<span>' + item.label + '</span>';
+    b.addEventListener('click', (e) => { e.stopPropagation(); closeLibCtxMenu(); handleLibCtxAction(item.action, id); });
+    libCtxMenu.appendChild(b);
+  });
+
+  if (openCtxMenu && openCtxMenu.btn) openCtxMenu.btn.classList.remove('is-active');
+  openCtxMenu = { id, btn };
+  btn.classList.add('is-active'); btn.setAttribute('aria-expanded', 'true');
+  libCtxMenu.classList.remove('drop-up');
+  libCtxMenu.classList.add('is-open');
+  positionLibCtxMenu(btn);
+}
+
+function toggleLibCtxMenu(id, btn){
+  if (openCtxMenu && openCtxMenu.btn === btn){ closeLibCtxMenu(); return; }
+  openLibCtxMenu(id, btn);
+}
+
 document.addEventListener('click', (e) => {
-  if (!openLibraryDropdown) return;
-  if (openLibraryDropdown.el.contains(e.target)) return;
-  if (e.target.closest && e.target.closest('.lib-card')) return;
-  closeLibraryTrackDropdown();
+  if (!openCtxMenu) return;
+  if (libCtxMenu.contains(e.target) || (openCtxMenu.btn && openCtxMenu.btn.contains(e.target))) return;
+  closeLibCtxMenu();
 });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openCtxMenu) closeLibCtxMenu(); });
+window.addEventListener('resize', () => { if (openCtxMenu) closeLibCtxMenu(); });
+window.addEventListener('scroll', () => { if (openCtxMenu) closeLibCtxMenu(); }, true);
+
+function handleLibCtxAction(action, id){
+  const pl = getCachedPlaylist(id);
+  if (!pl) return;
+  if (action === 'rename') openRenamePlaylistFlow(id, pl);
+  else if (action === 'art') openChangeArtFlow(id, pl);
+  else if (action === 'duplicate') duplicateLibraryPlaylist(id, pl);
+  else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
+  else if (action === 'copylink') copyPlaylistLink(pl);
+  else if (action === 'replacelink') openReplaceLinkFlow(id, pl);
+  else if (action === 'delete'){ removeFromLibrary(id); renderLibrary(); showToast('Deleted'); }
+}
+
+function openRenamePlaylistFlow(id, pl){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Rename playlist</div>' +
+    '<input id="plRenameInput" type="text" placeholder="Playlist name" autocomplete="off" spellcheck="false" ' +
+      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
+    '<button class="btn-ghost is-active" id="plRenameBtn" style="width:100%">Save</button>';
+  const input = $('plRenameInput');
+  input.value = pl.name;
+  input.focus(); input.select();
+  function submit(){
+    const name = input.value.trim();
+    if (!name) return;
+    pl.name = name;
+    lsSet(LS_PL(id), pl);
+    if (state.playlist && state.playlist.id === id) state.playlist.name = name;
+    closeImportOverlay();
+    renderLibrary();
+    showToast('Renamed');
+  }
+  $('plRenameBtn').addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+}
+
+function openChangeArtFlow(id, pl){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Change playlist art</div>' +
+    '<input id="plArtUrlInput" type="text" placeholder="Paste an image URL" autocomplete="off" spellcheck="false" ' +
+      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
+    '<button class="btn-ghost is-active" id="plArtUrlBtn" style="width:100%;margin-bottom:14px">Use this image</button>' +
+    '<label class="btn-ghost" for="plArtFileInput" style="display:block;text-align:center;width:100%;cursor:pointer">Upload from device</label>' +
+    '<input id="plArtFileInput" type="file" accept="image/*" style="display:none">' +
+    (pl.image ? '<button class="btn-ghost" id="plArtResetBtn" style="width:100%;margin-top:10px">Remove custom art</button>' : '');
+  function apply(image){
+    pl.image = image;
+    lsSet(LS_PL(id), pl);
+    if (state.playlist && state.playlist.id === id) state.playlist.image = image;
+    closeImportOverlay();
+    renderLibrary();
+    showToast('Playlist art updated');
+  }
+  $('plArtUrlBtn').addEventListener('click', () => {
+    const url = $('plArtUrlInput').value.trim();
+    if (url) apply(url);
+  });
+  $('plArtFileInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 400;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        apply(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  const resetBtn = $('plArtResetBtn');
+  if (resetBtn) resetBtn.addEventListener('click', () => apply(null));
+}
+
+function duplicateLibraryPlaylist(id, pl){
+  const newId = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const copy = { id: newId, type: 'custom', name: pl.name + ' copy', image: pl.image || null,
+    tracks: pl.tracks.map(t => Object.assign({}, t)), ts: Date.now() };
+  lsSet(LS_PL(newId), copy);
+  const lib = getLibrary();
+  const idx = lib.indexOf(id);
+  if (idx === -1) lib.unshift(newId); else lib.splice(idx + 1, 0, newId);
+  lsSet(LS_LIB, lib);
+  renderLibrary();
+  showToast('Duplicated');
+}
+
+function copyPlaylistLink(pl){
+  const link = canonicalLinkForPlaylist(pl);
+  if (!link) return;
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(() => showToast('Link copied')).catch(() => showToast("Couldn't copy link"));
+  } else {
+    showToast("Couldn't copy link");
+  }
+}
+
+// Re-points a library entry at a different source link entirely, keeping
+// its position in the library and its pin state, rather than adding a
+// second entry the way pasting a new link into the main import bar would.
+function swapLibraryPlaylist(oldId, newPl){
+  if (oldId === newPl.id){ lsSet(LS_PL(oldId), newPl); return; }
+  lsSet(LS_LIB, getLibrary().map(x => x === oldId ? newPl.id : x));
+  lsSet(LS_PINNED, getPinnedLibrary().map(x => x === oldId ? newPl.id : x));
+  const lastPlayed = getLastPlayed(oldId);
+  if (lastPlayed) lsSet(LS_LASTPLAYED(newPl.id), lastPlayed);
+  lsDel(LS_LASTPLAYED(oldId));
+  lsDel(LS_PL(oldId));
+  lsSet(LS_PL(newPl.id), newPl);
+  if (state.playlist && state.playlist.id === oldId) state.playlist = newPl;
+}
+
+function openReplaceLinkFlow(id, pl){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Replace link for &ldquo;' + escapeHtml(pl.name) + '&rdquo;</div>' +
+    '<input id="plReplaceInput" type="text" placeholder="Paste a Spotify, YouTube, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false" ' +
+      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
+    '<div class="import-err" id="plReplaceErr"></div>' +
+    '<button class="btn-ghost is-active" id="plReplaceBtn" style="width:100%">Replace</button>';
+  const input = $('plReplaceInput');
+  input.focus();
+  function submit(){
+    const parsed = parseImportLink(input.value);
+    if (!parsed){ $('plReplaceErr').textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
+    let newId, newType;
+    if (parsed.source === 'youtube'){ newId = 'yt:' + parsed.id; newType = parsed.type === 'video' ? 'yt_video' : 'yt_playlist'; }
+    else if (parsed.source === 'soundcloud'){ newId = 'sc:' + encodeURIComponent(parsed.id); newType = parsed.type === 'track' ? 'sc_track' : 'sc_playlist'; }
+    else if (parsed.source === 'applemusic'){ newId = parsed.storefront + ':' + parsed.id; newType = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist'; }
+    else { newId = parsed.id; newType = parsed.type; }
+    $('plReplaceErr').textContent = '';
+    stageFinding();
+    resolvePlaylist(newId, newType, (p) => {
+      if (p.stage === 'matching'){
+        if (!$('matchFill')) stageMatching(null, p.total);
+        stageMatchingProgress(p.done, p.total, p.track);
+      }
+    }).then(newPl => {
+      swapLibraryPlaylist(id, newPl);
+      closeImportOverlay();
+      renderLibrary();
+      showToast('Link replaced');
+    }).catch(e => {
+      stageError(e.message || 'Something went wrong.', submit);
+    });
+  }
+  $('plReplaceBtn').addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+}
 
 /* =========================================================================
    CUSTOM PLAYLISTS (user-built, not backed by a Spotify id)
@@ -3508,31 +3773,31 @@ function closeQueuePanel(){
 }
 queueScrim.addEventListener('click', closeQueuePanel);
 
-/* mobile: swipe down on the queue sheet to dismiss */
-(function(){
+/* mobile: swipe down on a sheet's drag handle to dismiss it (used by both
+   the queue panel and the library playlist panel) */
+function attachSwipeToDismiss(panelEl, closeFn){
   let startY = null;
-  const handleEl = queuePanel.querySelector('.queue-drag-handle');
+  const handleEl = panelEl.querySelector('.queue-drag-handle');
   function down(e){ startY = (e.touches ? e.touches[0].clientY : e.clientY); }
   function move(e){
     if (startY === null) return;
     const y = (e.touches ? e.touches[0].clientY : e.clientY);
     const dy = y - startY;
-    if (dy > 0) queuePanel.style.transform = 'translateY(' + dy + 'px)';
+    if (dy > 0) panelEl.style.transform = 'translateY(' + dy + 'px)';
   }
   function up(e){
     if (startY === null) return;
     const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
     const dy = y - startY;
-    queuePanel.style.transform = '';
-    if (dy > 90) closeQueuePanel();
+    panelEl.style.transform = '';
+    if (dy > 90) closeFn();
     startY = null;
   }
-  [handleEl].forEach(el => {
-    el.addEventListener('touchstart', down, {passive:true});
-    el.addEventListener('touchmove', move, {passive:true});
-    el.addEventListener('touchend', up);
-  });
-})();
+  handleEl.addEventListener('touchstart', down, {passive:true});
+  handleEl.addEventListener('touchmove', move, {passive:true});
+  handleEl.addEventListener('touchend', up);
+}
+attachSwipeToDismiss(queuePanel, closeQueuePanel);
 
 /* =========================================================================
    YOUTUBE PLAYBACK — dual deck, gapless (optional crossfade)
