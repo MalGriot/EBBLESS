@@ -3692,14 +3692,14 @@ function updateTrackMetaUI(t){
 
 function updateMediaSessionMeta(t){
   if (!('mediaSession' in navigator)) return;
+  const artwork = t && t.art
+    ? [{ src: t.art, sizes: '512x512', type: 'image/jpeg' }]
+    : artworkUrls(t).map(src => ({ src, sizes: '480x360', type: 'image/jpeg' }));
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title || 'EBBLESS',
     artist: t.artist || '',
     album: 'EBBLESS',
-    artwork: [
-      { src: 'https://img.youtube.com/vi/' + t.videoId + '/mqdefault.jpg', sizes: '320x180', type: 'image/jpeg' },
-      { src: 'https://img.youtube.com/vi/' + t.videoId + '/hqdefault.jpg', sizes: '480x360', type: 'image/jpeg' }
-    ]
+    artwork
   });
 }
 
@@ -4153,12 +4153,11 @@ flowLayer.addEventListener('click', armFlowChromeTimer);
   flowLayer.addEventListener('touchend', end);
 })();
 
-/* tap album art -> play/pause */
+/* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
 (function(){
   function toggleActivePlayback(){ if (state.queuePos >= 0) playIndex(state.queuePos); }
   $('artworkWrap').addEventListener('click', toggleActivePlayback);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
-  $('flowVizWrap').addEventListener('click', toggleActivePlayback);
 })();
 
 /* =========================================================================
