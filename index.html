@@ -166,6 +166,13 @@ svg{display:block}
 .lib-card .art .face{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .lib-card .art .face.grid-face.single{grid-template-columns:1fr;grid-template-rows:1fr}
 .lib-card .art .face.spotify-face{display:block}
+/* Fallback for a playlist with no Spotify/Apple art and no matched tracks
+   yet (a brand-new Swell before its first generation, or an empty manual
+   playlist) - the app icon glyph, recolored to the same day's-color-clock
+   accent as everything else, instead of an empty tile. */
+.lib-card .art .face.icon-face{display:flex;align-items:center;justify-content:center;background:#121212}
+.lib-card .art .face.icon-face svg{width:44%;height:44%}
+.lib-card .art .face.icon-face path{stroke:var(--clock-accent,#e0b26a)}
 .lib-card .art.animated .face{opacity:0;animation:lib-art-crossfade 9s ease-in-out infinite}
 .lib-card .art.animated .face.grid-face{opacity:1}
 .lib-card .art.animated .face.spotify-face{animation-delay:-4.5s}
@@ -1930,24 +1937,33 @@ function renderLibrary(){
     card.className = 'lib-card' + (pinned ? ' is-pinned' : '');
     const artDiv = document.createElement('div');
     artDiv.className = 'art';
-    const gridFace = document.createElement('div');
-    gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
-    if (withArt.length === 1){
-      const img = document.createElement('img'); attachArtworkFallback(img, withArt[0]); gridFace.appendChild(img);
+    if (withArt.length === 0 && !pl.image){
+      // No matched tracks yet and no source-provided image (a brand-new
+      // Swell before its first generation, or an empty manual playlist) -
+      // the app icon glyph, recolored to today's color-clock accent,
+      // instead of an empty tile.
+      artDiv.classList.add('single');
+      artDiv.innerHTML = '<div class="face icon-face"><svg viewBox="0 0 512 512"><path d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272" fill="none" stroke-width="46" stroke-linecap="round"/></svg></div>';
     } else {
-      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
-    }
-    if (pl.image){
-      artDiv.classList.add('animated');
-      const spotifyFace = document.createElement('div');
-      spotifyFace.className = 'face spotify-face';
-      const img = document.createElement('img'); img.src = pl.image; img.loading = 'lazy';
-      spotifyFace.appendChild(img);
-      artDiv.appendChild(gridFace);
-      artDiv.appendChild(spotifyFace);
-    } else {
-      if (withArt.length <= 1) artDiv.classList.add('single');
-      while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
+      const gridFace = document.createElement('div');
+      gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
+      if (withArt.length === 1){
+        const img = document.createElement('img'); attachArtworkFallback(img, withArt[0]); gridFace.appendChild(img);
+      } else {
+        withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
+      }
+      if (pl.image){
+        artDiv.classList.add('animated');
+        const spotifyFace = document.createElement('div');
+        spotifyFace.className = 'face spotify-face';
+        const img = document.createElement('img'); img.src = pl.image; img.loading = 'lazy';
+        spotifyFace.appendChild(img);
+        artDiv.appendChild(gridFace);
+        artDiv.appendChild(spotifyFace);
+      } else {
+        if (withArt.length <= 1) artDiv.classList.add('single');
+        while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
+      }
     }
     if (!isSystemPl){
       const removeBtn = document.createElement('button');
