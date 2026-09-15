@@ -70,7 +70,11 @@ svg{display:block}
 @media (prefers-reduced-motion:reduce){
   #ambient .layer.is-active{animation:none}
 }
-#ambient::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%);}
+#ambient::after{content:'';position:absolute;inset:0;transition:background 4s linear;
+  background:
+    radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%),
+    var(--clock-tint-ambient, transparent);
+}
 
 /* ---------- topbar (desktop) ---------- */
 #topbar{
@@ -251,7 +255,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #view-player{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 #view-player:not([hidden]){display:flex}
 #view-player .view-scroll{max-width:1040px;padding-top:6px;padding-bottom:8px;width:100%;
-  display:flex;flex-direction:column;justify-content:center}
+  display:flex;flex-direction:column;justify-content:safe center}
 .player-layout{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
 .player-stage{display:flex;flex-direction:column;align-items:center;padding-top:10px;min-height:0}
 .visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:14px}
@@ -684,7 +688,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 /* ---------- splash screen ---------- */
 #splash{
   position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-  background:var(--bg);transition:opacity 420ms var(--ease-out),visibility 420ms var(--ease-out);
+  background:radial-gradient(ellipse 120% 80% at 50% 42%, var(--clock-tint-splash, transparent) 0%, var(--bg) 78%);
+  transition:opacity 420ms var(--ease-out),visibility 420ms var(--ease-out),background 4s linear;
 }
 #splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
 #splash img{width:200px;height:auto;animation:splash-pulse 1.8s var(--ease-in-out) infinite}
@@ -1654,6 +1659,7 @@ const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = 
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
+const ambientEl = $('ambient');
 const ambientA = $('ambient-a'), ambientB = $('ambient-b');
 const flowAmbientA = $('flowAmbientA'), flowAmbientB = $('flowAmbientB');
 const toastEl = $('toast');
@@ -1687,6 +1693,7 @@ function setView(name){
   });
   views[name].scrollTop = 0;
   updateMiniBarVisibility();
+  if (typeof updateLibraryClockColor === 'function') updateLibraryClockColor();
 }
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
@@ -3170,15 +3177,20 @@ function vizRosicrucianColor(){
   return VIZ_LETTER_COLORS[currentLetter];
 }
 
-/* Library page accent/tint follows the same color-clock as the cymatics
-   grains above, independent of visualizer/playback state so it drifts even
-   when nothing is playing. */
+/* Library accent/tint, the splash screen wash, and the library lava-lamp
+   ambient tint all follow the same color-clock as the cymatics grains above,
+   independent of visualizer/playback state so it drifts even when nothing
+   is playing. Vars are set on the root so splash/#ambient (outside
+   #view-library) can read them too. */
 function updateLibraryClockColor(){
   const solid = vizRosicrucianColor();
-  const m = solid.match(/\d+/g);
-  const tint = m ? `rgba(${m[0]},${m[1]},${m[2]},.22)` : 'transparent';
-  views.library.style.setProperty('--clock-accent', solid);
-  views.library.style.setProperty('--clock-tint', tint);
+  const [cr, cg, cb] = solid.startsWith('#') ? vizHexToRgb(solid) : solid.match(/\d+/g).map(Number);
+  const alpha = (a) => `rgba(${cr},${cg},${cb},${a})`;
+  const root = document.documentElement.style;
+  root.setProperty('--clock-accent', solid);
+  root.setProperty('--clock-tint', alpha(.22));
+  root.setProperty('--clock-tint-splash', alpha(.4));
+  ambientEl.style.setProperty('--clock-tint-ambient', state.currentView === 'library' ? alpha(.3) : 'transparent');
 }
 updateLibraryClockColor();
 setInterval(updateLibraryClockColor, 10000);
