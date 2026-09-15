@@ -145,10 +145,12 @@ svg{display:block}
 .section-label-row .section-label{margin:28px 0 2px}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-head-actions{display:flex;align-items:center;gap:8px;flex:none}
-#libSortSel{font-size:11.5px;padding:6px 10px;max-width:150px}
-@media (max-width:380px){
-  #libSortSel{font-size:11px;padding:6px 8px;max-width:112px}
-}
+.lib-sort{position:relative}
+.lib-sort-btn{width:30px;height:30px;border-radius:8px;background:var(--panel-2)}
+.lib-sort-btn svg{width:15px;height:15px}
+.lib-sort-btn.is-active{color:var(--text)}
+.lib-sort-menu{left:auto;right:0;transform:translateY(-6px)}
+.lib-sort-menu.is-open{transform:translateY(0)}
 .view-toggle{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
 .view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .view-toggle-btn svg{width:14px;height:14px}
@@ -903,12 +905,29 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
           <div class="section-label">Playlists</div>
           <div class="lib-head-actions">
             <button class="btn-ghost" id="newPlaylistBtn" style="padding:5px 14px;font-size:12.5px">+ New playlist</button>
-            <select class="btn-ghost" id="libSortSel" aria-label="Sort library">
-              <option value="custom">Manual order</option>
-              <option value="alpha">Alphabetical</option>
-              <option value="plays_desc">Most listened to</option>
-              <option value="tracks_desc">Most songs</option>
-            </select>
+            <div class="lib-sort">
+              <button type="button" class="view-toggle-btn lib-sort-btn" id="libSortBtn" aria-label="Sort library" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+              </button>
+              <div class="art-style-menu lib-sort-menu" id="libSortMenu">
+                <button class="art-style-opt" data-sort="custom">
+                  <span class="art-style-label">Manual order</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <button class="art-style-opt" data-sort="alpha">
+                  <span class="art-style-label">Alphabetical</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <button class="art-style-opt" data-sort="plays_desc">
+                  <span class="art-style-label">Most listened to</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <button class="art-style-opt" data-sort="tracks_desc">
+                  <span class="art-style-label">Most songs</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+              </div>
+            </div>
             <div class="view-toggle" id="libViewToggle" role="group" aria-label="Library layout">
               <button type="button" class="view-toggle-btn" data-mode="grid" aria-label="Grid view">
                 <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
@@ -1814,7 +1833,7 @@ const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('imp
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libViewToggle = $('libViewToggle');
-const libSortSel = $('libSortSel');
+const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
@@ -1974,11 +1993,33 @@ libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
 });
-libSortSel.value = getLibrarySort();
-libSortSel.addEventListener('change', () => {
-  setLibrarySort(libSortSel.value);
-  renderLibrary();
+function applyLibSortUI(){
+  const mode = getLibrarySort();
+  libSortMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
+  libSortBtn.classList.toggle('is-active', mode !== 'custom');
+}
+function openLibSortMenu(){ libSortMenu.classList.add('is-open'); libSortBtn.setAttribute('aria-expanded', 'true'); }
+function closeLibSortMenu(){ libSortMenu.classList.remove('is-open'); libSortBtn.setAttribute('aria-expanded', 'false'); }
+libSortBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  libSortMenu.classList.toggle('is-open');
+  libSortBtn.setAttribute('aria-expanded', libSortMenu.classList.contains('is-open') ? 'true' : 'false');
 });
+libSortMenu.querySelectorAll('.art-style-opt').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setLibrarySort(btn.dataset.sort);
+    applyLibSortUI();
+    closeLibSortMenu();
+    renderLibrary();
+  });
+});
+document.addEventListener('click', (e) => {
+  if (!libSortMenu.classList.contains('is-open')) return;
+  if (libSortMenu.contains(e.target) || libSortBtn.contains(e.target)) return;
+  closeLibSortMenu();
+});
+applyLibSortUI();
 setLibraryView(getLibraryView());
 
 function renderLibrary(){
