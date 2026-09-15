@@ -218,6 +218,10 @@ svg{display:block}
   .lib-card .art.animated .face.spotify-face{opacity:0}
 }
 .lib-card .name{margin-top:9px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-card .name .new-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
+  background:var(--faint);vertical-align:middle}
+.lib-card .name .new-dot.is-active{background:var(--accent);animation:new-dot-blink 1.4s ease-in-out infinite}
+@keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
@@ -1619,6 +1623,7 @@ async function fetchAppleMusicTrack(storefront, id){
 const LS_LIB = 'ebbless:library';           // array of playlist ids, most recent first
 const LS_PINNED = 'ebbless:pinned';          // array of pinned playlist ids, most recently pinned first
 const LS_LASTPLAYED = (id) => 'ebbless:lastplayed:' + id;  // ms timestamp a playlist last started playing
+const LS_LASTOPENED = (id) => 'ebbless:lastopened:' + id;  // ms timestamp a playlist's tracklist panel was last opened
 const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
 const LS_VOL = 'ebbless:volume';
 let isMuted = false;
@@ -1705,6 +1710,8 @@ function orderedLibraryIds(){
 
 function recordLastPlayed(plId){ if (plId) lsSet(LS_LASTPLAYED(plId), Date.now()); }
 function getLastPlayed(id){ return lsGet(LS_LASTPLAYED(id), null); }
+function recordLastOpened(plId){ if (plId) lsSet(LS_LASTOPENED(plId), Date.now()); }
+function getLastOpened(id){ return lsGet(LS_LASTOPENED(id), null); }
 function formatLastPlayed(ts){
   if (!ts) return null;
   const diffMs = Date.now() - ts;
@@ -2143,6 +2150,7 @@ function renderLibrary(){
     const withArt = pl.tracks.filter(t => t.videoId).slice(0, 4);
     const card = document.createElement('div');
     card.className = 'lib-card' + (pinned ? ' is-pinned' : '');
+    card.dataset.plId = id;
     const artDiv = document.createElement('div');
     artDiv.className = 'art';
     if (isLiked && withArt.length === 0){
@@ -2216,6 +2224,12 @@ function renderLibrary(){
     }
 
     const name = document.createElement('div'); name.className = 'name'; name.textContent = pl.name;
+    if (id === SWELL_ID){
+      const dot = document.createElement('span');
+      dot.className = 'new-dot' + (swellHasUnseenDrop() ? ' is-active' : '');
+      dot.setAttribute('aria-label', swellHasUnseenDrop() ? 'New music' : '');
+      name.appendChild(dot);
+    }
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
@@ -2290,6 +2304,12 @@ function toggleLibraryPlaylistPanel(id){
   }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
+
+  if (id === SWELL_ID){
+    recordLastOpened(id);
+    const dot = libraryGrid.querySelector('[data-pl-id="' + SWELL_ID + '"] .new-dot');
+    if (dot) dot.classList.remove('is-active');
+  }
 
   openLibraryPanelId = id;
   libplTitle.textContent = pl.name;
@@ -2474,7 +2494,10 @@ function handleLibCtxAction(action, id){
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
   else if (action === 'copylink') copyPlaylistLink(pl);
   else if (action === 'replacelink') openReplaceLinkFlow(id, pl);
-  else if (action === 'delete'){ removeFromLibrary(id); renderLibrary(); showToast('Deleted'); }
+  else if (action === 'delete'){
+    if (!confirm(`Delete "${pl.name}"? This can't be undone.`)) return;
+    removeFromLibrary(id); renderLibrary(); showToast('Deleted');
+  }
 }
 
 function openRenamePlaylistFlow(id, pl){
@@ -2642,8 +2665,13 @@ function ensureLikedPlaylist(){
 // played recently (see generateSwell). Always pinned to the very front of
 // the library (see orderedLibraryIds), same mechanism as Liked Songs.
 function ensureSwellPlaylist(){
-  if (getCachedPlaylist(SWELL_ID)) return;
-  const pl = { id: SWELL_ID, type: 'custom', name: 'Swell', image: null, tracks: [], ts: Date.now() };
+  const existing = getCachedPlaylist(SWELL_ID);
+  if (existing){
+    // Migrate playlists created before the rename from "Swell" to "Current".
+    if (existing.name !== 'Current'){ existing.name = 'Current'; lsSet(LS_PL(SWELL_ID), existing); }
+    return;
+  }
+  const pl = { id: SWELL_ID, type: 'custom', name: 'CURRENT', image: null, tracks: [], ts: Date.now() };
   lsSet(LS_PL(SWELL_ID), pl);
   saveToLibrary(SWELL_ID);
 }
@@ -2936,6 +2964,10 @@ $('addSongBtn').addEventListener('click', () => { if (state.playlist) openAddLin
 function playPlaylistNow(id){
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
+  if (id === SWELL_ID){
+    const dot = libraryGrid.querySelector('[data-pl-id="' + SWELL_ID + '"] .new-dot');
+    if (dot) dot.classList.remove('is-active');
+  }
   loadPlaylistIntoPlayer(pl);
   setView('player');
   buildQueueFrom(0, pl.id);
@@ -3632,6 +3664,17 @@ function isSameLocalDay(tsA, tsB){
   const a = new Date(tsA), b = new Date(tsB);
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
+// true once today's Current drop has landed and the listener hasn't opened
+// or played it since - drives the blinking "new music" dot on the card.
+function swellHasUnseenDrop(){
+  const generated = lsGet(LS_SWELL_GENERATED, 0);
+  if (!generated || !isSameLocalDay(generated, Date.now())) return false;
+  const opened = getLastOpened(SWELL_ID);
+  const played = getLastPlayed(SWELL_ID);
+  if (opened && isSameLocalDay(opened, Date.now())) return false;
+  if (played && isSameLocalDay(played, Date.now())) return false;
+  return true;
+}
 async function generateSwell(){
   const likedPl = getCachedPlaylist(LIKED_ID);
   const recentPls = getLibrary()
@@ -3661,7 +3704,7 @@ async function generateSwell(){
   }
   if (!collected.length) return;
 
-  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'Swell', image: null, tracks: [], ts: Date.now() };
+  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CURRENT', image: null, tracks: [], ts: Date.now() };
   pl.tracks = collected;
   lsSet(LS_PL(SWELL_ID), pl);
   lsSet(LS_SWELL_GENERATED, Date.now());
