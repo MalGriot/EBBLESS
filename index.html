@@ -107,11 +107,11 @@ svg{display:block}
   transition:background 4s linear;
 }
 /* Library background video - same time-of-day color clock as the splash
-   screen wash (see updateLibraryClockColor()), blurred so it stays a mood
-   rather than a distraction behind the playlist grid. */
+   screen wash (see updateLibraryClockColor()), kept subtle so it stays a
+   mood rather than a distraction behind the playlist grid. */
 .lib-bg{position:fixed;left:0;right:0;top:var(--topbar-h);bottom:0;overflow:hidden;pointer-events:none;container-type:size}
-.lib-bg-video{position:absolute;top:50%;left:50%;width:114cqh;height:114cqw;transform:translate(-50%,-50%) rotate(-90deg);
-  object-fit:cover;filter:blur(5px) saturate(1.05) brightness(.5)}
+.lib-bg-video{position:absolute;top:50%;left:50%;width:102cqh;height:102cqw;transform:translate(-50%,-50%) rotate(-90deg);
+  object-fit:cover;filter:saturate(1.05) brightness(.5)}
 .lib-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;
   opacity:.55;transition:background 4s linear}
 .lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
