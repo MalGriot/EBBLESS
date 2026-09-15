@@ -296,11 +296,11 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .swatch-hub{width:6px;height:6px;border-radius:50%;background:var(--faint-2);box-shadow:0 0 0 1px rgba(255,255,255,.1)}
 
 .artwork-wrap{position:relative;width:min(420px,72vw);aspect-ratio:1;border-radius:var(--r-lg);overflow:hidden;
-  box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2);transition:height var(--dur-surface) var(--ease-in-out)}
+  box-shadow:0 24px 60px -12px rgba(0,0,0,.6);background:var(--panel-2);transition:height var(--dur-surface) var(--ease-in-out);
+  flex-shrink:0}
 .artwork-wrap[data-mode="art"][data-art-style="record"],
 .artwork-wrap[data-mode="art"][data-art-style="cassette"]{background:transparent;box-shadow:none}
 .artwork-wrap[data-mode="art"]{aspect-ratio:1!important;height:auto!important;flex-shrink:0}
-.artwork-wrap.mode-lyrics{aspect-ratio:auto;height:min(56vh,520px)}
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
 .artwork-wrap[data-mode="art"]:not([data-art-style="default"]) .art{opacity:0!important}
@@ -1186,6 +1186,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
       </div>
       <div class="artist marquee" id="flowArtist"><span>—</span></div>
     </div>
+  </div>
+
+  <!-- ===== LYRICS FULLSCREEN ===== -->
+  <div id="lyricsFsLayer">
+    <button class="lyrics-fs-exit" id="lyricsFsExitBtn" aria-label="Exit fullscreen lyrics">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
+    </button>
+    <div class="lyrics-fs-body" id="lyricsFsBody"></div>
   </div>
 
   <div class="toast" id="toast"></div>
