@@ -60,9 +60,9 @@ function deepFindKey(obj, key, out) {
 // for their old TTL (up to 30 days on some routes) after a deploy. Forgetting
 // this on a scoring change is exactly what let two already-cached tracks
 // keep returning their old wrong match after the fix had already shipped.
-const ART_CACHE_VERSION = 'v2';
+const ART_CACHE_VERSION = 'v3';
 const LYRICS_CACHE_VERSION = 'v2';
-const SEARCH_CACHE_VERSION = 'v3';
+const SEARCH_CACHE_VERSION = 'v4';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -141,7 +141,7 @@ async function handleEmbed(kind, url, ctx) {
   if (kind === 'album') {
     // Every track on an album shares the album's own cover — no per-track
     // lookup needed, it's already correct.
-    tracks = entity.trackList.map(t => ({ title: t.title, artist: t.subtitle || '', image }));
+    tracks = entity.trackList.map(t => ({ title: t.title, artist: t.subtitle || '', image, duration: t.duration || 0 }));
   } else {
     // A playlist can span many albums, so each track needs its own art.
     const inCap = entity.trackList.slice(0, PER_TRACK_ART_CAP);
@@ -150,6 +150,7 @@ async function handleEmbed(kind, url, ctx) {
       title: t.title,
       artist: t.subtitle || '',
       image: (i < PER_TRACK_ART_CAP ? thumbs[i] : null) || image,
+      duration: t.duration || 0,
     }));
   }
 
@@ -184,13 +185,14 @@ const DEMOTE_HINTS = ['reaction', 'sped up', 'slowed', 'clean version', 'clean e
 // not be excluded in that case).
 const EXCLUDE_GROUPS = [
   { keyword: 'live', hints: ['live at', 'live from', 'live in', 'live performance', 'live session', '(live)', '[live]', '- live', 'live version'] },
-  { keyword: 'concert', hints: ['in concert', 'concert film', 'tour visualizer'] },
+  { keyword: 'concert', hints: ['in concert', 'concert film', 'tour visualizer', 'full concert'] },
   { keyword: 'unplugged', hints: ['unplugged', 'tiny desk'] },
   { keyword: 'acoustic', hints: ['acoustic version', 'acoustic cover', '(acoustic)', '[acoustic]', '- acoustic'] },
   { keyword: 'remix', hints: ['remix)', 'remix]', '- remix'] },
   { keyword: 'rehearsal', hints: ['rehearsal'] },
   { keyword: 'cover', hints: ['cover)', 'cover]', '- cover'] },
   { keyword: 'karaoke', hints: ['karaoke'] },
+  { keyword: 'instrumental', hints: ['instrumental', '(instrumental)', '[instrumental]', '- instrumental'] },
 ];
 
 // "1,062,839,758 views" -> 1062839758, "1.2M views" -> 1200000
@@ -226,6 +228,22 @@ const VIEW_COUNT_WEIGHT = 2;
 // it outweighs every other bonus combined, so a title mismatch can't be
 // papered over by channel authority or popularity.
 const TITLE_MATCH_WEIGHT = 8;
+
+// When the source track's own duration is known, a candidate whose length
+// closely matches it is almost certainly the right version - a full-length
+// bonus within 5s of an exact match, tapering to a penalty by a minute off
+// (catches instrumental/extended-jazz/live reworks that keep the same title
+// but run a very different length). Missing-duration candidates are treated
+// neutrally rather than penalized, since not every result carries a parsed
+// length.
+const DURATION_MATCH_WEIGHT = 6;
+const DURATION_HARD_DIFF_SECONDS = 90;
+function durationScore(candidateSeconds, sourceSeconds) {
+  if (!sourceSeconds || !candidateSeconds) return 0;
+  const diff = Math.abs(candidateSeconds - sourceSeconds);
+  if (diff <= 5) return DURATION_MATCH_WEIGHT;
+  return DURATION_MATCH_WEIGHT * (1 - Math.min(diff, 65) / 30);
+}
 const TITLE_STOPWORDS = new Set([
   'a', 'an', 'the', 'of', 'and', 'feat', 'ft', 'featuring', 'with', 'vs',
   'remix', 'version', 'edit', 'radio', 'official', 'audio', 'video',
@@ -244,7 +262,7 @@ function titleOverlapRatio(sourceTokens, candidateTitle) {
   return sourceTokens.filter(w => set.has(w)).length / sourceTokens.length;
 }
 
-function scoreCandidate(c, firstArtist, maxViews) {
+function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   const title = (c.title || '').toLowerCase();
   const channel = (c.channel || '').toLowerCase();
   let score = 0;
@@ -253,8 +271,12 @@ function scoreCandidate(c, firstArtist, maxViews) {
   if (AUDIO_HINTS.some(h => title.includes(h))) score += 4;
   if (channel.includes(firstArtist)) score += 3;
   if (MUSIC_VIDEO_HINTS.some(h => title.includes(h))) score += 1;
-  if (channel.includes('vevo')) score += 1;
+  // VEVO uploads are music videos, not audio-only tracks - they can splice in
+  // spoken intros/skits (see AUDIO_HINTS comment above), so avoid favoring
+  // them the way an earlier version of this scorer did.
+  if (channel.includes('vevo')) score -= 3;
   if (DEMOTE_HINTS.some(h => title.includes(h))) score -= 2;
+  score += durationScore(c.duration, sourceDurationSeconds);
   if (maxViews > 0) score += (c.views / maxViews) * VIEW_COUNT_WEIGHT;
   return score;
 }
@@ -262,11 +284,17 @@ function scoreCandidate(c, firstArtist, maxViews) {
 async function handleSearch(url, ctx) {
   const title = url.searchParams.get('title');
   const artist = url.searchParams.get('artist') || '';
+  // Source track's duration in milliseconds (as Spotify returns it), if the
+  // caller has it - used to prefer a same-length YouTube upload over an
+  // instrumental/live/extended version that otherwise scores fine on title
+  // and channel alone.
+  const durationMs = parseInt(url.searchParams.get('durationMs'), 10);
+  const sourceDurationSeconds = Number.isFinite(durationMs) && durationMs > 0 ? Math.round(durationMs / 1000) : 0;
   if (!title) return json({ error: 'missing title' }, 400);
 
   const firstArtist = artist.split(',')[0].trim().toLowerCase();
   const cache = caches.default;
-  const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist);
+  const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist + '|' + sourceDurationSeconds);
   const cacheKey = new Request(cacheKeyStr);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -334,8 +362,19 @@ async function handleSearch(url, ctx) {
   const titleMatched = pool.filter(c => c.titleOverlap > 0);
   pool = titleMatched.length ? titleMatched : pool;
 
+  // Same hard-filter-with-fallback pattern again: a candidate running far
+  // longer/shorter than the source track is very likely an instrumental,
+  // extended, or live cut that happens to share the title - drop it rather
+  // than let title/channel signals outvote a duration that's way off.
+  // Candidates with no parsed duration are never filtered (nothing to
+  // compare), and this only applies when the source duration is known.
+  if (sourceDurationSeconds) {
+    const durationMatched = pool.filter(c => !c.duration || Math.abs(c.duration - sourceDurationSeconds) <= DURATION_HARD_DIFF_SECONDS);
+    pool = durationMatched.length ? durationMatched : pool;
+  }
+
   const maxViews = Math.max(...pool.map(c => c.views), 0);
-  pool.forEach(c => { c.score = scoreCandidate(c, firstArtist, maxViews); });
+  pool.forEach(c => { c.score = scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds); });
   pool.sort((a, b) => b.score - a.score);
   const best = pool[0];
 
@@ -386,7 +425,7 @@ async function handleTrack(url, ctx) {
   const artist = entity.subtitle ||
     (Array.isArray(entity.artists) ? entity.artists.map(a => a && a.name).filter(Boolean).join(', ') : '') || '';
 
-  const payload = { title, artist, image: image || null };
+  const payload = { title, artist, image: image || null, duration: entity.duration || 0 };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
