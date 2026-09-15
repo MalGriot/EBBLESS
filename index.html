@@ -184,11 +184,13 @@ svg{display:block}
    grid - it's the one playlist whose identity is the "liked" action
    itself, not its contents. */
 .lib-card .art .face.heart-face{display:flex;align-items:center;justify-content:center;background:#121212}
-.lib-card .art .face.heart-face svg{width:46%;height:46%;animation:lib-heart-beat 1.4s ease-in-out infinite}
-.lib-card .art .face.heart-face path{fill:var(--clock-accent,#e0576a)}
+.lib-card .art .face.heart-face .heart-glyph{width:62%;height:62%;background:var(--clock-accent,#e0576a);
+  -webkit-mask:url(brand/assets/liked-heart.png) center/contain no-repeat;
+  mask:url(brand/assets/liked-heart.png) center/contain no-repeat;
+  animation:lib-heart-beat 1.4s ease-in-out infinite}
 @keyframes lib-heart-beat{0%,100%{transform:scale(1)}20%{transform:scale(1.15)}40%{transform:scale(0.98)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion: reduce){
-  .lib-card .art .face.heart-face svg{animation:none}
+  .lib-card .art .face.heart-face .heart-glyph{animation:none}
 }
 .lib-card .art.animated .face{opacity:0;animation:lib-art-crossfade 9s ease-in-out infinite}
 .lib-card .art.animated .face.grid-face{opacity:1}
@@ -766,6 +768,35 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .track-meta .title{font-size:26px}
   body.queue-open .view-scroll,body.queue-open #topbar{margin-right:380px;transition:margin var(--dur-surface) var(--ease-in-out)}
   #view-player{overflow-y:hidden}
+}
+/* wide desktop: persistent 3-pane layout (library | now playing | queue) in
+   place of the tab-switching + overlay-queue behavior used below 1150px */
+@media (min-width:1150px){
+  body.split-desktop:not(.view-settings-active) #topnav [data-view="library"],
+  body.split-desktop:not(.view-settings-active) #topnav [data-view="player"],
+  body.split-desktop:not(.view-settings-active) #topnav [data-action="toggle-queue"]{display:none}
+  body.split-desktop:not(.view-settings-active) #app{
+    display:grid;grid-template-rows:var(--topbar-h) 1fr;
+    grid-template-columns:minmax(240px,300px) 1fr minmax(300px,360px);
+  }
+  body.split-desktop:not(.view-settings-active) #topbar{grid-column:1/-1;grid-row:1}
+  body.split-desktop:not(.view-settings-active) #view-library,
+  body.split-desktop:not(.view-settings-active) #view-player{
+    position:static;grid-row:2;display:block!important;top:auto;bottom:auto;
+  }
+  body.split-desktop:not(.view-settings-active) #view-library{
+    grid-column:1;border-right:1px solid var(--border);position:relative;
+  }
+  body.split-desktop:not(.view-settings-active) #view-library .lib-bg{position:absolute}
+  body.split-desktop:not(.view-settings-active) #view-player{grid-column:2}
+  body.split-desktop:not(.view-settings-active) #queue-panel{
+    position:static;grid-column:3;grid-row:2;width:auto;height:auto;top:auto;right:auto;bottom:auto;
+    transform:none!important;border-left:1px solid var(--border);
+  }
+  body.split-desktop:not(.view-settings-active) #queue-scrim{display:none!important}
+  body.split-desktop:not(.view-settings-active) #mini-bar{display:none!important}
+  body.split-desktop:not(.view-settings-active) .view-scroll,
+  body.split-desktop:not(.view-settings-active) #topbar{margin-right:0!important}
 }
 /* short viewports (landscape phones, small windows): the vertical stack can't
    fit at normal sizes no matter how small the artwork gets, so collapse the
@@ -1842,6 +1873,7 @@ function setView(name){
   const prevView = state.currentView;
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
   state.currentView = name;
+  document.body.classList.toggle('view-settings-active', name === 'settings');
   if (state.queueOpen) closeQueuePanel();
   if (name === 'player' && prevView !== 'player' && typeof setVisualMode === 'function'){
     setVisualMode('art');
@@ -1873,6 +1905,13 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
 });
 document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', toggleQueuePanel));
 $('wordmarkBtn').addEventListener('click', () => setView('library'));
+
+/* wide desktop: library + player + queue all shown at once (see the
+   min-width:1150px CSS block) instead of tab-switching between them */
+const splitDesktopMQ = window.matchMedia('(min-width:1150px)');
+function updateSplitDesktop(){ document.body.classList.toggle('split-desktop', splitDesktopMQ.matches); updateMiniBarVisibility(); }
+splitDesktopMQ.addEventListener('change', updateSplitDesktop);
+updateSplitDesktop();
 
 /* =========================================================================
    AMBIENT BACKGROUND (blurred artwork, crossfade)
@@ -1968,7 +2007,7 @@ function renderLibrary(){
       // Liked Songs is always the heart glyph, never the track-art grid -
       // its identity is the like action, not whatever's currently in it.
       artDiv.classList.add('single');
-      artDiv.innerHTML = '<div class="face heart-face"><svg viewBox="0 0 24 24"><path d="M12 21s-6.7-4.35-9.3-8.2C.8 9.9 1.9 6 5.4 5.1 7.6 4.5 9.9 5.6 12 8c2.1-2.4 4.4-3.5 6.6-2.9 3.5.9 4.6 4.8 2.7 7.7C18.7 16.65 12 21 12 21z"/></svg></div>';
+      artDiv.innerHTML = '<div class="face heart-face"><div class="heart-glyph"></div></div>';
     } else if (withArt.length === 0 && !pl.image && id === SWELL_ID){
       // Swell before its first generation has no matched tracks yet - a
       // looping teaser clip stands in for the tile until that first drop
@@ -2019,7 +2058,7 @@ function renderLibrary(){
     playBtn.addEventListener('click', (e) => { e.stopPropagation(); playPlaylistNow(id); });
     const openBtn = document.createElement('button');
     openBtn.className = 'open-link'; openBtn.textContent = 'Open';
-    openBtn.addEventListener('click', (e) => { e.stopPropagation(); openPlaylist(id); });
+    openBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibraryTrackDropdown(id, card); });
     hoverActions.appendChild(playBtn); hoverActions.appendChild(openBtn);
     artDiv.appendChild(hoverActions);
 
@@ -2450,23 +2489,6 @@ function openAddLinksFlow(playlistId){
   }
 }
 $('addSongBtn').addEventListener('click', () => { if (state.playlist) openAddLinksFlow(state.playlist.id); });
-
-function openPlaylist(id){
-  const pl = getCachedPlaylist(id);
-  if (!pl){ showToast("Couldn't find that playlist."); return; }
-  loadPlaylistIntoPlayer(pl);
-  setView('player');
-  /* the track list now lives inside the queue panel, not inline under the
-     player, so it has to be opened here or the tracks are unreachable */
-  openQueuePanel();
-  /* if nothing is playing yet, opening a playlist starts it, same as before;
-     if something is already playing, this just browses the playlist so its
-     tracks can be queued without interrupting playback */
-  if (state.queuePos < 0){
-    buildQueueFrom(0, pl.id);
-    loadIndex(state.queuePos, true);
-  }
-}
 
 /* hover play button on a library card: always starts the playlist from the
    top immediately, unlike openPlaylist which only auto-starts when nothing
