@@ -592,6 +592,118 @@ async function handleYtMix(url, ctx) {
   return response;
 }
 
+// ---------- GET /artistsearch?artist=&limit= ----------
+// Last-resort discovery source for Current: /similar (Last.fm tags) and
+// /ytmix (YouTube's own "up next") both need existing metadata about the
+// seed track, so a niche or unreleased-to-charts artist can leave both
+// empty. This just scrapes YouTube search for the artist name directly and
+// returns other uploads that plausibly belong to them - it's cruder (no
+// tag-similarity scoring, since there's no seed track to compare against)
+// but it's a source of *new* candidates rather than reusing what the
+// listener already has.
+async function handleArtistSearch(url, ctx) {
+  const artist = (url.searchParams.get('artist') || '').trim();
+  const limit = Math.min(parseInt(url.searchParams.get('limit'), 10) || 15, 25);
+  if (!artist) return json({ error: 'missing artist' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + SEARCH_CACHE_VERSION + '/artistsearch/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const res = await fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(artist), {
+    headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9', 'Cookie': 'CONSENT=YES+1' },
+  });
+  if (!res.ok) return json({ error: 'youtube returned ' + res.status }, 502);
+  const html = await res.text();
+
+  const marker = 'var ytInitialData';
+  const mi = html.indexOf(marker);
+  if (mi === -1) return json({ tracks: [] });
+  const braceIdx = html.indexOf('{', mi);
+  const jsonStr = extractBalancedJson(html, braceIdx);
+  if (!jsonStr) return json({ tracks: [] });
+
+  let data;
+  try { data = JSON.parse(jsonStr); } catch (e) { return json({ tracks: [] }); }
+
+  const renderers = [];
+  deepFindKey(data, 'videoRenderer', renderers);
+  let candidates = renderers.map(v => {
+    let vTitle = '';
+    try { vTitle = v.title.runs.map(r => r.text).join(''); } catch (e) {}
+    let channel = '';
+    try { channel = v.ownerText.runs[0].text; } catch (e) {}
+    let duration = 0;
+    try { duration = parseDurationText(v.lengthText.simpleText); } catch (e) {}
+    return { videoId: v.videoId, title: vTitle, channel, duration };
+  }).filter(v => v.videoId && v.title);
+
+  // Never surface a live/remix/cover/instrumental upload as a "new song"
+  // suggestion - same hard-exclude list /search uses, but unconditional here
+  // since there's no source title whose own wording could waive a group.
+  const activeExcludeHints = EXCLUDE_GROUPS.flatMap(g => g.hints);
+  candidates = candidates.filter(c => !activeExcludeHints.some(h => c.title.toLowerCase().includes(h)));
+
+  // A bare artist-name search still pulls in unrelated videos that merely
+  // rank for the query - keep only results that actually mention the artist
+  // in the title or the channel name.
+  const lowerArtist = artist.toLowerCase();
+  candidates = candidates.filter(c => c.title.toLowerCase().includes(lowerArtist) || c.channel.toLowerCase().includes(lowerArtist));
+
+  const seen = new Set();
+  const tracks = [];
+  for (const c of candidates) {
+    if (seen.has(c.videoId)) continue;
+    seen.add(c.videoId);
+    tracks.push(c);
+    if (tracks.length >= limit) break;
+  }
+
+  const payload = { tracks };
+  const response = json(payload);
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
+// ---------- GET /art?title=&artist= ----------
+// Discovered tracks (Current/Discover, sourced from /similar, /ytmix or
+// /artistsearch) carry no album art of their own - only a YouTube video,
+// whose thumbnail is a 16:9 crop rather than a proper square cover. iTunes'
+// public search API is keyless and needs no scraping, and its artwork URLs
+// can be upsized past the default 100x100 by swapping the size segment.
+async function handleArt(url, ctx) {
+  const title = (url.searchParams.get('title') || '').trim();
+  const artist = (url.searchParams.get('artist') || '').trim();
+  if (!title) return json({ error: 'missing title' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/art/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const term = encodeURIComponent((title + ' ' + artist).trim());
+  const res = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=1&term=' + term);
+  let image = null;
+  if (res.ok) {
+    const data = await res.json();
+    const hit = data && data.results && data.results[0];
+    const rawArt = hit && hit.artworkUrl100;
+    if (rawArt) image = rawArt.replace('100x100bb', '600x600bb');
+  }
+
+  const payload = { image };
+  const response = json(payload);
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
+  })));
+  return response;
+}
+
 // ---------- GET /lyrics?videoId=&title=&artist= ----------
 // Originally tried YouTube's caption track (for timing) cross-referenced
 // against a scraped Genius page (for clean text). Both are dead ends in
@@ -1183,10 +1295,12 @@ export default {
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
+      if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
+      if (url.pathname === '/art') return await handleArt(url, ctx);
       if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

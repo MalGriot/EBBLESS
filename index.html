@@ -5280,18 +5280,24 @@ function tryResume(){
   const r = lsGet(LS_RESUME, null);
   if (!r) return;
   const pl = getCachedPlaylist(r.playlistId);
-  if (!pl) return;
+  // The saved position can go stale - the playlist was deleted, cleared, or
+  // (Current/swell especially) regenerated with a different track list
+  // since this was written. Bail out quietly rather than resuming into a
+  // track that no longer exists.
+  if (!pl || !pl.tracks.length){ lsDel(LS_RESUME); return; }
   loadPlaylistIntoPlayer(pl);
   const trackIndex = r.trackIndex != null ? r.trackIndex : 0;
   buildQueueFrom(trackIndex, pl.id);
+  const track = currentTrack();
+  if (!track){ state.queue = []; state.queuePos = -1; renderQueuePanel(); lsDel(LS_RESUME); return; }
   if (r.position > 0) pendingResume = { plId: pl.id, idx: trackIndex, position: r.position };
-  updateTrackMetaUI(currentTrack());
-  swapPlayerArt(currentTrack());
-  swapFlowArt(currentTrack());
-  swapAltArt(currentTrack());
-  setAmbient(currentTrack());
-  attachArtworkFallback(miniArt, currentTrack());
-  cassetteUpdateTrack(currentTrack(), state.queuePos);
+  updateTrackMetaUI(track);
+  swapPlayerArt(track);
+  swapFlowArt(track);
+  swapAltArt(track);
+  setAmbient(track);
+  attachArtworkFallback(miniArt, track);
+  cassetteUpdateTrack(track, state.queuePos);
   highlightActiveRow();
 }
 
@@ -5422,9 +5428,17 @@ ensureSwellPlaylist();
 renderLibrary();
 renderQueuePanel();
 setView('player');
-tryResume();
+// Resuming reads back whatever was last saved, which can be stale in ways
+// tryResume itself doesn't anticipate - never let a bad resume take the
+// rest of init down with it (the splash screen would hang forever).
+try{ tryResume(); } catch(e){}
 if (!currentTrack()) updateMiniBarVisibility();
 refreshSwellIfStale();
+// Sessions left open across midnight would otherwise keep showing
+// yesterday's Current until the next reload - poll periodically so the
+// day-rollover check in refreshSwellIfStale also fires while the app is
+// just sitting open.
+setInterval(refreshSwellIfStale, 60 * 1000);
 
 /* dev convenience: on localhost with an empty library, auto-load a test playlist */
 if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length === 0){
