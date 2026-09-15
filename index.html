@@ -2681,8 +2681,8 @@ function ensureLikedPlaylist(){
 function ensureSwellPlaylist(){
   const existing = getCachedPlaylist(SWELL_ID);
   if (existing){
-    // Migrate playlists created before the rename from "Swell" to "Current".
-    if (existing.name !== 'Current'){ existing.name = 'Current'; lsSet(LS_PL(SWELL_ID), existing); }
+    // Migrate playlists created before the rename from "Swell" to "CURRENT".
+    if (existing.name !== 'CURRENT'){ existing.name = 'CURRENT'; lsSet(LS_PL(SWELL_ID), existing); }
     return;
   }
   const pl = { id: SWELL_ID, type: 'custom', name: 'CURRENT', image: null, tracks: [], ts: Date.now() };
@@ -3457,6 +3457,28 @@ async function fetchYtMix(videoId){
     return data.tracks || [];
   } catch(e){ return []; }
 }
+// Discovered tracks only carry a YouTube video, so their art would otherwise
+// fall back to a 16:9 thumbnail - this fetches the proper square cover from
+// iTunes' keyless search API. Best-effort: a miss just leaves art null and
+// the YouTube-thumbnail fallback in artworkUrls() takes over.
+async function fetchDiscoverArt(title, artist){
+  try{
+    const res = await fetch(BACKEND + '/art?' + new URLSearchParams({ title, artist: artist || '' }));
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.image || null;
+  } catch(e){ return null; }
+}
+// Last resort when /similar and /ytmix both come up empty for a seed - other
+// uploads by that same artist, scraped straight from YouTube search.
+async function fetchArtistSearch(artist){
+  try{
+    const res = await fetch(BACKEND + '/artistsearch?' + new URLSearchParams({ artist, limit: '15' }));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.tracks || [];
+  } catch(e){ return []; }
+}
 // Fire-and-forget: pooling is a bonus signal, never something playback
 // should wait on or fail over.
 function postPoolSignal(tags, weight){
@@ -3583,13 +3605,15 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
     const tagNames = (c.tags || []).map(t => t.name);
     if (c.videoId){
       if (excludeVideoIds.has(c.videoId)) continue;
-      resolved.push({ title: c.title, artist: c.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: null, duration: 0, tags: tagNames });
+      const art = await fetchDiscoverArt(c.title, c.artist);
+      resolved.push({ title: c.title, artist: c.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art, duration: 0, tags: tagNames });
       continue;
     }
     try{
       const match = await searchYouTube(c.title, c.artist);
       if (!match.videoId || excludeVideoIds.has(match.videoId)) continue;
-      resolved.push({ title: c.title, artist: c.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: null, duration: match.duration || 0, tags: tagNames });
+      const art = await fetchDiscoverArt(c.title, c.artist);
+      resolved.push({ title: c.title, artist: c.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, tags: tagNames });
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
   }
   return resolved;
@@ -3715,6 +3739,27 @@ async function generateSwell(){
     found.forEach(t => {
       if (t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); exclude.add(t.videoId); collected.push(t); }
     });
+  }
+  if (!collected.length){
+    // /similar and /ytmix had nothing for any seed (common for niche or
+    // unreleased-to-charts catalogs) - fall back to searching YouTube for
+    // other tracks by the same artists. Still excludes anything already in
+    // the library so Current never just echoes what's already been played.
+    // Only the first credited artist per seed: a multi-artist string like
+    // "DJ Tunez, Wizkid" won't literally appear in another upload's title
+    // or channel name, so searching on the whole string finds nothing.
+    const artists = Array.from(new Set(seeds.map(s => (s.artist || '').split(',')[0].trim()).filter(Boolean)));
+    for (const artist of artists){
+      if (collected.length >= 20) break;
+      const found = await fetchArtistSearch(artist);
+      for (const t of found){
+        if (t.videoId && !seen.has(t.videoId) && !exclude.has(t.videoId)){
+          seen.add(t.videoId); exclude.add(t.videoId);
+          const art = await fetchDiscoverArt(t.title, artist);
+          collected.push({ title: t.title, artist, videoId: t.videoId, matchedTitle: t.title, channel: t.channel || '', plays: 0, art, duration: t.duration || 0, tags: [] });
+        }
+      }
+    }
   }
   if (!collected.length) return;
 
