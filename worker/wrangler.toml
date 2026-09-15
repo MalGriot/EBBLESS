@@ -5,3 +5,7 @@ compatibility_date = "2026-08-01"
 [[kv_namespaces]]
 binding = "MATCH_REPORTS"
 id = "9a2addf8bdf84ac093c97d5d5638ed2e"
+
+[[kv_namespaces]]
+binding = "TASTE_POOL"
+id = "4c917855c0624fb3ba4f642de5dee046"

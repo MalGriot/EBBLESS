@@ -12,7 +12,7 @@
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -63,6 +63,8 @@ function deepFindKey(obj, key, out) {
 const ART_CACHE_VERSION = 'v3';
 const LYRICS_CACHE_VERSION = 'v2';
 const SEARCH_CACHE_VERSION = 'v4';
+const SIMILAR_CACHE_VERSION = 'v1';
+const YTMIX_CACHE_VERSION = 'v1';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -530,6 +532,66 @@ async function handleYtVideo(url, ctx) {
   return response;
 }
 
+// ---------- GET /ytmix?videoId=<seed youtube video id> ----------
+// Last-resort discovery source, used only when neither Last.fm nor
+// ListenBrainz can produce candidates for a seed track (see handleSimilar).
+// There's no public API for YouTube's algorithmic "Mix" - it's generated
+// per-request and stitched into the watch page itself, not a fetchable
+// playlist - so this scrapes the same ytInitialData block handleYtVideo
+// already parses, but walks into the "Up next" panel
+// (secondaryResults > compactVideoRenderer) instead of videoDetails. Purely
+// a fallback: if YouTube reshapes this panel, this just comes back empty
+// and the client falls through with nothing, same as a Last.fm/ListenBrainz
+// miss would.
+async function handleYtMix(url, ctx) {
+  const videoId = url.searchParams.get('videoId');
+  if (!videoId || !/^[a-zA-Z0-9_-]+$/.test(videoId)) return json({ error: 'missing or invalid videoId' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + YTMIX_CACHE_VERSION + '/ytmix/' + videoId);
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const res = await fetch('https://www.youtube.com/watch?v=' + encodeURIComponent(videoId), {
+    headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9', 'Cookie': 'CONSENT=YES+1' },
+  });
+  if (!res.ok) return json({ error: 'youtube returned ' + res.status }, 502);
+  const html = await res.text();
+
+  const marker = 'var ytInitialData';
+  const mi = html.indexOf(marker);
+  if (mi === -1) return json({ tracks: [] });
+  const braceIdx = html.indexOf('{', mi);
+  const jsonStr = extractBalancedJson(html, braceIdx);
+  if (!jsonStr) return json({ tracks: [] });
+
+  let data;
+  try { data = JSON.parse(jsonStr); } catch (e) { return json({ tracks: [] }); }
+
+  const renderers = [];
+  deepFindKey(data, 'compactVideoRenderer', renderers);
+  const seen = new Set([videoId]);
+  const tracks = [];
+  for (const r of renderers) {
+    const vid = r && r.videoId;
+    if (!vid || seen.has(vid)) continue;
+    seen.add(vid);
+    const title = r.title && r.title.simpleText;
+    const channel = r.longBylineText && r.longBylineText.runs && r.longBylineText.runs[0] && r.longBylineText.runs[0].text;
+    if (!title) continue;
+    tracks.push({ videoId: vid, title, artist: channel || '' });
+    if (tracks.length >= 20) break;
+  }
+
+  const payload = { tracks };
+  const response = json(payload);
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 // ---------- GET /lyrics?videoId=&title=&artist= ----------
 // Originally tried YouTube's caption track (for timing) cross-referenced
 // against a scraped Genius page (for clean text). Both are dead ends in
@@ -864,6 +926,212 @@ async function handleSoundCloud(url, ctx) {
   return response;
 }
 
+// ---------- GET /similar?title=&artist=&limit= ----------
+// Discovery cascade for Radio / the queue's Discover toggle / the Swell
+// playlist. Tries Last.fm first (best tag coverage, needs LASTFM_API_KEY),
+// falls back to ListenBrainz's open, keyless "labs" similarity API when
+// Last.fm has too little to say about a track. Returns whichever source
+// actually produced candidates so the client knows how much to trust the
+// tag data (ListenBrainz candidates come back with empty tag arrays - the
+// client's scoring function treats that as "lean on the match score").
+const APP_UA = 'EBBLESS/1.0 (+https://github.com/MalGriot/EBBLESS) - music discovery lookup';
+
+// Last.fm's folksonomy is full of tags that describe the *listener* (seen
+// live, favorites) or a decade (2010s) rather than the *sound* - neither
+// helps "does the next track feel like this one."
+const TAG_BLACKLIST = new Set([
+  'seen live', 'favorites', 'favourite', 'favorite', 'spotify', 'awesome',
+  'good', 'love', 'beautiful', 'amazing', 'great', '00s', '90s', '80s',
+  '70s', '60s', '2010s', '2020s', 'under 2000 listeners',
+]);
+
+async function lastfmCall(method, params, env) {
+  if (!env.LASTFM_API_KEY) return null;
+  const qs = new URLSearchParams(Object.assign({ method, api_key: env.LASTFM_API_KEY, format: 'json' }, params));
+  try {
+    const res = await fetch('https://ws.audioscrobbler.com/2.0/?' + qs.toString(), {
+      headers: { 'User-Agent': APP_UA },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.error) return null;
+    return data;
+  } catch (e) { return null; }
+}
+
+async function getLastfmTopTags(title, artist, env) {
+  const data = await lastfmCall('track.getTopTags', { track: title, artist }, env);
+  const tags = data && data.toptags && data.toptags.tag;
+  if (!Array.isArray(tags) || !tags.length) return [];
+  return tags
+    .filter(t => t.name && !TAG_BLACKLIST.has(t.name.toLowerCase()))
+    .slice(0, 15)
+    .map(t => ({ name: t.name.toLowerCase(), weight: Number(t.count) || 0 }));
+}
+
+async function getLastfmSimilar(title, artist, env, limit) {
+  const data = await lastfmCall('track.getSimilar', { track: title, artist, limit: String(limit) }, env);
+  const list = data && data.similartracks && data.similartracks.track;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter(t => t.name && t.artist && t.artist.name)
+    .map(t => ({ title: t.name, artist: t.artist.name, matchScore: Number(t.match) || 0 }));
+}
+
+// MusicBrainz's own search API - free, keyless, but wants a real UA and
+// asks for roughly 1 request/second per client. A Worker invocation is
+// short-lived and stateless so a hard rate limiter can't live here; this is
+// only reached when Last.fm has nothing, which is the minority case.
+async function resolveMBID(title, artist) {
+  const query = 'recording:"' + title.replace(/"/g, '') + '" AND artist:"' + (artist || '').replace(/"/g, '') + '"';
+  const qs = new URLSearchParams({ query, fmt: 'json', limit: '1' });
+  try {
+    const res = await fetch('https://musicbrainz.org/ws/2/recording/?' + qs.toString(), {
+      headers: { 'User-Agent': APP_UA },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rec = data.recordings && data.recordings[0];
+    return (rec && rec.score >= 80) ? rec.id : null;
+  } catch (e) { return null; }
+}
+
+async function getListenBrainzSimilar(mbid, limit) {
+  try {
+    const res = await fetch('https://labs.api.listenbrainz.org/similar-recordings/json?recording_mbid=' + encodeURIComponent(mbid) + '&max_similar_recordings=' + String(limit), {
+      headers: { 'User-Agent': APP_UA },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data && data[mbid]) || [];
+    return list
+      .filter(r => r && (r.recording_name || r.name))
+      .map(r => ({
+        title: r.recording_name || r.name,
+        artist: r.artist_credit_name || r.artist || '',
+        matchScore: typeof r.score === 'number' ? Math.min(1, r.score / 100) : 0.4,
+      }));
+  } catch (e) { return []; }
+}
+
+async function handleSimilar(url, env, ctx) {
+  const title = url.searchParams.get('title');
+  const artist = url.searchParams.get('artist') || '';
+  if (!title) return json({ error: 'missing title' }, 400);
+  const limit = Math.min(30, parseInt(url.searchParams.get('limit'), 10) || 20);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + SIMILAR_CACHE_VERSION + '/similar/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()) + '/' + limit);
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  let source = 'none';
+  let candidates = [];
+  let seedTags = [];
+
+  const lastfmCandidates = await getLastfmSimilar(title, artist, env, limit);
+  if (lastfmCandidates.length >= 5) {
+    source = 'lastfm';
+    seedTags = await getLastfmTopTags(title, artist, env);
+    candidates = await mapWithConcurrency(lastfmCandidates.slice(0, limit), 5, async (c) => {
+      const tags = await getLastfmTopTags(c.title, c.artist, env);
+      return Object.assign({}, c, { tags });
+    });
+  } else {
+    const mbid = await resolveMBID(title, artist);
+    if (mbid) {
+      const lbCandidates = await getListenBrainzSimilar(mbid, limit);
+      if (lbCandidates.length) {
+        source = 'listenbrainz';
+        candidates = lbCandidates.map(c => Object.assign({}, c, { tags: [] }));
+      }
+    }
+  }
+
+  const payload = { source, seedTags, candidates };
+  const response = json(payload);
+  // Similarity between two given tracks doesn't shift day to day - a long
+  // TTL keeps repeat Radio/Swell runs off Last.fm/ListenBrainz entirely.
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': (source === 'none' ? 'max-age=3600' : 'max-age=604800') },
+  })));
+  return response;
+}
+
+// ---------- POST /pool/signal, GET /pool/affinity ----------
+// The listening graph every EBBLESS listener quietly contributes to and
+// draws from. A completed/liked/skipped play submits the seed track's tags
+// with a small positive or negative weight; this folds that into running
+// per-tag-pair counters so "these two tags tend to work well together, in
+// practice, for real listeners" becomes a scoring input alongside Last.fm/
+// ListenBrainz - one that gets sharper the more EBBLESS is used, and that
+// no external API can take away. No listener identifier is ever stored,
+// only the tags and the weight.
+//
+// KV read-modify-write isn't atomic, so two near-simultaneous writes to the
+// same pair can clobber each other under real concurrency. Acceptable for
+// a v1 running at hobby scale; a Durable Object is the real fix if this
+// ever needs to hold up under heavier concurrent traffic.
+const POOL_MAX_TAGS = 8;
+
+function pairKey(tagA, tagB) {
+  return 'pair:' + tagA + '|' + tagB;
+}
+
+async function bumpPoolPair(env, tagA, tagB, weight) {
+  const key = pairKey(tagA, tagB);
+  const raw = await env.TASTE_POOL.get(key);
+  const cur = raw ? (JSON.parse(raw).score || 0) : 0;
+  await env.TASTE_POOL.put(key, JSON.stringify({ score: cur + weight }));
+}
+
+async function handlePoolSignal(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.TASTE_POOL) return json({ error: 'pooling not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  const tags = Array.isArray(body && body.tags)
+    ? body.tags.filter(t => typeof t === 'string' && t).map(t => t.toLowerCase().slice(0, 40)).slice(0, POOL_MAX_TAGS)
+    : [];
+  const weight = Math.max(-3, Math.min(3, Number(body && body.weight) || 0));
+  if (tags.length < 2 || !weight) return json({ ok: true, skipped: true });
+
+  // Every unordered pair among this play's tags gets nudged - both
+  // directions, so /pool/affinity can answer "what pairs with tag X" with a
+  // single prefix list regardless of which side of the pair X was on.
+  const pairs = [];
+  for (let i = 0; i < tags.length; i++) {
+    for (let j = i + 1; j < tags.length; j++) {
+      pairs.push([tags[i], tags[j]]);
+    }
+  }
+  ctx.waitUntil(Promise.all(pairs.flatMap(([a, b]) => [
+    bumpPoolPair(env, a, b, weight),
+    bumpPoolPair(env, b, a, weight),
+  ])));
+  return json({ ok: true });
+}
+
+async function handlePoolAffinity(url, env, ctx) {
+  if (!env.TASTE_POOL) return json({ error: 'pooling not configured' }, 500);
+  const tags = (url.searchParams.get('tags') || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, POOL_MAX_TAGS);
+  if (!tags.length) return json({ error: 'missing tags' }, 400);
+
+  const affinities = {};
+  await Promise.all(tags.map(async (tag) => {
+    const list = await env.TASTE_POOL.list({ prefix: pairKey(tag, ''), limit: 25 });
+    const partners = await Promise.all(list.keys.map(async (k) => {
+      const partnerTag = k.name.slice(pairKey(tag, '').length);
+      const raw = await env.TASTE_POOL.get(k.name);
+      const score = raw ? (JSON.parse(raw).score || 0) : 0;
+      return { tag: partnerTag, score };
+    }));
+    affinities[tag] = partners.filter(p => p.score !== 0).sort((a, b) => b.score - a.score);
+  }));
+  return json({ affinities });
+}
+
 // ---------- POST /report ----------
 // Lets the client flag a track whose YouTube match isn't the plain
 // audio/lyric version it expected (e.g. a music video with skits, a wrong
@@ -913,8 +1181,12 @@ export default {
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
+      if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
+      if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
+      if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
+      if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/report (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
