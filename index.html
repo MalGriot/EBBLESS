@@ -169,10 +169,10 @@ svg{display:block}
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
 
-.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:18px 16px}
+.lib-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 16px}
 #libraryGrid{margin-top:14px}
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
-.lib-grid.is-compact{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:14px 12px}
+.lib-grid.is-compact{grid-template-columns:repeat(3,1fr);gap:14px 12px}
 .lib-card{cursor:pointer;border-radius:var(--r-md);overflow:hidden;transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
 .lib-card .art{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);
@@ -222,7 +222,7 @@ svg{display:block}
   background:var(--faint);vertical-align:middle}
 .lib-card .name .new-dot.is-active{background:var(--accent);animation:new-dot-blink 1.4s ease-in-out infinite}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
-.lib-card .name.current-label{animation:current-label-cycle 8s linear infinite}
+.lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
 @keyframes current-label-cycle{
   0%,100%{color:#ff5b5b}
   12.5%{color:#ff9f43}
@@ -234,8 +234,14 @@ svg{display:block}
   87.5%{color:#ff6bcb}
 }
 @media (prefers-reduced-motion: reduce){
-  .lib-card .name.current-label{animation:none;color:var(--accent)}
+  .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:none;color:var(--accent)}
 }
+.lib-card .art .title-overlay{position:absolute;left:0;right:0;bottom:0;z-index:2;display:none;
+  align-items:center;gap:6px;padding:14px 7px 6px;background:linear-gradient(to top,rgba(0,0,0,.75),rgba(0,0,0,0))}
+.lib-grid:not(.is-list) .lib-card .art .title-overlay{display:flex}
+.lib-grid:not(.is-list) .lib-card .info .name{display:none}
+.lib-card .art .title-overlay .marquee{flex:1;min-width:0;font-size:12px;font-weight:600;color:#fff}
+.lib-card .art .title-overlay .new-dot{flex:none;margin-left:0}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
@@ -796,7 +802,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 308px)))}
   .track-meta{width:min(340px,84vw)}
-  .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
+  .lib-grid{grid-template-columns:repeat(2,1fr)}
   .ctl-btn{width:44px;height:44px}
   .ctl-btn svg{width:18px;height:18px}
   .ctl-btn.main{width:58px;height:58px}
@@ -876,6 +882,23 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+
+/* ---------- portrait-only lock ----------
+   Mobile browsers won't honor manifest.json's orientation:"portrait" outside
+   an installed, standalone PWA (iOS Safari in particular ignores it entirely),
+   so a coarse-pointer device in landscape gets a blocking screen instead of
+   the app reflowing to fit sideways. */
+#rotate-lock{
+  display:none;position:fixed;inset:0;z-index:20000;
+  background:var(--bg);color:var(--text);
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  text-align:center;padding:24px;
+}
+#rotate-lock svg{width:48px;height:48px;opacity:.85}
+#rotate-lock p{font-size:14px;letter-spacing:.3px;opacity:.75;max-width:260px}
+@media (orientation:landscape) and (pointer:coarse){
+  #rotate-lock{display:flex}
 }
 
 /* ---------- splash screen ---------- */
@@ -962,6 +985,11 @@ body.onb-stage-input #importForm{width:min(520px,86vw);margin:0;transform:scale(
 </head>
 <body>
 
+<div id="rotate-lock" role="alert">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01" stroke-width="2"/><path d="M4 9a8 8 0 0 1 3-3M20 15a8 8 0 0 1-3 3" stroke-dasharray="3 3"/></svg>
+  <p>EBBLESS works in portrait only. Rotate your device back to continue.</p>
+</div>
+
 <div id="onbBackdrop"></div>
 <div id="onbMark" class="is-idle">
   <img id="onbWord" src="brand/assets/wordmark-white.png" alt="">
@@ -980,6 +1008,7 @@ body.onb-stage-input #importForm{width:min(520px,86vw);margin:0;transform:scale(
 <div id="onbCaption" aria-live="polite"></div>
 <button id="onbSkip" type="button">Skip</button>
 <button id="onbCapture" type="button" aria-label="Skip intro"></button>
+<audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
 
 <div id="splash">
   <video class="splash-video" autoplay muted loop playsinline src="brand/assets/splash-cymatics.mp4"></video>
@@ -2215,6 +2244,7 @@ function setLibraryView(mode){
   libViewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
+  refreshLibraryMarquees();
 }
 function isAlbumType(type){ return type === 'album' || type === 'am_album'; }
 libViewToggle.addEventListener('click', (e) => {
@@ -2372,12 +2402,20 @@ function renderLibrary(){
     }
 
     const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = pl.name;
+    const titleOverlay = document.createElement('div'); titleOverlay.className = 'title-overlay';
+    const marqueeEl = document.createElement('div');
+    marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '');
+    marqueeEl.dataset.text = pl.name;
+    titleOverlay.appendChild(marqueeEl);
     if (id === SWELL_ID){
       const dot = document.createElement('span');
       dot.className = 'new-dot' + (swellHasUnseenDrop() ? ' is-active' : '');
       dot.setAttribute('aria-label', swellHasUnseenDrop() ? 'New music' : '');
       name.appendChild(dot);
+      const overlayDot = dot.cloneNode(true);
+      titleOverlay.appendChild(overlayDot);
     }
+    artDiv.appendChild(titleOverlay);
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
@@ -2420,6 +2458,12 @@ function renderLibrary(){
   const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length;
   libraryFilterEmpty.textContent = filter === 'albums' ? 'No albums in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', filter === 'all' || !nothingShown);
+  refreshLibraryMarquees();
+}
+function refreshLibraryMarquees(){
+  document.querySelectorAll('.lib-card .art .title-overlay .marquee').forEach(el => {
+    setMarqueeText(el, el.dataset.text || '');
+  });
 }
 
 /* =========================================================================
@@ -5298,6 +5342,13 @@ if ('serviceWorker' in navigator){
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
 
+/* Best-effort native lock (Android/installed PWA support this without
+   fullscreen; iOS Safari has no such API - the #rotate-lock overlay above
+   is what actually enforces portrait-only there). */
+if (screen.orientation && screen.orientation.lock){
+  screen.orientation.lock('portrait').catch(() => {});
+}
+
 /* ---- install prompt (Settings fallback for anyone who dismissed the splash) ---- */
 {
   const installBlock = $('installBlock');
@@ -5689,7 +5740,23 @@ const ONB_KEY = 'ebbless_onboarding_complete';
 function runIntro(preview){
   const prefersReduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const backdrop = $('onbBackdrop'), markEl = $('onbMark'), captionEl = $('onbCaption'),
-        skipEl = $('onbSkip'), captureEl = $('onbCapture'), discoveryEl = $('onbDiscovery');
+        skipEl = $('onbSkip'), captureEl = $('onbCapture'), discoveryEl = $('onbDiscovery'),
+        musicEl = $('onbMusic');
+  const MUSIC_PEAK = 0.55;
+  let musicFadeRaf = null;
+  function fadeMusic(to, ms){
+    if (!musicEl) return;
+    if (musicFadeRaf) cancelAnimationFrame(musicFadeRaf);
+    const from = musicEl.volume, start = performance.now();
+    if (ms <= 0){ musicEl.volume = to; return; }
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / ms);
+      musicEl.volume = from + (to - from) * p;
+      if (p < 1) musicFadeRaf = requestAnimationFrame(step);
+      else musicFadeRaf = null;
+    };
+    musicFadeRaf = requestAnimationFrame(step);
+  }
   const STAGE_CLASSES = ['onb-stage-input','onb-stage-player','onb-stage-discovery','onb-stage-outro'];
   function setStage(name){
     STAGE_CLASSES.forEach(c => document.body.classList.remove(c));
@@ -5704,6 +5771,9 @@ function runIntro(preview){
     // a forced ?intro replay is just a preview - don't let it write the
     // real completion flag and affect whether a genuine first visit sees it
     if (!preview){ try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){} }
+    // fade the track out over the same 700ms the logo/chrome take to leave,
+    // so the music dies alongside the EBBLESS mark rather than cutting off
+    fadeMusic(0, prefersReduced ? 30 : 700);
     document.removeEventListener('keydown', onKey);
     vizStop();
     applyVisualMode();
@@ -5794,11 +5864,20 @@ function runIntro(preview){
   }
 
   async function sequence(){
+    // score the sequence with the intro theme, fading in under the premise
+    // caption; finish() fades it back out again over the same 700ms the
+    // chrome takes to leave, so it never needs to play to the end
+    if (musicEl && !prefersReduced){
+      musicEl.volume = 0;
+      musicEl.play().catch(() => {});
+      fadeMusic(MUSIC_PEAK, 1400);
+    }
+
     // 0. premise — the mark alone, breathing
     setCaption('music, without the homework');
-    await wait(1500);
+    await wait(3200);
     clearCaption();
-    await wait(250);
+    await wait(500);
     if (done) return;
 
     // 1. the mark becomes the input
@@ -5806,20 +5885,20 @@ function runIntro(preview){
     setView('library');
     setStage('input');
     setCaption('bring a playlist');
-    await wait(450);
+    await wait(900);
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
     if (urlInput){
       urlInput.value = '';
       urlInput.focus();
       for (let i = 2; i <= demoUrl.length && !done; i += 3){
         urlInput.value = demoUrl.slice(0, i);
-        await wait(12);
+        await wait(16);
       }
       if (!done) urlInput.value = demoUrl;
     }
-    await wait(450);
+    await wait(900);
     clearCaption();
-    await wait(300);
+    await wait(600);
     if (done) return;
 
     // 2. the input becomes music
@@ -5827,58 +5906,59 @@ function runIntro(preview){
     setStage('player');
     seedDemoTrack();
     setCaption('then just listen');
-    await wait(1200);
+    await wait(2400);
     clearCaption();
-    await wait(400);
+    await wait(800);
     if (done) return;
 
     // 3. the player opens into the field
     showVizField(true);
     setCaption('play with it');
-    await wait(700);
+    await wait(1400);
     if (!done) vizAdvancePattern();
-    await wait(900);
+    await wait(1800);
     if (!done) vizAdvancePattern();
-    await wait(900);
+    await wait(1800);
     clearCaption();
-    await wait(300);
+    await wait(600);
     if (done) return;
 
     // 4. the field becomes discovery
     showVizField(false);
     setStage('discovery');
     setCaption('something new, every day');
-    await wait(1700);
+    await wait(3200);
     clearCaption();
-    await wait(300);
+    await wait(600);
     if (done) return;
 
     // 5. discovery becomes the player, briefly opening its menu
     setStage('player');
-    await wait(400);
+    await wait(800);
     if (done) return;
     openArtStyleMenu();
     setCaption('there’s more');
-    await wait(500);
+    await wait(1000);
     artworkWrap.dataset.artStyle = 'record';
-    await wait(550);
+    await wait(1000);
     artworkWrap.dataset.artStyle = 'cassette';
-    await wait(550);
+    await wait(1000);
     closeArtStyleMenu();
     artworkWrap.dataset.artStyle = 'default';
     clearCaption();
-    await wait(300);
+    await wait(600);
     if (done) return;
 
-    // 6. everything collapses back into EBBLESS
+    // 6. everything collapses back into EBBLESS — the logo holds while the
+    // track fades out under finish()
     setStage('outro');
-    await wait(500);
+    await wait(1000);
     setCaption('that’s it.');
-    await wait(1100);
+    await wait(2200);
     clearCaption();
-    await wait(200);
+    await wait(400);
     setCaption('listen.');
-    await wait(1300);
+    await wait(2600);
     finish();
   }
   sequence();
@@ -5890,7 +5970,7 @@ function runIntro(preview){
 // run at all, that markup must still be torn down here, or it just sits on
 // screen (opaque, full-viewport, above everything) forever.
 function discardIntroChrome(){
-  ['onbBackdrop','onbMark','onbCaption','onbSkip','onbCapture','onbDiscovery'].forEach(id => {
+  ['onbBackdrop','onbMark','onbCaption','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
     if (el) el.remove();
   });
