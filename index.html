@@ -5679,7 +5679,17 @@ function playPrev(){
   playIndex(pos);
 }
 
-playBtn.addEventListener('click', () => { if (state.queuePos >= 0) playIndex(state.queuePos); });
+// Nothing queued and the player tab's play button gets hit anyway - rather
+// than doing nothing, drop in a known-good track so the button always does
+// something.
+function playRickrollFallback(){
+  state.playlist = { id: '__rickroll__', name: 'Never Gonna Give You Up', tracks: [
+    { title: 'Never Gonna Give You Up', artist: 'Rick Astley', videoId: 'dQw4w9WgXcQ', matchedTitle: 'Never Gonna Give You Up', channel: 'Rick Astley', plays: 0, art: null, duration: 212 }
+  ], ts: Date.now() };
+  state.queue = [{ plId: state.playlist.id, idx: 0 }];
+  loadIndex(0, true);
+}
+playBtn.addEventListener('click', () => { if (state.queuePos >= 0) playIndex(state.queuePos); else playRickrollFallback(); });
 nextBtn.addEventListener('click', () => playNext(false));
 prevBtn.addEventListener('click', playPrev);
 flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) playIndex(state.queuePos); });
