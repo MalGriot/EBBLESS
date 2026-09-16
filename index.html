@@ -6858,6 +6858,30 @@ function renderDemoLyrics(){
     div.textContent = line || ' ';
     lyricsScroller.appendChild(div);
   });
+  lyricsScroller.scrollTop = 0;
+  startDemoLyricsScroll();
+}
+
+// slow teleprompter-style drift for the demo lyrics beat above - the demo
+// track has no per-line timing to sync to (see DEMO_LYRICS), so this is
+// the only motion standing in for "the lyrics are alive while it plays"
+let demoLyricsScrollRaf = null, demoLyricsScrollLastTs = 0;
+function demoLyricsScrollTick(ts){
+  if (!demoLyricsScrollLastTs) demoLyricsScrollLastTs = ts;
+  const dt = ts - demoLyricsScrollLastTs;
+  demoLyricsScrollLastTs = ts;
+  const max = lyricsScroller.scrollHeight - lyricsScroller.clientHeight;
+  if (max > 0) lyricsScroller.scrollTop = Math.min(max, lyricsScroller.scrollTop + 16 * dt / 1000);
+  demoLyricsScrollRaf = requestAnimationFrame(demoLyricsScrollTick);
+}
+function startDemoLyricsScroll(){
+  if (demoLyricsScrollRaf) return;
+  demoLyricsScrollLastTs = 0;
+  demoLyricsScrollRaf = requestAnimationFrame(demoLyricsScrollTick);
+}
+function stopDemoLyricsScroll(){
+  if (demoLyricsScrollRaf) cancelAnimationFrame(demoLyricsScrollRaf);
+  demoLyricsScrollRaf = null; demoLyricsScrollLastTs = 0;
 }
 
 function discardIntroChrome(){
