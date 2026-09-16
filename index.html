@@ -238,12 +238,12 @@ svg{display:block}
   .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:none;color:var(--accent)}
 }
 .lib-card .art .title-overlay{position:absolute;left:0;right:0;bottom:0;height:33.34%;z-index:2;display:none;
-  align-items:flex-end;gap:4%;padding:0;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.35) 70%,rgba(0,0,0,0))}
+  align-items:flex-end;padding:0;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.35) 70%,rgba(0,0,0,0))}
 .lib-grid:not(.is-list) .lib-card .art .title-overlay{display:flex}
 .lib-grid:not(.is-list) .lib-card .info .name{display:none}
-.lib-card .art .title-overlay .marquee{flex:1;min-width:0;
+.lib-card .art .title-overlay .marquee{flex:1;min-width:0;width:100%;
   font-size:33.34cqh;font-weight:800;line-height:1;color:#fff}
-.lib-card .art .title-overlay .new-dot{flex:none;margin-left:0;width:14%;height:14%;max-width:10px;max-height:10px}
+.lib-card .art .title-overlay .new-dot{position:absolute;top:6%;right:6%;width:14%;height:14%;max-width:10px;max-height:10px}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
@@ -1000,6 +1000,12 @@ body.onb-active #splash{display:none!important}
 body.onb-active:not(.split-desktop) #topbar,body.onb-active #bottom-nav,body.onb-active #mini-bar,
 body.onb-active #queue-scrim,body.onb-active:not(.split-desktop) #queue-panel,
 body.onb-active #libpl-panel,body.onb-active #libpl-scrim{display:none!important}
+/* the one intro beat that needs the real playlist panel back (see
+   showLoadedLibraryPanel() in runIntro()) - narrower than undoing the rule
+   above outright, so every other beat still gets the fullscreened, chrome-free
+   promoted view */
+body.onb-active.onb-show-libpl #libpl-panel{display:flex!important}
+body.onb-active.onb-show-libpl #libpl-scrim{display:block!important}
 body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-desktop) #view-player,body.onb-active:not(.split-desktop) #view-settings{
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
@@ -5905,6 +5911,9 @@ function runIntro(preview){
     renderCrossfadeUI();
     document.querySelectorAll('.onb-tap').forEach(el => el.classList.remove('onb-tap'));
     document.querySelectorAll('.onb-tap-ring').forEach(el => el.classList.remove('onb-tap-ring'));
+    document.body.classList.remove('onb-show-libpl');
+    libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
+    libplBody.innerHTML = '';
     libraryGrid.innerHTML = '';
     const tSpan = trackTitle.querySelector('span'), aSpan = trackArtist.querySelector('span');
     if (tSpan) tSpan.textContent = '—';
@@ -5947,7 +5956,7 @@ function runIntro(preview){
   // Also drives the spotlight cutout (see #onbSpotlight) over the same
   // element, so whatever's being talked about is the one bright thing on
   // screen and everything else reads as dimmed background.
-  function placeCaptionNear(el){
+  function placeCaptionNear(el, forceAbove){
     const vw = window.innerWidth, vh = window.innerHeight;
     if (!el){
       const d = captionDefaultPos();
@@ -5967,7 +5976,11 @@ function runIntro(preview){
     const halfCap = Math.min(300, vw * 0.78) / 2 + 12;
     const cx = Math.min(Math.max(r.left + r.width / 2, halfCap), vw - halfCap);
     let top = r.bottom + gap, above = false;
-    if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
+    // a forced-above placement (e.g. a menu's trigger button, which the
+    // menu itself opens downward from) needs more clearance than the
+    // default gap so the caption doesn't crowd the button it's pointing at
+    if (forceAbove){ top = r.top - gap - 40; above = true; }
+    else if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
     captionEl.style.left = cx + 'px';
     captionEl.style.top = top + 'px';
     captionEl.classList.toggle('onb-cap-above', above);
@@ -5983,21 +5996,21 @@ function runIntro(preview){
   // re-measures the same target a beat after its view/stage transition
   // starts - elements promoted via onb-stage-* scale/fade in over ~900ms,
   // so a position sampled at the very first frame can be slightly off
-  function correctCaptionPos(el){
+  function correctCaptionPos(el, forceAbove){
     if (!el) return;
-    setTimeout(() => { if (!done) placeCaptionNear(el); }, 400);
+    setTimeout(() => { if (!done) placeCaptionNear(el, forceAbove); }, 400);
   }
-  function setCaption(text, el){
+  function setCaption(text, el, forceAbove){
     if (done) return;
     captionEl.innerHTML = '';
     const span = document.createElement('span');
     span.textContent = text;
     captionEl.appendChild(span);
-    placeCaptionNear(el || null);
+    placeCaptionNear(el || null, forceAbove);
     captionEl.classList.remove('is-visible');
     void captionEl.offsetWidth;
     captionEl.classList.add('is-visible');
-    correctCaptionPos(el);
+    correctCaptionPos(el, forceAbove);
   }
   // slides the still-visible caption over to a new target, e.g. the
   // like -> shuffle -> repeat chapter, without touching its text
@@ -6090,6 +6103,37 @@ function runIntro(preview){
     libraryListWrap.classList.remove('hidden');
     libraryEmpty.classList.add('hidden');
   }
+  // the real tracklist panel a tap on the library card opens (see
+  // toggleLibraryPlaylistPanel) - shown here so the intro teaches where the
+  // current playlist actually lives, instead of leaving it as a standalone
+  // card that's never opened
+  function showLoadedLibraryPanel(){
+    libplTitle.textContent = DEMO_TITLE;
+    libplBody.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    const img = document.createElement('img'); img.src = DEMO_ART;
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const title = document.createElement('div'); title.className = 'title'; title.textContent = DEMO_TITLE;
+    const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = DEMO_ARTIST;
+    meta.appendChild(title); meta.appendChild(artist);
+    row.appendChild(img); row.appendChild(meta);
+    libplBody.appendChild(row);
+    // the panel is display:none by default during the intro (see the
+    // body.onb-active rule in the CSS) - reveal it, force a reflow so the
+    // browser paints the closed (translated-off-screen) frame first, then
+    // add is-open on the next frame so its slide-in actually animates
+    // instead of just appearing already open
+    document.body.classList.add('onb-show-libpl');
+    void libplPanel.offsetWidth;
+    libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  }
+  function closeLoadedLibraryPanel(){
+    libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
+    // wait out the slide-shut transition before re-hiding it, or it'd just
+    // vanish instead of sliding away like the queue panel does
+    setTimeout(() => { if (!done) document.body.classList.remove('onb-show-libpl'); }, 500);
+  }
   // a beat that's only a caption: show it, hold, clear it, breathe
   async function beat(text, holdMs, tailMs, el){
     setCaption(text, el);
@@ -6173,6 +6217,18 @@ function runIntro(preview){
     setCaption('there it is', loadedCard);
     await wait(1200);
     clearCaption();
+    await wait(400);
+    if (done) return;
+
+    // 4b. the same tap a real card takes opens its tracklist here, in the
+    // playlist window - not the card itself - so that's the one place
+    // people learn to look for the playlist they just loaded
+    tap(loadedCard);
+    showLoadedLibraryPanel();
+    setCaption('your playlist lives here', libplPanel);
+    await wait(1400);
+    closeLoadedLibraryPanel();
+    clearCaption();
     await wait(500);
     if (done) return;
 
@@ -6188,7 +6244,7 @@ function runIntro(preview){
 
     // 6. how it looks while it plays - the real style menu, each option
     // tapped as it's chosen; one caption spans both style beats [14700->18300->21900]
-    setCaption('see it your way', artStyleMenu);
+    setCaption('see it your way', isTouchDevice ? artTabBtn : artStyleMenu, isTouchDevice);
     await wait(700);
     openArtStyleMenu();
     await wait(900);
@@ -6369,7 +6425,7 @@ if (introBeatCapture){
   }
   // mirrors runIntro()'s placeCaptionNear() so debug captures match the
   // real per-beat anchored caption + spotlight cutout exactly
-  function capPlaceNear(el){
+  function capPlaceNear(el, forceAbove){
     const vw = window.innerWidth, vh = window.innerHeight;
     if (!el){
       const bottomPx = Math.max(64, vh * 0.26);
@@ -6389,7 +6445,8 @@ if (introBeatCapture){
     const halfCap = Math.min(300, vw * 0.78) / 2 + 12;
     const cx = Math.min(Math.max(r.left + r.width / 2, halfCap), vw - halfCap);
     let top = r.bottom + gap, above = false;
-    if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
+    if (forceAbove){ top = r.top - gap - 40; above = true; }
+    else if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
     capCaption.style.left = cx + 'px';
     capCaption.style.top = top + 'px';
     capCaption.classList.toggle('onb-cap-above', above);
@@ -6402,13 +6459,13 @@ if (introBeatCapture){
       capSpotlight.classList.add('is-visible');
     }
   }
-  function capCaptionText(text, el){
+  function capCaptionText(text, el, forceAbove){
     if (!text){ capCaption.classList.remove('is-visible'); if (capSpotlight) capSpotlight.classList.remove('is-visible'); return; }
     capCaption.innerHTML = '';
     const span = document.createElement('span');
     span.textContent = text;
     capCaption.appendChild(span);
-    capPlaceNear(el || null);
+    capPlaceNear(el || null, forceAbove);
     capCaption.classList.add('is-visible');
   }
   function capSeedTrack(){
@@ -6484,6 +6541,25 @@ if (introBeatCapture){
       libraryEmpty.classList.add('hidden');
       capCaptionText('there it is', capCard);
       break;
+    case 'library-panel':
+      capMark.classList.remove('is-idle');
+      setView('library');
+      capStage('library');
+      libplTitle.textContent = CAP_TITLE;
+      libplBody.innerHTML = '';
+      const capRow = document.createElement('div');
+      capRow.className = 'track-row';
+      const capImg = document.createElement('img'); capImg.src = CAP_ART;
+      const capMeta = document.createElement('div'); capMeta.className = 'meta';
+      const capRowTitle = document.createElement('div'); capRowTitle.className = 'title'; capRowTitle.textContent = CAP_TITLE;
+      const capRowArtist = document.createElement('div'); capRowArtist.className = 'artist'; capRowArtist.textContent = CAP_ARTIST;
+      capMeta.appendChild(capRowTitle); capMeta.appendChild(capRowArtist);
+      capRow.appendChild(capImg); capRow.appendChild(capMeta);
+      libplBody.appendChild(capRow);
+      document.body.classList.add('onb-show-libpl');
+      libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+      capCaptionText('your playlist lives here', libplPanel);
+      break;
     case 'player':
       capStage('player');
       capSeedTrack();
@@ -6494,14 +6570,14 @@ if (introBeatCapture){
       capSeedTrack();
       artworkWrap.dataset.artStyle = 'record';
       openArtStyleMenu();
-      capCaptionText('see it your way', artStyleMenu);
+      capCaptionText('see it your way', isTouchDevice ? artTabBtn : artStyleMenu, isTouchDevice);
       break;
     case 'style-cassette':
       capStage('player');
       capSeedTrack();
       artworkWrap.dataset.artStyle = 'cassette';
       openArtStyleMenu();
-      capCaptionText('see it your way', artStyleMenu);
+      capCaptionText('see it your way', isTouchDevice ? artTabBtn : artStyleMenu, isTouchDevice);
       break;
     case 'viz':
       capStage('player');
