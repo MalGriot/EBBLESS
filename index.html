@@ -6193,7 +6193,6 @@ function runIntro(preview){
     await wait(140);
     el.classList.remove('onb-sim-press');
     tap(el, withRing);
-    await wait(160);
     el.classList.remove('onb-sim-hover');
   }
   // a real .lib-card, built with the same markup renderLibrary() uses, so
@@ -6374,18 +6373,22 @@ function runIntro(preview){
     await wait(700);
     openArtStyleMenu();
     await wait(900);
-    tap(artStyleMenu.querySelector('[data-style="record"]'));
+    // each option gets a scripted hover-then-press (see hoverThenPress) so
+    // picking a style reads as a real click, not the art just changing -
+    // its own hold time is carried by shortening the settle wait after it,
+    // so the beat still lands on the same track-synced marks as before
+    await hoverThenPress(artStyleMenu.querySelector('[data-style="record"]'));
     artworkWrap.dataset.artStyle = 'record';
-    await wait(2000);
+    await wait(1500);
     if (done) return;
     // -> 18300
-    tap(artStyleMenu.querySelector('[data-style="cassette"]'));
+    await hoverThenPress(artStyleMenu.querySelector('[data-style="cassette"]'));
     artworkWrap.dataset.artStyle = 'cassette';
-    await wait(1800);
-    tap(artStyleMenu.querySelector('[data-style="default"]'));
+    await wait(1300);
+    await hoverThenPress(artStyleMenu.querySelector('[data-style="default"]'));
     closeArtStyleMenu();
     artworkWrap.dataset.artStyle = 'default';
-    await wait(1000);
+    await wait(500);
     clearCaption();
     await wait(800);
     if (done) return;
