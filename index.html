@@ -377,10 +377,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .art-style-opt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;
   color:var(--faint);font-size:13px;text-align:left;transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .art-style-opt:hover{background:var(--panel-2);color:var(--text)}
-.art-style-label{flex:1}
-.art-style-check{width:14px;height:14px;flex:none;opacity:0;color:var(--accent)}
+.art-style-label{flex:1;transition:font-weight var(--dur-ui) var(--ease-out)}
+.art-style-check{width:14px;height:14px;flex:none;opacity:0;color:var(--accent);
+  transform:translateX(6px) scale(.7);transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .art-style-opt.is-active{color:var(--text)}
-.art-style-opt.is-active .art-style-check{opacity:1}
+.art-style-opt.is-active .art-style-label{font-weight:700}
+.art-style-opt.is-active .art-style-check{opacity:1;transform:translateX(0) scale(1)}
 .art-style-swatch{width:22px;height:22px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
   background:var(--panel-2);color:var(--faint-2);overflow:hidden}
 .art-style-swatch svg{width:13px;height:13px}
