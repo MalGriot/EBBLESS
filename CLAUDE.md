@@ -11,9 +11,23 @@ directory. `index.html` is one large file - two sessions editing it in the
 same checkout will overwrite each other's uncommitted work, not just conflict
 on merge.
 
-**Before starting work, if you suspect another session might be active on
-this repo, check `AGENTS.md` (run `scripts/session.sh status`) first.** Every
-session should claim a lane before touching code:
+**Before starting work, always check for other active sessions first - do not
+rely on `AGENTS.md` alone, since it only shows sessions that opted into the
+lane system.** A session that never ran `scripts/session.sh start` (including
+every session running before this protocol existed) is invisible to the
+ledger but just as capable of clobbering your work. Check both:
+
+```bash
+scripts/session.sh status
+ps aux | grep -c '[c]laude.*EBBLESS'
+```
+
+If the process count is more than one (this session included) and you are
+about to work directly in the main checkout (not already inside a worktree
+under `../ebbless-worktrees/`), assume collision risk is real even if
+`AGENTS.md` is empty. Don't uproot an edit that's already in flight - finish
+the atomic change you're on, commit it, and push promptly - but claim a lane
+for anything further:
 
 ```bash
 scripts/session.sh start <slug> "<what you're doing>"
@@ -52,3 +66,11 @@ Rules of the road:
   from.
 - A single-session task (no other Claude Code session active) doesn't need
   any of this - work directly in the main checkout as usual.
+- If you discover mid-session that you're already sharing the main checkout
+  with another active session (uncommitted changes appear/vanish that you
+  didn't make, a commit or reset shows up in `git reflog` that you didn't
+  run), stop and tell the user directly rather than guessing at whose work is
+  whose. Don't commit, stash, `reset`, or `checkout --` over a file another
+  live session may be mid-edit on - even "protecting" it that way can look
+  to that session like its own change disappeared. Surface what you found
+  and let the user decide.
