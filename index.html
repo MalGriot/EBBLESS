@@ -5986,6 +5986,8 @@ function runIntro(preview){
     renderCrossfadeUI();
     document.querySelectorAll('.onb-tap').forEach(el => el.classList.remove('onb-tap'));
     document.querySelectorAll('.onb-tap-ring').forEach(el => el.classList.remove('onb-tap-ring'));
+    document.querySelectorAll('.onb-sim-hover').forEach(el => el.classList.remove('onb-sim-hover'));
+    document.querySelectorAll('.onb-sim-press').forEach(el => el.classList.remove('onb-sim-press'));
     document.body.classList.remove('onb-show-libpl');
     libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
     libplBody.innerHTML = '';
