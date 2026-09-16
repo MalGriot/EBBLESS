@@ -907,18 +907,23 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
    layer) and the real cymatics/art-style functions - see runIntro() at the
    end of the main script - rather than a second, fake copy of the app. */
 #onbBackdrop{position:fixed;inset:0;z-index:10000;background:var(--bg)}
-#onbMark{position:fixed;inset:0;z-index:10002;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;pointer-events:none}
-#onbRibbon{opacity:1;transform:scale(1);transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
-#onbMark.is-idle #onbRibbon{animation:onb-breathe 3400ms var(--ease-in-out) infinite}
-#onbMark.is-stretch #onbRibbon,#onbMark.is-outro #onbRibbon{opacity:0;transform:scale(.4)}
-#onbWord{position:absolute;width:min(260px,58vw);height:auto;opacity:0;transform:scale(.85);
+#onbMark{position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;pointer-events:none}
+#onbWord{width:min(220px,52vw);height:auto;opacity:0;transform:scale(.85);
   transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
+#onbMark.is-idle #onbWord{opacity:1;transform:scale(1);animation:onb-breathe 3400ms var(--ease-in-out) infinite}
 body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
-@keyframes onb-breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.06);opacity:1}}
+@keyframes onb-breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.05);opacity:1}}
 
-#onbCaption{position:fixed;left:0;right:0;bottom:16%;z-index:10002;text-align:center;color:var(--faint);
-  font-size:clamp(13px,2.6vw,15px);letter-spacing:.02em;opacity:0;transform:translateY(6px);
-  transition:opacity 600ms var(--ease-out),transform 600ms var(--ease-out);pointer-events:none;padding:0 24px}
+/* caption text sits over real, busy graphics (artwork, cymatics field,
+   discovery art) for most of the sequence - a flat --faint grey reads fine
+   on the plain black backdrop but disappears over those, so it needs real
+   contrast of its own: near-white plus a dark scrim, not just color+opacity. */
+#onbCaption{position:fixed;left:0;right:0;top:max(20px,env(safe-area-inset-top));z-index:10004;display:flex;justify-content:center;
+  opacity:0;transform:translateY(-6px);pointer-events:none;padding:0 24px;
+  transition:opacity 600ms var(--ease-out),transform 600ms var(--ease-out)}
+#onbCaption span{color:var(--text);font-size:clamp(13px,2.6vw,15px);letter-spacing:.02em;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:9px 18px;border-radius:999px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 #onbCaption.is-visible{opacity:1;transform:translateY(0)}
 
 #onbSkip{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
@@ -949,8 +954,8 @@ body.onb-stage-input #view-library .view-scroll>*:not(.import-row){display:none}
 body.onb-stage-input #importForm{width:min(520px,86vw);margin:0;transform:scale(1.15)}
 
 @media (prefers-reduced-motion:reduce){
-  #onbMark.is-idle #onbRibbon{animation:none}
-  body.onb-active #view-library,body.onb-active #view-player,#onbDiscovery,#onbWord,#onbRibbon,#onbCaption{
+  #onbMark.is-idle #onbWord{animation:none}
+  body.onb-active #view-library,body.onb-active #view-player,#onbDiscovery,#onbWord,#onbCaption{
     transition-property:opacity!important;transform:none!important;filter:none!important}
 }
 </style>
@@ -959,9 +964,6 @@ body.onb-stage-input #importForm{width:min(520px,86vw);margin:0;transform:scale(
 
 <div id="onbBackdrop"></div>
 <div id="onbMark" class="is-idle">
-  <svg id="onbRibbon" viewBox="0 0 100 40" width="180" height="72" aria-hidden="true">
-    <path d="M2 20 C 20 20, 30 8, 50 20 S 80 32, 98 20" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"/>
-  </svg>
   <img id="onbWord" src="brand/assets/wordmark-white.png" alt="">
 </div>
 <div id="onbDiscovery">
@@ -5741,19 +5743,22 @@ function runIntro(){
   }
   function setCaption(text){
     if (done) return;
-    captionEl.textContent = text;
+    captionEl.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = text;
+    captionEl.appendChild(span);
     captionEl.classList.remove('is-visible');
     void captionEl.offsetWidth;
     captionEl.classList.add('is-visible');
   }
   function clearCaption(){ if (!done) captionEl.classList.remove('is-visible'); }
 
+  // plain warm gradient, no brand mark baked into the placeholder art
   const DEMO_ART = 'data:image/svg+xml;utf8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">' +
     '<defs><radialGradient id="g" cx="50%" cy="42%" r="75%">' +
     '<stop offset="0%" stop-color="#3a2f1d"/><stop offset="100%" stop-color="#121212"/>' +
     '</radialGradient></defs><rect width="400" height="400" fill="url(#g)"/>' +
-    '<path d="M60 210 C 120 210, 150 130, 200 210 S 280 290, 340 210" fill="none" stroke="#E0B26A" stroke-width="10" stroke-linecap="round"/>' +
     '</svg>'
   );
   function seedDemoTrack(){
@@ -5794,9 +5799,8 @@ function runIntro(){
     await wait(250);
     if (done) return;
 
-    // 1. the ribbon becomes the input
+    // 1. the mark becomes the input
     markEl.classList.remove('is-idle');
-    markEl.classList.add('is-stretch');
     setView('library');
     setStage('input');
     setCaption('bring a playlist');
@@ -5866,7 +5870,6 @@ function runIntro(){
 
     // 6. everything collapses back into EBBLESS
     setStage('outro');
-    markEl.classList.add('is-outro');
     await wait(500);
     setCaption('that’s it.');
     await wait(1100);

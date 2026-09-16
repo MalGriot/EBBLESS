@@ -72,9 +72,9 @@ The wordmark **is** the logo. No separate pictorial symbol competes with it.
   - don't recolor the wordmark with a gradient
   - don't set it in lowercase
 
-Assets: [`assets/wordmark.svg`](./assets/wordmark.svg),
-[`assets/mark.svg`](./assets/mark.svg),
-[`assets/favicon.svg`](./assets/favicon.svg).
+Assets: [`assets/wordmark-white.png`](./assets/wordmark-white.png),
+[`assets/mark.png`](./assets/mark.png) / [`assets/mark-white.png`](./assets/mark-white.png),
+[`assets/icons/favicon-32.png`](./assets/icons/favicon-32.png).
 
 ## 4. Color
 
