@@ -26,6 +26,7 @@
   --bg:#121212; --panel:#181818; --panel-2:#202020; --panel-3:#282828;
   --text:#f2f2f2; --faint:#9a9a9a; --faint-2:#6c6c6c;
   --accent:var(--clock-accent, #e0b26a); --accent-dim:rgba(224,178,106,.16);
+  --player-accent:var(--accent);
   --good:#2fbf71; --bad:#e0645e; --border:rgba(255,255,255,.08); --border-2:rgba(255,255,255,.14);
   --r-sm:6px; --r-md:8px; --r-lg:14px;
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
@@ -173,7 +174,7 @@ svg{display:block}
 #libraryGrid{margin-top:14px}
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
 .lib-grid.is-compact{grid-template-columns:repeat(3,1fr);gap:14px 12px}
-.lib-card{cursor:pointer;border-radius:var(--r-md);overflow:hidden;transition:transform var(--dur-ui) var(--ease-out)}
+.lib-card{position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
 .lib-card .art{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;container-type:size}
@@ -237,7 +238,7 @@ svg{display:block}
   .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:none;color:var(--accent)}
 }
 .lib-card .art .title-overlay{position:absolute;left:0;right:0;bottom:0;height:33.34%;z-index:2;display:none;
-  align-items:flex-end;gap:4%;padding:0;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.35) 70%,rgba(0,0,0,0))}
+  align-items:flex-end;gap:4%;padding:0 10px 4px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.35) 70%,rgba(0,0,0,0))}
 .lib-grid:not(.is-list) .lib-card .art .title-overlay{display:flex}
 .lib-grid:not(.is-list) .lib-card .info .name{display:none}
 .lib-card .art .title-overlay .marquee{flex:1;min-width:0;
@@ -258,7 +259,7 @@ svg{display:block}
 .lib-card .pin svg{width:12px;height:12px;color:#fff}
 .lib-card .pin.is-active{background:var(--accent,#1db954)}
 
-.lib-card .hover-actions{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+.lib-card .hover-actions{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
   opacity:0;transition:opacity var(--dur-ui) var(--ease-out);background:rgba(0,0,0,.32)}
 .lib-card:hover .hover-actions{opacity:1}
 .lib-card .play-overlay{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.95);
@@ -267,9 +268,13 @@ svg{display:block}
 .lib-card .play-overlay:hover{transform:scale(1.06)}
 .lib-card .play-overlay:active{transform:scale(.96)}
 .lib-card .play-overlay svg{width:20px;height:20px;color:#111;margin-left:2px}
-.lib-card .open-link{font-size:11.5px;font-weight:600;color:#fff;padding:3px 10px;border-radius:999px;
-  background:rgba(0,0,0,.4);backdrop-filter:blur(4px)}
-.lib-card .open-link:hover{background:rgba(0,0,0,.6)}
+.lib-card .open-link{position:absolute;left:50%;top:100%;z-index:5;transform:translate(-50%,4px);
+  font-size:11.5px;font-weight:600;color:#fff;padding:3px 10px;border-radius:999px;white-space:nowrap;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);opacity:0;pointer-events:none;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.lib-card:hover .open-link{opacity:1;pointer-events:auto;transform:translate(-50%,8px)}
+.lib-card .open-link:hover{background:rgba(0,0,0,.9)}
+.lib-grid.is-list .lib-card .open-link{display:none}
 
 .lib-card .row-actions{display:none}
 .lib-grid.is-list .lib-card{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:var(--r-md);overflow:visible}
@@ -516,7 +521,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .player-like-btn svg{width:14px;height:14px}
 .player-like-btn:hover{background:var(--panel-3);color:var(--text)}
-.player-like-btn.is-liked{color:var(--accent)}
+.player-like-btn.is-liked{color:var(--player-accent)}
 .track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
@@ -529,8 +534,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
 .seek-track{flex:1;height:14px;display:flex;align-items:center;cursor:pointer;position:relative}
 .seek-track .rail{width:100%;height:3px;border-radius:2px;background:var(--border);position:relative;overflow:hidden}
-.seek-track .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--accent);border-radius:2px}
-.seek-track .knob{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--accent);
+.seek-track .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--player-accent);border-radius:2px}
+.seek-track .knob{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--player-accent);
   transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
 .seek-track:hover .knob{opacity:1}
 
@@ -540,14 +545,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .ctl-btn:hover{background:var(--panel-2)}
 .ctl-btn:active{transform:scale(.92)}
 .ctl-btn svg{width:16px;height:16px}
-.ctl-btn.is-active{color:var(--accent)}
-.ctl-btn.main{width:52px;height:52px;background:var(--accent);color:#151107}
-.ctl-btn.main:hover{background:var(--accent)}
+.ctl-btn.is-active{color:var(--player-accent)}
+.ctl-btn.main{width:52px;height:52px;background:var(--player-accent);color:#151107}
+.ctl-btn.main:hover{background:var(--player-accent)}
 .ctl-btn.main svg{width:19px;height:19px}
 .ctl-btn.small{width:32px;height:32px}
 .ctl-btn.small svg{width:14px;height:14px}
 .repeat-badge{position:relative}
-.repeat-badge .one{position:absolute;bottom:3px;right:2px;font-size:8px;font-weight:800;color:var(--accent)}
+.repeat-badge .one{position:absolute;bottom:3px;right:2px;font-size:8px;font-weight:800;color:var(--player-accent)}
 
 
 /* playlist list (lives inside the queue dropdown) */
@@ -605,7 +610,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #mini-bar .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #mini-bar .mini-ctl{flex:none;display:flex;align-items:center;gap:0}
 #mini-bar .mini-line{position:absolute;left:0;right:0;top:0;height:2px;background:var(--border)}
-#mini-bar .mini-line .fill{height:100%;background:var(--accent);width:0%}
+#mini-bar .mini-line .fill{height:100%;background:var(--player-accent);width:0%}
 @media (max-width:420px){
   #mini-bar #miniShuffleBtn,#mini-bar #miniRepeatBtn{display:none}
 }
@@ -651,7 +656,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .q-now .meta{min-width:0;flex:1}
 .q-now .title{font-size:13.5px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q-now .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#151107;
+.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--player-accent);color:#151107;
   display:flex;align-items:center;justify-content:center;transition:transform var(--dur-ui) var(--ease-out)}
 .q-now .play-btn:active{transform:scale(.92)}
 .q-now .play-btn svg{width:15px;height:15px}
@@ -822,7 +827,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop:not(.view-settings-active) #topnav [data-action="toggle-queue"]{display:none}
   body.split-desktop:not(.view-settings-active) #app{
     display:grid;grid-template-rows:var(--topbar-h) 1fr;
-    grid-template-columns:minmax(240px,300px) 1fr minmax(300px,360px);
+    grid-template-columns:minmax(280px,340px) 1fr minmax(280px,340px);
   }
   body.split-desktop:not(.view-settings-active) #topbar{grid-column:1/-1;grid-row:1}
   body.split-desktop:not(.view-settings-active) #view-library,
@@ -930,13 +935,22 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 /* caption text sits over real, busy graphics (artwork, cymatics field,
    discovery art) for most of the sequence - a flat --faint grey reads fine
    on the plain black backdrop but disappears over those, so it needs real
-   contrast of its own: near-white plus a dark scrim, not just color+opacity. */
-#onbCaption{position:fixed;left:0;right:0;top:max(20px,env(safe-area-inset-top));z-index:10004;display:flex;justify-content:center;
-  opacity:0;transform:translateY(-6px);pointer-events:none;padding:0 24px;
+   contrast of its own: near-white plus a dark scrim, not just color+opacity.
+   Parked low (clear of the topbar/art/player controls it narrates) and
+   built from the brand accent gold rather than a generic pill, so it reads
+   as EBBLESS talking, not a system toast. */
+#onbCaption{position:fixed;left:0;right:0;bottom:max(64px,26vh);top:auto;z-index:10004;display:flex;justify-content:center;
+  opacity:0;transform:translateY(10px);pointer-events:none;padding:0 24px;
   transition:opacity 600ms var(--ease-out),transform 600ms var(--ease-out)}
-#onbCaption span{color:var(--text);font-size:clamp(13px,2.6vw,15px);letter-spacing:.02em;
-  background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  padding:9px 18px;border-radius:999px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#onbCaption span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
+  font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:78vw;
+  background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
+  box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(224,178,106,.08) inset;
+  padding:13px 22px;border-radius:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#onbCaption span::before{content:'';position:absolute;left:50%;top:-5px;transform:translateX(-50%);
+  width:30px;height:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(224,178,106,.7)}
 #onbCaption.is-visible{opacity:1;transform:translateY(0)}
 
 #onbSkip{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
@@ -955,11 +969,12 @@ body.onb-stage-discovery #onbDiscovery{opacity:1;filter:blur(0);transform:scale(
 body.onb-active #topbar,body.onb-active #bottom-nav,body.onb-active #mini-bar,
 body.onb-active #queue-scrim,body.onb-active #queue-panel,
 body.onb-active #libpl-panel,body.onb-active #libpl-scrim{display:none!important}
-body.onb-active #view-library,body.onb-active #view-player{
+body.onb-active #view-library,body.onb-active #view-player,body.onb-active #view-settings{
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
   transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
-body.onb-stage-input #view-library,body.onb-stage-player #view-player{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-stage-input #view-library,body.onb-stage-player #view-player,body.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-stage-settings #view-settings .settings-block:first-child{display:none}
 body.onb-stage-input #view-library .lib-bg{display:none}
 body.onb-stage-input #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
@@ -979,6 +994,39 @@ body.onb-stage-input #importForm{width:min(520px,86vw);margin:0;transform:scale(
 #loadBtn.onb-zoom.onb-press{transform:scale(1.24)}
 #loadBtn.onb-loading{animation:onb-load-pulse 850ms var(--ease-in-out) infinite}
 @keyframes onb-load-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* generic "this was just tapped" emphasis - a punchy overshoot squash so a
+   button press reads clearly even though nothing is actually clicking it.
+   Reused on the Load button, style-menu options, viz/lyrics tabs, the like
+   heart, shuffle and repeat. */
+.onb-tap{animation:onb-tap-kf 520ms cubic-bezier(.32,1.7,.5,1)}
+@keyframes onb-tap-kf{
+  0%{transform:scale(1)}
+  30%{transform:scale(.82)}
+  62%{transform:scale(1.16)}
+  100%{transform:scale(1)}
+}
+.onb-tap-ring{position:relative}
+.onb-tap-ring::after{
+  content:'';position:absolute;inset:-8px;border-radius:inherit;
+  border:2px solid var(--accent);opacity:0;pointer-events:none;
+}
+.onb-tap-ring.onb-tap::after{animation:onb-tap-ring-kf 560ms var(--ease-out)}
+@keyframes onb-tap-ring-kf{
+  0%{opacity:.9;transform:scale(.7)}
+  100%{opacity:0;transform:scale(1.45)}
+}
+
+/* the "loaded library" beat promotes #view-library like the input stage
+   does, but shows the populated grid (one real playlist card) instead of
+   the paste form */
+body.onb-stage-library #view-library{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-stage-library #view-library .lib-bg{display:none}
+body.onb-stage-library #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
+  padding:0;margin:0!important;width:100%;max-width:none}
+body.onb-stage-library #view-library .view-scroll>*:not(#libraryListWrap){display:none}
+body.onb-stage-library #libraryListWrap>*:not(#libraryGrid){display:none}
+body.onb-stage-library #libraryGrid{width:min(280px,72vw);grid-template-columns:1fr}
 
 @media (prefers-reduced-motion:reduce){
   #onbMark.is-idle #onbWord{animation:none}
@@ -2237,6 +2285,60 @@ function swapAltArt(track){
 }
 
 /* =========================================================================
+   PLAYER ACCENT FROM ALBUM ART
+   Buttons and the progress bar follow the dominant color of whatever
+   artwork is currently loaded, via the --player-accent CSS var (falls back
+   to the color-clock --accent when there's no art, or the image can't be
+   read for cross-origin reasons). Pulled from a downscaled canvas sample of
+   a separate probe Image so a CORS failure never disturbs the visible
+   artwork or its own fallback chain.
+   ========================================================================= */
+function sampleDominantColor(img){
+  const w = 24, h = 24;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  let sr = 0, sg = 0, sb = 0, n = 0;
+  let bestSat = -1, bestR = 0, bestG = 0, bestB = 0;
+  for (let i = 0; i < data.length; i += 4){
+    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+    if (a < 128) continue;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+    if (lum > 0.92 || lum < 0.08) continue;
+    const sat = max === 0 ? 0 : (max - min) / max;
+    sr += r; sg += g; sb += b; n++;
+    if (sat > bestSat){ bestSat = sat; bestR = r; bestG = g; bestB = b; }
+  }
+  if (!n) return null;
+  const r = Math.round(sr / n * 0.5 + bestR * 0.5);
+  const g = Math.round(sg / n * 0.5 + bestG * 0.5);
+  const b = Math.round(sb / n * 0.5 + bestB * 0.5);
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+let playerAccentReqId = 0;
+function updatePlayerAccentColor(track){
+  const reqId = ++playerAccentReqId;
+  const url = artworkUrls(track)[0];
+  if (!url){ document.documentElement.style.setProperty('--player-accent', 'var(--accent)'); return; }
+  const probe = new Image();
+  probe.crossOrigin = 'anonymous';
+  probe.onload = () => {
+    if (reqId !== playerAccentReqId) return;
+    let color = null;
+    try { color = sampleDominantColor(probe); } catch (e) { color = null; }
+    document.documentElement.style.setProperty('--player-accent', color || 'var(--accent)');
+  };
+  probe.onerror = () => {
+    if (reqId !== playerAccentReqId) return;
+    document.documentElement.style.setProperty('--player-accent', 'var(--accent)');
+  };
+  probe.src = url;
+}
+
+/* =========================================================================
    LIBRARY RENDER
    ========================================================================= */
 function getLibraryView(){ return lsGet(LS_LIB_VIEW, 'grid'); }
@@ -2391,10 +2493,7 @@ function renderLibrary(){
     playBtn.className = 'play-overlay'; playBtn.setAttribute('aria-label', 'Play ' + pl.name);
     playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     playBtn.addEventListener('click', (e) => { e.stopPropagation(); playPlaylistNow(id); });
-    const openBtn = document.createElement('button');
-    openBtn.className = 'open-link'; openBtn.textContent = 'Open';
-    openBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibraryPlaylistPanel(id); });
-    hoverActions.appendChild(playBtn); hoverActions.appendChild(openBtn);
+    hoverActions.appendChild(playBtn);
     artDiv.appendChild(hoverActions);
 
     if (!isSystemPl){
@@ -2428,6 +2527,10 @@ function renderLibrary(){
     const info = document.createElement('div'); info.className = 'info';
     info.appendChild(name); info.appendChild(count);
 
+    const openBtn = document.createElement('button');
+    openBtn.className = 'open-link'; openBtn.textContent = 'Open';
+    openBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibraryPlaylistPanel(id); });
+
     const rowActions = document.createElement('div');
     rowActions.className = 'row-actions';
     const rowPlayBtn = document.createElement('button');
@@ -2448,7 +2551,7 @@ function renderLibrary(){
       rowActions.appendChild(rowPinBtn); rowActions.appendChild(rowMenuBtn);
     }
 
-    card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
+    card.appendChild(artDiv); card.appendChild(info); card.appendChild(openBtn); card.appendChild(rowActions);
     card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
     if (!isSystemPl){
       attachLongPress(card, () => {
@@ -5127,6 +5230,7 @@ function reflectCurrentTrackUI(pos){
   swapFlowArt(t);
   swapAltArt(t);
   setAmbient(t);
+  updatePlayerAccentColor(t);
   attachArtworkFallback(miniArt, t);
   cassetteUpdateTrack(t, pos);
   bumpPlayCount(entry);
@@ -5494,6 +5598,7 @@ function tryResume(){
   swapFlowArt(track);
   swapAltArt(track);
   setAmbient(track);
+  updatePlayerAccentColor(track);
   attachArtworkFallback(miniArt, track);
   cassetteUpdateTrack(track, state.queuePos);
   highlightActiveRow();
@@ -5715,7 +5820,7 @@ function runIntro(preview){
     };
     step();
   }
-  const STAGE_CLASSES = ['onb-stage-input','onb-stage-player','onb-stage-discovery','onb-stage-outro'];
+  const STAGE_CLASSES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings'];
   function setStage(name){
     STAGE_CLASSES.forEach(c => document.body.classList.remove(c));
     if (name) document.body.classList.add('onb-stage-' + name);
@@ -5747,11 +5852,20 @@ function runIntro(preview){
     if (urlInput){ urlInput.value = ''; urlInput.classList.remove('onb-pasted'); }
     if (loadBtn) loadBtn.classList.remove('onb-zoom', 'onb-press', 'onb-loading');
     if (playerLikeBtn) playerLikeBtn.classList.remove('is-liked');
+    if (shuffleBtn) shuffleBtn.classList.remove('is-active');
+    if (repeatBtn) repeatBtn.classList.remove('is-active');
+    renderCrossfadeUI();
+    document.querySelectorAll('.onb-tap').forEach(el => el.classList.remove('onb-tap'));
+    document.querySelectorAll('.onb-tap-ring').forEach(el => el.classList.remove('onb-tap-ring'));
+    libraryGrid.innerHTML = '';
     const tSpan = trackTitle.querySelector('span'), aSpan = trackArtist.querySelector('span');
     if (tSpan) tSpan.textContent = '—';
     if (aSpan) aSpan.textContent = '—';
     artA.classList.remove('is-active');
     artA.removeAttribute('src');
+    recordLabelImg.removeAttribute('src');
+    cassetteLabelArt.removeAttribute('href'); cassetteLabelArt.removeAttribute('xlink:href');
+    cassetteLabelArt.classList.remove('is-loaded');
     seekFill.style.transition = 'none';
     seekFill.style.width = '0%';
     timeCur.textContent = '0:00';
@@ -5785,24 +5899,33 @@ function runIntro(preview){
   }
   function clearCaption(){ if (!done) captionEl.classList.remove('is-visible'); }
 
-  // real brand mark, standing in for a cover until a real track is loaded
-  const DEMO_ART = 'brand/assets/demo-cover.png';
+  // "I Tried It" by Unnayanaa feat. Mal Griot - a real released track and
+  // its real Spotify cover, not the brand mark standing in for one
+  const DEMO_ART = 'brand/assets/demo-cover.jpg';
+  const DEMO_TITLE = 'I Tried It';
+  const DEMO_ARTIST = 'Unnayanaa, Mal Griot';
+  // same shape attachArtworkFallback()/cassetteSetLabelArt() read a real
+  // queue track as (see artworkUrls()) - lets the record label and cassette
+  // window show the real cover too, not just the default art view
+  const DEMO_TRACK = { title: DEMO_TITLE, artist: DEMO_ARTIST, art: DEMO_ART };
   function seedDemoTrack(){
     const t = trackTitle.querySelector('span'), a = trackArtist.querySelector('span');
-    if (t) t.textContent = 'Your first track';
-    if (a) a.textContent = 'from the playlist';
+    if (t) t.textContent = DEMO_TITLE;
+    if (a) a.textContent = DEMO_ARTIST;
     artA.src = DEMO_ART;
     artA.classList.add('is-active');
     artB.classList.remove('is-active');
     artworkWrap.dataset.mode = 'art';
     artworkWrap.dataset.artStyle = 'default';
+    attachArtworkFallback(recordLabelImg, DEMO_TRACK);
+    cassetteUpdateTrack(DEMO_TRACK, 0);
     timeCur.textContent = '0:00';
-    timeDur.textContent = '3:24';
+    timeDur.textContent = '5:56';
     seekFill.style.transition = 'none';
     seekFill.style.width = '0%';
     requestAnimationFrame(() => {
       seekFill.style.transition = 'width 6s linear';
-      seekFill.style.width = '38%';
+      seekFill.style.width = '18%';
     });
   }
   // switches which of art/viz/lyrics is on screen, mirroring applyVisualMode()
@@ -5828,6 +5951,32 @@ function runIntro(preview){
     void urlInput.offsetWidth;
     urlInput.classList.add('onb-pasted');
   }
+  // the generic "this was just tapped" pulse (see .onb-tap in the CSS above)
+  // - restartable, so the same element can be tapped more than once
+  function tap(el, withRing){
+    if (!el) return;
+    el.classList.remove('onb-tap');
+    if (withRing) el.classList.add('onb-tap-ring');
+    void el.offsetWidth;
+    el.classList.add('onb-tap');
+  }
+  // a real .lib-card, built with the same markup renderLibrary() uses, so
+  // the "your playlist just loaded" beat shows the actual grid UI rather
+  // than skipping straight to the player - never touches real library data
+  function showLoadedLibraryCard(){
+    libraryGrid.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'lib-card';
+    card.innerHTML =
+      '<div class="art single">' +
+        '<img src="' + DEMO_ART + '" alt="">' +
+        '<div class="title-overlay"><div class="marquee"><span>' + DEMO_TITLE + '</span></div></div>' +
+      '</div>' +
+      '<div class="info"><div class="name">' + DEMO_TITLE + '</div><div class="count">1 track</div></div>';
+    libraryGrid.appendChild(card);
+    libraryListWrap.classList.remove('hidden');
+    libraryEmpty.classList.add('hidden');
+  }
   // a beat that's only a caption: show it, hold, clear it, breathe
   async function beat(text, holdMs, tailMs){
     setCaption(text);
@@ -5842,6 +5991,13 @@ function runIntro(preview){
   // actually going to touch the app
   const TAP = isTouchDevice ? 'tap' : 'click';
 
+  function tabBtn(mode){ return Array.prototype.find.call(visualTabs, b => b.dataset.mode === mode); }
+
+  // the visitor gave the actual beat timestamps in "The Last Point" - every
+  // stage transition below lands on one of them (ms), so the cuts read as
+  // scored to the track rather than arbitrary:
+  // 900 4400 7600 11200 12900 14700 18300 21900 25300 27200 28800 32300
+  // 35800 39400 41100 42800
   async function sequence(){
     // score the sequence with the intro theme, fading in under the opening
     // beat; finish() fades it back out again over the same 700ms the chrome
@@ -5852,136 +6008,191 @@ function runIntro(preview){
       fadeMusic(MUSIC_PEAK, 1400);
     }
 
-    // 0. the mark alone, breathing - no caption, just a beat to arrive on
+    // 0. the mark alone, breathing - no caption, just a beat to arrive on [->900]
     await wait(900);
     if (done) return;
 
-    // 1. the mark becomes the input
+    // 1. the mark becomes the input [900->4400]
     markEl.classList.remove('is-idle');
     setView('library');
     setStage('input');
     setCaption('paste a link - Spotify, SoundCloud, or Apple Music');
-    await wait(750);
+    await wait(900);
     if (done) return;
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
     pasteUrl(demoUrl);
-    await wait(950);
+    await wait(1600);
     clearCaption();
-    await wait(350);
+    await wait(1000);
     if (done) return;
 
-    // 2. that one button is the whole commitment - hold on it, tap it
+    // 2. that one button is the whole commitment - hold on it, then a
+    // clear, punchy tap (zoom + the shared onb-tap emphasis together) [4400->7600]
     if (loadBtn) loadBtn.classList.add('onb-zoom');
     setCaption(TAP === 'tap' ? 'tap Load' : 'click Load');
-    await wait(950);
+    await wait(1200);
     if (loadBtn) loadBtn.classList.add('onb-press');
-    await wait(160);
+    tap(loadBtn, true);
+    await wait(600);
     if (loadBtn) loadBtn.classList.remove('onb-press');
-    await wait(550);
+    await wait(900);
     clearCaption();
     if (loadBtn) loadBtn.classList.remove('onb-zoom');
-    await wait(400);
+    await wait(500);
     if (done) return;
 
-    // 3. a beat to show it's actually doing something before tracks appear
+    // 3. a beat to show it's actually doing something before tracks appear [7600->11200]
     setCaption('finding your tracks...');
     if (loadBtn) loadBtn.classList.add('onb-loading');
-    await wait(1700);
+    await wait(2900);
     if (loadBtn) loadBtn.classList.remove('onb-loading');
     clearCaption();
-    await wait(400);
+    await wait(700);
     if (done) return;
 
-    // 4. the input becomes music
+    // 4. the real library grid, populated - one real .lib-card, not a jump
+    // straight to the player, so the actual "your stuff is here now" screen
+    // gets to register [11200->12900]
+    setStage('library');
+    showLoadedLibraryCard();
+    tap(libraryGrid.querySelector('.lib-card'));
+    setCaption('there it is');
+    await wait(1200);
+    clearCaption();
+    await wait(500);
+    if (done) return;
+
+    // 5. the library card becomes the player [12900->14700]
     setView('player');
     setStage('player');
     seedDemoTrack();
     setCaption('then just listen');
-    await wait(2400);
+    await wait(1300);
     clearCaption();
-    await wait(600);
+    await wait(500);
     if (done) return;
 
-    // 5. how it looks while it plays - the real style menu, opened and used,
-    // then the real visualizer tab for the cymatics field
+    // 6. how it looks while it plays - the real style menu, each option
+    // tapped as it's chosen; one caption spans both style beats [14700->18300->21900]
     setCaption('see it your way');
-    await wait(650);
+    await wait(700);
     openArtStyleMenu();
-    await wait(950);
+    await wait(900);
+    tap(artStyleMenu.querySelector('[data-style="record"]'));
     artworkWrap.dataset.artStyle = 'record';
-    await wait(1250);
+    await wait(2000);
+    if (done) return;
+    // -> 18300
+    tap(artStyleMenu.querySelector('[data-style="cassette"]'));
     artworkWrap.dataset.artStyle = 'cassette';
-    await wait(1250);
+    await wait(1800);
+    tap(artStyleMenu.querySelector('[data-style="default"]'));
     closeArtStyleMenu();
     artworkWrap.dataset.artStyle = 'default';
-    await wait(650);
-    if (done) return;
+    await wait(1000);
     clearCaption();
-    await wait(300);
-    setCaption('or watch it move');
-    await wait(650);
-    showVisual('viz');
-    await wait(1150);
-    if (!done) vizAdvancePattern();
-    await wait(1600);
-    showVisual('art');
-    clearCaption();
-    await wait(500);
+    await wait(800);
     if (done) return;
 
-    // 6. the field becomes discovery
-    setStage('discovery');
-    setCaption('something new, every day');
-    await wait(2700);
+    // 7. the visualizer tab, tapped - cymatics [21900->25300]
+    setCaption('or watch it move');
+    tap(tabBtn('viz'), true);
+    await wait(700);
+    showVisual('viz');
+    await wait(1200);
+    if (!done) vizAdvancePattern();
+    await wait(1000);
     clearCaption();
     await wait(600);
     if (done) return;
 
-    // 7. quick, real feature mentions - lyrics and liking both actually
-    // switch the real UI; crossfade / no ads / bug reports live in Settings,
-    // so those three stay caption-only rather than leaving the player mid-flow
-    setStage('player');
-    await wait(500);
-    if (done) return;
-
+    // 8. lyrics, right after cymatics - the other visualizer-tab option,
+    // same tap treatment [25300->27200]
     setCaption('sing along - lyrics, synced to the track');
-    await wait(550);
+    tap(tabBtn('lyrics'), true);
+    await wait(600);
     showVisual('lyrics');
-    await wait(1900);
+    await wait(900);
+    tap(tabBtn('art'));
     showVisual('art');
     clearCaption();
-    await wait(450);
+    await wait(400);
     if (done) return;
 
-    setCaption(TAP === 'tap' ? 'tap the heart to save it' : 'click the heart to save it');
-    await wait(550);
+    // 9. everything that lives in the transport row, one chapter: like,
+    // shuffle, repeat land under a single caption (no clear/reset between
+    // them) instead of three separate beats - each still a real tap on the
+    // real control, timed to the same beat marks [27200->28800->32300->35800]
+    setCaption('save it, shuffle it, loop it - all right here');
+    await wait(500);
+    tap(playerLikeBtn, true);
     if (playerLikeBtn) playerLikeBtn.classList.add('is-liked');
-    await wait(1650);
+    await wait(700);
     if (playerLikeBtn) playerLikeBtn.classList.remove('is-liked');
-    clearCaption();
     await wait(400);
     if (done) return;
-
-    // two beats, not three - crossfade and no-ads are both quick asides
-    // about playback, so they read together as one thought
-    await beat('crossfade smooths the handoff between tracks - and there’s never any ads', 2600, 500);
-    if (done) return;
-    await beat('found a bug? tell us - it’s in Settings', 2000, 500);
-    if (done) return;
-
-    await beat(isTouchDevice ? 'swipe the artwork to skip tracks' : 'space to play, arrow keys to skip', 1900, 550);
-    if (done) return;
-
-    // 8. everything collapses back into EBBLESS — the logo holds while the
-    // track fades out under finish()
-    setStage('outro');
-    await wait(900);
-    setCaption('that’s it.');
+    // -> 28800
+    await wait(600);
+    tap(shuffleBtn, true);
+    if (shuffleBtn) shuffleBtn.classList.add('is-active');
     await wait(2000);
+    if (shuffleBtn) shuffleBtn.classList.remove('is-active');
+    await wait(900);
+    if (done) return;
+    // -> 32300
+    await wait(600);
+    tap(repeatBtn, true);
+    if (repeatBtn) repeatBtn.classList.add('is-active');
+    await wait(2000);
+    if (repeatBtn) repeatBtn.classList.remove('is-active');
+    clearCaption();
+    await wait(900);
+    if (done) return;
+
+    // 10. the field becomes discovery [35800->39400]
+    setStage('discovery');
+    setCaption('something new, every day');
+    await wait(2800);
+    clearCaption();
+    await wait(800);
+    if (done) return;
+
+    // 11. the real Settings pane - crossfade toggled (cosmetically, never
+    // persisted - see renderCrossfadeUI() reset in finish()) and the real
+    // "Report a bug" row, both actually scrolled to and shown [39400->41100->42800]
+    setView('settings');
+    setStage('settings');
+    const settingsScroll = document.querySelector('#view-settings .view-scroll');
+    if (settingsScroll) settingsScroll.scrollTop = 0;
+    setCaption('crossfade smooths the handoff - no ads, ever');
+    await wait(500);
+    tap(crossfadeBtn, true);
+    crossfadeBtn.textContent = 'On';
+    crossfadeBtn.classList.add('is-active');
+    crossfadeDurRow.style.opacity = '1';
+    await wait(800);
     clearCaption();
     await wait(400);
-    setCaption('listen.');
-    await wait(2400);
+    if (done) return;
+    const bugRow = document.querySelector('#view-settings a[href^="mailto:"]');
+    if (bugRow && bugRow.scrollIntoView) bugRow.scrollIntoView({ block: 'center' });
+    setCaption('found a bug? tell us - it’s right here');
+    await wait(500);
+    tap(bugRow, true);
+    await wait(800);
+    clearCaption();
+    await wait(400);
+    if (done) return;
+    renderCrossfadeUI();
+    setView('player');
+    setStage('player');
+
+    // 12. the closing, device-specific power move
+    await beat(isTouchDevice ? 'swipe the artwork to skip tracks' : 'space to play, arrow keys to skip', 1600, 500);
+    if (done) return;
+
+    // no separate outro beat - the real splash (see startApp() inside
+    // finish()) is the landing, not a second logo screen first
     finish();
   }
   sequence();
@@ -6030,7 +6241,8 @@ let introBeatCapture = null;
 try{ introBeatCapture = new URLSearchParams(location.search).get('introBeat'); }catch(e){}
 if (introBeatCapture){
   const capMark = $('onbMark'), capCaption = $('onbCaption'), capDiscovery = $('onbDiscovery');
-  const STAGES = ['onb-stage-input','onb-stage-player','onb-stage-discovery','onb-stage-outro'];
+  const STAGES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings'];
+  const CAP_ART = 'brand/assets/demo-cover.jpg', CAP_TITLE = 'I Tried It', CAP_ARTIST = 'Unnayanaa, Mal Griot';
   function capStage(name){
     STAGES.forEach(c => document.body.classList.remove(c));
     if (name) document.body.classList.add('onb-stage-' + name);
@@ -6047,14 +6259,16 @@ if (introBeatCapture){
     capMark.classList.remove('is-idle');
     setView('player');
     const t = trackTitle.querySelector('span'), a = trackArtist.querySelector('span');
-    if (t) t.textContent = 'Your first track';
-    if (a) a.textContent = 'from the playlist';
-    artA.src = 'brand/assets/demo-cover.png';
+    if (t) t.textContent = CAP_TITLE;
+    if (a) a.textContent = CAP_ARTIST;
+    artA.src = CAP_ART;
     artA.classList.add('is-active');
     artworkWrap.dataset.mode = 'art';
     artworkWrap.dataset.artStyle = 'default';
+    attachArtworkFallback(recordLabelImg, { title: CAP_TITLE, art: CAP_ART });
+    cassetteUpdateTrack({ title: CAP_TITLE, art: CAP_ART }, 0);
     timeCur.textContent = '0:00';
-    timeDur.textContent = '3:24';
+    timeDur.textContent = '5:56';
     seekFill.style.transition = 'none';
     seekFill.style.width = '14%';
   }
@@ -6088,7 +6302,7 @@ if (introBeatCapture){
       setView('library');
       capStage('input');
       urlInput.value = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
-      if (loadBtn) loadBtn.classList.add('onb-zoom');
+      if (loadBtn) loadBtn.classList.add('onb-zoom', 'onb-press', 'onb-tap', 'onb-tap-ring');
       capCaptionText(TAP_CAP === 'tap' ? 'tap Load' : 'click Load');
       break;
     case 'loading':
@@ -6098,6 +6312,21 @@ if (introBeatCapture){
       urlInput.value = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
       if (loadBtn) loadBtn.classList.add('onb-loading');
       capCaptionText('finding your tracks...');
+      break;
+    case 'library':
+      capMark.classList.remove('is-idle');
+      setView('library');
+      capStage('library');
+      libraryGrid.innerHTML = '';
+      const capCard = document.createElement('div');
+      capCard.className = 'lib-card';
+      capCard.innerHTML = '<div class="art single"><img src="' + CAP_ART + '" alt="">' +
+        '<div class="title-overlay"><div class="marquee"><span>' + CAP_TITLE + '</span></div></div></div>' +
+        '<div class="info"><div class="name">' + CAP_TITLE + '</div><div class="count">1 track</div></div>';
+      libraryGrid.appendChild(capCard);
+      libraryListWrap.classList.remove('hidden');
+      libraryEmpty.classList.add('hidden');
+      capCaptionText('there it is');
       break;
     case 'player':
       capStage('player');
@@ -6124,13 +6353,6 @@ if (introBeatCapture){
       capVisual('viz');
       capCaptionText('or watch it move');
       break;
-    case 'discovery':
-      capMark.classList.remove('is-idle');
-      setView('player');
-      capStage('discovery');
-      capDiscovery.style.opacity = '1'; capDiscovery.style.filter = 'blur(0)'; capDiscovery.style.transform = 'scale(1)';
-      capCaptionText('something new, every day');
-      break;
     case 'lyrics':
       capStage('player');
       capSeedTrack();
@@ -6147,15 +6369,39 @@ if (introBeatCapture){
       if (playerLikeBtn) playerLikeBtn.classList.add('is-liked');
       capCaptionText(TAP_CAP === 'tap' ? 'tap the heart to save it' : 'click the heart to save it');
       break;
-    case 'mentions':
+    case 'shuffle':
       capStage('player');
       capSeedTrack();
-      capCaptionText('crossfade smooths the handoff between tracks - and there’s never any ads');
+      if (shuffleBtn) shuffleBtn.classList.add('is-active');
+      capCaptionText('shuffle the queue');
+      break;
+    case 'repeat':
+      capStage('player');
+      capSeedTrack();
+      if (repeatBtn) repeatBtn.classList.add('is-active');
+      capCaptionText('or loop it');
+      break;
+    case 'discovery':
+      capMark.classList.remove('is-idle');
+      setView('player');
+      capStage('discovery');
+      capDiscovery.style.opacity = '1'; capDiscovery.style.filter = 'blur(0)'; capDiscovery.style.transform = 'scale(1)';
+      capCaptionText('something new, every day');
+      break;
+    case 'mentions':
+      setView('settings');
+      capStage('settings');
+      crossfadeBtn.textContent = 'On';
+      crossfadeBtn.classList.add('is-active');
+      crossfadeDurRow.style.opacity = '1';
+      capCaptionText('crossfade smooths the handoff - no ads, ever');
       break;
     case 'bug':
-      capStage('player');
-      capSeedTrack();
-      capCaptionText('found a bug? tell us - it’s in Settings');
+      setView('settings');
+      capStage('settings');
+      const capBugRow = document.querySelector('#view-settings a[href^="mailto:"]');
+      if (capBugRow && capBugRow.scrollIntoView) capBugRow.scrollIntoView({ block: 'center' });
+      capCaptionText('found a bug? tell us - it’s right here');
       break;
     case 'power-desktop':
       capStage('player');
@@ -6166,14 +6412,6 @@ if (introBeatCapture){
       capStage('player');
       capSeedTrack();
       capCaptionText('swipe the artwork to skip tracks');
-      break;
-    case 'outro1':
-      capStage('outro');
-      capCaptionText('that’s it.');
-      break;
-    case 'outro2':
-      capStage('outro');
-      capCaptionText('listen.');
       break;
     case 'splash':
       discardIntroChrome();
