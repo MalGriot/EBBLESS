@@ -989,6 +989,14 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 #onbDiscovery .lib-card{width:min(220px,58vw);cursor:default}
 body.onb-stage-discovery #onbDiscovery{opacity:1;filter:blur(0);transform:scale(1)}
 
+/* #splash is opaque and visible by default (it's the no-FOUC cover shown
+   before JS decides what to do) and sits at z-index 9999 - normally that's
+   moot because the intro's own promoted views/backdrop sit above it at
+   10000+, but the desktop tri-section layout below leaves the real
+   #view-library/#view-player at their natural (unpromoted) stacking order,
+   which is UNDER the splash - so it has to be explicitly hidden here or it
+   blocks the whole app from showing through during the intro. */
+body.onb-active #splash{display:none!important}
 body.onb-active:not(.split-desktop) #topbar,body.onb-active #bottom-nav,body.onb-active #mini-bar,
 body.onb-active #queue-scrim,body.onb-active:not(.split-desktop) #queue-panel,
 body.onb-active #libpl-panel,body.onb-active #libpl-scrim{display:none!important}
@@ -996,7 +1004,7 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
   transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
-body.onb-stage-input #view-library,body.onb-stage-player #view-player,body.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
 body.onb-stage-settings #view-settings .settings-block:first-child{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
@@ -1054,7 +1062,7 @@ body.onb-stage-settings.split-desktop #onbBackdrop{opacity:0;pointer-events:none
 /* the "loaded library" beat promotes #view-library like the input stage
    does, but shows the populated grid (one real playlist card) instead of
    the paste form */
-body.onb-stage-library #view-library{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-active.onb-stage-library #view-library{opacity:1;filter:blur(0);transform:scale(1)}
 body.onb-stage-library:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-library:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
