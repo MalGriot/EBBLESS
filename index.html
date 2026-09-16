@@ -950,6 +950,7 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
   transition:opacity 550ms var(--ease-out),left 550ms var(--ease-out),top 550ms var(--ease-out)}
 #onbCaption span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
   font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:min(300px,78vw);
+  white-space:nowrap;
   background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
@@ -1004,8 +1005,8 @@ body.onb-active #libpl-panel,body.onb-active #libpl-scrim{display:none!important
    showLoadedLibraryPanel() in runIntro()) - narrower than undoing the rule
    above outright, so every other beat still gets the fullscreened, chrome-free
    promoted view */
-body.onb-active.onb-show-libpl #libpl-panel{display:flex!important}
-body.onb-active.onb-show-libpl #libpl-scrim{display:block!important}
+body.onb-active.onb-show-libpl #libpl-panel{display:flex!important;z-index:10003!important}
+body.onb-active.onb-show-libpl #libpl-scrim{display:block!important;z-index:10002!important}
 body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-desktop) #view-player,body.onb-active:not(.split-desktop) #view-settings{
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
@@ -5856,6 +5857,21 @@ function startApp(){
    visitor's first load; startApp() (and the real splash) always follows.
    ========================================================================= */
 const ONB_KEY = 'ebbless_onboarding_complete';
+// keeps an #onbCaption span on one line regardless of text length: measures
+// its natural (unwrapped) width against a viewport-relative budget and
+// steps the font-size down until it fits, rather than letting the CSS
+// max-width force a wrap
+function fitOnbCaptionLine(span){
+  const budget = Math.min(window.innerWidth * 0.86, 460);
+  span.style.maxWidth = 'none';
+  span.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(span).fontSize);
+  while (span.scrollWidth > budget && size > 11){
+    size -= 0.5;
+    span.style.fontSize = size + 'px';
+  }
+  span.style.maxWidth = Math.ceil(span.scrollWidth) + 'px';
+}
 function runIntro(preview){
   const prefersReduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const backdrop = $('onbBackdrop'), markEl = $('onbMark'), captionEl = $('onbCaption'),
@@ -5955,15 +5971,30 @@ function runIntro(preview){
     const bottomPx = Math.max(64, window.innerHeight * 0.26);
     return { left: window.innerWidth / 2, top: window.innerHeight - bottomPx };
   }
+  // the bounding box that covers every element in the list, not just one -
+  // lets a beat spotlight two things at once (e.g. the artwork square AND
+  // the button that's changing it) as a single lit region instead of
+  // picking just one to point at
+  function unionRect(els){
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    els.forEach(el => {
+      const rc = el.getBoundingClientRect();
+      left = Math.min(left, rc.left); top = Math.min(top, rc.top);
+      right = Math.max(right, rc.right); bottom = Math.max(bottom, rc.bottom);
+    });
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  }
   // anchors the caption next to a real element instead of a fixed spot -
   // below it when there's room, above it otherwise - so it reads as
   // pointing at the thing it's narrating rather than floating independently.
   // Also drives the spotlight cutout (see #onbSpotlight) over the same
   // element, so whatever's being talked about is the one bright thing on
-  // screen and everything else reads as dimmed background.
+  // screen and everything else reads as dimmed background. `el` can be a
+  // single element or an array of elements (spotlit together as one region).
   function placeCaptionNear(el, forceAbove){
     const vw = window.innerWidth, vh = window.innerHeight;
-    if (!el){
+    const els = Array.isArray(el) ? el.filter(Boolean) : (el ? [el] : []);
+    if (!els.length){
       const d = captionDefaultPos();
       captionEl.style.left = d.left + 'px';
       captionEl.style.top = d.top + 'px';
@@ -5971,7 +6002,7 @@ function runIntro(preview){
       if (spotlightEl) spotlightEl.classList.remove('is-visible');
       return;
     }
-    const r = el.getBoundingClientRect();
+    const r = els.length > 1 ? unionRect(els) : els[0].getBoundingClientRect();
     const gap = 16;
     // half the caption's own max-width (plus a little breathing room), not
     // a flat margin - a target near either edge (e.g. shuffle/repeat at the
@@ -6011,6 +6042,7 @@ function runIntro(preview){
     const span = document.createElement('span');
     span.textContent = text;
     captionEl.appendChild(span);
+    fitOnbCaptionLine(span);
     placeCaptionNear(el || null, forceAbove);
     captionEl.classList.remove('is-visible');
     void captionEl.offsetWidth;
@@ -6149,8 +6181,8 @@ function runIntro(preview){
   }
 
   // device-specific wording - the same sequence runs everywhere, but the
-  // verb and the one closing "power move" beat match how this visitor is
-  // actually going to touch the app
+  // verb and the "power move" beat match how this visitor is actually
+  // going to touch the app
   const TAP = isTouchDevice ? 'tap' : 'click';
 
   function tabBtn(mode){ return Array.prototype.find.call(visualTabs, b => b.dataset.mode === mode); }
@@ -6178,7 +6210,10 @@ function runIntro(preview){
     markEl.classList.remove('is-idle');
     setView('library');
     setStage('input');
-    setCaption('paste a link - Spotify, SoundCloud, or Apple Music', urlInput);
+    setCaption('Paste a link to a playlist or album', urlInput);
+    await wait(900);
+    if (done) return;
+    setCaption('Spotify, SoundCloud, or Apple Music', urlInput);
     await wait(900);
     if (done) return;
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
@@ -6191,7 +6226,7 @@ function runIntro(preview){
     // 2. that one button is the whole commitment - hold on it, then a
     // clear, punchy tap (zoom + the shared onb-tap emphasis together) [4400->7600]
     if (loadBtn) loadBtn.classList.add('onb-zoom');
-    setCaption(TAP === 'tap' ? 'tap Load' : 'click Load', loadBtn);
+    setCaption(TAP === 'tap' ? 'Tap Load' : 'Click Load', loadBtn);
     await wait(1200);
     if (loadBtn) loadBtn.classList.add('onb-press');
     tap(loadBtn, true);
@@ -6204,7 +6239,7 @@ function runIntro(preview){
     if (done) return;
 
     // 3. a beat to show it's actually doing something before tracks appear [7600->11200]
-    setCaption('finding your tracks...', loadBtn);
+    setCaption('Loading your tracks...', loadBtn);
     if (loadBtn) loadBtn.classList.add('onb-loading');
     await wait(2900);
     if (loadBtn) loadBtn.classList.remove('onb-loading');
@@ -6219,7 +6254,7 @@ function runIntro(preview){
     showLoadedLibraryCard();
     const loadedCard = libraryGrid.querySelector('.lib-card');
     tap(loadedCard);
-    setCaption('there it is', loadedCard);
+    setCaption('There it is', loadedCard);
     await wait(1200);
     clearCaption();
     await wait(400);
@@ -6230,7 +6265,12 @@ function runIntro(preview){
     // people learn to look for the playlist they just loaded
     tap(loadedCard);
     showLoadedLibraryPanel();
-    setCaption('your playlist lives here', libplPanel);
+    setCaption('Your playlist lives here', libplPanel);
+    // the generic 400ms re-measure in correctCaptionPos() lands before this
+    // panel's own 500ms slide-open transition (--dur-surface) finishes, so
+    // the spotlight can still be chasing a moving target - one more
+    // re-measure once the slide has actually settled fixes the alignment
+    setTimeout(() => { if (!done) placeCaptionNear(libplPanel); }, 550);
     await wait(1400);
     closeLoadedLibraryPanel();
     clearCaption();
@@ -6241,15 +6281,18 @@ function runIntro(preview){
     setView('player');
     setStage('player');
     seedDemoTrack();
-    setCaption('then just listen', document.querySelector('.track-meta'));
+    setCaption('Then just listen', document.querySelector('.track-meta'));
     await wait(1300);
     clearCaption();
     await wait(500);
     if (done) return;
 
     // 6. how it looks while it plays - the real style menu, each option
-    // tapped as it's chosen; one caption spans both style beats [14700->18300->21900]
-    setCaption('see it your way', isTouchDevice ? artTabBtn : artStyleMenu, isTouchDevice);
+    // tapped as it's chosen; one caption spans both style beats [14700->18300->21900].
+    // spotlights the artwork square AND the control that drives it (the
+    // tab trigger on touch, the open menu on desktop) together, as one lit
+    // region - both the thing that changes and the thing you'd press
+    setCaption('Choose your style', [artworkWrap, isTouchDevice ? artTabBtn : artStyleMenu]);
     await wait(700);
     openArtStyleMenu();
     await wait(900);
@@ -6269,8 +6312,10 @@ function runIntro(preview){
     await wait(800);
     if (done) return;
 
-    // 7. the visualizer tab, tapped - cymatics [21900->25300]
-    setCaption('or watch it move', tabBtn('viz'));
+    // 7. the visualizer tab, tapped - cymatics [21900->25300]. spotlights
+    // the artwork square plus the tab that switches it, same as the style
+    // beat above
+    setCaption('Or watch it move', [artworkWrap, tabBtn('viz')]);
     tap(tabBtn('viz'), true);
     await wait(700);
     showVisual('viz');
@@ -6282,11 +6327,13 @@ function runIntro(preview){
     if (done) return;
 
     // 8. lyrics, right after cymatics - the other visualizer-tab option,
-    // same tap treatment [25300->27200]
-    setCaption('sing along - lyrics, synced to the track', tabBtn('lyrics'));
+    // same tap treatment [25300->27200]; artwork square + its tab, same as viz
+    setCaption('Song lyrics', [artworkWrap, tabBtn('lyrics')]);
     tap(tabBtn('lyrics'), true);
     await wait(600);
     showVisual('lyrics');
+    await wait(900);
+    setCaption('Synced to the track', [artworkWrap, tabBtn('lyrics')]);
     await wait(900);
     tap(tabBtn('art'));
     showVisual('art');
@@ -6298,7 +6345,7 @@ function runIntro(preview){
     // shuffle, repeat land under a single caption (no clear/reset between
     // them) instead of three separate beats - each still a real tap on the
     // real control, timed to the same beat marks [27200->28800->32300->35800]
-    setCaption('save it, shuffle it, loop it - all right here', playerLikeBtn);
+    setCaption('Save it', playerLikeBtn);
     await wait(500);
     tap(playerLikeBtn, true);
     if (playerLikeBtn) playerLikeBtn.classList.add('is-liked');
@@ -6306,8 +6353,15 @@ function runIntro(preview){
     if (playerLikeBtn) playerLikeBtn.classList.remove('is-liked');
     await wait(400);
     if (done) return;
+
+    // skip tracks, called out before shuffle so the visitor knows how to
+    // move between tracks before the sequence shows them changing the order
+    await beat(isTouchDevice ? 'swipe the artwork to skip tracks' : 'space to play, arrow keys to skip', 1600, 500,
+      isTouchDevice ? artworkWrap : null);
+    if (done) return;
+
     // -> 28800
-    moveCaptionNear(shuffleBtn);
+    setCaption('Shuffle it', shuffleBtn);
     await wait(600);
     tap(shuffleBtn, true);
     if (shuffleBtn) shuffleBtn.classList.add('is-active');
@@ -6316,20 +6370,29 @@ function runIntro(preview){
     await wait(900);
     if (done) return;
     // -> 32300
-    moveCaptionNear(repeatBtn);
+    setCaption('Loop it', repeatBtn);
     await wait(600);
+    // repeat cycles off -> all -> one -> off; walk all three so the
+    // visitor sees the "1" badge state, not just the plain active state
     tap(repeatBtn, true);
     if (repeatBtn) repeatBtn.classList.add('is-active');
-    await wait(2000);
+    await wait(1000);
+    tap(repeatBtn, true);
+    if (repeatOneBadge) repeatOneBadge.hidden = false;
+    await wait(1000);
+    tap(repeatBtn, true);
     if (repeatBtn) repeatBtn.classList.remove('is-active');
+    if (repeatOneBadge) repeatOneBadge.hidden = true;
     clearCaption();
     await wait(900);
     if (done) return;
 
     // 10. the field becomes discovery [35800->39400]
     setStage('discovery');
-    setCaption('something new, every day', discoveryEl.querySelector('.lib-card'));
-    await wait(2800);
+    setCaption('New music for you', discoveryEl.querySelector('.lib-card'));
+    await wait(1400);
+    setCaption('Every day', discoveryEl.querySelector('.lib-card'));
+    await wait(1400);
     clearCaption();
     await wait(800);
     if (done) return;
@@ -6341,19 +6404,21 @@ function runIntro(preview){
     setStage('settings');
     const settingsScroll = document.querySelector('#view-settings .view-scroll');
     if (settingsScroll) settingsScroll.scrollTop = 0;
-    setCaption('crossfade smooths the handoff - no ads, ever', crossfadeBtn);
+    setCaption('Crossfade smoothly', crossfadeBtn);
     await wait(500);
     tap(crossfadeBtn, true);
     crossfadeBtn.textContent = 'On';
     crossfadeBtn.classList.add('is-active');
     crossfadeDurRow.style.opacity = '1';
+    await wait(500);
+    setCaption('With no ads ever', crossfadeBtn);
     await wait(800);
     clearCaption();
     await wait(400);
     if (done) return;
     const bugRow = document.querySelector('#view-settings a[href^="mailto:"]');
     if (bugRow && bugRow.scrollIntoView) bugRow.scrollIntoView({ block: 'center' });
-    setCaption('found a bug? tell us - it’s right here', bugRow);
+    setCaption('Tell us if you find a bug', bugRow);
     await wait(500);
     tap(bugRow, true);
     await wait(800);
@@ -6363,13 +6428,6 @@ function runIntro(preview){
     renderCrossfadeUI();
     setView('player');
     setStage('player');
-
-    // 12. the closing, device-specific power move - touch points at the
-    // artwork it's describing; the keyboard version isn't about one element
-    // on screen, so it keeps the default centered spot
-    await beat(isTouchDevice ? 'swipe the artwork to skip tracks' : 'space to play, arrow keys to skip', 1600, 500,
-      isTouchDevice ? artworkWrap : null);
-    if (done) return;
 
     // no separate outro beat - the real splash (see startApp() inside
     // finish()) is the landing, not a second logo screen first
@@ -6430,9 +6488,19 @@ if (introBeatCapture){
   }
   // mirrors runIntro()'s placeCaptionNear() so debug captures match the
   // real per-beat anchored caption + spotlight cutout exactly
+  function capUnionRect(els){
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    els.forEach(el => {
+      const rc = el.getBoundingClientRect();
+      left = Math.min(left, rc.left); top = Math.min(top, rc.top);
+      right = Math.max(right, rc.right); bottom = Math.max(bottom, rc.bottom);
+    });
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  }
   function capPlaceNear(el, forceAbove){
     const vw = window.innerWidth, vh = window.innerHeight;
-    if (!el){
+    const els = Array.isArray(el) ? el.filter(Boolean) : (el ? [el] : []);
+    if (!els.length){
       const bottomPx = Math.max(64, vh * 0.26);
       capCaption.style.left = (vw / 2) + 'px';
       capCaption.style.top = (vh - bottomPx) + 'px';
@@ -6440,7 +6508,7 @@ if (introBeatCapture){
       if (capSpotlight) capSpotlight.classList.remove('is-visible');
       return;
     }
-    const r = el.getBoundingClientRect();
+    const r = els.length > 1 ? capUnionRect(els) : els[0].getBoundingClientRect();
     const gap = 16;
     // half the caption's own max-width (plus a little breathing room), not
     // a flat margin - a target near either edge (e.g. shuffle/repeat at the
@@ -6470,6 +6538,7 @@ if (introBeatCapture){
     const span = document.createElement('span');
     span.textContent = text;
     capCaption.appendChild(span);
+    fitOnbCaptionLine(span);
     capPlaceNear(el || null, forceAbove);
     capCaption.classList.add('is-visible');
   }
@@ -6513,7 +6582,7 @@ if (introBeatCapture){
       capMark.classList.remove('is-idle');
       setView('library');
       capStage('input');
-      capCaptionText('paste a link - Spotify, SoundCloud, or Apple Music', urlInput);
+      capCaptionText('Paste a link to a playlist or album', urlInput);
       break;
     case 'load':
       capMark.classList.remove('is-idle');
@@ -6521,7 +6590,7 @@ if (introBeatCapture){
       capStage('input');
       urlInput.value = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
       if (loadBtn) loadBtn.classList.add('onb-zoom', 'onb-press', 'onb-tap', 'onb-tap-ring');
-      capCaptionText(TAP_CAP === 'tap' ? 'tap Load' : 'click Load', loadBtn);
+      capCaptionText(TAP_CAP === 'tap' ? 'Tap Load' : 'Click Load', loadBtn);
       break;
     case 'loading':
       capMark.classList.remove('is-idle');
@@ -6529,7 +6598,7 @@ if (introBeatCapture){
       capStage('input');
       urlInput.value = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
       if (loadBtn) loadBtn.classList.add('onb-loading');
-      capCaptionText('finding your tracks...', loadBtn);
+      capCaptionText('Loading your tracks...', loadBtn);
       break;
     case 'library':
       capMark.classList.remove('is-idle');
@@ -6544,7 +6613,7 @@ if (introBeatCapture){
       libraryGrid.appendChild(capCard);
       libraryListWrap.classList.remove('hidden');
       libraryEmpty.classList.add('hidden');
-      capCaptionText('there it is', capCard);
+      capCaptionText('There it is', capCard);
       break;
     case 'library-panel':
       capMark.classList.remove('is-idle');
@@ -6563,32 +6632,32 @@ if (introBeatCapture){
       libplBody.appendChild(capRow);
       document.body.classList.add('onb-show-libpl');
       libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
-      capCaptionText('your playlist lives here', libplPanel);
+      capCaptionText('Your playlist lives here', libplPanel);
       break;
     case 'player':
       capStage('player');
       capSeedTrack();
-      capCaptionText('then just listen', document.querySelector('.track-meta'));
+      capCaptionText('Then just listen', document.querySelector('.track-meta'));
       break;
     case 'style-record':
       capStage('player');
       capSeedTrack();
       artworkWrap.dataset.artStyle = 'record';
       openArtStyleMenu();
-      capCaptionText('see it your way', isTouchDevice ? artTabBtn : artStyleMenu, isTouchDevice);
+      capCaptionText('Choose your style', [artworkWrap, isTouchDevice ? artTabBtn : artStyleMenu]);
       break;
     case 'style-cassette':
       capStage('player');
       capSeedTrack();
       artworkWrap.dataset.artStyle = 'cassette';
       openArtStyleMenu();
-      capCaptionText('see it your way', isTouchDevice ? artTabBtn : artStyleMenu, isTouchDevice);
+      capCaptionText('Choose your style', [artworkWrap, isTouchDevice ? artTabBtn : artStyleMenu]);
       break;
     case 'viz':
       capStage('player');
       capSeedTrack();
       capVisual('viz');
-      capCaptionText('or watch it move', Array.prototype.find.call(visualTabs, b => b.dataset.mode === 'viz'));
+      capCaptionText('Or watch it move', [artworkWrap, Array.prototype.find.call(visualTabs, b => b.dataset.mode === 'viz')]);
       break;
     case 'lyrics':
       capStage('player');
@@ -6598,32 +6667,32 @@ if (introBeatCapture){
       // never runs - show the same empty-state copy loadLyricsForTrack()
       // would, rather than an uninformative blank panel
       lyricsScroller.innerHTML = '<div class="lyrics-empty">No lyrics found for this track.</div>';
-      capCaptionText('sing along - lyrics, synced to the track', Array.prototype.find.call(visualTabs, b => b.dataset.mode === 'lyrics'));
+      capCaptionText('Song lyrics', [artworkWrap, Array.prototype.find.call(visualTabs, b => b.dataset.mode === 'lyrics')]);
       break;
     case 'liked':
       capStage('player');
       capSeedTrack();
       if (playerLikeBtn) playerLikeBtn.classList.add('is-liked');
-      capCaptionText('save it, shuffle it, loop it - all right here', playerLikeBtn);
+      capCaptionText('Save it', playerLikeBtn);
       break;
     case 'shuffle':
       capStage('player');
       capSeedTrack();
       if (shuffleBtn) shuffleBtn.classList.add('is-active');
-      capCaptionText('save it, shuffle it, loop it - all right here', shuffleBtn);
+      capCaptionText('Shuffle it', shuffleBtn);
       break;
     case 'repeat':
       capStage('player');
       capSeedTrack();
       if (repeatBtn) repeatBtn.classList.add('is-active');
-      capCaptionText('save it, shuffle it, loop it - all right here', repeatBtn);
+      capCaptionText('Loop it', repeatBtn);
       break;
     case 'discovery':
       capMark.classList.remove('is-idle');
       setView('player');
       capStage('discovery');
       capDiscovery.style.opacity = '1'; capDiscovery.style.filter = 'blur(0)'; capDiscovery.style.transform = 'scale(1)';
-      capCaptionText('something new, every day', capDiscovery.querySelector('.lib-card'));
+      capCaptionText('New music for you', capDiscovery.querySelector('.lib-card'));
       break;
     case 'mentions':
       setView('settings');
@@ -6631,14 +6700,14 @@ if (introBeatCapture){
       crossfadeBtn.textContent = 'On';
       crossfadeBtn.classList.add('is-active');
       crossfadeDurRow.style.opacity = '1';
-      capCaptionText('crossfade smooths the handoff - no ads, ever', crossfadeBtn);
+      capCaptionText('Crossfade smoothly', crossfadeBtn);
       break;
     case 'bug':
       setView('settings');
       capStage('settings');
       const capBugRow = document.querySelector('#view-settings a[href^="mailto:"]');
       if (capBugRow && capBugRow.scrollIntoView) capBugRow.scrollIntoView({ block: 'center' });
-      capCaptionText('found a bug? tell us - it’s right here', capBugRow);
+      capCaptionText('Tell us if you find a bug', capBugRow);
       break;
     case 'power-desktop':
       capStage('player');
