@@ -6776,6 +6776,20 @@ function runIntro(preview){
     setStage(null);
     await wait(900);
     if (done) return;
+    // "Flow with the go" has to appear already centered, not glide there:
+    // #onbCaption's left/top carry a 550ms transition (see its base rule)
+    // so any earlier beat can move it, and this caption still holds
+    // whatever off-center left/top the last real target (the bug-report
+    // row) left it at. onb-cap-center's top:50% override and setCaption()'s
+    // own left recompute would both then read as real value changes and
+    // glide in from that stale spot instead of the words just appearing in
+    // place. Snap left/top to center with the transition suspended first
+    // so there's nothing left to glide from.
+    captionEl.style.transition = 'none';
+    captionEl.style.left = '50%';
+    captionEl.style.top = '50%';
+    void captionEl.offsetWidth;
+    captionEl.style.transition = '';
     captionEl.classList.add('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle');
     setCaption('Flow with the go');
     await wait(1100);
@@ -6785,8 +6799,22 @@ function runIntro(preview){
     captionEl.classList.add('onb-cap-blink-out');
     await wait(550);
     if (done) return;
+    // teardown has to be instant, not transitioned: onb-cap-blink-out's
+    // keyframes hold the span at opacity 0/blur 24px via `forwards`, but
+    // that hold only lasts while the class stays on - removing it (below)
+    // snaps the span's opacity back to its un-animated default (1, fully
+    // visible) the instant the class is gone. Doing that removal, and
+    // dropping onb-cap-center's top:50% override, while #onbCaption's own
+    // opacity/top transitions are still live made the words visibly
+    // un-blink and slide down to the caption's default lower position
+    // instead of just disappearing where they already were. Suspending the
+    // transition for one synchronous flip makes every change land in the
+    // same frame with nothing to animate.
+    captionEl.style.transition = 'none';
     clearCaption();
     captionEl.classList.remove('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle', 'onb-cap-blink-out');
+    void captionEl.offsetWidth;
+    captionEl.style.transition = '';
     const wordImg = markEl.querySelector('img');
     if (wordImg) wordImg.src = 'brand/assets/icons/icon-512.png';
     setStage('outro');
