@@ -2338,6 +2338,8 @@ function toggleLibraryPlaylistPanel(id){
     if (dot) dot.classList.remove('is-active');
   }
 
+  if (state.queueOpen) closeQueuePanel();
+
   openLibraryPanelId = id;
   libplTitle.textContent = pl.name;
   libplBody.innerHTML = '';
@@ -3936,6 +3938,7 @@ function wireQueueRowGestures(row, handle){
    ========================================================================= */
 function toggleQueuePanel(){ state.queueOpen ? closeQueuePanel() : openQueuePanel(); }
 function openQueuePanel(){
+  closeLibraryPlaylistPanel();
   state.queueOpen = true;
   queuePanel.classList.add('is-open'); queueScrim.classList.add('is-open');
   document.body.classList.add('queue-open');
@@ -3991,6 +3994,16 @@ attachSwipeToDismiss(queuePanel, closeQueuePanel);
    See README for the ad-timing tradeoff itself.
    ========================================================================= */
 const UNMUTE_DELAY_MS = 5000;
+// Ads run far longer than the flat timer on some loads (non-skippable
+// pre-rolls commonly run 6-20s), which left them audible once the timer
+// fired. getDuration() is a real, documented signal here: an ad in progress
+// reports the ad's own (short) duration, not the real track's, so treat a
+// suspiciously short duration at the timer mark as "still an ad" and keep
+// rechecking rather than unmuting into it. Capped so a track never stays
+// muted forever if something genuinely short is queued.
+const UNMUTE_RECHECK_MS = 3000;
+const UNMUTE_MAX_WAIT_MS = 20000;
+const MIN_CONTENT_DURATION_S = 90;
 
 function makeDeck(id){ return { id, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null }; }
 const decks = [ makeDeck('yt-deck-a'), makeDeck('yt-deck-b') ];
@@ -4026,6 +4039,24 @@ function resetDeck(deck){
   if (deck.player){
     try { deck.player.mute && deck.player.mute(); deck.player.stopVideo && deck.player.stopVideo(); } catch(e){}
   }
+}
+
+// Called at each unmute check point: unmutes into real content, or — if the
+// player's own reported duration still looks ad-length — pushes the check
+// out a bit further instead of confirming.
+function scheduleAdCheck(deck){
+  deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_DELAY_MS);
+}
+function checkDeckReady(deck){
+  if (!deck.player) return;
+  const elapsed = Date.now() - deck.muteStartTs;
+  const dur = deck.player.getDuration ? (deck.player.getDuration() || 0) : 0;
+  const looksLikeAd = dur > 0 && dur < MIN_CONTENT_DURATION_S;
+  if (looksLikeAd && elapsed < UNMUTE_MAX_WAIT_MS){
+    deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_RECHECK_MS);
+    return;
+  }
+  onDeckConfirmed(deck);
 }
 
 function onDeckConfirmed(deck){
@@ -4087,7 +4118,7 @@ function createDeckPlayer(deck, videoId){
         if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v, suggestedQuality: LOWEST_QUALITY }); }
         deck.confirmed = false;
         deck.muteStartTs = Date.now();
-        deck.unmuteTimer = setTimeout(() => onDeckConfirmed(deck), UNMUTE_DELAY_MS);
+        scheduleAdCheck(deck);
         if (deck === activeDeck()) updateAdLoadingIcon();
       },
       onStateChange: function(e){ onDeckStateChange(deck, e); },
@@ -4105,7 +4136,7 @@ function loadIntoDeck(deck, videoId, isActive){
   deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
   forceLowestQuality(deck);
   deck.muteStartTs = Date.now();
-  deck.unmuteTimer = setTimeout(() => onDeckConfirmed(deck), UNMUTE_DELAY_MS);
+  scheduleAdCheck(deck);
   if (deck === activeDeck()) updateAdLoadingIcon();
 }
 
@@ -5159,8 +5190,17 @@ function stopSeekPoll(){
   persistResume();
 }
 window.addEventListener('beforeunload', persistResume);
+// iOS suspends the YouTube iframe's <video> element (the one actually making
+// sound) as soon as the screen locks or the tab backgrounds — it isn't a
+// user pause, YouTube just silently reports PAUSED. keepAliveAudio is a real
+// <audio> element, which iOS exempts from that suspension, so the lock
+// screen still shows a "playing" transport — but the underlying track stays
+// paused until something resumes it. Remember whether it was actually
+// playing going into the background and resume it coming back.
+let wasPlayingBeforeHide = false;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){
+    wasPlayingBeforeHide = artworkWrap.classList.contains('is-playing');
     persistResume();
     lsSet(LS_BACKGROUNDED_AT, Date.now());
   } else {
@@ -5170,6 +5210,7 @@ document.addEventListener('visibilitychange', () => {
       return;
     }
     lsDel(LS_BACKGROUNDED_AT);
+    if (wasPlayingBeforeHide) resumePlayback();
   }
 });
 function updateSeekUI(){
@@ -5440,11 +5481,13 @@ miniBar.addEventListener('click', () => setView('player'));
 ensureSwellPlaylist();
 renderLibrary();
 renderQueuePanel();
-setView('player');
 // Resuming reads back whatever was last saved, which can be stale in ways
 // tryResume itself doesn't anticipate - never let a bad resume take the
 // rest of init down with it (the splash screen would hang forever).
 try{ tryResume(); } catch(e){}
+// First-time visitors (or anyone with nothing resumed) have no track to
+// show on the player view, so land them on the library instead.
+setView(currentTrack() ? 'player' : 'library');
 if (!currentTrack()) updateMiniBarVisibility();
 refreshSwellIfStale();
 // Sessions left open across midnight would otherwise keep showing
