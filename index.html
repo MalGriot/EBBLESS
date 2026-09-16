@@ -375,7 +375,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .art-style-menu.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 .art-style-opt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;
-  color:var(--faint);font-size:13px;text-align:left;transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  color:var(--faint);font-size:13px;text-align:left;transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .art-style-opt:hover{background:var(--panel-2);color:var(--text)}
 .art-style-label{flex:1}
 .art-style-check{width:14px;height:14px;flex:none;opacity:0;color:var(--accent)}
@@ -1075,6 +1075,14 @@ body.onb-stage-settings.split-desktop #onbBackdrop{opacity:0;pointer-events:none
   0%{opacity:.9;transform:scale(.7)}
   100%{opacity:0;transform:scale(1.45)}
 }
+
+/* simulated hover + press for the intro's art-style picker - nothing is
+   actually under a cursor during the scripted walkthrough, so each option
+   gets its real :hover look toggled on by class, then a brief scale-down
+   press just before it's chosen, so "selecting a style" reads as an actual
+   click rather than a style just changing on its own */
+.art-style-opt.onb-sim-hover{background:var(--panel-2);color:var(--text)}
+.art-style-opt.onb-sim-press{transform:scale(.96)}
 
 /* the "loaded library" beat promotes #view-library like the input stage
    does, but shows the populated grid (one real playlist card) instead of
@@ -6169,6 +6177,24 @@ function runIntro(preview){
     if (withRing) el.classList.add('onb-tap-ring');
     void el.offsetWidth;
     el.classList.add('onb-tap');
+  }
+  // a scripted "cursor arrives, then clicks" beat for elements that aren't
+  // actually under a pointer during the intro - toggles the real :hover
+  // look on via .onb-sim-hover, holds it, presses (.onb-sim-press) just
+  // before the tap, then clears both so the next option starts clean.
+  // Used for the art-style menu so choosing record/cassette/default reads
+  // as a real hover-then-click instead of the artwork just changing.
+  async function hoverThenPress(el, withRing){
+    if (!el) return;
+    el.classList.add('onb-sim-hover');
+    await wait(360);
+    if (done) { el.classList.remove('onb-sim-hover'); return; }
+    el.classList.add('onb-sim-press');
+    await wait(140);
+    el.classList.remove('onb-sim-press');
+    tap(el, withRing);
+    await wait(160);
+    el.classList.remove('onb-sim-hover');
   }
   // a real .lib-card, built with the same markup renderLibrary() uses, so
   // the "your playlist just loaded" beat shows the actual grid UI rather
