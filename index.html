@@ -2514,7 +2514,7 @@ function updatePlayerAccentColor(track){
 /* =========================================================================
    LIBRARY RENDER
    ========================================================================= */
-function getLibraryView(){ return lsGet(LS_LIB_VIEW, 'grid'); }
+function getLibraryView(){ return lsGet(LS_LIB_VIEW, 'compact'); }
 function setLibraryView(mode){
   lsSet(LS_LIB_VIEW, mode);
   libraryGrid.classList.toggle('is-list', mode === 'list');
