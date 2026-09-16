@@ -5201,7 +5201,12 @@ function setMarqueeText(el, text){
       // express that as a static CSS keyframe percentage (scroll speed varies
       // per title), so drive it with the Web Animations API instead, where
       // the hold's share of the timeline is computed per instance.
-      const dist = span.scrollWidth + gap;
+      // dist must be the EXACT gap between the two copies' start positions,
+      // or the loop resets a hair before span2 lines up with where span1
+      // started - visible as a stutter/snap right at the wrap. scrollWidth
+      // rounds to a whole pixel; the two spans' actual rendered rects don't,
+      // so measure the real gap instead of trusting scrollWidth + a constant.
+      const dist = span2.getBoundingClientRect().left - span.getBoundingClientRect().left;
       // One constant px/s for every marquee, short or long - no per-instance
       // min/max, so nothing scrolls relatively slower or faster than
       // anything else.
