@@ -938,6 +938,40 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   animation:none;transition:opacity 380ms var(--ease-in),transform 380ms var(--ease-in),filter 380ms var(--ease-in)}
 body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 @keyframes onb-breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.05);opacity:1}}
+/* the very last beat before the real splash takes over: the PWA icon
+   (swapped in for the outro, see runIntro()) flickers rather than just
+   fading, then blurs out hard - a last flash of life instead of a plain
+   dissolve, timed to finish() 's 700ms teardown window so it's gone by the
+   time startApp() shows the real splash */
+#onbMark.is-outro-blink #onbWord{animation:onb-outro-blink 650ms steps(1,end) forwards}
+@keyframes onb-outro-blink{
+  0%{opacity:1;filter:blur(0)}
+  10%{opacity:.1;filter:blur(3px)}
+  20%{opacity:1;filter:blur(0)}
+  32%{opacity:.12;filter:blur(5px)}
+  42%{opacity:1;filter:blur(1px)}
+  55%{opacity:.15;filter:blur(7px)}
+  68%{opacity:.85;filter:blur(4px)}
+  100%{opacity:0;filter:blur(24px)}
+}
+/* mirror of onb-outro-blink for the icon's entrance - the same flicker
+   pattern run in reverse, so the logo arrives with a flash of life
+   instead of a plain fade-in (see runIntro()'s closing beat) */
+#onbMark.is-outro-blink-in #onbWord{animation:onb-outro-blink-in 600ms steps(1,end) forwards}
+@keyframes onb-outro-blink-in{
+  0%{opacity:0;filter:blur(24px)}
+  12%{opacity:.85;filter:blur(4px)}
+  25%{opacity:.12;filter:blur(7px)}
+  38%{opacity:1;filter:blur(1px)}
+  50%{opacity:.15;filter:blur(5px)}
+  62%{opacity:1;filter:blur(0)}
+  75%{opacity:.1;filter:blur(3px)}
+  88%{opacity:1;filter:blur(0)}
+  100%{opacity:1;filter:blur(0)}
+}
+@media (prefers-reduced-motion: reduce){
+  #onbMark.is-outro-blink #onbWord,#onbMark.is-outro-blink-in #onbWord{animation:none}
+}
 
 /* caption text sits over real, busy graphics (artwork, cymatics field,
    discovery art) for most of the sequence - a flat --faint grey reads fine
@@ -975,6 +1009,30 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
    pill - this is EBBLESS speaking for itself, not a callout pointing at a
    control */
 #onbCaption.onb-cap-center{top:50% !important;transform:translate(-50%,-50%) !important}
+
+/* the persistent "Paste a playlist..." label pinned above the input box -
+   see setMainCaption() in runIntro(). Unlike #onbCaption above, this one
+   never swaps text or slides to a new target mid-beat: it stays up from the
+   moment the input appears until the flow moves on to the Load button, so
+   the app's one core action reads as the headline while the narration
+   bubble below it cycles through the supported-link detail. Same pill
+   styling as #onbCaption (this is still EBBLESS talking, just pinned in
+   place) with the accent tab flipped to the bottom since it always sits
+   above what it's pointing at. */
+#onbCaptionMain{position:fixed;left:50%;top:50%;z-index:10004;pointer-events:none;
+  transform:translate(-50%,-100%);opacity:0;
+  transition:opacity 550ms var(--ease-out),left 550ms var(--ease-out),top 550ms var(--ease-out)}
+#onbCaptionMain span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
+  font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:min(300px,78vw);
+  white-space:nowrap;
+  background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
+  box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(224,178,106,.08) inset;
+  padding:13px 22px;border-radius:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#onbCaptionMain span::before{content:'';position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+  width:30px;height:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(224,178,106,.7)}
+#onbCaptionMain.is-visible{opacity:1}
 #onbCaption.onb-cap-plain span{background:none;border:none;box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;max-width:min(92vw,560px);
   font-size:clamp(22px,5vw,34px);font-weight:700;letter-spacing:.02em}
@@ -986,6 +1044,17 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 #onbCaption.onb-cap-cycle span{animation:current-label-cycle 1.2s linear infinite}
 @media (prefers-reduced-motion: reduce){
   #onbCaption.onb-cap-cycle span{animation:none}
+}
+/* "Flow with the go" 's own exit: the words blink and blur out (reusing
+   the icon's onb-outro-blink keyframes, see #onbMark.is-outro-blink) before
+   the icon takes over, rather than the plain 550ms fade every other
+   caption uses. Written as one combined rule (not a bare animation-name
+   override) so it keeps cycling color while it blinks - two animations on
+   the same shorthand, not a cascade of two separate ones. */
+#onbCaption.onb-cap-cycle.onb-cap-blink-out span{
+  animation:current-label-cycle 1.2s linear infinite,onb-outro-blink 550ms steps(1,end) forwards}
+@media (prefers-reduced-motion: reduce){
+  #onbCaption.onb-cap-cycle.onb-cap-blink-out span{animation:none;opacity:0}
 }
 
 /* the "spotlight" that goes with a targeted caption: a transparent window
@@ -1121,7 +1190,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
 @media (prefers-reduced-motion:reduce){
   #onbMark.is-idle #onbWord{animation:none}
-  body.onb-active #view-library,body.onb-active #view-player,#onbDiscovery,#onbWord,#onbCaption{
+  body.onb-active #view-library,body.onb-active #view-player,#onbDiscovery,#onbWord,#onbCaption,#onbCaptionMain{
     transition-property:opacity!important;transform:none!important;filter:none!important}
 }
 </style>
@@ -1153,6 +1222,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 </div>
 <div id="onbSpotlight"></div>
 <div id="onbCaption" aria-live="polite"></div>
+<div id="onbCaptionMain" aria-live="polite"></div>
 <button id="onbSkip" type="button">Skip</button>
 <button id="onbCapture" type="button" aria-label="Skip intro"></button>
 <audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
@@ -4606,6 +4676,7 @@ function setPlayingUI(isPlaying){
   setKeepAliveAudio(isPlaying);
   vizSetPlaying(isPlaying);
   cassetteSetPlaying(isPlaying);
+  lyricsSetPlaying(isPlaying);
 }
 
 /* the real audio plays inside YouTube's cross-origin iframe, which mobile
@@ -5007,6 +5078,9 @@ vizSpeedBtn.addEventListener('click', (e) => {
    ========================================================================= */
 let visualMode = lsGet(LS_VIZ, 'art');
 if (visualMode !== 'art' && visualMode !== 'viz' && visualMode !== 'lyrics') visualMode = 'art';
+const LYRICS_SCROLL_PX_PER_S = 16;
+let lyricsScrollRaf = null, lyricsScrollLastTs = 0;
+const lyricsReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function applyVisualMode(){
   visualTabs.forEach(b => b.classList.toggle('is-active', b.dataset.mode === visualMode));
@@ -5020,6 +5094,9 @@ function applyVisualMode(){
     maybeLoadLyrics();
     const ad = activeDeck();
     updateLyricsHighlight(ad.player && ad.player.getCurrentTime ? (ad.player.getCurrentTime() || 0) : 0);
+    lyricsAutoScrollStart();
+  } else {
+    lyricsAutoScrollStop();
   }
 }
 function setVisualMode(mode){
@@ -5222,6 +5299,7 @@ function renderLyrics(data){
     note.textContent = 'Lyrics found, but no synced timing for this track.';
     lyricsScroller.appendChild(note);
   }
+  lyricsAutoScrollStart();
 }
 
 function loadLyricsForTrack(t){
@@ -5263,6 +5341,34 @@ function updateLyricsHighlight(cur){
       el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   }
+}
+
+/* slow continuous auto-scroll for lyrics with no synced timing - synced
+   tracks already track playback via updateLyricsHighlight's scrollIntoView */
+function lyricsAutoScrollActive(){
+  return visualMode === 'lyrics' && !lyricsState.synced && lyricsState.lines.length > 0 &&
+    artworkWrap.classList.contains('is-playing');
+}
+function lyricsAutoScrollTick(ts){
+  if (!lyricsScrollLastTs) lyricsScrollLastTs = ts;
+  const dt = ts - lyricsScrollLastTs;
+  lyricsScrollLastTs = ts;
+  if (!lyricsAutoScrollActive()){ lyricsScrollRaf = null; lyricsScrollLastTs = 0; return; }
+  const max = lyricsScroller.scrollHeight - lyricsScroller.clientHeight;
+  if (max > 0) lyricsScroller.scrollTop = Math.min(max, lyricsScroller.scrollTop + LYRICS_SCROLL_PX_PER_S * dt / 1000);
+  lyricsScrollRaf = requestAnimationFrame(lyricsAutoScrollTick);
+}
+function lyricsAutoScrollStart(){
+  if (lyricsScrollRaf || lyricsReducedMotion || !lyricsAutoScrollActive()) return;
+  lyricsScrollLastTs = 0;
+  lyricsScrollRaf = requestAnimationFrame(lyricsAutoScrollTick);
+}
+function lyricsAutoScrollStop(){
+  if (lyricsScrollRaf) cancelAnimationFrame(lyricsScrollRaf);
+  lyricsScrollRaf = null; lyricsScrollLastTs = 0;
+}
+function lyricsSetPlaying(isPlaying){
+  if (isPlaying) lyricsAutoScrollStart(); else lyricsAutoScrollStop();
 }
 
 function setMarqueeText(el, text){
@@ -5972,6 +6078,7 @@ function fitOnbCaptionLine(span){
 function runIntro(preview){
   const prefersReduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const backdrop = $('onbBackdrop'), markEl = $('onbMark'), captionEl = $('onbCaption'),
+        captionMainEl = $('onbCaptionMain'),
         spotlightEl = $('onbSpotlight'),
         skipEl = $('onbSkip'), captureEl = $('onbCapture'), discoveryEl = $('onbDiscovery'),
         musicEl = $('onbMusic');
@@ -6046,6 +6153,9 @@ function runIntro(preview){
     if (!prefersReduced) echoOut();
     document.removeEventListener('keydown', onKey);
     vizStop();
+    stopDemoLyricsScroll();
+    cassetteSetPlaying(false);
+    artworkWrap.classList.remove('is-playing');
     applyVisualMode();
     applyArtStyle();
     closeArtStyleMenu();
@@ -6082,7 +6192,8 @@ function runIntro(preview){
     seekFill.style.width = '0%';
     timeCur.textContent = '0:00';
     timeDur.textContent = '0:00';
-    [backdrop, markEl, captionEl, spotlightEl, skipEl, captureEl, discoveryEl].forEach(el => { if (el) el.style.opacity = '0'; });
+    [backdrop, captionEl, captionMainEl, spotlightEl, skipEl, captureEl, discoveryEl].forEach(el => { if (el) el.style.opacity = '0'; });
+    if (markEl){ if (prefersReduced) markEl.style.opacity = '0'; else markEl.classList.add('is-outro-blink'); }
     setTimeout(() => {
       document.body.classList.remove('onb-active');
       discardIntroChrome();
@@ -6195,6 +6306,31 @@ function runIntro(preview){
     captionEl.classList.remove('is-visible');
     if (spotlightEl) spotlightEl.classList.remove('is-visible');
   }
+  // the persistent "Paste a playlist..." label pinned above the input box -
+  // unlike setCaption() above it never swaps text or slides between targets,
+  // it just holds position over `el` for as long as the caller keeps it
+  // visible, so the app's one core action reads as a headline rather than
+  // one more line in the narration bubble's cycle
+  function placeMainCaptionNear(el){
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    captionMainEl.style.left = (r.left + r.width / 2) + 'px';
+    captionMainEl.style.top = (r.top - 14) + 'px';
+  }
+  function setMainCaption(text, el){
+    if (done) return;
+    captionMainEl.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = text;
+    captionMainEl.appendChild(span);
+    fitOnbCaptionLine(span);
+    placeMainCaptionNear(el);
+    captionMainEl.classList.add('is-visible');
+    setTimeout(() => { if (!done) placeMainCaptionNear(el); }, 400);
+  }
+  function clearMainCaption(){
+    captionMainEl.classList.remove('is-visible');
+  }
 
   // "I Tried It" by Unnayanaa feat. Mal Griot - a real released track and
   // its real Spotify cover, not the brand mark standing in for one
@@ -6237,6 +6373,12 @@ function runIntro(preview){
     vizCanvas.classList.toggle('is-active', mode === 'viz');
     lyricsWrap.classList.toggle('is-active', mode === 'lyrics');
     if (mode === 'viz') vizStart(); else vizStop();
+  }
+  // mirrors applyArtStyle()'s checkmark toggle, again without touching the
+  // real saved artStyle - keeps the picked option checked while the demo
+  // spins the record/turns the cassette
+  function markArtStyleOptActive(style){
+    artStyleMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.style === style));
   }
   // a paste, not a typing animation - the value lands in one frame, and the
   // field flashes to read as "something just arrived" (see #urlInput.onb-pasted)
@@ -6367,21 +6509,30 @@ function runIntro(preview){
     markEl.classList.remove('is-leaving');
     setView('library');
     setStage('input');
-    setCaption('Paste a link to a playlist or album', urlInput);
-    await wait(900);
+    // both captions stay up over the whole "here's the box, here's what it
+    // takes" chapter - all the way through the paste and right up until
+    // attention moves to Load - rather than swapping/clearing mid-beat, so
+    // the app's one core action reads as a headline instead of a caption
+    // that flashes past with everything else
+    setMainCaption('Paste a playlist…', urlInput);
+    await wait(500);
     if (done) return;
     setCaption('Spotify, SoundCloud, or Apple Music', urlInput);
-    await wait(900);
+    await wait(1500);
     if (done) return;
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
     pasteUrl(demoUrl);
     await wait(1600);
-    clearCaption();
     await wait(1000);
     if (done) return;
 
     // 2. that one button is the whole commitment - hold on it, then a
     // clear, punchy tap (zoom + the shared onb-tap emphasis together) [4400->7600]
+    // both "paste a link" captions have done their job once there's a link
+    // in the box and attention is moving to Load - clear them together here
+    // rather than leaving either stranded once the beat moves on
+    clearCaption();
+    clearMainCaption();
     if (loadBtn) loadBtn.classList.add('onb-zoom');
     setCaption(TAP === 'tap' ? 'Tap Load' : 'Click Load', loadBtn);
     await wait(1200);
@@ -6459,15 +6610,22 @@ function runIntro(preview){
     // so the beat still lands on the same track-synced marks as before
     await hoverThenPress(artStyleMenu.querySelector('[data-style="record"]'));
     artworkWrap.dataset.artStyle = 'record';
+    markArtStyleOptActive('record');
+    artworkWrap.classList.add('is-playing');
     await wait(1500);
     if (done) return;
     // -> 18300
     await hoverThenPress(artStyleMenu.querySelector('[data-style="cassette"]'));
     artworkWrap.dataset.artStyle = 'cassette';
+    markArtStyleOptActive('cassette');
+    cassetteSetPlaying(true);
     await wait(1300);
     await hoverThenPress(artStyleMenu.querySelector('[data-style="default"]'));
     closeArtStyleMenu();
     artworkWrap.dataset.artStyle = 'default';
+    markArtStyleOptActive('default');
+    cassetteSetPlaying(false);
+    artworkWrap.classList.remove('is-playing');
     await wait(500);
     clearCaption();
     await wait(800);
@@ -6499,6 +6657,7 @@ function runIntro(preview){
     await wait(900);
     tap(tabBtn('art'));
     showVisual('art');
+    stopDemoLyricsScroll();
     clearCaption();
     await wait(400);
     if (done) return;
@@ -6619,15 +6778,36 @@ function runIntro(preview){
     if (done) return;
     captionEl.classList.add('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle');
     setCaption('Flow with the go');
-    await wait(1500);
+    await wait(1100);
+    if (done) return;
+    // the words blink-and-blur out (onb-cap-blink-out, 550ms) rather than
+    // the plain fade every other caption gets - see its CSS for why
+    captionEl.classList.add('onb-cap-blink-out');
+    await wait(550);
     if (done) return;
     clearCaption();
+    captionEl.classList.remove('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle', 'onb-cap-blink-out');
     const wordImg = markEl.querySelector('img');
     if (wordImg) wordImg.src = 'brand/assets/icons/icon-512.png';
     setStage('outro');
-    await wait(900);
+    // the icon itself blinks in (is-outro-blink-in, 600ms) rather than the
+    // ordinary 900ms fade-in, to match the caption's flicker
+    markEl.classList.add('is-outro-blink-in');
+    await wait(600);
     if (done) return;
-    captionEl.classList.remove('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle');
+    markEl.classList.remove('is-outro-blink-in');
+    await wait(400);
+    if (done) return;
+    // ...then blinks back out (is-outro-blink, 650ms) - finish() below would
+    // otherwise be the one to add this class, but triggering it here lets a
+    // full second of plain black backdrop (#onbBackdrop, already the only
+    // thing left once the icon's gone) play before the real splash cuts in,
+    // instead of finish()'s own 700ms teardown starting immediately
+    markEl.classList.add('is-outro-blink');
+    await wait(650);
+    if (done) return;
+    await wait(1000);
+    if (done) return;
     finish();
   }
   sequence();
@@ -6653,7 +6833,7 @@ function renderDemoLyrics(){
 }
 
 function discardIntroChrome(){
-  ['onbBackdrop','onbMark','onbCaption','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
+  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
     if (el) el.remove();
   });
