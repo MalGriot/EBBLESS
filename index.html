@@ -1012,6 +1012,11 @@ body.onb-active #libpl-panel,body.onb-active #libpl-scrim{display:none!important
    promoted view */
 body.onb-active.onb-show-libpl #libpl-panel{display:flex!important;z-index:10003!important}
 body.onb-active.onb-show-libpl #libpl-scrim{display:block!important;z-index:10002!important}
+/* same beat also spotlights the real footer nav's Library tab - the actual
+   place to find the playlist again once the panel closes - so it needs to
+   be pulled back above the backdrop too, not left hidden by the blanket
+   #bottom-nav rule below */
+body.onb-active.onb-show-libpl:not(.split-desktop) #bottom-nav{display:flex!important;z-index:10003!important}
 body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-desktop) #view-player,body.onb-active:not(.split-desktop) #view-settings{
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
@@ -1911,6 +1916,7 @@ const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc
 const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'albums'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
+const SAMPLE_PLAYLIST_ID = '5qMMDwZ1Wo8q0lpDOmsXnZ';  // dev/tutorial demo playlist - art-only thumb, no title overlay
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
@@ -2574,7 +2580,7 @@ function renderLibrary(){
       const overlayDot = dot.cloneNode(true);
       titleOverlay.appendChild(overlayDot);
     }
-    artDiv.appendChild(titleOverlay);
+    if (id !== SAMPLE_PLAYLIST_ID) artDiv.appendChild(titleOverlay);
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
@@ -5900,50 +5906,38 @@ function runIntro(preview){
     };
     step();
   }
-  // Web Audio echo tail for the outro: a feedback delay line fed from the
-  // intro theme, silent until finish() opens its send - the delay's own
-  // feedback loop keeps ringing out after the dry track is cut, so the
-  // fade reads as an echo dying away rather than a plain volume ramp.
-  // Independent of musicEl.volume/fadeMusic (dry path), and independent of
-  // the element itself once finish() pauses/removes it - already-buffered
-  // samples keep decaying through the delay->feedback loop on their own.
-  let echoCtx = null, echoSend = null;
-  function ensureEchoGraph(){
-    if (echoCtx || !musicEl) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    try{
-      echoCtx = new Ctx();
-      const source = echoCtx.createMediaElementSource(musicEl);
-      source.connect(echoCtx.destination);
-      echoSend = echoCtx.createGain();
-      echoSend.gain.value = 0;
-      const delay = echoCtx.createDelay(1.0);
-      delay.delayTime.value = 0.3;
-      const feedback = echoCtx.createGain();
-      feedback.gain.value = 0.42;
-      const tone = echoCtx.createBiquadFilter();
-      tone.type = 'lowpass';
-      tone.frequency.value = 2000;
-      source.connect(echoSend);
-      echoSend.connect(delay);
-      delay.connect(tone);
-      tone.connect(feedback);
-      feedback.connect(delay);
-      tone.connect(echoCtx.destination);
-      echoCtx.resume().catch(() => {});
-    }catch(e){ echoCtx = null; echoSend = null; }
+  // Outro echo: a couple of cloned <audio> taps, staggered and quieter,
+  // picking up from wherever the main track is when finish() cuts it -
+  // reads as a slap-back echo trailing off into the real splash. Built
+  // from plain HTMLMediaElement clones (not Web Audio) on purpose: routing
+  // musicEl itself through a fresh AudioContext would silence it outright,
+  // since that context starts suspended without a prior user gesture and
+  // the intro autoplays with none.
+  function playEchoTap(delayMs, startVol, fadeMs){
+    if (!musicEl) return;
+    setTimeout(() => {
+      let tap;
+      try{
+        tap = musicEl.cloneNode(true);
+        tap.removeAttribute('id');
+        tap.currentTime = musicEl.currentTime;
+        tap.volume = startVol;
+        tap.play().catch(() => {});
+      }catch(e){ return; }
+      const start = Date.now();
+      const step = () => {
+        const p = Math.min(1, (Date.now() - start) / fadeMs);
+        tap.volume = Math.max(0, startVol * (1 - p));
+        if (p < 1) setTimeout(step, 40);
+        else { try{ tap.pause(); }catch(e){} }
+      };
+      step();
+    }, delayMs);
   }
-  // opens the echo send and lets it decay away over `ms`; the dry track's
-  // own fadeMusic() call keeps running in parallel
-  function echoOut(ms){
-    if (!echoCtx || !echoSend) return;
-    const now = echoCtx.currentTime;
-    echoSend.gain.cancelScheduledValues(now);
-    echoSend.gain.setValueAtTime(echoSend.gain.value, now);
-    echoSend.gain.linearRampToValueAtTime(0.6, now + Math.min(0.12, ms / 4000));
-    echoSend.gain.linearRampToValueAtTime(0, now + ms / 1000);
-    setTimeout(() => { try{ echoCtx.close(); }catch(e){} echoCtx = null; echoSend = null; }, ms + 400);
+  function echoOut(){
+    playEchoTap(110, 0.30, 900);
+    playEchoTap(300, 0.16, 1100);
+    playEchoTap(520, 0.08, 1300);
   }
   const STAGE_CLASSES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings'];
   function setStage(name){
@@ -5963,8 +5957,7 @@ function runIntro(preview){
     // so the music dies alongside the EBBLESS mark rather than cutting off
     fadeMusic(0, prefersReduced ? 30 : 700);
     // let the echo ring on past the dry cutoff, into the real splash
-    echoOut(prefersReduced ? 0 : 1500);
-    if (musicEl && !prefersReduced) setTimeout(() => { try{ musicEl.pause(); }catch(e){} }, 1600);
+    if (!prefersReduced) echoOut();
     document.removeEventListener('keydown', onKey);
     vizStop();
     applyVisualMode();
@@ -6135,6 +6128,7 @@ function runIntro(preview){
     artworkWrap.dataset.artStyle = 'default';
     attachArtworkFallback(recordLabelImg, DEMO_TRACK);
     cassetteUpdateTrack(DEMO_TRACK, 0);
+    updatePlayerAccentColor(DEMO_TRACK);
     timeCur.textContent = '0:00';
     timeDur.textContent = '5:56';
     seekFill.style.transition = 'none';
@@ -6186,7 +6180,6 @@ function runIntro(preview){
     card.innerHTML =
       '<div class="art single">' +
         '<img src="' + DEMO_ART + '" alt="">' +
-        '<div class="title-overlay"><div class="marquee"><span>' + DEMO_TITLE + '</span></div></div>' +
       '</div>' +
       '<div class="info"><div class="name">' + DEMO_TITLE + '</div><div class="count">1 track</div></div>';
     libraryGrid.appendChild(card);
@@ -6251,7 +6244,6 @@ function runIntro(preview){
     // takes to leave, so it never needs to play to the end
     if (musicEl && !prefersReduced){
       musicEl.volume = 0;
-      ensureEchoGraph();
       musicEl.play().catch(() => {});
       fadeMusic(MUSIC_PEAK, 1400);
     }
@@ -6325,12 +6317,12 @@ function runIntro(preview){
     // people learn to look for the playlist they just loaded
     tap(loadedCard);
     showLoadedLibraryPanel();
-    setCaption('Your playlist lives here', libplPanel);
+    setCaption('Your playlist lives here', [libplPanel, bottomNav.querySelector('[data-view="library"]')]);
     // the generic 400ms re-measure in correctCaptionPos() lands before this
     // panel's own 500ms slide-open transition (--dur-surface) finishes, so
     // the spotlight can still be chasing a moving target - one more
     // re-measure once the slide has actually settled fixes the alignment
-    setTimeout(() => { if (!done) placeCaptionNear(libplPanel); }, 550);
+    setTimeout(() => { if (!done) placeCaptionNear([libplPanel, bottomNav.querySelector('[data-view="library"]')]); }, 550);
     await wait(1400);
     closeLoadedLibraryPanel();
     clearCaption();
@@ -6392,6 +6384,7 @@ function runIntro(preview){
     tap(tabBtn('lyrics'), true);
     await wait(600);
     showVisual('lyrics');
+    renderDemoLyrics();
     await wait(900);
     setCaption('Synced to the track', [artworkWrap, tabBtn('lyrics')]);
     await wait(900);
@@ -6498,8 +6491,14 @@ function runIntro(preview){
     setView('player');
     setStage('player');
 
-    // no separate outro beat - the real splash (see startApp() inside
-    // finish()) is the landing, not a second logo screen first
+    // one closing line, centered (no target element) since it's not
+    // pointing at anything - the real splash (see startApp() inside
+    // finish()) still follows right after, not a second logo screen
+    setCaption('Flow with the go');
+    await wait(1300);
+    clearCaption();
+    await wait(400);
+    if (done) return;
     finish();
   }
   sequence();
@@ -6510,6 +6509,20 @@ function runIntro(preview){
 // finish() removes it once the sequence plays. Whenever the intro doesn't
 // run at all, that markup must still be torn down here, or it just sits on
 // screen (opaque, full-viewport, above everything) forever.
+// the real "I Tried It" lyrics, unsynced (no per-line timing for the demo
+// track) - shown as-is rather than the "no lyrics found" placeholder,
+// since the lyrics tab is demonstrating on the artist's own released song
+const DEMO_LYRICS = ("So…\nI did it three times\nWell, I tried it two times in Chicago\nAnd one time in Australia\nOn a futon\nI heard of it\nBut didn’t know much\nThink I did a Google search\nBut, back then, man, I was deep in the flow\nY’know?\nSo, she made it\nAnd I took one sip\nAnd it smelled like dirt\nLooked like shit\nAnd my stomach hurt\nAnd I felt mad sick\nBut, I thugged it out\nY’know, ‘wait for the hit’\nAnd my homegirl who I was taking it with was in the other room cuz the first couple times I think we distracted each other so we was like \"yo let’s try something different\"\nSo…\nI cut off all the lights and I’m sitting\nThinking ‘this better be worth the price of admission’\nI’m feeling my eyelids getting heavy\nI’m trying to keep it steady\nIf I sleep, I’ll be pissed that I missed it\nBut, that was just not realistic at all\nI’m laying in the dark so I start drifting off\nJust before I got too deep,\nSomething woke me from my sleep\nAnd I’m staring real hard at the walls\nAnd the space between me and the wall that I faced split apart like the drapes of a spaceship\nAnd what followed in place were these molecule shapes gyrating in crazy formations\nAnd I’m laughing at their dances\nTil I finally stand on my feet\nAnd I’m listening to the silence\nBehind it was a tribal beat\nThen the rhythm\nIt caught me\nMy heartbeat\nIt copied\nThen I realized it’s a party\nSo sheeyit you know how I do…\nI started dancing in the dark\n\nI shared a tea with Ayahuasca Mama\nWho fractalized the image of the inner-conscious drama\nOnce clarified this pair of eyes could hear the message from her\nThe walls were dancing, singing\nSecond chances given\nQuestions answered questions\nAvalanching visions from ascendant shamans\nChildren bearing mothers\nWith no sins/sense to suffer\nFuture, past and other\nLasting love for all\nCuz all our paths are common\nAnd once I had these capacities\nShe tasked me with delivering the ready through the river\nAcross the boundless matter of time\nWhen I asked her if she planned for me to know the route/root or never\nShe cast me off without a reply\nSo I kept on dancing in the dark\n\nYou could be blind but you gon see it when you need to see it\nYou got be fine cuz you gon be it when you need to be it\nFollow the signs, first free your mind and then you’ll free your spirit\nListen for the rhythm and then hear it with no interference\n\nThe thing about it is…\nThere was no clear come down\nThe mothership never dropped me off\nShe took my hand\nAnd walked me back through the hologram\nI came home seeing all\nUnderstanding all\nBut…\nEnlightenment was just a hangover\nAnd philosophy is just mental masturbation\nClarity only scratches the itch, y’nahmean?\nCuz don’t nobody really know\nYou might be sure, but…\nSure, you’re sure\nBut, you don’t know\nSure, I’m sure\nBut, I don’t know\n\nDancing in the dark\n\nSo, I never really had to do it again\nI just…\nLearned to\nAccept\nNot knowing\nI just learned to love not knowing").split('\n');
+function renderDemoLyrics(){
+  lyricsScroller.innerHTML = '';
+  DEMO_LYRICS.forEach(line => {
+    const div = document.createElement('div');
+    div.className = 'lyric-line';
+    div.textContent = line || ' ';
+    lyricsScroller.appendChild(div);
+  });
+}
+
 function discardIntroChrome(){
   ['onbBackdrop','onbMark','onbCaption','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
@@ -6676,8 +6689,7 @@ if (introBeatCapture){
       libraryGrid.innerHTML = '';
       const capCard = document.createElement('div');
       capCard.className = 'lib-card';
-      capCard.innerHTML = '<div class="art single"><img src="' + CAP_ART + '" alt="">' +
-        '<div class="title-overlay"><div class="marquee"><span>' + CAP_TITLE + '</span></div></div></div>' +
+      capCard.innerHTML = '<div class="art single"><img src="' + CAP_ART + '" alt=""></div>' +
         '<div class="info"><div class="name">' + CAP_TITLE + '</div><div class="count">1 track</div></div>';
       libraryGrid.appendChild(capCard);
       libraryListWrap.classList.remove('hidden');
@@ -6701,7 +6713,7 @@ if (introBeatCapture){
       libplBody.appendChild(capRow);
       document.body.classList.add('onb-show-libpl');
       libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
-      capCaptionText('Your playlist lives here', libplPanel);
+      capCaptionText('Your playlist lives here', [libplPanel, bottomNav.querySelector('[data-view="library"]')]);
       break;
     case 'player':
       capStage('player');
@@ -6733,9 +6745,9 @@ if (introBeatCapture){
       capSeedTrack();
       capVisual('lyrics');
       // the demo track has no real videoId, so the normal lyrics fetch
-      // never runs - show the same empty-state copy loadLyricsForTrack()
-      // would, rather than an uninformative blank panel
-      lyricsScroller.innerHTML = '<div class="lyrics-empty">No lyrics found for this track.</div>';
+      // never runs - show the real "I Tried It" lyrics instead of an
+      // uninformative blank panel or empty-state placeholder
+      renderDemoLyrics();
       capCaptionText('Song lyrics', [artworkWrap, Array.prototype.find.call(visualTabs, b => b.dataset.mode === 'lyrics')]);
       break;
     case 'liked':
@@ -6787,6 +6799,11 @@ if (introBeatCapture){
       capStage('player');
       capSeedTrack();
       capCaptionText('swipe the artwork to skip tracks', artworkWrap);
+      break;
+    case 'flow':
+      capStage('player');
+      capSeedTrack();
+      capCaptionText('Flow with the go');
       break;
     case 'splash':
       discardIntroChrome();
