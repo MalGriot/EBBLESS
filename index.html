@@ -1475,6 +1475,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <div class="settings-block">
         <h2>About</h2>
         <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track. Either way, playback threads through so the listening doesn't stop.</p>
+        <div class="settings-row">
+          <div>
+            <div class="label">Replay tutorial</div>
+            <div class="desc">Watch the intro walkthrough again, from the top.</div>
+          </div>
+          <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
+        </div>
       </div>
       <div class="settings-block">
         <h2>Playback</h2>
@@ -2273,6 +2280,7 @@ const ambientA = $('ambient-a'), ambientB = $('ambient-b');
 const flowAmbientA = $('flowAmbientA'), flowAmbientB = $('flowAmbientB');
 const toastEl = $('toast');
 const clearLibraryBtn = $('clearLibraryBtn');
+const replayTutorialBtn = $('replayTutorialBtn');
 const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlider'), crossfadeDurRow = $('crossfadeDurRow'), crossfadeDurVal = $('crossfadeDurVal');
 
 /* =========================================================================
@@ -3490,6 +3498,15 @@ clearLibraryBtn.addEventListener('click', () => {
   lsSet(LS_LIB, []);
   renderLibrary();
   showToast('Library cleared');
+});
+
+replayTutorialBtn.addEventListener('click', () => {
+  // stop any real track first - the intro has its own theme music and
+  // nothing else in this flow pauses the actual player for us
+  pausePlayback();
+  // preview=true: same replay path as the ?intro query param, so this
+  // never touches the real ONB_KEY completion flag
+  runIntro(true);
 });
 
 function fmtCrossfadeMs(ms){
