@@ -238,7 +238,7 @@ svg{display:block}
   .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:none;color:var(--accent)}
 }
 .lib-card .art .title-overlay{position:absolute;left:0;right:0;bottom:0;height:33.34%;z-index:2;display:none;
-  align-items:flex-end;gap:4%;padding:0 10px 4px;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.35) 70%,rgba(0,0,0,0))}
+  align-items:flex-end;gap:4%;padding:0;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,.35) 70%,rgba(0,0,0,0))}
 .lib-grid:not(.is-list) .lib-card .art .title-overlay{display:flex}
 .lib-grid:not(.is-list) .lib-card .info .name{display:none}
 .lib-card .art .title-overlay .marquee{flex:1;min-width:0;
@@ -5196,7 +5196,11 @@ function setMarqueeText(el, text){
       // per title), so drive it with the Web Animations API instead, where
       // the hold's share of the timeline is computed per instance.
       const dist = span.scrollWidth + gap;
-      const scrollDur = Math.max(9, dist / 30);
+      // One constant px/s for every marquee, short or long - no per-instance
+      // min/max, so nothing scrolls relatively slower or faster than
+      // anything else.
+      const PX_PER_SEC = 100;
+      const scrollDur = dist / PX_PER_SEC;
       const pause = 3;
       const totalDur = scrollDur + pause;
       track.style.animation = 'none';
