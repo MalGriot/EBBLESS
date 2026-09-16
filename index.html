@@ -549,15 +549,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .repeat-badge{position:relative}
 .repeat-badge .one{position:absolute;bottom:3px;right:2px;font-size:8px;font-weight:800;color:var(--accent)}
 
-.secondary-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:clamp(6px,3dvh,16px)}
-.vol-wrap{display:flex;align-items:center;gap:8px;width:140px}
-.vol-wrap svg{width:15px;height:15px;color:var(--faint);flex:none}
-#volIco,#volMaxIco{cursor:pointer}
-#volIco:hover,#volMaxIco:hover{color:var(--accent)}
-.vol-track{flex:1;height:12px;display:flex;align-items:center;cursor:pointer;position:relative;touch-action:none}
-.vol-track .rail{width:100%;height:3px;border-radius:2px;background:var(--border)}
-.vol-track .fill{position:absolute;left:0;top:calc(50% - 1.5px);height:3px;border-radius:2px;background:var(--faint);width:80%}
-.vol-wrap:hover .fill{background:var(--accent)}
 
 /* playlist list (lives inside the queue dropdown) */
 .playlist-list-wrap{margin:8px 12px 24px;padding-top:14px;border-top:1px solid var(--border)}
@@ -872,14 +863,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .playlist-ctx{display:none!important}
   .transport-full{margin-top:8px}
   .controls-row{margin-top:4px;gap:2px}
-  .secondary-row{margin-top:4px}
   .ctl-btn{width:30px;height:30px}
   .ctl-btn svg{width:13px;height:13px}
   .ctl-btn.main{width:38px;height:38px}
   .ctl-btn.main svg{width:15px;height:15px}
   .ctl-btn.small{width:26px;height:26px}
   .ctl-btn.small svg{width:12px;height:12px}
-  .vol-wrap{width:105px}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
@@ -1331,13 +1320,6 @@ body.onb-stage-input #importForm{width:min(520px,86vw);margin:0;transform:scale(
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
               <span class="one" id="repeatOneBadge" hidden>1</span>
             </button>
-          </div>
-          <div class="secondary-row">
-            <div class="vol-wrap">
-              <svg viewBox="0 0 24 24" fill="currentColor" id="volIco" role="button" tabindex="0" title="Mute" aria-label="Mute"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
-              <div class="vol-track" id="volTrack"><div class="rail"></div><div class="fill" id="volFill"></div></div>
-              <svg viewBox="0 0 24 24" fill="currentColor" id="volMaxIco" role="button" tabindex="0" title="Max volume" aria-label="Max volume"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-            </div>
           </div>
         </div>
       </div>
@@ -1814,9 +1796,7 @@ const LS_PINNED = 'ebbless:pinned';          // array of pinned playlist ids, mo
 const LS_LASTPLAYED = (id) => 'ebbless:lastplayed:' + id;  // ms timestamp a playlist last started playing
 const LS_LASTOPENED = (id) => 'ebbless:lastopened:' + id;  // ms timestamp a playlist's tracklist panel was last opened
 const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
-const LS_VOL = 'ebbless:volume';
-let isMuted = false;
-function effectiveVolume(){ return isMuted ? 0 : lsGet(LS_VOL, 80); }
+function effectiveVolume(){ return 100; }
 const LS_RESUME = 'ebbless:resume';
 const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_SORT = (id) => 'ebbless:sort:' + id;    // per-playlist track sort mode
@@ -2128,7 +2108,7 @@ const keepAliveAudio = $('keepAliveAudio');
 if (keepAliveAudio) keepAliveAudio.volume = 0.01;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
-const volTrack = $('volTrack'), volFill = $('volFill'), fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), playerLikeBtn = $('playerLikeBtn');
+const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), playerLikeBtn = $('playerLikeBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
@@ -4303,7 +4283,6 @@ function createDeckPlayer(deck, videoId){
       onReady: function(){
         deck.ready = true;
         deck.player.setVolume(deck === activeDeck() ? effectiveVolume() : 0);
-        if (deck === activeDeck()) setVolumeUI(lsGet(LS_VOL, 80));
         forceLowestQuality(deck);
         if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v, suggestedQuality: LOWEST_QUALITY }); }
         deck.confirmed = false;
@@ -5180,9 +5159,7 @@ function promoteDeckDirect(nd, pos, shouldPlay){
   crossfadeTriggered = false;
   reflectCurrentTrackUI(pos);
 
-  const vol = effectiveVolume();
-  nd.player.setVolume(vol);
-  setVolumeUI(vol);
+  nd.player.setVolume(effectiveVolume());
   if (nd.confirmed && nd.player.unMute) nd.player.unMute();
   if (shouldPlay && nd.player.playVideo) nd.player.playVideo();
   else if (!shouldPlay && nd.player.pauseVideo) nd.player.pauseVideo();
@@ -5360,9 +5337,6 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowRight':
       playNext(false);
       break;
-    case 'm': case 'M':
-      toggleMute();
-      break;
     case 'f': case 'F':
       if (state.flowOpen) closeFlow();
       else if (currentTrack()) openFlow();
@@ -5476,70 +5450,6 @@ function seekFromClientX(trackEl, clientX){
 [seekTrack, flowSeekTrack].forEach(el => {
   el.addEventListener('click', (e) => seekFromClientX(el, e.clientX));
 });
-
-/* ---- volume ---- */
-const volIco = $('volIco');
-const VOL_ICO_ON = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
-const VOL_ICO_MUTED = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3z"/>';
-let volBeforeMute = lsGet(LS_VOL, 80);
-function setVolumeUI(v){ volFill.style.width = v + '%'; }
-function updateVolIcon(){
-  const muted = isMuted || lsGet(LS_VOL, 80) === 0;
-  volIco.innerHTML = muted ? VOL_ICO_MUTED : VOL_ICO_ON;
-  volIco.title = muted ? 'Unmute' : 'Mute';
-  volIco.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
-}
-function applyVolume(v){
-  const ad = activeDeck();
-  if (!swapInProgress && ad.player && ad.player.setVolume) ad.player.setVolume(v);
-  setVolumeUI(v);
-}
-function setVolumeFromClientX(clientX){
-  const rect = volTrack.getBoundingClientRect();
-  const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-  const v = Math.round(pct * 100);
-  if (isMuted && v > 0) isMuted = false;
-  applyVolume(v);
-  lsSet(LS_VOL, v);
-  updateVolIcon();
-}
-volTrack.addEventListener('click', (e) => setVolumeFromClientX(e.clientX));
-let volDragging = false;
-volTrack.addEventListener('pointerdown', (e) => {
-  volDragging = true;
-  volTrack.setPointerCapture(e.pointerId);
-  e.preventDefault();
-  setVolumeFromClientX(e.clientX);
-});
-volTrack.addEventListener('pointermove', (e) => { if (volDragging) setVolumeFromClientX(e.clientX); });
-volTrack.addEventListener('pointerup', (e) => { volDragging = false; volTrack.releasePointerCapture(e.pointerId); });
-volTrack.addEventListener('pointercancel', () => { volDragging = false; });
-function toggleMute(){
-  if (isMuted){
-    isMuted = false;
-    const restore = volBeforeMute > 0 ? volBeforeMute : 80;
-    applyVolume(restore);
-    lsSet(LS_VOL, restore);
-  } else {
-    volBeforeMute = lsGet(LS_VOL, 80);
-    isMuted = true;
-    applyVolume(0);
-  }
-  updateVolIcon();
-}
-volIco.addEventListener('click', toggleMute);
-volIco.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleMute(); } });
-const volMaxIco = $('volMaxIco');
-function setMaxVolume(){
-  isMuted = false;
-  applyVolume(100);
-  lsSet(LS_VOL, 100);
-  updateVolIcon();
-}
-volMaxIco.addEventListener('click', setMaxVolume);
-volMaxIco.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); setMaxVolume(); } });
-setVolumeUI(lsGet(LS_VOL, 80));
-updateVolIcon();
 
 /* Load the IFrame API once, lazily. */
 let ytApiRequested = false;
