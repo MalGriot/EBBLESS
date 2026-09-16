@@ -967,6 +967,16 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
    the little accent tab still points toward the thing it's pointing at */
 #onbCaption.onb-cap-above span::before{top:auto;bottom:-5px}
 #onbCaption.is-visible{opacity:1}
+/* the closing "Flow with the go" beat: dead center (not the usual
+   lower-center default) so it sits exactly where the wordmark it dissolves
+   into will appear, and plain brand-style type instead of the narration
+   pill - this is EBBLESS speaking for itself, not a callout pointing at a
+   control */
+#onbCaption.onb-cap-center{top:50% !important;transform:translate(-50%,-50%) !important}
+#onbCaption.onb-cap-plain span{background:none;border:none;box-shadow:none;
+  backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;max-width:min(92vw,560px);
+  font-size:clamp(22px,5vw,34px);font-weight:700;letter-spacing:.02em}
+#onbCaption.onb-cap-plain span::before{display:none}
 
 /* the "spotlight" that goes with a targeted caption: a transparent window
    sized/positioned exactly over whatever's being narrated, ringed by a huge
@@ -1924,7 +1934,6 @@ const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc
 const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'albums'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
-const SAMPLE_PLAYLIST_ID = '5qMMDwZ1Wo8q0lpDOmsXnZ';  // dev/tutorial demo playlist - art-only thumb, no title overlay
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
@@ -2588,7 +2597,7 @@ function renderLibrary(){
       const overlayDot = dot.cloneNode(true);
       titleOverlay.appendChild(overlayDot);
     }
-    if (id !== SAMPLE_PLAYLIST_ID) artDiv.appendChild(titleOverlay);
+    artDiv.appendChild(titleOverlay);
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
@@ -5947,7 +5956,7 @@ function runIntro(preview){
     playEchoTap(300, 0.16, 1100);
     playEchoTap(520, 0.08, 1300);
   }
-  const STAGE_CLASSES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings'];
+  const STAGE_CLASSES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings','onb-stage-outro'];
   function setStage(name){
     STAGE_CLASSES.forEach(c => document.body.classList.remove(c));
     if (name) document.body.classList.add('onb-stage-' + name);
@@ -6520,16 +6529,28 @@ function runIntro(preview){
     if (done) return;
     renderCrossfadeUI();
     setView('player');
-    setStage('player');
 
-    // one closing line, centered (no target element) since it's not
-    // pointing at anything - the real splash (see startApp() inside
-    // finish()) still follows right after, not a second logo screen
-    setCaption('Flow with the go');
-    await wait(1300);
-    clearCaption();
-    await wait(400);
+    // closing beat: clear the player chrome back down to a blank screen -
+    // the same bare arrival the intro opened on - so the bg (the plain
+    // #onbBackdrop, always there, just uncovered now) reads as fading in
+    // behind the words as the view dissolves away [900ms, matching the
+    // view-fade transition itself]. Hold on the words, then dissolve them
+    // into the real EBBLESS wordmark (#onbWord, styled via onb-stage-outro)
+    // instead of clearing to nothing, so the handoff into the actual splash
+    // (startApp() inside finish()) reads as one continuous reveal rather
+    // than a cut back to a second logo screen
+    setStage(null);
+    await wait(900);
     if (done) return;
+    captionEl.classList.add('onb-cap-plain', 'onb-cap-center');
+    setCaption('Flow with the go');
+    await wait(1500);
+    if (done) return;
+    clearCaption();
+    setStage('outro');
+    await wait(900);
+    if (done) return;
+    captionEl.classList.remove('onb-cap-plain', 'onb-cap-center');
     finish();
   }
   sequence();
@@ -6832,9 +6853,13 @@ if (introBeatCapture){
       capCaptionText('swipe the artwork to skip tracks', artworkWrap);
       break;
     case 'flow':
-      capStage('player');
-      capSeedTrack();
+      capStage(null);
+      capCaption.classList.add('onb-cap-plain', 'onb-cap-center');
       capCaptionText('Flow with the go');
+      break;
+    case 'flow-word':
+      capStage('outro');
+      capCaption.classList.remove('is-visible');
       break;
     case 'splash':
       discardIntroChrome();
