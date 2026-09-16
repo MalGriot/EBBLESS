@@ -977,6 +977,14 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
   backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;max-width:min(92vw,560px);
   font-size:clamp(22px,5vw,34px);font-weight:700;letter-spacing:.02em}
 #onbCaption.onb-cap-plain span::before{display:none}
+/* "Flow with the go" cycles through the same hues as the library's
+   CURRENT title (current-label-cycle, see .lib-card .name.current-label)
+   but faster, so the words visibly shift color across the short 1.5s hold
+   instead of barely moving through one 8s lap */
+#onbCaption.onb-cap-cycle span{animation:current-label-cycle 1.2s linear infinite}
+@media (prefers-reduced-motion: reduce){
+  #onbCaption.onb-cap-cycle span{animation:none}
+}
 
 /* the "spotlight" that goes with a targeted caption: a transparent window
    sized/positioned exactly over whatever's being narrated, ringed by a huge
@@ -1003,6 +1011,8 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
   opacity:0;filter:blur(14px);transform:scale(.9);pointer-events:none;
   transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 #onbDiscovery .lib-card{width:min(220px,58vw);cursor:default}
+#onbDiscovery .lib-card .art .title-overlay{display:flex}
+#onbDiscovery .lib-card .info{display:none}
 body.onb-stage-discovery #onbDiscovery{opacity:1;filter:blur(0);transform:scale(1)}
 
 /* #splash is opaque and visible by default (it's the no-FOUC cover shown
@@ -1025,8 +1035,10 @@ body.onb-active.onb-show-libpl #libpl-scrim{display:block!important;z-index:1000
 /* same beat also spotlights the real footer nav's Library tab - the actual
    place to find the playlist again once the panel closes - so it needs to
    be pulled back above the backdrop too, not left hidden by the blanket
-   #bottom-nav rule below */
-body.onb-active.onb-show-libpl:not(.split-desktop) #bottom-nav{display:flex!important;z-index:10003!important}
+   #bottom-nav rule below. Sits one tier above #libpl-panel's z-index (not
+   just tied with it) so it stays visually in front even while the panel is
+   mid-slide and briefly sweeps over the nav's screen area. */
+body.onb-active.onb-show-libpl:not(.split-desktop) #bottom-nav{display:flex!important;z-index:10004!important}
 body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-desktop) #view-player,body.onb-active:not(.split-desktop) #view-settings{
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
@@ -1127,6 +1139,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <div class="lib-card">
     <div class="art single">
       <div class="face video-face"><video autoplay muted loop playsinline src="brand/assets/swell-thumb.mp4"></video></div>
+      <div class="title-overlay">
+        <div class="marquee current-label" data-text="CURRENT"><span>CURRENT</span></div>
+      </div>
     </div>
     <div class="info">
       <div class="name current-label">CURRENT</div>
@@ -6434,6 +6449,13 @@ function runIntro(preview){
     await wait(400);
     if (done) return;
 
+    // fullscreen, right after lyrics - desktop gets the keyboard hint;
+    // touch has no equivalent shortcut, so it's skipped there
+    if (!isTouchDevice){
+      await beat('⛶ to full screen', 1100, 500, fsBtn);
+      if (done) return;
+    }
+
     // 9. everything that lives in the transport row, one chapter: like,
     // shuffle, repeat land under a single caption (no clear/reset between
     // them) instead of three separate beats - each still a real tap on the
@@ -6449,16 +6471,14 @@ function runIntro(preview){
 
     // skip tracks, called out before shuffle so the visitor knows how to
     // move between tracks before the sequence shows them changing the order.
-    // desktop gets the full keyboard-shortcut chapter (play/pause, skip,
-    // fullscreen) as three quick beats; touch just gets the swipe gesture
+    // desktop gets the play/pause + skip keyboard beats; touch just gets
+    // the swipe gesture
     if (isTouchDevice){
       await beat('swipe the artwork to skip tracks', 1600, 500, artworkWrap);
     } else {
       await beat('Space 𓋰 to play/pause', 1100, 300, playBtn);
       if (done) return;
       await beat('◀ Arrows ▶ to skip', 1100, 300, [prevBtn, nextBtn]);
-      if (done) return;
-      await beat('⛶ to full screen', 1100, 500, fsBtn);
     }
     if (done) return;
 
@@ -6535,22 +6555,25 @@ function runIntro(preview){
     // #onbBackdrop, always there, just uncovered now) reads as fading in
     // behind the words as the view dissolves away [900ms, matching the
     // view-fade transition itself]. Hold on the words, then dissolve them
-    // into the real EBBLESS wordmark (#onbWord, styled via onb-stage-outro)
-    // instead of clearing to nothing, so the handoff into the actual splash
-    // (startApp() inside finish()) reads as one continuous reveal rather
-    // than a cut back to a second logo screen
+    // into the real app icon (#onbWord swapped from the opening wordmark to
+    // the actual PWA icon, styled via onb-stage-outro) instead of clearing
+    // to nothing, so the handoff into the actual splash (startApp() inside
+    // finish()) reads as one continuous reveal rather than a cut back to a
+    // second logo screen
     setStage(null);
     await wait(900);
     if (done) return;
-    captionEl.classList.add('onb-cap-plain', 'onb-cap-center');
+    captionEl.classList.add('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle');
     setCaption('Flow with the go');
     await wait(1500);
     if (done) return;
     clearCaption();
+    const wordImg = markEl.querySelector('img');
+    if (wordImg) wordImg.src = 'brand/assets/icons/icon-512.png';
     setStage('outro');
     await wait(900);
     if (done) return;
-    captionEl.classList.remove('onb-cap-plain', 'onb-cap-center');
+    captionEl.classList.remove('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle');
     finish();
   }
   sequence();
@@ -6854,10 +6877,11 @@ if (introBeatCapture){
       break;
     case 'flow':
       capStage(null);
-      capCaption.classList.add('onb-cap-plain', 'onb-cap-center');
+      capCaption.classList.add('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle');
       capCaptionText('Flow with the go');
       break;
     case 'flow-word':
+      capMark.querySelector('img').src = 'brand/assets/icons/icon-512.png';
       capStage('outro');
       capCaption.classList.remove('is-visible');
       break;
