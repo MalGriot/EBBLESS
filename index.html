@@ -5686,7 +5686,7 @@ function startApp(){
    visitor's first load; startApp() (and the real splash) always follows.
    ========================================================================= */
 const ONB_KEY = 'ebbless_onboarding_complete';
-function runIntro(){
+function runIntro(preview){
   const prefersReduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const backdrop = $('onbBackdrop'), markEl = $('onbMark'), captionEl = $('onbCaption'),
         skipEl = $('onbSkip'), captureEl = $('onbCapture'), discoveryEl = $('onbDiscovery');
@@ -5701,7 +5701,9 @@ function runIntro(){
   function finish(){
     if (done) return;
     done = true;
-    try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){}
+    // a forced ?intro replay is just a preview - don't let it write the
+    // real completion flag and affect whether a genuine first visit sees it
+    if (!preview){ try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){} }
     document.removeEventListener('keydown', onKey);
     vizStop();
     applyVisualMode();
@@ -5908,7 +5910,16 @@ const introEligibleNow = !isTouchDevice || isStandaloneApp;
 
 let onboardingComplete = false;
 try{ onboardingComplete = localStorage.getItem(ONB_KEY) === 'true'; }catch(e){}
-if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); } else { runIntro(); }
+
+// ?intro replays the sequence on demand (for demos/checking changes) even
+// on a device/browser that's already past its one real showing - it never
+// writes ebbless_onboarding_complete, so it doesn't disturb that.
+let forceIntroPreview = false;
+try{ forceIntroPreview = new URLSearchParams(location.search).has('intro'); }catch(e){}
+
+if (forceIntroPreview) runIntro(true);
+else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); }
+else runIntro(false);
 
 })();
 </script>
