@@ -926,9 +926,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
    end of the main script - rather than a second, fake copy of the app. */
 #onbBackdrop{position:fixed;inset:0;z-index:10000;background:var(--bg)}
 #onbMark{position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;pointer-events:none}
-#onbWord{width:min(220px,52vw);height:auto;opacity:0;transform:scale(.85);
-  transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
+#onbWord{width:min(220px,52vw);height:auto;opacity:0;transform:scale(.85);filter:blur(0);
+  transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),filter 900ms var(--ease-in-out)}
 #onbMark.is-idle #onbWord{opacity:1;transform:scale(1);animation:onb-breathe 3400ms var(--ease-in-out) infinite}
+/* the opening beat's exit: a quick blur-out rather than the slower plain
+   fade used elsewhere, so the logo reads as "arrived, then whisked away"
+   instead of just dissolving at the same speed it arrived */
+#onbMark.is-leaving #onbWord{opacity:0;transform:scale(1.08);filter:blur(16px);
+  animation:none;transition:opacity 380ms var(--ease-in),transform 380ms var(--ease-in),filter 380ms var(--ease-in)}
 body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 @keyframes onb-breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.05);opacity:1}}
 
@@ -5895,6 +5900,51 @@ function runIntro(preview){
     };
     step();
   }
+  // Web Audio echo tail for the outro: a feedback delay line fed from the
+  // intro theme, silent until finish() opens its send - the delay's own
+  // feedback loop keeps ringing out after the dry track is cut, so the
+  // fade reads as an echo dying away rather than a plain volume ramp.
+  // Independent of musicEl.volume/fadeMusic (dry path), and independent of
+  // the element itself once finish() pauses/removes it - already-buffered
+  // samples keep decaying through the delay->feedback loop on their own.
+  let echoCtx = null, echoSend = null;
+  function ensureEchoGraph(){
+    if (echoCtx || !musicEl) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    try{
+      echoCtx = new Ctx();
+      const source = echoCtx.createMediaElementSource(musicEl);
+      source.connect(echoCtx.destination);
+      echoSend = echoCtx.createGain();
+      echoSend.gain.value = 0;
+      const delay = echoCtx.createDelay(1.0);
+      delay.delayTime.value = 0.3;
+      const feedback = echoCtx.createGain();
+      feedback.gain.value = 0.42;
+      const tone = echoCtx.createBiquadFilter();
+      tone.type = 'lowpass';
+      tone.frequency.value = 2000;
+      source.connect(echoSend);
+      echoSend.connect(delay);
+      delay.connect(tone);
+      tone.connect(feedback);
+      feedback.connect(delay);
+      tone.connect(echoCtx.destination);
+      echoCtx.resume().catch(() => {});
+    }catch(e){ echoCtx = null; echoSend = null; }
+  }
+  // opens the echo send and lets it decay away over `ms`; the dry track's
+  // own fadeMusic() call keeps running in parallel
+  function echoOut(ms){
+    if (!echoCtx || !echoSend) return;
+    const now = echoCtx.currentTime;
+    echoSend.gain.cancelScheduledValues(now);
+    echoSend.gain.setValueAtTime(echoSend.gain.value, now);
+    echoSend.gain.linearRampToValueAtTime(0.6, now + Math.min(0.12, ms / 4000));
+    echoSend.gain.linearRampToValueAtTime(0, now + ms / 1000);
+    setTimeout(() => { try{ echoCtx.close(); }catch(e){} echoCtx = null; echoSend = null; }, ms + 400);
+  }
   const STAGE_CLASSES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings'];
   function setStage(name){
     STAGE_CLASSES.forEach(c => document.body.classList.remove(c));
@@ -5912,6 +5962,9 @@ function runIntro(preview){
     // fade the track out over the same 700ms the logo/chrome take to leave,
     // so the music dies alongside the EBBLESS mark rather than cutting off
     fadeMusic(0, prefersReduced ? 30 : 700);
+    // let the echo ring on past the dry cutoff, into the real splash
+    echoOut(prefersReduced ? 0 : 1500);
+    if (musicEl && !prefersReduced) setTimeout(() => { try{ musicEl.pause(); }catch(e){} }, 1600);
     document.removeEventListener('keydown', onKey);
     vizStop();
     applyVisualMode();
@@ -6198,16 +6251,23 @@ function runIntro(preview){
     // takes to leave, so it never needs to play to the end
     if (musicEl && !prefersReduced){
       musicEl.volume = 0;
+      ensureEchoGraph();
       musicEl.play().catch(() => {});
       fadeMusic(MUSIC_PEAK, 1400);
     }
 
-    // 0. the mark alone, breathing - no caption, just a beat to arrive on [->900]
-    await wait(900);
+    // 0. the mark alone, breathing - a longer beat to arrive on and actually
+    // register, then a quick blur-out (rather than the slower plain fade
+    // used elsewhere) so it reads as "arrived, then whisked away" [->1800]
+    await wait(1800);
+    if (done) return;
+    markEl.classList.add('is-leaving');
+    await wait(380);
     if (done) return;
 
-    // 1. the mark becomes the input [900->4400]
+    // 1. the mark becomes the input [1800->4400]
     markEl.classList.remove('is-idle');
+    markEl.classList.remove('is-leaving');
     setView('library');
     setStage('input');
     setCaption('Paste a link to a playlist or album', urlInput);
@@ -6355,9 +6415,18 @@ function runIntro(preview){
     if (done) return;
 
     // skip tracks, called out before shuffle so the visitor knows how to
-    // move between tracks before the sequence shows them changing the order
-    await beat(isTouchDevice ? 'swipe the artwork to skip tracks' : 'space to play, arrow keys to skip', 1600, 500,
-      isTouchDevice ? artworkWrap : null);
+    // move between tracks before the sequence shows them changing the order.
+    // desktop gets the full keyboard-shortcut chapter (play/pause, skip,
+    // fullscreen) as three quick beats; touch just gets the swipe gesture
+    if (isTouchDevice){
+      await beat('swipe the artwork to skip tracks', 1600, 500, artworkWrap);
+    } else {
+      await beat('Space 𓋰 to play/pause', 1100, 300, playBtn);
+      if (done) return;
+      await beat('◀ Arrows ▶ to skip', 1100, 300, [prevBtn, nextBtn]);
+      if (done) return;
+      await beat('⛶ to full screen', 1100, 500, fsBtn);
+    }
     if (done) return;
 
     // -> 28800
@@ -6712,7 +6781,7 @@ if (introBeatCapture){
     case 'power-desktop':
       capStage('player');
       capSeedTrack();
-      capCaptionText('space to play, arrow keys to skip');
+      capCaptionText('Space 𓋰 to play/pause', playBtn);
       break;
     case 'power-mobile':
       capStage('player');
