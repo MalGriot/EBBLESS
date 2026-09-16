@@ -3493,6 +3493,42 @@ reResolveBtn.addEventListener('click', () => {
   beginImport(state.playlist.id, true, state.playlist.type);
 });
 
+// Starter library for anyone with nothing saved yet: the artist's own
+// SoundCloud album plus a curated Spotify playlist. Resolves and saves each
+// straight into the library without routing through beginImport (which
+// jumps to the player view / import overlay - not wanted for a silent,
+// on-load seed).
+const STARTER_LIBRARY_URLS = [
+  'https://soundcloud.com/mal-griot/sets/breathelovedeep',
+  'https://open.spotify.com/playlist/2AcQTlTA3xgd9HAZJcHYmz'
+];
+async function seedStarterLibrary(){
+  for (const url of STARTER_LIBRARY_URLS){
+    const parsed = parseImportLink(url);
+    if (!parsed) continue;
+    let id, type;
+    if (parsed.source === 'soundcloud'){
+      id = 'sc:' + encodeURIComponent(parsed.id);
+      type = parsed.type === 'track' ? 'sc_track' : 'sc_playlist';
+    } else if (parsed.source === 'applemusic'){
+      type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
+      id = parsed.storefront + ':' + parsed.id;
+    } else if (parsed.source === 'youtube'){
+      id = 'yt:' + parsed.id;
+      type = parsed.type === 'video' ? 'yt_video' : 'yt_playlist';
+    } else {
+      id = parsed.id;
+      type = parsed.type;
+    }
+    if (getCachedPlaylist(id)){ saveToLibrary(id); continue; }
+    try{
+      await resolvePlaylist(id, type, () => {});
+      saveToLibrary(id);
+    } catch(e){ /* best-effort seed - a failed fetch just leaves the library short one entry */ }
+  }
+  renderLibrary();
+}
+
 clearLibraryBtn.addEventListener('click', () => {
   getLibrary().forEach(id => lsDel(LS_PL(id)));
   lsSet(LS_LIB, []);
@@ -5867,11 +5903,10 @@ function startApp(){
   // just sitting open.
   setInterval(refreshSwellIfStale, 60 * 1000);
 
-  /* dev convenience: on localhost with an empty library, auto-load a test playlist */
-  if (['localhost','127.0.0.1'].includes(location.hostname) && getLibrary().length === 0){
-    const parsed = parseImportLink('https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ?si=aUx0lxmHQumqjSJqcf8tOg');
-    if (parsed) beginImport(parsed.id, false, parsed.type);
-  }
+  /* First-time visitors (nothing saved yet, ignoring the always-present
+     Swell/Liked system playlists ensureSwellPlaylist() just created above)
+     get a starter library instead of an empty one. */
+  if (!getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID)) seedStarterLibrary();
 
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
