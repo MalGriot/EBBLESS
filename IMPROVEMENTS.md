@@ -563,53 +563,50 @@ Add entries in this shape:
   detail; agent will need to locate the actual surface first.
 
 ### github-issues-status-tabs: GitHub issues repo should have "waiting for deployment" and "completed" views
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The Geethub issues repo (MalGriot/EBBLESS) should have
   views/labels for "waiting for deployment" and "completed" states, so the
   status of a submitted idea is visible from GitHub itself.
-- **Touches:** Geethub repo configuration (labels and/or a saved
-  issue-list view) — not `index.html`, no app code involved.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #19. Different in kind from the rest
-  of this backlog: it's a repo/process change (labels + views), not a code
-  lane, so it doesn't fit the usual worktree-agent flow. Flagging for a
-  judgment call on how to actually do this rather than dispatching a
-  code-editing lane for it.
+- **Touches:** Geethub repo configuration (labels only) — not `index.html`,
+  no app code involved, no worktree/branch.
+- **Branch:** n/a — done directly against the repo, not a code lane.
+- **Notes:** Synced from Geethub issue #19. Done directly (no agent lane
+  needed): created two labels on MalGriot/EBBLESS — `waiting-for-deployment`
+  (`#fbca04`) and `completed` (`#0e8a16`). **Open tension worth your input:**
+  the existing autoclose rule ([[feedback_github_idea_autoclose]]) closes
+  every synced idea issue immediately, before any code is built — so these
+  labels currently have nothing to attach to, since the issue is already
+  closed by the time an entry reaches `waiting-for-deployment` or
+  `completed`. Either (a) these labels only ever get used if you manually
+  reopen/label an issue you care about tracking, or (b) the autoclose rule
+  changes so synced issues stay open and get labeled through the pipeline
+  instead of closing at sync time. Left as-is (autoclose unchanged) since
+  you didn't ask to change that rule — flagging so you can decide.
 
-### player-button-color-source: Player buttons should match play-button color, not time-of-day
-- **Status:** draft
+### player-button-colors: Unify player button coloring (play-button color + legibility against album art)
+- **Status:** in-progress
 - **Priority:** medium
-- **Description:** All player buttons (album art control, cymatics, etc.)
-  should use the same color as the play button, instead of each deriving
-  its color from the day-color-clock / time-of-day accent.
+- **Description:** Combines two overlapping Geethub asks into one lane:
+  (1) all player buttons (album art control, cymatics, etc.) should use the
+  same color as the play button, instead of each deriving its color from
+  the day-color-clock / time-of-day accent; (2) buttons should stay legible
+  against the currently-playing album art — pick a brighter color pulled
+  from the art, or fall back to white when the art's dominant color is
+  dull. Implement both together: source the shared button color from the
+  play button as the base, but apply the brightness/contrast check against
+  album art on top of that base so buttons never go dull-on-dull.
 - **Touches:** player button styling, the `--accent` / day-color-clock
   variable (see `album-art-icon-colors` above for how `--accent` currently
-  drives these), play-button color source.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #20. Overlaps with
-  `player-button-contrast` below — both are about player buttons being
-  hard to see, but propose different fixes (this one: unify on the play
-  button's color; the other: derive contrast from album art with a white
-  fallback). Flagging both rather than picking one — needs your call on
-  which approach (or both/neither).
-
-### player-button-contrast: Player buttons hard to see against dull album art
-- **Status:** draft
-- **Priority:** medium
-- **Description:** Player buttons should either pick a brighter color
-  pulled from the currently-playing album art, or switch to white when the
-  art's dominant color is dull — they're currently sometimes hard to see.
-- **Touches:** player button styling, album-art color sampling, currently-
-  playing album art.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #21. Overlaps with
-  `player-button-color-source` above — same underlying complaint (button
-  legibility), different proposed mechanism. See that entry's note; needs
-  your call on which approach to take.
+  drives these), play-button color source, album-art color sampling.
+- **Branch:** (filled in by the manager once claimed)
+- **Notes:** Merges Geethub issues #20 and #21 (previously separate entries
+  `player-button-color-source` and `player-button-contrast`) — same
+  underlying complaint (button legibility/consistency), user asked to do
+  them together rather than pick one.
 
 ### mobile-background-resume: App restarts to splash after switching apps on mobile
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** On mobile, switching away from the app (e.g. to another
   app) and back pauses the music and restarts the app from the splash
