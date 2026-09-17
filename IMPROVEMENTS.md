@@ -105,7 +105,7 @@ Add entries in this shape:
 -->
 
 ### spotify-album-art: Player album art should pull from Spotify art
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Player album art should pull from Spotify art no matter
   what link the user enters, except when it's a Soundcloud link — in that
@@ -150,7 +150,7 @@ Add entries in this shape:
   both get queued together, or share a helper.
 
 ### mobile-tutorial-load: Tutorial not loading on mobile
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** The onboarding tutorial isn't loading on mobile. Open
   question from the reporter: would a video version of the tutorial be more
@@ -171,7 +171,7 @@ Add entries in this shape:
   gone, so a rewrite wasn't warranted.
 
 ### mobile-install-button: Missing install button on mobile splash
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On the splash screen shown after the tutorial on mobile,
   the app should detect whether it's already been installed to the home
