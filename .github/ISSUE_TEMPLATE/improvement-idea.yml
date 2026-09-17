@@ -1,0 +1,45 @@
+name: Improvement idea
+description: Suggest something for the manager session to build.
+title: "[idea] "
+labels:
+  - idea
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Only the title (above) is required. Fill in as much or as little
+        else as you have right now — the manager will fill gaps in during
+        implementation if needed.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - high
+        - medium
+        - low
+      default: 1
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should change and why, as concretely as you can.
+      placeholder: Describe the current behavior, the desired behavior, and any constraints.
+    validations:
+      required: false
+  - type: input
+    id: touches
+    attributes:
+      label: Touches
+      description: Which feature/area of index.html this affects, if you know.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else — things to avoid, prior attempts, edge cases.
+    validations:
+      required: false

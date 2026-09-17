@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Improvements intake</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b6862;
+    --line: #e4e1da;
+    --accent: #b5502f;
+    --accent-ink: #ffffff;
+    --ok: #3c6e47;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171614;
+      --panel: #211f1c;
+      --ink: #eeece6;
+      --muted: #9b9790;
+      --line: #37342e;
+      --accent: #e07a52;
+      --accent-ink: #1c1006;
+      --ok: #7fbf8e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 32px 20px 80px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 0.92rem; margin: 0 0 28px; line-height: 1.5; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin: 16px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 0.8rem; display: block; margin-top: 2px; }
+  input[type=text], textarea, select {
+    width: 100%;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .row { display: flex; gap: 16px; }
+  .row > div { flex: 1; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; align-items: center; flex-wrap: wrap; }
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 11px 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .primary { background: var(--accent); color: var(--accent-ink); }
+  .ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .status-msg { font-size: 0.85rem; color: var(--ok); opacity: 0; transition: opacity .2s; }
+  .status-msg.show { opacity: 1; }
+  h2 { font-size: 1rem; margin: 0 0 12px; display: flex; align-items: center; justify-content: space-between; }
+  .count { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+  .queue-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 0.88rem;
+  }
+  .queue-item .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .queue-item .title { font-weight: 600; }
+  .queue-item .meta { color: var(--muted); font-size: 0.78rem; }
+  .queue-item .desc { color: var(--muted); margin-top: 4px; white-space: pre-wrap; }
+  .queue-item .remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.78rem; padding: 0; text-decoration: underline; }
+  .empty { color: var(--muted); font-size: 0.88rem; }
+  pre {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Improvements intake</h1>
+  <p class="sub">
+    Fill this in for each improvement. "Add to queue" stacks them below in this
+    browser tab. When you're done, click "Submit to IMPROVEMENTS.md" and this
+    form writes them straight into the file &mdash; nothing to copy or paste.
+    The manager session picks them up next time it checks.
+  </p>
+
+  <div class="card">
+    <label>Title <span class="hint">short, plain-English name for the improvement</span></label>
+    <input type="text" id="title" placeholder="e.g. Fix shuffle repeating the same track twice in a row">
+
+    <div class="row">
+      <div>
+        <label>Priority</label>
+        <select id="priority">
+          <option value="high">High</option>
+          <option value="medium" selected>Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="status">
+          <option value="ready" selected>Ready &mdash; queue it now</option>
+          <option value="draft">Draft &mdash; not ready yet</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Description <span class="hint">optional &mdash; what should change and why, concrete enough that an agent with no other context could implement it correctly</span></label>
+    <textarea id="description" placeholder="Describe the current behavior, the desired behavior, and any constraints."></textarea>
+
+    <label>Touches <span class="hint">optional &mdash; which feature/area of index.html this affects, if you know</span></label>
+    <input type="text" id="touches" placeholder="e.g. player controls / queue logic">
+
+    <label>Notes <span class="hint">optional &mdash; anything else: things to avoid, prior attempts, edge cases</span></label>
+    <textarea id="notes" placeholder="Optional"></textarea>
+
+    <div class="actions">
+      <button class="primary" id="addBtn">Add to queue</button>
+      <span class="status-msg" id="addMsg">Added.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Queue <span class="count" id="count">0 entries</span></h2>
+    <div id="queueList"><p class="empty">Nothing queued yet.</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Submit</h2>
+    <div class="actions">
+      <button class="primary" id="submitBtn">Submit to IMPROVEMENTS.md</button>
+      <button class="ghost" id="clearBtn">Clear queue</button>
+      <span class="status-msg" id="submitMsg">Submitted.</span>
+    </div>
+    <p class="hint" id="submitError" style="color:#b5502f; display:none;"></p>
+    <pre id="preview">Add an entry above to see the generated markdown here.</pre>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'ebbless-improvements-queue';
+
+function loadQueue() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+function saveQueue(q) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(q)); } catch (e) {}
+}
+function slugify(s) {
+  return s.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+let queue = loadQueue();
+
+const titleEl = document.getElementById('title');
+
+function entryToMarkdown(e) {
+  const lines = [
+    `### ${e.slug}: ${e.title}`,
+    `- **Status:** ${e.status}`,
+    `- **Priority:** ${e.priority}`,
+  ];
+  lines.push(`- **Description:** ${e.description || '(none yet)'}`);
+  if (e.touches) lines.push(`- **Touches:** ${e.touches}`);
+  lines.push(`- **Branch:** (filled in by the manager once a lane is claimed)`);
+  if (e.notes) lines.push(`- **Notes:** ${e.notes}`);
+  return lines.join('\n');
+}
+
+function render() {
+  const listEl = document.getElementById('queueList');
+  const countEl = document.getElementById('count');
+  const previewEl = document.getElementById('preview');
+  countEl.textContent = queue.length + (queue.length === 1 ? ' entry' : ' entries');
+
+  if (!queue.length) {
+    listEl.innerHTML = '<p class="empty">Nothing queued yet.</p>';
+    previewEl.textContent = 'Add an entry above to see the generated markdown here.';
+    return;
+  }
+
+  listEl.innerHTML = queue.map((e, i) => `
+    <div class="queue-item">
+      <div class="top">
+        <span class="title">${esc(e.title)}</span>
+        <button class="remove" data-i="${i}">remove</button>
+      </div>
+      <div class="meta">${esc(e.slug)} &middot; ${e.priority} priority &middot; ${e.status}${e.touches ? ' &middot; ' + esc(e.touches) : ''}</div>
+      <div class="desc">${esc(e.description)}</div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('.remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      queue.splice(Number(btn.dataset.i), 1);
+      saveQueue(queue);
+      render();
+    });
+  });
+
+  previewEl.textContent = queue.map(entryToMarkdown).join('\n\n');
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const title = titleEl.value.trim();
+  const description = document.getElementById('description').value.trim();
+  if (!title) {
+    alert('Title is required.');
+    return;
+  }
+  const entry = {
+    title,
+    slug: slugify(title),
+    priority: document.getElementById('priority').value,
+    status: document.getElementById('status').value,
+    description,
+    touches: document.getElementById('touches').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+  };
+  queue.push(entry);
+  saveQueue(queue);
+  render();
+
+  ['title','description','touches','notes'].forEach(id => document.getElementById(id).value = '');
+
+  const msg = document.getElementById('addMsg');
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 1500);
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (!queue.length) return;
+  if (!confirm('Clear the whole queue? This cannot be undone.')) return;
+  queue = [];
+  saveQueue(queue);
+  render();
+});
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  if (!queue.length) return;
+  const errEl = document.getElementById('submitError');
+  errEl.style.display = 'none';
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    const res = await fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(queue),
+    });
+    const result = await res.json();
+    if (!res.ok || !result.ok) {
+      throw new Error(result.error || `Request failed (${res.status})`);
+    }
+
+    queue = [];
+    saveQueue(queue);
+    render();
+
+    const msg = document.getElementById('submitMsg');
+    msg.textContent = `Submitted ${result.added} ${result.added === 1 ? 'entry' : 'entries'} to IMPROVEMENTS.md.`;
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 3000);
+  } catch (e) {
+    errEl.textContent = 'Could not submit: ' + e.message + ' — make sure the form server (tools/improvements-server.js) is running.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit to IMPROVEMENTS.md';
+  }
+});
+
+render();
+</script>
+</body>
+</html>

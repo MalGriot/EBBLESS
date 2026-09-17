@@ -7,6 +7,13 @@
       "runtimeArgs": ["-c", "python3 -m http.server $PORT"],
       "port": 8934,
       "autoPort": true
+    },
+    {
+      "name": "improvements-form",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/improvements-server.js"],
+      "port": 5820,
+      "autoPort": true
     }
   ]
 }
