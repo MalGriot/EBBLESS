@@ -777,6 +777,82 @@ async function handleArt(url, ctx) {
   return response;
 }
 
+// ---------- GET /spotifyart?title=&artist= ----------
+// Whatever link a listener pastes to import a track/playlist, EBBLESS wants
+// to show Spotify's own official cover art in the player (and, per the same
+// resolveTrackArt() logic on the client, the OS lock-screen/media-session
+// metadata) — Spotify's art is consistently square, high-res, and covers
+// virtually every released track. SoundCloud is the one deliberate
+// exception, handled entirely client-side: a SoundCloud-sourced track never
+// calls this endpoint and keeps its own SoundCloud art untouched.
+//
+// This needs a Spotify Developer app's client id/secret (Client Credentials
+// Flow — app-only auth, no end-user login involved) set as the
+// SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET Worker secrets. Same graceful
+// no-op pattern as LASTFM_API_KEY above: without them configured this just
+// returns { image: null } and the client falls back to the track's native
+// source art (Apple Music's own cover, or the YouTube thumbnail).
+let cachedSpotifyToken = null; // { token, expiresAt } — one per isolate, best-effort only
+async function getSpotifyAppToken(env) {
+  if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET) return null;
+  if (cachedSpotifyToken && cachedSpotifyToken.expiresAt > Date.now()) return cachedSpotifyToken.token;
+  try {
+    const auth = btoa(env.SPOTIFY_CLIENT_ID + ':' + env.SPOTIFY_CLIENT_SECRET);
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'client_credentials' }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.access_token) return null;
+    // Refresh a minute early rather than racing the exact expiry.
+    cachedSpotifyToken = { token: data.access_token, expiresAt: Date.now() + Math.max(0, (data.expires_in || 3600) - 60) * 1000 };
+    return cachedSpotifyToken.token;
+  } catch (e) { return null; }
+}
+async function searchSpotifyTrackArt(title, artist, env) {
+  const token = await getSpotifyAppToken(env);
+  if (!token) return null;
+  try {
+    const q = artist ? (title + ' ' + artist) : title;
+    const params = new URLSearchParams({ q, type: 'track', limit: '1' });
+    const res = await fetch('https://api.spotify.com/v1/search?' + params.toString(), {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const track = data.tracks && data.tracks.items && data.tracks.items[0];
+    const images = track && track.album && track.album.images;
+    return (images && images[0] && images[0].url) || null;
+  } catch (e) { return null; }
+}
+async function handleSpotifyArt(url, env, ctx) {
+  const title = (url.searchParams.get('title') || '').trim();
+  const artist = (url.searchParams.get('artist') || '').trim();
+  if (!title) return json({ error: 'missing title' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/spotifyart/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const image = await searchSpotifyTrackArt(title, artist, env);
+
+  const payload = { image };
+  const response = json(payload);
+  // Same miss-vs-hit caching split as /art: only cache real hits for the
+  // long window so a transient miss (or SPOTIFY_CLIENT_ID/SECRET not being
+  // configured yet) doesn't lock a track out once it's actually resolvable.
+  if (image) {
+    const toCache = response.clone();
+    ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
+    })));
+  }
+  return response;
+}
+
 // ---------- GET /lyrics?videoId=&title=&artist= ----------
 // Originally tried YouTube's caption track (for timing) cross-referenced
 // against a scraped Genius page (for clean text). Both are dead ends in
@@ -1370,10 +1446,11 @@ export default {
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
       if (url.pathname === '/art') return await handleArt(url, ctx);
+      if (url.pathname === '/spotifyart') return await handleSpotifyArt(url, env, ctx);
       if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

@@ -2015,6 +2015,44 @@ async function fetchAppleMusicTrack(storefront, id){
   return data;
 }
 
+// =========================================================================
+// ALBUM ART SOURCE RESOLUTION
+// =========================================================================
+// Canonical "which art should represent this track" decision, used while
+// resolving a playlist/track from any source. Whatever link a listener
+// pastes, the player should show Spotify's own official cover — it's the
+// most consistently square, high-res source across virtually every released
+// track. SoundCloud is the one deliberate exception: a SoundCloud-sourced
+// track keeps its own SoundCloud art untouched, never routed through Spotify.
+//
+// This is the single place that decision gets made, so any other surface
+// that needs "what art represents this track" — the OS lock-screen/media-
+// session metadata, for instance — should call this too rather than
+// re-deriving the same source/SoundCloud-exception logic on its own.
+function sourceKindForType(type){
+  if (type === 'sc_track' || type === 'sc_playlist') return 'soundcloud';
+  if (type === 'am_track' || type === 'am_playlist' || type === 'am_album') return 'applemusic';
+  if (type === 'yt_video' || type === 'yt_playlist') return 'youtube';
+  return 'spotify'; // track | playlist | album (bare Spotify types)
+}
+async function resolveTrackArt(sourceKind, title, artist, nativeArt){
+  // Already Spotify's or SoundCloud's own art — nothing to resolve, and no
+  // network round-trip needed either.
+  if (sourceKind === 'spotify' || sourceKind === 'soundcloud') return nativeArt || null;
+  try{
+    const params = new URLSearchParams({ title, artist: artist || '' });
+    const res = await fetch(BACKEND + '/spotifyart?' + params.toString());
+    if (res.ok){
+      const data = await res.json();
+      if (data.image) return data.image;
+    }
+  } catch(e){ /* fall through to native art below */ }
+  // No Spotify match (or SPOTIFY_CLIENT_ID/SECRET not configured on the
+  // backend yet) — fall back to the track's own native source art, same as
+  // before this existed.
+  return nativeArt || null;
+}
+
 /* =========================================================================
    PERSISTENCE
    ========================================================================= */
@@ -2154,9 +2192,12 @@ async function resolvePlaylist(playlistId, type, onProgress){
       ({ title, artist, image: art, duration: sourceDuration } = await fetchSpotifyTrack(playlistId));
     }
     onProgress({ stage: 'matching', done: 0, total: 1 });
-    let match = { videoId: null, title: '', channel: '' };
-    try { match = await searchYouTube(title, artist, sourceDuration); } catch(e){}
-    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: art || null, duration: match.duration || 0 };
+    async function trySearchYouTube(){ try { return await searchYouTube(title, artist, sourceDuration); } catch(e){ return { videoId: null, title: '', channel: '' }; } }
+    const [match, resolvedArt] = await Promise.all([
+      trySearchYouTube(),
+      resolveTrackArt(sourceKindForType(type), title, artist, art),
+    ]);
+    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: resolvedArt, duration: match.duration || 0 };
     onProgress({ stage: 'matching', done: 1, total: 1, track });
     const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
     lsSet(LS_PL(playlistId), payload);
@@ -2166,7 +2207,8 @@ async function resolvePlaylist(playlistId, type, onProgress){
     const rawId = playlistId.replace(/^yt:/, '');
     if (type === 'yt_video'){
       const v = await fetchYouTubeVideo(rawId);
-      const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0, art: null };
+      const art = await resolveTrackArt('youtube', v.title, v.artist || '', null);
+      const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0, art };
       onProgress({ stage: 'matching', done: 0, total: 1 });
       onProgress({ stage: 'matching', done: 1, total: 1, track });
       const payload = { id: playlistId, type, name: v.title, image: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
@@ -2175,7 +2217,8 @@ async function resolvePlaylist(playlistId, type, onProgress){
     }
     const { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
-    const resolved = tracks.map(t => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0, art: null }));
+    const arts = await Promise.all(tracks.map(t => resolveTrackArt('youtube', t.title, t.artist, null)));
+    const resolved = tracks.map((t, i) => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0, art: arts[i] }));
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
     // YouTube's public playlist feed (the only stable, unscraped source for a
     // full tracklist) only returns its ~15 most recent videos.
@@ -2195,14 +2238,19 @@ async function resolvePlaylist(playlistId, type, onProgress){
     ({ name, image, tracks } = await fetchSpotifyPlaylist(playlistId, type));
   }
   onProgress({ stage: 'matching', done: 0, total: tracks.length });
+  const sourceKind = sourceKindForType(type);
   const resolved = [];
   for (let i = 0; i < tracks.length; i++){
     const t = tracks[i];
     try{
-      const match = await searchYouTube(t.title, t.artist);
-      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: t.image || null, duration: match.duration || 0 });
+      const [match, art] = await Promise.all([
+        searchYouTube(t.title, t.artist),
+        resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
+      ]);
+      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0 });
     } catch(e){
-      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art: t.image || null, duration: 0 });
+      const art = await resolveTrackArt(sourceKind, t.title, t.artist, t.image || null);
+      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0 });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     if (i < tracks.length - 1) await sleep(350);
@@ -2251,10 +2299,13 @@ function currentTrackIndex(){
   return (e && e.plId === state.playlist.id) ? e.idx : -1;
 }
 
-// A track's `art` field (when present) is the album art from its original
-// source — Spotify/SoundCloud/Apple Music — and always takes priority.
-// YouTube's own thumbnail is only a fallback for YouTube-sourced tracks or
-// tracks whose source art couldn't be found.
+// A track's `art` field (when present) is already the resolved art from
+// resolveTrackArt() above — Spotify's own cover for everything except a
+// SoundCloud-sourced track (which keeps SoundCloud's own art) — and always
+// takes priority. YouTube's own thumbnail is only a last-resort fallback,
+// for a track whose resolved art couldn't be found at all. Any other
+// surface that needs "the art URL for this track" (e.g. lock-screen media-
+// session metadata) should read it the same way, through this function.
 function artworkUrls(track){
   const chain = [];
   if (track && track.art) chain.push(track.art);
@@ -3309,15 +3360,19 @@ async function resolveTracksFromLink(input, onProgress){
   if (yt){
     if (yt.type === 'video'){
       const v = await fetchYouTubeVideo(yt.id);
-      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', art: null, duration: 0 }];
+      const art = await resolveTrackArt('youtube', v.title, v.artist || '', null);
+      return [{ title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', art, duration: 0 }];
     }
     const { tracks } = await fetchYouTubePlaylist(yt.id);
     if (!tracks.length) throw new Error("That playlist has no videos.");
-    return tracks.map((t, i) => {
-      const r = { title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art: null, duration: 0 };
+    const resolved = [];
+    for (let i = 0; i < tracks.length; i++){
+      const t = tracks[i];
+      const art = await resolveTrackArt('youtube', t.title, t.artist, null);
+      resolved.push({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art, duration: 0 });
       if (onProgress) onProgress(i + 1, tracks.length);
-      return r;
-    });
+    }
+    return resolved;
   }
   const sp = parseSpotifyLink(input);
   if (sp){
@@ -3325,18 +3380,20 @@ async function resolveTracksFromLink(input, onProgress){
       const { title, artist, image } = await fetchSpotifyTrack(sp.id);
       const match = await searchYouTube(title, artist);
       if (!match.videoId) throw new Error("Couldn't find that song.");
-      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null, duration: match.duration || 0 }];
+      const art = await resolveTrackArt('spotify', title, artist, image || null);
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
     const { tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
     if (!tracks.length) throw new Error('That ' + sp.type + ' has no tracks.');
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
+      const art = await resolveTrackArt('spotify', t.title, t.artist, t.image || null);
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null, duration: match.duration || 0 });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null, duration: 0 });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
       }
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
@@ -3349,17 +3406,19 @@ async function resolveTracksFromLink(input, onProgress){
     if (data.kind === 'track'){
       const match = await searchYouTube(data.title, data.artist);
       if (!match.videoId) throw new Error("Couldn't find that song.");
-      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: data.image || null, duration: match.duration || 0 }];
+      const art = await resolveTrackArt('soundcloud', data.title, data.artist, data.image || null);
+      return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
     if (!data.tracks.length) throw new Error('That playlist has no tracks.');
     const resolved = [];
     for (let i = 0; i < data.tracks.length; i++){
       const t = data.tracks[i];
+      const art = await resolveTrackArt('soundcloud', t.title, t.artist, t.image || null);
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null, duration: match.duration || 0 });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null, duration: 0 });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
       }
       if (onProgress) onProgress(i + 1, data.tracks.length);
       if (i < data.tracks.length - 1) await sleep(350);
@@ -3372,18 +3431,20 @@ async function resolveTracksFromLink(input, onProgress){
       const { title, artist, image } = await fetchAppleMusicTrack(am.storefront, am.id);
       const match = await searchYouTube(title, artist);
       if (!match.videoId) throw new Error("Couldn't find that song.");
-      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: image || null, duration: match.duration || 0 }];
+      const art = await resolveTrackArt('applemusic', title, artist, image || null);
+      return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
     const { tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
     if (!tracks.length) throw new Error('That ' + am.type + ' has no tracks.');
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
+      const art = await resolveTrackArt('applemusic', t.title, t.artist, t.image || null);
       try{
         const match = await searchYouTube(t.title, t.artist);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art: t.image || null, duration: match.duration || 0 });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art: t.image || null, duration: 0 });
+        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
       }
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
