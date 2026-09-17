@@ -336,42 +336,71 @@ Add entries in this shape:
 - **Touches:** splash screen (`#splashChoice` buttons).
 - **Branch:** (none yet)
 - **Notes:** Synced from Geethub issues #8 and #9 - combined into one entry
-  since both are simple label edits to the same two buttons. Depends on
-  `splash-tutorial-choice` (currently `review`) actually landing on `main`
-  first, since these buttons don't exist there yet.
-
-### breathe-love-deep-album: "Breathe Love Deep" should be categorized as an album, sourced from SoundCloud
-- **Status:** in-progress
-- **Priority:** medium
-- **Description:** The "Breathe Love Deep" release that's default-loaded in
-  the library should be categorized as an album, and its data (art, tracks,
-  etc.) should be pulled directly from its SoundCloud link rather than being
-  resolved through Spotify or Apple Music.
-- **Touches:** default library seed data, album/track categorization,
-  SoundCloud-direct resolution path (same exception logic used in
-  `spotify-album-art`/`spotify-art-source`).
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #10.
+  since both are simple label edits to the same two buttons. Its dependency
+  (`splash-tutorial-choice`) has now landed on `main`, so this is unblocked.
 
 ### tutorial-i-tried-it-album: "I Tried It" tutorial sample should show as a two-track album
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The "I Tried It" sample shown in the onboarding tutorial
   is actually an album - it should display as such, showing both tracks,
   matching how it appears in the real Spotify album.
 - **Touches:** onboarding/tutorial flow, tutorial sample data.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #11.
+- **Branch:** agent/tutorial-i-tried-it-album
+- **Notes:** Synced from Geethub issue #11. Fixed and pushed (commit
+  `ed129ca`): tutorial now shows a `DEMO_TRACKS` array of two tracks -
+  "I Tried It" (5:56) and "I Tried It (Radio Edit)" (3:34) - matching the
+  real playlist track-row shape. **Held for user confirmation:** the Radio
+  Edit title/duration was inferred from Wind Horse Records' Bandcamp
+  listing, not scraped from Spotify directly - needs a check against the
+  real Spotify album page before merging to `main`.
 
-### tutorial-caption-timing: Tutorial captions should not overlap
-- **Status:** in-progress
-- **Priority:** low
-- **Description:** In the tutorial, the "smooth" caption should stay hidden
-  until the "no ads ever" caption has fully disappeared, instead of
-  overlapping it.
-- **Touches:** onboarding/tutorial flow, caption sequencing/timing.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #12.
+### tutorial-caption-timing: Onboarding captions overlap ("smooth" / "no ads ever")
+- **Status:** review
+- **Priority:** medium
+- **Description:** During the onboarding tutorial, the "Crossfade smoothly"
+  and "With no ads ever" captions (settings/crossfade beat) overlap instead
+  of one fully disappearing before the next appears.
+- **Touches:** `runIntro()`'s settings-section caption beats in `index.html`
+  (~line 6886, the `crossfadeBtn` pair).
+- **Branch:** agent/tutorial-caption-timing
+- **Notes:** Synced from a Geethub issue. Read `baa95e6` (the prior tutorial-
+  replay fix) first to confirm this wasn't the same class of bug — it isn't;
+  that commit fixed a *cross-run* race (`cancelPrevIntro`, stale DOM state
+  from `discardIntroChrome()`), this is a *same-run* timing bug entirely
+  local to one pair of captions.
+
+  Root cause: `setCaption('Crossfade smoothly', crossfadeBtn)` was followed
+  by only `wait(500)` before `setCaption('With no ads ever', crossfadeBtn)`
+  — shorter than `#onbCaption`'s own 550ms opacity transition
+  (`transition:opacity 550ms ...`, ~line 991). Both captions share the same
+  DOM element and target, and `setCaption()` swaps text in place with no
+  clear in between (the same pattern the "New music for you" / "Every day"
+  pair uses safely, since that pair gets a full 1400ms hold each). Here the
+  gap was tighter than the fade itself, so the second caption's text swapped
+  in while the first was still mid-fade-in, reading as an overlap rather
+  than a clean handoff.
+
+  Fixed and pushed (commit `b531241`): extended the hold after "Crossfade
+  smoothly" from 500ms to 600ms so its own fade-in completes, then inserted
+  an explicit `clearCaption()` plus a 550ms wait (matching the CSS
+  transition duration exactly) before "With no ads ever" fades in. This is
+  a minimal, targeted change to this one pair — no other beat's timing,
+  duration, or the `cancelPrevIntro`/`discardIntroChrome` replay-safety
+  mechanism from `baa95e6` was touched.
+
+  Verified via a `MutationObserver` on `#onbCaption` logging text/visibility
+  with timestamps (browser preview couldn't drive local `file://` pages
+  directly, so served the worktree over `python3 -m http.server` and drove
+  it from there) across two full tutorial runs — an initial `?intro` run
+  and a Settings → "Replay tutorial" run (the exact scenario `baa95e6`
+  hardened). Both runs showed "Crossfade smoothly" go `visible:false`
+  roughly 550ms before "With no ads ever" goes `visible:true` (e.g.
+  `t=43581` false → `t=44133` true on the first run; `t=53261` false →
+  `t=53814` true on the replay), zero console errors in either run, and the
+  rest of the sequence (including the closing "Flow with the go" beat and
+  the return to the real app) played through unaffected in both. No open
+  questions.
 
 ### album-art-icon-colors: Album art style icons should share one color scheme
 - **Status:** ready
@@ -382,5 +411,5 @@ Add entries in this shape:
   cassette icon's two small circles and the default/plain album art icon
   don't match that same color - they should.
 - **Touches:** album art style icon UI/theming.
-- **Branch:** (none yet)
+- **Branch:** agent/album-art-icon-colors
 - **Notes:** Synced from Geethub issue #13.

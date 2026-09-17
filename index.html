@@ -6919,12 +6919,20 @@ function runIntro(preview){
     const settingsScroll = document.querySelector('#view-settings .view-scroll');
     if (settingsScroll) settingsScroll.scrollTop = 0;
     setCaption('Crossfade smoothly', crossfadeBtn);
-    await wait(500);
+    await wait(600);
     tap(crossfadeBtn, true);
     crossfadeBtn.textContent = 'On';
     crossfadeBtn.classList.add('is-active');
     crossfadeDurRow.style.opacity = '1';
     await wait(500);
+    // clear and let 'Crossfade smoothly' fully fade out (#onbCaption's
+    // opacity transition is 550ms) before 'With no ads ever' fades in -
+    // without this gap the two calls landed close enough together that the
+    // second caption's text swapped in mid-fade on the first's still-running
+    // transition, reading as the two captions overlapping instead of a
+    // clean handoff
+    clearCaption();
+    await wait(550);
     setCaption('With no ads ever', crossfadeBtn);
     await wait(800);
     clearCaption();
