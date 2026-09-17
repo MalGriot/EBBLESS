@@ -2055,7 +2055,7 @@ async function fetchAppleMusicTrack(storefront, id){
 // session metadata, for instance — should call this too rather than
 // re-deriving the same source/SoundCloud-exception logic on its own.
 function sourceKindForType(type){
-  if (type === 'sc_track' || type === 'sc_playlist') return 'soundcloud';
+  if (type === 'sc_track' || type === 'sc_playlist' || type === 'sc_album') return 'soundcloud';
   if (type === 'am_track' || type === 'am_playlist' || type === 'am_album') return 'applemusic';
   if (type === 'yt_video' || type === 'yt_playlist') return 'youtube';
   return 'spotify'; // track | playlist | album (bare Spotify types)
@@ -2252,7 +2252,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     return payload;
   }
   let name, image, tracks;
-  if (type === 'sc_playlist'){
+  if (type === 'sc_playlist' || type === 'sc_album'){
     const sc = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
     if (sc.kind !== 'playlist') throw new Error("That SoundCloud link isn't a playlist.");
     ({ name, image, tracks } = sc);
@@ -2609,7 +2609,13 @@ function setLibraryView(mode){
   });
   refreshLibraryMarquees();
 }
-function isAlbumType(type){ return type === 'album' || type === 'am_album'; }
+// sc_album is a SoundCloud "set" (SoundCloud has no separate album URL
+// shape - /sets/ covers both playlists and albums) that this app has
+// deliberately flagged as a full release rather than a loose playlist, e.g.
+// the artist's own default-seeded "Breathe Love Deep". It resolves exactly
+// like sc_playlist (see resolvePlaylist/sourceKindForType/canonicalLinkForPlaylist)
+// and differs only in being counted/displayed as an album here.
+function isAlbumType(type){ return type === 'album' || type === 'am_album' || type === 'sc_album'; }
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
@@ -2924,7 +2930,7 @@ function canonicalLinkForPlaylist(pl){
   if (t === 'playlist' || t === 'album' || t === 'track') return 'https://open.spotify.com/' + t + '/' + pl.id;
   if (t === 'yt_playlist') return 'https://www.youtube.com/playlist?list=' + pl.id.replace(/^yt:/, '');
   if (t === 'yt_video') return 'https://www.youtube.com/watch?v=' + pl.id.replace(/^yt:/, '');
-  if (t === 'sc_playlist' || t === 'sc_track') return decodeURIComponent(pl.id.replace(/^sc:/, ''));
+  if (t === 'sc_playlist' || t === 'sc_track' || t === 'sc_album') return decodeURIComponent(pl.id.replace(/^sc:/, ''));
   if (t === 'am_playlist' || t === 'am_album' || t === 'am_track'){
     const idx = pl.id.indexOf(':');
     const storefront = pl.id.slice(0, idx), amId = pl.id.slice(idx + 1);
@@ -3672,7 +3678,12 @@ async function seedStarterLibrary(){
     let id, type;
     if (parsed.source === 'soundcloud'){
       id = 'sc:' + encodeURIComponent(parsed.id);
-      type = parsed.type === 'track' ? 'sc_track' : 'sc_playlist';
+      // "Breathe Love Deep" is a full release, not a loose playlist - flag
+      // it sc_album (see isAlbumType) so it displays/counts as an album
+      // like the app's other multi-track releases, while still resolving
+      // its tracks/art straight from SoundCloud via the same sc_playlist
+      // path (see resolvePlaylist/sourceKindForType's SoundCloud exception).
+      type = parsed.type === 'track' ? 'sc_track' : (url.indexOf('/sets/breathelovedeep') !== -1 ? 'sc_album' : 'sc_playlist');
     } else if (parsed.source === 'applemusic'){
       type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
       id = parsed.storefront + ':' + parsed.id;

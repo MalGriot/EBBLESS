@@ -104,6 +104,64 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### breathe-love-deep-album: "Breathe Love Deep" should be an album sourced from SoundCloud
+- **Status:** review
+- **Priority:** medium
+- **Description:** The "Breathe Love Deep" release, default-loaded into the
+  app's library, should (1) be categorized/displayed as an ALBUM like this
+  app's other multi-track releases, and (2) resolve its data (art, track
+  list, everything) directly from its SoundCloud source, never routed
+  through Spotify or Apple Music matching.
+- **Touches:** starter/default library seed (`STARTER_LIBRARY_URLS` /
+  `seedStarterLibrary()`), album categorization (`isAlbumType()`),
+  SoundCloud source resolution (`sourceKindForType()`, `resolveTrackArt()`).
+- **Branch:** agent/breathe-love-deep-album
+- **Notes:** Synced from a Geethub issue. Found the SoundCloud-sourcing
+  half was already correct: `STARTER_LIBRARY_URLS` already seeds
+  "Breathe Love Deep" from its own SoundCloud set link
+  (`https://soundcloud.com/mal-griot/sets/breathelovedeep`), resolved as an
+  `sc_playlist`, whose art/tracks come straight from
+  `fetchSoundCloudLink()` and `sourceKindForType('sc_playlist')` ->
+  `'soundcloud'` -> `resolveTrackArt()`'s existing SoundCloud exception
+  (native art, no Spotify/Apple Music round-trip) - the same helper/pattern
+  added by `spotify-album-art` and reused by `lockscreen-album-art` /
+  `spotify-art-source`. What was missing was album categorization:
+  `isAlbumType(type)` only recognized `'album'` (bare Spotify) and
+  `'am_album'` (Apple Music) - SoundCloud has no separate album URL shape
+  (a "set" covers both playlists and albums), so this release was falling
+  into the generic Playlists bucket.
+
+  Fixed and pushed (commit `cd13264`): added a new `sc_album` type that
+  resolves through the exact same `resolvePlaylist` branch, `sourceKindForType`
+  mapping, and `canonicalLinkForPlaylist` handling as `sc_playlist` (identical
+  SoundCloud-native resolution - no new fetch path, no reinvented logic),
+  but is recognized by `isAlbumType()` so it renders in the Albums section
+  like every other release. `seedStarterLibrary()` now tags specifically the
+  `/sets/breathelovedeep` URL as `sc_album`; any other SoundCloud set a
+  listener pastes in themselves still defaults to plain `sc_playlist` as
+  before - this only changes the one default-seeded release, not general
+  SoundCloud-set behavior.
+
+  Verified via a local static server serving this worktree directly (not
+  the shared preview-tool launcher, which turned out to be serving the
+  main checkout's `index.html` regardless of worktree - worth knowing for
+  future lanes) on a fresh browser profile: after the intro/onboarding,
+  the library shows "Breathe Love Deep" (10 tracks, 1h 1m) under its own
+  "ALBUMS" section header, separate from the Playlists grid, matching how
+  other albums render. Confirmed in localStorage that its cached playlist
+  object has `"type":"sc_album"` and its track art/images are SoundCloud
+  CDN URLs (`i1.sndcdn.com`), not Spotify/Apple Music. Checked console
+  errors: one `"An unknown error occurred when fetching the script"`
+  appears, but it reproduces identically on unmodified `HEAD` served the
+  same way (a pre-existing sandbox/service-worker quirk, not caused by
+  this change) - no new console errors from this fix. Did not exercise
+  actual SoundCloud embed/audio playback in this sandbox (no network
+  egress to SoundCloud/YouTube from this environment during the check;
+  the localStorage cache already held previously-resolved real data), so
+  playback itself is unverified - recommend a quick real-device/browser
+  check of `beginImport`/embed playback for this album before treating
+  audio playback as confirmed.
+
 ### spotify-album-art: Player album art should pull from Spotify art
 - **Status:** merged
 - **Priority:** high
