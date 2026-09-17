@@ -585,7 +585,7 @@ Add entries in this shape:
   you didn't ask to change that rule — flagging so you can decide.
 
 ### player-button-colors: Player buttons should match play-button color and stay legible against album art
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Merges two overlapping ideas (Geethub issues #20 and
   #21 — see the old `player-button-color-source` and `player-button-contrast`
