@@ -105,7 +105,7 @@ Add entries in this shape:
 -->
 
 ### breathe-love-deep-album: "Breathe Love Deep" should be an album sourced from SoundCloud
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The "Breathe Love Deep" release, default-loaded into the
   app's library, should (1) be categorized/displayed as an ALBUM like this
@@ -190,7 +190,7 @@ Add entries in this shape:
   go live — that's your call.
 
 ### spotify-art-source: Swap /spotifyart lookup off the blocked Spotify API
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Spotify locked developer-app creation behind a Premium
   account (Feb 2026), so `/spotifyart`'s Client Credentials flow
@@ -228,7 +228,7 @@ Add entries in this shape:
   once reviewed.
 
 ### lockscreen-album-art: Lock screen art should be Spotify album art on mobile
-- **Status:** review
+- **Status:** merged
 - **Priority:** low (deprioritized below mobile-install-button; also blocks on spotify-album-art landing first)
 - **Description:** On mobile, the OS lock-screen / media-session artwork
   should show the Spotify album art (same Soundcloud exception as
@@ -305,7 +305,7 @@ Add entries in this shape:
   Closed with a comment pointing here.
 
 ### splash-tutorial-choice: Splash screen should offer tutorial-or-skip with sound
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On the splash screen, show two buttons: one to play the
   tutorial, one to skip straight in. Choosing the tutorial option should
@@ -356,7 +356,7 @@ Add entries in this shape:
   real Spotify album page before merging to `main`.
 
 ### tutorial-caption-timing: Onboarding captions overlap ("smooth" / "no ads ever")
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** During the onboarding tutorial, the "Crossfade smoothly"
   and "With no ads ever" captions (settings/crossfade beat) overlap instead
@@ -403,7 +403,7 @@ Add entries in this shape:
   questions.
 
 ### album-art-icon-colors: Album art style icons have inconsistent accent colors
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** The three album-art "style" icons in the picker menu
   (Default / Spinning Record / Cassette Tape) should all use the same
