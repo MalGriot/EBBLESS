@@ -779,52 +779,42 @@ async function handleArt(url, ctx) {
 
 // ---------- GET /spotifyart?title=&artist= ----------
 // Whatever link a listener pastes to import a track/playlist, EBBLESS wants
-// to show Spotify's own official cover art in the player (and, per the same
-// resolveTrackArt() logic on the client, the OS lock-screen/media-session
-// metadata) — Spotify's art is consistently square, high-res, and covers
-// virtually every released track. SoundCloud is the one deliberate
-// exception, handled entirely client-side: a SoundCloud-sourced track never
-// calls this endpoint and keeps its own SoundCloud art untouched.
+// to show a track's official-looking cover art in the player (and, per the
+// same resolveTrackArt() logic on the client, the OS lock-screen/media-
+// session metadata) — square, high-res, and covering virtually every
+// released track. SoundCloud is the one deliberate exception, handled
+// entirely client-side: a SoundCloud-sourced track never calls this
+// endpoint and keeps its own SoundCloud art untouched.
 //
-// This needs a Spotify Developer app's client id/secret (Client Credentials
-// Flow — app-only auth, no end-user login involved) set as the
-// SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET Worker secrets. Same graceful
-// no-op pattern as LASTFM_API_KEY above: without them configured this just
-// returns { image: null } and the client falls back to the track's native
-// source art (Apple Music's own cover, or the YouTube thumbnail).
-let cachedSpotifyToken = null; // { token, expiresAt } — one per isolate, best-effort only
-async function getSpotifyAppToken(env) {
-  if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET) return null;
-  if (cachedSpotifyToken && cachedSpotifyToken.expiresAt > Date.now()) return cachedSpotifyToken.token;
+// This used to call Spotify's Web API (Client Credentials Flow) via
+// SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET Worker secrets. As of Feb 2026
+// Spotify requires an active Premium subscription just to create the
+// developer app needed to mint those credentials, so that path is dead.
+// Replaced with Apple's iTunes Search API (https://itunes.apple.com/search)
+// — public, free, no key/login/auth of any kind, and a stable documented
+// Apple API rather than a scraped or reverse-engineered one (same standard
+// this codebase already applies elsewhere — see README "Why there's a
+// backend" on why YouTube's undocumented innertube API was rejected).
+// The route name and response shape ({ image }) are unchanged so the
+// client-side caller in index.html (resolveTrackArt(), search for
+// '/spotifyart') needs no changes. Same graceful no-op pattern as before:
+// on any failure or no match this just returns { image: null } and the
+// client falls back to the track's native source art (Apple Music's own
+// cover, or the YouTube thumbnail).
+async function searchItunesTrackArt(title, artist) {
   try {
-    const auth = btoa(env.SPOTIFY_CLIENT_ID + ':' + env.SPOTIFY_CLIENT_SECRET);
-    const res = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'client_credentials' }),
-    });
+    const term = artist ? (artist + ' ' + title) : title;
+    const params = new URLSearchParams({ term, media: 'music', entity: 'song', limit: '1' });
+    const res = await fetch('https://itunes.apple.com/search?' + params.toString());
     if (!res.ok) return null;
     const data = await res.json();
-    if (!data.access_token) return null;
-    // Refresh a minute early rather than racing the exact expiry.
-    cachedSpotifyToken = { token: data.access_token, expiresAt: Date.now() + Math.max(0, (data.expires_in || 3600) - 60) * 1000 };
-    return cachedSpotifyToken.token;
-  } catch (e) { return null; }
-}
-async function searchSpotifyTrackArt(title, artist, env) {
-  const token = await getSpotifyAppToken(env);
-  if (!token) return null;
-  try {
-    const q = artist ? (title + ' ' + artist) : title;
-    const params = new URLSearchParams({ q, type: 'track', limit: '1' });
-    const res = await fetch('https://api.spotify.com/v1/search?' + params.toString(), {
-      headers: { 'Authorization': 'Bearer ' + token },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const track = data.tracks && data.tracks.items && data.tracks.items[0];
-    const images = track && track.album && track.album.images;
-    return (images && images[0] && images[0].url) || null;
+    const track = data.results && data.results[0];
+    const artwork = track && track.artworkUrl100;
+    if (!artwork) return null;
+    // iTunes' default artwork URLs are 100x100 thumbnails; upsizing by
+    // string-replacing the size segment is the documented trick for getting
+    // a much larger image from the same CDN path.
+    return artwork.replace('100x100', '1200x1200');
   } catch (e) { return null; }
 }
 async function handleSpotifyArt(url, env, ctx) {
@@ -837,13 +827,14 @@ async function handleSpotifyArt(url, env, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  const image = await searchSpotifyTrackArt(title, artist, env);
+  const image = await searchItunesTrackArt(title, artist);
 
   const payload = { image };
   const response = json(payload);
   // Same miss-vs-hit caching split as /art: only cache real hits for the
-  // long window so a transient miss (or SPOTIFY_CLIENT_ID/SECRET not being
-  // configured yet) doesn't lock a track out once it's actually resolvable.
+  // long window so a transient miss doesn't lock a track out of art once
+  // it's actually resolvable (e.g. iTunes indexes it later, or the query
+  // just needs different phrasing next time).
   if (image) {
     const toCache = response.clone();
     ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
