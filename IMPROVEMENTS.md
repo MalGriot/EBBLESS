@@ -32,7 +32,19 @@ Two intake channels, both feed this same backlog:
 ## How this works
 
 1. You add/edit entries below (directly, or via one of the intake channels above). Anything you want built goes in `ready`.
-2. The manager (this Claude Code session) picks up `ready` entries, up to
+2. Whenever the manager syncs new entries in (from a GitHub-issue sync, or
+   before promoting anything to `ready`), it first checks the new entry
+   against every existing entry in the backlog below — any status,
+   including `merged`/`dropped` — for duplicates or overlap: same feature
+   area, same underlying complaint, or one that's a subset of another.
+   It does **not** silently fire off a redundant lane for a near-duplicate.
+   Instead it: folds the new detail into the existing entry's Notes and
+   discards the duplicate (obvious, exact-match dupes), or flags both
+   entries side by side and asks you which should stand when it's a
+   judgment call (overlapping but not identical, or the existing one is
+   already `in-progress`/`review`). Only entries that survive this check
+   get queued.
+3. The manager (this Claude Code session) picks up `ready` entries, up to
    the agreed parallelism limit (currently: **2-3 lanes at once**), and for
    each one:
    - runs `scripts/session.sh start <slug> "<scope>"` to create an isolated
@@ -40,18 +52,18 @@ Two intake channels, both feed this same backlog:
    - dispatches a subagent into that worktree with the entry's description
      as its brief
    - sets the entry's status to `in-progress`
-3. Before any lane commits+pushes, the manager diffs it against every other
+4. Before any lane commits+pushes, the manager diffs it against every other
    active lane's current worktree contents. If two lanes touched overlapping
    regions of `index.html` in a way that would conflict, the manager holds
    the later one, sequences the merge, and re-runs the diff check rather
    than letting both push blind.
-4. Lanes **commit and push to their own `agent/<slug>` branch only** —
+5. Lanes **commit and push to their own `agent/<slug>` branch only** —
    never to `main`, and nothing is ever deployed live by the manager. Status
    moves to `review`.
-5. Once all in-flight lanes for a batch reach `review`, the manager posts
+6. Once all in-flight lanes for a batch reach `review`, the manager posts
    you a report (what changed, per-lane diff summary, how to look at each
    branch locally) and stops.
-6. You review locally. For whatever you approve, the manager gives you a
+7. You review locally. For whatever you approve, the manager gives you a
    final list of diffs to actually ship, and merges to `main` / deploys only
    on your explicit go-ahead.
 
