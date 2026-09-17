@@ -503,7 +503,7 @@ Add entries in this shape:
   unrelated aborted intro-theme audio fetch on a duplicate page load).
 
 ### bug-report-button: Settings email button should say "Report a bug"
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In Settings, change the existing email/contact button's
   label (and framing) to "Report a bug".
@@ -526,7 +526,7 @@ Add entries in this shape:
   messages present before this change.
 
 ### splash-install-delay: Delay splash install button 2-3s after logo
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On the splash page, the install button (added by
   `mobile-install-button`, merged) should wait about 2-3 seconds after the
@@ -553,7 +553,7 @@ Add entries in this shape:
   block and a vibrate-without-gesture warning, unrelated to this change).
 
 ### stale-track-links: Some resolved track links are stale/outdated
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Tracks resolved and cached before later link-matching
   protocol changes are now pointing at old/outdated links. Reporter's
@@ -605,7 +605,7 @@ Add entries in this shape:
   console errors vs. before the change.
 
 ### settings-install-button: Add install button to Settings screen
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add an install-to-home-screen button on the Settings
   screen, using the same real install-state detection (not just
@@ -649,7 +649,7 @@ Add entries in this shape:
   script" messages present before this change.
 
 ### remove-brand-guidelines: Remove brand guidelines from the app
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The brand guidelines content currently shown somewhere
   in the app should be removed — it doesn't need to live in-app.
