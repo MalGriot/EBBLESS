@@ -13,12 +13,16 @@ Two intake channels, both feed this same backlog:
 - **At your computer:** run `node tools/improvements-server.js` (or ask the
   manager to launch it), open `http://localhost:5820`, fill in the form,
   click "Submit to IMPROVEMENTS.md" — it writes straight into this file.
-- **On the go:** open the [Ebbless Ideas](https://claude.ai/code/artifact/d0a169ef-7d97-4cd0-b33d-1bc6f323b640)
-  page from your phone (or anywhere, signed into claude.ai) and submit an
-  idea. It's saved to that page's shared queue, not this file directly — the
-  manager pulls new entries from there into the backlog below next time it
-  syncs (ask it to sync, or it checks at the start of a session). Only
-  Title is required on either form; everything else can be filled in later.
+- **On the go, no Claude sign-in needed:** open EBBLESS itself → Settings →
+  About → "Suggest an improvement" (or go straight to
+  [github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea](https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea)).
+  Only needs a GitHub login — nothing Claude-specific. It files a GitHub
+  issue labeled `idea`, not an entry in this file directly. The manager
+  syncs those into the backlog below (`gh issue list --label idea --state
+  open`), appends each as an entry here, and closes the issue with a
+  comment linking to the entry it became — ask it to sync, or it checks at
+  the start of a session. Only Title is required on either channel;
+  everything else can be filled in later.
 
 ## How this works
 
