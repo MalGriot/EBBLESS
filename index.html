@@ -921,7 +921,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @keyframes splash-reveal{from{opacity:1}to{opacity:0}}
 @keyframes splash-logo-in{from{opacity:0}to{opacity:1}}
 
-/* first-visit choice: "Play Tutorial" / "Skip" offered explicitly on the
+/* first-visit choice: "Tutorial" / "Enter" offered explicitly on the
    splash instead of the app deciding automatically - see the bottom of the
    main script (showSplashChoice()) for the logic. Hidden by default so a
    returning visitor (or anyone mid-tutorial/mid-splash-timeout) never sees
@@ -1253,8 +1253,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
-    <button id="splashPlayTutorial" type="button" class="splash-choice-btn splash-choice-btn-primary">Play Tutorial</button>
-    <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Skip</button>
+    <button id="splashPlayTutorial" type="button" class="splash-choice-btn splash-choice-btn-primary">Tutorial</button>
+    <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
 </div>
 
@@ -7108,11 +7108,11 @@ function discardIntroChrome(){
 }
 
 // First-time visitor: offer an explicit choice on the splash screen instead
-// of deciding for them. "Play Tutorial" hands off to the existing runIntro()
+// of deciding for them. "Tutorial" hands off to the existing runIntro()
 // sequence unchanged (music included - runIntro() already starts #onbMusic
 // itself once it runs, see MUSIC_PEAK/fadeMusic above); the tap that chooses
 // it also doubles as the user gesture autoplay needs, which the old
-// auto-launched intro never reliably had. "Skip" marks onboarding complete,
+// auto-launched intro never reliably had. "Enter" marks onboarding complete,
 // same as if the tutorial had already been seen, and falls straight into
 // startApp() - the same path a returning visitor takes.
 function showSplashChoice(){
@@ -7123,8 +7123,8 @@ function showSplashChoice(){
   // loads, above #splash's z-index - that's fine when runIntro() takes over
   // immediately, but it would otherwise sit on top of the splash and hide
   // this very choice from the visitor. Hide them while the choice is up;
-  // "Play Tutorial" restores them (runIntro()'s own sequence() starts from
-  // that same idle beat) and "Skip" removes them outright via
+  // "Tutorial" restores them (runIntro()'s own sequence() starts from
+  // that same idle beat) and "Enter" removes them outright via
   // discardIntroChrome(), same as a returning visitor.
   const backdropEl = $('onbBackdrop'), markEl = $('onbMark'), onbSkipEl = $('onbSkip');
   [backdropEl, markEl, onbSkipEl].forEach(el => { if (el) el.style.display = 'none'; });
