@@ -866,15 +866,20 @@ Add entries in this shape:
   sound even though the app now correctly avoids re-showing the splash and
   restores the track/queue UI. Worth a real-device check once this merges.
 
-### player-controller-centering: Desktop player/controller should be centered, not off to one side
-- **Status:** draft
+### player-controller-centering: Desktop player/controller is missing/off-center, not centered
+- **Status:** ready
 - **Priority:** medium
-- **Description:** On desktop, the player/controller UI sits off-center,
-  leaving blank space in the layout. It should appear centered in the UI.
-- **Touches:** desktop layout CSS for the player/controller region in
-  `index.html` (unconfirmed - needs investigation of the exact selector).
+- **Description:** On desktop, there's no player/controller visible centered
+  in the UI at all (not just off to one side) - just blank space where it
+  should be. Investigate why it's not rendering/positioned there and fix so
+  the player/controller appears centered in the desktop layout.
+- **Touches:** desktop layout CSS/markup for the player/controller region in
+  `index.html` (unconfirmed - needs investigation of the exact selector and
+  why it isn't showing).
 - **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #23. No description/touches given
-  by the reporter beyond the title. Checked against existing entries -
-  distinct from `player-button-colors` (that one is about button color/
-  contrast, not layout position), no overlap found.
+- **Notes:** Synced from Geethub issue #23. Reporter clarified (2026-09-18):
+  it's not just off-center, there's no center player visible at all on
+  desktop. Checked against existing entries - distinct from
+  `player-button-colors` (that one is about button color/contrast on an
+  existing, visible player, not this one's absence/positioning), no overlap
+  found.
