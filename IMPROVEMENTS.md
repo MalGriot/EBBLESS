@@ -268,3 +268,59 @@ Add entries in this shape:
   Verified in mobile (375x812) and desktop viewports: both buttons work,
   tutorial plays with music, skip proceeds straight through, reload after
   skip doesn't re-show the choice, no new console errors.
+
+### tutorial-i-tried-it-album: "I Tried It" tutorial sample should show as a two-track album
+- **Status:** review
+- **Priority:** medium
+- **Description:** The "I Tried It" sample shown in the onboarding tutorial
+  is actually an album - it should display as such, showing both tracks,
+  matching how it appears in the real Spotify album.
+- **Touches:** onboarding/tutorial flow, tutorial sample data.
+- **Branch:** agent/tutorial-i-tried-it-album
+- **Notes:** Synced from Geethub issue #11. Fixed and pushed (commit
+  `ed129ca`): the demo sample data lived in `index.html`'s
+  `runIntro()` as three flat consts (`DEMO_ART`/`DEMO_TITLE`/`DEMO_ARTIST`/
+  `DEMO_TRACK`, ~line 6479) feeding `showLoadedLibraryCard()` and
+  `showLoadedLibraryPanel()`, which hardcoded a "1 track" library card and a
+  single track-row in the playlist panel. Replaced with a `DEMO_TRACKS`
+  array of two track objects (same `{title, artist, art}` shape a real
+  loaded playlist's `pl.tracks` entries use elsewhere in the app, e.g.
+  `toggleLibraryPlaylistPanel()`'s own `pl.tracks.forEach()` around line
+  2858), plus a `DEMO_ALBUM` const for the album/playlist name. The library
+  card now reads "2 tracks" and the playlist panel renders both rows,
+  mirroring the exact track-row markup the real panel builds. The
+  single-track beats (player, lyrics, art-style menu) still show just the
+  first track ("I Tried It" - the version already playing there, duration
+  5:56 unchanged) since only one track is ever "now playing" during the
+  intro. Mirrored the same change in the `?introBeat=` debug-capture
+  harness further down the file (`CAP_TRACKS`, used by the `library` and
+  `library-panel` capture cases) so it stays consistent with the real
+  sequence.
+
+  **Assumption to confirm:** Wind Horse Records' own Bandcamp listing
+  (windhorserecords.bandcamp.com/album/unnayanaa-mal-griot-i-tried-it)
+  lists this as a two-track release: "I Tried It (Original Mix)" - 5:56,
+  and "I Tried It (Radio Edit)" - 3:34. The 5:56 duration matches what the
+  tutorial already had hardcoded for the currently-"playing" track, which
+  corroborates the Original Mix being track 1. Apple Music's own listing
+  treats "I Tried It" as a single (1 track), and I could not scrape
+  Spotify's own track listing directly (its web player is a JS SPA that
+  didn't yield a track list through a plain HTML fetch) to confirm the
+  second track's exact title/casing there - used "I Tried It (Radio Edit)"
+  based on the Bandcamp listing. Please confirm against the actual Spotify
+  album page that the second track is titled that way (and not, say,
+  "I Tried It - Radio Edit" with a dash, or a different edit name
+  entirely) before merging.
+- **Verified:** Syntax-checked (`node -e "new Function(...)"` over the
+  extracted `<script>` block - no errors). Loaded the file in a live
+  browser preview (a plain `python3 -m http.server` over this worktree, not
+  the main checkout) and exercised both the real timed intro (`?intro=1`)
+  and the deterministic debug beats (`?introBeat=library` /
+  `?introBeat=library-panel`): the library card now shows "2 tracks", the
+  playlist panel shows both "I Tried It" and "I Tried It (Radio Edit)" rows
+  with the correct artist/art, and the rest of the sequence (paste/load
+  beats, player, art-style menu, captions/timing) played through
+  unaffected. No new console errors or failed network requests against the
+  worktree's own server; the console/network noise seen during testing
+  traced to unrelated stale tabs/servers left over from other concurrent
+  sessions on this machine, not this change.
