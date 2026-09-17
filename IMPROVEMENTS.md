@@ -402,14 +402,50 @@ Add entries in this shape:
   the return to the real app) played through unaffected in both. No open
   questions.
 
-### album-art-icon-colors: Album art style icons should share one color scheme
-- **Status:** ready
+### album-art-icon-colors: Album art style icons have inconsistent accent colors
+- **Status:** review
 - **Priority:** low
-- **Description:** The three album-art style icons (plain/default art,
-  record, cassette) should share a consistent color scheme. Currently the
-  record icon's small center circle changes to the UI accent color, but the
-  cassette icon's two small circles and the default/plain album art icon
-  don't match that same color - they should.
-- **Touches:** album art style icon UI/theming.
+- **Description:** The three album-art "style" icons in the picker menu
+  (Default / Spinning Record / Cassette Tape) should all use the same
+  accent-color source for their small circle accents, so they stay in sync
+  if the accent ever changes. The record icon's center-label dot already
+  used the accent var; the cassette's two reel-hub dots and the default
+  icon's glyph did not.
+- **Touches:** `index.html` CSS around line 386-393 (`.art-style-swatch`,
+  `.swatch-default`, `.swatch-disc`/`.swatch-label`, `.swatch-cassette`/
+  `.swatch-hub`, the small swatch icons shown in the `#artStyleMenu`
+  picker), distinct from the larger physical-material `.record-spindle` /
+  `.cs-hub-core` elements used in the actual playing record/cassette
+  views, which intentionally use realistic hardware colors, not the
+  theme accent.
 - **Branch:** agent/album-art-icon-colors
-- **Notes:** Synced from Geethub issue #13.
+- **Notes:** Synced from a Geethub issue (backlog entry had not yet been
+  created in this worktree's copy of this file, added now). Fixed and
+  pushed (commit `073c2c6`): `.swatch-hub` (cassette reel-hub dots) changed
+  from a hardcoded `var(--faint-2)` to `var(--accent)`, matching
+  `.swatch-label` (record center dot), which already used `var(--accent)`.
+  Added a new `.swatch-default{color:var(--accent)}` rule so the default
+  icon's glyph (drawn with `fill="currentColor"`) also resolves to the
+  accent instead of inheriting the menu's default `var(--faint-2)`. No
+  hardcoded hex values introduced, all three now read the same
+  `--accent` custom property, so they move together automatically if the
+  accent (which is itself driven by the day's color-clock) changes.
+  Verified: ran a local `python3 -m http.server` directly in this worktree
+  (not the shared `preview_start` launch config, which per a sibling
+  lane's warning can silently serve the main checkout's `index.html`
+  regardless of worktree) and pointed the browser tool at that port
+  explicitly, confirming via `location.href` in the page that the tab was
+  actually loading from the worktree's own server before trusting any
+  result. Opened a playlist's player view, opened the art-style picker
+  menu, and via `getComputedStyle` confirmed `--accent`, `.swatch-label`
+  background, `.swatch-hub` background, and `.swatch-default` color all
+  resolved to the identical computed RGB value. Screenshot confirms all
+  three icons render the same pink accent visually. This app has no
+  light/dark theme toggle (the "accent" is a day-color-clock variable,
+  not a light/dark mode switch), so no separate dark-mode check applied;
+  since all three now share one CSS var, they will track any future
+  accent change (including any day-color-clock rotation) together by
+  construction. Checked console: two pre-existing "unknown error fetching
+  the script" messages appear, unrelated to this CSS-only change (present
+  before editing, no JS touched, no new network failures beyond an
+  unrelated aborted intro-theme audio fetch on a duplicate page load).
