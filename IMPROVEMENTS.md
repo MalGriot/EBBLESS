@@ -124,18 +124,53 @@ Add entries in this shape:
   everything else (Apple Music, YouTube, etc.) gets a Spotify cover lookup.
   `lockscreen-album-art` should reuse this same helper via `track.art` /
   `artworkUrls(track)` rather than reimplementing the logic.
-  **Needs a decision before this is fully live:** the Spotify lookup is
-  backed by a new `GET /spotifyart` endpoint in `worker/src/index.js` using
-  Spotify's Client Credentials flow — it needs `SPOTIFY_CLIENT_ID` /
-  `SPOTIFY_CLIENT_SECRET` set via `wrangler secret put` and the worker
-  redeployed before it does anything; until then it's a safe no-op and the
-  app falls back to each source's native art (verified: Spotify links show
-  real Spotify CDN art, SoundCloud keeps its own, Apple Music falls back
-  cleanly with no errors). The agent deliberately did not deploy this
-  itself since it's a live production/infra change — that's your call.
+  **Superseded:** Spotify's Client Credentials flow this originally relied
+  on is now blocked (Spotify requires Premium to create a developer app as
+  of Feb 2026) — see `spotify-art-source` above, which replaced the
+  `/spotifyart` lookup with the free, keyless iTunes Search API instead.
+  No Spotify secrets are needed anymore. Still needs `wrangler deploy` to
+  go live — that's your call.
+
+### spotify-art-source: Swap /spotifyart lookup off the blocked Spotify API
+- **Status:** review
+- **Priority:** high
+- **Description:** Spotify locked developer-app creation behind a Premium
+  account (Feb 2026), so `/spotifyart`'s Client Credentials flow
+  (`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`) is a dead end for this
+  user. Replace it with the iTunes Search API (public, free, no key/login,
+  same source already used for Apple Music matching elsewhere in this
+  app) as the art-lookup-by-title/artist source. Keep the existing
+  SoundCloud-native-art exception and the existing graceful fallback to
+  each source's own native art when no match is found.
+- **Touches:** `worker/src/index.js` (`handleSpotifyArt` and the
+  Client Credentials token helper around line 780-850); the endpoint name
+  and any client-side references to it in `index.html` may need
+  renaming/updating for accuracy, or can stay as-is if only the backend
+  swaps sources.
+- **Branch:** agent/spotify-art-source
+- **Notes:** Supersedes the `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`
+  requirement noted in `spotify-album-art`'s entry above — that decision
+  is now moot, drop it once this lands. Do not use Spotify's undocumented
+  anonymous web-player token trick as an alternative — same class of
+  brittle, ToS-risky reverse-engineering this app's README already
+  rejected for YouTube's innertube API.
+
+  Fixed and pushed (commit `47a4d67`): deleted the Spotify Client
+  Credentials token helper and search call entirely, replaced with
+  `searchItunesTrackArt(title, artist)` hitting the public, keyless iTunes
+  Search API and upsizing `artworkUrl100` to `1200x1200`. Same route
+  (`GET /spotifyart?title=&artist=`), same `{ image }` response shape, same
+  cache-key/TTL strategy, same graceful null-on-miss behavior — no client
+  change needed in `index.html`. Verified live via `wrangler dev --local`:
+  a real query (Blinding Lights / The Weeknd) returned real upsized art, a
+  nonsense query returned a clean `{"image":null}`. This is no longer
+  blocked on Spotify credentials — the `SPOTIFY_CLIENT_ID`/
+  `SPOTIFY_CLIENT_SECRET` requirement noted in `spotify-album-art` above is
+  now moot. Not deployed (`wrangler deploy` not run) — deploy is your call
+  once reviewed.
 
 ### lockscreen-album-art: Lock screen art should be Spotify album art on mobile
-- **Status:** draft
+- **Status:** review
 - **Priority:** low (deprioritized below mobile-install-button; also blocks on spotify-album-art landing first)
 - **Description:** On mobile, the OS lock-screen / media-session artwork
   should show the Spotify album art (same Soundcloud exception as
@@ -144,10 +179,22 @@ Add entries in this shape:
   on the lock screen instead.
 - **Touches:** mobile media session metadata (`MediaSession` API /
   equivalent), lock screen artwork.
-- **Branch:**
-- **Notes:** Synced from Geethub issue #3. Likely wants the same
-  art-resolution logic as `spotify-album-art` — implement that one first if
-  both get queued together, or share a helper.
+- **Branch:** agent/lockscreen-album-art
+- **Notes:** Synced from Geethub issue #3. Agent found the reported bug
+  couldn't be reproduced on current `main` — a prior fix (`c860d3a`) plus
+  `spotify-album-art` landing (`3c12bbc`) already had the lock screen
+  reading resolved art via `t.art`. It found and fixed a latent duplication
+  though: `updateMediaSessionMeta()` (~line 5528) had its own inline art
+  logic instead of calling the shared `artworkUrls()` helper — the exact
+  kind of drift that caused this bug once before (`59035ee` fixed it,
+  `ef630ab` silently reverted it, `c860d3a` restored it). Simplified to
+  delegate to `artworkUrls()` so it can't drift again. Commit `a62d718` on
+  `agent/lockscreen-album-art`, pushed, not merged. Verified by tracing
+  every track-creation path and a syntax check; couldn't exercise
+  `navigator.mediaSession` directly since the browser tool renders local
+  files as a static snapshot. Real-device check recommended once art
+  actually goes live (see `spotify-art-source` below — this depends on
+  that landing before it does anything visible).
 
 ### mobile-tutorial-load: Tutorial not loading on mobile
 - **Status:** merged
@@ -195,3 +242,29 @@ Add entries in this shape:
   (`installBtn`/`installBlock`, ~line 5756) has the identical
   `beforeinstallprompt`-only bug and also never shows on iOS — worth a
   future lane if you want it fixed too.
+  Also folded in Geethub issue #6 ("Where's the install button on mobile
+  splash?") as a duplicate - same complaint, filed before this fix landed.
+  Closed with a comment pointing here.
+
+### splash-tutorial-choice: Splash screen should offer tutorial-or-skip with sound
+- **Status:** review
+- **Priority:** medium
+- **Description:** On the splash screen, show two buttons: one to play the
+  tutorial, one to skip straight in. Choosing the tutorial option should
+  trigger sound (tutorial music).
+- **Touches:** splash screen, onboarding/tutorial flow, audio triggers.
+- **Branch:** agent/splash-tutorial-choice
+- **Notes:** Synced from Geethub issue #7. Fixed and pushed (commit
+  `3c1873d`): added a `#splashChoice` panel with "Play Tutorial"/"Skip"
+  pill buttons to `#splash`, wired via a new `showSplashChoice()` that
+  replaces the old automatic `runIntro(false)` call. "Play Tutorial" calls
+  the existing `runIntro(false)`, which already plays `#onbMusic`
+  (`brand/assets/intro-theme.mp3`) — no new audio pattern needed, and
+  triggering it from the click handler also fixes a latent autoplay-policy
+  risk (previously fired with no user gesture at all). "Skip" behaves like
+  a returning visitor. Bug found+fixed along the way: `#onbBackdrop`/
+  `#onbMark` are visible-by-default static markup that would've sat on top
+  of the new buttons and hidden them; now hidden while the choice is up.
+  Verified in mobile (375x812) and desktop viewports: both buttons work,
+  tutorial plays with music, skip proceeds straight through, reload after
+  skip doesn't re-show the choice, no new console errors.

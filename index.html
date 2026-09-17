@@ -6171,7 +6171,46 @@ function fitOnbCaptionLine(span){
   }
   span.style.maxWidth = Math.ceil(span.scrollWidth) + 'px';
 }
+// Set while a runIntro() instance is live, cleared once it tears itself
+// down - a second call (fast double-tap on Replay, Escape immediately
+// followed by Replay, etc.) now reuses the same DOM elements instead of
+// crashing on removed ones (see discardIntroChrome()), so without this a
+// second call would leave the first instance's sequence() still running
+// and racing the new one over the same captions/stage classes - the
+// "captions arrive out of order" symptom. Halting the previous instance
+// first makes a new call a clean restart instead of two overlapping ones.
+let cancelPrevIntro = null;
 function runIntro(preview){
+  if (cancelPrevIntro){ cancelPrevIntro(); cancelPrevIntro = null; }
+  // undo discardIntroChrome()'s display:none from a prior run/skip, plus
+  // the inline opacity:0 and outro-blink classes finish() leaves behind on
+  // its way out - a replay reuses these same elements rather than
+  // recreating them, so any leftover state from the previous run would
+  // otherwise make it play out invisibly
+  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
+    const el = $(id);
+    if (el) { el.style.display = ''; el.style.opacity = ''; }
+  });
+  const prevMarkEl = $('onbMark');
+  if (prevMarkEl){
+    prevMarkEl.classList.remove('is-outro-blink', 'is-outro-blink-in', 'is-leaving');
+    // sequence()'s opening beat (mark alone, breathing) depends on
+    // #onbMark.is-idle for its visibility/animation - the first-ever run
+    // starts with it from the static HTML, but sequence() itself removes
+    // it a couple seconds in and nothing ever puts it back. Without
+    // restoring it here, a replay's opening beat plays out with the mark
+    // sitting fully transparent (base #onbWord is opacity:0 without
+    // .is-idle) - it just never appears, so the first caption feels like
+    // it fires immediately with nothing before it.
+    prevMarkEl.classList.add('is-idle');
+    prevMarkEl.style.opacity = '';
+    // a run that reached its outro (or got skipped after reaching it)
+    // swaps this to the mark icon and never swaps it back - without
+    // resetting it here, a replay would open on the small mark instead of
+    // the wordmark for its entire run, not just the outro
+    const prevWordImg = prevMarkEl.querySelector('img');
+    if (prevWordImg) prevWordImg.src = 'brand/assets/wordmark-white.png';
+  }
   const prefersReduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const backdrop = $('onbBackdrop'), markEl = $('onbMark'), captionEl = $('onbCaption'),
         captionMainEl = $('onbCaptionMain'),
@@ -6301,6 +6340,15 @@ function runIntro(preview){
   document.addEventListener('keydown', onKey);
   captureEl.addEventListener('click', finish);
   skipEl.addEventListener('click', (e) => { e.stopPropagation(); finish(); });
+  // hard-stop for the *next* runIntro() call to reach for, if this instance
+  // is still mid-sequence when it does - just halts progression and frees
+  // its timer/listener, doesn't run finish()'s teardown (the new instance
+  // is about to overwrite all the same DOM anyway)
+  cancelPrevIntro = function(){
+    done = true;
+    if (musicFadeTimer) clearTimeout(musicFadeTimer);
+    document.removeEventListener('keydown', onKey);
+  };
 
   function wait(ms){
     if (done) return Promise.resolve();
@@ -6911,8 +6959,14 @@ function runIntro(preview){
     captionEl.classList.remove('onb-cap-plain', 'onb-cap-center', 'onb-cap-cycle', 'onb-cap-blink-out');
     void captionEl.offsetWidth;
     captionEl.style.transition = '';
+    // brand/assets/mark-white.png, not the PWA icon (brand/assets/icons/
+    // icon-512.png) - the PWA icon is a flat opaque square with no alpha
+    // channel (it has to be, for OS home-screen tiles), so blinking it out
+    // over the backdrop showed a visible black square instead of a clean
+    // fade. The mark is a real transparent PNG, same as the wordmark this
+    // is replacing.
     const wordImg = markEl.querySelector('img');
-    if (wordImg) wordImg.src = 'brand/assets/icons/icon-512.png';
+    if (wordImg) wordImg.src = 'brand/assets/mark-white.png';
     setStage('outro');
     // the icon itself blinks in (is-outro-blink-in, 600ms) rather than the
     // ordinary 900ms fade-in, to match the caption's flicker
@@ -6980,10 +7034,16 @@ function stopDemoLyricsScroll(){
   demoLyricsScrollRaf = null; demoLyricsScrollLastTs = 0;
 }
 
+// Hides rather than removes: a replay (Settings "Replay tutorial", or
+// ?intro) calls runIntro() again later in the same page life, which looks
+// these same elements up by id - removing them here would make every
+// later replay attempt crash on a null element mid-sequence, hanging the
+// app on a blurred/hidden screen with no stage class ever set to reveal it
+// again (body.onb-active hides the real UI until setStage() runs).
 function discardIntroChrome(){
   ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
-    if (el) el.remove();
+    if (el) el.style.display = 'none';
   });
 }
 
@@ -7266,7 +7326,7 @@ if (introBeatCapture){
       capCaptionText('Flow with the go');
       break;
     case 'flow-word':
-      capMark.querySelector('img').src = 'brand/assets/icons/icon-512.png';
+      capMark.querySelector('img').src = 'brand/assets/mark-white.png';
       capStage('outro');
       capCaption.classList.remove('is-visible');
       break;
