@@ -268,3 +268,61 @@ Add entries in this shape:
   Verified in mobile (375x812) and desktop viewports: both buttons work,
   tutorial plays with music, skip proceeds straight through, reload after
   skip doesn't re-show the choice, no new console errors.
+
+### splash-button-labels: Rename splash screen button labels
+- **Status:** ready
+- **Priority:** low
+- **Description:** On the splash screen's tutorial-choice buttons (added by
+  `splash-tutorial-choice`), rename "Skip" to "Enter" and "Play Tutorial" to
+  "Tutorial".
+- **Touches:** splash screen (`#splashChoice` buttons).
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issues #8 and #9 - combined into one entry
+  since both are simple label edits to the same two buttons. Depends on
+  `splash-tutorial-choice` (currently `review`) actually landing on `main`
+  first, since these buttons don't exist there yet.
+
+### breathe-love-deep-album: "Breathe Love Deep" should be categorized as an album, sourced from SoundCloud
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** The "Breathe Love Deep" release that's default-loaded in
+  the library should be categorized as an album, and its data (art, tracks,
+  etc.) should be pulled directly from its SoundCloud link rather than being
+  resolved through Spotify or Apple Music.
+- **Touches:** default library seed data, album/track categorization,
+  SoundCloud-direct resolution path (same exception logic used in
+  `spotify-album-art`/`spotify-art-source`).
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #10.
+
+### tutorial-i-tried-it-album: "I Tried It" tutorial sample should show as a two-track album
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** The "I Tried It" sample shown in the onboarding tutorial
+  is actually an album - it should display as such, showing both tracks,
+  matching how it appears in the real Spotify album.
+- **Touches:** onboarding/tutorial flow, tutorial sample data.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #11.
+
+### tutorial-caption-timing: Tutorial captions should not overlap
+- **Status:** in-progress
+- **Priority:** low
+- **Description:** In the tutorial, the "smooth" caption should stay hidden
+  until the "no ads ever" caption has fully disappeared, instead of
+  overlapping it.
+- **Touches:** onboarding/tutorial flow, caption sequencing/timing.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #12.
+
+### album-art-icon-colors: Album art style icons should share one color scheme
+- **Status:** ready
+- **Priority:** low
+- **Description:** The three album-art style icons (plain/default art,
+  record, cassette) should share a consistent color scheme. Currently the
+  record icon's small center circle changes to the UI accent color, but the
+  cassette icon's two small circles and the default/plain album art icon
+  don't match that same color - they should.
+- **Touches:** album art style icon UI/theming.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #13.
