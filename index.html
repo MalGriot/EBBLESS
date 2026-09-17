@@ -6908,17 +6908,20 @@ function discardIntroChrome(){
   });
 }
 
-// Two entry flows, per device:
-// - desktop (mouse/trackpad, no meaningful "install" step): the intro runs
-//   on the very first visit, straight in the browser tab.
-// - mobile/touch (installable as a home-screen app): the intro is held back
-//   until the app is actually launched standalone, i.e. after the visitor
-//   has installed it - a plain mobile-browser-tab visit gets the ordinary
-//   splash instead, and ebbless_onboarding_complete is left unset so the
-//   intro still plays the first time they open the installed app.
+// Runs on the very first visit regardless of device - the sequence already
+// has touch-aware wording built in (see TAP below, and the 'power-mobile'
+// debug beat), so there's no reason to hold it back on phones/tablets.
+//
+// NOTE: this used to gate touch devices behind "app installed to the home
+// screen, launched standalone" first, on the theory that a plain mobile
+// browser tab has no install step to anchor the intro to. In practice that
+// meant almost no first-time mobile visitor - who lands in a browser tab,
+// not an installed PWA - ever saw the tutorial at all, which is exactly the
+// "onboarding doesn't load on mobile" bug this fixes. The intro itself
+// renders and plays fine on a touch/mobile viewport; only the eligibility
+// check was wrong.
 const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointer: coarse)').matches);
-const isStandaloneApp = !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-const introEligibleNow = !isTouchDevice || isStandaloneApp;
+const introEligibleNow = true;
 
 let onboardingComplete = false;
 try{ onboardingComplete = localStorage.getItem(ONB_KEY) === 'true'; }catch(e){}
