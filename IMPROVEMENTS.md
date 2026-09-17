@@ -526,32 +526,83 @@ Add entries in this shape:
   messages present before this change.
 
 ### splash-install-delay: Delay splash install button 2-3s after logo
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On the splash page, the install button (added by
   `mobile-install-button`, merged) should wait about 2-3 seconds after the
   logo appears before it shows, instead of appearing immediately.
-- **Touches:** mobile splash screen, install-button timing — same area as
-  `mobile-install-button` above.
+- **Touches:** `index.html` `startApp()`'s mobile splash block (~line 6310,
+  inside the `isMobileUA && !isStandaloneDisplay()` branch) — wrapped the
+  existing `is-install` class add / tap handler / `appinstalled` listener /
+  stranded-visitor timeout in a `setTimeout(..., INSTALL_INVITE_DELAY_MS)`
+  instead of running them synchronously alongside `is-active`.
 - **Branch:** agent/splash-links-fixes
 - **Notes:** Synced from Geethub issue #15. Refinement of the already-merged
   `mobile-install-button` work, not a duplicate of it. Bundled with
   `stale-track-links` into one `agent/splash-links-fixes` lane to save on
-  separate agent spin-up overhead.
+  separate agent spin-up overhead. Commit 702f7d6. Added
+  a 2500ms delay and a guard that skips showing the invite if the splash was
+  already hidden (backgrounded/dismissed) before the timer fires. Verified
+  with a mobile-viewport browser check against this worktree's own static
+  `index.html` (not the shared preview launcher): polled `#splash`'s
+  classList at intervals after a simulated cold launch and confirmed it
+  carried only `is-active` through ~2.3s, then gained `is-install` once the
+  2.5s delay elapsed (screenshot + DOM checks both match). No new console
+  errors vs. before the change (the only console errors present, both
+  before and after, are the pre-existing sandboxed YouTube iframe API script
+  block and a vibrate-without-gesture warning, unrelated to this change).
 
 ### stale-track-links: Some resolved track links are stale/outdated
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Tracks resolved and cached before later link-matching
   protocol changes are now pointing at old/outdated links. Reporter's
   example: "State of Mind" in the "Reetzzz" playlist, installed on mobile
   home screen. These should be re-resolved/updated.
-- **Touches:** track link resolution / caching, possibly a cache
-  invalidation or re-resolve step for previously-cached tracks.
+- **Touches:** `index.html` RESOLVE PIPELINE section (~line 2196): new
+  `RESOLVE_LOGIC_VERSION` constant stamped as `resolveVersion` onto every
+  payload `resolvePlaylist()` writes; new `isResolveStale()` /
+  `reResolveStaleInBackground()` helpers after `getCachedPlaylist()`
+  (~line 2299); a staleness check in `beginImport()`'s cache-hit fast path
+  (~line 3713); a one-time startup sweep over the library in `startApp()`
+  (~line 6265).
 - **Branch:** agent/splash-links-fixes
-- **Notes:** Synced from Geethub issue #16. Bundled with
-  `splash-install-delay` into one `agent/splash-links-fixes` lane to save
-  on separate agent spin-up overhead.
+- **Notes:** Synced from Geethub issue #16. Commit 01cedc3. There was no
+  cache-versioning of any kind on the per-playlist `localStorage` cache
+  (`ebbless:playlist:<id>`, keyed by `LS_PL`) before this — a resolved
+  playlist just sat there indefinitely. Added a `RESOLVE_LOGIC_VERSION`
+  constant and stamp it on every playlist/track payload `resolvePlaylist()`
+  produces; `isResolveStale()` flags a cached playlist whose stamp doesn't
+  match (skipping `type === 'custom'` playlists — Liked Songs, CURRENT/
+  Swell, user-made playlists, Discover overflow — which aren't built by
+  `resolvePlaylist()` and have no such stamp to compare). Two triggers
+  quietly re-resolve a stale entry in the background and swap the refreshed
+  tracks in without disturbing what's on screen, falling back silently to
+  the existing cache on failure: opening a stale playlist through
+  `beginImport`'s cache-hit path, and a one-time sweep over the library at
+  startup (so a playlist played straight from the library/queue, never
+  reopened through `beginImport`, still gets caught). Once re-resolved, a
+  playlist is stamped current and left alone on every later launch — this
+  is a one-time migration per version bump, not a standing "always
+  refetch" poll, so it shouldn't cost performance or offline behavior on
+  playlists that are already current. Verified end-to-end against this
+  worktree's own static `index.html` (not the shared preview launcher):
+  seeded a real cached playlist via the app's own starter-library flow,
+  stripped its `resolveVersion` in `localStorage` to simulate a
+  pre-versioning cache entry, reloaded in a mobile viewport, and confirmed
+  the startup sweep silently re-fetched it — `ts` and track `videoId`s
+  refreshed and `resolveVersion` restored to current — via the app's live
+  backend/YouTube search (this sandbox did have outbound network access to
+  the app's Cloudflare Worker backend, so this was a genuine live
+  re-resolve, not just a code-path trace). Also confirmed a second reload
+  of an already-current-version playlist left its `ts` unchanged (no
+  needless re-fetch). What's **not** independently confirmed: the exact
+  reporter scenario (the specific "State of Mind" / "Reetzzz" track on a
+  real installed-to-home-screen PWA) wasn't reproduced 1:1, since that
+  depends on that specific playlist's actual pre-existing cache state on
+  the reporter's device, which isn't available here — verification instead
+  used a simulated stale entry that exercises the same code path. No new
+  console errors vs. before the change.
 
 ### settings-install-button: Add install button to Settings screen
 - **Status:** review
@@ -814,3 +865,16 @@ Add entries in this shape:
   regardless, in which case the user would still need one tap to resume
   sound even though the app now correctly avoids re-showing the splash and
   restores the track/queue UI. Worth a real-device check once this merges.
+
+### player-controller-centering: Desktop player/controller should be centered, not off to one side
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, the player/controller UI sits off-center,
+  leaving blank space in the layout. It should appear centered in the UI.
+- **Touches:** desktop layout CSS for the player/controller region in
+  `index.html` (unconfirmed - needs investigation of the exact selector).
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #23. No description/touches given
+  by the reporter beyond the title. Checked against existing entries -
+  distinct from `player-button-colors` (that one is about button color/
+  contrast, not layout position), no overlap found.
