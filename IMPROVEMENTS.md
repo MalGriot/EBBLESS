@@ -867,15 +867,15 @@ Add entries in this shape:
   restores the track/queue UI. Worth a real-device check once this merges.
 
 ### player-controller-centering: Desktop player/controller is missing/off-center, not centered
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, there's no player/controller visible centered
   in the UI at all (not just off to one side) - just blank space where it
   should be. Investigate why it's not rendering/positioned there and fix so
   the player/controller appears centered in the desktop layout.
-- **Touches:** desktop layout CSS/markup for the player/controller region in
-  `index.html` (unconfirmed - needs investigation of the exact selector and
-  why it isn't showing).
+- **Touches:** `index.html` ~line 825-859, the `@media (min-width:1150px)`
+  "split-desktop" 3-pane grid block - added `min-height:0` to the
+  `#view-library`/`#view-player` rule and the `#queue-panel` rule.
 - **Branch:** agent/player-controller-centering
 - **Notes:** Synced from Geethub issue #23. Reporter clarified (2026-09-18):
   it's not just off-center, there's no center player visible at all on
@@ -883,3 +883,49 @@ Add entries in this shape:
   `player-button-colors` (that one is about button color/contrast on an
   existing, visible player, not this one's absence/positioning), no overlap
   found.
+
+  Root cause: the `>=1150px` "split-desktop" layout (added in `6957871`,
+  well before this session) places `#view-library`, `#view-player` and
+  `#queue-panel` as `position:static` grid items sharing one
+  `grid-template-rows: var(--topbar-h) 1fr` row, but never gave any of them
+  `min-height:0`. Grid items default to `min-height:auto`, which resolves to
+  the item's own content height whenever its overflow is visible in that
+  axis - and `#queue-panel` has no vertical overflow constraint of its own
+  once it's turned into a static grid item (its normal fixed-position
+  top/bottom sizing, and the internal `.queue-scroll{overflow-y:auto}` that
+  depends on it, don't apply). With only a couple of queued tracks this went
+  unnoticed, but with a real queue loaded (the common case - e.g. an
+  8-10-track album) `#queue-panel`'s un-scrolled content forced the shared
+  grid row to grow to match it (1424px measured against an 800px-tall
+  viewport in testing), stretching `#view-player` right along with it. The
+  player content itself then rendered far below the visible viewport, and
+  `#app`'s own `overflow:hidden` silently clipped all of it away - so the
+  whole player/controller (artwork, seek bar, transport buttons) vanished
+  with no visible trace or console error.
+
+  Fix: added `min-height:0` to the `#view-library`/`#view-player` rule and
+  the `#queue-panel` rule inside the `@media (min-width:1150px)` block, so
+  each pane is forced back to the grid row's actual (viewport-bounded,
+  stretched) height instead of the row growing to fit whichever pane has
+  the most content; each pane's own overflow/scroll behavior (queue's
+  internal `.queue-scroll`, view-player's `overflow-y:hidden`) then takes
+  over as intended.
+
+  Verified with a real browser check, served from this worktree's own
+  `index.html` via `python3 -m http.server` (not the shared preview
+  launcher, per the multi-session note in `CLAUDE.md`) at a 1280x800
+  desktop viewport: loaded the "breathe love d e e p" album (10 tracks) to
+  populate the queue. Before the fix, `#view-player .view-scroll` and
+  `#queue-panel` both measured 1424px tall (vs. an 800px viewport) and
+  `.transport-full` sat at y=1053-1137, entirely past the visible area.
+  After the fix, both measure exactly 740px (the actual grid-row height)
+  and every transport control
+  (`#shuffleBtn`/`#prevBtn`/`#playBtn`/`#nextBtn`/`#repeatBtn`) falls fully
+  within the viewport, properly centered under the artwork. Also confirmed
+  the non-split desktop layout (860-1149px width) was unaffected and still
+  renders/centers correctly. No new console errors versus before the fix
+  (the only console errors present in both cases are a sandboxed-network
+  YouTube iframe API script-fetch failure, unrelated to this change).
+
+  Pushed to `agent/player-controller-centering` (commit `c08bef7`); not
+  merged - left for review per the session's instructions.
