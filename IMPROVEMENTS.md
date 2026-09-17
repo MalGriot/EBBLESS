@@ -584,26 +584,91 @@ Add entries in this shape:
   instead of closing at sync time. Left as-is (autoclose unchanged) since
   you didn't ask to change that rule — flagging so you can decide.
 
-### player-button-colors: Unify player button coloring (play-button color + legibility against album art)
-- **Status:** in-progress
+### player-button-colors: Player buttons should match play-button color and stay legible against album art
+- **Status:** review
 - **Priority:** medium
-- **Description:** Combines two overlapping Geethub asks into one lane:
-  (1) all player buttons (album art control, cymatics, etc.) should use the
-  same color as the play button, instead of each deriving its color from
-  the day-color-clock / time-of-day accent; (2) buttons should stay legible
-  against the currently-playing album art — pick a brighter color pulled
-  from the art, or fall back to white when the art's dominant color is
-  dull. Implement both together: source the shared button color from the
-  play button as the base, but apply the brightness/contrast check against
-  album art on top of that base so buttons never go dull-on-dull.
-- **Touches:** player button styling, the `--accent` / day-color-clock
-  variable (see `album-art-icon-colors` above for how `--accent` currently
-  drives these), play-button color source, album-art color sampling.
-- **Branch:** (filled in by the manager once claimed)
-- **Notes:** Merges Geethub issues #20 and #21 (previously separate entries
-  `player-button-color-source` and `player-button-contrast`) — same
-  underlying complaint (button legibility/consistency), user asked to do
-  them together rather than pick one.
+- **Description:** Merges two overlapping ideas (Geethub issues #20 and
+  #21 — see the old `player-button-color-source` and `player-button-contrast`
+  entries this replaces) about player buttons being hard to see. Two parts,
+  implemented together as one color pipeline rather than two competing
+  sources: (1) all player buttons (album art control, cymatics, etc.)
+  should use the same color as the play button, instead of each deriving
+  its color from the day-color-clock / time-of-day `--accent`; (2) on top
+  of that base, buttons should stay legible against the currently-playing
+  album art — sample the art's dominant color/brightness, and if it's
+  dull/low-contrast, brighten the button color or fall back to white.
+- **Touches:** `index.html` CSS `.visual-tabs .v-tab.is-active` and
+  `.viz-ctl-btn.is-active` (~line 370 and ~498, switched from `--accent` to
+  `--player-accent`); the `PLAYER ACCENT FROM ALBUM ART` JS block (~line
+  2544 comment, ~2566 `sampleDominantColor`, ~2634 new
+  `ensureLegibleAccent`, ~2651 `updatePlayerAccentColor`).
+- **Branch:** agent/player-button-colors
+- **Notes:** Found that most player buttons (`.ctl-btn` transport controls
+  including the play button itself, seek bar fill/knob, like button, mini
+  bar progress, queue "now playing" play button) already read from a
+  `--player-accent` CSS var fed by `updatePlayerAccentColor()` /
+  `sampleDominantColor()` — an existing canvas-based color-extraction
+  helper that samples the currently-loaded album art via a downscaled
+  (24x24) probe-image canvas, falling back to the day-color-clock
+  `--accent` when there's no art or the image can't be read (CORS). Two
+  player-button groups had been left out of that system and were still
+  hardcoded to `--accent` directly: the art/cymatics/lyrics view-tab
+  switcher (`.visual-tabs .v-tab.is-active`) and the cymatics visualizer's
+  pattern/speed/auto controls (`.viz-ctl-btn.is-active`). Switched both to
+  `var(--player-accent)` so every player button now shares one base color
+  source with the play button, satisfying part 1 without needing a second,
+  competing color system.
+  For part 2 (contrast), reused the existing `sampleDominantColor()` output
+  rather than writing a new sampler: added `ensureLegibleAccent(rgbStr)`,
+  called on the sampled color right before it's written to
+  `--player-accent`. It computes perceived luminance
+  (`0.299r+0.587g+0.114b`); colors at or above a 0.5 luminance floor pass
+  through unchanged, colors below that are converted to HSL (new
+  `rgbToHsl`/`hslToRgb` helpers, no existing HSL utilities were present in
+  the file) and either brightened (lightness raised to a 0.56 floor,
+  saturation raised to a 0.45 floor, preserving hue) when there's enough
+  saturation to still read as a color, or replaced with flat white `#fff`
+  when saturation is under 0.22 (i.e. the art is essentially gray/dull, so
+  brightening would just produce muddy gray rather than something legible).
+  This only touches the album-art-sampled path — the `--accent`
+  color-clock fallback (no art / CORS failure) is left as-is, since it's a
+  deliberately tuned brand color rather than an arbitrary photo sample.
+  **Verified:** ran a local `python3 -m http.server 8934` directly in this
+  worktree (not the shared `preview_start` launcher, per the warning left
+  by prior lanes that it can silently serve the main checkout regardless
+  of worktree) and confirmed via `location.href` in the browser tool that
+  the tab was loading from `127.0.0.1:8934`/this worktree before trusting
+  any result. Checked the pure color-math (`rgbToHsl`/`hslToRgb`/
+  `ensureLegibleAccent`) standalone in Node first (e.g. `rgb(20,20,20)` →
+  `#fff`, `rgb(120,60,40)` → `rgb(199,115,87)`, an already-bright
+  `rgb(200,200,200)` passes through unchanged), then confirmed the same
+  behavior live in the running app using the standard test playlist: with
+  the default `--player-accent` unset, manually setting it via
+  `document.documentElement.style.setProperty` and adding `.is-active`
+  confirmed `.ctl-btn.main`, `.viz-ctl-btn`, and `.visual-tabs .v-tab` all
+  resolve their background to that var. Then played two real tracks: "…
+  gasp" (dusty, low-contrast cover) sampled to `rgb(176,78,107)`
+  (luminance 0.434, below the floor) and was correctly brightened to
+  `rgb(193,92,122)` — confirmed both by directly re-running the sampling
+  algorithm against the live artwork URL and by reading the resulting
+  `--player-accent` / `.ctl-btn.main` / `.seek-track .fill` /
+  `.visual-tabs .v-tab.is-active` / `.viz-ctl-btn.is-active` computed
+  background colors, all matching. A second track ("breathe love d e e p")
+  sampled to `rgb(188,147,105)` (luminance 0.606, above the floor) and was
+  left unchanged, confirming the pass-through path. Screenshot of the
+  player view for the first track shows the play button, active view tab,
+  and progress bar all rendering the same warm, clearly-visible rose/tan
+  tone against the dark UI — matching the album art's palette rather than
+  the unrelated day-color-clock gold.
+  **Caveat:** while iterating I hit a false negative where a stale browser
+  tab kept showing the pre-fix (unbrightened) color after an edit +
+  server-restart cycle even though the served file was already correct
+  (opening a fresh tab and re-navigating resolved it immediately) — this
+  looked like a service-worker cache at first (the app does register
+  `sw.js`) but no registration or cache actually existed at the time, so
+  the more likely explanation is stale in-memory JS in a tab that was
+  never fully reloaded; worth a hard refresh if verifying this again and
+  results look surprising. No open questions on the implementation itself.
 
 ### mobile-background-resume: App restarts to splash after switching apps on mobile
 - **Status:** in-progress
