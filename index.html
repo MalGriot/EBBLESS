@@ -920,6 +920,22 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @keyframes splash-reveal{from{opacity:1}to{opacity:0}}
 @keyframes splash-logo-in{from{opacity:0}to{opacity:1}}
 
+/* first-visit choice: "Play Tutorial" / "Skip" offered explicitly on the
+   splash instead of the app deciding automatically - see the bottom of the
+   main script (showSplashChoice()) for the logic. Hidden by default so a
+   returning visitor (or anyone mid-tutorial/mid-splash-timeout) never sees
+   it; only added for a first-time visitor awaiting their choice. */
+.splash-choice{position:relative;z-index:1;display:flex;gap:12px;opacity:0;pointer-events:none;
+  transform:translateY(10px);transition:opacity 500ms var(--ease-out) 1200ms,transform 500ms var(--ease-out) 1200ms}
+#splash.is-choice .splash-choice{opacity:1;pointer-events:auto;transform:translateY(0)}
+.splash-choice-btn{font:inherit;font-size:14px;letter-spacing:.2px;padding:11px 22px;border-radius:22px;
+  border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:var(--text);cursor:pointer;
+  transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.splash-choice-btn:hover,.splash-choice-btn:focus-visible{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4)}
+.splash-choice-btn:active{transform:scale(.96)}
+.splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:#121212;font-weight:600}
+.splash-choice-btn-primary:hover,.splash-choice-btn-primary:focus-visible{background:var(--accent);filter:brightness(1.08)}
+
 /* ---------- first-launch intro: one continuous flowing sequence that
    reveals EBBLESS's mental model (bring music -> listen -> touch the
    field -> discover -> explore -> listen) before the existing splash.
@@ -1235,6 +1251,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <img src="brand/assets/wordmark-white.png" alt="EBBLESS">
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
+  <div id="splashChoice" class="splash-choice">
+    <button id="splashPlayTutorial" type="button" class="splash-choice-btn splash-choice-btn-primary">Play Tutorial</button>
+    <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Skip</button>
+  </div>
 </div>
 
 <div id="app">
@@ -6987,6 +7007,44 @@ function discardIntroChrome(){
   });
 }
 
+// First-time visitor: offer an explicit choice on the splash screen instead
+// of deciding for them. "Play Tutorial" hands off to the existing runIntro()
+// sequence unchanged (music included - runIntro() already starts #onbMusic
+// itself once it runs, see MUSIC_PEAK/fadeMusic above); the tap that chooses
+// it also doubles as the user gesture autoplay needs, which the old
+// auto-launched intro never reliably had. "Skip" marks onboarding complete,
+// same as if the tutorial had already been seen, and falls straight into
+// startApp() - the same path a returning visitor takes.
+function showSplashChoice(){
+  const splashEl = $('splash');
+  if (!splashEl){ runIntro(false); return; }
+  // #onbBackdrop/#onbMark are static markup, present and opaque (onbMark
+  // starts with the "is-idle" breathing class) from the moment the page
+  // loads, above #splash's z-index - that's fine when runIntro() takes over
+  // immediately, but it would otherwise sit on top of the splash and hide
+  // this very choice from the visitor. Hide them while the choice is up;
+  // "Play Tutorial" restores them (runIntro()'s own sequence() starts from
+  // that same idle beat) and "Skip" removes them outright via
+  // discardIntroChrome(), same as a returning visitor.
+  const backdropEl = $('onbBackdrop'), markEl = $('onbMark'), onbSkipEl = $('onbSkip');
+  [backdropEl, markEl, onbSkipEl].forEach(el => { if (el) el.style.display = 'none'; });
+  splashEl.classList.add('is-active', 'is-choice');
+  const playBtn = $('splashPlayTutorial'), skipBtn = $('splashSkipTutorial');
+  const choose = (next) => {
+    splashEl.classList.remove('is-choice');
+    next();
+  };
+  if (playBtn) playBtn.addEventListener('click', () => choose(() => {
+    [backdropEl, markEl, onbSkipEl].forEach(el => { if (el) el.style.display = ''; });
+    runIntro(false);
+  }), { once: true });
+  if (skipBtn) skipBtn.addEventListener('click', () => choose(() => {
+    try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){}
+    discardIntroChrome();
+    startApp();
+  }), { once: true });
+}
+
 // Runs on the very first visit regardless of device - the sequence already
 // has touch-aware wording built in (see TAP below, and the 'power-mobile'
 // debug beat), so there's no reason to hold it back on phones/tablets.
@@ -7282,7 +7340,7 @@ if (introBeatCapture){
   document.documentElement.style.setProperty('--clock-accent', '#e0b26a');
 } else if (forceIntroPreview) runIntro(true);
 else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); }
-else runIntro(false);
+else showSplashChoice();
 
 })();
 </script>
