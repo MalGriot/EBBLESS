@@ -5527,9 +5527,13 @@ function updatePlayerLikeBtn(t){
 
 function updateMediaSessionMeta(t){
   if (!('mediaSession' in navigator)) return;
-  const artwork = t && t.art
-    ? [{ src: t.art, sizes: '512x512', type: 'image/jpeg' }]
-    : artworkUrls(t).map(src => ({ src, sizes: '480x360', type: 'image/jpeg' }));
+  // Same art-resolution chain the in-app player reads (artworkUrls(), fed by
+  // resolveTrackArt()'s Spotify-cover-with-SoundCloud-exception result via
+  // track.art) - not a separate lookup, so the lock screen never drifts out
+  // of sync with what's shown in-app. track.art (when present) is always
+  // first in the chain; a bare YouTube thumbnail only shows up as the
+  // last-resort fallback when no resolved/native art exists at all.
+  const artwork = artworkUrls(t).map(src => ({ src, sizes: '512x512', type: 'image/jpeg' }));
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title || 'EBBLESS',
     artist: t.artist || '',
