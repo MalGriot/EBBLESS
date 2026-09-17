@@ -2193,6 +2193,15 @@ function formatLastPlayed(ts){
 /* =========================================================================
    RESOLVE PIPELINE (Spotify playlist -> matched tracks, with cache)
    ========================================================================= */
+// Bump this whenever the matching/resolution logic changes in a way that can
+// change which link a track resolves to (search ranking, source parsing,
+// etc.) - anything cached under an older version is treated as stale (see
+// isResolveStale/reResolveStaleInBackground below) so it gets quietly
+// re-resolved instead of serving a link that predates the fix that would
+// have picked a better one. Cached payloads written before this field
+// existed have no resolveVersion at all, which also compares unequal to any
+// real version number, so they're covered too.
+const RESOLVE_LOGIC_VERSION = 2;
 // Re-matching/re-resolving a playlist re-fetches its tracklist from the
 // source and would otherwise silently drop any songs the user added by hand
 // (from another playlist or a pasted link) — carry those forward.
@@ -2226,7 +2235,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     ]);
     const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: resolvedArt, duration: match.duration || 0 };
     onProgress({ stage: 'matching', done: 1, total: 1, track });
-    const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
+    const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
@@ -2238,7 +2247,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
       const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0, art };
       onProgress({ stage: 'matching', done: 0, total: 1 });
       onProgress({ stage: 'matching', done: 1, total: 1, track });
-      const payload = { id: playlistId, type, name: v.title, image: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now() };
+      const payload = { id: playlistId, type, name: v.title, image: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
       lsSet(LS_PL(playlistId), payload);
       return payload;
     }
@@ -2249,7 +2258,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
     // YouTube's public playlist feed (the only stable, unscraped source for a
     // full tracklist) only returns its ~15 most recent videos.
-    const payload = { id: playlistId, type, name, image: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now() };
+    const payload = { id: playlistId, type, name, image: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
@@ -2282,12 +2291,30 @@ async function resolvePlaylist(playlistId, type, onProgress){
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     if (i < tracks.length - 1) await sleep(350);
   }
-  const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now() };
+  const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
   lsSet(LS_PL(playlistId), payload);
   return payload;
 }
 
 function getCachedPlaylist(id){ return lsGet(LS_PL(id), null); }
+
+// 'custom' playlists (Liked Songs, CURRENT/Swell, user-made playlists,
+// Discover overflow) aren't built by resolvePlaylist and have no
+// resolveVersion to compare - they're never stale by this check.
+function isResolveStale(pl){
+  return !!pl && pl.type !== 'custom' && pl.resolveVersion !== RESOLVE_LOGIC_VERSION;
+}
+// Quietly re-resolves a playlist whose cached links predate the current
+// resolution logic, without disturbing whatever's currently on screen - the
+// stale cache keeps serving until the fresh one lands. Best-effort: offline
+// or a source hiccup just leaves the existing (stale but playable) cache in
+// place for next time.
+function reResolveStaleInBackground(id, type){
+  resolvePlaylist(id, type, () => {}).then(pl => {
+    if (state.playlist && state.playlist.id === id){ state.playlist = pl; renderTrackList(); }
+    renderLibrary();
+  }).catch(() => {});
+}
 
 /* the playlist currently loaded in the player is kept in memory (state.playlist);
    any other playlist referenced by the queue is read fresh from storage */
@@ -3686,6 +3713,11 @@ async function beginImport(id, force, type){
       buildQueueFrom(0);
       loadIndex(state.queuePos, true);
       setView('player');
+      // Cached before the resolution logic last changed - the tracks that
+      // are showing now may point at outdated links. Don't make the visitor
+      // wait on a full re-resolve to see their playlist; refresh it behind
+      // the scenes and swap the tracks in once the fresh links are back.
+      if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
       return;
     }
   }
@@ -6233,6 +6265,23 @@ function startApp(){
   // day-rollover check in refreshSwellIfStale also fires while the app is
   // just sitting open.
   setInterval(refreshSwellIfStale, 60 * 1000);
+  // One-time sweep for playlists that were cached under an older resolve
+  // version (see RESOLVE_LOGIC_VERSION) - covers library playlists that get
+  // played straight from the library/queue and never pass back through
+  // beginImport's own staleness check. Once a playlist re-resolves it's
+  // stamped with the current version, so this is a no-op on every later
+  // launch until the logic changes again - not a standing "always refetch"
+  // poll. Staggered and best-effort so a slow/offline source can't stall
+  // startup or spam requests.
+  (async () => {
+    const staleIds = getLibrary().filter(id => isResolveStale(getCachedPlaylist(id)));
+    for (const id of staleIds){
+      const pl = getCachedPlaylist(id);
+      if (!pl) continue;
+      reResolveStaleInBackground(id, pl.type);
+      await sleep(350);
+    }
+  })();
 
   /* First-time visitors (nothing saved yet, ignoring the always-present
      Swell/Liked system playlists ensureSwellPlaylist() just created above)
