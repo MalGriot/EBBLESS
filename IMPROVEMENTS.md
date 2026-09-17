@@ -503,7 +503,7 @@ Add entries in this shape:
   unrelated aborted intro-theme audio fetch on a duplicate page load).
 
 ### bug-report-button: Settings email button should say "Report a bug"
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In Settings, change the existing email/contact button's
   label (and framing) to "Report a bug".
@@ -512,7 +512,18 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #14. Bundled with
   `settings-install-button` and `remove-brand-guidelines` into one
   `agent/settings-cleanup` lane (all three touch the Settings screen) to
-  save on separate agent spin-up overhead.
+  save on separate agent spin-up overhead. Fixed and pushed (commit
+  `d36f357`): the row's `<div class="label">` already read "Report a bug"
+  (from an earlier, unrelated intro-sequence change), but the button
+  itself — the actual clickable `<a class="btn-ghost" href="mailto:...">`
+  — still said "Email". Changed its text to "Report a bug"; the
+  `mailto:sumtinels@gmail.com?subject=EBBLESS%20bug%20report` href and
+  behavior are untouched. Verified via a local `python3 -m http.server`
+  served directly from this worktree (confirmed via `location.href` in
+  the page, not the shared preview launcher), opened Settings, and
+  confirmed the button now reads "Report a bug". No console errors beyond
+  the two pre-existing, unrelated "unknown error fetching the script"
+  messages present before this change.
 
 ### splash-install-delay: Delay splash install button 2-3s after logo
 - **Status:** in-progress
@@ -543,7 +554,7 @@ Add entries in this shape:
   on separate agent spin-up overhead.
 
 ### settings-install-button: Add install button to Settings screen
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add an install-to-home-screen button on the Settings
   screen, using the same real install-state detection (not just
@@ -559,9 +570,35 @@ Add entries in this shape:
   the same `isMobileUA && !isStandaloneDisplay()` gating logic added there.
   Bundled with `bug-report-button` and `remove-brand-guidelines` into one
   `agent/settings-cleanup` lane to save on separate agent spin-up overhead.
+  Fixed and pushed (commit
+  `d36f357`): the Settings install block previously only revealed itself
+  via a `document.addEventListener('ebbless:install-available', ...)`
+  listener tied to the Chromium-only `beforeinstallprompt` event, so it
+  never appeared on iOS Safari. Reused the exact helpers the
+  `mobile-install-button` splash fix introduced (`isMobileUA`,
+  `isStandaloneDisplay()`, `isIOS`, `deferredInstallPrompt`,
+  `runInstallPrompt()`) rather than reimplementing anything: the block now
+  shows whenever `isMobileUA && !isStandaloneDisplay()`, the button
+  triggers the native prompt when `deferredInstallPrompt` is available,
+  falls back to an in-place "Tap Share, then Add to Home Screen" message
+  on iOS (second tap dismisses the block, mirroring the splash button's
+  UX), and an `appinstalled` listener hides the block once installed.
+  Verified via a local `python3 -m http.server` served directly from this
+  worktree (confirmed `location.href` pointed at the worktree copy, not
+  the shared preview launcher). Used the browser tool's mobile viewport
+  preset (which also emulates an Android Chrome UA) to confirm
+  `installBlock.hidden` flips to `false` and the button renders under a
+  simulated `isMobileUA && !isStandaloneDisplay()` state, and confirmed it
+  stays hidden under the default desktop UA (matching prior
+  `isStandaloneDisplay()`-only behavior). Clicked the button in that state
+  with no `deferredInstallPrompt` and `isIOS` false and confirmed it's a
+  safe no-op (no thrown errors), same as the equivalent splash-button
+  path on a non-Chromium, non-iOS mobile browser. No new console errors —
+  only the two pre-existing, unrelated "unknown error fetching the
+  script" messages present before this change.
 
 ### remove-brand-guidelines: Remove brand guidelines from the app
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The brand guidelines content currently shown somewhere
   in the app should be removed — it doesn't need to live in-app.
@@ -572,6 +609,25 @@ Add entries in this shape:
   detail; agent will need to locate the actual surface first. Bundled with
   `bug-report-button` and `settings-install-button` into one
   `agent/settings-cleanup` lane to save on separate agent spin-up overhead.
+  Located the surface: a "Brand" block at the bottom of
+  Settings with a "Brand guidelines" row linking out to
+  `brand/brand-guidelines.html` in a new tab. Fixed and pushed (commit
+  `d36f357`): removed that entire `settings-block` (heading, row, and
+  link) from Settings. Left `brand/brand-guidelines.html` and
+  `brand/BRAND.md` themselves in place — they're developer-facing
+  reference material (the visual brand manual and its condensed
+  developer/agent source of truth, respectively), explicitly linked from
+  `README.md`'s project-structure section, not in-app content — so only
+  the in-app surfacing was in scope here. Confirmed no other reference to
+  `brand-guidelines.html` remained anywhere in `index.html` before
+  removing the link. Verified via a local `python3 -m http.server` served
+  directly from this worktree (confirmed `location.href` pointed at the
+  worktree copy), opened Settings, and confirmed via
+  `document.querySelectorAll('h2')` that no "Brand" section renders
+  anymore, with the "Library"/"Support" sections immediately adjacent and
+  otherwise untouched. No new console errors — only the two pre-existing,
+  unrelated "unknown error fetching the script" messages present before
+  this change.
 
 ### github-issues-status-tabs: GitHub issues repo should have "waiting for deployment" and "completed" views
 - **Status:** merged

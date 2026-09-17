@@ -1631,14 +1631,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="label">Report a bug</div>
             <div class="desc">Something broken or behaving strangely? Email the details and it gets looked at directly.</div>
           </div>
-          <a class="btn-ghost" href="mailto:sumtinels@gmail.com?subject=EBBLESS%20bug%20report">Email</a>
-        </div>
-      </div>
-      <div class="settings-block">
-        <h2>Brand</h2>
-        <div class="settings-row">
-          <div class="label">Brand guidelines</div>
-          <a class="btn-ghost" href="brand/brand-guidelines.html" target="_blank" rel="noopener">Open</a>
+          <a class="btn-ghost" href="mailto:sumtinels@gmail.com?subject=EBBLESS%20bug%20report">Report a bug</a>
         </div>
       </div>
     </div>
@@ -5929,17 +5922,37 @@ if (screen.orientation && screen.orientation.lock){
   screen.orientation.lock('portrait').catch(() => {});
 }
 
-/* ---- install prompt (Settings fallback for anyone who dismissed the splash) ---- */
+/* ---- install prompt (Settings fallback for anyone who dismissed the splash) ----
+   Used to only reveal itself on the Chromium-only 'ebbless:install-available'
+   event, which meant it never showed on iOS Safari (no beforeinstallprompt
+   there, ever - see the splash install button's own comment above). Gated on
+   real install state now, same as the splash button, with the same iOS
+   Share-sheet fallback since there's no programmatic install API to fall
+   back on there. */
 {
   const installBlock = $('installBlock');
   const installBtn = $('installBtn');
-  if (!isStandaloneDisplay()){
-    document.addEventListener('ebbless:install-available', () => { installBlock.hidden = false; });
+  const installDesc = installBlock ? installBlock.querySelector('.desc') : null;
+  if (installBlock && installBtn && isMobileUA && !isStandaloneDisplay()){
+    installBlock.hidden = false;
+    let iosTapped = false;
     installBtn.addEventListener('click', async () => {
-      installBtn.disabled = true;
-      await runInstallPrompt();
-      installBlock.hidden = true;
-      installBtn.disabled = false;
+      if (deferredInstallPrompt){
+        installBtn.disabled = true;
+        await runInstallPrompt();
+        installBlock.hidden = true;
+        installBtn.disabled = false;
+      } else if (isIOS){
+        // No native install prompt on iOS Safari - point at the manual flow,
+        // then let a second tap dismiss the block.
+        if (!iosTapped){
+          iosTapped = true;
+          if (installDesc) installDesc.textContent = 'Tap Share, then Add to Home Screen.';
+          installBtn.textContent = 'Got it';
+        } else {
+          installBlock.hidden = true;
+        }
+      }
     });
     window.addEventListener('appinstalled', () => { installBlock.hidden = true; });
   }
