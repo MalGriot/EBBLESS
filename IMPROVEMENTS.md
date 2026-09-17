@@ -328,7 +328,7 @@ Add entries in this shape:
   skip doesn't re-show the choice, no new console errors.
 
 ### splash-button-labels: Rename splash screen button labels
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** On the splash screen's tutorial-choice buttons (added by
   `splash-tutorial-choice`), rename "Skip" to "Enter" and "Play Tutorial" to
