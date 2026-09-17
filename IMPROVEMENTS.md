@@ -13,6 +13,8 @@ Two intake channels, both feed this same backlog:
 - **At your computer:** run `node tools/improvements-server.js` (or ask the
   manager to launch it), open `http://localhost:5820`, fill in the form,
   click "Submit to IMPROVEMENTS.md" — it writes straight into this file.
+  Entries from here default to **`ready`** — you're at the keyboard, so
+  it's queued immediately.
 - **On the go, no Claude sign-in needed:** open EBBLESS itself → Settings →
   About → "Suggest an improvement" (or go straight to
   [github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea](https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea)).
@@ -21,8 +23,11 @@ Two intake channels, both feed this same backlog:
   syncs those into the backlog below (`gh issue list --label idea --state
   open`), appends each as an entry here, and closes the issue with a
   comment linking to the entry it became — ask it to sync, or it checks at
-  the start of a session. Only Title is required on either channel;
-  everything else can be filled in later.
+  the start of a session. Entries from here default to **`draft`** — this
+  channel is reachable by anyone with the app open (not necessarily you in
+  person), so a synced idea waits for you to flip it to `ready` in this
+  file before any agent is dispatched on it. Only Title is required on
+  either channel; everything else can be filled in later.
 
 ## How this works
 
