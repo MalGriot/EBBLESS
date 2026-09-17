@@ -671,7 +671,7 @@ Add entries in this shape:
   results look surprising. No open questions on the implementation itself.
 
 ### mobile-background-resume: App restarts to splash after switching apps on mobile
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** high
 - **Description:** On mobile, switching away from the app (e.g. to another
   app) and back pauses the music and restarts the app from the splash
@@ -679,5 +679,71 @@ Add entries in this shape:
 - **Touches:** mobile lifecycle handling (`visibilitychange`/`pagehide`
   equivalents), app state persistence across backgrounding, splash-screen
   re-trigger logic.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #22.
+- **Branch:** `agent/mobile-background-resume`
+- **Notes:** Synced from Geethub issue #22. The existing
+  `visibilitychange` listener (~line 5895) was already reasonably careful -
+  it persists resume state and a `wasPlayingBeforeHide` flag on hide, and on
+  return either calls `resumePlayback()` (iOS suspends the YouTube iframe's
+  underlying `<video>` on lock/background even though the `keepAliveAudio`
+  element keeps the lock-screen transport looking alive) or, past a
+  deliberate 10-minute `BACKGROUND_RESET_MS` threshold, does an explicit
+  `location.reload()`. That reload path isn't the actual bug: mobile
+  browsers/PWAs (iOS Safari standalone home-screen apps especially) kill the
+  whole page process under memory pressure and silently reload from scratch
+  the moment the user switches back - routinely well inside that 10-minute
+  window, since it needs a *live* JS process to even reach the timer logic.
+  From `startApp()`'s point of view that's indistinguishable from a genuine
+  cold launch, and `startApp()` (line ~6120) unconditionally replayed the
+  full branded `#splash` logo/reveal animation (`is-active`, held for
+  `SPLASH_MS` = 3400ms, longer with the mobile install-prompt flow) on every
+  call - there was no "this is a resume, not a first launch" signal for it
+  to check, so every backgrounded-and-returned session looked to the user
+  like the app had restarted from scratch. This is the same shape of bug as
+  `mobile-tutorial-load` (a gate that fires unconditionally where it should
+  only fire on true first-visit), just on the branded splash rather than the
+  onboarding intro.
+
+  **Fix:** the hide-side of the `visibilitychange` handler already wrote
+  `LS_BACKGROUNDED_AT` (timestamp) to `localStorage`; added a matching
+  `LS_WAS_PLAYING` key written alongside it, since the in-memory
+  `wasPlayingBeforeHide` variable doesn't survive a real process kill.
+  `startApp()` now reads both back at the very top: if `LS_BACKGROUNDED_AT`
+  is set and recent (under `BACKGROUND_RESET_MS`, i.e. the visit is
+  functionally a resume rather than a stale reopen), it skips the `is-active`
+  reveal entirely and just marks `#splash` `is-hidden` directly (it's opaque
+  and visible-by-default as a no-FOUC cover, so it still has to be
+  dismissed, just without the animation/install-prompt dance), and - after
+  `tryResume()` restores the queue/track - makes a best-effort
+  `resumePlayback()` call if `LS_WAS_PLAYING` was true. Both keys are
+  cleared immediately after being read so a later *genuine* cold launch (or
+  a background gap past the 10-minute threshold) still gets the normal
+  splash. A true first-ever visit (verified in a fresh tab with no prior
+  `LS_BACKGROUNDED_AT`) is unaffected - `#splash` still gets `is-active`
+  and plays its full reveal.
+
+  **Verified:** ran `python3 -m http.server` directly from this worktree
+  (not the shared preview-tool launcher, per a prior lane's caution that it
+  can serve the main checkout regardless of worktree) and confirmed via
+  `location.href` in the browser tool that the page under test was this
+  worktree's `index.html`. In a 375x812 mobile viewport: (1) a genuine
+  fresh tab with no prior background state still shows the full splash
+  (`is-active` present) - cold launch unaffected; (2) with onboarding
+  marked complete and `artworkWrap` given `is-playing`, dispatching a
+  `visibilitychange` to `hidden` correctly wrote `LS_BACKGROUNDED_AT`/
+  `LS_WAS_PLAYING` to `localStorage`; (3) reloading the page (simulating the
+  OS killing and reopening the page on app-switch return) resulted in
+  `#splash` going straight to `is-hidden` with `is-active` never set - no
+  splash flash - and both localStorage flags were read and cleared as
+  expected. No new console errors from the change; the only console errors
+  present ("An unknown error occurred when fetching the script") are
+  pre-existing YouTube iframe-API fetch failures caused by this sandbox
+  having no real network access to youtube.com, reproduced identically on
+  a plain cold load with no backgrounding involved, so they're unrelated to
+  this fix.
+  **Caveat:** couldn't exercise the real YouTube iframe/audio resume itself
+  in this sandbox (no network access to actually load a player), so
+  `resumePlayback()`'s effect on real audio is unverified here - browsers
+  may also still block autoplay-without-gesture on a fresh page load
+  regardless, in which case the user would still need one tap to resume
+  sound even though the app now correctly avoids re-showing the splash and
+  restores the track/queue UI. Worth a real-device check once this merges.

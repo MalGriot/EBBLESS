@@ -2103,6 +2103,7 @@ const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep pla
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
+const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
 const BACKGROUND_RESET_MS = 10 * 60 * 1000;             // stay alive in background up to this long, then reopen fresh
 
 function lsGet(key, fallback){
@@ -5970,6 +5971,12 @@ document.addEventListener('visibilitychange', () => {
     wasPlayingBeforeHide = artworkWrap.classList.contains('is-playing');
     persistResume();
     lsSet(LS_BACKGROUNDED_AT, Date.now());
+    // Also written to storage (not just the in-memory flag above) because
+    // mobile browsers/PWAs routinely kill the whole JS process while
+    // backgrounded and reload from scratch on return - the in-memory flag
+    // doesn't survive that, but startApp()'s cold-boot path below reads
+    // this back to know playback was active when it got cut off.
+    lsSet(LS_WAS_PLAYING, wasPlayingBeforeHide);
   } else {
     const hiddenAt = lsGet(LS_BACKGROUNDED_AT, null);
     if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS){
@@ -5977,6 +5984,7 @@ document.addEventListener('visibilitychange', () => {
       return;
     }
     lsDel(LS_BACKGROUNDED_AT);
+    lsDel(LS_WAS_PLAYING);
     if (wasPlayingBeforeHide) resumePlayback();
   }
 });
@@ -6183,6 +6191,24 @@ miniBar.addEventListener('click', () => setView('player'));
    INIT
    ========================================================================= */
 function startApp(){
+  // Mobile browsers/PWAs routinely kill the whole page (and its JS state)
+  // while backgrounded, then reload from scratch the moment the user
+  // switches back - well before the 10-minute "reopen fresh" timer in the
+  // visibilitychange handler above ever gets a chance to run (that handler
+  // needs a live JS process to fire in). From here that's indistinguishable
+  // from a genuine cold launch... except LS_BACKGROUNDED_AT/LS_WAS_PLAYING,
+  // which were written to storage (not just an in-memory flag) right before
+  // the page was hidden and are still sitting there, recent, because the
+  // handler never got to clear them on the way back in. Treat that as
+  // "resuming from background", not a first launch: skip the splash replay
+  // and try to pick playback back up, instead of stranding the visitor on
+  // the splash screen looking like the app just restarted.
+  const bgAt = lsGet(LS_BACKGROUNDED_AT, null);
+  const resumingFromBackground = !!(bgAt && (Date.now() - bgAt) < BACKGROUND_RESET_MS);
+  const wasPlayingAtBackground = lsGet(LS_WAS_PLAYING, false);
+  lsDel(LS_BACKGROUNDED_AT);
+  lsDel(LS_WAS_PLAYING);
+
   ensureSwellPlaylist();
   renderLibrary();
   renderQueuePanel();
@@ -6190,6 +6216,13 @@ function startApp(){
   // tryResume itself doesn't anticipate - never let a bad resume take the
   // rest of init down with it (the splash screen would hang forever).
   try{ tryResume(); } catch(e){}
+  if (resumingFromBackground && wasPlayingAtBackground){
+    // Best-effort: browsers can still block unrequested playback here since
+    // this is a fresh page load with no fresh user gesture, but it's worth
+    // trying rather than leaving a track that was actively playing sitting
+    // paused for no visible reason.
+    try{ resumePlayback(); } catch(e){}
+  }
   // First-time visitors (or anyone with nothing resumed) have no track to
   // show on the player view, so land them on the library instead.
   setView(currentTrack() ? 'player' : 'library');
@@ -6209,7 +6242,13 @@ function startApp(){
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
   const SPLASH_MS = 3400;
-  if (splashEl){
+  if (splashEl && resumingFromBackground){
+    // #splash is opaque and visible by default (the no-FOUC cover, see its
+    // CSS comment) so it still has to be explicitly dismissed here - just
+    // skip the is-active reveal animation and the install-prompt/timeout
+    // dance below, both of which are only meaningful on a real cold launch.
+    splashEl.classList.add('is-hidden');
+  } else if (splashEl){
     splashEl.classList.add('is-active');
     const hideSplash = () => splashEl.classList.add('is-hidden');
 
