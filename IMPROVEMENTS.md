@@ -328,16 +328,33 @@ Add entries in this shape:
   skip doesn't re-show the choice, no new console errors.
 
 ### splash-button-labels: Rename splash screen button labels
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** On the splash screen's tutorial-choice buttons (added by
   `splash-tutorial-choice`), rename "Skip" to "Enter" and "Play Tutorial" to
   "Tutorial".
 - **Touches:** splash screen (`#splashChoice` buttons).
-- **Branch:** (none yet)
+- **Branch:** `agent/splash-button-labels`
 - **Notes:** Synced from Geethub issues #8 and #9 - combined into one entry
   since both are simple label edits to the same two buttons. Its dependency
   (`splash-tutorial-choice`) has now landed on `main`, so this is unblocked.
+  Changed only the visible label text on `#splashPlayTutorial` ("Play
+  Tutorial" -> "Tutorial") and `#splashSkipTutorial` ("Skip" -> "Enter") in
+  `index.html`, plus the three code comments nearby that quoted the old
+  button text (for consistency) - left every id/class/handler untouched.
+  Commit `6938341`. Verified by serving this worktree's `index.html` with
+  `python3 -m http.server` (confirmed via `location.href` that the browser
+  was pointed at the worktree copy, not the main checkout), clearing
+  `localStorage` to force the first-visit `showSplashChoice()` path, and
+  confirming via screenshot/read_page that the buttons render "Tutorial" and
+  "Enter". Clicking "Enter" set `ebbless_onboarding_complete=true` and
+  dropped straight into the library view (returning-visitor path);
+  reloading fresh and clicking "Tutorial" called `runIntro(false)` with
+  `#onbMusic` playing (`intro-theme.mp3`), confirmed by screenshot mid-intro.
+  No new console errors from the app itself - the only console errors seen
+  ("unknown error fetching the script") don't correspond to any failing
+  request in the network log for this origin, so they're a pre-existing
+  browser-pane/extension artifact, not something this change introduced.
 
 ### tutorial-i-tried-it-album: "I Tried It" tutorial sample should show as a two-track album
 - **Status:** merged
