@@ -503,28 +503,33 @@ Add entries in this shape:
   unrelated aborted intro-theme audio fetch on a duplicate page load).
 
 ### bug-report-button: Settings email button should say "Report a bug"
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In Settings, change the existing email/contact button's
   label (and framing) to "Report a bug".
 - **Touches:** Settings screen, the email/contact button.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #14.
+- **Branch:** agent/settings-cleanup
+- **Notes:** Synced from Geethub issue #14. Bundled with
+  `settings-install-button` and `remove-brand-guidelines` into one
+  `agent/settings-cleanup` lane (all three touch the Settings screen) to
+  save on separate agent spin-up overhead.
 
 ### splash-install-delay: Delay splash install button 2-3s after logo
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On the splash page, the install button (added by
   `mobile-install-button`, merged) should wait about 2-3 seconds after the
   logo appears before it shows, instead of appearing immediately.
 - **Touches:** mobile splash screen, install-button timing — same area as
   `mobile-install-button` above.
-- **Branch:** (none yet)
+- **Branch:** agent/splash-links-fixes
 - **Notes:** Synced from Geethub issue #15. Refinement of the already-merged
-  `mobile-install-button` work, not a duplicate of it.
+  `mobile-install-button` work, not a duplicate of it. Bundled with
+  `stale-track-links` into one `agent/splash-links-fixes` lane to save on
+  separate agent spin-up overhead.
 
 ### stale-track-links: Some resolved track links are stale/outdated
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Tracks resolved and cached before later link-matching
   protocol changes are now pointing at old/outdated links. Reporter's
@@ -532,11 +537,13 @@ Add entries in this shape:
   home screen. These should be re-resolved/updated.
 - **Touches:** track link resolution / caching, possibly a cache
   invalidation or re-resolve step for previously-cached tracks.
-- **Branch:** (none yet)
-- **Notes:** Synced from Geethub issue #16.
+- **Branch:** agent/splash-links-fixes
+- **Notes:** Synced from Geethub issue #16. Bundled with
+  `splash-install-delay` into one `agent/splash-links-fixes` lane to save
+  on separate agent spin-up overhead.
 
 ### settings-install-button: Add install button to Settings screen
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add an install-to-home-screen button on the Settings
   screen, using the same real install-state detection (not just
@@ -544,23 +551,27 @@ Add entries in this shape:
 - **Touches:** Settings screen's existing "Install" fallback button
   (`installBtn`/`installBlock`, ~line 5756 per the `mobile-install-button`
   note).
-- **Branch:** (none yet)
+- **Branch:** agent/settings-cleanup
 - **Notes:** Synced from Geethub issue #17. This is the exact follow-up the
   `mobile-install-button` agent already flagged but never turned into a
   backlog entry: the Settings "Install" button has the identical
   `beforeinstallprompt`-only bug and never shows on iOS. Fix should reuse
   the same `isMobileUA && !isStandaloneDisplay()` gating logic added there.
+  Bundled with `bug-report-button` and `remove-brand-guidelines` into one
+  `agent/settings-cleanup` lane to save on separate agent spin-up overhead.
 
 ### remove-brand-guidelines: Remove brand guidelines from the app
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The brand guidelines content currently shown somewhere
   in the app should be removed — it doesn't need to live in-app.
 - **Touches:** wherever brand guidelines are currently surfaced (likely
   Settings/About area) — needs locating.
-- **Branch:** (none yet)
+- **Branch:** agent/settings-cleanup
 - **Notes:** Synced from Geethub issue #18. Issue body had no further
-  detail; agent will need to locate the actual surface first.
+  detail; agent will need to locate the actual surface first. Bundled with
+  `bug-report-button` and `settings-install-button` into one
+  `agent/settings-cleanup` lane to save on separate agent spin-up overhead.
 
 ### github-issues-status-tabs: GitHub issues repo should have "waiting for deployment" and "completed" views
 - **Status:** merged
