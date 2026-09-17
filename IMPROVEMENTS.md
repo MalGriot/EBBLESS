@@ -501,3 +501,121 @@ Add entries in this shape:
   the script" messages appear, unrelated to this CSS-only change (present
   before editing, no JS touched, no new network failures beyond an
   unrelated aborted intro-theme audio fetch on a duplicate page load).
+
+### bug-report-button: Settings email button should say "Report a bug"
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In Settings, change the existing email/contact button's
+  label (and framing) to "Report a bug".
+- **Touches:** Settings screen, the email/contact button.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #14.
+
+### splash-install-delay: Delay splash install button 2-3s after logo
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On the splash page, the install button (added by
+  `mobile-install-button`, merged) should wait about 2-3 seconds after the
+  logo appears before it shows, instead of appearing immediately.
+- **Touches:** mobile splash screen, install-button timing — same area as
+  `mobile-install-button` above.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #15. Refinement of the already-merged
+  `mobile-install-button` work, not a duplicate of it.
+
+### stale-track-links: Some resolved track links are stale/outdated
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Tracks resolved and cached before later link-matching
+  protocol changes are now pointing at old/outdated links. Reporter's
+  example: "State of Mind" in the "Reetzzz" playlist, installed on mobile
+  home screen. These should be re-resolved/updated.
+- **Touches:** track link resolution / caching, possibly a cache
+  invalidation or re-resolve step for previously-cached tracks.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #16.
+
+### settings-install-button: Add install button to Settings screen
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add an install-to-home-screen button on the Settings
+  screen, using the same real install-state detection (not just
+  `beforeinstallprompt`) as the splash-screen install button.
+- **Touches:** Settings screen's existing "Install" fallback button
+  (`installBtn`/`installBlock`, ~line 5756 per the `mobile-install-button`
+  note).
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #17. This is the exact follow-up the
+  `mobile-install-button` agent already flagged but never turned into a
+  backlog entry: the Settings "Install" button has the identical
+  `beforeinstallprompt`-only bug and never shows on iOS. Fix should reuse
+  the same `isMobileUA && !isStandaloneDisplay()` gating logic added there.
+
+### remove-brand-guidelines: Remove brand guidelines from the app
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The brand guidelines content currently shown somewhere
+  in the app should be removed — it doesn't need to live in-app.
+- **Touches:** wherever brand guidelines are currently surfaced (likely
+  Settings/About area) — needs locating.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #18. Issue body had no further
+  detail; agent will need to locate the actual surface first.
+
+### github-issues-status-tabs: GitHub issues repo should have "waiting for deployment" and "completed" views
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Geethub issues repo (MalGriot/EBBLESS) should have
+  views/labels for "waiting for deployment" and "completed" states, so the
+  status of a submitted idea is visible from GitHub itself.
+- **Touches:** Geethub repo configuration (labels and/or a saved
+  issue-list view) — not `index.html`, no app code involved.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #19. Different in kind from the rest
+  of this backlog: it's a repo/process change (labels + views), not a code
+  lane, so it doesn't fit the usual worktree-agent flow. Flagging for a
+  judgment call on how to actually do this rather than dispatching a
+  code-editing lane for it.
+
+### player-button-color-source: Player buttons should match play-button color, not time-of-day
+- **Status:** draft
+- **Priority:** medium
+- **Description:** All player buttons (album art control, cymatics, etc.)
+  should use the same color as the play button, instead of each deriving
+  its color from the day-color-clock / time-of-day accent.
+- **Touches:** player button styling, the `--accent` / day-color-clock
+  variable (see `album-art-icon-colors` above for how `--accent` currently
+  drives these), play-button color source.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #20. Overlaps with
+  `player-button-contrast` below — both are about player buttons being
+  hard to see, but propose different fixes (this one: unify on the play
+  button's color; the other: derive contrast from album art with a white
+  fallback). Flagging both rather than picking one — needs your call on
+  which approach (or both/neither).
+
+### player-button-contrast: Player buttons hard to see against dull album art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Player buttons should either pick a brighter color
+  pulled from the currently-playing album art, or switch to white when the
+  art's dominant color is dull — they're currently sometimes hard to see.
+- **Touches:** player button styling, album-art color sampling, currently-
+  playing album art.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #21. Overlaps with
+  `player-button-color-source` above — same underlying complaint (button
+  legibility), different proposed mechanism. See that entry's note; needs
+  your call on which approach to take.
+
+### mobile-background-resume: App restarts to splash after switching apps on mobile
+- **Status:** draft
+- **Priority:** high
+- **Description:** On mobile, switching away from the app (e.g. to another
+  app) and back pauses the music and restarts the app from the splash
+  page, instead of resuming where it was.
+- **Touches:** mobile lifecycle handling (`visibilitychange`/`pagehide`
+  equivalents), app state persistence across backgrounding, splash-screen
+  re-trigger logic.
+- **Branch:** (none yet)
+- **Notes:** Synced from Geethub issue #22.
