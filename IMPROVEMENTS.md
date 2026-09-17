@@ -340,7 +340,7 @@ Add entries in this shape:
   (`splash-tutorial-choice`) has now landed on `main`, so this is unblocked.
 
 ### tutorial-i-tried-it-album: "I Tried It" tutorial sample should show as a two-track album
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The "I Tried It" sample shown in the onboarding tutorial
   is actually an album - it should display as such, showing both tracks,
@@ -348,12 +348,47 @@ Add entries in this shape:
 - **Touches:** onboarding/tutorial flow, tutorial sample data.
 - **Branch:** agent/tutorial-i-tried-it-album
 - **Notes:** Synced from Geethub issue #11. Fixed and pushed (commit
-  `ed129ca`): tutorial now shows a `DEMO_TRACKS` array of two tracks -
-  "I Tried It" (5:56) and "I Tried It (Radio Edit)" (3:34) - matching the
-  real playlist track-row shape. **Held for user confirmation:** the Radio
-  Edit title/duration was inferred from Wind Horse Records' Bandcamp
-  listing, not scraped from Spotify directly - needs a check against the
-  real Spotify album page before merging to `main`.
+  `ed129ca`): the demo sample data lived in `index.html`'s
+  `runIntro()` as three flat consts (`DEMO_ART`/`DEMO_TITLE`/`DEMO_ARTIST`/
+  `DEMO_TRACK`, ~line 6479) feeding `showLoadedLibraryCard()` and
+  `showLoadedLibraryPanel()`, which hardcoded a "1 track" library card and a
+  single track-row in the playlist panel. Replaced with a `DEMO_TRACKS`
+  array of two track objects (same `{title, artist, art}` shape a real
+  loaded playlist's `pl.tracks` entries use elsewhere in the app, e.g.
+  `toggleLibraryPlaylistPanel()`'s own `pl.tracks.forEach()` around line
+  2858), plus a `DEMO_ALBUM` const for the album/playlist name. The library
+  card now reads "2 tracks" and the playlist panel renders both rows,
+  mirroring the exact track-row markup the real panel builds. The
+  single-track beats (player, lyrics, art-style menu) still show just the
+  first track ("I Tried It" - the version already playing there, duration
+  5:56 unchanged) since only one track is ever "now playing" during the
+  intro. Mirrored the same change in the `?introBeat=` debug-capture
+  harness further down the file (`CAP_TRACKS`, used by the `library` and
+  `library-panel` capture cases) so it stays consistent with the real
+  sequence.
+
+  **Confirmed against the label's own listing** (commit `a9b06fb`):
+  checked Wind Horse Records' Bandcamp page and web-search aggregation
+  directly - this is a two-track release, "I Tried It (Original Mix)"
+  5:56 and "I Tried It (Radio edit)" 3:34 (lowercase "edit", not "Edit" -
+  fixed a casing mismatch from the initial guess). Apple Music's own
+  listing treats it as a single; Spotify's web player is a JS SPA that
+  doesn't expose its track list to a plain fetch, but the label's own page
+  is the authoritative source for its own release and the durations match
+  what the tutorial already had hardcoded.
+- **Verified:** Syntax-checked (`node -e "new Function(...)"` over the
+  extracted `<script>` block - no errors). Loaded the file in a live
+  browser preview (a plain `python3 -m http.server` over this worktree, not
+  the main checkout) and exercised both the real timed intro (`?intro=1`)
+  and the deterministic debug beats (`?introBeat=library` /
+  `?introBeat=library-panel`): the library card now shows "2 tracks", the
+  playlist panel shows both "I Tried It" and "I Tried It (Radio edit)" rows
+  with the correct artist/art, and the rest of the sequence (paste/load
+  beats, player, art-style menu, captions/timing) played through
+  unaffected. No new console errors or failed network requests against the
+  worktree's own server; the console/network noise seen during testing
+  traced to unrelated stale tabs/servers left over from other concurrent
+  sessions on this machine, not this change.
 
 ### tutorial-caption-timing: Onboarding captions overlap ("smooth" / "no ads ever")
 - **Status:** merged

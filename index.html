@@ -6512,15 +6512,25 @@ function runIntro(preview){
     captionMainEl.classList.remove('is-visible');
   }
 
-  // "I Tried It" by Unnayanaa feat. Mal Griot - a real released track and
-  // its real Spotify cover, not the brand mark standing in for one
+  // "I Tried It" by Unnayanaa feat. Mal Griot - a real released record and
+  // its real Spotify cover, not the brand mark standing in for one. On
+  // Spotify/Bandcamp it's a two-track album (Original Mix + Radio Edit),
+  // not the single track this demo used to show - DEMO_TRACKS models both,
+  // in the same shape a real loaded playlist's pl.tracks entries take.
   const DEMO_ART = 'brand/assets/demo-cover.jpg';
-  const DEMO_TITLE = 'I Tried It';
+  const DEMO_ALBUM = 'I Tried It';
   const DEMO_ARTIST = 'Unnayanaa, Mal Griot';
-  // same shape attachArtworkFallback()/cassetteSetLabelArt() read a real
-  // queue track as (see artworkUrls()) - lets the record label and cassette
-  // window show the real cover too, not just the default art view
-  const DEMO_TRACK = { title: DEMO_TITLE, artist: DEMO_ARTIST, art: DEMO_ART };
+  const DEMO_TRACKS = [
+    { title: 'I Tried It', artist: DEMO_ARTIST, art: DEMO_ART, duration: '5:56' },
+    { title: 'I Tried It (Radio edit)', artist: DEMO_ARTIST, art: DEMO_ART, duration: '3:34' }
+  ];
+  // kept for the beats below that only ever show the one track actually
+  // "playing" (the player, lyrics, art-style beats) - same shape
+  // attachArtworkFallback()/cassetteSetLabelArt() read a real queue track as
+  // (see artworkUrls()) - lets the record label and cassette window show
+  // the real cover too, not just the default art view
+  const DEMO_TITLE = DEMO_TRACKS[0].title;
+  const DEMO_TRACK = DEMO_TRACKS[0];
   function seedDemoTrack(){
     const t = trackTitle.querySelector('span'), a = trackArtist.querySelector('span');
     if (t) t.textContent = DEMO_TITLE;
@@ -6608,7 +6618,8 @@ function runIntro(preview){
       '<div class="art single">' +
         '<img src="' + DEMO_ART + '" alt="">' +
       '</div>' +
-      '<div class="info"><div class="name">' + DEMO_TITLE + '</div><div class="count">1 track</div></div>';
+      '<div class="info"><div class="name">' + DEMO_ALBUM + '</div><div class="count">' +
+        DEMO_TRACKS.length + ' tracks</div></div>';
     libraryGrid.appendChild(card);
     libraryListWrap.classList.remove('hidden');
     libraryEmpty.classList.add('hidden');
@@ -6616,19 +6627,24 @@ function runIntro(preview){
   // the real tracklist panel a tap on the library card opens (see
   // toggleLibraryPlaylistPanel) - shown here so the intro teaches where the
   // current playlist actually lives, instead of leaving it as a standalone
-  // card that's never opened
+  // card that's never opened. Mirrors toggleLibraryPlaylistPanel()'s own
+  // pl.tracks.forEach() row-building above (~line 2858) - same track-row
+  // shape, one row per real track, since "I Tried It" is a two-track album
+  // (the plain mix + the Radio Edit) rather than a single.
   function showLoadedLibraryPanel(){
-    libplTitle.textContent = DEMO_TITLE;
+    libplTitle.textContent = DEMO_ALBUM;
     libplBody.innerHTML = '';
-    const row = document.createElement('div');
-    row.className = 'track-row';
-    const img = document.createElement('img'); img.src = DEMO_ART;
-    const meta = document.createElement('div'); meta.className = 'meta';
-    const title = document.createElement('div'); title.className = 'title'; title.textContent = DEMO_TITLE;
-    const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = DEMO_ARTIST;
-    meta.appendChild(title); meta.appendChild(artist);
-    row.appendChild(img); row.appendChild(meta);
-    libplBody.appendChild(row);
+    DEMO_TRACKS.forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'track-row';
+      const img = document.createElement('img'); img.src = t.art;
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
+      const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
+      meta.appendChild(title); meta.appendChild(artist);
+      row.appendChild(img); row.appendChild(meta);
+      libplBody.appendChild(row);
+    });
     // the panel is display:none by default during the intro (see the
     // body.onb-active rule in the CSS) - reveal it, force a reflow so the
     // browser paints the closed (translated-off-screen) frame first, then
@@ -7166,6 +7182,13 @@ if (introBeatCapture){
         capSpotlight = $('onbSpotlight');
   const STAGES = ['onb-stage-input','onb-stage-library','onb-stage-player','onb-stage-discovery','onb-stage-settings'];
   const CAP_ART = 'brand/assets/demo-cover.jpg', CAP_TITLE = 'I Tried It', CAP_ARTIST = 'Unnayanaa, Mal Griot';
+  // mirrors runIntro()'s DEMO_TRACKS above - "I Tried It" is a two-track
+  // album (Original Mix + Radio Edit), not a single, so the library/
+  // library-panel captures below show both rows instead of one
+  const CAP_TRACKS = [
+    { title: CAP_TITLE, artist: CAP_ARTIST, art: CAP_ART },
+    { title: 'I Tried It (Radio edit)', artist: CAP_ARTIST, art: CAP_ART }
+  ];
   function capStage(name){
     STAGES.forEach(c => document.body.classList.remove(c));
     if (name) document.body.classList.add('onb-stage-' + name);
@@ -7292,7 +7315,8 @@ if (introBeatCapture){
       const capCard = document.createElement('div');
       capCard.className = 'lib-card';
       capCard.innerHTML = '<div class="art single"><img src="' + CAP_ART + '" alt=""></div>' +
-        '<div class="info"><div class="name">' + CAP_TITLE + '</div><div class="count">1 track</div></div>';
+        '<div class="info"><div class="name">' + CAP_TITLE + '</div><div class="count">' +
+        CAP_TRACKS.length + ' tracks</div></div>';
       libraryGrid.appendChild(capCard);
       libraryListWrap.classList.remove('hidden');
       libraryEmpty.classList.add('hidden');
@@ -7304,15 +7328,17 @@ if (introBeatCapture){
       capStage('library');
       libplTitle.textContent = CAP_TITLE;
       libplBody.innerHTML = '';
-      const capRow = document.createElement('div');
-      capRow.className = 'track-row';
-      const capImg = document.createElement('img'); capImg.src = CAP_ART;
-      const capMeta = document.createElement('div'); capMeta.className = 'meta';
-      const capRowTitle = document.createElement('div'); capRowTitle.className = 'title'; capRowTitle.textContent = CAP_TITLE;
-      const capRowArtist = document.createElement('div'); capRowArtist.className = 'artist'; capRowArtist.textContent = CAP_ARTIST;
-      capMeta.appendChild(capRowTitle); capMeta.appendChild(capRowArtist);
-      capRow.appendChild(capImg); capRow.appendChild(capMeta);
-      libplBody.appendChild(capRow);
+      CAP_TRACKS.forEach(t => {
+        const capRow = document.createElement('div');
+        capRow.className = 'track-row';
+        const capImg = document.createElement('img'); capImg.src = t.art;
+        const capMeta = document.createElement('div'); capMeta.className = 'meta';
+        const capRowTitle = document.createElement('div'); capRowTitle.className = 'title'; capRowTitle.textContent = t.title;
+        const capRowArtist = document.createElement('div'); capRowArtist.className = 'artist'; capRowArtist.textContent = t.artist;
+        capMeta.appendChild(capRowTitle); capMeta.appendChild(capRowArtist);
+        capRow.appendChild(capImg); capRow.appendChild(capMeta);
+        libplBody.appendChild(capRow);
+      });
       document.body.classList.add('onb-show-libpl');
       libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
       capCaptionText('Your playlist lives here', [libplPanel, bottomNav.querySelector('[data-view="library"]')]);
