@@ -1807,6 +1807,11 @@ const BACKEND = 'https://spotify-youtube-search.malgriot.workers.dev';
 let deferredInstallPrompt = null;
 const isStandaloneDisplay = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+// iOS Safari never fires beforeinstallprompt (no programmatic install API at
+// all there) - includes iPadOS, which reports as "MacIntel" but is
+// touch-only, unlike a real Mac.
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 if (!isStandaloneDisplay()){
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -6038,29 +6043,42 @@ function startApp(){
     splashEl.classList.add('is-active');
     const hideSplash = () => splashEl.classList.add('is-hidden');
 
-    // On mobile, if the browser is willing to install EBBLESS, let the
-    // splash's own fade-in become the install invite instead of just
-    // disappearing - give the beforeinstallprompt event a grace window
-    // (the length of the normal splash) to show up before giving up on it.
+    // On mobile, if EBBLESS isn't installed yet, let the splash's own
+    // fade-in become the install invite instead of just disappearing.
+    // This used to wait for beforeinstallprompt to fire before showing
+    // anything, which meant the button never appeared at all on iOS Safari
+    // (no beforeinstallprompt support, ever) and could miss the window on
+    // Android/Chrome if the event arrived after the splash already timed
+    // out. Detection is now based on install state (isStandaloneDisplay),
+    // not on whether that event happened to show up in time.
     if (isMobileUA && !isStandaloneDisplay()){
-      let settled = false;
-      const showInstallUI = () => {
-        if (settled) return;
-        settled = true;
-        splashEl.classList.add('is-install');
-        splashLogoBtn.addEventListener('click', async () => {
+      splashEl.classList.add('is-install');
+      let tapped = false;
+      splashLogoBtn.addEventListener('click', async () => {
+        if (deferredInstallPrompt){
+          // Chrome/Edge/Samsung Internet etc: native install prompt available.
           await runInstallPrompt();
           hideSplash();
-        }, { once: true });
-        // Don't strand a visitor on the splash forever if they never tap.
-        setTimeout(hideSplash, 6000);
-      };
-      if (deferredInstallPrompt){
-        showInstallUI();
-      } else {
-        document.addEventListener('ebbless:install-available', showInstallUI, { once: true });
-        setTimeout(() => { if (!settled){ settled = true; hideSplash(); } }, SPLASH_MS);
-      }
+        } else if (isIOS){
+          // No programmatic install API on iOS Safari - point the visitor
+          // at the manual Share -> Add to Home Screen flow instead of
+          // silently doing nothing, then give them a moment to read it
+          // before the splash moves on.
+          if (!tapped){
+            tapped = true;
+            const label = splashEl.querySelector('.splash-install-label');
+            if (label) label.textContent = 'Tap Share, then Add to Home Screen';
+            setTimeout(hideSplash, 4000);
+          }
+        } else {
+          // Some other mobile browser that hasn't offered a native prompt
+          // (and may never) - don't strand the visitor on the splash.
+          hideSplash();
+        }
+      });
+      window.addEventListener('appinstalled', hideSplash, { once: true });
+      // Don't strand a visitor on the splash forever if they never tap.
+      setTimeout(hideSplash, 6000);
     } else {
       setTimeout(hideSplash, SPLASH_MS);
     }
