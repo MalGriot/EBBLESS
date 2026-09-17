@@ -867,7 +867,7 @@ Add entries in this shape:
   restores the track/queue UI. Worth a real-device check once this merges.
 
 ### player-controller-centering: Desktop player/controller is missing/off-center, not centered
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, there's no player/controller visible centered
   in the UI at all (not just off to one side) - just blank space where it
@@ -876,7 +876,7 @@ Add entries in this shape:
 - **Touches:** desktop layout CSS/markup for the player/controller region in
   `index.html` (unconfirmed - needs investigation of the exact selector and
   why it isn't showing).
-- **Branch:** (none yet)
+- **Branch:** agent/player-controller-centering
 - **Notes:** Synced from Geethub issue #23. Reporter clarified (2026-09-18):
   it's not just off-center, there's no center player visible at all on
   desktop. Checked against existing entries - distinct from
