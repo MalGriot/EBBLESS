@@ -6261,33 +6261,42 @@ function startApp(){
     // out. Detection is now based on install state (isStandaloneDisplay),
     // not on whether that event happened to show up in time.
     if (isMobileUA && !isStandaloneDisplay()){
-      splashEl.classList.add('is-install');
-      let tapped = false;
-      splashLogoBtn.addEventListener('click', async () => {
-        if (deferredInstallPrompt){
-          // Chrome/Edge/Samsung Internet etc: native install prompt available.
-          await runInstallPrompt();
-          hideSplash();
-        } else if (isIOS){
-          // No programmatic install API on iOS Safari - point the visitor
-          // at the manual Share -> Add to Home Screen flow instead of
-          // silently doing nothing, then give them a moment to read it
-          // before the splash moves on.
-          if (!tapped){
-            tapped = true;
-            const label = splashEl.querySelector('.splash-install-label');
-            if (label) label.textContent = 'Tap Share, then Add to Home Screen';
-            setTimeout(hideSplash, 4000);
+      // Let the logo settle in for a beat before turning it into the install
+      // invite - showing it instantly alongside the logo read as cluttered
+      // and gave visitors no chance to register the brand first.
+      const INSTALL_INVITE_DELAY_MS = 2500;
+      setTimeout(() => {
+        // The splash may already be gone (backgrounded, dismissed some other
+        // way) by the time this fires - don't resurrect the install invite.
+        if (splashEl.classList.contains('is-hidden')) return;
+        splashEl.classList.add('is-install');
+        let tapped = false;
+        splashLogoBtn.addEventListener('click', async () => {
+          if (deferredInstallPrompt){
+            // Chrome/Edge/Samsung Internet etc: native install prompt available.
+            await runInstallPrompt();
+            hideSplash();
+          } else if (isIOS){
+            // No programmatic install API on iOS Safari - point the visitor
+            // at the manual Share -> Add to Home Screen flow instead of
+            // silently doing nothing, then give them a moment to read it
+            // before the splash moves on.
+            if (!tapped){
+              tapped = true;
+              const label = splashEl.querySelector('.splash-install-label');
+              if (label) label.textContent = 'Tap Share, then Add to Home Screen';
+              setTimeout(hideSplash, 4000);
+            }
+          } else {
+            // Some other mobile browser that hasn't offered a native prompt
+            // (and may never) - don't strand the visitor on the splash.
+            hideSplash();
           }
-        } else {
-          // Some other mobile browser that hasn't offered a native prompt
-          // (and may never) - don't strand the visitor on the splash.
-          hideSplash();
-        }
-      });
-      window.addEventListener('appinstalled', hideSplash, { once: true });
-      // Don't strand a visitor on the splash forever if they never tap.
-      setTimeout(hideSplash, 6000);
+        });
+        window.addEventListener('appinstalled', hideSplash, { once: true });
+        // Don't strand a visitor on the splash forever if they never tap.
+        setTimeout(hideSplash, 6000);
+      }, INSTALL_INVITE_DELAY_MS);
     } else {
       setTimeout(hideSplash, SPLASH_MS);
     }
