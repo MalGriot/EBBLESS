@@ -1423,7 +1423,7 @@ Add entries in this shape:
   they all land in `runIntro()`.
 
 ### splash-tutorial-music-preload: Splash should play first beat of tutorial music on load
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** The splash screen should start playing the first beat/clip
   of the tutorial music as soon as it loads, rather than silence until the
@@ -1475,7 +1475,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #63.
 
 ### tutorial-paste-link-copy: Clarify "paste a link" tutorial caption
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** The tutorial's "paste a link" beat should specify what
   kind of link - e.g. "paste a link to a playlist, album, or song."
@@ -1537,7 +1537,7 @@ Add entries in this shape:
   all three cases.
 
 ### cymatics-true-black-contrast: Cymatics background should be true black
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** The cymatics visualizer's background should be true
   black, with higher contrast against the dots - but the dots' own
@@ -1547,7 +1547,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #49.
 
 ### record-cassette-size: Make spinning record / cassette visuals bigger
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The spinning record and cassette tape visuals should be
   larger and closer to the screen edges, sized proportionately - without
@@ -1571,7 +1571,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #51.
 
 ### cymatics-heart-centering: Center the title in cymatics fullscreen (heart pushes it left)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** In cymatics fullscreen view, the track title is currently
   pushed off-center to the left by the heart/like icon. The heart should sit
@@ -1581,7 +1581,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #53.
 
 ### playlist-queue-slide-height: Playlist and queue slide-up panels should match max height
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** The slide-up panel for an opened playlist should always
   expand to the same maximum height as the queue panel does, and both should
@@ -1591,7 +1591,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #54.
 
 ### playlist-art-at-top: Opened playlist panel should show its art at the top
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** When a playlist is opened from the library, its cover
   image should appear at the top of the panel.
@@ -1600,7 +1600,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #55.
 
 ### logo-tap-to-player: Tapping the logo on the main HUD should open the player tab
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Tapping the EBBLESS logo in the main header/HUD should
   navigate to the player tab.
@@ -1720,7 +1720,7 @@ Add entries in this shape:
   identically before and after).
 
 ### desktop-playlist-hover-buttons: Playlist hover play button blocks pin/3-dot buttons
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, hovering a playlist card reveals a play
   button that overlaps/blocks the pin button and the three-dot menu button,
@@ -1883,7 +1883,7 @@ Add entries in this shape:
   re-test - flag for close if a maintainer agrees.
 
 ### rename-current-playlist: Rename "Current" playlist to "CURRENTSSsss"
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Rename the "Current" playlist label to "CURRENTSSsss"
   (exact casing/spelling as given).
