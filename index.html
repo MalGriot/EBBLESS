@@ -340,6 +340,10 @@ svg{display:block}
 .btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
 select.btn-ghost{-webkit-appearance:none;appearance:none;background-color:var(--panel-2);color:var(--text)}
 select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
+.btn-danger{border:1px solid var(--bad);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:600;
+  color:var(--bad);background:rgba(224,101,94,.1);flex:none;
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.btn-danger:hover{background:var(--bad);color:#fff}
 #crossfadeDurRow{transition:opacity var(--dur-ui) var(--ease-out)}
 #import-overlay .close{position:absolute;top:calc(20px + var(--safe-t));right:20px;width:34px;height:34px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint)}
@@ -671,6 +675,23 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .q-row .remove:hover{background:var(--panel-3);color:var(--bad)}
 .q-row .remove svg{width:12px;height:12px}
 .q-empty{padding:40px 10px;text-align:center;color:var(--faint-2);font-size:12.5px}
+
+/* ---------- danger confirm modal (centered, for actions weighty enough
+   they shouldn't share the queue/library sliding-sheet pattern - modeled
+   on the same scrim used above but a fixed centered card instead of an
+   edge-docked panel) ---------- */
+#danger-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;
+  transition:opacity var(--dur-surface) var(--ease-in-out)}
+#danger-scrim.is-open{opacity:1;pointer-events:auto}
+#danger-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(360px,calc(100vw - 48px));
+  background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
+  opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+#danger-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#danger-modal h2{font-size:16px;font-weight:700;margin:0 0 10px;color:var(--bad)}
+#danger-modal p{font-size:13px;color:var(--faint);line-height:1.5;margin:0}
+.danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 
 /* desktop: side panel */
 @media (min-width:860px){
@@ -1635,16 +1656,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         </div>
       </div>
       <div class="settings-block">
-        <h2>Library</h2>
-        <div class="settings-row">
-          <div>
-            <div class="label">Clear saved playlists</div>
-            <div class="desc">Removes every playlist saved to your library on this device. Cached matches are cleared too.</div>
-          </div>
-          <button class="btn-ghost" id="clearLibraryBtn">Clear</button>
-        </div>
-      </div>
-      <div class="settings-block">
         <h2>Support</h2>
         <div class="settings-row">
           <div>
@@ -1654,8 +1665,29 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <a class="btn-ghost" href="mailto:sumtinels@gmail.com?subject=EBBLESS%20bug%20report">Report a bug</a>
         </div>
       </div>
+      <div class="settings-block">
+        <h2>Danger zone</h2>
+        <div class="settings-row">
+          <div>
+            <div class="label">Clear saved playlists</div>
+            <div class="desc">Removes every playlist saved to your library on this device. Cached matches are cleared too. This can't be undone.</div>
+          </div>
+          <button class="btn-danger" id="clearLibraryBtn">Clear playlists</button>
+        </div>
+      </div>
     </div>
   </main>
+
+  <!-- ===== CLEAR PLAYLISTS CONFIRM ===== -->
+  <div id="danger-scrim"></div>
+  <div id="danger-modal" role="alertdialog" aria-modal="true" aria-labelledby="dangerModalTitle" aria-describedby="dangerModalDesc">
+    <h2 id="dangerModalTitle">Clear all saved playlists?</h2>
+    <p id="dangerModalDesc">This permanently removes every playlist saved to your library on this device, along with their cached matches. It can't be undone.</p>
+    <div class="danger-modal-actions">
+      <button class="btn-ghost" id="dangerModalCancelBtn">Cancel</button>
+      <button class="btn-danger" id="dangerModalConfirmBtn">Clear playlists</button>
+    </div>
+  </div>
 
   <!-- ===== IMPORT OVERLAY ===== -->
   <div id="import-overlay">
@@ -4031,10 +4063,25 @@ async function seedStarterLibrary(){
   renderLibrary();
 }
 
-clearLibraryBtn.addEventListener('click', () => {
+const dangerScrim = $('danger-scrim'), dangerModal = $('danger-modal');
+const dangerModalCancelBtn = $('dangerModalCancelBtn'), dangerModalConfirmBtn = $('dangerModalConfirmBtn');
+
+function openDangerModal(){
+  dangerScrim.classList.add('is-open');
+  dangerModal.classList.add('is-open');
+}
+function closeDangerModal(){
+  dangerScrim.classList.remove('is-open');
+  dangerModal.classList.remove('is-open');
+}
+clearLibraryBtn.addEventListener('click', openDangerModal);
+dangerModalCancelBtn.addEventListener('click', closeDangerModal);
+dangerScrim.addEventListener('click', closeDangerModal);
+dangerModalConfirmBtn.addEventListener('click', () => {
   getLibrary().forEach(id => lsDel(LS_PL(id)));
   lsSet(LS_LIB, []);
   renderLibrary();
+  closeDangerModal();
   showToast('Library cleared');
 });
 
