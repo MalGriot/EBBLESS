@@ -1498,7 +1498,7 @@ Add entries in this shape:
   candidate to bundle with other tutorial-beat lanes above.
 
 ### settings-bug-report-github-form: "Report a bug" should link to a GitHub issue form
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The Settings "Report a bug" button currently opens a
   mailto link (per `bug-report-button`, merged). Reporter wants it to lead
@@ -1507,9 +1507,11 @@ Add entries in this shape:
   suggestions).
 - **Touches:** Settings screen bug-report button/link.
 - **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #27. Judgment call: replace the
-  mailto entirely, or offer both? Flagging for your call rather than
-  guessing.
+- **Notes:** Synced from Geethub issue #27. Judgment call resolved by user:
+  **replace** the mailto link entirely with the GitHub form (not offer
+  both). If no dedicated bug-report issue template exists yet, reuse/adapt
+  the existing `improvement-idea.yml` template pattern rather than
+  inventing a new one from scratch.
 
 ### settings-share-app: Add "share this app" button in Settings
 - **Status:** merged
