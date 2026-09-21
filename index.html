@@ -402,14 +402,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .artwork-wrap[data-mode="art"][data-art-style="record"] .art-record{display:flex;opacity:1}
 .artwork-wrap[data-mode="art"][data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
 
-.record-shadow,.record-disc{position:absolute;top:50%;left:50%;width:80%;aspect-ratio:1;border-radius:50%;
+.record-shadow,.record-disc{position:absolute;top:50%;left:50%;width:96%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%)}
 .record-shadow{box-shadow:0 20px 46px -14px rgba(0,0,0,.7)}
 .record-disc{background:repeating-radial-gradient(circle at center,#161616 0 3px,#0c0c0c 3px 6px);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
   animation:record-spin 3s linear infinite;animation-play-state:paused}
 .artwork-wrap.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
-.record-label{position:absolute;top:50%;left:50%;width:32%;aspect-ratio:1;border-radius:50%;
+.record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
@@ -418,7 +418,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 /* cassette: physical-object rebuild — SVG shell/reels/tape driven by real
    playback progress (see CASSETTE PHYSICAL OBJECT block in the script). The
    wrap only positions the SVG; all geometry/material lives in the markup. */
-.art-cassette{padding:8% 4%}
+.art-cassette{padding:2% 1%}
 .cassette-svg{width:100%;height:100%;display:block;overflow:visible}
 .cs-shell-outer{fill:#161513}
 .cs-shell-face{fill:#1c1b18}
@@ -2555,7 +2555,7 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
   });
 });
 document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', toggleQueuePanel));
-$('wordmarkBtn').addEventListener('click', () => setView('library'));
+$('wordmarkBtn').addEventListener('click', () => setView('player'));
 
 /* wide desktop: library + player + queue all shown at once (see the
    min-width:1150px CSS block) instead of tab-switching between them */
@@ -6608,6 +6608,18 @@ function startApp(){
     splashEl.classList.add('is-active');
     const hideSplash = () => splashEl.classList.add('is-hidden');
 
+    // Get the tutorial's theme music going as soon as the splash appears,
+    // so it's already warmed up by the time the tutorial itself starts
+    // instead of kicking in silent-to-sound. Mobile browsers commonly block
+    // audio that starts before any user gesture - that's expected here and
+    // not an error, so the rejection is swallowed rather than surfaced.
+    const splashMusicEl = $('onbMusic');
+    if (splashMusicEl){
+      try { splashMusicEl.currentTime = 0; } catch (e) {}
+      const splashPlayPromise = splashMusicEl.play();
+      if (splashPlayPromise && typeof splashPlayPromise.catch === 'function') splashPlayPromise.catch(() => {});
+    }
+
     // On mobile, if EBBLESS isn't installed yet, let the splash's own
     // fade-in become the install invite instead of just disappearing.
     // This used to wait for beforeinstallprompt to fire before showing
@@ -7196,7 +7208,7 @@ function runIntro(preview){
     // attention moves to Load - rather than swapping/clearing mid-beat, so
     // the app's one core action reads as a headline instead of a caption
     // that flashes past with everything else
-    setMainCaption('Paste a playlist…', urlInput);
+    setMainCaption('Paste a link to a playlist, album, or song', urlInput);
     await wait(500);
     if (done) return;
     setCaption('Spotify, SoundCloud, or Apple Music', urlInput);
