@@ -2687,7 +2687,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #114.
 
 ### amel-larrieux-wrong-track: "i n i" by Amel Larrieux always plays the wrong track
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The track "i n i" by Amel Larrieux consistently resolves
   to the wrong song - it plays a different track by the same artist rather
@@ -2695,10 +2695,73 @@ Add entries in this shape:
   and `stale-track-links` work (wrong/stale resolved links), but this is a
   fresh, specific mismatch report - investigate whether it's a new case the
   general fix doesn't cover, or a stale cache entry.
-- **Touches:** track resolution/matching pipeline (`resolvePlaylist()` /
-  link-match logic).
-- **Branch:** (unclaimed)
+- **Touches:** `worker/src/index.js` `titleTokens()`/`titleOverlapRatio()`
+  (~line 296); `index.html` `RESOLVE_LOGIC_VERSION` bump (~line 2270);
+  `worker/src/index.js` `SEARCH_CACHE_VERSION` bump (~line 65).
+- **Branch:** `agent/amel-larrieux-wrong-track`
 - **Notes:** Synced from Geethub issue #115.
+
+  **Root cause found:** a genuine matching-algorithm bug, not a stale-cache
+  case - `titleTokens()` tokenized a source title and then dropped every
+  token of length 1 (meant to strip apostrophe-split noise like the "t" in
+  "don't"). "i n i" is made entirely of single-character words, so it
+  tokenized to an empty array. `titleOverlapRatio()` treats an empty
+  source-token list as "nothing to compare against" and returns a full
+  match (1.0) for every candidate unconditionally - which silently disabled
+  both the title-relevance hard filter and `TITLE_MATCH_WEIGHT` (the
+  dominant scoring signal, weighted above every other bonus combined) for
+  this title. With the title signal blind, channel/view-count signals alone
+  picked the winner among same-artist candidates, and a different, more-
+  viewed Amel Larrieux upload ("For Real") consistently outscored the
+  correct "I n I" video. Systemic, not specific to this one title: any
+  title made entirely of single-character words (rare, but not unique to
+  this track) would hit the same empty-token-list path.
+
+  **Changed** (`worker/src/index.js`): `titleTokens()` now falls back to the
+  single-character tokens when the length>1 filter would otherwise leave
+  nothing at all, instead of returning an empty array. `titleOverlapRatio()`
+  now matches the candidate side against the *unfiltered* token set
+  (renamed the old filtered helper's body into a new `titleTokensRaw()`),
+  so a single-character source token from that fallback (e.g. "i", "n") can
+  still be found inside a candidate title that also contains other, longer
+  words (an artist name) - which the old filtered candidate-side tokenizer
+  would have dropped right back out. Ordinary titles are unaffected: the
+  length>1 filter still applies whenever a title has any multi-character
+  words at all, exactly as before, so apostrophe-noise stripping (e.g.
+  "don't" -> "don"/"stop"/"believin", not "t") is unchanged. Bumped
+  `SEARCH_CACHE_VERSION` (worker scoring change) and `RESOLVE_LOGIC_VERSION`
+  (client re-resolve trigger, per the `stale-track-links` machinery) so any
+  playlist already cached with the wrong "i n i" match - or any other
+  title this bug could have hit - gets quietly re-resolved instead of
+  serving the stale bad link indefinitely.
+
+  **Verified live**, not just traced: this sandbox had outbound network
+  access, so a standalone harness replicating the worker's exact
+  fetch/parse/score pipeline (not `wrangler dev`, which wasn't installed
+  and would have needed an install step) was run against the real
+  `youtube.com/results` search endpoint for "i n i" / "amel larrieux":
+  - Pre-fix logic: top result "For Real" by Amel Larrieux (4.9M views) -
+    reproduces the reported bug exactly, live.
+  - Post-fix logic: correctly matches "I n I" by Amel Larrieux (496K
+    views) - the title-relevance hard filter now actually excludes the
+    other, unrelated same-artist tracks that share nothing but the artist
+    name, leaving only genuine "I n I" uploads in the candidate pool.
+  - Regression check: "Lava Lamp" / Thundercat (a normal multi-word title)
+    picked the identical top candidate before and after the change. A
+    second regression check ("Don't Stop Believin'" / Journey) was cut
+    short by an intermittent YouTube bot-check block mid-run (the same
+    known-intermittent block `fetchYouTubePage`'s comments describe) after
+    its "OLD" pass had already completed cleanly and matched expectations
+    (`sourceTokens` correctly excluded the apostrophe-split "t"); the "NEW"
+    pass wasn't independently re-run to completion, though the code change
+    to that path is a no-op whenever any multi-character token exists,
+    which this title's tokens all satisfy. Not verified end-to-end: the
+    actual staleness re-resolve trigger for a previously-cached "i n i"
+    entry (covered generically by the existing, already-verified
+    `stale-track-links` machinery, not re-tested here) and "Blinding
+    Lights" / The Weeknd (queued but not reached before the block). No new
+    console errors; this is a worker/backend-only logic change with a
+    two-line client cache-version bump, no UI touched.
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
 - **Status:** draft
