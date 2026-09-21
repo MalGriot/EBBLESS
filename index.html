@@ -2202,7 +2202,7 @@ function formatLastPlayed(ts){
 // have picked a better one. Cached payloads written before this field
 // existed have no resolveVersion at all, which also compares unequal to any
 // real version number, so they're covered too.
-const RESOLVE_LOGIC_VERSION = 2;
+const RESOLVE_LOGIC_VERSION = 3;
 // Re-matching/re-resolving a playlist re-fetches its tracklist from the
 // source and would otherwise silently drop any songs the user added by hand
 // (from another playlist or a pasted link) — carry those forward.
@@ -2281,7 +2281,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     const t = tracks[i];
     try{
       const [match, art] = await Promise.all([
-        searchYouTube(t.title, t.artist),
+        searchYouTube(t.title, t.artist, t.duration),
         resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
       ]);
       resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0 });
@@ -3511,8 +3511,8 @@ async function resolveTracksFromLink(input, onProgress){
   const sp = parseSpotifyLink(input);
   if (sp){
     if (sp.type === 'track'){
-      const { title, artist, image } = await fetchSpotifyTrack(sp.id);
-      const match = await searchYouTube(title, artist);
+      const { title, artist, image, duration } = await fetchSpotifyTrack(sp.id);
+      const match = await searchYouTube(title, artist, duration);
       if (!match.videoId) throw new Error("Couldn't find that song.");
       const art = await resolveTrackArt('spotify', title, artist, image || null);
       return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
@@ -3524,7 +3524,7 @@ async function resolveTracksFromLink(input, onProgress){
       const t = tracks[i];
       const art = await resolveTrackArt('spotify', t.title, t.artist, t.image || null);
       try{
-        const match = await searchYouTube(t.title, t.artist);
+        const match = await searchYouTube(t.title, t.artist, t.duration);
         resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
         resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
