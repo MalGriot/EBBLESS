@@ -1454,7 +1454,7 @@ Add entries in this shape:
   the pasted demo URL as before.
 
 ### tutorial-preload-pacing: Preload tutorial assets before playing; fix glitchy pacing
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The tutorial's first frame should ensure everything
   (assets/animations) is loaded before playback starts - reporter says
@@ -2437,7 +2437,7 @@ Add entries in this shape:
   (only pre-existing, unrelated YouTube-iframe/proxy errors were present).
 
 ### library-playlist-footer-overlap: Footer player blocks last entry when viewing a playlist on mobile
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, opening a playlist from the library, the
   footer player bar covers/blocks the bottom-most track entry in the list.
@@ -2470,7 +2470,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #101.
 
 ### queue-close-return-view: Closing the queue should return to the view you were on
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, closing the queue panel should return you to
   whichever view you were on just before opening it (player or library),
