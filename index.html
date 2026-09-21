@@ -6720,6 +6720,20 @@ function startApp(){
       try { splashMusicEl.currentTime = 0; } catch (e) {}
       const splashPlayPromise = splashMusicEl.play();
       if (splashPlayPromise && typeof splashPlayPromise.catch === 'function') splashPlayPromise.catch(() => {});
+      // Just a warm-up preview, not a full listen - stop after ~1s so the
+      // splash doesn't play the whole track out from under the user. This
+      // only touches the splash's own preview snippet: runIntro() (the
+      // actual tutorial) always finishes before startApp() gets here (see
+      // its closing call to startApp() below), so by the time this timer
+      // fires the tutorial's own playback, if any, is long done and this
+      // can't cut it short.
+      const SPLASH_MUSIC_PREVIEW_MS = 1000;
+      setTimeout(() => {
+        try {
+          splashMusicEl.pause();
+          splashMusicEl.currentTime = 0;
+        } catch (e) {}
+      }, SPLASH_MUSIC_PREVIEW_MS);
     }
 
     // On mobile, if EBBLESS isn't installed yet, let the splash's own
