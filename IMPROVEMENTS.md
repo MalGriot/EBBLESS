@@ -994,7 +994,7 @@ Add entries in this shape:
   folded into "How this works" below).
 
 ### link-match-accuracy: Wrong-track matches - use album art image comparison + study source meta tags
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Multiple reports of badly wrong YouTube matches (e.g.
   "Lava Lamp" by Thundercat resolved to an unrelated 270-minute meditation
@@ -1007,12 +1007,101 @@ Add entries in this shape:
   improvement opportunities.
 - **Touches:** RESOLVE PIPELINE / track-matching logic in `index.html` and
   the worker backend's YouTube search/matching code.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/link-match-accuracy`
 - **Notes:** Synced from Geethub issues #70, #74, #81, #31. Distinct from
   `stale-track-links` (merged) - that fixed *cached, outdated* matches after
   a protocol change; this is about the *matching algorithm's* accuracy on
   fresh resolves. High priority - reporter called a bad match "severely
   wrong, needs to absolutely never happen again."
+
+  **Investigation:** The worker (`worker/src/index.js`) already had a
+  fairly sophisticated matcher: a title-token-overlap hard filter, a
+  hard-exclude list for live/acoustic/remix/cover/karaoke uploads, and -
+  critically - a duration-based hard filter + scoring bonus
+  (`durationScore`/`DURATION_HARD_DIFF_SECONDS`, added in an earlier commit,
+  `7332eb8`). All of Spotify's title/artist/duration/album-art metadata
+  the app fetches was already in play *in principle*. Apple Music tracks
+  carry title/artist/art but the worker's Apple Music scrape
+  (`handleAppleMusicList`/`handleAppleMusicTrack`) never pulls a duration
+  field out of Apple's page data at all - nothing to compare there yet.
+
+  **Root cause found:** the duration signal was silently dead for the
+  common case. `resolvePlaylist()`'s per-track loop (every multi-track
+  Spotify playlist/album import) and `resolveTracksFromLink()`'s Spotify
+  branches (the "+ Add song/playlist" flow) called
+  `searchYouTube(title, artist)` without the third `sourceDurationMs`
+  argument, even though the source track's duration was already sitting on
+  the track object. Only the single-track resolve path passed it. So for
+  playlists - where these bug reports almost certainly came from - the
+  worker's duration hard-filter and scoring bonus never activated, leaving
+  only title-token overlap as a safety net. That net has a hole: when
+  Spotify's and YouTube's title spelling diverge enough to share zero
+  significant tokens (confirmed live: Spotify's "Spottieottiedopalicious"
+  vs. YouTube's actual "SpottieOttieDopaliscious" upload share none), the
+  title-overlap filter's fallback-to-unfiltered-pool behavior kicks in and
+  a same-artist, wrong-song, high-view-count video can win outright.
+
+  **Changed:**
+  1. `index.html`: pass the source track's duration through to
+     `searchYouTube()` in `resolvePlaylist()`'s bulk loop and in
+     `resolveTracksFromLink()`'s Spotify single-track and playlist/album
+     branches (SoundCloud/Apple Music branches left as-is - see below).
+  2. `worker/src/index.js`: the duration hard-filter was a flat 90s
+     absolute difference regardless of track length - fine for a 5-minute
+     song (~30% tolerance) but nearly meaningless against a 270-minute
+     mislabeled upload. Changed to
+     `min(90s, max(30s, 20% of source duration))` so short tracks get a
+     proportionally tighter net while longer tracks keep the wider 90s
+     absolute margin (intros/fades on long tracks need more slack than a
+     flat percentage would give).
+  3. Bumped `SEARCH_CACHE_VERSION` (worker scoring change) and
+     `RESOLVE_LOGIC_VERSION` (client re-resolve trigger) so playlists
+     already cached with a wrong match get quietly re-resolved instead of
+     serving the stale bad link indefinitely.
+
+  **Verified live**, not just traced: ran `worker/src/index.js` for real
+  via `wrangler dev --local` (network access was available in this
+  session) and hit the actual `/search` endpoint against live YouTube
+  search:
+  - `Spottieottiedopalicious` / OutKast **without** duration: matched
+    `"Outkast - ATliens (Official HD Video)"` - reproduces the reported
+    bug exactly, live, on current `main` behavior.
+  - Same query **with** `durationMs` (the fix): correctly matched
+    `"SpottieOttieDopaliscious"`.
+  - `Lava Lamp` / Thundercat: both with and without duration currently
+    return a correct-looking match (`"[Lyrics+Vietsub] Thundercat - Lava
+    lamp"`, 179s vs. the real ~191s track) - the specific 270-minute
+    meditation-track result from the report doesn't reproduce today
+    (YouTube's live index has likely shifted since the report), but the
+    new percentage-based duration filter would reject a candidate that far
+    off regardless of source track length, and the duration fix closes the
+    same *class* of bug either way.
+  - Sanity-checked normal tracks to confirm no regression: `Blinding
+    Lights` / The Weeknd and `Bohemian Rhapsody` / Queen both still
+    resolve to the correct official audio/video with duration passed.
+
+  **Not done - thumbnail/album-art image similarity:** investigated and
+  concluded infeasible without a heavy new dependency, per the task's own
+  constraint. Cloudflare Workers have no native image-decoding API (no
+  `Canvas`/`ImageData`/`OffscreenCanvas` in the runtime); comparing a
+  Spotify cover to a YouTube thumbnail for real (even a cheap perceptual
+  hash) requires decoding JPEG/PNG bytes first, which means pulling in a
+  WASM image codec - exactly the "heavy new dependency" the task asked to
+  avoid. Given the duration fix directly reproduces and fixes the
+  higher-profile reported case live, it was prioritized as the
+  highest-leverage, lowest-risk change; image comparison is left as
+  future work if the team decides the dependency weight is worth it.
+
+  **Also not done:** wiring duration through for SoundCloud and Apple
+  Music sources - neither the worker's SoundCloud (`handleSoundCloud`) nor
+  Apple Music (`handleAppleMusicList`/`handleAppleMusicTrack`) responses
+  currently include a duration field at all, so there's nothing on the
+  client track object to pass yet. Adding it would need scraping/parsing
+  each source's own duration field (SoundCloud's v2 API likely has one;
+  Apple Music's dehydrated page JSON shape wasn't confirmed) and wasn't
+  attempted here to avoid guessing at an unverified field mapping - flagged
+  as a natural follow-up, not needed to fix the two reported cases (both
+  were Spotify).
 
 ### track-relink-menu: Per-track "refresh this link" menu with thumbnail choices
 - **Status:** ready
