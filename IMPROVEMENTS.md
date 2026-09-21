@@ -867,7 +867,7 @@ Add entries in this shape:
   restores the track/queue UI. Worth a real-device check once this merges.
 
 ### player-controller-centering: Desktop player/controller is missing/off-center, not centered
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On desktop, there's no player/controller visible centered
   in the UI at all (not just off to one side) - just blank space where it
