@@ -1817,22 +1817,49 @@ Add entries in this shape:
   safety fix - good candidate for an early lane.
 
 ### missing-starter-playlists: "This Is Mal Griot" (and possibly "Breathe Love Deep") not appearing
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Reporter says both the "Breathe Love Deep" and "This Is
   Mal Griot" starter Spotify/SoundCloud releases aren't appearing in the
   library. Also reiterates "Breathe Love Deep" should come straight from
   SoundCloud, no Spotify routing.
 - **Touches:** `STARTER_LIBRARY_URLS` / `seedStarterLibrary()`.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/missing-starter-playlists`
 - **Notes:** Synced from Geethub issues #29 and #32 (#32 - "Soundcloud links
   should be treated as direct links" - folded in as the same underlying ask,
   already largely covered by the merged `breathe-love-deep-album` /
-  `spotify-album-art` work for SoundCloud routing generally). The
-  "Breathe Love Deep" half of this may already be fixed by
-  `breathe-love-deep-album` (merged) - re-verify it's actually showing up
-  live before assuming it's still broken. The "This Is Mal Griot" half looks
-  like a genuine, distinct gap - it was never covered by that prior fix.
+  `spotify-album-art` work for SoundCloud routing generally).
+  **Investigated - could not reproduce with current code; no fix needed
+  beyond re-verification.** Both `STARTER_LIBRARY_URLS` entries
+  (`https://soundcloud.com/mal-griot/sets/breathelovedeep` and
+  `https://open.spotify.com/playlist/2AcQTlTA3xgd9HAZJcHYmz`, whose oembed
+  title is literally "This is Mal Griot") are live and reachable, and
+  `seedStarterLibrary()` correctly parses and resolves both. Verified in a
+  real browser by serving this worktree's own `index.html` directly
+  (`python3 -m http.server`, confirmed via `location.href` that the served
+  copy matched this worktree - the shared preview-tool launcher was seen
+  routing to a different worktree/session's server mid-session, so every
+  check here was pinned to the correct tab explicitly), clearing
+  `localStorage`, and walking the real first-time flow (splash choice ->
+  "Enter" -> app). Result: the library populates with "This is Mal Griot"
+  (8 tracks, type `playlist`, resolved via the Spotify path) and
+  "breathe love d e e p" under ALBUMS (10 tracks, id prefixed `sc:`, type
+  `sc_album`) - confirming Breathe Love Deep resolves straight from
+  SoundCloud with no Spotify routing, and that "This Is Mal Griot" is not
+  actually missing. Repeated the check twice (once forcing
+  `ebbless_onboarding_complete` to skip straight to `startApp()`, once via
+  the genuine onboarding click-through) with identical results both times.
+  Conclusion: whatever caused the original report - likely a transient
+  backend hiccup against the shared `spotify-youtube-search.malgriot.workers.dev`
+  worker, since `seedStarterLibrary()`'s per-URL resolve is wrapped in a
+  silent best-effort try/catch with no retry - is not reproducible against
+  the current `STARTER_LIBRARY_URLS`/`seedStarterLibrary()`/resolution code,
+  which likely benefited from the unrelated `breathe-love-deep-album`,
+  `spotify-album-art`, `album-art-2x2-grid-bug`, and
+  `discovery-pipeline-metadata` merges touching the same shared resolve
+  path. No code changes made. Moving to `review` rather than closing
+  outright, since a live backend blip can't be ruled out from a local
+  re-test - flag for close if a maintainer agrees.
 
 ### rename-current-playlist: Rename "Current" playlist to "CURRENTSSsss"
 - **Status:** draft
