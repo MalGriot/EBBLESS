@@ -1600,6 +1600,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
           <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Share EBBLESS</div>
+            <div class="desc">Tell someone else about the app. Opens your device's share sheet, or copies the link if that's not available.</div>
+          </div>
+          <button class="btn-ghost" id="shareAppBtn">Share</button>
+        </div>
       </div>
       <div class="settings-block">
         <h2>Playback</h2>
@@ -2507,6 +2514,7 @@ const flowAmbientA = $('flowAmbientA'), flowAmbientB = $('flowAmbientB');
 const toastEl = $('toast');
 const clearLibraryBtn = $('clearLibraryBtn');
 const replayTutorialBtn = $('replayTutorialBtn');
+const shareAppBtn = $('shareAppBtn');
 const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlider'), crossfadeDurRow = $('crossfadeDurRow'), crossfadeDurVal = $('crossfadeDurVal');
 
 /* =========================================================================
@@ -4045,6 +4053,26 @@ replayTutorialBtn.addEventListener('click', () => {
   // preview=true: same replay path as the ?intro query param, so this
   // never touches the real ONB_KEY completion flag
   runIntro(true);
+});
+
+shareAppBtn.addEventListener('click', async () => {
+  const shareData = {
+    title: 'EBBLESS',
+    text: 'EBBLESS plays your playlist or album straight through, without the gaps.',
+    url: location.origin + location.pathname
+  };
+  if (navigator.share){
+    try{ await navigator.share(shareData); }
+    catch(e){ /* user cancelled the share sheet - nothing to do */ }
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(shareData.url)
+      .then(() => showToast('Copied!'))
+      .catch(() => showToast("Couldn't copy link"));
+  } else {
+    showToast("Couldn't copy link");
+  }
 });
 
 function fmtCrossfadeMs(ms){
