@@ -1671,9 +1671,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <div class="settings-row">
           <div>
             <div class="label">Report a bug</div>
-            <div class="desc">Something broken or behaving strangely? Email the details and it gets looked at directly.</div>
+            <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
-          <a class="btn-ghost" href="mailto:sumtinels@gmail.com?subject=EBBLESS%20bug%20report">Report a bug</a>
+          <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
         </div>
       </div>
       <div class="settings-block">
@@ -7629,7 +7629,7 @@ function runIntro(preview){
     clearCaption();
     await wait(400);
     if (done) return;
-    const bugRow = document.querySelector('#view-settings a[href^="mailto:"]');
+    const bugRow = document.getElementById('reportBugBtn');
     if (bugRow && bugRow.scrollIntoView) bugRow.scrollIntoView({ block: 'center' });
     setCaption('Tell us if you find a bug', bugRow);
     await wait(500);
@@ -8102,7 +8102,7 @@ if (introBeatCapture){
     case 'bug':
       setView('settings');
       capStage('settings');
-      const capBugRow = document.querySelector('#view-settings a[href^="mailto:"]');
+      const capBugRow = document.getElementById('reportBugBtn');
       if (capBugRow && capBugRow.scrollIntoView) capBugRow.scrollIntoView({ block: 'center' });
       capCaptionText('Tell us if you find a bug', capBugRow);
       break;

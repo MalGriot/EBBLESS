@@ -1,0 +1,64 @@
+name: Bug report
+description: Something broken or behaving strangely in EBBLESS.
+title: "[bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Only the title (above) is required. Fill in as much or as little
+        else as you have right now - the manager will fill gaps in during
+        triage if needed.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - high
+        - medium
+        - low
+      default: 1
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What went wrong, as concretely as you can.
+      placeholder: Describe what you expected, and what actually happened instead.
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can this be triggered again?
+      placeholder: |
+        1. Go to...
+        2. Tap...
+        3. See...
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device / browser
+      description: What you were using when this happened, if you know.
+      placeholder: e.g. iPhone 14, Safari - or - Windows, Chrome
+    validations:
+      required: false
+  - type: input
+    id: touches
+    attributes:
+      label: Touches
+      description: Which feature/area of index.html this affects, if you know.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else - things you tried, edge cases, screenshots.
+    validations:
+      required: false
