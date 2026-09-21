@@ -2662,18 +2662,39 @@ Add entries in this shape:
   separate features. Each issue closed with a comment linking here.
 
 ### cymatics-fullscreen-title-position: Cymatics fullscreen title/artist should sit above the progress bar like the regular player
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** In cymatics fullscreen view, the song title and artist
   should be positioned at the bottom, directly above the progress/play bar -
   matching where they sit in the regular (non-fullscreen) player - instead
   of wherever they currently render.
-- **Touches:** cymatics fullscreen layout CSS/markup.
-- **Branch:** (unclaimed)
+- **Touches:** `index.html` `.flow-meta`/`.flow-chrome`/`.flow-bottom`
+  (cymatics fullscreen layer, "flow" internally).
+- **Branch:** `agent/cymatics-fullscreen-title-position`
 - **Notes:** Synced from Geethub issue #113. Distinct from the merged
   `cymatics-heart-centering` (that was about the heart icon pushing the
   title off-center horizontally) - this is about vertical placement relative
   to the progress bar, matching the regular player's layout.
+
+  Fixed and pushed (commit `a6e9131`): moved `.flow-meta` (the title/artist
+  block, including the like button) out of the vertically-centered art
+  group and into `.flow-chrome > .flow-bottom` as the first child before
+  `.flow-seek` and `.controls-row` - mirroring the regular player's DOM
+  order (`.track-meta` sits directly above `.transport-full`). Widened
+  `#flow-layer .flow-meta` from `min(52vh,62vw)` (art-tile sizing) to
+  `min(420px,80vw)` (matching `.flow-seek`'s width) and dropped the
+  now-redundant `margin-top:28px` since `.flow-bottom`'s existing
+  `gap:18px` handles spacing. The `cymatics-heart-centering` fix
+  (`title-row`'s `column-reverse` layout, heart above title, both
+  centered) is untouched and still applies in the new location.
+  Verified via a worktree-local `python3 -m http.server` (confirmed via
+  `location.href`), loaded a real track, entered cymatics fullscreen, and
+  screenshotted both desktop and mobile (375x812) viewports: title/artist
+  now sit directly above the progress bar and transport controls, heart
+  centered above the title. Confirmed DOM order via
+  `document.querySelector('.flow-bottom').children` ->
+  `["flow-meta","flow-seek","controls-row"]`. No new console/network
+  errors against the worktree's own server.
 
 ### crossfade-album-art-transition: Crossfade album art should fade into the next track's art
 - **Status:** ready
