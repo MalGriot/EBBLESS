@@ -2643,3 +2643,61 @@ Add entries in this shape:
   one theme by the same author - folded into a single entry since they all
   describe one cohesive polish pass on the same element rather than four
   separate features. Each issue closed with a comment linking here.
+
+### cymatics-fullscreen-title-position: Cymatics fullscreen title/artist should sit above the progress bar like the regular player
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In cymatics fullscreen view, the song title and artist
+  should be positioned at the bottom, directly above the progress/play bar -
+  matching where they sit in the regular (non-fullscreen) player - instead
+  of wherever they currently render.
+- **Touches:** cymatics fullscreen layout CSS/markup.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #113. Distinct from the merged
+  `cymatics-heart-centering` (that was about the heart icon pushing the
+  title off-center horizontally) - this is about vertical placement relative
+  to the progress bar, matching the regular player's layout.
+
+### crossfade-album-art-transition: Crossfade album art should fade into the next track's art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When songs are crossfading, the currently-shown album art
+  should visually fade into the next track's album art, in sync with the
+  audio crossfade, instead of switching abruptly (or not visually
+  transitioning at all).
+- **Touches:** crossfade audio logic + now-playing album art rendering.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #114.
+
+### amel-larrieux-wrong-track: "i n i" by Amel Larrieux always plays the wrong track
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The track "i n i" by Amel Larrieux consistently resolves
+  to the wrong song - it plays a different track by the same artist rather
+  than "i n i" itself. Related in kind to the merged `link-match-accuracy`
+  and `stale-track-links` work (wrong/stale resolved links), but this is a
+  fresh, specific mismatch report - investigate whether it's a new case the
+  general fix doesn't cover, or a stale cache entry.
+- **Touches:** track resolution/matching pipeline (`resolvePlaylist()` /
+  link-match logic).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #115.
+
+### record-tap-minigame: Rhythm-tap minigame on the spinning record
+- **Status:** draft
+- **Priority:** low
+- **Description:** A minigame on the spinning record visual: the record
+  spins slowly, and tapping/clicking it right when it returns to its
+  original position (0 degrees) scores a point and makes it spin slightly
+  faster each time. While a run is active, show the current score (growing
+  as points go up) alongside the all-time high score. On a miss, the
+  current score blinks 3 times then disappears; the high score stays
+  visible for an extra 3 blinks before it also disappears.
+- **Touches:** spinning-record visual element (new interaction layer on top
+  of it), local high-score persistence.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #116. New feature, not overlapping
+  `spinning-record-realism` (that's a visual/physicality polish pass with no
+  gameplay) - worth sequencing after that one if both are built, so the
+  minigame's interaction layer sits on top of the finished visual rather
+  than the other way around.
