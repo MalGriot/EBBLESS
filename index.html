@@ -1275,11 +1275,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="art single">
       <div class="face video-face"><video autoplay muted loop playsinline src="brand/assets/swell-thumb.mp4"></video></div>
       <div class="title-overlay">
-        <div class="marquee current-label" data-text="CURRENTSSsss"><span>CURRENTSSsss</span></div>
+        <div class="marquee current-label" data-text="CuRRentSSsss"><span>CuRRentSSsss</span></div>
       </div>
     </div>
     <div class="info">
-      <div class="name current-label">CURRENTSSsss</div>
+      <div class="name current-label">CuRRentSSsss</div>
       <div class="count">A fresh set, waiting</div>
     </div>
   </div>
@@ -3612,11 +3612,11 @@ function ensureLikedPlaylist(){
 function ensureSwellPlaylist(){
   const existing = getCachedPlaylist(SWELL_ID);
   if (existing){
-    // Migrate playlists created before the rename from "Swell" to "CURRENTSSsss".
-    if (existing.name !== 'CURRENTSSsss'){ existing.name = 'CURRENTSSsss'; lsSet(LS_PL(SWELL_ID), existing); }
+    // Migrate playlists created before the rename from "Swell" to "CuRRentSSsss".
+    if (existing.name !== 'CuRRentSSsss'){ existing.name = 'CuRRentSSsss'; lsSet(LS_PL(SWELL_ID), existing); }
     return;
   }
-  const pl = { id: SWELL_ID, type: 'custom', name: 'CURRENTSSsss', image: null, tracks: [], ts: Date.now() };
+  const pl = { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
   lsSet(LS_PL(SWELL_ID), pl);
   saveToLibrary(SWELL_ID);
 }
@@ -4838,7 +4838,7 @@ async function generateSwell(){
   }
   if (!collected.length) return;
 
-  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CURRENTSSsss', image: null, tracks: [], ts: Date.now() };
+  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
   pl.tracks = collected;
   lsSet(LS_PL(SWELL_ID), pl);
   lsSet(LS_SWELL_GENERATED, Date.now());
