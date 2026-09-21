@@ -2195,3 +2195,34 @@ Add entries in this shape:
   `ambient-soundscapes` (ambient layer) above - this issue's own title
   straddles both. Least concrete of the three; may turn out to just be "an
   equalizer-presets preset" once scoped, rather than its own feature.
+
+### album-art-resolution: Album art is blurry/low quality on desktop
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, album art often renders blurry or low
+  resolution. Investigate the desktop art-rendering path and prefer/request
+  higher-resolution source images (e.g. larger iTunes/Spotify/SoundCloud
+  artwork sizes) where the current pipeline is settling for a smaller image.
+- **Touches:** track/playlist art resolution (`resolveTrackArt()`,
+  `searchItunesTrackArt()`/`artworkUrls()`), desktop album art rendering.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #91. No existing entry covers image
+  resolution/sharpness specifically - `album-art-icon-colors` and
+  `album-art-2x2-grid-bug` are unrelated bugs (accent color, placeholder
+  grid), not resolution.
+
+### lyrics-accuracy: Wrong/missing lyrics even when correct lyrics are findable elsewhere
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Sometimes lyrics don't show even though the correct
+  lyrics are findable on Google or Genius. Reporter's example: "Nova Deli"
+  by Luedji Luna (genius.com/artists/Luedji-luna) has lyrics on Genius but
+  not in-app. Investigate the current lyrics-lookup source/matching and
+  improve match accuracy/coverage, possibly by using Genius as a source or
+  fallback.
+- **Touches:** lyrics fetch/matching pipeline (wherever lyrics are looked up
+  by title/artist).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #90. No existing entry covers lyrics
+  accuracy/sourcing - `lyrics-glow-trail` above is a visual effect on
+  already-displayed lyrics, unrelated.
