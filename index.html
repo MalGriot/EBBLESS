@@ -54,7 +54,7 @@ svg{display:block}
 
 /* ambient background: blurred artwork, subtle, crossfading, slowly drifting
    like a lava lamp (position/scale + brightness/saturation breathing) */
-#ambient{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
+#ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bg)}
 #ambient .layer{position:absolute;inset:-40%;background-size:cover;background-position:center;
   filter:blur(70px) saturate(1.15) brightness(.42);transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
