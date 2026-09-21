@@ -1155,7 +1155,7 @@ Add entries in this shape:
   were Spotify).
 
 ### track-relink-menu: Per-track "refresh this link" menu with thumbnail choices
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Each track row in a playlist should have a hold/long-press
   menu with a "refresh link" option. Selecting it opens a picker showing 3-5
@@ -1219,7 +1219,7 @@ Add entries in this shape:
   existing top-1 fields, via the fallback above) against the live backend.
 
 ### playlist-relink-all: Playlist-level "refresh all links" option
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The playlist hold-menu (in Library) should have an option
   to refresh/re-resolve the links for every track in that playlist at once.
@@ -1575,7 +1575,7 @@ Add entries in this shape:
   this batch - likely its own lane.
 
 ### album-art-2x2-grid-bug: Album art sometimes shows placeholder grid instead of real art
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the player and queue, album art sometimes shows a
   generic 2x2 grid placeholder instead of the actual resolved album art.
