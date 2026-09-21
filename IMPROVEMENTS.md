@@ -1817,3 +1817,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #47. Overlaps somewhat with
   `feedback-prompt` above - both are feedback-collection mechanisms;
   worth discussing whether one covers both needs before building both.
+
+### library-search: Add a search function for the user's own library
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Users should be able to search their own library for a
+  song or playlist they already have, rather than scrolling to find it.
+- **Touches:** library view UI, likely a new search input + filter over the
+  in-library playlists/tracks list.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #84.
+
+### playlist-vibe-search: Search Spotify/Apple Music/SoundCloud for playlists by vibe/keyword
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The playlist-input bar should let a user search by vibe
+  or keyword (not just paste a direct link) and get back a matching
+  playlist - or a list of candidates to pick from - that then loads
+  straight into their library.
+- **Touches:** playlist input bar / import flow, likely a new search
+  endpoint against Spotify/Apple Music/SoundCloud rather than the existing
+  direct-link resolve pipeline.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #85. Distinct from `library-search`
+  above (that one searches what the user already has; this one searches
+  external platforms to find something new to add) - kept separate.
