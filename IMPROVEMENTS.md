@@ -1499,12 +1499,12 @@ Add entries in this shape:
   guessing.
 
 ### settings-share-app: Add "share this app" button in Settings
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Add a button in Settings that lets the user share EBBLESS
   itself (the app, not a specific song/playlist).
 - **Touches:** Settings screen.
-- **Branch:** (unclaimed)
+- **Branch:** agent/settings-share-app
 - **Notes:** Synced from Geethub issue #43. Related to `share-song-playlist`
   below (song/playlist-level sharing) - different scope, worth keeping
   separate since one shares the app, the other shares specific content.
@@ -1793,14 +1793,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #56.
 
 ### disable-native-context-menu: Suppress OS/browser context menu on long-press
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Long-pressing/holding an item should only ever open
   EBBLESS's own internal menu - the device's or browser's native
   long-press/context menu should be disabled everywhere this applies.
 - **Touches:** touch/hold handlers across track rows, playlist cards, etc.
   (likely needs `touch-action`/`contextmenu` prevention applied broadly).
-- **Branch:** (unclaimed)
+- **Branch:** agent/disable-native-context-menu
 - **Notes:** Synced from Geethub issue #57.
 
 ### share-song-playlist: Share a song or playlist via link
@@ -1826,14 +1826,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #65.
 
 ### clear-playlists-confirm: "Clear playlists" needs a serious confirm prompt + danger styling
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The Settings "clear playlists" button should show a
   serious-looking confirmation prompt before acting (reporter: should feel
   as weighty as deleting your account), and the button itself should look
   visually distinct/dangerous and be moved to the bottom of Settings.
 - **Touches:** Settings screen, clear-playlists action.
-- **Branch:** (unclaimed)
+- **Branch:** agent/clear-playlists-confirm
 - **Notes:** Synced from Geethub issue #67. Straightforward, low-risk UX
   safety fix - good candidate for an early lane.
 
@@ -2226,3 +2226,41 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #90. No existing entry covers lyrics
   accuracy/sourcing - `lyrics-glow-trail` above is a visual effect on
   already-displayed lyrics, unrelated.
+
+### background-playlist-loading: Playlist/album loading should run in the background with a progress bar
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When a playlist/album/song is loading, the user should be
+  able to freely return to the main pages instead of being stuck waiting - a
+  progress bar somewhere in the UI shows load status and disappears on
+  completion. On finish, default behavior is to just add the loaded
+  playlist/album to the library (no auto-play); optionally, the user should
+  be able to choose to play it immediately and replace the current queue
+  once loading finishes.
+- **Touches:** `beginImport()` playlist-load flow, loading-state UI.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #93. **Judgment call, flagging for
+  your input:** this overlaps two existing draft entries -
+  `loading-progress-indicator` (a progress-bar/loading indicator during
+  track load) and `play-first-loaded-track` (play-immediately vs. a "play
+  now" prompt when a playlist is pasted). Kept as its own entry rather than
+  folding in, since it adds two things neither covers: (1) freely navigating
+  away from the loading screen instead of being blocked on it, and (2) a
+  default "just add to library, don't auto-play" behavior. If you'd rather
+  these three be tackled as one combined lane, say so when picking what's
+  `ready`.
+
+### podcasts: Support loading and playing podcasts
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add podcast support - load single episodes, or paste a
+  link to a podcast's page and have it load all episodes.
+- **Touches:** likely a new content-source path alongside the existing
+  Spotify/Apple Music/SoundCloud/YouTube resolution pipeline - needs
+  scoping (podcast source/API, episode list resolution, playback).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #92. No existing entry covers
+  podcasts - this is a new content type/feature area, not a fix to
+  anything already in the backlog. Likely a larger lane than most entries
+  here given it's a new source type; may be worth scoping/splitting once
+  picked up.
