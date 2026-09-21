@@ -1754,6 +1754,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
        library card; repositioned in JS next to whichever button opened it) ===== -->
   <div class="lib-ctx-menu" id="libCtxMenu"></div>
 
+  <!-- ===== TRACK CONTEXT MENU (opened from a track row's kebab button, or a
+       hold/long-press on the row itself; same floating-panel behavior as
+       libCtxMenu above, just anchored to a track row instead of a card) ===== -->
+  <div class="lib-ctx-menu" id="trackCtxMenu"></div>
+
   <!-- ===== FLOW / FULLSCREEN ===== -->
   <div id="flow-layer">
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
@@ -2317,6 +2322,26 @@ function reResolveStaleInBackground(id, type){
   }).catch(() => {});
 }
 
+// User-triggered version of the above (playlist-relink-all): same
+// resolvePlaylist() call that automatic staleness recovery already uses -
+// re-fetches the source tracklist and re-searches every track against it -
+// just invoked on demand from the playlist's context menu instead of only
+// when the cached resolveVersion is behind RESOLVE_LOGIC_VERSION. Unlike the
+// silent background version, this one is a direct user action so it gives
+// toast feedback either way.
+function manualRelinkPlaylist(id){
+  const pl = getCachedPlaylist(id);
+  if (!pl || pl.type === 'custom') return;
+  showToast('Refreshing links…');
+  resolvePlaylist(id, pl.type, () => {}).then(newPl => {
+    if (state.playlist && state.playlist.id === id){ state.playlist = newPl; renderTrackList(); }
+    renderLibrary();
+    showToast('Links refreshed');
+  }).catch(() => {
+    showToast("Couldn't refresh links right now.");
+  });
+}
+
 /* the playlist currently loaded in the player is kept in memory (state.playlist);
    any other playlist referenced by the queue is read fresh from storage */
 function playlistById(id){
@@ -2455,6 +2480,7 @@ const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = 
 const discoverToggleBtn = $('discoverToggleBtn');
 const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn');
 const libCtxMenu = $('libCtxMenu');
+const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
@@ -2997,6 +3023,11 @@ function toggleLibraryPlaylistPanel(id){
       if (t.videoId){
         row.addEventListener('click', () => playLibraryTrackInline(id, i));
       }
+      // track-relink-menu: same long-press "Refresh link" menu as the main
+      // tracklist view (renderTrackList) - no dedicated kebab button here
+      // given this panel's tighter row layout, but the hold gesture works
+      // the same way, missing tracks included.
+      attachLongPress(row, () => toggleTrackCtxMenu(id, i, row));
       libplBody.appendChild(row);
     });
   }
@@ -3022,6 +3053,7 @@ const CTX_ICON_DUPLICATE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d
 const CTX_ICON_PIN = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>';
 const CTX_ICON_LINK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12a5 5 0 015-5h3v2h-3a3 3 0 000 6h3v2h-3a5 5 0 01-5-5zm6-1h4v2h-4v-2zm5-4h3a5 5 0 010 10h-3v-2h3a3 3 0 000-6h-3V7z"/></svg>';
 const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h6V4l-2.35 2.35z"/></svg>';
+const CTX_ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V2L7 7l5 5V8c3.31 0 6 2.69 6 6a6 6 0 01-6 6 6 6 0 01-6-6H4a8 8 0 008 8 8 8 0 008-8c0-4.42-3.58-8-8-8z"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
 
 // Reverses a resolved playlist's {type,id} back into the URL it was
@@ -3079,6 +3111,13 @@ function openLibCtxMenu(id, btn){
   if (link){
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
     items.push({ action: 'replacelink', label: 'Replace link', icon: CTX_ICON_REPLACE });
+  }
+  // 'custom' playlists (Liked Songs, CURRENT/Swell, user-made, Discover
+  // overflow) aren't backed by resolvePlaylist() and have no source to
+  // re-resolve against - only offer this for playlists that came from an
+  // actual link.
+  if (pl.type !== 'custom'){
+    items.push({ action: 'relinkall', label: 'Refresh links', icon: CTX_ICON_REFRESH });
   }
   items.push({ sep: true });
   items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
@@ -3152,6 +3191,70 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openCtxM
 window.addEventListener('resize', () => { if (openCtxMenu) closeLibCtxMenu(); });
 window.addEventListener('scroll', () => { if (openCtxMenu) closeLibCtxMenu(); }, true);
 
+/* =========================================================================
+   TRACK CONTEXT MENU (track-relink-menu) — a per-track hold/long-press menu
+   whose only item today is "Refresh link" (opens the multi-candidate picker
+   below). Same floating-panel pattern as the playlist context menu above,
+   just anchored to a track row's kebab button (mouse) or the row itself
+   (long-press on touch) instead of a library card's 3-dot button.
+   ========================================================================= */
+let openTrackCtxMenu = null; // { plId, trackIdx, btn }
+
+function closeTrackCtxMenu(){
+  if (!openTrackCtxMenu) return;
+  if (openTrackCtxMenu.btn) openTrackCtxMenu.btn.classList.remove('is-active');
+  trackCtxMenu.classList.remove('is-open');
+  openTrackCtxMenu = null;
+}
+
+function positionTrackCtxMenu(anchorEl){
+  const r = anchorEl.getBoundingClientRect();
+  const menuRect = trackCtxMenu.getBoundingClientRect();
+  const margin = 8;
+  const spaceBelow = window.innerHeight - r.bottom;
+  const dropUp = spaceBelow < menuRect.height + margin && r.top > menuRect.height + margin;
+  trackCtxMenu.classList.toggle('drop-up', dropUp);
+  let top = dropUp ? (r.top - menuRect.height - 6) : (r.bottom + 6);
+  top = Math.max(margin, Math.min(top, window.innerHeight - menuRect.height - margin));
+  let left = r.right - menuRect.width;
+  left = Math.max(margin, Math.min(left, window.innerWidth - menuRect.width - margin));
+  trackCtxMenu.style.top = top + 'px';
+  trackCtxMenu.style.left = left + 'px';
+}
+
+// plId/trackIdx identify the track to refresh; anchorEl is whatever the menu
+// should be positioned next to (the kebab button on mouse, or the row
+// itself on a touch long-press, which has no dedicated button).
+function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
+  trackCtxMenu.innerHTML = '';
+  const b = document.createElement('button');
+  b.className = 'lib-ctx-item';
+  b.innerHTML = CTX_ICON_REFRESH + '<span>Refresh link</span>';
+  b.addEventListener('click', (e) => { e.stopPropagation(); closeTrackCtxMenu(); openRefreshLinkPicker(plId, trackIdx); });
+  trackCtxMenu.appendChild(b);
+
+  if (openTrackCtxMenu && openTrackCtxMenu.btn) openTrackCtxMenu.btn.classList.remove('is-active');
+  openTrackCtxMenu = { plId, trackIdx, btn: anchorEl };
+  if (anchorEl.classList) anchorEl.classList.add('is-active');
+  trackCtxMenu.classList.remove('drop-up');
+  trackCtxMenu.classList.add('is-open');
+  positionTrackCtxMenu(anchorEl);
+}
+
+function toggleTrackCtxMenu(plId, trackIdx, anchorEl){
+  if (openTrackCtxMenu && openTrackCtxMenu.btn === anchorEl){ closeTrackCtxMenu(); return; }
+  openTrackCtxMenuFor(plId, trackIdx, anchorEl);
+}
+
+document.addEventListener('click', (e) => {
+  if (!openTrackCtxMenu) return;
+  if (trackCtxMenu.contains(e.target) || (openTrackCtxMenu.btn && openTrackCtxMenu.btn.contains(e.target))) return;
+  closeTrackCtxMenu();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openTrackCtxMenu) closeTrackCtxMenu(); });
+window.addEventListener('resize', () => { if (openTrackCtxMenu) closeTrackCtxMenu(); });
+window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMenu(); }, true);
+
 function handleLibCtxAction(action, id){
   const pl = getCachedPlaylist(id);
   if (!pl) return;
@@ -3161,6 +3264,7 @@ function handleLibCtxAction(action, id){
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
   else if (action === 'copylink') copyPlaylistLink(pl);
   else if (action === 'replacelink') openReplaceLinkFlow(id, pl);
+  else if (action === 'relinkall') manualRelinkPlaylist(id);
   else if (action === 'delete'){
     if (!confirm(`Delete "${pl.name}"? This can't be undone.`)) return;
     removeFromLibrary(id); renderLibrary(); showToast('Deleted');
@@ -3311,6 +3415,86 @@ function openReplaceLinkFlow(id, pl){
   }
   $('plReplaceBtn').addEventListener('click', submit);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+}
+
+/* =========================================================================
+   TRACK "REFRESH LINK" PICKER (track-relink-menu) — the manual fallback for
+   when auto-matching (RESOLVE PIPELINE / scoreCandidate on the worker) still
+   picks the wrong video. Reuses the same /search endpoint as the automatic
+   matcher, just reads its `candidates` field (added alongside the existing
+   top-1 videoId/title/channel/duration fields specifically for this picker -
+   see handleSearch in worker/src/index.js) instead of only the best match,
+   so the listener can see and choose among the top few results themselves.
+   ========================================================================= */
+function refreshLinkCandidateThumb(videoId){
+  return 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
+}
+
+function openRefreshLinkPicker(plId, trackIdx){
+  const pl = playlistById(plId) || getCachedPlaylist(plId);
+  const t = pl && pl.tracks[trackIdx];
+  if (!t) return;
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Refresh link for &ldquo;' + escapeHtml(t.title) + '&rdquo;</div>' +
+    '<div id="relinkCandidates" style="width:100%;max-height:320px;overflow-y:auto">' +
+      '<div style="color:var(--faint-2);font-size:13px;padding:8px 0">Searching YouTube…</div>' +
+    '</div>';
+  searchYouTube(t.title, t.artist, t.duration ? t.duration * 1000 : 0).then(data => {
+    const container = $('relinkCandidates');
+    if (!container) return; // overlay was closed while the search was in flight
+    const candidates = (data.candidates && data.candidates.length) ? data.candidates
+      : (data.videoId ? [{ videoId: data.videoId, title: data.title, channel: data.channel, duration: data.duration }] : []);
+    renderRelinkCandidates(container, candidates, plId, trackIdx, t.videoId);
+  }).catch(e => {
+    const container = $('relinkCandidates');
+    if (!container) return;
+    container.innerHTML = '<div class="import-err">' + escapeHtml(e.message || 'Search failed.') + '</div>';
+  });
+}
+
+function renderRelinkCandidates(container, candidates, plId, trackIdx, currentVideoId){
+  if (!candidates.length){
+    container.innerHTML = '<div style="color:var(--faint-2);font-size:13px;padding:8px 0">No alternatives found.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  candidates.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-ghost relink-cand' + (c.videoId === currentVideoId ? ' is-active' : '');
+    btn.style.cssText = 'width:100%;display:flex;gap:10px;align-items:center;text-align:left;margin-bottom:8px;padding:8px';
+    const img = document.createElement('img');
+    img.style.cssText = 'width:64px;height:36px;object-fit:cover;border-radius:4px;flex:none;background:var(--panel-2)';
+    img.src = refreshLinkCandidateThumb(c.videoId);
+    const meta = document.createElement('span');
+    meta.style.cssText = 'min-width:0;flex:1';
+    const titleEl = document.createElement('span');
+    titleEl.style.cssText = 'display:block;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    titleEl.textContent = c.title || '(untitled)';
+    const subEl = document.createElement('span');
+    subEl.style.cssText = 'display:block;font-size:11.5px;color:var(--faint-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    subEl.textContent = [c.channel, c.duration ? formatTime(c.duration) : ''].filter(Boolean).join(' · ') +
+      (c.videoId === currentVideoId ? ' · current' : '');
+    meta.appendChild(titleEl); meta.appendChild(subEl);
+    btn.appendChild(img); btn.appendChild(meta);
+    btn.addEventListener('click', () => applyRelinkChoice(plId, trackIdx, c));
+    container.appendChild(btn);
+  });
+}
+
+function applyRelinkChoice(plId, trackIdx, candidate){
+  const pl = getCachedPlaylist(plId);
+  const t = pl && pl.tracks[trackIdx];
+  if (!t) return;
+  t.videoId = candidate.videoId;
+  t.matchedTitle = candidate.title || '';
+  t.channel = candidate.channel || '';
+  t.duration = candidate.duration || 0;
+  lsSet(LS_PL(plId), pl);
+  if (state.playlist && state.playlist.id === plId){ state.playlist = pl; renderTrackList(); }
+  renderLibrary();
+  closeImportOverlay();
+  showToast('Link updated');
 }
 
 /* =========================================================================
@@ -3957,12 +4141,25 @@ function renderTrackList(){
         removeFromPlBtnEl.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
         actions.appendChild(removeFromPlBtnEl);
       }
+      // track-relink-menu: kebab opens the per-track hold-menu (currently
+      // just "Refresh link") for mouse/desktop use; attachLongPress below
+      // covers the same menu for touch, since there's no hover to reveal
+      // this button on a phone.
+      const trackMenuBtnEl = document.createElement('button'); trackMenuBtnEl.className = 'track-menu-btn'; trackMenuBtnEl.title = 'Track options'; trackMenuBtnEl.setAttribute('aria-label','Track options'); trackMenuBtnEl.setAttribute('aria-haspopup','true');
+      trackMenuBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+      trackMenuBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(pl.id, i, trackMenuBtnEl); });
+      actions.appendChild(trackMenuBtnEl);
       row.appendChild(actions);
       row.addEventListener('click', (e) => {
         if (e.target === handle || handle.contains(e.target)) return;
         buildQueueFrom(i, pl.id); loadIndex(state.queuePos, true);
       });
     }
+    // Long-press the row itself opens the same "Refresh link" menu, touch
+    // equivalent of the kebab button above - and, unlike the kebab, also
+    // works on a track with no match yet (t.videoId null / "is-missing"
+    // rows), which is exactly when a manual refresh is most wanted.
+    attachLongPress(row, () => toggleTrackCtxMenu(pl.id, i, row));
     trackListEl.appendChild(row);
     if (state.sortMode === 'custom') wireTrackRowDrag(row, handle);
   });
