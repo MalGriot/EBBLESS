@@ -2697,7 +2697,7 @@ Add entries in this shape:
   errors against the worktree's own server.
 
 ### crossfade-album-art-transition: Crossfade album art should fade into the next track's art
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When songs are crossfading, the currently-shown album art
   should visually fade into the next track's album art, in sync with the
