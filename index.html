@@ -2640,14 +2640,32 @@ function setAmbient(track){
 
 /* =========================================================================
    ARTWORK CROSSFADE (player + flow)
+
+   Normal call (no durationMs) uses the default CSS opacity transition
+   (--dur-surface) - a quick swap. When a track-to-track *audio* crossfade
+   is running (see runCrossfade()), durationMs is passed so this visual
+   fade is stretched to match the audio fade's own length and start
+   alongside it, instead of popping to the new art only once the audio
+   fade finishes.
    ========================================================================= */
 function makeArtSwapper(imgA, imgB){
   let active = 'a';
-  return function(track){
+  return function(track, durationMs){
     const cur = active === 'a' ? imgA : imgB;
     const nxt = active === 'a' ? imgB : imgA;
     attachArtworkFallback(nxt, track);
-    nxt.onload = () => { nxt.classList.add('is-active'); cur.classList.remove('is-active'); };
+    cur.style.transitionDuration = durationMs ? durationMs + 'ms' : '';
+    nxt.style.transitionDuration = durationMs ? durationMs + 'ms' : '';
+    nxt.onload = () => {
+      nxt.classList.add('is-active');
+      cur.classList.remove('is-active');
+      if (durationMs){
+        // Revert to the default transition speed once this synced fade has
+        // played out, so the next ordinary (non-crossfade) swap isn't left
+        // running at the crossfade's duration.
+        setTimeout(() => { cur.style.transitionDuration = ''; nxt.style.transitionDuration = ''; }, durationMs + 50);
+      }
+    };
     active = active === 'a' ? 'b' : 'a';
   };
 }
@@ -6065,13 +6083,20 @@ function bumpPlayCount(entry){
   }
 }
 
-function reflectCurrentTrackUI(pos){
+function reflectCurrentTrackUI(pos, opts){
   const entry = state.queue[pos];
   const t = trackAt(pos);
   if (!t) return;
+  // finishCrossfade() already started (and by now finished) the player/flow
+  // art fade back in runCrossfade(), synced to the audio crossfade - redoing
+  // it here would restart the swap at the default (fast) speed and flash
+  // the same art back and forth for no visual gain.
+  const skipArt = opts && opts.skipArtSwap;
   updateTrackMetaUI(t);
-  swapPlayerArt(t);
-  swapFlowArt(t);
+  if (!skipArt){
+    swapPlayerArt(t);
+    swapFlowArt(t);
+  }
   swapAltArt(t);
   setAmbient(t);
   updatePlayerAccentColor(t);
@@ -6134,6 +6159,14 @@ function runCrossfade(nd, nextPos){
   if (nd.player.unMute) nd.player.unMute();
   nd.player.playVideo();
   const durationMs = crossfadePrefs.ms;
+  // Fade the album art over the same window as the audio crossfade, starting
+  // now rather than waiting for finishCrossfade() - otherwise the art would
+  // pop to the next track only once the audio fade is already done.
+  const nextTrack = trackAt(nextPos);
+  if (nextTrack){
+    swapPlayerArt(nextTrack, durationMs);
+    swapFlowArt(nextTrack, durationMs);
+  }
   const start = Date.now();
   old.fadeTimer = setInterval(() => {
     const p = Math.min(1, (Date.now() - start) / durationMs);
@@ -6152,7 +6185,7 @@ function finishCrossfade(old, nd, nextPos, targetVol){
   state.queuePos = nextPos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
-  reflectCurrentTrackUI(nextPos);
+  reflectCurrentTrackUI(nextPos, { skipArtSwap: true });
   setPlayingUI(true);
   resetDeck(old);
   schedulePreload(nextPos);
