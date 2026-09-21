@@ -2697,15 +2697,56 @@ Add entries in this shape:
   errors against the worktree's own server.
 
 ### crossfade-album-art-transition: Crossfade album art should fade into the next track's art
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** When songs are crossfading, the currently-shown album art
   should visually fade into the next track's album art, in sync with the
   audio crossfade, instead of switching abruptly (or not visually
   transitioning at all).
-- **Touches:** crossfade audio logic + now-playing album art rendering.
-- **Branch:** (unclaimed)
+- **Touches:** `index.html` `makeArtSwapper()` (~line 2644),
+  `runCrossfade()`/`finishCrossfade()` (~line 6156),
+  `reflectCurrentTrackUI()`.
+- **Branch:** `agent/crossfade-album-art-transition`
 - **Notes:** Synced from Geethub issue #114.
+
+  Root cause: the now-playing art (`artA`/`artB` in `.artwork-wrap`, plus
+  the cymatics "flow" view's `flowArtA`/`flowArtB`) only swapped inside
+  `reflectCurrentTrackUI()`, called from `finishCrossfade()` - i.e. only
+  *after* the audio fade (`crossfadePrefs.ms`, default 4s) had already
+  finished, so the art popped to the new cover abruptly at the tail end
+  instead of transitioning alongside it.
+
+  Fixed and pushed (commit `6c641ac`): `makeArtSwapper()` now accepts an
+  optional `durationMs`, applied as `transition-duration` on the art
+  `<img>`s for that swap and cleared back to the default CSS speed
+  (`--dur-surface`) once it completes. `runCrossfade()` now calls
+  `swapPlayerArt(nextTrack, durationMs)` / `swapFlowArt(nextTrack,
+  durationMs)` at the *start* of the fade using `crossfadePrefs.ms` - same
+  duration and start time as the audio fade. `reflectCurrentTrackUI()`
+  gained a `skipArtSwap` option so `finishCrossfade()` doesn't redo the
+  swap a second time at default speed once the crossfade lands. Normal
+  (non-crossfade) track changes are untouched - still call
+  `swapPlayerArt`/`swapFlowArt` with no `durationMs`. Degrades gracefully
+  by existing design: the swap only flips `.is-active` inside the new
+  image's `onload`, so art that fails to resolve/load in time just leaves
+  the current art visible.
+
+  Verified via a worktree-local `python3 -m http.server` (confirmed via
+  `location.href`). Real playback/audio wasn't exercisable in this
+  sandbox (no live YouTube network access, no queue loaded), so a
+  temporary in-page debug hook was used to call the exact in-closure
+  function `runCrossfade` calls (`swapPlayerArt(track, durationMs)`)
+  directly - confirmed transition-duration applies to both images
+  immediately, the swap completes and flips `is-active` correctly,
+  duration clears afterward, the untouched normal-swap path still uses
+  default duration, and unresolvable art leaves the current art in place.
+  The debug hook was removed before committing (confirmed via `grep -c`
+  returning 0 in the diff). **Open/unverified:** true end-to-end
+  audio+visual sync on a real device with live playback wasn't exercised
+  - the logic trace (same start time, same `crossfadePrefs.ms` duration
+  feeding both the audio fade's `setInterval` and the art's
+  `transition-duration`) strongly implies correct sync, but this specific
+  claim wants a real-device check once merged.
 
 ### amel-larrieux-wrong-track: "i n i" by Amel Larrieux always plays the wrong track
 - **Status:** review
