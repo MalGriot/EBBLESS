@@ -54,7 +54,7 @@ svg{display:block}
 
 /* ambient background: blurred artwork, subtle, crossfading, slowly drifting
    like a lava lamp (position/scale + brightness/saturation breathing) */
-#ambient{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
+#ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bg)}
 #ambient .layer{position:absolute;inset:-40%;background-size:cover;background-position:center;
   filter:blur(70px) saturate(1.15) brightness(.42);transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
@@ -823,7 +823,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   #view-player{overflow-y:hidden}
 }
 /* wide desktop: persistent 3-pane layout (library | now playing | queue) in
-   place of the tab-switching + overlay-queue behavior used below 1150px */
+   place of the tab-switching + overlay-queue behavior used below 1150px.
+   Each pane is a grid item whose default min-height is auto (= its content's
+   height) rather than 0, so when the queue list (or library) has enough
+   rows to be taller than the viewport, the shared grid-row track grows to
+   fit that content instead of the row staying capped at #app's own height -
+   pushing the whole #view-player pane (and its transport controls) below
+   the viewport, clipped away entirely by #app's overflow:hidden. min-height:0
+   below forces each pane back to the row's actual (stretched) height so
+   their own overflow rules take over instead of the grid growing around them. */
 @media (min-width:1150px){
   body.split-desktop:not(.view-settings-active) #topnav [data-view="library"],
   body.split-desktop:not(.view-settings-active) #topnav [data-view="player"],
@@ -835,7 +843,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop:not(.view-settings-active) #topbar{grid-column:1/-1;grid-row:1}
   body.split-desktop:not(.view-settings-active) #view-library,
   body.split-desktop:not(.view-settings-active) #view-player{
-    position:static;grid-row:2;display:block!important;top:auto;bottom:auto;
+    position:static;grid-row:2;display:block!important;top:auto;bottom:auto;min-height:0;
   }
   body.split-desktop:not(.view-settings-active) #view-library{
     grid-column:1;border-right:1px solid var(--border);position:relative;
@@ -844,7 +852,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop:not(.view-settings-active) #view-player{grid-column:2}
   body.split-desktop:not(.view-settings-active) #queue-panel{
     position:static;grid-column:3;grid-row:2;width:auto;height:auto;top:auto;right:auto;bottom:auto;
-    transform:none!important;border-left:1px solid var(--border);
+    min-height:0;transform:none!important;border-left:1px solid var(--border);
   }
   body.split-desktop:not(.view-settings-active) #queue-scrim{display:none!important}
   body.split-desktop:not(.view-settings-active) #mini-bar{display:none!important}
