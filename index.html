@@ -750,7 +750,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
 #flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
 #flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
-#flow-layer .flow-meta{margin-top:28px;text-align:center;position:relative;z-index:5;pointer-events:none;width:min(52vh,62vw);margin-left:auto;margin-right:auto}
+#flow-layer .flow-meta{text-align:center;position:relative;z-index:5;pointer-events:none;width:min(420px,80vw);margin-left:auto;margin-right:auto}
 #flow-layer .flow-meta .title-row{display:flex;flex-direction:column-reverse;align-items:center;justify-content:center;gap:6px}
 #flow-layer .flow-meta .title-row .title{flex:none;width:100%}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
@@ -1821,6 +1821,15 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="flow-chrome">
       <div class="flow-top"><button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>
       <div class="flow-bottom">
+        <div class="flow-meta">
+          <div class="title-row">
+            <div class="title marquee" id="flowTitle"><span>—</span></div>
+            <button class="player-like-btn" id="flowLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
+            </button>
+          </div>
+          <div class="artist marquee" id="flowArtist"><span>—</span></div>
+        </div>
         <div class="flow-seek">
           <div class="seek-row">
             <span class="t tnum" id="flowTimeCur">0:00</span>
@@ -1837,15 +1846,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="flow-art" id="flowArtWrap"><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
     <div class="flow-art flow-viz" id="flowVizWrap" hidden></div>
-    <div class="flow-meta">
-      <div class="title-row">
-        <div class="title marquee" id="flowTitle"><span>—</span></div>
-        <button class="player-like-btn" id="flowLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
-        </button>
-      </div>
-      <div class="artist marquee" id="flowArtist"><span>—</span></div>
-    </div>
   </div>
 
   <!-- ===== LYRICS FULLSCREEN ===== -->
