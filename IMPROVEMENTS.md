@@ -1338,7 +1338,7 @@ Add entries in this shape:
   once this fix's real-world impact is visible.
 
 ### discovery-pipeline-metadata: Discovery songs should show Spotify/Apple metadata, not YouTube's
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Discovery/recommended songs currently pull their title,
   artist, and album art straight from YouTube. Instead: pick candidates via
