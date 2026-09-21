@@ -1935,27 +1935,81 @@ Add entries in this shape:
   flagging both for your call.
 
 ### pwa-update-propagation: Updates should reach already-installed mobile PWAs
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** When a new version is deployed, users who already
   installed EBBLESS to their mobile home screen should receive the update,
   not stay stuck on the version they installed.
-- **Touches:** `sw.js` service worker update/activation logic.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #33. Related to `deploy-cache-refresh`
-  below - likely the same underlying service-worker cache-busting fix
-  covers both; worth one lane for both.
+- **Touches:** `sw.js` service worker update/activation logic, `index.html`
+  service worker registration + a new "Update available / Refresh" toast.
+- **Branch:** `agent/pwa-update-refresh`
+- **Notes:** Synced from Geethub issue #33. Root cause: `sw.js` had no
+  version marker of its own and did zero caching, so a deploy that only
+  touched `index.html` (the common case, since this is a single-file app)
+  never changed `sw.js`'s bytes - and a browser only re-checks/reinstalls a
+  service worker when the SW *file* is byte-different. Combined with an
+  installed/home-screen app rarely triggering a fresh navigation (the only
+  time browsers auto-check for a new SW), already-installed users could go
+  a very long time without ever getting a new worker at all.
+  Fix: `sw.js` now carries a `CACHE_VERSION` string meant to be bumped every
+  deploy (see its top comment) so its bytes actually change; `index.html`
+  registers with `updateViaCache:'none'` and proactively calls
+  `registration.update()` on visibility/focus/hourly-interval so a resumed
+  or long-lived session gets checked even without a fresh navigation.
+  `skipWaiting`/`clients.claim` (already present) still make an update take
+  over promptly once detected, but instead of forcing a reload out from
+  under someone (e.g. mid-playback), `index.html` now listens for
+  `controllerchange` and shows a small "Update available / Refresh" toast
+  (new `#swUpdateToast` element + `.sw-update-toast` CSS) that reloads only
+  when tapped.
+  Verified: registered/exercised the worktree's own `index.html`+`sw.js`
+  (confirmed via `location.href`) served from a local `python3 http.server`
+  with `node --check` passing on both `sw.js` and the extracted inline
+  script, and by manually triggering/inspecting the `#swUpdateToast` markup,
+  CSS, and its reload-on-click handler in a real browser (screenshot
+  confirmed it renders correctly above the mini-player and the Refresh
+  button does call `location.reload()`). **Verification gap:** the actual
+  service-worker *registration* itself could not be exercised end-to-end -
+  this sandbox's automated browser refuses all `navigator.serviceWorker
+  .register()` calls outright ("An unknown error occurred when fetching the
+  script"), reproduced even with a trivial one-line dummy worker and with
+  both HTTP/1.0 and HTTP/1.1 local servers, so it's an environment
+  restriction, not a bug in this change. The registration/update-detection
+  code path (`reg.update()`, `updatefound`, `controllerchange`) is
+  therefore unverified live and should get a real-device/real-browser check
+  before this is fully trusted - a second real deploy (bumping
+  `CACHE_VERSION`) against an already-installed PWA is the strongest test.
 
 ### deploy-cache-refresh: Deploys should bust cached assets/cookies on update
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** When a new version is deployed, it should refresh users'
   cached assets/cookies so they see the update rather than a stale cached
   version.
 - **Touches:** `sw.js` service worker cache versioning/invalidation.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #34. Same underlying fix as
-  `pwa-update-propagation` above - bundle into one lane.
+- **Branch:** `agent/pwa-update-refresh`
+- **Notes:** Synced from Geethub issue #34. Same fix and lane as
+  `pwa-update-propagation` above. `sw.js` previously did no caching of any
+  kind (by design - EBBLESS needs live network access for Spotify/YouTube
+  on every load), which meant there was no cache to invalidate but also
+  nothing forcing a stale `index.html` to be re-fetched once cached by
+  HTTP. `sw.js` now caches only the app shell (`index.html`,
+  `manifest.json`, `./`) under a versioned `CACHE_VERSION` cache name;
+  `activate` deletes any cache whose name doesn't match the current
+  version, and navigations are served network-first with the versioned
+  cache only as an offline fallback - so bumping `CACHE_VERSION` on deploy
+  both forces the update-detection described above and guarantees old
+  shell caches don't linger. All non-navigation requests (Worker/Spotify/
+  YouTube calls, audio, images) remain completely uncached, unchanged from
+  before.
+  Verified: same as `pwa-update-propagation` above - `node --check` on
+  `sw.js`, and manual inspection of the cache-open/delete/network-first
+  logic; the live Cache Storage behavior (old cache entries actually being
+  evicted, network-first actually falling back when offline) could not be
+  exercised because service worker registration itself is blocked in this
+  sandbox's browser (see gap noted above). Recommend confirming via
+  DevTools Application > Cache Storage on a real deploy that only one
+  `ebbless-shell-v*` cache exists after an update.
 
 ### volume-equalizer: Volume equalizer/normalization across tracks
 - **Status:** draft
