@@ -2749,7 +2749,7 @@ Add entries in this shape:
   claim wants a real-device check once merged.
 
 ### amel-larrieux-wrong-track: "i n i" by Amel Larrieux always plays the wrong track
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The track "i n i" by Amel Larrieux consistently resolves
   to the wrong song - it plays a different track by the same artist rather
