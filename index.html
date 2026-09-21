@@ -6988,6 +6988,31 @@ function runIntro(preview){
     if (done) return Promise.resolve();
     return new Promise(res => setTimeout(res, prefersReduced ? Math.min(ms, 220) : ms));
   }
+  // sequence()'s beats are scored to #onbMusic's real playback (see the
+  // timestamp comment above sequence()) - if the track hasn't buffered
+  // enough to play without stalling by the time sequence() fires, the
+  // setTimeout-driven captions below start on schedule regardless while the
+  // audio catches up (or stutters) on its own clock. That's the "sometimes
+  // too fast, sometimes out of sync" pacing bug: it depends entirely on how
+  // much of the mp3 happened to be cached/downloaded already. Delay
+  // sequence()'s start until the browser reports the track can play through
+  // without further buffering, capped at 2.5s so a slow or broken connection
+  // doesn't leave the intro frozen on a black screen forever.
+  function waitForMusicReady(){
+    if (!musicEl || prefersReduced || musicEl.readyState >= 4) return Promise.resolve();
+    return new Promise(resolve => {
+      let settled = false;
+      const capTimer = setTimeout(finishWait, 2500);
+      function finishWait(){
+        if (settled) return;
+        settled = true;
+        musicEl.removeEventListener('canplaythrough', finishWait);
+        clearTimeout(capTimer);
+        resolve();
+      }
+      musicEl.addEventListener('canplaythrough', finishWait, { once: true });
+    });
+  }
   // where the caption sits when a beat has no single element to point at -
   // same lower-center spot the caption always used to occupy
   function captionDefaultPos(){
@@ -7658,7 +7683,7 @@ function runIntro(preview){
     if (done) return;
     finish();
   }
-  sequence();
+  waitForMusicReady().then(() => { if (!done) sequence(); });
 }
 
 // The intro's own DOM (onbBackdrop/onbMark/onbCaption/onbSkip/onbCapture/
