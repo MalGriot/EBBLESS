@@ -2328,7 +2328,7 @@ Add entries in this shape:
   picked up.
 
 ### currentsss-casing-followup: Fix "Currents" playlist casing to "CuRRentSSsss"
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** The Currents playlist was renamed to "CURRENTSSsss" (all
   caps) by `rename-current-playlist` (merged), but the reporter now wants
@@ -2386,7 +2386,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #98.
 
 ### player-hud-remove-playlist-label: Remove playlist title/track number from main player HUD
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Remove the playlist name and track number (currently
   sitting between the artist name and the progress bar) from the main
@@ -2495,7 +2495,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #107.
 
 ### cymatics-fullscreen-dot-density: Add more dots to cymatics visualizer in fullscreen
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** In fullscreen, the cymatics visualizer's dots look too
   spread out - consider adding more dots when in fullscreen to fill the
