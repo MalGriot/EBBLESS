@@ -1499,7 +1499,7 @@ Add entries in this shape:
   guessing.
 
 ### settings-share-app: Add "share this app" button in Settings
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Add a button in Settings that lets the user share EBBLESS
   itself (the app, not a specific song/playlist).
@@ -1813,7 +1813,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #56.
 
 ### disable-native-context-menu: Suppress OS/browser context menu on long-press
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Long-pressing/holding an item should only ever open
   EBBLESS's own internal menu - the device's or browser's native
@@ -1869,7 +1869,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #65.
 
 ### clear-playlists-confirm: "Clear playlists" needs a serious confirm prompt + danger styling
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The Settings "clear playlists" button should show a
   serious-looking confirmation prompt before acting (reporter: should feel
