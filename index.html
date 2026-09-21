@@ -7317,8 +7317,19 @@ function showSplashChoice(){
   // "Tutorial" restores them (runIntro()'s own sequence() starts from
   // that same idle beat) and "Enter" removes them outright via
   // discardIntroChrome(), same as a returning visitor.
-  const backdropEl = $('onbBackdrop'), markEl = $('onbMark'), onbSkipEl = $('onbSkip');
-  [backdropEl, markEl, onbSkipEl].forEach(el => { if (el) el.style.display = 'none'; });
+  //
+  // #onbCapture is part of that same static markup - a full-viewport,
+  // invisible, z-index:10005 tap-catcher (see its CSS comment) that sits
+  // above literally everything, #splashChoice's buttons included, until
+  // runIntro() attaches its click handler and starts managing it. Before
+  // that first runIntro() call it's just dead: unlisened-to but still very
+  // much intercepting the hit-test, so every tap on "Tutorial"/"Enter"
+  // silently lands on it instead and nothing happens. It was missing from
+  // this hide list - the bug behind "the splash choice buttons go nowhere
+  // when tapped" (and, by extension, visitors stuck on the splash forever
+  // on a fresh/incognito load, where this choice fires on every visit).
+  const backdropEl = $('onbBackdrop'), markEl = $('onbMark'), onbSkipEl = $('onbSkip'), captureEl = $('onbCapture');
+  [backdropEl, markEl, onbSkipEl, captureEl].forEach(el => { if (el) el.style.display = 'none'; });
   splashEl.classList.add('is-active', 'is-choice');
   const playBtn = $('splashPlayTutorial'), skipBtn = $('splashSkipTutorial');
   const choose = (next) => {
@@ -7326,7 +7337,7 @@ function showSplashChoice(){
     next();
   };
   if (playBtn) playBtn.addEventListener('click', () => choose(() => {
-    [backdropEl, markEl, onbSkipEl].forEach(el => { if (el) el.style.display = ''; });
+    [backdropEl, markEl, onbSkipEl, captureEl].forEach(el => { if (el) el.style.display = ''; });
     runIntro(false);
   }), { once: true });
   if (skipBtn) skipBtn.addEventListener('click', () => choose(() => {
