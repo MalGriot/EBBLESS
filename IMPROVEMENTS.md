@@ -2326,3 +2326,183 @@ Add entries in this shape:
   anything already in the backlog. Likely a larger lane than most entries
   here given it's a new source type; may be worth scoping/splitting once
   picked up.
+
+### currentsss-casing-followup: Fix "Currents" playlist casing to "CuRRentSSsss"
+- **Status:** draft
+- **Priority:** low
+- **Description:** The Currents playlist was renamed to "CURRENTSSsss" (all
+  caps) by `rename-current-playlist` (merged), but the reporter now wants
+  the exact casing "CuRRentSSsss" (mixed case, not all-caps) instead.
+- **Touches:** playlist naming/labels (same spot `rename-current-playlist`
+  touched).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #94. Follow-up correction, not a
+  duplicate - the already-merged rename used different casing than this
+  request specifies.
+
+### playlist-remove-track-library: Option to remove tracks from a playlist in library
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add an option to remove individual tracks from a playlist
+  directly from the library view.
+- **Touches:** library playlist view, track row actions/menu.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #95.
+
+### fullscreen-lp-cassette-visual: Fullscreen on LP/cassette should fullscreen that visual, not standard album art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Activating fullscreen while the LP (spinning record) or
+  cassette art style is selected currently switches to the standard album
+  art in fullscreen instead of fullscreening the LP/cassette visual itself.
+- **Touches:** album art style fullscreen logic (art-style picker /
+  fullscreen toggle).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #96. Distinct from `record-cassette-size`
+  (merged - that changed the visuals' size, not fullscreen behavior).
+
+### fullscreen-player-controls: Fullscreen mode should expose all player controls
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Fullscreen mode should show all the player controls -
+  shuffle, loop, album art style switcher, etc. - not just a subset.
+- **Touches:** fullscreen player view.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #97. Related to
+  `desktop-player-fullscreen-toggle` (draft, desktop-specific panel-sliding
+  behavior) but distinct - this is about which controls are present/visible
+  in fullscreen generally, not desktop panel layout. Worth reviewing
+  together since both touch fullscreen player UI.
+
+### queue-playlist-row-buttons: Collapse queue's playlist-section row buttons into a 3-dot menu
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The playlist section at the bottom of the queue menu has
+  so many buttons per track that the title becomes unreadable. Each track
+  row there should collapse down to a single 3-dot button that opens the
+  other functions, matching the pattern used elsewhere.
+- **Touches:** queue panel's playlist section, track row markup.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #98.
+
+### player-hud-remove-playlist-label: Remove playlist title/track number from main player HUD
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Remove the playlist name and track number (currently
+  sitting between the artist name and the progress bar) from the main
+  player HUD.
+- **Touches:** player view HUD layout.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #99.
+
+### library-playlist-footer-overlap: Footer player blocks last entry when viewing a playlist on mobile
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On mobile, opening a playlist from the library, the
+  footer player bar covers/blocks the bottom-most track entry in the list.
+- **Touches:** library playlist-detail view, mobile footer player spacing.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #100. Related to `player-mobile-spacing`
+  (merged - that fixed spacing within the player view itself) but this is a
+  different surface (the library's playlist-detail list being covered),
+  kept separate.
+
+### discovery-radio-continuation: Discovery should keep playing a radio around a song after it ends
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When playing a single song with Discovery on, once it
+  finishes the app should keep playing a radio built around that song
+  (rather than stopping). Loading a song while something's already playing
+  should build a queue around it.
+- **Touches:** Discovery/radio playback logic, queue building.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #101.
+
+### queue-close-return-view: Closing the queue should return to the view you were on
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On mobile, closing the queue panel should return you to
+  whichever view you were on just before opening it (player or library),
+  instead of always landing somewhere fixed.
+- **Touches:** queue panel open/close navigation state, mobile.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #102.
+
+### save-discovery-playlist-to-library: Save modified/discovery-generated playlists to library
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Let the user save a modified playlist, or a radio station
+  generated by Discovery, as a new playlist in their library.
+- **Touches:** playlist save/create flow, Discovery radio generation.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #103. Related to `currents-playlist-algorithm`
+  and `blend-playlist` (both draft, auto-playlist generation) but distinct -
+  this is about saving/persisting generated or edited results, not defining
+  a new auto-playlist's selection rules.
+
+### background-app-switch-playlist-loading: Playlist loading should continue while app is backgrounded on mobile
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On mobile, if a playlist is still loading and the user
+  switches to another app, loading currently stops. It should continue in
+  the background instead.
+- **Touches:** `beginImport()` playlist-load flow, mobile backgrounding
+  behavior (same general area as `mobile-background-resume`, merged).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #104. **Judgment call, flagging for
+  your input:** overlaps `background-playlist-loading` (draft, #93 - a
+  progress bar + freedom to navigate away while loading in the foreground).
+  Kept separate since this is specifically about loading surviving an app
+  backgrounding/process-suspend event on mobile, a different technical
+  problem (and may hit the same real OS constraints `mobile-background-resume`
+  ran into) rather than just a UI/progress-bar change. Say so if you'd
+  rather these be tackled as one lane.
+
+### world-radio-addon: World radio - pick a region on a map, hear music from there
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add a mode where the user picks a spot on a world map and
+  hears music from that region in a continuous, ad-free radio format. Should
+  use simple, lightweight, mostly-existing techniques rather than heavy new
+  infrastructure; UI should be an intuitive, simple map-tap interaction.
+- **Touches:** new feature area - likely a new view/mode, a map UI, and a
+  region-to-playlist/source mapping strategy (needs scoping).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #105. Larger, open-ended feature -
+  will likely need scoping/design before a lane can implement it directly.
+
+### tutorial-song-preview-only: Tutorial music should play only its first second on app load
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When the app loads, it currently plays the whole tutorial
+  song; it should instead just play the first second and then stop.
+- **Touches:** splash/tutorial audio trigger (`#onbMusic`), same area as
+  `splash-tutorial-music-preload` (merged).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #106. `splash-tutorial-music-preload`
+  added playing the first beat of tutorial music on splash load; this
+  report says the full song now plays instead of stopping after a moment -
+  likely a follow-up fix/regression on that same feature rather than a
+  duplicate ask, so kept as its own entry.
+
+### discover-artist-this-is-playlist: Discover should pull from the "This Is [Artist]" Spotify playlist
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Discover feature should source from Spotify's
+  official "This Is [artist name]" playlists for the relevant artist(s).
+- **Touches:** Discovery source-fetching logic.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #107.
+
+### cymatics-fullscreen-dot-density: Add more dots to cymatics visualizer in fullscreen
+- **Status:** draft
+- **Priority:** low
+- **Description:** In fullscreen, the cymatics visualizer's dots look too
+  spread out - consider adding more dots when in fullscreen to fill the
+  larger space.
+- **Touches:** cymatics visualizer rendering/dot-count logic.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #108. Distinct from
+  `cymatics-heart-centering` (merged - title centering) and
+  `cymatics-true-black-contrast` (merged - background color) - this is
+  about dot density/spacing in fullscreen specifically.
