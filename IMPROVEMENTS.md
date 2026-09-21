@@ -1454,13 +1454,13 @@ Add entries in this shape:
   the pasted demo URL as before.
 
 ### tutorial-preload-pacing: Preload tutorial assets before playing; fix glitchy pacing
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The tutorial's first frame should ensure everything
   (assets/animations) is loaded before playback starts - reporter says
   pacing is currently glitchy, sometimes too fast, sometimes out of sync.
 - **Touches:** `runIntro()` startup / asset preload.
-- **Branch:** (unclaimed)
+- **Branch:** agent/tutorial-preload-pacing
 - **Notes:** Synced from Geethub issue #62.
 
 ### tutorial-crossfade-demo: Tutorial should visually animate the crossfade slider
@@ -2424,12 +2424,12 @@ Add entries in this shape:
   (only pre-existing, unrelated YouTube-iframe/proxy errors were present).
 
 ### library-playlist-footer-overlap: Footer player blocks last entry when viewing a playlist on mobile
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On mobile, opening a playlist from the library, the
   footer player bar covers/blocks the bottom-most track entry in the list.
 - **Touches:** library playlist-detail view, mobile footer player spacing.
-- **Branch:** (unclaimed)
+- **Branch:** agent/library-playlist-footer-overlap
 - **Notes:** Synced from Geethub issue #100. Related to `player-mobile-spacing`
   (merged - that fixed spacing within the player view itself) but this is a
   different surface (the library's playlist-detail list being covered),
@@ -2447,13 +2447,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #101.
 
 ### queue-close-return-view: Closing the queue should return to the view you were on
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On mobile, closing the queue panel should return you to
   whichever view you were on just before opening it (player or library),
   instead of always landing somewhere fixed.
 - **Touches:** queue panel open/close navigation state, mobile.
-- **Branch:** (unclaimed)
+- **Branch:** agent/queue-close-return-view
 - **Notes:** Synced from Geethub issue #102.
 
 ### save-discovery-playlist-to-library: Save modified/discovery-generated playlists to library
