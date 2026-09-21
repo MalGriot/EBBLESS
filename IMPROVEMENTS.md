@@ -1575,17 +1575,70 @@ Add entries in this shape:
   this batch - likely its own lane.
 
 ### album-art-2x2-grid-bug: Album art sometimes shows placeholder grid instead of real art
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** In the player and queue, album art sometimes shows a
   generic 2x2 grid placeholder instead of the actual resolved album art.
 - **Touches:** track art resolution (`resolveTrackArt()` / `artworkUrls()`),
   player and queue art rendering.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #35. Likely related to
-  `link-match-accuracy`/`playlist-full-loading` above (art resolution
-  falling back to a placeholder when a track fails to resolve cleanly) -
-  worth investigating together.
+- **Branch:** `agent/album-art-2x2-grid-bug`
+- **Notes:** Synced from Geethub issue #35.
+
+  **Investigation:** `resolveTrackArt()`/`artworkUrls()` themselves turned
+  out fine - reloading the standard test playlist
+  (`5qMMDwZ1Wo8q0lpDOmsXnZ`) and inspecting the resolved cache confirmed
+  every track had both a `videoId` and a real resolved `art` URL, and the
+  in-app player/queue rows (single `<img>` + `attachArtworkFallback()`)
+  read that correctly - no grid there, and no blank/broken art either.
+
+  The actual 2x2 grid only exists in one place: `renderLibrary()`'s
+  playlist/album tile (`.lib-card .art`, the `grid-face` built from up to
+  4 track thumbnails). The root cause was that this was never a pure
+  fallback - `renderLibrary()` built the 4-track collage unconditionally
+  whenever a playlist had >=1 matched track, and *also* stacked the real
+  source cover (`pl.image`, e.g. Spotify/SoundCloud) behind it when one
+  existed. A `.lib-card .art.animated .face` CSS rule
+  (`lib-art-crossfade`, a 9s `ease-in-out infinite` keyframe animation)
+  then crossfaded the two faces back and forth forever. So for any
+  playlist that had a real cover, the tile alternated between the real
+  cover and the 2x2 track-thumbnail grid roughly every 4.5s - the grid
+  was genuinely on screen about half the time, even though the real
+  album art (`pl.image`) was sitting right there the whole time and
+  never actually missing. That matches the report precisely: "sometimes"
+  it's the grid, "sometimes" it's the actual art, on the same playlist,
+  with nothing about track resolution changing in between.
+
+  **Fix:** in `renderLibrary()` (`index.html`, the tile-building branch
+  around the old `withArt`/`gridFace` block), a real `pl.image` now wins
+  outright - the card renders just that image, no grid, no crossfade, no
+  `.animated` class. The 2x2 collage is still built, unchanged, as the
+  fallback for a playlist with matched tracks but *no* source-provided
+  cover at all (still a legitimate "nothing better to show" case, not a
+  bug). Removed the now-dead `.animated`/`spotify-face`/
+  `lib-art-crossfade` CSS (including its `prefers-reduced-motion`
+  override) since nothing sets those classes anymore.
+
+  **Verification:** served this worktree's `index.html` directly via
+  `python3 -m http.server` from inside
+  `../ebbless-worktrees/album-art-2x2-grid-bug` (confirmed via
+  `location.href` in the browser that the loaded origin was this
+  worktree's server, not the main checkout or another lane's worktree -
+  several other lanes' worktrees/servers were live in the same shared
+  browser at the time). Loaded the standard test playlist plus a second
+  SoundCloud playlist (auto-imported on localhost) and, before the fix,
+  confirmed both playlist tiles had `.art.animated` with a `grid-face` +
+  `spotify-face` pair (i.e. actively crossfading, so the grid really was
+  intermittently covering the real art). After the fix, re-inspected the
+  DOM: both tiles render a single non-animated `<img>` pointed straight
+  at `pl.image` (Spotify CDN / SoundCloud CDN URL respectively), no
+  `grid-face` or `.animated` anywhere in the document. Also checked the
+  Player and Queue screens directly (track art, "Now"/"Next"/"Later"
+  rows) - all showed correct per-track art throughout, consistent with
+  the investigation finding that per-track resolution was never the
+  problem. Console showed no new errors from the change (two pre-existing
+  "unknown error fetching script" messages remained, unrelated to this
+  fix - a service-worker registration quirk of plain `http.server`, seen
+  identically before and after).
 
 ### desktop-playlist-hover-buttons: Playlist hover play button blocks pin/3-dot buttons
 - **Status:** draft

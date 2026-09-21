@@ -182,7 +182,6 @@ svg{display:block}
 .lib-card .art.single img{grid-column:1/3;grid-row:1/3}
 .lib-card .art .face{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .lib-card .art .face.grid-face.single{grid-template-columns:1fr;grid-template-rows:1fr}
-.lib-card .art .face.spotify-face{display:block}
 /* Fallback for a playlist with no Spotify/Apple art and no matched tracks
    yet (a brand-new Swell before its first generation, or an empty manual
    playlist) - the app icon glyph, recolored to the same day's-color-clock
@@ -210,14 +209,6 @@ svg{display:block}
      nudged down so it reads as centered in the tile instead of floating
      toward the top; see brand/tmp-heart-center.html to re-tune by eye. */
   transform:translateY(7.1%)}
-.lib-card .art.animated .face{opacity:0;animation:lib-art-crossfade 9s ease-in-out infinite}
-.lib-card .art.animated .face.grid-face{opacity:1}
-.lib-card .art.animated .face.spotify-face{animation-delay:-4.5s}
-@keyframes lib-art-crossfade{0%,38%{opacity:1}50%,88%{opacity:0}100%{opacity:1}}
-@media (prefers-reduced-motion: reduce){
-  .lib-card .art.animated .face{animation:none;opacity:1}
-  .lib-card .art.animated .face.spotify-face{opacity:0}
-}
 .lib-card .name{margin-top:9px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-card .name .new-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
   background:var(--faint);vertical-align:middle}
@@ -2849,6 +2840,20 @@ function renderLibrary(){
       // color-clock accent, instead of an empty tile.
       artDiv.classList.add('single');
       artDiv.innerHTML = '<div class="face icon-face"><svg viewBox="0 0 512 512"><path d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272" fill="none" stroke-width="46" stroke-linecap="round"/></svg></div>';
+    } else if (pl.image){
+      // A real source-provided cover (Spotify/SoundCloud/Apple) always wins
+      // over the per-track collage below. This used to render both and
+      // crossfade between them forever (`.animated` + `lib-art-crossfade`),
+      // which meant the real cover was only on screen ~half the time - the
+      // rest of the time the tile showed the 2x2 track-thumbnail grid
+      // instead, even though the actual album art was sitting right there
+      // in `pl.image` (Geethub issue #35 / album-art-2x2-grid-bug). The
+      // grid is still a legitimate fallback for a playlist with no source
+      // cover (see the branch below), just never a substitute for real art
+      // once it's available.
+      artDiv.classList.add('single');
+      const img = document.createElement('img'); img.src = pl.image; img.loading = 'lazy';
+      artDiv.appendChild(img);
     } else {
       const gridFace = document.createElement('div');
       gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
@@ -2857,18 +2862,8 @@ function renderLibrary(){
       } else {
         withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
       }
-      if (pl.image){
-        artDiv.classList.add('animated');
-        const spotifyFace = document.createElement('div');
-        spotifyFace.className = 'face spotify-face';
-        const img = document.createElement('img'); img.src = pl.image; img.loading = 'lazy';
-        spotifyFace.appendChild(img);
-        artDiv.appendChild(gridFace);
-        artDiv.appendChild(spotifyFace);
-      } else {
-        if (withArt.length <= 1) artDiv.classList.add('single');
-        while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
-      }
+      if (withArt.length <= 1) artDiv.classList.add('single');
+      while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
     if (!isSystemPl){
       const menuBtn = document.createElement('button');
