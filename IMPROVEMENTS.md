@@ -2514,3 +2514,31 @@ Add entries in this shape:
   `cymatics-heart-centering` (merged - title centering) and
   `cymatics-true-black-contrast` (merged - background color) - this is
   about dot density/spacing in fullscreen specifically.
+
+### spinning-record-realism: Make the spinning record feel physical, tactile, and restrained
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Four-part visual polish pass on the spinning-record
+  element (distinct from `record-cassette-size`, which only changed its
+  size):
+  1. Rotation should read as a real object in motion - tiny, subtle
+     variation in highlight/rotation rather than a perfectly mechanical
+     spin, without visible wobble or jitter.
+  2. Add understated physical depth: a slight edge/thickness, restrained
+     concentric groove detail, and a natural vinyl sheen that shows as it
+     turns - tactile, not visually noisy.
+  3. Playback state should feel intentional: smooth hypnotic rotation while
+     playing, a full stop when paused, and a subtle settle-into-motion
+     transition on load/track-change rather than just continuing the same
+     loop.
+  4. Stay restrained overall - no equalizer effects, glowing rings,
+     exaggerated wobble, fake scratches, or music-reactive scaling. The
+     record is the tactile/physical element; cymatics already covers the
+     dynamic, music-reactive visual side.
+- **Touches:** spinning-record visual/animation logic (whatever renders and
+  animates the record element).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from four Geethub issues (#109-#112) filed together as
+  one theme by the same author - folded into a single entry since they all
+  describe one cohesive polish pass on the same element rather than four
+  separate features. Each issue closed with a comment linking here.
