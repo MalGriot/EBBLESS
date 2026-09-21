@@ -2662,7 +2662,7 @@ Add entries in this shape:
   separate features. Each issue closed with a comment linking here.
 
 ### cymatics-fullscreen-title-position: Cymatics fullscreen title/artist should sit above the progress bar like the regular player
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In cymatics fullscreen view, the song title and artist
   should be positioned at the bottom, directly above the progress/play bar -
