@@ -5274,6 +5274,14 @@ let vizPlaying = false;
 let vizRAF = null;
 const vizCtx2d = vizCanvas.getContext('2d');
 const VIZ_GRAINS = 1600;
+// Fullscreen (flow-mode) canvas is much larger than the normal player/library
+// tile, so the same grain count reads as sparse once stretched across it.
+// Double the active grain count while state.flowOpen is true (see FULLSCREEN
+// / FLOW MODE below) - the backing arrays are sized to the larger count
+// upfront so entering/exiting fullscreen is just a loop-bound change, not a
+// reallocation. Dot size/brightness/color logic is untouched.
+const VIZ_GRAINS_FULLSCREEN = VIZ_GRAINS * 2;
+const VIZ_GRAINS_MAX = Math.max(VIZ_GRAINS, VIZ_GRAINS_FULLSCREEN);
 
 /* ---------- grain color: Rosicrucian (AMORC) sevenfold daily-period system,
    per the CYCLES-OF-LIFE-APP reference (data/letters.ts, data/weeklyMatrix.ts,
@@ -5507,9 +5515,9 @@ function vizRandomParams(){
 let vizParamsA = vizRandomParams();
 let vizParamsB = vizRandomParams();
 
-const vizGx = new Float32Array(VIZ_GRAINS);
-const vizGy = new Float32Array(VIZ_GRAINS);
-for (let i = 0; i < VIZ_GRAINS; i++){
+const vizGx = new Float32Array(VIZ_GRAINS_MAX);
+const vizGy = new Float32Array(VIZ_GRAINS_MAX);
+for (let i = 0; i < VIZ_GRAINS_MAX; i++){
   vizGx[i] = Math.random() * 2 - 1;
   vizGy[i] = Math.random() * 2 - 1;
 }
@@ -5592,7 +5600,8 @@ function vizDraw(t){
 
   vizCtx2d.fillStyle = color;
   const r = 0.5 * grain;
-  for (let i = 0; i < VIZ_GRAINS; i++){
+  const grainCount = state.flowOpen ? VIZ_GRAINS_FULLSCREEN : VIZ_GRAINS;
+  for (let i = 0; i < grainCount; i++){
     let x = vizGx[i], y = vizGy[i];
     const fA = famA.field(x, y, vizParams, tSec);
     const f = mix > 0 ? fA * (1 - mix) + famB.field(x, y, vizNextParams, tSec) * mix : fA;
