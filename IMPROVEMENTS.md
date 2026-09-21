@@ -974,7 +974,7 @@ Add entries in this shape:
   `d6de2d6`); not merged - left for review per the session's instructions.
 
 ### app-down-splash-blocked: App stuck on splash, never loads past it
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Reporter says the app hasn't gotten past the splash page
   on mobile since roughly Fri/Sat (check the date of the most recent synced
@@ -994,7 +994,7 @@ Add entries in this shape:
   folded into "How this works" below).
 
 ### link-match-accuracy: Wrong-track matches - use album art image comparison + study source meta tags
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Multiple reports of badly wrong YouTube matches (e.g.
   "Lava Lamp" by Thundercat resolved to an unrelated 270-minute meditation
@@ -1015,7 +1015,7 @@ Add entries in this shape:
   wrong, needs to absolutely never happen again."
 
 ### track-relink-menu: Per-track "refresh this link" menu with thumbnail choices
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Each track row in a playlist should have a hold/long-press
   menu with a "refresh link" option. Selecting it opens a picker showing 3-5
@@ -1029,7 +1029,7 @@ Add entries in this shape:
   gets it wrong.
 
 ### playlist-relink-all: Playlist-level "refresh all links" option
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The playlist hold-menu (in Library) should have an option
   to refresh/re-resolve the links for every track in that playlist at once.
@@ -1040,7 +1040,7 @@ Add entries in this shape:
   automatic background version of this).
 
 ### playlist-full-loading: Fix greyed-out / missing tracks - target 100% playlist loading
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Reporter says a lot of tracks show up greyed-out/missing
   from loaded playlists, wants every track to resolve successfully.
@@ -1053,7 +1053,7 @@ Add entries in this shape:
   investigating together.
 
 ### discovery-pipeline-metadata: Discovery songs should show Spotify/Apple metadata, not YouTube's
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Discovery/recommended songs currently pull their title,
   artist, and album art straight from YouTube. Instead: pick candidates via
@@ -1290,7 +1290,7 @@ Add entries in this shape:
   this batch - likely its own lane.
 
 ### album-art-2x2-grid-bug: Album art sometimes shows placeholder grid instead of real art
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** In the player and queue, album art sometimes shows a
   generic 2x2 grid placeholder instead of the actual resolved album art.
@@ -1421,7 +1421,7 @@ Add entries in this shape:
   safety fix - good candidate for an early lane.
 
 ### missing-starter-playlists: "This Is Mal Griot" (and possibly "Breathe Love Deep") not appearing
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Reporter says both the "Breathe Love Deep" and "This Is
   Mal Griot" starter Spotify/SoundCloud releases aren't appearing in the
