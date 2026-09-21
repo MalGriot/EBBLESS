@@ -1826,7 +1826,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #65.
 
 ### clear-playlists-confirm: "Clear playlists" needs a serious confirm prompt + danger styling
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The Settings "clear playlists" button should show a
   serious-looking confirmation prompt before acting (reporter: should feel
@@ -1836,6 +1836,25 @@ Add entries in this shape:
 - **Branch:** agent/clear-playlists-confirm
 - **Notes:** Synced from Geethub issue #67. Straightforward, low-risk UX
   safety fix - good candidate for an early lane.
+
+  Fixed and pushed (commit `dd08e73`): added a `.btn-danger` style (red
+  border/text, filled-red on hover), a centered `#danger-scrim`/
+  `#danger-modal` confirm dialog (deliberately a centered card rather than
+  the edge-docked sliding sheets used elsewhere, to read as weightier),
+  moved the button into a new "Danger zone" block at the bottom of Settings
+  (replacing the old "Library" block), and updated its copy to note the
+  action can't be undone. `clearLibraryBtn` now opens the modal instead of
+  clearing immediately; Cancel/scrim-click closes it with no side effects;
+  confirming runs the original clear logic then closes the modal. Verified
+  via a worktree-local `python3 -m http.server` (confirmed `location.href`
+  before trusting results, since a port collision with another session's
+  server occurred on the first attempt): confirm dialog appears instead of
+  an immediate clear, Cancel leaves `localStorage` untouched, confirming
+  clears it and shows the "Library cleared" toast, button renders bottom-of-
+  Settings with danger styling, no new console errors. Not tested against a
+  real Spotify/SoundCloud-sourced playlist (used a seeded fake localStorage
+  entry instead), but the clear path only touches localStorage keys
+  regardless of playlist source.
 
 ### missing-starter-playlists: "This Is Mal Griot" (and possibly "Breathe Love Deep") not appearing
 - **Status:** merged
