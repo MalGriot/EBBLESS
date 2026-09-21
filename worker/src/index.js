@@ -482,7 +482,17 @@ async function handleSearch(url, ctx) {
   pool.sort((a, b) => b.score - a.score);
   const best = pool[0];
 
-  const payload = { videoId: best.videoId, title: best.title, channel: best.channel, duration: best.duration || 0 };
+  // Top-5 alternates, same pool/scoring as the auto-picked `best` above -
+  // powers the manual "refresh link" picker (track-relink-menu) so a
+  // listener can pick a different candidate when the auto-match is wrong,
+  // without this endpoint doing a second, separate search. Existing callers
+  // that only read the top-level videoId/title/channel/duration fields are
+  // unaffected; this is purely additive.
+  const altCandidates = pool.slice(0, 5).map(c => ({
+    videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0,
+  }));
+
+  const payload = { videoId: best.videoId, title: best.title, channel: best.channel, duration: best.duration || 0, candidates: altCandidates };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {

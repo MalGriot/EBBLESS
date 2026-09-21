@@ -1155,7 +1155,7 @@ Add entries in this shape:
   were Spotify).
 
 ### track-relink-menu: Per-track "refresh this link" menu with thumbnail choices
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Each track row in a playlist should have a hold/long-press
   menu with a "refresh link" option. Selecting it opens a picker showing 3-5
@@ -1163,21 +1163,101 @@ Add entries in this shape:
   the listener can manually pick the right one.
 - **Touches:** playlist track-row UI, RESOLVE PIPELINE (needs a
   multi-candidate search mode, not just top-1).
-- **Branch:** (unclaimed)
+- **Branch:** agent/relink-menus
 - **Notes:** Synced from Geethub issue #69. Complements `link-match-accuracy`
   (automatic improvement) as a manual fallback for when auto-matching still
   gets it wrong.
 
+  **Implementation:** extended the worker's `/search` endpoint
+  (`handleSearch` in `worker/src/index.js`) rather than adding a second
+  endpoint - it now also returns a `candidates` field with the top 5 scored
+  results from the same pool/scoring pass that already picks the top-1
+  match, so no second search round-trip is needed. Purely additive: existing
+  callers that only read `videoId`/`title`/`channel`/`duration` are
+  unaffected.
+
+  On the client, added a shared per-track context menu (`trackCtxMenu` in
+  `index.html`, same floating-panel pattern as the existing library-card
+  `libCtxMenu`) with a single "Refresh link" item today. It's reachable two
+  ways: a hold/long-press (`attachLongPress`) on the row itself - wired into
+  both the main tracklist (`renderTrackList`) and the Library playlist panel
+  (`toggleLibraryPlaylistPanel`) - and, on the main tracklist only, a kebab
+  button for desktop/mouse users who have no long-press gesture. Long-press
+  works even on a track with no match yet (`videoId` null / "Couldn't find
+  this one" rows), which is exactly when a manual refresh matters most.
+
+  "Refresh link" opens `openRefreshLinkPicker()`, which reuses the existing
+  `import-overlay` modal (same one `openReplaceLinkFlow` etc. use) and calls
+  the existing `searchYouTube()` - now reading its `.candidates` field
+  (falling back to a single-item list built from the top-1 fields if an
+  older/un-updated backend response has none, so the picker still shows
+  *something* rather than breaking). Each candidate renders with its real
+  YouTube thumbnail (`img.youtube.com/vi/<id>/mqdefault.jpg`), title,
+  channel, duration, and the currently-linked one is flagged "current".
+  Picking a candidate (`applyRelinkChoice`) updates that track's
+  `videoId`/`matchedTitle`/`channel`/`duration` in the cached playlist,
+  re-renders, and toasts "Link updated".
+
+  **Verified:** worked through the whole flow live against a real playlist
+  in this worktree's own copy of `index.html`, served directly from this
+  checkout via `python3 -m http.server` (confirmed via `location.href` in
+  the browser, not a shared preview) - long-pressed a track row to confirm
+  the menu opens and stays open, opened the picker, and confirmed 3-5
+  distinct candidates render with working thumbnails. Since the deployed
+  Worker (`spotify-youtube-search.malgriot.workers.dev`) doesn't have this
+  change yet, the multi-candidate path itself was verified against
+  `wrangler dev --local` (temporarily pointing `BACKEND` at
+  `http://localhost:8787`, then reverting that before committing - the
+  committed `index.html` still points at the real deployed Worker).
+  Confirmed via `curl` against `wrangler dev --local` that `/search` returns
+  5 distinct, correctly-scored candidates, and via the browser that picking
+  a non-default candidate persists the new `videoId`/`matchedTitle`/
+  `channel`/`duration` into `localStorage`. No new console errors from
+  either code path. **Not deployed** (`wrangler deploy` not run) - like
+  other worker-touching entries in this file, deploy is your call; until
+  then the picker will still work but only ever show one candidate (the
+  existing top-1 fields, via the fallback above) against the live backend.
+
 ### playlist-relink-all: Playlist-level "refresh all links" option
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The playlist hold-menu (in Library) should have an option
   to refresh/re-resolve the links for every track in that playlist at once.
 - **Touches:** playlist hold-menu UI, RESOLVE PIPELINE.
-- **Branch:** (unclaimed)
+- **Branch:** agent/relink-menus
 - **Notes:** Synced from Geethub issue #68. Related to `track-relink-menu`
   (same idea, per-track vs. whole-playlist) and `stale-track-links` (merged,
   automatic background version of this).
+
+  **Implementation:** added a "Refresh links" item to the existing playlist
+  context menu (`openLibCtxMenu` in `index.html`, the 3-dot/hold menu on
+  each Library card), hidden for `type === 'custom'` playlists (Liked
+  Songs, CURRENT/Swell, user-made, Discover overflow) since those aren't
+  backed by a source link `resolvePlaylist()` can re-fetch against - same
+  guard `isResolveStale()` already uses. Picking it calls a new
+  `manualRelinkPlaylist(id)`, which is deliberately thin: it calls the same
+  `resolvePlaylist(id, pl.type, ...)` that `reResolveStaleInBackground()`
+  (from `stale-track-links`) already uses for the automatic version, just
+  invoked directly on user demand instead of gated on `resolveVersion`
+  being stale - with a "Refreshing links…" / "Links refreshed" toast pair
+  around it (or a "Couldn't refresh links right now." toast on failure)
+  since this is a direct user action rather than a silent background one.
+  No changes needed to the RESOLVE PIPELINE itself - it already re-fetches
+  the source tracklist and re-searches every track, manual tracks
+  (`withManualTracks`) included.
+
+  **Verified:** live in this worktree's own served copy of `index.html`
+  (same server/browser session as `track-relink-menu` above). Opened the
+  Library context menu on a real Spotify-backed playlist, confirmed
+  "Refresh links" appears (and confirmed the hide-for-custom-playlists
+  guard reads correctly against `isResolveStale`'s same check), clicked it,
+  saw the "Refreshing links…" toast, and after resolution completed
+  confirmed in `localStorage` that the playlist's `ts`/`resolveVersion` were
+  bumped and a track that had been manually relinked via
+  `track-relink-menu`'s picker moments earlier was correctly overwritten
+  back to the pipeline's own top-scored match (expected: a full relink-all
+  is a fresh resolve, not a merge with prior manual per-track picks). No
+  new console errors.
 
 ### playlist-full-loading: Fix greyed-out / missing tracks - target 100% playlist loading
 - **Status:** merged
