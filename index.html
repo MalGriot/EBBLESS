@@ -474,7 +474,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .lyrics-credit{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;color:var(--faint-2);
   pointer-events:none}
 .viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
-  transition:opacity var(--dur-surface) var(--ease-in-out);background:rgba(10,10,10,.55)}
+  transition:opacity var(--dur-surface) var(--ease-in-out);background:#000}
 .viz-canvas.is-active{opacity:1}
 .viz-controls{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;z-index:6;
   opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out)}
@@ -718,8 +718,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
 #flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
 #flow-layer .flow-meta{margin-top:28px;text-align:center;position:relative;z-index:5;pointer-events:none;width:min(52vh,62vw);margin-left:auto;margin-right:auto}
-#flow-layer .flow-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
-#flow-layer .flow-meta .title-row .title{flex:1;min-width:0}
+#flow-layer .flow-meta .title-row{display:flex;flex-direction:column-reverse;align-items:center;justify-content:center;gap:6px}
+#flow-layer .flow-meta .title-row .title{flex:none;width:100%}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
 #flow-layer .flow-meta .player-like-btn{pointer-events:auto}
