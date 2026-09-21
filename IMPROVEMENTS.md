@@ -2523,17 +2523,48 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #107.
 
 ### cymatics-fullscreen-dot-density: Add more dots to cymatics visualizer in fullscreen
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** In fullscreen, the cymatics visualizer's dots look too
   spread out - consider adding more dots when in fullscreen to fill the
   larger space.
 - **Touches:** cymatics visualizer rendering/dot-count logic.
-- **Branch:** (unclaimed)
+- **Branch:** agent/cymatics-fullscreen-dot-density
 - **Notes:** Synced from Geethub issue #108. Distinct from
   `cymatics-heart-centering` (merged - title centering) and
   `cymatics-true-black-contrast` (merged - background color) - this is
   about dot density/spacing in fullscreen specifically.
+
+  Implemented in commit `e3a20f9`. `VIZ_GRAINS` (1600, the normal
+  player/library-tile grain count) is unchanged. Added
+  `VIZ_GRAINS_FULLSCREEN = VIZ_GRAINS * 2` (3200) and
+  `VIZ_GRAINS_MAX = Math.max(...)`; the `vizGx`/`vizGy` Float32Array grain
+  buffers are now allocated at `VIZ_GRAINS_MAX` up front (instead of
+  `VIZ_GRAINS`) so switching grain count on fullscreen enter/exit is just a
+  loop-bound change, not a reallocation. In `vizDraw`, the per-frame grain
+  loop now runs `state.flowOpen ? VIZ_GRAINS_FULLSCREEN : VIZ_GRAINS`
+  iterations - `state.flowOpen` is the existing flag the app already uses to
+  track the fullscreen "flow layer" (openFlow()/closeFlow() in the
+  FULLSCREEN / FLOW MODE section). Dot size, brightness, and color logic
+  (grain radius `r`, alpha-by-settle, `vizRosicrucianColor()`) were not
+  touched.
+
+  Verified by serving this worktree's own `index.html` directly
+  (`python3 -m http.server 8791` run from
+  `ebbless-worktrees/cymatics-fullscreen-dot-density`, confirmed via
+  `curl -sI http://localhost:8791/index.html` and the browser's network log
+  showing all `index.html`/`brand/assets/*` requests resolving against that
+  port) rather than any shared/other-worktree server. Loaded the standard
+  EBBLESS test playlist, opened the cymatics visualizer tab on a track, and
+  compared: normal in-player view showed the same pattern/density as before
+  the change; entering fullscreen (the expand button) visibly doubled dot
+  density with no layout shift or resize glitch, and exiting fullscreen
+  returned to the original, unchanged normal-view density. No new console
+  errors were introduced by the change (the only console errors seen were
+  pre-existing YouTube iframe/embed-API failures unrelated to this diff, and
+  all `index.html`/asset requests returned 200). No runaway grain counts -
+  3200 grains at 60fps showed no visible frame-rate drop during manual
+  testing.
 
 ### spinning-record-realism: Make the spinning record feel physical, tactile, and restrained
 - **Status:** draft
