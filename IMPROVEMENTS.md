@@ -2386,14 +2386,34 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #98.
 
 ### player-hud-remove-playlist-label: Remove playlist title/track number from main player HUD
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Remove the playlist name and track number (currently
   sitting between the artist name and the progress bar) from the main
   player HUD.
 - **Touches:** player view HUD layout.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #99.
+- **Branch:** agent/player-hud-remove-playlist-label
+- **Notes:** Synced from Geethub issue #99. Found the element at
+  `#playlistCtx`/`#ctxText` (`.playlist-ctx` div, rendering
+  `"PlaylistName · N of M"`) in `index.html`, sitting between `.track-meta`
+  (title/artist) and `.transport-full` (seek bar) in the player view markup.
+  Removed the markup, the `updatePlaylistCtx()` function that populated it
+  (and its lone call site in `highlightActiveRow()`), the `playlistCtx`/
+  `ctxText` `$()` lookups, and the now-dead `.playlist-ctx` CSS rules
+  (including the mobile `display:none!important` override). Commit
+  `3216abb`. Verified by serving this worktree's own `index.html` directly
+  via `python3 -m http.server 8935` run from
+  `/Users/malcolm/Documents/CLAUDE-CODE/ebbless-worktrees/player-hud-remove-playlist-label`
+  (not the shared/main-checkout dev server, which a `preview_start` by name
+  turned out to launch from the main `EBBLESS` checkout instead of this
+  worktree - caught via `preview_list`'s reported `cwd` and stopped before
+  using it) - confirmed via `curl` that the served HTML had zero matches for
+  `playlist-ctx`/`playlistCtx`/`ctxText` before loading it in the browser.
+  Loaded the standard test playlist, opened the player view, and confirmed
+  the playlist name/track-number line is gone from the HUD while the title,
+  artist, seek bar, and transport controls all render and work normally.
+  Checked the browser console: no errors reference the removed IDs/selectors
+  (only pre-existing, unrelated YouTube-iframe/proxy errors were present).
 
 ### library-playlist-footer-overlap: Footer player blocks last entry when viewing a playlist on mobile
 - **Status:** draft
