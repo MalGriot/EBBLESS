@@ -2550,16 +2550,18 @@ Add entries in this shape:
   likely a follow-up fix/regression on that same feature rather than a
   duplicate ask, so kept as its own entry.
 
-  Fixed and pushed (commit `fad0c8b`): in `startApp()` (~line 6718-6733),
-  added a 1-second `setTimeout` after the splash's `#onbMusic.play()` call
-  that pauses it and resets `currentTime` to 0, so the splash's warm-up
-  preview stops after ~1s instead of running the whole track. Safe against
-  the real tutorial (`runIntro()`, which calls `startApp()` at its own end
-  after finishing its own play/fade/volume handling on the same element) -
-  by the time this timer fires, tutorial playback is already over, so it
-  can only ever cut off the splash's own autoplay snippet. Verified via a
-  worktree-local static server + browser gesture: `play()` succeeds, then
-  after 1s the element is paused with `currentTime === 0`.
+  Fixed and pushed, then refined further per follow-up direction in chat
+  (commits `fad0c8b`, `642f141`) in `startApp()` (~line 6718-6751). Current
+  behavior: the splash's `#onbMusic` preview skips the track's first 0.5s,
+  plays at full volume for a beat, then fades out over 2.5s (3.5s total)
+  instead of running the whole track, with no delay before sound starts.
+  Safe against the real tutorial (`runIntro()`, which calls `startApp()` at
+  its own end after finishing its own play/fade/volume handling on the same
+  element) - by the time these timers fire, tutorial playback is already
+  over, so it can only ever cut off the splash's own autoplay snippet.
+  Verified via a worktree-local static server + real click gesture on
+  "Enter"/"Tutorial": `play()` fires immediately at `currentTime = 0.5`,
+  volume fades to 0 and the element pauses/resets at ~3.5s.
 
 ### discover-artist-this-is-playlist: Discover should pull from the "This Is [Artist]" Spotify playlist
 - **Status:** draft
