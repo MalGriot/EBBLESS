@@ -2033,3 +2033,63 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #85. Distinct from `library-search`
   above (that one searches what the user already has; this one searches
   external platforms to find something new to add) - kept separate.
+
+### mobile-ipod-ui: Mobile UI mode styled like the original iPod (click wheel)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add an alternate mobile UI mode that looks and behaves
+  like the original iPod - including the click-wheel scrolling interaction
+  for navigating the library/menus.
+- **Touches:** new feature - mobile UI, likely a toggleable theme/mode plus
+  a custom scroll-wheel gesture control.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #86. No overlap with any existing
+  entry found - a standalone UI-mode feature.
+
+### ambient-soundscapes: Background ambient sound layer option
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add a player option to layer a background ambient sound
+  under the music - fireplace crackling, soft rain, cafe, forest, beach, car
+  ride, etc.
+- **Touches:** playback audio pipeline - a second, independently-mixed audio
+  layer alongside the main track.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #89. Conceptually adjacent to
+  `lp-quality-audio` below (that issue's title also mentions "ambient
+  undertones") but this one is concretely scoped (named ambience presets)
+  while that one is vague/research-flagged - kept separate rather than
+  merged; worth your call on whether they should become one "sound
+  atmosphere" feature.
+
+### equalizer-presets: Equalizer presets for playback
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add selectable EQ presets for the playing music (e.g.
+  bass boost, vocal, flat, treble). No further detail given in the issue.
+- **Touches:** playback audio pipeline - Web Audio API EQ/filter nodes.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #88. **Flagging as a judgment call,
+  not auto-merged:** overlaps with the existing `volume-equalizer` entry
+  above (Geethub issue #37, loudness normalization across tracks) and with
+  `lp-quality-audio` below (Geethub issue #87, vinyl-warmth EQ) - all three
+  are "shape the sound" features but aimed at different problems (leveling
+  loudness vs. selectable tonal presets vs. simulating LP warmth). Could
+  ship as one unified "sound" settings panel or stay as separate lanes -
+  your call before any of these get built.
+
+### lp-quality-audio: "LP quality" sound option (vinyl warmth EQ/ambience)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add an option/setting that gives playing music an "LP
+  quality" sound - reporter flags this needs research into sound
+  settings/EQ and "ambient undertones" before it's actionable; not yet
+  scoped to a concrete implementation.
+- **Touches:** playback audio pipeline - likely EQ shaping plus subtle
+  ambient/noise texture (vinyl crackle?) - needs research/scoping first.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #87. **Flagging as a judgment call:**
+  overlaps with both `equalizer-presets` (EQ shaping) and
+  `ambient-soundscapes` (ambient layer) above - this issue's own title
+  straddles both. Least concrete of the three; may turn out to just be "an
+  equalizer-presets preset" once scoped, rather than its own feature.
