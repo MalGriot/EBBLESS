@@ -1498,7 +1498,7 @@ Add entries in this shape:
   candidate to bundle with other tutorial-beat lanes above.
 
 ### settings-bug-report-github-form: "Report a bug" should link to a GitHub issue form
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The Settings "Report a bug" button currently opens a
   mailto link (per `bug-report-button`, merged). Reporter wants it to lead
