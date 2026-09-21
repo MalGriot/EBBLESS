@@ -62,7 +62,7 @@ function deepFindKey(obj, key, out) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v3';
 const LYRICS_CACHE_VERSION = 'v2';
-const SEARCH_CACHE_VERSION = 'v5';
+const SEARCH_CACHE_VERSION = 'v6';
 const SIMILAR_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
 
@@ -298,16 +298,52 @@ const TITLE_STOPWORDS = new Set([
   'remix', 'version', 'edit', 'radio', 'official', 'audio', 'video',
   'lyrics', 'lyric', 'music',
 ]);
-function titleTokens(t) {
+// All non-stopword words in a title, including single-character ones (e.g.
+// the stray "t"/"s" left over from splitting "don't"/"it's" on the
+// apostrophe). Used for the *candidate* side of a title-overlap check below,
+// where extra noise tokens are harmless - they only matter if a source token
+// happens to equal one, which is exactly the case titleTokens() (below)
+// exists to catch.
+function titleTokensRaw(t) {
   return (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
-    .filter(w => w.length > 1 && !TITLE_STOPWORDS.has(w));
+    .filter(w => w.length > 0 && !TITLE_STOPWORDS.has(w));
+}
+// The *significant* words in a title: same as titleTokensRaw but with
+// single-character tokens (usually apostrophe-split noise, or throwaway
+// pronouns) dropped too, since normally those aren't what makes one title
+// distinct from another.
+//
+// Falls back to the raw (single-character-inclusive) token list when that
+// filtering would leave nothing at all - a title made entirely of
+// single-character "words", like Amel Larrieux's "i n i", would otherwise
+// tokenize to an empty array. An empty source-token list makes
+// titleOverlapRatio below treat *every* candidate as a full match (nothing
+// to compare against), which silently disables the title-match signal -
+// the dominant scoring weight and the hard title-relevance filter both stop
+// discriminating, leaving channel/view-count signals alone to pick between
+// same-artist tracks. That's exactly how "i n i" could resolve to a
+// different, more popular Amel Larrieux upload instead of itself.
+function titleTokens(t) {
+  const raw = titleTokensRaw(t);
+  const significant = raw.filter(w => w.length > 1);
+  return significant.length ? significant : raw;
 }
 // Fraction of the source track's significant words that show up in a
 // candidate's title. 1 if the source title has no significant words of its
 // own (nothing to compare against, so don't penalize).
+//
+// The candidate side is matched against titleTokensRaw (not titleTokens) so
+// that a single-character source token - only possible via the all-short
+// fallback above - can still be found in a candidate title that also
+// contains other, longer words (e.g. matching the "i"/"n" in "Amel Larrieux
+// - i n i" even though "amel"/"larrieux" are what titleTokens would normally
+// keep). This doesn't change matching for ordinary titles: titleTokens only
+// ever drops single-character tokens from sourceTokens when longer words
+// survive, so a normal sourceTokens list never contains one for the raw
+// candidate set to spuriously match against.
 function titleOverlapRatio(sourceTokens, candidateTitle) {
   if (!sourceTokens.length) return 1;
-  const set = new Set(titleTokens(candidateTitle));
+  const set = new Set(titleTokensRaw(candidateTitle));
   return sourceTokens.filter(w => set.has(w)).length / sourceTokens.length;
 }
 
