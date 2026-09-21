@@ -974,7 +974,7 @@ Add entries in this shape:
   `d6de2d6`); not merged - left for review per the session's instructions.
 
 ### app-down-splash-blocked: App stuck on splash, never loads past it
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Reporter says the app hasn't gotten past the splash page
   on mobile since roughly Fri/Sat (check the date of the most recent synced
@@ -994,7 +994,7 @@ Add entries in this shape:
   folded into "How this works" below).
 
 ### link-match-accuracy: Wrong-track matches - use album art image comparison + study source meta tags
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Multiple reports of badly wrong YouTube matches (e.g.
   "Lava Lamp" by Thundercat resolved to an unrelated 270-minute meditation
@@ -1040,7 +1040,7 @@ Add entries in this shape:
   automatic background version of this).
 
 ### playlist-full-loading: Fix greyed-out / missing tracks - target 100% playlist loading
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Reporter says a lot of tracks show up greyed-out/missing
   from loaded playlists, wants every track to resolve successfully.
