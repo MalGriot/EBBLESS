@@ -529,10 +529,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
-.playlist-ctx{margin-top:18px;font-size:12.5px;color:var(--faint-2);display:flex;align-items:center;gap:6px}
-.playlist-ctx button{color:var(--faint);text-decoration:none;font-weight:500}
-.playlist-ctx button:hover{color:var(--text)}
-
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
@@ -915,7 +911,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .track-meta{margin-top:6px}
   .track-meta .title{font-size:14px;line-height:1.15}
   .track-meta .artist{font-size:10px;margin-top:2px}
-  .playlist-ctx{display:none!important}
   .transport-full{margin-top:8px}
   .controls-row{margin-top:4px;gap:2px}
   .ctl-btn{width:30px;height:30px}
@@ -1572,10 +1567,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             </button>
           </div>
           <div class="artist marquee" id="trackArtist"><span>—</span></div>
-        </div>
-
-        <div class="playlist-ctx" id="playlistCtx" hidden>
-          <span id="ctxText"></span>
         </div>
 
         <div class="transport-full">
@@ -2513,7 +2504,6 @@ const libFilter = $('libFilter');
 const libFilterCycle = $('libFilterCycle');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-const playlistCtx = $('playlistCtx'), ctxText = $('ctxText');
 const playlistListWrap = $('playlistListWrap'), plHeadName = $('plHeadName'), trackListEl = $('trackList'), reResolveBtn = $('reResolveBtn'), trackSortSel = $('trackSortSel'), plPlayBtn = $('plPlayBtn');
 const artA = $('artA'), artB = $('artB');
 const recordLabelImg = $('recordLabelImg');
@@ -4358,15 +4348,6 @@ function highlightActiveRow(){
   Array.from(trackListEl.children).forEach(el => {
     el.classList.toggle('is-current', parseInt(el.dataset.index, 10) === idx);
   });
-  updatePlaylistCtx();
-}
-
-function updatePlaylistCtx(){
-  const pl = state.playlist;
-  const idx = currentTrackIndex();
-  if (!pl || idx < 0){ playlistCtx.hidden = true; return; }
-  playlistCtx.hidden = false;
-  ctxText.textContent = pl.name + ' · ' + (idx + 1) + ' of ' + pl.tracks.length;
 }
 
 /* =========================================================================
