@@ -1454,7 +1454,7 @@ Add entries in this shape:
   the pasted demo URL as before.
 
 ### tutorial-preload-pacing: Preload tutorial assets before playing; fix glitchy pacing
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The tutorial's first frame should ensure everything
   (assets/animations) is loaded before playback starts - reporter says
@@ -1462,6 +1462,19 @@ Add entries in this shape:
 - **Touches:** `runIntro()` startup / asset preload.
 - **Branch:** agent/tutorial-preload-pacing
 - **Notes:** Synced from Geethub issue #62.
+
+  Fixed in commit `3da813b`: `sequence()`'s caption/animation timeline is
+  scored to `intro-theme.mp3` timestamps but previously started immediately
+  regardless of how much audio had buffered, so a slow/fresh load let the
+  visual timeline race ahead of the music. Added `waitForMusicReady()`
+  (resolves on `canplaythrough` or a 2.5s cap so a broken connection can't
+  freeze the intro) and gated the `sequence()` call on it, respecting the
+  existing `done`/cancel flag and `prefers-reduced-motion` short-circuit.
+  Verified on both a fast local load and a simulated stalled connection
+  (monkey-patched `readyState`) - pacing stayed in sync in both cases, with
+  the fallback cap confirmed to unstick a broken load after ~2.5s. No new
+  console errors. Pushed to `agent/tutorial-preload-pacing` - awaiting your
+  local review before merge.
 
 ### tutorial-crossfade-demo: Tutorial should visually animate the crossfade slider
 - **Status:** draft
@@ -2424,7 +2437,7 @@ Add entries in this shape:
   (only pre-existing, unrelated YouTube-iframe/proxy errors were present).
 
 ### library-playlist-footer-overlap: Footer player blocks last entry when viewing a playlist on mobile
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On mobile, opening a playlist from the library, the
   footer player bar covers/blocks the bottom-most track entry in the list.
@@ -2434,6 +2447,16 @@ Add entries in this shape:
   (merged - that fixed spacing within the player view itself) but this is a
   different surface (the library's playlist-detail list being covered),
   kept separate.
+
+  Fixed in commit `f65c457`: root cause was `#mini-bar` (footer player)
+  sharing the same `bottom` offset as `#libpl-panel` on mobile but with a
+  higher z-index, so it floated over the panel's own bottom edge. Added
+  `#libplBody{padding-bottom:78px}` in the mobile media query so the
+  scrollable playlist-detail track list clears the mini-bar. Verified on a
+  375x812 viewport with an 8-track playlist and playback active: last
+  track now fully visible above the mini-bar, no new console errors.
+  Pushed to `agent/library-playlist-footer-overlap` - awaiting your local
+  review before merge.
 
 ### discovery-radio-continuation: Discovery should keep playing a radio around a song after it ends
 - **Status:** draft
@@ -2447,7 +2470,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #101.
 
 ### queue-close-return-view: Closing the queue should return to the view you were on
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On mobile, closing the queue panel should return you to
   whichever view you were on just before opening it (player or library),
@@ -2455,6 +2478,20 @@ Add entries in this shape:
 - **Touches:** queue panel open/close navigation state, mobile.
 - **Branch:** agent/queue-close-return-view
 - **Notes:** Synced from Geethub issue #102.
+
+  Fixed in commit `a38b1e2`: added `state.preQueueView` (mirrors the
+  existing `preSettingsView` pattern) - `openQueuePanel()` records the
+  current view before opening, `closeQueuePanel(restoreView = true)`
+  restores it. `setView()`'s own auto-close-queue call now passes
+  `restoreView:false` so deliberately switching views while the queue is
+  open isn't clobbered by the restore. Verified on a 375x812 viewport from
+  both starting views (Player and Library) plus a guard check that
+  switching views while the queue is open is preserved, not reverted. No
+  new console errors. Note: couldn't reproduce the original bug via the
+  toggle-queue button itself (it already preserved view correctly) but the
+  fix closes the gap for any other path that changes view while the queue
+  is open. Pushed to `agent/queue-close-return-view` - awaiting your local
+  review before merge.
 
 ### save-discovery-playlist-to-library: Save modified/discovery-generated playlists to library
 - **Status:** draft
@@ -2500,18 +2537,29 @@ Add entries in this shape:
   will likely need scoping/design before a lane can implement it directly.
 
 ### tutorial-song-preview-only: Tutorial music should play only its first second on app load
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** When the app loads, it currently plays the whole tutorial
   song; it should instead just play the first second and then stop.
 - **Touches:** splash/tutorial audio trigger (`#onbMusic`), same area as
   `splash-tutorial-music-preload` (merged).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/tutorial-song-preview-only`
 - **Notes:** Synced from Geethub issue #106. `splash-tutorial-music-preload`
   added playing the first beat of tutorial music on splash load; this
   report says the full song now plays instead of stopping after a moment -
   likely a follow-up fix/regression on that same feature rather than a
   duplicate ask, so kept as its own entry.
+
+  Fixed and pushed (commit `fad0c8b`): in `startApp()` (~line 6718-6733),
+  added a 1-second `setTimeout` after the splash's `#onbMusic.play()` call
+  that pauses it and resets `currentTime` to 0, so the splash's warm-up
+  preview stops after ~1s instead of running the whole track. Safe against
+  the real tutorial (`runIntro()`, which calls `startApp()` at its own end
+  after finishing its own play/fade/volume handling on the same element) -
+  by the time this timer fires, tutorial playback is already over, so it
+  can only ever cut off the splash's own autoplay snippet. Verified via a
+  worktree-local static server + browser gesture: `play()` succeeds, then
+  after 1s the element is paused with `currentTime === 0`.
 
 ### discover-artist-this-is-playlist: Discover should pull from the "This Is [Artist]" Spotify playlist
 - **Status:** draft
