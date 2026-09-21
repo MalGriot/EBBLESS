@@ -1498,7 +1498,7 @@ Add entries in this shape:
   candidate to bundle with other tutorial-beat lanes above.
 
 ### settings-bug-report-github-form: "Report a bug" should link to a GitHub issue form
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The Settings "Report a bug" button currently opens a
   mailto link (per `bug-report-button`, merged). Reporter wants it to lead
@@ -1506,12 +1506,27 @@ Add entries in this shape:
   `improvement-idea.yml`-style issue template flow already used for
   suggestions).
 - **Touches:** Settings screen bug-report button/link.
-- **Branch:** (unclaimed)
+- **Branch:** agent/settings-bug-report-github-form
 - **Notes:** Synced from Geethub issue #27. Judgment call resolved by user:
   **replace** the mailto link entirely with the GitHub form (not offer
-  both). If no dedicated bug-report issue template exists yet, reuse/adapt
-  the existing `improvement-idea.yml` template pattern rather than
-  inventing a new one from scratch.
+  both).
+
+  Fixed and pushed (commit `69b0fef`): added a new
+  `.github/ISSUE_TEMPLATE/bug-report.yml` (adapted from the existing
+  `improvement-idea.yml` pattern - title prefix `[bug]`, label `bug`,
+  fields for what happened / steps to reproduce / device-browser /
+  touches / notes). The Settings button (`#reportBugBtn`) now links to
+  `https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug`
+  with `target="_blank" rel="noopener"`, matching the existing
+  `#suggestIdeaBtn` convention; mailto behavior removed entirely, no
+  mailto references remain in the DOM. Also fixed two onboarding-tutorial
+  JS selectors that targeted the old `a[href^="mailto:"]` and would have
+  silently broken after the href change - now use `#reportBugBtn`
+  directly. Verified via a worktree-local `python3 -m http.server`
+  (confirmed via `location.href`): button href/attributes correct, zero
+  mailto links in the DOM, Settings renders correctly, no new console
+  errors. Pushed to `agent/settings-bug-report-github-form`, not merged -
+  awaiting your review.
 
 ### settings-share-app: Add "share this app" button in Settings
 - **Status:** merged
