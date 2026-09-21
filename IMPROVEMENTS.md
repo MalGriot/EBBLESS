@@ -1180,17 +1180,82 @@ Add entries in this shape:
   automatic background version of this).
 
 ### playlist-full-loading: Fix greyed-out / missing tracks - target 100% playlist loading
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** high
 - **Description:** Reporter says a lot of tracks show up greyed-out/missing
   from loaded playlists, wants every track to resolve successfully.
 - **Touches:** RESOLVE PIPELINE, `beginImport()`, track resolution failure
   handling.
-- **Branch:** (unclaimed)
+- **Branch:** agent/playlist-full-loading
 - **Notes:** Synced from Geethub issue #59. Related to `link-match-accuracy`
   - both are about resolve-pipeline reliability, but this is about tracks
   failing to resolve at all vs. resolving to the wrong thing. Worth
   investigating together.
+
+  **Investigation findings (worker/src/index.js, `handleSearch`):**
+  reproduced against the real, unmocked `/search` endpoint (`wrangler dev
+  --local`, no mocking) and found the dominant root cause: YouTube
+  intermittently answers `youtube.com/results` with a redirect into a
+  Google bot-check/consent interstitial instead of serving results - and a
+  short burst of `/search` calls in quick succession (exactly what a
+  multi-track playlist's resolve loop produces) was enough to trigger it
+  repeatedly in testing, even with the app's own `CONSENT` cookie already
+  set. Cloudflare's `fetch()` follows redirects by default, and that
+  interstitial sometimes redirects through a chain long enough for the
+  runtime to give up ~7s later with an opaque "Too many redirects"
+  `TypeError`, which fell through the worker's top-level catch-all as an
+  unhelpful, slow 500 - indistinguishable from a genuine bug, and far too
+  slow for the client's existing retry-with-backoff (`SEARCH_MAX_ATTEMPTS`
+  in index.html) to absorb cheaply across a whole playlist. This is what
+  was producing runs of consecutive greyed-out tracks once the block was
+  hit mid-playlist, rather than isolated one-off misses.
+
+  Fixed by fetching YouTube's search/watch pages with `redirect: 'manual'`
+  (new `fetchYouTubePage` helper) so a redirect-to-interstitial is detected
+  and fails in one round-trip instead of chasing the chain - paired with
+  one quick, quiet internal retry inside the worker (the block was
+  intermittent, not sticky: a request moments later usually went through
+  clean) before surfacing a specific, fast 503 the client can distinguish
+  and retry. Applied to both `/search` (the hot path, hit once per track)
+  and `/ytvideo` (direct YouTube-video imports).
+
+  Secondary, smaller fix: `handleSearch` now retries once with a relaxed
+  query (`relaxedSearchTitle` - strips `(...)`/`[...]` and "feat./ft."
+  clauses) when the full-title query comes back with **zero** results,
+  since an over-specific title can occasionally pull YouTube's own search
+  away from the plain song entirely. In testing this rarely triggered - the
+  redirect/bot-check above was the real cause of failures, not title
+  shape - but it's a real gap this closes as defense in depth (e.g.
+  remix/feature-heavy titles). Verified the previously-existing
+  match-scoring logic (`scoreCandidate`, exclude/duration/title-overlap
+  filters) is untouched, so this doesn't affect wrong-match cases owned by
+  `link-match-accuracy`.
+
+  **Verification:** with the fix applied, ran ~99 real `/search` requests
+  against the local worker (isolated burst tests up to 30 tracks at 8-way
+  concurrency, plus a full end-to-end resolve of the standard 32-track test
+  playlist through `index.html` served via plain `python3 -m http.server`,
+  confirmed via `location.href` to be this worktree's own server) - zero
+  4xx/5xx and 32/32 tracks resolved with a real `videoId` (100%), versus
+  the pre-fix run hitting the redirect-block failure repeatedly within the
+  first ~10 requests. `BACKEND` was pointed at `localhost:8787` only for
+  that manual browser check and reverted before committing (confirmed via
+  `git diff` showing no index.html changes).
+
+  **Verification gap:** this was tested against a local dev machine's IP
+  reputation with YouTube, not Cloudflare's Worker egress IPs (which the
+  README notes were specifically chosen to avoid the CORS-proxy 401s this
+  kind of block resembles) - so the trigger frequency in production may
+  differ from what was reproduced here. The fix is a strict improvement
+  either way (fails fast + retries instead of hanging on an uncaught
+  exception), but real-world frequency after deploy is worth watching.
+
+  **Follow-up not done here (flagging per this lane's scope: root-causing
+  a whole-playlist bug, not adding new UI):** there is still no per-track
+  retry affordance in the UI once a track lands in the greyed-out state at
+  the end of a resolve - the only recovery path today is re-resolving the
+  whole playlist (`reResolveBtn`) or reloading. Worth a small follow-up
+  once this fix's real-world impact is visible.
 
 ### discovery-pipeline-metadata: Discovery songs should show Spotify/Apple metadata, not YouTube's
 - **Status:** ready

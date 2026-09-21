@@ -70,6 +70,40 @@ const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/128.0 Safari/537.36';
 
+// YouTube occasionally answers a scrape (search results or watch page) with a
+// redirect into a Google interstitial - a bot-check "/sorry" page, or a fresh
+// consent wall - instead of the page actually requested. Observed in testing:
+// a short burst of /search calls in quick succession (exactly the pattern a
+// large playlist's track-by-track resolve loop produces) is enough to trigger
+// it intermittently, even with the CONSENT cookie already set. A plain
+// fetch() follows redirects by default, and that interstitial sometimes
+// redirects through a chain long enough for the runtime to give up with an
+// opaque "Too many redirects" TypeError several seconds later - which was
+// falling through to the top-level catch-all as an unhelpful 500, with no
+// distinction from a genuine parse/logic bug and no fast, specific signal
+// for the client to back off and retry on. Fetching with redirect:'manual'
+// catches that redirect on the first hop instead, so this fails in one
+// round-trip rather than several seconds, with an error the caller can
+// recognize and retry.
+class YouTubeBlockedError extends Error {}
+async function fetchYouTubePage(pageUrl, extraHeaders) {
+  const res = await fetch(pageUrl, {
+    redirect: 'manual',
+    headers: Object.assign({
+      'User-Agent': DESKTOP_UA,
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cookie': 'CONSENT=YES+1',
+    }, extraHeaders || {}),
+  });
+  // A 3xx here means YouTube didn't serve the page - almost always the
+  // interstitial described above, not a legitimate redirect to follow.
+  if (res.status >= 300 && res.status < 400) {
+    throw new YouTubeBlockedError('youtube redirected to an interstitial (likely a transient bot-check) instead of serving results');
+  }
+  return res;
+}
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 // Spotify's oembed endpoint returns a per-track thumbnail (the track's own
 // album art) from a lightweight JSON call — no HTML scrape needed. Used to
 // get real per-track art for playlist tracks, which otherwise only carry the
@@ -277,6 +311,68 @@ function titleOverlapRatio(sourceTokens, candidateTitle) {
   return sourceTokens.filter(w => set.has(w)).length / sourceTokens.length;
 }
 
+// Strip parenthetical/bracketed suffixes and "feat./ft./featuring" clauses
+// off a track title, for use as a fallback *search query* only (never for
+// display or scoring) - a title like "Song (feat. X) - Y Remix" is exactly
+// right once results come back, but as the literal search string those
+// extra clauses occasionally pull YouTube's own search toward an unrelated
+// video (a remix compilation, a stray "feat. X" upload) that returns none of
+// the candidates this endpoint would otherwise accept. Only tried as a
+// second pass when the full-title query comes back with zero results.
+function relaxedSearchTitle(title) {
+  return String(title || '')
+    .replace(/[\(\[][^)\]]*[\)\]]/g, ' ')
+    .replace(/[-–]\s*(feat\.?|ft\.?|featuring)\b.*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Fetches and parses one YouTube search-results page into candidate videos.
+// Throws YouTubeBlockedError (see fetchYouTubePage) if YouTube answered with
+// an interstitial instead of results - after one quick, quiet retry, since
+// that block was intermittent in testing (a request moments later usually
+// goes through clean) and retrying once here is far cheaper than making the
+// client burn a full retry-with-backoff round-trip over it. Throws a plain
+// Error for any other fetch/parse failure. Returns [] (not an error) for a
+// clean response that simply has no video results for this query.
+async function fetchYouTubeSearchCandidates(query) {
+  const resultsUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+  let res;
+  try {
+    res = await fetchYouTubePage(resultsUrl);
+  } catch (e) {
+    if (!(e instanceof YouTubeBlockedError)) throw e;
+    await sleep(300 + Math.random() * 300);
+    res = await fetchYouTubePage(resultsUrl);
+  }
+  if (!res.ok) throw new Error('youtube returned ' + res.status);
+  const html = await res.text();
+
+  const marker = 'var ytInitialData';
+  const mi = html.indexOf(marker);
+  if (mi === -1) throw new Error('no results data on youtube page');
+  const braceIdx = html.indexOf('{', mi);
+  const jsonStr = extractBalancedJson(html, braceIdx);
+  if (!jsonStr) throw new Error('could not parse youtube results');
+
+  let data;
+  try { data = JSON.parse(jsonStr); } catch (e) { throw new Error('malformed youtube results'); }
+
+  const renderers = [];
+  deepFindKey(data, 'videoRenderer', renderers);
+  return renderers.map(v => {
+    let vTitle = '';
+    try { vTitle = v.title.runs.map(r => r.text).join(''); } catch (e) {}
+    let channel = '';
+    try { channel = v.ownerText.runs[0].text; } catch (e) {}
+    let views = 0;
+    try { views = parseViewCount(v.viewCountText.simpleText); } catch (e) {}
+    let duration = 0;
+    try { duration = parseDurationText(v.lengthText.simpleText); } catch (e) {}
+    return { videoId: v.videoId, title: vTitle, channel, views, duration };
+  }).filter(v => v.videoId);
+}
+
 function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   const title = (c.title || '').toLowerCase();
   const channel = (c.channel || '').toLowerCase();
@@ -314,42 +410,34 @@ async function handleSearch(url, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  const q = encodeURIComponent(title + ' ' + firstArtist);
-  const res = await fetch('https://www.youtube.com/results?search_query=' + q, {
-    headers: {
-      'User-Agent': DESKTOP_UA,
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Cookie': 'CONSENT=YES+1',
-    },
-  });
-  if (!res.ok) return json({ error: 'youtube returned ' + res.status }, 502);
-  const html = await res.text();
+  // Query attempts, most-specific first. The full title (as the source gave
+  // it to us) is tried first since it's the most disambiguating; only if
+  // that comes back with genuinely zero results does a second pass run with
+  // the title's parenthetical/feat. clauses stripped (see
+  // relaxedSearchTitle) - covers titles whose extra detail pulls YouTube's
+  // own search away from the plain song entirely.
+  const relaxedTitle = relaxedSearchTitle(title);
+  const queries = [title + ' ' + firstArtist];
+  if (relaxedTitle && relaxedTitle.toLowerCase() !== title.toLowerCase()) {
+    queries.push(relaxedTitle + ' ' + firstArtist);
+  }
 
-  const marker = 'var ytInitialData';
-  const mi = html.indexOf(marker);
-  if (mi === -1) return json({ error: 'no results data on youtube page' }, 502);
-  const braceIdx = html.indexOf('{', mi);
-  const jsonStr = extractBalancedJson(html, braceIdx);
-  if (!jsonStr) return json({ error: 'could not parse youtube results' }, 502);
-
-  let data;
-  try { data = JSON.parse(jsonStr); } catch (e) { return json({ error: 'malformed youtube results' }, 502); }
-
-  const renderers = [];
-  deepFindKey(data, 'videoRenderer', renderers);
-  const candidates = renderers.map(v => {
-    let vTitle = '';
-    try { vTitle = v.title.runs.map(r => r.text).join(''); } catch (e) {}
-    let channel = '';
-    try { channel = v.ownerText.runs[0].text; } catch (e) {}
-    let views = 0;
-    try { views = parseViewCount(v.viewCountText.simpleText); } catch (e) {}
-    let duration = 0;
-    try { duration = parseDurationText(v.lengthText.simpleText); } catch (e) {}
-    return { videoId: v.videoId, title: vTitle, channel, views, duration };
-  }).filter(v => v.videoId);
-
-  if (!candidates.length) return json({ error: 'no video results' }, 404);
+  let candidates = [];
+  let lastError = null;
+  for (const query of queries) {
+    try {
+      candidates = await fetchYouTubeSearchCandidates(query);
+    } catch (e) {
+      lastError = e;
+      candidates = [];
+    }
+    if (candidates.length) break;
+  }
+  if (!candidates.length) {
+    if (lastError instanceof YouTubeBlockedError) return json({ error: lastError.message }, 503);
+    if (lastError) return json({ error: lastError.message }, 502);
+    return json({ error: 'no video results' }, 404);
+  }
 
   // Drop concert/live/acoustic/remix/cover uploads outright: they're never
   // the album or single version, so a hard filter beats a score penalty that
@@ -515,9 +603,13 @@ async function handleYtVideo(url, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  const res = await fetch('https://www.youtube.com/watch?v=' + encodeURIComponent(id), {
-    headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9', 'Cookie': 'CONSENT=YES+1' },
-  });
+  let res;
+  try {
+    res = await fetchYouTubePage('https://www.youtube.com/watch?v=' + encodeURIComponent(id));
+  } catch (e) {
+    if (e instanceof YouTubeBlockedError) return json({ error: e.message }, 503);
+    throw e;
+  }
   if (!res.ok) return json({ error: 'youtube returned ' + res.status }, 502);
   const html = await res.text();
 
