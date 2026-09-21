@@ -917,6 +917,14 @@ async function handleArt(url, ctx) {
 // on any failure or no match this just returns { image: null } and the
 // client falls back to the track's native source art (Apple Music's own
 // cover, or the YouTube thumbnail).
+//
+// Also returns the matched track/artist name from iTunes' own catalog, not
+// just the artwork - the discovery pipeline (see fetchDiscoverCandidates in
+// index.html) uses this same lookup as a second matching pass to resolve a
+// YouTube-found discovery candidate's *displayed* title/artist back to
+// Spotify/Apple Music's own metadata, not YouTube's raw upload title. Every
+// other caller only ever read `.image` off the old string return, so adding
+// title/artist here is additive and doesn't change their behavior.
 async function searchItunesTrackArt(title, artist) {
   try {
     const term = artist ? (artist + ' ' + title) : title;
@@ -925,12 +933,16 @@ async function searchItunesTrackArt(title, artist) {
     if (!res.ok) return null;
     const data = await res.json();
     const track = data.results && data.results[0];
-    const artwork = track && track.artworkUrl100;
-    if (!artwork) return null;
-    // iTunes' default artwork URLs are 100x100 thumbnails; upsizing by
-    // string-replacing the size segment is the documented trick for getting
-    // a much larger image from the same CDN path.
-    return artwork.replace('100x100', '1200x1200');
+    if (!track) return null;
+    const artwork = track.artworkUrl100;
+    return {
+      // iTunes' default artwork URLs are 100x100 thumbnails; upsizing by
+      // string-replacing the size segment is the documented trick for
+      // getting a much larger image from the same CDN path.
+      image: artwork ? artwork.replace('100x100', '1200x1200') : null,
+      title: track.trackName || null,
+      artist: track.artistName || null,
+    };
   } catch (e) { return null; }
 }
 async function handleSpotifyArt(url, env, ctx) {
@@ -943,9 +955,10 @@ async function handleSpotifyArt(url, env, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  const image = await searchItunesTrackArt(title, artist);
+  const match = await searchItunesTrackArt(title, artist);
+  const image = match && match.image;
 
-  const payload = { image };
+  const payload = { image: image || null, title: (match && match.title) || null, artist: (match && match.artist) || null };
   const response = json(payload);
   // Same miss-vs-hit caching split as /art: only cache real hits for the
   // long window so a transient miss doesn't lock a track out of art once

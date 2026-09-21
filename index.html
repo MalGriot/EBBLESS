@@ -4379,6 +4379,31 @@ async function fetchDiscoverArt(title, artist){
     return data.image || null;
   } catch(e){ return null; }
 }
+// A discovery candidate's title/artist/art start out as whatever Last.fm
+// (or, in the artist-search last resort, YouTube's own search results)
+// called it - not necessarily the canonical name. This runs the same
+// second matching pass already used for every other source's art (see
+// resolveTrackArt/sourceKindForType above) through the /spotifyart worker
+// endpoint's iTunes lookup, and - unlike resolveTrackArt - also takes the
+// title/artist that lookup resolved to, so what's actually displayed for a
+// discovered track matches Spotify/Apple Music's own catalog rather than
+// YouTube's raw upload title. Falls back to the original title/artist
+// untouched on any miss (still tries the MusicBrainz-backed /art endpoint
+// for art alone, same as before this existed).
+async function resolveDiscoverMetadata(title, artist){
+  try{
+    const params = new URLSearchParams({ title, artist: artist || '' });
+    const res = await fetch(BACKEND + '/spotifyart?' + params.toString());
+    if (res.ok){
+      const data = await res.json();
+      if (data.image || data.title){
+        return { title: data.title || title, artist: data.artist || artist, art: data.image || null };
+      }
+    }
+  } catch(e){ /* fall through to MusicBrainz art + original title/artist */ }
+  const art = await fetchDiscoverArt(title, artist);
+  return { title, artist, art };
+}
 // Last resort when /similar and /ytmix both come up empty for a seed - other
 // uploads by that same artist, scraped straight from YouTube search.
 async function fetchArtistSearch(artist){
@@ -4515,15 +4540,18 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
     const tagNames = (c.tags || []).map(t => t.name);
     if (c.videoId){
       if (excludeVideoIds.has(c.videoId)) continue;
-      const art = await fetchDiscoverArt(c.title, c.artist);
-      resolved.push({ title: c.title, artist: c.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art, duration: 0, tags: tagNames });
+      // videoId is only for playback - the displayed title/artist/art come
+      // from the Spotify/Apple Music second matching pass, not from
+      // whatever the recommendation source called this candidate.
+      const meta = await resolveDiscoverMetadata(c.title, c.artist);
+      resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: 0, tags: tagNames });
       continue;
     }
     try{
       const match = await searchYouTube(c.title, c.artist);
       if (!match.videoId || excludeVideoIds.has(match.videoId)) continue;
-      const art = await fetchDiscoverArt(c.title, c.artist);
-      resolved.push({ title: c.title, artist: c.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, tags: tagNames });
+      const meta = await resolveDiscoverMetadata(c.title, c.artist);
+      resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
   }
   return resolved;
@@ -4665,8 +4693,11 @@ async function generateSwell(){
       for (const t of found){
         if (t.videoId && !seen.has(t.videoId) && !exclude.has(t.videoId)){
           seen.add(t.videoId); exclude.add(t.videoId);
-          const art = await fetchDiscoverArt(t.title, artist);
-          collected.push({ title: t.title, artist, videoId: t.videoId, matchedTitle: t.title, channel: t.channel || '', plays: 0, art, duration: t.duration || 0, tags: [] });
+          // t.title/artist here are straight off a YouTube search result -
+          // resolve the displayed title/artist/art back through Spotify/
+          // Apple Music the same as the main /similar path above.
+          const meta = await resolveDiscoverMetadata(t.title, artist);
+          collected.push({ title: meta.title, artist: meta.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.channel || '', plays: 0, art: meta.art, duration: t.duration || 0, tags: [] });
         }
       }
     }

@@ -1338,7 +1338,7 @@ Add entries in this shape:
   once this fix's real-world impact is visible.
 
 ### discovery-pipeline-metadata: Discovery songs should show Spotify/Apple metadata, not YouTube's
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Discovery/recommended songs currently pull their title,
   artist, and album art straight from YouTube. Instead: pick candidates via
@@ -1346,8 +1346,66 @@ Add entries in this shape:
   playback, but display the title/artist/art resolved back from Spotify or
   Apple Music (a second matching pass), not YouTube's own metadata.
 - **Touches:** discovery/recommendation pipeline.
-- **Branch:** (unclaimed)
+- **Branch:** agent/discovery-pipeline-metadata
 - **Notes:** Synced from Geethub issue #77.
+
+  Found that title/artist for `/similar`-sourced candidates already came
+  from Last.fm rather than YouTube, but the art always came from
+  `fetchDiscoverArt()` hitting the MusicBrainz/Cover Art Archive-backed
+  `/art` endpoint - a different lookup from the Spotify/Apple Music one
+  (`resolveTrackArt`/`sourceKindForType`, `/spotifyart`) every other
+  source in the app uses. The `fetchArtistSearch()` last-resort fallback
+  (used when `/similar` and `/ytmix` both come up empty for every seed)
+  was worse: title/artist there came straight off a raw YouTube search
+  result, exactly the bug this entry describes.
+
+  Fixed and pushed (commit `b5943c1`): reused the existing `/spotifyart`
+  worker endpoint (iTunes Search API, same one `resolveTrackArt` calls
+  elsewhere) as a second matching pass for discovery tracks specifically.
+  `searchItunesTrackArt()`/`handleSpotifyArt()` in `worker/src/index.js`
+  now also return the matched `trackName`/`artistName` from iTunes'
+  catalog alongside the upsized artwork, not just `{ image }` - additive
+  to the response shape, since every existing caller only ever read
+  `.image` off it. Added `resolveDiscoverMetadata(title, artist)` in
+  `index.html`, which calls `/spotifyart` and returns the resolved
+  `{ title, artist, art }`, falling back to the original title/artist
+  (and the MusicBrainz `/art` lookup for art alone) on any miss so a
+  niche/unreleased-to-Apple-Music track still gets *some* art instead of
+  none. `fetchDiscoverCandidates()` (both the `/similar`-with-videoId and
+  the `/similar`-without-videoId-then-searchYouTube branches) and
+  `generateSwell()`'s artist-search fallback now build every discovery
+  track object through this instead of `fetchDiscoverArt()`. The YouTube
+  videoId (and the raw YouTube search hit, kept in `matchedTitle`/
+  `channel` as before) is still resolved and used for actual playback -
+  only what's *displayed* changes.
+
+  Verified via a local static server (`python3 -m http.server 8934`)
+  serving this worktree directly, confirmed via `location.href` in the
+  browser that the tab was actually on `http://127.0.0.1:8934` and not a
+  shared launcher serving the main checkout. Ran the worker locally too
+  (`npx wrangler dev --local --port 8787`) and confirmed `/spotifyart`
+  now returns matched title/artist alongside art (e.g. `title=Blinding
+  Lights&artist=The Weeknd` -> `{"title":"Blinding Lights
+  (Remix)","artist":"The Weeknd & ROSALÍA", "image": ...}`) and a clean
+  `{"image":null,"title":null,"artist":null}` on a nonsense query. Seeded
+  a Liked Songs track in the app's `localStorage`, redirected the app's
+  `/spotifyart` and `/art` calls to the local worker via a page-level
+  `fetch` patch, and ran the real `generateSwell()` pipeline end to end:
+  every resulting Current/Swell track showed a clean Spotify/Apple-style
+  title and artist (e.g. `"In Your Eyes" / "The Weeknd"`) and `art` URLs
+  on Apple's `mzstatic.com` CDN, while `matchedTitle`/`channel` still held
+  the raw YouTube upload title/channel used only to find the videoId
+  (e.g. `"The Weeknd - In Your Eyes (Official Audio)"`), and playback's
+  `videoId` was still a real resolved YouTube id. Confirmed via network
+  request logs that every discovery candidate hit `/spotifyart` and none
+  fell through to the `/art` MusicBrainz fallback. Checked the console -
+  no new errors; the only error present was a pre-existing aborted
+  `intro-theme.mp3` fetch unrelated to this change. As with the sibling
+  `spotify-art-source`/`spotify-album-art` lanes, the worker change is
+  not deployed (`wrangler deploy` not run) - that's your call once
+  reviewed; until it's deployed, discovery tracks keep their current
+  (already-correct-for-title/artist, MusicBrainz-art) behavior in
+  production.
 
 ### tutorial-chaptered-prompts: Tutorial should pause per chapter with a "next" prompt
 - **Status:** draft
