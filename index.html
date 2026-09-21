@@ -809,7 +809,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .ctl-btn.small{width:40px;height:40px}
   .ctl-btn.small svg{width:16px;height:16px}
   .track-row .row-actions button,.q-row .remove{width:34px;height:34px}
-  #view-player .view-scroll{justify-content:safe center;padding-bottom:12px}
+  /* extra clearance above #bottom-nav (issue #30) - .view is already offset
+     by var(--nav-h)+var(--safe-b) so its bottom edge sits right above the
+     nav bar, but the transport controls were landing flush against that
+     edge with barely a gap; this padding gives them real breathing room
+     above the footer nav instead of crowding it */
+  #view-player .view-scroll{justify-content:safe center;padding-bottom:28px}
 }
 @media (min-width:860px){
   #bottom-nav{display:none}
@@ -820,6 +825,11 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .track-meta .title{font-size:26px}
   body.queue-open .view-scroll,body.queue-open #topbar{margin-right:380px;transition:margin var(--dur-surface) var(--ease-in-out)}
   #view-player{overflow-y:hidden}
+  /* desktop clearance above the OS taskbar (issue #30) - .view sits flush
+     against the viewport bottom here (bottom:0), so with no padding the
+     transport controls could land right where a taskbar typically covers
+     the screen (~40-50px); this pulls them up clear of that band */
+  #view-player .view-scroll{padding-bottom:44px}
 }
 /* wide desktop: persistent 3-pane layout (library | now playing | queue) in
    place of the tab-switching + overlay-queue behavior used below 1150px.
@@ -7038,15 +7048,24 @@ function runIntro(preview){
     artStyleMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.style === style));
   }
   // a paste, not a typing animation - the value lands in one frame, and the
-  // field flashes to read as "something just arrived" (see #urlInput.onb-pasted)
+  // field flashes to read as "something just arrived" (see #urlInput.onb-pasted).
+  // This is demonstrative only - nobody is meant to type into the field
+  // during the intro - so the field is made readonly for the moment it's
+  // focused. On mobile, focusing a readonly input doesn't raise the on-screen
+  // keyboard, while still giving the field a real caret/focus look; it's
+  // blurred and un-readonlied right after so a visitor who later taps into
+  // the real field (post-intro) gets the normal editable behavior.
   function pasteUrl(text){
     if (!urlInput) return;
     urlInput.value = '';
+    urlInput.readOnly = true;
     urlInput.focus();
     urlInput.value = text;
     urlInput.classList.remove('onb-pasted');
     void urlInput.offsetWidth;
     urlInput.classList.add('onb-pasted');
+    urlInput.blur();
+    urlInput.readOnly = false;
   }
   // the generic "this was just tapped" pulse (see .onb-tap in the CSS above)
   // - restartable, so the same element can be tapped more than once
