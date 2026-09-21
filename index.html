@@ -238,14 +238,14 @@ svg{display:block}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
+  opacity:0;z-index:4;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
 .lib-card:hover .menu-btn,.lib-card .menu-btn:active,.lib-card .menu-btn.is-active{opacity:1}
 .lib-card .menu-btn:hover{background:rgba(0,0,0,.75)}
 .lib-card .menu-btn svg{width:12px;height:12px;color:#fff}
 
 .lib-card .pin{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
+  opacity:0;z-index:4;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
 .lib-card:hover .pin,.lib-card .pin:active,.lib-card .pin.is-active{opacity:1}
 .lib-card .pin svg{width:12px;height:12px;color:#fff}
 .lib-card .pin.is-active{background:var(--accent,#1db954)}
@@ -642,6 +642,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .queue-head .close-btn svg{width:12px;height:12px}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .queue-body{padding:4px 12px 24px}
+.libpl-art-wrap{padding:4px 20px 14px}
+.libpl-art{display:block;width:100%;aspect-ratio:1;max-width:220px;margin:0 auto;border-radius:var(--r-md);
+  object-fit:cover;background:var(--panel-3)}
 .queue-drag-handle{display:none}
 .q-section-label{font-size:10.5px;font-weight:700;letter-spacing:.6px;color:var(--faint-2);text-transform:uppercase;
   margin:18px 8px 6px}
@@ -679,7 +682,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 /* mobile: bottom sheet (stops above the bottom nav so its buttons stay reachable) */
 @media (max-width:859.98px){
   #queue-panel,#libpl-panel{left:0;right:0;bottom:calc(var(--nav-h) + var(--safe-b));
-    max-height:calc(82vh - var(--nav-h) - var(--safe-b));border-radius:18px 18px 0 0;
+    max-height:calc(92vh - var(--nav-h) - var(--safe-b));border-radius:18px 18px 0 0;
     transform:translateY(calc(100% + var(--nav-h) + var(--safe-b)));transition:transform var(--dur-surface) var(--ease-in-out)}
   #queue-panel.is-open,#libpl-panel.is-open{transform:translateY(0)}
   #queue-scrim,#libpl-scrim{bottom:calc(var(--nav-h) + var(--safe-b))}
@@ -1245,11 +1248,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="art single">
       <div class="face video-face"><video autoplay muted loop playsinline src="brand/assets/swell-thumb.mp4"></video></div>
       <div class="title-overlay">
-        <div class="marquee current-label" data-text="CURRENT"><span>CURRENT</span></div>
+        <div class="marquee current-label" data-text="CURRENTSSsss"><span>CURRENTSSsss</span></div>
       </div>
     </div>
     <div class="info">
-      <div class="name current-label">CURRENT</div>
+      <div class="name current-label">CURRENTSSsss</div>
       <div class="count">A fresh set, waiting</div>
     </div>
   </div>
@@ -1755,6 +1758,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       </button>
     </div>
     <div class="queue-scroll">
+      <div class="libpl-art-wrap" id="libplArtWrap" hidden><img class="libpl-art" id="libplArt" alt=""></div>
       <div class="queue-body" id="libplBody"></div>
     </div>
   </div>
@@ -2491,7 +2495,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueClearBtn = $('queueClearBtn');
 const discoverToggleBtn = $('discoverToggleBtn');
-const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn');
+const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt');
 const libCtxMenu = $('libCtxMenu');
 const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
@@ -3023,6 +3027,21 @@ function toggleLibraryPlaylistPanel(id){
 
   openLibraryPanelId = id;
   libplTitle.textContent = pl.name;
+  // cover art at the top of the panel: prefer the playlist's own source
+  // cover (Spotify/SoundCloud/Apple), falling back to the first track that
+  // has any resolvable artwork so a manual/matched playlist isn't left blank.
+  const artTrack = pl.image ? null : pl.tracks.find(t => t.videoId || t.art);
+  if (pl.image){
+    libplArt.onerror = null;
+    libplArt.src = pl.image;
+    libplArtWrap.hidden = false;
+  } else if (artTrack){
+    attachArtworkFallback(libplArt, artTrack);
+    libplArtWrap.hidden = false;
+  } else {
+    libplArt.removeAttribute('src');
+    libplArtWrap.hidden = true;
+  }
   libplBody.innerHTML = '';
   if (!pl.tracks.length){
     libplBody.innerHTML = '<div class="empty-lib">No tracks found.</div>';
@@ -3535,11 +3554,11 @@ function ensureLikedPlaylist(){
 function ensureSwellPlaylist(){
   const existing = getCachedPlaylist(SWELL_ID);
   if (existing){
-    // Migrate playlists created before the rename from "Swell" to "CURRENT".
-    if (existing.name !== 'CURRENT'){ existing.name = 'CURRENT'; lsSet(LS_PL(SWELL_ID), existing); }
+    // Migrate playlists created before the rename from "Swell" to "CURRENTSSsss".
+    if (existing.name !== 'CURRENTSSsss'){ existing.name = 'CURRENTSSsss'; lsSet(LS_PL(SWELL_ID), existing); }
     return;
   }
-  const pl = { id: SWELL_ID, type: 'custom', name: 'CURRENT', image: null, tracks: [], ts: Date.now() };
+  const pl = { id: SWELL_ID, type: 'custom', name: 'CURRENTSSsss', image: null, tracks: [], ts: Date.now() };
   lsSet(LS_PL(SWELL_ID), pl);
   saveToLibrary(SWELL_ID);
 }
@@ -4726,7 +4745,7 @@ async function generateSwell(){
   }
   if (!collected.length) return;
 
-  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CURRENT', image: null, tracks: [], ts: Date.now() };
+  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CURRENTSSsss', image: null, tracks: [], ts: Date.now() };
   pl.tracks = collected;
   lsSet(LS_PL(SWELL_ID), pl);
   lsSet(LS_SWELL_GENERATED, Date.now());
@@ -7131,6 +7150,9 @@ function runIntro(preview){
   // (the plain mix + the Radio Edit) rather than a single.
   function showLoadedLibraryPanel(){
     libplTitle.textContent = DEMO_ALBUM;
+    libplArt.onerror = null;
+    libplArt.src = DEMO_ART;
+    libplArtWrap.hidden = false;
     libplBody.innerHTML = '';
     DEMO_TRACKS.forEach(t => {
       const row = document.createElement('div');
@@ -7836,6 +7858,9 @@ if (introBeatCapture){
       setView('library');
       capStage('library');
       libplTitle.textContent = CAP_TITLE;
+      libplArt.onerror = null;
+      libplArt.src = CAP_ART;
+      libplArtWrap.hidden = false;
       libplBody.innerHTML = '';
       CAP_TRACKS.forEach(t => {
         const capRow = document.createElement('div');
