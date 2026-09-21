@@ -62,7 +62,7 @@ function deepFindKey(obj, key, out) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v3';
 const LYRICS_CACHE_VERSION = 'v2';
-const SEARCH_CACHE_VERSION = 'v4';
+const SEARCH_CACHE_VERSION = 'v5';
 const SIMILAR_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
 
@@ -240,6 +240,19 @@ const TITLE_MATCH_WEIGHT = 8;
 // length.
 const DURATION_MATCH_WEIGHT = 6;
 const DURATION_HARD_DIFF_SECONDS = 90;
+// The hard filter below used to be a flat 90s, which is a generous ~30% of
+// a typical 5-minute track but a near-useless ~0.5% of a 270-minute
+// mislabeled "meditation"/"mix" upload - exactly the kind of wildly-wrong
+// duration a bad match report turned up (a ~3-minute song resolving to a
+// 4.5-hour video). Scaling the tolerance down for short source tracks (while
+// keeping the 90s ceiling for longer ones, since a long track's own natural
+// length variance - intros, fades - needs the wider absolute margin) closes
+// that gap without tightening anything for the common case.
+const DURATION_HARD_DIFF_MIN_SECONDS = 30;
+const DURATION_HARD_DIFF_RATIO = 0.2;
+function durationHardDiffThreshold(sourceSeconds) {
+  return Math.min(DURATION_HARD_DIFF_SECONDS, Math.max(DURATION_HARD_DIFF_MIN_SECONDS, sourceSeconds * DURATION_HARD_DIFF_RATIO));
+}
 function durationScore(candidateSeconds, sourceSeconds) {
   if (!sourceSeconds || !candidateSeconds) return 0;
   const diff = Math.abs(candidateSeconds - sourceSeconds);
@@ -371,7 +384,8 @@ async function handleSearch(url, ctx) {
   // Candidates with no parsed duration are never filtered (nothing to
   // compare), and this only applies when the source duration is known.
   if (sourceDurationSeconds) {
-    const durationMatched = pool.filter(c => !c.duration || Math.abs(c.duration - sourceDurationSeconds) <= DURATION_HARD_DIFF_SECONDS);
+    const threshold = durationHardDiffThreshold(sourceDurationSeconds);
+    const durationMatched = pool.filter(c => !c.duration || Math.abs(c.duration - sourceDurationSeconds) <= threshold);
     pool = durationMatched.length ? durationMatched : pool;
   }
 
