@@ -43,7 +43,8 @@ Two intake channels, both feed this same backlog:
    with which entries to flip to `ready` (or `dropped`, etc.).
    - Priority order favors entries closest to done first — `review` >
      `in-progress` > `ready` > `draft` — then within a tier, by the
-     manager's judgment of urgency/impact.
+     manager's judgment of urgency/impact, always weighting bug fixes ahead
+     of new features at the same tier (per Geethub issue #48).
    - Only after you've picked does the manager act: it runs up to the
      parallelism limit (**2-3 lanes at once**) across whichever entries are
      now `ready`, are already `in-progress`, or were left unfinished from a
@@ -971,3 +972,643 @@ Add entries in this shape:
 
   Pushed to `agent/player-controller-centering` (commits `c08bef7`,
   `d6de2d6`); not merged - left for review per the session's instructions.
+
+### app-down-splash-blocked: App stuck on splash, never loads past it
+- **Status:** draft
+- **Priority:** high
+- **Description:** Reporter says the app hasn't gotten past the splash page
+  on mobile since roughly Fri/Sat (check the date of the most recent synced
+  idea before this one for the exact window), across different mobile
+  browsers and incognito - but working on desktop Chrome. Separately, the
+  splash's "Tutorial"/"Enter" buttons have been reported as going nowhere.
+  Investigate whether these are the same regression (a splash-flow bug
+  blocking progression) or two different bugs.
+- **Touches:** splash/onboarding flow (`startApp()`, `showSplashChoice()`,
+  the `mobile-background-resume` and `splash-tutorial-choice` code this
+  overlaps with).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issues #83 (high priority, app down) and
+  #28 (splash buttons go nowhere - same symptom, folded in here rather than
+  a separate entry). This is a live bug affecting real usage - highest
+  priority in this sync per the "bugs before features" rule (issue #48,
+  folded into "How this works" below).
+
+### link-match-accuracy: Wrong-track matches - use album art image comparison + study source meta tags
+- **Status:** draft
+- **Priority:** high
+- **Description:** Multiple reports of badly wrong YouTube matches (e.g.
+  "Lava Lamp" by Thundercat resolved to an unrelated 270-minute meditation
+  track; "Spottieottiedopalicious" resolved to a different song entirely).
+  Two concrete improvements requested: (1) when resolving a Spotify/Apple
+  Music track to a YouTube link, fetch the Spotify album art first and
+  verify the candidate YouTube video's thumbnail actually matches it before
+  accepting the match; (2) audit what metadata/meta-tags are currently being
+  pulled from Spotify and Apple Music for matching, to find further
+  improvement opportunities.
+- **Touches:** RESOLVE PIPELINE / track-matching logic in `index.html` and
+  the worker backend's YouTube search/matching code.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issues #70, #74, #81, #31. Distinct from
+  `stale-track-links` (merged) - that fixed *cached, outdated* matches after
+  a protocol change; this is about the *matching algorithm's* accuracy on
+  fresh resolves. High priority - reporter called a bad match "severely
+  wrong, needs to absolutely never happen again."
+
+### track-relink-menu: Per-track "refresh this link" menu with thumbnail choices
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Each track row in a playlist should have a hold/long-press
+  menu with a "refresh link" option. Selecting it opens a picker showing 3-5
+  alternative YouTube candidates, each with its actual video thumbnail, so
+  the listener can manually pick the right one.
+- **Touches:** playlist track-row UI, RESOLVE PIPELINE (needs a
+  multi-candidate search mode, not just top-1).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #69. Complements `link-match-accuracy`
+  (automatic improvement) as a manual fallback for when auto-matching still
+  gets it wrong.
+
+### playlist-relink-all: Playlist-level "refresh all links" option
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The playlist hold-menu (in Library) should have an option
+  to refresh/re-resolve the links for every track in that playlist at once.
+- **Touches:** playlist hold-menu UI, RESOLVE PIPELINE.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #68. Related to `track-relink-menu`
+  (same idea, per-track vs. whole-playlist) and `stale-track-links` (merged,
+  automatic background version of this).
+
+### playlist-full-loading: Fix greyed-out / missing tracks - target 100% playlist loading
+- **Status:** draft
+- **Priority:** high
+- **Description:** Reporter says a lot of tracks show up greyed-out/missing
+  from loaded playlists, wants every track to resolve successfully.
+- **Touches:** RESOLVE PIPELINE, `beginImport()`, track resolution failure
+  handling.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #59. Related to `link-match-accuracy`
+  - both are about resolve-pipeline reliability, but this is about tracks
+  failing to resolve at all vs. resolving to the wrong thing. Worth
+  investigating together.
+
+### discovery-pipeline-metadata: Discovery songs should show Spotify/Apple metadata, not YouTube's
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Discovery/recommended songs currently pull their title,
+  artist, and album art straight from YouTube. Instead: pick candidates via
+  the existing last.fm recommendation algorithm, find each on YouTube for
+  playback, but display the title/artist/art resolved back from Spotify or
+  Apple Music (a second matching pass), not YouTube's own metadata.
+- **Touches:** discovery/recommendation pipeline.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #77.
+
+### tutorial-chaptered-prompts: Tutorial should pause per chapter with a "next" prompt
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Restructure the onboarding tutorial into chapters. Each
+  chapter's animation loops in place until the user taps "next" to advance;
+  music plays in per-chapter clips, only starting when that chapter begins
+  (on "next"), rather than running continuously start to finish.
+- **Touches:** `runIntro()` and the tutorial beat sequence in `index.html`.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #25. Large-ish rework of the existing
+  timed-beat tutorial system - touches the same code as
+  `tutorial-preload-pacing`, `tutorial-crossfade-demo`, `tutorial-keyboard-disable`,
+  and `tutorial-paste-link-copy` below; worth bundling into one lane since
+  they all land in `runIntro()`.
+
+### splash-tutorial-music-preload: Splash should play first beat of tutorial music on load
+- **Status:** draft
+- **Priority:** low
+- **Description:** The splash screen should start playing the first beat/clip
+  of the tutorial music as soon as it loads, rather than silence until the
+  tutorial itself starts.
+- **Touches:** splash screen, `#onbMusic` / tutorial audio triggers.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #26. Note: autoplay-with-sound before
+  any user gesture may be blocked by mobile browsers - worth checking during
+  implementation.
+
+### tutorial-keyboard-disable: Mobile keyboard shouldn't pop up during tutorial
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On mobile, the on-screen keyboard sometimes appears during
+  the "paste a playlist" tutorial beat. It shouldn't - that beat is
+  demonstrative, not an actual input the user needs to type into.
+- **Touches:** tutorial beat sequence, whatever input element the "paste a
+  link" demo beat focuses/simulates.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #61.
+
+### tutorial-preload-pacing: Preload tutorial assets before playing; fix glitchy pacing
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The tutorial's first frame should ensure everything
+  (assets/animations) is loaded before playback starts - reporter says
+  pacing is currently glitchy, sometimes too fast, sometimes out of sync.
+- **Touches:** `runIntro()` startup / asset preload.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #62.
+
+### tutorial-crossfade-demo: Tutorial should visually animate the crossfade slider
+- **Status:** draft
+- **Priority:** low
+- **Description:** In the tutorial's crossfade beat, after the crossfade
+  toggle is switched on, animate the crossfade slider visually moving from
+  0 to 10 seconds, then settling to 5 seconds.
+- **Touches:** tutorial crossfade beat (near the caption-timing fix in
+  `tutorial-caption-timing`, merged).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #63.
+
+### tutorial-paste-link-copy: Clarify "paste a link" tutorial caption
+- **Status:** draft
+- **Priority:** low
+- **Description:** The tutorial's "paste a link" beat should specify what
+  kind of link - e.g. "paste a link to a playlist, album, or song."
+- **Touches:** tutorial caption copy.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #66. Trivial copy change - good
+  candidate to bundle with other tutorial-beat lanes above.
+
+### settings-bug-report-github-form: "Report a bug" should link to a GitHub issue form
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Settings "Report a bug" button currently opens a
+  mailto link (per `bug-report-button`, merged). Reporter wants it to lead
+  to an actual bug-report form on GitHub instead (e.g. the same
+  `improvement-idea.yml`-style issue template flow already used for
+  suggestions).
+- **Touches:** Settings screen bug-report button/link.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #27. Judgment call: replace the
+  mailto entirely, or offer both? Flagging for your call rather than
+  guessing.
+
+### settings-share-app: Add "share this app" button in Settings
+- **Status:** draft
+- **Priority:** low
+- **Description:** Add a button in Settings that lets the user share EBBLESS
+  itself (the app, not a specific song/playlist).
+- **Touches:** Settings screen.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #43. Related to `share-song-playlist`
+  below (song/playlist-level sharing) - different scope, worth keeping
+  separate since one shares the app, the other shares specific content.
+
+### player-mobile-spacing: Player should sit clear of screen edges (desktop taskbar, mobile footer nav)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The player currently sits too low - on desktop it can get
+  covered by the OS taskbar, and on mobile there's not enough space between
+  the player's bottom controls and the footer nav. Consider moving the whole
+  player block (art, controls) up slightly on both platforms.
+- **Touches:** player view layout CSS.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #30. Related to but distinct from
+  `player-controller-centering` (merged, fixed the desktop player being
+  fully invisible) - this is a spacing/breathing-room polish pass on a now-
+  visible player.
+
+### cymatics-true-black-contrast: Cymatics background should be true black
+- **Status:** draft
+- **Priority:** low
+- **Description:** The cymatics visualizer's background should be true
+  black, with higher contrast against the dots - but the dots' own
+  brightness should stay unchanged.
+- **Touches:** cymatics visualizer CSS/rendering.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #49.
+
+### record-cassette-size: Make spinning record / cassette visuals bigger
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The spinning record and cassette tape visuals should be
+  larger and closer to the screen edges, sized proportionately - without
+  moving or resizing the rest of the UI, which the reporter considers
+  already correct.
+- **Touches:** `.record-*` / `.cs-*` (cassette) visual elements in the
+  player view.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #50.
+
+### lyrics-glow-trail: Lyrics should glow with a fading trail effect
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The current lyric line should glow in a color. Passed
+  lines should keep glowing in that same color but at progressively lower
+  vibrance, fading all the way back to the first lyric line (a trailing-glow
+  effect). If the user manually selects/clicks a lyric line, the glow/trail
+  state should stay consistent with wherever they clicked.
+- **Touches:** lyrics view rendering.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #51.
+
+### cymatics-heart-centering: Center the title in cymatics fullscreen (heart pushes it left)
+- **Status:** draft
+- **Priority:** low
+- **Description:** In cymatics fullscreen view, the track title is currently
+  pushed off-center to the left by the heart/like icon. The heart should sit
+  above the title, both centered on screen.
+- **Touches:** cymatics fullscreen layout CSS.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #53.
+
+### playlist-queue-slide-height: Playlist and queue slide-up panels should match max height
+- **Status:** draft
+- **Priority:** low
+- **Description:** The slide-up panel for an opened playlist should always
+  expand to the same maximum height as the queue panel does, and both should
+  sit closer to the top ("x"/close button).
+- **Touches:** playlist panel / queue panel slide-up CSS.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #54.
+
+### playlist-art-at-top: Opened playlist panel should show its art at the top
+- **Status:** draft
+- **Priority:** low
+- **Description:** When a playlist is opened from the library, its cover
+  image should appear at the top of the panel.
+- **Touches:** playlist panel layout.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #55.
+
+### logo-tap-to-player: Tapping the logo on the main HUD should open the player tab
+- **Status:** draft
+- **Priority:** low
+- **Description:** Tapping the EBBLESS logo in the main header/HUD should
+  navigate to the player tab.
+- **Touches:** header/HUD nav, logo tap handler.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #71.
+
+### album-art-swipe-nav: Swipe album art left/right for prev/next track
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Swiping left or right on the album art in the player
+  should skip to the next/previous track respectively.
+- **Touches:** player view, album art touch handlers.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #72.
+
+### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen (or like?)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Double-tapping the album art (or cymatics view) should
+  toggle fullscreen. Reporter raised an open question themselves: might it
+  be more intuitive for double-tap to instead heart/like the track (the
+  common gesture convention)? Needs your call before implementation.
+- **Touches:** player view / cymatics view touch handlers.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #73. **Needs your decision:**
+  fullscreen-toggle vs. like-track for the double-tap gesture.
+
+### video-playback-option: Add a video-playback button next to lyrics
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add an option to play the actual YouTube video (not just
+  audio) for the current track, via a new button placed next to the existing
+  lyrics button.
+- **Touches:** player view controls, YouTube embed/player logic.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #45.
+
+### desktop-mini-player: Floating desktop mini-player when tab loses focus
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When the user switches away from the EBBLESS browser tab
+  on desktop, show a small, movable/draggable mini-player in a corner of the
+  screen with full playback controls.
+- **Touches:** desktop layout, likely a `document.hasFocus()`/`visibilitychange`
+  trigger plus a new floating-widget component. Picture-in-Picture Web API
+  may be relevant here (real OS-level floating window) - worth researching
+  as an alternative to a plain in-page floating div.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #64. Bigger lift than most entries in
+  this batch - likely its own lane.
+
+### album-art-2x2-grid-bug: Album art sometimes shows placeholder grid instead of real art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In the player and queue, album art sometimes shows a
+  generic 2x2 grid placeholder instead of the actual resolved album art.
+- **Touches:** track art resolution (`resolveTrackArt()` / `artworkUrls()`),
+  player and queue art rendering.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #35. Likely related to
+  `link-match-accuracy`/`playlist-full-loading` above (art resolution
+  falling back to a placeholder when a track fails to resolve cleanly) -
+  worth investigating together.
+
+### desktop-playlist-hover-buttons: Playlist hover play button blocks pin/3-dot buttons
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, hovering a playlist card reveals a play
+  button that overlaps/blocks the pin button and the three-dot menu button,
+  making them unusable.
+- **Touches:** playlist card hover-state CSS (desktop library grid).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #76.
+
+### desktop-settings-inline: Desktop Settings should replace the player pane in place
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, clicking Settings currently navigates to a
+  separate screen. Instead it should pop up in the player pane's spot,
+  replacing the player view there, so the header nav doesn't change.
+- **Touches:** desktop split-view layout, Settings navigation.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #78. Same general area as
+  `player-controller-centering` (merged) - the desktop split-pane layout -
+  worth the same care around `min-height`/z-index quirks found there.
+
+### desktop-player-fullscreen-toggle: Desktop player fullscreen should slide panels off, nav buttons become toggles
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, with the player centered, its fullscreen
+  button should slide the library/playlist panel off to the left and the
+  queue panel off to the right, opening the player to the full screen width.
+  The header nav's Queue and Library buttons should become toggles that
+  show/hide those panels directly (rather than just navigating).
+- **Touches:** desktop split-view layout, header nav buttons.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #79. Related to `desktop-settings-inline`
+  and `player-controller-centering` (merged) - same desktop-layout area,
+  worth planning together.
+
+### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
+- **Status:** draft
+- **Priority:** low
+- **Description:** On desktop, if audio starts playing from another source
+  (another tab/app), EBBLESS should detect it and automatically lower its
+  own volume.
+- **Touches:** playback volume control; likely no reliable cross-app/tab
+  audio-detection API exists in browsers - needs research into feasibility
+  (e.g. only detectable for other tabs in the same browser via the Web Audio
+  API, not system-wide).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #80. Flagging a feasibility risk -
+  true system-wide audio detection isn't available to web apps; may only be
+  partially achievable.
+
+### library-hold-add-to-queue: Hold a library track to add to queue / play next
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Holding down on a track in the library should bring up a
+  menu with "add to queue" and "play next" options. "Play next" should play
+  right after the currently-playing song, with the rest of the queue
+  continuing unchanged after that.
+- **Touches:** library track rows, queue management.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #52.
+
+### playlist-image-reset: Add "reset to original art" in playlist image picker
+- **Status:** draft
+- **Priority:** low
+- **Description:** The playlist hold-menu's "change image" screen should
+  offer a "reset to original" option. If the playlist never had original
+  art, this should just clear whatever custom image was assigned in
+  EBBLESS.
+- **Touches:** playlist image-change UI.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #56.
+
+### disable-native-context-menu: Suppress OS/browser context menu on long-press
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Long-pressing/holding an item should only ever open
+  EBBLESS's own internal menu - the device's or browser's native
+  long-press/context menu should be disabled everywhere this applies.
+- **Touches:** touch/hold handlers across track rows, playlist cards, etc.
+  (likely needs `touch-action`/`contextmenu` prevention applied broadly).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #57.
+
+### share-song-playlist: Share a song or playlist via link
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add the ability to share a specific song or playlist - it
+  should generate a nice link + message that, when opened, leads the
+  recipient to install/open EBBLESS and play that song or playlist.
+- **Touches:** new share feature, likely needs a share-link resolution route
+  on the backend/worker plus a Web Share API integration client-side.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #58. Related to `settings-share-app`
+  above (sharing the app itself) - different scope, kept separate.
+
+### single-song-paste-prompt: Prompt for target playlist when pasting a single song
+- **Status:** draft
+- **Priority:** medium
+- **Description:** If the pasted link resolves to a single song (not a
+  playlist/album), prompt the user for which playlist it should be added
+  to - with a quick option to just add it to Liked Songs.
+- **Touches:** `beginImport()` / paste-a-link flow.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #65.
+
+### clear-playlists-confirm: "Clear playlists" needs a serious confirm prompt + danger styling
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Settings "clear playlists" button should show a
+  serious-looking confirmation prompt before acting (reporter: should feel
+  as weighty as deleting your account), and the button itself should look
+  visually distinct/dangerous and be moved to the bottom of Settings.
+- **Touches:** Settings screen, clear-playlists action.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #67. Straightforward, low-risk UX
+  safety fix - good candidate for an early lane.
+
+### missing-starter-playlists: "This Is Mal Griot" (and possibly "Breathe Love Deep") not appearing
+- **Status:** draft
+- **Priority:** high
+- **Description:** Reporter says both the "Breathe Love Deep" and "This Is
+  Mal Griot" starter Spotify/SoundCloud releases aren't appearing in the
+  library. Also reiterates "Breathe Love Deep" should come straight from
+  SoundCloud, no Spotify routing.
+- **Touches:** `STARTER_LIBRARY_URLS` / `seedStarterLibrary()`.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issues #29 and #32 (#32 - "Soundcloud links
+  should be treated as direct links" - folded in as the same underlying ask,
+  already largely covered by the merged `breathe-love-deep-album` /
+  `spotify-album-art` work for SoundCloud routing generally). The
+  "Breathe Love Deep" half of this may already be fixed by
+  `breathe-love-deep-album` (merged) - re-verify it's actually showing up
+  live before assuming it's still broken. The "This Is Mal Griot" half looks
+  like a genuine, distinct gap - it was never covered by that prior fix.
+
+### rename-current-playlist: Rename "Current" playlist to "CURRENTSSsss"
+- **Status:** draft
+- **Priority:** low
+- **Description:** Rename the "Current" playlist label to "CURRENTSSsss"
+  (exact casing/spelling as given).
+- **Touches:** playlist naming/labels.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #24.
+
+### currents-playlist-algorithm: Define Currents playlist selection rules
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Currents playlist should be built from: one new/
+  unplayed song per saved playlist, three suggested songs from the Liked
+  Songs playlist, and one song based on the most recently played track -
+  selection should weigh genre, year, and vibe, not just matching artist or
+  album.
+- **Touches:** Currents/recommendation generation logic.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #36. Related to `blend-playlist`
+  below (a second, broader auto-playlist) and `discovery-pipeline-metadata`
+  - all touch recommendation logic, worth reviewing together for shared
+  helpers.
+
+### blend-playlist: Add an auto-updating "Blend" playlist across all saved playlists
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add a playlist that pulls tracks from all of the user's
+  saved playlists, refreshing with a different set of songs every day.
+- **Touches:** new auto-playlist generation logic (parallel to Currents).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #60.
+
+### encourage-liking-songs: Nudge users to like more songs
+- **Status:** draft
+- **Priority:** low
+- **Description:** Add UX nudges that encourage users to like more songs, to
+  build a richer per-user dataset - goal is a personal algorithm that
+  surfaces both known favorites and undiscovered music the user will likely
+  love, not just generic popularity.
+- **Touches:** UI prompts around the like button; unclear exact mechanism -
+  needs design thought before implementation.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #40. Vague/directional - needs a
+  concrete design decision (what nudge, when, how often) before it's
+  actionable as a lane.
+
+### accounts-profiles: Add accounts and cross-device profile sync
+- **Status:** draft
+- **Priority:** low
+- **Description:** Add accounts/profiles so the experience (library,
+  playlists, likes) is consistent between mobile and desktop, survives a
+  device switch, and builds a long-term per-person dataset for
+  personalization.
+- **Touches:** major feature - needs backend auth, a database/storage layer
+  beyond the current per-device `localStorage` model, and a data-migration
+  story for existing users' local data.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #75. Largest-scope item in this
+  batch by far - architectural decision, not a quick lane. Recommend
+  discussing approach before queuing.
+
+### instant-resume-caching: Cache current track for instant resume across app switches
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Switching away from and back to the app currently takes
+  too long to resume the currently-loaded song - it should be cached so
+  playback resumes instantly. Also ensure lock-screen and notification-drop
+  -down playback controls stay fully responsive.
+- **Touches:** playback state caching, `mobile-background-resume` (merged)
+  - related but distinct: that fixed the splash re-appearing on resume, this
+  is about resume *speed* and lock-screen control responsiveness.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #41.
+
+### loading-progress-indicator: Add a loading screen/progress indicator while a track loads
+- **Status:** draft
+- **Priority:** medium
+- **Description:** While a track is loading, show a loading indicator -
+  reporter suggests reusing the play button's existing filling-ring
+  animation style as a progress indicator.
+- **Touches:** player view, track-load state.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #42.
+
+### play-first-loaded-track: Play first resolved track immediately during playlist sync
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When a playlist is pasted, the first track to finish
+  resolving should start playing immediately rather than waiting for the
+  whole playlist. Skip should be disabled until the whole playlist has
+  loaded (then re-enabled) - or, alternatively, show a "play now" prompt on
+  the loading screen instead of auto-playing.
+- **Touches:** `beginImport()` playlist-load flow, playback start trigger.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #82. Reporter offered two options
+  (auto-play immediately vs. a "play now" prompt) - leaning toward the
+  prompt per their own follow-up ("Actually, it should be a prompt"), but
+  flagging both for your call.
+
+### pwa-update-propagation: Updates should reach already-installed mobile PWAs
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When a new version is deployed, users who already
+  installed EBBLESS to their mobile home screen should receive the update,
+  not stay stuck on the version they installed.
+- **Touches:** `sw.js` service worker update/activation logic.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #33. Related to `deploy-cache-refresh`
+  below - likely the same underlying service-worker cache-busting fix
+  covers both; worth one lane for both.
+
+### deploy-cache-refresh: Deploys should bust cached assets/cookies on update
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When a new version is deployed, it should refresh users'
+  cached assets/cookies so they see the update rather than a stale cached
+  version.
+- **Touches:** `sw.js` service worker cache versioning/invalidation.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #34. Same underlying fix as
+  `pwa-update-propagation` above - bundle into one lane.
+
+### volume-equalizer: Volume equalizer/normalization across tracks
+- **Status:** draft
+- **Priority:** low
+- **Description:** Add a volume equalizer so loudness is consistent across
+  different tracks (avoids jarring volume jumps between songs).
+- **Touches:** playback audio pipeline - likely Web Audio API gain
+  normalization.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #37. No further detail given in the
+  issue - needs scoping (per-track normalization vs. a manual EQ UI) before
+  it's actionable.
+
+### clip-editor: Audio clip editor with a "My Clipsss" playlist
+- **Status:** draft
+- **Priority:** low
+- **Description:** Add an audio editor that lets users clip a track (trim to
+  a range) and apply fades. Saved clips go into a new "My Clipsss" playlist
+  in the library. Reporter suggests using timestamp-based play/pause as a
+  simpler, less data-intensive implementation instead of real audio
+  re-encoding.
+- **Touches:** new feature - clip editor UI, playback-range/fade logic, new
+  playlist type.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #39. Sizable new feature - likely its
+  own lane, not a quick fix.
+
+### feedback-prompt: "Are you feeling this app or nah?" periodic feedback prompt
+- **Status:** draft
+- **Priority:** low
+- **Description:** After a few days of use, show a thumbs-up/thumbs-down
+  prompt. Either choice should prompt for more detail, and that feedback
+  should feed into this same improvements queue - but tagged as
+  user-submitted (same as the existing GitHub-idea intake channel) and
+  waiting for Mal's confirmation before any lane is dispatched on it, same
+  as everything else synced from GitHub.
+- **Touches:** new in-app prompt/survey UI, feeds into the GitHub-issue
+  intake channel already described above.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #44.
+
+### tester-feedback-form: Form for beta testers to report on the app
+- **Status:** draft
+- **Priority:** low
+- **Description:** Add a form specifically for beta testers to give
+  structured feedback on the app.
+- **Touches:** likely reuses/extends the existing `improvement-idea.yml`
+  GitHub issue template intake channel, or a dedicated form.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #47. Overlaps somewhat with
+  `feedback-prompt` above - both are feedback-collection mechanisms;
+  worth discussing whether one covers both needs before building both.
