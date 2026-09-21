@@ -875,7 +875,8 @@ Add entries in this shape:
   the player/controller appears centered in the desktop layout.
 - **Touches:** `index.html` ~line 825-859, the `@media (min-width:1150px)`
   "split-desktop" 3-pane grid block - added `min-height:0` to the
-  `#view-library`/`#view-player` rule and the `#queue-panel` rule.
+  `#view-library`/`#view-player` rule and the `#queue-panel` rule. Also
+  `index.html:57`, `#ambient`'s `z-index` (`0` -> `-1`).
 - **Branch:** agent/player-controller-centering
 - **Notes:** Synced from Geethub issue #23. Reporter clarified (2026-09-18):
   it's not just off-center, there's no center player visible at all on
@@ -927,5 +928,46 @@ Add entries in this shape:
   (the only console errors present in both cases are a sandboxed-network
   YouTube iframe API script-fetch failure, unrelated to this change).
 
-  Pushed to `agent/player-controller-centering` (commit `c08bef7`); not
-  merged - left for review per the session's instructions.
+  **Follow-up (2026-09-21):** the user reported the controls were *still*
+  missing after the above fix ("need the controls. all of them"). Re-tested
+  at a shorter, equally-common desktop height (1280x720, vs. the 1280x800
+  used above) and reproduced it: the seek bar rendered but every transport
+  button (shuffle/prev/play/next/repeat) was fully invisible and
+  unclickable, even though `getBoundingClientRect()` said each button's box
+  was inside the viewport. `document.elementsFromPoint()` at the play
+  button's own center returned `#ambient` (the fixed decorative background
+  layer) as the topmost hit, not the button - despite `#ambient` appearing
+  earlier in the DOM. Root cause: `#ambient` is `position:fixed` with
+  `z-index:0`; per CSS stacking rules, *any* positioned element (regardless
+  of z-index value or DOM order) paints above plain non-positioned in-flow
+  content. The transport buttons, seek bar, and their containers in the
+  player view are all `position:static`, so `#ambient` was rendering on top
+  of them - swallowing both their pixels and their clicks. This is separate
+  from the grid `min-height:0` bug above (that one controlled *whether the
+  row was tall enough to contain the controls at all*; this one controls
+  *what paints on top once they're in the visible area*) - it only became
+  reachable/testable after the min-height:0 fix stopped pushing the whole
+  row far below the fold. The artwork image happened to escape this by
+  luck: `.artwork-wrap` has its own `position:relative`, which promotes it
+  into the same positioned-elements paint tier as `#ambient`, where later
+  DOM order wins.
+
+  Fix: changed `#ambient`'s `z-index` from `0` to `-1` (`index.html:57`).
+  This matches a convention already used elsewhere in this file for
+  exactly this kind of decorative fixed background - `.lib-bg` (the
+  library view's equivalent backdrop) is already `z-index:-1` - so `#ambient`
+  was the inconsistent one. A negative z-index guarantees it paints behind
+  *all* other content unconditionally, regardless of any other element's
+  own position/z-index, rather than depending on which elements happen to
+  be positioned.
+
+  Verified: reloaded the worktree's own `index.html` at 1280x720 (no prior
+  browser fix applied) and reproduced the invisible/unclickable buttons via
+  `document.elementsFromPoint()`. After the fix, `read_page`/`find` locate
+  Shuffle, Previous, "Play or pause", Next, and Repeat as normal reachable
+  buttons, and a full-viewport screenshot shows all five rendered and
+  centered under the seek bar, both with an empty queue and with a real
+  loaded album. No new console errors.
+
+  Pushed to `agent/player-controller-centering` (commits `c08bef7`,
+  `d6de2d6`); not merged - left for review per the session's instructions.
