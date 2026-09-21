@@ -1499,7 +1499,7 @@ Add entries in this shape:
   guessing.
 
 ### settings-share-app: Add "share this app" button in Settings
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Add a button in Settings that lets the user share EBBLESS
   itself (the app, not a specific song/playlist).
@@ -1508,6 +1508,26 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #43. Related to `share-song-playlist`
   below (song/playlist-level sharing) - different scope, worth keeping
   separate since one shares the app, the other shares specific content.
+
+  Fixed and pushed (commit `7c17f83`): added a "Share EBBLESS" row to the
+  Settings "About" block, styled identically to existing rows. Click handler
+  calls `navigator.share({title, text, url})` when available (swallowing
+  user-cancel rejections), falling back to `navigator.clipboard.writeText`
+  with a "Copied!" toast on success (mirrors the existing "Link copied"
+  clipboard pattern already used elsewhere in the file). Verified via a
+  worktree-local `python3 -m http.server`: row renders matching existing
+  Settings styling; confirmed `navigator.share` is unavailable in the
+  automated browser so the fallback path is what's exercised; confirmed
+  clicking the button correctly hits the clipboard-fallback branch and
+  drives the toast UI, though the actual "Copied!" success text couldn't be
+  triggered end-to-end since `navigator.clipboard.writeText` rejected with
+  `NotAllowedError: Document is not focused` in the headless pane (not an
+  app defect - `document.hasFocus()` stayed false even after
+  `window.focus()`); both success/failure branches are present and wired
+  correctly in source. No new console errors vs. baseline. **Caveat:** real
+  on-device confirmation of the "Copied!" toast and of `navigator.share`
+  opening an actual OS share sheet wasn't possible in this headless tool -
+  worth a quick real-device check.
 
 ### player-mobile-spacing: Player should sit clear of screen edges (desktop taskbar, mobile footer nav)
 - **Status:** merged
