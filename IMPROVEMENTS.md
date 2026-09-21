@@ -1793,7 +1793,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #56.
 
 ### disable-native-context-menu: Suppress OS/browser context menu on long-press
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Long-pressing/holding an item should only ever open
   EBBLESS's own internal menu - the device's or browser's native
@@ -1802,6 +1802,29 @@ Add entries in this shape:
   (likely needs `touch-action`/`contextmenu` prevention applied broadly).
 - **Branch:** agent/disable-native-context-menu
 - **Notes:** Synced from Geethub issue #57.
+
+  Fixed and pushed (commit `e780879`): added `-webkit-touch-callout:none` to
+  the global `body` rule plus a targeted rule on `img,.track-row,.lib-card,
+  .q-row` (`-webkit-touch-callout`/`-webkit-user-select`/`user-select:none`)
+  so no OS save-image sheet, selection popup, or magnifier can appear on
+  hold over track rows, playlist/album cards, or album art. Added one global
+  `contextmenu` listener (right after the existing `attachLongPress` helper)
+  that calls `preventDefault()` on every event except inside `input`/
+  `textarea`/`[contenteditable]`, so native Cut/Copy/Paste still works in
+  text fields. Existing `attachLongPress` logic (playlist/album cards,
+  track rows) is untouched - this only suppresses the native menu, not the
+  app's own. Verified via a worktree-local `python3 -m http.server`
+  (confirmed via `location.href`, using `127.0.0.1` + explicit `tabId`
+  since the shared preview pane kept getting hijacked by other concurrent
+  sessions' localhost servers): right-clicking (same event as touch
+  long-press) a playlist card, album art, and a track row showed no native
+  menu, only the app's own hover UI; normal taps/navigation still worked;
+  no new console errors. **Caveat:** couldn't fully automate a real
+  touch-and-hold gesture to confirm the app's own long-press menu still
+  fires end-to-end (a JS-dispatched TouchEvent attempt got interrupted when
+  the shared preview tab was closed by another session) - since
+  `attachLongPress` itself wasn't touched, risk is low, but worth a manual
+  spot-check.
 
 ### share-song-playlist: Share a song or playlist via link
 - **Status:** draft
