@@ -2328,17 +2328,25 @@ Add entries in this shape:
   picked up.
 
 ### currentsss-casing-followup: Fix "Currents" playlist casing to "CuRRentSSsss"
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** The Currents playlist was renamed to "CURRENTSSsss" (all
   caps) by `rename-current-playlist` (merged), but the reporter now wants
   the exact casing "CuRRentSSsss" (mixed case, not all-caps) instead.
 - **Touches:** playlist naming/labels (same spot `rename-current-playlist`
   touched).
-- **Branch:** (unclaimed)
+- **Branch:** agent/currentsss-casing-followup
 - **Notes:** Synced from Geethub issue #94. Follow-up correction, not a
   duplicate - the already-merged rename used different casing than this
-  request specifies.
+  request specifies. Fixed in commit 3ecabc6: replaced all 5 occurrences
+  of the string "CURRENTSSsss" in index.html (the onboarding marquee
+  label, the library card name div, and the three playlist-data `name`
+  fields set in `ensureSwellPlaylist`/its fallback) with the exact
+  mixed casing "CuRRentSSsss". Internal identifiers (`SWELL_ID`, the
+  `current-label` CSS class, `LS_PL` key) were left untouched since
+  they aren't user-facing. Verified by serving index.html locally
+  (`python3 -m http.server`) and confirming the onboarding discovery
+  card renders "CuRRentSSsss" in both the marquee and name label.
 
 ### playlist-remove-track-library: Option to remove tracks from a playlist in library
 - **Status:** draft
