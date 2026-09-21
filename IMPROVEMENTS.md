@@ -1435,7 +1435,7 @@ Add entries in this shape:
   implementation.
 
 ### tutorial-keyboard-disable: Mobile keyboard shouldn't pop up during tutorial
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, the on-screen keyboard sometimes appears during
   the "paste a playlist" tutorial beat. It shouldn't - that beat is
@@ -1510,7 +1510,7 @@ Add entries in this shape:
   separate since one shares the app, the other shares specific content.
 
 ### player-mobile-spacing: Player should sit clear of screen edges (desktop taskbar, mobile footer nav)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The player currently sits too low - on desktop it can get
   covered by the OS taskbar, and on mobile there's not enough space between
@@ -1838,7 +1838,7 @@ Add entries in this shape:
   safety fix - good candidate for an early lane.
 
 ### missing-starter-playlists: "This Is Mal Griot" (and possibly "Breathe Love Deep") not appearing
-- **Status:** review
+- **Status:** merged
 - **Branch:** agent/missing-starter-playlists
 - **Priority:** high
 - **Description:** Reporter says both the "Breathe Love Deep" and "This Is
@@ -1983,7 +1983,7 @@ Add entries in this shape:
   flagging both for your call.
 
 ### pwa-update-propagation: Updates should reach already-installed mobile PWAs
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When a new version is deployed, users who already
   installed EBBLESS to their mobile home screen should receive the update,
@@ -2029,7 +2029,7 @@ Add entries in this shape:
   `CACHE_VERSION`) against an already-installed PWA is the strongest test.
 
 ### deploy-cache-refresh: Deploys should bust cached assets/cookies on update
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When a new version is deployed, it should refresh users'
   cached assets/cookies so they see the update rather than a stale cached
