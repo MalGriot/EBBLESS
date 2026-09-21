@@ -2416,6 +2416,7 @@ const state = {
   repeat: 'off',          // off | all | one
   currentView: 'player',
   preSettingsView: 'library',
+  preQueueView: null,
   queueOpen: false,
   flowOpen: false,
   sortMode: 'custom',    // custom | alpha | plays_desc | plays_asc (per-playlist track list order)
@@ -2564,7 +2565,7 @@ function setView(name){
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
   state.currentView = name;
   document.body.classList.toggle('view-settings-active', name === 'settings');
-  if (state.queueOpen) closeQueuePanel();
+  if (state.queueOpen) closeQueuePanel(false);
   if (name !== 'library' && typeof closeLibraryPlaylistPanel === 'function') closeLibraryPlaylistPanel();
   if (name === 'player' && prevView !== 'player' && typeof setVisualMode === 'function'){
     setVisualMode('art');
@@ -4980,18 +4981,28 @@ function wireQueueRowGestures(row, handle){
 function toggleQueuePanel(){ state.queueOpen ? closeQueuePanel() : openQueuePanel(); }
 function openQueuePanel(){
   closeLibraryPlaylistPanel();
+  state.preQueueView = state.currentView;
   state.queueOpen = true;
   queuePanel.classList.add('is-open'); queueScrim.classList.add('is-open');
   document.body.classList.add('queue-open');
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.add('is-active'));
   updateMiniBarVisibility();
 }
-function closeQueuePanel(){
+// restoreView: false when closeQueuePanel is invoked as a side effect of
+// setView() switching to a different view on purpose (e.g. tapping the
+// Player/Library nav buttons while the queue is open) - in that case the
+// view the user just chose should win, not whatever was active before the
+// queue opened.
+function closeQueuePanel(restoreView = true){
   state.queueOpen = false;
   queuePanel.classList.remove('is-open'); queueScrim.classList.remove('is-open');
   document.body.classList.remove('queue-open');
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.remove('is-active'));
   updateMiniBarVisibility();
+  if (restoreView && state.preQueueView && state.preQueueView !== state.currentView && views[state.preQueueView]){
+    setView(state.preQueueView);
+  }
+  state.preQueueView = null;
 }
 queueScrim.addEventListener('click', closeQueuePanel);
 
