@@ -1435,15 +1435,17 @@ Add entries in this shape:
   implementation.
 
 ### tutorial-keyboard-disable: Mobile keyboard shouldn't pop up during tutorial
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On mobile, the on-screen keyboard sometimes appears during
   the "paste a playlist" tutorial beat. It shouldn't - that beat is
   demonstrative, not an actual input the user needs to type into.
 - **Touches:** tutorial beat sequence, whatever input element the "paste a
   link" demo beat focuses/simulates.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #61.
+- **Branch:** agent/tutorial-mobile-fixes
+- **Notes:** Synced from Geethub issue #61. Bundled with `player-mobile-spacing`
+  into one `agent/tutorial-mobile-fixes` lane to save on separate agent
+  spin-up overhead.
 
 ### tutorial-preload-pacing: Preload tutorial assets before playing; fix glitchy pacing
 - **Status:** draft
@@ -1502,15 +1504,17 @@ Add entries in this shape:
   separate since one shares the app, the other shares specific content.
 
 ### player-mobile-spacing: Player should sit clear of screen edges (desktop taskbar, mobile footer nav)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The player currently sits too low - on desktop it can get
   covered by the OS taskbar, and on mobile there's not enough space between
   the player's bottom controls and the footer nav. Consider moving the whole
   player block (art, controls) up slightly on both platforms.
 - **Touches:** player view layout CSS.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #30. Related to but distinct from
+- **Branch:** agent/tutorial-mobile-fixes
+- **Notes:** Bundled with `tutorial-keyboard-disable` into one
+  `agent/tutorial-mobile-fixes` lane to save on separate agent spin-up
+  overhead. Synced from Geethub issue #30. Related to but distinct from
   `player-controller-centering` (merged, fixed the desktop player being
   fully invisible) - this is a spacing/breathing-room polish pass on a now-
   visible player.
@@ -1817,14 +1821,14 @@ Add entries in this shape:
   safety fix - good candidate for an early lane.
 
 ### missing-starter-playlists: "This Is Mal Griot" (and possibly "Breathe Love Deep") not appearing
-- **Status:** ready
+- **Status:** in-progress
+- **Branch:** agent/missing-starter-playlists
 - **Priority:** high
 - **Description:** Reporter says both the "Breathe Love Deep" and "This Is
   Mal Griot" starter Spotify/SoundCloud releases aren't appearing in the
   library. Also reiterates "Breathe Love Deep" should come straight from
   SoundCloud, no Spotify routing.
 - **Touches:** `STARTER_LIBRARY_URLS` / `seedStarterLibrary()`.
-- **Branch:** (unclaimed)
 - **Notes:** Synced from Geethub issues #29 and #32 (#32 - "Soundcloud links
   should be treated as direct links" - folded in as the same underlying ask,
   already largely covered by the merged `breathe-love-deep-album` /
@@ -1935,27 +1939,28 @@ Add entries in this shape:
   flagging both for your call.
 
 ### pwa-update-propagation: Updates should reach already-installed mobile PWAs
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When a new version is deployed, users who already
   installed EBBLESS to their mobile home screen should receive the update,
   not stay stuck on the version they installed.
 - **Touches:** `sw.js` service worker update/activation logic.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #33. Related to `deploy-cache-refresh`
-  below - likely the same underlying service-worker cache-busting fix
-  covers both; worth one lane for both.
+- **Branch:** agent/pwa-update-refresh
+- **Notes:** Synced from Geethub issue #33. Bundled with `deploy-cache-refresh`
+  below into one `agent/pwa-update-refresh` lane - likely the same
+  underlying service-worker cache-busting fix covers both.
 
 ### deploy-cache-refresh: Deploys should bust cached assets/cookies on update
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When a new version is deployed, it should refresh users'
   cached assets/cookies so they see the update rather than a stale cached
   version.
 - **Touches:** `sw.js` service worker cache versioning/invalidation.
-- **Branch:** (unclaimed)
+- **Branch:** agent/pwa-update-refresh
 - **Notes:** Synced from Geethub issue #34. Same underlying fix as
-  `pwa-update-propagation` above - bundle into one lane.
+  `pwa-update-propagation` above - bundled into one `agent/pwa-update-refresh`
+  lane.
 
 ### volume-equalizer: Volume equalizer/normalization across tracks
 - **Status:** draft
