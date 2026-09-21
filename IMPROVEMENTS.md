@@ -974,7 +974,7 @@ Add entries in this shape:
   `d6de2d6`); not merged - left for review per the session's instructions.
 
 ### app-down-splash-blocked: App stuck on splash, never loads past it
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Reporter says the app hasn't gotten past the splash page
   on mobile since roughly Fri/Sat (check the date of the most recent synced
@@ -986,12 +986,63 @@ Add entries in this shape:
 - **Touches:** splash/onboarding flow (`startApp()`, `showSplashChoice()`,
   the `mobile-background-resume` and `splash-tutorial-choice` code this
   overlaps with).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/app-down-splash-blocked`
 - **Notes:** Synced from Geethub issues #83 (high priority, app down) and
   #28 (splash buttons go nowhere - same symptom, folded in here rather than
   a separate entry). This is a live bug affecting real usage - highest
   priority in this sync per the "bugs before features" rule (issue #48,
   folded into "How this works" below).
+
+  Confirmed one real bug is the cause of both reports, and fixed it.
+  `showSplashChoice()` (added by `splash-tutorial-choice`, commit `3c1873d`,
+  still present on `main`) hides `#onbBackdrop`/`#onbMark`/`#onbSkip` so
+  they don't sit on top of the splash choice buttons - but it never hid
+  `#onbCapture`, a separate piece of the intro's static markup: an
+  invisible, full-viewport, `position:fixed;z-index:10005` tap-catcher
+  (`<button id="onbCapture">`, meant to let a tap anywhere skip the intro
+  once `runIntro()` is running and has wired up its click handler). Before
+  `runIntro()` ever runs - i.e. exactly the moment `showSplashChoice()` is
+  showing "Tutorial"/"Enter" - `#onbCapture` has no listener attached yet,
+  but it's still the topmost element at every point on screen, `#splash`
+  (z-index 9999) included. Every tap on either button was hitting this dead
+  button instead and doing nothing: no error, no console output, just a
+  swallowed tap. Confirmed via `document.elementFromPoint()` at both
+  buttons' coordinates - it resolved to `onbCapture`, not the button -
+  and via a dispatched pointerdown/mousedown/pointerup/mouseup/click
+  sequence at those coordinates, which also landed on `onbCapture` and did
+  nothing.
+
+  This also explains bug #1 without needing a second cause: a fresh/
+  incognito mobile visit always has `ebbless_onboarding_complete` unset, so
+  `showSplashChoice()` runs on *every* load, and both choices were broken -
+  there was no way to get past the splash, on any mobile browser, in
+  incognito, ever. Desktop Chrome most likely worked because that browser
+  already had the onboarding flag set from before `splash-tutorial-choice`
+  existed (or from an earlier successful run), so it takes the
+  `onboardingComplete` branch at the bottom of the script straight into
+  `startApp()` and never reaches `showSplashChoice()` at all - consistent
+  with "fine on desktop Chrome, broken everywhere fresh." No separate
+  regression in `mobile-background-resume`'s visibilitychange/backgrounding
+  logic was found or needed to explain either report.
+
+  Fix: added `onbCapture` to the element list `showSplashChoice()` hides
+  before showing the choice buttons (and to the list it restores on the
+  "Tutorial" path before handing off to `runIntro()`, which manages
+  `onbCapture` itself from there). See `index.html`'s `showSplashChoice()`.
+
+  Verified in a mobile-viewport browser check served directly from this
+  worktree (`python3 -m http.server`, confirmed via `location.href` before
+  trusting any result - not the shared preview launcher, per this backlog
+  entry's own warning about it silently serving the main checkout).
+  Before the fix, `elementFromPoint()` at both button centers returned
+  `onbCapture`; after the fix it returns the actual button
+  (`splashSkipTutorial` / `splashPlayTutorial`), and a simulated real tap
+  (pointerdown -> mousedown -> pointerup -> mouseup -> click at the
+  button's own coordinates, not a programmatic `.click()`, which bypasses
+  hit-testing and would have "worked" even with the bug present) correctly
+  completes both paths: "Enter" hides the splash and sets
+  `ebbless_onboarding_complete`; "Tutorial" starts `runIntro()`
+  (`body.onb-active` engaged). No new console errors introduced by the fix.
 
 ### link-match-accuracy: Wrong-track matches - use album art image comparison + study source meta tags
 - **Status:** ready
