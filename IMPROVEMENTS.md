@@ -1435,15 +1435,23 @@ Add entries in this shape:
   implementation.
 
 ### tutorial-keyboard-disable: Mobile keyboard shouldn't pop up during tutorial
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** On mobile, the on-screen keyboard sometimes appears during
   the "paste a playlist" tutorial beat. It shouldn't - that beat is
   demonstrative, not an actual input the user needs to type into.
-- **Touches:** tutorial beat sequence, whatever input element the "paste a
-  link" demo beat focuses/simulates.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #61.
+- **Touches:** `pasteUrl()` inside `runIntro()`'s `sequence()` (the only place
+  in the intro that calls `.focus()` on `#urlInput`).
+- **Branch:** `agent/tutorial-mobile-fixes`
+- **Notes:** Synced from Geethub issue #61. Fixed by making `#urlInput`
+  `readOnly` for the instant it's focused during the demo paste, then
+  blurring and clearing `readOnly` again immediately after - a readonly
+  input doesn't raise the mobile on-screen keyboard on focus, but still
+  gets the field's own focus/caret look for that flash-paste beat. Verified
+  by loading `?intro=1` at a 375x812 mobile viewport and polling
+  `document.activeElement` every 100ms for the full ~40s sequence: it never
+  equalled `urlInput` at any sample, while the field's value still received
+  the pasted demo URL as before.
 
 ### tutorial-preload-pacing: Preload tutorial assets before playing; fix glitchy pacing
 - **Status:** draft
@@ -1502,18 +1510,31 @@ Add entries in this shape:
   separate since one shares the app, the other shares specific content.
 
 ### player-mobile-spacing: Player should sit clear of screen edges (desktop taskbar, mobile footer nav)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** The player currently sits too low - on desktop it can get
   covered by the OS taskbar, and on mobile there's not enough space between
   the player's bottom controls and the footer nav. Consider moving the whole
   player block (art, controls) up slightly on both platforms.
 - **Touches:** player view layout CSS.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/tutorial-mobile-fixes`
 - **Notes:** Synced from Geethub issue #30. Related to but distinct from
   `player-controller-centering` (merged, fixed the desktop player being
   fully invisible) - this is a spacing/breathing-room polish pass on a now-
-  visible player.
+  visible player. Fixed by adding bottom padding to `#view-player
+  .view-scroll` (which sits inside a flex column with `justify-content:safe
+  center`, so extra bottom padding nudges the centered content up): 28px on
+  mobile (<=859.98px, on top of the existing `.view{bottom:calc(var(--nav-h)
+  + var(--safe-b))}` offset that already clears `#bottom-nav`'s own box) and
+  44px on desktop (>=860px, where `.view{bottom:0}` previously left almost
+  no margin - only the base 8px - above the viewport edge). Verified by
+  serving this worktree's `index.html` directly, loading the real "I Tried
+  It" test playlist, and opening the player view: at a 375x812 mobile
+  viewport the transport controls sit ~62px above `#bottom-nav`; at a
+  1440x900 desktop viewport they sit ~76px above the viewport bottom; and at
+  1200x800 (the `split-desktop` 3-pane layout, >=1150px) they sit ~42px
+  above the viewport bottom - clearing a typical 40-50px OS taskbar band in
+  all three cases.
 
 ### cymatics-true-black-contrast: Cymatics background should be true black
 - **Status:** draft
