@@ -6735,9 +6735,37 @@ function startApp(){
     // not an error, so the rejection is swallowed rather than surfaced.
     const splashMusicEl = $('onbMusic');
     if (splashMusicEl){
-      try { splashMusicEl.currentTime = 0; } catch (e) {}
+      // Just a warm-up preview, not a full listen - skip the track's first
+      // half-second (it starts a beat before the music really kicks in),
+      // then play at full volume for a beat, then fade out slowly over 2.5s
+      // so it eases out instead of cutting off. This only touches the
+      // splash's own preview snippet: runIntro() (the actual tutorial)
+      // always finishes before startApp() gets here (see its closing call
+      // to startApp() below), so by the time these timers fire the
+      // tutorial's own playback, if any, is long done and this can't cut
+      // it short.
+      const SPLASH_MUSIC_TRIM_START_S = 0.5;
+      const SPLASH_MUSIC_PREVIEW_MS = 3500;
+      const SPLASH_MUSIC_FADE_MS = 2500;
+      const splashMusicStartVol = splashMusicEl.volume;
+      try { splashMusicEl.currentTime = SPLASH_MUSIC_TRIM_START_S; } catch (e) {}
       const splashPlayPromise = splashMusicEl.play();
       if (splashPlayPromise && typeof splashPlayPromise.catch === 'function') splashPlayPromise.catch(() => {});
+      setTimeout(() => {
+        const fadeStart = Date.now();
+        const fromVol = splashMusicEl.volume;
+        const step = () => {
+          try {
+            const p = Math.min(1, (Date.now() - fadeStart) / SPLASH_MUSIC_FADE_MS);
+            splashMusicEl.volume = Math.max(0, fromVol * (1 - p));
+            if (p < 1){ setTimeout(step, 40); return; }
+            splashMusicEl.pause();
+            splashMusicEl.currentTime = 0;
+            splashMusicEl.volume = splashMusicStartVol;
+          } catch (e) {}
+        };
+        step();
+      }, SPLASH_MUSIC_PREVIEW_MS - SPLASH_MUSIC_FADE_MS);
     }
 
     // On mobile, if EBBLESS isn't installed yet, let the splash's own
