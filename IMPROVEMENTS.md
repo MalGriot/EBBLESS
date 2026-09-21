@@ -2537,7 +2537,7 @@ Add entries in this shape:
   will likely need scoping/design before a lane can implement it directly.
 
 ### tutorial-song-preview-only: Tutorial music should play only its first second on app load
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When the app loads, it currently plays the whole tutorial
   song; it should instead just play the first second and then stop.
