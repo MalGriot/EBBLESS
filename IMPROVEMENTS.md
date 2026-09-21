@@ -2662,7 +2662,7 @@ Add entries in this shape:
   separate features. Each issue closed with a comment linking here.
 
 ### cymatics-fullscreen-title-position: Cymatics fullscreen title/artist should sit above the progress bar like the regular player
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** In cymatics fullscreen view, the song title and artist
   should be positioned at the bottom, directly above the progress/play bar -
@@ -2676,7 +2676,7 @@ Add entries in this shape:
   to the progress bar, matching the regular player's layout.
 
 ### crossfade-album-art-transition: Crossfade album art should fade into the next track's art
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When songs are crossfading, the currently-shown album art
   should visually fade into the next track's album art, in sync with the
@@ -2687,7 +2687,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #114.
 
 ### amel-larrieux-wrong-track: "i n i" by Amel Larrieux always plays the wrong track
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The track "i n i" by Amel Larrieux consistently resolves
   to the wrong song - it plays a different track by the same artist rather
