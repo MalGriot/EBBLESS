@@ -2625,16 +2625,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #44.
 
 ### tester-feedback-form: Form for beta testers to report on the app
-- **Status:** review
+- **Status:** dropped
 - **Priority:** low
 - **Description:** Add a form specifically for beta testers to give
   structured feedback on the app.
 - **Touches:** likely reuses/extends the existing `improvement-idea.yml`
   GitHub issue template intake channel, or a dedicated form.
-- **Branch:** (unclaimed)
+- **Branch:** agent/tester-feedback-form (not merged - dropped)
 - **Notes:** Synced from Geethub issue #47. Overlaps somewhat with
   `feedback-prompt` above - both are feedback-collection mechanisms;
   worth discussing whether one covers both needs before building both.
+  Built and pushed to `agent/tester-feedback-form` (new `tester-feedback.yml`
+  issue template + a "Report as a beta tester" Settings row), but dropped
+  by you as redundant with the existing "Suggest an improvement" intake -
+  not merged. Branch left in place, not deleted.
 
 ### library-search: Add a search function for the user's own library
 - **Status:** draft
