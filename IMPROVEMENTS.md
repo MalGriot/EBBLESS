@@ -3883,7 +3883,7 @@ Add entries in this shape:
   only the pre-existing, unrelated YouTube iframe-API script-fetch errors.
 
 ### queue-drag-reorder-glitch: Dragging a track up the queue glitches and drifts back down
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Reordering tracks by dragging within the queue panel
   glitches after a track is dragged a few spaces - it stops staying
@@ -3970,7 +3970,7 @@ Add entries in this shape:
   touch audio processing.
 
 ### token-exhaustion-splash-stuck: App stuck on splash when out of tokens
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Reporter says every time they run out of (Claude/API)
   tokens, the site doesn't load on desktop or mobile - it just stays on the
@@ -4042,7 +4042,7 @@ Add entries in this shape:
   regardless of which upstream call originally exhausted its budget.
 
 ### youtube-link-paste-play: Paste a YouTube link to a song and have it play
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Reporter wants to paste a YouTube link to a song and have
   it play. The app already appears to recognize `youtube.com/watch`,
