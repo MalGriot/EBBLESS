@@ -1846,9 +1846,16 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
         </div>
         <div class="controls-row">
+          <button class="ctl-btn small" id="flowShuffleBtn" title="Shuffle" aria-label="Shuffle">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+          </button>
           <button class="ctl-btn" id="flowPrevBtn" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
           <button class="ctl-btn main" id="flowPlayBtn" aria-label="Play or pause"><svg id="flowPlayIco" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
           <button class="ctl-btn" id="flowNextBtn" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg></button>
+          <button class="ctl-btn small repeat-badge" id="flowRepeatBtn" title="Repeat" aria-label="Repeat">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+            <span class="one" id="flowRepeatOneBadge" hidden>1</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2552,6 +2559,7 @@ const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
+const flowShuffleBtn = $('flowShuffleBtn'), flowRepeatBtn = $('flowRepeatBtn'), flowRepeatOneBadge = $('flowRepeatOneBadge');
 const ambientEl = $('ambient');
 const ambientA = $('ambient-a'), ambientB = $('ambient-b');
 const flowAmbientA = $('flowAmbientA'), flowAmbientB = $('flowAmbientB');
@@ -4605,6 +4613,7 @@ function toggleShuffle(){
   state.shuffle = !state.shuffle;
   shuffleBtn.classList.toggle('is-active', state.shuffle);
   miniShuffleBtn.classList.toggle('is-active', state.shuffle);
+  flowShuffleBtn.classList.toggle('is-active', state.shuffle);
   if (!state.playlist || state.queuePos < 0) return;
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (state.shuffle){
@@ -4629,6 +4638,8 @@ function cycleRepeat(){
   repeatOneBadge.hidden = state.repeat !== 'one';
   miniRepeatBtn.classList.toggle('is-active', state.repeat !== 'off');
   miniRepeatOneBadge.hidden = state.repeat !== 'one';
+  flowRepeatBtn.classList.toggle('is-active', state.repeat !== 'off');
+  flowRepeatOneBadge.hidden = state.repeat !== 'one';
   if (state.queuePos >= 0) schedulePreload(state.queuePos);
 }
 
@@ -6491,6 +6502,8 @@ miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); 
 miniNextBtn.addEventListener('click', (e) => { e.stopPropagation(); playNext(false); });
 miniShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
 miniRepeatBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleRepeat(); });
+flowShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
+flowRepeatBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleRepeat(); });
 shuffleBtn.addEventListener('click', toggleShuffle);
 repeatBtn.addEventListener('click', cycleRepeat);
 

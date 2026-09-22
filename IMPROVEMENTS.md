@@ -2480,17 +2480,97 @@ Add entries in this shape:
   (merged - that changed the visuals' size, not fullscreen behavior).
 
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Fullscreen mode should show all the player controls -
   shuffle, loop, album art style switcher, etc. - not just a subset.
-- **Touches:** fullscreen player view.
-- **Branch:** (unclaimed)
+- **Touches:** `index.html` - `#flow-layer` markup (~line 1826-1848, the
+  fullscreen "flow mode" chrome), its element refs (~line 2548), the
+  `toggleShuffle()`/`cycleRepeat()` UI-sync lines (~line 4551-4577), and
+  the new click listeners next to the existing mini-bar ones (~line
+  6437-6440).
+- **Branch:** `agent/fullscreen-player-controls`
 - **Notes:** Synced from Geethub issue #97. Related to
   `desktop-player-fullscreen-toggle` (draft, desktop-specific panel-sliding
   behavior) but distinct - this is about which controls are present/visible
   in fullscreen generally, not desktop panel layout. Worth reviewing
   together since both touch fullscreen player UI.
+
+  Root cause: fullscreen ("flow mode", `#flow-layer`, entered via the
+  album-art `fsBtn` "Enter flow mode" button) is a separate DOM overlay
+  from the normal player, not a promoted/reused copy of it - similar in
+  spirit to the mini-bar, which already keeps its own
+  `miniShuffleBtn`/`miniRepeatBtn` duplicate controls. When flow mode was
+  originally built, its `.controls-row` only got `flowPrevBtn`/
+  `flowPlayBtn`/`flowNextBtn` markup - `shuffleBtn` and `repeatBtn` were
+  never duplicated for it, so shuffle and loop were simply absent from the
+  fullscreen chrome (not hidden by CSS/z-index/overflow - the markup for
+  them didn't exist at all). Checked against `player-controller-centering`
+  (merged) since that bug had a similar "controls vanish" symptom, but that
+  one was a `min-height:0`/grid-stacking issue in the desktop split-pane
+  layout - unrelated here; flow mode's own layout (`#flow-layer` flex
+  column + `.flow-chrome` absolute overlay) has no such stacking problem,
+  it was purely missing markup. The seek bar, like button, prev/play/next,
+  and exit button were all already present and working in flow mode; the
+  "album art style switcher" mentioned in the synced issue text (switching
+  between the default/record/cassette art styles, or between art/
+  visualizer/lyrics) is intentionally out of scope for this pass - flow
+  mode still opens showing whatever mode/style was active in the normal
+  player (art or visualizer; lyrics gets its own separate `#lyricsFsLayer`
+  fullscreen via the same `fsBtn`), it just can't be changed without
+  exiting - left as a possible follow-up since adding a live switcher would
+  mean either duplicating the `#artStyleMenu` overlay into flow's
+  positioning context or re-parenting it, more surface area than this
+  ready-item's core "controls are simply missing" bug warranted.
+
+  Fix: added `flowShuffleBtn`/`flowRepeatBtn` (with the same
+  `repeat-badge`/`flowRepeatOneBadge` "1" indicator the normal and mini
+  players use) into `#flow-layer .controls-row`, on either side of
+  prev/play/next - same position shuffle/repeat sit in the normal player's
+  row. Reused the existing `ctl-btn`/`ctl-btn small`/`repeat-badge` CSS
+  classes verbatim, so no new styling was needed and the short-viewport
+  `@media (max-height:480px)` rules that already shrink `.ctl-btn` apply
+  here too. Wired both buttons to the existing `toggleShuffle()`/
+  `cycleRepeat()` functions (same handlers the normal and mini buttons
+  call) and added them to the two functions' UI-sync lines, so shuffle/
+  repeat state stays in lockstep across all three surfaces (normal,
+  mini-bar, flow) no matter which one triggered the change.
+
+  Verified by serving this worktree's `index.html` directly with
+  `python3 -m http.server` from inside the worktree (confirmed via
+  `location.href` in the browser, not the shared preview launcher) and
+  loading the real "I Tried It" test playlist:
+  - 375x812 (mobile): opened flow mode from the album-art fullscreen
+    button; shuffle, prev, play, next, and repeat were all visible and
+    tappable in the chrome; tapped shuffle then repeat (both lit up
+    pink/active, matching the normal player's `is-active` styling) then
+    play, which switched to the pause icon and the seek bar/time (0:01 of
+    5:56) started advancing - confirming actual playback control, not
+    just a UI toggle.
+  - 1280x800 (desktop, split 3-pane layout): entered flow mode; all five
+    transport controls plus the seek bar, like button, and exit (X) button
+    rendered correctly with no clipping.
+  - 1280x720 (short desktop height, the height the sibling
+    `player-controller-centering` lane flagged as a risk): same result -
+    all five controls, seek bar, and title/artist rendered fully on
+    screen, nothing cut off by `#app`/`#flow-layer` overflow. (Separately
+    confirmed flow mode's existing 3.2s no-interaction auto-hide -
+    `armFlowChromeTimer()`/`.chrome-hidden` - is intentional immersive-mode
+    UX, not a bug: the chrome reappears immediately on pointer movement or
+    a click, at every viewport tested.) Toggling shuffle/repeat via the
+    new flow buttons was confirmed via direct DOM state (`is-active` class
+    flipped on both `flowShuffleBtn`/`flowRepeatBtn` and, in sync, on the
+    normal `shuffleBtn`/`repeatBtn`).
+  - Console: two pre-existing `"An unknown error occurred when fetching
+    the script"` errors appear on load in this sandboxed test environment
+    (looks like the YouTube iframe API script being blocked/unreachable,
+    not related to this change - the same errors appear on a fresh reload
+    with no fullscreen interaction at all) plus a harmless
+    `Unrecognized feature: 'web-share'` warning. No new errors introduced
+    by this change; no errors reference the added elements.
+
+  Not merged - left on `agent/fullscreen-player-controls` for review per
+  the task's instructions.
 
 ### queue-playlist-row-buttons: Collapse queue's playlist-section row buttons into a 3-dot menu
 - **Status:** merged
