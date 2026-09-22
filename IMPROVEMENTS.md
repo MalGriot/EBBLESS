@@ -4263,7 +4263,7 @@ Add entries in this shape:
   call, per usual).
 
 ### soundcloud-native-playback: Stream SoundCloud-sourced tracks natively instead of YouTube-search matching
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** SoundCloud-sourced playlists/albums currently play by
   matching each track's `{title, artist}` to a YouTube video via
@@ -4277,7 +4277,7 @@ Add entries in this shape:
 - **Touches:** the shared resolve pipeline's YouTube-search matching path
   (`index.html` ~line 2272 comment, `resolvePlaylist()`), `worker/src/index.js`
   (`handleSoundCloud`, `handleSearch`), player/embed logic.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/soundcloud-native-playback`
 - **Notes:** Flagged by the `breathe-love-deep-soundcloud-pull` agent as
   the real, complete fix for that bug's residual mismatches (several
   "Breathe Love Deep" tracks have zero legitimate YouTube candidates to
@@ -4289,6 +4289,72 @@ Add entries in this shape:
   for SoundCloud sources with thin YouTube coverage. A genuine
   architecture change, not a quick fix - scope carefully before
   dispatching a lane.
+
+  **Investigated hands-on (not from docs alone):** SoundCloud's public
+  oEmbed endpoint (`soundcloud.com/oembed?format=json&url=<permalink>`)
+  works with no API key for both tracks and playlists, verified live
+  against the real "Breathe Love Deep" set and one of its tracks - it
+  returns an `<iframe>` pointing at `w.soundcloud.com/player/`. The
+  companion Widget JS API (`w.soundcloud.com/player/api.js`, `SC.Widget`)
+  is real and public - confirmed with real audio playback, position
+  advancing in real time and duration matching the actual track. No
+  stream-URL-extraction/`client_id` scraping was attempted (ToS-risk
+  parallel to the Spotify Client Credentials dead-end and the
+  already-rejected YouTube innertube approach) - went straight for the
+  officially-documented widget-embed path, same spirit as this app's
+  existing YouTube iframe approach.
+
+  **Approach:** a SoundCloud track's numeric id becomes its `videoId`
+  field with an `sc:` prefix (`isSoundCloudVideoId`/`soundCloudVideoId`)
+  so every existing "is this playable" check keeps working unchanged. The
+  two-deck crossfade/preload player (`createDeckPlayer`/`loadIntoDeck`)
+  now builds either a `YT.Player` or a new `SC.Widget`-backed adapter
+  (`makeSCPlayerAdapter`/`createSCDeckPlayer`) per deck depending on
+  source, exposing the same method surface, so crossfade, queue,
+  media-session metadata, and transport controls keep working for both
+  kinds without touching non-SoundCloud sources.
+
+  **Trade-offs for SoundCloud tracks specifically:** lyrics fetch and the
+  Discover "YouTube mix" seed fallback are skipped (would just fail
+  against a non-YouTube id); the "report a bad match" button is hidden
+  (no YouTube match to report anymore); no pre-roll-ad mute-and-wait
+  (SoundCloud's embed has no such pre-roll). **Real, honest limitation
+  worth your attention:** SoundCloud's widget has no equivalent to
+  YouTube's "start muted (always allowed), unmute after" trick - a brand
+  new SoundCloud iframe's very first autoplay attempt (including one
+  auto-promoted from the preloaded standby deck on a natural
+  end-of-track advance, with no fresh click) can get silently blocked by
+  browser autoplay policy. Verified directly. The play/pause icon always
+  reflects the true state accurately (never a silent false-"playing"),
+  and a single tap reliably starts/resumes it, but this is a real rough
+  edge - agent recommends re-checking it against the deployed worker
+  (production latency) rather than trusting only the slow local
+  `wrangler dev` result before calling this fully solved.
+
+  **Two real bugs found and fixed while building this** (would have
+  shipped broken otherwise): (1) a stale/orphaned deck-player callback
+  (e.g. `prewarmResumeDeck()` racing a fresh import) could fire late
+  against a deck since repurposed for a different track/kind, corrupting
+  it - fixed with a per-deck generation counter (`deck.gen`) every YT and
+  SC callback now checks, which also hardens the pre-existing YT-only
+  path against the same race class; (2) re-fetching a SC widget's
+  duration immediately after `.load()` could return the *previous*
+  track's duration - now also refreshed on the `PLAY` event.
+
+  **Verified:** worker's `/soundcloud` endpoint live via
+  `wrangler dev --local` against real SoundCloud network egress
+  (confirmed real `scId` per track, matching oEmbed). Full app served
+  locally, driven in a real browser against that worker: resolved the
+  real "Breathe Love Deep" album, played multiple tracks end-to-end with
+  real audio (confirmed via the widget's own position/duration, not just
+  UI), confirmed natural end-of-track auto-advance and manual next/prev
+  across tracks with correct title/artist/art/duration each time.
+  **Not verified:** the deployed production worker (not deployed yet -
+  needs `wrangler deploy` after merge) or any browser besides the
+  sandbox's Chromium - **recommend a real-device check of the
+  first-autoplay-block edge case specifically** before treating this as
+  fully closed. Commit `9efc88b`. Also added a "SoundCloud native
+  playback" section to `README.md` documenting the approach.
 
 ### tutorial-text-overflow-button-animation: Tutorial text overflows screen and hides shuffle/loop buttons; needs press animation
 - **Status:** draft
