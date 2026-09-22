@@ -581,6 +581,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .track-row .row-actions svg{width:13px;height:13px}
 .track-row .row-actions .like-btn.is-liked{color:var(--accent)}
 .track-row .plays{flex:none;font-size:11px;color:var(--faint-2);min-width:30px;text-align:right}
+.track-row .remove{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
+.track-row .remove:hover{background:var(--panel-3);color:var(--bad)}
+.track-row .remove svg{width:12px;height:12px}
 .track-row .drag-handle{display:none;flex:none;width:20px;height:28px;align-items:center;justify-content:center;color:var(--faint-2);cursor:grab;touch-action:none}
 .track-row .drag-handle svg{width:12px;height:16px}
 .track-row.is-dragging{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.4);position:relative;z-index:3;background:var(--panel-2)}
@@ -841,7 +844,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .ctl-btn.main svg{width:22px;height:22px}
   .ctl-btn.small{width:40px;height:40px}
   .ctl-btn.small svg{width:16px;height:16px}
-  .track-row .row-actions button,.q-row .remove{width:34px;height:34px}
+  .track-row .row-actions button,.track-row .remove,.q-row .remove{width:34px;height:34px}
   /* extra clearance above #bottom-nav (issue #30) - .view is already offset
      by var(--nav-h)+var(--safe-b) so its bottom edge sits right above the
      nav bar, but the transport controls were landing flush against that
@@ -3310,6 +3313,11 @@ window.addEventListener('scroll', () => { if (openCtxMenu) closeLibCtxMenu(); },
    ========================================================================= */
 let openTrackCtxMenu = null; // { plId, trackIdx, btn }
 
+const CTX_ICON_LIKE_ON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
+const CTX_ICON_LIKE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
+const CTX_ICON_PLAY_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
+const CTX_ICON_ADD_PLAYLIST = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zM3 16h8v-2H3v2zm0-5h12v-2H3v2zm15 5v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>';
+
 function closeTrackCtxMenu(){
   if (!openTrackCtxMenu) return;
   if (openTrackCtxMenu.btn) openTrackCtxMenu.btn.classList.remove('is-active');
@@ -3335,13 +3343,40 @@ function positionTrackCtxMenu(anchorEl){
 // plId/trackIdx identify the track to refresh; anchorEl is whatever the menu
 // should be positioned next to (the kebab button on mouse, or the row
 // itself on a touch long-press, which has no dedicated button).
+// Builds the full per-track menu: when the track has a resolved videoId, all
+// of the row-level actions that used to be separate inline buttons (like,
+// play next, add to playlist) live here alongside "Refresh link"; a track
+// with no match yet only offers "Refresh link". "Add to queue" and "Remove
+// from playlist" were dropped from this menu (queue-removal already has its
+// own direct X button in the Now/Next/Later queue list below - see the
+// `.remove`/queueRemoveAt pattern in renderQueuePanel - and "Play next" here
+// covers getting a track into the queue quickly).
 function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
+  const pl = playlistById(plId);
+  const t = pl && pl.tracks[trackIdx];
+  const items = [];
+  if (t && t.videoId){
+    const liked = isTrackLiked(t.videoId);
+    items.push({ action: 'like', label: liked ? 'Remove from Liked Songs' : 'Add to Liked Songs', icon: liked ? CTX_ICON_LIKE_ON : CTX_ICON_LIKE_OFF });
+    items.push({ action: 'playnext', label: 'Play next', icon: CTX_ICON_PLAY_NEXT });
+    items.push({ action: 'addplaylist', label: 'Add to playlist', icon: CTX_ICON_ADD_PLAYLIST });
+    items.push({ sep: true });
+  }
+  items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
+
   trackCtxMenu.innerHTML = '';
-  const b = document.createElement('button');
-  b.className = 'lib-ctx-item';
-  b.innerHTML = CTX_ICON_REFRESH + '<span>Refresh link</span>';
-  b.addEventListener('click', (e) => { e.stopPropagation(); closeTrackCtxMenu(); openRefreshLinkPicker(plId, trackIdx); });
-  trackCtxMenu.appendChild(b);
+  items.forEach(item => {
+    if (item.sep){
+      const sep = document.createElement('div'); sep.className = 'lib-ctx-sep';
+      trackCtxMenu.appendChild(sep);
+      return;
+    }
+    const b = document.createElement('button');
+    b.className = 'lib-ctx-item';
+    b.innerHTML = item.icon + '<span>' + item.label + '</span>';
+    b.addEventListener('click', (e) => { e.stopPropagation(); closeTrackCtxMenu(); handleTrackCtxAction(item.action, plId, trackIdx); });
+    trackCtxMenu.appendChild(b);
+  });
 
   if (openTrackCtxMenu && openTrackCtxMenu.btn) openTrackCtxMenu.btn.classList.remove('is-active');
   openTrackCtxMenu = { plId, trackIdx, btn: anchorEl };
@@ -3354,6 +3389,15 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
 function toggleTrackCtxMenu(plId, trackIdx, anchorEl){
   if (openTrackCtxMenu && openTrackCtxMenu.btn === anchorEl){ closeTrackCtxMenu(); return; }
   openTrackCtxMenuFor(plId, trackIdx, anchorEl);
+}
+
+function handleTrackCtxAction(action, plId, trackIdx){
+  const pl = playlistById(plId);
+  const t = pl && pl.tracks[trackIdx];
+  if (action === 'like'){ if (t) toggleLikeTrack(t); }
+  else if (action === 'playnext'){ queuePlayNext(trackIdx, plId); showToast('Playing next'); }
+  else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
+  else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
 }
 
 document.addEventListener('click', (e) => {
@@ -4313,40 +4357,13 @@ function renderTrackList(){
 
     row.appendChild(handle); row.appendChild(num); row.appendChild(img); row.appendChild(meta);
 
-    const plays = document.createElement('div'); plays.className = 'plays';
-    plays.textContent = (t.plays || 0) + (t.plays === 1 ? ' play' : ' plays');
-    row.appendChild(plays);
-
     if (t.videoId){
+      // All per-track actions (like, play next, add to playlist) used to be
+      // separate inline buttons here, which left the title barely any room.
+      // They now live in the same track-options menu the kebab below opens
+      // (see openTrackCtxMenuFor), matching the 3-dot overflow-menu pattern
+      // used on library cards (toggleLibCtxMenu).
       const actions = document.createElement('div'); actions.className = 'row-actions';
-      const liked = isTrackLiked(t.videoId);
-      const likeBtnEl = document.createElement('button'); likeBtnEl.className = 'like-btn' + (liked ? ' is-liked' : '');
-      likeBtnEl.title = liked ? 'Remove from Liked Songs' : 'Add to Liked Songs';
-      likeBtnEl.setAttribute('aria-label', likeBtnEl.title);
-      likeBtnEl.innerHTML = liked
-        ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
-      likeBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleLikeTrack(t); });
-      const nextBtnEl = document.createElement('button'); nextBtnEl.title = 'Play next'; nextBtnEl.setAttribute('aria-label','Play next');
-      nextBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
-      nextBtnEl.addEventListener('click', (e) => { e.stopPropagation(); queuePlayNext(i, pl.id); showToast('Playing next'); });
-      const addBtnEl = document.createElement('button'); addBtnEl.title = 'Add to queue'; addBtnEl.setAttribute('aria-label','Add to queue');
-      addBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10V4h-2v6H6v2h6v6h2v-6h6v-2z"/></svg>';
-      addBtnEl.addEventListener('click', (e) => { e.stopPropagation(); queueAddToEnd(i, pl.id); showToast('Added to queue'); });
-      const addToPlBtnEl = document.createElement('button'); addToPlBtnEl.title = 'Add to playlist'; addToPlBtnEl.setAttribute('aria-label','Add to playlist');
-      addToPlBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zM3 16h8v-2H3v2zm0-5h12v-2H3v2zm15 5v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>';
-      addToPlBtnEl.addEventListener('click', (e) => { e.stopPropagation(); openAddToPlaylistPicker(t); });
-      actions.appendChild(likeBtnEl); actions.appendChild(nextBtnEl); actions.appendChild(addBtnEl); actions.appendChild(addToPlBtnEl);
-      if (pl.type === 'custom'){
-        const removeFromPlBtnEl = document.createElement('button'); removeFromPlBtnEl.title = 'Remove from playlist'; removeFromPlBtnEl.setAttribute('aria-label','Remove from playlist');
-        removeFromPlBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h12v2H3V6zm0 5h9v2H3v-2zm0 5h9v2H3v-2zm12.59-1.5L19 12.09l3.41 3.41L21 16.91l-2-2-2 2-1.41-1.41 2-2-2-2 1.41-1.41 2 2z"/></svg>';
-        removeFromPlBtnEl.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
-        actions.appendChild(removeFromPlBtnEl);
-      }
-      // track-relink-menu: kebab opens the per-track hold-menu (currently
-      // just "Refresh link") for mouse/desktop use; attachLongPress below
-      // covers the same menu for touch, since there's no hover to reveal
-      // this button on a phone.
       const trackMenuBtnEl = document.createElement('button'); trackMenuBtnEl.className = 'track-menu-btn'; trackMenuBtnEl.title = 'Track options'; trackMenuBtnEl.setAttribute('aria-label','Track options'); trackMenuBtnEl.setAttribute('aria-haspopup','true');
       trackMenuBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
       trackMenuBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(pl.id, i, trackMenuBtnEl); });
@@ -4356,6 +4373,22 @@ function renderTrackList(){
         if (e.target === handle || handle.contains(e.target)) return;
         buildQueueFrom(i, pl.id); loadIndex(state.queuePos, true);
       });
+    }
+    // Direct remove button, same visual/markup pattern as the Now/Next/Later
+    // queue's own `.remove` (queueRemoveAt) button. "Remove" here means
+    // remove from THIS playlist, not from the queue - this list is the
+    // playlist's full tracklist, not the queue, and a given row may not even
+    // be queued right now - so it's wired to removeTrackFromCustomPlaylist,
+    // the same function the old inline "Remove from playlist" button used.
+    // Only custom playlists support removing a single track (that function
+    // no-ops otherwise), so only show it there - covers missing/unmatched
+    // rows too, since those are exactly the ones you're most likely to want
+    // to drop from a custom playlist.
+    if (pl.type === 'custom'){
+      const removeBtn = document.createElement('button'); removeBtn.className = 'remove'; removeBtn.setAttribute('aria-label','Remove from playlist');
+      removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
+      removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
+      row.appendChild(removeBtn);
     }
     // Long-press the row itself opens the same "Refresh link" menu, touch
     // equivalent of the kebab button above - and, unlike the kebab, also
@@ -4471,6 +4504,12 @@ function shuffleTail(arr, keepFromStart){
 function queuePlayNext(trackIndex, plId){
   plId = plId || (state.playlist && state.playlist.id);
   if (state.queuePos < 0) { buildQueueFrom(trackIndex, plId); loadIndex(state.queuePos, true); return; }
+  // If this track is already sitting further down the queue, move it up
+  // instead of adding a second copy - drop any later occurrence first.
+  for (let i = state.queue.length - 1; i > state.queuePos; i--){
+    const e = state.queue[i];
+    if (e.plId === plId && e.idx === trackIndex) state.queue.splice(i, 1);
+  }
   state.queue.splice(state.queuePos + 1, 0, { plId, idx: trackIndex });
   renderQueuePanel();
   schedulePreload(state.queuePos);
