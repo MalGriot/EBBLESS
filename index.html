@@ -2567,7 +2567,7 @@ function formatLastPlayed(ts){
 // have picked a better one. Cached payloads written before this field
 // existed have no resolveVersion at all, which also compares unequal to any
 // real version number, so they're covered too.
-const RESOLVE_LOGIC_VERSION = 4;
+const RESOLVE_LOGIC_VERSION = 5;
 // Re-matching/re-resolving a playlist re-fetches its tracklist from the
 // source and would otherwise silently drop any songs the user added by hand
 // (from another playlist or a pasted link) — carry those forward.
@@ -2585,7 +2585,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     if (type === 'sc_track'){
       const t = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
       if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single track.");
-      title = t.title; artist = t.artist; art = t.image || null;
+      title = t.title; artist = t.artist; art = t.image || null; sourceDuration = t.duration || 0;
     } else if (type === 'am_track'){
       const idx = playlistId.indexOf(':');
       const t = await fetchAppleMusicTrack(playlistId.slice(0, idx), playlistId.slice(idx + 1));
@@ -4372,7 +4372,7 @@ async function resolveTracksFromLink(input, onProgress){
   if (sc){
     const data = await fetchSoundCloudLink(sc.url);
     if (data.kind === 'track'){
-      const match = await searchYouTube(data.title, data.artist);
+      const match = await searchYouTube(data.title, data.artist, data.duration);
       if (!match.videoId) throw new Error("Couldn't find that song.");
       const art = await resolveTrackArt('soundcloud', data.title, data.artist, data.image || null);
       return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
@@ -4383,7 +4383,7 @@ async function resolveTracksFromLink(input, onProgress){
       const t = data.tracks[i];
       const art = await resolveTrackArt('soundcloud', t.title, t.artist, t.image || null);
       try{
-        const match = await searchYouTube(t.title, t.artist);
+        const match = await searchYouTube(t.title, t.artist, t.duration);
         resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
         resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
