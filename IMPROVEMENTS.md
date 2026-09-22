@@ -1832,15 +1832,58 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #52.
 
 ### playlist-image-reset: Add "reset to original art" in playlist image picker
-- **Status:** draft
+- **Status:** review
 - **Priority:** low
 - **Description:** The playlist hold-menu's "change image" screen should
   offer a "reset to original" option. If the playlist never had original
   art, this should just clear whatever custom image was assigned in
   EBBLESS.
 - **Touches:** playlist image-change UI.
-- **Branch:** (unclaimed)
+- **Branch:** agent/playlist-image-reset
 - **Notes:** Synced from Geethub issue #56.
+
+  Fixed and pushed. `pl.image` was doing double duty as both the
+  source-provided cover (set at import in `resolvePlaylist`, around lines
+  2316/2327/2360) and the user's custom override - once a user picked a
+  custom image the original Spotify/YouTube/SoundCloud/Apple Music cover was
+  gone for good, so the old "Remove custom art" button in `openChangeArtFlow`
+  (~line 3408) could only fall back to the generic track-grid/icon art, never
+  restore the real cover.
+
+  Added a new `originalImage` field, written once at import time alongside
+  `image` in all three `resolvePlaylist` payload branches (yt_video,
+  yt_playlist, and the generic Spotify/SoundCloud/Apple Music branch) and
+  carried through in `duplicateLibraryPlaylist` (~line 3454). `image` itself
+  is still the only field the rest of the app reads for display, so no other
+  render path changed.
+
+  `openChangeArtFlow` now reads `originalImage` (falling back to `null` via
+  `hasOwnProperty` for playlists saved before this change, since we can't
+  know their true original) and only shows the reset button when
+  `pl.image !== original` - i.e. when there's actually something to revert.
+  The button is labeled "Reset to original art" and calls `apply(original)`
+  when a real original is known, or "Remove custom art" (`apply(null)`, the
+  old behavior) when it isn't - matching the two cases in the spec.
+
+  Verified by serving this worktree with a plain `python3 -m http.server
+  8934` (confirmed via `location.href` in the browser that the tab was on
+  this worktree's server, not another lane's) and seeding a fake playlist
+  in localStorage with `image`/`originalImage` both set to a native cover
+  URL: opening "Change art" showed no reset button (nothing to revert),
+  setting a custom image URL via "Use this image" made a "Reset to original
+  art" button appear, and clicking it reverted `pl.image` back to the
+  original URL in localStorage and updated the visible thumbnail
+  immediately, with a "Playlist art updated" toast. No new console errors
+  from the app (only pre-existing extension-injected script noise unrelated
+  to this change).
+
+  Caveat: playlists already saved in localStorage before this change have no
+  `originalImage` field, so for them the reset button (when a custom image
+  is set) falls back to the old "Remove custom art" behavior (clears to
+  `null`, not the real original cover) since the true original was never
+  captured. This matches the spec's fallback case and only affects
+  previously-imported playlists that already had a custom override applied
+  before this fix landed.
 
 ### disable-native-context-menu: Suppress OS/browser context menu on long-press
 - **Status:** merged

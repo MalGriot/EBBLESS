@@ -2313,7 +2313,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
       const track = { title: v.title, artist: v.artist || '', videoId: v.videoId, matchedTitle: v.title, channel: v.artist || '', plays: 0, art };
       onProgress({ stage: 'matching', done: 0, total: 1 });
       onProgress({ stage: 'matching', done: 1, total: 1, track });
-      const payload = { id: playlistId, type, name: v.title, image: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+      const payload = { id: playlistId, type, name: v.title, image: v.image || null, originalImage: v.image || null, tracks: withManualTracks(playlistId, [track]), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
       lsSet(LS_PL(playlistId), payload);
       return payload;
     }
@@ -2324,7 +2324,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
     // YouTube's public playlist feed (the only stable, unscraped source for a
     // full tracklist) only returns its ~15 most recent videos.
-    const payload = { id: playlistId, type, name, image: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+    const payload = { id: playlistId, type, name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
@@ -2357,7 +2357,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     if (i < tracks.length - 1) await sleep(350);
   }
-  const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+  const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
   lsSet(LS_PL(playlistId), payload);
   return payload;
 }
@@ -3407,6 +3407,13 @@ function openRenamePlaylistFlow(id, pl){
 
 function openChangeArtFlow(id, pl){
   openImportOverlay();
+  // `originalImage` is the source-provided cover captured at import time
+  // (null for playlists with no native art, e.g. custom/manual playlists).
+  // Older playlists saved before this field existed won't have it - treat
+  // them as having no known original, so reset just clears back to the
+  // normal fallback art rather than guessing at a "real" cover.
+  const original = Object.prototype.hasOwnProperty.call(pl, 'originalImage') ? pl.originalImage : null;
+  const resetLabel = original ? 'Reset to original art' : 'Remove custom art';
   importStage.innerHTML =
     '<div class="step">Change playlist art</div>' +
     '<input id="plArtUrlInput" type="text" placeholder="Paste an image URL" autocomplete="off" spellcheck="false" ' +
@@ -3414,7 +3421,7 @@ function openChangeArtFlow(id, pl){
     '<button class="btn-ghost is-active" id="plArtUrlBtn" style="width:100%;margin-bottom:14px">Use this image</button>' +
     '<label class="btn-ghost" for="plArtFileInput" style="display:block;text-align:center;width:100%;cursor:pointer">Upload from device</label>' +
     '<input id="plArtFileInput" type="file" accept="image/*" style="display:none">' +
-    (pl.image ? '<button class="btn-ghost" id="plArtResetBtn" style="width:100%;margin-top:10px">Remove custom art</button>' : '');
+    (pl.image !== original ? '<button class="btn-ghost" id="plArtResetBtn" style="width:100%;margin-top:10px">' + resetLabel + '</button>' : '');
   function apply(image){
     pl.image = image;
     lsSet(LS_PL(id), pl);
@@ -3448,12 +3455,13 @@ function openChangeArtFlow(id, pl){
     reader.readAsDataURL(file);
   });
   const resetBtn = $('plArtResetBtn');
-  if (resetBtn) resetBtn.addEventListener('click', () => apply(null));
+  if (resetBtn) resetBtn.addEventListener('click', () => apply(original));
 }
 
 function duplicateLibraryPlaylist(id, pl){
   const newId = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const copy = { id: newId, type: 'custom', name: pl.name + ' copy', image: pl.image || null,
+    originalImage: (Object.prototype.hasOwnProperty.call(pl, 'originalImage') ? pl.originalImage : null),
     tracks: pl.tracks.map(t => Object.assign({}, t)), ts: Date.now() };
   lsSet(LS_PL(newId), copy);
   const lib = getLibrary();
