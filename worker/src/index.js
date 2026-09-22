@@ -65,6 +65,9 @@ const LYRICS_CACHE_VERSION = 'v2';
 const SEARCH_CACHE_VERSION = 'v7';
 const SIMILAR_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
+// Bumped independently of ART_CACHE_VERSION - see the /soundcloud cache key
+// below for why this endpoint doesn't share that constant.
+const SOUNDCLOUD_CACHE_VERSION = 'v2';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -1319,6 +1322,11 @@ async function getSoundCloudClientId(ctx, { forceRefresh } = {}) {
 // mode. `full_duration` (uncropped, including any trailing silence
 // SoundCloud sometimes trims from `duration`) is used as a fallback when
 // `duration` itself is missing.
+// `id` (SoundCloud's own numeric track id) rides along too - it's the only
+// thing needed to build a SoundCloud widget/embed URL client-side
+// (https://api.soundcloud.com/tracks/<id>), which is how native SoundCloud
+// playback (see soundcloud-native-playback) plays this track directly
+// instead of routing it through a YouTube search match.
 function scTrackToTitleArtist(t) {
   const rawArt = t.artwork_url || (t.user && t.user.avatar_url) || null;
   return {
@@ -1326,6 +1334,7 @@ function scTrackToTitleArtist(t) {
     artist: (t.publisher_metadata && t.publisher_metadata.artist) || (t.user && t.user.username) || '',
     image: rawArt ? rawArt.replace('-large.', '-t500x500.') : null,
     duration: t.duration || t.full_duration || 0,
+    scId: t.id || null,
   };
 }
 
@@ -1342,7 +1351,10 @@ async function handleSoundCloud(url, ctx) {
   if (!permalinkUrl || !/^https:\/\/(www\.)?soundcloud\.com\//i.test(permalinkUrl)) return json({ error: 'missing or invalid url' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/soundcloud/' + encodeURIComponent(permalinkUrl));
+  // Own version segment, not ART_CACHE_VERSION - bumping it (when this
+  // payload's shape changes, e.g. adding scId below) shouldn't also evict
+  // every unrelated Spotify/Apple Music art cache entry that constant guards.
+  const cacheKey = new Request('https://cache.internal/' + SOUNDCLOUD_CACHE_VERSION + '/soundcloud/' + encodeURIComponent(permalinkUrl));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -1363,7 +1375,7 @@ async function handleSoundCloud(url, ctx) {
   if (data.kind === 'track') {
     const t = scTrackToTitleArtist(data);
     if (!t.title) return json({ error: 'track has no title' }, 404);
-    payload = { kind: 'track', title: t.title, artist: t.artist, image: t.image, duration: t.duration };
+    payload = { kind: 'track', title: t.title, artist: t.artist, image: t.image, duration: t.duration, scId: t.scId };
   } else if (data.kind === 'playlist') {
     const rawTracks = data.tracks || [];
     const stubIds = rawTracks.filter(t => !('title' in t)).map(t => t.id);
