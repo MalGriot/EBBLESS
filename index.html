@@ -748,12 +748,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer .flow-art[data-art-style="record"] .art-record,
 #flow-layer .flow-art[data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
 #flow-layer .flow-art.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
-/* ambient particle-drift canvas, behind the record/cassette element -
-   see FLOW ART AMBIENT PARTICLES block in the script for the draw loop */
-#flow-layer .flow-art-particles{position:absolute;inset:0;width:100%;height:100%;z-index:0;
-  display:none;pointer-events:none}
-#flow-layer .flow-art[data-art-style="record"] .flow-art-particles,
-#flow-layer .flow-art[data-art-style="cassette"] .flow-art-particles{display:block}
 #flow-layer .flow-viz{position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;
   background:var(--bg)}
 #flow-layer .flow-viz .viz-canvas{opacity:1}
@@ -775,10 +769,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer.is-open .flow-chrome>*{pointer-events:auto}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
-.flow-top{display:flex;justify-content:flex-end}
-.flow-exit{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
-.flow-exit:hover{background:var(--panel-2);color:var(--text)}
-.flow-exit svg{width:16px;height:16px}
+.flow-top{display:flex;justify-content:space-between;align-items:flex-start}
+.flow-exit,.flow-art-style-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.flow-exit:hover,.flow-art-style-btn:hover{background:var(--panel-2);color:var(--text)}
+.flow-exit svg,.flow-art-style-btn svg{width:16px;height:16px}
+/* anchors the shared #artStyleMenu (moved in from the normal player while
+   flow mode is open on the art view - see openFlow()/closeFlow()) below
+   this button instead of wherever it'd land relative to the normal
+   player's layout */
+.flow-art-style-anchor{position:relative}
 .flow-bottom{display:flex;flex-direction:column;align-items:center;gap:18px}
 .flow-seek{width:min(420px,80vw)}
 
@@ -1814,7 +1813,14 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <div id="flow-layer">
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
     <div class="flow-chrome">
-      <div class="flow-top"><button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>
+      <div class="flow-top">
+        <div class="flow-art-style-anchor" id="flowArtStyleAnchor">
+          <button class="flow-art-style-btn" id="flowArtStyleBtn" title="Album art style" aria-label="Choose album art style" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg>
+          </button>
+        </div>
+        <button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
+      </div>
       <div class="flow-bottom">
         <div class="flow-meta">
           <div class="title-row">
@@ -1846,7 +1852,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         </div>
       </div>
     </div>
-    <div class="flow-art" id="flowArtWrap"><canvas class="flow-art-particles" id="flowArtParticles"></canvas><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
+    <div class="flow-art" id="flowArtWrap"><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
     <div class="flow-art flow-viz" id="flowVizWrap" hidden></div>
   </div>
 
@@ -2911,12 +2917,10 @@ function updatePlayerAccentColor(track){
     try { color = sampleDominantColor(probe); } catch (e) { color = null; }
     if (color) { try { color = ensureLegibleAccent(color); } catch (e) {} }
     document.documentElement.style.setProperty('--player-accent', color || 'var(--accent)');
-    if (typeof syncFlowPartsColor === 'function') syncFlowPartsColor();
   };
   probe.onerror = () => {
     if (reqId !== playerAccentReqId) return;
     document.documentElement.style.setProperty('--player-accent', 'var(--accent)');
-    if (typeof syncFlowPartsColor === 'function') syncFlowPartsColor();
   };
   probe.src = url;
 }
@@ -5820,6 +5824,7 @@ function setArtStyle(style){
   applyArtStyle();
   closeArtStyleMenu();
   if (style === 'cassette') cassetteRefreshLabel();
+  if (typeof syncFlowArtStyle === 'function') syncFlowArtStyle();
 }
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
 function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
@@ -6672,113 +6677,31 @@ const artRecord = $('artRecord'), artCassette = $('artCassette');
 const artRecordHome = artRecord.parentElement, artRecordAnchor = artRecord.nextElementSibling;
 const artCassetteHome = artCassette.parentElement, artCassetteAnchor = artCassette.nextElementSibling;
 
-/* ---------- ambient particle-drift canvas behind the fullscreen record/
-   cassette visual: a sparse field of soft glowing dots drifting very
-   slowly, tinted with the track's own --player-accent color (the same
-   color pipeline the play button and other player controls use - see the
-   PLAYER ACCENT FROM ALBUM ART block above). Only active while flow mode
-   is open on the record/cassette art style - openFlow()/closeFlow() start
-   and stop it so the requestAnimationFrame loop never runs invisibly in
-   the background. Resize handling mirrors vizResize() above. ---------- */
-const flowArtParticles = $('flowArtParticles');
-const flowPartsCtx = flowArtParticles.getContext('2d');
-const FLOW_PARTS_COUNT = 60;
-let flowPartsRAF = null, flowPartsList = [], flowPartsColor = 'rgb(255,255,255)', flowPartsLastT = 0;
-/* custom-property computed values keep var() references unsubstituted, so
-   reading --player-accent directly via getComputedStyle can hand back the
-   literal string "var(--accent)" instead of a usable color - routing it
-   through a real element's `color` (which the browser must fully resolve
-   to paint with) gets the concrete rgb() value instead. */
-const flowPartsAccentProbe = document.createElement('span');
-flowPartsAccentProbe.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;color:var(--player-accent)';
-document.body.appendChild(flowPartsAccentProbe);
-function getPlayerAccentRGB(){
-  try { return getComputedStyle(flowPartsAccentProbe).color || 'rgb(255,255,255)'; }
-  catch (e) { return 'rgb(255,255,255)'; }
-}
-/* one pre-rendered glow sprite, tinted to flowPartsColor, reused for every
-   particle every frame via drawImage - the original per-particle
-   createRadialGradient()+fill() (60x every single frame) was expensive
-   enough to drop frames on real devices, which read as the whole layer
-   "blinking"/glitching rather than a smooth ambient drift. Only rebuilt
-   when the tint color actually changes, not every frame. */
-let flowPartsSprite = null;
-function buildFlowPartsSprite(){
-  const size = 128;
-  if (!flowPartsSprite){ flowPartsSprite = document.createElement('canvas'); flowPartsSprite.width = size; flowPartsSprite.height = size; }
-  const sctx = flowPartsSprite.getContext('2d');
-  const m = /rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(flowPartsColor);
-  const rC = m ? +m[1] : 255, gC = m ? +m[2] : 255, bC = m ? +m[3] : 255;
-  sctx.clearRect(0, 0, size, size);
-  const grad = sctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, `rgba(${rC},${gC},${bC},1)`);
-  grad.addColorStop(1, `rgba(${rC},${gC},${bC},0)`);
-  sctx.fillStyle = grad;
-  sctx.beginPath();
-  sctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-  sctx.fill();
-}
-function syncFlowPartsColor(){
-  if (!flowPartsRAF) return;
-  const next = getPlayerAccentRGB();
-  if (next === flowPartsColor) return;
-  flowPartsColor = next;
-  buildFlowPartsSprite();
-}
-function flowPartsResize(){
-  const rect = flowArtParticles.parentElement.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  flowArtParticles.width = Math.round(rect.width * dpr);
-  flowArtParticles.height = Math.round(rect.height * dpr);
-  flowPartsCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-function flowPartsInit(){
-  const w = flowArtParticles.width / (window.devicePixelRatio || 1);
-  const h = flowArtParticles.height / (window.devicePixelRatio || 1);
-  flowPartsList = [];
-  for (let i = 0; i < FLOW_PARTS_COUNT; i++){
-    flowPartsList.push({
-      x: Math.random() * w, y: Math.random() * h,
-      r: 1.2 + Math.random() * 3,
-      vx: (Math.random() - 0.5) * 0.014,
-      vy: (Math.random() - 0.5) * 0.014,
-      baseA: 0.15 + Math.random() * 0.35,
-      phase: Math.random() * Math.PI * 2,
-    });
+/* ---------- album art style switcher, available in fullscreen too: the
+   shared #artStyleMenu (normally anchored under the player's art/viz/
+   lyrics tabs) is moved into flow-chrome's own anchor while flow mode is
+   open on the art view, and restored on close - same relocate-the-real-
+   element pattern as vizCanvas/artRecord/artCassette above, so there's
+   only ever one menu instance, one set of click handlers. ---------- */
+const artStyleMenuHome = artStyleMenu.parentElement, artStyleMenuAnchor = artStyleMenu.nextElementSibling;
+const flowArtStyleAnchor = $('flowArtStyleAnchor'), flowArtStyleBtn = $('flowArtStyleBtn');
+function syncFlowArtStyle(){
+  if (!state.flowOpen || flowArtWrap.hidden) return;
+  if (artStyle === 'record' || artStyle === 'cassette'){
+    const el = artStyle === 'record' ? artRecord : artCassette;
+    const other = artStyle === 'record' ? artCassette : artRecord;
+    const otherHome = artStyle === 'record' ? artCassetteHome : artRecordHome;
+    const otherAnchor = artStyle === 'record' ? artCassetteAnchor : artRecordAnchor;
+    if (other.parentElement === flowArtWrap) otherHome.insertBefore(other, otherAnchor);
+    if (el.parentElement !== flowArtWrap) flowArtWrap.appendChild(el);
+    flowArtWrap.dataset.artStyle = artStyle;
+  } else {
+    if (artRecord.parentElement === flowArtWrap) artRecordHome.insertBefore(artRecord, artRecordAnchor);
+    if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
+    delete flowArtWrap.dataset.artStyle;
   }
 }
-function flowPartsDraw(t){
-  const dt = flowPartsLastT ? Math.min(48, t - flowPartsLastT) : 16;
-  flowPartsLastT = t;
-  const w = flowArtParticles.width / (window.devicePixelRatio || 1);
-  const h = flowArtParticles.height / (window.devicePixelRatio || 1);
-  flowPartsCtx.clearRect(0, 0, w, h);
-  for (const p of flowPartsList){
-    p.x += p.vx * dt; p.y += p.vy * dt;
-    p.phase += dt * 0.0006;
-    if (p.x < -12) p.x = w + 12; else if (p.x > w + 12) p.x = -12;
-    if (p.y < -12) p.y = h + 12; else if (p.y > h + 12) p.y = -12;
-    const a = p.baseA * (0.65 + 0.35 * Math.sin(p.phase));
-    const glowR = p.r * 4;
-    flowPartsCtx.globalAlpha = a;
-    flowPartsCtx.drawImage(flowPartsSprite, p.x - glowR, p.y - glowR, glowR * 2, glowR * 2);
-  }
-  flowPartsCtx.globalAlpha = 1;
-  flowPartsRAF = requestAnimationFrame(flowPartsDraw);
-}
-function flowPartsStart(){
-  if (flowPartsRAF) return;
-  flowPartsResize();
-  flowPartsInit();
-  flowPartsColor = getPlayerAccentRGB();
-  buildFlowPartsSprite();
-  flowPartsLastT = 0;
-  flowPartsRAF = requestAnimationFrame(flowPartsDraw);
-}
-function flowPartsStop(){
-  if (flowPartsRAF){ cancelAnimationFrame(flowPartsRAF); flowPartsRAF = null; }
-}
-window.addEventListener('resize', () => { if (flowPartsRAF) flowPartsResize(); });
+flowArtStyleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleArtStyleMenu(); armFlowChromeTimer(); });
 
 function openFlow(){
   state.flowOpen = true;
@@ -6787,20 +6710,18 @@ function openFlow(){
   flowArtWrap.hidden = showViz;
   flowVizWrap.hidden = !showViz;
   if (showViz) vizResize();
-  if (!showViz && (artStyle === 'record' || artStyle === 'cassette')){
-    flowArtWrap.appendChild(artStyle === 'record' ? artRecord : artCassette);
-    flowArtWrap.dataset.artStyle = artStyle;
-    flowPartsStart();
+  flowArtStyleBtn.hidden = showViz;
+  if (!showViz){
+    flowArtStyleAnchor.appendChild(artStyleMenu);
+    syncFlowArtStyle();
   } else {
     delete flowArtWrap.dataset.artStyle;
-    flowPartsStop();
   }
   flowLayer.classList.add('is-open');
   armFlowChromeTimer();
 }
 function closeFlow(){
   state.flowOpen = false;
-  flowPartsStop();
   flowLayer.classList.remove('is-open');
   flowLayer.classList.remove('chrome-hidden');
   clearTimeout(flowHideTimer);
@@ -6809,6 +6730,10 @@ function closeFlow(){
     vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
     vizResize();
+  }
+  if (artStyleMenu.parentElement === flowArtStyleAnchor){
+    artStyleMenuHome.insertBefore(artStyleMenu, artStyleMenuAnchor);
+    closeArtStyleMenu();
   }
   if (artRecord.parentElement === flowArtWrap) artRecordHome.insertBefore(artRecord, artRecordAnchor);
   if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
