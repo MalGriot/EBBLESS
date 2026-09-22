@@ -2479,7 +2479,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #95.
 
 ### fullscreen-lp-cassette-visual: Fullscreen on LP/cassette should fullscreen that visual, not standard album art
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Activating fullscreen while the LP (spinning record) or
   cassette art style is selected currently switches to the standard album
@@ -2489,6 +2489,51 @@ Add entries in this shape:
 - **Branch:** agent/fullscreen-lp-cassette-visual
 - **Notes:** Synced from Geethub issue #96. Distinct from `record-cassette-size`
   (merged - that changed the visuals' size, not fullscreen behavior).
+
+  Root cause: `openFlow()` (the "flow mode" fullscreen entry point,
+  `index.html` ~line 6647) only ever populated `#flowArtWrap` with the
+  generic `flowArtA`/`flowArtB` album-art `<img>`s, or - when the
+  visualizer tab was active - moved the real `#vizCanvas` into
+  `#flowVizWrap`. It never accounted for the record/cassette art style:
+  the actual `#artRecord`/`#artCassette` elements live inside
+  `#artworkWrap` in the normal player and are shown/hidden purely by the
+  `.artwork-wrap[data-art-style=...]` CSS selectors (see the
+  `record-cassette-size` notes for that markup), so once flow mode moved
+  the view outside `#artworkWrap` those selectors no longer matched and
+  fullscreen fell back to the flat album-art images.
+
+  Fix: `openFlow()` now moves the real `#artRecord` or `#artCassette`
+  element into `#flowArtWrap` (and sets `flowArtWrap.dataset.artStyle`)
+  whenever flow mode opens on that style and the visualizer isn't active
+  - the same "relocate the live element" pattern already used for
+  `#vizCanvas`/`#flowVizWrap` - and `closeFlow()` moves it back to its
+  original spot. New CSS scoped to
+  `#flow-layer .flow-art[data-art-style="record"/"cassette"]` shows the
+  moved element and hides the flat `.art` images in that state, and
+  `setPlayingUI()` now also toggles `is-playing` on `flowArtWrap` so the
+  record-spin animation (which depends on an `.is-playing` ancestor
+  class) keeps running once the disc is inside the fullscreen layer.
+  Default-style fullscreen is untouched - `flowArtWrap.dataset.artStyle`
+  is simply deleted and the original image-swap path runs as before.
+
+  Verified by serving this worktree directly with
+  `python3 -m http.server` (the shared preview-tool launcher was
+  confirmed, per the `EBBLESS/CLAUDE.md` warning, to sometimes serve a
+  different worktree's `index.html`; every check below re-confirmed
+  `location.href`/a fetch of `/index.html` for the fix's marker text
+  before trusting the page) and driving the app in-browser: with the
+  Spinning Record style selected and a track loaded, fullscreen showed
+  the actual spinning record filling the view, and
+  `artRecord.parentElement.id === 'flowArtWrap'` with
+  `flowArtWrap.dataset.artStyle === 'record'`. With Cassette Tape
+  selected, fullscreen showed the real cassette element the same way
+  (`artCassette.parentElement.id === 'flowArtWrap'`). With the Default
+  style, fullscreen still showed the normal album art
+  (`flowArtA`/`flowArtB` opacity 1/0) and both `#artRecord` and
+  `#artCassette` stayed put inside `#artworkWrap` - no regression.
+  Checked the browser console throughout; the only error present
+  (`intro-theme.mp3` fetch aborted) is pre-existing background noise
+  unrelated to this change, not something introduced by it.
 
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
