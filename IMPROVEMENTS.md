@@ -1691,7 +1691,7 @@ Add entries in this shape:
   transport buttons, behavior should match those buttons live.
 
 ### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Double-tapping the album art (or cymatics view) should
   toggle fullscreen.
@@ -2625,7 +2625,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #44.
 
 ### tester-feedback-form: Form for beta testers to report on the app
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Add a form specifically for beta testers to give
   structured feedback on the app.
@@ -2812,7 +2812,7 @@ Add entries in this shape:
   card renders "CuRRentSSsss" in both the marquee and name label.
 
 ### playlist-remove-track-library: Option to remove tracks from a playlist in library
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add an option to remove individual tracks from a playlist
   directly from the library view.
@@ -3495,7 +3495,7 @@ Add entries in this shape:
   testing.
 
 ### spinning-record-realism: Make the spinning record feel physical, tactile, and restrained
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Four-part visual polish pass on the spinning-record
   element (distinct from `record-cassette-size`, which only changed its
