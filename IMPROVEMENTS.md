@@ -1780,7 +1780,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #76.
 
 ### desktop-settings-inline: Desktop Settings should replace the player pane in place
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, clicking Settings currently navigates to a
   separate screen. Instead it should pop up in the player pane's spot,
@@ -1790,6 +1790,67 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #78. Same general area as
   `player-controller-centering` (merged) - the desktop split-pane layout -
   worth the same care around `min-height`/z-index quirks found there.
+
+  Root cause: the `>=1150px` "split-desktop" 3-pane grid block (the same
+  one `player-controller-centering` fixed) scoped every one of its rules
+  to `body.split-desktop:not(.view-settings-active)`. `setView()` toggles
+  `.view-settings-active` on `<body>` whenever Settings becomes the active
+  view, so opening Settings simply knocked the whole grid out - `#app`
+  fell back to its plain (non-grid) layout, `#view-library`/`#queue-panel`
+  reverted to their normal fixed-position/hidden rules, and `#view-settings`
+  took over the full screen exactly like the sub-1150px "separate screen"
+  behavior. That's a real navigation-away, just visually convincing enough
+  on desktop to look intentional.
+
+  Fix (`index.html`, inside the existing `@media (min-width:1150px)`
+  block): dropped the `:not(.view-settings-active)` scoping from the grid
+  itself and from `#view-library`/`#queue-panel`'s placement rules, so the
+  3-pane grid and the outer panes stay put regardless of whether Settings
+  is open. Only the center column now swaps: `#view-player` is forced
+  visible (`display:block!important`, ignoring its own `hidden` attribute -
+  the same pre-existing trick that keeps `#view-library` visible
+  regardless of `state.currentView`) whenever `.view-settings-active` is
+  *not* set, and `#view-settings` gets the identical treatment when it
+  *is* set - so exactly one of the two occupies grid-column 2 at a time,
+  driven by the class `setView()` already toggles. No JS changes were
+  needed; `setView()`'s existing settings-toggle logic (remembering
+  `preSettingsView` so a second click on Settings returns to wherever you
+  came from) already generalized cleanly to this case.
+
+  Verified with a real browser check, served from this worktree's own
+  `index.html` via `python3 -m http.server` (not the shared preview
+  launcher - it kept silently reattaching the pane to an unrelated
+  worktree's already-running dev server on the launch.json's default
+  port, exactly the multi-session collision `CLAUDE.md` warns about;
+  working around it required passing an explicit `tabId` on every browser
+  call rather than letting it default to "the active tab"). At 1280x800
+  (well inside the split-desktop breakpoint): loaded an album, started
+  playback, then clicked Settings - the center pane swapped to the
+  Settings content while the library pane (playlists/albums) and the
+  queue pane (now-playing + upcoming tracks) stayed exactly as they were,
+  and the header nav still showed only the Settings gear (no Library/
+  Player/Queue buttons reappeared). Confirmed via the DOM that
+  `document.body.className` was `view-settings-active split-desktop` and
+  the YouTube iframe's `src` (video id, query params) was byte-for-byte
+  unchanged from before opening Settings - i.e. playback wasn't paused,
+  stopped, or reloaded under the hood. Clicked Settings again to close it:
+  `body.className` dropped back to plain `split-desktop`, `#view-player`
+  came back exactly where it left off, and the iframe `src` was still
+  identical - confirmed visually too (artwork/track/seek/transport all
+  back, mid-track). `location.href` never changed across any of this - no
+  navigation, just DOM/class swaps. Also checked 1100px (just below the
+  1150px breakpoint) and a narrower ~800px width: at both, clicking
+  Settings still fully navigates away exactly as before (`body.className`
+  is bare `view-settings-active`, no `split-desktop`, header nav collapses
+  to the full Settings screen, mini-bar keeps showing the current track at
+  the bottom) - confirming the sub-1150px behavior is untouched. Checked
+  the console throughout: the only error present, before and after, is the
+  pre-existing sandboxed-network YouTube iframe API script-fetch failure
+  already called out in `player-controller-centering`'s notes - no new
+  errors from this change.
+
+  Pushed to `agent/desktop-settings-inline` (commit `39e07d9`); not
+  merged - left for review.
 
 ### desktop-player-fullscreen-toggle: Desktop player fullscreen should slide panels off, nav buttons become toggles
 - **Status:** in-progress
