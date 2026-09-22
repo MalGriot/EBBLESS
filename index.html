@@ -943,7 +943,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   }
   body.split-desktop #queue-scrim{display:none!important}
   body.split-desktop #mini-bar{display:none!important}
-  body.split-desktop .view-scroll,
+  /* :not(.desktop-fs) on .view-scroll only: without it, this override
+     survives into the desktop-fs full-width #view-player and cancels the
+     margin:0 auto centering .view-scroll gets from its base rule (line
+     ~105) - since only margin-right gets pinned to 0, margin:auto puts
+     ALL the leftover space on the left instead of splitting it, shoving
+     every fullscreen album art style (default/record/cassette) well right
+     of center. #topbar doesn't use margin:auto centering the same way, so
+     it keeps this rule unconditionally. */
+  body.split-desktop:not(.desktop-fs) .view-scroll,
   body.split-desktop #topbar{margin-right:0!important}
   /* the library column is only 240-300px here - as narrow as the mobile
      layout the filter/cycle split already handles, so reuse it - and let
@@ -982,6 +990,21 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   }
   body.split-desktop.desktop-fs:not(.view-settings-active) #view-player{
     position:fixed;top:var(--topbar-h);left:0;right:0;bottom:0;grid-column:auto;z-index:44;
+  }
+  /* the normal in-pane .artwork-wrap sizing (min(440px,34vw,...), from the
+     >=860px breakpoint) is tuned for a narrow player pane, not this
+     newly-full-width fullscreen player - without an override it stays
+     small even though there's now a whole screen to fill. Sized to match
+     the mobile "flow mode" fullscreen's own art treatment (86vh/86vw,
+     see #flow-layer .flow-art) so desktop and mobile fullscreen read the
+     same across all three art styles (default/record/cassette, which all
+     share this one container) - but capped by the same
+     `calc(100dvh - var(--topbar-h) - 300px)` reservation the >=860px rule
+     above already uses for title/artist/seek/controls-row/tabs below the
+     art, so a plain 86vh doesn't push the transport controls off the
+     bottom of the pane the way an uncapped value did during testing. */
+  body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap{
+    width:min(86vh,86vw,calc(100dvh - var(--topbar-h) - 300px));
   }
   /* drawer overlays: only reachable while deskFsOpen, so it's fine for
      these to reuse the library/queue panes' own fixed positioning rather
