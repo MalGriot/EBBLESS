@@ -912,9 +912,13 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
      in its place whenever Settings IS the active view - so exactly one of
      the two occupies grid-column 2 at a time, driven by the same
      `view-settings-active` class setView() already toggles. */
-  body.split-desktop #topnav [data-view="library"],
-  body.split-desktop #topnav [data-view="player"],
-  body.split-desktop #topnav [data-action="toggle-queue"]{display:none}
+  body.split-desktop #topnav [data-view="player"]{display:none}
+  /* Library/Queue nav buttons are useless (and hidden) in the normal 3-pane
+     split-desktop layout, where both panes are always visible - but once
+     deskFsOpen (below) hides them, these become the only way to bring one
+     back, so they're only shown in that mode. */
+  body.split-desktop:not(.desktop-fs) #topnav [data-view="library"],
+  body.split-desktop:not(.desktop-fs) #topnav [data-action="toggle-queue"]{display:none}
   body.split-desktop #app{
     display:grid;grid-template-rows:var(--topbar-h) 1fr;
     grid-template-columns:minmax(280px,340px) 1fr minmax(280px,340px);
@@ -947,6 +951,54 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop .lib-filter{display:none}
   body.split-desktop .lib-filter-cycle{display:inline-flex;align-items:center}
   body.split-desktop .section-label-row{flex-wrap:wrap;row-gap:8px}
+
+  /* ---- desktop "fullscreen" mode: player expands to the full split-view
+     width, library slides off left and queue slides off right. Both panes
+     stay real grid items (so nothing about the split-desktop grid itself
+     changes) - they're just pushed out of the viewport with `transform`
+     while the player is lifted out of the grid onto a fixed layer that
+     covers the whole area below the topbar. The nav's Library/Queue
+     buttons (shown above only in this mode) then toggle either panel back
+     in as a temporary overlay drawer on top of that fixed player, via the
+     separate .desktop-fs-lib-open/.desktop-fs-queue-open classes below.
+     Guarded by :not(.view-settings-active) throughout, same as the rest of
+     this sub-block below - fsBtn only exists in the player view, which
+     isn't visible while Settings is showing, so entering this mode while
+     Settings is active shouldn't be reachable in practice, but the guard
+     keeps it that way defensively rather than by omission. */
+  body.split-desktop:not(.view-settings-active) #view-library,
+  body.split-desktop:not(.view-settings-active) #queue-panel{
+    transition:transform 320ms var(--ease-out);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) #view-library{
+    transform:translateX(-100%);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) #queue-panel{
+    /* !important needed: the non-fullscreen split-desktop rule above sets
+       transform:none!important on #queue-panel (to cancel the <1150px
+       drawer transform), which otherwise beats this more-specific rule too
+       since importance outranks specificity */
+    transform:translateX(100%)!important;
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) #view-player{
+    position:fixed;top:var(--topbar-h);left:0;right:0;bottom:0;grid-column:auto;z-index:44;
+  }
+  /* drawer overlays: only reachable while deskFsOpen, so it's fine for
+     these to reuse the library/queue panes' own fixed positioning rather
+     than the grid - they sit above the fixed fullscreen player (z-index 44)
+     and slide in/out independently of it */
+  body.split-desktop.desktop-fs:not(.view-settings-active) #view-library{
+    position:fixed;top:var(--topbar-h);left:0;bottom:0;width:340px;z-index:46;
+  }
+  body.split-desktop.desktop-fs.desktop-fs-lib-open:not(.view-settings-active) #view-library{
+    transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.35);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) #queue-panel{
+    position:fixed;top:var(--topbar-h);right:0;bottom:0;width:340px;z-index:46;
+  }
+  body.split-desktop.desktop-fs.desktop-fs-queue-open:not(.view-settings-active) #queue-panel{
+    transform:translateX(0)!important;box-shadow:-8px 0 24px rgba(0,0,0,.35);
+  }
 }
 /* short viewports (landscape phones, small windows): the vertical stack can't
    fit at normal sizes no matter how small the artwork gets, so collapse the
@@ -2531,6 +2583,9 @@ const state = {
   preQueueView: null,
   queueOpen: false,
   flowOpen: false,
+  deskFsOpen: false,     // split-desktop-only "fullscreen" mode: library/queue panels slid off, player full width
+  deskFsLibOpen: false,  // library panel drawn back in as an overlay while deskFsOpen
+  deskFsQueueOpen: false,// queue panel drawn back in as an overlay while deskFsOpen
 };
 
 function currentTrack(){
@@ -2750,19 +2805,70 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
       setView(state.currentView === 'settings' ? state.preSettingsView : 'settings');
       return;
     }
+    // In split-desktop, the Library nav button is only ever visible while
+    // deskFsOpen (see the CSS) - there it toggles the library drawer back
+    // in over the fullscreen player instead of switching views (both
+    // panes are always mounted side by side outside fullscreen).
+    if (btn.dataset.view === 'library' && document.body.classList.contains('split-desktop')){
+      toggleDesktopFsLib();
+      return;
+    }
     if (btn.dataset.view === 'player' && typeof setVisualMode === 'function') setVisualMode('art');
     setView(btn.dataset.view);
   });
 });
-document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', toggleQueuePanel));
+document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', () => {
+  // same split-desktop/deskFsOpen carve-out as the Library button above
+  if (document.body.classList.contains('split-desktop')){ toggleDesktopFsQueue(); return; }
+  toggleQueuePanel();
+}));
 $('wordmarkBtn').addEventListener('click', () => setView('player'));
 
 /* wide desktop: library + player + queue all shown at once (see the
    min-width:1150px CSS block) instead of tab-switching between them */
 const splitDesktopMQ = window.matchMedia('(min-width:1150px)');
-function updateSplitDesktop(){ document.body.classList.toggle('split-desktop', splitDesktopMQ.matches); updateMiniBarVisibility(); }
+function updateSplitDesktop(){
+  document.body.classList.toggle('split-desktop', splitDesktopMQ.matches);
+  if (!splitDesktopMQ.matches) closeDesktopFs();
+  updateMiniBarVisibility();
+}
 splitDesktopMQ.addEventListener('change', updateSplitDesktop);
 updateSplitDesktop();
+
+/* ---- split-desktop "fullscreen" mode: see the .desktop-fs* rules in the
+   min-width:1150px CSS block. Distinct from openFlow()/closeFlow() below,
+   which is the separate mobile/tablet "flow mode" overlay - fsBtn picks
+   between the two based on whether split-desktop is active. */
+function closeDesktopFs(){
+  state.deskFsOpen = false; state.deskFsLibOpen = false; state.deskFsQueueOpen = false;
+  document.body.classList.remove('desktop-fs', 'desktop-fs-lib-open', 'desktop-fs-queue-open');
+  document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
+    .forEach(b => b.classList.remove('is-active'));
+}
+function toggleDesktopFs(){
+  if (state.deskFsOpen){ closeDesktopFs(); return; }
+  state.deskFsOpen = true;
+  document.body.classList.add('desktop-fs');
+  // Defensive reset: don't rely on these already being false - always start
+  // a fresh fullscreen entry with the library/queue drawers closed.
+  state.deskFsLibOpen = false;
+  state.deskFsQueueOpen = false;
+  document.body.classList.remove('desktop-fs-lib-open', 'desktop-fs-queue-open');
+  document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
+    .forEach(b => b.classList.remove('is-active'));
+}
+function toggleDesktopFsLib(){
+  state.deskFsLibOpen = !state.deskFsLibOpen;
+  document.body.classList.toggle('desktop-fs-lib-open', state.deskFsLibOpen);
+  document.querySelectorAll('#topnav [data-view="library"]')
+    .forEach(b => b.classList.toggle('is-active', state.deskFsLibOpen));
+}
+function toggleDesktopFsQueue(){
+  state.deskFsQueueOpen = !state.deskFsQueueOpen;
+  document.body.classList.toggle('desktop-fs-queue-open', state.deskFsQueueOpen);
+  document.querySelectorAll('#topnav [data-action="toggle-queue"]')
+    .forEach(b => b.classList.toggle('is-active', state.deskFsQueueOpen));
+}
 
 /* =========================================================================
    AMBIENT BACKGROUND (blurred artwork, crossfade)
@@ -6859,8 +6965,12 @@ function closeFlow(){
   clearTimeout(flowHideTimer);
   if (vizCanvas.parentElement === flowVizWrap){
     vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
-    vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
+    // Restore vizSpeedBtn before vizAutoBtn: vizAutoBtn's original anchor
+    // (its next sibling) IS vizSpeedBtn, which was also moved out to the
+    // flow layer - restoring in the original order throws a NotFoundError
+    // because the anchor isn't back in the home container yet.
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
+    vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
     vizResize();
   }
   if (artStyleMenu.parentElement === flowArtStyleAnchor){
@@ -6879,7 +6989,17 @@ function armFlowChromeTimer(){
 fsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (!currentTrack()) return;
-  if (visualMode === 'lyrics') openLyricsFs(); else openFlow();
+  // Cymatics visualizer and lyrics always get the true full-bleed overlay
+  // (position:fixed;inset:0, hides the topbar) on both mobile and desktop -
+  // the split-desktop panel-slide treatment below is only for the album-art
+  // view.
+  if (visualMode === 'lyrics'){ openLyricsFs(); return; }
+  if (visualMode === 'viz'){ openFlow(); return; }
+  // split-desktop + art view: slide library/queue off instead of the
+  // mobile/tablet "flow mode" overlay - see the .desktop-fs* CSS and
+  // toggleDesktopFs().
+  if (document.body.classList.contains('split-desktop')){ toggleDesktopFs(); return; }
+  openFlow();
 });
 
 /* ---------- lyrics fullscreen: no chrome but an exit X, same tap-to-seek
