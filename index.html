@@ -3207,6 +3207,15 @@ function renderLibrary(){
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
+    // A single malformed/partial cache entry (e.g. a "resolving: true"
+    // snapshot left behind by a resolve call that errored out or hit an
+    // exhausted API/token budget mid-write - see startApp's bootstrap
+    // try/catch above) used to throw here and take the *entire* library
+    // render down with it, since this used to be one unguarded forEach body.
+    // Isolate each card so one bad entry only drops that one card, and purge
+    // the entry that caused it so the same throw can't recur on every future
+    // load - self-healing instead of requiring a manual storage clear.
+    try{
     const isAlbum = isAlbumType(pl.type);
     if ((isAlbum && !showAlbums) || (!isAlbum && !showPlaylists)) return;
     if (isAlbum) albumCount++;
@@ -3345,6 +3354,10 @@ function renderLibrary(){
       });
     }
     (isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
+    } catch(e){
+      console.warn('[ebbless] dropping corrupted library entry', id, e);
+      lsDel(LS_PL(id));
+    }
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
