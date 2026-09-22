@@ -2411,7 +2411,7 @@ Add entries in this shape:
   already-displayed lyrics, unrelated.
 
 ### background-playlist-loading: Playlist/album loading should run in the background with a progress bar
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When a playlist/album/song is loading, the user should be
   able to freely return to the main pages instead of being stuck waiting - a
@@ -2421,17 +2421,17 @@ Add entries in this shape:
   be able to choose to play it immediately and replace the current queue
   once loading finishes.
 - **Touches:** `beginImport()` playlist-load flow, loading-state UI.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #93. **Judgment call, flagging for
-  your input:** this overlaps two existing draft entries -
-  `loading-progress-indicator` (a progress-bar/loading indicator during
-  track load) and `play-first-loaded-track` (play-immediately vs. a "play
-  now" prompt when a playlist is pasted). Kept as its own entry rather than
-  folding in, since it adds two things neither covers: (1) freely navigating
-  away from the loading screen instead of being blocked on it, and (2) a
-  default "just add to library, don't auto-play" behavior. If you'd rather
-  these three be tackled as one combined lane, say so when picking what's
-  `ready`.
+- **Branch:** none - done directly against `main` (commits `1b078d6`,
+  `ac67c8f`, `699db0b`).
+- **Notes:** Synced from Geethub issue #93. Previously flagged as a
+  judgment call overlapping `loading-progress-indicator` and
+  `play-first-loaded-track`. **Update (2026-09-22):** found already
+  implemented directly on `main` - "Show background-loading progress in the
+  queue panel", "Don't let background playlist resolution disturb what's
+  playing now", and "Disable and pulse the Load button while an import is
+  in flight". Backlog status corrected from `draft` to `merged`. Whether
+  this also resolved `loading-progress-indicator`'s narrower per-track
+  ask is unconfirmed - left that entry as-is for your call.
 
 ### podcasts: Support loading and playing podcasts
 - **Status:** draft
@@ -2790,22 +2790,19 @@ Add entries in this shape:
   a new auto-playlist's selection rules.
 
 ### background-app-switch-playlist-loading: Playlist loading should continue while app is backgrounded on mobile
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, if a playlist is still loading and the user
   switches to another app, loading currently stops. It should continue in
   the background instead.
 - **Touches:** `beginImport()` playlist-load flow, mobile backgrounding
   behavior (same general area as `mobile-background-resume`, merged).
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #104. **Judgment call, flagging for
-  your input:** overlaps `background-playlist-loading` (draft, #93 - a
-  progress bar + freedom to navigate away while loading in the foreground).
-  Kept separate since this is specifically about loading surviving an app
-  backgrounding/process-suspend event on mobile, a different technical
-  problem (and may hit the same real OS constraints `mobile-background-resume`
-  ran into) rather than just a UI/progress-bar change. Say so if you'd
-  rather these be tackled as one lane.
+- **Branch:** none - done directly against `main` (commit `a6e6d30`).
+- **Notes:** Synced from Geethub issue #104. Previously flagged as a
+  judgment call overlapping `background-playlist-loading`. **Update
+  (2026-09-22):** found already implemented directly on `main` -
+  "Recover an in-progress playlist import after the app gets
+  backgrounded". Backlog status corrected from `draft` to `merged`.
 
 ### world-radio-addon: World radio - pick a region on a map, hear music from there
 - **Status:** draft
