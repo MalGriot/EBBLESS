@@ -2117,7 +2117,7 @@ Add entries in this shape:
   discussing approach before queuing.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Switching away from and back to the app currently takes
   too long to resume the currently-loaded song - it should be cached so
@@ -2140,7 +2140,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #42.
 
 ### play-first-loaded-track: Play first resolved track immediately during playlist sync
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When a playlist is pasted, the first track to finish
   resolving should start playing immediately rather than waiting for the
@@ -2459,7 +2459,7 @@ Add entries in this shape:
   card renders "CuRRentSSsss" in both the marquee and name label.
 
 ### playlist-remove-track-library: Option to remove tracks from a playlist in library
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Add an option to remove individual tracks from a playlist
   directly from the library view.
@@ -2480,7 +2480,7 @@ Add entries in this shape:
   (merged - that changed the visuals' size, not fullscreen behavior).
 
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Fullscreen mode should show all the player controls -
   shuffle, loop, album art style switcher, etc. - not just a subset.
@@ -3000,6 +3000,41 @@ Add entries in this shape:
     Lights" / The Weeknd (queued but not reached before the block). No new
     console errors; this is a worker/backend-only logic change with a
     two-line client cache-version bump, no UI touched.
+
+### queue-footer-overlap: Queue slide-up panel bottom row blocked by footer player on mobile
+- **Status:** ready
+- **Priority:** medium
+- **Description:** On mobile, when the queue panel is open, its bottom-most
+  entry is blocked/covered by the footer player bar - the same overlap bug
+  `library-playlist-footer-overlap` already fixed for the playlist panel,
+  now reported on the queue panel specifically.
+- **Touches:** queue slide-up panel (`#queue-panel` or equivalent), mobile
+  footer player bar z-index/spacing - likely the same fix pattern as
+  `library-playlist-footer-overlap` and `player-mobile-spacing`, applied to
+  the queue panel's own scroll container.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #117. Not a duplicate of
+  `library-playlist-footer-overlap` (merged) - that one only touched the
+  playlist panel; this is the analogous gap on the queue panel, per the
+  reporter's own "just like the playlist was" framing.
+
+### back-button-to-player: Back button should return to the player, not out of the app
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Hitting the back button (mobile back gesture/hardware
+  back) from within the app should navigate to the player view, rather than
+  its current behavior (reported as going back out of "my part" of the
+  app - likely exiting the current view/app instead of returning to the
+  player).
+- **Touches:** mobile back-button/history handling - needs investigation
+  into whatever `popstate`/back-navigation wiring (or lack of it) currently
+  exists.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #118. Distinct from the merged
+  `queue-close-return-view` (that one governs closing the queue panel
+  specifically, returning to whichever view was open before it) - this is
+  about the OS/browser back button generally, and the target is
+  specifically the player view, not "whatever was open before."
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
 - **Status:** draft
