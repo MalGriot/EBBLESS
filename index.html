@@ -581,6 +581,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .track-row .row-actions svg{width:13px;height:13px}
 .track-row .row-actions .like-btn.is-liked{color:var(--accent)}
 .track-row .plays{flex:none;font-size:11px;color:var(--faint-2);min-width:30px;text-align:right}
+.track-row .remove{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
+.track-row .remove:hover{background:var(--panel-3);color:var(--bad)}
+.track-row .remove svg{width:12px;height:12px}
 .track-row .drag-handle{display:none;flex:none;width:20px;height:28px;align-items:center;justify-content:center;color:var(--faint-2);cursor:grab;touch-action:none}
 .track-row .drag-handle svg{width:12px;height:16px}
 .track-row.is-dragging{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.4);position:relative;z-index:3;background:var(--panel-2)}
@@ -841,7 +844,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .ctl-btn.main svg{width:22px;height:22px}
   .ctl-btn.small{width:40px;height:40px}
   .ctl-btn.small svg{width:16px;height:16px}
-  .track-row .row-actions button,.q-row .remove{width:34px;height:34px}
+  .track-row .row-actions button,.track-row .remove,.q-row .remove{width:34px;height:34px}
   /* extra clearance above #bottom-nav (issue #30) - .view is already offset
      by var(--nav-h)+var(--safe-b) so its bottom edge sits right above the
      nav bar, but the transport controls were landing flush against that
@@ -4297,16 +4300,12 @@ function renderTrackList(){
 
     row.appendChild(handle); row.appendChild(num); row.appendChild(img); row.appendChild(meta);
 
-    const plays = document.createElement('div'); plays.className = 'plays';
-    plays.textContent = (t.plays || 0) + (t.plays === 1 ? ' play' : ' plays');
-    row.appendChild(plays);
-
     if (t.videoId){
-      // All per-track actions (like, play next, add to queue, add/remove
-      // from playlist) used to be separate inline buttons here, which left
-      // the title barely any room. They now live in the same track-options
-      // menu the kebab below opens (see openTrackCtxMenuFor), matching the
-      // 3-dot overflow-menu pattern used on library cards (toggleLibCtxMenu).
+      // All per-track actions (like, play next, add to playlist) used to be
+      // separate inline buttons here, which left the title barely any room.
+      // They now live in the same track-options menu the kebab below opens
+      // (see openTrackCtxMenuFor), matching the 3-dot overflow-menu pattern
+      // used on library cards (toggleLibCtxMenu).
       const actions = document.createElement('div'); actions.className = 'row-actions';
       const trackMenuBtnEl = document.createElement('button'); trackMenuBtnEl.className = 'track-menu-btn'; trackMenuBtnEl.title = 'Track options'; trackMenuBtnEl.setAttribute('aria-label','Track options'); trackMenuBtnEl.setAttribute('aria-haspopup','true');
       trackMenuBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -4317,6 +4316,22 @@ function renderTrackList(){
         if (e.target === handle || handle.contains(e.target)) return;
         buildQueueFrom(i, pl.id); loadIndex(state.queuePos, true);
       });
+    }
+    // Direct remove button, same visual/markup pattern as the Now/Next/Later
+    // queue's own `.remove` (queueRemoveAt) button. "Remove" here means
+    // remove from THIS playlist, not from the queue - this list is the
+    // playlist's full tracklist, not the queue, and a given row may not even
+    // be queued right now - so it's wired to removeTrackFromCustomPlaylist,
+    // the same function the old inline "Remove from playlist" button used.
+    // Only custom playlists support removing a single track (that function
+    // no-ops otherwise), so only show it there - covers missing/unmatched
+    // rows too, since those are exactly the ones you're most likely to want
+    // to drop from a custom playlist.
+    if (pl.type === 'custom'){
+      const removeBtn = document.createElement('button'); removeBtn.className = 'remove'; removeBtn.setAttribute('aria-label','Remove from playlist');
+      removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
+      removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
+      row.appendChild(removeBtn);
     }
     // Long-press the row itself opens the same "Refresh link" menu, touch
     // equivalent of the kebab button above - and, unlike the kebab, also
