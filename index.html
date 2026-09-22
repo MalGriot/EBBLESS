@@ -6834,6 +6834,26 @@ flowLayer.addEventListener('click', armFlowChromeTimer);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
 })();
 
+/* swipe left/right on the player view's album art -> next/prev track, same
+   gesture and threshold as the fullscreen flow view above. Vertical drags
+   are ignored here (no close gesture in this view) so scrolling still works. */
+(function(){
+  const artWrap = artworkWrap;
+  let sx = null, sy = null;
+  function start(e){ const p = e.touches ? e.touches[0] : e; sx = p.clientX; sy = p.clientY; }
+  function end(e){
+    if (sx === null) return;
+    const p = e.changedTouches ? e.changedTouches[0] : e;
+    const dx = p.clientX - sx, dy = p.clientY - sy;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)){
+      dx < 0 ? playNext(false) : playPrev();
+    }
+    sx = null; sy = null;
+  }
+  artWrap.addEventListener('touchstart', start, {passive:true});
+  artWrap.addEventListener('touchend', end);
+})();
+
 /* =========================================================================
    MINI BAR TAP -> OPEN PLAYER
    ========================================================================= */
