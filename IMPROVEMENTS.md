@@ -2076,7 +2076,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #36. Related to `blend-playlist`
   below (a second, broader auto-playlist) and `discovery-pipeline-metadata`
   - all touch recommendation logic, worth reviewing together for shared
-  helpers.
+  helpers. **Update (2026-09-22):** folded in Geethub issue #121
+  ("currentsss playlist should have more diverse artist selection, keep the
+  vibe tho") as the same underlying task rather than a separate entry -
+  it's a specific selection-criterion request (diversify artists without
+  losing vibe) that belongs inside this entry's "selection should weigh
+  genre, year, and vibe" rule, not a standalone feature. Closed #121 with a
+  comment pointing here.
 
 ### blend-playlist: Add an auto-updating "Blend" playlist across all saved playlists
 - **Status:** draft
@@ -3274,3 +3280,34 @@ Add entries in this shape:
   from a library card) still renders and functions normally, confirming
   the shared track-menu code wasn't disturbed. No new console errors -
   only the pre-existing, unrelated YouTube iframe-API script-fetch errors.
+
+### queue-drag-reorder-glitch: Dragging a track up the queue glitches and drifts back down
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Reordering tracks by dragging within the queue panel
+  glitches after a track is dragged a few spaces - it stops staying
+  gripped to the cursor, and after release it slowly drifts back down the
+  list instead of staying where it was dropped.
+- **Touches:** queue panel drag-to-reorder (queue's own up-next list, not
+  the removed `.playlist-list-wrap` section from
+  `queue-panel-remove-playlist-section` above - that removal deleted
+  `wireTrackRowDrag` for the playlist tracklist specifically, this is the
+  separate queue-reordering drag behavior).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #119.
+
+### audio-quality-boost: Boost audio quality
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Reporter wants audio quality boosted generally. No
+  further detail given - needs investigation into what's actually
+  controllable here (stream bitrate/source quality selection vs. an
+  EQ/processing boost) before scoping a fix.
+- **Touches:** audio playback pipeline / source resolution - needs
+  locating.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #120. Distinct from `volume-equalizer`
+  (loudness normalization) and `lp-quality-audio` (vinyl-warmth EQ option)
+  - this is a plain "make it sound better/higher quality" ask, not either
+  of those specific features. Worth reviewing together since all three
+  touch audio processing.
