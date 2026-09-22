@@ -4231,17 +4231,63 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #127.
 
 ### queue-drag-reorder-glitch-regression: Dragging a queue track up glitches again
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Dragging a track up in the queue glitches out again -
   same symptom as the already-merged `queue-drag-reorder-glitch` entry
   above.
 - **Touches:** queue panel drag-to-reorder (`wireQueueRowGestures()`).
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #126. Looks like a regression of
-  the already-merged `queue-drag-reorder-glitch` fix - start by checking
-  whether anything landed since that fix touched `wireQueueRowGestures()`
-  or the queue's drag-swap logic again.
+- **Branch:** `agent/queue-drag-reorder-glitch-regression`
+- **Notes:** Synced from Geethub issue #126.
+
+  **Not actually a regression of the same root cause** - the original
+  fix (`a941d39`, merged `4025f59`) is fully intact; `git log -L`/`-G`
+  on `wireQueueRowGestures()` (~line 5365) confirms nothing has touched
+  it since. `queue-panel-remove-playlist-section` and `queue-footer-overlap`
+  (both merged, both predate the original fix chronologically) touched
+  unrelated code - a now-deleted `.track-row` drag handler and a `#queueBody`
+  CSS padding tweak - neither disturbed this function.
+
+  **Actual root cause:** the original fix computed `rowH = row.offsetHeight`
+  to compensate for the pixel jump each `queueBody.insertBefore(...)` swap
+  introduces, but `.q-row + .q-row{margin-top:2px}` (present since the
+  file's first commit) means the real row-to-row pitch is
+  `offsetHeight + 2px`, not just `offsetHeight` - every swap left a 2px
+  uncompensated residual. This existed even during the original fix's own
+  verification; it was just too small to notice over the ~4-6 row drags
+  tested then. Over a longer real drag the 2px/swap residual compounds
+  into the same "loses grip / drifts" symptom, from a smaller cause.
+
+  **Fix** (commit `5ff33f1`): in `wireQueueRowGestures()`'s pointerdown
+  handler, instead of `rowH = row.offsetHeight`, measure the real
+  row-to-row pitch directly off a neighboring `.q-row`'s
+  `getBoundingClientRect().top` diff at drag start - naturally includes
+  margin (and any future spacing change) instead of just the content box.
+  12 lines changed, nothing else touched.
+
+  **Verified:** served this worktree's own `index.html` via
+  `python3 -m http.server` from inside the worktree (confirmed via
+  `location.href`, not the shared preview launcher), loaded the standard
+  EBBLESS test playlist (31-track queue), and drove the queue drag handle
+  with real synthetic `PointerEvent` sequences (`pointerdown` -> many
+  incremental `pointermove` steps -> `pointerup`). A 5-up/5-down drag held
+  a constant -27px pointer-to-row offset across all 30 steps in both
+  directions (vs. drifting -27 to -37 before the fix) and returned the row
+  to its exact original slot; a 16-position, 90-step drag produced the
+  exact expected final DOM order with no leftover inline
+  `transform`/`position` after drop. Screenshot confirms a clean
+  post-drag render. Console showed only pre-existing sandbox noise
+  (YouTube/Google-signin network errors) plus `setPointerCapture
+  NotFoundError`s that are an artifact of the synthetic fake pointerId
+  used for testing, not a real app bug.
+
+  **Caveats:** verification used synthetic `PointerEvent`s rather than the
+  browser tool's native drag emulation (which can't do multi-step paths) -
+  real trackpad/touch jitter wasn't exercised, though the fix is a static
+  per-drag measurement taken once at `pointerdown`, so it shouldn't be
+  sensitive to event cadence. Did not re-audit every other `.q-row`-spacing
+  consumer for the same `offsetHeight`-without-margin assumption - scoped
+  to just the one spot that needed it.
 
 ### cassette-fullscreen-animation: Cassette fullscreen should stack and orbit background cassettes
 - **Status:** draft
