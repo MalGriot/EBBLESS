@@ -5383,6 +5383,7 @@ function setPlayingUI(isPlaying){
   vizSetPlaying(isPlaying);
   cassetteSetPlaying(isPlaying);
   lyricsSetPlaying(isPlaying);
+  updateMiniPlayerUI();
 }
 
 /* the real audio plays inside YouTube's cross-origin iframe, which mobile
@@ -6155,6 +6156,7 @@ function updateTrackMetaUI(t){
   reportMatchBtn.classList.remove('is-sent');
   updatePlayerLikeBtn(t);
   updateMediaSessionMeta(t);
+  updateMiniPlayerUI();
 }
 
 function updatePlayerLikeBtn(t){
@@ -6461,6 +6463,105 @@ if ('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('previoustrack', playPrev);
   navigator.mediaSession.setActionHandler('nexttrack', () => playNext(false));
   try { navigator.mediaSession.setActionHandler('stop', pausePlayback); } catch(e){}
+}
+
+/* =========================================================================
+   DESKTOP MINI PLAYER — Document Picture-in-Picture
+   A plain in-page floating div is invisible the instant the tab loses focus
+   (background tabs don't paint), which defeats the point of a "keep playing
+   while you switch away" mini player. The real fix is a Document
+   Picture-in-Picture window: an actual always-on-top OS-level window that
+   keeps rendering while EBBLESS's own tab is hidden.
+   Opening any PiP window normally requires a fresh user gesture, which a
+   visibilitychange/blur event never carries — but Chromium's Media Session
+   API has a specific exemption for this exact case: registering an
+   'enterpictureinpicture' action handler lets the browser itself invoke it
+   (no script-side gesture needed) once media is audible, holds audio focus,
+   and the user switches away from the tab. The browser also auto-closes the
+   window when the tab becomes visible again, so no manual visibilitychange
+   bookkeeping is needed on our end.
+   No playback logic lives here — every control below just calls the same
+   resumePlayback/pausePlayback/playPrev/playNext/playIndex functions the
+   main transport uses, so the mini player can never drift from real state.
+   Unsupported browsers (most non-Chromium ones, and 'documentPictureInPicture'
+   missing entirely) fall through to a no-op: audio keeps playing in the
+   backgrounded tab exactly as it already did before this feature existed. */
+let miniPlayerWin = null;
+const MINI_PLAYER_STYLE = `
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#121212;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    height:100vh;display:flex;align-items:center;gap:12px;padding:12px;overflow:hidden}
+  #mpArt{width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none;background:#282828}
+  #mpMeta{flex:1;min-width:0}
+  #mpTitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #mpArtist{font-size:12px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  #mpControls{display:flex;align-items:center;gap:6px;flex:none}
+  #mpControls button{width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:#fff;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  #mpControls button:hover{background:rgba(255,255,255,.12)}
+  #mpPlay{width:38px;height:38px;background:#e0b26a;color:#151107}
+  #mpPlay:hover{background:#e0b26a;filter:brightness(1.08)}
+  svg{width:18px;height:18px;fill:currentColor}
+  #mpPlay svg{width:20px;height:20px}
+`;
+function miniPlayerSupported(){ return 'documentPictureInPicture' in window; }
+function buildMiniPlayerDOM(win){
+  const doc = win.document;
+  const style = doc.createElement('style');
+  style.textContent = MINI_PLAYER_STYLE;
+  doc.head.appendChild(style);
+  doc.body.innerHTML =
+    '<img id="mpArt" alt="">' +
+    '<div id="mpMeta"><div id="mpTitle"></div><div id="mpArtist"></div></div>' +
+    '<div id="mpControls">' +
+      '<button id="mpPrev" title="Previous" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>' +
+      '<button id="mpPlay" title="Play/Pause" aria-label="Play/Pause"><svg id="mpPlayIco" viewBox="0 0 24 24">' + ICO_PLAY + '</svg></button>' +
+      '<button id="mpNext" title="Next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg></button>' +
+    '</div>';
+  doc.getElementById('mpPrev').addEventListener('click', playPrev);
+  doc.getElementById('mpNext').addEventListener('click', () => playNext(false));
+  doc.getElementById('mpPlay').addEventListener('click', () => {
+    if (state.queuePos >= 0) playIndex(state.queuePos); else playRickrollFallback();
+  });
+}
+function updateMiniPlayerUI(){
+  if (!miniPlayerWin || miniPlayerWin.closed) return;
+  const doc = miniPlayerWin.document;
+  const t = currentTrack();
+  const artEl = doc.getElementById('mpArt');
+  const titleEl = doc.getElementById('mpTitle');
+  const artistEl = doc.getElementById('mpArtist');
+  const playIcoEl = doc.getElementById('mpPlayIco');
+  if (!artEl || !titleEl || !artistEl || !playIcoEl) return;
+  if (t){
+    const urls = artworkUrls(t);
+    artEl.src = urls[0] || '';
+    titleEl.textContent = t.title || '';
+    artistEl.textContent = t.artist || '';
+  }
+  const isPlaying = artworkWrap.classList.contains('is-playing');
+  playIcoEl.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY;
+}
+async function openMiniPlayer(){
+  if (!miniPlayerSupported() || !currentTrack()) return;
+  if (miniPlayerWin && !miniPlayerWin.closed){ updateMiniPlayerUI(); return; }
+  try {
+    const win = await documentPictureInPicture.requestWindow({ width: 300, height: 88 });
+    miniPlayerWin = win;
+    buildMiniPlayerDOM(win);
+    updateMiniPlayerUI();
+    win.addEventListener('pagehide', () => { miniPlayerWin = null; }, { once: true });
+  } catch (err) {
+    // Not eligible (no recent audio, declined permission, another PiP
+    // window already open, etc.) or unsupported entirely — no-op fallback,
+    // same as before this feature existed.
+    miniPlayerWin = null;
+  }
+}
+if ('mediaSession' in navigator){
+  try { navigator.mediaSession.setActionHandler('enterpictureinpicture', openMiniPlayer); }
+  catch(e){ /* Chromium-only action; unsupported browsers just skip it */ }
 }
 
 /* ---- PWA update propagation ----
