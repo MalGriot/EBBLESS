@@ -738,6 +738,16 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer .flow-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #flow-layer .flow-art .art.is-active{opacity:1}
+/* when flow mode opens on the record/cassette art style, the real
+   #artRecord / #artCassette elements are moved in here (see openFlow/
+   closeFlow) instead of showing the generic art images */
+#flow-layer .flow-art[data-art-style="record"],
+#flow-layer .flow-art[data-art-style="cassette"]{background:transparent;box-shadow:none}
+#flow-layer .flow-art[data-art-style="record"] .art,
+#flow-layer .flow-art[data-art-style="cassette"] .art{opacity:0!important}
+#flow-layer .flow-art[data-art-style="record"] .art-record,
+#flow-layer .flow-art[data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
+#flow-layer .flow-art.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
 #flow-layer .flow-viz{position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;
   background:var(--bg)}
 #flow-layer .flow-viz .viz-canvas{opacity:1}
@@ -5342,6 +5352,7 @@ function setPlayingUI(isPlaying){
   if (adLoading) updateAdLoadingIcon();
   else [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
   artworkWrap.classList.toggle('is-playing', isPlaying);
+  flowArtWrap.classList.toggle('is-playing', isPlaying);
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   setKeepAliveAudio(isPlaying);
@@ -6644,6 +6655,14 @@ const flowVizWrap = $('flowVizWrap');
 const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
 const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
 const vizSpeedBtnHome = vizSpeedBtn.parentElement, vizSpeedBtnAnchor = vizSpeedBtn.nextElementSibling;
+/* the real #artRecord / #artCassette elements (not copies) get moved into
+   flowArtWrap while flow mode is open on that art style, mirroring how the
+   viz canvas above is relocated - so the same spinning-disc / cassette-reel
+   visual (with its live playback-driven state) fills the fullscreen view
+   instead of the generic album-art image */
+const artRecord = $('artRecord'), artCassette = $('artCassette');
+const artRecordHome = artRecord.parentElement, artRecordAnchor = artRecord.nextElementSibling;
+const artCassetteHome = artCassette.parentElement, artCassetteAnchor = artCassette.nextElementSibling;
 function openFlow(){
   state.flowOpen = true;
   const showViz = visualMode === 'viz';
@@ -6651,6 +6670,12 @@ function openFlow(){
   flowArtWrap.hidden = showViz;
   flowVizWrap.hidden = !showViz;
   if (showViz) vizResize();
+  if (!showViz && (artStyle === 'record' || artStyle === 'cassette')){
+    flowArtWrap.appendChild(artStyle === 'record' ? artRecord : artCassette);
+    flowArtWrap.dataset.artStyle = artStyle;
+  } else {
+    delete flowArtWrap.dataset.artStyle;
+  }
   flowLayer.classList.add('is-open');
   armFlowChromeTimer();
 }
@@ -6665,6 +6690,9 @@ function closeFlow(){
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
     vizResize();
   }
+  if (artRecord.parentElement === flowArtWrap) artRecordHome.insertBefore(artRecord, artRecordAnchor);
+  if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
+  delete flowArtWrap.dataset.artStyle;
 }
 function armFlowChromeTimer(){
   flowLayer.classList.remove('chrome-hidden');
