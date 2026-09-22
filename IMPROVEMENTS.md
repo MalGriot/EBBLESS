@@ -2804,6 +2804,30 @@ Add entries in this shape:
   fetch, a cross-origin YouTube iframe `postMessage` warning, and a
   `web-share` feature warning) - none introduced by this change.
 
+  **Follow-up (2026-09-22, commit `8848318`):** user reported the fullscreen
+  view "a little glitchy... the bg is blinking a lot" after trying the
+  above. Root cause: `flowPartsDraw()` was calling `createRadialGradient()`
+  + `fill()` for all 60 particles on every single animation frame -
+  expensive enough on real devices to drop frames, which reads as the
+  whole particle layer blinking/strobing rather than drifting smoothly.
+  Fixed by pre-rendering one tinted glow sprite once (`buildFlowPartsSprite()`,
+  a small offscreen canvas) and reusing it every frame via `drawImage()`
+  with `globalAlpha` for the per-particle pulse - the sprite is only
+  rebuilt when `--player-accent` actually changes (via `syncFlowPartsColor()`
+  now diffing before rebuilding), not every frame. Verified by sampling the
+  canvas's alpha channel across 30-60 consecutive animation frames
+  (`getImageData` sums) before and after: values change smoothly frame to
+  frame with no drops to zero or spikes, consistent with the intended slow
+  drift rather than a strobe. Also bumped the *default* (flat album art,
+  no record/cassette style) fullscreen size from `min(52vh,62vw)` to
+  `min(86vh,86vw)` per the same follow-up ("the fullscreen album art should
+  be bigger also. the lp and cassette look fine") - confirmed via
+  `getBoundingClientRect()` that it now measures exactly `min(86vh,86vw)`
+  for the viewport tested, and visually confirmed no clipping at that size.
+  Re-checked record and cassette styles too - unaffected, still
+  `min(86vh,86vw)`, particles still render correctly. No new console
+  errors (only the same pre-existing sandbox noise).
+
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
 - **Priority:** medium
