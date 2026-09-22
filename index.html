@@ -5215,18 +5215,34 @@ function wireQueueRowGestures(row, handle){
   });
   handle.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    const dy = e.clientY - startY;
+    // Swapping DOM siblings shifts the row's own base offset by a full
+    // rowH, but the pointer has only moved past the (smaller) 0.6*rowH
+    // threshold at that instant. Resetting startY/transform to 0 on swap
+    // ignored that gap, injecting a (rowH - dy) jump into the row's
+    // rendered position on every swap - it visually detached from the
+    // cursor a bit more each time, and the row landed somewhere other
+    // than where it visually looked dropped. Instead, carry the leftover
+    // dy across each swap (subtracting/adding rowH) so the row's on-screen
+    // position stays continuous through the whole drag. A while loop (not
+    // if/else-if) also lets a single fast pointermove step across more
+    // than one row without leaving the row lagging behind the cursor.
+    let dy = e.clientY - startY;
+    let siblings = Array.from(queueBody.querySelectorAll('.q-row'));
+    let curIdx = siblings.indexOf(row);
+    while (dy > rowH * 0.6 && siblings[curIdx + 1]){
+      queueBody.insertBefore(siblings[curIdx + 1], row);
+      startY += rowH; dy -= rowH;
+      siblings = Array.from(queueBody.querySelectorAll('.q-row'));
+      curIdx = siblings.indexOf(row);
+    }
+    while (dy < -rowH * 0.6 && siblings[curIdx - 1]){
+      queueBody.insertBefore(row, siblings[curIdx - 1]);
+      startY -= rowH; dy += rowH;
+      siblings = Array.from(queueBody.querySelectorAll('.q-row'));
+      curIdx = siblings.indexOf(row);
+    }
     row.style.transform = 'translateY(' + dy + 'px)';
     row.style.position = 'relative'; row.style.zIndex = 3;
-    const siblings = Array.from(queueBody.querySelectorAll('.q-row'));
-    const curIdx = siblings.indexOf(row);
-    if (dy > rowH * 0.6 && siblings[curIdx + 1]){
-      queueBody.insertBefore(siblings[curIdx + 1], row);
-      startY = e.clientY; row.style.transform = 'translateY(0)';
-    } else if (dy < -rowH * 0.6 && siblings[curIdx - 1]){
-      queueBody.insertBefore(row, siblings[curIdx - 1]);
-      startY = e.clientY; row.style.transform = 'translateY(0)';
-    }
   });
   function endDrag(e){
     if (!dragging) return;
