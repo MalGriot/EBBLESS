@@ -2676,7 +2676,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #95.
 
 ### fullscreen-lp-cassette-visual: Fullscreen on LP/cassette should fullscreen that visual, not standard album art
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Activating fullscreen while the LP (spinning record) or
   cassette art style is selected currently switches to the standard album
@@ -2921,6 +2921,11 @@ Add entries in this shape:
   `getBoundingClientRect()` that the button's center-X now exactly matches
   `#visualTabs`' center-X in the normal player (both `381` in the viewport
   tested) - not just visually close, an exact match.
+
+  **Closed out (2026-09-22):** merged to `main` (commit `a43315a`) at the
+  user's request to test live rather than waiting for a from-worktree
+  review, since the rotation-shimmer fix above couldn't be verified in
+  the dev sandbox. User confirmed on real hardware afterward: "works."
 
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
