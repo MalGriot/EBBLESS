@@ -1853,18 +1853,96 @@ Add entries in this shape:
   merged - left for review.
 
 ### desktop-player-fullscreen-toggle: Desktop player fullscreen should slide panels off, nav buttons become toggles
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, with the player centered, its fullscreen
   button should slide the library/playlist panel off to the left and the
   queue panel off to the right, opening the player to the full screen width.
   The header nav's Queue and Library buttons should become toggles that
   show/hide those panels directly (rather than just navigating).
-- **Touches:** desktop split-view layout, header nav buttons.
+- **Touches:** `index.html` - the `@media (min-width:1150px)` "split-desktop"
+  CSS block (~line 874-949: new `.desktop-fs`/`.desktop-fs-lib-open`/
+  `.desktop-fs-queue-open` rules), `state` (~line 2527: `deskFsOpen`/
+  `deskFsLibOpen`/`deskFsQueueOpen`), the nav button click handlers (~line
+  2749-2764), `updateSplitDesktop()` (~line 2755), the new
+  `toggleDesktopFs()`/`closeDesktopFs()`/`toggleDesktopFsLib()`/
+  `toggleDesktopFsQueue()` functions (~line 2778-2803), and `fsBtn`'s click
+  handler (~line 6768).
 - **Branch:** agent/desktop-player-fullscreen-toggle
 - **Notes:** Synced from Geethub issue #79. Related to `desktop-settings-inline`
   and `player-controller-centering` (merged) - same desktop-layout area,
-  worth planning together.
+  worth planning together. Worked in an isolated worktree per the repo's
+  multi-session protocol to avoid clobbering the parallel
+  `desktop-settings-inline` lane also touching this area.
+
+  Root cause: `fsBtn` (the album-art expand button, aria-label "Enter flow
+  mode") always opened "flow mode" (`#flow-layer`, a full-viewport overlay
+  built for mobile/tablet) regardless of layout - including in the
+  `>=1150px` "split-desktop" 3-pane layout, where the player is already
+  visible full-time alongside library and queue. There it just duplicated
+  the already-visible player into a second fullscreen overlay with no way
+  back to library/queue, which isn't the "slide the side panels away"
+  behavior the issue asked for. Separately, the header nav's Library/Queue
+  buttons were unconditionally `display:none` in split-desktop (added by the
+  `player-controller-centering` fix) since both panes are always on-screen
+  there already - so there was no existing UI hook for a "bring a panel
+  back" affordance either.
+
+  Fix: added a `body.split-desktop`-scoped branch to `fsBtn`'s click handler
+  that calls a new `toggleDesktopFs()` instead of `openFlow()`. This toggles
+  a `.desktop-fs` class on `<body>`, which (via new CSS in the
+  `min-width:1150px` block) transforms `#view-library` off-screen left and
+  `#queue-panel` off-screen right (`translateX(-100%)`/`translateX(100%)`,
+  animated via the existing `--ease-out` transition curve) while lifting
+  `#view-player` out of the grid onto a `position:fixed` layer spanning the
+  full split-view width (`z-index:44`) - both side panes stay real grid
+  items so nothing about the underlying 3-column grid itself changes, they
+  just get pushed out of view. One gotcha: `#queue-panel`'s existing
+  non-fullscreen split-desktop rule sets `transform:none!important` (to
+  cancel the <1150px drawer transform it also carries) - CSS `!important`
+  always beats specificity regardless of selector length, so the new
+  fullscreen transform needed its own `!important` to actually win; the
+  library pane needed no such override since it never had a competing
+  `!important` transform to begin with.
+
+  The header nav's Library/Queue buttons are now shown (still hidden
+  otherwise) only while `.desktop-fs` is active, and their click handlers
+  branch on `body.split-desktop` to call new `toggleDesktopFsLib()`/
+  `toggleDesktopFsQueue()` instead of `setView('library')`/
+  `toggleQueuePanel()` - each toggles a `.desktop-fs-lib-open`/
+  `.desktop-fs-queue-open` class that slides that one panel back in as a
+  `position:fixed`, `z-index:46` overlay drawer on top of the fullscreen
+  player (independently of the other panel), with the nav button's
+  `is-active` state kept in sync the same way `toggle-queue` already did
+  elsewhere. `updateSplitDesktop()` (the `matchMedia('(min-width:1150px)')`
+  listener) now calls the new `closeDesktopFs()` whenever the viewport drops
+  below the breakpoint, so resizing out of split-desktop can't leave the app
+  stuck with panels transformed off-screen and no way to reach them (the
+  mobile/tablet layout doesn't have a `.desktop-fs` concept at all).
+
+  Verified by serving this worktree's `index.html` directly via `python3 -m
+  http.server` from inside the worktree (confirmed via `location.href` in
+  the browser that the served copy - not the main checkout, which a shared
+  preview launcher in this environment silently substituted at least twice
+  during testing - had the new code, after also catching the browser
+  serving a stale cached copy of the file on one earlier check and forcing
+  a fresh load) at a 1280x800 desktop viewport with the standard "I Tried
+  It" test playlist auto-loaded: clicking `fsBtn` added `desktop-fs` to
+  `<body>` and moved `#view-library`/`#view-player`/`#queue-panel` to
+  `x:-340/0:1280/1280` (confirmed via `getBoundingClientRect()`) - library
+  and queue fully off-screen, player spanning the entire 1280px width - and
+  showed the Library/Queue nav buttons (Player nav button stayed hidden, as
+  before). Clicking the Library nav button slid `#view-library` back to
+  `x:0` as an overlay on top of the fixed player and marked the button
+  `is-active`; clicking Queue while Library was open closed Library and
+  slid `#queue-panel` in from the right to `x:940`, each independently.
+  Clicking `fsBtn` again removed `desktop-fs` and restored the exact
+  pre-fullscreen 3-pane rects (`library x:0/w:340`, `player x:340/w:600`,
+  `queue x:940/w:340`) with the nav buttons hidden again - confirming no
+  regression to the normal split-desktop layout. Console showed only the
+  pre-existing "unknown error... fetching the script" YouTube-iframe-API
+  noise already documented in `fullscreen-player-controls`'s notes (present
+  on a fresh reload with no interaction at all); no new errors.
 
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
 - **Status:** draft
