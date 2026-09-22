@@ -720,6 +720,11 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
      row. Give the library playlist track list enough extra bottom padding
      to clear it. */
   #libplBody{padding-bottom:78px}
+  /* Same overlap, same fix, applied to the queue panel's own scroll
+     container: #mini-bar's higher z-index (42 vs. #queue-panel's 41) lets
+     it float over the queue list's last row too. See #libplBody above
+     (library-playlist-footer-overlap) for the original diagnosis. */
+  #queueBody{padding-bottom:78px}
 }
 
 /* ---------- fullscreen / flow mode ---------- */

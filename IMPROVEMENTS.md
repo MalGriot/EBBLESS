@@ -3002,7 +3002,7 @@ Add entries in this shape:
     two-line client cache-version bump, no UI touched.
 
 ### queue-footer-overlap: Queue slide-up panel bottom row blocked by footer player on mobile
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** On mobile, when the queue panel is open, its bottom-most
   entry is blocked/covered by the footer player bar - the same overlap bug
@@ -3012,11 +3012,63 @@ Add entries in this shape:
   footer player bar z-index/spacing - likely the same fix pattern as
   `library-playlist-footer-overlap` and `player-mobile-spacing`, applied to
   the queue panel's own scroll container.
-- **Branch:** (unclaimed)
+- **Branch:** agent/queue-footer-overlap
 - **Notes:** Synced from Geethub issue #117. Not a duplicate of
   `library-playlist-footer-overlap` (merged) - that one only touched the
   playlist panel; this is the analogous gap on the queue panel, per the
   reporter's own "just like the playlist was" framing.
+
+  Fixed in commit `b6cb431`: identical root cause to
+  `library-playlist-footer-overlap` - `#mini-bar` (footer player) shares
+  the same `bottom` offset as `#queue-panel` on mobile (both anchor to
+  `calc(var(--nav-h) + var(--safe-b))`) but `#mini-bar` has a higher
+  z-index (42 vs. `#queue-panel`'s 41), so it floats over the queue
+  list's own bottom edge. Added `#queueBody{padding-bottom:78px}` in the
+  same mobile media query, right alongside the existing `#libplBody`
+  rule, using the same 78px value (mini-bar's ~54px height plus
+  breathing room) for consistency.
+
+  Verified in a real browser: served this worktree's `index.html`
+  directly via `python3 -m http.server 8791` from inside the worktree
+  (confirmed via `location.href` in the browser that the tab was loading
+  from `localhost:8791`, not some other checkout - a shared preview-tool
+  launcher was deliberately avoided per the task brief). Loaded the
+  standard EBBLESS test playlist (32 tracks), started playback so the
+  mini-bar appeared, and opened the queue panel at a 375x812 viewport.
+
+  Confirmed the bug reproduces without the fix: with `#queueBody`'s
+  padding-bottom temporarily zeroed out via devtools, scrolling the
+  queue's `.queue-scroll` container to its max scroll position left the
+  last row (`Mushrooms & Roses`) ending 53px below the mini-bar's top
+  edge - a real overlap, and visually confirmed by screenshot (the row's
+  text rendered underneath the mini-bar's "STATE OF MIND" label).
+
+  With the fix applied, the same scroll-to-bottom test put the last
+  row's bottom edge ~21px above the mini-bar's top edge (no overlap),
+  confirmed both by `getBoundingClientRect()` measurement and by
+  screenshot - "Mushrooms & Roses" renders fully clear of the footer
+  player with visible breathing room beneath it.
+
+  One wrinkle hit during verification, noted here in case it recurs:
+  the queue panel's `.queue-scroll` container also holds a second,
+  normally-`hidden` child (`#playlistListWrap`, used when the queue
+  panel pivots to show an underlying playlist's track list). An
+  incidental interaction during manual testing unhid it, which
+  inflated the scroll container's `scrollHeight` and produced wildly
+  wrong `scrollTop`/`getBoundingClientRect()` readings until it was
+  re-hidden - a testing artifact, not a product bug, and unrelated to
+  this fix, but worth knowing about if the queue panel ever appears to
+  scroll further than its visible track list suggests it should.
+
+  Checked the browser console before and after opening the queue panel:
+  saw a handful of `502` / "unknown error... fetching the script"
+  messages, but these were already present on a bare page load before
+  touching the queue at all (looks like unrelated third-party
+  track-matching/network noise from the test playlist import flow) - no
+  new console errors were introduced by this change.
+
+  Pushed to `agent/queue-footer-overlap` - awaiting your local review
+  before merge. Not merged and not deployed, per the task scope.
 
 ### back-button-to-player: Back button should return to the player, not out of the app
 - **Status:** ready
