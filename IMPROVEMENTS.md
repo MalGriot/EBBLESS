@@ -3883,7 +3883,7 @@ Add entries in this shape:
   only the pre-existing, unrelated YouTube iframe-API script-fetch errors.
 
 ### queue-drag-reorder-glitch: Dragging a track up the queue glitches and drifts back down
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Reordering tracks by dragging within the queue panel
   glitches after a track is dragged a few spaces - it stops staying
@@ -3894,8 +3894,64 @@ Add entries in this shape:
   `queue-panel-remove-playlist-section` above - that removal deleted
   `wireTrackRowDrag` for the playlist tracklist specifically, this is the
   separate queue-reordering drag behavior).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/queue-drag-reorder-glitch`
 - **Notes:** Synced from Geethub issue #119.
+  Root cause found in `wireQueueRowGestures()` (the `pointermove` handler
+  driving the queue's own drag-to-reorder, around what was index.html
+  line ~5194 before this fix). Each time the dragged row crossed the
+  0.6*rowH swap threshold, the code did `queueBody.insertBefore(...)` to
+  swap DOM siblings, then reset both `startY` and the row's
+  `translateY` transform to 0. But the DOM swap itself shifts the row's
+  base layout offset by a full `rowH`, not by the smaller `dy` that had
+  actually accumulated at the threshold crossing - so every swap injected
+  an uncompensated `(rowH - dy)` jump into the row's rendered position.
+  Over a multi-row drag those jumps compounded, which is exactly "stops
+  staying gripped to the cursor after a few spaces." The final DOM order
+  written to `state.queue` (via `queueReorder`) was still numerically
+  correct (each swap really did happen), but because the visual position
+  had drifted away from the cursor by drop time, the row appeared to
+  "slowly drift back down" once the queue panel re-rendered to its
+  actual (correct) computed slot instead of the visually-drifted one the
+  user thought they'd dropped it at.
+
+  Fix: instead of zeroing `startY`/transform on each swap, carry the
+  leftover `dy` across the swap by adjusting `startY` and `dy` by `rowH`,
+  so the row's on-screen position stays continuous through the whole
+  drag (no jump = stays gripped, and the drop position now visually
+  matches the actual reordered slot). Also changed the single
+  `if`/`else if` swap check to `while` loops so one fast `pointermove`
+  that crosses more than one row's worth of movement swaps through all
+  of them in that same event instead of needing a follow-up move to
+  "catch up."
+
+  **Verification:** Served this worktree's own `index.html` directly via
+  `python3 -m http.server` from inside the worktree (not the shared
+  preview-tool launcher, which has previously been reported to silently
+  serve the main checkout instead of a worktree's copy) and confirmed
+  `location.href` pointed at `http://localhost:<port>/index.html` from
+  this worktree before testing. Loaded the standard EBBLESS test Spotify
+  playlist (per the project's saved test-playlist convention) to get a
+  real 30+ track queue, then drove the queue panel's drag handle with
+  real `PointerEvent` sequences (`pointerdown` -> many incremental
+  `pointermove` steps -> `pointerup`) dispatched directly on the handle
+  element, both dragging a row up ~6 spots and back down ~4.5 spots.
+  Logged the row's `getBoundingClientRect().top` vs. the simulated
+  pointer Y at every step: the offset between cursor and row stayed
+  essentially constant throughout each drag (no jump), and after
+  release the row landed at exactly the expected list index with no
+  leftover inline transform and no post-drop animation/drift. Checked
+  `read_console_messages` before/after - no errors traceable to
+  `wireQueueRowGestures`/`queueReorder`/drag handling (the only console
+  errors present were pre-existing YouTube/artwork fetch failures from
+  the sandboxed test environment having no real network access, unrelated
+  to this change).
+  **Caveat:** verification drove the drag via synthetic `PointerEvent`s
+  through JS rather than the browser tool's native mouse-drag emulation
+  (which only supports start/end coordinates, not a realistic multi-step
+  move path), so real trackpad/touch "jitter" during a human drag wasn't
+  exercised - but the fix addresses the underlying math unconditionally
+  (it no longer matters how many pointermove events land or how large
+  each step is), so this shouldn't be sensitive to that.
 
 ### audio-quality-boost: Boost audio quality
 - **Status:** draft
@@ -3914,7 +3970,7 @@ Add entries in this shape:
   touch audio processing.
 
 ### token-exhaustion-splash-stuck: App stuck on splash when out of tokens
-- **Status:** draft
+- **Status:** review
 - **Priority:** high
 - **Description:** Reporter says every time they run out of (Claude/API)
   tokens, the site doesn't load on desktop or mobile - it just stays on the
@@ -3924,14 +3980,69 @@ Add entries in this shape:
   of hanging forever.
 - **Touches:** startup flow (`startApp()`), splash screen, whatever
   backend/worker call it's blocking on during load - needs locating.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/token-exhaustion-splash-stuck`
 - **Notes:** Synced from Geethub issue #122. Distinct from the already-merged
   `app-down-splash-blocked` (that was a `#onbCapture` tap-catcher z-index bug,
   unrelated to token exhaustion) - different root cause, same visible symptom
   (stuck splash), so kept as a separate entry rather than folded in.
 
+  **Root cause found:** it's not a hung network `await` gating the splash -
+  every fetch to `BACKEND` (the `spotify-youtube-search` Cloudflare Worker,
+  used for Spotify/YouTube/SoundCloud/Apple Music resolves, `/similar`,
+  `/lyrics`, etc.) already wraps its `fetch`/`await res.json()` in try/catch
+  that degrades gracefully. The actual bug is in `startApp()`
+  (`index.html`, was ~line 7138): its bootstrap block -
+  `ensureSwellPlaylist()`, `renderLibrary()`, `renderQueuePanel()`,
+  `setView()`, `refreshSwellIfStale()`, the stale-playlist re-resolve sweep,
+  `seedStarterLibrary()` - ran completely unguarded, *before* the code that
+  schedules the splash's dismiss timer (`setTimeout(hideSplash, SPLASH_MS)`
+  or the mobile install-invite path). `#splash` is opaque and visible by
+  default (the no-FOUC cover), so it only ever goes away once JS explicitly
+  hides it. Any synchronous throw in that unguarded block - e.g. from a
+  playlist object left corrupted/partial in localStorage by a prior
+  `resolvePlaylist()` call that errored out or hit an exhausted API/token
+  budget mid-resolve (see its `resolving: true` partial-snapshot writes) -
+  aborted `startApp()` outright before it ever reached the splash-dismiss
+  code, stranding the visitor on the splash forever with no error shown and
+  no retry path.
+
+  **Fix:** wrapped that entire bootstrap block in try/catch (falling back to
+  a plain `setView()` on error) so a throw there can only degrade what lands
+  on screen (e.g. an empty library instead of a seeded one) and can never
+  again prevent the splash-dismiss code from running. Also added an
+  independent 12-second hard safety-net `setTimeout` near the very top of
+  the script (right after the `BACKEND` constant, so it's scheduled as early
+  as possible) that force-hides `#splash` no matter what else happens during
+  startup - a last-resort backstop for failure modes outside that one block.
+  Both changes are additive/defensive; no existing startup behavior was
+  restructured or removed.
+
+  **Verified:** served this worktree's own `index.html` directly via
+  `python3 -m http.server` (not the shared preview-tool launcher, per this
+  repo's multi-worktree caution) and confirmed `location.href` pointed at
+  the worktree copy before testing. Normal path: splash clears and the
+  library renders exactly as before, no regressions. Failure path: since a
+  live real-world token/quota exhaustion isn't reproducible in this sandbox,
+  simulated it by injecting a synchronous throw at the top of the
+  previously-unguarded bootstrap block (behind a `localStorage` test flag,
+  not shipped) to stand in for a corrupted cache left by an exhausted-quota
+  resolve. On the pre-fix code this reproduced the reported bug exactly -
+  splash logo stuck on screen indefinitely with an uncaught error in the
+  console. On the fixed code the same throw is caught, the splash still
+  clears within its normal timing, and the app lands in a usable (if
+  degraded - empty library) state instead of hanging.
+
+  **Caveat:** this fix addresses the confirmed, reproducible mechanism (an
+  uncaught synchronous error during startup bootstrap leaving the splash-
+  dismiss timer unscheduled) plus a general backstop timeout. It was not
+  possible to actually exhaust the `spotify-youtube-search` Worker's real
+  upstream API quota/tokens in this sandbox to prove that specific trigger
+  end-to-end - the fix instead guards against *any* startup-time throw
+  (including one caused that way), which covers the reported symptom
+  regardless of which upstream call originally exhausted its budget.
+
 ### youtube-link-paste-play: Paste a YouTube link to a song and have it play
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Reporter wants to paste a YouTube link to a song and have
   it play. The app already appears to recognize `youtube.com/watch`,
@@ -3941,5 +4052,91 @@ Add entries in this shape:
   end-to-end, or whether it's dead/broken code, before scoping a fix.
 - **Touches:** link-paste import flow, YouTube link parsing
   (`index.html` ~line 1949-1965), `yt_video` resolution (~line 3300).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/youtube-link-paste-play`
 - **Notes:** Synced from Geethub issue #123.
+
+  Traced the full path by hand: `parseYouTubeLink`/`parseImportLink`
+  (index.html ~2051-2149) correctly classify `youtube.com/watch?v=`,
+  `youtu.be/`, and `/shorts/` links (with or without tracking params like
+  `?si=`) as `yt_video`; the main paste-link form's submit handler
+  (~4466-4482) already branches on `parsed.source === 'youtube'` and calls
+  `beginImport('yt:'+id, false, 'yt_video')`; `resolvePlaylist`'s
+  `yt_video` branch (~2468-2479) calls `fetchYouTubeVideo` -> backend
+  `GET /ytvideo?id=` (worker/src/index.js `handleYtVideo`, ~640-685),
+  which scrapes the watch page's `ytInitialPlayerResponse` for
+  title/artist/thumbnail; `isSingleTrackType` (~4369-4371) already
+  includes `yt_video` so it's routed through
+  `openSingleTrackDestinationPicker` into a playlist/Liked Songs instead
+  of being mishandled as a bare "playlist"; and playback
+  (`loadIndex`/`createDeckPlayer`, ~6464+) runs off `track.videoId`
+  identically regardless of source. **None of this was dead or broken
+  code** - every link in the chain was already wired and reachable.
+
+  The actual defect was in the UI copy, not the logic. Commit `c198a0e`
+  ("Add YouTube track duration and bump worker cache version", Sep 13)
+  stripped the word "YouTube" out of four places while leaving the
+  `yt_video` handling itself untouched: the main `#urlInput` placeholder
+  (said "Paste a Spotify, SoundCloud, or Apple Music link"), the main
+  import form's "that doesn't look like a link" error, the
+  `resolveTracksFromLink` ("+ Add song" flow) error of the same kind, and
+  the onboarding-animation caption. Meanwhile the sibling
+  "replace track link" picker (`#plReplaceInput`) still said "Spotify,
+  YouTube, SoundCloud, or Apple Music" the whole time, and the About-page
+  copy was left with a dangling "Either way, playback threads through..."
+  that no longer had a first "way" stated (the YouTube-direct clause had
+  been deleted out from under it). Net effect: a listener pasting a
+  YouTube link got no on-screen indication it was supported, and anyone
+  who mistyped a link was told the app only understood three other
+  services - even though YouTube worked the whole time.
+
+  **Fix:** restored "YouTube" to the placeholder, both error strings, and
+  the onboarding caption; restored the About copy's "or paste a YouTube
+  playlist or video link directly" clause so "Either way" has an
+  antecedent again. No changes to the classifier, `resolvePlaylist`,
+  `beginImport`, or player - scoped purely to the copy that was hiding an
+  already-working feature. Diff is 5 one-line copy changes in
+  `index.html`.
+
+  **Verified:**
+  - `parseYouTubeLink` unit-tested standalone (extracted into a Node
+    snippet) against `youtube.com/watch?v=`, `youtu.be/id`,
+    `youtu.be/id?si=...`, bare `youtube.com/watch?v=` with no scheme,
+    `m.youtube.com`, `music.youtube.com` with a `list=RD...` mix param,
+    and `/shorts/id` - all correctly resolve to `{type:'video', id}`.
+  - Served this worktree's own `index.html` directly with
+    `python3 -m http.server` from inside the worktree (confirmed via
+    `location.href` in the browser that the fixed copy, not the main
+    checkout's, was loaded - the shared preview-tool launcher was
+    avoided per the known cross-worktree risk, and a stray
+    `http.server` from an unrelated worktree/session already squatting
+    on the first port tried was caught via `lsof -p <pid> | grep cwd`
+    before it could produce a false verification).
+  - Confirmed the placeholder, import-form error text, and onboarding
+    caption all now read "YouTube" in the served page.
+  - Pasted `https://youtu.be/dQw4w9WgXcQ?si=abc123` into the live
+    `#urlInput` and clicked Load: the classifier fired, `beginImport`
+    opened the import overlay, and the request chain reached the real
+    backend and a real `https://www.youtube.com/watch?v=...` fetch - this
+    sandbox does have network egress that far. The call came back with
+    "youtube redirected to an interstitial (likely a transient bot-check)
+    instead of serving results," i.e. YouTube's bot detection blocked the
+    scrape from this environment's IP, exactly the failure mode
+    `handleYtVideo`/`fetchYouTubePage` already anticipate and surface as a
+    typed, retryable error (see worker/src/index.js `YouTubeBlockedError`).
+    This is independent confirmation the whole pipeline - UI, classifier,
+    `beginImport`, `resolvePlaylist`, and the live network call - is
+    reachable and correctly wired end to end; it also happens to be the
+    likely reason some real users see this "not working" intermittently
+    (the `/ytvideo` scrape has no official-API fallback and is inherently
+    exposed to YouTube's bot-checks), but that reliability question is a
+    separate, pre-existing backend-scraping concern, not a paste-UI wiring
+    bug, and is out of scope for this fix.
+  - **Not verified:** an actual successful YouTube video resolution and
+    playback against a real video with no bot-check in the way (blocked by
+    the transient interstitial above, not by anything in this diff).
+    Recommend a follow-up manual check on a real device/network - paste a
+    `youtu.be` or `youtube.com/watch?v=` link for an actual song and
+    confirm title/artist/art populate and the track plays - to rule out
+    any YouTube-scrape-specific issue that only a successful response
+    would surface (e.g. an edge case in how `handleYtVideo` parses
+    `ytInitialPlayerResponse` for a particular video's metadata shape).
