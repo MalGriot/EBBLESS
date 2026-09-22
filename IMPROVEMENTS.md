@@ -2480,7 +2480,7 @@ Add entries in this shape:
   (merged - that changed the visuals' size, not fullscreen behavior).
 
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Fullscreen mode should show all the player controls -
   shuffle, loop, album art style switcher, etc. - not just a subset.
@@ -3082,7 +3082,7 @@ Add entries in this shape:
     two-line client cache-version bump, no UI touched.
 
 ### queue-footer-overlap: Queue slide-up panel bottom row blocked by footer player on mobile
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, when the queue panel is open, its bottom-most
   entry is blocked/covered by the footer player bar - the same overlap bug
@@ -3151,7 +3151,7 @@ Add entries in this shape:
   before merge. Not merged and not deployed, per the task scope.
 
 ### back-button-to-player: Back button should return to the player, not out of the app
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Hitting the back button (mobile back gesture/hardware
   back) from within the app should navigate to the player view, rather than
