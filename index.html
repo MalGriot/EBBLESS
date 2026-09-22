@@ -2046,6 +2046,47 @@ async function searchYouTube(title, artist, sourceDurationMs){
   throw lastErr;
 }
 
+// Caches title/artist -> matched YouTube video across every playlist a
+// listener has, not just within one resolve - the same song showing up in
+// two playlists (or a playlist re-resolving after RESOLVE_LOGIC_VERSION
+// bumps) reuses the match already on file instead of re-searching. Keyed
+// under the current resolve version so a scoring/logic change starts a
+// fresh cache rather than serving matches picked under the old rules.
+// Ignores source duration when matching cache entries - a rare same-title-
+// same-artist collision (e.g. a live vs. studio cut) can occasionally reuse
+// the wrong one, traded for the common case (the same track resolving
+// again) never re-hitting the network.
+// A function, not a top-level const, because RESOLVE_LOGIC_VERSION isn't
+// declared until further down the file (see the RESOLVE PIPELINE section) -
+// this is only ever called at runtime, well after that's initialized.
+function trackMatchCacheKey(){ return 'ebbless:trackMatchCache:v' + RESOLVE_LOGIC_VERSION; }
+const TRACK_MATCH_CACHE_MAX = 2000;
+function trackMatchKey(title, artist){
+  return (title || '').trim().toLowerCase() + '|||' + (artist || '').trim().toLowerCase();
+}
+function getCachedTrackMatch(title, artist){
+  const cache = lsGet(trackMatchCacheKey(), {});
+  return cache[trackMatchKey(title, artist)] || null;
+}
+function cacheTrackMatch(title, artist, match){
+  if (!match || !match.videoId) return;
+  const cache = lsGet(trackMatchCacheKey(), {});
+  cache[trackMatchKey(title, artist)] = { videoId: match.videoId, title: match.title || '', channel: match.channel || '', duration: match.duration || 0, ts: Date.now() };
+  const keys = Object.keys(cache);
+  if (keys.length > TRACK_MATCH_CACHE_MAX){
+    keys.sort((a, b) => (cache[a].ts || 0) - (cache[b].ts || 0));
+    for (const k of keys.slice(0, keys.length - TRACK_MATCH_CACHE_MAX)) delete cache[k];
+  }
+  lsSet(trackMatchCacheKey(), cache);
+}
+async function searchYouTubeCached(title, artist, sourceDurationMs){
+  const cached = getCachedTrackMatch(title, artist);
+  if (cached) return cached;
+  const match = await searchYouTube(title, artist, sourceDurationMs);
+  cacheTrackMatch(title, artist, match);
+  return match;
+}
+
 async function fetchYouTubePlaylist(playlistId){
   const res = await fetch(BACKEND + '/ytplaylist?id=' + encodeURIComponent(playlistId));
   const data = await res.json();
@@ -2279,7 +2320,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       ({ title, artist, image: art, duration: sourceDuration } = await fetchSpotifyTrack(playlistId));
     }
     onProgress({ stage: 'matching', done: 0, total: 1 });
-    async function trySearchYouTube(){ try { return await searchYouTube(title, artist, sourceDuration); } catch(e){ return { videoId: null, title: '', channel: '' }; } }
+    async function trySearchYouTube(){ try { return await searchYouTubeCached(title, artist, sourceDuration); } catch(e){ return { videoId: null, title: '', channel: '' }; } }
     const [match, resolvedArt] = await Promise.all([
       trySearchYouTube(),
       resolveTrackArt(sourceKindForType(type), title, artist, art),
@@ -2332,7 +2373,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     const t = tracks[i];
     try{
       const [match, art] = await Promise.all([
-        searchYouTube(t.title, t.artist, t.duration),
+        searchYouTubeCached(t.title, t.artist, t.duration),
         resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
       ]);
       resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0 });
@@ -5162,16 +5203,20 @@ function onDeckConfirmed(deck){
   deck.confirmed = true;
   deck.unmuteTimer = null;
   if (!deck.player) return;
-  if (deck === activeDeck()){
-    let resumed = false;
-    if (pendingResume && deck.player.seekTo){
-      const entry = state.queue[state.queuePos];
-      if (entry && entry.plId === pendingResume.plId && entry.idx === pendingResume.idx){
-        deck.player.seekTo(pendingResume.position, true);
-        resumed = true;
-      }
+  // A prewarmed standby deck (see prewarmResumeDeck) can be the one that
+  // first reaches "confirmed" for a saved resume position, not just the
+  // active deck - apply the seek here regardless of which slot this is, so
+  // the position is already baked in by the time it's promoted to active.
+  let resumed = false;
+  if (pendingResume && deck.player.seekTo){
+    const entry = state.queue[deck.pos];
+    if (entry && entry.plId === pendingResume.plId && entry.idx === pendingResume.idx){
+      deck.player.seekTo(pendingResume.position, true);
+      resumed = true;
       pendingResume = null;
     }
+  }
+  if (deck === activeDeck()){
     // The video plays muted (silently) through the whole pre-ad wait, so by the
     // time it's confirmed clean it has already drifted past the intro — snap
     // back to the start so the listener hears the song from 0:00.
@@ -5246,6 +5291,26 @@ function schedulePreload(afterPos){
   if (!t || !t.videoId){ resetDeck(deck); return; }
   resetDeck(deck);
   deck.pos = pos;
+  loadIntoDeck(deck, t.videoId, false);
+}
+
+// Warms the standby deck with whatever tryResume() just restored, muted and
+// paused, the moment the app opens - not just within the narrow "actively
+// resuming from a recent background" window resumePlayback() covers. The
+// same trick schedulePreload already uses for gapless next-track playback,
+// aimed here at "the next thing the listener will do" being tap play on
+// what they left off on. loadIndex's existing standby-promotion check picks
+// this up automatically, so that tap promotes an already-buffered deck
+// instead of creating a fresh YouTube player from cold.
+function prewarmResumeDeck(){
+  if (state.queuePos < 0) return;
+  if (typeof YT === 'undefined' || !YT.Player){ setTimeout(prewarmResumeDeck, 300); return; }
+  const t = trackAt(state.queuePos);
+  if (!t || !t.videoId) return;
+  const deck = standbyDeck();
+  if (deck.pos === state.queuePos && (deck.player || deck.pendingVideoId)) return;
+  resetDeck(deck);
+  deck.pos = state.queuePos;
   loadIntoDeck(deck, t.videoId, false);
 }
 
@@ -6726,6 +6791,12 @@ function startApp(){
     // trying rather than leaving a track that was actively playing sitting
     // paused for no visible reason.
     try{ resumePlayback(); } catch(e){}
+  } else {
+    // Not auto-resuming sound (a real cold launch, or nothing was playing
+    // when it backgrounded) - still warm the deck for whatever tryResume()
+    // just restored, so the moment the listener does tap play it's an
+    // instant promotion instead of a YouTube player spinning up from cold.
+    try{ prewarmResumeDeck(); } catch(e){}
   }
   // First-time visitors (or anyone with nothing resumed) have no track to
   // show on the player view, so land them on the library instead.
