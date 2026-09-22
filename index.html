@@ -897,37 +897,56 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
    below forces each pane back to the row's actual (stretched) height so
    their own overflow rules take over instead of the grid growing around them. */
 @media (min-width:1150px){
-  body.split-desktop:not(.view-settings-active) #topnav [data-view="library"],
-  body.split-desktop:not(.view-settings-active) #topnav [data-view="player"],
-  body.split-desktop:not(.view-settings-active) #topnav [data-action="toggle-queue"]{display:none}
-  body.split-desktop:not(.view-settings-active) #app{
+  /* Settings (issue #78): on this split-desktop layout, Settings swaps into
+     the center pane in #view-player's place instead of navigating away to
+     its own screen. Below this 1150px breakpoint none of this block's
+     rules apply at all, so the plain `views[k].hidden = k !== name` logic
+     in setView() (via the ordinary `.view[hidden]{display:none}` rule)
+     still drives the existing navigate-to-a-separate-screen behavior there
+     unchanged. Up here, the library/queue panes and the grid itself are no
+     longer scoped to `:not(.view-settings-active)` - they stay put
+     regardless of whether Settings is open. Only the center column swaps
+     content: #view-player is forced visible (ignoring its own `hidden`
+     attribute, same trick used pre-existing for #view-library) whenever
+     Settings is NOT the active view, and #view-settings is forced visible
+     in its place whenever Settings IS the active view - so exactly one of
+     the two occupies grid-column 2 at a time, driven by the same
+     `view-settings-active` class setView() already toggles. */
+  body.split-desktop #topnav [data-view="library"],
+  body.split-desktop #topnav [data-view="player"],
+  body.split-desktop #topnav [data-action="toggle-queue"]{display:none}
+  body.split-desktop #app{
     display:grid;grid-template-rows:var(--topbar-h) 1fr;
     grid-template-columns:minmax(280px,340px) 1fr minmax(280px,340px);
   }
-  body.split-desktop:not(.view-settings-active) #topbar{grid-column:1/-1;grid-row:1}
-  body.split-desktop:not(.view-settings-active) #view-library,
-  body.split-desktop:not(.view-settings-active) #view-player{
-    position:static;grid-row:2;display:block!important;top:auto;bottom:auto;min-height:0;
+  body.split-desktop #topbar{grid-column:1/-1;grid-row:1}
+  body.split-desktop #view-library,
+  body.split-desktop #view-player,
+  body.split-desktop #view-settings{
+    position:static;grid-row:2;top:auto;bottom:auto;min-height:0;
   }
-  body.split-desktop:not(.view-settings-active) #view-library{
-    grid-column:1;border-right:1px solid var(--border);position:relative;
+  body.split-desktop #view-library{
+    grid-column:1;border-right:1px solid var(--border);position:relative;display:block!important;
   }
-  body.split-desktop:not(.view-settings-active) #view-library .lib-bg{position:absolute}
-  body.split-desktop:not(.view-settings-active) #view-player{grid-column:2}
-  body.split-desktop:not(.view-settings-active) #queue-panel{
+  body.split-desktop #view-library .lib-bg{position:absolute}
+  body.split-desktop #view-player,
+  body.split-desktop #view-settings{grid-column:2}
+  body.split-desktop:not(.view-settings-active) #view-player{display:block!important}
+  body.split-desktop.view-settings-active #view-settings{display:block!important}
+  body.split-desktop #queue-panel{
     position:static;grid-column:3;grid-row:2;width:auto;height:auto;top:auto;right:auto;bottom:auto;
     min-height:0;transform:none!important;border-left:1px solid var(--border);
   }
-  body.split-desktop:not(.view-settings-active) #queue-scrim{display:none!important}
-  body.split-desktop:not(.view-settings-active) #mini-bar{display:none!important}
-  body.split-desktop:not(.view-settings-active) .view-scroll,
-  body.split-desktop:not(.view-settings-active) #topbar{margin-right:0!important}
+  body.split-desktop #queue-scrim{display:none!important}
+  body.split-desktop #mini-bar{display:none!important}
+  body.split-desktop .view-scroll,
+  body.split-desktop #topbar{margin-right:0!important}
   /* the library column is only 240-300px here - as narrow as the mobile
      layout the filter/cycle split already handles, so reuse it - and let
      the head-actions row wrap rather than clip when it still doesn't fit */
-  body.split-desktop:not(.view-settings-active) .lib-filter{display:none}
-  body.split-desktop:not(.view-settings-active) .lib-filter-cycle{display:inline-flex;align-items:center}
-  body.split-desktop:not(.view-settings-active) .section-label-row{flex-wrap:wrap;row-gap:8px}
+  body.split-desktop .lib-filter{display:none}
+  body.split-desktop .lib-filter-cycle{display:inline-flex;align-items:center}
+  body.split-desktop .section-label-row{flex-wrap:wrap;row-gap:8px}
 }
 /* short viewports (landscape phones, small windows): the vertical stack can't
    fit at normal sizes no matter how small the artwork gets, so collapse the
