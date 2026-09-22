@@ -4167,19 +4167,27 @@ Add entries in this shape:
   regression from `desktop-settings-inline`, which changed how Settings
   and the queue/player panes coexist in the desktop grid.
 
-### breathe-love-deep-spotify-pull: "Breathe Love Deep" album still not pulling from its real source, plays random YouTube songs
+### breathe-love-deep-soundcloud-pull: "Breathe Love Deep" album still not pulling from its real SoundCloud source, plays random YouTube songs
 - **Status:** in-progress
 - **Priority:** high
 - **Description:** The "Breathe Love Deep" album is pulling random songs
   from YouTube while still showing the correct "Breathe Love Deep" album
   art and titles, instead of playing the actual tracks from its real
-  source link.
+  SoundCloud source (`https://soundcloud.com/mal-griot/sets/breathelovedeep`).
 - **Touches:** starter/default library seed (`STARTER_LIBRARY_URLS` /
   `seedStarterLibrary()`), SoundCloud/source resolution
   (`sourceKindForType()`, `resolveTrackArt()`), track-link matching
   pipeline (`link-match-accuracy` area).
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #130. Likely a regression or
+- **Branch:** `agent/breathe-love-deep-spotify-pull` (lane was claimed
+  under the original slug before the wording below was corrected from
+  "spotify" to "soundcloud" - kept as-is rather than re-churning the
+  worktree/branch for a naming fix only).
+- **Notes:** Reporter clarified (2026-09-22) the original issue title's
+  "spotify link" phrasing was a mistake - this album is SoundCloud-sourced,
+  not Spotify. Entry title/slug/description corrected accordingly; the
+  dispatched agent's brief was already scoped to SoundCloud resolution
+  (not Spotify), so no redirection was needed, just this record correction.
+  Synced from Geethub issue #130. Likely a regression or
   incomplete fix relative to the already-merged `breathe-love-deep-album`
   entry above (which addressed album categorization and SoundCloud
   sourcing) - needs fresh investigation into why tracks are resolving to
