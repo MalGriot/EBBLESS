@@ -4066,8 +4066,15 @@ function playPlaylistNow(id){
    ========================================================================= */
 function setImportHint(){ /* static text; kept for future contextual tips */ }
 
-function openImportOverlay(){ importOverlay.classList.add('is-open'); }
-function closeImportOverlay(){ importOverlay.classList.remove('is-open'); importStage.innerHTML = ''; }
+function openImportOverlay(){
+  importOverlay.classList.add('is-open');
+  if (loadBtn){ loadBtn.disabled = true; loadBtn.classList.add('onb-loading'); }
+}
+function closeImportOverlay(){
+  importOverlay.classList.remove('is-open');
+  importStage.innerHTML = '';
+  if (loadBtn){ loadBtn.disabled = false; loadBtn.classList.remove('onb-loading'); }
+}
 $('importClose').addEventListener('click', closeImportOverlay);
 
 function stageFinding(){
