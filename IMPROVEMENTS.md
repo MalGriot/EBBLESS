@@ -1690,17 +1690,15 @@ Add entries in this shape:
   timing - but since the swipe calls the identical functions as the existing
   transport buttons, behavior should match those buttons live.
 
-### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen (or like?)
-- **Status:** ready
+### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Double-tapping the album art (or cymatics view) should
-  toggle fullscreen. Reporter raised an open question themselves: might it
-  be more intuitive for double-tap to instead heart/like the track (the
-  common gesture convention)? Needs your call before implementation.
+  toggle fullscreen.
 - **Touches:** player view / cymatics view touch handlers.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #73. **Needs your decision:**
-  fullscreen-toggle vs. like-track for the double-tap gesture.
+- **Branch:** agent/album-art-doubletap
+- **Notes:** Synced from Geethub issue #73. Decision made 2026-09-22: double-tap
+  toggles fullscreen (not like/heart).
 
 ### video-playback-option: Add a video-playback button next to lyrics
 - **Status:** draft
@@ -2627,7 +2625,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #44.
 
 ### tester-feedback-form: Form for beta testers to report on the app
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Add a form specifically for beta testers to give
   structured feedback on the app.
@@ -2814,7 +2812,7 @@ Add entries in this shape:
   card renders "CuRRentSSsss" in both the marquee and name label.
 
 ### playlist-remove-track-library: Option to remove tracks from a playlist in library
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add an option to remove individual tracks from a playlist
   directly from the library view.
