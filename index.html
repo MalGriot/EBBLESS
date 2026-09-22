@@ -2349,6 +2349,16 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       firstTrackFired = true;
       onFirstTrack({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
     }
+    // Mirror progress to storage too, not just the in-memory callback above -
+    // mobile browsers/PWAs routinely kill the whole JS process the moment
+    // the app is backgrounded (see the visibilitychange/startApp handling
+    // near LS_BACKGROUNDED_AT), which would otherwise abandon this loop
+    // mid-playlist and strand the track already playing with nowhere to
+    // resume from. `resolving: true` marks this a snapshot-in-progress so
+    // startApp's sweep can pick up a playlist a killed process left behind.
+    if (firstTrackFired){
+      lsSet(LS_PL(playlistId), { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION, resolving: true });
+    }
     if (i < tracks.length - 1) await sleep(350);
   }
   const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
@@ -4181,6 +4191,14 @@ async function beginImport(id, force, type){
       buildQueueFrom(0);
       loadIndex(state.queuePos, true);
       setView('player');
+      // Save to the library now rather than waiting for the full resolve -
+      // resolvePlaylist is already mirroring its progress to storage as
+      // "resolving: true" (see its loop), so if the app gets backgrounded
+      // and killed before this finishes, startApp's sweep can find this by
+      // id and pick the rest of the match-up back up next launch instead of
+      // the whole import silently vanishing.
+      saveToLibrary(id);
+      renderLibrary();
     });
     if (isSingleTrackType(pl.type)){
       closeImportOverlay();
@@ -6727,8 +6745,17 @@ function startApp(){
   // launch until the logic changes again - not a standing "always refetch"
   // poll. Staggered and best-effort so a slow/offline source can't stall
   // startup or spam requests.
+  // Also picks up playlists still mid-resolve ("resolving: true", see
+  // resolvePlaylist's loop) - the import got far enough to save a partial
+  // playlist and start playback, then the app was backgrounded and the OS
+  // killed the JS process before the rest finished matching. That process
+  // is gone along with its in-flight loop; this is the only place that
+  // notices the leftover snapshot and picks the match-up back up.
   (async () => {
-    const staleIds = getLibrary().filter(id => isResolveStale(getCachedPlaylist(id)));
+    const staleIds = getLibrary().filter(id => {
+      const pl = getCachedPlaylist(id);
+      return isResolveStale(pl) || (pl && pl.resolving);
+    });
     for (const id of staleIds){
       const pl = getCachedPlaylist(id);
       if (!pl) continue;
