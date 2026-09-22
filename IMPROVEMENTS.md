@@ -2123,7 +2123,7 @@ Add entries in this shape:
   discussing approach before queuing.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Switching away from and back to the app currently takes
   too long to resume the currently-loaded song - it should be cached so
@@ -2132,8 +2132,10 @@ Add entries in this shape:
 - **Touches:** playback state caching, `mobile-background-resume` (merged)
   - related but distinct: that fixed the splash re-appearing on resume, this
   is about resume *speed* and lock-screen control responsiveness.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #41.
+- **Branch:** none - done directly against `main` (commit `24adec7`).
+- **Notes:** Synced from Geethub issue #41. **Update (2026-09-22):** found
+  already implemented directly on `main`, not through a lane - backlog
+  status corrected from `ready`/unclaimed to `merged` to match reality.
 
 ### loading-progress-indicator: Add a loading screen/progress indicator while a track loads
 - **Status:** draft
@@ -2146,7 +2148,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #42.
 
 ### play-first-loaded-track: Play first resolved track immediately during playlist sync
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When a playlist is pasted, the first track to finish
   resolving should start playing immediately rather than waiting for the
@@ -2154,11 +2156,14 @@ Add entries in this shape:
   loaded (then re-enabled) - or, alternatively, show a "play now" prompt on
   the loading screen instead of auto-playing.
 - **Touches:** `beginImport()` playlist-load flow, playback start trigger.
-- **Branch:** (unclaimed)
+- **Branch:** none - done directly against `main` (commit `d98675a`).
 - **Notes:** Synced from Geethub issue #82. Reporter offered two options
   (auto-play immediately vs. a "play now" prompt) - leaning toward the
   prompt per their own follow-up ("Actually, it should be a prompt"), but
-  flagging both for your call.
+  flagging both for your call. **Update (2026-09-22):** found already
+  implemented directly on `main` (went with immediate auto-play, not the
+  prompt) - backlog status corrected from `ready`/unclaimed to `merged` to
+  match reality.
 
 ### pwa-update-propagation: Updates should reach already-installed mobile PWAs
 - **Status:** merged
