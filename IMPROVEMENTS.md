@@ -3243,3 +3243,34 @@ Add entries in this shape:
   gameplay) - worth sequencing after that one if both are built, so the
   minigame's interaction layer sits on top of the finished visual rather
   than the other way around.
+
+### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
+- **Status:** merged
+- **Priority:** medium
+- **Description:** The queue panel showed a "Playlist" section below the
+  queue itself (the currently loaded playlist's full tracklist, with
+  Play/Sort/Add song/Re-match controls) every time a playlist was loaded.
+  User reported this as clutter, not needed.
+- **Touches:** `index.html` `#queue-panel`'s `.playlist-list-wrap` markup,
+  its CSS, and the JS wiring exclusively feeding it (`renderTrackList`,
+  `computeViewOrder`, `reorderPlaylistTracks`, `wireTrackRowDrag`,
+  `highlightActiveRow`, `removeTrackFromCustomPlaylist`, and the
+  `addSongBtn`/`reResolveBtn`/`trackSortSel`/`plPlayBtn` handlers).
+- **Branch:** none - done directly against `main` (no other session active
+  at the time; small, self-contained removal).
+- **Notes:** Asked the user first since this section also held Add Song and
+  Sort tracks controls with no other entry point in the app (Re-match
+  duplicates the existing "Refresh links" item in the library card's 3-dot
+  menu) - user chose to remove the whole section, accepting the loss of
+  Add Song/Sort. Kept `state.playlist` itself and the shared track-options
+  menu (`trackCtxMenu`/`toggleTrackCtxMenu`), since both are also used by
+  the separate `libpl-panel` (library playlist browsing panel) and the
+  queue engine's up-next logic - only the exclusively-UI code for this one
+  section was removed. Verified via a local `python3 -m http.server`
+  served directly from a fresh checkout (confirmed via `location.href`),
+  loaded the standard test playlist, and confirmed `.queue-scroll` inside
+  `#queue-panel` contains only `#queueBody` with no trace of the removed
+  elements in the DOM. Also re-verified the separate `libpl-panel` (opened
+  from a library card) still renders and functions normally, confirming
+  the shared track-menu code wasn't disturbed. No new console errors -
+  only the pre-existing, unrelated YouTube iframe-API script-fetch errors.
