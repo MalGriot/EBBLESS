@@ -5367,8 +5367,18 @@ function wireQueueRowGestures(row, handle){
   let swipeStartX = null, swipeDX = 0, swipeActive = false;
 
   handle.addEventListener('pointerdown', (e) => {
-    dragging = true; startY = e.clientY; rowH = row.offsetHeight;
-    origIndex = Array.from(queueBody.querySelectorAll('.q-row')).indexOf(row);
+    dragging = true; startY = e.clientY;
+    const siblings = Array.from(queueBody.querySelectorAll('.q-row'));
+    origIndex = siblings.indexOf(row);
+    // row.offsetHeight alone excludes the `.q-row + .q-row{margin-top:2px}`
+    // gap between rows, so it understates the actual pixel distance each
+    // insertBefore swap (in pointermove below) shifts the row by. That left
+    // a small (2px/swap) uncompensated residual that compounds over a
+    // multi-row drag - the same class of bug the carry-over fix below
+    // already handles for the larger jump, just missed for the margin.
+    // Measure the real row-to-row pitch off an actual neighbor instead.
+    const neighbor = siblings[origIndex + 1] || siblings[origIndex - 1];
+    rowH = neighbor ? Math.abs(neighbor.getBoundingClientRect().top - row.getBoundingClientRect().top) : row.offsetHeight;
     row.classList.add('is-dragging');
     handle.setPointerCapture(e.pointerId);
   });
