@@ -9,6 +9,7 @@
 <meta name="description" content="Music without the ebb. Paste a playlist, keep listening.">
 <meta name="theme-color" content="#121212">
 <link rel="manifest" href="manifest.json">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="apple-touch-icon" href="brand/assets/icons/apple-touch-icon.png">
 <meta property="og:title" content="EBBLESS">
 <meta property="og:description" content="Music without the ebb. Paste a playlist, keep listening.">
@@ -2358,9 +2359,122 @@ function lsGet(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
   catch(e){ return fallback; }
 }
-function lsSet(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+function lsSet(key, val){
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
+  // Silent profile backup: any write to library/playlist/pinned state queues
+  // a debounced push to the signed-in visitor's cloud profile (see PROFILE
+  // SYNC below) so a wiped browser can reclaim it later. No-op until a
+  // Google session has actually been established.
+  if (isLibraryRelevantKey(key)) scheduleProfileSync();
+}
 let crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {}));
-function lsDel(key){ try { localStorage.removeItem(key); } catch(e){} }
+function lsDel(key){
+  try { localStorage.removeItem(key); } catch(e){}
+  if (isLibraryRelevantKey(key)) scheduleProfileSync();
+}
+
+/* =========================================================================
+   PROFILE SYNC (Google Sign-In) - silently backs a visitor's library up to
+   the Worker (BACKEND, above) keyed to their verified Google account, so a
+   wiped browser or a new device can reclaim their playlists without ever
+   having to know an account exists. Google Identity Services' One Tap
+   (script tag in <head>) silently re-establishes the session on every
+   visit where the browser already has a Google login - the only moment a
+   real person sees anything is that small corner prompt the first time
+   they consent. See the Worker's /profile/sync and /profile/fetch, which
+   independently verify the ID token's signature before trusting the `sub`
+   it's keyed to - this file only ever sends the raw token, never anything
+   claiming to already be a verified identity.
+   ========================================================================= */
+const GOOGLE_CLIENT_ID = '1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com';
+const LS_PROFILE_EMAIL = 'ebbless:profileEmail'; // last-known signed-in email - display-only, never trusted server-side
+let profileIdToken = null;     // this page load's ID token; re-obtained via One Tap every visit, never persisted
+let profileSyncTimer = null;
+let applyingRemoteProfile = false; // true while writing a pulled snapshot back into localStorage, so that write doesn't itself queue a redundant push
+
+function isLibraryRelevantKey(key){
+  return key === LS_LIB || key === LS_PINNED || (typeof key === 'string' && key.indexOf('ebbless:playlist:') === 0);
+}
+
+function libraryBlobForSync(){
+  const lib = getLibrary();
+  const playlists = {};
+  lib.forEach(id => { const pl = getCachedPlaylist(id); if (pl) playlists[id] = pl; });
+  return { lib, pinned: getPinnedLibrary(), playlists };
+}
+
+function scheduleProfileSync(){
+  if (!profileIdToken || applyingRemoteProfile) return;
+  clearTimeout(profileSyncTimer);
+  profileSyncTimer = setTimeout(pushProfileNow, 2500);
+}
+
+async function pushProfileNow(){
+  if (!profileIdToken) return;
+  try{
+    await fetch(BACKEND + '/profile/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: profileIdToken, library: libraryBlobForSync() }),
+    });
+  } catch(e){}
+}
+
+// Only restores into a library that looks freshly wiped (nothing but the
+// always-present system playlists) - never clobbers an active local
+// library with a possibly-older cloud snapshot just because a sign-in
+// happened to fire.
+async function pullProfileIfEmpty(){
+  if (!profileIdToken) return;
+  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID);
+  if (hasRealLibrary) return;
+  try{
+    const res = await fetch(BACKEND + '/profile/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: profileIdToken }),
+    });
+    const data = await res.json();
+    if (!data || !data.library || !Array.isArray(data.library.lib) || !data.library.lib.length) return;
+    applyingRemoteProfile = true;
+    try{
+      const { lib, pinned, playlists } = data.library;
+      lsSet(LS_LIB, lib);
+      lsSet(LS_PINNED, pinned || []);
+      Object.entries(playlists || {}).forEach(([id, pl]) => lsSet(LS_PL(id), pl));
+    } finally { applyingRemoteProfile = false; }
+    renderLibrary(); renderQueuePanel();
+    showToast('Library restored from your account');
+  } catch(e){}
+}
+
+function handleGoogleCredential(response){
+  profileIdToken = response.credential;
+  try{
+    const payloadB64 = response.credential.split('.')[1];
+    const payload = JSON.parse(atob(payloadB64.replace(/-/g,'+').replace(/_/g,'/')));
+    if (payload.email) lsSet(LS_PROFILE_EMAIL, payload.email);
+  } catch(e){}
+  pullProfileIfEmpty().then(pushProfileNow);
+}
+
+// Polls briefly for the async Google Identity Services script (tag in
+// <head>) rather than depending on load ordering between it and this
+// inline script. auto_select:true means returning visitors with exactly
+// one Google session get signed back in with no click at all; first-time
+// consent is the small One Tap corner card, not a full account UI.
+function initGoogleOneTap(attempt){
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
+  if (window.google && window.google.accounts && window.google.accounts.id){
+    try{
+      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
+      google.accounts.id.prompt();
+    } catch(e){}
+    return;
+  }
+  if ((attempt || 0) < 25) setTimeout(() => initGoogleOneTap((attempt || 0) + 1), 200);
+}
+window.addEventListener('load', () => initGoogleOneTap());
 
 function getLibrary(){ return lsGet(LS_LIB, []); }
 function saveToLibrary(id){

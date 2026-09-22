@@ -1577,6 +1577,109 @@ async function handleReport(request, env, ctx) {
   return json({ ok: true });
 }
 
+// ---------- Google Sign-In profile sync ----------
+// Lets a signed-in visitor's library (playlists/queue/liked songs) survive
+// a wiped browser: the client silently obtains a Google ID token (One Tap,
+// see the GSI wiring in index.html) and POSTs the whole library blob here
+// keyed to the token's verified `sub`, then pulls it back on a fresh device
+// or after storage was cleared. Verifying the token server-side (rather
+// than trusting whatever `sub`/email the client claims) is what makes this
+// safe to key a KV write off of - anyone could otherwise overwrite anyone
+// else's saved library just by guessing an id.
+const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+
+function b64urlToBytes(b64url) {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(b64url.length / 4) * 4, '=');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function b64urlToJson(b64url) {
+  return JSON.parse(new TextDecoder().decode(b64urlToBytes(b64url)));
+}
+
+// Verifies a Google-issued ID token (RS256 JWT) against Google's published
+// public keys and returns its payload, or throws. Checks signature,
+// audience (our OAuth client id), issuer, and expiry - the same checks
+// Google's own client libraries do, just without pulling in a dependency
+// for a Worker that otherwise has none.
+async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
+  const parts = (idToken || '').split('.');
+  if (parts.length !== 3) throw new Error('malformed id token');
+  const [headerB64, payloadB64, sigB64] = parts;
+  const header = b64urlToJson(headerB64);
+  const payload = b64urlToJson(payloadB64);
+
+  if (payload.aud !== clientId) throw new Error('audience mismatch');
+  if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') throw new Error('bad issuer');
+  if (!payload.exp || payload.exp * 1000 < Date.now()) throw new Error('token expired');
+  if (!payload.sub) throw new Error('missing sub');
+
+  const jwksRes = await fetch(GOOGLE_JWKS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  const jwks = await jwksRes.json();
+  const jwk = (jwks.keys || []).find(k => k.kid === header.kid);
+  if (!jwk) throw new Error('signing key not found');
+
+  const key = await crypto.subtle.importKey(
+    'jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']
+  );
+  const signingInput = new TextEncoder().encode(headerB64 + '.' + payloadB64);
+  const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64urlToBytes(sigB64), signingInput);
+  if (!valid) throw new Error('bad signature');
+
+  return payload; // { sub, email, email_verified, name, picture, ... }
+}
+
+function profileKey(sub) { return 'profile:' + sub; }
+
+async function handleProfileSync(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.PROFILES) return json({ error: 'profiles not configured' }, 500);
+  if (!env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return json({ error: 'google sign-in not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  const { idToken, library } = body || {};
+  if (!idToken || !library || typeof library !== 'object') return json({ error: 'missing idToken or library' }, 400);
+
+  let payload;
+  try { payload = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID, env, ctx); }
+  catch (e) { return json({ error: 'invalid id token: ' + e.message }, 401); }
+
+  // Cap stored library size generously but finitely - KV values top out at
+  // 25MB, and nothing legitimate should ever approach this.
+  const serialized = JSON.stringify(library);
+  if (serialized.length > 5 * 1024 * 1024) return json({ error: 'library too large' }, 413);
+
+  const record = {
+    email: payload.email || null,
+    library,
+    ts: Date.now(),
+  };
+  await env.PROFILES.put(profileKey(payload.sub), JSON.stringify(record));
+  return json({ ok: true, ts: record.ts });
+}
+
+async function handleProfileFetch(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.PROFILES) return json({ error: 'profiles not configured' }, 500);
+  if (!env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return json({ error: 'google sign-in not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  const { idToken } = body || {};
+  if (!idToken) return json({ error: 'missing idToken' }, 400);
+
+  let payload;
+  try { payload = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID, env, ctx); }
+  catch (e) { return json({ error: 'invalid id token: ' + e.message }, 401); }
+
+  const raw = await env.PROFILES.get(profileKey(payload.sub));
+  if (!raw) return json({ library: null });
+  const record = JSON.parse(raw);
+  return json({ library: record.library, ts: record.ts });
+}
+
 function applyCors(res) {
   const headers = new Headers(res.headers);
   Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
@@ -1606,7 +1709,9 @@ export default {
       if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)'] }, 404);
+      if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
+      if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

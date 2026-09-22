@@ -9,3 +9,10 @@ id = "9a2addf8bdf84ac093c97d5d5638ed2e"
 [[kv_namespaces]]
 binding = "TASTE_POOL"
 id = "4c917855c0624fb3ba4f642de5dee046"
+
+[[kv_namespaces]]
+binding = "PROFILES"
+id = "7ba1ba2734224136b5e998365a37ea67"
+
+[vars]
+GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"
