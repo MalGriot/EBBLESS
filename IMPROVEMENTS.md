@@ -1832,7 +1832,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #52.
 
 ### playlist-image-reset: Add "reset to original art" in playlist image picker
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** The playlist hold-menu's "change image" screen should
   offer a "reset to original" option. If the playlist never had original
@@ -1932,7 +1932,7 @@ Add entries in this shape:
   above (sharing the app itself) - different scope, kept separate.
 
 ### single-song-paste-prompt: Prompt for target playlist when pasting a single song
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** If the pasted link resolves to a single song (not a
   playlist/album), prompt the user for which playlist it should be added
@@ -2493,7 +2493,7 @@ Add entries in this shape:
   together since both touch fullscreen player UI.
 
 ### queue-playlist-row-buttons: Collapse queue's playlist-section row buttons into a 3-dot menu
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The playlist section at the bottom of the queue menu has
   so many buttons per track that the title becomes unreadable. Each track
