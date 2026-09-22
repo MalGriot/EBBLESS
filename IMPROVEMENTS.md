@@ -4168,7 +4168,7 @@ Add entries in this shape:
   and the queue/player panes coexist in the desktop grid.
 
 ### breathe-love-deep-soundcloud-pull: "Breathe Love Deep" album still not pulling from its real SoundCloud source, plays random YouTube songs
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** The "Breathe Love Deep" album is pulling random songs
   from YouTube while still showing the correct "Breathe Love Deep" album
@@ -4195,6 +4195,100 @@ Add entries in this shape:
   overlap with `link-match-accuracy` (merged) or `stale-track-links`
   (merged) territory. Flagging as high priority since it's a listener-
   facing playback-correctness bug on the app's own default-seeded release.
+
+  **Root cause (confirmed live):** every SoundCloud source plays through
+  the shared resolve pipeline by matching `{title, artist}` to a YouTube
+  video via `searchYouTube()` (SoundCloud audio was never streamed
+  natively - existing, intentional architecture, see `index.html:2272-2274`
+  comment). Two compounding gaps let bad matches through for this album
+  specifically: (1) the worker's `/soundcloud` endpoint never extracted
+  SoundCloud's own `duration` field, so the duration hard-filter never
+  engaged - the exact unfinished follow-up the merged `link-match-accuracy`
+  lane had already flagged; (2) every track title on this release is
+  stylized as individually letter-spaced (`"h i g h"`, `"b u r n"`,
+  `". . . g a s p"`), which defeats the title-token-overlap filter the
+  same way the `amel-larrieux-wrong-track` "i n i" case did.
+
+  **Fixed** (commit `43fd288` on `agent/breathe-love-deep-spotify-pull`):
+  `worker/src/index.js` - `scTrackToTitleArtist()` now returns `duration`,
+  threaded through `handleSoundCloud()`'s payloads; new
+  `collapseLetterSpacedTitle()` normalizes letter-spaced titles
+  (`"h i g h"` -> `"high"`) for both the search query and the title-overlap
+  check in `handleSearch()`, narrowly guarded (3+ tokens, each 0-1
+  alphanumeric chars) so ordinary titles are untouched. `ART_CACHE_VERSION`
+  and `SEARCH_CACHE_VERSION` bumped so stale cache entries don't keep
+  serving pre-fix results. `index.html` - `resolvePlaylist()`'s `sc_track`
+  branch and `resolveTracksFromLink()`'s SoundCloud branch now both
+  capture/pass `sourceDuration`; `RESOLVE_LOGIC_VERSION` bumped 4->5 so any
+  already-cached SoundCloud resolve (including this starter album) gets
+  quietly re-resolved with the fix applied. This is a real fix to the
+  general SoundCloud-matching pipeline, not scoped to just this album.
+
+  **Verified:** `node --check` on both changed files plus an
+  extracted-script syntax check on `index.html` pass. Ran the worker live
+  via `wrangler dev --local` (KV in local/simulated mode only) against
+  real SoundCloud/YouTube network egress: confirmed `/soundcloud` now
+  returns a real `duration` per track, and confirmed
+  `collapseLetterSpacedTitle` changes real search behavior for the better
+  (a bare `"high"` query now correctly surfaces "Wiz Khalifa - So High"
+  instead of an unrelated match). Served this worktree's own `index.html`
+  directly (confirmed via `location.href`, caught and corrected a
+  cross-session stale-tab mixup mid-session by re-targeting an explicit
+  `tabId`).
+
+  **Not fully closed - important caveat:** even with both fixes, several
+  tracks (`"h i g h"`, `"b u r n"`, `"m u t e"`) still resolve to unrelated
+  "Griot"-culture videos live. Checked the full YouTube candidate pool for
+  each query directly: **no legitimate Mal Griot upload appears in the
+  results at all** - this isn't a scoring bug, there's nothing correct to
+  rank higher. "Griot" collides with an established West African
+  oral-historian/musician cultural term with heavy YouTube content, and
+  this catalog has little-to-no YouTube presence of its own. No client- or
+  server-side matching heuristic can select a correct video that isn't in
+  the search results - the only complete fix is to stop routing
+  SoundCloud-sourced playback through YouTube search entirely and stream
+  SoundCloud audio natively instead (real architecture change, e.g.
+  SoundCloud's own stream/embed API - out of scope for this lane's
+  "smallest correct fix"). Filed as a new entry below,
+  `soundcloud-native-playback`, so this doesn't get lost.
+
+  **Not deployed:** `worker/src/index.js` is the shared, live Cloudflare
+  Worker backend (`spotify-youtube-search.malgriot.workers.dev`) that
+  production traffic and every other concurrent session hit regardless of
+  which worktree serves `index.html`. Deliberately did not run
+  `wrangler deploy` - that would push unmerged branch code straight to
+  production for all live users. **`wrangler deploy` needs to run after
+  this branch merges to `main`** - flagging clearly since the worker half
+  of this fix does nothing for real listeners until that happens (your
+  call, per usual).
+
+### soundcloud-native-playback: Stream SoundCloud-sourced tracks natively instead of YouTube-search matching
+- **Status:** draft
+- **Priority:** high
+- **Description:** SoundCloud-sourced playlists/albums currently play by
+  matching each track's `{title, artist}` to a YouTube video via
+  `searchYouTube()` - SoundCloud audio is never streamed natively. For
+  artists/releases with little or no real YouTube presence (or whose name
+  collides with an unrelated common term), this can produce completely
+  wrong matches with no correct candidate available to rank higher, no
+  matter how good the matching heuristic gets. Play SoundCloud-sourced
+  tracks directly from SoundCloud's own stream/embed API instead of
+  routing them through YouTube search.
+- **Touches:** the shared resolve pipeline's YouTube-search matching path
+  (`index.html` ~line 2272 comment, `resolvePlaylist()`), `worker/src/index.js`
+  (`handleSoundCloud`, `handleSearch`), player/embed logic.
+- **Branch:** (unclaimed)
+- **Notes:** Flagged by the `breathe-love-deep-soundcloud-pull` agent as
+  the real, complete fix for that bug's residual mismatches (several
+  "Breathe Love Deep" tracks have zero legitimate YouTube candidates to
+  match against at all, confirmed by checking the full search result pool
+  directly - not a scoring/heuristic problem). That lane's fixes
+  (SoundCloud duration signal, letter-spaced-title normalization) are
+  real, general improvements to the matching pipeline and should still
+  land, but this is the only way to fully eliminate wrong-track playback
+  for SoundCloud sources with thin YouTube coverage. A genuine
+  architecture change, not a quick fix - scope carefully before
+  dispatching a lane.
 
 ### tutorial-text-overflow-button-animation: Tutorial text overflows screen and hides shuffle/loop buttons; needs press animation
 - **Status:** draft
