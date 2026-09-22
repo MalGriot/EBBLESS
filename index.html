@@ -2006,6 +2006,28 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
    ========================================================================= */
 const BACKEND = 'https://spotify-youtube-search.malgriot.workers.dev';
 
+/* ---- splash hard safety net ----
+   #splash is opaque and visible by default (the no-FOUC cover - see its CSS
+   comment near #splash{...}), so it only ever goes away once JS explicitly
+   hides it. Every intentional path to that (startApp()'s own timers,
+   showSplashChoice(), runIntro()'s own caps) already has a bound on it, but
+   this exists as a last-resort backstop: if the BACKEND Worker above stalls
+   on an exhausted API/token budget (or anything else during startup throws
+   before reaching those normal paths), a visitor should never be stuck
+   staring at the splash with no way out. Scheduled as early as possible, on
+   the visitor's actual clock rather than counted from whenever startApp()
+   happens to run, so it forces the app open even if startup never gets that
+   far. Any *earlier* dismissal (normal startup, the install-prompt flow,
+   etc.) just makes this a no-op - is-hidden is idempotent. */
+setTimeout(() => {
+  try{
+    const splashSafetyEl = document.getElementById('splash');
+    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden')){
+      splashSafetyEl.classList.add('is-hidden');
+    }
+  }catch(e){}
+}, 12000);
+
 /* ---- install prompt ----
    Captured as early as possible (top of the script) since Chrome/Brave can
    fire beforeinstallprompt within the first second of a qualifying load -
@@ -7154,67 +7176,88 @@ function startApp(){
   lsDel(LS_BACKGROUNDED_AT);
   lsDel(LS_WAS_PLAYING);
 
-  ensureSwellPlaylist();
-  renderLibrary();
-  renderQueuePanel();
-  // Resuming reads back whatever was last saved, which can be stale in ways
-  // tryResume itself doesn't anticipate - never let a bad resume take the
-  // rest of init down with it (the splash screen would hang forever).
-  try{ tryResume(); } catch(e){}
-  if (resumingFromBackground && wasPlayingAtBackground){
-    // Best-effort: browsers can still block unrequested playback here since
-    // this is a fresh page load with no fresh user gesture, but it's worth
-    // trying rather than leaving a track that was actively playing sitting
-    // paused for no visible reason.
-    try{ resumePlayback(); } catch(e){}
-  } else {
-    // Not auto-resuming sound (a real cold launch, or nothing was playing
-    // when it backgrounded) - still warm the deck for whatever tryResume()
-    // just restored, so the moment the listener does tap play it's an
-    // instant promotion instead of a YouTube player spinning up from cold.
-    try{ prewarmResumeDeck(); } catch(e){}
-  }
-  // First-time visitors (or anyone with nothing resumed) have no track to
-  // show on the player view, so land them on the library instead.
-  setView(currentTrack() ? 'player' : 'library');
-  if (!currentTrack()) updateMiniBarVisibility();
-  refreshSwellIfStale();
-  // Sessions left open across midnight would otherwise keep showing
-  // yesterday's Current until the next reload - poll periodically so the
-  // day-rollover check in refreshSwellIfStale also fires while the app is
-  // just sitting open.
-  setInterval(refreshSwellIfStale, 60 * 1000);
-  // One-time sweep for playlists that were cached under an older resolve
-  // version (see RESOLVE_LOGIC_VERSION) - covers library playlists that get
-  // played straight from the library/queue and never pass back through
-  // beginImport's own staleness check. Once a playlist re-resolves it's
-  // stamped with the current version, so this is a no-op on every later
-  // launch until the logic changes again - not a standing "always refetch"
-  // poll. Staggered and best-effort so a slow/offline source can't stall
-  // startup or spam requests.
-  // Also picks up playlists still mid-resolve ("resolving: true", see
-  // resolvePlaylist's loop) - the import got far enough to save a partial
-  // playlist and start playback, then the app was backgrounded and the OS
-  // killed the JS process before the rest finished matching. That process
-  // is gone along with its in-flight loop; this is the only place that
-  // notices the leftover snapshot and picks the match-up back up.
-  (async () => {
-    const staleIds = getLibrary().filter(id => {
-      const pl = getCachedPlaylist(id);
-      return isResolveStale(pl) || (pl && pl.resolving);
-    });
-    for (const id of staleIds){
-      const pl = getCachedPlaylist(id);
-      if (!pl) continue;
-      reResolveStaleInBackground(id, pl.type);
-      await sleep(350);
+  // Everything in this block is best-effort bootstrapping that reads/writes
+  // cached playlist data - including snapshots a prior backend call
+  // (Spotify/YouTube resolve via the Worker) may have left partially written
+  // if that call errored out or exhausted its API/token budget mid-resolve
+  // (see resolvePlaylist's "resolving: true" snapshots and RESOLVE_LOGIC_VERSION
+  // above). A synchronous throw anywhere in here used to abort startApp()
+  // outright *before* it ever reached the splash-dismiss code below - since
+  // #splash is opaque and visible by default (the no-FOUC cover), that left
+  // the visitor stranded looking at the splash forever with no error and no
+  // way out short of clearing storage. Wrapping the whole block means a bad
+  // cache or a failed background call can only degrade what's on screen
+  // (e.g. an empty library instead of a seeded one), never prevent the
+  // splash from clearing.
+  try{
+    ensureSwellPlaylist();
+    renderLibrary();
+    renderQueuePanel();
+    // Resuming reads back whatever was last saved, which can be stale in ways
+    // tryResume itself doesn't anticipate - never let a bad resume take the
+    // rest of init down with it (the splash screen would hang forever).
+    try{ tryResume(); } catch(e){}
+    if (resumingFromBackground && wasPlayingAtBackground){
+      // Best-effort: browsers can still block unrequested playback here since
+      // this is a fresh page load with no fresh user gesture, but it's worth
+      // trying rather than leaving a track that was actively playing sitting
+      // paused for no visible reason.
+      try{ resumePlayback(); } catch(e){}
+    } else {
+      // Not auto-resuming sound (a real cold launch, or nothing was playing
+      // when it backgrounded) - still warm the deck for whatever tryResume()
+      // just restored, so the moment the listener does tap play it's an
+      // instant promotion instead of a YouTube player spinning up from cold.
+      try{ prewarmResumeDeck(); } catch(e){}
     }
-  })();
+    // First-time visitors (or anyone with nothing resumed) have no track to
+    // show on the player view, so land them on the library instead.
+    setView(currentTrack() ? 'player' : 'library');
+    if (!currentTrack()) updateMiniBarVisibility();
+    refreshSwellIfStale();
+    // Sessions left open across midnight would otherwise keep showing
+    // yesterday's Current until the next reload - poll periodically so the
+    // day-rollover check in refreshSwellIfStale also fires while the app is
+    // just sitting open.
+    setInterval(refreshSwellIfStale, 60 * 1000);
+    // One-time sweep for playlists that were cached under an older resolve
+    // version (see RESOLVE_LOGIC_VERSION) - covers library playlists that get
+    // played straight from the library/queue and never pass back through
+    // beginImport's own staleness check. Once a playlist re-resolves it's
+    // stamped with the current version, so this is a no-op on every later
+    // launch until the logic changes again - not a standing "always refetch"
+    // poll. Staggered and best-effort so a slow/offline source can't stall
+    // startup or spam requests.
+    // Also picks up playlists still mid-resolve ("resolving: true", see
+    // resolvePlaylist's loop) - the import got far enough to save a partial
+    // playlist and start playback, then the app was backgrounded and the OS
+    // killed the JS process before the rest finished matching. That process
+    // is gone along with its in-flight loop; this is the only place that
+    // notices the leftover snapshot and picks the match-up back up.
+    (async () => {
+      const staleIds = getLibrary().filter(id => {
+        const pl = getCachedPlaylist(id);
+        return isResolveStale(pl) || (pl && pl.resolving);
+      });
+      for (const id of staleIds){
+        const pl = getCachedPlaylist(id);
+        if (!pl) continue;
+        reResolveStaleInBackground(id, pl.type);
+        await sleep(350);
+      }
+    })();
 
-  /* First-time visitors (nothing saved yet, ignoring the always-present
-     Swell/Liked system playlists ensureSwellPlaylist() just created above)
-     get a starter library instead of an empty one. */
-  if (!getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID)) seedStarterLibrary();
+    /* First-time visitors (nothing saved yet, ignoring the always-present
+       Swell/Liked system playlists ensureSwellPlaylist() just created above)
+       get a starter library instead of an empty one. */
+    if (!getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID)) seedStarterLibrary();
+  } catch(e){
+    // Best-effort recovery: land on whatever view makes sense rather than
+    // leaving the DOM in whatever half-rendered state the throw above left
+    // it in. Still swallowed - the splash-dismiss code right below this is
+    // what actually gets the visitor unstuck, and it must run regardless.
+    try{ setView(currentTrack() ? 'player' : 'library'); } catch(e2){}
+  }
 
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
