@@ -2413,15 +2413,74 @@ Add entries in this shape:
   together since both touch fullscreen player UI.
 
 ### queue-playlist-row-buttons: Collapse queue's playlist-section row buttons into a 3-dot menu
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** The playlist section at the bottom of the queue menu has
   so many buttons per track that the title becomes unreadable. Each track
   row there should collapse down to a single 3-dot button that opens the
   other functions, matching the pattern used elsewhere.
 - **Touches:** queue panel's playlist section, track row markup.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #98.
+- **Branch:** agent/queue-playlist-row-buttons
+- **Notes:** Synced from Geethub issue #98. The row (built in `renderTrackList`,
+  the `#trackList` renderer for the queue panel's `#playlistListWrap` section)
+  had five separate inline buttons crammed next to the title: like, play
+  next, add to queue, add to playlist, and (for custom playlists) remove
+  from playlist - on top of the `.track-menu-btn` kebab that already existed
+  for "Refresh link". Reused that existing kebab/`trackCtxMenu` overflow-menu
+  pattern (same one `toggleLibCtxMenu`/`libCtxMenu` uses for library cards)
+  instead of inventing a new component: `openTrackCtxMenuFor` (previously
+  hardcoded to just "Refresh link") now builds the item list from the
+  track/playlist looked up by `plId`/`trackIdx`, and a new
+  `handleTrackCtxAction(action, plId, trackIdx)` dispatches clicks the same
+  way `handleLibCtxAction` does for the library menu. `renderTrackList` now
+  only builds the kebab button per row; the other inline buttons and their
+  handlers were deleted. Tracks with no resolved `videoId` still get no
+  kebab (unchanged - long-press on the row itself still opens the menu via
+  `attachLongPress`, same as before).
+
+  First pass put all five actions in the menu (Like, Play next, Add to
+  queue, Add to playlist, Remove from playlist). Refined per follow-up
+  feedback: dropped "Add to queue" and "Remove from playlist" entirely -
+  queue removal already has its own direct X button in the Now/Next/Later
+  queue list (`.remove` → `queueRemoveAt`, in `renderQueuePanel`), reused
+  as-is rather than duplicating it in this menu, and "Remove from playlist"
+  wasn't wanted here (`removeTrackFromCustomPlaylist` is left defined but
+  now unused by this menu). The menu is now just Like/Unlike, Play next, Add
+  to playlist, a separator, then Refresh link. "Play next" also changed
+  semantics: `queuePlayNext` (only call site was this menu) now strips any
+  existing occurrence of that `(plId, trackIndex)` pair further down
+  `state.queue` before reinserting at `state.queuePos + 1`, so picking "Play
+  next" on a track already queued moves it up instead of adding a duplicate
+  entry.
+
+  Verified by serving this worktree's `index.html` with a plain
+  `python3 -m http.server` on a dedicated, unusual port (127.0.0.1, ports
+  47391 then 58217 for the second pass) - the shared/default port 8934
+  turned out to be contested by other concurrently-running EBBLESS worktree
+  sessions on this machine (confirmed via `AGENTS.md`'s session ledger
+  showing 3 active lanes), which repeatedly and silently swapped the browser
+  tab to a different session's server mid-test, and even a fresh tab
+  navigated straight to 8934 got hijacked within a couple tool calls;
+  switching to an uncommon port stopped it. Confirmed via `curl` and
+  `location.href`/script-content checks (`grep -c openTrackCtxMenuFor`, and
+  confirming no `addqueue`/`removeplaylist` strings remained) that the tab
+  was loading this worktree's edited file before testing. Seeded custom
+  playlists directly into `localStorage` (`ebbless:playlist:<id>` /
+  `ebbless:library`) with a resolved-and-unresolved mix of tracks to test
+  without depending on live network imports. Confirmed: track titles are
+  readable with just the single 3-dot button per row; the menu shows exactly
+  Like/Unlike, Play next, Add to playlist, Refresh link on both a
+  non-custom and a custom playlist (no Add to queue, no Remove from
+  playlist, on either); clicking Like/Unlike toggled the track in and out of
+  Liked Songs; Play next on a track already further down the queue moved it
+  to immediately-next with no duplicate (verified twice in a row - second
+  click just re-confirmed position, still no duplicate); the existing
+  Now/Next/Later queue list's own X button still removes a track from the
+  queue exactly as before (untouched code path); the unmatched track still
+  shows no kebab. Checked the browser console throughout - no new errors
+  (only pre-existing, unrelated 404s/script-fetch failures from the
+  sandboxed preview environment's network restrictions on external YouTube/
+  artwork requests).
 
 ### player-hud-remove-playlist-label: Remove playlist title/track number from main player HUD
 - **Status:** merged
