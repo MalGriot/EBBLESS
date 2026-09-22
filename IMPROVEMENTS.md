@@ -2732,6 +2732,78 @@ Add entries in this shape:
   (`intro-theme.mp3` fetch aborted) is pre-existing background noise
   unrelated to this change, not something introduced by it.
 
+  **Follow-up (commit 01f26de):** after the user's first review, two
+  more changes on top of the fix above, both scoped to the record/
+  cassette fullscreen view only (default flat-album-art fullscreen is
+  untouched): (1) `#flow-layer .flow-art[data-art-style="record"/
+  "cassette"]` now overrides the shared `min(52vh,62vw)` sizing to
+  `min(86vh,86vw)` so the moved-in element reads as genuinely
+  fullscreen-scale; centering still comes for free from `#flow-layer`'s
+  own flex layout, and the record/cassette markup already sizes its
+  internals (label, reels) by percentage so nothing clipped or
+  distorted at the larger size. (2) added a `<canvas id="flowArtParticles"
+  class="flow-art-particles">` as the first child of `#flowArtWrap`
+  (so it sits behind the moved-in `#artRecord`/`#artCassette` by DOM
+  order, same trick as the existing z-index-free stacking elsewhere in
+  this file), only shown via CSS when `data-art-style` is `record` or
+  `cassette`. It renders ~60 soft glowing particles drifting slowly via
+  `requestAnimationFrame` (`flowPartsDraw`/`flowPartsStart`/
+  `flowPartsStop`, resize handled by `flowPartsResize` mirroring the
+  existing `vizResize()` pattern), tinted from `--player-accent`. Reading
+  that custom property directly with `getComputedStyle` can hand back
+  the literal unsubstituted string `"var(--accent)"` rather than a
+  usable color (custom-property computed values don't substitute their
+  own nested `var()` references) - worked around with a hidden probe
+  `<span style="color:var(--player-accent)">` and reading its computed
+  `color`, which the browser must fully resolve. `openFlow()` calls
+  `flowPartsStart()` only on the record/cassette branch and
+  `flowPartsStop()` otherwise; `closeFlow()` always calls
+  `flowPartsStop()`. `updatePlayerAccentColor()` now also calls a new
+  `syncFlowPartsColor()` after setting `--player-accent` (success and
+  error paths both), so switching tracks while fullscreen is open
+  re-tints the particles instead of leaving them on the previous
+  track's color. There's currently no in-fullscreen art-style switcher
+  in this app (swiping the flow view changes track, not style), so
+  "switching styles while already in fullscreen" wasn't a reachable
+  case to wire up separately - style changes only take effect on the
+  next `openFlow()`.
+
+  Verified in-browser the same way as above (worktree served directly
+  with `python3 -m http.server`, `location.href` re-confirmed before
+  trusting the page - the shared preview launcher had, per this
+  session's earlier discovery, a stray server left over from a
+  *different* worktree still bound to the first port tried, so this
+  session killed it and rebound a fresh one to confirm `lsof -a -p
+  <pid> -d cwd` pointed at this worktree before testing). With the
+  Spinning Record style and the "I Tried It" track playing, fullscreen
+  showed the disc at roughly double its previous size, centered, with
+  no clipping in the label/spindle, and soft pink particles
+  (`rgb(193,92,122)`, matching the live `--player-accent`) drifting in
+  the corners. Repeated with Cassette Tape: same larger centered
+  sizing, reels/shell undistorted, particles visible against the
+  busier album-art-derived ambient background. Skipping to the next
+  track ("Helicopter Man") while still in fullscreen changed
+  `--player-accent` to `rgb(199,87,141)` and the particle tint visibly
+  followed. Confirmed the default flat-album-art fullscreen view was
+  untouched: still exactly `min(52vh,62vw)` (measured
+  `flowArtWrap`'s computed width against `window.innerHeight` -
+  423.27px on an 814px-tall viewport, matching 52%), and
+  `flowArtWrap.dataset.artStyle` unset with no particle canvas showing.
+  Confirmed the animation loop actually stops on exit: patched
+  `window.requestAnimationFrame` to count calls, measured a nonzero
+  delta while fullscreen was open on the record style, then measured
+  again after clicking the exit button - delta dropped to exactly 0 in
+  one run (a later re-check showed a small nonzero baseline of ~3
+  calls/sec present even with no fullscreen open at all and no art
+  style selected, i.e. pre-existing background rAF activity elsewhere
+  in the app unrelated to this change - confirmed by measuring the same
+  baseline noise both with the record-style particle loop stopped and
+  with the default-style fullscreen open, where no particle code runs
+  at all). Checked the console throughout: no new errors, only the
+  same pre-existing background noise as before (service-worker script
+  fetch, a cross-origin YouTube iframe `postMessage` warning, and a
+  `web-share` feature warning) - none introduced by this change.
+
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
 - **Priority:** medium
