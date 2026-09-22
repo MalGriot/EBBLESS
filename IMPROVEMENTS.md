@@ -1659,7 +1659,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #71.
 
 ### album-art-swipe-nav: Swipe album art left/right for prev/next track
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Swiping left or right on the album art in the player
   should skip to the next/previous track respectively.
@@ -1713,7 +1713,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #45.
 
 ### desktop-mini-player: Floating desktop mini-player when tab loses focus
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When the user switches away from the EBBLESS browser tab
   on desktop, show a small, movable/draggable mini-player in a corner of the
@@ -2089,7 +2089,7 @@ Add entries in this shape:
   partially achievable.
 
 ### library-hold-add-to-queue: Hold a library track to add to queue / play next
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Holding down on a track in the library should bring up a
   menu with "add to queue" and "play next" options. "Play next" should play
