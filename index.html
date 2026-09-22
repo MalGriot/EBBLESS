@@ -2020,7 +2020,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <span>Update available</span>
     <button type="button" id="swUpdateBtn">Refresh</button>
   </div>
-  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div></div>
+  <!-- sc-deck-a/b: companion slots for the yt-deck-a/b decks below, used
+       instead of the YouTube iframe for a SoundCloud-native track (see
+       soundcloud-native-playback / createSCDeckPlayer). SC.Widget needs an
+       actual <iframe> already pointing at the widget URL to bind to (unlike
+       YT.Player, which takes over a plain element itself), so these sit here
+       pre-created rather than being swapped in/out of the yt-deck-* slots. -->
+  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe></div>
   <!-- near-silent (not truly zero-amplitude — Chromium's audible-source
        heuristic ignores pure digital silence) loop: keeps the tab holding an
        active local media session so mobile OSes grant lock-screen/
@@ -2349,6 +2355,23 @@ function sourceKindForType(type){
   if (type === 'yt_video' || type === 'yt_playlist') return 'youtube';
   return 'spotify'; // track | playlist | album (bare Spotify types)
 }
+
+// A SoundCloud-sourced track's `videoId` (every other surface's "is this
+// track playable / what's its unique key" field) is never a real YouTube id
+// — see soundcloud-native-playback. Instead it's this synthetic
+// 'sc:<SoundCloud numeric track id>' string, which is enough on its own to
+// rebuild the SoundCloud widget embed URL (soundCloudWidgetSrc, near the
+// deck/player code below) without any side-channel lookup. Every other
+// videoId consumer (liked-songs, relink UI, queue de-dupe, thumbnail
+// fallback chains, etc.) only ever needs a stable unique string, so this
+// reuses that one field instead of threading a parallel `scId` through the
+// whole app - the two YouTube-specific consumers that would otherwise choke
+// on a non-YouTube id (the img.youtube.com thumbnail fallback and the
+// Discover "YouTube mix" seed lookup) are guarded with this check where they
+// read videoId; see artworkUrls() and fetchDiscoverCandidates().
+function isSoundCloudVideoId(id){ return typeof id === 'string' && id.indexOf('sc:') === 0; }
+function soundCloudVideoId(scId){ return 'sc:' + scId; }
+function soundCloudTrackId(videoId){ return videoId.slice(3); }
 async function resolveTrackArt(sourceKind, title, artist, nativeArt){
   // Already Spotify's or SoundCloud's own art — nothing to resolve, and no
   // network round-trip needed either.
@@ -2601,7 +2624,7 @@ function formatLastPlayed(ts){
 // have picked a better one. Cached payloads written before this field
 // existed have no resolveVersion at all, which also compares unequal to any
 // real version number, so they're covered too.
-const RESOLVE_LOGIC_VERSION = 5;
+const RESOLVE_LOGIC_VERSION = 6;
 // Re-matching/re-resolving a playlist re-fetches its tracklist from the
 // source and would otherwise silently drop any songs the user added by hand
 // (from another playlist or a pasted link) — carry those forward.
@@ -2615,11 +2638,11 @@ function withManualTracks(playlistId, resolvedTracks){
 
 async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   if (type === 'track' || type === 'sc_track' || type === 'am_track'){
-    let title, artist, art = null, sourceDuration = 0;
+    let title, artist, art = null, sourceDuration = 0, scId = null;
     if (type === 'sc_track'){
       const t = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
       if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single track.");
-      title = t.title; artist = t.artist; art = t.image || null; sourceDuration = t.duration || 0;
+      title = t.title; artist = t.artist; art = t.image || null; sourceDuration = t.duration || 0; scId = t.scId || null;
     } else if (type === 'am_track'){
       const idx = playlistId.indexOf(':');
       const t = await fetchAppleMusicTrack(playlistId.slice(0, idx), playlistId.slice(idx + 1));
@@ -2628,7 +2651,14 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       ({ title, artist, image: art, duration: sourceDuration } = await fetchSpotifyTrack(playlistId));
     }
     onProgress({ stage: 'matching', done: 0, total: 1 });
-    async function trySearchYouTube(){ try { return await searchYouTubeCached(title, artist, sourceDuration); } catch(e){ return { videoId: null, title: '', channel: '' }; } }
+    // A SoundCloud-sourced track plays natively (see soundcloud-native-
+    // playback) - no YouTube search needed or wanted, so this builds the
+    // same { videoId, title, channel, duration } shape searchYouTube()
+    // would've returned, straight off the SoundCloud data already in hand.
+    async function trySearchYouTube(){
+      if (type === 'sc_track' && scId) return { videoId: soundCloudVideoId(scId), title, channel: artist, duration: Math.round(sourceDuration / 1000) };
+      try { return await searchYouTubeCached(title, artist, sourceDuration); } catch(e){ return { videoId: null, title: '', channel: '' }; }
+    }
     const [match, resolvedArt] = await Promise.all([
       trySearchYouTube(),
       resolveTrackArt(sourceKindForType(type), title, artist, art),
@@ -2679,9 +2709,15 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
     const t = tracks[i];
+    // SoundCloud-sourced tracks play natively (see soundcloud-native-
+    // playback) - build the match straight off t.scId instead of asking
+    // searchYouTubeCached() to find a YouTube stand-in for it.
+    const isNativeSC = sourceKind === 'soundcloud' && t.scId;
     try{
       const [match, art] = await Promise.all([
-        searchYouTubeCached(t.title, t.artist, t.duration),
+        isNativeSC
+          ? Promise.resolve({ videoId: soundCloudVideoId(t.scId), title: t.title, channel: t.artist, duration: Math.round((t.duration || 0) / 1000) })
+          : searchYouTubeCached(t.title, t.artist, t.duration),
         resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
       ]);
       resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0 });
@@ -2708,7 +2744,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     if (firstTrackFired){
       lsSet(LS_PL(playlistId), { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION, resolving: true });
     }
-    if (i < tracks.length - 1) await sleep(350);
+    // The 350ms spacing exists to be polite to the /search backend
+    // (YouTube-scraping, rate-limit-sensitive) - a native SoundCloud track
+    // never calls it, so there's nothing to pace here.
+    if (i < tracks.length - 1 && !isNativeSC) await sleep(350);
   }
   const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
   lsSet(LS_PL(playlistId), payload);
@@ -2815,7 +2854,11 @@ function artworkUrls(track){
   const chain = [];
   if (track && track.art) chain.push(track.art);
   const videoId = track && track.videoId;
-  if (videoId){
+  // A SoundCloud-native videoId (see isSoundCloudVideoId) was never a real
+  // YouTube id - nothing to fall back to at img.youtube.com for it, and its
+  // `art` above is already SoundCloud's own cover (resolveTrackArt's
+  // SoundCloud exception), so this chain is only ever a no-op for it anyway.
+  if (videoId && !isSoundCloudVideoId(videoId)){
     chain.push('https://img.youtube.com/vi/' + videoId + '/maxresdefault.jpg');
     chain.push('https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg');
     chain.push('https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg');
@@ -4406,9 +4449,12 @@ async function resolveTracksFromLink(input, onProgress){
   if (sc){
     const data = await fetchSoundCloudLink(sc.url);
     if (data.kind === 'track'){
+      const art = await resolveTrackArt('soundcloud', data.title, data.artist, data.image || null);
+      // Native SoundCloud playback (see soundcloud-native-playback) - no
+      // YouTube search needed when SoundCloud handed back a usable scId.
+      if (data.scId) return [{ title: data.title, artist: data.artist, videoId: soundCloudVideoId(data.scId), matchedTitle: data.title, channel: data.artist, art, duration: Math.round((data.duration || 0) / 1000) }];
       const match = await searchYouTube(data.title, data.artist, data.duration);
       if (!match.videoId) throw new Error("Couldn't find that song.");
-      const art = await resolveTrackArt('soundcloud', data.title, data.artist, data.image || null);
       return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
     if (!data.tracks.length) throw new Error('That playlist has no tracks.');
@@ -4416,14 +4462,18 @@ async function resolveTracksFromLink(input, onProgress){
     for (let i = 0; i < data.tracks.length; i++){
       const t = data.tracks[i];
       const art = await resolveTrackArt('soundcloud', t.title, t.artist, t.image || null);
-      try{
-        const match = await searchYouTube(t.title, t.artist, t.duration);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
-      } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
+      if (t.scId){
+        resolved.push({ title: t.title, artist: t.artist, videoId: soundCloudVideoId(t.scId), matchedTitle: t.title, channel: t.artist, art, duration: Math.round((t.duration || 0) / 1000) });
+      } else {
+        try{
+          const match = await searchYouTube(t.title, t.artist, t.duration);
+          resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
+        } catch(e){
+          resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
+        }
       }
       if (onProgress) onProgress(i + 1, data.tracks.length);
-      if (i < data.tracks.length - 1) await sleep(350);
+      if (i < data.tracks.length - 1 && !t.scId) await sleep(350);
     }
     return resolved;
   }
@@ -5116,7 +5166,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
   let pool = similar.candidates || [];
   const seedTagVec = normalizeTagList(similar.seedTags, 15);
 
-  if (!pool.length && seed.videoId){
+  if (!pool.length && seed.videoId && !isSoundCloudVideoId(seed.videoId)){
     const mix = await fetchYtMix(seed.videoId);
     pool = mix.map(t => Object.assign({}, t, { matchScore: 0.3, tags: [] }));
   }
@@ -5575,8 +5625,15 @@ const UNMUTE_RECHECK_MS = 3000;
 const UNMUTE_MAX_WAIT_MS = 20000;
 const MIN_CONTENT_DURATION_S = 90;
 
-function makeDeck(id){ return { id, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null }; }
-const decks = [ makeDeck('yt-deck-a'), makeDeck('yt-deck-b') ];
+// kind: 'yt' (deck.player is a YT.Player bound to #<id>) or 'sc' (deck.player
+// is an SC.Widget-backed adapter bound to #<scId> - see createSCDeckPlayer).
+// _scPos/_scDur/_scState cache the SC widget's position/duration/play-state
+// locally since SC.Widget's own getters are async/callback-based, unlike
+// YT.Player's synchronous ones every other deck consumer assumes.
+// gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
+// deck's player - see the gen-check comment on those functions for why.
+function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
+const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
 const standbyDeck = () => decks[1 - activeIdx];
@@ -5680,11 +5737,21 @@ function forceLowestQuality(deck){
 }
 
 function createDeckPlayer(deck, videoId){
+  if (isSoundCloudVideoId(videoId)){ createSCDeckPlayer(deck, videoId); return; }
+  deck.kind = 'yt';
+  // See the matching comment in createSCDeckPlayer: this deck's player is
+  // about to be (re)built, so any callback bound to the player this call
+  // replaces belongs to a dead generation - each callback below checks
+  // `deck.gen === myGen` before touching `deck` so a late-firing one (e.g.
+  // this exact deck got repurposed for a different track/kind in the
+  // meantime) is a no-op instead of corrupting the deck that replaced it.
+  const myGen = ++deck.gen;
   deck.player = new YT.Player(deck.id, {
     videoId: videoId,
     playerVars: { autoplay: 1, playsinline: 1, mute: 1, vq: LOWEST_QUALITY },
     events: {
       onReady: function(){
+        if (deck.gen !== myGen) return;
         deck.ready = true;
         deck.player.setVolume(deck === activeDeck() ? effectiveVolume() : 0);
         forceLowestQuality(deck);
@@ -5694,22 +5761,174 @@ function createDeckPlayer(deck, videoId){
         scheduleAdCheck(deck);
         if (deck === activeDeck()) updateAdLoadingIcon();
       },
-      onStateChange: function(e){ onDeckStateChange(deck, e); },
-      onPlaybackQualityChange: function(){ forceLowestQuality(deck); }
+      onStateChange: function(e){ if (deck.gen === myGen) onDeckStateChange(deck, e); },
+      onPlaybackQualityChange: function(){ if (deck.gen === myGen) forceLowestQuality(deck); }
     }
   });
 }
 
+// SoundCloud-native counterpart to createDeckPlayer, wrapping SC's Widget
+// API (SC.Widget) behind an object exposing the same subset of YT.Player's
+// method names every deck consumer already calls (playVideo/pauseVideo/
+// mute/unMute/setVolume/getPlayerState/getCurrentTime/getDuration/seekTo/
+// loadVideoById) - see soundcloud-native-playback for why this shape was
+// chosen: it lets crossfade, the ad-confirm dance, media-session, the seek
+// poll, and playIndex/playPrev/playNext all keep working completely
+// unmodified for a SoundCloud deck, the same as for a YouTube one.
+//
+// Two real differences from a YT.Player that this adapter can't paper over:
+// (1) SC.Widget's getPosition/getDuration/isPaused are callback-based, not
+// synchronous, so this caches the latest known values on the deck object
+// itself (_scPos/_scDur/_scState) via the widget's own events, and every
+// synchronous getter below just reads that cache. (2) there's no ad-preroll
+// concept on SoundCloud's own embeddable player, so this skips the mute-
+// and-wait-5-seconds dance entirely (scheduleAdCheck/checkDeckReady) and
+// confirms the deck the moment the widget reports READY.
+function makeSCPlayerAdapter(deck, widget, myGen){
+  let vol = 100, muted = false;
+  return {
+    playVideo(){ widget.play(); },
+    pauseVideo(){ widget.pause(); },
+    stopVideo(){ widget.pause(); widget.seekTo(0); deck._scPos = 0; },
+    mute(){ muted = true; widget.setVolume(0); },
+    unMute(){ muted = false; widget.setVolume(vol); },
+    setVolume(v){ vol = v; if (!muted) widget.setVolume(v); },
+    getPlayerState(){ return deck._scState; },
+    getCurrentTime(){ return deck._scPos || 0; },
+    getDuration(){ return deck._scDur || 0; },
+    seekTo(seconds){ const ms = Math.max(0, Math.round((seconds || 0) * 1000)); widget.seekTo(ms); deck._scPos = seconds || 0; },
+    loadVideoById(opts){
+      const v = typeof opts === 'string' ? opts : opts.videoId;
+      deck._scPos = 0; deck._scDur = 0; deck._scState = -1;
+      widget.load(soundCloudTrackApiUrl(v), { auto_play: true, show_artwork: false });
+      // .load() doesn't re-fire READY on an already-bound widget (verified
+      // directly against the real widget), so this is the only place the
+      // new track's duration gets (re-)fetched. Gen-guarded like every other
+      // callback in createSCDeckPlayer - this widget/adapter pair could be
+      // orphaned (a fresh createSCDeckPlayer call replaced it) by the time
+      // this resolves.
+      widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
+    },
+  };
+}
+function soundCloudTrackApiUrl(videoId){ return 'https://api.soundcloud.com/tracks/' + soundCloudTrackId(videoId); }
+// Same URL shape SoundCloud's own oEmbed endpoint returns for a track/set
+// permalink (verified directly against https://soundcloud.com/oembed) -
+// built here instead of round-tripping through oEmbed per track since the
+// numeric id (videoId, minus its 'sc:' prefix) is all that URL actually
+// needs. Chrome (etc.) delegates autoplay permission into the iframe via the
+// allow="autoplay" attribute already on #sc-deck-a/b, the same way YouTube's
+// own iframe embed relies on it.
+function soundCloudWidgetSrc(videoId){
+  return 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(soundCloudTrackApiUrl(videoId)) +
+    '&auto_play=true&show_artwork=false&visual=false&download=false&sharing=false' +
+    '&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&buying=false&liking=false';
+}
+function createSCDeckPlayer(deck, videoId){
+  deck.kind = 'sc';
+  deck.ready = false;
+  deck._scPos = 0; deck._scDur = 0; deck._scState = -1;
+  // This deck's player is being (re)built - bump its generation and have
+  // every callback below check it still matches before touching `deck`. A
+  // deck can legitimately get re-targeted at a different track (or, for a
+  // 'sc' deck, a different kind entirely) while a previous player instance
+  // for it is still mid-flight - concretely, prewarmResumeDeck() warming the
+  // standby deck at app startup can race a listener immediately pasting a
+  // fresh link, both ending up building a player for the same deck object
+  // close together. Without this, the earlier instance's onReady/event
+  // callbacks still fire later against whatever now-unrelated player/track
+  // has since replaced it on that same `deck` (same symptom YT.Player would
+  // have too, just far less likely to actually collide there since same-kind
+  // YT reloads usually go through loadVideoById on the existing player
+  // rather than constructing a brand new one - see createDeckPlayer's own
+  // myGen for the same guard applied there).
+  const myGen = ++deck.gen;
+  // A fresh <iframe> every time, not the persistent #sc-deck-a/b element
+  // reused in place - SC.Widget has no unbind/destroy, so a widget bound to
+  // a reused element would leave its old listeners live too (defence in
+  // depth alongside the gen check above; a fresh element also gives the
+  // widget a fresh contentWindow identity to filter its postMessage
+  // listener on). YT.Player doesn't need this: it always builds its own
+  // fresh iframe under the target element regardless.
+  const old = document.getElementById(deck.scId);
+  const iframe = document.createElement('iframe');
+  iframe.id = deck.scId;
+  iframe.setAttribute('allow', 'autoplay');
+  iframe.src = soundCloudWidgetSrc(videoId);
+  old.replaceWith(iframe);
+  const widget = SC.Widget(iframe);
+  deck.player = makeSCPlayerAdapter(deck, widget, myGen);
+  widget.bind(SC.Widget.Events.READY, function(){
+    if (deck.gen !== myGen) return;
+    deck.ready = true;
+    widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
+    deck.player.setVolume(deck === activeDeck() ? effectiveVolume() : 0);
+    if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v }); }
+    deck.confirmed = false;
+    // No ad-preroll wait for SoundCloud - confirm (and, for the active
+    // deck, unmute/seek-to-0/reflect play state) right away.
+    onDeckConfirmed(deck);
+    // Explicit nudge, not relying on the iframe's own auto_play=true alone -
+    // verified directly that it can silently no-op (isPaused still true,
+    // position stuck at 0) when too much time/async work has passed since
+    // the click that started this resolve, apparently burning through
+    // Chrome's transient-activation window for unmuted cross-origin audio
+    // before the iframe's src is actually set. An explicit postMessage
+    // play() call still succeeds even then (verified the same way) - SC's
+    // widget doesn't re-check frame-level autoplay eligibility for a command
+    // its own embedding page sent it. YT doesn't need this: its playerVars
+    // start it autoplaying *muted* (always allowed), and onDeckConfirmed
+    // above just unmutes an already-playing player.
+    if (deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
+    if (deck === activeDeck()) updateAdLoadingIcon();
+  });
+  widget.bind(SC.Widget.Events.PLAY, function(){
+    if (deck.gen !== myGen) return;
+    deck._scState = YT.PlayerState.PLAYING;
+    // Re-fetch duration here too, not just right after load() in
+    // makeSCPlayerAdapter's loadVideoById - verified directly that calling
+    // getDuration() immediately after load() can still answer with the
+    // *previous* sound's duration (the widget appears to process them as
+    // separate queued postMessage calls, and the load hadn't necessarily
+    // taken effect internally yet) - a real PLAY event only fires once the
+    // new sound is actually the one live, so this is the reliable point to
+    // trust it. Cheap and idempotent if the earlier fetch already got it right.
+    widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
+    onDeckStateChange(deck, { data: YT.PlayerState.PLAYING });
+  });
+  widget.bind(SC.Widget.Events.PAUSE, function(){ if (deck.gen !== myGen) return; deck._scState = YT.PlayerState.PAUSED; onDeckStateChange(deck, { data: YT.PlayerState.PAUSED }); });
+  widget.bind(SC.Widget.Events.FINISH, function(){ if (deck.gen !== myGen) return; deck._scState = YT.PlayerState.ENDED; onDeckStateChange(deck, { data: YT.PlayerState.ENDED }); });
+  widget.bind(SC.Widget.Events.PLAY_PROGRESS, function(data){ if (deck.gen === myGen) deck._scPos = (data && data.currentPosition || 0) / 1000; });
+}
+
 function loadIntoDeck(deck, videoId, isActive){
-  if (!deck.player){ deck.pendingVideoId = videoId; createDeckPlayer(deck, videoId); return; }
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : 'yt';
+  if (!deck.player || deck.kind !== kind){
+    // Switching a deck between a YouTube and a SoundCloud track (a mixed-
+    // source queue/crossfade) - the existing player is the wrong kind to
+    // reuse via loadVideoById, so stop it in place (it's harmless to leave
+    // sitting idle in its own DOM slot - see the yt-deck-*/sc-deck-* split
+    // above) and build a fresh one of the right kind instead.
+    if (deck.player){ try { deck.player.mute && deck.player.mute(); deck.player.pauseVideo && deck.player.pauseVideo(); } catch(e){} }
+    deck.pendingVideoId = videoId;
+    createDeckPlayer(deck, videoId);
+    return;
+  }
   if (!deck.ready || !deck.player.loadVideoById){ deck.pendingVideoId = videoId; return; }
   if (deck.unmuteTimer) clearTimeout(deck.unmuteTimer);
   deck.confirmed = false;
   deck.player.mute();
   deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
   forceLowestQuality(deck);
-  deck.muteStartTs = Date.now();
-  scheduleAdCheck(deck);
+  if (kind === 'sc'){
+    onDeckConfirmed(deck);
+    // Same explicit nudge as createSCDeckPlayer's READY handler - .load()'s
+    // own auto_play:true can silently no-op the same way.
+    if (deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
+  } else {
+    deck.muteStartTs = Date.now();
+    scheduleAdCheck(deck);
+  }
   if (deck === activeDeck()) updateAdLoadingIcon();
 }
 
@@ -5738,6 +5957,7 @@ function prewarmResumeDeck(){
   if (typeof YT === 'undefined' || !YT.Player){ setTimeout(prewarmResumeDeck, 300); return; }
   const t = trackAt(state.queuePos);
   if (!t || !t.videoId) return;
+  if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(prewarmResumeDeck, 300); return; }
   const deck = standbyDeck();
   if (deck.pos === state.queuePos && (deck.player || deck.pendingVideoId)) return;
   resetDeck(deck);
@@ -6473,6 +6693,16 @@ function loadLyricsForTrack(t){
 function maybeLoadLyrics(){
   const t = currentTrack();
   if (!t || !t.videoId) return;
+  // The /lyrics backend's videoId param is validated as a bare alphanumeric
+  // YouTube-shaped id (see worker's handleLyrics) - a SoundCloud-native
+  // 'sc:<id>' videoId would just 400 every time, so skip the doomed request
+  // and say so plainly instead of leaving the previous track's lyrics on
+  // screen or showing a generic "couldn't load" error.
+  if (isSoundCloudVideoId(t.videoId)){
+    lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">Lyrics aren\'t available for SoundCloud tracks yet.</div>';
+    return;
+  }
   if (lyricsState.videoId === t.videoId) return;
   loadLyricsForTrack(t);
 }
@@ -6591,6 +6821,11 @@ function updateTrackMetaUI(t){
   setMarqueeText(miniTitle, t.title);
   setMarqueeText(miniArtist, t.artist);
   reportMatchBtn.classList.remove('is-sent');
+  // "This isn't just the audio" only means anything for a track that was
+  // matched to a YouTube video - a SoundCloud-native track (see
+  // soundcloud-native-playback) plays the source audio directly, so there's
+  // no match to report.
+  reportMatchBtn.style.display = isSoundCloudVideoId(t.videoId) ? 'none' : '';
   updatePlayerLikeBtn(t);
   updateMediaSessionMeta(t);
   updateMiniPlayerUI();
@@ -6747,6 +6982,7 @@ function loadIndex(pos, autoplay){
   if (typeof YT === 'undefined' || !YT.Player){ setTimeout(() => loadIndex(pos, autoplay), 300); return; }
   const t = trackAt(pos);
   if (!t || !t.videoId) return;
+  if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(() => loadIndex(pos, autoplay), 300); return; }
   recordLastPlayed(state.queue[pos].plId);
 
   cancelCrossfade();
@@ -7172,6 +7408,19 @@ function ensureYouTubeApi(){
   document.head.appendChild(tag);
 }
 window.onYouTubeIframeAPIReady = function(){};
+// SoundCloud's Widget API script - same lazy-load-once treatment as
+// YouTube's above. No official "ready" callback to hook (unlike
+// onYouTubeIframeAPIReady) - loadIndex/prewarmResumeDeck poll for
+// `window.SC && SC.Widget` the same way they already poll for `YT.Player`.
+let scApiRequested = false;
+function ensureSoundCloudWidgetApi(){
+  if (scApiRequested) return;
+  scApiRequested = true;
+  const tag = document.createElement('script');
+  tag.src = 'https://w.soundcloud.com/player/api.js';
+  document.head.appendChild(tag);
+}
+ensureSoundCloudWidgetApi();
 ensureYouTubeApi();
 
 /* =========================================================================

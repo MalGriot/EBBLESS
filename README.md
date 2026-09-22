@@ -62,22 +62,64 @@ import.
 Also accepted: a SoundCloud track/set link (`soundcloud.com/{user}/{track}` or
 `.../sets/{name}`) and an Apple Music album/playlist/song link
 (`music.apple.com/{storefront}/{album|playlist|song}/{slug}/{id}`, including an
-album URL's `?i=<songId>` deep link to one track). Unlike YouTube, neither
-service's audio gets played directly — like Spotify, they're only ever a
-source of `{title, artist}` pairs, each matched to a YouTube video through the
-same `/search` endpoint everything else uses.
+album URL's `?i=<songId>` deep link to one track).
 
-- **Apple Music** dehydrates its album/playlist/song pages into a
-  `<script id="serialized-server-data">` JSON blob (the same trick as
-  Spotify's `__NEXT_DATA__`), scraped directly - no API key, no missing
-  tracks.
-- **SoundCloud** stopped embedding track/playlist data in its pages entirely
-  (verified directly - the old `window.__sc_hydration` blob is gone), so this
-  calls SoundCloud's own public web API instead, using a `client_id` pulled
-  live out of one of the site's JS bundles (cached for an hour; refetched once
-  on a 401 in case it rotated). A playlist's `/resolve` response only fully
-  hydrates its first ~5 tracks and leaves the rest as bare `{id}` stubs, which
-  get a follow-up batch fetch.
+- **Apple Music** isn't played directly - like Spotify, it's only ever a
+  source of `{title, artist}` pairs, each matched to a YouTube video through
+  the same `/search` endpoint everything else uses. It dehydrates its
+  album/playlist/song pages into a `<script id="serialized-server-data">`
+  JSON blob (the same trick as Spotify's `__NEXT_DATA__`), scraped directly -
+  no API key, no missing tracks.
+- **SoundCloud** plays natively instead of being matched to a YouTube video -
+  see "SoundCloud native playback" below. Its tracklist data comes from
+  SoundCloud's own public web API (it stopped embedding track/playlist data
+  in its pages entirely - verified directly, the old `window.__sc_hydration`
+  blob is gone), using a `client_id` pulled live out of one of the site's JS
+  bundles (cached for an hour; refetched once on a 401 in case it rotated). A
+  playlist's `/resolve` response only fully hydrates its first ~5 tracks and
+  leaves the rest as bare `{id}` stubs, which get a follow-up batch fetch.
+
+## SoundCloud native playback
+
+Every other source (Spotify, Apple Music, a plain YouTube link) only ever
+supplies a `{title, artist}` pair that gets matched to a YouTube video via
+`/search` - SoundCloud is the one exception. A SoundCloud track's own numeric
+id (`scId`, from the worker's `/soundcloud` endpoint) becomes the track's
+`videoId` field with an `sc:` prefix (e.g. `sc:2312228204`) instead of a real
+YouTube id, and the player detects that prefix (`isSoundCloudVideoId()`) and
+routes it to a SoundCloud embeddable Widget
+(`https://w.soundcloud.com/player/...`, using the SC Widget JS API) instead of
+a YouTube `<iframe>` player. This exists because for an independent/
+self-released catalog with little YouTube presence of its own, `/search`
+sometimes has *no* correct video to match against at all (an artist name that
+collides with an unrelated, heavily-used term is the concrete case that
+prompted this - see the `soundcloud-native-playback` IMPROVEMENTS.md entry).
+
+Practically, this means: the two-deck crossfade/preload architecture
+(`decks`/`createDeckPlayer`/`loadIntoDeck` in `index.html`) now builds either
+a `YT.Player` or an SC.Widget-backed adapter per deck depending on the
+track's source, exposing the same method surface (`playVideo`/`pauseVideo`/
+`seekTo`/`getCurrentTime`/etc.) so crossfade, the queue, media-session
+metadata, and transport controls all keep working unmodified either way.
+SoundCloud tracks skip the YouTube pre-roll-ad mute-and-wait dance entirely
+(SoundCloud's own embeddable player has no such pre-roll to hide) but lyrics
+and the Discover "YouTube mix" seed fallback are skipped for them, and the
+"report a bad match" button is hidden (there's no YouTube match to report).
+
+One real, unresolved limitation: browsers only reliably allow a *new*
+cross-origin iframe to autoplay unmuted audio within a short window after a
+genuine user gesture (or once that specific origin/frame has already been
+allowed to play once) - YouTube's player sidesteps this by always starting
+**muted** (always allowed) and unmuting after the fact, which SoundCloud's
+widget has no equivalent hook for. In practice this can mean the very first
+SoundCloud track of a session - or a track that gets auto-promoted from the
+preloaded standby deck without any fresh click, e.g. a natural end-of-track
+advance - loads and shows correctly but sits paused until the listener taps
+play once; the play/pause icon accurately reflects this (it's never a silent
+failure), and playback is normal after that tap. Worth deeper investigation
+against the real deployed worker (much lower latency than a local
+`wrangler dev` instance, which is what this was verified against) before
+assuming how often this actually bites a real listener.
 
 One easy footgun: `parseSpotifyLink`'s `playlist|album|track` regex isn't
 anchored to a Spotify domain, and Apple Music's own URLs contain the literal
