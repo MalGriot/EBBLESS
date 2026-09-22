@@ -2828,6 +2828,52 @@ Add entries in this shape:
   `min(86vh,86vw)`, particles still render correctly. No new console
   errors (only the same pre-existing sandbox noise).
 
+  **Follow-up 2 (2026-09-22, commit `1c4dae3`):** user reported the
+  particle background was *still* blinking after the sprite optimization
+  above, and separately asked for the normal player's album-art style
+  switcher (Default/Spinning Record/Cassette Tape) to also be reachable
+  from fullscreen. On the blinking: rather than keep chasing an
+  unreproducible glitch, the user said to just drop the particle layer
+  since they didn't find it attractive anyway and already like the
+  existing drifting/blurred `.flow-ambient` background (pre-existing,
+  built from the track's own blurred album art) - so the entire particle
+  system (`flowArtParticles` canvas, `flowPartsStart/Stop/Init/Draw/Resize`,
+  the accent-color probe, the sprite cache) was removed outright, along
+  with its CSS and the now-unused `syncFlowPartsColor()` hooks in
+  `updatePlayerAccentColor()`. The ambient ("bg colors moving") layer the
+  user said they like is untouched by this - it was never part of this
+  entry's work, just already there.
+
+  For the style switcher: added a new button (top-left of the fullscreen
+  chrome, mirrors the exit button's styling) that relocates the shared
+  `#artStyleMenu` into a `.flow-art-style-anchor` inside `.flow-chrome`
+  while flow mode is open on the art view (`openFlow()`/`closeFlow()`
+  now move it in/out, same real-element-relocation pattern already used
+  for `vizCanvas`/`artRecord`/`artCassette`), hidden whenever the cymatics
+  visualizer is showing instead (`flowArtStyleBtn.hidden = showViz`) since
+  there's no art style to pick then. It's a child of `.flow-chrome`, so it
+  automatically inherits the same appear-on-pointer-movement /
+  fade-after-3.2s-idle behavior as the rest of the fullscreen controls -
+  no separate visibility logic needed. New `syncFlowArtStyle()` centralizes
+  "which element (default art / real `#artRecord` / real `#artCassette`)
+  should currently be inside `flowArtWrap`," called both from `openFlow()`
+  on entry and from `setArtStyle()` so picking a *different* style while
+  already fullscreen updates the fullscreen visual immediately instead of
+  only taking effect next time flow mode opens.
+
+  Verified via a local `python3 -m http.server` served directly from this
+  worktree (confirmed via `location.href`): fullscreen now shows the
+  ambient drifting background with no particle canvas at all, in any art
+  style. The new button opens the style menu correctly positioned under
+  itself; selecting Cassette Tape while already viewing the fullscreen
+  Spinning Record immediately swapped to the cassette element in place
+  (screenshot-confirmed both states); exiting fullscreen afterward
+  confirmed `#artStyleMenu` returned to `#visualTabs` (its normal home)
+  and `#artCassette` returned to `#artworkWrap` - nothing left stranded
+  inside `flowArtWrap`. Confirmed the button stays `hidden` when
+  fullscreen opens on the cymatics visualizer instead. No new console
+  errors versus the pre-existing sandbox noise.
+
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
 - **Priority:** medium
