@@ -2482,6 +2482,43 @@ Add entries in this shape:
   sandboxed preview environment's network restrictions on external YouTube/
   artwork requests).
 
+  Third pass (per further follow-up feedback): added a direct "x" remove
+  button on each row and dropped the "N plays" count display entirely.
+  Confirmed first that "remove" in this list means remove-from-playlist, not
+  remove-from-queue - `#trackList` renders `state.playlist.tracks` (the
+  playlist's full tracklist), not the queue, so a given row may not even be
+  queued right now; the queue's own removal (`queueRemoveAt`, the `.remove`
+  button in `renderQueuePanel`'s Now/Next/Later rows) is separate and was
+  left untouched. Wired the new button to the existing
+  `removeTrackFromCustomPlaylist(i)` - the same function the original inline
+  "Remove from playlist" button and the first-pass menu item both used - so
+  no new removal logic was written. It's built with the same SVG markup as
+  `.q-row .remove` and a new `.track-row .remove` CSS rule that mirrors
+  `.q-row .remove`'s sizing/colors (including the touch-target bump in the
+  mobile media query), so it matches that existing pattern exactly. Shown
+  only when `pl.type === 'custom'` (matching `removeTrackFromCustomPlaylist`'s
+  own guard - non-custom/imported playlists don't support removing a single
+  track), and shown on unmatched/missing rows too since those have no kebab
+  at all and are exactly the ones worth pruning from a custom playlist. The
+  `.plays` div and its `renderTrackList` code were deleted outright;
+  `t.plays` itself (used for the "Most/Least played" sort options elsewhere)
+  is untouched.
+
+  Verified with a fresh `python3 -m http.server` on yet another dedicated
+  port (127.0.0.1:61829, same port-contention workaround as before) and
+  `curl`-confirmed the served file had the new remove-button code and zero
+  `class="plays"` markup before testing in the browser. Seeded a custom
+  playlist (4 tracks: 2 plain, 1 already-liked-eligible, 1 unmatched) and a
+  non-custom playlist (1 track) directly into `localStorage`. Confirmed: no
+  `.plays` element anywhere in `#trackList`; every row in the custom
+  playlist - matched and unmatched alike - has a working `.remove` button
+  that removes exactly that track and re-renders the list (tested on both a
+  matched and the unmatched row); the non-custom playlist's row has no
+  remove button (only the kebab); the kebab menu is unchanged (Like/Unlike,
+  Play next, Add to playlist, Refresh link) on both playlist types; titles
+  still fully readable. No new console errors (same pre-existing sandboxed
+  404/script-fetch noise as before).
+
 ### player-hud-remove-playlist-label: Remove playlist title/track number from main player HUD
 - **Status:** merged
 - **Priority:** medium
