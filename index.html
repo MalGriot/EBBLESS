@@ -417,7 +417,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .record-shadow{box-shadow:0 20px 46px -14px rgba(0,0,0,.7)}
 .record-disc{background:repeating-radial-gradient(circle at center,#161616 0 3px,#0c0c0c 3px 6px);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
-  animation:record-spin 3s linear infinite;animation-play-state:paused}
+  animation:record-spin 3s linear infinite;animation-play-state:paused;
+  /* promotes this to its own GPU compositor layer so the browser
+     rasterizes the fine repeating-gradient groove pattern once and just
+     rotates that texture per frame, instead of re-rasterizing a dense
+     concentric pattern on every frame - the latter is a known source of
+     shimmer/moiré on a rotating fine gradient, and much more visible now
+     that this renders far larger in fullscreen (min(86vh,86vw) vs the
+     52vh/62vw it used to be everywhere) */
+  will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .artwork-wrap.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
 .record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
@@ -451,7 +459,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .cs-reel-bed{fill:#0e0e0c}
 .cs-reel-mass{fill:#1c1712;transition:r 90ms linear}
 .cs-reel-mass-line{fill:none;stroke:rgba(0,0,0,.35);stroke-width:1}
-.cs-hub{transform-box:fill-box;transform-origin:center}
+.cs-hub{transform-box:fill-box;transform-origin:center;will-change:transform}
 .cs-hub-ring{fill:#c9c3b0}
 .cs-hub-core{fill:#0a0a09}
 .cs-hub-spoke{fill:#0a0a09}
@@ -733,11 +741,21 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @media (prefers-reduced-motion:reduce){
   #flow-layer .flow-ambient .layer.is-active{animation:none}
 }
-#flow-layer .flow-art{width:min(52vh,62vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
+#flow-layer .flow-art{width:min(86vh,86vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
   box-shadow:0 30px 80px -16px rgba(0,0,0,.7);z-index:1}
 #flow-layer .flow-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #flow-layer .flow-art .art.is-active{opacity:1}
+/* when flow mode opens on the record/cassette art style, the real
+   #artRecord / #artCassette elements are moved in here (see openFlow/
+   closeFlow) instead of showing the generic art images */
+#flow-layer .flow-art[data-art-style="record"],
+#flow-layer .flow-art[data-art-style="cassette"]{background:transparent;box-shadow:none;border-radius:0}
+#flow-layer .flow-art[data-art-style="record"] .art,
+#flow-layer .flow-art[data-art-style="cassette"] .art{opacity:0!important}
+#flow-layer .flow-art[data-art-style="record"] .art-record,
+#flow-layer .flow-art[data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
+#flow-layer .flow-art.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
 #flow-layer .flow-viz{position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;
   background:var(--bg)}
 #flow-layer .flow-viz .viz-canvas{opacity:1}
@@ -759,10 +777,17 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer.is-open .flow-chrome>*{pointer-events:auto}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
-.flow-top{display:flex;justify-content:flex-end}
-.flow-exit{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
-.flow-exit:hover{background:var(--panel-2);color:var(--text)}
-.flow-exit svg{width:16px;height:16px}
+.flow-top{display:flex;justify-content:flex-end;align-items:flex-start;position:relative}
+.flow-exit,.flow-art-style-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.flow-exit:hover,.flow-art-style-btn:hover{background:var(--panel-2);color:var(--text)}
+.flow-exit svg,.flow-art-style-btn svg{width:16px;height:16px}
+/* centered to match where the art/viz/lyrics tabs sit (horizontally
+   centered above the artwork) in the normal, non-fullscreen player -
+   also anchors the shared #artStyleMenu (moved in from the normal player
+   while flow mode is open on the art view - see openFlow()/closeFlow())
+   below this button instead of wherever it'd land relative to the normal
+   player's layout */
+.flow-art-style-anchor{position:absolute;left:50%;top:0;transform:translateX(-50%)}
 .flow-bottom{display:flex;flex-direction:column;align-items:center;gap:18px}
 .flow-seek{width:min(420px,80vw)}
 
@@ -1798,7 +1823,14 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <div id="flow-layer">
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
     <div class="flow-chrome">
-      <div class="flow-top"><button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>
+      <div class="flow-top">
+        <div class="flow-art-style-anchor" id="flowArtStyleAnchor">
+          <button class="flow-art-style-btn" id="flowArtStyleBtn" title="Album art style" aria-label="Choose album art style" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg>
+          </button>
+        </div>
+        <button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
+      </div>
       <div class="flow-bottom">
         <div class="flow-meta">
           <div class="title-row">
@@ -5342,6 +5374,7 @@ function setPlayingUI(isPlaying){
   if (adLoading) updateAdLoadingIcon();
   else [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
   artworkWrap.classList.toggle('is-playing', isPlaying);
+  flowArtWrap.classList.toggle('is-playing', isPlaying);
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   setKeepAliveAudio(isPlaying);
@@ -5801,6 +5834,7 @@ function setArtStyle(style){
   applyArtStyle();
   closeArtStyleMenu();
   if (style === 'cassette') cassetteRefreshLabel();
+  if (typeof syncFlowArtStyle === 'function') syncFlowArtStyle();
 }
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
 function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
@@ -6644,6 +6678,41 @@ const flowVizWrap = $('flowVizWrap');
 const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
 const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
 const vizSpeedBtnHome = vizSpeedBtn.parentElement, vizSpeedBtnAnchor = vizSpeedBtn.nextElementSibling;
+/* the real #artRecord / #artCassette elements (not copies) get moved into
+   flowArtWrap while flow mode is open on that art style, mirroring how the
+   viz canvas above is relocated - so the same spinning-disc / cassette-reel
+   visual (with its live playback-driven state) fills the fullscreen view
+   instead of the generic album-art image */
+const artRecord = $('artRecord'), artCassette = $('artCassette');
+const artRecordHome = artRecord.parentElement, artRecordAnchor = artRecord.nextElementSibling;
+const artCassetteHome = artCassette.parentElement, artCassetteAnchor = artCassette.nextElementSibling;
+
+/* ---------- album art style switcher, available in fullscreen too: the
+   shared #artStyleMenu (normally anchored under the player's art/viz/
+   lyrics tabs) is moved into flow-chrome's own anchor while flow mode is
+   open on the art view, and restored on close - same relocate-the-real-
+   element pattern as vizCanvas/artRecord/artCassette above, so there's
+   only ever one menu instance, one set of click handlers. ---------- */
+const artStyleMenuHome = artStyleMenu.parentElement, artStyleMenuAnchor = artStyleMenu.nextElementSibling;
+const flowArtStyleAnchor = $('flowArtStyleAnchor'), flowArtStyleBtn = $('flowArtStyleBtn');
+function syncFlowArtStyle(){
+  if (!state.flowOpen || flowArtWrap.hidden) return;
+  if (artStyle === 'record' || artStyle === 'cassette'){
+    const el = artStyle === 'record' ? artRecord : artCassette;
+    const other = artStyle === 'record' ? artCassette : artRecord;
+    const otherHome = artStyle === 'record' ? artCassetteHome : artRecordHome;
+    const otherAnchor = artStyle === 'record' ? artCassetteAnchor : artRecordAnchor;
+    if (other.parentElement === flowArtWrap) otherHome.insertBefore(other, otherAnchor);
+    if (el.parentElement !== flowArtWrap) flowArtWrap.appendChild(el);
+    flowArtWrap.dataset.artStyle = artStyle;
+  } else {
+    if (artRecord.parentElement === flowArtWrap) artRecordHome.insertBefore(artRecord, artRecordAnchor);
+    if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
+    delete flowArtWrap.dataset.artStyle;
+  }
+}
+flowArtStyleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleArtStyleMenu(); armFlowChromeTimer(); });
+
 function openFlow(){
   state.flowOpen = true;
   const showViz = visualMode === 'viz';
@@ -6651,6 +6720,13 @@ function openFlow(){
   flowArtWrap.hidden = showViz;
   flowVizWrap.hidden = !showViz;
   if (showViz) vizResize();
+  flowArtStyleBtn.hidden = showViz;
+  if (!showViz){
+    flowArtStyleAnchor.appendChild(artStyleMenu);
+    syncFlowArtStyle();
+  } else {
+    delete flowArtWrap.dataset.artStyle;
+  }
   flowLayer.classList.add('is-open');
   armFlowChromeTimer();
 }
@@ -6665,6 +6741,13 @@ function closeFlow(){
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
     vizResize();
   }
+  if (artStyleMenu.parentElement === flowArtStyleAnchor){
+    artStyleMenuHome.insertBefore(artStyleMenu, artStyleMenuAnchor);
+    closeArtStyleMenu();
+  }
+  if (artRecord.parentElement === flowArtWrap) artRecordHome.insertBefore(artRecord, artRecordAnchor);
+  if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
+  delete flowArtWrap.dataset.artStyle;
 }
 function armFlowChromeTimer(){
   flowLayer.classList.remove('chrome-hidden');
