@@ -1851,7 +1851,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #76.
 
 ### desktop-settings-inline: Desktop Settings should replace the player pane in place
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On desktop, clicking Settings currently navigates to a
   separate screen. Instead it should pop up in the player pane's spot,
@@ -1923,8 +1923,15 @@ Add entries in this shape:
   Pushed to `agent/desktop-settings-inline` (commit `39e07d9`); not
   merged - left for review.
 
+  **Closed out (2026-09-22):** merged to `main` along with
+  `desktop-player-fullscreen-toggle` below (commit `df093f3`), resolving a
+  real CSS conflict between the two - see that entry's notes for the
+  resolution. Re-verified Settings-inline still works correctly after the
+  merge, in a real browser, with the fullscreen toggle also exercised in
+  the same session. Pushed live at the user's request.
+
 ### desktop-player-fullscreen-toggle: Desktop player fullscreen should slide panels off, nav buttons become toggles
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On desktop, with the player centered, its fullscreen
   button should slide the library/playlist panel off to the left and the
@@ -2072,6 +2079,25 @@ Add entries in this shape:
   unrelated art-view `openFlow()` path is unchanged. Only the pre-existing,
   already-documented "unknown error... fetching the script" YouTube-iframe
   noise remained; no other new console errors.
+
+  **Closed out (2026-09-22):** merged to `main` along with
+  `desktop-settings-inline` (commit `df093f3`). The two conflicted on the
+  same `@media (min-width:1150px)` CSS block - `desktop-settings-inline`
+  had removed the `:not(.view-settings-active)` scoping from the base
+  grid/library/queue-panel/lib-filter rules (so the layout stays put while
+  Settings is open), while this entry's own commits still carried the
+  original `:not(.view-settings-active)` guards on those same base rules
+  (written before that fix landed). Resolution: kept the base rules
+  unguarded (per `desktop-settings-inline`), kept `:not(.view-settings-active)`
+  only on this entry's own new desktop-fs-specific rules (the panel-slide
+  transforms and drawer overlays - those shouldn't ever be active
+  simultaneously with Settings in practice, since `fsBtn` only exists in
+  the player view), and merged the library/queue nav-button visibility
+  rule (`:not(.desktop-fs)`) without reintroducing the now-removed
+  Settings dependency. Verified in a real browser after merging: Settings-
+  inline swap, fullscreen panel-slide, and both Library/Queue drawer
+  toggles all still work correctly together, in either order, clean exits,
+  no new console errors. Pushed live at the user's request.
 
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
 - **Status:** draft
