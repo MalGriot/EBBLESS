@@ -1944,6 +1944,64 @@ Add entries in this shape:
   noise already documented in `fullscreen-player-controls`'s notes (present
   on a fresh reload with no interaction at all); no new errors.
 
+  **Follow-up fix (same branch, second pass):** the first pass's
+  `fsBtn`-in-`split-desktop`-always-calls-`toggleDesktopFs()` branch was too
+  broad - it fired regardless of `visualMode`, so entering fullscreen on
+  desktop while viewing the cymatics visualizer or lyrics got trapped in the
+  smaller panel-slide player pane (`position:fixed;top:var(--topbar-h)`,
+  topbar/nav still visible) instead of the true full-bleed
+  `openFlow()`/`openLyricsFs()` overlays (`#flow-layer`/`#lyricsFsLayer`,
+  `position:fixed;inset:0`, topbar hidden) those views use everywhere else -
+  a regression from "before this lane" behavior the user explicitly flagged
+  ("cymatics and lyrics should cover the screen on fullscreen like before").
+  Fixed `fsBtn`'s click handler (~line 6775) to check `visualMode` first:
+  `'lyrics'`/`'viz'` now always get the full-bleed overlay on any viewport,
+  and only `visualMode === 'art'` + `body.split-desktop` reaches
+  `toggleDesktopFs()`'s panel-slide treatment; mobile/non-split-desktop art
+  view still falls through to `openFlow()` unchanged. Also made
+  `toggleDesktopFs()` (~line 2792) defensively reset
+  `deskFsLibOpen`/`deskFsQueueOpen` and their body classes every time it
+  enters fullscreen, instead of relying on them already being false, per the
+  user's separate ask that the library/queue drawers always start closed on
+  a fresh fullscreen entry.
+
+  While verifying the viz-fullscreen path this also surfaced (and fixed) a
+  latent bug in `closeFlow()`: it restored `vizAutoBtn` using a stale
+  `nextElementSibling` anchor reference captured once at page load - that
+  anchor is `vizSpeedBtn`, which had itself also been moved out to the flow
+  layer and not yet restored, so `insertBefore` threw a `NotFoundError`
+  every time viz fullscreen was closed. This was already reachable on
+  mobile before this lane (identical `openFlow()`/`closeFlow()` code path,
+  untouched by either pass) but had never been exercised on desktop before
+  since split-desktop could never reach viz-fullscreen at all pre-fix.
+  Restoring `vizSpeedBtn` before `vizAutoBtn` (order matters: `vizAutoBtn`'s
+  anchor needs to already be back in the home container) fixes it.
+
+  Verified by serving this worktree's `index.html` directly via `python3 -m
+  http.server` from inside the worktree directory (confirmed via
+  `location.href` each time that the served/rendered copy was the worktree,
+  not the main checkout, per the repo's standing note that the shared
+  preview launcher has been unreliable across worktrees) at a 1280x800
+  desktop viewport with the standard "I Tried It" test playlist: switched to
+  the cymatics visualizer tab, hit fullscreen - `#flow-layer` gained
+  `is-open`, covering the entire screen with the topbar hidden, matching the
+  pre-lane behavior. Repeated for lyrics - `#lyricsFsLayer` gained
+  `is-open`, same full-bleed coverage. Switched back to the default
+  album-art view, hit fullscreen - confirmed the desktop panel-slide
+  behavior (library/queue sliding off, player expanding, `desktop-fs` class
+  on `<body>`) still works exactly as the first pass verified. Opened both
+  the library and queue drawers while in art fullscreen, exited, then
+  re-entered fullscreen fresh - confirmed `desktop-fs-lib-open`/
+  `desktop-fs-queue-open` were absent on the fresh entry (drawers start
+  closed every time). Also checked a fresh tab's console through a full
+  viz-fullscreen open/close cycle: no `NotFoundError`, and DOM inspection
+  confirmed `vizCanvas`/`vizAutoBtn`/`vizSpeedBtn` all correctly returned to
+  their home containers (`artworkWrap`/`vizControls`) after closing. A
+  mobile-viewport (375x812, non-split-desktop) check confirmed the
+  unrelated art-view `openFlow()` path is unchanged. Only the pre-existing,
+  already-documented "unknown error... fetching the script" YouTube-iframe
+  noise remained; no other new console errors.
+
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
 - **Status:** draft
 - **Priority:** low
