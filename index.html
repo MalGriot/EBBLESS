@@ -3778,6 +3778,39 @@ function openAddToPlaylistPicker(track){
   $('plNewFromPickerBtn').addEventListener('click', () => openCreatePlaylistFlow(track));
 }
 
+// A pasted link that resolves to a single song (Spotify/Apple Music track,
+// SoundCloud track, YouTube video) has nowhere obvious to land on its own -
+// unlike a playlist/album import it isn't a browsable thing in the library.
+// Ask where it should go instead of quietly stashing it as a one-track
+// "playlist" (see beginImport). Mirrors openAddToPlaylistPicker's layout,
+// plus a one-tap Liked Songs shortcut up top since that's the most common
+// destination for a single song and Liked Songs may not exist yet.
+function openSingleTrackDestinationPicker(track){
+  openImportOverlay();
+  const customs = getLibrary().map(id => getCachedPlaylist(id)).filter(p => p && p.type === 'custom' && p.id !== LIKED_ID);
+  const rowsHtml = customs.map(p =>
+    '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
+      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span>' +
+    '</button>'
+  ).join('');
+  importStage.innerHTML =
+    '<div class="step">Add &ldquo;' + escapeHtml(track.title) + '&rdquo; to&hellip;</div>' +
+    '<button class="btn-ghost" id="singleTrackLikedBtn" style="width:100%;text-align:left;margin-bottom:14px;display:block">&#9825; Liked Songs</button>' +
+    '<div style="width:100%;max-height:220px;overflow-y:auto;margin-bottom:16px">' +
+      (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No other playlists yet.</div>') +
+    '</div>' +
+    '<button class="btn-ghost" id="plNewFromSingleTrackBtn" style="width:100%">+ New playlist</button>';
+  $('singleTrackLikedBtn').addEventListener('click', () => {
+    ensureLikedPlaylist();
+    addTrackToPlaylist(LIKED_ID, track);
+    closeImportOverlay();
+  });
+  importStage.querySelectorAll('.pl-pick').forEach(btn => {
+    btn.addEventListener('click', () => { addTrackToPlaylist(btn.dataset.id, track); closeImportOverlay(); });
+  });
+  $('plNewFromSingleTrackBtn').addEventListener('click', () => openCreatePlaylistFlow(track));
+}
+
 // Resolves ANY pasted link down to a flat list of playable tracks: a single
 // song (Spotify track / YouTube video) becomes a one-item list, a whole
 // source (Spotify playlist/album / YouTube playlist) becomes all of its
@@ -3999,11 +4032,22 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// A single song has no browsable home of its own in the library - it needs
+// to land inside a playlist (or Liked Songs) rather than being saved as its
+// own one-track "playlist". See openSingleTrackDestinationPicker.
+function isSingleTrackType(type){
+  return type === 'track' || type === 'sc_track' || type === 'am_track' || type === 'yt_video';
+}
+
 async function beginImport(id, force, type){
   importErr.textContent = '';
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
+      if (isSingleTrackType(cached.type)){
+        openSingleTrackDestinationPicker(cached.tracks[0]);
+        return;
+      }
       loadPlaylistIntoPlayer(cached);
       buildQueueFrom(0);
       loadIndex(state.queuePos, true);
@@ -4029,6 +4073,11 @@ async function beginImport(id, force, type){
         stageMatchingProgress(p.done, p.total, p.track);
       }
     });
+    if (isSingleTrackType(pl.type)){
+      closeImportOverlay();
+      openSingleTrackDestinationPicker(pl.tracks[0]);
+      return;
+    }
     saveToLibrary(id);
     renderLibrary();
     closeImportOverlay();
