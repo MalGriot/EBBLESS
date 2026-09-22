@@ -4142,3 +4142,129 @@ Add entries in this shape:
     any YouTube-scrape-specific issue that only a successful response
     would surface (e.g. an edge case in how `handleYtVideo` parses
     `ytInitialPlayerResponse` for a particular video's metadata shape).
+
+### app-icon-transparent-bg: App icon should have a transparent background across all platforms
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The app icon (home screen / PWA / favicon / any other
+  platform surface it's used on) should have a transparent background
+  instead of whatever solid background it currently renders with.
+- **Touches:** app icon assets and manifest (`manifest.json` / PWA icon
+  set, favicon), likely under `brand/` or wherever icon source files live.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #132.
+
+### desktop-settings-queue-popup: Opening Settings on desktop also pops open the queue window
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, clicking Settings incorrectly also opens the
+  queue panel/window at the same time. Settings should open on its own.
+- **Touches:** desktop split-view layout, Settings navigation - likely an
+  interaction bug in the same area `desktop-settings-inline` (merged)
+  touched (`setView()`, the `>=1150px` split-desktop grid).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #131. Worth checking as a possible
+  regression from `desktop-settings-inline`, which changed how Settings
+  and the queue/player panes coexist in the desktop grid.
+
+### breathe-love-deep-spotify-pull: "Breathe Love Deep" album still not pulling from its real source, plays random YouTube songs
+- **Status:** draft
+- **Priority:** high
+- **Description:** The "Breathe Love Deep" album is pulling random songs
+  from YouTube while still showing the correct "Breathe Love Deep" album
+  art and titles, instead of playing the actual tracks from its real
+  source link.
+- **Touches:** starter/default library seed (`STARTER_LIBRARY_URLS` /
+  `seedStarterLibrary()`), SoundCloud/source resolution
+  (`sourceKindForType()`, `resolveTrackArt()`), track-link matching
+  pipeline (`link-match-accuracy` area).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #130. Likely a regression or
+  incomplete fix relative to the already-merged `breathe-love-deep-album`
+  entry above (which addressed album categorization and SoundCloud
+  sourcing) - needs fresh investigation into why tracks are resolving to
+  mismatched YouTube results despite correct display metadata; may
+  overlap with `link-match-accuracy` (merged) or `stale-track-links`
+  (merged) territory. Flagging as high priority since it's a listener-
+  facing playback-correctness bug on the app's own default-seeded release.
+
+### tutorial-text-overflow-button-animation: Tutorial text overflows screen and hides shuffle/loop buttons; needs press animation
+- **Status:** draft
+- **Priority:** medium
+- **Description:** During the onboarding tutorial, some caption text
+  stretches off screen and becomes unreadable, and the shuffle/loop
+  caption text boxes visually cover the actual shuffle/loop buttons
+  underneath. Add an animation showing those buttons actually being
+  pressed so it's clear what's being demonstrated.
+- **Touches:** onboarding/tutorial flow (`runIntro()`), caption
+  positioning/sizing for the shuffle/loop beat.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #129.
+
+### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The video used as the cover for the "CuRRentSSsss" /
+  Currents playlist is no longer showing up.
+- **Touches:** Currents playlist cover rendering - likely related to
+  `rename-current-playlist` / `currentsss-casing-followup` (both merged).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #128. Possible regression from a
+  more recent change - worth checking recent commits touching the
+  Currents playlist cover/art path first.
+
+### discover-toggle-required: Discover has to be deactivated and reactivated before it works
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Discover feature doesn't work on its own - the user
+  has to turn it off and back on again before it actually functions.
+- **Touches:** Discover feature toggle/init logic.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #127.
+
+### queue-drag-reorder-glitch-regression: Dragging a queue track up glitches again
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Dragging a track up in the queue glitches out again -
+  same symptom as the already-merged `queue-drag-reorder-glitch` entry
+  above.
+- **Touches:** queue panel drag-to-reorder (`wireQueueRowGestures()`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #126. Looks like a regression of
+  the already-merged `queue-drag-reorder-glitch` fix - start by checking
+  whether anything landed since that fix touched `wireQueueRowGestures()`
+  or the queue's drag-swap logic again.
+
+### cassette-fullscreen-animation: Cassette fullscreen should stack and orbit background cassettes
+- **Status:** draft
+- **Priority:** low
+- **Description:** On the cassette art style's fullscreen view: on mobile,
+  additional cassettes should stack behind/above the main cassette one
+  after another until they reach the top of the screen, then all
+  disappear back to one; their outer plastic housing should match the
+  album art's color scheme, getting darker toward the final cassette. On
+  desktop, the same stacking animation should play first, then the
+  stacked cassettes should spread into a circle around the central
+  cassette (rotated bottom-toward-center), spin slowly, and one by one
+  lift up slightly and slide behind the main cassette out of sight as
+  each reaches the top.
+- **Touches:** cassette fullscreen visual (`fullscreen-lp-cassette-visual`
+  area), cassette CSS/animation.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #125. A substantial new animation
+  build, not a bug fix - scope carefully before dispatching a lane.
+
+### fullscreen-lp-too-small: Fullscreen LP is too small again on mobile and desktop
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The fullscreen LP (spinning record) view is too small
+  again. On mobile it should reach the side edges; on desktop it should
+  reach the top and bottom edges.
+- **Touches:** LP/record fullscreen visual sizing - likely the same area
+  `record-cassette-size` and `fullscreen-lp-cassette-visual` (both
+  merged) touched.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #124. Reads as a regression of
+  previously-merged sizing work (`record-cassette-size` was about the
+  main player view, not fullscreen specifically) - check what changed in
+  the fullscreen LP sizing path since those landed.
