@@ -2099,6 +2099,29 @@ Add entries in this shape:
   toggles all still work correctly together, in either order, clean exits,
   no new console errors. Pushed live at the user's request.
 
+  **Follow-up (2026-09-22, commit `e30d6f9`):** user reported the desktop
+  fullscreen album art wasn't centered, across all three styles. Two
+  compounding bugs, both from this entry's own merge: (1) the
+  `margin-right:0!important` rule this entry's merge left on `.view-scroll`
+  (needed for the normal narrow 3-pane layout) survived into the
+  full-width fullscreen `#view-player`, so `margin:0 auto` centering had
+  its right side pinned to 0 and dumped all the leftover space on the
+  left instead - fixed by scoping that rule to `:not(.desktop-fs)`. (2)
+  while investigating, found the art itself was never actually enlarged
+  for desktop fullscreen at all - `.artwork-wrap` stayed at its normal
+  in-pane cap (~440px) since only the surrounding pane expanded, not the
+  art. Added a `min(86vh,86vw,calc(100dvh - var(--topbar-h) - 300px))`
+  override to match the mobile flow-mode fullscreen's own art scale - the
+  third term reuses the same reservation the existing `>=860px` rule
+  already budgets for title/artist/seek/controls-row/tabs, which mattered
+  in testing: an uncapped `86vh` pushed the transport controls off the
+  bottom of a shorter (800px-tall) viewport entirely. Verified centering
+  via `getBoundingClientRect()` (exact center-X match at both viewport
+  sizes tested) and confirmed the size scales up on a taller viewport
+  (640px at 1000px-tall) while staying at the pre-existing size where a
+  shorter viewport leaves no extra room (440px at 800px-tall, matching
+  before this fix - not a regression, just nothing to gain there).
+
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
 - **Status:** draft
 - **Priority:** low
