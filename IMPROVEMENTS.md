@@ -3074,6 +3074,21 @@ Add entries in this shape:
   review, since the rotation-shimmer fix above couldn't be verified in
   the dev sandbox. User confirmed on real hardware afterward: "works."
 
+  **Follow-up (2026-09-22, commit `0a521e8`):** user reported "album style
+  button doesn't work on cymatics fullscreen." Root cause: `openFlow()`
+  sets `flowArtStyleBtn.hidden = true` on the cymatics/lyrics view (no art
+  style to pick while looking at the visualizer), but the shared
+  `.flow-exit,.flow-art-style-btn{display:flex}` rule ties with the
+  browser's default `[hidden]{display:none}` on specificity and wins on
+  source order - so the button stayed visible there anyway. Clicking it
+  opened the style menu but did nothing, since `syncFlowArtStyle()`
+  already correctly no-ops while `flowArtWrap` itself is hidden - it read
+  as broken rather than simply absent. Added
+  `.flow-art-style-btn[hidden]{display:none}`. Verified via a real browser
+  check: computed `display` is now `none` on the cymatics view (was
+  `flex`), and unaffected (`flex`, still hidden-attribute `false`) on the
+  art view - switched between both to confirm neither broke the other.
+
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
 - **Priority:** medium
