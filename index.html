@@ -3561,13 +3561,20 @@ function toggleLibraryPlaylistPanel(id){
       const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
       meta.appendChild(title); meta.appendChild(artist);
       row.appendChild(img); row.appendChild(meta);
+      const rowActions = document.createElement('div'); rowActions.className = 'row-actions';
+      const menuBtn = document.createElement('button');
+      menuBtn.setAttribute('aria-label', 'Track options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
+      menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+      menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(id, i, menuBtn); });
+      rowActions.appendChild(menuBtn);
+      row.appendChild(rowActions);
       if (t.videoId){
         row.addEventListener('click', () => playLibraryTrackInline(id, i));
       }
-      // track-relink-menu: same long-press "Refresh link" menu used
-      // elsewhere - no dedicated kebab button here given this panel's
-      // tighter row layout, but the hold gesture works the same way,
-      // missing tracks included.
+      // track-relink-menu: same menu used elsewhere (Refresh link, Remove
+      // from playlist, etc.) - the kebab button above opens it on click,
+      // and long-press/hold still opens the same menu on touch, missing
+      // tracks included.
       attachLongPress(row, () => toggleTrackCtxMenu(id, i, row));
       libplBody.appendChild(row);
     });
@@ -3788,10 +3795,11 @@ function positionTrackCtxMenu(anchorEl){
 // Builds the full per-track menu: when the track has a resolved videoId, all
 // of the row-level actions that used to be separate inline buttons (like,
 // play next, add to queue, add to playlist) live here alongside "Refresh
-// link"; a track with no match yet only offers "Refresh link". "Remove from
-// playlist" was dropped from this menu - queue-removal already has its own
-// direct X button in the Now/Next/Later queue list below (see the
-// `.remove`/queueRemoveAt pattern in renderQueuePanel).
+// link"; a track with no match yet only offers "Refresh link" plus "Remove
+// from playlist" - this is distinct from the Now/Next/Later queue list's own
+// direct X button (see the `.remove`/queueRemoveAt pattern in
+// renderQueuePanel), which removes a track from the play queue rather than
+// from the underlying library playlist.
 function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
   const pl = playlistById(plId);
   const t = pl && pl.tracks[trackIdx];
@@ -3805,6 +3813,10 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
     items.push({ sep: true });
   }
   items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
+  if (t){
+    items.push({ sep: true });
+    items.push({ action: 'remove', label: 'Remove from playlist', icon: CTX_ICON_DELETE, danger: true });
+  }
 
   trackCtxMenu.innerHTML = '';
   items.forEach(item => {
@@ -3814,7 +3826,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
       return;
     }
     const b = document.createElement('button');
-    b.className = 'lib-ctx-item';
+    b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '');
     b.innerHTML = item.icon + '<span>' + item.label + '</span>';
     b.addEventListener('click', (e) => { e.stopPropagation(); closeTrackCtxMenu(); handleTrackCtxAction(item.action, plId, trackIdx); });
     trackCtxMenu.appendChild(b);
@@ -3841,6 +3853,16 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'addqueue'){ queueAddToEnd(trackIdx, plId); showToast('Added to queue'); }
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
+  else if (action === 'remove'){
+    if (!t) return;
+    removeTrackFromPlaylistAt(plId, trackIdx);
+    showToast('Removed from playlist');
+    // removeTrackFromPlaylistAt triggers renderLibrary(), which always closes
+    // the open library panel (see renderLibrary's closeLibraryPlaylistPanel()
+    // call) - reopen it for the same playlist so the row just vanishes
+    // in place instead of dropping the user back out to the grid.
+    toggleLibraryPlaylistPanel(plId);
+  }
 }
 
 document.addEventListener('click', (e) => {
@@ -4141,11 +4163,9 @@ function isTrackLiked(videoId){
   return !!(pl && pl.tracks.some(t => t.videoId === videoId));
 }
 
-function removeTrackFromPlaylistByVideoId(playlistId, videoId){
+function removeTrackFromPlaylistAt(playlistId, idx){
   const pl = getCachedPlaylist(playlistId);
-  if (!pl) return;
-  const idx = pl.tracks.findIndex(t => t.videoId === videoId);
-  if (idx === -1) return;
+  if (!pl || idx < 0 || idx >= pl.tracks.length) return;
   pl.tracks.splice(idx, 1);
   lsSet(LS_PL(playlistId), pl);
   if (state.playlist && state.playlist.id === playlistId){
@@ -4156,6 +4176,14 @@ function removeTrackFromPlaylistByVideoId(playlistId, videoId){
     state.playlist = pl;
   }
   renderLibrary();
+}
+
+function removeTrackFromPlaylistByVideoId(playlistId, videoId){
+  const pl = getCachedPlaylist(playlistId);
+  if (!pl) return;
+  const idx = pl.tracks.findIndex(t => t.videoId === videoId);
+  if (idx === -1) return;
+  removeTrackFromPlaylistAt(playlistId, idx);
 }
 
 function toggleLikeTrack(track){
