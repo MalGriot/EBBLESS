@@ -3071,7 +3071,7 @@ Add entries in this shape:
   before merge. Not merged and not deployed, per the task scope.
 
 ### back-button-to-player: Back button should return to the player, not out of the app
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Hitting the back button (mobile back gesture/hardware
   back) from within the app should navigate to the player view, rather than
@@ -3081,12 +3081,69 @@ Add entries in this shape:
 - **Touches:** mobile back-button/history handling - needs investigation
   into whatever `popstate`/back-navigation wiring (or lack of it) currently
   exists.
-- **Branch:** (unclaimed)
+- **Branch:** agent/back-button-to-player
 - **Notes:** Synced from Geethub issue #118. Distinct from the merged
   `queue-close-return-view` (that one governs closing the queue panel
   specifically, returning to whichever view was open before it) - this is
   about the OS/browser back button generally, and the target is
   specifically the player view, not "whatever was open before."
+
+  Root cause confirmed: the app had zero History API wiring before this -
+  no `pushState`/`popstate` anywhere - so back always fell through to the
+  browser/OS default (typically exiting the installed PWA), never anything
+  app-aware.
+
+  Fix: a single-buffered-history-entry pattern in `index.html`'s VIEW
+  ROUTING section. `syncHistoryBuffer()` keeps exactly one extra
+  `pushState` entry on the stack whenever the app is "away from rest"
+  (`currentView !== 'player'`, or the queue panel open, or the library
+  playlist sheet open), and collapses it back with `replaceState` the
+  moment the app returns to rest through ordinary in-app navigation (nav
+  taps, a panel's own close button/scrim) - so a manually-closed panel
+  never leaves an orphaned entry that would eat a future back press for
+  nothing. A `popstate` listener checks that same "away from rest" state:
+  if true, it closes the queue panel, closes the library playlist sheet,
+  and forces the view to Player - all in one back press - and does *not*
+  push a fresh buffer entry, so a second back press (now genuinely at
+  rest) falls through to the real default and actually exits, rather than
+  trapping the user in an inescapable back-press loop. Wired into
+  `setView()`, `openQueuePanel()`/`closeQueuePanel()`, and
+  `toggleLibraryPlaylistPanel()`'s open path /
+  `closeLibraryPlaylistPanel()`.
+
+  This is deliberately a single-level buffer, not a per-action stack:
+  pressing back from Library with the playlist sheet open lands on Player
+  in one press (closing the sheet along the way) rather than requiring a
+  press per layer. Chose this because the original report just says
+  "should go to the player" with no mention of wanting intermediate
+  states restored - simplicity over a nested trap felt like the safer
+  read of a terse, typo-laden report.
+
+  Verified on a 375x812 mobile viewport, served directly via
+  `python3 -m http.server` from this worktree (confirmed via
+  `location.href`, not the shared preview launcher) - the shared Browser
+  pane tool itself turned out to be contended by other concurrent
+  Claude Code sessions mid-verification (tabs closing/redirecting to other
+  ports out from under this session; a "no back history" quirk in the
+  pane's own back-navigation simulator that doesn't track pushState-created
+  entries, unrelated to the app), so the real back button/gesture behavior
+  was verified with `window.dispatchEvent(new PopStateEvent('popstate'))`
+  in-page, which is exactly the event a real back gesture fires against a
+  pushState entry, and is more reliable in that sandboxed pane than its own
+  simulated Back action. Confirmed: Library -> back -> Player; Settings ->
+  back -> Player; Queue panel open -> back -> closes queue, lands on
+  Player; Library with the playlist sheet open -> back -> closes the
+  sheet and lands on Player; already at Player with nothing open -> back
+  -> no-op, no error (lets the browser's real back/exit proceed on the
+  actual next press). No new console errors (the two console errors
+  present were pre-existing browser-extension noise unrelated to
+  index.html/sw.js, also present before this change).
+
+  Open question: the original Geethub #118 report ("when you hit the
+  back button from my prt of the app, it should go to the player") never
+  says which "part" - I read it as "any view/overlay other than the
+  player" and implemented it that way; if the reporter meant something
+  narrower (e.g. only the queue), that would need a follow-up.
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
 - **Status:** draft
