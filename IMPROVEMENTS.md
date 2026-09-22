@@ -2874,6 +2874,54 @@ Add entries in this shape:
   fullscreen opens on the cymatics visualizer instead. No new console
   errors versus the pre-existing sandbox noise.
 
+  **Follow-up 3 (2026-09-22, commit `2803ae9`):** user reported "the lp and
+  cassette themselves are now flickering" (distinct from the removed
+  particle background - this is the record/cassette elements' own
+  rotation), and asked for the fullscreen art-style button to sit in the
+  same spot as the normal player's art/viz/lyrics tabs.
+
+  Flicker: likely cause is the record's grooves (a fine
+  `repeating-radial-gradient`, 3px/6px bands) and the cassette's SVG reel
+  hubs both rotating continuously via `transform`, now rendering far
+  larger in fullscreen (`min(86vh,86vw)`, up from `52vh/62vw` everywhere
+  else in the app) since the `fullscreen-lp-cassette-visual` sizing work
+  above - a rotating fine repeating pattern is a known source of
+  shimmer/moiré in browsers, worse the larger it renders (more high-
+  frequency content per pixel row, more visible to the eye). Added
+  `will-change:transform` + `backface-visibility:hidden` to `.record-disc`
+  and `will-change:transform` to `.cs-hub` (the cassette reel hub `<g>`s) -
+  the standard fix, promoting each to its own GPU compositor layer so the
+  browser rasterizes the pattern once and just transforms that texture per
+  frame instead of re-rasterizing it every frame. **Caveat:** this
+  sandbox's `requestAnimationFrame` is heavily throttled (measured ~2-3
+  fps even during active animation, vs. a real device's 60fps), so
+  animation *smoothness* genuinely cannot be verified here - this is a
+  grounded fix for the exact symptom described, not a confirmed-fixed
+  result. Please check on a real device and report back if it's still
+  happening.
+
+  Also chased down what looked like a second, unrelated bug during this
+  investigation - a `NotFoundError` on `closeFlow()`'s `insertBefore` call
+  appeared in the console during testing - but a cache-busted reload
+  (`?cachebust=`) plus a 5-cycle open/switch-style/close stress test
+  produced zero errors, while the exact same interaction against a
+  non-cache-busted reload reproduced it reliably. Concluded this was a
+  stale cached copy of an earlier, already-superseded version of this
+  file being served during iterative local testing (this repo has no
+  service worker registered on this origin, so it wasn't `sw.js` - most
+  likely the static file server or browser tab reusing a prior response
+  across same-URL navigations within one session) rather than a real bug
+  in the committed code - flagging in case it resurfaces, since it would
+  be worth a closer look if so.
+
+  Button position: moved `.flow-art-style-anchor` from the top-left corner
+  of `.flow-top` to `position:absolute;left:50%;transform:translateX(-50%)`
+  (with `.flow-top` reverted to plain `justify-content:flex-end` for the
+  exit button, as it was before this button existed). Verified via
+  `getBoundingClientRect()` that the button's center-X now exactly matches
+  `#visualTabs`' center-X in the normal player (both `381` in the viewport
+  tested) - not just visually close, an exact match.
+
 ### fullscreen-player-controls: Fullscreen mode should expose all player controls
 - **Status:** merged
 - **Priority:** medium
