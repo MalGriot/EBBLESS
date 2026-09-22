@@ -2262,7 +2262,7 @@ function withManualTracks(playlistId, resolvedTracks){
   return manual.length ? resolvedTracks.concat(manual) : resolvedTracks;
 }
 
-async function resolvePlaylist(playlistId, type, onProgress){
+async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   if (type === 'track' || type === 'sc_track' || type === 'am_track'){
     let title, artist, art = null, sourceDuration = 0;
     if (type === 'sc_track'){
@@ -2325,6 +2325,7 @@ async function resolvePlaylist(playlistId, type, onProgress){
   onProgress({ stage: 'matching', done: 0, total: tracks.length });
   const sourceKind = sourceKindForType(type);
   const resolved = [];
+  let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
     const t = tracks[i];
     try{
@@ -2338,6 +2339,14 @@ async function resolvePlaylist(playlistId, type, onProgress){
       resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0 });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
+    // Fire as soon as the first *playable* track lands (not necessarily
+    // index 0 - an early match can fail) so the caller can start playback
+    // without waiting on the rest of the playlist to resolve. `resolved` is
+    // passed by reference and keeps growing as the loop continues.
+    if (!firstTrackFired && onFirstTrack && resolved.some(rt => rt.videoId)){
+      firstTrackFired = true;
+      onFirstTrack({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
+    }
     if (i < tracks.length - 1) await sleep(350);
   }
   const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
@@ -4129,12 +4138,23 @@ async function beginImport(id, force, type){
   }
   openImportOverlay();
   stageFinding();
+  // Once the first playable track lands, jump into the player and start it
+  // rather than making the listener sit through the whole import overlay -
+  // the rest keeps resolving underneath while it plays.
+  let startedEarly = false;
   try{
     const pl = await resolvePlaylist(id, type, (p) => {
       if (p.stage === 'matching'){
         if (!$('matchFill')) stageMatching(null, p.total);
         stageMatchingProgress(p.done, p.total, p.track);
       }
+    }, (partial) => {
+      startedEarly = true;
+      closeImportOverlay();
+      loadPlaylistIntoPlayer(partial);
+      buildQueueFrom(0);
+      loadIndex(state.queuePos, true);
+      setView('player');
     });
     if (isSingleTrackType(pl.type)){
       closeImportOverlay();
@@ -4143,11 +4163,19 @@ async function beginImport(id, force, type){
     }
     saveToLibrary(id);
     renderLibrary();
-    closeImportOverlay();
-    loadPlaylistIntoPlayer(pl);
-    buildQueueFrom(0);
-    loadIndex(state.queuePos, true);
-    setView('player');
+    if (startedEarly){
+      // Playback is already underway on the first track - swap in the fully
+      // resolved playlist without disturbing what's currently playing.
+      const anchor = (state.playlist && state.playlist.id === id && state.queue[state.queuePos]) ? state.queue[state.queuePos].idx : 0;
+      loadPlaylistIntoPlayer(pl);
+      buildQueueFrom(anchor);
+    } else {
+      closeImportOverlay();
+      loadPlaylistIntoPlayer(pl);
+      buildQueueFrom(0);
+      loadIndex(state.queuePos, true);
+      setView('player');
+    }
   } catch(e){
     stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type));
   }
