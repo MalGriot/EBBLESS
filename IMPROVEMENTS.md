@@ -4155,17 +4155,71 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #132.
 
 ### desktop-settings-queue-popup: Opening Settings on desktop also pops open the queue window
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, clicking Settings incorrectly also opens the
   queue panel/window at the same time. Settings should open on its own.
 - **Touches:** desktop split-view layout, Settings navigation - likely an
   interaction bug in the same area `desktop-settings-inline` (merged)
   touched (`setView()`, the `>=1150px` split-desktop grid).
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #131. Worth checking as a possible
-  regression from `desktop-settings-inline`, which changed how Settings
-  and the queue/player panes coexist in the desktop grid.
+- **Branch:** agent/desktop-settings-queue-popup
+- **Notes:** Synced from Geethub issue #131. Confirmed a regression from
+  `desktop-settings-inline`, but only under one specific precondition: the
+  split-desktop "fullscreen player" mode (`desktop-fs`, added later by
+  `desktop-player-fullscreen-toggle`), entered via the expand button on the
+  Player view, which hides the library/queue panes as fixed off-screen
+  drawers (`#view-library`/`#queue-panel` with `transform:translateX(...)`,
+  toggled open only via `.desktop-fs-lib-open`/`.desktop-fs-queue-open`).
+  Plain split-desktop (not fullscreen) was unaffected - there the queue has
+  always been a permanently-visible 3rd grid column by design, and Settings
+  already opened cleanly alongside it.
+
+  **Root cause:** all the desktop-fs drawer-positioning CSS rules
+  (`body.split-desktop.desktop-fs:not(.view-settings-active) #view-library`
+  / `#queue-panel`, around line 998 in `index.html`) are scoped with
+  `:not(.view-settings-active)`, on the assumption (per the original
+  comment) that fullscreen mode could only ever be *entered* from the
+  Player view, which isn't reachable while Settings is open - so the guard
+  seemed safe. That assumption missed the reverse path: you can already
+  *be* in desktop-fs mode and then click the always-visible Settings nav
+  button. Doing so adds `view-settings-active` to `<body>`, which drops all
+  those drawer rules - and the earlier, unconditional base split-desktop
+  rules (`body.split-desktop #view-library` / `#queue-panel`, which always
+  render both as static, visible grid columns) take back over. So both
+  panes snapped into view alongside Settings even though their own
+  `state.deskFsLibOpen`/`state.deskFsQueueOpen` said closed - the queue
+  popping open was the more visible symptom since the library reappearing
+  in its usual spot reads as normal.
+
+  **Fix (`setView()` in `index.html`, ~line 2977):** when navigating to
+  `'settings'` while `state.deskFsOpen` is true, call the existing
+  `closeDesktopFs()` first (cleanly resets `deskFsOpen`/`deskFsLibOpen`/
+  `deskFsQueueOpen` and strips the `desktop-fs*` body classes) before the
+  rest of `setView()` runs. This makes Settings always land on one
+  deterministic layout - the plain split-desktop grid, library and queue
+  exactly as visible as they are outside fullscreen - instead of a
+  CSS-forced hybrid state that didn't match the JS state. Closing Settings
+  afterward returns to the normal (non-fullscreen) player, which is the
+  expected outcome of having explicitly exited fullscreen.
+
+  **Verified locally:** served the worktree with `python3 -m http.server`
+  and drove it in a real browser at 1400x900 (>=1150px split-desktop).
+  Reproduced pre-fix: entered desktop-fs (expand button on Player), left
+  the library/queue drawers closed, clicked Settings - both panes snapped
+  open (confirmed via screenshot and by inspecting `document.body.className`
+  going from `split-desktop desktop-fs` to `split-desktop view-settings-active`,
+  i.e. `desktop-fs` silently dropping out while both drawers displayed).
+  After the fix: same steps now show `desktop-fs` explicitly removed by
+  `closeDesktopFs()` before `view-settings-active` is added, and the
+  screenshot matches the already-correct plain-split-desktop Settings view
+  (library left, Settings center, queue right, no stray nav buttons). Also
+  checked: opening Settings from plain (non-fullscreen) split-desktop is
+  unchanged; toggling the queue drawer directly in desktop-fs mode (without
+  ever touching Settings) still opens/closes it normally; opening Settings
+  from desktop-fs with the queue drawer already open also resolves cleanly
+  with no stray open drawer; and Settings navigation at mobile width
+  (390x844, well under the 1150px breakpoint, where `deskFsOpen` is never
+  true) is untouched.
 
 ### breathe-love-deep-soundcloud-pull: "Breathe Love Deep" album still not pulling from its real SoundCloud source, plays random YouTube songs
 - **Status:** merged

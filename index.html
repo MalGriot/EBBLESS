@@ -2977,6 +2977,19 @@ function showToast(msg){
 function setView(name){
   const prevView = state.currentView;
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
+  // Settings should open on its own (issue #131): the split-desktop
+  // "fullscreen player" mode (desktop-fs) keeps the library/queue panes as
+  // fixed, off-screen drawers, only shown via .desktop-fs-lib-open /
+  // .desktop-fs-queue-open. Those drawer rules are scoped to
+  // :not(.view-settings-active) (Settings needs the plain grid instead of
+  // the fixed fullscreen player), so opening Settings while still in
+  // desktop-fs silently dropped the drawer positioning and let the base
+  // split-desktop rules - which always show #view-library/#queue-panel as
+  // static grid columns - take over, popping both open even though their
+  // own state said closed. Cleanly exit fullscreen mode first so Settings
+  // always lands on the one deterministic layout (plain split-desktop grid,
+  // library/queue exactly as visible as they are outside fullscreen).
+  if (name === 'settings' && state.deskFsOpen && typeof closeDesktopFs === 'function') closeDesktopFs();
   state.currentView = name;
   document.body.classList.toggle('view-settings-active', name === 'settings');
   if (state.queueOpen) closeQueuePanel(false);
