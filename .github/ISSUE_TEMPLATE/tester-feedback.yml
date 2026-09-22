@@ -1,0 +1,70 @@
+name: Beta tester feedback
+description: Report how a specific thing went (or didn't) while testing EBBLESS.
+title: "[tester-feedback] "
+labels:
+  - tester-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Only the title (above) is required. This is for "here's how a
+        specific thing went while I was testing" - not a feature idea
+        (use "Suggest an improvement" for that) and not a clear-cut break
+        (use "Report a bug" for that). Fill in as much or as little else as
+        you have right now.
+  - type: dropdown
+    id: how-it-went
+    attributes:
+      label: How did it go
+      options:
+        - blocked me - couldn't do what I was trying to do
+        - annoyed me - got there, but it was a fight
+        - minor hiccup - barely noticeable
+        - no complaints - just flagging something I noticed
+      default: 1
+    validations:
+      required: false
+  - type: input
+    id: activity
+    attributes:
+      label: What were you doing
+      description: The task or flow you were testing.
+      placeholder: e.g. Pasting a Spotify playlist link and hitting play
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What actually happened.
+    validations:
+      required: false
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What you expected instead
+      description: What you thought would happen.
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device / browser
+      description: What you were using when this happened, if you know.
+      placeholder: e.g. iPhone 14, Safari - or - Windows, Chrome
+    validations:
+      required: false
+  - type: input
+    id: touches
+    attributes:
+      label: Touches
+      description: Which feature/area of index.html this affects, if you know.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else - things you tried, edge cases, screenshots.
+    validations:
+      required: false
