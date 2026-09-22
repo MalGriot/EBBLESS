@@ -1691,7 +1691,7 @@ Add entries in this shape:
   transport buttons, behavior should match those buttons live.
 
 ### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Double-tapping the album art (or cymatics view) should
   toggle fullscreen.
@@ -2816,7 +2816,7 @@ Add entries in this shape:
   card renders "CuRRentSSsss" in both the marquee and name label.
 
 ### playlist-remove-track-library: Option to remove tracks from a playlist in library
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add an option to remove individual tracks from a playlist
   directly from the library view.
@@ -3499,7 +3499,7 @@ Add entries in this shape:
   testing.
 
 ### spinning-record-realism: Make the spinning record feel physical, tactile, and restrained
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Four-part visual polish pass on the spinning-record
   element (distinct from `record-cassette-size`, which only changed its
