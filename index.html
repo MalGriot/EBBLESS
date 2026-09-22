@@ -742,12 +742,25 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
    #artRecord / #artCassette elements are moved in here (see openFlow/
    closeFlow) instead of showing the generic art images */
 #flow-layer .flow-art[data-art-style="record"],
-#flow-layer .flow-art[data-art-style="cassette"]{background:transparent;box-shadow:none}
+#flow-layer .flow-art[data-art-style="cassette"]{background:transparent;box-shadow:none;border-radius:0;
+  /* fullscreen moment for the real spinning-record / cassette-reel visual:
+     much bigger than the default flat-album-art sizing above (52vh/62vw) -
+     tuned to read as genuinely fullscreen-scale without clipping at common
+     portrait-mobile or landscape-desktop viewports. Centering comes from
+     #flow-layer's own flex layout (align-items/justify-content:center),
+     unchanged here. */
+  width:min(86vh,86vw)}
 #flow-layer .flow-art[data-art-style="record"] .art,
 #flow-layer .flow-art[data-art-style="cassette"] .art{opacity:0!important}
 #flow-layer .flow-art[data-art-style="record"] .art-record,
 #flow-layer .flow-art[data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
 #flow-layer .flow-art.is-playing[data-art-style="record"] .record-disc{animation-play-state:running}
+/* ambient particle-drift canvas, behind the record/cassette element -
+   see FLOW ART AMBIENT PARTICLES block in the script for the draw loop */
+#flow-layer .flow-art-particles{position:absolute;inset:0;width:100%;height:100%;z-index:0;
+  display:none;pointer-events:none}
+#flow-layer .flow-art[data-art-style="record"] .flow-art-particles,
+#flow-layer .flow-art[data-art-style="cassette"] .flow-art-particles{display:block}
 #flow-layer .flow-viz{position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;
   background:var(--bg)}
 #flow-layer .flow-viz .viz-canvas{opacity:1}
@@ -1840,7 +1853,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         </div>
       </div>
     </div>
-    <div class="flow-art" id="flowArtWrap"><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
+    <div class="flow-art" id="flowArtWrap"><canvas class="flow-art-particles" id="flowArtParticles"></canvas><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
     <div class="flow-art flow-viz" id="flowVizWrap" hidden></div>
   </div>
 
@@ -2905,10 +2918,12 @@ function updatePlayerAccentColor(track){
     try { color = sampleDominantColor(probe); } catch (e) { color = null; }
     if (color) { try { color = ensureLegibleAccent(color); } catch (e) {} }
     document.documentElement.style.setProperty('--player-accent', color || 'var(--accent)');
+    if (typeof syncFlowPartsColor === 'function') syncFlowPartsColor();
   };
   probe.onerror = () => {
     if (reqId !== playerAccentReqId) return;
     document.documentElement.style.setProperty('--player-accent', 'var(--accent)');
+    if (typeof syncFlowPartsColor === 'function') syncFlowPartsColor();
   };
   probe.src = url;
 }
@@ -6663,6 +6678,92 @@ const vizSpeedBtnHome = vizSpeedBtn.parentElement, vizSpeedBtnAnchor = vizSpeedB
 const artRecord = $('artRecord'), artCassette = $('artCassette');
 const artRecordHome = artRecord.parentElement, artRecordAnchor = artRecord.nextElementSibling;
 const artCassetteHome = artCassette.parentElement, artCassetteAnchor = artCassette.nextElementSibling;
+
+/* ---------- ambient particle-drift canvas behind the fullscreen record/
+   cassette visual: a sparse field of soft glowing dots drifting very
+   slowly, tinted with the track's own --player-accent color (the same
+   color pipeline the play button and other player controls use - see the
+   PLAYER ACCENT FROM ALBUM ART block above). Only active while flow mode
+   is open on the record/cassette art style - openFlow()/closeFlow() start
+   and stop it so the requestAnimationFrame loop never runs invisibly in
+   the background. Resize handling mirrors vizResize() above. ---------- */
+const flowArtParticles = $('flowArtParticles');
+const flowPartsCtx = flowArtParticles.getContext('2d');
+const FLOW_PARTS_COUNT = 60;
+let flowPartsRAF = null, flowPartsList = [], flowPartsColor = 'rgb(255,255,255)', flowPartsLastT = 0;
+/* custom-property computed values keep var() references unsubstituted, so
+   reading --player-accent directly via getComputedStyle can hand back the
+   literal string "var(--accent)" instead of a usable color - routing it
+   through a real element's `color` (which the browser must fully resolve
+   to paint with) gets the concrete rgb() value instead. */
+const flowPartsAccentProbe = document.createElement('span');
+flowPartsAccentProbe.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;color:var(--player-accent)';
+document.body.appendChild(flowPartsAccentProbe);
+function getPlayerAccentRGB(){
+  try { return getComputedStyle(flowPartsAccentProbe).color || 'rgb(255,255,255)'; }
+  catch (e) { return 'rgb(255,255,255)'; }
+}
+function syncFlowPartsColor(){ if (flowPartsRAF) flowPartsColor = getPlayerAccentRGB(); }
+function flowPartsResize(){
+  const rect = flowArtParticles.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  flowArtParticles.width = Math.round(rect.width * dpr);
+  flowArtParticles.height = Math.round(rect.height * dpr);
+  flowPartsCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function flowPartsInit(){
+  const w = flowArtParticles.width / (window.devicePixelRatio || 1);
+  const h = flowArtParticles.height / (window.devicePixelRatio || 1);
+  flowPartsList = [];
+  for (let i = 0; i < FLOW_PARTS_COUNT; i++){
+    flowPartsList.push({
+      x: Math.random() * w, y: Math.random() * h,
+      r: 1.2 + Math.random() * 3,
+      vx: (Math.random() - 0.5) * 0.014,
+      vy: (Math.random() - 0.5) * 0.014,
+      baseA: 0.15 + Math.random() * 0.35,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+function flowPartsDraw(t){
+  const dt = flowPartsLastT ? Math.min(48, t - flowPartsLastT) : 16;
+  flowPartsLastT = t;
+  const w = flowArtParticles.width / (window.devicePixelRatio || 1);
+  const h = flowArtParticles.height / (window.devicePixelRatio || 1);
+  flowPartsCtx.clearRect(0, 0, w, h);
+  const m = /rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(flowPartsColor);
+  const rC = m ? +m[1] : 255, gC = m ? +m[2] : 255, bC = m ? +m[3] : 255;
+  for (const p of flowPartsList){
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.phase += dt * 0.0006;
+    if (p.x < -12) p.x = w + 12; else if (p.x > w + 12) p.x = -12;
+    if (p.y < -12) p.y = h + 12; else if (p.y > h + 12) p.y = -12;
+    const a = p.baseA * (0.65 + 0.35 * Math.sin(p.phase));
+    const glowR = p.r * 4;
+    const grad = flowPartsCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+    grad.addColorStop(0, `rgba(${rC},${gC},${bC},${a})`);
+    grad.addColorStop(1, `rgba(${rC},${gC},${bC},0)`);
+    flowPartsCtx.fillStyle = grad;
+    flowPartsCtx.beginPath();
+    flowPartsCtx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+    flowPartsCtx.fill();
+  }
+  flowPartsRAF = requestAnimationFrame(flowPartsDraw);
+}
+function flowPartsStart(){
+  if (flowPartsRAF) return;
+  flowPartsResize();
+  flowPartsInit();
+  flowPartsColor = getPlayerAccentRGB();
+  flowPartsLastT = 0;
+  flowPartsRAF = requestAnimationFrame(flowPartsDraw);
+}
+function flowPartsStop(){
+  if (flowPartsRAF){ cancelAnimationFrame(flowPartsRAF); flowPartsRAF = null; }
+}
+window.addEventListener('resize', () => { if (flowPartsRAF) flowPartsResize(); });
+
 function openFlow(){
   state.flowOpen = true;
   const showViz = visualMode === 'viz';
@@ -6673,14 +6774,17 @@ function openFlow(){
   if (!showViz && (artStyle === 'record' || artStyle === 'cassette')){
     flowArtWrap.appendChild(artStyle === 'record' ? artRecord : artCassette);
     flowArtWrap.dataset.artStyle = artStyle;
+    flowPartsStart();
   } else {
     delete flowArtWrap.dataset.artStyle;
+    flowPartsStop();
   }
   flowLayer.classList.add('is-open');
   armFlowChromeTimer();
 }
 function closeFlow(){
   state.flowOpen = false;
+  flowPartsStop();
   flowLayer.classList.remove('is-open');
   flowLayer.classList.remove('chrome-hidden');
   clearTimeout(flowHideTimer);
