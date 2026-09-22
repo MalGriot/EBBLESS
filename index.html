@@ -2587,7 +2587,55 @@ function setView(name){
   views[name].scrollTop = 0;
   updateMiniBarVisibility();
   if (typeof updateLibraryClockColor === 'function') updateLibraryClockColor();
+  syncHistoryBuffer();
 }
+
+/* =========================================================================
+   BACK BUTTON / BACK GESTURE -> PLAYER
+   -------------------------------------------------------------------------
+   The app has no multi-page navigation of its own, so by default a mobile
+   back gesture / hardware back button / browser Back either does nothing
+   useful or exits the app entirely (Geethub issue #118). Instead: whenever
+   the app is "away from rest" - any view other than Player, or the queue
+   panel / library playlist sheet open on top of it - we keep exactly one
+   extra entry pushed onto the History API stack. A back press pops that
+   entry, our popstate handler closes any open panel and forces the view to
+   Player, and we do NOT push a fresh entry to replace it - so a *second*
+   back press (with nothing left "away from rest") falls through to the
+   browser/OS's real default (leave the page / exit the app), rather than
+   trapping the user in a back-press loop that never lets them leave.
+   Manually navigating back to Player/closing panels via the UI (not the
+   back button) collapses the buffered entry with replaceState instead, so
+   it never lingers as an orphaned no-op back press.
+   ========================================================================= */
+let historyBuffered = false;
+let inPopStateNav = false;
+function isAwayFromRest(){
+  return state.currentView !== 'player' || state.queueOpen || !!openLibraryPanelId;
+}
+function syncHistoryBuffer(){
+  if (inPopStateNav) return;
+  const away = isAwayFromRest();
+  if (away && !historyBuffered){
+    try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
+    historyBuffered = true;
+  } else if (!away && historyBuffered){
+    try { history.replaceState({ ebblessNav: false }, ''); } catch(e){}
+    historyBuffered = false;
+  }
+}
+window.addEventListener('popstate', () => {
+  if (!isAwayFromRest()) return; // already at rest: let the default back navigation proceed
+  inPopStateNav = true;
+  try {
+    if (state.queueOpen) closeQueuePanel(false);
+    if (openLibraryPanelId) closeLibraryPlaylistPanel();
+    if (state.currentView !== 'player') setView('player');
+  } finally {
+    inPopStateNav = false;
+    historyBuffered = false; // the buffered entry was just consumed by this back navigation
+  }
+});
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
   const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen);
@@ -3063,6 +3111,7 @@ function closeLibraryPlaylistPanel(){
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
+  syncHistoryBuffer();
 }
 
 // starts playback of a library playlist without leaving the library view
@@ -3134,6 +3183,7 @@ function toggleLibraryPlaylistPanel(id){
   }
 
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  syncHistoryBuffer();
 }
 
 libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
@@ -5108,6 +5158,7 @@ function openQueuePanel(){
   document.body.classList.add('queue-open');
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.add('is-active'));
   updateMiniBarVisibility();
+  syncHistoryBuffer();
 }
 // restoreView: false when closeQueuePanel is invoked as a side effect of
 // setView() switching to a different view on purpose (e.g. tapping the
@@ -5124,6 +5175,7 @@ function closeQueuePanel(restoreView = true){
     setView(state.preQueueView);
   }
   state.preQueueView = null;
+  syncHistoryBuffer();
 }
 queueScrim.addEventListener('click', closeQueuePanel);
 
