@@ -667,6 +667,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .q-row .remove:hover{background:var(--panel-3);color:var(--bad)}
 .q-row .remove svg{width:12px;height:12px}
 .q-empty{padding:40px 10px;text-align:center;color:var(--faint-2);font-size:12.5px}
+.q-loading .flow-line{max-width:220px;margin:14px auto 0}
+.q-loading .counter{font-size:11px;color:var(--faint-2);margin-top:8px}
 
 /* ---------- danger confirm modal (centered, for actions weighty enough
    they shouldn't share the queue/library sliding-sheet pattern - modeled
@@ -2403,6 +2405,12 @@ function playlistById(id){
 function persistPlaylistObj(pl){
   if (pl) lsSet(LS_PL(pl.id), pl);
 }
+
+// Set while a playlist is playing on its first resolved track but the rest
+// is still being matched in the background (see beginImport's onFirstTrack
+// path) - { id, done, total } or null. Read by renderQueuePanel to show a
+// loading line where the rest of the queue would otherwise appear.
+let bgResolveProgress = null;
 
 /* =========================================================================
    STATE
@@ -4147,6 +4155,13 @@ async function beginImport(id, force, type){
       if (p.stage === 'matching'){
         if (!$('matchFill')) stageMatching(null, p.total);
         stageMatchingProgress(p.done, p.total, p.track);
+        // Once playback has already jumped into the player, the import
+        // overlay above is gone - route the same progress into the queue
+        // panel instead so there's still a visible sign the rest is coming.
+        if (startedEarly){
+          bgResolveProgress = p.done < p.total ? { id, done: p.done, total: p.total } : null;
+          renderQueuePanel();
+        }
       }
     }, (partial) => {
       startedEarly = true;
@@ -4166,6 +4181,7 @@ async function beginImport(id, force, type){
     if (startedEarly){
       // Playback is already underway on the first track - swap in the fully
       // resolved playlist without disturbing what's currently playing.
+      bgResolveProgress = null;
       const anchor = (state.playlist && state.playlist.id === id && state.queue[state.queuePos]) ? state.queue[state.queuePos].idx : 0;
       loadPlaylistIntoPlayer(pl);
       buildQueueFrom(anchor);
@@ -4177,6 +4193,7 @@ async function beginImport(id, force, type){
       setView('player');
     }
   } catch(e){
+    if (startedEarly) bgResolveProgress = null;
     stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type));
   }
 }
@@ -4845,7 +4862,14 @@ function renderQueuePanel(){
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (!upcoming.length){
     const empty = document.createElement('div'); empty.className = 'q-empty'; empty.style.padding = '24px 10px';
-    empty.textContent = 'End of queue.';
+    if (bgResolveProgress && nowPl && nowPl.id === bgResolveProgress.id){
+      empty.classList.add('q-loading');
+      empty.innerHTML = 'Loading the rest of the playlist&hellip;' +
+        '<div class="flow-line"><div class="fill" style="width:' + Math.round((bgResolveProgress.done / bgResolveProgress.total) * 100) + '%"></div></div>' +
+        '<div class="counter">' + bgResolveProgress.done + ' / ' + bgResolveProgress.total + '</div>';
+    } else {
+      empty.textContent = 'End of queue.';
+    }
     queueBody.appendChild(empty);
     return;
   }
