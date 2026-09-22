@@ -4168,7 +4168,7 @@ Add entries in this shape:
   and the queue/player panes coexist in the desktop grid.
 
 ### breathe-love-deep-spotify-pull: "Breathe Love Deep" album still not pulling from its real source, plays random YouTube songs
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** The "Breathe Love Deep" album is pulling random songs
   from YouTube while still showing the correct "Breathe Love Deep" album
@@ -4223,7 +4223,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #127.
 
 ### queue-drag-reorder-glitch-regression: Dragging a queue track up glitches again
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Dragging a track up in the queue glitches out again -
   same symptom as the already-merged `queue-drag-reorder-glitch` entry
@@ -4255,7 +4255,7 @@ Add entries in this shape:
   build, not a bug fix - scope carefully before dispatching a lane.
 
 ### fullscreen-lp-too-small: Fullscreen LP is too small again on mobile and desktop
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The fullscreen LP (spinning record) view is too small
   again. On mobile it should reach the side edges; on desktop it should
