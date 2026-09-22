@@ -4529,3 +4529,19 @@ Add entries in this shape:
   legibility; worth knowing if it comes up again). Deliberately did not
   port `#flow-layer`'s idle-hide-chrome behavior to desktop-fs, which never
   had one - left as-is rather than expanding scope.
+
+### fullscreen-exit-button-consistency: LP, cassette, and cymatics fullscreen should share one exit-fullscreen button style/position
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The fullscreen views for the LP (spinning record),
+  cassette, and cymatics album art styles should all use the exact same
+  "exit fullscreen" (fullscreen:off) button - same visual style and same
+  on-screen position - regardless of which art style is active. Currently
+  the button appears inconsistent between the three styles.
+- **Touches:** fullscreen chrome/controls shared across `#flow-layer` and
+  desktop split-view fullscreen (`.artwork-wrap`), likely the same area
+  touched by `fullscreen-lp-cassette-visual` and `fullscreen-lp-too-small`
+  (both merged).
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #133. Issue body had no further
+  detail beyond the title.
