@@ -4403,7 +4403,7 @@ Add entries in this shape:
   build, not a bug fix - scope carefully before dispatching a lane.
 
 ### fullscreen-lp-too-small: Fullscreen LP is too small again on mobile and desktop
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The fullscreen LP (spinning record) view is too small
   again. On mobile it should reach the side edges; on desktop it should
@@ -4411,8 +4411,55 @@ Add entries in this shape:
 - **Touches:** LP/record fullscreen visual sizing - likely the same area
   `record-cassette-size` and `fullscreen-lp-cassette-visual` (both
   merged) touched.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #124. Reads as a regression of
-  previously-merged sizing work (`record-cassette-size` was about the
-  main player view, not fullscreen specifically) - check what changed in
-  the fullscreen LP sizing path since those landed.
+- **Branch:** `agent/fullscreen-lp-too-small`
+- **Notes:** Synced from Geethub issue #124.
+
+  **Two independent causes, not one:** (1) mobile's `#flow-layer .flow-art`
+  was capped at `min(86vh,86vw)` since it was enlarged (`01f26de`) - it had
+  actually *never* reached the true screen edges on any device, not a new
+  regression, just never quite met the "edge to edge" bar. (2) desktop
+  split-view fullscreen genuinely regressed: `2802d34` ("Desktop split-view:
+  fullscreen slides library/queue off...") replaced the old shared
+  `#flow-layer` overlay with an in-pane layout stacking title/seek/controls
+  *below* the art instead of overlaying them - a stacked layout can only
+  grow the art until it collides with the reserved text space beneath it,
+  and no reservation value lets it also reach both edges. Measured actual
+  content height needed (~250px): even with a perfectly tight reservation,
+  the art topped out around ~70% of pane height, never touching top or
+  bottom.
+
+  **Fix** (commit `9027960`): `#flow-layer .flow-art` changed
+  `min(86vh,86vw)` -> `min(100vh,100vw)` - a square sized this way
+  self-selects the tighter-constrained edge pair (sides on portrait/mobile,
+  top/bottom on landscape/desktop-shaped viewports), which also fixes
+  desktop fullscreen for the cymatics visualizer since it shares
+  `#flow-layer`. `body.split-desktop.desktop-fs .artwork-wrap` rebuilt to
+  use the same overlay pattern `#flow-layer` already uses instead of the
+  stacked layout: art now sizes to
+  `min(100vw, calc(100dvh - var(--topbar-h)))` (true edge-to-edge), with
+  `.visual-tabs`/`.track-meta`/`.transport-full` pulled out of flex flow
+  and absolutely positioned on top near the top/bottom instead of pushing
+  the art around.
+
+  **Verified** (real browser, this worktree served via
+  `python3 -m http.server 8791` from inside the worktree, confirmed via
+  `location.href`): desktop 1440x900 with a real track loaded, clicked the
+  real fullscreen button - `.artwork-wrap` measured exactly viewport height
+  (`top:60, bottom:900`) for all three art styles, screenshots confirm
+  edge-to-edge fill with title/seek/controls legible as an overlay.
+  Desktop panel-slide toggle (library/queue drawers) still works correctly
+  and exiting fullscreen restores the original in-pane layout exactly.
+  Mobile 375x812: `#flowArtWrap` measured exactly viewport width
+  (`left:0, right:375`) for record and cassette styles, flow-mode chrome
+  still renders/functions on top. A 1000x700 "small desktop window" (below
+  the 1150px split-desktop threshold, so also routes through
+  `#flow-layer`) measured exactly viewport height, confirming the same fix
+  covers that case too.
+
+  **Follow-up concerns:** the desktop-fs overlay text now sits directly on
+  the art near its bottom edge with no scrim/gradient backdrop, relying on
+  the art's own darkness for contrast - same approach mobile flow mode
+  already uses (not a new risk class, but very bright album art could hurt
+  legibility; worth knowing if it comes up again). Deliberately did not
+  port `#flow-layer`'s idle-hide-chrome behavior to desktop-fs, which never
+  had one - left as-is rather than expanding scope.
