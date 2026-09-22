@@ -60,9 +60,9 @@ function deepFindKey(obj, key, out) {
 // for their old TTL (up to 30 days on some routes) after a deploy. Forgetting
 // this on a scoring change is exactly what let two already-cached tracks
 // keep returning their old wrong match after the fix had already shipped.
-const ART_CACHE_VERSION = 'v3';
+const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v2';
-const SEARCH_CACHE_VERSION = 'v6';
+const SEARCH_CACHE_VERSION = 'v7';
 const SIMILAR_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
 
@@ -347,6 +347,35 @@ function titleOverlapRatio(sourceTokens, candidateTitle) {
   return sourceTokens.filter(w => set.has(w)).length / sourceTokens.length;
 }
 
+// Some artists stylize a track title as individually space-separated
+// letters/punctuation - confirmed live on the "Breathe Love Deep" SoundCloud
+// release, whose entire tracklist is written this way ("h i g h", "b u r n",
+// "d o z e .", ". . . g a s p", ...). That's exactly the "i n i" edge case
+// titleTokens() above already has to fall back for (an all-single-character
+// source title can't be filtered down to "significant" words), but the
+// fallback only prevents an empty token list - it doesn't restore any real
+// discriminating power, since no ordinary YouTube video title contains an
+// isolated single-letter "word" to overlap against. The title-relevance hard
+// filter in handleSearch below ends up unable to reject anything, and
+// YouTube's own search engine effectively discards the lone letters as noise
+// too, so the query degrades to just "<artist>" - live-tested, this resolves
+// "h i g h" / "MAL GRIOT MUSIC" to an unrelated "Griot Music Mali"
+// documentary upload, not the real track, and the same for every other track
+// on that release. Collapsing a run of single-character tokens back into the
+// word they clearly spell ("h i g h" -> "high") restores both a meaningful
+// search query and real multi-letter tokens for titleOverlapRatio to work
+// with. Guarded narrowly (3+ tokens, every one reducing to 0-1 letters/
+// digits) so it never touches an ordinary title - even a short one like
+// "I Am" keeps a multi-character word and is left alone.
+function collapseLetterSpacedTitle(title) {
+  const words = String(title || '').trim().split(/\s+/).filter(Boolean);
+  if (words.length < 3) return title;
+  const core = w => w.replace(/[^a-z0-9]/gi, '');
+  if (!words.every(w => core(w).length <= 1)) return title;
+  const collapsed = words.map(core).join('');
+  return collapsed.length > 1 ? collapsed : title;
+}
+
 // Strip parenthetical/bracketed suffixes and "feat./ft./featuring" clauses
 // off a track title, for use as a fallback *search query* only (never for
 // display or scoring) - a title like "Song (feat. X) - Y Remix" is exactly
@@ -446,15 +475,20 @@ async function handleSearch(url, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
+  // Collapse a letter-spaced stylized title ("h i g h" -> "high") before
+  // it's used as a search query or scored against - see
+  // collapseLetterSpacedTitle above. A no-op for every ordinary title.
+  const searchTitle = collapseLetterSpacedTitle(title);
+
   // Query attempts, most-specific first. The full title (as the source gave
-  // it to us) is tried first since it's the most disambiguating; only if
-  // that comes back with genuinely zero results does a second pass run with
-  // the title's parenthetical/feat. clauses stripped (see
-  // relaxedSearchTitle) - covers titles whose extra detail pulls YouTube's
-  // own search away from the plain song entirely.
-  const relaxedTitle = relaxedSearchTitle(title);
-  const queries = [title + ' ' + firstArtist];
-  if (relaxedTitle && relaxedTitle.toLowerCase() !== title.toLowerCase()) {
+  // it to us, collapsed if it's letter-spaced) is tried first since it's the
+  // most disambiguating; only if that comes back with genuinely zero results
+  // does a second pass run with the title's parenthetical/feat. clauses
+  // stripped (see relaxedSearchTitle) - covers titles whose extra detail
+  // pulls YouTube's own search away from the plain song entirely.
+  const relaxedTitle = relaxedSearchTitle(searchTitle);
+  const queries = [searchTitle + ' ' + firstArtist];
+  if (relaxedTitle && relaxedTitle.toLowerCase() !== searchTitle.toLowerCase()) {
     queries.push(relaxedTitle + ' ' + firstArtist);
   }
 
@@ -496,7 +530,7 @@ async function handleSearch(url, ctx) {
   // outright rather than let scoreCandidate's other signals outvote a
   // mismatch. Fall back to the unfiltered pool only if every candidate
   // fails (e.g. a title made entirely of stopwords/numbers).
-  const sourceTokens = titleTokens(title);
+  const sourceTokens = titleTokens(searchTitle);
   pool.forEach(c => { c.titleOverlap = titleOverlapRatio(sourceTokens, c.title); });
   const titleMatched = pool.filter(c => c.titleOverlap > 0);
   pool = titleMatched.length ? titleMatched : pool;
@@ -1273,12 +1307,25 @@ async function getSoundCloudClientId(ctx, { forceRefresh } = {}) {
 // one (common for uploads) fall back to the uploader's avatar, same as
 // SoundCloud's own clients do. "-large." -> "-t500x500." asks for a bigger,
 // square-cropped render instead of SoundCloud's default 100x100 thumbnail.
+//
+// `duration` (SoundCloud's API gives this in milliseconds, same unit
+// Spotify's track payload already uses - see /track above) rides along too:
+// without it, resolvePlaylist()/searchYouTube()'s duration hard-filter
+// (see DURATION_HARD_DIFF_SECONDS in handleSearch below) never activates
+// for SoundCloud-sourced tracks, which for an independent/self-released
+// catalog with few or no legitimate YouTube uploads leaves nothing but a
+// title-token-overlap check standing between a search and a confidently
+// wrong, unrelated result - exactly the "plays random YouTube songs" failure
+// mode. `full_duration` (uncropped, including any trailing silence
+// SoundCloud sometimes trims from `duration`) is used as a fallback when
+// `duration` itself is missing.
 function scTrackToTitleArtist(t) {
   const rawArt = t.artwork_url || (t.user && t.user.avatar_url) || null;
   return {
     title: t.title || '',
     artist: (t.publisher_metadata && t.publisher_metadata.artist) || (t.user && t.user.username) || '',
     image: rawArt ? rawArt.replace('-large.', '-t500x500.') : null,
+    duration: t.duration || t.full_duration || 0,
   };
 }
 
@@ -1316,7 +1363,7 @@ async function handleSoundCloud(url, ctx) {
   if (data.kind === 'track') {
     const t = scTrackToTitleArtist(data);
     if (!t.title) return json({ error: 'track has no title' }, 404);
-    payload = { kind: 'track', title: t.title, artist: t.artist, image: t.image };
+    payload = { kind: 'track', title: t.title, artist: t.artist, image: t.image, duration: t.duration };
   } else if (data.kind === 'playlist') {
     const rawTracks = data.tracks || [];
     const stubIds = rawTracks.filter(t => !('title' in t)).map(t => t.id);
