@@ -555,13 +555,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .repeat-badge .one{position:absolute;bottom:3px;right:2px;font-size:8px;font-weight:800;color:var(--player-accent)}
 
 
-/* playlist list (lives inside the queue dropdown) */
-.playlist-list-wrap{margin:8px 12px 24px;padding-top:14px;border-top:1px solid var(--border)}
-.playlist-list-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 14px;padding:0 8px}
-.playlist-list-head h2{font-size:14px;font-weight:600;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.playlist-list-head .re{font-size:12px;color:var(--faint-2);flex:none}
-.playlist-list-head .re:hover{color:var(--faint)}
-.playlist-list-head .head-actions{display:flex;align-items:center;gap:10px;flex:none}
 .track-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:var(--r-md);cursor:pointer;position:relative}
 .track-row:hover{background:var(--panel)}
 .track-row.is-current{background:var(--panel-2)}
@@ -587,12 +580,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .track-row .drag-handle{display:none;flex:none;width:20px;height:28px;align-items:center;justify-content:center;color:var(--faint-2);cursor:grab;touch-action:none}
 .track-row .drag-handle svg{width:12px;height:16px}
 .track-row.is-dragging{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.4);position:relative;z-index:3;background:var(--panel-2)}
-#trackList.sort-manual .track-row .drag-handle{display:flex}
-#trackList.sort-manual .track-row .num{display:none}
-#trackSortSel{font-size:11.5px;padding:6px 10px;max-width:132px}
-@media (max-width:380px){
-  #trackSortSel{font-size:11px;padding:6px 8px;max-width:112px}
-}
 .missing-note{font-size:11.5px;color:var(--faint-2);margin-top:2px}
 .missing-actions{display:flex;gap:10px;margin-top:4px}
 .missing-actions a,.missing-actions button{font-size:11.5px;color:var(--faint);text-decoration:underline;text-underline-offset:2px}
@@ -1775,24 +1762,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody"></div>
-
-      <div class="playlist-list-wrap" id="playlistListWrap" hidden>
-        <div class="playlist-list-head">
-          <h2 id="plHeadName">Playlist</h2>
-          <div class="head-actions">
-            <button class="re" id="plPlayBtn">Play</button>
-            <select class="btn-ghost" id="trackSortSel" aria-label="Sort tracks">
-              <option value="custom">Manual order</option>
-              <option value="alpha">Alphabetical</option>
-              <option value="plays_desc">Most played</option>
-              <option value="plays_asc">Least played</option>
-            </select>
-            <button class="re" id="addSongBtn">+ Add song</button>
-            <button class="re" id="reResolveBtn">Re-match</button>
-          </div>
-        </div>
-        <div id="trackList" style="margin-top:8px"></div>
-      </div>
     </div>
   </div>
 
@@ -2171,7 +2140,6 @@ const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
 function effectiveVolume(){ return 100; }
 const LS_RESUME = 'ebbless:resume';
 const LS_CROSSFADE = 'ebbless:crossfade';
-const LS_SORT = (id) => 'ebbless:sort:' + id;    // per-playlist track sort mode
 const LS_VIZ = 'ebbless:visualizer';
 const LS_VIZ_AUTO = 'ebbless:vizAuto';
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
@@ -2392,7 +2360,7 @@ function isResolveStale(pl){
 // place for next time.
 function reResolveStaleInBackground(id, type){
   resolvePlaylist(id, type, () => {}).then(pl => {
-    if (state.playlist && state.playlist.id === id){ state.playlist = pl; renderTrackList(); }
+    if (state.playlist && state.playlist.id === id) state.playlist = pl;
     renderLibrary();
   }).catch(() => {});
 }
@@ -2409,7 +2377,7 @@ function manualRelinkPlaylist(id){
   if (!pl || pl.type === 'custom') return;
   showToast('Refreshing links…');
   resolvePlaylist(id, pl.type, () => {}).then(newPl => {
-    if (state.playlist && state.playlist.id === id){ state.playlist = newPl; renderTrackList(); }
+    if (state.playlist && state.playlist.id === id) state.playlist = newPl;
     renderLibrary();
     showToast('Links refreshed');
   }).catch(() => {
@@ -2441,7 +2409,6 @@ const state = {
   preQueueView: null,
   queueOpen: false,
   flowOpen: false,
-  sortMode: 'custom',    // custom | alpha | plays_desc | plays_asc (per-playlist track list order)
 };
 
 function currentTrack(){
@@ -2527,7 +2494,6 @@ const libFilter = $('libFilter');
 const libFilterCycle = $('libFilterCycle');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-const playlistListWrap = $('playlistListWrap'), plHeadName = $('plHeadName'), trackListEl = $('trackList'), reResolveBtn = $('reResolveBtn'), trackSortSel = $('trackSortSel'), plPlayBtn = $('plPlayBtn');
 const artA = $('artA'), artB = $('artB');
 const recordLabelImg = $('recordLabelImg');
 const artStyleMenu = $('artStyleMenu'), artTabBtn = document.querySelector('#visualTabs .v-tab[data-mode="art"]');
@@ -3186,10 +3152,10 @@ function toggleLibraryPlaylistPanel(id){
       if (t.videoId){
         row.addEventListener('click', () => playLibraryTrackInline(id, i));
       }
-      // track-relink-menu: same long-press "Refresh link" menu as the main
-      // tracklist view (renderTrackList) - no dedicated kebab button here
-      // given this panel's tighter row layout, but the hold gesture works
-      // the same way, missing tracks included.
+      // track-relink-menu: same long-press "Refresh link" menu used
+      // elsewhere - no dedicated kebab button here given this panel's
+      // tighter row layout, but the hold gesture works the same way,
+      // missing tracks included.
       attachLongPress(row, () => toggleTrackCtxMenu(id, i, row));
       libplBody.appendChild(row);
     });
@@ -3716,7 +3682,7 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   t.channel = candidate.channel || '';
   t.duration = candidate.duration || 0;
   lsSet(LS_PL(plId), pl);
-  if (state.playlist && state.playlist.id === plId){ state.playlist = pl; renderTrackList(); }
+  if (state.playlist && state.playlist.id === plId) state.playlist = pl;
   renderLibrary();
   closeImportOverlay();
   showToast('Link updated');
@@ -3789,7 +3755,6 @@ function toggleLikeTrack(track){
     recordListenSignal(track, 2);
     showToast('Added to Liked Songs');
   }
-  renderTrackList();
   renderQueuePanel();
 }
 
@@ -3820,7 +3785,7 @@ function addTracksToPlaylist(playlistId, tracks){
   if (!added) return 0;
   lsSet(LS_PL(playlistId), pl);
   renderLibrary();
-  if (state.playlist && state.playlist.id === playlistId){ state.playlist = pl; renderTrackList(); }
+  if (state.playlist && state.playlist.id === playlistId) state.playlist = pl;
   return added;
 }
 
@@ -3829,21 +3794,6 @@ function addTrackToPlaylist(playlistId, track){
   if (!pl) return;
   const added = addTracksToPlaylist(playlistId, [track]);
   showToast(added ? 'Added to ' + pl.name : 'Already in playlist');
-}
-
-function removeTrackFromCustomPlaylist(index){
-  const pl = state.playlist;
-  if (!pl || pl.type !== 'custom') return;
-  pl.tracks.splice(index, 1);
-  state.queue = state.queue
-    .filter(e => !(e.plId === pl.id && e.idx === index))
-    .map(e => (e.plId === pl.id && e.idx > index) ? { plId: e.plId, idx: e.idx - 1 } : e);
-  if (state.queuePos >= state.queue.length) state.queuePos = state.queue.length - 1;
-  persistPlaylist();
-  renderTrackList();
-  renderQueuePanel();
-  renderLibrary();
-  showToast('Removed from playlist');
 }
 
 function openCreatePlaylistFlow(trackToAdd){
@@ -4075,8 +4025,6 @@ function openAddLinksFlow(playlistId){
     $('linkDoneBtn').addEventListener('click', () => closeImportOverlay());
   }
 }
-$('addSongBtn').addEventListener('click', () => { if (state.playlist) openAddLinksFlow(state.playlist.id); });
-
 /* hover play button on a library card: always starts the playlist from the
    top immediately, unlike openPlaylist which only auto-starts when nothing
    else is queued */
@@ -4223,11 +4171,6 @@ importForm.addEventListener('submit', (e) => {
   }
 });
 
-reResolveBtn.addEventListener('click', () => {
-  if (!state.playlist) return;
-  beginImport(state.playlist.id, true, state.playlist.type);
-});
-
 // Starter library for anyone with nothing saved yet: the artist's own
 // SoundCloud album plus a curated Spotify playlist. Resolves and saves each
 // straight into the library without routing through beginImport (which
@@ -4354,179 +4297,6 @@ function persistPlaylist(){
 
 function loadPlaylistIntoPlayer(pl){
   state.playlist = pl;
-  plHeadName.textContent = pl.name;
-  playlistListWrap.hidden = false;
-  state.sortMode = lsGet(LS_SORT(pl.id), 'custom');
-  trackSortSel.value = state.sortMode;
-  reResolveBtn.style.display = pl.type === 'custom' ? 'none' : '';
-  renderTrackList();
-}
-
-plPlayBtn.addEventListener('click', () => {
-  if (!state.playlist) return;
-  buildQueueFrom(0, state.playlist.id);
-  loadIndex(state.queuePos, true);
-});
-
-function computeViewOrder(pl){
-  const order = pl.tracks.map((t, i) => i);
-  if (state.sortMode === 'alpha'){
-    order.sort((a, b) => pl.tracks[a].title.localeCompare(pl.tracks[b].title, undefined, { sensitivity: 'base' })
-      || pl.tracks[a].artist.localeCompare(pl.tracks[b].artist, undefined, { sensitivity: 'base' }));
-  } else if (state.sortMode === 'plays_desc'){
-    order.sort((a, b) => (pl.tracks[b].plays || 0) - (pl.tracks[a].plays || 0) || a - b);
-  } else if (state.sortMode === 'plays_asc'){
-    order.sort((a, b) => (pl.tracks[a].plays || 0) - (pl.tracks[b].plays || 0) || a - b);
-  }
-  return order;
-}
-
-function renderTrackList(){
-  trackListEl.innerHTML = '';
-  const pl = state.playlist;
-  if (!pl || !pl.tracks.length){
-    trackListEl.innerHTML = '<div class="empty-lib">' +
-      (pl && pl.type === 'custom' ? 'No tracks yet.<br>Browse a playlist and add tracks here.' : 'No tracks found.') +
-      '</div>';
-    return;
-  }
-  trackListEl.classList.toggle('sort-manual', state.sortMode === 'custom');
-  const order = computeViewOrder(pl);
-  order.forEach((i, pos) => {
-    const t = pl.tracks[i];
-    const row = document.createElement('div');
-    row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
-    row.dataset.index = i;
-
-    const handle = document.createElement('div'); handle.className = 'drag-handle';
-    handle.innerHTML = '<svg viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.4"/><circle cx="9" cy="2" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/></svg>';
-    const num = document.createElement('div'); num.className = 'num'; num.textContent = pos + 1;
-    const img = document.createElement('img');
-    if (t.videoId || t.art) attachArtworkFallback(img, t);
-    const meta = document.createElement('div'); meta.className = 'meta';
-    const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
-    const artist = document.createElement('div'); artist.className = 'artist';
-    artist.textContent = t.videoId ? t.artist : t.artist;
-    meta.appendChild(title); meta.appendChild(artist);
-    if (!t.videoId){
-      const note = document.createElement('div'); note.className = 'missing-note'; note.textContent = "Couldn't find this one.";
-      const actions = document.createElement('div'); actions.className = 'missing-actions';
-      const searchLink = document.createElement('a');
-      searchLink.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t.title + ' ' + t.artist);
-      searchLink.target = '_blank'; searchLink.rel = 'noopener'; searchLink.textContent = 'Search manually';
-      actions.appendChild(searchLink);
-      meta.appendChild(note); meta.appendChild(actions);
-    }
-
-    row.appendChild(handle); row.appendChild(num); row.appendChild(img); row.appendChild(meta);
-
-    if (t.videoId){
-      // All per-track actions (like, play next, add to playlist) used to be
-      // separate inline buttons here, which left the title barely any room.
-      // They now live in the same track-options menu the kebab below opens
-      // (see openTrackCtxMenuFor), matching the 3-dot overflow-menu pattern
-      // used on library cards (toggleLibCtxMenu).
-      const actions = document.createElement('div'); actions.className = 'row-actions';
-      const trackMenuBtnEl = document.createElement('button'); trackMenuBtnEl.className = 'track-menu-btn'; trackMenuBtnEl.title = 'Track options'; trackMenuBtnEl.setAttribute('aria-label','Track options'); trackMenuBtnEl.setAttribute('aria-haspopup','true');
-      trackMenuBtnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
-      trackMenuBtnEl.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(pl.id, i, trackMenuBtnEl); });
-      actions.appendChild(trackMenuBtnEl);
-      row.appendChild(actions);
-      row.addEventListener('click', (e) => {
-        if (e.target === handle || handle.contains(e.target)) return;
-        buildQueueFrom(i, pl.id); loadIndex(state.queuePos, true);
-      });
-    }
-    // Direct remove button, same visual/markup pattern as the Now/Next/Later
-    // queue's own `.remove` (queueRemoveAt) button. "Remove" here means
-    // remove from THIS playlist, not from the queue - this list is the
-    // playlist's full tracklist, not the queue, and a given row may not even
-    // be queued right now - so it's wired to removeTrackFromCustomPlaylist,
-    // the same function the old inline "Remove from playlist" button used.
-    // Only custom playlists support removing a single track (that function
-    // no-ops otherwise), so only show it there - covers missing/unmatched
-    // rows too, since those are exactly the ones you're most likely to want
-    // to drop from a custom playlist.
-    if (pl.type === 'custom'){
-      const removeBtn = document.createElement('button'); removeBtn.className = 'remove'; removeBtn.setAttribute('aria-label','Remove from playlist');
-      removeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
-      removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeTrackFromCustomPlaylist(i); });
-      row.appendChild(removeBtn);
-    }
-    // Long-press the row itself opens the same "Refresh link" menu, touch
-    // equivalent of the kebab button above - and, unlike the kebab, also
-    // works on a track with no match yet (t.videoId null / "is-missing"
-    // rows), which is exactly when a manual refresh is most wanted.
-    attachLongPress(row, () => toggleTrackCtxMenu(pl.id, i, row));
-    trackListEl.appendChild(row);
-    if (state.sortMode === 'custom') wireTrackRowDrag(row, handle);
-  });
-  highlightActiveRow();
-}
-
-/* ---- track-list drag-to-reorder (manual sort mode only) ---- */
-function reorderPlaylistTracks(fromIdx, toIdx){
-  const pl = state.playlist;
-  if (!pl || fromIdx === toIdx) return;
-  const remap = (i) => {
-    if (i === fromIdx) return toIdx;
-    if (fromIdx < toIdx) return (i > fromIdx && i <= toIdx) ? i - 1 : i;
-    return (i >= toIdx && i < fromIdx) ? i + 1 : i;
-  };
-  const [item] = pl.tracks.splice(fromIdx, 1);
-  pl.tracks.splice(toIdx, 0, item);
-  state.queue = state.queue.map(e => e.plId === pl.id ? { plId: e.plId, idx: remap(e.idx) } : e);
-  persistPlaylist();
-  renderTrackList();
-  renderQueuePanel();
-}
-
-function wireTrackRowDrag(row, handle){
-  let dragging = false, startY = 0, rowH = 0, origIndex = 0;
-  handle.addEventListener('pointerdown', (e) => {
-    dragging = true; startY = e.clientY; rowH = row.offsetHeight;
-    origIndex = Array.from(trackListEl.querySelectorAll('.track-row')).indexOf(row);
-    row.classList.add('is-dragging');
-    handle.setPointerCapture(e.pointerId);
-  });
-  handle.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    const dy = e.clientY - startY;
-    row.style.transform = 'translateY(' + dy + 'px)';
-    const siblings = Array.from(trackListEl.querySelectorAll('.track-row'));
-    const curIdx = siblings.indexOf(row);
-    if (dy > rowH * 0.6 && siblings[curIdx + 1]){
-      trackListEl.insertBefore(siblings[curIdx + 1], row);
-      startY = e.clientY; row.style.transform = 'translateY(0)';
-    } else if (dy < -rowH * 0.6 && siblings[curIdx - 1]){
-      trackListEl.insertBefore(row, siblings[curIdx - 1]);
-      startY = e.clientY; row.style.transform = 'translateY(0)';
-    }
-  });
-  function endDrag(){
-    if (!dragging) return;
-    dragging = false;
-    row.classList.remove('is-dragging');
-    row.style.transform = '';
-    const siblings = Array.from(trackListEl.querySelectorAll('.track-row'));
-    const newIndex = siblings.indexOf(row);
-    if (newIndex !== origIndex) reorderPlaylistTracks(origIndex, newIndex);
-  }
-  handle.addEventListener('pointerup', endDrag);
-  handle.addEventListener('pointercancel', endDrag);
-}
-
-trackSortSel.addEventListener('change', () => {
-  state.sortMode = trackSortSel.value;
-  if (state.playlist) lsSet(LS_SORT(state.playlist.id), state.sortMode);
-  renderTrackList();
-});
-
-function highlightActiveRow(){
-  const idx = currentTrackIndex();
-  Array.from(trackListEl.children).forEach(el => {
-    el.classList.toggle('is-current', parseInt(el.dataset.index, 10) === idx);
-  });
 }
 
 /* =========================================================================
@@ -5011,7 +4781,7 @@ async function generateSwell(){
   pl.tracks = collected;
   lsSet(LS_PL(SWELL_ID), pl);
   lsSet(LS_SWELL_GENERATED, Date.now());
-  if (state.playlist && state.playlist.id === SWELL_ID){ state.playlist = pl; renderTrackList(); }
+  if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
   renderLibrary();
 }
 function refreshSwellIfStale(){
@@ -5420,7 +5190,6 @@ function setPlayingUI(isPlaying){
   if (adLoading) updateAdLoadingIcon();
   else [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
   artworkWrap.classList.toggle('is-playing', isPlaying);
-  highlightActiveRow();
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   setKeepAliveAudio(isPlaying);
@@ -6237,14 +6006,6 @@ function bumpPlayCount(entry){
   if (!t) return;
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
-  if (pl !== state.playlist) return;
-  if (state.sortMode === 'plays_desc' || state.sortMode === 'plays_asc'){
-    renderTrackList();
-  } else {
-    const row = trackListEl.querySelector('.track-row[data-index="' + entry.idx + '"]');
-    const playsEl = row && row.querySelector('.plays');
-    if (playsEl) playsEl.textContent = t.plays + (t.plays === 1 ? ' play' : ' plays');
-  }
 }
 
 function reflectCurrentTrackUI(pos, opts){
@@ -6267,7 +6028,6 @@ function reflectCurrentTrackUI(pos, opts){
   attachArtworkFallback(miniArt, t);
   cassetteUpdateTrack(t, pos);
   bumpPlayCount(entry);
-  highlightActiveRow();
   renderQueuePanel();
   persistResume();
   if (visualMode === 'lyrics') maybeLoadLyrics();
@@ -6722,7 +6482,6 @@ function tryResume(){
   updatePlayerAccentColor(track);
   attachArtworkFallback(miniArt, track);
   cassetteUpdateTrack(track, state.queuePos);
-  highlightActiveRow();
 }
 
 /* =========================================================================
