@@ -1932,14 +1932,51 @@ Add entries in this shape:
   above (sharing the app itself) - different scope, kept separate.
 
 ### single-song-paste-prompt: Prompt for target playlist when pasting a single song
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** If the pasted link resolves to a single song (not a
   playlist/album), prompt the user for which playlist it should be added
   to - with a quick option to just add it to Liked Songs.
 - **Touches:** `beginImport()` / paste-a-link flow.
-- **Branch:** (unclaimed)
+- **Branch:** agent/single-song-paste-prompt
 - **Notes:** Synced from Geethub issue #65.
+
+  Fixed and pushed (commit `686f840`): previously a single-track paste
+  (Spotify/Apple Music track, SoundCloud track, YouTube video) resolved via
+  `resolvePlaylist()` into its own one-song "playlist" and got saved
+  straight into the library with `saveToLibrary(id)` - a permanent,
+  un-browsable one-track entry the listener never asked for. Added
+  `isSingleTrackType(type)` and a new `openSingleTrackDestinationPicker(track)`
+  (index.html, next to the existing `openAddToPlaylistPicker`/
+  `openCreatePlaylistFlow`), which reuses the same import-overlay modal
+  pattern to list the listener's existing custom playlists plus a "+ New
+  playlist" row, with a one-tap "Liked Songs" shortcut pinned above the list
+  (calls `ensureLikedPlaylist()` first since Liked Songs may not exist yet
+  for someone who hasn't liked anything). `beginImport()` now checks
+  `isSingleTrackType(pl.type)` right after `resolvePlaylist()` resolves and
+  routes to the picker instead of `saveToLibrary`/`loadPlaylistIntoPlayer`;
+  the `!force` cache-hit fast path at the top of `beginImport()` got the
+  same check so re-pasting the same single-track link re-prompts instead of
+  silently reopening the old one-track "playlist" in the player.
+
+  Verified by serving this worktree's `index.html` directly with
+  `python3 -m http.server` (confirmed via `location.href` in the browser,
+  since the shared preview-tool launcher kept re-fronting a different
+  worktree's dev server mid-session - had to force a fresh tab/navigate a
+  few times to stay on the right origin). Pasted a real Spotify track link
+  (`open.spotify.com/track/...`) against the live resolver backend twice:
+  once picking an existing custom playlist ("Party Mix" went from 0 to 1
+  track, correct art/title), once via "+ New playlist" (created "Chill
+  Vibes" with the track, "Playlist created" toast), and once via the
+  "Liked Songs" shortcut (created Liked Songs on the fly, "Added to Liked
+  Songs" toast). After each, inspected `localStorage['ebbless:library']`
+  directly and confirmed no orphan entry was ever added for the pasted
+  track's own id - only the chosen destination playlist changed. No new
+  console errors traceable to this change; the only console output seen
+  ("unknown error fetching script", a transient 502 from the YouTube search
+  step) reproduced identically on unrelated pages/origins before any
+  interaction, so it's environmental noise in this browsing setup, not
+  caused by this fix.
 
 ### clear-playlists-confirm: "Clear playlists" needs a serious confirm prompt + danger styling
 - **Status:** merged
