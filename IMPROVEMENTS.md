@@ -3497,7 +3497,7 @@ Add entries in this shape:
   testing.
 
 ### spinning-record-realism: Make the spinning record feel physical, tactile, and restrained
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Four-part visual polish pass on the spinning-record
   element (distinct from `record-cassette-size`, which only changed its
