@@ -4263,7 +4263,7 @@ Add entries in this shape:
   call, per usual).
 
 ### soundcloud-native-playback: Stream SoundCloud-sourced tracks natively instead of YouTube-search matching
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** SoundCloud-sourced playlists/albums currently play by
   matching each track's `{title, artist}` to a YouTube video via
