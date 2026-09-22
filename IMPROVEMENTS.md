@@ -1659,13 +1659,36 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #71.
 
 ### album-art-swipe-nav: Swipe album art left/right for prev/next track
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Swiping left or right on the album art in the player
   should skip to the next/previous track respectively.
 - **Touches:** player view, album art touch handlers.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #72.
+- **Branch:** agent/album-art-swipe-nav
+- **Notes:** Synced from Geethub issue #72. Fixed and pushed (commit
+  `f76d1f4`): added a swipe handler on `#artworkWrap` (bound to `artworkWrap`,
+  declared line 1468) matching the existing swipe pattern already used by the
+  fullscreen "flow" view's `flowArtWrap` handler (lines 6808-6828: touchstart/
+  touchend, horizontal `dx`/vertical `dy` delta, 70px threshold) - inserted
+  right after the existing tap-to-play/pause block, before `MINI BAR TAP`
+  (~line 6837). Horizontal drag over 70px (and greater than vertical delta)
+  calls the same `playNext(auto)` (line 6380) / `playPrev()` (line 6395)
+  functions the real `nextBtn`/`prevBtn` buttons use; vertical-dominant or
+  small drags are ignored, so tap-to-play/pause and vertical scroll are
+  unaffected. No new queue/playback logic - reuses existing transport
+  functions exactly.
+
+  Verified via a local `python3 -m http.server 8934` served directly from
+  this worktree (confirmed via `location.href` that the tab loaded from
+  that port, not the shared preview launcher), 375x812 mobile viewport, real
+  loaded playlist: a synthetic left swipe (dx≈-200px) advanced the track
+  (title changed), a small 5px drag left the track unchanged and tap-to-play
+  still toggled correctly, and a 250px vertical-only swipe didn't trigger
+  track change. No new console errors (only the pre-existing YouTube iframe
+  API fetch error). **Caveat:** no real audio playback in this sandbox, so
+  `playPrev()`'s "seek to 0 if >3s played" branch wasn't exercised with real
+  timing - but since the swipe calls the identical functions as the existing
+  transport buttons, behavior should match those buttons live.
 
 ### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen (or like?)
 - **Status:** ready
@@ -1690,7 +1713,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #45.
 
 ### desktop-mini-player: Floating desktop mini-player when tab loses focus
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** When the user switches away from the EBBLESS browser tab
   on desktop, show a small, movable/draggable mini-player in a corner of the
@@ -1699,9 +1722,57 @@ Add entries in this shape:
   trigger plus a new floating-widget component. Picture-in-Picture Web API
   may be relevant here (real OS-level floating window) - worth researching
   as an alternative to a plain in-page floating div.
-- **Branch:** (unclaimed)
+- **Branch:** agent/desktop-mini-player
 - **Notes:** Synced from Geethub issue #64. Bigger lift than most entries in
   this batch - likely its own lane.
+
+  Fixed and pushed (commit `0110681`): used the Document Picture-in-Picture
+  API (`documentPictureInPicture`) rather than a plain in-page floating div —
+  a div is invisible the instant the tab backgrounds, which defeats the
+  point. Confirmed live that calling `requestWindow()` directly on
+  `visibilitychange`/blur throws `NotAllowedError` (no user gesture on a
+  tab-switch); the working mechanism instead is registering a MediaSession
+  `'enterpictureinpicture'` action handler (`navigator.mediaSession
+  .setActionHandler('enterpictureinpicture', openMiniPlayer)`) — Chromium
+  exempts that handler from the gesture requirement and invokes it itself
+  when audio is playing/holds audio focus and the tab is switched away from,
+  auto-closing the window on return. New block after the existing
+  `mediaSession` setup (~line 6466): `miniPlayerSupported()`,
+  `buildMiniPlayerDOM()`, `updateMiniPlayerUI()`, `openMiniPlayer()`, plus
+  two one-line sync hooks added to `setPlayingUI()` (~line 5384) and
+  `updateTrackMetaUI()` (~line 6157). The mini player's prev/play-pause/next
+  buttons call the existing `playPrev`, `playNext(false)`, and
+  `playIndex(state.queuePos)`/`playRickrollFallback()` — no playback logic
+  duplicated. Unsupported browsers / a declined/failed `requestWindow()`
+  fall through to a no-op via try/catch (audio just keeps playing in the
+  backgrounded tab as before, same as today).
+
+  Verified via a local `python3 -m http.server` served from this worktree
+  (confirmed `location.href` each time — the shared browser pane was
+  apparently in concurrent use by another lane mid-test and once silently
+  swapped the tab to a different origin, caught via `tabs_context` and moved
+  to a fresh dedicated tab). Confirmed `'documentPictureInPicture' in
+  window` is true and the action-handler registers without throwing; got
+  the app into a genuinely playing state and confirmed
+  `document.hasFocus()`/`visibilityState` flip correctly on backgrounding;
+  no new console errors from the change; mirrored the PiP window's
+  markup/CSS/button-wiring into a real iframe document and confirmed all
+  three buttons fire clicks correctly.
+
+  **Caveat — not fully proven end-to-end:** the sandboxed test browser
+  can't grant real OS-level PiP windows at all (`requestWindow()` returns
+  `InvalidStateError: ... no window` even on a genuine trusted click,
+  `documentPictureInPicture.window` stayed `null` after backgrounding a
+  playing tab), so the actual "window appears on tab-switch, closes on
+  return" behavior is reasoned from Chromium's documented
+  `enterpictureinpicture` auto-trigger contract, not directly observed here.
+  This is a sandbox limitation, not a known code bug — `openMiniPlayer()`'s
+  catch block handles exactly that failure path as a no-op — but **spot-check
+  in a real desktop Chrome/Edge before treating this as fully verified.**
+  Also note: this only works in Chromium-based browsers (Document PiP has
+  no Safari/Firefox support as of this writing) — non-Chromium desktop users
+  get the pre-existing behavior (audio keeps playing, no floating window),
+  not a broken experience, just no new feature.
 
 ### album-art-2x2-grid-bug: Album art sometimes shows placeholder grid instead of real art
 - **Status:** merged
@@ -2018,15 +2089,42 @@ Add entries in this shape:
   partially achievable.
 
 ### library-hold-add-to-queue: Hold a library track to add to queue / play next
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Holding down on a track in the library should bring up a
   menu with "add to queue" and "play next" options. "Play next" should play
   right after the currently-playing song, with the rest of the queue
   continuing unchanged after that.
 - **Touches:** library track rows, queue management.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #52.
+- **Branch:** agent/library-hold-add-to-queue
+- **Notes:** Synced from Geethub issue #52. Fixed and pushed (commit
+  `bc0943b`): the library's existing per-track long-press menu (from
+  `track-relink-menu`, wired via `attachLongPress(row, ...toggleTrackCtxMenu...)`
+  at line 3262) already had "Play next" but had explicitly dropped "Add to
+  queue" in an earlier pass. Added it back: new `CTX_ICON_ADD_QUEUE` SVG
+  (line 3452), new `addqueue` menu item between "Play next" and "Add to
+  playlist" (line 3494), and `handleTrackCtxAction` now calls the existing
+  `queueAddToEnd(trackIdx, plId)` (same helper used elsewhere, e.g. line
+  4829) for it (line 3532) - no new queue-insertion logic written. "Play
+  next" itself was untouched (already correct - calls `queuePlayNext()`,
+  which inserts right after `state.queuePos`, dedup'ing any later
+  occurrence, leaving the rest of the order unchanged).
+
+  Verified via a local `python3 -m http.server` served from this worktree
+  (confirmed via `location.href` and by grepping the served script for
+  `addqueue` that the correct worktree code was running - `127.0.0.1:<port>`
+  needed instead of `localhost`, which kept getting silently rerouted to a
+  stale server). In a 375x812 mobile viewport, dispatched a real
+  touchstart/touchend long-press (~650ms) on library track rows: menu shows
+  "Add to Liked Songs / Play next / Add to queue / Add to playlist / Refresh
+  link"; "Add to queue" on one track appended it to the end of the Queue
+  panel with a toast; "Play next" on another inserted it immediately after
+  the currently-playing track with the rest of the original queue order
+  fully intact. No new console errors (one pre-existing, unrelated `sw.js`
+  fetch error from the local test server setup, not the feature). **Caveat:**
+  touch-long-press-only, no desktop/mouse equivalent - matches the existing
+  `track-relink-menu` pattern (no kebab button on library rows by prior
+  design), so this is consistent with existing UX, not a new gap.
 
 ### playlist-image-reset: Add "reset to original art" in playlist image picker
 - **Status:** merged
@@ -3750,3 +3848,34 @@ Add entries in this shape:
   - this is a plain "make it sound better/higher quality" ask, not either
   of those specific features. Worth reviewing together since all three
   touch audio processing.
+
+### token-exhaustion-splash-stuck: App stuck on splash when out of tokens
+- **Status:** draft
+- **Priority:** high
+- **Description:** Reporter says every time they run out of (Claude/API)
+  tokens, the site doesn't load on desktop or mobile - it just stays on the
+  splash screen. Investigate what backend call the app depends on during
+  startup that fails silently/hangs when a token budget is exhausted, and
+  make the splash fail gracefully (error state or timeout past it) instead
+  of hanging forever.
+- **Touches:** startup flow (`startApp()`), splash screen, whatever
+  backend/worker call it's blocking on during load - needs locating.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #122. Distinct from the already-merged
+  `app-down-splash-blocked` (that was a `#onbCapture` tap-catcher z-index bug,
+  unrelated to token exhaustion) - different root cause, same visible symptom
+  (stuck splash), so kept as a separate entry rather than folded in.
+
+### youtube-link-paste-play: Paste a YouTube link to a song and have it play
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Reporter wants to paste a YouTube link to a song and have
+  it play. The app already appears to recognize `youtube.com/watch`,
+  `youtu.be`, and `/shorts/` links as a `yt_video` type
+  (`index.html` ~line 1949-1965, 3300) - needs investigation into whether
+  this path is actually reachable from the paste-a-link UI and working
+  end-to-end, or whether it's dead/broken code, before scoping a fix.
+- **Touches:** link-paste import flow, YouTube link parsing
+  (`index.html` ~line 1949-1965), `yt_video` resolution (~line 3300).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #123.
