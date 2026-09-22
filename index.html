@@ -1469,7 +1469,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="view-scroll">
       <form class="import-row" id="importForm">
-        <input id="urlInput" type="text" placeholder="Paste a Spotify, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
+        <input id="urlInput" type="text" placeholder="Paste a Spotify, YouTube, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
         <button type="submit" id="loadBtn">Load</button>
       </form>
       <div class="import-err" id="importErr"></div>
@@ -1734,7 +1734,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="view-scroll">
       <div class="settings-block">
         <h2>About</h2>
-        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track. Either way, playback threads through so the listening doesn't stop.</p>
+        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track, or paste a YouTube playlist or video link directly. Either way, playback threads through so the listening doesn't stop.</p>
         <div class="settings-row">
           <div>
             <div class="label">Replay tutorial</div>
@@ -4260,7 +4260,7 @@ async function resolveTracksFromLink(input, onProgress){
     }
     return resolved;
   }
-  throw new Error("That doesn't look like a Spotify, SoundCloud, or Apple Music link.");
+  throw new Error("That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link.");
 }
 
 // "+ Add song" opens this: paste one link at a time — a song, a playlist, or
@@ -4488,7 +4488,7 @@ async function beginImport(id, force, type){
 importForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const parsed = parseImportLink(urlInput.value);
-  if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, SoundCloud, or Apple Music link."; return; }
+  if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
   importErr.textContent = '';
   urlInput.value = '';
   if (parsed.source === 'youtube'){
@@ -7947,7 +7947,7 @@ function runIntro(preview){
     setMainCaption('Paste a link to a playlist, album, or song', urlInput);
     await wait(500);
     if (done) return;
-    setCaption('Spotify, SoundCloud, or Apple Music', urlInput);
+    setCaption('Spotify, YouTube, SoundCloud, or Apple Music', urlInput);
     await wait(1500);
     if (done) return;
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
