@@ -1659,7 +1659,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #71.
 
 ### album-art-swipe-nav: Swipe album art left/right for prev/next track
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Swiping left or right on the album art in the player
   should skip to the next/previous track respectively.
@@ -1668,7 +1668,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #72.
 
 ### album-art-doubletap: Double-tap album art / cymatics to toggle fullscreen (or like?)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Double-tapping the album art (or cymatics view) should
   toggle fullscreen. Reporter raised an open question themselves: might it
@@ -1690,7 +1690,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #45.
 
 ### desktop-mini-player: Floating desktop mini-player when tab loses focus
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When the user switches away from the EBBLESS browser tab
   on desktop, show a small, movable/draggable mini-player in a corner of the
@@ -1780,19 +1780,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #76.
 
 ### desktop-settings-inline: Desktop Settings should replace the player pane in place
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, clicking Settings currently navigates to a
   separate screen. Instead it should pop up in the player pane's spot,
   replacing the player view there, so the header nav doesn't change.
 - **Touches:** desktop split-view layout, Settings navigation.
-- **Branch:** (unclaimed)
+- **Branch:** agent/desktop-settings-inline
 - **Notes:** Synced from Geethub issue #78. Same general area as
   `player-controller-centering` (merged) - the desktop split-pane layout -
   worth the same care around `min-height`/z-index quirks found there.
 
 ### desktop-player-fullscreen-toggle: Desktop player fullscreen should slide panels off, nav buttons become toggles
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, with the player centered, its fullscreen
   button should slide the library/playlist panel off to the left and the
@@ -1800,7 +1800,7 @@ Add entries in this shape:
   The header nav's Queue and Library buttons should become toggles that
   show/hide those panels directly (rather than just navigating).
 - **Touches:** desktop split-view layout, header nav buttons.
-- **Branch:** (unclaimed)
+- **Branch:** agent/desktop-player-fullscreen-toggle
 - **Notes:** Synced from Geethub issue #79. Related to `desktop-settings-inline`
   and `player-controller-centering` (merged) - same desktop-layout area,
   worth planning together.
@@ -1821,7 +1821,7 @@ Add entries in this shape:
   partially achievable.
 
 ### library-hold-add-to-queue: Hold a library track to add to queue / play next
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Holding down on a track in the library should bring up a
   menu with "add to queue" and "play next" options. "Play next" should play
@@ -2283,7 +2283,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #44.
 
 ### tester-feedback-form: Form for beta testers to report on the app
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Add a form specifically for beta testers to give
   structured feedback on the app.
@@ -2479,14 +2479,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #95.
 
 ### fullscreen-lp-cassette-visual: Fullscreen on LP/cassette should fullscreen that visual, not standard album art
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Activating fullscreen while the LP (spinning record) or
   cassette art style is selected currently switches to the standard album
   art in fullscreen instead of fullscreening the LP/cassette visual itself.
 - **Touches:** album art style fullscreen logic (art-style picker /
   fullscreen toggle).
-- **Branch:** (unclaimed)
+- **Branch:** agent/fullscreen-lp-cassette-visual
 - **Notes:** Synced from Geethub issue #96. Distinct from `record-cassette-size`
   (merged - that changed the visuals' size, not fullscreen behavior).
 
@@ -2898,7 +2898,7 @@ Add entries in this shape:
   testing.
 
 ### spinning-record-realism: Make the spinning record feel physical, tactile, and restrained
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Four-part visual polish pass on the spinning-record
   element (distinct from `record-cassette-size`, which only changed its
