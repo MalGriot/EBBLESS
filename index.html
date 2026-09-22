@@ -7344,6 +7344,32 @@ flowLayer.addEventListener('click', armFlowChromeTimer);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
 })();
 
+/* double-tap (or double-click) album art / cymatics view -> toggle fullscreen.
+   Layered on top of the single-tap handling above rather than replacing it -
+   every tap still does what it always did (play/pause in the player view,
+   nothing but revealing chrome in flow mode), and a second tap/click landing
+   within DOUBLE_TAP_MS additionally fires the fullscreen toggle. Listening
+   on 'click' (fired for both a touch tap and a mouse click) rather than
+   separate touch/mouse handlers covers desktop and mobile with one path, same
+   as the single-tap handler above. Entering fullscreen reuses fsBtn's own
+   click handler (art/viz/lyrics/split-desktop branching) instead of
+   reimplementing it; exiting calls the same closeFlow() the exit button and
+   swipe-down gesture use. */
+(function(){
+  const DOUBLE_TAP_MS = 300;
+  function onDoubleTap(el, fn){
+    let lastTap = 0;
+    el.addEventListener('click', (e) => {
+      const now = Date.now();
+      if (now - lastTap < DOUBLE_TAP_MS){ lastTap = 0; fn(e); }
+      else lastTap = now;
+    });
+  }
+  onDoubleTap(artworkWrap, () => fsBtn.click());
+  onDoubleTap(flowArtWrap, closeFlow);
+  onDoubleTap(flowVizWrap, closeFlow);
+})();
+
 /* swipe left/right on the player view's album art -> next/prev track, same
    gesture and threshold as the fullscreen flow view above. Vertical drags
    are ignored here (no close gesture in this view) so scrolling still works. */
