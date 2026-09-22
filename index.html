@@ -2793,6 +2793,13 @@ function toggleDesktopFs(){
   if (state.deskFsOpen){ closeDesktopFs(); return; }
   state.deskFsOpen = true;
   document.body.classList.add('desktop-fs');
+  // Defensive reset: don't rely on these already being false - always start
+  // a fresh fullscreen entry with the library/queue drawers closed.
+  state.deskFsLibOpen = false;
+  state.deskFsQueueOpen = false;
+  document.body.classList.remove('desktop-fs-lib-open', 'desktop-fs-queue-open');
+  document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
+    .forEach(b => b.classList.remove('is-active'));
 }
 function toggleDesktopFsLib(){
   state.deskFsLibOpen = !state.deskFsLibOpen;
@@ -6755,8 +6762,12 @@ function closeFlow(){
   clearTimeout(flowHideTimer);
   if (vizCanvas.parentElement === flowVizWrap){
     vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
-    vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
+    // Restore vizSpeedBtn before vizAutoBtn: vizAutoBtn's original anchor
+    // (its next sibling) IS vizSpeedBtn, which was also moved out to the
+    // flow layer - restoring in the original order throws a NotFoundError
+    // because the anchor isn't back in the home container yet.
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
+    vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
     vizResize();
   }
 }
@@ -6768,10 +6779,17 @@ function armFlowChromeTimer(){
 fsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (!currentTrack()) return;
-  // split-desktop: slide library/queue off instead of the mobile/tablet
-  // "flow mode" overlay - see the .desktop-fs* CSS and toggleDesktopFs().
+  // Cymatics visualizer and lyrics always get the true full-bleed overlay
+  // (position:fixed;inset:0, hides the topbar) on both mobile and desktop -
+  // the split-desktop panel-slide treatment below is only for the album-art
+  // view.
+  if (visualMode === 'lyrics'){ openLyricsFs(); return; }
+  if (visualMode === 'viz'){ openFlow(); return; }
+  // split-desktop + art view: slide library/queue off instead of the
+  // mobile/tablet "flow mode" overlay - see the .desktop-fs* CSS and
+  // toggleDesktopFs().
   if (document.body.classList.contains('split-desktop')){ toggleDesktopFs(); return; }
-  if (visualMode === 'lyrics') openLyricsFs(); else openFlow();
+  openFlow();
 });
 
 /* ---------- lyrics fullscreen: no chrome but an exit X, same tap-to-seek
