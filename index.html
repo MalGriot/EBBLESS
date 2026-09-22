@@ -427,8 +427,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
      per frame, instead of re-rasterizing a dense concentric pattern on
      every frame - the latter is a known source of shimmer/moiré on a
      rotating fine gradient, and much more visible now that this renders
-     far larger in fullscreen (min(86vh,86vw) vs the 52vh/62vw it used to be
-     everywhere) */
+     far larger in fullscreen (min(100vh,100vw), edge-to-edge, vs the
+     52vh/62vw it used to be everywhere) */
   will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .record-disc::after{content:'';position:absolute;inset:0;border-radius:50%;pointer-events:none;
   background:conic-gradient(from 200deg,rgba(255,255,255,.11),rgba(255,255,255,0) 30%,
@@ -747,7 +747,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @media (prefers-reduced-motion:reduce){
   #flow-layer .flow-ambient .layer.is-active{animation:none}
 }
-#flow-layer .flow-art{width:min(86vh,86vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
+/* full-bleed: min(100vh,100vw) makes this a square that always touches
+   the constrained pair of edges - 100vw (touching the two side edges) on
+   a portrait/mobile viewport where vw<vh, 100vh (touching the top and
+   bottom edges) on a landscape/desktop-shaped one where vh<vw. Used to be
+   86% of each (issue #124, "fullscreen LP too small again") - the record/
+   cassette visuals (see the data-art-style rules just below) reach flush
+   against flow-chrome's overlaid controls now, same as the record disc
+   already did at 96% of this box either way. */
+#flow-layer .flow-art{width:min(100vh,100vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
   box-shadow:0 30px 80px -16px rgba(0,0,0,.7);z-index:1}
 #flow-layer .flow-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
@@ -1004,20 +1012,46 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop.desktop-fs:not(.view-settings-active) #view-player{
     position:fixed;top:var(--topbar-h);left:0;right:0;bottom:0;grid-column:auto;z-index:44;
   }
-  /* the normal in-pane .artwork-wrap sizing (min(440px,34vw,...), from the
-     >=860px breakpoint) is tuned for a narrow player pane, not this
-     newly-full-width fullscreen player - without an override it stays
-     small even though there's now a whole screen to fill. Sized to match
-     the mobile "flow mode" fullscreen's own art treatment (86vh/86vw,
-     see #flow-layer .flow-art) so desktop and mobile fullscreen read the
-     same across all three art styles (default/record/cassette, which all
-     share this one container) - but capped by the same
-     `calc(100dvh - var(--topbar-h) - 300px)` reservation the >=860px rule
-     above already uses for title/artist/seek/controls-row/tabs below the
-     art, so a plain 86vh doesn't push the transport controls off the
-     bottom of the pane the way an uncapped value did during testing. */
+  /* issue #124 ("fullscreen LP too small again"): the previous fix here
+     (capped at calc(100dvh - var(--topbar-h) - 300px), stacking
+     title/artist/seek/controls-row below the art like the normal in-pane
+     layout) could never reach the top/bottom edges no matter how that
+     reservation was tuned - room for that stacked text under the art was
+     the whole reason it stayed capped well short of the edges. Switched
+     to the same edge-to-edge treatment the mobile "flow mode" fullscreen
+     already uses (see #flow-layer .flow-art, and flow-chrome's overlaid
+     controls): the art fills the entire pane height (width derived from
+     aspect-ratio:1), and title/artist/seek/controls-row float on top of
+     it near the top/bottom instead of pushing it around. */
+  body.split-desktop.desktop-fs:not(.view-settings-active) #view-player .view-scroll{
+    padding:0;max-width:none;
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .player-layout{
+    height:100%;
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .player-stage{
+    position:relative;height:100%;padding-top:0;justify-content:center;
+  }
   body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap{
-    width:min(86vh,86vw,calc(100dvh - var(--topbar-h) - 300px));
+    width:min(100vw,calc(100dvh - var(--topbar-h)));
+  }
+  /* pulled out of the player-stage flex flow (which now only centers the
+     art) and floated over it instead - explicit z-index needed only for
+     .visual-tabs since it comes *before* .artwork-wrap in source order and
+     would otherwise paint underneath it (positioned elements with
+     z-index:auto stack in DOM order); .track-meta/.transport-full come
+     after it in source order so would already win, but set it on all
+     three for clarity/consistency. */
+  body.split-desktop.desktop-fs:not(.view-settings-active) .visual-tabs{
+    position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:2;
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta{
+    position:absolute;left:50%;bottom:108px;transform:translateX(-50%);z-index:2;
+    width:min(420px,80%);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .transport-full{
+    position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:2;
+    width:min(480px,90%);
   }
   /* drawer overlays: only reachable while deskFsOpen, so it's fine for
      these to reuse the library/queue panes' own fixed positioning rather
