@@ -2406,11 +2406,14 @@ function persistPlaylistObj(pl){
   if (pl) lsSet(LS_PL(pl.id), pl);
 }
 
-// Set while a playlist is playing on its first resolved track but the rest
-// is still being matched in the background (see beginImport's onFirstTrack
-// path) - { id, done, total } or null. Read by renderQueuePanel to show a
-// loading line where the rest of the queue would otherwise appear.
-let bgResolveProgress = null;
+// Tracks playlists that are playing on their first resolved track while the
+// rest is still being matched in the background (see beginImport's
+// onFirstTrack path): playlistId -> { done, total }. A map rather than a
+// single slot because the listener can start a second import while the
+// first is still resolving underneath - each gets its own entry. Read by
+// renderQueuePanel to show a loading line where the rest of the queue would
+// otherwise appear.
+const bgResolveProgress = new Map();
 
 /* =========================================================================
    STATE
@@ -4159,7 +4162,8 @@ async function beginImport(id, force, type){
         // overlay above is gone - route the same progress into the queue
         // panel instead so there's still a visible sign the rest is coming.
         if (startedEarly){
-          bgResolveProgress = p.done < p.total ? { id, done: p.done, total: p.total } : null;
+          if (p.done < p.total) bgResolveProgress.set(id, { done: p.done, total: p.total });
+          else bgResolveProgress.delete(id);
           renderQueuePanel();
         }
       }
@@ -4179,12 +4183,17 @@ async function beginImport(id, force, type){
     saveToLibrary(id);
     renderLibrary();
     if (startedEarly){
-      // Playback is already underway on the first track - swap in the fully
-      // resolved playlist without disturbing what's currently playing.
-      bgResolveProgress = null;
-      const anchor = (state.playlist && state.playlist.id === id && state.queue[state.queuePos]) ? state.queue[state.queuePos].idx : 0;
-      loadPlaylistIntoPlayer(pl);
-      buildQueueFrom(anchor);
+      bgResolveProgress.delete(id);
+      // The listener may have navigated elsewhere while this resolved in
+      // the background (browsed the library, started something else) - the
+      // fresh playlist is cached and in the library either way, but only
+      // touch the live player/queue if they're still on it, so background
+      // resolution never yanks them back to a playlist they left.
+      if (state.playlist && state.playlist.id === id){
+        const anchor = state.queue[state.queuePos] ? state.queue[state.queuePos].idx : 0;
+        loadPlaylistIntoPlayer(pl);
+        buildQueueFrom(anchor);
+      }
     } else {
       closeImportOverlay();
       loadPlaylistIntoPlayer(pl);
@@ -4193,7 +4202,7 @@ async function beginImport(id, force, type){
       setView('player');
     }
   } catch(e){
-    if (startedEarly) bgResolveProgress = null;
+    if (startedEarly) bgResolveProgress.delete(id);
     stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type));
   }
 }
@@ -4862,11 +4871,12 @@ function renderQueuePanel(){
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (!upcoming.length){
     const empty = document.createElement('div'); empty.className = 'q-empty'; empty.style.padding = '24px 10px';
-    if (bgResolveProgress && nowPl && nowPl.id === bgResolveProgress.id){
+    const progress = nowPl && bgResolveProgress.get(nowPl.id);
+    if (progress){
       empty.classList.add('q-loading');
       empty.innerHTML = 'Loading the rest of the playlist&hellip;' +
-        '<div class="flow-line"><div class="fill" style="width:' + Math.round((bgResolveProgress.done / bgResolveProgress.total) * 100) + '%"></div></div>' +
-        '<div class="counter">' + bgResolveProgress.done + ' / ' + bgResolveProgress.total + '</div>';
+        '<div class="flow-line"><div class="fill" style="width:' + Math.round((progress.done / progress.total) * 100) + '%"></div></div>' +
+        '<div class="counter">' + progress.done + ' / ' + progress.total + '</div>';
     } else {
       empty.textContent = 'End of queue.';
     }
