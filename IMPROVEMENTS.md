@@ -2809,7 +2809,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #84.
 
 ### playlist-vibe-search: Search Spotify/Apple Music/SoundCloud for playlists by vibe/keyword
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The playlist-input bar should let a user search by vibe
   or keyword (not just paste a direct link) and get back a matching
@@ -3739,7 +3739,7 @@ Add entries in this shape:
   volume fades to 0 and the element pauses/resets at ~3.5s.
 
 ### discover-artist-this-is-playlist: Discover should pull from the "This Is [Artist]" Spotify playlist
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The Discover feature should source from Spotify's
   official "This Is [artist name]" playlists for the relevant artist(s).
@@ -4335,7 +4335,7 @@ Add entries in this shape:
   each step is), so this shouldn't be sensitive to that.
 
 ### audio-quality-boost: Boost audio quality
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Reporter wants audio quality boosted generally. No
   further detail given - needs investigation into what's actually
