@@ -1484,7 +1484,7 @@ Add entries in this shape:
   local review before merge.
 
 ### tutorial-crossfade-demo: Tutorial should visually animate the crossfade slider
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** In the tutorial's crossfade beat, after the crossfade
   toggle is switched on, animate the crossfade slider visually moving from
@@ -2336,7 +2336,7 @@ Add entries in this shape:
   spot-check.
 
 ### share-song-playlist: Share a song or playlist via link
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add the ability to share a specific song or playlist - it
   should generate a nice link + message that, when opened, leads the
@@ -3502,7 +3502,7 @@ Add entries in this shape:
   review before merge.
 
 ### discovery-radio-continuation: Discovery should keep playing a radio around a song after it ends
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When playing a single song with Discovery on, once it
   finishes the app should keep playing a radio built around that song
