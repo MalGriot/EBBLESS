@@ -5856,13 +5856,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #159.
 
 ### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
-- **Status:** in-progress
+- **Status:** draft
 - **Priority:** medium
 - **Description:** On desktop, clicking the 3-dot menu button on a queue
   row just plays the track instead of opening the menu.
 - **Touches:** queue row click handling.
-- **Branch:** agent/queue-3dot-menu-desktop
-- **Notes:** Synced from Geethub issue #152.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #152. Lane run 2026-09-23 could
+  not reproduce: queue rows no longer have a 3-dot button (Playlist section
+  removed in 39155e1). The playlist panel's "Track options" button
+  (desktop right column) already stops propagation and opens its menu
+  correctly in headless tests at every width. Needs an exact repro (which
+  panel, browser, window width, click spot). Untested guess: clicks in the
+  row's right padding next to the button play the track.
 
 ### bld-background-tab-autoadvance: SoundCloud tracks won't advance to the next track in a background tab
 - **Status:** merged
@@ -6011,7 +6017,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #162.
 
 ### cymatics-infinity-invert: Invert the cymatics infinity button
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On cymatics, the infinity button should work the other
   way round: deactivated does what active does now, and vice versa.
@@ -6233,7 +6239,7 @@ Add entries in this shape:
   2026-09-23, not user-reported yet.
 
 ### relink-candidate-list: "Replace link" should show a full results list like the initial paste
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The per-track replace/refresh-link option should show a
   proper list of candidate results, the same way pasting a link does on
@@ -6243,6 +6249,8 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #176 (title only). Overlaps
   `relink-soundcloud-suggestions` (same menu) - likely best built in the
   same lane.
+  Added 2026-09-23: after a refresh/replace, still try to pull the track's
+  album art from Spotify; use the new link's thumbnail only if that fails.
 
 ### desktop-library-bg-video-fixed: Library background video shouldn't scroll on desktop
 - **Status:** draft
@@ -6252,3 +6260,14 @@ Add entries in this shape:
 - **Touches:** Library view background video CSS.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #175 (title only).
+
+### touch-landscape-rotate-lock: "Rotate your device" overlay blocks touch devices in landscape
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On a touch device at 1280x800 landscape (e.g. an iPad or
+  touchscreen laptop), the full-screen "rotate your device" overlay covers
+  the whole app, so it may be unusable there.
+- **Touches:** `#rotate-lock`.
+- **Branch:**
+- **Notes:** Found by the `queue-3dot-menu-desktop` lane 2026-09-23 in
+  headless touch emulation, not user-reported yet.
