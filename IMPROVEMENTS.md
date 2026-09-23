@@ -4144,14 +4144,14 @@ Add entries in this shape:
     `ytInitialPlayerResponse` for a particular video's metadata shape).
 
 ### app-icon-transparent-bg: App icon should have a transparent background across all platforms
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The app icon (home screen / PWA / favicon / any other
   platform surface it's used on) should have a transparent background
   instead of whatever solid background it currently renders with.
 - **Touches:** app icon assets and manifest (`manifest.json` / PWA icon
   set, favicon), likely under `brand/` or wherever icon source files live.
-- **Branch:** (unclaimed)
+- **Branch:** agent/app-icon-transparent-bg
 - **Notes:** Synced from Geethub issue #132.
 
 ### desktop-settings-queue-popup: Opening Settings on desktop also pops open the queue window
@@ -5177,7 +5177,7 @@ Add entries in this shape:
   (unaffected, as expected). Pushed as commit `06645c6`.
 
 ### splash-order-video-logo-buttons: Splash sequence order should be bg video, then logo, then tutorial/enter buttons
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The video-tinted splash screen should present its
   elements in this order: (1) background video, (2) EBBLESS logo, (3) the
@@ -5186,14 +5186,14 @@ Add entries in this shape:
   `#splash`/`#onbBackdrop`/`#onbMark` per the recent
   `tutorial-text-overflow-button-animation` splash-beat work, commit
   `01f2367`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/splash-order-video-logo-buttons
 - **Notes:** Synced from Geethub issue #139. Issue body had no further
   detail beyond the title. Check against the just-merged flat-black
   EBBLESS-mark-before-splash-choice change (commit `01f2367`) first, since
   it touches this exact sequencing.
 
 ### fullscreen-esc-exit: Esc key should exit fullscreen
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Pressing the Esc key while in fullscreen (LP, cassette,
   or cymatics) should exit fullscreen, same as clicking the exit-fullscreen
@@ -5202,7 +5202,7 @@ Add entries in this shape:
   split-view fullscreen (`.artwork-wrap`) - likely wires into the same
   `closeDesktopFs()` / flow-layer exit path as
   `fullscreen-exit-button-consistency` (merged, commit `e23b9a5`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/fullscreen-esc-exit
 - **Notes:** Synced from Geethub issue #138. Issue body had no further
   detail beyond the title. Related to but not a duplicate of
   `fullscreen-exit-button-consistency` - that unified the on-screen button;
