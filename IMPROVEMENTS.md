@@ -5095,7 +5095,7 @@ Add entries in this shape:
   screenshots alone.
 
 ### email-signin-prompt-loop: App asks to sign in to email account on every load
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Every time the app loads, it prompts the user to sign in
   to their email account. This should not happen on every load - diagnose
@@ -5121,7 +5121,7 @@ Add entries in this shape:
   every load is a bad first-run/every-run experience.
 
 ### breathe-love-deep-track-order: "Breathe Love Deep" skips "Gasp", starts on "Deep" instead
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Playing the "Breathe Love Deep" album skips the track
   "Gasp" and starts playback on "Deep" instead, even though the album title
@@ -5151,7 +5151,7 @@ Add entries in this shape:
   on the same release. Issue body had no further detail beyond the title.
 
 ### fullscreen-artwork-centering: Fullscreen artwork/LP/cassette should be centered to the viewport
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In fullscreen mode, the artwork, LP (spinning record),
   and cassette visuals should be centered to the viewport. Currently they
