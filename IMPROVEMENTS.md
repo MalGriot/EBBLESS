@@ -4411,7 +4411,7 @@ Add entries in this shape:
   playback" section to `README.md` documenting the approach.
 
 ### tutorial-text-overflow-button-animation: Tutorial text overflows screen and hides shuffle/loop buttons; needs press animation
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** During the onboarding tutorial, some caption text
   stretches off screen and becomes unreadable, and the shuffle/loop
@@ -4420,7 +4420,7 @@ Add entries in this shape:
   pressed so it's clear what's being demonstrated.
 - **Touches:** onboarding/tutorial flow (`runIntro()`), caption
   positioning/sizing for the shuffle/loop beat.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/tutorial-text-overflow-button-animation`
 - **Notes:** Synced from Geethub issue #129.
 
 ### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
@@ -4702,7 +4702,7 @@ Add entries in this shape:
   had one - left as-is rather than expanding scope.
 
 ### fullscreen-exit-button-consistency: LP, cassette, and cymatics fullscreen should share one exit-fullscreen button style/position
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The fullscreen views for the LP (spinning record),
   cassette, and cymatics album art styles should all use the exact same
@@ -4713,6 +4713,6 @@ Add entries in this shape:
   desktop split-view fullscreen (`.artwork-wrap`), likely the same area
   touched by `fullscreen-lp-cassette-visual` and `fullscreen-lp-too-small`
   (both merged).
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** `agent/fullscreen-exit-button-consistency`
 - **Notes:** Synced from Geethub issue #133. Issue body had no further
   detail beyond the title.
