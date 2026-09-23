@@ -5177,7 +5177,7 @@ Add entries in this shape:
   (unaffected, as expected). Pushed as commit `06645c6`.
 
 ### splash-order-video-logo-buttons: Splash sequence order should be bg video, then logo, then tutorial/enter buttons
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The video-tinted splash screen should present its
   elements in this order: (1) background video, (2) EBBLESS logo, (3) the
@@ -5188,9 +5188,36 @@ Add entries in this shape:
   `01f2367`).
 - **Branch:** agent/splash-order-video-logo-buttons
 - **Notes:** Synced from Geethub issue #139. Issue body had no further
-  detail beyond the title. Check against the just-merged flat-black
-  EBBLESS-mark-before-splash-choice change (commit `01f2367`) first, since
-  it touches this exact sequencing.
+  detail beyond the title. Checked against commit `01f2367` first per the
+  entry's own instruction: that commit only changed the *handoff* into
+  `showSplashChoice()` (holding the flat black `#onbBackdrop`/`#onbMark`
+  brand beat for `BRAND_BEAT_MS` before `#splash` takes over) and two
+  caption capitalizations - it never touched the CSS timing for the video
+  reveal, logo fade-in, or choice buttons, so this fix doesn't revert or
+  duplicate it.
+  Root cause: once `showSplashChoice()` adds `is-active is-choice` to
+  `#splash`, three CSS animations/transitions race independently -
+  `.splash-black`'s reveal (0ms delay, 2600ms), the logo `img`'s fade-in
+  (900ms delay, 1800ms duration, done at 2700ms), and `.splash-choice`'s
+  fade/slide-in (was 1200ms delay, 500ms duration, done at 1700ms). The
+  choice buttons finished fading in at 1700ms - a full second before the
+  logo's own fade-in completed at 2700ms - so visitors saw the Tutorial/
+  Enter buttons fully legible while the EBBLESS wordmark was still a faint,
+  half-formed ghost behind them: buttons registering before the logo did,
+  out of the intended order.
+  Fix: in the `.splash-choice` CSS rule (~line 1182), changed the
+  transition delay from `1200ms` to `2700ms` for both `opacity` and
+  `transform`, so the buttons only start fading in once the logo's
+  `splash-logo-in` animation has fully finished. Video reveal and logo
+  fade-in delays (0ms / 900ms) were already correctly ordered relative to
+  each other and untouched.
+  Verified live: served the worktree with `python3 -m http.server`,
+  opened it in the Browser pane with a cleared `localStorage` (first-time-
+  visitor path), and captured screenshots at ~2.5s/3.5s/4.7s/5.7s after
+  load. Confirmed the sequence now reads cleanly as (1) flat black brand
+  beat, (2) cymatics video alone, (3) video + EBBLESS wordmark, (4) video +
+  wordmark + Tutorial/Enter buttons - each element clearly established
+  before the next appears, with no overlap-driven reordering.
 
 ### fullscreen-esc-exit: Esc key should exit fullscreen
 - **Status:** in-progress
