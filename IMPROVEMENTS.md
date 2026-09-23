@@ -3022,7 +3022,11 @@ Add entries in this shape:
   podcasts - this is a new content type/feature area, not a fix to
   anything already in the backlog. Likely a larger lane than most entries
   here given it's a new source type; may be worth scoping/splitting once
-  picked up.
+  picked up. Issue #92 reopened 2026-09-23 with examples: single episode
+  `open.spotify.com/episode/0F73EhH9QeUblG8i2IO3eu`, whole show
+  `open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF`. User suspects a more
+  reliable free, good-quality source is needed for podcast and audiobook
+  audio (not just YouTube matching).
 
 ### currentsss-casing-followup: Fix "Currents" playlist casing to "CuRRentSSsss"
 - **Status:** merged
@@ -5852,12 +5856,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #159.
 
 ### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, clicking the 3-dot menu button on a queue
   row just plays the track instead of opening the menu.
 - **Touches:** queue row click handling.
-- **Branch:**
+- **Branch:** agent/queue-3dot-menu-desktop
 - **Notes:** Synced from Geethub issue #152.
 
 ### bld-background-tab-autoadvance: SoundCloud tracks won't advance to the next track in a background tab
@@ -6007,12 +6011,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #162.
 
 ### cymatics-infinity-invert: Invert the cymatics infinity button
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On cymatics, the infinity button should work the other
   way round: deactivated does what active does now, and vice versa.
 - **Touches:** cymatics infinity toggle.
-- **Branch:**
+- **Branch:** agent/cymatics-infinity-invert
 - **Notes:** Synced from Geethub issue #155.
 
 ### keyboard-shortcuts: Add keyboard shortcuts
@@ -6227,3 +6231,24 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Found by the `bld-background-tab-autoadvance` lane
   2026-09-23, not user-reported yet.
+
+### relink-candidate-list: "Replace link" should show a full results list like the initial paste
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** The per-track replace/refresh-link option should show a
+  proper list of candidate results, the same way pasting a link does on
+  first load, instead of the current limited choices.
+- **Touches:** `track-relink-menu`, `#relinkCandidates`, paste-bar results UI.
+- **Branch:** agent/relink-candidate-list
+- **Notes:** Synced from Geethub issue #176 (title only). Overlaps
+  `relink-soundcloud-suggestions` (same menu) - likely best built in the
+  same lane.
+
+### desktop-library-bg-video-fixed: Library background video shouldn't scroll on desktop
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, the Library's background video scrolls away
+  with the list. It should stay fixed in place while the list scrolls over it.
+- **Touches:** Library view background video CSS.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #175 (title only).
