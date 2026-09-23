@@ -2565,14 +2565,39 @@ function handleGoogleCredential(response){
 // Polls briefly for the async Google Identity Services script (tag in
 // <head>) rather than depending on load ordering between it and this
 // inline script. auto_select:true means returning visitors with exactly
-// one Google session get signed back in with no click at all; first-time
-// consent is the small One Tap corner card, not a full account UI.
+// one Google session get signed back in with no click at all - that path
+// is silent, no UI. The visible corner card only appears when there's no
+// stored consent yet, and Google is supposed to throttle re-showing it
+// after a visitor dismisses it - but that throttle is itself backed by a
+// cookie/FedCM state that third-party-cookie-blocking browsers (Safari by
+// default, hardened Chrome profiles) don't reliably persist, so a
+// dismissal isn't remembered and the card comes back on the very next
+// load, over and over (see issue #136 - "prompts to sign in to email on
+// every load"). LS_ONETAP_DISMISSED is a first-party fallback so *this*
+// app remembers the dismissal even when Google's own throttle doesn't,
+// and stays quiet for a day rather than re-asking on every single visit.
+const LS_ONETAP_DISMISSED = 'ebbless:oneTapDismissedAt';
+const ONETAP_DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 function initGoogleOneTap(attempt){
   if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
+  if (Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
   if (window.google && window.google.accounts && window.google.accounts.id){
     try{
       google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
-      google.accounts.id.prompt();
+      google.accounts.id.prompt((notification) => {
+        // Only a moment that didn't lead to sign-in (blocked, skipped, or
+        // actively dismissed) starts the cooldown - a real credential
+        // still arrives via handleGoogleCredential regardless of this.
+        try{
+          if (notification && (
+            (notification.isNotDisplayed && notification.isNotDisplayed()) ||
+            (notification.isSkippedMoment && notification.isSkippedMoment()) ||
+            (notification.isDismissedMoment && notification.isDismissedMoment())
+          )){
+            lsSet(LS_ONETAP_DISMISSED, Date.now());
+          }
+        } catch(e){}
+      });
     } catch(e){}
     return;
   }
