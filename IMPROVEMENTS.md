@@ -5861,7 +5861,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #152.
 
 ### bld-background-tab-autoadvance: SoundCloud tracks won't advance to the next track in a background tab
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** With the Breathe Love Deep album playing, when a song
   ends while the user is on another browser tab, the next track doesn't
@@ -5871,6 +5871,13 @@ Add entries in this shape:
 - **Branch:** agent/bld-background-tab-autoadvance
 - **Notes:** Synced from Geethub issue #144. User update 2026-09-23: this
   seems to affect ALL SoundCloud-sourced links, not just Breathe Love Deep.
+  Lane pushed `7e36ed3`: root cause was the standby SoundCloud deck
+  autoplaying, and SoundCloud only lets one widget play, so it paused the
+  active track (resumed only on tab return). Standby deck no longer
+  autoplays, volume re-applied after `widget.load()` (resets to 100), plus
+  a guard that re-pauses a stray standby play. Also fixes Next on a
+  SoundCloud album showing "paused". Not re-tested in a truly hidden tab
+  after the fix.
 
 ### safari-splash-bg-video: Splash background video doesn't load on Safari
 - **Status:** draft
@@ -6208,3 +6215,15 @@ Add entries in this shape:
   Pairs with `discover-pooled-affinity` (more signals make the pool useful
   faster) - both land near the Discover section of index.html, so run them
   one after the other, not in parallel, to avoid a merge conflict.
+
+### soundcloud-crossfade-cut: Crossfade between two SoundCloud tracks likely cuts instead of fading
+- **Status:** draft
+- **Priority:** medium
+- **Description:** SoundCloud only lets one embedded widget play at a
+  time, so when crossfade starts the incoming SoundCloud deck, the outgoing
+  one is probably paused instantly - a hard cut instead of a fade. Confirm
+  and find a way to overlap them (e.g. stream one via a different method).
+- **Touches:** crossfade engine, SoundCloud deck adapter.
+- **Branch:**
+- **Notes:** Found by the `bld-background-tab-autoadvance` lane
+  2026-09-23, not user-reported yet.
