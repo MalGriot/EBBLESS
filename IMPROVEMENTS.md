@@ -4411,7 +4411,7 @@ Add entries in this shape:
   playback" section to `README.md` documenting the approach.
 
 ### tutorial-text-overflow-button-animation: Tutorial text overflows screen and hides shuffle/loop buttons; needs press animation
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** During the onboarding tutorial, some caption text
   stretches off screen and becomes unreadable, and the shuffle/loop
@@ -4420,8 +4420,101 @@ Add entries in this shape:
   pressed so it's clear what's being demonstrated.
 - **Touches:** onboarding/tutorial flow (`runIntro()`), caption
   positioning/sizing for the shuffle/loop beat.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/tutorial-text-overflow-button-animation`
 - **Notes:** Synced from Geethub issue #129.
+
+  **Root cause:** `placeCaptionNear()` (the function `setCaption()` uses to
+  anchor `#onbCaption` next to whatever beat it's narrating, ~line 8213)
+  places the caption below its target by default (`top = r.bottom + gap`),
+  but flips to placing it *above* the target whenever the default spot
+  would run off the bottom of the viewport
+  (`else if (top + 70 > vh - 16)`). `#onbCaption` is positioned by its
+  *top* edge (`transform:translate(-50%,0)` in the CSS, ~line 1218) and
+  grows downward from there, so an "above" placement has to subtract the
+  pill's own rendered height to actually clear the target - the
+  `forceAbove` branch right next to it already did this (`r.top - gap -
+  40`), but the auto-flip `else if` branch didn't: it just used `r.top -
+  gap`, which puts the caption's top edge barely above the target's top
+  edge and lets the ~48px-tall pill hang straight down over it. The
+  shuffle/repeat buttons sit in `.controls-row` at the bottom of the
+  transport row, which is exactly the part of the player view most likely
+  to trip this auto-flip on shorter viewports - hence the caption boxes
+  for "Shuffle it" / "Loop it" specifically (not any of the beats whose
+  targets stay clear of the bottom edge) reliably covering the very
+  buttons they were narrating. A byte-identical copy of the same bug
+  existed in `capPlaceNear()` (~line 9034), the mirror of this function
+  used by the `?introBeat=<name>` debug-capture hook.
+
+  Text overflowing the viewport at narrow widths was **not** a second,
+  separate bug - `fitOnbCaptionLine()` (~line 7968) already steps the
+  caption's font-size down until its unwrapped width fits a
+  viewport-relative budget, and `placeCaptionNear()`'s horizontal clamp
+  (`halfCap`/`cx`) already keeps the pill's center far enough from either
+  edge. Testing at 320px/375px/390px/desktop widths across every beat
+  found no horizontal overflow before or after this change - the
+  ticket's "stretches off screen" symptom was the vertical
+  covering-the-button bug described above, which reads as "overflow"
+  when the pill's edge hangs past the button it's supposed to leave
+  clear.
+
+  **Fix (this branch):** in both `placeCaptionNear()` and its
+  `capPlaceNear()` mirror, measure the caption pill's actual rendered
+  height (`captionEl.getBoundingClientRect().height`, falling back to 49
+  if unavailable) right after the beat's text/font-size are set, and
+  subtract that from `r.top - gap` in the auto-flip branch, matching what
+  `forceAbove` already did (also switched `forceAbove`'s own hardcoded
+  `- 40` to the same measured `capH`, so both paths agree and the
+  fix isn't just special-cased to shuffle/repeat - any beat whose target
+  sits near the bottom edge on a short viewport benefits the same way).
+  This repositions the caption, not the button, per the ask - the
+  shuffle/repeat buttons themselves are untouched.
+
+  **Press animation:** already implemented and untouched by this fix -
+  `tap(shuffleBtn, true)` / `tap(repeatBtn, true)` (repeat gets three
+  taps, one per off/all/one state change) trigger the existing
+  `.onb-tap` squash-overshoot keyframe plus the `.onb-tap-ring` accent
+  ring pulse, the same "just tapped" treatment already used on the Load
+  button, art-style options, viz/lyrics tabs, and the like heart. The
+  ticket read as if this were missing, but it was just invisible in
+  practice: whenever the covering bug above put the opaque caption pill
+  (`z-index:10004`, above everything else in the intro) directly over
+  the button, the tap/ring animation played *underneath* it and was
+  never seen. Confirmed the animation itself is real and legible by
+  temporarily slowing its CSS duration to 4s in a live devtools session
+  and screenshotting mid-animation (see Verified below) - no code change
+  was needed here beyond unblocking the view of it.
+
+  **Verified:** `node --check` on the extracted inline `<script>` passes
+  (see the pattern used by other merged lanes above). Ran the app live
+  in the Browser pane against a plain `python3 -m http.server` pointed at
+  *this worktree* (the project's own `.claude/launch.json` "ebbless"
+  config was, for the current multi-session setup, actually serving the
+  main checkout's `index.html` at cwd `/Users/malcolm/Documents/CLAUDE-
+  CODE/EBBLESS` rather than this worktree - confirmed via `lsof`'s `cwd`
+  on the listening process - so verification used a second, throwaway
+  server rooted in this worktree instead; nothing about the main checkout
+  was touched). Used the existing `?introBeat=shuffle` / `?introBeat=
+  repeat` debug-capture hooks to get clean, static screenshots of both
+  beats at 320px, 375x400 (short/narrow - the height that actually
+  reproduces the original bug, confirmed both before-fix, where the
+  caption's measured rect overlapped the button's rect, and after-fix,
+  where it no longer does), 375x812 (normal phone), and desktop widths -
+  caption sits below the button with a clean gap at normal heights and
+  correctly flips above with a matching gap at the short height, on both
+  shuffle and repeat, with no horizontal overflow at any width. Also
+  screenshotted several other beats (`power-mobile`, `library-panel`,
+  `bug`, `viz`, `discovery`) at 320-375px to confirm the shared-function
+  fix didn't regress their positioning. Ran the real `?intro` sequence
+  live end to end to confirm timing/order of beats through the shuffle/
+  repeat/discovery/settings beats is unaffected. Confirmed the tap/ring
+  press animation itself renders correctly (ring pulse + icon
+  squash-overshoot) via a temporary slowed-duration override in a live
+  session, screenshotted mid-pulse. **Not independently re-verified:**
+  the `preview` (`runIntro(true)`) parameter's behavior beyond what
+  `?intro` already exercises (the two paths use the same code); this is
+  no different from the untouched-by-this-fix behavior already covered
+  by the code's own comments and doesn't touch anything this change
+  modified.
 
 ### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
 - **Status:** merged

@@ -8230,12 +8230,22 @@ function runIntro(preview){
     // letting it run off the edge of the screen
     const halfCap = Math.min(300, vw * 0.78) / 2 + 12;
     const cx = Math.min(Math.max(r.left + r.width / 2, halfCap), vw - halfCap);
+    // #onbCaption is positioned by its top edge (transform:translate(-50%,0)),
+    // so an "above" placement has to subtract the pill's own rendered height
+    // or the box just hangs down over the target instead of clearing it -
+    // this bit the transport row hardest (shuffle/repeat sit low enough on
+    // shorter viewports to trip the auto-flip below), where the caption
+    // ended up covering the very button it was narrating. Measured live
+    // (span/font-size are already set by fitOnbCaptionLine() by this point)
+    // rather than a flat guess, since the pill's height shifts with the
+    // clamp(...) font-size across viewport widths.
+    const capH = captionEl.getBoundingClientRect().height || 49;
     let top = r.bottom + gap, above = false;
     // a forced-above placement (e.g. a menu's trigger button, which the
     // menu itself opens downward from) needs more clearance than the
     // default gap so the caption doesn't crowd the button it's pointing at
-    if (forceAbove){ top = r.top - gap - 40; above = true; }
-    else if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
+    if (forceAbove){ top = r.top - gap - capH; above = true; }
+    else if (top + 70 > vh - 16){ top = r.top - gap - capH; above = true; }
     captionEl.style.left = cx + 'px';
     captionEl.style.top = top + 'px';
     captionEl.classList.toggle('onb-cap-above', above);
@@ -9041,9 +9051,12 @@ if (introBeatCapture){
     // letting it run off the edge of the screen
     const halfCap = Math.min(300, vw * 0.78) / 2 + 12;
     const cx = Math.min(Math.max(r.left + r.width / 2, halfCap), vw - halfCap);
+    // mirrors placeCaptionNear()'s fix: measure the pill's real height so an
+    // "above" placement clears the target instead of hanging down over it
+    const capH = capCaption.getBoundingClientRect().height || 49;
     let top = r.bottom + gap, above = false;
-    if (forceAbove){ top = r.top - gap - 40; above = true; }
-    else if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
+    if (forceAbove){ top = r.top - gap - capH; above = true; }
+    else if (top + 70 > vh - 16){ top = r.top - gap - capH; above = true; }
     capCaption.style.left = cx + 'px';
     capCaption.style.top = top + 'px';
     capCaption.classList.toggle('onb-cap-above', above);
