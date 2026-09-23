@@ -6197,7 +6197,9 @@ function onDeckConfirmed(deck){
 
 function onDeckStateChange(deck, e){
   if (deck !== activeDeck()) return;
-  if (e.data === YT.PlayerState.PLAYING) setPlayingUI(true);
+  // mid pause-fade the deck is still audibly playing, but the UI already
+  // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
+  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)) setPlayingUI(true); }
   else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
@@ -7488,15 +7490,103 @@ function loadIndex(pos, autoplay){
   maybeExtendDiscoverQueue();
 }
 
+/* ---------- pause/resume volume fade (pause-fade-out) ----------
+   Pausing eases the active deck's volume down to silence before actually
+   pausing it; resuming starts it at silence and eases back up to
+   effectiveVolume(). Every pause/resume entry point (play buttons, flow/
+   mini/queue players, keyboard, media session / lock screen / headset,
+   PiP mini player) funnels through pausePlayback/resumePlayback/playIndex's
+   same-track toggle, so hooking here covers them all.
+
+   playFade tracks the one in-flight fade and its current gain (0..1), so a
+   pause pressed mid-fade-in (or a resume mid-fade-out) reverses smoothly
+   from wherever the volume currently is instead of jumping. The deck's
+   volume is always put back to effectiveVolume() the moment a fade-out
+   finishes (the deck is paused by then, so it's silent) - nothing else that
+   calls playVideo() directly (lyrics click-to-seek, ad-confirm, crossfade)
+   can ever inherit a stuck-low volume. The UI flips immediately on press;
+   onDeckStateChange ignores the PLAYING events a deck still emits while it
+   fades out. A fade yields (volume restored, no pause) if the track changes
+   under it or a track-to-track crossfade takes over the deck's volume. */
+const PAUSE_FADE_OUT_MS = 550;
+const PAUSE_FADE_IN_MS = 320;
+const PAUSE_FADE_TICK_MS = 16;
+// how long a fade-in holds at silence waiting for the player to report it's
+// actually playing again (YT/SC take a beat to restart) before giving up
+const PAUSE_FADE_START_WAIT_MS = 1500;
+let playFade = null;
+
+function isFadingOut(deck){ return !!(playFade && playFade.dir === 'out' && (!deck || playFade.deck === deck)); }
+
+function runPlayFade(deck, dir){
+  const prev = (playFade && playFade.deck === deck) ? playFade : null;
+  if (playFade) clearTimeout(playFade.timer);
+  const from = prev ? prev.gain : (dir === 'out' ? 1 : 0);
+  const to = dir === 'out' ? 0 : 1;
+  const dur = Math.max(1, Math.abs(to - from) * (dir === 'out' ? PAUSE_FADE_OUT_MS : PAUSE_FADE_IN_MS));
+  const f = playFade = { deck, dir, gain: from, qpos: state.queuePos, gen: deck.gen, start: Date.now(), waitStart: Date.now(), timer: null };
+  const setVol = (g) => { if (deck.player && deck.player.setVolume) deck.player.setVolume(Math.round(effectiveVolume() * g)); };
+  const tick = () => {
+    if (playFade !== f) return;
+    // The track changed underneath (next/prev/queue click) or a crossfade
+    // now owns this deck's volume - stand down without pausing anything.
+    if (activeDeck() !== deck || deck.gen !== f.gen || state.queuePos !== f.qpos || swapInProgress){
+      playFade = null;
+      if (activeDeck() === deck && !swapInProgress) setVol(1);
+      return;
+    }
+    if (dir === 'in' && from === 0){
+      const s = deck.player && deck.player.getPlayerState ? deck.player.getPlayerState() : 1;
+      if (s !== 1){
+        const waited = Date.now() - f.waitStart;
+        if (waited < PAUSE_FADE_START_WAIT_MS){ setVol(0); f.start = Date.now(); f.timer = setTimeout(tick, PAUSE_FADE_TICK_MS); return; }
+        // never actually started (autoplay blocked, etc) - don't leave the
+        // volume parked at 0 or the UI claiming it's playing
+        playFade = null;
+        setVol(1);
+        if (s !== 3) setPlayingUI(false);
+        return;
+      }
+    }
+    const p = Math.min(1, (Date.now() - f.start) / dur);
+    // fade-out: sine ease-in-out (a gentle shoulder, then a soft landing);
+    // fade-in: sine ease-out (comes up quickly, settles into full volume)
+    const e = dir === 'out' ? 0.5 - 0.5 * Math.cos(Math.PI * p) : Math.sin(Math.PI / 2 * p);
+    f.gain = from + (to - from) * e;
+    setVol(f.gain);
+    if (p < 1){ f.timer = setTimeout(tick, PAUSE_FADE_TICK_MS); return; }
+    playFade = null;
+    if (dir === 'out'){
+      if (deck.player && deck.player.pauseVideo) deck.player.pauseVideo();
+      setVol(1);
+    }
+  };
+  tick();
+}
+
+function fadeOutAndPause(deck){
+  if (swapInProgress) cancelCrossfade();
+  setPlayingUI(false);
+  runPlayFade(deck, 'out');
+}
+function fadeInAndPlay(deck){
+  const wasFadingOut = isFadingOut(deck);
+  if (!wasFadingOut && deck.player.setVolume) deck.player.setVolume(0);
+  if (deck.player.playVideo) deck.player.playVideo();
+  setPlayingUI(true);
+  runPlayFade(deck, 'in');
+}
+
 function resumePlayback(){
   const ad = activeDeck();
   if (!ad.player){ if (state.queuePos >= 0) loadIndex(state.queuePos, true); return; }
   const s = ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
-  if (s !== 1 && ad.player.playVideo) ad.player.playVideo();
+  if (s !== 1 || isFadingOut(ad)) fadeInAndPlay(ad);
 }
 function pausePlayback(){
   const ad = activeDeck();
-  if (ad.player && ad.player.pauseVideo) ad.player.pauseVideo();
+  if (!ad.player || !ad.player.pauseVideo || isFadingOut(ad)) return;
+  fadeOutAndPause(ad);
 }
 
 function playIndex(pos){
@@ -7504,7 +7594,7 @@ function playIndex(pos){
   if (!ad.player){ loadIndex(pos, true); return; }
   if (pos === state.queuePos){
     const s = ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
-    if (s === 1) ad.player.pauseVideo(); else ad.player.playVideo();
+    if (s === 1 && !isFadingOut(ad)) fadeOutAndPause(ad); else fadeInAndPlay(ad);
     return;
   }
   loadIndex(pos, true);
