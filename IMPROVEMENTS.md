@@ -4516,6 +4516,117 @@ Add entries in this shape:
   by the code's own comments and doesn't touch anything this change
   modified.
 
+  **Round 2 (live user testing feedback):** after the fix above shipped,
+  the user tested it live and asked for three refinements to the same
+  positioning code: (1) the accent "tab" (the `::before` bar) should stay
+  pointed at the actual target even when the bubble's own position gets
+  clamped for on-screen safety, not just drift wherever the bubble's
+  center lands; (2) full off-screen clamping - vertical as well as
+  horizontal, and based on the bubble's real rendered size rather than an
+  assumed budget; (3) stop force-shrinking long captions onto one line -
+  let them wrap across a couple of lines at a readable font size instead.
+
+  **Change 1 - decoupled the tab from the bubble's center.** Extracted a
+  new shared top-level function, `positionOnbBubble(bubbleEl, r, vw, vh,
+  mode, forceAbove, gapOverride)` (defined next to `fitOnbCaptionLine()`,
+  ~line 7968), used by all three caption-bubble positioners:
+  `placeCaptionNear()` (~8213, mode `'below'`), its `?introBeat=` mirror
+  `capPlaceNear()` (~9091, same mode), and `placeMainCaptionNear()`
+  (~8356, mode `'above'` - the persistent "Paste a playlist..." label,
+  which turned out to have the exact same issues and wasn't previously
+  clamped for on-screen safety at all). Having all three go through one
+  function was itself a fix: the live/capture pair had already drifted
+  out of sync once during round 1 and needed the same bugfix applied
+  twice by hand.
+
+  The bubble's own horizontal position (`cx`) is still clamped to stay on
+  screen, but the accent tab is now positioned independently via a new
+  `--tab-shift` CSS custom property (`left:calc(50% + var(--tab-shift,
+  0px))` on `#onbCaption span::before` / `#onbCaptionMain span::before`,
+  ~line 1218/1255) - a real speech-bubble-tail technique. `tabShift` is
+  computed as `targetCenterX - cx`, clamped to stay inset 18px from the
+  bubble's own rounded edges so it never points off the bubble itself
+  when the target's center falls entirely outside the bubble's width
+  (e.g. shuffle at a 200px-wide viewport, where the button sits far
+  enough left that the bubble can't be centered on it and stay on
+  screen).
+
+  **Change 2 - full, size-aware off-screen clamping.** `positionOnbBubble`
+  now measures the bubble's actual rendered `getBoundingClientRect()`
+  (both width and height, both now legitimately variable since captions
+  can wrap - see Change 3) instead of relying on the old fixed
+  `halfCap`/`70`-px assumptions. Horizontal clamp uses the real width
+  (falls back to centering dead-center only if the bubble is wider than
+  the viewport has room for). The below/above flip threshold now compares
+  against the real measured height instead of a flat `70`. After
+  choosing above vs. below, a final safety clamp forces `top` into
+  `[8, vh - capH - 8]` regardless of which branch picked it - this is
+  the part that actually satisfies "doesn't go off screen either": a
+  target hard against the top edge (with `forceAbove`, or `#onbCaptionMain`
+  which always sits above), or a tall multi-line bubble near the bottom
+  edge, both used to be able to clip past the viewport before this.
+
+  **Change 3 - captions wrap instead of shrinking.** Removed
+  `white-space:nowrap` from `#onbCaption span` and `#onbCaptionMain span`
+  (~line 1221/1254). Rewrote `fitOnbCaptionLine()` (~line 7968): it used
+  to measure the text's natural unwrapped `scrollWidth` and shrink
+  `font-size` in a loop (down to as low as 11px) until it fit on one
+  line, then lock `max-width` to that exact content width. It now just
+  sets `max-width` to a sensible viewport-relative budget (`min(vw*0.86,
+  300)`, or `min(vw*0.92, 560)` for the plain-style "Flow with the go"
+  outro beat, matching its own CSS max-width) and leaves the font-size at
+  the CSS's own readable `clamp(14.5px,3vw,17px)` - wrapping is now the
+  CSS's job. The longest real captions in the flow ("Spotify, YouTube,
+  SoundCloud, or Apple Music", "Paste a link to a playlist, album, or
+  song") now wrap to 2 lines at full readable size instead of shrinking
+  to fit one line.
+
+  **A fourth bug found while verifying Change 1+2 together:**
+  `#onbCaption`/`#onbCaptionMain` are `position:fixed` with only `left`
+  set (no `right`) and `width:auto`. That combination shrink-to-fits
+  against the *remaining distance from `left` to the viewport's right
+  edge*, not against the element's own content - round 1's more generous
+  centering (and this round's real-width-based clamp) let `left` land
+  close enough to the right edge, for some targets, that the box would
+  narrow itself and force-wrap short text mid-word (observed: "Loop it"
+  rendering as "Loop" / "it" on two lines at 340px width, purely because
+  `left` happened to be far enough right that the browser computed a
+  ~65px "available width" for the box, even though the max-width budget
+  allowed ~290px). This was latent before round 1 too, just masked by the
+  old, much more conservative `halfCap` margin that never let `left` get
+  that close to the edge. Fixed by adding `width:max-content` to both
+  `#onbCaption` and `#onbCaptionMain`'s base rules (~line 1218/1263),
+  which sizes the box to its actual (possibly max-width-wrapped) content
+  regardless of where `left` lands - confirmed "Loop it" renders as one
+  line again afterward at the same 340px width that triggered it.
+
+  **Verified (round 2):** `node --check` on the extracted inline
+  `<script>` passes. Re-ran the same worktree-rooted throwaway
+  `python3 -m http.server` approach from round 1 (main checkout still
+  untouched). Confirmed via `getBoundingClientRect()` + screenshots at
+  200px, 320px, 340px, 375px, and desktop widths: the tab visually and
+  numerically points at the target's true center (`tabAbsoluteX` matches
+  `targetCenterX` to sub-pixel precision) both when unclamped (tabShift
+  0) and when clamped (e.g. shuffle at 200px: bubble center 63.4 vs.
+  target 30.4, tab correctly offset to `-33px` landing on 30.4; the
+  "Spotify, YouTube..." caption at 375px: bubble clamped to center 158,
+  target (urlInput) center 138.7, tab offset to `-19.3px` landing on
+  138.7); no bubble edge (top/left/right/bottom) exceeds its viewport in
+  any of these cases, including the `library-panel` beat's "Your
+  playlist lives here" caption which used to sit flush against y=0 at
+  320px and now clamps to `top:8`; both long real captions wrap to 2
+  lines at full readable font size at both a 375px phone width and
+  desktop width, confirmed via screenshot and `getBoundingClientRect()`
+  height (67px = 2 lines vs. the single-line 47.5px). Ran the live
+  `?intro` sequence end to end at 375px and desktop widths with no
+  console errors beyond unrelated Google Identity/FedCM network noise
+  (no network access to Google's services in this sandbox, unrelated to
+  this change). Spot-checked `flow`, `style-record`, and `bug`
+  `?introBeat=` captures for regressions from the shared-function
+  refactor - none found; the `style-record` beat's caption lightly
+  overlapping the track-title text below it is pre-existing (unrelated
+  to shuffle/loop, not touched by either round of this fix).
+
 ### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
 - **Status:** merged
 - **Priority:** medium
