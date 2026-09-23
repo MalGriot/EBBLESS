@@ -8765,7 +8765,7 @@ function runIntro(preview){
     // desktop gets the play/pause + skip keyboard beats; touch just gets
     // the swipe gesture
     if (isTouchDevice){
-      await beat('swipe the artwork to skip tracks', 1600, 500, artworkWrap);
+      await beat('Swipe the artwork to skip tracks', 1600, 500, artworkWrap);
     } else {
       await beat('Space 𓋰 to play/pause', 1100, 300, playBtn);
       if (done) return;
@@ -9019,9 +9019,14 @@ function showSplashChoice(){
   // this hide list - the bug behind "the splash choice buttons go nowhere
   // when tapped" (and, by extension, visitors stuck on the splash forever
   // on a fresh/incognito load, where this choice fires on every visit).
+  //
+  // #onbSkip and #onbCapture aren't part of the "flat black EBBLESS mark"
+  // beat below - a functionless Skip button (no handler yet - that's
+  // runIntro()'s job) and an invisible tap-catcher - so they hide right
+  // away regardless of the brand-beat delay; there's nothing for either of
+  // them to do until the real choice (or the real tutorial) is actually up.
   const backdropEl = $('onbBackdrop'), markEl = $('onbMark'), onbSkipEl = $('onbSkip'), captureEl = $('onbCapture');
-  [backdropEl, markEl, onbSkipEl, captureEl].forEach(el => { if (el) el.style.display = 'none'; });
-  splashEl.classList.add('is-active', 'is-choice');
+  [onbSkipEl, captureEl].forEach(el => { if (el) el.style.display = 'none'; });
   const playBtn = $('splashPlayTutorial'), skipBtn = $('splashSkipTutorial');
   const choose = (next) => {
     splashEl.classList.remove('is-choice');
@@ -9036,6 +9041,24 @@ function showSplashChoice(){
     discardIntroChrome();
     startApp();
   }), { once: true });
+  // Let the flat black EBBLESS mark - already on screen, breathing, since
+  // the very first paint - register on its own for a beat before handing
+  // off to the video-tinted splash and its Tutorial/Enter choice. Without
+  // this, #onbBackdrop/#onbMark got hidden in the same tick this function
+  // ran, before the browser ever painted a frame of them - a first-time
+  // visitor never actually saw plain EBBLESS branding at all, only the
+  // splash's cymatics video with the choice buttons already up. Mirrors
+  // the same "arrive, then move on" shape as sequence()'s own opening
+  // mark-alone beat (1800ms) once the tutorial itself starts - a touch
+  // shorter here since this is a lead-in, not the tutorial's first real
+  // beat. #splash's own splash-reveal (its black-to-video crossfade) only
+  // starts once is-active lands below, so the handoff from onbBackdrop's
+  // flat black to splash-black's own flat black is seamless either way.
+  const BRAND_BEAT_MS = 1300;
+  setTimeout(() => {
+    [backdropEl, markEl].forEach(el => { if (el) el.style.display = 'none'; });
+    splashEl.classList.add('is-active', 'is-choice');
+  }, BRAND_BEAT_MS);
 }
 
 // Runs on the very first visit regardless of device - the sequence already
@@ -9315,7 +9338,7 @@ if (introBeatCapture){
     case 'power-mobile':
       capStage('player');
       capSeedTrack();
-      capCaptionText('swipe the artwork to skip tracks', artworkWrap);
+      capCaptionText('Swipe the artwork to skip tracks', artworkWrap);
       break;
     case 'flow':
       capStage(null);

@@ -4627,6 +4627,98 @@ Add entries in this shape:
   overlapping the track-title text below it is pre-existing (unrelated
   to shuffle/loop, not touched by either round of this fix).
 
+  **Round 3 (two more small asks):**
+
+  **1. Sentence case.** `'swipe the artwork to skip tracks'` was the only
+  caption in the whole sequence starting lowercase - every other caption
+  (`'Tap Load'`, `'Shuffle it'`, `'Loop it'`, etc.) is capitalized.
+  Capitalized both occurrences: the real beat (`await beat(...)`,
+  index.html:8768) and its `?introBeat=power-mobile` debug-capture mirror
+  (`capCaptionText(...)`, index.html:9318). Trivial text-only change, no
+  logic touched.
+
+  **2. Make the flat black EBBLESS screen show first for a first-time
+  visitor.** Investigated live rather than trusting the read-through
+  alone, per the ask. Confirmed there really are two different "black
+  screen with the logo" things: `#splash` (a video-backed, tinted no-FOUC
+  cover that fades from black into the cymatics video) and
+  `#onbBackdrop`/`#onbMark` (a flat, opaque `background:var(--bg))`
+  backdrop with the breathing EBBLESS mark - the thing `sequence()`'s own
+  opening beat uses, and the thing the ask actually means by "the black
+  screen").
+
+  **What a first-time visitor actually saw, confirmed via
+  `getBoundingClientRect()`/class-state checks and screenshots taken as
+  close to page-load as this environment allows (as low as ~250ms after
+  `navigate`, well before any interaction):** `showSplashChoice()`
+  (called for anyone without `ebbless_onboarding_complete` set) hid
+  `#onbBackdrop`/`#onbMark` and activated `#splash`'s choice screen
+  *synchronously*, in the same tick that ran on page load - before the
+  browser's first real paint. So although `#onbBackdrop`/`#onbMark` are
+  static markup, opaque, and already breathing from the raw HTML/CSS
+  before any JS runs, a first-time visitor **never actually saw them at
+  all** - the very first frame ever painted was already the video-tinted
+  splash with the Tutorial/Enter buttons fully up. The flat black mark
+  only ever appeared *after* tapping "Tutorial" (confirmed
+  `sequence()`'s own first beat already holds on it correctly for
+  1800ms, per index.html:8579's `await wait(1800)` before beat 1) - never
+  before the choice was offered.
+
+  Separately, confirmed the tap-into-Tutorial transition itself
+  (`showSplashChoice()`'s `playBtn` click handler) is a single synchronous
+  function call - display restores and `runIntro(false)` both run in the
+  same tick, so no intermediate frame of the splash video or real app UI
+  can be painted in between; verified this cleanly in a live trial (click
+  → screenshot → flat black mark, no glitch) once the click was fired
+  within a normal few-second window of page load. One earlier trial *did*
+  show a garbled frame (real app UI with a corrupted-looking background)
+  a few seconds after clicking - traced this to this environment's own
+  multi-second-to-tens-of-seconds gaps between tool calls occasionally
+  letting the pre-existing 12-second `#splash` hard safety net
+  (index.html:2080, added as a last-resort backstop for a stalled
+  backend/error, comment at index.html:2067) fire while the choice was
+  still legitimately pending - not a real user-facing bug, since a human
+  taps within a second or two, well inside that window, and it isn't
+  something this task touched. Flagging it in case it's worth hardening
+  later (e.g. exempting a live pending choice from that timer), but out
+  of scope here.
+
+  **Fix:** `showSplashChoice()` (index.html:9000) used to hide
+  `#onbBackdrop`/`#onbMark` and activate `#splash`'s choice screen in the
+  same synchronous call. Split that: `#onbSkip`/`#onbCapture` (a
+  functionless Skip button and an invisible tap-catcher - neither part of
+  the actual "black screen" beat) still hide immediately, but hiding
+  `#onbBackdrop`/`#onbMark` and adding `is-active`/`is-choice` to
+  `#splash` now happens after a new `BRAND_BEAT_MS = 1300` timeout. Since
+  `#onbBackdrop`/`#onbMark` are already visible from the static markup
+  and nothing hides them for that first 1300ms, the flat black
+  EBBLESS-mark beat is now genuinely the first thing painted - then it
+  hands off to `#splash`'s own black `.splash-black` layer (already
+  black, so the handoff itself is seamless) before that fades into the
+  video as `splash-reveal` already did. Chose 1300ms as a shorter echo of
+  `sequence()`'s own 1800ms opening-mark beat - registers as a brand
+  moment without feeling like an added wait before the real choice.
+  Scoped only to the first-time-visitor path: a returning visitor
+  (`onboardingComplete === true`) never calls `showSplashChoice()` at all
+  (goes straight through `discardIntroChrome(); startApp();`, per
+  index.html:9341) and is completely unaffected - the existing no-FOUC
+  guarantee for them is untouched.
+
+  **Verified:** `node --check` on the extracted inline `<script>` passes.
+  Live in the Browser pane, worktree-rooted throwaway server again (main
+  checkout untouched): (a) first-time visitor (`localStorage.clear()` +
+  fresh tab + reload) now shows the flat black EBBLESS mark alone at
+  ~244ms post-navigate, `#splash` with no `is-active`/`is-choice` class
+  yet; (b) ~1300ms later `#splash` cleanly activates with the Tutorial/
+  Enter choice, no visible seam; (c) tapping "Tutorial" (within a normal
+  few-second window) transitions cleanly into the flat black
+  mark-breathing tutorial-opening beat, confirmed via screenshot and
+  `document.body.classList` gaining `onb-active`; (d) tapping "Enter"
+  still sets `ebbless_onboarding_complete` and lands correctly in the
+  real app; (e) reloading afterward (returning-visitor path) goes
+  straight to the app at ~378ms with `#splash` already `is-hidden` and no
+  black-screen delay, confirming that path is untouched.
+
 ### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
 - **Status:** merged
 - **Priority:** medium
