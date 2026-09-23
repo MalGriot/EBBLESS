@@ -4382,13 +4382,78 @@ Add entries in this shape:
   Currents playlist cover/art path first.
 
 ### discover-toggle-required: Discover has to be deactivated and reactivated before it works
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** The Discover feature doesn't work on its own - the user
   has to turn it off and back on again before it actually functions.
 - **Touches:** Discover feature toggle/init logic.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/discover-toggle-required`
 - **Notes:** Synced from Geethub issue #127.
+
+  First ruled out the obvious suspects: `isDiscoverOn()` (~line 4234)
+  defaults a never-toggled origin to `true`, the toggle button's markup/
+  `renderDiscoverToggle()` correctly show it on from the very first render,
+  and the click handler correctly flips state on the first press - confirmed
+  live (see verification below) that a completely fresh session, with the
+  toggle never touched, successfully fetches and appends Discover tracks the
+  first time the queue nears its end. So the toggle/default-value logic
+  itself wasn't the defect.
+
+  The real bug was in `extendQueueWithDiscover()` (~line 5234): it guarded
+  re-entrancy with a plain boolean (`discoverExtending`), so a second call
+  for the same origin while one was already in flight returned instantly
+  with no result instead of waiting. Two call sites can legitimately land on
+  the same origin close together - the proactive lookahead
+  (`maybeExtendDiscoverQueue()`, fired from `loadIndex()` once
+  `DISCOVER_LOOKAHEAD` tracks remain) and the "actually hit the end of the
+  queue" fallback in `playNext()` (`extendQueueWithDiscover(originPlId).then(
+  finishQueueAtEnd)`). When the fallback's call landed while the lookahead's
+  fetch was still resolving, the boolean guard made it resolve as a silent
+  no-op, so `finishQueueAtEnd()` read `state.queue.length` before the
+  original fetch had appended anything, concluded Discover had nothing more
+  to offer, and stopped playback via `setPlayingUI(false)` - even though the
+  in-flight fetch was seconds from landing and would have appended tracks in
+  the background moments later. A listener who then toggled Discover off and
+  back on wasn't fixing the toggle itself (it was never off); by the time
+  they noticed playback had stopped and re-engaged with the queue, the
+  stranded fetch had usually already finished appending tracks silently, so
+  the *next* play/skip picked them up and looked like the toggle had fixed
+  it.
+
+  Fix: replaced the boolean flag with a shared in-flight promise
+  (`discoverExtendPromise`). A second caller for the same origin now gets
+  back the *same* promise instead of an instant no-op, so every caller's
+  `.then()` (including `playNext()`'s `finishQueueAtEnd`) only runs after
+  the real fetch has actually resolved and appended whatever it found -
+  no more stale-length reads.
+
+  Verified with a real browser (`python3 -m http.server` from inside this
+  worktree, driven live rather than just reasoned about) against the
+  project's standard test playlist
+  (`https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ`):
+  - On a completely fresh profile (cleared `localStorage`, Discover never
+    toggled), forced the queue to a near-end position with a seed track
+    known to have Last.fm/YouTube-mix data (`Videotape` by Radiohead) and
+    confirmed `maybeExtendDiscoverQueue()` fetched and appended real
+    candidates end to end with zero prior toggle interaction (queue grew
+    32 -> 38 tracks).
+  - Reproduced the race directly: fired `extendQueueWithDiscover()` twice
+    back-to-back for the same origin while the first call was still
+    in-flight. Before the fix this would need re-deriving from a boolean
+    (not testable as a promise); after the fix, confirmed both calls
+    return `===` the same promise, and the second caller's `.then()` sees
+    the fully-updated `state.queue.length` (38, not the stale 32) once the
+    fetch resolves - the exact condition that used to make `finishQueueAtEnd`
+    stop playback prematurely.
+  - Manually toggled Discover off and back on via the Queue panel UI and
+    confirmed the button still renders and responds correctly (unaffected
+    by this change, since the toggle-state code itself wasn't touched).
+
+  Caveat: this fixes the race between the two extension call sites: it
+  doesn't change the pre-existing, expected "best-effort" behavior where
+  Discover legitimately finds nothing for an obscure seed track with no
+  Last.fm/YouTube-mix data (acknowledged in the code's own comments as a
+  known limitation, not a bug).
 
 ### queue-drag-reorder-glitch-regression: Dragging a queue track up glitches again
 - **Status:** merged
