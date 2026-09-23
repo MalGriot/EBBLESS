@@ -5095,7 +5095,7 @@ Add entries in this shape:
   screenshots alone.
 
 ### email-signin-prompt-loop: App asks to sign in to email account on every load
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Every time the app loads, it prompts the user to sign in
   to their email account. This should not happen on every load - diagnose
@@ -5105,12 +5105,23 @@ Add entries in this shape:
 - **Touches:** unknown - likely auth/account or notification-permission flow
   triggered during app init.
 - **Branch:** `agent/email-signin-prompt-loop`
+- **Notes:** Synced from Geethub issue #136. Root cause: `initGoogleOneTap()`
+  called `google.accounts.id.prompt()` unconditionally on every load with no
+  memory of a dismissal - browsers that don't reliably persist Google's own
+  cookie/FedCM throttle (Safari, hardened Chrome profiles) would see it
+  every single time. Fix: added a 24h `localStorage`-backed dismissal
+  cooldown (`ebbless:oneTapDismissedAt`), set only when the moment-
+  notification callback reports the prompt was not displayed/was skipped/
+  was dismissed - a genuine sign-in still works unaffected. Verified:
+  dismissal timestamp stays frozen across repeated reloads and the prompt
+  does not re-fire within the cooldown; no new JS errors introduced.
+  Pushed as commit `286c784`.
 - **Notes:** Synced from Geethub issue #136. Issue body had no further
   detail beyond the title. Flagged high priority - a sign-in prompt on
   every load is a bad first-run/every-run experience.
 
 ### breathe-love-deep-track-order: "Breathe Love Deep" skips "Gasp", starts on "Deep" instead
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Playing the "Breathe Love Deep" album skips the track
   "Gasp" and starts playback on "Deep" instead, even though the album title
@@ -5120,6 +5131,19 @@ Add entries in this shape:
   `breathe-love-deep-album` and `breathe-love-deep-soundcloud-pull` (both
   merged) - track list/order resolution for this album specifically.
 - **Branch:** `agent/breathe-love-deep-track-order`
+- **Notes:** Synced from Geethub issue #134. Root cause was not a live
+  ordering bug - a fresh resolve of the real SoundCloud set (verified
+  directly against SoundCloud's API and the deployed worker) is correct:
+  10 tracks, Gasp first. The bug reproduces only from a stale cached
+  playlist object left over from before the two earlier Breathe Love Deep
+  fixes landed. `beginImport()` already self-healed stale caches, but three
+  other paths that also serve a cached playlist didn't: `playPlaylistNow()`
+  (the actual library play button), the tracklist panel
+  (`toggleLibraryPlaylistPanel()`), and `seedStarterLibrary()`. All three
+  now run the same `isResolveStale`/`reResolveStaleInBackground` check.
+  Verified by injecting a synthetic stale cache and confirming it
+  reproduced the exact reported bug, then self-healed within ~5s and
+  played correctly on the next attempt. Pushed as commit `3adaf8b`.
 - **Notes:** Synced from Geethub issue #134. Related to (but not a
   duplicate of) `breathe-love-deep-album` and
   `breathe-love-deep-soundcloud-pull` - those fixed categorization and
@@ -5127,7 +5151,7 @@ Add entries in this shape:
   on the same release. Issue body had no further detail beyond the title.
 
 ### fullscreen-artwork-centering: Fullscreen artwork/LP/cassette should be centered to the viewport
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In fullscreen mode, the artwork, LP (spinning record),
   and cassette visuals should be centered to the viewport. Currently they
@@ -5137,6 +5161,20 @@ Add entries in this shape:
   `fullscreen-lp-cassette-visual`, `fullscreen-lp-too-small`, and
   `fullscreen-exit-button-consistency` (all merged/in that area).
 - **Branch:** `agent/fullscreen-artwork-centering`
+- **Notes:** Synced from Geethub issue #137. Mobile/tablet `#flow-layer`
+  was already correctly centered - the bug was desktop split-view
+  fullscreen only (`body.desktop-fs .artwork-wrap`, built by
+  `fullscreen-lp-too-small`): the pane starts below the topbar rather than
+  true viewport top, so flex-centering within the pane put the art ~30px
+  too low at a 900px-tall viewport (barely visible on plain cover art, but
+  clearly visible on the letterboxed record/cassette styles). Fix switches
+  that rule to `position:fixed` centered directly on the true viewport via
+  `top:50%;left:50%;transform:translate(-50%,-50%)`, trading a small
+  symmetric size reduction (topbar reserved on both sides) for exact
+  centering. Verified via `getBoundingClientRect` at 1440x900 (before:
+  center off by 30px vertically; after: exact match), 1150x1400
+  (width-constrained case, no topbar overlap), and 375x812 mobile
+  (unaffected, as expected). Pushed as commit `06645c6`.
 - **Notes:** Synced from Geethub issue #137. Issue body had no further
   detail beyond the title. Worth checking against the most recent
   `fullscreen-exit-button-consistency` fix (commit `e23b9a5`) and
