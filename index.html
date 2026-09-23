@@ -2523,6 +2523,7 @@ const LIKED_ID = 'liked';                    // fixed id for the built-in Liked 
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
+const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
 const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
@@ -5760,17 +5761,51 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
 }
 
 /* ---------- implicit feedback: completed / liked / skipped ---------- */
-// Only discover-origin tracks carry `.tags` (a regular pasted-playlist
-// track never got a /similar lookup), so this is naturally scoped to
-// exactly the data that improves discovery, with no separate tag lookup
-// needed for every track a listener plays.
-function recordListenSignal(track, weight){
-  if (!track || !track.tags || track.tags.length < 2 || !weight) return;
-  const tags = track.tags.slice(0, 8);
+// Discover-origin tracks arrive carrying `.tags` from /similar. Everything
+// else (a pasted Spotify/YouTube/SoundCloud/Apple Music playlist - most of
+// what people actually play) gets its tags looked up lazily via /tags the
+// first time a signal fires on it, remembered per title+artist so each
+// track is only ever looked up once. Fire-and-forget throughout: a finish,
+// like or skip never waits on a lookup.
+const TAG_CACHE_MAX = 2000;
+function tagCacheKey(track){ return ((track.title || '') + '|' + (track.artist || '')).toLowerCase(); }
+async function lookupTrackTags(track){
+  if (!track.title) return [];
+  const cache = lsGet(LS_TAG_CACHE, {});
+  const key = tagCacheKey(track);
+  if (cache[key]) return cache[key];
+  try{
+    const params = new URLSearchParams({ title: track.title, artist: track.artist || '' });
+    const res = await fetch(BACKEND + '/tags?' + params.toString());
+    if (!res.ok) return [];
+    const data = await res.json();
+    const tags = (data.tags || []).map(t => t.name).filter(Boolean).slice(0, 8);
+    // Oldest entries go first once the cache is full - object keys keep
+    // insertion order, so the front of the list is the stalest.
+    const fresh = lsGet(LS_TAG_CACHE, {});
+    const keys = Object.keys(fresh);
+    if (keys.length >= TAG_CACHE_MAX) keys.slice(0, keys.length - TAG_CACHE_MAX + 1).forEach(k => delete fresh[k]);
+    fresh[key] = tags;
+    lsSet(LS_TAG_CACHE, fresh);
+    return tags;
+  } catch(e){ return []; }
+}
+function applyListenSignal(tags, weight, poolTagLimit){
+  if (!tags || tags.length < 2) return;
+  tags = tags.slice(0, 8);
   for (let i = 0; i < tags.length; i++){
     for (let j = i + 1; j < tags.length; j++) bumpGraphPair(tags[i], tags[j], weight);
   }
-  postPoolSignal(tags, weight);
+  postPoolSignal(tags.slice(0, poolTagLimit), weight);
+}
+function recordListenSignal(track, weight){
+  if (!track || !weight) return;
+  if (track.tags && track.tags.length){ applyListenSignal(track.tags, weight, 8); return; }
+  // Looked-up tracks send only their top 4 tags to the shared pool (6 pairs
+  // instead of up to 28): every pair is two KV writes on the worker, and
+  // plain playlist plays vastly outnumber Discover plays - the free-tier
+  // daily write cap was already hit once. The local graph still gets all 8.
+  lookupTrackTags(track).then(tags => applyListenSignal(tags, weight, 4)).catch(() => {});
 }
 
 /* ---------- queue-toggle: endless continuation ---------- */
