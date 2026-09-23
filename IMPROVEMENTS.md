@@ -3667,13 +3667,99 @@ Add entries in this shape:
   volume fades to 0 and the element pauses/resets at ~3.5s.
 
 ### discover-artist-this-is-playlist: Discover should pull from the "This Is [Artist]" Spotify playlist
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** The Discover feature should source from Spotify's
   official "This Is [artist name]" playlists for the relevant artist(s).
 - **Touches:** Discovery source-fetching logic.
-- **Branch:** (unclaimed)
+- **Branch:** agent/discover-artist-this-is-playlist
 - **Notes:** Synced from Geethub issue #107.
+
+  Implemented as an additional source folded into the existing Discover
+  cascade (`fetchDiscoverCandidates` in `index.html`), alongside the
+  Last.fm/ListenBrainz `similar` pool and the YouTube-mix fallback - not a
+  replacement.
+
+  **Worker (`worker/src/index.js`):** new `GET /thisis?artist=` route
+  (`handleThisIsPlaylist`) resolves an artist name to the Spotify playlist
+  id of their official "This Is <Artist>" playlist, when Spotify's own
+  `spotify`-owned account curates one for them (most independent/niche
+  artists don't have one). This is the one Spotify lookup in this codebase
+  that genuinely needs the real Spotify Web API (Client Credentials Flow)
+  rather than a page scrape: unlike a track/album/playlist, fetchable by id
+  via the existing `/embed/` page-scrape trick with no auth, there's no
+  public unauthenticated way to *search* Spotify by name. Verified directly
+  against the live site: open.spotify.com's search and artist pages are now
+  both client-rendered SPAs with no server-embedded `__NEXT_DATA__` (only
+  the `/embed/` pages still have it), and reverse-engineering the web
+  player's private anonymous-token endpoint to call Spotify's internal
+  partner API was deliberately ruled out - that's exactly the kind of
+  undocumented, token-scraping approach this codebase already moved away
+  from once (see the `/spotifyart` comment on why that endpoint moved off
+  the Spotify Web API to iTunes' keyless search instead), and it's also the
+  kind of credential-adjacent scraping this environment's own tooling
+  correctly refused to let me test live.
+
+  So `/thisis` is intentionally optional and gated on
+  `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` Worker secrets (the same pair
+  `/spotifyart` used before Spotify tightened new developer-app creation to
+  Premium accounts in Feb 2026 - reviving that mechanism rather than
+  inventing a new one, on the chance this deployment's account still has an
+  older app's credentials). With no secrets configured - the current,
+  default state of the live deployment - `getSpotifyAppToken` resolves to
+  `null` and the endpoint always answers `{ playlistId: null }`, which the
+  client treats exactly like "no This Is playlist for this artist." Once a
+  playlist id is found, its actual tracklist is fetched through the
+  **existing** `/playlist?id=` embed-scrape (`handleEmbed`/
+  `fetchSpotifyPlaylist`) - no new scraping logic, full reuse. Result cached
+  6h at the edge (`THISIS_CACHE_VERSION`), hit or miss alike, same as other
+  endpoints in this file.
+
+  **Client (`index.html`):** new `fetchThisIsPlaylist(artist)` calls
+  `/thisis`, then (on a hit) `fetchSpotifyPlaylist` for the tracklist, and
+  maps it into the same `{title, artist, matchScore, tags}` candidate shape
+  the rest of the pipeline expects (`matchScore: 0.6`, `tags: []` - no
+  Last.fm tag data, so it's scored on match-score alone via
+  `scoreCandidate`'s existing 30% weight, rather than skipping scoring
+  entirely). `fetchDiscoverCandidates` now fetches this in parallel with the
+  Last.fm `/similar` call and merges any hits into the candidate pool
+  (de-duped by title+artist) before scoring - so "This Is" tracks compete on
+  the same footing as everything else, including the existing same-artist
+  +0.05 / recent-artist -0.15 adjustments already in `scoreCandidate` (most
+  "This Is" tracks are by the seed artist, which that recent-artist penalty
+  is already there to gently temper without excluding a genuinely strong
+  pick). No changes to the Swell/"Current" daily-drop path directly, but it
+  shares `fetchDiscoverCandidates` so it benefits automatically.
+
+  **Verified:** `node --check` on the worker file; the inline app script
+  parses clean (`new Function(...)` over the extracted `<script>` body, no
+  syntax errors). Loaded this worktree's actual `index.html` in a real
+  browser against a throwaway local static server (confirmed via a unique
+  grep marker served back over HTTP - the file being served really was this
+  worktree's, not the main checkout, per the known preview-launcher gotcha),
+  imported the team's standard test playlist, and confirmed the app loads,
+  resolves, and plays a track normally, and that the Queue panel's Discover
+  toggle still renders/toggles correctly - no regressions in the existing
+  pipeline.
+
+  **Not verified / caveats:** the worker changes are not deployed (no
+  `wrangler login` session available in this environment) and no
+  `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` secrets exist on the live
+  Worker, so `/thisis` will 404 against the current production backend
+  until (a) someone runs `wrangler deploy` from `worker/`, and (b) Spotify
+  Client Credentials are actually configured as Worker secrets - until then
+  this is a fully inert, zero-risk no-op and Discover behaves exactly as it
+  does today. I could not exercise a live "This Is" hit end-to-end (no
+  credentials to test against), and couldn't confirm the `/thisis` fetch
+  actually fires from the browser automation tooling available here (its
+  network-request capture didn't record *any* `fetch()`-initiated calls to
+  the existing Worker either, including ones that demonstrably succeeded,
+  e.g. the YouTube search that resolved the track that then played
+  correctly on-screen) - so that's a tooling gap in this verification pass,
+  not a sign the call isn't happening. Whoever configures Spotify
+  credentials for this Worker should sanity-check `/thisis?artist=Drake`
+  (or similar) directly, and confirm a queue extension actually surfaces a
+  "This Is" track for an artist known to have one.
 
 ### cymatics-fullscreen-dot-density: Add more dots to cymatics visualizer in fullscreen
 - **Status:** merged
