@@ -45,6 +45,13 @@ Two intake channels, both feed this same backlog:
      `in-progress` > `ready` > `draft` — then within a tier, by the
      manager's judgment of urgency/impact, always weighting bug fixes ahead
      of new features at the same tier (per Geethub issue #48).
+   - Run this whole step at **minimum token spend**: no play-by-play
+     narration of the sync/dedup work, no restating this protocol before or
+     after, no prose summary alongside the list — the list itself (short,
+     plain-English, one line per entry) is the one required output. This
+     file is thousands of lines; sync and dedup via targeted `grep`/section
+     reads, not a full read. Only break silence for something that actually
+     needs surfacing, like a sync failure or a genuinely ambiguous duplicate.
    - Only after you've picked does the manager act: it runs up to the
      parallelism limit (**2-3 lanes at once**) across whichever entries are
      now `ready`, are already `in-progress`, or were left unfinished from a
