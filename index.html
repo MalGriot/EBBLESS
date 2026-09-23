@@ -3746,6 +3746,13 @@ function toggleLibraryPlaylistPanel(id){
 
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
+  // Same staleness check as playPlaylistNow/beginImport - this is the
+  // tracklist view itself, exactly where a listener would notice a track
+  // like "Gasp" missing from a stale cached copy of an album. Refreshes
+  // the library card in the background; the open panel keeps showing this
+  // stale snapshot until closed and reopened, same eventual-consistency
+  // tradeoff reResolveStaleInBackground already makes elsewhere.
+  if (isResolveStale(pl)) reResolveStaleInBackground(id, pl.type);
 }
 
 libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
@@ -4652,6 +4659,17 @@ function playPlaylistNow(id){
   setView('player');
   buildQueueFrom(0, pl.id);
   loadIndex(state.queuePos, true);
+  // Same staleness check beginImport already does for a cached playlist
+  // about to play (see isResolveStale/reResolveStaleInBackground) - this is
+  // the *other* place a cached playlist starts playing (the library card's
+  // play button, rather than re-pasting/reimporting its link), and it was
+  // missing this check entirely: a playlist cached under an older resolve
+  // version - e.g. one added to the library before a source-parsing fix
+  // landed - would play its stale, possibly wrong or incomplete, tracklist
+  // forever with no self-heal. Doesn't rewrite the queue this click already
+  // built (a mid-playback swap would be jarring), but keeps the cache from
+  // going stale-forever the way it could before.
+  if (isResolveStale(pl)) reResolveStaleInBackground(id, pl.type);
 }
 
 /* =========================================================================
@@ -4865,7 +4883,14 @@ async function seedStarterLibrary(){
       id = parsed.id;
       type = parsed.type;
     }
-    if (getCachedPlaylist(id)){ saveToLibrary(id); continue; }
+    // Reuse an existing cache only if it isn't stale (see isResolveStale) -
+    // a listener whose starter items were seeded before a source-parsing
+    // fix landed (e.g. the SoundCloud album resolving/track-list fixes this
+    // album already went through once) would otherwise carry that same
+    // stale, possibly wrong or incomplete tracklist forward indefinitely,
+    // since seeding only ever runs once for a first-time/empty library.
+    const cached = getCachedPlaylist(id);
+    if (cached && !isResolveStale(cached)){ saveToLibrary(id); continue; }
     try{
       await resolvePlaylist(id, type, () => {});
       saveToLibrary(id);
