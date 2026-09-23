@@ -4411,7 +4411,7 @@ Add entries in this shape:
   playback" section to `README.md` documenting the approach.
 
 ### tutorial-text-overflow-button-animation: Tutorial text overflows screen and hides shuffle/loop buttons; needs press animation
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** During the onboarding tutorial, some caption text
   stretches off screen and becomes unreadable, and the shuffle/loop
@@ -4422,6 +4422,302 @@ Add entries in this shape:
   positioning/sizing for the shuffle/loop beat.
 - **Branch:** `agent/tutorial-text-overflow-button-animation`
 - **Notes:** Synced from Geethub issue #129.
+
+  **Root cause:** `placeCaptionNear()` (the function `setCaption()` uses to
+  anchor `#onbCaption` next to whatever beat it's narrating, ~line 8213)
+  places the caption below its target by default (`top = r.bottom + gap`),
+  but flips to placing it *above* the target whenever the default spot
+  would run off the bottom of the viewport
+  (`else if (top + 70 > vh - 16)`). `#onbCaption` is positioned by its
+  *top* edge (`transform:translate(-50%,0)` in the CSS, ~line 1218) and
+  grows downward from there, so an "above" placement has to subtract the
+  pill's own rendered height to actually clear the target - the
+  `forceAbove` branch right next to it already did this (`r.top - gap -
+  40`), but the auto-flip `else if` branch didn't: it just used `r.top -
+  gap`, which puts the caption's top edge barely above the target's top
+  edge and lets the ~48px-tall pill hang straight down over it. The
+  shuffle/repeat buttons sit in `.controls-row` at the bottom of the
+  transport row, which is exactly the part of the player view most likely
+  to trip this auto-flip on shorter viewports - hence the caption boxes
+  for "Shuffle it" / "Loop it" specifically (not any of the beats whose
+  targets stay clear of the bottom edge) reliably covering the very
+  buttons they were narrating. A byte-identical copy of the same bug
+  existed in `capPlaceNear()` (~line 9034), the mirror of this function
+  used by the `?introBeat=<name>` debug-capture hook.
+
+  Text overflowing the viewport at narrow widths was **not** a second,
+  separate bug - `fitOnbCaptionLine()` (~line 7968) already steps the
+  caption's font-size down until its unwrapped width fits a
+  viewport-relative budget, and `placeCaptionNear()`'s horizontal clamp
+  (`halfCap`/`cx`) already keeps the pill's center far enough from either
+  edge. Testing at 320px/375px/390px/desktop widths across every beat
+  found no horizontal overflow before or after this change - the
+  ticket's "stretches off screen" symptom was the vertical
+  covering-the-button bug described above, which reads as "overflow"
+  when the pill's edge hangs past the button it's supposed to leave
+  clear.
+
+  **Fix (this branch):** in both `placeCaptionNear()` and its
+  `capPlaceNear()` mirror, measure the caption pill's actual rendered
+  height (`captionEl.getBoundingClientRect().height`, falling back to 49
+  if unavailable) right after the beat's text/font-size are set, and
+  subtract that from `r.top - gap` in the auto-flip branch, matching what
+  `forceAbove` already did (also switched `forceAbove`'s own hardcoded
+  `- 40` to the same measured `capH`, so both paths agree and the
+  fix isn't just special-cased to shuffle/repeat - any beat whose target
+  sits near the bottom edge on a short viewport benefits the same way).
+  This repositions the caption, not the button, per the ask - the
+  shuffle/repeat buttons themselves are untouched.
+
+  **Press animation:** already implemented and untouched by this fix -
+  `tap(shuffleBtn, true)` / `tap(repeatBtn, true)` (repeat gets three
+  taps, one per off/all/one state change) trigger the existing
+  `.onb-tap` squash-overshoot keyframe plus the `.onb-tap-ring` accent
+  ring pulse, the same "just tapped" treatment already used on the Load
+  button, art-style options, viz/lyrics tabs, and the like heart. The
+  ticket read as if this were missing, but it was just invisible in
+  practice: whenever the covering bug above put the opaque caption pill
+  (`z-index:10004`, above everything else in the intro) directly over
+  the button, the tap/ring animation played *underneath* it and was
+  never seen. Confirmed the animation itself is real and legible by
+  temporarily slowing its CSS duration to 4s in a live devtools session
+  and screenshotting mid-animation (see Verified below) - no code change
+  was needed here beyond unblocking the view of it.
+
+  **Verified:** `node --check` on the extracted inline `<script>` passes
+  (see the pattern used by other merged lanes above). Ran the app live
+  in the Browser pane against a plain `python3 -m http.server` pointed at
+  *this worktree* (the project's own `.claude/launch.json` "ebbless"
+  config was, for the current multi-session setup, actually serving the
+  main checkout's `index.html` at cwd `/Users/malcolm/Documents/CLAUDE-
+  CODE/EBBLESS` rather than this worktree - confirmed via `lsof`'s `cwd`
+  on the listening process - so verification used a second, throwaway
+  server rooted in this worktree instead; nothing about the main checkout
+  was touched). Used the existing `?introBeat=shuffle` / `?introBeat=
+  repeat` debug-capture hooks to get clean, static screenshots of both
+  beats at 320px, 375x400 (short/narrow - the height that actually
+  reproduces the original bug, confirmed both before-fix, where the
+  caption's measured rect overlapped the button's rect, and after-fix,
+  where it no longer does), 375x812 (normal phone), and desktop widths -
+  caption sits below the button with a clean gap at normal heights and
+  correctly flips above with a matching gap at the short height, on both
+  shuffle and repeat, with no horizontal overflow at any width. Also
+  screenshotted several other beats (`power-mobile`, `library-panel`,
+  `bug`, `viz`, `discovery`) at 320-375px to confirm the shared-function
+  fix didn't regress their positioning. Ran the real `?intro` sequence
+  live end to end to confirm timing/order of beats through the shuffle/
+  repeat/discovery/settings beats is unaffected. Confirmed the tap/ring
+  press animation itself renders correctly (ring pulse + icon
+  squash-overshoot) via a temporary slowed-duration override in a live
+  session, screenshotted mid-pulse. **Not independently re-verified:**
+  the `preview` (`runIntro(true)`) parameter's behavior beyond what
+  `?intro` already exercises (the two paths use the same code); this is
+  no different from the untouched-by-this-fix behavior already covered
+  by the code's own comments and doesn't touch anything this change
+  modified.
+
+  **Round 2 (live user testing feedback):** after the fix above shipped,
+  the user tested it live and asked for three refinements to the same
+  positioning code: (1) the accent "tab" (the `::before` bar) should stay
+  pointed at the actual target even when the bubble's own position gets
+  clamped for on-screen safety, not just drift wherever the bubble's
+  center lands; (2) full off-screen clamping - vertical as well as
+  horizontal, and based on the bubble's real rendered size rather than an
+  assumed budget; (3) stop force-shrinking long captions onto one line -
+  let them wrap across a couple of lines at a readable font size instead.
+
+  **Change 1 - decoupled the tab from the bubble's center.** Extracted a
+  new shared top-level function, `positionOnbBubble(bubbleEl, r, vw, vh,
+  mode, forceAbove, gapOverride)` (defined next to `fitOnbCaptionLine()`,
+  ~line 7968), used by all three caption-bubble positioners:
+  `placeCaptionNear()` (~8213, mode `'below'`), its `?introBeat=` mirror
+  `capPlaceNear()` (~9091, same mode), and `placeMainCaptionNear()`
+  (~8356, mode `'above'` - the persistent "Paste a playlist..." label,
+  which turned out to have the exact same issues and wasn't previously
+  clamped for on-screen safety at all). Having all three go through one
+  function was itself a fix: the live/capture pair had already drifted
+  out of sync once during round 1 and needed the same bugfix applied
+  twice by hand.
+
+  The bubble's own horizontal position (`cx`) is still clamped to stay on
+  screen, but the accent tab is now positioned independently via a new
+  `--tab-shift` CSS custom property (`left:calc(50% + var(--tab-shift,
+  0px))` on `#onbCaption span::before` / `#onbCaptionMain span::before`,
+  ~line 1218/1255) - a real speech-bubble-tail technique. `tabShift` is
+  computed as `targetCenterX - cx`, clamped to stay inset 18px from the
+  bubble's own rounded edges so it never points off the bubble itself
+  when the target's center falls entirely outside the bubble's width
+  (e.g. shuffle at a 200px-wide viewport, where the button sits far
+  enough left that the bubble can't be centered on it and stay on
+  screen).
+
+  **Change 2 - full, size-aware off-screen clamping.** `positionOnbBubble`
+  now measures the bubble's actual rendered `getBoundingClientRect()`
+  (both width and height, both now legitimately variable since captions
+  can wrap - see Change 3) instead of relying on the old fixed
+  `halfCap`/`70`-px assumptions. Horizontal clamp uses the real width
+  (falls back to centering dead-center only if the bubble is wider than
+  the viewport has room for). The below/above flip threshold now compares
+  against the real measured height instead of a flat `70`. After
+  choosing above vs. below, a final safety clamp forces `top` into
+  `[8, vh - capH - 8]` regardless of which branch picked it - this is
+  the part that actually satisfies "doesn't go off screen either": a
+  target hard against the top edge (with `forceAbove`, or `#onbCaptionMain`
+  which always sits above), or a tall multi-line bubble near the bottom
+  edge, both used to be able to clip past the viewport before this.
+
+  **Change 3 - captions wrap instead of shrinking.** Removed
+  `white-space:nowrap` from `#onbCaption span` and `#onbCaptionMain span`
+  (~line 1221/1254). Rewrote `fitOnbCaptionLine()` (~line 7968): it used
+  to measure the text's natural unwrapped `scrollWidth` and shrink
+  `font-size` in a loop (down to as low as 11px) until it fit on one
+  line, then lock `max-width` to that exact content width. It now just
+  sets `max-width` to a sensible viewport-relative budget (`min(vw*0.86,
+  300)`, or `min(vw*0.92, 560)` for the plain-style "Flow with the go"
+  outro beat, matching its own CSS max-width) and leaves the font-size at
+  the CSS's own readable `clamp(14.5px,3vw,17px)` - wrapping is now the
+  CSS's job. The longest real captions in the flow ("Spotify, YouTube,
+  SoundCloud, or Apple Music", "Paste a link to a playlist, album, or
+  song") now wrap to 2 lines at full readable size instead of shrinking
+  to fit one line.
+
+  **A fourth bug found while verifying Change 1+2 together:**
+  `#onbCaption`/`#onbCaptionMain` are `position:fixed` with only `left`
+  set (no `right`) and `width:auto`. That combination shrink-to-fits
+  against the *remaining distance from `left` to the viewport's right
+  edge*, not against the element's own content - round 1's more generous
+  centering (and this round's real-width-based clamp) let `left` land
+  close enough to the right edge, for some targets, that the box would
+  narrow itself and force-wrap short text mid-word (observed: "Loop it"
+  rendering as "Loop" / "it" on two lines at 340px width, purely because
+  `left` happened to be far enough right that the browser computed a
+  ~65px "available width" for the box, even though the max-width budget
+  allowed ~290px). This was latent before round 1 too, just masked by the
+  old, much more conservative `halfCap` margin that never let `left` get
+  that close to the edge. Fixed by adding `width:max-content` to both
+  `#onbCaption` and `#onbCaptionMain`'s base rules (~line 1218/1263),
+  which sizes the box to its actual (possibly max-width-wrapped) content
+  regardless of where `left` lands - confirmed "Loop it" renders as one
+  line again afterward at the same 340px width that triggered it.
+
+  **Verified (round 2):** `node --check` on the extracted inline
+  `<script>` passes. Re-ran the same worktree-rooted throwaway
+  `python3 -m http.server` approach from round 1 (main checkout still
+  untouched). Confirmed via `getBoundingClientRect()` + screenshots at
+  200px, 320px, 340px, 375px, and desktop widths: the tab visually and
+  numerically points at the target's true center (`tabAbsoluteX` matches
+  `targetCenterX` to sub-pixel precision) both when unclamped (tabShift
+  0) and when clamped (e.g. shuffle at 200px: bubble center 63.4 vs.
+  target 30.4, tab correctly offset to `-33px` landing on 30.4; the
+  "Spotify, YouTube..." caption at 375px: bubble clamped to center 158,
+  target (urlInput) center 138.7, tab offset to `-19.3px` landing on
+  138.7); no bubble edge (top/left/right/bottom) exceeds its viewport in
+  any of these cases, including the `library-panel` beat's "Your
+  playlist lives here" caption which used to sit flush against y=0 at
+  320px and now clamps to `top:8`; both long real captions wrap to 2
+  lines at full readable font size at both a 375px phone width and
+  desktop width, confirmed via screenshot and `getBoundingClientRect()`
+  height (67px = 2 lines vs. the single-line 47.5px). Ran the live
+  `?intro` sequence end to end at 375px and desktop widths with no
+  console errors beyond unrelated Google Identity/FedCM network noise
+  (no network access to Google's services in this sandbox, unrelated to
+  this change). Spot-checked `flow`, `style-record`, and `bug`
+  `?introBeat=` captures for regressions from the shared-function
+  refactor - none found; the `style-record` beat's caption lightly
+  overlapping the track-title text below it is pre-existing (unrelated
+  to shuffle/loop, not touched by either round of this fix).
+
+  **Round 3 (two more small asks):**
+
+  **1. Sentence case.** `'swipe the artwork to skip tracks'` was the only
+  caption in the whole sequence starting lowercase - every other caption
+  (`'Tap Load'`, `'Shuffle it'`, `'Loop it'`, etc.) is capitalized.
+  Capitalized both occurrences: the real beat (`await beat(...)`,
+  index.html:8768) and its `?introBeat=power-mobile` debug-capture mirror
+  (`capCaptionText(...)`, index.html:9318). Trivial text-only change, no
+  logic touched.
+
+  **2. Make the flat black EBBLESS screen show first for a first-time
+  visitor.** Investigated live rather than trusting the read-through
+  alone, per the ask. Confirmed there really are two different "black
+  screen with the logo" things: `#splash` (a video-backed, tinted no-FOUC
+  cover that fades from black into the cymatics video) and
+  `#onbBackdrop`/`#onbMark` (a flat, opaque `background:var(--bg))`
+  backdrop with the breathing EBBLESS mark - the thing `sequence()`'s own
+  opening beat uses, and the thing the ask actually means by "the black
+  screen").
+
+  **What a first-time visitor actually saw, confirmed via
+  `getBoundingClientRect()`/class-state checks and screenshots taken as
+  close to page-load as this environment allows (as low as ~250ms after
+  `navigate`, well before any interaction):** `showSplashChoice()`
+  (called for anyone without `ebbless_onboarding_complete` set) hid
+  `#onbBackdrop`/`#onbMark` and activated `#splash`'s choice screen
+  *synchronously*, in the same tick that ran on page load - before the
+  browser's first real paint. So although `#onbBackdrop`/`#onbMark` are
+  static markup, opaque, and already breathing from the raw HTML/CSS
+  before any JS runs, a first-time visitor **never actually saw them at
+  all** - the very first frame ever painted was already the video-tinted
+  splash with the Tutorial/Enter buttons fully up. The flat black mark
+  only ever appeared *after* tapping "Tutorial" (confirmed
+  `sequence()`'s own first beat already holds on it correctly for
+  1800ms, per index.html:8579's `await wait(1800)` before beat 1) - never
+  before the choice was offered.
+
+  Separately, confirmed the tap-into-Tutorial transition itself
+  (`showSplashChoice()`'s `playBtn` click handler) is a single synchronous
+  function call - display restores and `runIntro(false)` both run in the
+  same tick, so no intermediate frame of the splash video or real app UI
+  can be painted in between; verified this cleanly in a live trial (click
+  → screenshot → flat black mark, no glitch) once the click was fired
+  within a normal few-second window of page load. One earlier trial *did*
+  show a garbled frame (real app UI with a corrupted-looking background)
+  a few seconds after clicking - traced this to this environment's own
+  multi-second-to-tens-of-seconds gaps between tool calls occasionally
+  letting the pre-existing 12-second `#splash` hard safety net
+  (index.html:2080, added as a last-resort backstop for a stalled
+  backend/error, comment at index.html:2067) fire while the choice was
+  still legitimately pending - not a real user-facing bug, since a human
+  taps within a second or two, well inside that window, and it isn't
+  something this task touched. Flagging it in case it's worth hardening
+  later (e.g. exempting a live pending choice from that timer), but out
+  of scope here.
+
+  **Fix:** `showSplashChoice()` (index.html:9000) used to hide
+  `#onbBackdrop`/`#onbMark` and activate `#splash`'s choice screen in the
+  same synchronous call. Split that: `#onbSkip`/`#onbCapture` (a
+  functionless Skip button and an invisible tap-catcher - neither part of
+  the actual "black screen" beat) still hide immediately, but hiding
+  `#onbBackdrop`/`#onbMark` and adding `is-active`/`is-choice` to
+  `#splash` now happens after a new `BRAND_BEAT_MS = 1300` timeout. Since
+  `#onbBackdrop`/`#onbMark` are already visible from the static markup
+  and nothing hides them for that first 1300ms, the flat black
+  EBBLESS-mark beat is now genuinely the first thing painted - then it
+  hands off to `#splash`'s own black `.splash-black` layer (already
+  black, so the handoff itself is seamless) before that fades into the
+  video as `splash-reveal` already did. Chose 1300ms as a shorter echo of
+  `sequence()`'s own 1800ms opening-mark beat - registers as a brand
+  moment without feeling like an added wait before the real choice.
+  Scoped only to the first-time-visitor path: a returning visitor
+  (`onboardingComplete === true`) never calls `showSplashChoice()` at all
+  (goes straight through `discardIntroChrome(); startApp();`, per
+  index.html:9341) and is completely unaffected - the existing no-FOUC
+  guarantee for them is untouched.
+
+  **Verified:** `node --check` on the extracted inline `<script>` passes.
+  Live in the Browser pane, worktree-rooted throwaway server again (main
+  checkout untouched): (a) first-time visitor (`localStorage.clear()` +
+  fresh tab + reload) now shows the flat black EBBLESS mark alone at
+  ~244ms post-navigate, `#splash` with no `is-active`/`is-choice` class
+  yet; (b) ~1300ms later `#splash` cleanly activates with the Tutorial/
+  Enter choice, no visible seam; (c) tapping "Tutorial" (within a normal
+  few-second window) transitions cleanly into the flat black
+  mark-breathing tutorial-opening beat, confirmed via screenshot and
+  `document.body.classList` gaining `onb-active`; (d) tapping "Enter"
+  still sets `ebbless_onboarding_complete` and lands correctly in the
+  real app; (e) reloading afterward (returning-visitor path) goes
+  straight to the app at ~378ms with `#splash` already `is-hidden` and no
+  black-screen delay, confirming that path is untouched.
 
 ### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
 - **Status:** merged

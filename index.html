@@ -1215,18 +1215,30 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
    heart -> shuffle -> repeat) without a jarring jump. Falls back to a
    default lower-center spot (still via left/top) when a beat has no single
    element to point at. */
-#onbCaption{position:fixed;left:50%;top:50%;z-index:10004;pointer-events:none;
+/* width:max-content matters more than it looks: a position:fixed box with
+   only `left` set (no `right`) and width:auto shrink-to-fits against the
+   remaining distance from `left` to the viewport's right edge, not against
+   its own content - so once a beat's target sits close enough to the right
+   edge that positionOnbBubble() (see runIntro()) sets a large `left`, the
+   box would narrow and force-wrap its own text mid-word even though there
+   was room to spare. max-content sizes it to its actual (possibly
+   max-width-wrapped) content instead, independent of where `left` lands. */
+#onbCaption{position:fixed;left:50%;top:50%;width:max-content;z-index:10004;pointer-events:none;
   transform:translate(-50%,0);opacity:0;
   transition:opacity 550ms var(--ease-out),left 550ms var(--ease-out),top 550ms var(--ease-out)}
 #onbCaption span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
   font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:min(300px,78vw);
-  white-space:nowrap;
   background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
   box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(224,178,106,.08) inset;
   padding:13px 22px;border-radius:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-#onbCaption span::before{content:'';position:absolute;left:50%;top:-5px;transform:translateX(-50%);
+/* --tab-shift is set per-beat by positionOnbBubble() (see runIntro()) - the
+   bubble itself is clamped to stay on screen, which can pull its center
+   away from the target it's narrating, so the little accent tab is offset
+   back toward the target's real center independently, like a speech-bubble
+   tail, instead of just tracking the bubble's own midpoint */
+#onbCaption span::before{content:'';position:absolute;left:calc(50% + var(--tab-shift,0px));top:-5px;transform:translateX(-50%);
   width:30px;height:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(224,178,106,.7)}
 /* flipped when the caption sits above its target instead of below it, so
    the little accent tab still points toward the thing it's pointing at */
@@ -1248,18 +1260,19 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
    styling as #onbCaption (this is still EBBLESS talking, just pinned in
    place) with the accent tab flipped to the bottom since it always sits
    above what it's pointing at. */
-#onbCaptionMain{position:fixed;left:50%;top:50%;z-index:10004;pointer-events:none;
+/* width:max-content - see #onbCaption above for why this matters */
+#onbCaptionMain{position:fixed;left:50%;top:50%;width:max-content;z-index:10004;pointer-events:none;
   transform:translate(-50%,-100%);opacity:0;
   transition:opacity 550ms var(--ease-out),left 550ms var(--ease-out),top 550ms var(--ease-out)}
 #onbCaptionMain span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
   font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:min(300px,78vw);
-  white-space:nowrap;
   background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
   box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(224,178,106,.08) inset;
   padding:13px 22px;border-radius:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-#onbCaptionMain span::before{content:'';position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+/* see #onbCaption span::before above - same tab-shift treatment */
+#onbCaptionMain span::before{content:'';position:absolute;left:calc(50% + var(--tab-shift,0px));bottom:-5px;transform:translateX(-50%);
   width:30px;height:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(224,178,106,.7)}
 #onbCaptionMain.is-visible{opacity:1}
 #onbCaption.onb-cap-plain span{background:none;border:none;box-shadow:none;
@@ -7961,20 +7974,97 @@ function startApp(){
    visitor's first load; startApp() (and the real splash) always follows.
    ========================================================================= */
 const ONB_KEY = 'ebbless_onboarding_complete';
-// keeps an #onbCaption span on one line regardless of text length: measures
-// its natural (unwrapped) width against a viewport-relative budget and
-// steps the font-size down until it fits, rather than letting the CSS
-// max-width force a wrap
+// sets a viewport-aware max-width on an #onbCaption/#onbCaptionMain span and
+// leaves wrapping to the CSS's own white-space:normal - long captions wrap
+// across a couple of lines within that width instead of being shrunk to fit
+// on one, which used to force the font size down as low as 11px for the
+// longer beats. Kept at the CSS's own readable clamp(14.5px,3vw,17px)
+// otherwise. The onb-cap-plain "Flow with the go" outro beat gets a wider
+// budget matching its own CSS max-width (min(92vw,560px)) so that one still
+// reads as a single confident line rather than wrapping unnecessarily.
+// placeCaptionNear()/capPlaceNear()/placeMainCaptionNear() each re-measure
+// the bubble's real (possibly multi-line) rendered size via
+// positionOnbBubble() right after this runs, so nothing downstream still
+// assumes a fixed single-line height.
 function fitOnbCaptionLine(span){
-  const budget = Math.min(window.innerWidth * 0.86, 460);
-  span.style.maxWidth = 'none';
   span.style.fontSize = '';
-  let size = parseFloat(getComputedStyle(span).fontSize);
-  while (span.scrollWidth > budget && size > 11){
-    size -= 0.5;
-    span.style.fontSize = size + 'px';
+  const plain = span.parentElement && span.parentElement.classList.contains('onb-cap-plain');
+  span.style.maxWidth = (plain
+    ? Math.min(window.innerWidth * 0.92, 560)
+    : Math.min(window.innerWidth * 0.86, 300)) + 'px';
+}
+// Shared placement math for every #onbCaption-style bubble: the live
+// per-beat caption (placeCaptionNear, in runIntro()), its ?introBeat=
+// debug-capture mirror (capPlaceNear), and the persistent "Paste a
+// playlist..." label (placeMainCaptionNear). Having all three go through
+// one function keeps their on-screen-safety and tab-pointing math from
+// drifting out of sync the way the live/capture copies already once did
+// (see the tutorial-text-overflow-button-animation notes in
+// IMPROVEMENTS.md).
+//
+// `bubbleEl` must already contain the <span> whose text/font were just set
+// (fitOnbCaptionLine above), so its current getBoundingClientRect()
+// reflects the caption's real rendered size for this beat - including
+// multi-line height/width now that captions can wrap. `r` is the target's
+// rect (or unionRect()/capUnionRect() of several targets). `mode` is
+// 'below' (sits below the target, flips above if there's no room - what
+// #onbCaption uses) or 'above' (always sits above, relying on the caller's
+// own translate(...,-100%) to grow the bubble upward from `top` on its own
+// - what #onbCaptionMain uses). Returns whether the bubble ended up
+// "above" its target.
+function positionOnbBubble(bubbleEl, r, vw, vh, mode, forceAbove, gapOverride){
+  const rect = bubbleEl.getBoundingClientRect();
+  const capW = rect.width || 160, capH = rect.height || 49;
+  const gap = gapOverride != null ? gapOverride : 16;
+  const edgePad = 8; // final on-screen safety margin from any viewport edge
+  const targetCx = r.left + r.width / 2;
+  // horizontal: clamp the bubble's own center using its ACTUAL rendered
+  // width (not an assumed budget) so a long, now-wrappable caption can't
+  // still run past either edge - falls back to dead-center only if the
+  // bubble itself is wider than the viewport has room for
+  const halfW = capW / 2;
+  const cx = (halfW * 2 + edgePad * 2 > vw)
+    ? vw / 2
+    : Math.min(Math.max(targetCx, halfW + edgePad), vw - halfW - edgePad);
+  // vertical
+  let top, above;
+  if (mode === 'above'){
+    top = r.top - gap;
+    above = true;
+    // translate(-50%,-100%) grows the bubble upward from `top` on its own,
+    // so the on-screen safety net just has to keep the resulting visual
+    // top edge (top - capH) from going past the top of the viewport
+    if (top - capH < edgePad) top = capH + edgePad;
+  } else {
+    top = r.bottom + gap;
+    above = false;
+    // flip above the target when the default below spot would run off the
+    // bottom - measured against the bubble's real height, not a flat
+    // guess, since bubbles can now be 2-3 lines tall
+    if (forceAbove || (top + capH > vh - 16)){
+      top = r.top - gap - capH;
+      above = true;
+    }
+    // final safety net either way - a target hard against the top edge
+    // with forceAbove, or a tall multi-line bubble near the bottom, can
+    // still end up off-screen otherwise
+    top = Math.max(edgePad, Math.min(top, vh - capH - edgePad));
   }
-  span.style.maxWidth = Math.ceil(span.scrollWidth) + 'px';
+  // the accent tab (the span's ::before "little bar") is centered on the
+  // bubble by default (see --tab-shift in the CSS) - once the bubble's own
+  // center gets clamped away from the target for on-screen safety, offset
+  // the tab back toward the target's real center so it still points at the
+  // thing it's narrating, like a speech-bubble tail. Clamped to stay
+  // inset from the bubble's own rounded corners when the target's center
+  // falls outside the bubble entirely.
+  const inset = 18;
+  const maxShift = Math.max(0, halfW - inset);
+  const tabShift = Math.max(-maxShift, Math.min(maxShift, targetCx - cx));
+  const span = bubbleEl.querySelector('span');
+  if (span) span.style.setProperty('--tab-shift', tabShift.toFixed(1) + 'px');
+  bubbleEl.style.left = cx + 'px';
+  bubbleEl.style.top = top + 'px';
+  return above;
 }
 // Set while a runIntro() instance is live, cleared once it tears itself
 // down - a second call (fast double-tap on Replay, Escape immediately
@@ -8218,26 +8308,13 @@ function runIntro(preview){
       captionEl.style.left = d.left + 'px';
       captionEl.style.top = d.top + 'px';
       captionEl.classList.remove('onb-cap-above');
+      const span = captionEl.querySelector('span');
+      if (span) span.style.setProperty('--tab-shift', '0px');
       if (spotlightEl) spotlightEl.classList.remove('is-visible');
       return;
     }
     const r = els.length > 1 ? unionRect(els) : els[0].getBoundingClientRect();
-    const gap = 16;
-    // half the caption's own max-width (plus a little breathing room), not
-    // a flat margin - a target near either edge (e.g. shuffle/repeat at the
-    // far sides of the transport row) would otherwise clamp the caption's
-    // center in without accounting for how wide the card can actually get,
-    // letting it run off the edge of the screen
-    const halfCap = Math.min(300, vw * 0.78) / 2 + 12;
-    const cx = Math.min(Math.max(r.left + r.width / 2, halfCap), vw - halfCap);
-    let top = r.bottom + gap, above = false;
-    // a forced-above placement (e.g. a menu's trigger button, which the
-    // menu itself opens downward from) needs more clearance than the
-    // default gap so the caption doesn't crowd the button it's pointing at
-    if (forceAbove){ top = r.top - gap - 40; above = true; }
-    else if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
-    captionEl.style.left = cx + 'px';
-    captionEl.style.top = top + 'px';
+    const above = positionOnbBubble(captionEl, r, vw, vh, 'below', forceAbove);
     captionEl.classList.toggle('onb-cap-above', above);
     if (spotlightEl){
       const pad = 10;
@@ -8288,8 +8365,7 @@ function runIntro(preview){
   function placeMainCaptionNear(el){
     if (!el) return;
     const r = el.getBoundingClientRect();
-    captionMainEl.style.left = (r.left + r.width / 2) + 'px';
-    captionMainEl.style.top = (r.top - 14) + 'px';
+    positionOnbBubble(captionMainEl, r, window.innerWidth, window.innerHeight, 'above', false, 14);
   }
   function setMainCaption(text, el){
     if (done) return;
@@ -8689,7 +8765,7 @@ function runIntro(preview){
     // desktop gets the play/pause + skip keyboard beats; touch just gets
     // the swipe gesture
     if (isTouchDevice){
-      await beat('swipe the artwork to skip tracks', 1600, 500, artworkWrap);
+      await beat('Swipe the artwork to skip tracks', 1600, 500, artworkWrap);
     } else {
       await beat('Space 𓋰 to play/pause', 1100, 300, playBtn);
       if (done) return;
@@ -8943,9 +9019,14 @@ function showSplashChoice(){
   // this hide list - the bug behind "the splash choice buttons go nowhere
   // when tapped" (and, by extension, visitors stuck on the splash forever
   // on a fresh/incognito load, where this choice fires on every visit).
+  //
+  // #onbSkip and #onbCapture aren't part of the "flat black EBBLESS mark"
+  // beat below - a functionless Skip button (no handler yet - that's
+  // runIntro()'s job) and an invisible tap-catcher - so they hide right
+  // away regardless of the brand-beat delay; there's nothing for either of
+  // them to do until the real choice (or the real tutorial) is actually up.
   const backdropEl = $('onbBackdrop'), markEl = $('onbMark'), onbSkipEl = $('onbSkip'), captureEl = $('onbCapture');
-  [backdropEl, markEl, onbSkipEl, captureEl].forEach(el => { if (el) el.style.display = 'none'; });
-  splashEl.classList.add('is-active', 'is-choice');
+  [onbSkipEl, captureEl].forEach(el => { if (el) el.style.display = 'none'; });
   const playBtn = $('splashPlayTutorial'), skipBtn = $('splashSkipTutorial');
   const choose = (next) => {
     splashEl.classList.remove('is-choice');
@@ -8960,6 +9041,24 @@ function showSplashChoice(){
     discardIntroChrome();
     startApp();
   }), { once: true });
+  // Let the flat black EBBLESS mark - already on screen, breathing, since
+  // the very first paint - register on its own for a beat before handing
+  // off to the video-tinted splash and its Tutorial/Enter choice. Without
+  // this, #onbBackdrop/#onbMark got hidden in the same tick this function
+  // ran, before the browser ever painted a frame of them - a first-time
+  // visitor never actually saw plain EBBLESS branding at all, only the
+  // splash's cymatics video with the choice buttons already up. Mirrors
+  // the same "arrive, then move on" shape as sequence()'s own opening
+  // mark-alone beat (1800ms) once the tutorial itself starts - a touch
+  // shorter here since this is a lead-in, not the tutorial's first real
+  // beat. #splash's own splash-reveal (its black-to-video crossfade) only
+  // starts once is-active lands below, so the handoff from onbBackdrop's
+  // flat black to splash-black's own flat black is seamless either way.
+  const BRAND_BEAT_MS = 1300;
+  setTimeout(() => {
+    [backdropEl, markEl].forEach(el => { if (el) el.style.display = 'none'; });
+    splashEl.classList.add('is-active', 'is-choice');
+  }, BRAND_BEAT_MS);
 }
 
 // Runs on the very first visit regardless of device - the sequence already
@@ -9029,23 +9128,16 @@ if (introBeatCapture){
       capCaption.style.left = (vw / 2) + 'px';
       capCaption.style.top = (vh - bottomPx) + 'px';
       capCaption.classList.remove('onb-cap-above');
+      const span = capCaption.querySelector('span');
+      if (span) span.style.setProperty('--tab-shift', '0px');
       if (capSpotlight) capSpotlight.classList.remove('is-visible');
       return;
     }
     const r = els.length > 1 ? capUnionRect(els) : els[0].getBoundingClientRect();
-    const gap = 16;
-    // half the caption's own max-width (plus a little breathing room), not
-    // a flat margin - a target near either edge (e.g. shuffle/repeat at the
-    // far sides of the transport row) would otherwise clamp the caption's
-    // center in without accounting for how wide the card can actually get,
-    // letting it run off the edge of the screen
-    const halfCap = Math.min(300, vw * 0.78) / 2 + 12;
-    const cx = Math.min(Math.max(r.left + r.width / 2, halfCap), vw - halfCap);
-    let top = r.bottom + gap, above = false;
-    if (forceAbove){ top = r.top - gap - 40; above = true; }
-    else if (top + 70 > vh - 16){ top = r.top - gap; above = true; }
-    capCaption.style.left = cx + 'px';
-    capCaption.style.top = top + 'px';
+    // mirrors placeCaptionNear()'s positionOnbBubble() - kept as one shared
+    // function (see its definition near fitOnbCaptionLine) so this debug-
+    // capture mirror can't drift out of sync with the live version again
+    const above = positionOnbBubble(capCaption, r, vw, vh, 'below', forceAbove);
     capCaption.classList.toggle('onb-cap-above', above);
     if (capSpotlight){
       const pad = 10;
@@ -9246,7 +9338,7 @@ if (introBeatCapture){
     case 'power-mobile':
       capStage('player');
       capSeedTrack();
-      capCaptionText('swipe the artwork to skip tracks', artworkWrap);
+      capCaptionText('Swipe the artwork to skip tracks', artworkWrap);
       break;
     case 'flow':
       capStage(null);
