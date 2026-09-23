@@ -5555,6 +5555,52 @@ function postPoolSignal(tags, weight){
     }).catch(() => {});
   } catch(e){}
 }
+// The read side of the same pool: what every listener's finishes, likes and
+// skips say about which tags go together. Gives a brand-new listener (empty
+// local graph) a crowd-informed starting point. Capped wait, empty on any
+// failure - a slow pool must never hold up the next Discover pick.
+async function fetchPoolAffinity(seedTagNames){
+  const tags = seedTagNames.slice(0, 8);
+  if (!tags.length) return null;
+  try{
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch(BACKEND + '/pool/affinity?tags=' + encodeURIComponent(tags.join(',')), { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const pairs = new Map();
+    let maxAbs = 0;
+    Object.keys(data.affinities || {}).forEach(a => {
+      (data.affinities[a] || []).forEach(p => {
+        pairs.set(graphPairKey(a, p.tag), p.score);
+        maxAbs = Math.max(maxAbs, Math.abs(p.score));
+      });
+    });
+    if (!pairs.size || !maxAbs) return null;
+    return { pairs, maxAbs };
+  } catch(e){ return null; }
+}
+// Scaled against the strongest pair in this response rather than a fixed
+// divisor, since pooled scores are summed across every listener and grow
+// without bound as EBBLESS gets used.
+function poolBoostFor(pool, seedTagNames, candidateTagNames){
+  if (!pool || !seedTagNames.length || !candidateTagNames.length) return 0;
+  let total = 0, n = 0;
+  seedTagNames.forEach(a => candidateTagNames.forEach(b => { total += pool.pairs.get(graphPairKey(a, b)) || 0; n++; }));
+  if (!n) return 0;
+  return Math.max(0, Math.min(1, (total / n) / pool.maxAbs * 4));
+}
+// Grows with how many pairs the crowd has an opinion on, capped well below
+// the Last.fm similarity it's nudging, and shrinks as this listener's own
+// graph matures - the crowd is the starting point, personal taste the
+// destination.
+function poolConfidence(pool, localConfidence){
+  if (!pool) return 0;
+  const size = pool.pairs.size;
+  const base = Math.min(0.2, size / (size + 40));
+  return base * (1 - (localConfidence / 0.4) * 0.75);
+}
 
 /* ---------- local listening graph ---------- */
 // Every listener quietly builds their own tag-pair affinity table from what
@@ -5606,13 +5652,20 @@ function tagCosineSimilarity(vecA, vecB){
   return dot / (Math.sqrt(magA) * Math.sqrt(magB));
 }
 // candidate: { title, artist, matchScore, tags:[{name,weight}], videoId? }
-function scoreCandidate(seedVec, candidate, seedArtist, recentArtists){
+function scoreCandidate(seedVec, candidate, seedArtist, recentArtists, pool){
   const candVec = normalizeTagList(candidate.tags, 15);
   const tagSim = tagCosineSimilarity(seedVec, candVec);
   let score = (tagSim * 0.7) + ((candidate.matchScore || 0) * 0.3);
+  const seedTagNames = Array.from(seedVec.keys());
+  const candTagNames = (candidate.tags || []).map(t => t.name.toLowerCase());
   const gc = graphConfidence();
+  const pc = poolConfidence(pool, gc);
+  if (pc){
+    const boost = poolBoostFor(pool, seedTagNames, candTagNames);
+    score = score * (1 - pc) + boost * pc;
+  }
   if (gc){
-    const boost = graphBoostFor(Array.from(seedVec.keys()), (candidate.tags || []).map(t => t.name.toLowerCase()));
+    const boost = graphBoostFor(seedTagNames, candTagNames);
     score = score * (1 - gc) + boost * gc;
   }
   const candArtist = (candidate.artist || '').toLowerCase();
@@ -5672,9 +5725,10 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
   }
   if (!pool.length) return [];
 
+  const crowd = await fetchPoolAffinity(Array.from(seedTagVec.keys()));
   const scored = pool
     .filter(c => c.title && c.artist)
-    .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists) }))
+    .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists, crowd) }))
     .sort((a, b) => b.score - a.score)
     .map(x => x.c);
 

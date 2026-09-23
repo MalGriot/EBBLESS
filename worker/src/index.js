@@ -1858,6 +1858,15 @@ async function handlePoolAffinity(url, env, ctx) {
   const tags = (url.searchParams.get('tags') || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, POOL_MAX_TAGS);
   if (!tags.length) return json({ error: 'missing tags' }, 400);
 
+  // Every Discover extension asks this, and each ask is a KV list plus up to
+  // 25 gets per tag - a short edge cache keeps that cheap while still letting
+  // fresh crowd signals show up within minutes. Sorted so tag order doesn't
+  // split the cache.
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/pool-affinity/' + encodeURIComponent(tags.slice().sort().join(',')));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
   const affinities = {};
   await Promise.all(tags.map(async (tag) => {
     const list = await env.TASTE_POOL.list({ prefix: pairKey(tag, ''), limit: 25 });
@@ -1869,7 +1878,12 @@ async function handlePoolAffinity(url, env, ctx) {
     }));
     affinities[tag] = partners.filter(p => p.score !== 0).sort((a, b) => b.score - a.score);
   }));
-  return json({ affinities });
+  const response = json({ affinities });
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=600' },
+  })));
+  return response;
 }
 
 // ---------- POST /report ----------
