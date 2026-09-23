@@ -794,6 +794,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .flow-exit,.flow-art-style-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .flow-exit:hover,.flow-art-style-btn:hover{background:var(--panel-2);color:var(--text)}
 .flow-exit svg,.flow-art-style-btn svg{width:16px;height:16px}
+/* desktop split-view "fullscreen" (toggleDesktopFs) exit button - hidden
+   outside that mode; shown/positioned by the body.split-desktop.desktop-fs
+   rule in the min-width:1150px block below, next to the other .desktop-fs*
+   overrides. Reuses .flow-exit's style so it matches #flowExitBtn exactly
+   (issue #133 - fullscreen-exit-button-consistency). */
+#desktopFsExitBtn{display:none}
 /* the class rule above sets display:flex unconditionally, which - at
    equal specificity - beats the UA stylesheet's [hidden]{display:none}
    in source order, so flowArtStyleBtn.hidden=true (set in openFlow() for
@@ -1052,6 +1058,19 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop.desktop-fs:not(.view-settings-active) .transport-full{
     position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:2;
     width:min(480px,90%);
+  }
+  /* exit-fullscreen button (issue #133): same corner inset (26px) and same
+     .flow-exit visual style #flowExitBtn uses in #flow-layer, so LP/cassette
+     desktop fullscreen (this class-toggle mechanism) and cymatics desktop
+     fullscreen (which still goes through #flow-layer/openFlow(), see
+     fsBtn's click handler) present an identical exit affordance. Positioned
+     relative to the viewport, not #view-player, and offset below the topbar
+     (which - unlike #flow-layer - stays visible here so the Library/Queue
+     drawer toggles in #topnav remain reachable); z-index 45 sits above the
+     fixed player (44) but below the slide-in drawers (46) so an open drawer
+     covers it the same way it would cover anything else in that corner. */
+  body.split-desktop.desktop-fs:not(.view-settings-active) #desktopFsExitBtn{
+    display:flex;position:fixed;top:calc(var(--topbar-h) + 26px);right:26px;z-index:45;
   }
   /* drawer overlays: only reachable while deskFsOpen, so it's fine for
      these to reuse the library/queue panes' own fixed positioning rather
@@ -1576,6 +1595,17 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
   <!-- ===== PLAYER ===== -->
   <main class="view" id="view-player" hidden>
+    <!-- desktop split-view "fullscreen" (toggleDesktopFs/.desktop-fs, see the
+         min-width:1150px CSS block) is a structurally different overlay from
+         #flow-layer's mobile/tablet + desktop-cymatics fullscreen, so it needs
+         its own exit button rather than reusing #flowExitBtn - but it reuses
+         the exact same .flow-exit visual style, positioned to match, so LP/
+         cassette/cymatics fullscreen all present the same exit affordance
+         (issue #133). Only shown while body.split-desktop.desktop-fs (see the
+         #desktopFsExitBtn CSS rule next to the other .desktop-fs* rules). -->
+    <button class="flow-exit" id="desktopFsExitBtn" aria-label="Exit fullscreen">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
+    </button>
     <div class="view-scroll">
       <div class="player-stage">
         <div class="visual-tabs" id="visualTabs">
@@ -2933,6 +2963,7 @@ if (keepAliveAudio) keepAliveAudio.volume = 0.01;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), playerLikeBtn = $('playerLikeBtn');
+const desktopFsExitBtn = $('desktopFsExitBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
@@ -3144,6 +3175,7 @@ function toggleDesktopFsQueue(){
   document.querySelectorAll('#topnav [data-action="toggle-queue"]')
     .forEach(b => b.classList.toggle('is-active', state.deskFsQueueOpen));
 }
+desktopFsExitBtn.addEventListener('click', closeDesktopFs);
 
 /* =========================================================================
    AMBIENT BACKGROUND (blurred artwork, crossfade)

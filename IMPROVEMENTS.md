@@ -4702,7 +4702,7 @@ Add entries in this shape:
   had one - left as-is rather than expanding scope.
 
 ### fullscreen-exit-button-consistency: LP, cassette, and cymatics fullscreen should share one exit-fullscreen button style/position
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The fullscreen views for the LP (spinning record),
   cassette, and cymatics album art styles should all use the exact same
@@ -4713,6 +4713,87 @@ Add entries in this shape:
   desktop split-view fullscreen (`.artwork-wrap`), likely the same area
   touched by `fullscreen-lp-cassette-visual` and `fullscreen-lp-too-small`
   (both merged).
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** `agent/fullscreen-exit-button-consistency`
 - **Notes:** Synced from Geethub issue #133. Issue body had no further
   detail beyond the title.
+
+  **Root cause:** `fsBtn`'s click handler (`index.html` ~7636) sends
+  cymatics fullscreen through `openFlow()`/`#flow-layer` on *both* mobile
+  and desktop - so cymatics always gets the shared round `.flow-exit`
+  button (`#flowExitBtn`, 38x38, top-right, 26px inset). LP/cassette (and
+  default) art fullscreen goes through the same `#flow-layer` path on
+  mobile/tablet too, so on narrow viewports all three styles were already
+  consistent. But on `split-desktop` (>=1150px), LP/cassette/default
+  instead call `toggleDesktopFs()`, a structurally different mechanism
+  (`body.desktop-fs` class + CSS that slides the library/queue panes off
+  and expands `#view-player` in place, built in `fullscreen-lp-too-small`
+  to reach edge-to-edge while keeping the topnav's Library/Queue drawer
+  toggles reachable). That mode never had its own exit affordance - the
+  only way out was clicking the small transport-style `fsBtn` icon again,
+  which looks nothing like `.flow-exit`. So the real inconsistency was
+  desktop-only: cymatics-desktop-fullscreen had the round exit button,
+  LP/cassette-desktop-fullscreen did not.
+
+  **Fix:** went with the "give desktop-fs mode its own `.flow-exit`-style
+  button" option rather than routing LP/cassette through `#flow-layer` on
+  desktop too - `#flow-layer` has no library/queue drawer mechanism, so
+  merging the two would have dropped that feature (the whole reason
+  `desktop-fs` exists as a separate overlay per `fullscreen-lp-too-small`'s
+  notes). Added `#desktopFsExitBtn` (`index.html` ~1578, styled via the
+  existing `.flow-exit` class, same SVG X icon as `#flowExitBtn`) as a
+  direct child of `#view-player`, hidden by default and shown only via
+  `body.split-desktop.desktop-fs:not(.view-settings-active) #desktopFsExitBtn`
+  in the same min-width:1150px block as the other `.desktop-fs*` rules.
+  Positioned `position:fixed;top:calc(var(--topbar-h) + 26px);right:26px`
+  - same 26px corner inset as `#flowExitBtn` uses, offset by the topbar's
+  height since (unlike `#flow-layer`, which covers the whole viewport)
+  `desktop-fs` deliberately leaves the topbar visible so its Library/Queue
+  toggles stay reachable. `z-index:45` sits above the fixed player (44) but
+  below the slide-in library/queue drawers (46), so an open drawer covers
+  it the same way it would cover anything else in that corner - confirmed
+  this is a graceful, non-broken interaction, not a dead end (the topnav's
+  Library/Queue button remains the way to close the drawer again). Wired
+  `desktopFsExitBtn.addEventListener('click', closeDesktopFs)` next to the
+  existing `toggleDesktopFs`/`closeDesktopFs` functions. Did not touch
+  `fsBtn` (enter-fullscreen) itself, `#flow-layer`, or `openFlow()`/
+  `closeFlow()` - cymatics-desktop and all three styles on mobile/tablet
+  were already consistent and untouched.
+
+  **Verified** (real browser, this worktree served via
+  `python3 -m http.server 8793` from inside the worktree, confirmed via
+  `location.href`/fetch matching this file's `desktopFsExitBtn` marker
+  before trusting the page - per the multi-session warning in this repo's
+  `CLAUDE.md`): at mobile width (375x812) all three styles - default,
+  record, cassette, and cymatics - open through `#flow-layer` and show the
+  identical `#flowExitBtn` at `top:26,right:26` (measured via
+  `getBoundingClientRect`, confirmed unaffected by which art style is
+  active). At desktop split-view width (1440x900): cymatics fullscreen
+  still uses `#flow-layer`/`#flowExitBtn` at `top:26,right:26` of the full
+  viewport (covering the topbar, as it always has); record and cassette
+  fullscreen now show the new `#desktopFsExitBtn` at
+  `top:86,right:26` (86 = 60px topbar height + 26px inset) - the same
+  size/style/26px corner inset as `#flowExitBtn`, just shifted down by the
+  topbar that `desktop-fs` intentionally keeps visible. Screenshotted all
+  six combinations (3 styles x 2 width tiers) confirming the exit button
+  reads as the same control within each tier. Clicking `#desktopFsExitBtn`
+  (dispatched both as a real click and verified via direct DOM
+  `.click()`) correctly calls `closeDesktopFs()` and removes the
+  `desktop-fs` class, restoring the normal split-view layout, from both
+  the record and cassette states. Also confirmed opening the queue drawer
+  while in desktop-fs fullscreen correctly layers over the exit button
+  (expected, see z-index note above) without breaking anything, and that
+  closing the drawer again restores it. Ran `node --check` against the
+  extracted `<script>` contents - passes.
+
+  **Caveat on browser-automation clicks:** in this session the shared
+  preview pane repeatedly got its foregrounded tab stolen and even closed
+  by other concurrent Claude Code sessions also driving the same pane
+  (this repo's `CLAUDE.md` warns `index.html` edits can collide across
+  sessions - the same turned out to be true of the shared browser pane
+  itself). At one point synthetic pointer clicks stopped registering on
+  the affected tab entirely (confirmed via a known-good control click on
+  the pre-existing play button also silently no-op'ing), unrelated to this
+  change - switched to a fresh tab and cross-checked every interaction
+  claim against direct DOM state (`getBoundingClientRect`,
+  `document.elementFromPoint`, `body.className`) rather than trusting
+  screenshots alone.
