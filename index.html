@@ -1804,7 +1804,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <button type="button" class="viz-ctl-btn" id="vizNextBtn" title="Next pattern" aria-label="Next cymatics pattern">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>
             </button>
-            <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Auto-cycle patterns" aria-label="Toggle automatic pattern cycling">∞</button>
+            <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Hold this pattern" aria-label="Toggle holding the current pattern">∞</button>
             <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Cymatics speed" aria-label="Change cymatics animation speed">1x</button>
           </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
@@ -2528,7 +2528,7 @@ function effectiveVolume(){ return 100; }
 const LS_RESUME = 'ebbless:resume';
 const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_VIZ = 'ebbless:visualizer';
-const LS_VIZ_AUTO = 'ebbless:vizAuto';
+const LS_VIZ_HOLD = 'ebbless:vizHold';     // true = stay within the current pattern family
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
@@ -6908,11 +6908,17 @@ let vizNextFamilyIdx = 0;
 let vizNextParams = VIZ_PATTERNS[0].modes[0];
 let vizMix = 0;               // 0..1 crossfade toward the next family/params
 let vizHoldTimer = 0;         // ms since last ambient drift within family
-let vizAutoTimer = 0;         // ms since last auto pattern switch
+let vizAutoTimer = 0;         // ms since last auto family switch
 let vizElapsed = 0;           // ms, feeds time-varying fields (e.g. Flow)
 const VIZ_XFADE_MS = 1600;
 const VIZ_AUTO_INTERVAL_MS = 9000;
-let vizAutoMode = lsGet(LS_VIZ_AUTO, false) === true;
+// Default is to cycle through pattern families; the ∞ button holds the current
+// family (only drifting within it). This used to be the other way round under
+// 'ebbless:vizAuto' (true = cycle). Anyone who had turned cycling on already
+// gets it by default now, and holding was only ever the old default, never an
+// explicit choice - so the old key carries nothing worth keeping: drop it.
+try { localStorage.removeItem('ebbless:vizAuto'); } catch(e){}
+let vizHoldMode = lsGet(LS_VIZ_HOLD, false) === true;
 let vizLastT = 0;
 
 /* ---------- fullscreen speed control: scales the simulation dt fed into
@@ -6972,9 +6978,9 @@ function vizAdvancePattern(){
   const fam = VIZ_PATTERNS[nextFam];
   vizStartTransition(nextFam, fam.modes[Math.floor(Math.random() * fam.modes.length)]);
 }
-function vizSetAutoMode(on){
-  vizAutoMode = on;
-  lsSet(LS_VIZ_AUTO, on);
+function vizSetHoldMode(on){
+  vizHoldMode = on;
+  lsSet(LS_VIZ_HOLD, on);
   vizAutoBtn.classList.toggle('is-active', on);
   vizAutoTimer = 0;
 }
@@ -7000,8 +7006,8 @@ function vizDraw(t){
   vizHoldTimer += dt;
   vizAutoTimer += dt;
   if (vizMix === 0){
-    if (vizAutoMode && vizAutoTimer > VIZ_AUTO_INTERVAL_MS) vizAdvancePattern();
-    else if (!vizAutoMode && vizHoldTimer > holdMs) vizAdvanceWithinFamily();
+    if (!vizHoldMode && vizAutoTimer > VIZ_AUTO_INTERVAL_MS) vizAdvancePattern();
+    else if (vizHoldMode && vizHoldTimer > holdMs) vizAdvanceWithinFamily();
   }
   if (vizMix > 0){
     vizMix += dt / VIZ_XFADE_MS;
@@ -7074,8 +7080,8 @@ function vizSetPlaying(isPlaying){
   vizPlaying = isPlaying;
 }
 vizNextBtn.addEventListener('click', (e) => { e.stopPropagation(); vizAdvancePattern(); });
-vizAutoBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetAutoMode(!vizAutoMode); });
-vizAutoBtn.classList.toggle('is-active', vizAutoMode);
+vizAutoBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetHoldMode(!vizHoldMode); });
+vizAutoBtn.classList.toggle('is-active', vizHoldMode);
 vizSpeedBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   const idx = VIZ_SPEEDS.indexOf(vizSpeed);
