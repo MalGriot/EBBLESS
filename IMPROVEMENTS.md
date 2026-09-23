@@ -6017,7 +6017,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #162.
 
 ### cymatics-infinity-invert: Invert the cymatics infinity button
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On cymatics, the infinity button should work the other
   way round: deactivated does what active does now, and vice versa.
@@ -6239,7 +6239,7 @@ Add entries in this shape:
   2026-09-23, not user-reported yet.
 
 ### relink-candidate-list: "Replace link" should show a full results list like the initial paste
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The per-track replace/refresh-link option should show a
   proper list of candidate results, the same way pasting a link does on
