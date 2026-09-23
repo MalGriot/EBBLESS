@@ -341,6 +341,13 @@ svg{display:block}
 .search-pick .info{min-width:0;flex:1}
 .search-pick .n{display:block;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search-pick .s{display:block;font-size:12px;color:var(--faint-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+/* same list, reused by the per-track "Refresh link" picker (see
+   openRefreshLinkPicker): video candidates get a 16:9 thumbnail at the
+   same row height, and the track's current link is outlined rather than
+   filled so its text stays readable */
+.search-pick.is-video img{width:78px}
+.search-pick.is-current{border-color:var(--accent)}
+.search-pick .s .cur{color:var(--accent)}
 .import-ready{display:flex;flex-direction:column;align-items:center;gap:18px}
 .import-ready .name{font-size:19px;font-weight:700;margin:0}
 .import-ready .meta{font-size:12.5px;color:var(--faint)}
@@ -2355,9 +2362,14 @@ async function searchPlaylistsByVibe(query){
 // indication anything was skipped. Retrying a couple of times before giving
 // up avoids that: the same query reliably succeeds moments later.
 const SEARCH_MAX_ATTEMPTS = 3;
-async function searchYouTube(title, artist, sourceDurationMs){
+// altCount (optional): how many ranked `candidates` to ask the worker for -
+// only the manual "Refresh link" picker passes it (see
+// openRefreshLinkPicker); every other caller keeps the worker's default
+// and its existing cache entries.
+async function searchYouTube(title, artist, sourceDurationMs, altCount){
   const params = new URLSearchParams({ title, artist });
   if (sourceDurationMs) params.set('durationMs', String(sourceDurationMs));
+  if (altCount) params.set('alts', String(altCount));
   let lastErr;
   for (let attempt = 1; attempt <= SEARCH_MAX_ATTEMPTS; attempt++){
     try{
@@ -4409,8 +4421,17 @@ function openReplaceLinkFlow(id, pl){
    matcher, just reads its `candidates` field (added alongside the existing
    top-1 videoId/title/channel/duration fields specifically for this picker -
    see handleSearch in worker/src/index.js) instead of only the best match,
-   so the listener can see and choose among the top few results themselves.
+   so the listener can see and choose among the top results themselves.
+   Presented in the same overlay and the same .search-results list as the
+   input bar's own search results (stageSearching / searchPickRowHtml), so
+   picking a new link looks and feels like the first time a link was loaded.
    ========================================================================= */
+// How many ranked candidates the picker asks the worker for - in line with
+// the 10-20 results the input bar's search shows (searchPlaylistsByVibe).
+// Capped server-side at SEARCH_MAX_ALTS (worker/src/index.js).
+const RELINK_CANDIDATE_COUNT = 15;
+let relinkPickerToken = 0;
+
 function refreshLinkCandidateThumb(videoId){
   return 'https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg';
 }
@@ -4419,62 +4440,87 @@ function openRefreshLinkPicker(plId, trackIdx){
   const pl = playlistById(plId) || getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
+  const token = String(++relinkPickerToken);
   openImportOverlay();
+  const label = t.title + (t.artist ? ' - ' + t.artist : '');
   importStage.innerHTML =
-    '<div class="step">Refresh link for &ldquo;' + escapeHtml(t.title) + '&rdquo;</div>' +
-    '<div id="relinkCandidates" style="width:100%;max-height:320px;overflow-y:auto">' +
-      '<div style="color:var(--faint-2);font-size:13px;padding:8px 0">Searching YouTube…</div>' +
+    '<div id="relinkSearching" data-token="' + token + '">' +
+      '<div class="step">Searching for &ldquo;' + escapeHtml(label) + '&rdquo;&hellip;</div>' +
+      '<div class="flow-line indeterminate"><div class="fill"></div></div>' +
     '</div>';
+  // Only paint results if this exact search's stage is still showing - the
+  // overlay may have been closed, or reused by another import, while the
+  // search was in flight.
+  const stillShowing = () => { const el = $('relinkSearching'); return !!el && el.dataset.token === token; };
   // Prefer the source's own duration (srcDuration) - t.duration is the
   // *matched* video's length, so searching with it biases the picker
   // toward the very video that was wrong. Older tracks resolved before
   // srcDuration was kept fall back to no duration hint at all.
-  searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0).then(data => {
-    const container = $('relinkCandidates');
-    if (!container) return; // overlay was closed while the search was in flight
+  searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT).then(data => {
+    if (!stillShowing()) return;
     const candidates = (data.candidates && data.candidates.length) ? data.candidates
       : (data.videoId ? [{ videoId: data.videoId, title: data.title, channel: data.channel, duration: data.duration }] : []);
-    renderRelinkCandidates(container, candidates, plId, trackIdx, t.videoId);
+    stageRelinkCandidates(candidates, plId, trackIdx, t);
   }).catch(e => {
-    const container = $('relinkCandidates');
-    if (!container) return;
-    container.innerHTML = '<div class="import-err">' + escapeHtml(e.message || 'Search failed.') + '</div>';
+    if (!stillShowing()) return;
+    stageError(e.message || 'Search failed.', () => openRefreshLinkPicker(plId, trackIdx), 'Couldn’t search for other links.');
   });
 }
 
-function renderRelinkCandidates(container, candidates, plId, trackIdx, currentVideoId){
-  if (!candidates.length){
-    container.innerHTML = '<div style="color:var(--faint-2);font-size:13px;padding:8px 0">No alternatives found.</div>';
+// Candidates are YouTube videos today. Each row reads its thumbnail/source
+// off the candidate itself when present (c.image / c.source) and only
+// falls back to YouTube's, so a future non-YouTube candidate (e.g. a
+// SoundCloud upload) can join this same list without a separate renderer.
+function stageRelinkCandidates(candidates, plId, trackIdx, t){
+  const currentVideoId = t.videoId;
+  const list = candidates.slice();
+  // The track's current link, if the fresh search didn't return it, goes
+  // first so the listener can always see what's playing now next to the
+  // alternatives - the same row the old picker marked as "current".
+  if (currentVideoId && !list.some(c => c.videoId === currentVideoId)){
+    const isSC = isSoundCloudVideoId(currentVideoId);
+    list.unshift({
+      videoId: currentVideoId, title: t.matchedTitle || t.title, channel: t.channel || '', duration: t.duration || 0,
+      source: isSC ? 'soundcloud' : 'youtube', image: isSC ? (t.art || '') : '',
+    });
+  }
+  const label = t.title + (t.artist ? ' - ' + t.artist : '');
+  if (!list.length){
+    importStage.innerHTML =
+      '<div class="step">No other links found for &ldquo;' + escapeHtml(label) + '&rdquo;</div>' +
+      '<button class="btn-ghost" id="relinkBackBtn" style="width:100%">Back</button>';
+    $('relinkBackBtn').addEventListener('click', closeImportOverlay);
     return;
   }
-  container.innerHTML = '';
-  candidates.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className = 'btn-ghost relink-cand' + (c.videoId === currentVideoId ? ' is-active' : '');
-    btn.style.cssText = 'width:100%;display:flex;gap:10px;align-items:center;text-align:left;margin-bottom:8px;padding:8px';
-    const img = document.createElement('img');
-    img.style.cssText = 'width:64px;height:36px;object-fit:cover;border-radius:4px;flex:none;background:var(--panel-2)';
-    img.src = refreshLinkCandidateThumb(c.videoId);
-    const meta = document.createElement('span');
-    meta.style.cssText = 'min-width:0;flex:1';
-    const titleEl = document.createElement('span');
-    titleEl.style.cssText = 'display:block;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-    titleEl.textContent = c.title || '(untitled)';
-    const subEl = document.createElement('span');
-    subEl.style.cssText = 'display:block;font-size:11.5px;color:var(--faint-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-    subEl.textContent = [c.channel, c.duration ? formatTime(c.duration) : ''].filter(Boolean).join(' · ') +
-      (c.videoId === currentVideoId ? ' · current' : '');
-    meta.appendChild(titleEl); meta.appendChild(subEl);
-    btn.appendChild(img); btn.appendChild(meta);
-    btn.addEventListener('click', () => applyRelinkChoice(plId, trackIdx, c));
-    container.appendChild(btn);
+  const rows = list.map((c, i) => {
+    const source = c.source || 'youtube';
+    const isCurrent = c.videoId === currentVideoId;
+    const sub = [c.channel, c.duration ? formatTime(c.duration) : '', SEARCH_SOURCE_LABEL[source] || source].filter(Boolean).join(' · ');
+    const subHtml = (isCurrent ? '<span class="cur">Current</span> · ' : '') + escapeHtml(sub);
+    const image = c.image || (source === 'youtube' ? refreshLinkCandidateThumb(c.videoId) : '');
+    return searchPickRowHtml(i, image, c.title || '(untitled)', subHtml, 'is-video' + (isCurrent ? ' is-current' : ''));
+  }).join('');
+  importStage.innerHTML =
+    '<div class="step">Pick a new link for &ldquo;' + escapeHtml(label) + '&rdquo;</div>' +
+    '<div class="search-results" id="relinkCandidates">' + rows + '</div>' +
+    '<button class="btn-ghost" id="relinkBackBtn" style="width:100%">Cancel</button>';
+  importStage.querySelectorAll('#relinkCandidates .search-pick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const c = list[parseInt(btn.dataset.i, 10)];
+      if (c) applyRelinkChoice(plId, trackIdx, c);
+    });
   });
+  $('relinkBackBtn').addEventListener('click', closeImportOverlay);
 }
 
 function applyRelinkChoice(plId, trackIdx, candidate){
   const pl = getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
+  // Decided before videoId is overwritten below: a SoundCloud-native track
+  // (or any track in a SoundCloud-sourced playlist) keeps its own
+  // SoundCloud art, per resolveTrackArt's SoundCloud exception.
+  const keepsNativeArt = isSoundCloudVideoId(t.videoId) || sourceKindForType(pl.type) === 'soundcloud';
   t.videoId = candidate.videoId;
   t.matchedTitle = candidate.title || '';
   t.channel = candidate.channel || '';
@@ -4487,6 +4533,7 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   cacheTrackMatch(t.title, t.artist, candidate);
   recordWrongTrackCorrection(t, candidate);
   renderLibrary();
+  repaintOpenLibPanelTrack(plId, trackIdx, pl);
   closeImportOverlay();
   showToast('Link updated');
   // Relinking the track that's playing right now: swap the audio over
@@ -4496,6 +4543,65 @@ function applyRelinkChoice(plId, trackIdx, candidate){
     loadIndex(state.queuePos, true);
     syncWrongTrackFlagUI(t);
   }
+  if (!keepsNativeArt) refreshRelinkedTrackArt(plId, trackIdx, t);
+}
+
+// renderLibrary() doesn't touch the open tracklist panel (it's built once
+// in toggleLibraryPlaylistPanel), so a relinked row there would keep its
+// old thumbnail until reopened. Repaints just that row's art - and the
+// panel's cover, when it's borrowed from a track (same pick as
+// toggleLibraryPlaylistPanel) - in place.
+function repaintOpenLibPanelTrack(plId, trackIdx, pl){
+  if (openLibraryPanelId !== plId || !pl) return;
+  const t = pl.tracks[trackIdx];
+  const row = libplBody.querySelectorAll('.track-row')[trackIdx];
+  const img = row && row.querySelector('img');
+  if (img && t) attachArtworkFallback(img, t);
+  if (!pl.image){
+    const artTrack = pl.tracks.find(x => x.videoId || x.art);
+    if (artTrack) attachArtworkFallback(libplArt, artTrack);
+  }
+}
+
+// A relinked track's art should stay Spotify's own cover, not become the
+// newly chosen video's thumbnail (artworkUrls only falls back to that when
+// track.art is empty - e.g. the original resolve's /spotifyart lookup
+// missed). So after a relink, re-run the same resolveTrackArt lookup and,
+// if it finds a cover, store it and repaint every surface showing this
+// track. On a miss the existing art (if any) is kept, and the candidate's
+// YouTube thumbnail stays the fallback exactly as before.
+function refreshRelinkedTrackArt(plId, trackIdx, t){
+  const videoId = t.videoId;
+  // 'youtube' as the source kind so resolveTrackArt actually asks
+  // /spotifyart - its 'spotify'/'soundcloud' kinds return the native art
+  // untouched without a lookup.
+  resolveTrackArt('youtube', t.title, t.artist, t.art || null).then(art => {
+    if (!art || art === t.art) return;
+    const pl = getCachedPlaylist(plId);
+    const cur = pl && pl.tracks[trackIdx];
+    // The playlist may have changed while the lookup was in flight (track
+    // removed/reordered, or relinked again) - only touch the same track.
+    if (!cur || cur.videoId !== videoId || cur.title !== t.title) return;
+    cur.art = art;
+    lsSet(LS_PL(plId), pl);
+    if (state.playlist && state.playlist.id === plId) state.playlist = pl;
+    renderLibrary();
+    repaintOpenLibPanelTrack(plId, trackIdx, pl);
+    const q = state.queue[state.queuePos];
+    if (q && q.plId === plId && q.idx === trackIdx){
+      // Same art surfaces reflectCurrentTrackUI paints, without its
+      // play-count bump / resume write.
+      swapPlayerArt(cur);
+      swapFlowArt(cur);
+      swapAltArt(cur);
+      setAmbient(cur);
+      updatePlayerAccentColor(cur);
+      attachArtworkFallback(miniArt, cur);
+      cassetteSetLabelArt(cur);
+      updateMediaSessionMeta(cur);
+    }
+    renderQueuePanel();
+  });
 }
 
 /* =========================================================================
@@ -4946,7 +5052,23 @@ function stageSearching(query){
     '<div class="flow-line indeterminate"><div class="fill"></div></div>';
 }
 
-const SEARCH_SOURCE_LABEL = { soundcloud: 'SoundCloud', applemusic: 'Apple Music' };
+const SEARCH_SOURCE_LABEL = { soundcloud: 'SoundCloud', applemusic: 'Apple Music', youtube: 'YouTube' };
+// One row of the .search-results list - shared by stageSearchResults and
+// the per-track "Refresh link" picker (openRefreshLinkPicker), so both
+// pickers look and behave the same. subHtml is already-escaped markup
+// (lets a caller add a highlighted "Current" tag); everything else is
+// escaped here.
+function searchPickRowHtml(i, image, name, subHtml, extraClass){
+  return (
+    '<button type="button" class="btn-ghost search-pick' + (extraClass ? ' ' + extraClass : '') + '" data-i="' + i + '">' +
+      '<img src="' + escapeHtml(image || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+      '<span class="info">' +
+        '<span class="n">' + escapeHtml(name || '') + '</span>' +
+        '<span class="s">' + subHtml + '</span>' +
+      '</span>' +
+    '</button>'
+  );
+}
 function stageSearchResults(results, query){
   if (!results.length){
     importStage.innerHTML =
@@ -4959,15 +5081,7 @@ function stageSearchResults(results, query){
   const rows = results.map((r, i) => {
     const label = SEARCH_SOURCE_LABEL[r.source] || r.source;
     const sub = [r.subtitle, label].filter(Boolean).join(' · ');
-    return (
-      '<button type="button" class="btn-ghost search-pick" data-i="' + i + '">' +
-        '<img src="' + escapeHtml(r.image || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
-        '<span class="info">' +
-          '<span class="n">' + escapeHtml(r.name) + '</span>' +
-          '<span class="s">' + escapeHtml(sub) + '</span>' +
-        '</span>' +
-      '</button>'
-    );
+    return searchPickRowHtml(i, r.image, r.name, escapeHtml(sub));
   }).join('');
   importStage.innerHTML =
     '<div class="step">Results for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +

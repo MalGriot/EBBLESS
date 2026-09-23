@@ -63,6 +63,10 @@ function deepFindKey(obj, key, out) {
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v2';
 const SEARCH_CACHE_VERSION = 'v7';
+// /search `candidates` count: the default every caller gets, and the most
+// the refresh-link picker may ask for via ?alts= (see handleSearch).
+const SEARCH_DEFAULT_ALTS = 5;
+const SEARCH_MAX_ALTS = 20;
 const SIMILAR_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
 const THISIS_CACHE_VERSION = 'v1';
@@ -473,10 +477,17 @@ async function handleSearch(url, ctx) {
   const durationMs = parseInt(url.searchParams.get('durationMs'), 10);
   const sourceDurationSeconds = Number.isFinite(durationMs) && durationMs > 0 ? Math.round(durationMs / 1000) : 0;
   if (!title) return json({ error: 'missing title' }, 400);
+  // How many ranked `candidates` to return (see altCandidates below). Only
+  // the client's manual "refresh link" picker asks for more than the
+  // default; the default's cache key is left exactly as it was so existing
+  // cached searches (and every automatic resolve) are untouched.
+  const altsParam = parseInt(url.searchParams.get('alts'), 10);
+  const altCount = Number.isFinite(altsParam) ? Math.min(Math.max(altsParam, 1), SEARCH_MAX_ALTS) : SEARCH_DEFAULT_ALTS;
 
   const firstArtist = artist.split(',')[0].trim().toLowerCase();
   const cache = caches.default;
-  const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist + '|' + sourceDurationSeconds);
+  const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist + '|' + sourceDurationSeconds) +
+    (altCount !== SEARCH_DEFAULT_ALTS ? '/alts' + altCount : '');
   const cacheKey = new Request(cacheKeyStr);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -558,13 +569,27 @@ async function handleSearch(url, ctx) {
   pool.sort((a, b) => b.score - a.score);
   const best = pool[0];
 
-  // Top-5 alternates, same pool/scoring as the auto-picked `best` above -
-  // powers the manual "refresh link" picker (track-relink-menu) so a
-  // listener can pick a different candidate when the auto-match is wrong,
-  // without this endpoint doing a second, separate search. Existing callers
-  // that only read the top-level videoId/title/channel/duration fields are
-  // unaffected; this is purely additive.
-  const altCandidates = pool.slice(0, 5).map(c => ({
+  // Top alternates (altCount, default 5), same pool/scoring as the
+  // auto-picked `best` above - powers the manual "refresh link" picker
+  // (track-relink-menu) so a listener can pick a different candidate when
+  // the auto-match is wrong, without this endpoint doing a second, separate
+  // search. Existing callers that only read the top-level videoId/title/
+  // channel/duration fields are unaffected; this is purely additive.
+  // If the hard filters above left fewer than altCount, the rest are padded
+  // from the unfiltered results in YouTube's own order (unscored): the
+  // filters exist to keep the *automatic* pick safe, but a listener picking
+  // by hand may want exactly the live/remix/extended cut they dropped.
+  const altPool = pool.slice(0, altCount);
+  if (altPool.length < altCount) {
+    const seen = new Set(altPool.map(c => c.videoId));
+    for (const c of candidates) {
+      if (altPool.length >= altCount) break;
+      if (seen.has(c.videoId)) continue;
+      seen.add(c.videoId);
+      altPool.push(c);
+    }
+  }
+  const altCandidates = altPool.map(c => ({
     videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0,
     // score/titleOverlap are for the client's wrong-track log
     // (flag-wrong-track) - lets a flagged match be explained after the fact.
