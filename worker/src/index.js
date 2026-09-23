@@ -65,6 +65,7 @@ const LYRICS_CACHE_VERSION = 'v2';
 const SEARCH_CACHE_VERSION = 'v7';
 const SIMILAR_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
+const THISIS_CACHE_VERSION = 'v1';
 // Bumped independently of ART_CACHE_VERSION - see the /soundcloud cache key
 // below for why this endpoint doesn't share that constant.
 const SOUNDCLOUD_CACHE_VERSION = 'v2';
@@ -1046,6 +1047,117 @@ async function handleSpotifyArt(url, env, ctx) {
   return response;
 }
 
+// ---------- GET /thisis?artist= ----------
+// Resolves an artist name to the Spotify playlist id of their official
+// Spotify-curated "This Is <Artist>" playlist, if one exists - most
+// independent/niche artists don't have one. This is the one Spotify lookup
+// in this file that genuinely needs the real Spotify Web API (Client
+// Credentials Flow, no user login) rather than a page scrape: unlike a
+// track/album/playlist (fetchable by id via the /embed/ page scrape in
+// handleEmbed above, no auth needed), there is no public, unauthenticated
+// way to *search* Spotify by name - the open.spotify.com search page and
+// artist page are both client-rendered SPAs with no server-embedded
+// __NEXT_DATA__ (verified directly; only the /embed/ pages still are), and
+// reverse-engineering the web player's private anonymous-token endpoint to
+// call Spotify's internal partner API is exactly the kind of undocumented,
+// token-scraping approach this codebase has deliberately steered away from
+// elsewhere (see the /spotifyart comment on why that endpoint moved off the
+// Spotify Web API to iTunes' keyless search instead).
+//
+// So this endpoint is intentionally optional: it works only when
+// SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET Worker secrets are configured
+// (the same credential pair /spotifyart used before Spotify tightened new
+// app creation to Premium accounts in Feb 2026 - reviving that mechanism
+// here rather than inventing a new one, since an *existing* app's
+// credentials, if the account already has one, still work fine for this
+// read-only search scope). With no secrets configured - the default,
+// current state of this deployment - getSpotifyAppToken resolves to null
+// and this always answers { playlistId: null }, which the client treats
+// exactly like "this artist has no This Is playlist": Discover's existing
+// Last.fm/YouTube-mix cascade carries the whole load, unchanged.
+let spotifyAppToken = null;   // { token, expiresAt } - module-scoped, reused
+let spotifyAppTokenPromise = null;  // de-dupe concurrent token fetches
+async function getSpotifyAppToken(env) {
+  if (!env.SPOTIFY_CLIENT_ID || !env.SPOTIFY_CLIENT_SECRET) return null;
+  if (spotifyAppToken && spotifyAppToken.expiresAt > Date.now()) return spotifyAppToken.token;
+  if (spotifyAppTokenPromise) return spotifyAppTokenPromise;
+  spotifyAppTokenPromise = (async () => {
+    try {
+      const basic = btoa(env.SPOTIFY_CLIENT_ID + ':' + env.SPOTIFY_CLIENT_SECRET);
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + basic,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'grant_type=client_credentials',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.access_token) return null;
+      // Refresh a minute early so a request never races an expiry right at
+      // the boundary.
+      spotifyAppToken = { token: data.access_token, expiresAt: Date.now() + ((data.expires_in || 3600) - 60) * 1000 };
+      return spotifyAppToken.token;
+    } catch (e) { return null; }
+    finally { spotifyAppTokenPromise = null; }
+  })();
+  return spotifyAppTokenPromise;
+}
+
+// Only a playlist actually owned by Spotify's own "spotify" account and
+// named "This Is <exact artist name>" counts - otherwise a fan-made
+// knockoff playlist with a similar name (there are many) could get picked
+// up instead of the real editorial one.
+function matchesThisIsPlaylist(item, artist) {
+  if (!item || !item.name) return false;
+  const name = item.name.trim().toLowerCase();
+  const wantName = ('this is ' + artist).trim().toLowerCase();
+  if (name !== wantName) return false;
+  const ownerId = item.owner && (item.owner.id || '').toLowerCase();
+  const ownerName = item.owner && (item.owner.display_name || '').toLowerCase();
+  return ownerId === 'spotify' || ownerName === 'spotify';
+}
+
+async function handleThisIsPlaylist(url, env, ctx) {
+  const artist = (url.searchParams.get('artist') || '').trim();
+  if (!artist) return json({ error: 'missing artist' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + THISIS_CACHE_VERSION + '/thisis/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const token = await getSpotifyAppToken(env);
+  let playlistId = null, name = null;
+  if (token) {
+    try {
+      const qs = new URLSearchParams({ q: 'This Is ' + artist, type: 'playlist', limit: '10' });
+      const res = await fetch('https://api.spotify.com/v1/search?' + qs.toString(), {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const items = (data.playlists && data.playlists.items) || [];
+        const match = items.find(it => matchesThisIsPlaylist(it, artist));
+        if (match) { playlistId = match.id; name = match.name; }
+      }
+    } catch (e) { /* best-effort - Discover falls back to its other sources */ }
+  }
+
+  const payload = { playlistId, name };
+  const response = json(payload);
+  // Cached whether found or not - an artist without a This Is playlist
+  // isn't going to grow one between requests, and a real hit's id is
+  // effectively permanent, so there's no "miss vs. hit" caching split like
+  // /art or /spotifyart use for their iTunes lookups.
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 // ---------- GET /lyrics?videoId=&title=&artist= ----------
 // Originally tried YouTube's caption track (for timing) cross-referenced
 // against a scraped Genius page (for clean text). Both are dead ends in
@@ -1765,12 +1877,13 @@ export default {
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
       if (url.pathname === '/art') return await handleArt(url, ctx);
       if (url.pathname === '/spotifyart') return await handleSpotifyArt(url, env, ctx);
+      if (url.pathname === '/thisis') return await handleThisIsPlaylist(url, env, ctx);
       if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

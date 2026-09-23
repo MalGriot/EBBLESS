@@ -5297,9 +5297,12 @@ function cycleRepeat(){
    DISCOVER — the queue's "keep playing similar songs" toggle and the Swell
    playlist share one engine: cascade through Last.fm -> ListenBrainz ->
    YouTube's own "Up next" panel for candidates (worker /similar, /ytmix),
-   score them by tag overlap with the seed plus this listener's own local
-   graph, then fold the outcome of each play back into that graph and into
-   the pooled affinity data every listener contributes to (/pool/signal).
+   plus the seed artist's official Spotify "This Is <Artist>" playlist when
+   one exists (worker /thisis - a bonus source folded into the same pool,
+   see fetchThisIsPlaylist), score them by tag overlap with the seed plus
+   this listener's own local graph, then fold the outcome of each play back
+   into that graph and into the pooled affinity data every listener
+   contributes to (/pool/signal).
    ========================================================================= */
 const DISCOVER_LOOKAHEAD = 3;   // extend once this few tracks remain in the queue
 const DISCOVER_BATCH = 6;       // tracks fetched per extension
@@ -5365,6 +5368,33 @@ async function fetchArtistSearch(artist){
     if (!res.ok) return [];
     const data = await res.json();
     return data.tracks || [];
+  } catch(e){ return []; }
+}
+// Spotify's own official "This Is <Artist>" playlist, when one exists (most
+// independent/niche artists don't have one - this is a bonus source, not a
+// dependency). Resolving an artist name to that playlist's id is the one
+// Spotify lookup that needs the real Spotify Web API rather than a page
+// scrape (see the worker's /thisis handler for why), so it only ever
+// returns candidates when the backend has Spotify app credentials
+// configured - the default deployment has none yet, so this is a silent,
+// always-safe no-op today: an empty array, exactly like /similar or /ytmix
+// coming up empty, which fetchDiscoverCandidates below already knows how to
+// fall through past.
+async function fetchThisIsPlaylist(artist){
+  if (!artist) return [];
+  try{
+    const res = await fetch(BACKEND + '/thisis?artist=' + encodeURIComponent(artist));
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data.playlistId) return [];
+    const pl = await fetchSpotifyPlaylist(data.playlistId, 'playlist');
+    // Official curation, but no Last.fm-style tag data to score it against -
+    // matchScore alone (via scoreCandidate's 30% weight) is enough to give
+    // these a fair shot without letting them drown out well-tagged Last.fm
+    // matches that share real sonic overlap with the seed.
+    return (pl.tracks || [])
+      .filter(t => t.title && t.artist)
+      .map(t => ({ title: t.title, artist: t.artist, matchScore: 0.6, tags: [] }));
   } catch(e){ return []; }
 }
 // Fire-and-forget: pooling is a bonus signal, never something playback
@@ -5467,13 +5497,31 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
   if (!seed) return [];
   const recentArtists = new Set(seedTracks.slice(0, 5).map(t => (t.artist || '').toLowerCase()));
 
-  const similar = await fetchSimilar(seed.title, seed.artist, 25);
+  const [similar, thisIs] = await Promise.all([
+    fetchSimilar(seed.title, seed.artist, 25),
+    fetchThisIsPlaylist(seed.artist),
+  ]);
   let pool = similar.candidates || [];
   const seedTagVec = normalizeTagList(similar.seedTags, 15);
 
   if (!pool.length && seed.videoId && !isSoundCloudVideoId(seed.videoId)){
     const mix = await fetchYtMix(seed.videoId);
     pool = mix.map(t => Object.assign({}, t, { matchScore: 0.3, tags: [] }));
+  }
+  // Fold in the seed artist's official "This Is" tracks alongside whatever
+  // else was found - an additional source, not a replacement. These stay
+  // subject to the same scoring/dedup/exclude pass as everything else below
+  // (including the same-artist +0.05 / recent-artist -0.15 adjustments in
+  // scoreCandidate), so they compete on equal footing rather than jumping
+  // the queue - most will be the seed artist, which recentArtists is
+  // already there to gently deprioritize without shutting out a genuinely
+  // strong pick.
+  if (thisIs.length){
+    const seenKey = new Set(pool.map(c => (c.title + '|' + c.artist).toLowerCase()));
+    thisIs.forEach(c => {
+      const key = (c.title + '|' + c.artist).toLowerCase();
+      if (!seenKey.has(key)){ seenKey.add(key); pool.push(c); }
+    });
   }
   if (!pool.length) return [];
 
