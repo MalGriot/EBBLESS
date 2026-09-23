@@ -1754,6 +1754,30 @@ async function getListenBrainzSimilar(mbid, limit) {
   } catch (e) { return []; }
 }
 
+// ---------- GET /tags ----------
+// Just a track's Last.fm tags - the light lookup the client uses to learn
+// from tracks that didn't come through /similar (anything from a pasted
+// playlist). One Last.fm call, cached for a month since a track's tags
+// barely move.
+async function handleTags(url, env, ctx) {
+  const title = url.searchParams.get('title');
+  const artist = url.searchParams.get('artist') || '';
+  if (!title) return json({ error: 'missing title' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/tags/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const tags = await getLastfmTopTags(title, artist, env);
+  const response = json({ tags });
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': (tags.length ? 'max-age=2592000' : 'max-age=86400') },
+  })));
+  return response;
+}
+
 async function handleSimilar(url, env, ctx) {
   const title = url.searchParams.get('title');
   const artist = url.searchParams.get('artist') || '';
@@ -2047,6 +2071,7 @@ export default {
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
       if (url.pathname === '/playlistsearch') return await handlePlaylistSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
+      if (url.pathname === '/tags') return await handleTags(url, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
       if (url.pathname === '/art') return await handleArt(url, ctx);
@@ -2057,7 +2082,7 @@ export default {
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
