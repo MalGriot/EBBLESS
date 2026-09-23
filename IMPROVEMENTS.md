@@ -6168,7 +6168,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #163.
 
 ### discover-pooled-affinity: Discover should read the crowd taste pool it already writes to
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Every finished / liked / skipped Discover track already
   POSTs its tag pairs to the worker's `/pool/signal`, stored in the
@@ -6188,12 +6188,12 @@ Add entries in this shape:
 - **Touches:** index.html Discover scoring (`fetchDiscoverCandidates`,
   `scoreCandidate`, local listening graph section); possibly
   `worker/src/index.js` `handlePoolAffinity` (caching) + worker redeploy.
-- **Branch:**
+- **Branch:** agent/discover-pooled-affinity (merged, worker deployed)
 - **Notes:** Found while answering "is EBBLESS learning?" (2026-09-23).
   Local per-browser learning works; the pooled half is collected but unused.
 
 ### tag-all-tracks-for-learning: Learn from every track, not just Discover picks
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** `recordListenSignal` only learns from tracks that carry
   `.tags`, and only Discover-origin tracks get tags (from `/similar`). So
@@ -6210,7 +6210,7 @@ Add entries in this shape:
 - **Touches:** index.html `recordListenSignal` and its three call sites
   (track end in `onDeckStateChange`, `toggleLikeTrack`, `recordSkipIfEarly`);
   possibly a new worker route.
-- **Branch:**
+- **Branch:** agent/tag-all-tracks-for-learning (merged, worker deployed)
 - **Notes:** Found while answering "is EBBLESS learning?" (2026-09-23).
   Pairs with `discover-pooled-affinity` (more signals make the pool useful
   faster) - both land near the Discover section of index.html, so run them
