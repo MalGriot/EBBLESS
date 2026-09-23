@@ -4144,7 +4144,7 @@ Add entries in this shape:
     `ytInitialPlayerResponse` for a particular video's metadata shape).
 
 ### app-icon-transparent-bg: App icon should have a transparent background across all platforms
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The app icon (home screen / PWA / favicon / any other
   platform surface it's used on) should have a transparent background
@@ -4152,7 +4152,44 @@ Add entries in this shape:
 - **Touches:** app icon assets and manifest (`manifest.json` / PWA icon
   set, favicon), likely under `brand/` or wherever icon source files live.
 - **Branch:** agent/app-icon-transparent-bg
-- **Notes:** Synced from Geethub issue #132.
+- **Notes:** Synced from Geethub issue #132. Found: every rasterized icon
+  under `brand/assets/icons/` (`favicon-16.png`, `favicon-32.png`,
+  `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) was the transparent
+  glyph in `brand/assets/mark.png` flattened onto an opaque `#121212` square
+  - confirmed via `sips -g hasAlpha` (all `no`) and by inspecting each PNG.
+  `manifest.json` also reused that one opaque `icon-512.png` for both the
+  `"any"` and `"maskable"` purposes.
+  Fix: regenerated all five files by compositing `mark.png` onto a
+  transparent canvas at the same scale/position the glyph already occupied
+  in each existing icon (measured each icon's non-background content bbox
+  first so size/placement is pixel-for-pixel unchanged, only the background
+  went transparent). Kept one opaque variant, `icon-512.png` copied to a new
+  `icon-512-maskable.png`, and pointed `manifest.json`'s `"maskable"` entry
+  at it, since maskable icons are spec'd to fill their full safe-zone with
+  an opaque background (the OS applies its own mask shape on top - a
+  transparent maskable icon renders inconsistently across launchers).
+  `"any"`-purpose entries (`icon-192.png`, `icon-512.png`) now point at the
+  transparent versions, as do the favicon `<link>` tags and
+  `apple-touch-icon` in `index.html` (unchanged, same filenames). Also
+  updated a stale code comment near the onboarding-outro animation
+  (`index.html` ~line 9008) that had asserted the PWA icon "has to" lack an
+  alpha channel - that claim was never quite right and is now actively
+  wrong for the `"any"` icons, so reworded it to the real reason that code
+  path uses `mark-white.png` instead (sizing/padding, not alpha support).
+  Note: iOS itself ignores alpha in `apple-touch-icon` and paints a black
+  fallback behind it on the home screen - that's platform behavior outside
+  this file's control, not a regression here.
+  Verified: `sips -g hasAlpha` on all five regenerated files now reports
+  `yes` (`icon-512-maskable.png` correctly still `no`, by design). Rendered
+  each new icon over a checkerboard via PIL and visually confirmed clean
+  transparency with the glyph in its original position/scale (no
+  resizing/recropping artifacts). Served the worktree over
+  `python3 -m http.server` and loaded it in a real browser tab: fetched
+  `manifest.json` and every icon file (all 200, correct `image/png` /
+  `application/json` content-types), then decoded each PNG onto a canvas
+  and read back the corner pixel - `[0,0,0,0]` (fully transparent) for all
+  `"any"`-purpose icons and favicons, `[18,18,18,255]` (opaque `#121212`)
+  for `icon-512-maskable.png` as intended.
 
 ### desktop-settings-queue-popup: Opening Settings on desktop also pops open the queue window
 - **Status:** merged

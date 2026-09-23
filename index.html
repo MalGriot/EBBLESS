@@ -9006,11 +9006,10 @@ function runIntro(preview){
     void captionEl.offsetWidth;
     captionEl.style.transition = '';
     // brand/assets/mark-white.png, not the PWA icon (brand/assets/icons/
-    // icon-512.png) - the PWA icon is a flat opaque square with no alpha
-    // channel (it has to be, for OS home-screen tiles), so blinking it out
-    // over the backdrop showed a visible black square instead of a clean
-    // fade. The mark is a real transparent PNG, same as the wordmark this
-    // is replacing.
+    // icon-512.png) - icon-512.png is sized and padded for a home-screen
+    // tile, not for sitting mid-animation over this backdrop, so blinking
+    // it out here would look visibly off. The mark is a real transparent
+    // PNG, same as the wordmark this is replacing.
     const wordImg = markEl.querySelector('img');
     if (wordImg) wordImg.src = 'brand/assets/mark-white.png';
     setStage('outro');
