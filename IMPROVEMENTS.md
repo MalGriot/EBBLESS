@@ -2336,16 +2336,100 @@ Add entries in this shape:
   spot-check.
 
 ### share-song-playlist: Share a song or playlist via link
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add the ability to share a specific song or playlist - it
   should generate a nice link + message that, when opened, leads the
   recipient to install/open EBBLESS and play that song or playlist.
 - **Touches:** new share feature, likely needs a share-link resolution route
   on the backend/worker plus a Web Share API integration client-side.
-- **Branch:** (unclaimed)
+- **Branch:** agent/share-song-playlist
 - **Notes:** Synced from Geethub issue #58. Related to `settings-share-app`
   above (sharing the app itself) - different scope, kept separate.
+
+  Investigated the backend/worker route this entry's own `Touches` line
+  suggested might be needed, and skipped it: `worker/src/index.js`'s
+  `/playlist`/`/album` handling (`handleEmbed`) already scrapes Spotify's
+  embed page for track lists but only ever returns `title`/`artist`/`image`/
+  `duration` per track - it never passes back each track's own Spotify URI,
+  so there was never a per-track canonical link to build a share URL from in
+  the first place, and no existing share-link/shortener endpoint to extend.
+  Went fully client-side instead, per this entry's own fallback guidance:
+  the "backend" a shared link needs is just the *source* link itself
+  (Spotify/YouTube/SoundCloud/Apple Music), which the app already knows how
+  to resolve - it's exactly what `canonicalLinkForPlaylist()` (added by the
+  merged `Copy link`/`Replace link` work) already reverses a playlist's
+  `{type,id}` back into.
+
+  Fixed and pushed (commit `46ba3eb`): added a "Share" item to both the
+  playlist context menu (`openLibCtxMenu`, right before "Copy link") and the
+  per-track context menu (`openTrackCtxMenuFor`, right after "Add to
+  playlist"), each only shown when `canonicalLinkForPlaylist()` finds a real
+  source link (custom playlists/Liked Songs have none, same guard "Copy
+  link" already uses). Both funnel into `shareEbblessLink()`, which builds
+  `{title, text, url}` and calls `navigator.share()` when available,
+  swallowing a user-cancel rejection, falling back to
+  `navigator.clipboard.writeText(url)` plus the existing "Link copied" toast
+  otherwise (identical pattern to `shareAppBtn`/`copyPlaylistLink`). The
+  `url` itself is `buildShareUrl()`'s output: `<origin><path>?import=<the
+  canonical source link>` for a playlist, plus `&track=<index>` for an
+  individual track share - a track has no source id of its own once it's
+  sitting inside a resolved playlist (see the `handleEmbed` finding above),
+  so sharing one re-shares its parent playlist/album's link plus its
+  position within it instead of inventing a fake per-track identity.
+
+  Opening that link is handled entirely client-side too: `startApp()` now
+  calls a new `applySharedImportFromUrl()`, which reads `?import=`/`&track=`,
+  strips them from the URL immediately (so a bad link or a refresh can't
+  re-trigger the import forever), and pushes the source link through the
+  *exact* same resolution path a manually pasted link takes -
+  `parseImportLink()` -> `beginImport()`. The `{source,type,id} ->
+  {internal id, type}` dispatch that used to live inline in `importForm`'s
+  submit handler is now `beginImportFromParsedLink()`, shared by both call
+  sites, so there's exactly one place that maps a pasted/shared link to a
+  `beginImport()` call. `beginImport()` itself gained an optional
+  `targetIndex` param, threaded into its `buildQueueFrom()` calls, that a
+  shared track link uses to land on the right song instead of always track
+  0. One real bug surfaced while testing this: `beginImport()`'s existing
+  "jump into the player as soon as the first track resolves" optimization
+  fires before the rest of the playlist (and therefore the actually-shared
+  track) has resolved, so a naive `buildQueueFrom(targetIndex)` there would
+  silently fall back to whichever track happened to resolve first (verified
+  this happening - a `&track=3` link landed on track 0 instead). Fixed by
+  skipping that early-jump callback entirely whenever `targetIndex` is set,
+  so a targeted share always waits for the full resolve and lands on the
+  right track, at the cost of that one optimization for shared-song opens
+  specifically (whole-playlist shares and ordinary pasted links are
+  unaffected and still jump in early as before).
+
+  Verified via a worktree-local `python3 -m http.server`, driving the real
+  UI (opening the library, right-clicking/kebab-clicking into both the
+  playlist and per-track context menus, confirmed "Share" appears in the
+  right position in each with `navigator.share`/`navigator.clipboard`
+  patched to capture calls instead of mocked away): playlist share produced
+  `.../index.html?import=https%3A%2F%2Fopen.spotify.com%2Fplaylist%2F...`
+  with the text `Listen to "This is Mal Griot" on EBBLESS`; track share (a
+  track at index 2) added `&track=2` and text naming that track/artist;
+  with `navigator.share` removed, the same actions correctly fell back to
+  `navigator.clipboard.writeText` plus the "Link copied" toast. Then
+  simulated a recipient actually opening each generated link: navigating to
+  a `?import=...&track=N` URL for an already-cached playlist jumped straight
+  to the player on the right track; clearing storage entirely and opening a
+  fresh `?import=<SoundCloud album URL>&track=3` link (a real, non-cached
+  resolve, hitting the real worker/SoundCloud over the network) first showed
+  the normal first-run splash-choice screen unchanged, then - after
+  confirming the early-jump bug fix above - landed correctly on track index
+  3 ("vast") once the full resolve finished; a plain `?import=` with no
+  `&track=` on a fresh playlist link correctly autoplayed track 0. Confirmed
+  the query params were stripped from the address bar after each import.
+  Checked the console throughout: no new errors beyond the same pre-existing
+  Google Identity/FedCM sign-in noise present on a completely vanilla load
+  with none of this change's code touched. **Caveat:** real on-device
+  confirmation of `navigator.share` opening an actual OS share sheet (as
+  opposed to the captured-call/clipboard-fallback paths exercised here)
+  wasn't possible in this headless tool, same caveat the merged
+  `settings-share-app` entry above already notes for its own share button -
+  worth a quick real-device check.
 
 ### single-song-paste-prompt: Prompt for target playlist when pasting a single song
 - **Status:** merged

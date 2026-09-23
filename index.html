@@ -3831,6 +3831,7 @@ const CTX_ICON_LINK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.
 const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h6V4l-2.35 2.35z"/></svg>';
 const CTX_ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V2L7 7l5 5V8c3.31 0 6 2.69 6 6a6 6 0 01-6 6 6 6 0 01-6-6H4a8 8 0 008 8 8 8 0 008-8c0-4.42-3.58-8-8-8z"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
+const CTX_ICON_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08a2.9 2.9 0 00-1.96.77l-7.13-4.15a2.92 2.92 0 000-1.4l7.05-4.11a3 3 0 10-.9-1.72l-7.05 4.11a3 3 0 100 4.84l7.13 4.15a2.92 2.92 0 10.86-1.49z"/></svg>';
 
 // Reverses a resolved playlist's {type,id} back into the URL it was
 // imported from, for "Copy link". Custom playlists and the two system
@@ -3885,6 +3886,7 @@ function openLibCtxMenu(id, btn){
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
   if (link){
+    items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
     items.push({ action: 'replacelink', label: 'Replace link', icon: CTX_ICON_REPLACE });
   }
@@ -4037,6 +4039,11 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
     items.push({ action: 'playnext', label: 'Play next', icon: CTX_ICON_PLAY_NEXT });
     items.push({ action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE });
     items.push({ action: 'addplaylist', label: 'Add to playlist', icon: CTX_ICON_ADD_PLAYLIST });
+    // A track has no canonical source link of its own (see
+    // canonicalLinkForPlaylist's comment) - sharing it re-shares the parent
+    // playlist/album's link plus this track's position within it, so only
+    // offer it when the parent actually came from a real link.
+    if (canonicalLinkForPlaylist(pl)) items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ sep: true });
   }
   items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
@@ -4079,6 +4086,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'playnext'){ queuePlayNext(trackIdx, plId); showToast('Playing next'); }
   else if (action === 'addqueue'){ queueAddToEnd(trackIdx, plId); showToast('Added to queue'); }
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
+  else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
   else if (action === 'remove'){
     if (!t) return;
@@ -4108,6 +4116,7 @@ function handleLibCtxAction(action, id){
   else if (action === 'art') openChangeArtFlow(id, pl);
   else if (action === 'duplicate') duplicateLibraryPlaylist(id, pl);
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
+  else if (action === 'share') sharePlaylistItem(pl);
   else if (action === 'copylink') copyPlaylistLink(pl);
   else if (action === 'replacelink') openReplaceLinkFlow(id, pl);
   else if (action === 'relinkall') manualRelinkPlaylist(id);
@@ -4216,6 +4225,72 @@ function copyPlaylistLink(pl){
   } else {
     showToast("Couldn't copy link");
   }
+}
+
+/* =========================================================================
+   SHARE A SONG/PLAYLIST — "Copy link" above just hands back the raw source
+   link (Spotify/YouTube/SoundCloud/Apple Music), useful for pasting back
+   into that source app, but opening it doesn't lead anywhere near EBBLESS.
+   Sharing wraps that same canonical link in an EBBLESS URL
+   (?import=<link>[&track=<index>]) that this build's own boot sequence
+   (see applySharedImportFromUrl, called from startApp()) recognizes and
+   feeds straight through the existing paste-a-link resolution path
+   (beginImportFromParsedLink/beginImport) - no separate share-link backend,
+   just the same import flow triggered automatically instead of by a form
+   submit. A fresh recipient with EBBLESS not open yet still lands on the
+   real splash/install-invite first (see startApp), then the song/playlist,
+   which matches "leads them to install/open EBBLESS and play it".
+   ========================================================================= */
+function buildShareUrl(sourceLink, trackIndex){
+  const params = new URLSearchParams({ import: sourceLink });
+  if (trackIndex != null && trackIndex > 0) params.set('track', String(trackIndex));
+  return location.origin + location.pathname + '?' + params.toString();
+}
+
+// Fires the Web Share API when available; otherwise falls back to copying
+// just the link, mirroring copyPlaylistLink/shareAppBtn's existing
+// clipboard-fallback pattern (see the Settings "Share EBBLESS" row).
+function shareEbblessLink(shareData){
+  if (navigator.share){
+    navigator.share(shareData).catch(() => { /* user cancelled the share sheet - nothing to do */ });
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(shareData.url).then(() => showToast('Link copied')).catch(() => showToast("Couldn't copy link"));
+  } else {
+    showToast("Couldn't copy link");
+  }
+}
+
+function sharePlaylistItem(pl){
+  const link = canonicalLinkForPlaylist(pl);
+  if (!link) return;
+  shareEbblessLink({
+    title: 'EBBLESS',
+    text: 'Listen to "' + pl.name + '" on EBBLESS',
+    url: buildShareUrl(link)
+  });
+}
+
+// Individual tracks have no canonical source link of their own once they're
+// sitting inside a resolved playlist (the backend only ever returns
+// title/artist/art per track, not the source's own per-track id - see
+// worker/src/index.js's handleEmbed) - sharing one instead re-shares the
+// parent playlist/album's link plus this track's index within it.
+// buildQueueFrom() already tolerates an out-of-range/unmatched index by
+// falling back to the top of the (freshly re-resolved) playlist, so a
+// reordered source at worst degrades to "shares the playlist" rather than
+// erroring.
+function shareTrackAt(plId, trackIdx){
+  const pl = playlistById(plId);
+  const t = pl && pl.tracks[trackIdx];
+  const link = pl && canonicalLinkForPlaylist(pl);
+  if (!t || !link) return;
+  shareEbblessLink({
+    title: 'EBBLESS',
+    text: 'Listen to "' + t.title + '" by ' + t.artist + ' on EBBLESS',
+    url: buildShareUrl(link, trackIdx)
+  });
 }
 
 // Re-points a library entry at a different source link entirely, keeping
@@ -4796,7 +4871,7 @@ function isSingleTrackType(type){
   return type === 'track' || type === 'sc_track' || type === 'am_track' || type === 'yt_video';
 }
 
-async function beginImport(id, force, type){
+async function beginImport(id, force, type, targetIndex){
   importErr.textContent = '';
   if (!force){
     const cached = getCachedPlaylist(id);
@@ -4806,7 +4881,7 @@ async function beginImport(id, force, type){
         return;
       }
       loadPlaylistIntoPlayer(cached);
-      buildQueueFrom(0);
+      buildQueueFrom(targetIndex || 0);
       loadIndex(state.queuePos, true);
       setView('player');
       // Cached before the resolution logic last changed - the tracks that
@@ -4841,7 +4916,16 @@ async function beginImport(id, force, type){
           renderQueuePanel();
         }
       }
-    }, (partial) => {
+    }, targetIndex ? undefined : (partial) => {
+      // Skipped entirely when a specific target track was asked for (a
+      // shared song link, see shareTrackAt/buildShareUrl): jumping in early
+      // plays whichever track resolves first, which is very likely NOT the
+      // one that was shared (validIndices() below would only contain
+      // whatever's resolved so far, so buildQueueFrom(targetIndex) would
+      // silently fall back to that first-ready track anyway). Waiting for
+      // the full resolve below instead means a shared song always actually
+      // starts on the shared song, at the cost of the early-jump-in
+      // optimization for that one case.
       startedEarly = true;
       closeImportOverlay();
       loadPlaylistIntoPlayer(partial);
@@ -4879,14 +4963,53 @@ async function beginImport(id, force, type){
     } else {
       closeImportOverlay();
       loadPlaylistIntoPlayer(pl);
-      buildQueueFrom(0);
+      buildQueueFrom(targetIndex || 0);
       loadIndex(state.queuePos, true);
       setView('player');
     }
   } catch(e){
     if (startedEarly) bgResolveProgress.delete(id);
-    stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type));
+    stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type, targetIndex));
   }
+}
+
+// Shared by importForm's submit handler (a manually pasted link) and
+// applySharedImportFromUrl (a ?import= link opened from a Share action) -
+// both need the same source-URL -> {internal id, type} mapping beginImport
+// expects; see parseImportLink for the {source,type,id,storefront} shape.
+function beginImportFromParsedLink(parsed, targetIndex){
+  if (parsed.source === 'youtube'){
+    beginImport('yt:' + parsed.id, false, parsed.type === 'video' ? 'yt_video' : 'yt_playlist', targetIndex);
+  } else if (parsed.source === 'soundcloud'){
+    beginImport('sc:' + encodeURIComponent(parsed.id), false, parsed.type === 'track' ? 'sc_track' : 'sc_playlist', targetIndex);
+  } else if (parsed.source === 'applemusic'){
+    const type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
+    beginImport(parsed.storefront + ':' + parsed.id, false, type, targetIndex);
+  } else {
+    beginImport(parsed.id, false, parsed.type, targetIndex);
+  }
+}
+
+// Consumes a ?import=<source link>[&track=<index>] URL (see buildShareUrl) -
+// generated by the Share action on a playlist/track - by running it through
+// the exact same resolution path a manually pasted link takes. Called once
+// from startApp() on every boot; a no-op when there's no ?import= param.
+// The params are stripped from the URL right away (not just after a
+// successful import) so a bad/expired link can't get stuck re-triggering on
+// every reload of the same tab.
+function applySharedImportFromUrl(){
+  let sourceLink, trackParam;
+  try{
+    const params = new URLSearchParams(location.search);
+    sourceLink = params.get('import');
+    trackParam = params.get('track');
+  } catch(e){ return; }
+  if (!sourceLink) return;
+  try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
+  const parsed = parseImportLink(sourceLink);
+  if (!parsed){ showToast("That share link isn't valid anymore."); return; }
+  const targetIndex = trackParam != null ? parseInt(trackParam, 10) : undefined;
+  beginImportFromParsedLink(parsed, targetIndex);
 }
 
 importForm.addEventListener('submit', (e) => {
@@ -4895,16 +5018,7 @@ importForm.addEventListener('submit', (e) => {
   if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
   importErr.textContent = '';
   urlInput.value = '';
-  if (parsed.source === 'youtube'){
-    beginImport('yt:' + parsed.id, false, parsed.type === 'video' ? 'yt_video' : 'yt_playlist');
-  } else if (parsed.source === 'soundcloud'){
-    beginImport('sc:' + encodeURIComponent(parsed.id), false, parsed.type === 'track' ? 'sc_track' : 'sc_playlist');
-  } else if (parsed.source === 'applemusic'){
-    const type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
-    beginImport(parsed.storefront + ':' + parsed.id, false, type);
-  } else {
-    beginImport(parsed.id, false, parsed.type);
-  }
+  beginImportFromParsedLink(parsed);
 });
 
 // Starter library for anyone with nothing saved yet: the artist's own
@@ -7975,6 +8089,13 @@ function startApp(){
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
     if (!getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID)) seedStarterLibrary();
+    // A shared song/playlist link (?import=..., see buildShareUrl/
+    // applySharedImportFromUrl) takes over from here if present - called
+    // last so its own setView('player') isn't immediately clobbered by the
+    // currentTrack()-based setView call above. #splash still covers the
+    // screen at this point (z-index 9999 vs. #import-overlay's 60) so this
+    // resolves quietly underneath it, same as any other cold-boot work here.
+    applySharedImportFromUrl();
   } catch(e){
     // Best-effort recovery: land on whatever view makes sense rather than
     // leaving the DOM in whatever half-rendered state the throw above left
