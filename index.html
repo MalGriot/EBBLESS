@@ -6278,7 +6278,19 @@ function makeSCPlayerAdapter(deck, widget, myGen){
     loadVideoById(opts){
       const v = typeof opts === 'string' ? opts : opts.videoId;
       deck._scPos = 0; deck._scDur = 0; deck._scState = -1;
-      widget.load(soundCloudTrackApiUrl(v), { auto_play: true, show_artwork: false });
+      // Only the active deck autoplays - a standby deck loading with
+      // auto_play:true would start playing (muted) on its own, and
+      // SoundCloud's widget pauses every other SoundCloud player on the
+      // page the moment one starts, knocking out the track actually being
+      // listened to. See soundCloudWidgetSrc's autoPlay comment.
+      // .load() also resets the widget's own volume back to 100 regardless
+      // of any earlier setVolume/mute, so re-apply this adapter's current
+      // volume/mute state once the new sound is in - otherwise a muted
+      // standby deck would come back at full volume.
+      widget.load(soundCloudTrackApiUrl(v), {
+        auto_play: deck === activeDeck(), show_artwork: false,
+        callback: function(){ if (deck.gen === myGen) widget.setVolume(muted ? 0 : vol); },
+      });
       // .load() doesn't re-fire READY on an already-bound widget (verified
       // directly against the real widget), so this is the only place the
       // new track's duration gets (re-)fetched. Gen-guarded like every other
@@ -6297,9 +6309,21 @@ function soundCloudTrackApiUrl(videoId){ return 'https://api.soundcloud.com/trac
 // needs. Chrome (etc.) delegates autoplay permission into the iframe via the
 // allow="autoplay" attribute already on #sc-deck-a/b, the same way YouTube's
 // own iframe embed relies on it.
-function soundCloudWidgetSrc(videoId){
+//
+// autoPlay is false for a standby (preloading) deck - see
+// bld-background-tab-autoadvance: SoundCloud's widget enforces "only one
+// SoundCloud player plays at a time" across every SC iframe on the page, so
+// a standby deck that autoplays (even muted, even for a split second before
+// onDeckConfirmed's pauseVideo lands) pauses the active deck. In a visible
+// tab that race usually went the right way; in a hidden tab the widget's
+// autoplay lands later, after the pause, so right after a track ended in the
+// background and the next one was promoted, preloading the track after it
+// silently paused the one that had just started - until the listener came
+// back to the tab and the visibilitychange handler's resumePlayback() kicked
+// it again.
+function soundCloudWidgetSrc(videoId, autoPlay){
   return 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(soundCloudTrackApiUrl(videoId)) +
-    '&auto_play=true&show_artwork=false&visual=false&download=false&sharing=false' +
+    '&auto_play=' + (autoPlay ? 'true' : 'false') + '&show_artwork=false&visual=false&download=false&sharing=false' +
     '&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&buying=false&liking=false';
 }
 function createSCDeckPlayer(deck, videoId){
@@ -6332,7 +6356,7 @@ function createSCDeckPlayer(deck, videoId){
   const iframe = document.createElement('iframe');
   iframe.id = deck.scId;
   iframe.setAttribute('allow', 'autoplay');
-  iframe.src = soundCloudWidgetSrc(videoId);
+  iframe.src = soundCloudWidgetSrc(videoId, deck === activeDeck());
   old.replaceWith(iframe);
   const widget = SC.Widget(iframe);
   deck.player = makeSCPlayerAdapter(deck, widget, myGen);
@@ -6362,6 +6386,24 @@ function createSCDeckPlayer(deck, videoId){
   });
   widget.bind(SC.Widget.Events.PLAY, function(){
     if (deck.gen !== myGen) return;
+    // Safety net for the standby-autoplay race described at
+    // soundCloudWidgetSrc: a standby deck should never be playing outside a
+    // crossfade (runCrossfade sets swapInProgress before it starts the
+    // standby deck). If one starts anyway, stop it, and note when - its
+    // PLAY will have made SoundCloud pause the active deck, which the
+    // PAUSE handler below then undoes.
+    if (deck !== activeDeck() && !swapInProgress){
+      deck._scBouncedAt = Date.now();
+      widget.pause();
+      // Same knock-out, events arriving in the other order: the active
+      // deck's PAUSE already landed (and was reflected) just before this.
+      const ad = activeDeck();
+      if (ad.kind === 'sc' && ad._scState === YT.PlayerState.PAUSED && ad._scPausedAt && Date.now() - ad._scPausedAt < 2000 && ad.player){
+        ad._scPausedAt = 0;
+        ad.player.playVideo();
+      }
+      return;
+    }
     deck._scState = YT.PlayerState.PLAYING;
     // Re-fetch duration here too, not just right after load() in
     // makeSCPlayerAdapter's loadVideoById - verified directly that calling
@@ -6374,7 +6416,22 @@ function createSCDeckPlayer(deck, videoId){
     widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
     onDeckStateChange(deck, { data: YT.PlayerState.PLAYING });
   });
-  widget.bind(SC.Widget.Events.PAUSE, function(){ if (deck.gen !== myGen) return; deck._scState = YT.PlayerState.PAUSED; onDeckStateChange(deck, { data: YT.PlayerState.PAUSED }); });
+  widget.bind(SC.Widget.Events.PAUSE, function(){
+    if (deck.gen !== myGen) return;
+    // The active deck paused within moments of a stray standby PLAY being
+    // bounced (see the PLAY handler above) - that pause came from
+    // SoundCloud's one-player-at-a-time rule, not the listener, so resume
+    // instead of reflecting it as a real pause.
+    const other = decks[0] === deck ? decks[1] : decks[0];
+    if (deck === activeDeck() && deck._scState === YT.PlayerState.PLAYING && other._scBouncedAt && Date.now() - other._scBouncedAt < 2000){
+      other._scBouncedAt = 0;
+      widget.play();
+      return;
+    }
+    deck._scState = YT.PlayerState.PAUSED;
+    deck._scPausedAt = Date.now();
+    onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
+  });
   widget.bind(SC.Widget.Events.FINISH, function(){ if (deck.gen !== myGen) return; deck._scState = YT.PlayerState.ENDED; onDeckStateChange(deck, { data: YT.PlayerState.ENDED }); });
   widget.bind(SC.Widget.Events.PLAY_PROGRESS, function(data){ if (deck.gen === myGen) deck._scPos = (data && data.currentPosition || 0) / 1000; });
 }
@@ -9826,7 +9883,6 @@ if (introBeatCapture){
 } else if (forceIntroPreview) runIntro(true);
 else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); }
 else showSplashChoice();
-
 })();
 </script>
 </body>
