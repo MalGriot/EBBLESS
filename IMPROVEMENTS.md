@@ -1484,15 +1484,82 @@ Add entries in this shape:
   local review before merge.
 
 ### tutorial-crossfade-demo: Tutorial should visually animate the crossfade slider
-- **Status:** draft
+- **Status:** review
 - **Priority:** low
 - **Description:** In the tutorial's crossfade beat, after the crossfade
   toggle is switched on, animate the crossfade slider visually moving from
   0 to 10 seconds, then settling to 5 seconds.
 - **Touches:** tutorial crossfade beat (near the caption-timing fix in
   `tutorial-caption-timing`, merged).
-- **Branch:** (unclaimed)
+- **Branch:** agent/tutorial-crossfade-demo
 - **Notes:** Synced from Geethub issue #63.
+
+  Found the beat in `runIntro()`'s settings section (~line 8970 in
+  `index.html`, right after `tutorial-caption-timing`'s fix to the same
+  "Crossfade smoothly" / "With no ads ever" caption pair): the crossfade
+  toggle was flipped on (`tap(crossfadeBtn, true)`, `crossfadeBtn.textContent
+  = 'On'`) but `crossfadeDurSlider`/`crossfadeDurVal` never moved - the
+  slider just sat wherever the real `crossfadePrefs.ms` last left it.
+
+  Added `animateCrossfadeDurDemo()`, a small async helper alongside the
+  tutorial's other scripted-interaction helpers (`tap()`, `hoverThenPress()`)
+  that sweeps the slider's `value`/label from 0ms to 10000ms over 12 steps,
+  holds briefly, then eases back down to 5000ms over 8 steps, driven by the
+  same `wait()` used everywhere else in `runIntro()` (so it respects
+  `prefers-reduced-motion` and bails cleanly via the `done` flag if the
+  visitor skips the tutorial mid-sweep). It's purely cosmetic: it never
+  touches `crossfadePrefs` or calls `lsSet`, so the real crossfade-length
+  setting is untouched throughout - exactly the same never-persisted pattern
+  already documented for the toggle itself, and `renderCrossfadeUI()` (called
+  from `finish()`) resets the slider back to the visitor's actual saved value
+  once the tutorial ends either way. Since the slider's real HTML `min` is
+  `1000` (1s), the helper temporarily lowers `min` to `'0'` so the sweep can
+  actually reach 0s, then restores the original `min` before returning -
+  scoped to the sweep's own lifetime, so it can never leak into the real
+  control.
+
+  Wired it into the beat right after the toggle turns on and before the
+  existing `clearCaption()` hold, replacing a flat `wait(500)` with
+  `await animateCrossfadeDurDemo()` followed by a shorter `wait(200)` - added
+  runtime is additive only, doesn't touch `tutorial-caption-timing`'s
+  clear/550ms-wait handoff into "With no ads ever" that follows.
+
+  Also handled a follow-up ask to call out the slider visually while it
+  animates: rather than invent a new highlight, reused the tutorial's
+  existing per-beat "spotlight" mechanism (`#onbSpotlight` /
+  `placeCaptionNear()`'s `unionRect()`), the same darkened-vignette-with-a-lit-
+  cutout treatment every other beat already uses to call out its target, and
+  already the pattern the style-record/viz beats use to spotlight two
+  elements as one region (e.g. the artwork square AND the tab that changes
+  it). Changed `setCaption('Crossfade smoothly', crossfadeBtn)` to
+  `setCaption('Crossfade smoothly', [crossfadeBtn, crossfadeDurRow])` so the
+  lit region now covers the toggle and the length-slider row together for
+  the whole beat, not just the toggle - no new CSS or visual language added.
+
+  Verified by serving this worktree with `python3 -m http.server` (a shared
+  preview-tool browser pane on this machine turned out to have other active
+  sessions' tabs/dev-servers mixed into it - noticed mid-verification when a
+  `navigate` call unexpectedly landed on an unrelated worktree's page;
+  switched to always targeting this session's own tab explicitly by id and
+  reloaded the one foreign tab an errant script injection had reached, to
+  leave it as found) and driving `?intro` runs of the real tutorial. Injected
+  a lightweight interval-based observer (matching the `MutationObserver`
+  technique `tutorial-caption-timing` used, since this sandbox can't drive
+  `file://` pages directly either) logging `crossfadeDurSlider.value`,
+  `crossfadeDurVal.textContent`, `#onbCaption` text, and `#onbSpotlight`'s
+  position/size with timestamps. Captured a full run showing the slider
+  climb 0.8s -> 10s over ~540ms then ease back down to exactly 5s over
+  ~360ms in the "Crossfade smoothly" window, `#onbSpotlight` widen to a
+  ~514x156px box (versus the ~40-80px single-button boxes every other beat
+  in the same run produced) for that exact window, and the slider's `min`
+  restored to `1000` and value reset to the real default `4000` once
+  `finish()`'s `renderCrossfadeUI()` ran at the end - confirming the sweep,
+  the widened highlight, and the real-setting isolation all work together.
+  A direct screenshot mid-beat also showed "Crossfade length 5s" with the
+  toggle On once the sweep settled. Zero console errors traceable to this
+  change in any run (the only console errors seen were pre-existing
+  Google-Identity/network-fetch failures from this sandbox's lack of
+  network egress, unrelated to this change). No open questions.
 
 ### tutorial-paste-link-copy: Clarify "paste a link" tutorial caption
 - **Status:** merged
