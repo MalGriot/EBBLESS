@@ -5093,3 +5093,96 @@ Add entries in this shape:
   claim against direct DOM state (`getBoundingClientRect`,
   `document.elementFromPoint`, `body.className`) rather than trusting
   screenshots alone.
+
+### email-signin-prompt-loop: App asks to sign in to email account on every load
+- **Status:** draft
+- **Priority:** high
+- **Description:** Every time the app loads, it prompts the user to sign in
+  to their email account. This should not happen on every load - diagnose
+  why a sign-in prompt is firing repeatedly (likely a mis-triggered
+  auth/notification flow) and make it only prompt when actually necessary,
+  not on every single load.
+- **Touches:** unknown - likely auth/account or notification-permission flow
+  triggered during app init.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #136. Issue body had no further
+  detail beyond the title. Flagged high priority - a sign-in prompt on
+  every load is a bad first-run/every-run experience.
+
+### breathe-love-deep-track-order: "Breathe Love Deep" skips "Gasp", starts on "Deep" instead
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Playing the "Breathe Love Deep" album skips the track
+  "Gasp" and starts playback on "Deep" instead, even though the album title
+  implies "Gasp" should play first (or at least be included). Fix the
+  track order/selection so "Gasp" plays as expected.
+- **Touches:** likely the same SoundCloud-sourced album area as
+  `breathe-love-deep-album` and `breathe-love-deep-soundcloud-pull` (both
+  merged) - track list/order resolution for this album specifically.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #134. Related to (but not a
+  duplicate of) `breathe-love-deep-album` and
+  `breathe-love-deep-soundcloud-pull` - those fixed categorization and
+  source-of-truth for this album; this is a distinct track-order/skip bug
+  on the same release. Issue body had no further detail beyond the title.
+
+### fullscreen-artwork-centering: Fullscreen artwork/LP/cassette should be centered to the viewport
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In fullscreen mode, the artwork, LP (spinning record),
+  and cassette visuals should be centered to the viewport. Currently they
+  are not centered.
+- **Touches:** fullscreen chrome shared across `#flow-layer` and desktop
+  split-view fullscreen (`.artwork-wrap`) - same area touched by
+  `fullscreen-lp-cassette-visual`, `fullscreen-lp-too-small`, and
+  `fullscreen-exit-button-consistency` (all merged/in that area).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #137. Issue body had no further
+  detail beyond the title. Worth checking against the most recent
+  `fullscreen-exit-button-consistency` fix (commit `e23b9a5`) and
+  `fullscreen-lp-too-small` before starting, in case centering regressed
+  as a side effect of either.
+
+### splash-order-video-logo-buttons: Splash sequence order should be bg video, then logo, then tutorial/enter buttons
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The video-tinted splash screen should present its
+  elements in this order: (1) background video, (2) EBBLESS logo, (3) the
+  tutorial/enter choice buttons. Currently the order doesn't match this.
+- **Touches:** splash sequence (`sequence()`, `showSplashChoice()`,
+  `#splash`/`#onbBackdrop`/`#onbMark` per the recent
+  `tutorial-text-overflow-button-animation` splash-beat work, commit
+  `01f2367`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #139. Issue body had no further
+  detail beyond the title. Check against the just-merged flat-black
+  EBBLESS-mark-before-splash-choice change (commit `01f2367`) first, since
+  it touches this exact sequencing.
+
+### fullscreen-esc-exit: Esc key should exit fullscreen
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Pressing the Esc key while in fullscreen (LP, cassette,
+  or cymatics) should exit fullscreen, same as clicking the exit-fullscreen
+  button.
+- **Touches:** fullscreen chrome shared across `#flow-layer` and desktop
+  split-view fullscreen (`.artwork-wrap`) - likely wires into the same
+  `closeDesktopFs()` / flow-layer exit path as
+  `fullscreen-exit-button-consistency` (merged, commit `e23b9a5`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #138. Issue body had no further
+  detail beyond the title. Related to but not a duplicate of
+  `fullscreen-exit-button-consistency` - that unified the on-screen button;
+  this adds a keyboard shortcut to the same exit path.
+
+### playlist-panel-side-desktop: Desktop playlist panel should open left-over-library, not right-over-queue
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, opening a playlist currently slides its
+  panel in on the right side, over the queue. It should instead open on
+  the left side, over the library.
+- **Touches:** desktop playlist panel/slide-up (same area as
+  `playlist-queue-slide-height`, `playlist-art-at-top`, both merged).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #135. Issue body had no further
+  detail beyond the title.
