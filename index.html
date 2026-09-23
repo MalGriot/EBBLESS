@@ -2991,6 +2991,20 @@ function setView(name){
   views[name].scrollTop = 0;
   updateMiniBarVisibility();
   if (typeof updateLibraryClockColor === 'function') updateLibraryClockColor();
+  // The Swell/Currents teaser video (see renderLibrary's video-face branch)
+  // can be built while #view-library is still hidden - e.g. the very first
+  // renderLibrary() call in startApp() runs before this function's first
+  // call ever does. Some engines never grant an autoplaying video started
+  // while hidden a second chance once it's actually shown, so re-kick it
+  // here on every switch into library rather than only at creation time.
+  if (name === 'library'){
+    const swellVideo = libraryGrid && libraryGrid.querySelector('.lib-card[data-pl-id="' + SWELL_ID + '"] .video-face video');
+    if (swellVideo && swellVideo.paused){
+      swellVideo.muted = true;
+      const playPromise = swellVideo.play();
+      if (playPromise && playPromise.catch) playPromise.catch(() => {});
+    }
+  }
   syncHistoryBuffer();
 }
 
@@ -3437,6 +3451,21 @@ function renderLibrary(){
       // 2x2 track grid every other playlist uses.
       artDiv.classList.add('single');
       artDiv.innerHTML = '<div class="face video-face"><video autoplay muted loop playsinline src="brand/assets/swell-thumb.mp4"></video></div>';
+      // The `muted`/`autoplay` HTML attributes aren't always honored on an
+      // element created via innerHTML - Safari in particular can leave the
+      // `muted` IDL property unset in that path, which silently blocks the
+      // autoplay that depends on it, and a card built while its view is
+      // still hidden (renderLibrary() runs before the first setView() call
+      // in startApp - see Geethub #128) can miss the initial autoplay grant
+      // entirely with no retry once it becomes visible. Drive both
+      // explicitly instead of trusting the markup alone, so the teaser clip
+      // reliably starts regardless of how/when the tile was inserted.
+      const swellVideo = artDiv.querySelector('.video-face video');
+      if (swellVideo){
+        swellVideo.muted = true;
+        const playPromise = swellVideo.play();
+        if (playPromise && playPromise.catch) playPromise.catch(() => {});
+      }
     } else if (withArt.length === 0 && !pl.image){
       // No matched tracks yet and no source-provided image (an empty
       // manual playlist) - the app icon glyph, recolored to today's
