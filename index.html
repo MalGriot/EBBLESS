@@ -5231,26 +5231,38 @@ function getOrCreateDiscoverExt(originPlId){
   return pl;
 }
 
-let discoverExtending = false;
-async function extendQueueWithDiscover(originPlId){
-  if (discoverExtending) return;
-  discoverExtending = true;
-  try{
-    const seedTracks = [];
-    for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
-      const t = trackAt(p);
-      if (t) seedTracks.push(t);
-    }
-    if (!seedTracks.length) return;
-    const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH);
-    if (!found.length) return;
-    const extId = discoverExtId(originPlId);
-    const ext = getOrCreateDiscoverExt(originPlId);
-    const startIdx = ext.tracks.length;
-    found.forEach(t => ext.tracks.push(t));
-    lsSet(LS_PL(extId), ext);
-    found.forEach((t, i) => queueAddToEnd(startIdx + i, extId));
-  } finally { discoverExtending = false; }
+// A single in-flight extension is shared by every caller instead of each
+// call racing its own fetch: the proactive lookahead (maybeExtendDiscoverQueue,
+// fired minutes ahead while tracks are still playing) and the "actually hit
+// the end of the queue" fallback (playNext) can both land while a fetch for
+// the same origin is still resolving. Callers await the *same* promise here
+// rather than getting an instant no-op when one is already running - a bare
+// re-entrancy flag would let a second caller's `.then(finishQueueAtEnd)` read
+// state.queue before the first call has appended anything, wrongly
+// concluding Discover found nothing and stopping playback out from under an
+// extension that was seconds from landing.
+let discoverExtendPromise = null;
+function extendQueueWithDiscover(originPlId){
+  if (discoverExtendPromise) return discoverExtendPromise;
+  discoverExtendPromise = (async () => {
+    try{
+      const seedTracks = [];
+      for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
+        const t = trackAt(p);
+        if (t) seedTracks.push(t);
+      }
+      if (!seedTracks.length) return;
+      const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH);
+      if (!found.length) return;
+      const extId = discoverExtId(originPlId);
+      const ext = getOrCreateDiscoverExt(originPlId);
+      const startIdx = ext.tracks.length;
+      found.forEach(t => ext.tracks.push(t));
+      lsSet(LS_PL(extId), ext);
+      found.forEach((t, i) => queueAddToEnd(startIdx + i, extId));
+    } finally { discoverExtendPromise = null; }
+  })();
+  return discoverExtendPromise;
 }
 
 // The playlist a Discover-continued queue is "about" - queue[0] keeps
