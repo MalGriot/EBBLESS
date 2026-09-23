@@ -4177,7 +4177,7 @@ Add entries in this shape:
   each step is), so this shouldn't be sensitive to that.
 
 ### audio-quality-boost: Boost audio quality
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Reporter wants audio quality boosted generally. No
   further detail given - needs investigation into what's actually
@@ -4185,12 +4185,106 @@ Add entries in this shape:
   EQ/processing boost) before scoping a fix.
 - **Touches:** audio playback pipeline / source resolution - needs
   locating.
-- **Branch:** (unclaimed)
+- **Branch:** agent/audio-quality-boost
 - **Notes:** Synced from Geethub issue #120. Distinct from `volume-equalizer`
   (loudness normalization) and `lp-quality-audio` (vinyl-warmth EQ option)
   - this is a plain "make it sound better/higher quality" ask, not either
   of those specific features. Worth reviewing together since all three
   touch audio processing.
+
+  Investigated the full playback pipeline end to end
+  (`createDeckPlayer`/`createSCDeckPlayer` and everything around them in
+  `index.html`, plus `worker/src/index.js`'s `/search` and `/soundcloud`
+  endpoints) looking for a real, controllable fidelity lever - stream
+  bitrate, source-quality tier, codec choice, or client-side processing
+  degrading output - per this entry's own scoping note. Conclusion: there
+  isn't one available to change. Detail:
+
+  - **YouTube path.** Every deck's `YT.Player` is pinned to
+    `LOWEST_QUALITY = 'tiny'` via `vq`/`suggestedQuality`/
+    `setPlaybackQuality`, re-forced on every ready/quality-change/load
+    (`forceLowestQuality`, ~index.html:6047-6082). This looked like the
+    obvious culprit going in - forcing "tiny" sounds like it should mean
+    "worst everything." Checked it directly rather than assuming: on the
+    IFrame Player's modern adaptive (DASH-style) delivery, video and audio
+    are separate representations, and the quality tier
+    (`tiny`/`small`/`medium`/...) only selects the video-only
+    representation - audio is negotiated independently and served at its
+    best available bitrate (AAC ~128kbps / Opus ~160kbps, itag 140/251)
+    regardless of the forced video tier. The only YouTube formats that
+    couple a genuinely low, fixed audio bitrate to a low video tier are the
+    legacy muxed progressive itags (17 @ 144p, ~24kbps mono; 18 @ 360p,
+    Google's own metadata literally tags it `AUDIO_QUALITY_LOW`) - and
+    those are non-adaptive fallbacks for clients without MediaSource
+    Extensions support, which is effectively none of the browsers/webviews
+    this app runs in today. So the existing comment above
+    `LOWEST_QUALITY` ("saves bandwidth/load time with zero visible/audible
+    cost") holds up under scrutiny rather than being an untested
+    assumption worth overturning - confirmed against YouTube's own support
+    docs, itag references, and multiple independent community threads
+    converging on the same "video quality setting doesn't touch audio
+    bitrate on modern YouTube" answer. Left unchanged: touching it would
+    only spend more (invisible, since this app never shows the video)
+    bandwidth for zero fidelity gain.
+  - **SoundCloud path.** Native playback (`createSCDeckPlayer`,
+    `soundCloudWidgetSrc`, ~index.html:6087-6230) already goes through
+    SoundCloud's own embeddable Widget (`w.soundcloud.com/player`) rather
+    than a YouTube-matched proxy - the real, already-shipped quality win
+    here was the `soundcloud-native-playback` work itself, which fixed the
+    much bigger fidelity problem of an independent artist's track
+    sometimes having *no* correct YouTube match at all. Checked whether the
+    embed Widget exposes any client-selectable quality/bitrate parameter
+    (a "hq" stream tier does exist in SoundCloud's API, but it's gated
+    behind an authenticated Go+ subscription) - it doesn't, for an
+    anonymous embed. Nothing to select here; the widget already serves the
+    best tier obtainable without SoundCloud login.
+  - **No client-side audio processing anywhere.** Neither pipeline is ever
+    routed through the Web Audio API - confirmed by the code itself,
+    which explains why in two places (index.html:6337,
+    "YouTube's iframe audio can't be tapped by the Web Audio API
+    (cross-origin)"; index.html:8402-8404, routing the onboarding music
+    element through a fresh `AudioContext` "would silence it outright").
+    Crossfade/volume changes go through each player's own native
+    `setVolume`, not a `GainNode`. There's no compressor, limiter, or
+    resampling step degrading anything to remove.
+  - **Worker.** `worker/src/index.js`'s `/search` and `/soundcloud`
+    endpoints only ever resolve metadata (title/artist/duration/videoId/
+    channel) for the client to hand to the YouTube/SoundCloud embeds -
+    neither endpoint touches an actual audio stream URL, itag, or bitrate;
+    that choice is made entirely inside the two platforms' own players
+    after receiving an id, not by this app. `scoreCandidate()` already
+    biases YouTube matching toward "- Topic" channels and official-audio/
+    lyric-video uploads over VEVO-style music videos (which can splice in
+    spoken intros) - i.e. it already prefers the cleanest available
+    recording. That's pre-existing, recently-tuned match-scoring logic
+    aimed at correctness (right song, right cut), a different concern from
+    this entry's stream-fidelity scope, and not touched further here.
+
+  **No code change made.** Both playback backends (YouTube IFrame Player,
+  SoundCloud Widget) are opaque, cross-origin, platform-owned embeds that
+  don't expose a client-selectable bitrate/quality knob beyond what's
+  already in use - correctly, for SoundCloud, and provably harmlessly for
+  the one YouTube "quality" override that exists. Making a cosmetic change
+  here (e.g. flipping `LOWEST_QUALITY` to something less extreme) would
+  have shipped nothing audible, per the investigation above, while quietly
+  regressing the bandwidth/load-time saving that setting exists for -
+  exactly the "cosmetic change to look busy" this entry's own instructions
+  warned against.
+
+  **What remains unverified:** this conclusion rests on documented YouTube
+  IFrame Player / DASH behavior, itag references, and community consensus
+  (no single canonical spec doc covers it) rather than a live packet
+  capture of this app's own negotiated audio itag - there's no network
+  egress to youtube.com/soundcloud.com from this sandbox to confirm
+  directly, so real playback was not (and could not be) listened to here.
+  If issue #120's reporter can give a concrete example (a specific song
+  that sounds bad, and how - muffled, quiet, distorted, cutting out), that
+  would likely point at something this investigation couldn't rule out
+  from static code alone: a genuinely low-quality source upload winning
+  the YouTube match (a matching-correctness issue, not a tier issue),
+  buffering/dropouts read as "quality," or a loudness complaint (which is
+  `volume-equalizer`'s scope, not this one) - worth a follow-up ask before
+  assuming this entry needs more work.
 
 ### token-exhaustion-splash-stuck: App stuck on splash when out of tokens
 - **Status:** merged
