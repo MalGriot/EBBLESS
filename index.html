@@ -4517,6 +4517,10 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   const pl = getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
+  // Decided before videoId is overwritten below: a SoundCloud-native track
+  // (or any track in a SoundCloud-sourced playlist) keeps its own
+  // SoundCloud art, per resolveTrackArt's SoundCloud exception.
+  const keepsNativeArt = isSoundCloudVideoId(t.videoId) || sourceKindForType(pl.type) === 'soundcloud';
   t.videoId = candidate.videoId;
   t.matchedTitle = candidate.title || '';
   t.channel = candidate.channel || '';
@@ -4529,6 +4533,7 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   cacheTrackMatch(t.title, t.artist, candidate);
   recordWrongTrackCorrection(t, candidate);
   renderLibrary();
+  repaintOpenLibPanelTrack(plId, trackIdx, pl);
   closeImportOverlay();
   showToast('Link updated');
   // Relinking the track that's playing right now: swap the audio over
@@ -4538,6 +4543,65 @@ function applyRelinkChoice(plId, trackIdx, candidate){
     loadIndex(state.queuePos, true);
     syncWrongTrackFlagUI(t);
   }
+  if (!keepsNativeArt) refreshRelinkedTrackArt(plId, trackIdx, t);
+}
+
+// renderLibrary() doesn't touch the open tracklist panel (it's built once
+// in toggleLibraryPlaylistPanel), so a relinked row there would keep its
+// old thumbnail until reopened. Repaints just that row's art - and the
+// panel's cover, when it's borrowed from a track (same pick as
+// toggleLibraryPlaylistPanel) - in place.
+function repaintOpenLibPanelTrack(plId, trackIdx, pl){
+  if (openLibraryPanelId !== plId || !pl) return;
+  const t = pl.tracks[trackIdx];
+  const row = libplBody.querySelectorAll('.track-row')[trackIdx];
+  const img = row && row.querySelector('img');
+  if (img && t) attachArtworkFallback(img, t);
+  if (!pl.image){
+    const artTrack = pl.tracks.find(x => x.videoId || x.art);
+    if (artTrack) attachArtworkFallback(libplArt, artTrack);
+  }
+}
+
+// A relinked track's art should stay Spotify's own cover, not become the
+// newly chosen video's thumbnail (artworkUrls only falls back to that when
+// track.art is empty - e.g. the original resolve's /spotifyart lookup
+// missed). So after a relink, re-run the same resolveTrackArt lookup and,
+// if it finds a cover, store it and repaint every surface showing this
+// track. On a miss the existing art (if any) is kept, and the candidate's
+// YouTube thumbnail stays the fallback exactly as before.
+function refreshRelinkedTrackArt(plId, trackIdx, t){
+  const videoId = t.videoId;
+  // 'youtube' as the source kind so resolveTrackArt actually asks
+  // /spotifyart - its 'spotify'/'soundcloud' kinds return the native art
+  // untouched without a lookup.
+  resolveTrackArt('youtube', t.title, t.artist, t.art || null).then(art => {
+    if (!art || art === t.art) return;
+    const pl = getCachedPlaylist(plId);
+    const cur = pl && pl.tracks[trackIdx];
+    // The playlist may have changed while the lookup was in flight (track
+    // removed/reordered, or relinked again) - only touch the same track.
+    if (!cur || cur.videoId !== videoId || cur.title !== t.title) return;
+    cur.art = art;
+    lsSet(LS_PL(plId), pl);
+    if (state.playlist && state.playlist.id === plId) state.playlist = pl;
+    renderLibrary();
+    repaintOpenLibPanelTrack(plId, trackIdx, pl);
+    const q = state.queue[state.queuePos];
+    if (q && q.plId === plId && q.idx === trackIdx){
+      // Same art surfaces reflectCurrentTrackUI paints, without its
+      // play-count bump / resume write.
+      swapPlayerArt(cur);
+      swapFlowArt(cur);
+      swapAltArt(cur);
+      setAmbient(cur);
+      updatePlayerAccentColor(cur);
+      attachArtworkFallback(miniArt, cur);
+      cassetteSetLabelArt(cur);
+      updateMediaSessionMeta(cur);
+    }
+    renderQueuePanel();
+  });
 }
 
 /* =========================================================================
