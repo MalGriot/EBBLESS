@@ -5820,7 +5820,7 @@ Add entries in this shape:
   user confirmed the mini-player is working ("i see it now").
 
 ### flag-wrong-track: Flag button missing on desktop; flag should report "wrong track playing"
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The flag button has disappeared on desktop (mobile not
   yet checked). Its job should be simple and quick: one tap reports the
@@ -5833,6 +5833,11 @@ Add entries in this shape:
   should do). No "flag" control exists in current `main` index.html -
   the agent should first confirm what the user means (likely the per-track
   relink/report control) or build it fresh.
+  Lane pushed `29ce42a`: flag was hidden for SoundCloud tracks since
+  `9efc88b` and missing from desktop fullscreen; now shown everywhere,
+  one tap logs + diagnoses (localStorage, Settings > Support copy, and
+  `/report`), second tap opens relink and pins the correction. Worker
+  changes (`/search` scores, `/report` payload) need a worker deploy.
 
 ### wrong-song-kaytranada-glowed-up: Playlist plays wrong song for "Glowed Up" (Kaytranada)
 - **Status:** draft
