@@ -7508,7 +7508,11 @@ function loadIndex(pos, autoplay){
    onDeckStateChange ignores the PLAYING events a deck still emits while it
    fades out. A fade yields (volume restored, no pause) if the track changes
    under it or a track-to-track crossfade takes over the deck's volume. */
-const PAUSE_FADE_OUT_MS = 550;
+// Fade-out length follows the listener's own transition preference: half
+// of the crossfade-length slider (read live at press time, used even while
+// crossfade itself is toggled off), never shorter than this floor.
+const PAUSE_FADE_OUT_MIN_MS = 550;
+function pauseFadeOutMs(){ return Math.max(PAUSE_FADE_OUT_MIN_MS, ((crossfadePrefs && crossfadePrefs.ms) || 0) / 2); }
 const PAUSE_FADE_IN_MS = 320;
 const PAUSE_FADE_TICK_MS = 16;
 // how long a fade-in holds at silence waiting for the player to report it's
@@ -7523,7 +7527,14 @@ function runPlayFade(deck, dir){
   if (playFade) clearTimeout(playFade.timer);
   const from = prev ? prev.gain : (dir === 'out' ? 1 : 0);
   const to = dir === 'out' ? 0 : 1;
-  const dur = Math.max(1, Math.abs(to - from) * (dir === 'out' ? PAUSE_FADE_OUT_MS : PAUSE_FADE_IN_MS));
+  let dur = Math.max(1, Math.abs(to - from) * (dir === 'out' ? pauseFadeOutMs() : PAUSE_FADE_IN_MS));
+  // A long fade-out must land before the track itself ends - otherwise the
+  // track-end auto-advance would start the next song mid-"pause". Squeeze
+  // it into whatever's left (minus a small margin) when that's shorter.
+  if (dir === 'out' && deck.player && deck.player.getDuration && deck.player.getCurrentTime){
+    const left = (deck.player.getDuration() - deck.player.getCurrentTime()) * 1000;
+    if (left > 0) dur = Math.max(1, Math.min(dur, left - 250));
+  }
   const f = playFade = { deck, dir, gain: from, qpos: state.queuePos, gen: deck.gen, start: Date.now(), waitStart: Date.now(), timer: null };
   const setVol = (g) => { if (deck.player && deck.player.setVolume) deck.player.setVolume(Math.round(effectiveVolume() * g)); };
   const tick = () => {
