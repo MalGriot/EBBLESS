@@ -5962,14 +5962,17 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #146 (title only, no description).
 
 ### pause-fade-out: Pausing should fade the music out briefly
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** When the user pauses, fade the audio down over a short
   time instead of cutting instantly - a longer distance between sound and
   silence. Likely fade back in on resume too.
 - **Touches:** play/pause handlers, audio gain.
 - **Branch:** agent/pause-fade-out
-- **Notes:** Synced from Geethub issue #145.
+- **Notes:** Synced from Geethub issue #145. Lane pushed `161536e`:
+  550ms eased fade-out then pause, 320ms fade-in gated on real playback,
+  mid-fade toggles reverse from current level, pausing mid-crossfade
+  cancels the crossfade. Verified on YouTube and SoundCloud.
 
 ### crossfade-manual-skip: Crossfade should also apply on next/previous
 - **Status:** draft
