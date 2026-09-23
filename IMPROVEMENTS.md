@@ -5820,7 +5820,7 @@ Add entries in this shape:
   user confirmed the mini-player is working ("i see it now").
 
 ### flag-wrong-track: Flag button missing on desktop; flag should report "wrong track playing"
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The flag button has disappeared on desktop (mobile not
   yet checked). Its job should be simple and quick: one tap reports the
@@ -5861,7 +5861,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #152.
 
 ### bld-background-tab-autoadvance: SoundCloud tracks won't advance to the next track in a background tab
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** With the Breathe Love Deep album playing, when a song
   ends while the user is on another browser tab, the next track doesn't
@@ -5974,7 +5974,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #146 (title only, no description).
 
 ### pause-fade-out: Pausing should fade the music out briefly
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** When the user pauses, fade the audio down over a short
   time instead of cutting instantly - a longer distance between sound and
