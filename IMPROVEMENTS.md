@@ -3351,15 +3351,78 @@ Add entries in this shape:
   review before merge.
 
 ### discovery-radio-continuation: Discovery should keep playing a radio around a song after it ends
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** When playing a single song with Discovery on, once it
   finishes the app should keep playing a radio built around that song
   (rather than stopping). Loading a song while something's already playing
   should build a queue around it.
 - **Touches:** Discovery/radio playback logic, queue building.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #101.
+- **Branch:** agent/discovery-radio-continuation
+- **Notes:** Synced from Geethub issue #101. Found the actual bug wasn't in
+  the radio-continuation logic itself - that already existed and already
+  worked generically for any queue. `maybeExtendDiscoverQueue()` (called
+  from `loadIndex()`) proactively tops any queue back up once it's within
+  `DISCOVER_LOOKAHEAD` tracks of the end via `extendQueueWithDiscover()`,
+  and `playNext()`/`finishQueueAtEnd()` fall back to the same extension at
+  the real end of the queue - this is exactly the "keep playing similar
+  songs when this queue ends" toggle already shipped and on by default
+  (`isDiscoverOn()` defaults to `true`). It works today for any playlist,
+  including a one-track one.
+
+  What was actually broken: pasting a single song (a Spotify/Apple
+  Music/SoundCloud track or a YouTube video link) never played anything at
+  all. `beginImport()` special-cased `isSingleTrackType()` results (`track`,
+  `sc_track`, `am_track`, `yt_video`) straight into
+  `openSingleTrackDestinationPicker()` - a "save it somewhere" prompt - in
+  both the cached-link branch and the freshly-resolved branch, and returned
+  without ever calling `loadPlaylistIntoPlayer`/`buildQueueFrom`/`loadIndex`.
+  So there was never a queue for Discover to extend or continue in the
+  first place; a single song's "radio" had nothing to build around, and
+  "loading a song while something's already playing" was a no-op for
+  playback (only the picker opened on top of whatever was already going).
+
+  Fixed (commit `414c8eb`): both branches now run the exact same
+  `loadPlaylistIntoPlayer` -> `buildQueueFrom(0)` -> `loadIndex(state.queuePos,
+  true)` -> `setView('player')` sequence already used for every other
+  playlist type, immediately before still opening the destination picker
+  (so the "save this to Liked Songs / a playlist" option is untouched).
+  This replaces whatever was queued/playing with a fresh one-track queue
+  anchored on the new song - satisfying "loading a song while something's
+  playing builds a queue around it" - and, because that one-track queue now
+  actually exists, the pre-existing Discover machinery picks it up with
+  zero new code: `loadIndex`'s own lookahead extends it right away, and the
+  existing end-of-queue fallback continues it when the track actually
+  finishes. No new recommendation/resolution logic was written or needed.
+
+  Verified without network egress or real audio, both called out as
+  possibly unavailable in this sandbox and confirmed unavailable: pasting a
+  real YouTube link failed with "youtube redirected to an interstitial
+  (bot-check)" from the backend worker, and the Browser preview pane in
+  this environment turned out to be hard-scoped to the main EBBLESS
+  checkout (not this worktree) - a plain static server started inside the
+  worktree could be curled but the pane refused to navigate to it, and
+  opening the worktree's `index.html` via a `file://` URL rendered as a
+  static, non-interactive snapshot. So this was **not** verified end-to-end
+  in a live browser. Instead verified two ways: (1) `node --check` on the
+  page's extracted inline scripts confirms no syntax errors; (2) extracted
+  the real, unmodified source of `beginImport`, `buildQueueFrom`,
+  `maybeExtendDiscoverQueue`, `extendQueueWithDiscover`, `playNext`, and
+  `finishQueueAtEnd` verbatim from `index.html` and ran them in a Node `vm`
+  sandbox against stubbed DOM/network/YouTube-iframe calls (localStorage,
+  `fetchDiscoverCandidates`, `loadIndex`'s actual playback), exercising:
+  loading a single song while a 3-track playlist is playing (queue is
+  replaced, song plays, save picker still offered, nothing saved to the
+  library as its own playlist), Discover proactively extending that
+  one-track queue right after it starts, and walking the queue to its end
+  and past it (auto-advance) continuing into the Discover-added tracks
+  instead of stopping. All assertions passed. What remains genuinely
+  unverified is real audio: whether a YouTube/Spotify/SoundCloud track
+  actually resolves and plays through the iframe/native players in a real
+  browser, and whether the live `/similar` and `/ytmix` backend endpoints
+  return usable candidates - none of that touches the code changed here,
+  which only decides *whether playback and a queue get started at all*,
+  not how a track is resolved or streamed.
 
 ### queue-close-return-view: Closing the queue should return to the view you were on
 - **Status:** merged
