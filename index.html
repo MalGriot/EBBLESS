@@ -2147,7 +2147,21 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
    flat 401 from YouTube. This small dedicated Cloudflare Worker does both
    fetches server-side and returns clean JSON. See worker/src/index.js.
    ========================================================================= */
-const BACKEND = 'https://spotify-youtube-search.malgriot.workers.dev';
+const BACKEND_PROD = 'https://spotify-youtube-search.malgriot.workers.dev';
+const BACKEND_STAGING = 'https://spotify-youtube-search-staging.malgriot.workers.dev';
+// ?backend=staging routes this load (and every load after, via localStorage)
+// at the staging worker/KV namespaces instead of production - use while
+// testing anything that writes KV (report-a-match, taste pooling, profile
+// save) so it doesn't eat production's free-tier daily put quota.
+// ?backend=prod clears the override back to production.
+(function(){
+  const q = new URLSearchParams(location.search).get('backend');
+  if (q === 'staging' || q === 'prod') {
+    try { localStorage.setItem('ebbless_backend', q); } catch(e){}
+  }
+})();
+let BACKEND = BACKEND_PROD;
+try { if (localStorage.getItem('ebbless_backend') === 'staging') BACKEND = BACKEND_STAGING; } catch(e){}
 
 /* ---- splash hard safety net ----
    #splash is opaque and visible by default (the no-FOUC cover - see its CSS

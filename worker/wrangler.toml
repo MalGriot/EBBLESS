@@ -16,3 +16,27 @@ id = "7ba1ba2734224136b5e998365a37ea67"
 
 [vars]
 GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"
+
+# Separate KV namespaces so local dev / testing (`wrangler dev --env staging`,
+# `wrangler deploy --env staging`) never touches production's KV quota - see
+# the Cloudflare KV free-tier daily put-limit hit on 2026-09-23, traced to
+# a lane testing the report-wrong-track feature against prod. Deploys to a
+# separate worker ("spotify-youtube-search-staging"), so point EBBLESS's
+# BACKEND at that URL while testing, not the production one.
+[env.staging]
+name = "spotify-youtube-search-staging"
+
+[[env.staging.kv_namespaces]]
+binding = "MATCH_REPORTS"
+id = "ed63bbe0fdba47c1b1c9d898a5c90b60"
+
+[[env.staging.kv_namespaces]]
+binding = "TASTE_POOL"
+id = "9caa11841d094555afedc29335fc1c64"
+
+[[env.staging.kv_namespaces]]
+binding = "PROFILES"
+id = "00d30b10ad134d8ab7952fa3e5a621e9"
+
+[env.staging.vars]
+GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"

@@ -39,6 +39,25 @@ npx wrangler deploy
 Requires the `sumtinels@gmail.com` Cloudflare account to be authenticated via
 `wrangler login` (already set up in this environment).
 
+## Testing against staging, not production
+
+The worker's KV namespaces (`MATCH_REPORTS`, `TASTE_POOL`, `PROFILES`) are on
+Cloudflare's free tier, which caps daily `put` operations account-wide - easy
+to blow through by testing a KV-writing feature (report-a-match, taste
+pooling, profile save) directly against production. Use the staging
+environment instead:
+
+```bash
+cd worker
+npx wrangler dev --env staging       # local dev server against staging KV
+npx wrangler deploy --env staging    # deploy to spotify-youtube-search-staging.<subdomain>.workers.dev
+```
+
+Then point `BACKEND` in `index.html` at the staging worker's URL while
+testing. Staging has its own separate KV namespaces (see `worker/wrangler.toml`),
+so nothing written there touches production's quota. Plain `npx wrangler
+deploy` (no `--env`) still targets production as before.
+
 ## YouTube links
 
 Besides Spotify, you can paste a YouTube link directly — a playlist
