@@ -4802,6 +4802,20 @@ async function beginImport(id, force, type){
     const cached = getCachedPlaylist(id);
     if (cached){
       if (isSingleTrackType(cached.type)){
+        // A single song is playable exactly like any other one-track queue
+        // (see discovery-radio-continuation): play it now - replacing
+        // whatever was already queued/playing, same as loading any other
+        // playlist below - then still offer to save it somewhere, since a
+        // single song has no browsable home of its own in the library.
+        // Discover picks up from here with zero new logic: buildQueueFrom
+        // -> loadIndex -> maybeExtendDiscoverQueue immediately looks ahead
+        // and extends the queue around this track (isDiscoverOn defaults to
+        // true), and playNext/finishQueueAtEnd carry that continuation
+        // through when the track actually ends.
+        loadPlaylistIntoPlayer(cached);
+        buildQueueFrom(0);
+        loadIndex(state.queuePos, true);
+        setView('player');
         openSingleTrackDestinationPicker(cached.tracks[0]);
         return;
       }
@@ -4859,6 +4873,15 @@ async function beginImport(id, force, type){
     });
     if (isSingleTrackType(pl.type)){
       closeImportOverlay();
+      // See the cache-hit branch above (discovery-radio-continuation): play
+      // the freshly-resolved single song immediately - this replaces
+      // whatever was already playing and builds a fresh one-track queue
+      // around it, which Discover then extends/continues exactly like it
+      // does for any other playlist - then still offer to save it.
+      loadPlaylistIntoPlayer(pl);
+      buildQueueFrom(0);
+      loadIndex(state.queuePos, true);
+      setView('player');
       openSingleTrackDestinationPicker(pl.tracks[0]);
       return;
     }
