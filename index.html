@@ -1178,9 +1178,18 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
    splash instead of the app deciding automatically - see the bottom of the
    main script (showSplashChoice()) for the logic. Hidden by default so a
    returning visitor (or anyone mid-tutorial/mid-splash-timeout) never sees
-   it; only added for a first-time visitor awaiting their choice. */
+   it; only added for a first-time visitor awaiting their choice.
+   The 2700ms delay is deliberate, not just "later than the logo's own
+   900ms delay" - it's timed to start only once splash-logo-in above has
+   fully finished (900ms delay + 1800ms duration = 2700ms), so the choice
+   buttons read as the third beat in "video, then logo, then buttons"
+   rather than fading in on top of a still-arriving logo. The previous
+   1200ms delay had the buttons fully visible by 1700ms, well before the
+   logo (still only ~44% faded in at that point) - so the buttons visually
+   registered before the logo did, out of order. Keep this in sync with
+   splash-logo-in's own timing if that ever changes. */
 .splash-choice{position:relative;z-index:1;display:flex;gap:12px;opacity:0;pointer-events:none;
-  transform:translateY(10px);transition:opacity 500ms var(--ease-out) 1200ms,transform 500ms var(--ease-out) 1200ms}
+  transform:translateY(10px);transition:opacity 500ms var(--ease-out) 2700ms,transform 500ms var(--ease-out) 2700ms}
 #splash.is-choice .splash-choice{opacity:1;pointer-events:auto;transform:translateY(0)}
 .splash-choice-btn{font:inherit;font-size:14px;letter-spacing:.2px;padding:11px 22px;border-radius:22px;
   border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:var(--text);cursor:pointer;
