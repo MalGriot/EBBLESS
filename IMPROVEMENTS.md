@@ -5193,7 +5193,7 @@ Add entries in this shape:
   it touches this exact sequencing.
 
 ### fullscreen-esc-exit: Esc key should exit fullscreen
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Pressing the Esc key while in fullscreen (LP, cassette,
   or cymatics) should exit fullscreen, same as clicking the exit-fullscreen
@@ -5207,6 +5207,38 @@ Add entries in this shape:
   detail beyond the title. Related to but not a duplicate of
   `fullscreen-exit-button-consistency` - that unified the on-screen button;
   this adds a keyboard shortcut to the same exit path.
+
+  **Fix:** added an `'Escape'` case to the existing desktop keyboard-shortcuts
+  `keydown` listener (`index.html` ~7273, the same switch that already
+  handles space/arrows/`f`). It closes whichever of the two fullscreen
+  overlays is actually open: `closeFlow()` if `state.flowOpen` (the shared
+  `#flow-layer` overlay - covers LP, cassette, and default art style on
+  mobile/tablet, plus cymatics on both mobile and desktop), else
+  `closeDesktopFs()` if `state.deskFsOpen` (the split-desktop panel-slide
+  LP/cassette/default fullscreen added by `fullscreen-exit-button-consistency`).
+  These two are mutually exclusive, so at most one fires. Lyrics fullscreen
+  (`#lyricsFsLayer`/`openLyricsFs()`) is a separate, pre-existing overlay
+  that was never part of the LP/cassette/cymatics exit-button unification
+  and is out of scope here per the issue title - left untouched, still only
+  closable via its own `#lyricsFsExitBtn`.
+- **Verified:** real browser (this worktree served via
+  `python3 -m http.server 8794`, confirmed via a fetch of `/index.html`
+  matching this change's marker text before trusting the page). At mobile
+  width (557x814, default `#flow-layer` path): entered fullscreen for
+  default art, Spinning Record (LP), Cassette Tape, and cymatics
+  (visualizer) - in each case confirmed `#flow-layer.is-open` was `true`,
+  pressed Escape, confirmed it flipped to `false` and the player view
+  underneath was intact. At desktop split-view width (1440x900): switched
+  to Cassette Tape, opened fullscreen (`toggleDesktopFs()` path, confirmed
+  `document.body` gained `desktop-fs` and NOT `#flow-layer.is-open`),
+  pressed Escape, confirmed `desktop-fs` was removed and the library/queue
+  panes slid back in. Also checked for interference with other Escape
+  behavior: opened lyrics fullscreen (`#lyricsFsLayer`, deliberately
+  out of scope) and pressed Escape - it stayed open as expected (no
+  regression, no accidental cross-wiring), then closed it via its own
+  button; opened the library item right-click context menu and pressed
+  Escape - it still closed via its pre-existing, untouched handler. Ran
+  `node --check` against the extracted `<script>` contents - passes.
 
 ### playlist-panel-side-desktop: Desktop playlist panel should open left-over-library, not right-over-queue
 - **Status:** draft

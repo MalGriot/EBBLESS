@@ -7290,6 +7290,16 @@ document.addEventListener('keydown', (e) => {
       if (state.flowOpen) closeFlow();
       else if (currentTrack()) openFlow();
       break;
+    case 'Escape':
+      // Same exit path as #flowExitBtn/#desktopFsExitBtn (see
+      // fullscreen-exit-button-consistency, commit e23b9a5): LP/cassette/
+      // cymatics fullscreen is either the shared #flow-layer overlay
+      // (mobile/tablet, and cymatics on desktop too) or, on split-desktop,
+      // the separate toggleDesktopFs() panel-slide - mutually exclusive,
+      // so at most one of these actually does anything.
+      if (state.flowOpen) closeFlow();
+      else if (state.deskFsOpen) closeDesktopFs();
+      break;
   }
 });
 miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); });
