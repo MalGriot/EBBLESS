@@ -6154,3 +6154,52 @@ Add entries in this shape:
 - **Touches:** Discover / Currents recommendation logic.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #163.
+
+### discover-pooled-affinity: Discover should read the crowd taste pool it already writes to
+- **Status:** ready
+- **Priority:** high
+- **Description:** Every finished / liked / skipped Discover track already
+  POSTs its tag pairs to the worker's `/pool/signal`, stored in the
+  `TASTE_POOL` KV. The worker also exposes `GET /pool/affinity?tags=`, but
+  nothing in `index.html` ever calls it - the crowd data is write-only and
+  shapes no one's recommendations. Wire it in: in `fetchDiscoverCandidates`,
+  fetch `/pool/affinity` for the seed tags (once per extension, in parallel
+  with `fetchSimilar`/`fetchThisIsPlaylist`, fail silent to an empty result)
+  and blend a pooled boost into `scoreCandidate` next to the local
+  `graphBoostFor` / `graphConfidence` blend. The point: a brand-new listener
+  with an empty local graph starts from what the crowd already knows, and
+  the local graph takes over as it grows. Keep the pooled share modest and
+  scaled by how much pooled data came back, so thin/noisy crowd data can't
+  swamp Last.fm tag similarity. Check the `/pool/affinity` response shape in
+  `worker/src/index.js` (`handlePoolAffinity`) and cache it if it isn't
+  already, since it does a KV list + gets per tag.
+- **Touches:** index.html Discover scoring (`fetchDiscoverCandidates`,
+  `scoreCandidate`, local listening graph section); possibly
+  `worker/src/index.js` `handlePoolAffinity` (caching) + worker redeploy.
+- **Branch:**
+- **Notes:** Found while answering "is EBBLESS learning?" (2026-09-23).
+  Local per-browser learning works; the pooled half is collected but unused.
+
+### tag-all-tracks-for-learning: Learn from every track, not just Discover picks
+- **Status:** ready
+- **Priority:** medium
+- **Description:** `recordListenSignal` only learns from tracks that carry
+  `.tags`, and only Discover-origin tracks get tags (from `/similar`). So
+  finishing, liking, or skipping a track from a pasted Spotify / YouTube /
+  SoundCloud / Apple Music playlist teaches the taste graph nothing - which
+  is most of what people actually play. Fetch Last.fm tags lazily for a
+  regular track the first time a signal fires on it (or on play start),
+  cache them on the track / in localStorage keyed by title+artist so each
+  track is looked up once ever, then run the same `recordListenSignal`
+  path. Must stay fire-and-forget: never delay playback, skip, or like on a
+  tag lookup. Reuse an existing worker endpoint if one returns track tags
+  (`/similar` returns `seedTags`); only add a lighter tags-only endpoint if
+  that proves too heavy.
+- **Touches:** index.html `recordListenSignal` and its three call sites
+  (track end in `onDeckStateChange`, `toggleLikeTrack`, `recordSkipIfEarly`);
+  possibly a new worker route.
+- **Branch:**
+- **Notes:** Found while answering "is EBBLESS learning?" (2026-09-23).
+  Pairs with `discover-pooled-affinity` (more signals make the pool useful
+  faster) - both land near the Discover section of index.html, so run them
+  one after the other, not in parallel, to avoid a merge conflict.
