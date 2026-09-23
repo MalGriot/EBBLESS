@@ -5175,11 +5175,6 @@ Add entries in this shape:
   center off by 30px vertically; after: exact match), 1150x1400
   (width-constrained case, no topbar overlap), and 375x812 mobile
   (unaffected, as expected). Pushed as commit `06645c6`.
-- **Notes:** Synced from Geethub issue #137. Issue body had no further
-  detail beyond the title. Worth checking against the most recent
-  `fullscreen-exit-button-consistency` fix (commit `e23b9a5`) and
-  `fullscreen-lp-too-small` before starting, in case centering regressed
-  as a side effect of either.
 
 ### splash-order-video-logo-buttons: Splash sequence order should be bg video, then logo, then tutorial/enter buttons
 - **Status:** draft

@@ -1038,8 +1038,30 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   body.split-desktop.desktop-fs:not(.view-settings-active) .player-stage{
     position:relative;height:100%;padding-top:0;justify-content:center;
   }
+  /* issue #137 ("fullscreen artwork/LP/cassette not centered"): the #124 fix
+     above sized this to fill the *pane* (#view-player, which starts below
+     the topbar) edge-to-edge - but .player-stage's justify-content:center
+     centers within that pane, and the pane itself isn't centered on the
+     viewport (it's shifted down by the topbar's full height), so the art's
+     true on-screen center sat var(--topbar-h)/2 (30px at the default 60px
+     topbar) below the actual viewport center. Same downward offset on all
+     three visual styles - most visible on record/cassette since they
+     letterbox inside this square and so reveal any asymmetry in the empty
+     margin, but present for the default cover art too.
+     True viewport centering *and* staying flush against the pane's bottom
+     edge are mutually exclusive here - the topbar only reserves space at
+     the top, and it has no background (see #topbar CSS), so letting the art
+     extend up behind it to compensate would show a raw square corner
+     bleeding through the transparent bar rather than a clean overlay like
+     #flow-layer's chrome. Instead: reserve var(--topbar-h) twice (once for
+     the real topbar up top, once as a matching empty margin at the bottom)
+     and center the box on the true viewport with fixed positioning instead
+     of relying on .player-stage's in-pane flexbox centering - keeps the
+     left/right edge-to-edge behavior (var(--topbar-h)*2 only ever shrinks
+     the height-constrained case) while making the on-screen center exact. */
   body.split-desktop.desktop-fs:not(.view-settings-active) .artwork-wrap{
-    width:min(100vw,calc(100dvh - var(--topbar-h)));
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(100vw,calc(100dvh - (var(--topbar-h) * 2)));
   }
   /* pulled out of the player-stage flex flow (which now only centers the
      art) and floated over it instead - explicit z-index needed only for
