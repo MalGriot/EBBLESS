@@ -5806,7 +5806,7 @@ Add entries in this shape:
   are about the same header row.
 
 ### desktop-mini-player-reopen: Desktop mini-player not working (issue reopened)
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** Geethub issue #64 (`desktop-mini-player`, merged) was
   reopened by the user with no new detail, meaning the floating mini-player
@@ -5816,10 +5816,11 @@ Add entries in this shape:
 - **Touches:** mini-player / Picture-in-Picture code from
   `desktop-mini-player`.
 - **Branch:**
-- **Notes:** Synced from reopened Geethub issue #64.
+- **Notes:** Synced from reopened Geethub issue #64. Dropped 2026-09-23:
+  user confirmed the mini-player is working ("i see it now").
 
 ### flag-wrong-track: Flag button missing on desktop; flag should report "wrong track playing"
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The flag button has disappeared on desktop (mobile not
   yet checked). Its job should be simple and quick: one tap reports the
@@ -5827,7 +5828,7 @@ Add entries in this shape:
   (what was requested vs what was matched/played, source, candidates) so
   the causes of inaccurate matches can be researched.
 - **Touches:** player controls; link matching / relink code.
-- **Branch:**
+- **Branch:** agent/flag-wrong-track
 - **Notes:** Synced from Geethub issues #174 (button gone) and #168 (what it
   should do). No "flag" control exists in current `main` index.html -
   the agent should first confirm what the user means (likely the per-track
@@ -5854,16 +5855,17 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Synced from Geethub issue #152.
 
-### bld-background-tab-autoadvance: Breathe Love Deep won't advance to the next track in a background tab
-- **Status:** draft
+### bld-background-tab-autoadvance: SoundCloud tracks won't advance to the next track in a background tab
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** With the Breathe Love Deep album playing, when a song
   ends while the user is on another browser tab, the next track doesn't
   start until they return to EBBLESS.
 - **Touches:** SoundCloud native playback / track-end handling
   (`soundcloud-native-playback`).
-- **Branch:**
-- **Notes:** Synced from Geethub issue #144.
+- **Branch:** agent/bld-background-tab-autoadvance
+- **Notes:** Synced from Geethub issue #144. User update 2026-09-23: this
+  seems to affect ALL SoundCloud-sourced links, not just Breathe Love Deep.
 
 ### safari-splash-bg-video: Splash background video doesn't load on Safari
 - **Status:** draft
@@ -5960,13 +5962,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #146 (title only, no description).
 
 ### pause-fade-out: Pausing should fade the music out briefly
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** When the user pauses, fade the audio down over a short
   time instead of cutting instantly - a longer distance between sound and
   silence. Likely fade back in on resume too.
 - **Touches:** play/pause handlers, audio gain.
-- **Branch:**
+- **Branch:** agent/pause-fade-out
 - **Notes:** Synced from Geethub issue #145.
 
 ### crossfade-manual-skip: Crossfade should also apply on next/previous
