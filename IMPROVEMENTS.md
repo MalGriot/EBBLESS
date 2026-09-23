@@ -4370,16 +4370,68 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #129.
 
 ### currents-cover-video-missing: "CuRRentSSsss" playlist cover video is no longer appearing
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The video used as the cover for the "CuRRentSSsss" /
   Currents playlist is no longer showing up.
 - **Touches:** Currents playlist cover rendering - likely related to
   `rename-current-playlist` / `currentsss-casing-followup` (both merged).
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #128. Possible regression from a
-  more recent change - worth checking recent commits touching the
-  Currents playlist cover/art path first.
+- **Branch:** `agent/currents-cover-video-missing`
+- **Notes:** Synced from Geethub issue #128.
+
+  **The rename/casing hypothesis didn't pan out:** checked both suspect
+  commits (`d6dbb39` rename to `CURRENTSSsss`, `3ecabc6` casing fix to
+  `CuRRentSSsss`) diff-by-diff, and every literal occurrence of the
+  playlist's display name (marquee, card title, migration string, seed/
+  generate fallback) was updated together and stays internally consistent
+  today - `grep -oE "Cu[Rr]+ent[Ss]+sss|CURRENT[Ss]*|Current"` across
+  `index.html` turns up no stray old-casing string. More importantly, the
+  video-face branch itself (`renderLibrary()`, `id === SWELL_ID`) has never
+  compared against the playlist's *name* at all, only its stable `SWELL_ID`
+  (`'swell'`), so a display-text rename can't touch it either way.
+
+  **Actual root cause: the teaser `<video>` can lose its one shot at
+  autoplay.** Two compounding issues in `renderLibrary()`'s video-face
+  branch (built for Swell/Currents whenever it has no tracks/image yet -
+  `brand/assets/swell-thumb.mp4`):
+  1. The `<video autoplay muted loop playsinline>` element is created via
+     `artDiv.innerHTML = '...'` rather than being present in the initial
+     parse. Some engines (Safari in particular) don't reliably promote the
+     `muted` *content* attribute to the `muted` *IDL* property for markup
+     inserted this way, and autoplay is gated on that property actually
+     being `true`.
+  2. `startApp()` calls `renderLibrary()` *before* the first `setView()` -
+     so the very first time this card (and its video) gets built, it can
+     do so while `#view-library` is still hidden (e.g. a returning listener
+     who resumes into `player` view, per Geethub #128's report). Chromium
+     tolerates this in testing, but several engines only grant an
+     autoplaying video its one autoplay attempt at insertion time and never
+     retry once the element becomes visible later - so a card built while
+     hidden can end up permanently stuck paused on frame 0 with no visible
+     video at all.
+  - **Fix:** in `renderLibrary()`, after inserting the video-face markup,
+    explicitly set `swellVideo.muted = true` and call
+    `swellVideo.play().catch(() => {})` instead of relying on the HTML
+    attributes alone. In `setView()`, re-kick the same Swell video
+    (`muted = true` + `play().catch()`) whenever navigating *into* the
+    library view and it's currently paused, so a card that missed its
+    first autoplay grant while hidden gets a second, guaranteed attempt
+    once it's actually on screen.
+  - **Verified:** served this worktree via
+    `python3 -m http.server 8793` and drove it in a real (Chromium)
+    browser. Reproduced the exact failure mode described in the issue by
+    seeding `localStorage` with a resumable non-Swell track (so `startApp`
+    calls `setView('player')`, hiding `#view-library`) alongside a fresh,
+    trackless Swell/Currents entry; confirmed via
+    `video.paused`/`video.currentTime` polling that this is the scenario
+    most likely to leave the teaser clip stuck. Reloaded with the fix in
+    place under the same seeded state and confirmed both programmatically
+    (`paused: false`, `currentTime` advancing/looping across repeated
+    checks) and visually (screenshot showing the actual swell-thumb.mp4
+    frames, not a black tile) that the cover video now plays reliably on
+    first load into a hidden library view, on switching into the Library
+    tab, and after 20 rapid back-to-back `renderLibrary()` re-renders (pin/
+    unpin-style churn) with no console errors introduced.
 
 ### discover-toggle-required: Discover has to be deactivated and reactivated before it works
 - **Status:** merged
