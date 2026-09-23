@@ -5788,3 +5788,364 @@ Add entries in this shape:
 - **Branch:** (unclaimed)
 - **Notes:** Synced from Geethub issue #135. Issue body had no further
   detail beyond the title.
+
+### fullscreen-vertical-centering-nav-row: Fullscreen art still not vertically centered; top nav row wastes space
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Follow-up to `fullscreen-artwork-centering`: in
+  fullscreen the artwork/LP/cassette is still not centered vertically. User
+  suspects the top nav header row - the logo and nav buttons don't need the
+  entire row to be off limits. Separately, outside fullscreen the top nav
+  row has a lot of empty space and feels like it floats above the rest of
+  the UI; it should feel like part of the panels below it.
+- **Touches:** topbar / header row, `body.desktop-fs .artwork-wrap`,
+  `#flow-layer`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #137 (reopened with the vertical
+  centering comment) and #151 (nav row empty space), combined since both
+  are about the same header row.
+
+### desktop-mini-player-reopen: Desktop mini-player not working (issue reopened)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Geethub issue #64 (`desktop-mini-player`, merged) was
+  reopened by the user with no new detail, meaning the floating mini-player
+  on tab switch isn't working or isn't meeting the brief (movable, corner of
+  screen, full player controls). Reproduce on desktop Chrome and Safari,
+  find what's broken, fix.
+- **Touches:** mini-player / Picture-in-Picture code from
+  `desktop-mini-player`.
+- **Branch:**
+- **Notes:** Synced from reopened Geethub issue #64.
+
+### flag-wrong-track: Flag button missing on desktop; flag should report "wrong track playing"
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The flag button has disappeared on desktop (mobile not
+  yet checked). Its job should be simple and quick: one tap reports the
+  current song as the wrong track playing. Keep a log of flagged tracks
+  (what was requested vs what was matched/played, source, candidates) so
+  the causes of inaccurate matches can be researched.
+- **Touches:** player controls; link matching / relink code.
+- **Branch:**
+- **Notes:** Synced from Geethub issues #174 (button gone) and #168 (what it
+  should do). No "flag" control exists in current `main` index.html -
+  the agent should first confirm what the user means (likely the per-track
+  relink/report control) or build it fresh.
+
+### wrong-song-kaytranada-glowed-up: Playlist plays wrong song for "Glowed Up" (Kaytranada)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Loading
+  https://open.spotify.com/playlist/18LY7SteZvmFRVoKTInRKS showed the art
+  for the first song, "Glowed Up" by Kaytranada, but played a different
+  song. Find why the match was wrong and fix the matching.
+- **Touches:** link matching (`link-match-accuracy`, `amel-larrieux-wrong-track`
+  area).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #159.
+
+### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop, clicking the 3-dot menu button on a queue
+  row just plays the track instead of opening the menu.
+- **Touches:** queue row click handling.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #152.
+
+### bld-background-tab-autoadvance: Breathe Love Deep won't advance to the next track in a background tab
+- **Status:** draft
+- **Priority:** medium
+- **Description:** With the Breathe Love Deep album playing, when a song
+  ends while the user is on another browser tab, the next track doesn't
+  start until they return to EBBLESS.
+- **Touches:** SoundCloud native playback / track-end handling
+  (`soundcloud-native-playback`).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #144.
+
+### safari-splash-bg-video: Splash background video doesn't load on Safari
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Opening the app in Safari, the splash showed only the
+  color gradient, no background video.
+- **Touches:** splash video element (autoplay/muted/playsinline, formats).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #161.
+
+### lp-shadow-clipped: LP shadow is cut off by its own image box
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The LP's shadow gets clipped by the image border, which
+  reveals a box. Make the edge softer/larger so the shadow never looks cut.
+- **Touches:** record art style CSS.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #143.
+
+### fullscreen-title-contrast: Fullscreen title unreadable over white-heavy art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In fullscreen, when album art has a lot of white, the
+  white title text disappears. Fix contrast, e.g. a subtle character
+  outline/shadow that only really shows when the text would vanish.
+- **Touches:** fullscreen title/artist styling.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #153.
+
+### crossfade-art-lp-cassette: Crossfade art fade should also work on LP and cassette
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The art-to-art fade on crossfade works for plain art but
+  not the LP or cassette styles. It should.
+- **Touches:** follow-up to `crossfade-album-art-transition`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #158.
+
+### library-title-full-width: Library playlist titles should use full width until hover
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In the library, unhovered playlist rows should let the
+  title stretch to the edge of the pane. Only on hover, when the row
+  buttons appear, should the title shorten to make room.
+- **Touches:** library row CSS (`desktop-playlist-hover-buttons` area).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #173.
+
+### fullscreen-immersive-phase: Make the hidden "press F twice" big fullscreen a real third button phase
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In fullscreen (art/LP/cassette), pressing "f" again
+  gives a larger graphic with UI that disappears after a while - the user
+  loves it but had to discover it. Make it the fullscreen button's 3rd
+  phase. It should cover the whole screen with no browser chrome (like a
+  YouTube video). Put the X next to the fullscreen button so one click
+  returns to the main screen, and drop the redundant X (the close-fullscreen
+  button near the middle already does that job). Replace the little image
+  button up top with the same 3-icon menu used in regular mode so users can
+  switch to cymatics/lyrics seamlessly.
+- **Touches:** fullscreen controls, Fullscreen API, keyboard handler.
+- **Branch:**
+- **Notes:** Synced from Geethub issues #157, #142 (true full screen, no
+  browser), #148 (redundant X), combined since they describe the same mode.
+
+### fullscreen-ui-autohide: Fullscreen LP/cassette/cymatics UI should fade out when idle
+- **Status:** draft
+- **Priority:** high
+- **Description:** On desktop and mobile, in fullscreen LP, cassette or
+  cymatics, the UI should fade out after some idle time and fade back in on
+  interaction.
+- **Touches:** fullscreen chrome. Overlaps `fullscreen-immersive-phase`
+  (that mode already auto-hides) - build both on one shared idle timer.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #147.
+
+### desktop-fullscreen-settings-only: In desktop fullscreen, Settings should open alone
+- **Status:** draft
+- **Priority:** medium
+- **Description:** If fullscreen is active on desktop and the user clicks
+  Settings, show just the settings window, not the queue and library too.
+- **Touches:** `desktop-settings-inline`, `desktop-settings-queue-popup` area.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #141.
+
+### desktop-settings-footer-controls: Desktop Settings view should show footer player controls
+- **Status:** draft
+- **Priority:** high
+- **Description:** On desktop, while the Settings menu is active (replacing
+  the player pane), show the footer player controls so playback stays
+  controllable.
+- **Touches:** desktop settings inline view, footer player.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #146 (title only, no description).
+
+### pause-fade-out: Pausing should fade the music out briefly
+- **Status:** draft
+- **Priority:** high
+- **Description:** When the user pauses, fade the audio down over a short
+  time instead of cutting instantly - a longer distance between sound and
+  silence. Likely fade back in on resume too.
+- **Touches:** play/pause handlers, audio gain.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #145.
+
+### crossfade-manual-skip: Crossfade should also apply on next/previous
+- **Status:** draft
+- **Priority:** medium
+- **Description:** With crossfade on, manually skipping to the next or
+  previous track should fade into it rather than cutting.
+- **Touches:** crossfade engine, next/prev handlers.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #160.
+
+### lp-needle-sfx: LP mode needle-lift / needle-drop sound on pause and play
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In LP mode, pausing plays a slight needle-lift sound;
+  pressing play plays the needle dropping back on the record. User can
+  provide the sound bites.
+- **Touches:** play/pause handlers when art style is record. Pairs with
+  `pause-fade-out`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #162.
+
+### cymatics-infinity-invert: Invert the cymatics infinity button
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On cymatics, the infinity button should work the other
+  way round: deactivated does what active does now, and vice versa.
+- **Touches:** cymatics infinity toggle.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #155.
+
+### keyboard-shortcuts: Add keyboard shortcuts
+- **Status:** draft
+- **Priority:** medium
+- **Description:** "i" toggles the cymatics infinity loop; "p" and "l" open
+  the library; "q" the queue; "s" toggles settings; "shift+s" make a
+  suggestion; "shift+b" report a bug.
+- **Touches:** global keydown handler (alongside "f" fullscreen and Esc).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #156.
+
+### relink-soundcloud-suggestions: "Refresh link" should suggest SoundCloud for SoundCloud tracks
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The per-track refresh-link menu only offers YouTube
+  candidates. For SoundCloud-sourced tracks it should offer SoundCloud
+  candidates too - match the source for accuracy.
+- **Touches:** `track-relink-menu`, `#relinkCandidates`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #140.
+
+### paste-search-result-counts: Paste-bar search results should show track count and duration
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In the list of options that appears when searching in
+  the paste bar, each playlist option should show how many tracks it has
+  and its total duration.
+- **Touches:** `playlist-vibe-search` results UI.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #172.
+
+### discover-append-to-queue: Discover should auto-append new songs to the end of the queue
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When Discover is active, keep adding new discovered
+  songs to the end of the queue. Deactivating Discover removes them.
+  Turning on shuffle should pull from both the original queue and the
+  discovered tracks.
+- **Touches:** Discover / `discovery-radio-continuation`, queue, shuffle.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #169.
+
+### currents-add-reset-button: Button to add more tracks to or reset CuRRentSSsss
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add a button on the CuRRentSSsss playlist to pull in
+  more tracks, and one to reset it.
+- **Touches:** Currents playlist; related to `currents-playlist-algorithm`
+  (draft), which defines how tracks are chosen.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #170 (title only).
+
+### playlist-cap-10: Cap user-added playlists at 10
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Users can add up to 10 new playlists. Auto-added ones
+  (Liked, CuRRentSSsss, This Is Mal Griot, Breathe Love Deep) don't count.
+  EBBLESS DEEP users get unlimited.
+- **Touches:** playlist add flow, library. Depends on `ebbless-deep` for the
+  unlimited tier.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #171.
+
+### button-press-feel: Every button should feel great to press
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Give every button a subtle, satisfying press feel
+  (micro-animation, maybe haptics on mobile) - a nice touch, never
+  distracting.
+- **Touches:** global button styles. Builds on the press animation from
+  `tutorial-text-overflow-button-animation`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #150.
+
+### own-songs-lyrics: Lyrics for every Breathe Love Deep and This Is Mal Griot song
+- **Status:** draft
+- **Priority:** medium
+- **Description:** All songs on Breathe Love Deep and This Is Mal Griot
+  should have lyrics. The user wrote them and will supply the text, so
+  bundle them in the app rather than searching a lyrics provider. Timed
+  lyrics if possible.
+- **Touches:** lyrics lookup - add a local override table.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #154. Needs lyric text from the user
+  before an agent can finish it.
+
+### cassette-beautification: Make the cassette a premium physical object
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Make the cassette feel like a beautiful physical object
+  floating in EBBLESS rather than a player UI: depth, shadow, space;
+  smoky/translucent plastic with subtle reflections and restrained
+  imperfections (contemporary, not retro); reels with slight rotational
+  variation and gentle inertia. See the issue for the full multi-point
+  brief.
+- **Touches:** cassette art style. Sibling of `spinning-record-realism`;
+  overlaps `cassette-fullscreen-animation` (draft) - same visual, do
+  together or sequence.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #149.
+
+### ebbless-deep: EBBLESS DEEP - an optional deeper tier to fund the app
+- **Status:** draft
+- **Priority:** medium
+- **Description:** A deeper layer of EBBLESS, not a conventional premium
+  subscription; free EBBLESS stays complete. Includes unlimited playlists
+  and queues, and "EBBLESS Echo": subtle environmental audio under the music
+  (Rain, Ocean, Forest, Night, City, Fire, Train, Room, Wind, Monsoon) with
+  an intensity control. See the issue for the full brief.
+- **Touches:** new; payments, feature gating, audio layer.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #167. Echo overlaps
+  `ambient-soundscapes` (draft) - likely the same feature. Needs a
+  payments/accounts decision first (`accounts-profiles`).
+
+### artist-tipping: Tipping and direct fan subscriptions for independent artists
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Let listeners pay a small monthly amount directly to
+  independent creators for bonus tracks, early releases, behind-the-scenes
+  audio. Open question from the user: artist pages vs a separate royalties
+  page, and how to do it without breaking platform rules.
+- **Touches:** new; needs research/plan before building.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #166.
+
+### cross-platform-handoff: Hand off playback between phone, desktop, speakers, car
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Move playback from phone to desktop, smart speaker, or
+  car without the queue disappearing or glitching.
+- **Touches:** depends on `accounts-profiles` (cross-device sync).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #165.
+
+### contextual-awareness: Music that adapts to weather, time of day, movement
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Beyond mood playlists: adapt recommendations to local
+  weather, time of day, or movement speed (phone sensors).
+- **Touches:** Discover / Currents recommendation logic.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #164.
+
+### algorithm-sliders: Sliders to steer recommendations
+- **Status:** draft
+- **Priority:** medium
+- **Description:** UI sliders for the recommendation engine: Familiarity vs
+  Discovery, Energy, Instrumental vs Vocal.
+- **Touches:** Discover / Currents recommendation logic.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #163.
