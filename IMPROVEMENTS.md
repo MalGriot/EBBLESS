@@ -5127,7 +5127,7 @@ Add entries in this shape:
   on the same release. Issue body had no further detail beyond the title.
 
 ### fullscreen-artwork-centering: Fullscreen artwork/LP/cassette should be centered to the viewport
-- **Status:** draft
+- **Status:** in review
 - **Priority:** medium
 - **Description:** In fullscreen mode, the artwork, LP (spinning record),
   and cassette visuals should be centered to the viewport. Currently they
@@ -5136,12 +5136,61 @@ Add entries in this shape:
   split-view fullscreen (`.artwork-wrap`) - same area touched by
   `fullscreen-lp-cassette-visual`, `fullscreen-lp-too-small`, and
   `fullscreen-exit-button-consistency` (all merged/in that area).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/fullscreen-artwork-centering`
 - **Notes:** Synced from Geethub issue #137. Issue body had no further
-  detail beyond the title. Worth checking against the most recent
-  `fullscreen-exit-button-consistency` fix (commit `e23b9a5`) and
-  `fullscreen-lp-too-small` before starting, in case centering regressed
-  as a side effect of either.
+  detail beyond the title.
+
+  **Root cause, desktop split-view fullscreen only:** mobile/tablet
+  `#flow-layer` (`display:flex;align-items:center;justify-content:center`
+  on a `position:fixed;inset:0` layer) was already correctly centered on
+  the true viewport - verified via `getBoundingClientRect` across all
+  three art styles at 375x812, no change needed there. Desktop split-view
+  fullscreen (`body.desktop-fs .artwork-wrap`, built by
+  `fullscreen-lp-too-small`) was the actual bug: `.player-stage`'s
+  `justify-content:center` centers `.artwork-wrap` within `#view-player`'s
+  own box, and `#view-player` starts at `top:var(--topbar-h)` (the topbar
+  deliberately stays visible/reachable in this mode, per
+  `fullscreen-exit-button-consistency`'s notes) - so its box runs from
+  `topbar-h` to the viewport bottom, and its *own* center sits
+  `topbar-h / 2` (30px at the default 60px topbar) below the true viewport
+  center. `.artwork-wrap` exactly filled that pane top-to-bottom, so it
+  inherited the same 30px-too-low offset on all three art styles equally.
+  Barely visible on the default cover-art style (object-fit:cover, no
+  letterboxing to reveal it) but clearly visible on record/cassette, which
+  letterbox inside the square and so expose any asymmetry in the empty
+  margin around them.
+
+  **Fix:** true viewport-centering and staying flush against the pane's
+  bottom edge (the `fullscreen-lp-too-small` edge-to-edge goal) are
+  mutually exclusive here, since the topbar only reserves space at the
+  top and has no background of its own (`#topbar` sets no
+  `background-color`) - letting the art extend up behind it to compensate
+  would show the artwork's raw square corner bleeding through the
+  transparent bar instead of a clean overlay like `#flow-layer`'s chrome
+  achieves. Instead, `body.split-desktop.desktop-fs .artwork-wrap`'s width
+  formula now reserves `var(--topbar-h)` *twice* -
+  `min(100vw, calc(100dvh - (var(--topbar-h) * 2)))` - and the element is
+  centered directly on the true viewport with
+  `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)` instead
+  of relying on `.player-stage`'s in-pane flex centering. The doubled
+  reservation only ever shrinks the height-constrained case (a small,
+  symmetric ~7% reduction at 900px viewport height, 840px -> 780px) and
+  leaves the width-constrained case (narrower desktop windows) untouched;
+  left/right edge-to-edge fill is unaffected either way.
+
+  **Verified** (real browser, this worktree served via
+  `python3 -m http.server 8934` from inside the worktree, confirmed via
+  `location.href` before trusting the page): at desktop 1440x900 with a
+  real track loaded, `.artwork-wrap`'s `getBoundingClientRect()` center
+  was `(720, 480)` against a true viewport center of `(720, 450)` before
+  the fix (30px low, all three styles identical) and exactly `(720, 450)`
+  after, for default, record, and cassette. Re-checked at a width-
+  constrained window (1150x1400, just above the split-desktop breakpoint)
+  - also exactly centered, no clipping or overlap with the topbar.
+  Screenshots confirm no visual regression: exit button, art-style pill,
+  and floated title/seek/transport controls all still read correctly
+  against the now-centered art. Mobile 375x812 measured unchanged/already-
+  correct for all three styles both before and after.
 
 ### splash-order-video-logo-buttons: Splash sequence order should be bg video, then logo, then tutorial/enter buttons
 - **Status:** draft
