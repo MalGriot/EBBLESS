@@ -5095,7 +5095,7 @@ Add entries in this shape:
   screenshots alone.
 
 ### email-signin-prompt-loop: App asks to sign in to email account on every load
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Every time the app loads, it prompts the user to sign in
   to their email account. This should not happen on every load - diagnose
@@ -5104,13 +5104,13 @@ Add entries in this shape:
   not on every single load.
 - **Touches:** unknown - likely auth/account or notification-permission flow
   triggered during app init.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/email-signin-prompt-loop`
 - **Notes:** Synced from Geethub issue #136. Issue body had no further
   detail beyond the title. Flagged high priority - a sign-in prompt on
   every load is a bad first-run/every-run experience.
 
 ### breathe-love-deep-track-order: "Breathe Love Deep" skips "Gasp", starts on "Deep" instead
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Playing the "Breathe Love Deep" album skips the track
   "Gasp" and starts playback on "Deep" instead, even though the album title
@@ -5119,7 +5119,7 @@ Add entries in this shape:
 - **Touches:** likely the same SoundCloud-sourced album area as
   `breathe-love-deep-album` and `breathe-love-deep-soundcloud-pull` (both
   merged) - track list/order resolution for this album specifically.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/breathe-love-deep-track-order`
 - **Notes:** Synced from Geethub issue #134. Related to (but not a
   duplicate of) `breathe-love-deep-album` and
   `breathe-love-deep-soundcloud-pull` - those fixed categorization and
@@ -5127,7 +5127,7 @@ Add entries in this shape:
   on the same release. Issue body had no further detail beyond the title.
 
 ### fullscreen-artwork-centering: Fullscreen artwork/LP/cassette should be centered to the viewport
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In fullscreen mode, the artwork, LP (spinning record),
   and cassette visuals should be centered to the viewport. Currently they
@@ -5136,7 +5136,7 @@ Add entries in this shape:
   split-view fullscreen (`.artwork-wrap`) - same area touched by
   `fullscreen-lp-cassette-visual`, `fullscreen-lp-too-small`, and
   `fullscreen-exit-button-consistency` (all merged/in that area).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/fullscreen-artwork-centering`
 - **Notes:** Synced from Geethub issue #137. Issue body had no further
   detail beyond the title. Worth checking against the most recent
   `fullscreen-exit-button-consistency` fix (commit `e23b9a5`) and
