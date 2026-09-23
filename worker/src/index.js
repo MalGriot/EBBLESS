@@ -566,6 +566,10 @@ async function handleSearch(url, ctx) {
   // unaffected; this is purely additive.
   const altCandidates = pool.slice(0, 5).map(c => ({
     videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0,
+    // score/titleOverlap are for the client's wrong-track log
+    // (flag-wrong-track) - lets a flagged match be explained after the fact.
+    score: typeof c.score === 'number' ? Math.round(c.score * 1000) / 1000 : null,
+    titleOverlap: typeof c.titleOverlap === 'number' ? Math.round(c.titleOverlap * 100) / 100 : null,
   }));
 
   const payload = { videoId: best.videoId, title: best.title, channel: best.channel, duration: best.duration || 0, candidates: altCandidates };
@@ -1891,6 +1895,13 @@ async function handleReport(request, env, ctx) {
     note: String(note || '').slice(0, 500),
     ts: Date.now(),
   };
+  // Optional full wrong-track log entry from the client (flag-wrong-track):
+  // requested vs. played metadata, cache state, resolve version. Capped so
+  // a malformed client can't stuff KV.
+  if (body.detail && typeof body.detail === 'object') {
+    const detail = JSON.stringify(body.detail);
+    if (detail.length <= 8000) report.detail = body.detail;
+  }
   const key = 'report:' + report.ts + ':' + crypto.randomUUID();
   await env.MATCH_REPORTS.put(key, JSON.stringify(report));
   return json({ ok: true });

@@ -538,11 +538,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   100%{transform:translateX(var(--marquee-shift,0))}
 }
 .report-match-btn{flex:none;width:22px;height:22px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;color:var(--faint-2);
-  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
-.report-match-btn svg{width:12px;height:12px}
+  display:flex;align-items:center;justify-content:center;color:var(--faint);
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.report-match-btn svg{width:13px;height:13px}
 .report-match-btn:hover{background:var(--panel-3);color:var(--text)}
-.report-match-btn.is-sent{color:var(--accent)}
+.report-match-btn:active{transform:scale(.88)}
+.report-match-btn.is-sent{color:var(--player-accent, var(--accent))}
 .player-like-btn{flex:none;width:22px;height:22px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint-2);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
@@ -793,6 +794,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
 #flow-layer .flow-meta .player-like-btn{pointer-events:auto}
+#flow-layer .flow-meta .flow-meta-actions{display:flex;align-items:center;justify-content:center;gap:10px}
+#flow-layer .flow-meta .report-match-btn{pointer-events:auto}
 #flow-layer .flow-chrome{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:space-between;
   padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:none;
   transition:opacity 600ms var(--ease-in-out)}
@@ -1811,7 +1814,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         </div>
         <div class="track-meta">
           <div class="title-row">
-            <button class="report-match-btn" id="reportMatchBtn" title="Report: this isn't just the audio" aria-label="Report this YouTube match">
+            <button class="report-match-btn" id="reportMatchBtn" title="Flag: wrong track playing" aria-label="Flag this as the wrong track playing">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
             </button>
             <div class="title marquee" id="trackTitle"><span>—</span></div>
@@ -1920,6 +1923,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
           <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Wrong-track log</div>
+            <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
+          </div>
+          <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
         </div>
       </div>
       <div class="settings-block">
@@ -2059,9 +2069,14 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <div class="flow-meta">
           <div class="title-row">
             <div class="title marquee" id="flowTitle"><span>—</span></div>
-            <button class="player-like-btn" id="flowLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
-            </button>
+            <div class="flow-meta-actions">
+              <button class="report-match-btn" id="flowReportBtn" title="Flag: wrong track playing" aria-label="Flag this as the wrong track playing">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+              </button>
+              <button class="player-like-btn" id="flowLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
+              </button>
+            </div>
           </div>
           <div class="artist marquee" id="flowArtist"><span>—</span></div>
         </div>
@@ -2842,10 +2857,13 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
           : searchYouTubeCached(t.title, t.artist, t.duration),
         resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
       ]);
-      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0 });
+      // srcDuration = the source's own length (seconds), kept separately
+      // from `duration` (the matched video's) for the wrong-track log and
+      // the refresh-link picker's search.
+      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, srcDuration: Math.round((t.duration || 0) / 1000) || null });
     } catch(e){
       const art = await resolveTrackArt(sourceKind, t.title, t.artist, t.image || null);
-      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0 });
+      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     // Fire as soon as the first *playable* track lands (not necessarily
@@ -3054,7 +3072,7 @@ const keepAliveAudio = $('keepAliveAudio');
 if (keepAliveAudio) keepAliveAudio.volume = 0.01;
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
-const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), playerLikeBtn = $('playerLikeBtn');
+const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = $('flowReportBtn'), playerLikeBtn = $('playerLikeBtn');
 const desktopFsExitBtn = $('desktopFsExitBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
@@ -4392,7 +4410,11 @@ function openRefreshLinkPicker(plId, trackIdx){
     '<div id="relinkCandidates" style="width:100%;max-height:320px;overflow-y:auto">' +
       '<div style="color:var(--faint-2);font-size:13px;padding:8px 0">Searching YouTube…</div>' +
     '</div>';
-  searchYouTube(t.title, t.artist, t.duration ? t.duration * 1000 : 0).then(data => {
+  // Prefer the source's own duration (srcDuration) - t.duration is the
+  // *matched* video's length, so searching with it biases the picker
+  // toward the very video that was wrong. Older tracks resolved before
+  // srcDuration was kept fall back to no duration hint at all.
+  searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0).then(data => {
     const container = $('relinkCandidates');
     if (!container) return; // overlay was closed while the search was in flight
     const candidates = (data.candidates && data.candidates.length) ? data.candidates
@@ -4444,9 +4466,21 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   t.duration = candidate.duration || 0;
   lsSet(LS_PL(plId), pl);
   if (state.playlist && state.playlist.id === plId) state.playlist = pl;
+  // Also overwrite the cross-playlist title/artist match cache, otherwise
+  // the same wrong video comes straight back the next time this song is
+  // resolved in any playlist.
+  cacheTrackMatch(t.title, t.artist, candidate);
+  recordWrongTrackCorrection(t, candidate);
   renderLibrary();
   closeImportOverlay();
   showToast('Link updated');
+  // Relinking the track that's playing right now: swap the audio over
+  // immediately instead of leaving the wrong one playing until next time.
+  const q = state.queue[state.queuePos];
+  if (q && q.plId === plId && q.idx === trackIdx){
+    loadIndex(state.queuePos, true);
+    syncWrongTrackFlagUI(t);
+  }
 }
 
 /* =========================================================================
@@ -7298,12 +7332,12 @@ function updateTrackMetaUI(t){
   setMarqueeText(flowArtist, t.artist);
   setMarqueeText(miniTitle, t.title);
   setMarqueeText(miniArtist, t.artist);
-  reportMatchBtn.classList.remove('is-sent');
-  // "This isn't just the audio" only means anything for a track that was
-  // matched to a YouTube video - a SoundCloud-native track (see
-  // soundcloud-native-playback) plays the source audio directly, so there's
-  // no match to report.
-  reportMatchBtn.style.display = isSoundCloudVideoId(t.videoId) ? 'none' : '';
+  // The wrong-track flag (flag-wrong-track) stays visible for every track,
+  // SoundCloud-native ones included: it used to be hidden for those (a
+  // native track has no YouTube match to report), which read as the flag
+  // having "disappeared" - and a native track can still be the wrong one
+  // (bad playlist index, wrong upload), so it's worth logging too.
+  syncWrongTrackFlagUI(t);
   updatePlayerLikeBtn(t);
   updateMediaSessionMeta(t);
   updateMiniPlayerUI();
@@ -8075,22 +8109,202 @@ function handleLikeBtnClick(e){
 playerLikeBtn.addEventListener('click', handleLikeBtnClick);
 miniLikeBtn.addEventListener('click', handleLikeBtnClick);
 flowLikeBtn.addEventListener('click', handleLikeBtnClick);
-reportMatchBtn.addEventListener('click', (e) => {
+/* =========================================================================
+   WRONG-TRACK FLAG (flag-wrong-track, issues #168/#174)
+   One tap on the flag in the player (main player + flow layer) reports the
+   now-playing track as "the wrong track playing": it logs what was asked
+   for vs. what actually played to localStorage (LS_WRONG_TRACK_LOG), posts
+   the same report to the worker's /report endpoint, then - in the
+   background - re-runs the /search for that track and attaches the fresh
+   candidate list plus a few quick heuristics ("diagnosis") explaining why
+   the pick was likely off. A second tap on an already-flagged track opens
+   the existing refresh-link picker so the right version is one more tap
+   away; picking one there is written back onto the log entry
+   ("correctedTo") so the log shows both the bad and the right match.
+   Read it back with window.ebblessWrongTrackLog() in the console, or the
+   "Copy log" button in Settings > Support.
+   ========================================================================= */
+const LS_WRONG_TRACK_LOG = 'ebbless:wrongTrackLog';
+const WRONG_TRACK_LOG_MAX = 200;
+function getWrongTrackLog(){ const l = lsGet(LS_WRONG_TRACK_LOG, []); return Array.isArray(l) ? l : []; }
+function saveWrongTrackLog(log){
+  try { localStorage.setItem(LS_WRONG_TRACK_LOG, JSON.stringify(log.slice(-WRONG_TRACK_LOG_MAX))); } catch(e){}
+  updateWrongTrackLogDesc();
+}
+function updateWrongTrackLogEntry(id, patch){
+  const log = getWrongTrackLog();
+  const entry = log.find(x => x.id === id);
+  if (!entry) return;
+  Object.assign(entry, patch);
+  saveWrongTrackLog(log);
+}
+function updateWrongTrackLogDesc(){
+  const el = $('wrongTrackLogDesc');
+  if (!el) return;
+  const n = getWrongTrackLog().length;
+  el.textContent = 'Every time you tap the flag in the player, what was asked for and what actually played is logged here. ' +
+    (n ? n + (n === 1 ? ' flag' : ' flags') + ' logged so far - copy them into a bug report so the matching can be fixed.'
+       : 'Nothing flagged yet.');
+}
+// Key the "already flagged" state off the track itself (not just a class
+// that updateTrackMetaUI clears) so the flag stays lit when coming back to
+// a flagged track later in the session.
+// `var`, not `const`: syncWrongTrackFlagUI runs from updateTrackMetaUI,
+// which could fire before this line has executed during startup.
+var flaggedTrackKeys = new Set();
+function wrongTrackKey(t){ return t ? (t.title || '') + '|||' + (t.artist || '') + '|||' + (t.videoId || '') : ''; }
+function syncWrongTrackFlagUI(t){
+  const on = !!t && !!flaggedTrackKeys && flaggedTrackKeys.has(wrongTrackKey(t));
+  [reportMatchBtn, flowReportBtn].forEach(btn => {
+    if (!btn) return;
+    btn.classList.toggle('is-sent', on);
+    const label = on ? 'Flagged as wrong track - tap to pick the right version' : 'Flag: wrong track playing';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  });
+}
+function wrongTrackTitleOverlap(a, b){
+  const tok = (x) => (x || '').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, ' ').split(/[^a-z0-9À-￿]+/).filter(w => w.length > 1);
+  const src = tok(a);
+  if (!src.length) return null;
+  const other = new Set(tok(b));
+  return Math.round(src.filter(w => other.has(w)).length / src.length * 100) / 100;
+}
+function diagnoseWrongTrack(entry){
+  const out = [];
+  const req = entry.requested, played = entry.played;
+  if (played.source === 'none') out.push('no match was ever found for this track');
+  if (played.source === 'soundcloud') out.push('SoundCloud-native track - no YouTube matching involved; the source playlist/upload itself may be wrong');
+  if (played.source === 'youtube'){
+    const ov = wrongTrackTitleOverlap(req.title, played.title);
+    if (ov !== null && ov < 0.5) out.push('matched video title shares only ' + Math.round(ov * 100) + '% of the requested title words');
+    const artistWords = (req.artist || '').toLowerCase().split(/,|&| feat\.? | x /).map(x => x.trim()).filter(Boolean);
+    const hay = ((played.title || '') + ' ' + (played.channel || '')).toLowerCase();
+    if (artistWords.length && !artistWords.some(a => hay.includes(a))) out.push('no requested artist name appears in the matched title or channel');
+    if (req.srcDuration && played.duration){
+      const diff = Math.abs(req.srcDuration - played.duration);
+      if (diff > 15) out.push('duration off by ' + diff + 's (requested ' + req.srcDuration + 's, played ' + played.duration + 's)');
+    } else if (!req.srcDuration){
+      out.push('source duration unknown (track resolved before durations were kept), so the duration filter could not help');
+    }
+    if (played.manual) out.push('track was added by hand, not auto-matched');
+    if (entry.cachedMatch && entry.cachedMatch.videoId === played.videoId) out.push('same video is in the cross-playlist title/artist match cache (which ignores duration), so every re-resolve of this song reuses it');
+  }
+  if (entry.candidates){
+    const idx = entry.candidates.findIndex(c => c.videoId === played.videoId);
+    if (entry.candidates.length && idx !== 0){
+      out.push(idx < 0
+        ? 'a fresh search no longer returns the played video at all - the stored match is stale (older resolve logic or cache)'
+        : 'a fresh search now ranks the played video #' + (idx + 1) + ' - the stored match is stale (older resolve logic or cache)');
+    } else if (idx === 0){
+      out.push('a fresh search still picks this same video first - the scorer itself is choosing it');
+    }
+  }
+  return out;
+}
+function flagWrongTrack(){
+  const t = currentTrack();
+  if (!t) return;
+  const q = state.queue[state.queuePos] || {};
+  const pl = q.plId ? playlistById(q.plId) : null;
+  let sourceLink = '';
+  try { sourceLink = pl ? (canonicalLinkForPlaylist(pl) || '') : ''; } catch(e){}
+  const isSC = isSoundCloudVideoId(t.videoId);
+  const cached = getCachedTrackMatch(t.title, t.artist);
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    ts: new Date().toISOString(),
+    requested: {
+      title: t.title || '', artist: t.artist || '', album: t.album || (pl && /album/.test(pl.type || '') ? pl.name : '') || '',
+      srcDuration: t.srcDuration || null, art: t.art || '',
+      playlistId: q.plId || '', playlistName: pl ? (pl.name || '') : '', playlistType: pl ? (pl.type || '') : '',
+      trackIndex: typeof q.idx === 'number' ? q.idx : null, sourceLink,
+    },
+    played: {
+      source: isSC ? 'soundcloud' : (t.videoId ? 'youtube' : 'none'),
+      videoId: t.videoId || null,
+      url: !t.videoId ? '' : isSC ? '' : 'https://www.youtube.com/watch?v=' + t.videoId,
+      title: t.matchedTitle || '', channel: t.channel || '', duration: t.duration || 0,
+      manual: !!t.manual,
+      elapsedSec: lastTrackStartTs ? Math.round((Date.now() - lastTrackStartTs) / 1000) : null,
+    },
+    cachedMatch: cached ? { videoId: cached.videoId, title: cached.title, channel: cached.channel, duration: cached.duration } : null,
+    resolveVersion: RESOLVE_LOGIC_VERSION,
+    candidates: null,
+    correctedTo: null,
+  };
+  entry.diagnosis = diagnoseWrongTrack(entry);
+  const log = getWrongTrackLog();
+  log.push(entry);
+  saveWrongTrackLog(log);
+  flaggedTrackKeys.add(wrongTrackKey(t));
+  syncWrongTrackFlagUI(t);
+  showToast(isSC || !t.videoId ? 'Flagged as wrong track - logged' : 'Flagged as wrong track - tap the flag again to pick the right one');
+
+  if (t.videoId){
+    fetch(BACKEND + '/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoId: t.videoId, title: t.title, artist: t.artist,
+        matchedTitle: t.matchedTitle || '', channel: t.channel || '',
+        note: 'wrong track playing', detail: entry,
+      }),
+    }).catch(() => {});
+  }
+  // Research pass: what would a fresh search pick now, and where does the
+  // played video rank? Tells a stale cached match apart from a scorer
+  // that's still getting it wrong today.
+  if (!isSC && t.title){
+    searchYouTube(t.title, t.artist, (t.srcDuration || 0) * 1000).then(data => {
+      const cands = (data && data.candidates && data.candidates.length) ? data.candidates
+        : (data && data.videoId ? [{ videoId: data.videoId, title: data.title, channel: data.channel, duration: data.duration }] : []);
+      entry.candidates = cands.map((c, i) => Object.assign({ rank: i + 1 }, c,
+        { titleOverlap: wrongTrackTitleOverlap(t.title, c.title), isPlayed: c.videoId === t.videoId }));
+      updateWrongTrackLogEntry(entry.id, { candidates: entry.candidates, diagnosis: diagnoseWrongTrack(entry) });
+    }).catch(e => updateWrongTrackLogEntry(entry.id, { candidatesError: String(e && e.message || e) }));
+  }
+}
+function handleWrongTrackFlagClick(e){
   e.stopPropagation();
   const t = currentTrack();
-  if (!t || !t.videoId || reportMatchBtn.classList.contains('is-sent')) return;
-  fetch(BACKEND + '/report', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      videoId: t.videoId, title: t.title, artist: t.artist,
-      matchedTitle: t.matchedTitle || '', channel: t.channel || '',
-      note: 'not just the audio',
-    }),
-  }).catch(() => {});
-  reportMatchBtn.classList.add('is-sent');
-  showToast('Reported, thanks - I\'ll take a look');
-});
+  if (!t) return;
+  if (!flaggedTrackKeys.has(wrongTrackKey(t))){ flagWrongTrack(); return; }
+  // Already flagged: second tap = pick the right version (YouTube-matched
+  // tracks only - a SoundCloud-native one has nothing to re-pick from).
+  const q = state.queue[state.queuePos];
+  if (!q || isSoundCloudVideoId(t.videoId)){ showToast('Already flagged - logged'); return; }
+  if (state.flowOpen) closeFlow();
+  openRefreshLinkPicker(q.plId, q.idx);
+}
+// When a flagged track gets re-linked via the picker, record the listener's
+// choice on the most recent matching log entry - the log then has both the
+// bad pick and the right one side by side.
+function recordWrongTrackCorrection(t, candidate){
+  const log = getWrongTrackLog();
+  for (let i = log.length - 1; i >= 0; i--){
+    const x = log[i];
+    if (x.requested.title === t.title && x.requested.artist === t.artist && !x.correctedTo){
+      x.correctedTo = { videoId: candidate.videoId, title: candidate.title || '', channel: candidate.channel || '', duration: candidate.duration || 0, ts: new Date().toISOString() };
+      saveWrongTrackLog(log);
+      return;
+    }
+  }
+}
+function copyWrongTrackLog(){
+  const text = JSON.stringify(getWrongTrackLog(), null, 2);
+  const done = () => showToast('Wrong-track log copied');
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(() => { console.log(text); showToast('Could not copy - log printed to the console'); });
+  } else { console.log(text); showToast('Log printed to the console'); }
+}
+window.ebblessWrongTrackLog = function(){ return getWrongTrackLog(); };
+window.ebblessWrongTrackLog.copy = copyWrongTrackLog;
+window.ebblessWrongTrackLog.clear = function(){ saveWrongTrackLog([]); flaggedTrackKeys.clear(); syncWrongTrackFlagUI(currentTrack()); };
+reportMatchBtn.addEventListener('click', handleWrongTrackFlagClick);
+if (flowReportBtn) flowReportBtn.addEventListener('click', handleWrongTrackFlagClick);
+if ($('copyWrongTrackLogBtn')) $('copyWrongTrackLogBtn').addEventListener('click', copyWrongTrackLog);
+updateWrongTrackLogDesc();
 flowExitBtn.addEventListener('click', closeFlow);
 flowLayer.addEventListener('pointermove', armFlowChromeTimer);
 flowLayer.addEventListener('pointerdown', armFlowChromeTimer);
