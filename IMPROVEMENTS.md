@@ -2809,7 +2809,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #84.
 
 ### playlist-vibe-search: Search Spotify/Apple Music/SoundCloud for playlists by vibe/keyword
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** The playlist-input bar should let a user search by vibe
   or keyword (not just paste a direct link) and get back a matching
@@ -2818,10 +2818,82 @@ Add entries in this shape:
 - **Touches:** playlist input bar / import flow, likely a new search
   endpoint against Spotify/Apple Music/SoundCloud rather than the existing
   direct-link resolve pipeline.
-- **Branch:** (unclaimed)
+- **Branch:** agent/playlist-vibe-search
 - **Notes:** Synced from Geethub issue #85. Distinct from `library-search`
   above (that one searches what the user already has; this one searches
   external platforms to find something new to add) - kept separate.
+
+  **Implementation notes (this pass):** Built and scoped to SoundCloud +
+  Apple Music only - Spotify search is not included, deliberately. Spotify's
+  official Web API search needs a Client Credentials token, and per the
+  worker's existing `/spotifyart` comment, minting one now requires an
+  active Premium subscription just to create the developer app - the same
+  dead end that already forced `/spotifyart` off the Web API onto iTunes'
+  API. The other path - scraping open.spotify.com's own anonymous
+  "web player" access token (`/get_access_token`) - was considered and
+  rejected: it's an unofficial, session-shaped endpoint (not a stable public
+  surface like the `__NEXT_DATA__`/`serialized-server-data` embeds this
+  codebase already scrapes for direct-link resolution), so it carries real
+  ToS/stability risk for comparatively little gain.
+
+  Added a new worker endpoint, `GET /playlistsearch?q=&storefront=&limit=`
+  (`worker/src/index.js`), that runs two scrapes in parallel via
+  `Promise.allSettled` (one source failing doesn't take down the other):
+  - **SoundCloud**: `api-v2.soundcloud.com/search/playlists`, reusing the
+    exact same `getSoundCloudClientId()` rotating-client_id mechanism the
+    existing `/soundcloud` direct-link endpoint already depends on in
+    production - no new credential-acquisition logic. Filtered to real
+    `/sets/` playlists (excludes SoundCloud's own algorithmic
+    "system-playlist" results, which the existing resolve pipeline can't
+    handle).
+  - **Apple Music**: scrapes `music.apple.com/{storefront}/search?term=`,
+    which dehydrates into the same `serialized-server-data` blob as the
+    album/playlist/song pages `/amlist` already scrapes - reuses
+    `extractServerData`, just reads the `... - playlist` section instead of
+    one entity's tracklist.
+
+  Each result comes back already shaped like `parseImportLink()`'s output
+  (`{source, type, id[, storefront]}`), so `index.html`'s
+  `beginImportFromParsedLink` consumes a picked candidate directly - no
+  second resolve pipeline. Client side: `#urlInput`'s submit handler now
+  only shows the old "doesn't look like a supported link" error when the
+  text actually looks like an attempted URL (`looksLikeUrl()`); anything
+  else is sent to `/playlistsearch` via `beginVibeSearch()`, which reuses
+  the existing import overlay (`importStage`) for a "Searching..." spinner
+  and then a picker (`stageSearchResults()` - art, title, curator/uploader,
+  source badge) instead of building a separate UI surface.
+
+  **Verified:** worker syntax (`node --check`); ran the worker locally via
+  `wrangler dev` (not deployed) and hit `/playlistsearch?q=chill%20afrobeat`
+  directly - got real, well-formed candidates from both SoundCloud and
+  Apple Music; fed a candidate from each source back into the existing
+  `/soundcloud?url=` and `/amlist?kind=playlist&...` endpoints and confirmed
+  both resolve to real tracklists, confirming a picked candidate really
+  round-trips through the unmodified resolve pipeline. Also checked missing
+  `?q=` (400), a nonsense query (empty `results: []`, not an error), and
+  `limit=` clamping. Exercised the actual client UI in a browser against
+  this worktree's `index.html` (served on a dedicated port, confirmed via
+  response content that it wasn't the main checkout or another worktree) -
+  typing a non-link phrase into the input bar correctly triggered the
+  search flow instead of the old link-parse error; it hit the **production**
+  worker (which doesn't have `/playlistsearch` yet) and correctly rendered
+  the 404 through the new error stage, confirming the client-side wiring
+  end to end even though full search results couldn't be seen against prod
+  pre-deploy.
+
+  **Not verified / caveats:** the worker changes are NOT deployed to the
+  live Cloudflare Worker (`spotify-youtube-search.malgriot.workers.dev`) -
+  only tested locally via `wrangler dev`. Someone needs to `cd worker &&
+  npx wrangler deploy` (per README) before this is live for real users.
+  Apple Music search defaults to the `us` storefront server-side since the
+  input bar has no other signal for the visitor's market - results may skew
+  US-centric for listeners elsewhere (direct Apple Music links don't have
+  this limitation, since those already carry their own storefront). Did not
+  test on a real mobile viewport or with a screen reader. SoundCloud's
+  `client_id` scrape is the same mechanism already live in production for
+  `/soundcloud`, so it's presumed to keep working the same way, but wasn't
+  independently stress-tested for rotation/expiry beyond what the existing
+  endpoint already handles.
 
 ### mobile-ipod-ui: Mobile UI mode styled like the original iPod (click wheel)
 - **Status:** draft
