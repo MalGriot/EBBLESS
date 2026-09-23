@@ -8609,6 +8609,33 @@ function runIntro(preview){
     tap(el, withRing);
     el.classList.remove('onb-sim-hover');
   }
+  // Purely cosmetic sweep of the crossfade-length slider for the "Crossfade
+  // smoothly" beat: glides the thumb/value from 0s up past the slider's own
+  // 10s max, then eases back down to rest on 5s. Never touches
+  // crossfadePrefs or lsSet - the real setting is untouched, and
+  // renderCrossfadeUI() (called from finish()) puts the slider back to
+  // whatever the visitor's actual saved crossfade length is once the whole
+  // tutorial ends. Temporarily lowers the slider's real min (1000ms) to 0 so
+  // the sweep can visit 0s at all, then restores it before returning.
+  async function animateCrossfadeDurDemo(){
+    const realMin = crossfadeDurSlider.min;
+    crossfadeDurSlider.min = '0';
+    const sweepTo = async (fromMs, toMs, steps, stepMs) => {
+      for (let i = 1; i <= steps; i++){
+        if (done) return;
+        const ms = Math.round(fromMs + (toMs - fromMs) * (i / steps));
+        crossfadeDurSlider.value = String(ms);
+        crossfadeDurVal.textContent = fmtCrossfadeMs(ms);
+        await wait(stepMs);
+      }
+    };
+    await sweepTo(0, 10000, 12, 45);
+    if (!done){
+      await wait(200);
+      await sweepTo(10000, 5000, 8, 45);
+    }
+    crossfadeDurSlider.min = realMin;
+  }
   // a real .lib-card, built with the same markup renderLibrary() uses, so
   // the "your playlist just loaded" beat shows the actual grid UI rather
   // than skipping straight to the player - never touches real library data
@@ -8940,13 +8967,22 @@ function runIntro(preview){
     setStage('settings');
     const settingsScroll = document.querySelector('#view-settings .view-scroll');
     if (settingsScroll) settingsScroll.scrollTop = 0;
-    setCaption('Crossfade smoothly', crossfadeBtn);
+    // spotlight the toggle AND the length slider below it as one region (the
+    // same unionRect/placeCaptionNear pattern the style-record/viz beats use
+    // to light up "the control AND the thing it changes" together) so the
+    // slider reads as part of this beat even before it starts sweeping
+    setCaption('Crossfade smoothly', [crossfadeBtn, crossfadeDurRow]);
     await wait(600);
     tap(crossfadeBtn, true);
     crossfadeBtn.textContent = 'On';
     crossfadeBtn.classList.add('is-active');
     crossfadeDurRow.style.opacity = '1';
-    await wait(500);
+    // demo the crossfade-length slider: sweep 0s -> 10s -> settle on 5s,
+    // purely cosmetic (see animateCrossfadeDurDemo() for why it's safe) -
+    // already spotlit above, so the sweep happens inside the lit region
+    await animateCrossfadeDurDemo();
+    if (done) return;
+    await wait(200);
     // clear and let 'Crossfade smoothly' fully fade out (#onbCaption's
     // opacity transition is 550ms) before 'With no ads ever' fades in -
     // without this gap the two calls landed close enough together that the
