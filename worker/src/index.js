@@ -68,6 +68,8 @@ const YTMIX_CACHE_VERSION = 'v1';
 // Bumped independently of ART_CACHE_VERSION - see the /soundcloud cache key
 // below for why this endpoint doesn't share that constant.
 const SOUNDCLOUD_CACHE_VERSION = 'v2';
+// /playlistsearch (see handlePlaylistSearch) - own version, same reasoning.
+const PLAYLIST_SEARCH_CACHE_VERSION = 'v1';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -1402,6 +1404,152 @@ async function handleSoundCloud(url, ctx) {
   return response;
 }
 
+// ---------- GET /playlistsearch?q=&storefront=&limit= ----------
+// Powers the playlist-input bar's "search by vibe/keyword" mode (see
+// beginVibeSearch/stageSearchResults in index.html): when what's pasted
+// isn't a recognized direct link, this is queried instead and the client
+// shows a picker of candidate playlists to import.
+//
+// Spotify is deliberately not a source here. Its official Web API search
+// endpoint needs a Client Credentials token, and per the /spotifyart notes
+// above, minting one now requires an active Premium subscription just to
+// create the developer app - the same dead end that already forced
+// /spotifyart off the Web API. The other obvious path, scraping open.spotify
+// .com's own anonymous "web player" access token
+// (open.spotify.com/get_access_token), was tried by hand while building
+// this and abandoned: it's an unofficial, session-shaped endpoint, not a
+// public API surface like the __NEXT_DATA__/serialized-server-data embeds
+// this file already scrapes elsewhere, so it carries real ToS/stability risk
+// for comparatively little gain. Search here is scoped to SoundCloud and
+// Apple Music instead, both of which already have a proven, low-risk
+// scraping path in this file (SoundCloud's public web API + rotating
+// client_id below /soundcloud, Apple Music's serialized-server-data embed
+// below /amlist) that a search page turns out to share.
+//
+// Runs both sources in parallel and never lets one's failure take down the
+// other - Promise.allSettled, not Promise.all.
+async function scSearchPlaylistsRaw(query, limit, clientId) {
+  const params = new URLSearchParams({ q: query, limit: String(Math.min(limit, 12)), client_id: clientId });
+  const res = await fetch('https://api-v2.soundcloud.com/search/playlists?' + params.toString());
+  if (res.status === 401) return null; // signal: client_id likely rotated, caller retries once
+  if (!res.ok) return { collection: [] };
+  try { return await res.json(); } catch (e) { return { collection: [] }; }
+}
+// Same art fallback (track/playlist artwork, else the uploader's avatar) and
+// upsize trick (SoundCloud's default is a small "-large." crop; asking for
+// "-t500x500." gets a proper square image) as scTrackToTitleArtist above.
+function scPlaylistArt(p) {
+  const raw = p.artwork_url || (p.user && p.user.avatar_url) || null;
+  return raw ? raw.replace('-large.', '-t500x500.') : null;
+}
+// Only a "sets" URL is something parseSoundCloudLink/handleSoundCloud can
+// actually resolve - SoundCloud's search also returns "system-playlist"
+// results (its own algorithmic playlists, e.g. under /discover/sets/...)
+// whose kind and URL shape the existing resolve pipeline was never built to
+// handle, so those are filtered out here rather than surfaced as a candidate
+// that would fail on import.
+const SC_SETS_URL_RE = /^https:\/\/soundcloud\.com\/[^/]+\/sets\/[^/]+$/i;
+async function searchSoundCloudPlaylists(query, limit, ctx) {
+  let clientId;
+  try { clientId = await getSoundCloudClientId(ctx); } catch (e) { return []; }
+  let data = await scSearchPlaylistsRaw(query, limit, clientId);
+  if (data === null) {
+    try { clientId = await getSoundCloudClientId(ctx, { forceRefresh: true }); } catch (e) { return []; }
+    data = await scSearchPlaylistsRaw(query, limit, clientId);
+  }
+  if (!data) return [];
+  return (data.collection || [])
+    .filter(p => p && p.kind === 'playlist' && p.title && p.permalink_url && SC_SETS_URL_RE.test(p.permalink_url))
+    .slice(0, limit)
+    .map(p => ({
+      source: 'soundcloud',
+      type: 'playlist',
+      id: p.permalink_url, // same shape parseSoundCloudLink() produces for a pasted "sets" link
+      name: p.title,
+      subtitle: (p.user && p.user.username) || '',
+      image: scPlaylistArt(p),
+      trackCount: p.track_count || (Array.isArray(p.tracks) ? p.tracks.length : 0),
+    }));
+}
+
+// Apple Music's public search page (music.apple.com/{storefront}/search
+// ?term=) dehydrates into the same serialized-server-data blob as its
+// album/playlist/song pages (see extractServerData/handleAppleMusicList) -
+// just with a `sections` list covering every result category (top results,
+// artists, albums, songs, playlists, ...) instead of one entity's tracklist.
+// The playlist category's section id has been observed as literally
+// "square-section - playlist" - matched by suffix rather than an exact
+// string in case Apple's own naming grows a prefix/variant, since nothing
+// else in that id list plausibly ends the same way.
+async function searchAppleMusicPlaylists(term, storefront, limit) {
+  const res = await fetch(`https://music.apple.com/${storefront}/search?term=${encodeURIComponent(term)}`, {
+    headers: { 'User-Agent': DESKTOP_UA },
+  });
+  if (!res.ok) return [];
+  const html = await res.text();
+  const data = extractServerData(html);
+  const sections = data && data.data && data.data[0] && data.data[0].data && data.data[0].data.sections;
+  if (!Array.isArray(sections)) return [];
+  const plSection = sections.find(s => typeof s.id === 'string' && s.id.endsWith('- playlist'));
+  if (!plSection || !Array.isArray(plSection.items)) return [];
+  return plSection.items
+    .map(item => {
+      const id = item.contentDescriptor && item.contentDescriptor.identifiers && item.contentDescriptor.identifiers.storeAdamID;
+      const name = item.titleLinks && item.titleLinks[0] && item.titleLinks[0].title;
+      if (!id || !name || !/^[a-zA-Z0-9.]+$/.test(id)) return null;
+      const artTpl = item.artwork && item.artwork.dictionary && item.artwork.dictionary.url;
+      const image = artTpl ? artTpl.replace('{w}', '600').replace('{h}', '600').replace('{f}', 'jpg') : null;
+      const subtitle = (item.subtitleLinks && item.subtitleLinks[0] && item.subtitleLinks[0].title) || '';
+      // { storefront, id } here is exactly the shape parseAppleMusicLink()
+      // produces for a pasted playlist link - beginImportFromParsedLink can
+      // take this candidate straight through the existing am_playlist
+      // resolve path with no new client-side logic.
+      return { source: 'applemusic', type: 'playlist', id, storefront, name, subtitle, image };
+    })
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+async function handlePlaylistSearch(url, ctx) {
+  const q = (url.searchParams.get('q') || '').trim();
+  if (!q) return json({ error: 'missing q' }, 400);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit'), 10) || 8, 1), 12);
+  const storefront = (url.searchParams.get('storefront') || 'us').toLowerCase();
+  if (!/^[a-z]{2}$/.test(storefront)) return json({ error: 'invalid storefront' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + PLAYLIST_SEARCH_CACHE_VERSION + '/playlistsearch/' + storefront + '/' + limit + '/' + encodeURIComponent(q.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const [scResult, amResult] = await Promise.allSettled([
+    searchSoundCloudPlaylists(q, limit, ctx),
+    searchAppleMusicPlaylists(q, storefront, limit),
+  ]);
+
+  // Interleaved rather than grouped source-by-source, so neither source
+  // dominates the top of the picker when both return a full page.
+  const sc = scResult.status === 'fulfilled' ? scResult.value : [];
+  const am = amResult.status === 'fulfilled' ? amResult.value : [];
+  const results = [];
+  for (let i = 0; i < Math.max(sc.length, am.length); i++) {
+    if (sc[i]) results.push(sc[i]);
+    if (am[i]) results.push(am[i]);
+  }
+
+  const payload = { results };
+  const response = json(payload);
+  // A real miss (a genuinely obscure query) is routine and worth caching
+  // like any other hit here - unlike /art or /spotifyart, there's no reason
+  // to expect a *specific* empty query to start returning results shortly,
+  // so this doesn't need the shorter miss-vs-hit split those use.
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 // ---------- GET /similar?title=&artist=&limit= ----------
 // Discovery cascade for Radio / the queue's Discover toggle / the Swell
 // playlist. Tries Last.fm first (best tag coverage, needs LASTFM_API_KEY),
@@ -1760,6 +1908,7 @@ export default {
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
+      if (url.pathname === '/playlistsearch') return await handlePlaylistSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
@@ -1770,7 +1919,7 @@ export default {
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

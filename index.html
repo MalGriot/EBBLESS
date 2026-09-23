@@ -332,6 +332,15 @@ svg{display:block}
 @keyframes row-in{to{opacity:1;transform:none}}
 .import-preview-row img{width:28px;height:28px;border-radius:4px;object-fit:cover;background:var(--panel-2);flex:none}
 .import-preview-row .t{font-size:12.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* vibe/keyword search results picker (see stageSearchResults) - candidates
+   returned by /playlistsearch, tapped to import through the same resolve
+   pipeline a pasted link uses */
+.search-results{width:100%;max-height:340px;overflow-y:auto;margin-bottom:12px}
+.search-pick{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:8px;margin-bottom:6px}
+.search-pick img{width:44px;height:44px;border-radius:6px;object-fit:cover;background:var(--panel-2);flex:none}
+.search-pick .info{min-width:0;flex:1}
+.search-pick .n{display:block;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-pick .s{display:block;font-size:12px;color:var(--faint-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .import-ready{display:flex;flex-direction:column;align-items:center;gap:18px}
 .import-ready .name{font-size:19px;font-weight:700;margin:0}
 .import-ready .meta{font-size:12.5px;color:var(--faint)}
@@ -1571,7 +1580,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="view-scroll">
       <form class="import-row" id="importForm">
-        <input id="urlInput" type="text" placeholder="Paste a Spotify, YouTube, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false">
+        <input id="urlInput" type="text" placeholder="Paste a link, or search a vibe or keyword" autocomplete="off" spellcheck="false">
         <button type="submit" id="loadBtn">Load</button>
       </form>
       <div class="import-err" id="importErr"></div>
@@ -2294,6 +2303,20 @@ async function fetchSpotifyPlaylist(playlistId, type){
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
   return data;
+}
+
+// Backs the playlist-input bar's "search by vibe/keyword" mode (see
+// beginVibeSearch below) - queries the worker's /playlistsearch, which
+// covers SoundCloud and Apple Music (not Spotify - see the worker's own
+// handlePlaylistSearch comment for why). Each result is already shaped like
+// parseImportLink()'s output ({source,type,id[,storefront]}), so a picked
+// candidate goes straight through beginImportFromParsedLink with no
+// separate resolve path.
+async function searchPlaylistsByVibe(query){
+  const res = await fetch(BACKEND + '/playlistsearch?q=' + encodeURIComponent(query) + '&limit=10');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data.results || [];
 }
 
 // A failed match here (YouTube's scrape occasionally 502s with a consent/
@@ -4850,10 +4873,10 @@ function stageMatchingProgress(done, total, track){
   }
 }
 
-function stageError(msg, onRetry){
+function stageError(msg, onRetry, title){
   importStage.innerHTML =
     '<div class="import-error">' +
-      '<div class="step">Couldn&rsquo;t load that playlist.</div>' +
+      '<div class="step">' + escapeHtml(title || 'Couldn’t load that playlist.') + '</div>' +
       '<div class="msg">' + escapeHtml(msg) + '</div>' +
       '<button class="btn-ghost" id="importRetryBtn">Try again</button>' +
     '</div>';
@@ -4862,6 +4885,78 @@ function stageError(msg, onRetry){
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// playlist-vibe-search: the import overlay gains two more stages - a plain
+// "searching" spinner, then a picker of candidates - used when whatever was
+// typed into the input bar isn't a recognized direct link (see
+// looksLikeUrl/beginVibeSearch below).
+function stageSearching(query){
+  importStage.innerHTML =
+    '<div class="step">Searching for &ldquo;' + escapeHtml(query) + '&rdquo;&hellip;</div>' +
+    '<div class="flow-line indeterminate"><div class="fill"></div></div>';
+}
+
+const SEARCH_SOURCE_LABEL = { soundcloud: 'SoundCloud', applemusic: 'Apple Music' };
+function stageSearchResults(results, query){
+  if (!results.length){
+    importStage.innerHTML =
+      '<div class="step">No playlists found for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
+      '<div class="msg" style="color:var(--faint-2);font-size:13px;margin:0 0 18px">Try a different word, or paste a direct link instead.</div>' +
+      '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Back</button>';
+    $('searchBackBtn').addEventListener('click', closeImportOverlay);
+    return;
+  }
+  const rows = results.map((r, i) => {
+    const label = SEARCH_SOURCE_LABEL[r.source] || r.source;
+    const sub = [r.subtitle, label].filter(Boolean).join(' · ');
+    return (
+      '<button type="button" class="btn-ghost search-pick" data-i="' + i + '">' +
+        '<img src="' + escapeHtml(r.image || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
+        '<span class="info">' +
+          '<span class="n">' + escapeHtml(r.name) + '</span>' +
+          '<span class="s">' + escapeHtml(sub) + '</span>' +
+        '</span>' +
+      '</button>'
+    );
+  }).join('');
+  importStage.innerHTML =
+    '<div class="step">Results for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
+    '<div class="search-results">' + rows + '</div>' +
+    '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Cancel</button>';
+  importStage.querySelectorAll('.search-pick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const r = results[parseInt(btn.dataset.i, 10)];
+      if (!r) return;
+      // Same {source,type,id[,storefront]} shape parseImportLink() produces
+      // for a pasted link - runs through the exact same resolve pipeline,
+      // no new import logic for a search-picked candidate.
+      beginImportFromParsedLink({ source: r.source, type: r.type, id: r.id, storefront: r.storefront });
+    });
+  });
+  $('searchBackBtn').addEventListener('click', closeImportOverlay);
+}
+
+// A rough "this looks like an attempted link, not a vibe" heuristic so a
+// mistyped or unsupported-host URL (a Tidal link, a typo'd spotify.con,
+// missing https://) still gets the direct "that doesn't look like a
+// supported link" error instead of being sent off as a nonsense search
+// query - and, the more common case, so a real keyword search ("sunday
+// morning jazz") never gets misread as a link attempt just because it
+// happens to contain a dot.
+function looksLikeUrl(input){
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(input) || /^(www\.)?[a-z0-9-]+\.[a-z]{2,}(\/|$)/i.test(input.trim());
+}
+
+async function beginVibeSearch(query){
+  openImportOverlay();
+  stageSearching(query);
+  try{
+    const results = await searchPlaylistsByVibe(query);
+    stageSearchResults(results, query);
+  } catch(e){
+    stageError(e.message || "Couldn't search for that.", () => beginVibeSearch(query), "Couldn’t search for that.");
+  }
 }
 
 // A single song has no browsable home of its own in the library - it needs
@@ -5037,11 +5132,29 @@ function applySharedImportFromUrl(){
 
 importForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const parsed = parseImportLink(urlInput.value);
-  if (!parsed){ importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
+  const raw = urlInput.value;
+  const parsed = parseImportLink(raw);
+  if (parsed){
+    importErr.textContent = '';
+    urlInput.value = '';
+    beginImportFromParsedLink(parsed);
+    return;
+  }
+  const val = raw.trim();
+  if (!val) return;
+  // Not a recognized direct link. If it's clearly an attempted link anyway
+  // (has a scheme, or looks like a bare domain) say so plainly rather than
+  // silently searching for a URL as if it were a vibe/keyword query - but
+  // anything else (playlist-vibe-search) is sent to /playlistsearch instead
+  // of just erroring, so the input bar doubles as "paste a link" and
+  // "search a vibe" without a separate affordance.
+  if (looksLikeUrl(val)){
+    importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link.";
+    return;
+  }
   importErr.textContent = '';
   urlInput.value = '';
-  beginImportFromParsedLink(parsed);
+  beginVibeSearch(val);
 });
 
 // Starter library for anyone with nothing saved yet: the artist's own
