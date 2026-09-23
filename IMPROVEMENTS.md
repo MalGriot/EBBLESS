@@ -4151,7 +4151,7 @@ Add entries in this shape:
     `ytInitialPlayerResponse` for a particular video's metadata shape).
 
 ### app-icon-transparent-bg: App icon should have a transparent background across all platforms
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The app icon (home screen / PWA / favicon / any other
   platform surface it's used on) should have a transparent background
@@ -5221,7 +5221,7 @@ Add entries in this shape:
   (unaffected, as expected). Pushed as commit `06645c6`.
 
 ### splash-order-video-logo-buttons: Splash sequence order should be bg video, then logo, then tutorial/enter buttons
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The video-tinted splash screen should present its
   elements in this order: (1) background video, (2) EBBLESS logo, (3) the
@@ -5264,7 +5264,7 @@ Add entries in this shape:
   before the next appears, with no overlap-driven reordering.
 
 ### fullscreen-esc-exit: Esc key should exit fullscreen
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Pressing the Esc key while in fullscreen (LP, cassette,
   or cymatics) should exit fullscreen, same as clicking the exit-fullscreen
