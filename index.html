@@ -6516,7 +6516,7 @@ function createDeckPlayer(deck, videoId){
 // and-wait-5-seconds dance entirely (scheduleAdCheck/checkDeckReady) and
 // confirms the deck the moment the widget reports READY.
 function makeSCPlayerAdapter(deck, widget, myGen){
-  let vol = 100, muted = false;
+  let vol = 100, muted = false, loadSeq = 0;
   return {
     playVideo(){ widget.play(); },
     pauseVideo(){ widget.pause(); },
@@ -6540,9 +6540,21 @@ function makeSCPlayerAdapter(deck, widget, myGen){
       // of any earlier setVolume/mute, so re-apply this adapter's current
       // volume/mute state once the new sound is in - otherwise a muted
       // standby deck would come back at full volume.
+      // opts.onLoad runs once the new sound is actually in (bld-playback-
+      // glitch): every widget command sent before that - seekTo/setVolume/
+      // play - still lands on the *previous* sound (verified directly: an
+      // unMute+seekTo(0)+play right after load() restarted the old track
+      // audibly for ~1.3s before the new one took over). loadSeq drops the
+      // callback of a load that a newer one already superseded.
+      const mySeq = ++loadSeq;
+      const onLoad = typeof opts === 'object' && opts.onLoad;
       widget.load(soundCloudTrackApiUrl(v), {
         auto_play: deck === activeDeck(), show_artwork: false,
-        callback: function(){ if (deck.gen === myGen) widget.setVolume(muted ? 0 : vol); },
+        callback: function(){
+          if (deck.gen !== myGen || mySeq !== loadSeq) return;
+          widget.setVolume(muted ? 0 : vol);
+          if (onLoad) onLoad();
+        },
       });
       // .load() doesn't re-fire READY on an already-bound widget (verified
       // directly against the real widget), so this is the only place the
@@ -6618,7 +6630,11 @@ function createSCDeckPlayer(deck, videoId){
     deck.ready = true;
     widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
     deck.player.setVolume(deck === activeDeck() ? effectiveVolume() : 0);
-    if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v }); }
+    // The iframe was built with this exact track already (loadIntoDeck sets
+    // pendingVideoId to the same id it passes createDeckPlayer) - reloading
+    // it here would just restart/delay the same sound, so only load a
+    // pending track that's actually different.
+    if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; if (v !== videoId) deck.player.loadVideoById({ videoId: v }); }
     deck.confirmed = false;
     // No ad-preroll wait for SoundCloud - confirm (and, for the active
     // deck, unmute/seek-to-0/reflect play state) right away.
@@ -6706,14 +6722,19 @@ function loadIntoDeck(deck, videoId, isActive){
   if (deck.unmuteTimer) clearTimeout(deck.unmuteTimer);
   deck.confirmed = false;
   deck.player.mute();
-  deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
-  forceLowestQuality(deck);
   if (kind === 'sc'){
-    onDeckConfirmed(deck);
-    // Same explicit nudge as createSCDeckPlayer's READY handler - .load()'s
-    // own auto_play:true can silently no-op the same way.
-    if (deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
+    // Confirm (unmute/seek-to-0/play) only once the new sound has loaded -
+    // see makeSCPlayerAdapter's loadVideoById for why doing it right away
+    // replays the previous track.
+    deck.player.loadVideoById({ videoId: videoId, onLoad: function(){
+      onDeckConfirmed(deck);
+      // Same explicit nudge as createSCDeckPlayer's READY handler - .load()'s
+      // own auto_play:true can silently no-op the same way.
+      if (deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
+    } });
   } else {
+    deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
+    forceLowestQuality(deck);
     deck.muteStartTs = Date.now();
     scheduleAdCheck(deck);
   }
@@ -7727,6 +7748,13 @@ function maybeStartCrossfade(cur, dur){
   const nd = standbyDeck();
   const nextPos = computeNextPos(state.queuePos, false);
   if (nextPos < 0 || nd.pos !== nextPos || !nd.player || !nd.ready || !nd.confirmed) return;
+  // SoundCloud only lets one widget on the page play at a time (verified
+  // directly: the incoming deck's play() pauses the outgoing one within the
+  // same tick), so an SC-to-SC "crossfade" is really a hard cut into a track
+  // fading up from silence, dropping the old track's last few seconds.
+  // Let the old track finish instead - FINISH then promotes the preloaded
+  // standby deck straight away (bld-playback-glitch).
+  if (activeDeck().kind === 'sc' && nd.kind === 'sc') return;
   crossfadeTriggered = true;
   runCrossfade(nd, nextPos);
 }
