@@ -5583,6 +5583,30 @@ function cycleRepeat(){
 const DISCOVER_LOOKAHEAD = 3;   // extend once this few tracks remain in the queue
 const DISCOVER_BATCH = 6;       // tracks fetched per extension
 
+// Long uploads (DJ sets, full albums, hour-long mixes) are fine to play but
+// make poor automatic picks: one wrong guess eats an hour. Discover quietly
+// weights against them by length. This only applies to automatic Discover
+// picks; a searched or pasted long track plays exactly as before.
+//   0-15 min: normal.  15-45 min: accepted 60% -> 20% of the time, falling
+//   with length.  45-90 min: 10%, and only from the top of the scored pool.
+//   90-120 min: 3%, same strong-match rule.  2h+: never.
+// Unknown duration (0) counts as normal. Anything over 15 min is also held
+// back until DISCOVER_LONG_AFTER Discover tracks have been queued this
+// session, so long tracks are never among the first picks.
+const DISCOVER_LONG_MIN = 15 * 60;
+const DISCOVER_LONG_STRONG_RANK = 5;  // 45+ min needs a top-5 scored candidate
+const DISCOVER_LONG_AFTER = DISCOVER_BATCH;
+let discoverQueuedThisSession = 0;
+function discoverLongTrackOk(seconds, rank, allowLong){
+  if (!seconds || seconds <= DISCOVER_LONG_MIN) return true;
+  if (!allowLong) return false;
+  const min = seconds / 60;
+  if (min >= 120) return false;
+  if (min > 45 && rank >= DISCOVER_LONG_STRONG_RANK) return false;
+  const chance = min <= 45 ? 0.6 - 0.4 * (min - 15) / 30 : (min <= 90 ? 0.1 : 0.03);
+  return Math.random() < chance;
+}
+
 async function fetchSimilar(title, artist, limit){
   try{
     const params = new URLSearchParams({ title, artist: artist || '', limit: String(limit || 20) });
@@ -5820,8 +5844,10 @@ function libraryVideoIdSet(){
 /* seedTracks: most-recently-played first. excludeVideoIds: Set already in
    the library/queue, so Discover never resurfaces something the listener
    already has. Returns resolved, playable track objects (same shape
-   resolvePlaylist produces), each carrying `.tags` for later signal use. */
-async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
+   resolvePlaylist produces), each carrying `.tags` for later signal use.
+   allowLong: whether tracks over 15 min may be picked at all (see
+   discoverLongTrackOk); false for early/first picks. */
+async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong){
   const seed = seedTracks[0];
   if (!seed) return [];
   const recentArtists = new Set(seedTracks.slice(0, 5).map(t => (t.artist || '').toLowerCase()));
@@ -5863,7 +5889,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
 
   const resolved = [];
   const seenTitles = new Set();
-  for (const c of scored){
+  for (const [rank, c] of scored.entries()){
     if (resolved.length >= count) break;
     const dupeKey = (c.title + '|' + c.artist).toLowerCase();
     if (seenTitles.has(dupeKey)) continue;
@@ -5871,16 +5897,18 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count){
     const tagNames = (c.tags || []).map(t => t.name);
     if (c.videoId){
       if (excludeVideoIds.has(c.videoId)) continue;
+      if (!discoverLongTrackOk(c.duration || 0, rank, allowLong)) continue;
       // videoId is only for playback - the displayed title/artist/art come
       // from the Spotify/Apple Music second matching pass, not from
       // whatever the recommendation source called this candidate.
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
-      resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: 0, tags: tagNames });
+      resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: c.duration || 0, tags: tagNames });
       continue;
     }
     try{
       const match = await searchYouTube(c.title, c.artist);
       if (!match.videoId || excludeVideoIds.has(match.videoId)) continue;
+      if (!discoverLongTrackOk(match.duration || 0, rank, allowLong)) continue;
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
       resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
@@ -5969,8 +5997,10 @@ function extendQueueWithDiscover(originPlId){
         if (t) seedTracks.push(t);
       }
       if (!seedTracks.length) return;
-      const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH);
+      const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
+      const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong);
       if (!found.length) return;
+      discoverQueuedThisSession += found.length;
       const extId = discoverExtId(originPlId);
       const ext = getOrCreateDiscoverExt(originPlId);
       const startIdx = ext.tracks.length;
