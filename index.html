@@ -7941,14 +7941,98 @@ function finishCrossfade(old, nd, nextPos, targetVol){
   schedulePreload(nextPos);
 }
 
-function loadIndex(pos, autoplay){
+/* ---------- manual-skip crossfade (crossfade-manual-skip) ----------
+   With crossfade on, a manual next/prev fades into the new track instead of
+   cutting. Unlike runCrossfade() (which leaves queuePos on the old track
+   until the fade lands), the switch happens right away - UI, queuePos,
+   decks - so a second skip mid-fade counts from the new track, and the
+   outgoing track fades out underneath on what is now the standby deck. The
+   incoming deck fades up from silence once it's confirmed clean: a track
+   that wasn't preloaded (e.g. "previous") still sits out the pre-roll ad
+   check muted, and the old track fades out over that wait instead of
+   stopping dead. swapInProgress is held for the whole fade so the existing
+   crossfade guards (track-end, pause fade, the SC standby safety net) treat
+   it like one, and cancelCrossfade() - clear the active deck's fadeTimer,
+   restore it to full volume, silence the standby - is already the right
+   bail-out for this orientation. Returns false (caller cuts as before) when
+   there's nothing audible to fade from, or for SC-to-SC (can't overlap -
+   see maybeStartCrossfade), or while an automatic crossfade is running. */
+let skipFade = null;
+function startSkipCrossfade(pos, t){
+  const old = activeDeck(), nd = standbyDeck();
+  if (!crossfadePrefs.on || !old.player || !old.confirmed || isFadingOut(old)) return false;
+  if (!old.player.getPlayerState || old.player.getPlayerState() !== 1) return false;
+  if (old.kind === 'sc' && isSoundCloudVideoId(t.videoId)) return false;
+  // Skipping again mid skip-fade: pick the outgoing ramp up from wherever
+  // the previous fade had the (now outgoing) track, so nothing jumps or stacks.
+  const chaining = swapInProgress && skipFade && skipFade.nd === old && old.fadeTimer && old.fadeTimer === skipFade.timer;
+  if (swapInProgress && !chaining) return false;
+  const fromGain = chaining ? skipFade.gain : 1;
+  cancelCrossfade();
+  if (old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume() * fromGain));
+
+  if (nd.pos !== pos || !(nd.player || nd.pendingVideoId)){
+    resetDeck(nd);
+    nd.pos = pos;
+    loadIntoDeck(nd, t.videoId, false);
+  }
+  swapInProgress = true;
+  // label the outgoing deck with what it's actually playing (an active deck's
+  // pos isn't kept current), so a "previous" mid-fade can pick it back up
+  old.pos = state.queuePos;
+  activeIdx = 1 - activeIdx;
+  state.queuePos = pos;
+  lastTrackStartTs = Date.now();
+  crossfadeTriggered = false;
+  if (nd.player && nd.player.setVolume) nd.player.setVolume(0);
+  if (nd.confirmed && nd.player){
+    if (nd.player.unMute) nd.player.unMute();
+    if (nd.player.playVideo) nd.player.playVideo();
+  }
+  const durationMs = crossfadePrefs.ms;
+  reflectCurrentTrackUI(pos, { skipArtSwap: true });
+  swapPlayerArt(t, durationMs);
+  swapFlowArt(t, durationMs);
+  setPlayingUI(true);
+
+  const start = Date.now();
+  let inStart = nd.confirmed ? start : 0;
+  const f = skipFade = { nd, gain: 0, timer: null, oldPaused: false };
+  f.timer = nd.fadeTimer = setInterval(() => {
+    if (activeDeck() !== nd || nd.fadeTimer !== f.timer){ clearInterval(f.timer); return; }
+    const now = Date.now(), vol = effectiveVolume();
+    const outP = Math.min(1, (now - start) / durationMs);
+    if (old.player && old.player.setVolume) old.player.setVolume(Math.round(vol * fromGain * (1 - outP)));
+    if (outP >= 1 && !f.oldPaused){ f.oldPaused = true; if (old.player && old.player.pauseVideo) old.player.pauseVideo(); }
+    if (!inStart && nd.confirmed) inStart = now;
+    // incoming never cleared its ad check (dead video etc.) - don't hold
+    // swapInProgress forever; onDeckConfirmed unmutes it at full if it ever does
+    if (!inStart && now - start > UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS) inStart = now - durationMs;
+    f.gain = inStart ? Math.min(1, (now - inStart) / durationMs) : 0;
+    if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(vol * f.gain));
+    if (outP < 1 || f.gain < 1) return;
+    clearInterval(f.timer);
+    nd.fadeTimer = null;
+    swapInProgress = false;
+    skipFade = null;
+    resetDeck(old);
+    schedulePreload(state.queuePos);
+  }, 100);
+  return true;
+}
+
+function loadIndex(pos, autoplay, opts){
   if (pos < 0 || pos >= state.queue.length) return;
-  if (typeof YT === 'undefined' || !YT.Player){ setTimeout(() => loadIndex(pos, autoplay), 300); return; }
+  if (typeof YT === 'undefined' || !YT.Player){ setTimeout(() => loadIndex(pos, autoplay, opts), 300); return; }
   const t = trackAt(pos);
   if (!t || !t.videoId) return;
-  if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(() => loadIndex(pos, autoplay), 300); return; }
+  if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(() => loadIndex(pos, autoplay, opts), 300); return; }
   recordLastPlayed(state.queue[pos].plId);
 
+  if (opts && opts.crossfade && autoplay !== false && startSkipCrossfade(pos, t)){
+    maybeExtendDiscoverQueue();
+    return;
+  }
   cancelCrossfade();
 
   // deck.pos is only a queue *position* - it goes stale the moment the
@@ -8093,7 +8177,7 @@ function pausePlayback(){
   fadeOutAndPause(ad);
 }
 
-function playIndex(pos){
+function playIndex(pos, opts){
   const ad = activeDeck();
   if (!ad.player){ loadIndex(pos, true); return; }
   if (pos === state.queuePos){
@@ -8101,7 +8185,7 @@ function playIndex(pos){
     if (s === 1 && !isFadingOut(ad)) fadeOutAndPause(ad); else fadeInAndPlay(ad);
     return;
   }
-  loadIndex(pos, true);
+  loadIndex(pos, true, opts);
 }
 
 // A manual skip within the first 15s (or first quarter of a known-duration
@@ -8117,29 +8201,33 @@ function recordSkipIfEarly(){
   if (elapsed < 15000 && (!durMs || elapsed < durMs * 0.25)) recordListenSignal(t, -1);
 }
 
-function finishQueueAtEnd(){
+function finishQueueAtEnd(opts){
   let pos = state.queuePos + 1;
   if (pos >= state.queue.length){
     if (state.repeat === 'all'){ pos = 0; if (state.shuffle) state.queue = shuffleTail(state.queue, 0); }
     else { setPlayingUI(false); return; }
   }
-  playIndex(pos);
+  playIndex(pos, opts);
 }
 
+// Manual skips (next/prev) ask for a crossfade - startSkipCrossfade()
+// decides whether one actually applies; auto-advance never does (the
+// track-end crossfade is maybeStartCrossfade's job).
 function playNext(auto){
   if (!auto) recordSkipIfEarly();
   if (auto && state.repeat === 'one'){ loadIndex(state.queuePos, true); return; }
+  const opts = auto ? null : { crossfade: true };
   let pos = state.queuePos + 1;
   if (pos >= state.queue.length){
     const originPlId = discoverOriginId();
     if (originPlId && isDiscoverOn(originPlId)){
-      extendQueueWithDiscover(originPlId).then(finishQueueAtEnd);
+      extendQueueWithDiscover(originPlId).then(() => finishQueueAtEnd(opts));
       return;
     }
-    finishQueueAtEnd();
+    finishQueueAtEnd(opts);
     return;
   }
-  playIndex(pos);
+  playIndex(pos, opts);
 }
 function playPrev(){
   const ad = activeDeck();
@@ -8149,7 +8237,7 @@ function playPrev(){
   }
   let pos = state.queuePos - 1;
   if (pos < 0){ if (state.repeat === 'all') pos = state.queue.length - 1; else return; }
-  playIndex(pos);
+  playIndex(pos, { crossfade: true });
 }
 
 // Nothing queued and the player tab's play button gets hit anyway - rather
