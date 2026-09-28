@@ -2621,6 +2621,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #75. Largest-scope item in this
   batch by far - architectural decision, not a quick lane. Recommend
   discussing approach before queuing.
+  Geethub #182 folded in (bug report): user is signed in on desktop and mobile but playlists and settings differ between them - i.e. cross-device sync is what's expected.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
 - **Status:** merged
@@ -2985,6 +2986,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #90. No existing entry covers lyrics
   accuracy/sourcing - `lyrics-glow-trail` above is a visual effect on
   already-displayed lyrics, unrelated.
+  Geethub #195 folded in: use free third-party sources (LRCLIB named; app already queries lrclib by title/artist) to fill tracks with no lyrics, verify it's the right song, and use synced timestamps.
 
 ### background-playlist-loading: Playlist/album loading should run in the background with a progress bar
 - **Status:** merged
@@ -5792,6 +5794,7 @@ Add entries in this shape:
 - **Branch:** (unclaimed)
 - **Notes:** Synced from Geethub issue #135. Issue body had no further
   detail beyond the title.
+  Geethub #198 folded in: desktop playlist panel currently shows two close buttons - remove the top one. The remaining X should be identical to the queue's X in the window's top-right corner. User wants this done as part of this entry.
 
 ### fullscreen-vertical-centering-nav-row: Fullscreen art still not vertically centered; top nav row wastes space
 - **Status:** draft
@@ -6075,6 +6078,7 @@ Add entries in this shape:
   (draft), which defines how tracks are chosen.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #170 (title only).
+  Geethub #192 folded in: a button in the CuRRentSSsss menu to reshuffle/reload all tracks with new ones based on the most recent listening.
 
 ### playlist-cap-10: Cap user-added playlists at 10
 - **Status:** draft
@@ -6138,6 +6142,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #167. Echo overlaps
   `ambient-soundscapes` (draft) - likely the same feature. Needs a
   payments/accounts decision first (`accounts-profiles`).
+  Geethub #188 folded in: candidate EBBLESS DEEP visuals from reactbits.dev/backgrounds - aero-shards, crt-warp, shape-waves, light-tunnel, sliced-waves, acid-squares, liquid-ether, floating-lines, pixel-blast, color-bends, evil-eye, line-waves, radar, particles, gradient-blinds, galaxy, dither, faulty-terminal, ripple-grid, dot-field, dot-grid (full URLs with tuned params in the issue).
 
 ### artist-tipping: Tipping and direct fan subscriptions for independent artists
 - **Status:** draft
@@ -6167,6 +6172,7 @@ Add entries in this shape:
 - **Touches:** Discover / Currents recommendation logic.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #164.
+  Geethub #187 folded in: track the user's time of day, time zone, weather and location to curate Discover and offer automatic time-based playlists; also asks to incorporate Rosicrucian knowledge about the time of day and day of the week.
 
 ### algorithm-sliders: Sliders to steer recommendations
 - **Status:** draft
@@ -6271,3 +6277,155 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Found by the `queue-3dot-menu-desktop` lane 2026-09-23 in
   headless touch emulation, not user-reported yet.
+
+### pause-fade-cap: Cap the pause fade-out at a short fixed length
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Pausing fades out for too long. Cap the pause fade at a short duration regardless of the crossfade setting.
+- **Touches:** pause fade-out logic (follow-up to merged `pause-fade-out`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #177.
+
+### cymatics-icon-morph: Cymatics button icon should morph between 3 cymatics shapes
+- **Status:** draft
+- **Priority:** low
+- **Description:** The cymatics mode button icon should be a 3-phase cymatics form that fades between shapes, 3 full cycles per minute.
+- **Touches:** visual-style buttons (cymatics icon).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #178.
+
+### mobile-queue-icon-highlight: Mobile: only the queue icon should be lit while the queue is open
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On mobile, when the queue is open, the queue icon should be the only highlighted nav icon.
+- **Touches:** mobile footer nav active states.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #179.
+
+### swipe-track-animation: Mobile: animate swipe-to-change-track
+- **Status:** draft
+- **Priority:** low
+- **Description:** Swiping left/right to change songs should animate. Must feel unique to EBBLESS, flowy, nothing like Spotify/iTunes/macOS, and light on memory even with rapid repeated swipes.
+- **Touches:** album-art swipe nav (see merged `album-art-swipe-nav`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #180.
+
+### footer-title-marquee: Mobile footer player: long titles should scroll like a marquee
+- **Status:** draft
+- **Priority:** low
+- **Description:** In the mobile footer player, titles too long to fit should scroll as a marquee.
+- **Touches:** mobile footer player title.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #181.
+
+### mobile-fullscreen-art-slide: Mobile fullscreen: art should slide to center when UI appears
+- **Status:** draft
+- **Priority:** low
+- **Description:** In mobile fullscreen, when the screen is tapped and the UI pops up, the record/cassette/album art should slide up to sit centered between the lower player UI and the visual-style buttons at the top.
+- **Touches:** mobile fullscreen layout; related to `fullscreen-vertical-centering-nav-row`.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #184.
+
+### conversational-vibe-search: Search by typing or speaking a mood/vibe to get a playlist
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Let users type conversationally (like talking to an LLM) or speak a sentence into the search bar describing their mood, vibe or environment, and get back a playlist of existing songs that fit. Needs a free tool or LLM working silently in the background to interpret the request.
+- **Touches:** search bar / paste bar, discovery backend (worker). Follow-on to merged `playlist-vibe-search`.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #185, #186.
+
+### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
+- **Status:** draft
+- **Priority:** low
+- **Description:** Replace the delete-all-playlists confirm with a hold-to-confirm button (reference: reactbits.dev/micro/hold-button).
+- **Touches:** Settings clear-playlists control (follow-up to merged `clear-playlists-confirm`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #189.
+
+### mobile-resume-pause-regression: Mobile: returning from another app pauses and resets progress
+- **Status:** draft
+- **Priority:** high
+- **Description:** On mobile, switching to another app and back pauses the track and restarts the player progress. Playback and position should survive the app switch.
+- **Touches:** visibility/resume handling (see merged `mobile-background-resume`, `instant-resume-caching`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #190.
+
+### mobile-library-tap-closes-playlist: Mobile: tapping Library should close an open playlist
+- **Status:** draft
+- **Priority:** low
+- **Description:** On mobile, with a playlist open, tapping the Library nav button should close the playlist and show the library.
+- **Touches:** mobile nav / playlist panel.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #191.
+
+### first-run-paste-guide: First-run pop-up guiding new users to paste a playlist
+- **Status:** draft
+- **Priority:** medium
+- **Description:** If the user has no playlists loaded, show a pop-up that points them in the UI to their first step: paste a playlist.
+- **Touches:** empty-library state, paste bar.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #193.
+
+### discover-mood-matching: Use free BPM/key/energy lookups to improve mood matching
+- **Status:** draft
+- **Priority:** low
+- **Description:** Improve Discover and mood search using free online track-metric sources (Chosic BPM & Key Finder, Musicstax, SongBPM) for BPM, key, time signature and energy.
+- **Touches:** Discover backend (worker).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #194.
+
+### discover-long-track-weighting: Discover should rarely serve very long tracks
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Quiet duration hierarchy for automatic Discover: 0-15 min normal; 15-45 min allowed but increasingly selective; 45-90 min occasional outlier only on a strong match; 90+ min very selective; 2+ hours essentially excluded. Do not ban them (explicit searches still work). Long tracks should never come first; only later in the queue once the listener has been going a while.
+- **Touches:** Discover candidate scoring.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #196.
+
+### geethub-open-closed-tracking: Geethub: synced ideas shouldn't look "closed" before they ship
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Synced ideas get closed on GitHub before they are built or deployed, so when writing a new issue you can't tell if something is already done. Keep issues open (or clearly labeled) until they actually ship.
+- **Touches:** Geethub workflow only (manager auto-close rule + existing `waiting-for-deployment`/`completed` labels) - no app code.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #197.
+
+### discover-randomness: Discover should vary its picks each time for the same song
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Discover should not produce the same queue every time from the same seed song. Each run should feel unique.
+- **Touches:** Discover candidate selection.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #199.
+
+### tester-report-no-github: Bug reporting for testers without a GitHub login
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Testers reporting bugs should not need a GitHub account, and should not be able to touch the user's own task list. Needs a separate intake mechanism.
+- **Touches:** Settings report-a-bug flow, maybe worker endpoint (see merged `tester-feedback-form`, `settings-bug-report-github-form`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #200.
+
+### android-ad-popup: An ad popped up during playback on a OnePlus 13R
+- **Status:** draft
+- **Priority:** high
+- **Description:** User saw an ad pop up on a OnePlus 13R (Android). The app promises no ads; find where it came from (likely the embedded YouTube player) and suppress it.
+- **Touches:** YouTube player embed / playback on Android.
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #201.
+
+### album-art-consistent-per-album: Tracks from one album show different cover art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** All tracks from the same album should show that album's art. Repro: https://open.spotify.com/album/7utDnqKdc3HiSx54MSaGSc
+- **Touches:** album art lookup (Spotify art).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #202.
+
+### bld-playback-glitch: Breathe Love Deep playback always glitches
+- **Status:** draft
+- **Priority:** high
+- **Description:** Breathe Love Deep playback always glitches. User asks whether uploading it to YouTube instead would help.
+- **Touches:** SoundCloud native playback path (see merged `soundcloud-native-playback`, draft `soundcloud-crossfade-cut`).
+- **Branch:** (unclaimed)
+- **Notes:** Synced from Geethub issue #203.
