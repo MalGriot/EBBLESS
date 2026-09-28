@@ -6233,7 +6233,7 @@ Add entries in this shape:
   one after the other, not in parallel, to avoid a merge conflict.
 
 ### soundcloud-crossfade-cut: Crossfade between two SoundCloud tracks likely cuts instead of fading
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** SoundCloud only lets one embedded widget play at a
   time, so when crossfade starts the incoming SoundCloud deck, the outgoing
@@ -6360,7 +6360,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #191.
 
 ### first-run-paste-guide: First-run pop-up guiding new users to paste a playlist
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** If the user has no playlists loaded, show a pop-up that points them in the UI to their first step: paste a playlist.
 - **Touches:** empty-library state, paste bar.
@@ -6376,7 +6376,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #194.
 
 ### discover-long-track-weighting: Discover should rarely serve very long tracks
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Quiet duration hierarchy for automatic Discover: 0-15 min normal; 15-45 min allowed but increasingly selective; 45-90 min occasional outlier only on a strong match; 90+ min very selective; 2+ hours essentially excluded. Do not ban them (explicit searches still work). Long tracks should never come first; only later in the queue once the listener has been going a while.
 - **Touches:** Discover candidate scoring.
@@ -6424,7 +6424,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #202.
 
 ### bld-playback-glitch: Breathe Love Deep playback always glitches
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Breathe Love Deep playback always glitches. User asks whether uploading it to YouTube instead would help.
 - **Touches:** SoundCloud native playback path (see merged `soundcloud-native-playback`, draft `soundcloud-crossfade-cut`).
