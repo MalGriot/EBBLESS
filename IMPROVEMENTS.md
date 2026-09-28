@@ -6359,11 +6359,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #191.
 
 ### first-run-paste-guide: First-run pop-up guiding new users to paste a playlist
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** If the user has no playlists loaded, show a pop-up that points them in the UI to their first step: paste a playlist.
 - **Touches:** empty-library state, paste bar.
-- **Branch:** (unclaimed)
+- **Branch:** agent/first-run-paste-guide
 - **Notes:** Synced from Geethub issue #193.
 
 ### discover-mood-matching: Use free BPM/key/energy lookups to improve mood matching
@@ -6375,11 +6375,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #194.
 
 ### discover-long-track-weighting: Discover should rarely serve very long tracks
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Quiet duration hierarchy for automatic Discover: 0-15 min normal; 15-45 min allowed but increasingly selective; 45-90 min occasional outlier only on a strong match; 90+ min very selective; 2+ hours essentially excluded. Do not ban them (explicit searches still work). Long tracks should never come first; only later in the queue once the listener has been going a while.
 - **Touches:** Discover candidate scoring.
-- **Branch:** (unclaimed)
+- **Branch:** agent/discover-long-track-weighting
 - **Notes:** Synced from Geethub issue #196.
 
 ### geethub-open-closed-tracking: Geethub: synced ideas shouldn't look "closed" before they ship
@@ -6423,9 +6423,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #202.
 
 ### bld-playback-glitch: Breathe Love Deep playback always glitches
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Breathe Love Deep playback always glitches. User asks whether uploading it to YouTube instead would help.
 - **Touches:** SoundCloud native playback path (see merged `soundcloud-native-playback`, draft `soundcloud-crossfade-cut`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/bld-playback-glitch
 - **Notes:** Synced from Geethub issue #203.
