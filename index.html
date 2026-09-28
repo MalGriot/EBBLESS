@@ -7971,7 +7971,7 @@ function startSkipCrossfade(pos, t){
   cancelCrossfade();
   if (old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume() * fromGain));
 
-  if (nd.pos !== pos || !(nd.player || nd.pendingVideoId)){
+  if (nd.pos !== pos || nd.videoId !== t.videoId || !(nd.player || nd.pendingVideoId)){
     resetDeck(nd);
     nd.pos = pos;
     loadIntoDeck(nd, t.videoId, false);
