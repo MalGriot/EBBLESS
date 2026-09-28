@@ -6494,7 +6494,7 @@ const MIN_CONTENT_DURATION_S = 90;
 // YT.Player's synchronous ones every other deck consumer assumes.
 // gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
 // deck's player - see the gen-check comment on those functions for why.
-function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
+function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
 const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
@@ -6525,6 +6525,7 @@ function resetDeck(deck){
   deck.muteStartTs = 0;
   deck.pos = -1;
   deck.pendingVideoId = null;
+  deck.videoId = null;
   if (deck.player){
     try { deck.player.mute && deck.player.mute(); deck.player.stopVideo && deck.player.stopVideo(); } catch(e){}
   }
@@ -6606,6 +6607,7 @@ function forceLowestQuality(deck){
 }
 
 function createDeckPlayer(deck, videoId){
+  deck.videoId = videoId;
   if (isSoundCloudVideoId(videoId)){ createSCDeckPlayer(deck, videoId); return; }
   deck.kind = 'yt';
   // See the matching comment in createSCDeckPlayer: this deck's player is
@@ -6844,6 +6846,7 @@ function createSCDeckPlayer(deck, videoId){
 }
 
 function loadIntoDeck(deck, videoId, isActive){
+  deck.videoId = videoId;
   const kind = isSoundCloudVideoId(videoId) ? 'sc' : 'yt';
   if (!deck.player || deck.kind !== kind){
     // Switching a deck between a YouTube and a SoundCloud track (a mixed-
@@ -6883,8 +6886,8 @@ function schedulePreload(afterPos){
   const deck = standbyDeck();
   const pos = computeNextPos(afterPos, true);
   if (pos < 0){ if (deck.pos !== -1) resetDeck(deck); return; }
-  if (deck.pos === pos && (deck.player || deck.pendingVideoId)) return;
   const t = trackAt(pos);
+  if (deck.pos === pos && t && deck.videoId === t.videoId && (deck.player || deck.pendingVideoId)) return;
   if (!t || !t.videoId){ resetDeck(deck); return; }
   resetDeck(deck);
   deck.pos = pos;
@@ -6906,7 +6909,7 @@ function prewarmResumeDeck(){
   if (!t || !t.videoId) return;
   if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(prewarmResumeDeck, 300); return; }
   const deck = standbyDeck();
-  if (deck.pos === state.queuePos && (deck.player || deck.pendingVideoId)) return;
+  if (deck.pos === state.queuePos && deck.videoId === t.videoId && (deck.player || deck.pendingVideoId)) return;
   resetDeck(deck);
   deck.pos = state.queuePos;
   loadIntoDeck(deck, t.videoId, false);
@@ -7886,6 +7889,7 @@ function maybeStartCrossfade(cur, dur){
   const nd = standbyDeck();
   const nextPos = computeNextPos(state.queuePos, false);
   if (nextPos < 0 || nd.pos !== nextPos || !nd.player || !nd.ready || !nd.confirmed) return;
+  if (!trackAt(nextPos) || nd.videoId !== trackAt(nextPos).videoId) return;
   // SoundCloud only lets one widget on the page play at a time (verified
   // directly: the incoming deck's play() pauses the outgoing one within the
   // same tick), so an SC-to-SC "crossfade" is really a hard cut into a track
@@ -7947,8 +7951,17 @@ function loadIndex(pos, autoplay){
 
   cancelCrossfade();
 
+  // deck.pos is only a queue *position* - it goes stale the moment the
+  // queue is rebuilt (a new playlist loaded, a re-shuffle, a background
+  // re-resolve re-anchoring). The standby deck prewarmed for the previous
+  // session's resumed track (prewarmResumeDeck) sits at that old queuePos,
+  // so pasting a new playlist whose first track lands on the same position
+  // promoted the old, already-buffered track while the UI showed the new
+  // one's art - "Glowed Up" art, a different song playing
+  // (wrong-song-kaytranada-glowed-up). Only promote when the deck actually
+  // holds this track's video.
   const nd = standbyDeck();
-  if (nd.pos === pos && nd.player && nd.ready){
+  if (nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId){
     promoteDeckDirect(nd, pos, autoplay !== false);
     maybeExtendDiscoverQueue();
     return;
