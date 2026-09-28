@@ -6375,7 +6375,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #194.
 
 ### discover-long-track-weighting: Discover should rarely serve very long tracks
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Quiet duration hierarchy for automatic Discover: 0-15 min normal; 15-45 min allowed but increasingly selective; 45-90 min occasional outlier only on a strong match; 90+ min very selective; 2+ hours essentially excluded. Do not ban them (explicit searches still work). Long tracks should never come first; only later in the queue once the listener has been going a while.
 - **Touches:** Discover candidate scoring.
