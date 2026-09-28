@@ -145,6 +145,29 @@ svg{display:block}
 }
 .import-row button:active{transform:scale(.97)}
 .import-err{font-size:12.5px;color:var(--bad);margin:8px 0 0;min-height:0}
+/* first-run paste guide: bubble hanging off the paste bar, arrow pointing up
+   at the input, plus a soft accent ring on the input while it's up */
+.paste-guide{position:absolute;top:calc(100% + 12px);left:0;z-index:20;width:min(320px,100%);
+  background:var(--panel-2);border:1px solid var(--accent);border-radius:var(--r-lg);
+  box-shadow:0 14px 40px rgba(0,0,0,.5);padding:14px 16px 14px;color:var(--text);
+  animation:paste-guide-in 420ms var(--ease-out)}
+.paste-guide[hidden]{display:none}
+.paste-guide::before{content:'';position:absolute;top:-7px;left:28px;width:12px;height:12px;
+  background:var(--panel-2);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}
+.paste-guide-title{font-size:13.5px;font-weight:700;margin:0 24px 6px 0;color:var(--accent)}
+.paste-guide p{font-size:13px;line-height:1.45;color:var(--text);margin:0}
+.import-row .paste-guide-x{position:absolute;top:6px;right:8px;width:28px;height:28px;font-size:18px;line-height:1;
+  color:var(--faint);background:none;padding:0}
+.import-row .paste-guide-x:hover,.import-row .paste-guide-x:focus-visible{color:var(--text)}
+.import-row .paste-guide-ok{display:block;margin:12px 0 0 auto;padding:7px 16px;font-size:12.5px}
+.import-row.paste-guide-on input{border-color:var(--accent);animation:paste-guide-ring 2.2s var(--ease-in-out) infinite}
+body.onb-active .paste-guide{display:none}
+@keyframes paste-guide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes paste-guide-ring{0%,100%{box-shadow:0 0 0 0 var(--accent-dim)}50%{box-shadow:0 0 0 6px var(--accent-dim)}}
+@media (prefers-reduced-motion:reduce){
+  .paste-guide{animation:none}
+  .import-row.paste-guide-on input{animation:none;box-shadow:0 0 0 3px var(--accent-dim)}
+}
 
 .section-label{font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--faint-2);text-transform:uppercase;margin:28px 0 12px}
 .section-label:first-of-type{margin-top:8px}
@@ -1592,6 +1615,12 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <form class="import-row" id="importForm">
         <input id="urlInput" type="text" placeholder="Paste a link, or search a vibe or keyword" autocomplete="off" spellcheck="false">
         <button type="submit" id="loadBtn">Load</button>
+        <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
+          <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
+          <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
+          <p>Paste a Spotify, Apple Music, YouTube or SoundCloud link to a playlist or album, then hit Load.</p>
+          <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
+        </div>
       </form>
       <div class="import-err" id="importErr"></div>
 
@@ -3171,6 +3200,7 @@ function setView(name){
   });
   views[name].scrollTop = 0;
   updateMiniBarVisibility();
+  try{ refreshPasteGuide(); } catch(e){}
   if (typeof updateLibraryClockColor === 'function') updateLibraryClockColor();
   // The Swell/Currents teaser video (see renderLibrary's video-face branch)
   // can be built while #view-library is still hidden - e.g. the very first
@@ -5329,29 +5359,41 @@ const STARTER_LIBRARY_URLS = [
   'https://soundcloud.com/mal-griot/sets/breathelovedeep',
   'https://open.spotify.com/playlist/2AcQTlTA3xgd9HAZJcHYmz'
 ];
+// Library id/type a starter URL is saved under - shared by the seed below
+// and the first-run paste guide (which needs to tell starter items apart
+// from anything the listener added themselves).
+function starterLibraryEntry(url){
+  const parsed = parseImportLink(url);
+  if (!parsed) return null;
+  let id, type;
+  if (parsed.source === 'soundcloud'){
+    id = 'sc:' + encodeURIComponent(parsed.id);
+    // "Breathe Love Deep" is a full release, not a loose playlist - flag
+    // it sc_album (see isAlbumType) so it displays/counts as an album
+    // like the app's other multi-track releases, while still resolving
+    // its tracks/art straight from SoundCloud via the same sc_playlist
+    // path (see resolvePlaylist/sourceKindForType's SoundCloud exception).
+    type = parsed.type === 'track' ? 'sc_track' : (url.indexOf('/sets/breathelovedeep') !== -1 ? 'sc_album' : 'sc_playlist');
+  } else if (parsed.source === 'applemusic'){
+    type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
+    id = parsed.storefront + ':' + parsed.id;
+  } else if (parsed.source === 'youtube'){
+    id = 'yt:' + parsed.id;
+    type = parsed.type === 'video' ? 'yt_video' : 'yt_playlist';
+  } else {
+    id = parsed.id;
+    type = parsed.type;
+  }
+  return { id, type };
+}
+function starterLibraryIds(){
+  return STARTER_LIBRARY_URLS.map(starterLibraryEntry).filter(Boolean).map(e => e.id);
+}
 async function seedStarterLibrary(){
   for (const url of STARTER_LIBRARY_URLS){
-    const parsed = parseImportLink(url);
-    if (!parsed) continue;
-    let id, type;
-    if (parsed.source === 'soundcloud'){
-      id = 'sc:' + encodeURIComponent(parsed.id);
-      // "Breathe Love Deep" is a full release, not a loose playlist - flag
-      // it sc_album (see isAlbumType) so it displays/counts as an album
-      // like the app's other multi-track releases, while still resolving
-      // its tracks/art straight from SoundCloud via the same sc_playlist
-      // path (see resolvePlaylist/sourceKindForType's SoundCloud exception).
-      type = parsed.type === 'track' ? 'sc_track' : (url.indexOf('/sets/breathelovedeep') !== -1 ? 'sc_album' : 'sc_playlist');
-    } else if (parsed.source === 'applemusic'){
-      type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
-      id = parsed.storefront + ':' + parsed.id;
-    } else if (parsed.source === 'youtube'){
-      id = 'yt:' + parsed.id;
-      type = parsed.type === 'video' ? 'yt_video' : 'yt_playlist';
-    } else {
-      id = parsed.id;
-      type = parsed.type;
-    }
+    const entry = starterLibraryEntry(url);
+    if (!entry) continue;
+    const { id, type } = entry;
     // Reuse an existing cache only if it isn't stale (see isResolveStale) -
     // a listener whose starter items were seeded before a source-parsing
     // fix landed (e.g. the SoundCloud album resolving/track-list fixes this
@@ -5366,6 +5408,67 @@ async function seedStarterLibrary(){
     } catch(e){ /* best-effort seed - a failed fetch just leaves the library short one entry */ }
   }
   renderLibrary();
+}
+
+/* ---------- first-run paste guide ----------
+   A listener with nothing of their own in the library (only the auto-seeded
+   starter items plus the built-in Liked/Swell playlists) gets a one-time
+   bubble pointing at the paste bar. Shown only once the splash/tutorial is
+   out of the way and the paste bar is actually on screen; dismissed for good
+   by its close/Got it buttons or by typing/pasting into the bar, and never
+   shown again once they've added a playlist of their own. */
+const LS_PASTE_GUIDE_DISMISSED = 'ebbless:pasteGuideDismissed';
+const pasteGuideEl = $('pasteGuide');
+function hasOwnPlaylists(){
+  const skip = new Set([LIKED_ID, SWELL_ID].concat(starterLibraryIds()));
+  return getLibrary().some(id => !skip.has(id));
+}
+function pasteBarVisible(){
+  const r = urlInput.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && r.right > 0 && r.left < window.innerWidth;
+}
+function shouldShowPasteGuide(){
+  if (!pasteGuideEl || lsGet(LS_PASTE_GUIDE_DISMISSED, false)) return false;
+  const splashEl = $('splash');
+  if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
+  if (document.body.classList.contains('onb-active')) return false;
+  if (hasOwnPlaylists()) return false;
+  return pasteBarVisible();
+}
+function refreshPasteGuide(){
+  if (!pasteGuideEl) return;
+  const show = shouldShowPasteGuide();
+  pasteGuideEl.hidden = !show;
+  importForm.classList.toggle('paste-guide-on', show);
+}
+function dismissPasteGuide(){
+  lsSet(LS_PASTE_GUIDE_DISMISSED, true);
+  refreshPasteGuide();
+}
+// Called from startApp(): wait for the splash to clear (it hides on its own
+// timer or via the install invite), then check once. Capped so a splash that
+// somehow never reports hidden can't leave this polling forever.
+function schedulePasteGuide(){
+  if (!pasteGuideEl || lsGet(LS_PASTE_GUIDE_DISMISSED, false)) return;
+  const startedAt = Date.now();
+  const tick = () => {
+    const splashEl = $('splash');
+    if (splashEl && !splashEl.classList.contains('is-hidden') && Date.now() - startedAt < 20000){
+      setTimeout(tick, 400); return;
+    }
+    // small beat after the splash fade so the bubble lands on a settled UI
+    setTimeout(refreshPasteGuide, 700);
+  };
+  tick();
+}
+if (pasteGuideEl){
+  pasteGuideEl.querySelectorAll('[data-paste-guide-dismiss]').forEach(b => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    dismissPasteGuide();
+  }));
+  urlInput.addEventListener('input', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
+  importForm.addEventListener('submit', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
+  window.addEventListener('resize', () => { if (!pasteGuideEl.hidden) refreshPasteGuide(); });
 }
 
 const dangerScrim = $('danger-scrim'), dangerModal = $('danger-modal');
@@ -8940,6 +9043,8 @@ function startApp(){
     // what actually gets the visitor unstuck, and it must run regardless.
     try{ setView(currentTrack() ? 'player' : 'library'); } catch(e2){}
   }
+
+  try{ schedulePasteGuide(); } catch(e){}
 
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
