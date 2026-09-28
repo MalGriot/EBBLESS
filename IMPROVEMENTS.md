@@ -6243,6 +6243,7 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Found by the `bld-background-tab-autoadvance` lane
   2026-09-23, not user-reported yet.
+  Addressed on branch agent/bld-playback-glitch: confirmed SoundCloud allows only one playing widget, so SC-to-SC crossfade is skipped (play to end, then auto-advance) instead of cutting. True overlap is not possible. Close as merged when that branch ships.
 
 ### relink-candidate-list: "Replace link" should show a full results list like the initial paste
 - **Status:** merged
@@ -6423,7 +6424,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #202.
 
 ### bld-playback-glitch: Breathe Love Deep playback always glitches
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Breathe Love Deep playback always glitches. User asks whether uploading it to YouTube instead would help.
 - **Touches:** SoundCloud native playback path (see merged `soundcloud-native-playback`, draft `soundcloud-crossfade-cut`).
