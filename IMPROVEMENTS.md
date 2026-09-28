@@ -6359,7 +6359,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #191.
 
 ### first-run-paste-guide: First-run pop-up guiding new users to paste a playlist
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** If the user has no playlists loaded, show a pop-up that points them in the UI to their first step: paste a playlist.
 - **Touches:** empty-library state, paste bar.
