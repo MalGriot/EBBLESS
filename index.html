@@ -6559,7 +6559,12 @@ function onDeckConfirmed(deck){
   // the position is already baked in by the time it's promoted to active.
   let resumed = false;
   if (pendingResume && deck.player.seekTo){
-    const entry = state.queue[deck.pos];
+    // Only a standby deck's .pos is maintained - the active deck's track is
+    // state.queuePos (a deck loadIndex builds directly stays at -1). Matching
+    // on deck.pos alone skipped the seek whenever the active deck was built
+    // straight from a resume, e.g. startApp's return-from-mobile-background
+    // path, so the track restarted from 0:00.
+    const entry = state.queue[deck === activeDeck() ? state.queuePos : deck.pos];
     if (entry && entry.plId === pendingResume.plId && entry.idx === pendingResume.idx){
       deck.player.seekTo(pendingResume.position, true);
       resumed = true;
