@@ -5847,7 +5847,7 @@ Add entries in this shape:
   changes (`/search` scores, `/report` payload) need a worker deploy.
 
 ### wrong-song-kaytranada-glowed-up: Playlist plays wrong song for "Glowed Up" (Kaytranada)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Loading
   https://open.spotify.com/playlist/18LY7SteZvmFRVoKTInRKS showed the art
@@ -5855,7 +5855,7 @@ Add entries in this shape:
   song. Find why the match was wrong and fix the matching.
 - **Touches:** link matching (`link-match-accuracy`, `amel-larrieux-wrong-track`
   area).
-- **Branch:**
+- **Branch:** agent/wrong-song-kaytranada-glowed-up
 - **Notes:** Synced from Geethub issue #159.
 
 ### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
@@ -6000,12 +6000,12 @@ Add entries in this shape:
   cancels the crossfade. Verified on YouTube and SoundCloud.
 
 ### crossfade-manual-skip: Crossfade should also apply on next/previous
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** With crossfade on, manually skipping to the next or
   previous track should fade into it rather than cutting.
 - **Touches:** crossfade engine, next/prev handlers.
-- **Branch:**
+- **Branch:** agent/crossfade-manual-skip
 - **Notes:** Synced from Geethub issue #160.
 
 ### lp-needle-sfx: LP mode needle-lift / needle-drop sound on pause and play
@@ -6344,11 +6344,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #189.
 
 ### mobile-resume-pause-regression: Mobile: returning from another app pauses and resets progress
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** On mobile, switching to another app and back pauses the track and restarts the player progress. Playback and position should survive the app switch.
 - **Touches:** visibility/resume handling (see merged `mobile-background-resume`, `instant-resume-caching`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/mobile-resume-pause-regression
 - **Notes:** Synced from Geethub issue #190.
 
 ### mobile-library-tap-closes-playlist: Mobile: tapping Library should close an open playlist
