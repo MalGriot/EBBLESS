@@ -6850,13 +6850,13 @@ Add entries in this shape:
 
 
 ### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The change-art page should have a checkbox to apply the
   chosen art to every track in the same album. The option should not be
   shown when changing a playlist's art.
 - **Touches:** track art picker / relink menu.
-- **Branch:**
+- **Branch:** agent/change-art-apply-album
 - **Notes:** Synced from Geethub issue #206. Related:
   `album-art-consistent-per-album`, `playlist-image-reset`.
 
