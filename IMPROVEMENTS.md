@@ -6850,7 +6850,7 @@ Add entries in this shape:
 
 
 ### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The change-art page should have a checkbox to apply the
   chosen art to every track in the same album. The option should not be
@@ -6859,6 +6859,14 @@ Add entries in this shape:
 - **Branch:** agent/change-art-apply-album
 - **Notes:** Synced from Geethub issue #206. Related:
   `album-art-consistent-per-album`, `playlist-image-reset`.
+  **Built (2697f03):** app had no per-track art picker, so added "Change art"
+  to the track menu (shared `openArtPicker` with the playlist picker) plus the
+  "Apply to all tracks in <album>" checkbox (hidden for playlist art, no
+  album, or 1-track album). Album = album-type library entry holding the
+  track; applies to every title+artist match library-wide. Per-track
+  `originalArt` keeps reset working; relink no longer overwrites hand-picked
+  art. **At merge:** `albumForTrack` should call `isAlbumEntry(p)` (from
+  `playlist-menu-album-toggle`) instead of `isAlbumType(p.type)`.
 
 ### cassette-fullscreen-second-stack: Cassette fullscreen intro should do a second stack downward
 - **Status:** review
