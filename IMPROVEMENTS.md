@@ -6157,13 +6157,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #155.
 
 ### keyboard-shortcuts: Add keyboard shortcuts
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** "i" toggles the cymatics infinity loop; "p" and "l" open
   the library; "q" the queue; "s" toggles settings; "shift+s" make a
   suggestion; "shift+b" report a bug.
 - **Touches:** global keydown handler (alongside "f" fullscreen and Esc).
-- **Branch:**
+- **Branch:** agent/keyboard-shortcuts
 - **Notes:** Synced from Geethub issue #156.
 
 ### relink-soundcloud-suggestions: "Refresh link" should suggest SoundCloud for SoundCloud tracks
@@ -6249,14 +6249,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #171.
 
 ### button-press-feel: Every button should feel great to press
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Give every button a subtle, satisfying press feel
   (micro-animation, maybe haptics on mobile) - a nice touch, never
   distracting.
 - **Touches:** global button styles. Builds on the press animation from
   `tutorial-text-overflow-button-animation`.
-- **Branch:**
+- **Branch:** agent/button-press-feel
 - **Notes:** Synced from Geethub issue #150.
 
 ### own-songs-lyrics: Lyrics for every Breathe Love Deep and This Is Mal Griot song
@@ -6521,11 +6521,11 @@ Add entries in this shape:
   so it relights on close. CSS only, no-op at >=860px (footer nav hidden).
 
 ### swipe-track-animation: Mobile: animate swipe-to-change-track
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Swiping left/right to change songs should animate. Must feel unique to EBBLESS, flowy, nothing like Spotify/iTunes/macOS, and light on memory even with rapid repeated swipes.
 - **Touches:** album-art swipe nav (see merged `album-art-swipe-nav`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/swipe-track-animation
 - **Notes:** Synced from Geethub issue #180.
 
 ### footer-title-marquee: Mobile footer player: long titles should scroll like a marquee
