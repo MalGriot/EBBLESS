@@ -583,6 +583,16 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .marquee .marquee-track{display:inline-flex;white-space:nowrap;will-change:transform}
 .marquee .marquee-track>span{display:inline-block;white-space:nowrap;flex:none}
 .marquee.is-marquee .marquee-track{animation:marquee-scroll var(--marquee-dur,12s) linear infinite}
+/* Static (non-scrolling) state: a title that overflows but isn't animating -
+   reduced motion, or not yet measured - ends in an ellipsis instead of a hard
+   clip. The span is inline-block, so the ellipsis has to live on the span. */
+.marquee:not(.is-marquee)>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+/* Mini-bar footer: soft fade at both edges while scrolling. The box is pulled
+   8px left into the art/meta gap with matching padding, so at rest the text
+   sits exactly where it did and only text scrolling *past* the start fades. */
+#mini-bar .marquee.is-marquee{margin-left:-8px;padding-left:8px;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 8px,#000 calc(100% - 18px),transparent 100%);
+          mask-image:linear-gradient(to right,transparent 0,#000 8px,#000 calc(100% - 18px),transparent 100%)}
 @keyframes marquee-scroll{
   0%,8%{transform:translateX(0)}
   100%{transform:translateX(var(--marquee-shift,0))}
@@ -8340,7 +8350,37 @@ function lyricsSetPlaying(isPlaying){
   if (isPlaying) lyricsAutoScrollStart(); else lyricsAutoScrollStop();
 }
 
+// Re-measure a marquee whenever its box width changes. This covers window
+// resizes/rotation, and - the important case for the mini-bar footer - an
+// element that was display:none when its text was set (mini-bar is hidden
+// while the full player is open, so a track change there measured 0px of
+// overflow and the title stayed clipped once you navigated away). Keyed on
+// width only, so rebuilding the content can't feed back into another pass.
+// Created lazily (function-scoped var, not a top-level const) because
+// setMarqueeText already runs during startup, before this point in the
+// script would have initialised a const.
+var marqueeResizeObs;
+function marqueeObserve(el){
+  if (el._marqueeObserved || typeof ResizeObserver !== 'function') return;
+  if (!marqueeResizeObs) marqueeResizeObs = new ResizeObserver(entries => {
+    entries.forEach(({ target, contentRect }) => {
+      // Content-box width: the mini-bar's scrolling state adds padding for
+      // its edge fade, which must not read as a resize.
+      const w = contentRect.width;
+      if (target._marqueeW !== undefined && Math.abs(w - target._marqueeW) < 1) return;
+      target._marqueeW = w;
+      if (w > 0 && typeof target._marqueeText === 'string') setMarqueeText(target, target._marqueeText);
+    });
+  });
+  el._marqueeObserved = true;
+  marqueeResizeObs.observe(el);
+}
+function marqueeReducedMotion(){
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
 function setMarqueeText(el, text){
+  el._marqueeText = text;
+  marqueeObserve(el);
   if (el._marqueeAnim){ el._marqueeAnim.cancel(); el._marqueeAnim = null; }
   el.classList.remove('is-marquee');
   el.style.removeProperty('--marquee-shift');
@@ -8359,6 +8399,12 @@ function setMarqueeText(el, text){
   const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
   ready.then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
     if (!el.isConnected || el.querySelector('span') !== span) return;
+    // Reduced motion: never scroll - the static span keeps its ellipsis.
+    // Hidden (0px wide): nothing to measure yet; the ResizeObserver above
+    // re-runs this once the element actually gets a width.
+    const cs = getComputedStyle(el);
+    el._marqueeW = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    if (marqueeReducedMotion() || !el.clientWidth) return;
     const overflow = span.scrollWidth - el.clientWidth;
     if (overflow > 4){
       const gap = 48;
