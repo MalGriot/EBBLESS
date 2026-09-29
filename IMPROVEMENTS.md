@@ -5922,7 +5922,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #143.
 
 ### fullscreen-title-contrast: Fullscreen title unreadable over white-heavy art
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In fullscreen, when album art has a lot of white, the
   white title text disappears. Fix contrast, e.g. a subtle character
@@ -6271,7 +6271,7 @@ Add entries in this shape:
   album art from Spotify; use the new link's thumbnail only if that fails.
 
 ### desktop-library-bg-video-fixed: Library background video shouldn't scroll on desktop
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, the Library's background video scrolls away
   with the list. It should stay fixed in place while the list scrolls over it.
@@ -6280,7 +6280,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #175 (title only).
 
 ### touch-landscape-rotate-lock: "Rotate your device" overlay blocks touch devices in landscape
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On a touch device at 1280x800 landscape (e.g. an iPad or
   touchscreen laptop), the full-screen "rotate your device" overlay covers
