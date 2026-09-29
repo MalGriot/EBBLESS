@@ -868,6 +868,19 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .fb-status{font-size:13px;line-height:1.45;margin:4px 0 0;min-height:1em}
 .fb-status.is-ok{color:var(--good)}
 .fb-status.is-err{color:var(--bad)}
+/* periodic "feeling it or nah" mode (issue #44): thumbs step first, then the
+   usual message/name/contact fields once a thumb is picked */
+.fb-vibe{display:none;gap:10px;margin:4px 0 14px}
+#feedback-modal.is-vibe .fb-vibe{display:flex}
+#feedback-modal.is-vibe .fb-std{display:none}
+#feedback-modal.is-vibe:not(.has-thumb) .fb-detail{display:none}
+.fb-thumb{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  transition:border-color var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
+.fb-thumb svg{width:28px;height:28px}
+.fb-thumb:hover,.fb-thumb:focus-visible{border-color:var(--border-2);background:var(--panel-2);outline:none}
+.fb-thumb[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 
 /* desktop: side panel */
 @media (min-width:860px){
@@ -2341,8 +2354,20 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <!-- ===== TESTER FEEDBACK FORM ===== -->
   <form id="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle" novalidate>
     <h2 id="feedbackModalTitle">Send feedback</h2>
-    <p>Something broken, or an idea for EBBLESS? Tell us what happened. No account needed.</p>
-    <div class="fb-field">
+    <p id="fbIntro">Something broken, or an idea for EBBLESS? Tell us what happened. No account needed.</p>
+    <!-- periodic "feeling it or nah" check (issue #44): same form, same
+         /tester-report path, just a thumbs step first. See scheduleVibeCheck. -->
+    <div class="fb-vibe" role="group" aria-label="Your vibe">
+      <button type="button" class="fb-thumb" id="fbThumbUp" data-sentiment="up" aria-pressed="false" aria-label="Feeling it">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H4v-9h3zm2 9V10.5l4.2-6.3c.3-.4.8-.6 1.3-.5 1 .2 1.6 1.2 1.3 2.2L15 10h4.2c1.3 0 2.2 1.2 1.9 2.4l-1.6 6.1c-.2.9-1 1.5-1.9 1.5H9z" fill="currentColor"/></svg>
+        <span>Feeling it</span>
+      </button>
+      <button type="button" class="fb-thumb" id="fbThumbDown" data-sentiment="down" aria-pressed="false" aria-label="Nah">
+        <svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)"><path d="M7 11v9H4v-9h3zm2 9V10.5l4.2-6.3c.3-.4.8-.6 1.3-.5 1 .2 1.6 1.2 1.3 2.2L15 10h4.2c1.3 0 2.2 1.2 1.9 2.4l-1.6 6.1c-.2.9-1 1.5-1.9 1.5H9z" fill="currentColor"/></svg>
+        <span>Nah</span>
+      </button>
+    </div>
+    <div class="fb-field fb-std">
       <label for="fbCategory">What kind?</label>
       <select id="fbCategory">
         <option value="bug">Something's broken</option>
@@ -2350,11 +2375,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <option value="other">Something else</option>
       </select>
     </div>
-    <div class="fb-field">
-      <label for="fbMessage">What's up?</label>
+    <div class="fb-field fb-detail">
+      <label for="fbMessage" id="fbMessageLabel">What's up?</label>
       <textarea id="fbMessage" maxlength="4000" placeholder="What happened, and what did you expect instead?"></textarea>
     </div>
-    <div class="fb-row">
+    <div class="fb-row fb-detail">
       <div class="fb-field">
         <label for="fbName">Name (optional)</label>
         <input id="fbName" type="text" maxlength="100" autocomplete="name">
@@ -2367,7 +2392,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="fb-status" id="fbStatus" role="status" aria-live="polite"></div>
     <div class="danger-modal-actions">
       <button type="button" class="btn-ghost" id="fbCancelBtn">Cancel</button>
-      <button type="submit" class="btn-ghost is-active" id="fbSendBtn">Send</button>
+      <button type="submit" class="btn-ghost is-active fb-detail" id="fbSendBtn">Send</button>
     </div>
   </form>
 
@@ -6178,16 +6203,49 @@ function setFbStatus(msg, kind){
   fbStatus.textContent = msg || '';
   fbStatus.className = 'fb-status' + (kind ? ' is-' + kind : '');
 }
+const fbTitle = $('feedbackModalTitle'), fbIntro = $('fbIntro'), fbMessageLabel = $('fbMessageLabel');
+const fbThumbs = [$('fbThumbUp'), $('fbThumbDown')];
+const FB_STD_COPY = { title: fbTitle.textContent, intro: fbIntro.textContent, label: fbMessageLabel.textContent, placeholder: fbMessage.placeholder };
+// null outside the periodic vibe check; otherwise { sentiment, sent, force }
+let fbVibe = null;
+function setFbMode(vibe){
+  fbVibe = vibe;
+  feedbackModal.classList.toggle('is-vibe', !!vibe);
+  feedbackModal.classList.remove('has-thumb');
+  fbThumbs.forEach(b => b.setAttribute('aria-pressed', 'false'));
+  fbTitle.textContent = vibe ? 'Are you feeling this app or nah?' : FB_STD_COPY.title;
+  fbIntro.textContent = vibe ? 'Quick gut check. Tap one.' : FB_STD_COPY.intro;
+  fbMessageLabel.textContent = FB_STD_COPY.label;
+  fbMessage.placeholder = FB_STD_COPY.placeholder;
+  fbCancelBtn.textContent = vibe ? 'Not now' : 'Cancel';
+}
 function openFeedbackModal(){
+  setFbMode(null);
   setFbStatus('');
   dangerScrim.classList.add('is-open');
   feedbackModal.classList.add('is-open');
   setTimeout(() => fbMessage.focus(), 50);
 }
 function closeFeedbackModal(){
+  if (!feedbackModal.classList.contains('is-open')) return;
   feedbackModal.classList.remove('is-open');
   dangerScrim.classList.remove('is-open');
+  // closing the vibe check without sending counts as "not now"
+  if (fbVibe && !fbVibe.sent && !fbVibe.force) vibeCheckDismissed();
+  fbVibe = null;
 }
+fbThumbs.forEach(btn => btn.addEventListener('click', () => {
+  if (!fbVibe) return;
+  const up = btn.dataset.sentiment === 'up';
+  fbVibe.sentiment = up ? 'up' : 'down';
+  fbThumbs.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  feedbackModal.classList.add('has-thumb');
+  fbIntro.textContent = up ? 'Love that. Tell us a little more, if you want.' : 'Fair. Tell us a little more so we can fix it.';
+  fbMessageLabel.textContent = up ? 'What\'s hitting for you?' : 'What\'s not landing?';
+  fbMessage.placeholder = up ? 'Favorite part, what keeps you coming back, anything.' : 'What felt off, what\'s missing, what would make it click.';
+  setFbStatus('');
+  setTimeout(() => fbMessage.focus(), 50);
+}));
 feedbackBtn.addEventListener('click', openFeedbackModal);
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);
@@ -6195,13 +6253,22 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape') close
 feedbackModal.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (fbSending) return;
-  const message = fbMessage.value.trim();
-  if (!message){ setFbStatus('Add a few words first, then hit Send.', 'err'); fbMessage.focus(); return; }
+  const vibe = fbVibe;
+  if (vibe && !vibe.sentiment){ setFbStatus('Tap a thumb first.', 'err'); return; }
+  const typed = fbMessage.value.trim();
+  if (!typed && !vibe){ setFbStatus('Add a few words first, then hit Send.', 'err'); fbMessage.focus(); return; }
+  // vibe check: detail is optional, and the thumbs value rides in the message
+  // text too so it reads right in KV even on a worker without `sentiment`
+  const message = vibe
+    ? ('[Vibe check: ' + (vibe.sentiment === 'up' ? 'feeling it' : 'nah') + '] ' + (typed || '(no detail given)')).slice(0, 4000)
+    : typed;
   let appVersion = '';
   try { appVersion = ((await caches.keys()).find(k => k.startsWith('ebbless-shell-')) || ''); } catch(err){}
   const t = currentTrack();
   const payload = {
-    category: fbCategory.value, message,
+    category: vibe ? 'other' : fbCategory.value, message,
+    source: vibe ? 'vibe-check' : 'feedback-form',
+    sentiment: vibe ? vibe.sentiment : undefined,
     name: fbName.value.trim(), contact: fbContact.value.trim(),
     appVersion, userAgent: navigator.userAgent,
     viewport: window.innerWidth + 'x' + window.innerHeight,
@@ -6224,6 +6291,7 @@ feedbackModal.addEventListener('submit', async (e) => {
       throw new Error(res.status === 429 ? 'You\'ve sent a few already. Give it a few minutes and try again.' : (err || 'HTTP ' + res.status));
     }
     fbMessage.value = '';
+    if (vibe){ vibe.sent = true; if (!vibe.force) vibeCheckAnswered(); }
     setFbStatus('Sent. Thank you, this really helps.', 'ok');
     setTimeout(() => { if (!fbMessage.value) closeFeedbackModal(); }, 1400);
     showToast('Feedback sent, thank you');
@@ -6235,6 +6303,77 @@ feedbackModal.addEventListener('submit', async (e) => {
     fbSendBtn.textContent = 'Send';
   }
 });
+
+/* ---- periodic "Are you feeling this app or nah?" check (issue #44) ----
+   Reuses the feedback form above in its thumbs-first mode, so answers land
+   in the same /tester-report intake (tagged source:'vibe-check'). Rules:
+   - counts distinct local days the app was opened; eligible from the 3rd
+   - never again once answered (sent)
+   - "Not now"/close: re-ask no sooner than 7 days later, give up after 3
+   - only at a calm moment: splash gone, no tutorial, no fullscreen/flow,
+     no other dialog open, tab visible
+   Dev: ?vibecheck forces it shortly after load; in the console,
+   ebblessVibeCheck() opens it now, .state() / .reset() inspect/clear.
+   Forced showings never write the stored state. */
+const VIBE_KEY = 'ebbless_vibe_check';
+const VIBE_MIN_DAYS = 3, VIBE_REASK_MS = 7 * 86400000, VIBE_MAX_DISMISSALS = 3;
+const VIBE_FIRST_DELAY_MS = 45000, VIBE_RETRY_MS = 30000, VIBE_MAX_TRIES = 10;
+function vibeState(){
+  const v = lsGet(VIBE_KEY, null);
+  return (v && typeof v === 'object') ? v : { first: Date.now(), days: 0, lastDay: '', answered: false, dismissals: 0, lastAsked: 0 };
+}
+function vibeCheckAnswered(){ const v = vibeState(); v.answered = true; lsSet(VIBE_KEY, v); }
+function vibeCheckDismissed(){ const v = vibeState(); v.dismissals = (v.dismissals || 0) + 1; lsSet(VIBE_KEY, v); }
+function vibeCheckEligible(v){
+  return !v.answered && (v.dismissals || 0) < VIBE_MAX_DISMISSALS && (v.days || 0) >= VIBE_MIN_DAYS
+    && (!v.lastAsked || Date.now() - v.lastAsked >= VIBE_REASK_MS);
+}
+function vibeCheckCalm(){
+  if (document.hidden) return false;
+  const splashEl = $('splash');
+  if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
+  if (document.body.classList.contains('onb-active')) return false;
+  if (state.flowOpen || state.deskFsOpen) return false;
+  if (lyricsFsLayer && lyricsFsLayer.classList.contains('is-open')) return false;
+  if (dangerScrim.classList.contains('is-open')) return false;
+  if (document.querySelector('[role="dialog"].is-open, [aria-modal="true"].is-open')) return false;
+  return true;
+}
+function openVibeCheck(force){
+  setFbMode({ sentiment: null, sent: false, force: !!force });
+  setFbStatus('');
+  fbMessage.value = '';
+  dangerScrim.classList.add('is-open');
+  feedbackModal.classList.add('is-open');
+  setTimeout(() => fbThumbs[0].focus(), 50);
+}
+function scheduleVibeCheck(){
+  let force = false;
+  try{ force = new URLSearchParams(location.search).has('vibecheck'); }catch(e){}
+  if (!force){
+    const v = vibeState();
+    const today = new Date().toDateString();
+    if (v.lastDay !== today){ v.lastDay = today; v.days = (v.days || 0) + 1; }
+    lsSet(VIBE_KEY, v);
+    if (!vibeCheckEligible(v)) return;
+  }
+  let tries = 0;
+  const attempt = () => {
+    if (vibeCheckCalm()){
+      if (!force){
+        const v = vibeState();
+        if (!vibeCheckEligible(v)) return;
+        v.lastAsked = Date.now();
+        lsSet(VIBE_KEY, v);
+      }
+      openVibeCheck(force);
+    } else if (++tries < VIBE_MAX_TRIES) setTimeout(attempt, VIBE_RETRY_MS);
+  };
+  setTimeout(attempt, force ? 4000 : VIBE_FIRST_DELAY_MS);
+}
+window.ebblessVibeCheck = function(){ openVibeCheck(true); };
+window.ebblessVibeCheck.state = function(){ return lsGet(VIBE_KEY, null); };
+window.ebblessVibeCheck.reset = function(){ lsDel(VIBE_KEY); };
 
 replayTutorialBtn.addEventListener('click', () => {
   // stop any real track first - the intro has its own theme music and
@@ -10821,6 +10960,7 @@ function startApp(){
   }
 
   try{ schedulePasteGuide(); } catch(e){}
+  try{ scheduleVibeCheck(); } catch(e){}
 
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');

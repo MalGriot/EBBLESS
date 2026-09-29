@@ -63,7 +63,11 @@ deploy` (no `--env`) still targets production as before.
 Settings > Support > "Send feedback" lets beta testers report bugs or ideas
 with no login and no GitHub. It POSTs to the worker's `/tester-report`,
 which stores each report in `MATCH_REPORTS` under a `tester:<ts>:<uuid>` key
-(max 5 per IP per 10 minutes). Read them with:
+(max 5 per IP per 10 minutes). The same form also opens on its own as a
+periodic "Are you feeling this app or nah?" thumbs check (from the 3rd day of
+use); those reports carry `source: "vibe-check"` and `sentiment: "up"|"down"`
+(the thumbs value is also prefixed into `message`). Force it with `?vibecheck`
+or `ebblessVibeCheck()` in the console. Read them with:
 
 ```bash
 cd worker

@@ -2144,6 +2144,7 @@ async function handleReport(request, env, ctx) {
 const TESTER_REPORT_LIMIT = 5;          // reports per IP...
 const TESTER_REPORT_WINDOW_S = 600;     // ...per 10 minutes
 const TESTER_CATEGORIES = ['bug', 'idea', 'other'];
+const TESTER_SOURCES = ['feedback-form', 'vibe-check'];
 async function handleTesterReport(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
@@ -2179,6 +2180,11 @@ async function handleTesterReport(request, env, ctx) {
     track: { title: str(track.title, 300), artist: str(track.artist, 300) },
     ts: Date.now(),
   };
+  // Optional, whitelisted: where in the app the report came from, and the
+  // thumbs value from the periodic "feeling this app or nah?" check. Older
+  // clients just omit these; the thumbs value is also in `message` text.
+  if (TESTER_SOURCES.includes(body.source)) report.source = body.source;
+  if (body.sentiment === 'up' || body.sentiment === 'down') report.sentiment = body.sentiment;
   const key = 'tester:' + report.ts + ':' + crypto.randomUUID();
   await env.MATCH_REPORTS.put(key, JSON.stringify(report));
   return json({ ok: true });
