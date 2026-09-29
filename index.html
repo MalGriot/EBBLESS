@@ -2061,6 +2061,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-5.41L15.59 9 17 10.41 11 16.41 7 12.41 8.41 11z"/></svg>
         Discover
       </button>
+      <button class="re" id="queueSaveBtn" title="Save this queue as a new playlist in your library">Save</button>
       <button class="clear" id="queueClearBtn">Clear</button>
     </div>
     <div class="queue-scroll">
@@ -2962,7 +2963,55 @@ function getCachedPlaylist(id){ return lsGet(LS_PL(id), null); }
 // Discover overflow) aren't built by resolvePlaylist and have no
 // resolveVersion to compare - they're never stale by this check.
 function isResolveStale(pl){
-  return !!pl && pl.type !== 'custom' && pl.resolveVersion !== RESOLVE_LOGIC_VERSION;
+  if (pl && pl.type === 'custom') return needsUnmatchedRematch(pl);
+  return !!pl && pl.resolveVersion !== RESOLVE_LOGIC_VERSION;
+}
+// Exception to the above: a playlist saved from the queue (flagged
+// rematchUnmatched, see saveQueueAsPlaylist) re-matches its unmatched rows
+// (videoId null) only - matched rows are never touched. Each row gets one
+// attempt per RESOLVE_LOGIC_VERSION (stamped in rematchTried), the same
+// once-per-logic-version cadence imported playlists re-resolve on, so a
+// track that keeps failing can't be retried in a loop.
+function needsUnmatchedRematch(pl){
+  return !!pl.rematchUnmatched && pl.tracks.some(t => t && !t.videoId && t.rematchTried !== RESOLVE_LOGIC_VERSION);
+}
+const unmatchedRematchInFlight = new Set();
+async function rematchUnmatchedInBackground(id){
+  if (unmatchedRematchInFlight.has(id)) return;
+  unmatchedRematchInFlight.add(id);
+  try {
+    const snap = getCachedPlaylist(id);
+    if (!snap || !needsUnmatchedRematch(snap)) return;
+    const results = new Map();
+    for (let i = 0; i < snap.tracks.length; i++){
+      const t = snap.tracks[i];
+      if (!t || t.videoId || t.rematchTried === RESOLVE_LOGIC_VERSION) continue;
+      // A thrown search (offline, backend down) isn't stamped, so it's
+      // retried on the next natural trigger rather than burned; stop here.
+      try { results.set(i, await searchYouTubeCached(t.title, t.artist, (t.srcDuration || 0) * 1000 || undefined)); }
+      catch(e){ break; }
+    }
+    if (!results.size) return;
+    // Re-read so edits made while searching aren't clobbered; only apply to
+    // a row that's still the same unmatched track.
+    const pl = getCachedPlaylist(id);
+    if (!pl) return;
+    results.forEach((m, i) => {
+      const t = pl.tracks[i], o = snap.tracks[i];
+      if (!t || t.videoId || t.title !== o.title || t.artist !== o.artist) return;
+      if (m && m.videoId){
+        t.videoId = m.videoId; t.matchedTitle = m.title || ''; t.channel = m.channel || ''; t.duration = m.duration || 0;
+        delete t.rematchTried;
+      } else {
+        t.rematchTried = RESOLVE_LOGIC_VERSION;
+      }
+    });
+    persistPlaylistObj(pl);
+    if (state.playlist && state.playlist.id === id) state.playlist = pl;
+    renderLibrary();
+  } finally {
+    unmatchedRematchInFlight.delete(id);
+  }
 }
 // Quietly re-resolves a playlist whose cached links predate the current
 // resolution logic, without disturbing whatever's currently on screen - the
@@ -2970,6 +3019,7 @@ function isResolveStale(pl){
 // or a source hiccup just leaves the existing (stale but playable) cache in
 // place for next time.
 function reResolveStaleInBackground(id, type){
+  if (type === 'custom'){ rematchUnmatchedInBackground(id); return; }
   resolvePlaylist(id, type, () => {}).then(pl => {
     if (state.playlist && state.playlist.id === id) state.playlist = pl;
     renderLibrary();
@@ -4754,7 +4804,9 @@ function addTrackToPlaylist(playlistId, track){
   showToast(added ? 'Added to ' + pl.name : 'Already in playlist');
 }
 
-function openCreatePlaylistFlow(trackToAdd){
+// opts (optional): { prefill: default name, onCreate(name): called instead
+// of the normal create step; used by the queue's Save button }.
+function openCreatePlaylistFlow(trackToAdd, opts){
   openImportOverlay();
   importStage.innerHTML =
     '<div class="step">Name your playlist</div>' +
@@ -4762,10 +4814,12 @@ function openCreatePlaylistFlow(trackToAdd){
       'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
     '<button class="btn-ghost is-active" id="plCreateBtn" style="width:100%">Create</button>';
   const input = $('plNameInput');
+  if (opts && opts.prefill){ input.value = opts.prefill; input.select(); }
   input.focus();
   function submit(){
     const name = input.value.trim();
     if (!name) return;
+    if (opts && opts.onCreate){ closeImportOverlay(); opts.onCreate(name); return; }
     const pl = createCustomPlaylist(name);
     if (trackToAdd){
       addTrackToPlaylist(pl.id, trackToAdd);
@@ -6312,6 +6366,45 @@ function renderQueuePanel(){
 }
 
 queueClearBtn.addEventListener('click', queueClearUpcoming);
+
+// Saves the whole queue (played + now + upcoming, in its current order) as a
+// new custom playlist - the way to keep a Discover-generated radio or an
+// edited queue. Tracks are copied whole so their resolved videoId/art/
+// matched metadata come along and play straight from the library. The
+// queue itself only ever holds matched tracks (validIndices), so the origin
+// playlist's unmatched rows (videoId null) are appended as-is, in the same
+// shape imports store them, rather than silently dropped. Opens the normal
+// "Name your playlist" prompt pre-filled with a default name.
+function saveQueueAsPlaylist(){
+  const seen = new Set();
+  const tracks = [];
+  let hasDiscover = false;
+  state.queue.forEach(e => {
+    const pl = playlistById(e.plId);
+    const t = pl && pl.tracks[e.idx];
+    if (!t) return;
+    if (t.videoId){ if (seen.has(t.videoId)) return; seen.add(t.videoId); }
+    if (String(e.plId).startsWith('discover-ext:')) hasDiscover = true;
+    tracks.push(Object.assign({}, t, { plays: 0 }));
+  });
+  if (!tracks.length){ showToast('Nothing to save'); return; }
+  const origin = playlistById(discoverOriginId());
+  const realOrigin = origin && !origin.id.startsWith('discover-ext:') ? origin : null;
+  if (realOrigin) realOrigin.tracks.forEach(t => { if (t && !t.videoId) tracks.push(Object.assign({}, t, { plays: 0 })); });
+  const base = (realOrigin && realOrigin.name) ? realOrigin.name : 'Queue';
+  openCreatePlaylistFlow(null, {
+    prefill: base + (hasDiscover ? ' Radio' : ' Mix'),
+    onCreate(name){
+      const pl = createCustomPlaylist(name);
+      pl.tracks = tracks;
+      pl.rematchUnmatched = true;
+      persistPlaylistObj(pl);
+      renderLibrary();
+      showToast('Saved as ' + pl.name);
+    }
+  });
+}
+$('queueSaveBtn').addEventListener('click', saveQueueAsPlaylist);
 
 /* ---- queue row drag-to-reorder (pointer-based, works for mouse + touch) ---- */
 function wireQueueRowGestures(row, handle){
