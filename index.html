@@ -726,6 +726,9 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 .q-row .remove{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
 .q-row .remove:hover{background:var(--panel-3);color:var(--bad)}
 .q-row .remove svg{width:12px;height:12px}
+.q-row .q-menu{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
+.q-row .q-menu:hover,.q-row .q-menu.is-active{background:var(--panel-3);color:var(--text)}
+.q-row .q-menu svg{width:13px;height:13px}
 .q-empty{padding:40px 10px;text-align:center;color:var(--faint-2);font-size:12.5px}
 .q-loading .flow-line{max-width:220px;margin:14px auto 0}
 .q-loading .counter{font-size:11px;color:var(--faint-2);margin-top:8px}
@@ -938,7 +941,7 @@ svg.load-spin{animation:load-spin .9s linear infinite}
   .ctl-btn.main svg{width:22px;height:22px}
   .ctl-btn.small{width:40px;height:40px}
   .ctl-btn.small svg{width:16px;height:16px}
-  .track-row .row-actions button,.track-row .remove,.q-row .remove{width:34px;height:34px}
+  .track-row .row-actions button,.track-row .remove,.q-row .remove,.q-row .q-menu{width:34px;height:34px}
   /* extra clearance above #bottom-nav (issue #30) - .view is already offset
      by var(--nav-h)+var(--safe-b) so its bottom edge sits right above the
      nav bar, but the transport controls were landing flush against that
@@ -4182,8 +4185,10 @@ function positionTrackCtxMenu(anchorEl){
 // from playlist" - this is distinct from the Now/Next/Later queue list's own
 // direct X button (see the `.remove`/queueRemoveAt pattern in
 // renderQueuePanel), which removes a track from the play queue rather than
-// from the underlying library playlist.
-function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
+// from the underlying library playlist. opts.inQueue (queue panel rows) drops
+// "Remove from playlist": the queue row's own X already covers removal there,
+// and editing the source playlist from the queue would be surprising.
+function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
   const pl = playlistById(plId);
   const t = pl && pl.tracks[trackIdx];
   const items = [];
@@ -4201,7 +4206,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
     items.push({ sep: true });
   }
   items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
-  if (t){
+  if (t && !(opts && opts.inQueue)){
     items.push({ sep: true });
     items.push({ action: 'remove', label: 'Remove from playlist', icon: CTX_ICON_DELETE, danger: true });
   }
@@ -4228,9 +4233,9 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl){
   positionTrackCtxMenu(anchorEl);
 }
 
-function toggleTrackCtxMenu(plId, trackIdx, anchorEl){
+function toggleTrackCtxMenu(plId, trackIdx, anchorEl, opts){
   if (openTrackCtxMenu && openTrackCtxMenu.btn === anchorEl){ closeTrackCtxMenu(); return; }
-  openTrackCtxMenuFor(plId, trackIdx, anchorEl);
+  openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts);
 }
 
 function handleTrackCtxAction(action, plId, trackIdx){
@@ -6355,11 +6360,16 @@ function renderQueuePanel(){
     const remove = document.createElement('button'); remove.className = 'remove'; remove.setAttribute('aria-label','Remove from queue');
     remove.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 
+    const menuBtn = document.createElement('button'); menuBtn.className = 'q-menu';
+    menuBtn.setAttribute('aria-label', 'Track options'); menuBtn.setAttribute('aria-haspopup', 'true');
+    menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+
     img.addEventListener('click', () => queueJumpTo(pos));
     meta.addEventListener('click', () => queueJumpTo(pos));
+    menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(entry.plId, entry.idx, menuBtn, { inQueue: true }); });
     remove.addEventListener('click', () => queueRemoveAt(pos));
 
-    row.appendChild(handle); row.appendChild(img); row.appendChild(meta); row.appendChild(remove);
+    row.appendChild(handle); row.appendChild(img); row.appendChild(meta); row.appendChild(menuBtn); row.appendChild(remove);
     queueBody.appendChild(row);
     wireQueueRowGestures(row, handle);
   });
