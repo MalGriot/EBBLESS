@@ -181,7 +181,14 @@ async function handleEmbed(kind, url, ctx) {
   if (!entity || !entity.trackList) return json({ error: kind + ' has no tracks (private or invalid link?)' }, 404);
 
   const coverSources = entity.coverArt && entity.coverArt.sources;
-  const image = (coverSources && coverSources[0] && coverSources[0].url) || null;
+  // Album embeds no longer carry `coverArt` at all (playlist embeds still
+  // do) - the cover only survives under visualIdentity.image, as 64/300/640
+  // renditions in no fixed order. Without this fallback every album track
+  // got image: null and each fell through to its own YouTube thumbnail, so
+  // one album showed a different cover per track.
+  const identityImages = (entity.visualIdentity && Array.isArray(entity.visualIdentity.image)) ? entity.visualIdentity.image : [];
+  const largestIdentity = identityImages.filter(i => i && i.url).sort((a, b) => (b.maxWidth || 0) - (a.maxWidth || 0))[0];
+  const image = (coverSources && coverSources[0] && coverSources[0].url) || (largestIdentity && largestIdentity.url) || null;
 
   let tracks;
   if (kind === 'album') {
