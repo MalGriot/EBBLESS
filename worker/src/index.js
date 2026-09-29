@@ -72,7 +72,8 @@ const YTMIX_CACHE_VERSION = 'v1';
 const THISIS_CACHE_VERSION = 'v1';
 // Bumped independently of ART_CACHE_VERSION - see the /soundcloud cache key
 // below for why this endpoint doesn't share that constant.
-const SOUNDCLOUD_CACHE_VERSION = 'v2';
+// v3: playlist payloads gained isAlbum (album-detection).
+const SOUNDCLOUD_CACHE_VERSION = 'v3';
 // /playlistsearch (see handlePlaylistSearch) - own version, same reasoning.
 // v2: SoundCloud results gained durationMs (and trackCount is now null, not
 // 0, when unknown) - bumped so cached v1-shape responses aren't served.
@@ -455,7 +456,13 @@ async function fetchYouTubeSearchCandidates(query) {
     try { views = parseViewCount(v.viewCountText.simpleText); } catch (e) {}
     let duration = 0;
     try { duration = parseDurationText(v.lengthText.simpleText); } catch (e) {}
-    return { videoId: v.videoId, title: vTitle, channel, views, duration };
+    // Description snippet - for an auto-generated "<Artist> - Topic" upload
+    // this is YouTube's "Provided to YouTube by <label> · <title> · <artist>
+    // · <album> ..." boilerplate, which names the release the upload
+    // belongs to (see albumMatches in handleSearch).
+    let snippet = '';
+    try { snippet = v.detailedMetadataSnippets[0].snippetText.runs.map(r => r.text).join(''); } catch (e) {}
+    return { videoId: v.videoId, title: vTitle, channel, views, duration, snippet };
   }).filter(v => v.videoId);
 }
 
@@ -478,6 +485,53 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   return score;
 }
 
+// Album-track mode (?album=<album name>) - sent by the client only for
+// tracks resolved from an album link (Spotify/Apple Music album; see
+// isAlbumType/searchYouTubeCached in index.html). An album's tracks should
+// resolve to the album cuts themselves, which YouTube publishes on the
+// artist's auto-generated "<Artist> - Topic" channel (one "Art Track" upload
+// per song, whose thumbnail is the album cover). So in album mode:
+//  - alternate versions (remix, sped up, slowed, live, cover, ...) are
+//    hard-excluded on any whole-word mention, not just the bracketed forms
+//    EXCLUDE_GROUPS catches, unless the source title itself names that
+//    version;
+//  - an upload on the artist's own Topic channel is preferred outright
+//    (hard filter with fallback, same pattern as the filters below) and
+//    one whose description names the album gets a further bonus;
+//  - if the normal query surfaced no artist-Topic upload at all, one extra
+//    query with the album name appended is tried, since Topic uploads'
+//    descriptions carry it.
+// Requests without ?album= are untouched (same filters, scores and cache
+// keys as before).
+const ALBUM_EXCLUDE_WORDS = [
+  'remix', 'remixed', 'rmx', 'sped up', 'speed up', 'slowed', 'reverb', 'nightcore', '8d',
+  'bass boosted', 'live', 'cover', 'karaoke', 'instrumental', 'acapella', 'a cappella',
+  'extended', 'mashup', 'reaction', 'tiny desk', 'unplugged',
+];
+const ALBUM_TOPIC_WEIGHT = 6;
+const ALBUM_NAME_WEIGHT = 4;
+function albumNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function wordRegex(phrase) {
+  return new RegExp('(^|[^a-z0-9])' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])', 'i');
+}
+// artistNames: the first credited artist plus the full credit string - an
+// artist whose own name has a comma in it ("Tyler, The Creator") is cut
+// short by the firstArtist split in handleSearch, but still matches whole.
+function isArtistTopicChannel(channel, artistNames) {
+  const ch = String(channel || '').toLowerCase();
+  if (!/\s-\s*topic$/.test(ch)) return false;
+  const owner = albumNorm(ch.replace(/\s-\s*topic$/, ''));
+  return !!owner && artistNames.some(a => albumNorm(a) === owner);
+}
+function snippetNamesAlbum(snippet, album) {
+  const hay = ' ' + albumNorm(snippet) + ' ';
+  return [album, relaxedSearchTitle(album)].map(albumNorm)
+    .some(a => a.length > 1 && hay.includes(' ' + a + ' '));
+}
+
 async function handleSearch(url, ctx) {
   const title = url.searchParams.get('title');
   const artist = url.searchParams.get('artist') || '';
@@ -494,11 +548,15 @@ async function handleSearch(url, ctx) {
   // cached searches (and every automatic resolve) are untouched.
   const altsParam = parseInt(url.searchParams.get('alts'), 10);
   const altCount = Number.isFinite(altsParam) ? Math.min(Math.max(altsParam, 1), SEARCH_MAX_ALTS) : SEARCH_DEFAULT_ALTS;
+  // Album name when this track comes from an album link - see the album-
+  // track mode notes above ALBUM_EXCLUDE_WORDS.
+  const album = (url.searchParams.get('album') || '').trim().slice(0, 200);
 
   const firstArtist = artist.split(',')[0].trim().toLowerCase();
   const cache = caches.default;
   const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist + '|' + sourceDurationSeconds) +
-    (altCount !== SEARCH_DEFAULT_ALTS ? '/alts' + altCount : '');
+    (altCount !== SEARCH_DEFAULT_ALTS ? '/alts' + altCount : '') +
+    (album ? '/album/' + encodeURIComponent(album) : '');
   const cacheKey = new Request(cacheKeyStr);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -531,6 +589,19 @@ async function handleSearch(url, ctx) {
     }
     if (candidates.length) break;
   }
+  // Album mode: no upload from the artist's own Topic channel among these
+  // results - try once more with the album name in the query, which is how
+  // a Topic "Art Track" upload's description reads, and pool the results.
+  const topicArtists = [firstArtist, artist];
+  if (album && firstArtist && !candidates.some(c => isArtistTopicChannel(c.channel, topicArtists))) {
+    try {
+      const extra = await fetchYouTubeSearchCandidates(searchTitle + ' ' + firstArtist + ' ' + relaxedSearchTitle(album));
+      const seen = new Set(candidates.map(c => c.videoId));
+      candidates = candidates.concat(extra.filter(c => !seen.has(c.videoId)));
+    } catch (e) {
+      if (!candidates.length) lastError = e;
+    }
+  }
   if (!candidates.length) {
     if (lastError instanceof YouTubeBlockedError) return json({ error: lastError.message }, 503);
     if (lastError) return json({ error: lastError.message }, 502);
@@ -549,7 +620,11 @@ async function handleSearch(url, ctx) {
   const activeExcludeHints = EXCLUDE_GROUPS
     .filter(g => !lowerSourceTitle.includes(g.keyword))
     .flatMap(g => g.hints);
-  const clean = candidates.filter(c => !activeExcludeHints.some(h => c.title.toLowerCase().includes(h)));
+  const albumExcludeRes = album
+    ? ALBUM_EXCLUDE_WORDS.filter(w => !wordRegex(w).test(lowerSourceTitle)).map(wordRegex)
+    : [];
+  const clean = candidates.filter(c => !activeExcludeHints.some(h => c.title.toLowerCase().includes(h)) &&
+    !albumExcludeRes.some(re => re.test(c.title)));
   let pool = clean.length ? clean : candidates;
 
   // Same hard-filter-with-fallback pattern as the exclude groups above, but
@@ -575,8 +650,24 @@ async function handleSearch(url, ctx) {
     pool = durationMatched.length ? durationMatched : pool;
   }
 
+  // Album mode: the artist's own Topic upload is the album cut - prefer it
+  // outright over any other channel's upload of the same song, falling back
+  // to the whole pool only if none survived the filters above.
+  if (album) {
+    pool.forEach(c => {
+      c.artistTopic = isArtistTopicChannel(c.channel, topicArtists);
+      c.albumMatch = snippetNamesAlbum(c.snippet, album);
+    });
+    const topicOnly = pool.filter(c => c.artistTopic);
+    pool = topicOnly.length ? topicOnly : pool;
+  }
+
   const maxViews = Math.max(...pool.map(c => c.views), 0);
-  pool.forEach(c => { c.score = scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds); });
+  pool.forEach(c => {
+    c.score = scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds);
+    if (c.artistTopic) c.score += ALBUM_TOPIC_WEIGHT;
+    if (c.albumMatch) c.score += ALBUM_NAME_WEIGHT;
+  });
   pool.sort((a, b) => b.score - a.score);
   const best = pool[0];
 
@@ -606,6 +697,10 @@ async function handleSearch(url, ctx) {
     // (flag-wrong-track) - lets a flagged match be explained after the fact.
     score: typeof c.score === 'number' ? Math.round(c.score * 1000) / 1000 : null,
     titleOverlap: typeof c.titleOverlap === 'number' ? Math.round(c.titleOverlap * 100) / 100 : null,
+    // Album mode only: lets the client's album-art check (see
+    // pickAlbumArtMatch in index.html) and the wrong-track log see why a
+    // candidate ranked where it did.
+    ...(album ? { artistTopic: !!c.artistTopic, albumMatch: !!c.albumMatch } : {}),
   }));
 
   const payload = { videoId: best.videoId, title: best.title, channel: best.channel, duration: best.duration || 0, candidates: altCandidates };
@@ -1626,7 +1721,12 @@ async function handleSoundCloud(url, ctx) {
     const tracks = rawTracks.map(t => scTrackToTitleArtist(hydrated[t.id] || t)).filter(t => t.title);
     if (!tracks.length) return json({ error: 'playlist has no tracks (private or invalid link?)' }, 404);
     const image = data.artwork_url ? data.artwork_url.replace('-large.', '-t500x500.') : null;
-    payload = { kind: 'playlist', name: data.title || 'Playlist', image, tracks };
+    // SoundCloud has one "set" URL shape for both playlists and releases -
+    // the set itself says which: is_album, or a set_type of album/ep/
+    // compilation/single (plain playlists leave set_type empty). The client
+    // uses this to file the set as an album (sc_album) instead of a playlist.
+    const isAlbum = !!data.is_album || ['album', 'ep', 'compilation', 'single'].includes(String(data.set_type || '').toLowerCase());
+    payload = { kind: 'playlist', name: data.title || 'Playlist', image, tracks, isAlbum };
   } else {
     return json({ error: 'unsupported soundcloud link' }, 400);
   }

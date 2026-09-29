@@ -2767,7 +2767,12 @@ function parseSpotifyLink(input){
 // Recognizes youtube.com/playlist, youtube.com/watch (with or without a
 // &list=), youtu.be short links, and /shorts/ links. A list param that looks
 // like an auto-generated mix/radio ("RD…") or "watch later"/"liked" ("WL",
-// "LL") is treated as a single video, not a real playlist.
+// "LL") is treated as a single video, not a real playlist. A list id starting
+// "OLAK5uy_" is YouTube's auto-generated playlist for an album release (what
+// YouTube Music's Share on an album page hands out) - returned as type
+// 'album' so it's filed as one (yt_album, see isAlbumType) rather than a
+// loose playlist.
+function youTubeListType(list){ return /^OLAK5uy_/.test(list) ? 'album' : 'playlist'; }
 function parseYouTubeLink(input){
   input = (input || '').trim();
   if (!/youtube\.com|youtu\.be/i.test(input)) return null;
@@ -2784,17 +2789,17 @@ function parseYouTubeLink(input){
     const id = url.pathname.slice(1).split('/')[0];
     if (id) return { type: 'video', id };
   }
-  if (url.pathname === '/playlist' && list) return { type: 'playlist', id: list };
+  if (url.pathname === '/playlist' && list) return { type: youTubeListType(list), id: list };
   if (url.pathname.startsWith('/shorts/')){
     const id = url.pathname.split('/')[2];
     if (id) return { type: 'video', id };
   }
   const v = url.searchParams.get('v');
   if (v){
-    if (isRealPlaylist) return { type: 'playlist', id: list };
+    if (isRealPlaylist) return { type: youTubeListType(list), id: list };
     return { type: 'video', id: v };
   }
-  if (isRealPlaylist) return { type: 'playlist', id: list };
+  if (isRealPlaylist) return { type: youTubeListType(list), id: list };
   return null;
 }
 
@@ -2864,6 +2869,26 @@ function parseImportLink(input){
   return null;
 }
 
+// parseImportLink()'s {source,type,id[,storefront]} -> the {id, type} a
+// library entry / beginImport / resolvePlaylist use. The one place that
+// mapping lives, so every entry point (pasted link, share link, search
+// pick, Replace link, starter seed) files albums as albums the same way.
+// A SoundCloud set can't be told apart from its URL - it's filed as
+// sc_playlist here and upgraded to sc_album by resolvePlaylist once the
+// set's own data says it's a release (see handleSoundCloud's isAlbum).
+function libraryEntryForParsedLink(parsed){
+  if (parsed.source === 'youtube'){
+    return { id: 'yt:' + parsed.id, type: parsed.type === 'video' ? 'yt_video' : parsed.type === 'album' ? 'yt_album' : 'yt_playlist' };
+  }
+  if (parsed.source === 'soundcloud'){
+    return { id: 'sc:' + encodeURIComponent(parsed.id), type: parsed.type === 'track' ? 'sc_track' : parsed.type === 'album' ? 'sc_album' : 'sc_playlist' };
+  }
+  if (parsed.source === 'applemusic'){
+    return { id: parsed.storefront + ':' + parsed.id, type: parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist' };
+  }
+  return { id: parsed.id, type: parsed.type };
+}
+
 async function fetchSpotifyPlaylist(playlistId, type){
   const res = await fetch(BACKEND + '/' + (type || 'playlist') + '?id=' + encodeURIComponent(playlistId));
   const data = await res.json();
@@ -2896,10 +2921,15 @@ const SEARCH_MAX_ATTEMPTS = 3;
 // only the manual "Refresh link" picker passes it (see
 // openRefreshLinkPicker); every other caller keeps the worker's default
 // and its existing cache entries.
-async function searchYouTube(title, artist, sourceDurationMs, altCount){
+// album (optional): the album's name, for a track resolved from an album
+// link - switches the worker to album-track mode (prefer the artist's own
+// "<Artist> - Topic" upload, hard-exclude remix/sped-up/live/cover cuts the
+// source title doesn't ask for; see ALBUM_EXCLUDE_WORDS in the worker).
+async function searchYouTube(title, artist, sourceDurationMs, altCount, album){
   const params = new URLSearchParams({ title, artist });
   if (sourceDurationMs) params.set('durationMs', String(sourceDurationMs));
   if (altCount) params.set('alts', String(altCount));
+  if (album) params.set('album', String(album));
   let lastErr;
   for (let attempt = 1; attempt <= SEARCH_MAX_ATTEMPTS; attempt++){
     try{
@@ -2948,11 +2978,100 @@ function cacheTrackMatch(title, artist, match){
   }
   lsSet(trackMatchCacheKey(), cache);
 }
-async function searchYouTubeCached(title, artist, sourceDurationMs){
-  const cached = getCachedTrackMatch(title, artist);
+// albumOpts (optional, album tracks only - see resolvePlaylist):
+// { album: <album name>, albumArt: <album cover URL> }. Album-mode matches
+// are cached under their own key (per album), so a loose-playlist match of
+// the same song - which may be a single/remaster/other release - is never
+// reused for the album's own tracklist, or vice versa.
+async function searchYouTubeCached(title, artist, sourceDurationMs, albumOpts){
+  const album = albumOpts && albumOpts.album ? String(albumOpts.album) : '';
+  const cacheArtist = album ? artist + '|||album:' + album : artist;
+  const cached = getCachedTrackMatch(title, cacheArtist);
   if (cached) return cached;
-  const match = await searchYouTube(title, artist, sourceDurationMs);
-  cacheTrackMatch(title, artist, match);
+  let match = await searchYouTube(title, artist, sourceDurationMs, undefined, album || undefined);
+  if (album && albumOpts.albumArt) match = await pickAlbumArtMatch(match, albumOpts.albumArt);
+  cacheTrackMatch(title, cacheArtist, match);
+  return match;
+}
+
+// Album-art vs. video-thumbnail check for album tracks (Geethub #204,
+// following up link-match-accuracy's "not done" image comparison). The
+// worker can't decode images, but the page can: an auto-generated Topic
+// "Art Track" upload's thumbnail is the album cover itself, so among the
+// worker's own ranked candidates (already title/duration/remix-filtered and
+// Topic-first in album mode) the first whose thumbnail looks like the album
+// cover wins - which also steers away from a same-song upload from another
+// release (single, compilation, deluxe with a different cover). Purely an
+// extra signal: no readable cover/thumbnail (CORS, network) or no candidate
+// that looks like it leaves the worker's pick unchanged.
+const ALBUM_ART_CHECK_MAX = 3;
+const ALBUM_ART_HASH_MAX_DIST = 12;   // of 64 dHash bits
+const ALBUM_ART_COLOR_MAX_DIFF = 48;  // mean per-channel 0-255 diff
+const ALBUM_ART_LOAD_TIMEOUT_MS = 4000;
+const albumArtHashCache = new Map();
+// Loads an image CORS-enabled and reduces it to { bits: 64 dHash bits,
+// rgb: mean color } - or null if it can't be loaded/read. squareCrop takes
+// the centered square of a 16:9 thumbnail (where a Topic upload's
+// pillarboxed cover sits).
+function imageArtSignature(src, squareCrop){
+  return new Promise(resolve => {
+    const img = new Image();
+    let done = false;
+    const finish = (v) => { if (!done){ done = true; clearTimeout(timer); resolve(v); } };
+    const timer = setTimeout(() => finish(null), ALBUM_ART_LOAD_TIMEOUT_MS);
+    img.crossOrigin = 'anonymous';
+    img.onerror = () => finish(null);
+    img.onload = () => {
+      try{
+        const w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) return finish(null);
+        let sx = 0, sy = 0, sw = w, sh = h;
+        if (squareCrop){ const side = Math.min(w, h); sx = (w - side) / 2; sy = (h - side) / 2; sw = sh = side; }
+        const canvas = document.createElement('canvas');
+        canvas.width = 9; canvas.height = 8;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 9, 8);
+        const data = ctx.getImageData(0, 0, 9, 8).data; // throws if tainted
+        const gray = [];
+        let r = 0, g = 0, b = 0;
+        for (let i = 0; i < data.length; i += 4){
+          gray.push(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+          r += data[i]; g += data[i + 1]; b += data[i + 2];
+        }
+        const bits = [];
+        for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) bits.push(gray[y * 9 + x] > gray[y * 9 + x + 1] ? 1 : 0);
+        finish({ bits, rgb: [r / 72, g / 72, b / 72] });
+      } catch(e){ finish(null); }
+    };
+    img.src = src;
+  });
+}
+function artSignaturesMatch(a, b){
+  let dist = 0;
+  for (let i = 0; i < 64; i++) if (a.bits[i] !== b.bits[i]) dist++;
+  const colorDiff = (Math.abs(a.rgb[0] - b.rgb[0]) + Math.abs(a.rgb[1] - b.rgb[1]) + Math.abs(a.rgb[2] - b.rgb[2])) / 3;
+  return dist <= ALBUM_ART_HASH_MAX_DIST && colorDiff <= ALBUM_ART_COLOR_MAX_DIFF;
+}
+function albumArtSignature(url){
+  if (!albumArtHashCache.has(url)) albumArtHashCache.set(url, imageArtSignature(url, false));
+  return albumArtHashCache.get(url);
+}
+async function pickAlbumArtMatch(match, artUrl){
+  if (!match || !artUrl) return match;
+  // Only the worker's own scored picks (unscored ones are padding from the
+  // unfiltered results - live/remix cuts the filters already dropped).
+  const cands = (match.candidates || []).filter(c => c && c.videoId && !isSoundCloudVideoId(c.videoId) &&
+    typeof c.score === 'number' && !(c.titleOverlap === 0)).slice(0, ALBUM_ART_CHECK_MAX);
+  if (!cands.length) return match;
+  const artSig = await albumArtSignature(artUrl);
+  if (!artSig) return match;
+  for (const c of cands){
+    const sig = await imageArtSignature('https://i.ytimg.com/vi/' + c.videoId + '/mqdefault.jpg', true);
+    if (!sig) return match; // thumbnails unreadable here - nothing to compare
+    if (!artSignaturesMatch(artSig, sig)) continue;
+    if (c.videoId === match.videoId) return Object.assign({}, match, { artMatch: true });
+    return Object.assign({}, match, { videoId: c.videoId, title: c.title || '', channel: c.channel || '', duration: c.duration || 0, artMatch: true });
+  }
   return match;
 }
 
@@ -3020,7 +3139,7 @@ async function fetchAppleMusicTrack(storefront, id){
 function sourceKindForType(type){
   if (type === 'sc_track' || type === 'sc_playlist' || type === 'sc_album') return 'soundcloud';
   if (type === 'am_track' || type === 'am_playlist' || type === 'am_album') return 'applemusic';
-  if (type === 'yt_video' || type === 'yt_playlist') return 'youtube';
+  if (type === 'yt_video' || type === 'yt_playlist' || type === 'yt_album') return 'youtube';
   return 'spotify'; // track | playlist | album (bare Spotify types)
 }
 
@@ -3321,7 +3440,10 @@ function formatLastPlayed(ts){
 // have picked a better one. Cached payloads written before this field
 // existed have no resolveVersion at all, which also compares unequal to any
 // real version number, so they're covered too.
-const RESOLVE_LOGIC_VERSION = 6;
+// 7: album detection/matching (Geethub #204) - SoundCloud release sets and
+// YouTube OLAK5uy_ album playlists re-file as albums, album tracks re-match
+// in album mode (see searchYouTubeCached).
+const RESOLVE_LOGIC_VERSION = 7;
 // Re-matching/re-resolving a playlist re-fetches its tracklist from the
 // source and would otherwise silently drop any songs the user added by hand
 // (from another playlist or a pasted link) — carry those forward.
@@ -3366,7 +3488,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
-  if (type === 'yt_playlist' || type === 'yt_video'){
+  // Saved before album playlists were told apart (see youTubeListType) -
+  // re-file on this (re-)resolve.
+  if (type === 'yt_playlist' && youTubeListType(playlistId.replace(/^yt:/, '')) === 'album') type = 'yt_album';
+  if (type === 'yt_playlist' || type === 'yt_album' || type === 'yt_video'){
     const rawId = playlistId.replace(/^yt:/, '');
     if (type === 'yt_video'){
       const v = await fetchYouTubeVideo(rawId);
@@ -3378,10 +3503,25 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       lsSet(LS_PL(playlistId), payload);
       return payload;
     }
-    const { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
+    let { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
+    if (type === 'yt_album'){
+      // An album playlist's videos are the artist's auto-generated "<Artist>
+      // - Topic" uploads - the credit is the artist, not the channel name,
+      // and the feed titles the list "Album - <name>".
+      tracks = tracks.map(t => Object.assign({}, t, { artist: String(t.artist || '').replace(/\s+-\s+Topic$/i, '') }));
+      name = String(name || '').replace(/^Album\s+-\s+/i, '') || name;
+    }
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
     const arts = await Promise.all(tracks.map(t => resolveTrackArt('youtube', t.title, t.artist, null)));
     const resolved = tracks.map((t, i) => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0, art: arts[i] }));
+    // YouTube's feed carries no cover for a playlist. An album's tracks all
+    // share one cover, so use it (first track's resolved art, else its
+    // video thumbnail - an Art Track's thumbnail is the cover) as the
+    // album's own image rather than leaving the library tile to fall back
+    // to a 2x2 grid of track art.
+    if (type === 'yt_album' && !image && resolved.length){
+      image = resolved[0].art || ('https://i.ytimg.com/vi/' + resolved[0].videoId + '/hqdefault.jpg');
+    }
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
     // YouTube's public playlist feed (the only stable, unscraped source for a
     // full tracklist) only returns its ~15 most recent videos.
@@ -3394,6 +3534,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     const sc = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
     if (sc.kind !== 'playlist') throw new Error("That SoundCloud link isn't a playlist.");
     ({ name, image, tracks } = sc);
+    // SoundCloud's set URL doesn't say album vs playlist, the set's own
+    // data does (handleSoundCloud's isAlbum) - file a release as an album.
+    if (sc.isAlbum) type = 'sc_album';
   } else if (type === 'am_playlist' || type === 'am_album'){
     const idx = playlistId.indexOf(':');
     ({ name, image, tracks } = await fetchAppleMusicList(type === 'am_album' ? 'album' : 'playlist', playlistId.slice(0, idx), playlistId.slice(idx + 1)));
@@ -3402,6 +3545,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   }
   onProgress({ stage: 'matching', done: 0, total: tracks.length });
   const sourceKind = sourceKindForType(type);
+  // Album tracks are matched in album mode (see searchYouTubeCached): the
+  // artist's Topic upload of the album cut, checked against the album cover.
+  const albumOpts = isAlbumType(type) ? { album: name, albumArt: image || null } : null;
   const resolved = [];
   let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
@@ -3414,7 +3560,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       const [match, art] = await Promise.all([
         isNativeSC
           ? Promise.resolve({ videoId: soundCloudVideoId(t.scId), title: t.title, channel: t.artist, duration: Math.round((t.duration || 0) / 1000) })
-          : searchYouTubeCached(t.title, t.artist, t.duration),
+          : searchYouTubeCached(t.title, t.artist, t.duration, albumOpts && { album: albumOpts.album, albumArt: albumOpts.albumArt || t.image || null }),
         resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
       ]);
       // srcDuration = the source's own length (seconds), kept separately
@@ -4222,8 +4368,12 @@ function setLibraryView(mode){
 // deliberately flagged as a full release rather than a loose playlist, e.g.
 // the artist's own default-seeded "Breathe Love Deep". It resolves exactly
 // like sc_playlist (see resolvePlaylist/sourceKindForType/canonicalLinkForPlaylist)
-// and differs only in being counted/displayed as an album here.
-function isAlbumType(type){ return type === 'album' || type === 'am_album' || type === 'sc_album'; }
+// and differs only in being counted/displayed as an album here. Any other
+// set is upgraded to sc_album by resolvePlaylist once SoundCloud's own data
+// flags it as a release (is_album/set_type - see handleSoundCloud).
+// yt_album is a YouTube album playlist (list id "OLAK5uy_…", see
+// youTubeListType) - resolves like yt_playlist.
+function isAlbumType(type){ return type === 'album' || type === 'am_album' || type === 'sc_album' || type === 'yt_album'; }
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
@@ -4414,6 +4564,15 @@ function renderLibrary(){
       // once it's available.
       artDiv.classList.add('single');
       const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, { art: pl.image });
+      artDiv.appendChild(img);
+    } else if (isAlbum){
+      // An album with no source cover on file (e.g. a Spotify album
+      // resolved while the worker's /album returned image: null - see
+      // album-art-consistent-per-album) still gets one cover, never the
+      // 2x2 grid (Geethub #204): every track on an album carries that same
+      // album art, so the first track's stands in for it.
+      artDiv.classList.add('single');
+      const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, pl.tracks.find(t => t.art) || withArt[0]);
       artDiv.appendChild(img);
     } else {
       const gridFace = document.createElement('div');
@@ -4666,7 +4825,7 @@ const CTX_ICON_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1
 function canonicalLinkForPlaylist(pl){
   const t = pl.type;
   if (t === 'playlist' || t === 'album' || t === 'track') return 'https://open.spotify.com/' + t + '/' + pl.id;
-  if (t === 'yt_playlist') return 'https://www.youtube.com/playlist?list=' + pl.id.replace(/^yt:/, '');
+  if (t === 'yt_playlist' || t === 'yt_album') return 'https://www.youtube.com/playlist?list=' + pl.id.replace(/^yt:/, '');
   if (t === 'yt_video') return 'https://www.youtube.com/watch?v=' + pl.id.replace(/^yt:/, '');
   if (t === 'sc_playlist' || t === 'sc_track' || t === 'sc_album') return decodeURIComponent(pl.id.replace(/^sc:/, ''));
   if (t === 'am_playlist' || t === 'am_album' || t === 'am_track'){
@@ -5159,11 +5318,7 @@ function openReplaceLinkFlow(id, pl){
   function submit(){
     const parsed = parseImportLink(input.value);
     if (!parsed){ $('plReplaceErr').textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link."; return; }
-    let newId, newType;
-    if (parsed.source === 'youtube'){ newId = 'yt:' + parsed.id; newType = parsed.type === 'video' ? 'yt_video' : 'yt_playlist'; }
-    else if (parsed.source === 'soundcloud'){ newId = 'sc:' + encodeURIComponent(parsed.id); newType = parsed.type === 'track' ? 'sc_track' : 'sc_playlist'; }
-    else if (parsed.source === 'applemusic'){ newId = parsed.storefront + ':' + parsed.id; newType = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist'; }
-    else { newId = parsed.id; newType = parsed.type; }
+    const { id: newId, type: newType } = libraryEntryForParsedLink(parsed);
     $('plReplaceErr').textContent = '';
     stageFinding();
     resolvePlaylist(newId, newType, (p) => {
@@ -5623,7 +5778,7 @@ async function resolveTracksFromLink(input, onProgress){
     if (!tracks.length) throw new Error("That playlist has no videos.");
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
-      const t = tracks[i];
+      const t = yt.type === 'album' ? Object.assign({}, tracks[i], { artist: String(tracks[i].artist || '').replace(/\s+-\s+Topic$/i, '') }) : tracks[i];
       const art = await resolveTrackArt('youtube', t.title, t.artist, null);
       resolved.push({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art, duration: 0 });
       if (onProgress) onProgress(i + 1, tracks.length);
@@ -5639,14 +5794,14 @@ async function resolveTracksFromLink(input, onProgress){
       const art = await resolveTrackArt('spotify', title, artist, image || null);
       return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
-    const { tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
+    const { name: listName, tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
     if (!tracks.length) throw new Error('That ' + sp.type + ' has no tracks.');
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
       const art = await resolveTrackArt('spotify', t.title, t.artist, t.image || null);
       try{
-        const match = await searchYouTube(t.title, t.artist, t.duration);
+        const match = await searchYouTube(t.title, t.artist, t.duration, undefined, sp.type === 'album' ? listName : undefined);
         resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
         resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
@@ -5697,14 +5852,14 @@ async function resolveTracksFromLink(input, onProgress){
       const art = await resolveTrackArt('applemusic', title, artist, image || null);
       return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
-    const { tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
+    const { name: listName, tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
     if (!tracks.length) throw new Error('That ' + am.type + ' has no tracks.');
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
       const art = await resolveTrackArt('applemusic', t.title, t.artist, t.image || null);
       try{
-        const match = await searchYouTube(t.title, t.artist);
+        const match = await searchYouTube(t.title, t.artist, undefined, undefined, am.type === 'album' ? listName : undefined);
         resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
       } catch(e){
         resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
@@ -6087,16 +6242,8 @@ async function beginImport(id, force, type, targetIndex){
 // both need the same source-URL -> {internal id, type} mapping beginImport
 // expects; see parseImportLink for the {source,type,id,storefront} shape.
 function beginImportFromParsedLink(parsed, targetIndex){
-  if (parsed.source === 'youtube'){
-    beginImport('yt:' + parsed.id, false, parsed.type === 'video' ? 'yt_video' : 'yt_playlist', targetIndex);
-  } else if (parsed.source === 'soundcloud'){
-    beginImport('sc:' + encodeURIComponent(parsed.id), false, parsed.type === 'track' ? 'sc_track' : 'sc_playlist', targetIndex);
-  } else if (parsed.source === 'applemusic'){
-    const type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
-    beginImport(parsed.storefront + ':' + parsed.id, false, type, targetIndex);
-  } else {
-    beginImport(parsed.id, false, parsed.type, targetIndex);
-  }
+  const { id, type } = libraryEntryForParsedLink(parsed);
+  beginImport(id, false, type, targetIndex);
 }
 
 // Consumes a ?import=<source link>[&track=<index>] URL (see buildShareUrl) -
@@ -6163,26 +6310,16 @@ const STARTER_LIBRARY_URLS = [
 function starterLibraryEntry(url){
   const parsed = parseImportLink(url);
   if (!parsed) return null;
-  let id, type;
-  if (parsed.source === 'soundcloud'){
-    id = 'sc:' + encodeURIComponent(parsed.id);
-    // "Breathe Love Deep" is a full release, not a loose playlist - flag
-    // it sc_album (see isAlbumType) so it displays/counts as an album
-    // like the app's other multi-track releases, while still resolving
-    // its tracks/art straight from SoundCloud via the same sc_playlist
-    // path (see resolvePlaylist/sourceKindForType's SoundCloud exception).
-    type = parsed.type === 'track' ? 'sc_track' : (url.indexOf('/sets/breathelovedeep') !== -1 ? 'sc_album' : 'sc_playlist');
-  } else if (parsed.source === 'applemusic'){
-    type = parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist';
-    id = parsed.storefront + ':' + parsed.id;
-  } else if (parsed.source === 'youtube'){
-    id = 'yt:' + parsed.id;
-    type = parsed.type === 'video' ? 'yt_video' : 'yt_playlist';
-  } else {
-    id = parsed.id;
-    type = parsed.type;
-  }
-  return { id, type };
+  const entry = libraryEntryForParsedLink(parsed);
+  // "Breathe Love Deep" is a full release, not a loose playlist - flag
+  // it sc_album (see isAlbumType) so it displays/counts as an album
+  // like the app's other multi-track releases, while still resolving
+  // its tracks/art straight from SoundCloud via the same sc_playlist
+  // path (see resolvePlaylist/sourceKindForType's SoundCloud exception).
+  // Set up front rather than waiting on resolvePlaylist's isAlbum upgrade
+  // so it's an album even before its first resolve lands.
+  if (entry.type === 'sc_playlist' && url.indexOf('/sets/breathelovedeep') !== -1) entry.type = 'sc_album';
+  return entry;
 }
 function starterLibraryIds(){
   return STARTER_LIBRARY_URLS.map(starterLibraryEntry).filter(Boolean).map(e => e.id);
