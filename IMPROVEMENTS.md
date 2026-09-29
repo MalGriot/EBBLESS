@@ -6886,3 +6886,27 @@ Add entries in this shape:
   Music, GetSongBPM, ReccoBeats, Deezer, Last.fm, ListenBrainz,
   MusicBrainz, Cover Art Archive, LRCLIB, Cloudflare Workers, GitHub Pages,
   Sign in with Google. Update this list when a new service is added.
+
+### currents-12-tracks: CuRRentSSsss playlist should load 12 tracks
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When CuRRentSSsss is built, it should end up with 12
+  tracks (currently it tops up to a minimum of 8 via `CURRENTS_MIN_TRACKS`).
+- **Touches:** Currents generation (`CURRENTS_MIN_TRACKS` and the slot
+  top-up logic near it in `index.html`).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #208 (title only). Related (merged):
+  `currents-playlist-algorithm`, `currents-add-reset-button`.
+
+### playlist-menu-album-toggle: Playlist menu option to mark something as a playlist or album
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The playlist 3-dot menu should let the user manually
+  recategorize an entry as a playlist or an album, for when auto-detection
+  gets it wrong. Switching should update the library filter and the tile art
+  (album art only for albums, no 2x2 grid).
+- **Touches:** playlist menu, `isAlbumType()` / library entry type, library
+  filter, playlist thumbnail art.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #209. Manual override complementing
+  the merged `album-detection` auto-categorization.
