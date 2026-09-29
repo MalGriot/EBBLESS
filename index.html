@@ -6124,7 +6124,7 @@ const DISCOVER_BATCH = 6;       // tracks fetched per extension
 // excluding them - a small pool still fills). All hard filters (dupes,
 // library/queue exclusion, long-track rules, wrong-track guards inside
 // searchYouTube) still apply to whatever the draw picks.
-const DISCOVER_SAMPLE_TEMP = 0.15;
+const DISCOVER_SAMPLE_TEMP = 0.1;  // 0.15 drifted to ~2.6/6 top-15 picks on repeat runs of one seed (sim of a Last.fm-shaped pool); 0.1 keeps ~3.5/6 with every run still distinct
 const DISCOVER_RECENT_PENALTY = 0.15;
 const DISCOVER_RECENT_PER_SEED = 36;
 const DISCOVER_RECENT_SEEDS = 80;
