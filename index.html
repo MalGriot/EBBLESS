@@ -898,7 +898,9 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
     transform:translateY(calc(100% + var(--nav-h) + var(--safe-b)));transition:transform var(--dur-surface) var(--ease-in-out)}
   #queue-panel.is-open,#libpl-panel.is-open{transform:translateY(0)}
   #queue-scrim,#libpl-scrim{bottom:calc(var(--nav-h) + var(--safe-b))}
-  .queue-drag-handle{display:block;width:36px;height:4px;border-radius:3px;background:var(--border-2);margin:10px auto 0}
+  .queue-drag-handle{display:block;width:36px;height:4px;border-radius:3px;background:var(--border-2);margin:10px auto 0;position:relative}
+  /* the visible bar is 4px tall - give the finger a real target to grab */
+  .queue-drag-handle::before{content:'';position:absolute;inset:-12px -70px}
   /* #libpl-panel already stops above #bottom-nav (see the shared "bottom:
      calc(var(--nav-h) + var(--safe-b))" rule above), but #mini-bar floats
      at that same bottom edge with a higher z-index (42 vs. 41), so its own
@@ -914,9 +916,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 }
 
 /* ---------- fullscreen / flow mode ---------- */
-/* mobile queue opened from fullscreen sits above #flow-layer/#lyricsFsLayer */
+/* mobile queue opened from fullscreen sits above #flow-layer/#lyricsFsLayer,
+   with the footer player (#mini-bar) still on top of it as in normal mode */
 body.queue-over-fs #queue-scrim{z-index:56}
 body.queue-over-fs #queue-panel{z-index:57}
+body.queue-over-fs #mini-bar{z-index:58;bottom:0}
+/* no #bottom-nav under fullscreen, so the sheet and scrim run to the bottom
+   edge (#queueBody's bottom padding already clears #mini-bar) */
+body.queue-over-fs #queue-panel{bottom:0;max-height:92vh}
+body.queue-over-fs #queue-scrim{bottom:0}
 #flow-layer{position:fixed;inset:0;z-index:50;background:var(--bg);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out);display:flex;flex-direction:column;align-items:center;justify-content:center}
 #flow-layer.is-open{opacity:1;pointer-events:auto}
@@ -7811,7 +7819,10 @@ function openQueuePanel(){
 function closeQueuePanel(restoreView = true){
   state.queueOpen = false;
   queuePanel.classList.remove('is-open'); queueScrim.classList.remove('is-open');
-  document.body.classList.remove('queue-open', 'queue-over-fs');
+  document.body.classList.remove('queue-open');
+  if (document.body.classList.contains('queue-over-fs')){
+    setTimeout(() => { if (!state.queueOpen) document.body.classList.remove('queue-over-fs'); }, 550);
+  }
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.remove('is-active'));
   updateMiniBarVisibility();
   if (restoreView && state.preQueueView && state.preQueueView !== state.currentView && views[state.preQueueView]){
