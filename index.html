@@ -9144,9 +9144,10 @@ function playIndex(pos, opts){
    Real sound bites: drop the files in sfx/ and set the two paths below.
    Empty = synthesized Web Audio placeholder. A file that fails to load
    falls back to the placeholder too. */
-const LP_NEEDLE_DROP_SRC = ''; // e.g. 'sfx/needle-drop.mp3'
-const LP_NEEDLE_LIFT_SRC = ''; // e.g. 'sfx/needle-lift.mp3'
-const LP_NEEDLE_SFX_VOLUME = 0.25;
+const LP_NEEDLE_DROP_SRC = 'sfx/needle-drop.mp3';
+const LP_NEEDLE_LIFT_SRC = 'sfx/needle-lift.mp3';
+// per-kind: the lift file runs ~11dB hotter on average than the drop file
+const LP_NEEDLE_SFX_VOLUME = { drop: 0.35, lift: 0.2 };
 // skip the sfx rather than play it late (slow first fetch, context waking)
 const LP_NEEDLE_MAX_LAG_MS = 300;
 let lpSfxCtx = null;
@@ -9194,6 +9195,8 @@ function playLpNeedle(kind){
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       lpSfxCtx = new AC();
+      // warm both buffers so the first toggle of the other kind isn't lost to a fetch
+      lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift');
     }
     const ctx = lpSfxCtx, t0 = Date.now();
     // starts suspended until a user gesture - every caller runs inside one
@@ -9202,7 +9205,7 @@ function playLpNeedle(kind){
     Promise.all([lpNeedleBuffer(ctx, kind), ready]).then(([buf]) => {
       if (!buf || ctx.state !== 'running' || Date.now() - t0 > LP_NEEDLE_MAX_LAG_MS) return;
       const g = ctx.createGain();
-      g.gain.value = LP_NEEDLE_SFX_VOLUME;
+      g.gain.value = LP_NEEDLE_SFX_VOLUME[kind];
       const s = ctx.createBufferSource();
       s.buffer = buf;
       s.connect(g); g.connect(ctx.destination);
