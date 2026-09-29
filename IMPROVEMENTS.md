@@ -6681,11 +6681,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #193.
 
 ### discover-mood-matching: Use free BPM/key/energy lookups to improve mood matching
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Improve Discover and mood search using free online track-metric sources (Chosic BPM & Key Finder, Musicstax, SongBPM) for BPM, key, time signature and energy.
 - **Touches:** Discover backend (worker).
-- **Branch:** (unclaimed)
+- **Branch:** agent/discover-mood-matching
 - **Notes:** Synced from Geethub issue #194.
 
 ### discover-long-track-weighting: Discover should rarely serve very long tracks
@@ -6794,7 +6794,7 @@ Add entries in this shape:
   yet.
 
 ### album-detection: Pasted albums should be treated as albums, not playlists
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When an album is added, categorize it as an album: the
   library's album filter should include it, its thumbnail should be the
@@ -6803,18 +6803,18 @@ Add entries in this shape:
   the video thumbnail).
 - **Touches:** `isAlbumType()`, library filter, playlist thumbnail/grid art,
   YouTube match selection.
-- **Branch:**
+- **Branch:** agent/album-detection
 - **Notes:** Synced from Geethub issue #204. Related (merged):
   `breathe-love-deep-album` (SoundCloud album categorization),
   `album-art-2x2-grid-bug`, `link-match-accuracy`.
 
 ### lp-needle-sfx-silent: LP needle-lift/drop sound not audible on pause/play
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In LP mode, the needle-lift sound on pause and needle-drop
   on play can't be heard. Find out why and make it audible.
 - **Touches:** play/pause handlers for the record art style, `sfx/`.
-- **Branch:**
+- **Branch:** agent/lp-needle-sfx-silent
 - **Notes:** Synced from Geethub issue #205. Regression/follow-up of
   `lp-needle-sfx` (merged). Possibly masked by `pause-fade-out`.
 
