@@ -8530,6 +8530,11 @@ if (visualMode !== 'art' && visualMode !== 'viz' && visualMode !== 'lyrics') vis
 const LYRICS_SCROLL_PX_PER_S = 16;
 let lyricsScrollRaf = null, lyricsScrollLastTs = 0;
 const lyricsReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+/* lyrics fetch cache + render state (see LYRICS section below). Declared up
+   here because applyVisualMode() runs at load and reads lyricsState when the
+   saved visual mode is lyrics - declaring it later is a TDZ crash. */
+const lyricsCache = new Map();
+let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
 
 function applyVisualMode(){
   visualTabs.forEach(b => b.classList.toggle('is-active', b.dataset.mode === visualMode));
@@ -8772,8 +8777,6 @@ applyVisualMode();
    YouTube captions are both dead ends from a Worker). Cached per videoId so
    switching tabs back and forth doesn't re-fetch.
    ========================================================================= */
-const lyricsCache = new Map();
-let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
 
 async function fetchLyrics(t){
   if (lyricsCache.has(t.videoId)) return lyricsCache.get(t.videoId);
