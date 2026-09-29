@@ -5896,13 +5896,21 @@ Add entries in this shape:
   after the fix.
 
 ### safari-splash-bg-video: Splash background video doesn't load on Safari
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Opening the app in Safari, the splash showed only the
   color gradient, no background video.
 - **Touches:** splash video element (autoplay/muted/playsinline, formats).
-- **Branch:**
+- **Branch:** `agent/safari-splash-bg-video`
 - **Notes:** Synced from Geethub issue #161.
+
+  Fix on branch (commit `1a41d6f`), root cause not reproduced: assets are
+  Apple-encoded H.264 yuv420p with faststart, Pages serves 206, SW doesn't
+  touch media. Likely iOS Low Power Mode / Auto-Play "Never" blocking
+  muted autoplay with no `play()` retry. Added first-frame `poster` JPEGs
+  to splash + library videos and a first-gesture `play()` retry. If it
+  still fails with Low Power Mode off, suspect the opaque splash tint
+  compositing over the video (separate CSS fix).
 
 ### lp-shadow-clipped: LP shadow is cut off by its own image box
 - **Status:** draft
@@ -6411,20 +6419,35 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #200.
 
 ### android-ad-popup: An ad popped up during playback on a OnePlus 13R
-- **Status:** draft
+- **Status:** merged
 - **Priority:** high
 - **Description:** User saw an ad pop up on a OnePlus 13R (Android). The app promises no ads; find where it came from (likely the embedded YouTube player) and suppress it.
 - **Touches:** YouTube player embed / playback on Android.
-- **Branch:** (unclaimed)
+- **Branch:** `agent/android-ad-popup`
 - **Notes:** Synced from Geethub issue #201.
 
+  Fixed on branch (commit `2c70f40`): ad came from the hidden YouTube
+  embed (heard, not seen). Ad check only ran at load, so long pre-rolls
+  unmuted after the 20s cap and mid-rolls were never caught. New
+  `deckShowsAd()` compares player duration to the matched video length;
+  `guardActiveDeckAd()` (in `updateSeekUI`) keeps the deck muted during
+  ads and pauses seek/lyrics/crossfade, with a 2 min give-up. Ads still
+  play silently; the OS media notification may briefly show ad info.
+
 ### album-art-consistent-per-album: Tracks from one album show different cover art
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** All tracks from the same album should show that album's art. Repro: https://open.spotify.com/album/7utDnqKdc3HiSx54MSaGSc
 - **Touches:** album art lookup (Spotify art).
-- **Branch:** (unclaimed)
+- **Branch:** `agent/album-art-consistent-per-album`
 - **Notes:** Synced from Geethub issue #202.
+
+  Fixed on branch (commit `0c59569`, worker only): Spotify album embeds
+  dropped `entity.coverArt`; cover now only in `visualIdentity.image`, so
+  `/album` returned `image: null` and each track fell back to its own
+  YouTube thumbnail. `handleEmbed` now falls back to the largest
+  `visualIdentity` rendition. Needs a separate worker deploy. Cached album
+  responses persist up to 6h; saved albums need "Refresh links" or re-paste.
 
 ### bld-playback-glitch: Breathe Love Deep playback always glitches
 - **Status:** merged
