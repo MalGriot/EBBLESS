@@ -3856,16 +3856,19 @@ function updateMiniBarVisibility(){
 
 document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-view], #mobileSettingsBtn').forEach(btn => {
   btn.addEventListener('click', () => {
+    // Library/Settings from any fullscreen leave it for the main view first,
+    // then open (see leaveFullscreen).
+    if (btn.dataset.view !== 'player') leaveFullscreen(true);
     if (btn.dataset.view === 'settings'){
       setView(state.currentView === 'settings' ? state.preSettingsView : 'settings');
       return;
     }
     // In split-desktop, the Library nav button is only ever visible while
-    // deskFsOpen (see the CSS) - there it toggles the library drawer back
-    // in over the fullscreen player instead of switching views (both
-    // panes are always mounted side by side outside fullscreen).
+    // deskFsOpen (see the CSS). Out of fullscreen the library is a permanent
+    // column of the 3-pane grid, so all that's left is stepping out of
+    // Settings if it's showing instead.
     if (btn.dataset.view === 'library' && document.body.classList.contains('split-desktop')){
-      toggleDesktopFsLib();
+      if (state.currentView === 'settings') setView(state.preSettingsView);
       return;
     }
     if (btn.dataset.view === 'player' && typeof setVisualMode === 'function') setVisualMode('art');
@@ -3876,8 +3879,12 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
   });
 });
 document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', () => {
-  // same split-desktop/deskFsOpen carve-out as the Library button above
-  if (document.body.classList.contains('split-desktop')){ toggleDesktopFsQueue(); return; }
+  // same fullscreen exit and split-desktop carve-out as the Library button above
+  leaveFullscreen(true);
+  if (document.body.classList.contains('split-desktop')){
+    if (state.currentView === 'settings') setView(state.preSettingsView);
+    return;
+  }
   toggleQueuePanel();
 }));
 $('wordmarkBtn').addEventListener('click', () => setView('player'));
@@ -3921,17 +3928,24 @@ function toggleDesktopFs(){
   armFsIdleTimer();
   csStackSync();
 }
-function toggleDesktopFsLib(){
-  state.deskFsLibOpen = !state.deskFsLibOpen;
-  document.body.classList.toggle('desktop-fs-lib-open', state.deskFsLibOpen);
-  document.querySelectorAll('#topnav [data-view="library"]')
-    .forEach(b => b.classList.toggle('is-active', state.deskFsLibOpen));
-}
-function toggleDesktopFsQueue(){
-  state.deskFsQueueOpen = !state.deskFsQueueOpen;
-  document.body.classList.toggle('desktop-fs-queue-open', state.deskFsQueueOpen);
-  document.querySelectorAll('#topnav [data-action="toggle-queue"]')
-    .forEach(b => b.classList.toggle('is-active', state.deskFsQueueOpen));
+// The one "leave fullscreen" path for menu buttons, keyboard shortcuts and
+// Escape: the same closeLyricsFs()/closeFlow()/closeDesktopFs() calls as
+// #lyricsFsExitBtn/#flowExitBtn/#desktopFsExitBtn (see
+// fullscreen-exit-button-consistency, commit e23b9a5). Fullscreen is the
+// lyrics overlay, the shared #flow-layer (LP/cassette/cymatics on
+// mobile/tablet, cymatics on desktop too) or, on split-desktop, the
+// toggleDesktopFs() panel-slide; flow can sit on top of desktop-fs. Without
+// `all` it peels one layer, topmost first (Escape); with `all` (before
+// opening a menu) it leaves every layer. Returns whether anything closed.
+// The Library/Queue buttons used to slide deskFsLibOpen/deskFsQueueOpen
+// drawers in over desktop-fs instead; they now exit to the grid, so those
+// flags just stay false.
+function leaveFullscreen(all){
+  let did = false;
+  if (lyricsFsLayer.classList.contains('is-open')){ closeLyricsFs(); did = true; if (!all) return true; }
+  if (state.flowOpen){ closeFlow(); did = true; if (!all) return true; }
+  if (state.deskFsOpen){ closeDesktopFs(); did = true; }
+  return did;
 }
 desktopFsExitBtn.addEventListener('click', closeDesktopFs);
 
@@ -4749,7 +4763,7 @@ document.addEventListener('click', (e) => {
   if (libCtxMenu.contains(e.target) || (openCtxMenu.btn && openCtxMenu.btn.contains(e.target))) return;
   closeLibCtxMenu();
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openCtxMenu) closeLibCtxMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openCtxMenu){ e.preventDefault(); closeLibCtxMenu(); } });
 window.addEventListener('resize', () => { if (openCtxMenu) closeLibCtxMenu(); });
 window.addEventListener('scroll', () => { if (openCtxMenu) closeLibCtxMenu(); }, true);
 
@@ -4881,7 +4895,7 @@ document.addEventListener('click', (e) => {
   if (trackCtxMenu.contains(e.target) || (openTrackCtxMenu.btn && openTrackCtxMenu.btn.contains(e.target))) return;
   closeTrackCtxMenu();
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openTrackCtxMenu) closeTrackCtxMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && openTrackCtxMenu){ e.preventDefault(); closeTrackCtxMenu(); } });
 window.addEventListener('resize', () => { if (openTrackCtxMenu) closeTrackCtxMenu(); });
 window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMenu(); }, true);
 
@@ -6306,7 +6320,7 @@ fbThumbs.forEach(btn => btn.addEventListener('click', () => {
 feedbackBtn.addEventListener('click', openFeedbackModal);
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);
-feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFeedbackModal(); });
+feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.preventDefault(); closeFeedbackModal(); } });
 feedbackModal.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (fbSending) return;
@@ -9591,17 +9605,64 @@ flowPrevBtn.addEventListener('click', playPrev);
 miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) userTogglePlayback(); });
 
 /* ---------- desktop keyboard shortcuts ---------- */
-// Library/Queue shortcuts reuse the top-nav buttons' own click handlers. In
-// the normal split-desktop 3-pane layout both panes are always visible (and
-// those buttons are hidden - clicking them there would only toggle the
-// fullscreen drawer state), so there the shortcut just leaves Settings if
-// it's open and otherwise does nothing.
+// Library/Queue/Settings shortcuts click the nav buttons themselves, so they
+// share the buttons' "leave fullscreen, then open" path (leaveFullscreen).
+// alreadyOpen: the pane is already the one showing under any fullscreen, so
+// just leave fullscreen rather than clicking (which could toggle it away).
 function kbShowPane(btn, alreadyOpen){
-  const split = document.body.classList.contains('split-desktop');
-  if (split && state.currentView === 'settings') setView(state.preSettingsView);
-  if (split && !state.deskFsOpen) return;
-  if (alreadyOpen && alreadyOpen()) return;
+  if (alreadyOpen && alreadyOpen()){ leaveFullscreen(true); return; }
   if (btn) btn.click();
+}
+function kbShowLibrary(){
+  kbShowPane(document.querySelector('#topnav [data-view="library"]'),
+    () => !document.body.classList.contains('split-desktop') && state.currentView === 'library' && !state.queueOpen);
+}
+// p/l: toggle the library. From fullscreen it exits to the main view with
+// the library showing; on mobile/tablet a second press "closes" it back to
+// the player, the same rest view the back button uses. On the plain
+// split-desktop grid the library is a permanent column, so there is
+// nothing to close.
+function kbToggleLibrary(){
+  const wasFs = state.flowOpen || state.deskFsOpen || lyricsFsLayer.classList.contains('is-open');
+  if (!wasFs && !document.body.classList.contains('split-desktop') && state.currentView === 'library' && !state.queueOpen){
+    setView('player');
+    return;
+  }
+  kbShowLibrary();
+}
+// y/u/t: same path as tapping the visual tabs. #flow-layer picks art vs
+// cymatics once in openFlow(), so when that choice flips while it's open,
+// re-run it through the existing close/open pair to stay in fullscreen.
+function kbSetVisual(mode){
+  const wasViz = visualMode === 'viz';
+  closeArtStyleMenu();
+  setVisualMode(mode);
+  if (state.flowOpen && wasViz !== (visualMode === 'viz')){ closeFlow(); openFlow(); }
+}
+// y/u: pressing again goes back to art
+function kbToggleVisual(mode){
+  kbSetVisual(visualMode === mode ? 'art' : mode);
+}
+// shift+left/right: seek within the current track via the deck's player
+// adapter (YouTube and SoundCloud expose the same getCurrentTime/
+// getDuration/seekTo shape), clamped to the track's bounds
+// getCurrentTime() lags a just-issued seekTo() while the player rebuffers,
+// so rapid presses build on the last target instead of the stale position.
+const KB_SEEK_S = 10;
+let kbSeekLast = null; // { player, to, at }
+function kbSeekBy(delta){
+  if (state.queuePos < 0) return;
+  const ad = activeDeck();
+  if (!ad.player || !ad.player.getDuration || !ad.player.getCurrentTime || !ad.player.seekTo) return;
+  const dur = ad.player.getDuration() || 0;
+  if (!dur) return;
+  const recent = kbSeekLast && kbSeekLast.player === ad.player && Date.now() - kbSeekLast.at < 1200;
+  const from = recent ? kbSeekLast.to : (ad.player.getCurrentTime() || 0);
+  const to = Math.min(Math.max(0, dur - 1), Math.max(0, from + delta));
+  kbSeekLast = { player: ad.player, to, at: Date.now() };
+  ad.player.seekTo(to, true);
+  cassetteSeekPulse();
+  updateSeekUI();
 }
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -9614,10 +9675,12 @@ document.addEventListener('keydown', (e) => {
       if (state.queuePos >= 0) userTogglePlayback();
       break;
     case 'ArrowLeft':
-      playPrev();
+      if (e.shiftKey){ e.preventDefault(); kbSeekBy(-KB_SEEK_S); }
+      else playPrev();
       break;
     case 'ArrowRight':
-      playNext(false);
+      if (e.shiftKey){ e.preventDefault(); kbSeekBy(KB_SEEK_S); }
+      else playNext(false);
       break;
     case 'f': case 'F':
       if (state.flowOpen) closeFlow();
@@ -9627,8 +9690,35 @@ document.addEventListener('keydown', (e) => {
       if (!e.repeat) vizAutoBtn.click(); // cymatics infinity (hold pattern) toggle
       break;
     case 'p': case 'P': case 'l': case 'L':
-      if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-view="library"]'),
-        () => document.body.classList.contains('split-desktop') ? state.deskFsLibOpen : state.currentView === 'library' && !state.queueOpen);
+      if (e.repeat) break;
+      if (e.shiftKey && (e.key === 'l' || e.key === 'L')){
+        // focus the paste-a-link box; preventDefault keeps the "L" itself
+        // from being typed into it once focus lands there
+        e.preventDefault();
+        kbShowLibrary();
+        urlInput.focus();
+      } else kbToggleLibrary();
+      break;
+    case 'x': case 'X':
+      if (!e.repeat) toggleShuffle();
+      break;
+    case 'o': case 'O':
+      if (!e.repeat) cycleRepeat();
+      break;
+    case 't': case 'T': {
+      // first press from cymatics/lyrics just shows the art; after that it
+      // steps default -> record -> cassette, same order as #artStyleMenu
+      if (e.repeat) break;
+      if (visualMode !== 'art'){ kbSetVisual('art'); break; }
+      const styles = Array.from(artStyleMenu.querySelectorAll('.art-style-opt'), b => b.dataset.style);
+      setArtStyle(styles[(styles.indexOf(artStyle) + 1) % styles.length]);
+      break;
+    }
+    case 'y': case 'Y':
+      if (!e.repeat) kbToggleVisual('viz');
+      break;
+    case 'u': case 'U':
+      if (!e.repeat) kbToggleVisual('lyrics');
       break;
     case 'q': case 'Q':
       if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
@@ -9642,14 +9732,12 @@ document.addEventListener('keydown', (e) => {
       if (e.shiftKey && !e.repeat){ const a = $('reportBugBtn'); if (a) a.click(); }
       break;
     case 'Escape':
-      // Same exit path as #flowExitBtn/#desktopFsExitBtn (see
-      // fullscreen-exit-button-consistency, commit e23b9a5): LP/cassette/
-      // cymatics fullscreen is either the shared #flow-layer overlay
-      // (mobile/tablet, and cymatics on desktop too) or, on split-desktop,
-      // the separate toggleDesktopFs() panel-slide - mutually exclusive,
-      // so at most one of these actually does anything.
-      if (state.flowOpen) closeFlow();
-      else if (state.deskFsOpen) closeDesktopFs();
+      // Fullscreen first (one layer, see leaveFullscreen), then an open
+      // playlist panel. A context menu / modal that already handled this
+      // Escape marks it defaultPrevented, so one press closes one thing.
+      if (e.defaultPrevented) break;
+      if (leaveFullscreen()) break;
+      if (openLibraryPanelId) closeLibraryPlaylistPanel();
       break;
   }
 });
