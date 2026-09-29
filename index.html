@@ -9634,10 +9634,8 @@ function kbToggleLibrary(){
 // cymatics once in openFlow(), so when that choice flips while it's open,
 // re-run it through the existing close/open pair to stay in fullscreen.
 function kbSetVisual(mode){
-  const wasViz = visualMode === 'viz';
   closeArtStyleMenu();
   setVisualMode(mode);
-  if (state.flowOpen && wasViz !== (visualMode === 'viz')){ closeFlow(); openFlow(); }
 }
 // y/u: pressing again goes back to art
 function kbToggleVisual(mode){
