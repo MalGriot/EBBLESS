@@ -1694,7 +1694,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #50.
 
 ### lyrics-glow-trail: Lyrics should glow with a fading trail effect
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The current lyric line should glow in a color. Passed
   lines should keep glowing in that same color but at progressively lower
@@ -1702,7 +1702,7 @@ Add entries in this shape:
   effect). If the user manually selects/clicks a lyric line, the glow/trail
   state should stay consistent with wherever they clicked.
 - **Touches:** lyrics view rendering.
-- **Branch:** (unclaimed)
+- **Branch:** agent/lyrics-glow-trail
 - **Notes:** Synced from Geethub issue #51.
 
 ### cymatics-heart-centering: Center the title in cymatics fullscreen (heart pushes it left)
@@ -6260,14 +6260,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #150.
 
 ### own-songs-lyrics: Lyrics for every Breathe Love Deep and This Is Mal Griot song
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** All songs on Breathe Love Deep and This Is Mal Griot
   should have lyrics. The user wrote them and will supply the text, so
   bundle them in the app rather than searching a lyrics provider. Timed
   lyrics if possible.
 - **Touches:** lyrics lookup - add a local override table.
-- **Branch:**
+- **Branch:** agent/own-songs-lyrics
 - **Notes:** Synced from Geethub issue #154. Needs lyric text from the user
   before an agent can finish it.
 
@@ -6574,11 +6574,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #185, #186.
 
 ### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Replace the delete-all-playlists confirm with a hold-to-confirm button (reference: reactbits.dev/micro/hold-button).
 - **Touches:** Settings clear-playlists control (follow-up to merged `clear-playlists-confirm`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/clear-playlists-hold-button
 - **Notes:** Synced from Geethub issue #189.
 
 ### mobile-resume-pause-regression: Mobile: returning from another app pauses and resets progress
