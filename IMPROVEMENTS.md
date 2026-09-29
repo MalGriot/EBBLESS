@@ -6318,12 +6318,16 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #178.
 
 ### mobile-queue-icon-highlight: Mobile: only the queue icon should be lit while the queue is open
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On mobile, when the queue is open, the queue icon should be the only highlighted nav icon.
 - **Touches:** mobile footer nav active states.
 - **Branch:** agent/mobile-queue-icon-highlight
-- **Notes:** Synced from Geethub issue #179.
+- **Notes:** Synced from Geethub issue #179. Fix (`85a75a9`): `setView()`
+  keeps `.is-active` on the Library/Player footer button while
+  `openQueuePanel()` also lights Queue, so both lit. Added one CSS rule
+  dimming the view button while `body.queue-open`; its class is untouched,
+  so it relights on close. CSS only, no-op at >=860px (footer nav hidden).
 
 ### swipe-track-animation: Mobile: animate swipe-to-change-track
 - **Status:** draft
