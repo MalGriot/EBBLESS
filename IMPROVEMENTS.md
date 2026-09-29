@@ -6681,12 +6681,22 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #193.
 
 ### discover-mood-matching: Use free BPM/key/energy lookups to improve mood matching
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Improve Discover and mood search using free online track-metric sources (Chosic BPM & Key Finder, Musicstax, SongBPM) for BPM, key, time signature and energy.
 - **Touches:** Discover backend (worker).
 - **Branch:** agent/discover-mood-matching
 - **Notes:** Synced from Geethub issue #194.
+
+  Built on branch (commit `9c98c1e`): new worker `POST /metrics` merging
+  GetSongBPM (only if `GETSONGBPM_API_KEY` secret set; needs a visible
+  backlink per its terms; sole source of key/time sig), ReccoBeats
+  (tempo/energy/danceability/valence via Deezer ISRC) and Deezer (BPM).
+  Chosic/Musicstax/SongBPM/Tunebat rejected (no API, scraping only).
+  Discover nudges candidates by BPM (half/double ok), Camelot key, energy,
+  valence; max +/-0.08, no-op without data; 1.8s client timeout. All
+  sources unreachable from sandbox - mock-tested only. Needs worker deploy.
+
 
 ### discover-long-track-weighting: Discover should rarely serve very long tracks
 - **Status:** merged
