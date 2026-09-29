@@ -2957,7 +2957,7 @@ Add entries in this shape:
   equalizer-presets preset" once scoped, rather than its own feature.
 
 ### album-art-resolution: Album art is blurry/low quality on desktop
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On desktop, album art often renders blurry or low
   resolution. Investigate the desktop art-rendering path and prefer/request
@@ -5797,7 +5797,7 @@ Add entries in this shape:
   Geethub #198 folded in: desktop playlist panel currently shows two close buttons - remove the top one. The remaining X should be identical to the queue's X in the window's top-right corner. User wants this done as part of this entry.
 
 ### fullscreen-vertical-centering-nav-row: Fullscreen art still not vertically centered; top nav row wastes space
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to `fullscreen-artwork-centering`: in
   fullscreen the artwork/LP/cassette is still not centered vertically. User
@@ -6363,7 +6363,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #190.
 
 ### mobile-library-tap-closes-playlist: Mobile: tapping Library should close an open playlist
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** On mobile, with a playlist open, tapping the Library nav button should close the playlist and show the library.
 - **Touches:** mobile nav / playlist panel.
@@ -6458,7 +6458,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #203.
 
 ### desktop-grid-extra-row: Desktop panes shrink when an extra grid row appears after load
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On desktop (seen at 1440x900), a few seconds after load
   the layout grows an extra row at the bottom, and the Library, player and
