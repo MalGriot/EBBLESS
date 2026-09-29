@@ -2957,7 +2957,55 @@ function getCachedPlaylist(id){ return lsGet(LS_PL(id), null); }
 // Discover overflow) aren't built by resolvePlaylist and have no
 // resolveVersion to compare - they're never stale by this check.
 function isResolveStale(pl){
-  return !!pl && pl.type !== 'custom' && pl.resolveVersion !== RESOLVE_LOGIC_VERSION;
+  if (pl && pl.type === 'custom') return needsUnmatchedRematch(pl);
+  return !!pl && pl.resolveVersion !== RESOLVE_LOGIC_VERSION;
+}
+// Exception to the above: a playlist saved from the queue (flagged
+// rematchUnmatched, see saveQueueAsPlaylist) re-matches its unmatched rows
+// (videoId null) only - matched rows are never touched. Each row gets one
+// attempt per RESOLVE_LOGIC_VERSION (stamped in rematchTried), the same
+// once-per-logic-version cadence imported playlists re-resolve on, so a
+// track that keeps failing can't be retried in a loop.
+function needsUnmatchedRematch(pl){
+  return !!pl.rematchUnmatched && pl.tracks.some(t => t && !t.videoId && t.rematchTried !== RESOLVE_LOGIC_VERSION);
+}
+const unmatchedRematchInFlight = new Set();
+async function rematchUnmatchedInBackground(id){
+  if (unmatchedRematchInFlight.has(id)) return;
+  unmatchedRematchInFlight.add(id);
+  try {
+    const snap = getCachedPlaylist(id);
+    if (!snap || !needsUnmatchedRematch(snap)) return;
+    const results = new Map();
+    for (let i = 0; i < snap.tracks.length; i++){
+      const t = snap.tracks[i];
+      if (!t || t.videoId || t.rematchTried === RESOLVE_LOGIC_VERSION) continue;
+      // A thrown search (offline, backend down) isn't stamped, so it's
+      // retried on the next natural trigger rather than burned; stop here.
+      try { results.set(i, await searchYouTubeCached(t.title, t.artist, (t.srcDuration || 0) * 1000 || undefined)); }
+      catch(e){ break; }
+    }
+    if (!results.size) return;
+    // Re-read so edits made while searching aren't clobbered; only apply to
+    // a row that's still the same unmatched track.
+    const pl = getCachedPlaylist(id);
+    if (!pl) return;
+    results.forEach((m, i) => {
+      const t = pl.tracks[i], o = snap.tracks[i];
+      if (!t || t.videoId || t.title !== o.title || t.artist !== o.artist) return;
+      if (m && m.videoId){
+        t.videoId = m.videoId; t.matchedTitle = m.title || ''; t.channel = m.channel || ''; t.duration = m.duration || 0;
+        delete t.rematchTried;
+      } else {
+        t.rematchTried = RESOLVE_LOGIC_VERSION;
+      }
+    });
+    persistPlaylistObj(pl);
+    if (state.playlist && state.playlist.id === id) state.playlist = pl;
+    renderLibrary();
+  } finally {
+    unmatchedRematchInFlight.delete(id);
+  }
 }
 // Quietly re-resolves a playlist whose cached links predate the current
 // resolution logic, without disturbing whatever's currently on screen - the
@@ -2965,6 +3013,7 @@ function isResolveStale(pl){
 // or a source hiccup just leaves the existing (stale but playable) cache in
 // place for next time.
 function reResolveStaleInBackground(id, type){
+  if (type === 'custom'){ rematchUnmatchedInBackground(id); return; }
   resolvePlaylist(id, type, () => {}).then(pl => {
     if (state.playlist && state.playlist.id === id) state.playlist = pl;
     renderLibrary();
@@ -6342,6 +6391,7 @@ function saveQueueAsPlaylist(){
     onCreate(name){
       const pl = createCustomPlaylist(name);
       pl.tracks = tracks;
+      pl.rematchUnmatched = true;
       persistPlaylistObj(pl);
       renderLibrary();
       showToast('Saved as ' + pl.name);
