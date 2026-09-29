@@ -6118,7 +6118,7 @@ Add entries in this shape:
   network blocks SoundCloud).
 
 ### paste-search-result-counts: Paste-bar search results should show track count and duration
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the list of options that appears when searching in
   the paste bar, each playlist option should show how many tracks it has
@@ -6126,9 +6126,14 @@ Add entries in this shape:
 - **Touches:** `playlist-vibe-search` results UI.
 - **Branch:** agent/paste-search-result-counts
 - **Notes:** Synced from Geethub issue #172.
+  Fix (`37910e3`): **needs a worker deploy** for durations. SoundCloud
+  results show "N tracks · X hr Y min" (`durationMs` added from the search
+  response; `trackCount` null not 0 when unknown; cache v1->v2). Apple
+  Music search carries neither, Spotify isn't a source. Old worker shape
+  shows count only. Live responses untested.
 
 ### discover-append-to-queue: Discover should auto-append new songs to the end of the queue
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When Discover is active, keep adding new discovered
   songs to the end of the queue. Deactivating Discover removes them.
@@ -6137,6 +6142,14 @@ Add entries in this shape:
 - **Touches:** Discover / `discovery-radio-continuation`, queue, shuffle.
 - **Branch:** agent/discover-append-to-queue
 - **Notes:** Synced from Geethub issue #169.
+  Fix (`0bd6d3c`, `cea8b5c`): Discover-added queue entries tagged
+  `discover: true`; toggling off removes them (except the playing one);
+  batches arriving with shuffle on reshuffle the upcoming tail; unshuffle
+  restores playlist order + discoveries after. **Behavior change:** the
+  resume data now saves the whole queue and restores it on reload (falls
+  back to rebuilding if any entry is unplayable). In-flight batch is
+  dropped if Discover was switched off meanwhile. Real network/crossfade
+  timing untested.
 
 ### currents-add-reset-button: Button to add more tracks to or reset CuRRentSSsss
 - **Status:** draft
@@ -6409,12 +6422,17 @@ Add entries in this shape:
   not run in WebKit (not available in sandbox).
 
 ### mobile-fullscreen-art-slide: Mobile fullscreen: art should slide to center when UI appears
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** low
 - **Description:** In mobile fullscreen, when the screen is tapped and the UI pops up, the record/cassette/album art should slide up to sit centered between the lower player UI and the visual-style buttons at the top.
 - **Touches:** mobile fullscreen layout; related to `fullscreen-vertical-centering-nav-row`.
 - **Branch:** agent/mobile-fullscreen-art-slide
 - **Notes:** Synced from Geethub issue #184.
+  Fix (`58ee0e4`): `syncFlowArtSlide()` measures `.flow-top`/`.flow-bottom`
+  live and translates (scales only if needed) `#flowArtWrap` to the middle
+  of the gap while chrome shows; back to viewport-center when idle. 600ms
+  slide, snaps on open, none under reduced motion. Portrait <1150px only;
+  cymatics and landscape excluded. Real devices/long wrapping titles untested.
 
 ### conversational-vibe-search: Search by typing or speaking a mood/vibe to get a playlist
 - **Status:** draft
