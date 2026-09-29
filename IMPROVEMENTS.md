@@ -5859,7 +5859,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #159.
 
 ### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, clicking the 3-dot menu button on a queue
   row just plays the track instead of opening the menu.
@@ -6283,7 +6283,7 @@ Add entries in this shape:
   headless touch emulation, not user-reported yet.
 
 ### pause-fade-cap: Cap the pause fade-out at a short fixed length
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Pausing fades out for too long. Cap the pause fade at a short duration regardless of the crossfade setting.
 - **Touches:** pause fade-out logic (follow-up to merged `pause-fade-out`).
@@ -6403,7 +6403,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #199.
 
 ### tester-report-no-github: Bug reporting for testers without a GitHub login
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Testers reporting bugs should not need a GitHub account, and should not be able to touch the user's own task list. Needs a separate intake mechanism.
 - **Touches:** Settings report-a-bug flow, maybe worker endpoint (see merged `tester-feedback-form`, `settings-bug-report-github-form`).
