@@ -1046,7 +1046,13 @@ svg.load-spin{animation:load-spin .9s linear infinite}
   body.split-desktop #view-library{
     grid-column:1;border-right:1px solid var(--border);position:relative;display:block!important;
   }
-  body.split-desktop #view-library .lib-bg{position:absolute}
+  /* #view-library is itself the scroll container here, so an absolute
+     .lib-bg scrolled away with the list. Sticky at top:0 pins it to the
+     pane's scrollport instead; the pane's own size query (100cqh) sizes it
+     to the pane, and the matching negative margin keeps it out of flow so
+     .view-scroll still starts at the top. */
+  body.split-desktop #view-library{container-type:size}
+  body.split-desktop #view-library .lib-bg{position:sticky;top:0;bottom:auto;height:100cqh;margin-bottom:-100cqh}
   body.split-desktop #view-player,
   body.split-desktop #view-settings{grid-column:2}
   body.split-desktop:not(.view-settings-active) #view-player{display:block!important}
