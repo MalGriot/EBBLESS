@@ -5795,7 +5795,7 @@ Add entries in this shape:
   `node --check` against the extracted `<script>` contents - passes.
 
 ### playlist-panel-side-desktop: Desktop playlist panel should open left-over-library, not right-over-queue
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, opening a playlist currently slides its
   panel in on the right side, over the queue. It should instead open on
@@ -5806,6 +5806,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #135. Issue body had no further
   detail beyond the title.
   Geethub #198 folded in: desktop playlist panel currently shows two close buttons - remove the top one. The remaining X should be identical to the queue's X in the window's top-right corner. User wants this done as part of this entry.
+  Fix (`eda404f`, CSS only): in the >=1150px split layout `#libpl-panel`
+  now shares the library pane's grid cell (col 1) and slides in from the
+  left over it; the queue stays uncovered. Mobile slide-up and the
+  860-1149px drawer unchanged. #198: only one close X (`#libplCloseBtn`)
+  exists in the markup, so nothing was removed - it now sits in the pane's
+  top-right at the same 20px inset as the queue header's controls. Needs a
+  check whether the "second X" still shows anywhere. Desktop-fullscreen
+  (library drawer) case untested.
 
 ### fullscreen-vertical-centering-nav-row: Fullscreen art still not vertically centered; top nav row wastes space
 - **Status:** merged
