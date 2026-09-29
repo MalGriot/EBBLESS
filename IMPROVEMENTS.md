@@ -6861,7 +6861,7 @@ Add entries in this shape:
   `album-art-consistent-per-album`, `playlist-image-reset`.
 
 ### cassette-fullscreen-second-stack: Cassette fullscreen intro should do a second stack downward
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** After the tapes stack upward and slide behind the center
   tape, repeat the same move downward toward the bottom of the screen and
@@ -6870,6 +6870,9 @@ Add entries in this shape:
 - **Branch:** agent/cassette-fullscreen-second-stack
 - **Notes:** Synced from Geethub issue #207. Extends
   `cassette-fullscreen-animation` (merged).
+  **Built (eb3de82):** mirrored downward stack + slide-back after the upward
+  one (0.4s gap), then the ring. Intro ~9-11s longer; check pacing and the
+  mobile down stack vs. transport controls on a real device.
 
 ### settings-credits: Settings "Credits" button listing every service used, with links
 - **Status:** merged
@@ -6888,7 +6891,7 @@ Add entries in this shape:
   Sign in with Google. Update this list when a new service is added.
 
 ### currents-12-tracks: CuRRentSSsss playlist should load 12 tracks
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** When CuRRentSSsss is built, it should end up with 12
   tracks (currently it tops up to a minimum of 8 via `CURRENTS_MIN_TRACKS`).
@@ -6897,9 +6900,12 @@ Add entries in this shape:
 - **Branch:** agent/currents-12-tracks
 - **Notes:** Synced from Geethub issue #208 (title only). Related (merged):
   `currents-playlist-algorithm`, `currents-add-reset-button`.
+  **Built (c3b0ff1):** `CURRENTS_MIN_TRACKS` 8 -> 12, per-slot top-up 2 -> 3,
+  "Add more" keeps its old 8 target (new `CURRENTS_MORE_TRACKS`). Aims for
+  at least 12 (can still reach 14 with many saved playlists). Client-only.
 
 ### playlist-menu-album-toggle: Playlist menu option to mark something as a playlist or album
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The playlist 3-dot menu should let the user manually
   recategorize an entry as a playlist or an album, for when auto-detection
@@ -6910,3 +6916,7 @@ Add entries in this shape:
 - **Branch:** agent/playlist-menu-album-toggle
 - **Notes:** Synced from Geethub issue #209. Manual override complementing
   the merged `album-detection` auto-categorization.
+  **Built (6587e41):** "Mark as album / playlist" in a link-imported
+  entry's 3-dot menu; stored as `albumOverride` on the entry, read via new
+  `isAlbumEntry()` (library filter, sections, tile art, album-mode matching),
+  kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
