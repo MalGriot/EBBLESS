@@ -5126,6 +5126,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     items.push({ sep: true });
   }
   items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
+  if (t) items.push({ action: 'art', label: 'Change art', icon: CTX_ICON_ART });
   if (t && !(opts && opts.inQueue)){
     items.push({ sep: true });
     items.push({ action: 'remove', label: 'Remove from playlist', icon: CTX_ICON_DELETE, danger: true });
@@ -5167,6 +5168,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
+  else if (action === 'art'){ if (t) openTrackArtFlow(plId, trackIdx); }
   else if (action === 'remove'){
     if (!t) return;
     removeTrackFromPlaylistAt(plId, trackIdx);
@@ -5244,7 +5246,6 @@ function openRenamePlaylistFlow(id, pl){
 }
 
 function openChangeArtFlow(id, pl){
-  openImportOverlay();
   // `originalImage` is the source-provided cover captured at import time
   // (null for playlists with no native art, e.g. custom/manual playlists).
   // Older playlists saved before this field existed won't have it - treat
@@ -5252,14 +5253,6 @@ function openChangeArtFlow(id, pl){
   // normal fallback art rather than guessing at a "real" cover.
   const original = Object.prototype.hasOwnProperty.call(pl, 'originalImage') ? pl.originalImage : null;
   const resetLabel = original ? 'Reset to original art' : 'Remove custom art';
-  importStage.innerHTML =
-    '<div class="step">Change playlist art</div>' +
-    '<input id="plArtUrlInput" type="text" placeholder="Paste an image URL" autocomplete="off" spellcheck="false" ' +
-      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
-    '<button class="btn-ghost is-active" id="plArtUrlBtn" style="width:100%;margin-bottom:14px">Use this image</button>' +
-    '<label class="btn-ghost" for="plArtFileInput" style="display:block;text-align:center;width:100%;cursor:pointer">Upload from device</label>' +
-    '<input id="plArtFileInput" type="file" accept="image/*" style="display:none">' +
-    (pl.image !== original ? '<button class="btn-ghost" id="plArtResetBtn" style="width:100%;margin-top:10px">' + resetLabel + '</button>' : '');
   function apply(image){
     pl.image = image;
     lsSet(LS_PL(id), pl);
@@ -5268,6 +5261,23 @@ function openChangeArtFlow(id, pl){
     renderLibrary();
     showToast('Playlist art updated');
   }
+  openArtPicker('Change playlist art', pl.image !== original ? resetLabel : null, '', apply, () => apply(original));
+}
+
+// The URL / upload / reset picker shared by playlist art (openChangeArtFlow)
+// and per-track art (openTrackArtFlow). extraHtml sits between the upload
+// button and the reset button (the track flow's "whole album" checkbox).
+function openArtPicker(heading, resetLabel, extraHtml, apply, onReset){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">' + heading + '</div>' +
+    '<input id="plArtUrlInput" type="text" placeholder="Paste an image URL" autocomplete="off" spellcheck="false" ' +
+      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
+    '<button class="btn-ghost is-active" id="plArtUrlBtn" style="width:100%;margin-bottom:14px">Use this image</button>' +
+    '<label class="btn-ghost" for="plArtFileInput" style="display:block;text-align:center;width:100%;cursor:pointer">Upload from device</label>' +
+    '<input id="plArtFileInput" type="file" accept="image/*" style="display:none">' +
+    extraHtml +
+    (resetLabel ? '<button class="btn-ghost" id="plArtResetBtn" style="width:100%;margin-top:10px">' + resetLabel + '</button>' : '');
   $('plArtUrlBtn').addEventListener('click', () => {
     const url = $('plArtUrlInput').value.trim();
     if (url) apply(url);
@@ -5293,7 +5303,93 @@ function openChangeArtFlow(id, pl){
     reader.readAsDataURL(file);
   });
   const resetBtn = $('plArtResetBtn');
-  if (resetBtn) resetBtn.addEventListener('click', () => apply(original));
+  if (resetBtn) resetBtn.addEventListener('click', onReset);
+}
+
+/* =========================================================================
+   PER-TRACK "CHANGE ART" (change-art-apply-album, Geethub #206) - the track
+   context menu's counterpart to the playlist "Change art" above. The chosen
+   image replaces `track.art` (the first link in artworkUrls' chain); the
+   track's previous art is kept once in `track.originalArt` so "Reset to
+   original art" can put it back per track, the same way playlist art keeps
+   `originalImage`.
+   "Apply to all tracks in this album": tracks don't carry an album field of
+   their own - album membership only exists as an album-type library entry
+   (isAlbumType) holding them. So the album is the album entry containing
+   this track (the one it was opened from, else any album in the library
+   with the same title+artist), and "all tracks" is every track across the
+   whole library (every playlist, Liked Songs included) whose title+artist
+   matches one of that album's tracks - so a song also saved into a playlist
+   gets the same cover as its album copy. Not offered when no album contains
+   the track, or the album only has this one track.
+   ========================================================================= */
+function artTrackKey(t){ return normLibSearch(t.title) + '|' + normLibSearch(t.artist); }
+
+function albumForTrack(pl, t){
+  const key = artTrackKey(t);
+  const holds = p => !!p && isAlbumType(p.type) && Array.isArray(p.tracks) && p.tracks.some(x => artTrackKey(x) === key);
+  if (holds(pl)) return pl;
+  for (const id of getLibrary()){ const p = playlistById(id); if (holds(p)) return p; }
+  return null;
+}
+
+// image === undefined means "reset": restore each track's own originalArt.
+function setTrackArtOverride(t, image){
+  const hasOrig = Object.prototype.hasOwnProperty.call(t, 'originalArt');
+  if (image === undefined){
+    if (!hasOrig) return false;
+    t.art = t.originalArt; delete t.originalArt;
+    return true;
+  }
+  if (!hasOrig) t.originalArt = t.art || null;
+  t.art = image;
+  if (t.art === t.originalArt) delete t.originalArt;
+  return true;
+}
+
+function openTrackArtFlow(plId, trackIdx){
+  const pl = playlistById(plId);
+  const t = pl && pl.tracks[trackIdx];
+  if (!t) return;
+  const album = albumForTrack(pl, t);
+  const albumKeys = album ? new Set(album.tracks.map(artTrackKey)) : null;
+  const offerAlbum = !!albumKeys && albumKeys.size > 1;
+  const hasOrig = Object.prototype.hasOwnProperty.call(t, 'originalArt');
+  const resetLabel = hasOrig && t.art !== t.originalArt ? (t.originalArt ? 'Reset to original art' : 'Remove custom art') : null;
+  const albumHtml = offerAlbum
+    ? '<label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13.5px;color:var(--text);cursor:pointer">' +
+        '<input id="trArtAlbumChk" type="checkbox" style="width:18px;height:18px;margin:0;accent-color:var(--accent);flex:none">' +
+        '<span>Apply to all tracks in &ldquo;' + escapeHtml(album.name) + '&rdquo;</span></label>'
+    : '';
+  function apply(image){
+    const chk = $('trArtAlbumChk');
+    const whole = !!(chk && chk.checked);
+    const ids = [plId].concat(getLibrary().filter(id => id !== plId));
+    let changed = 0;
+    ids.forEach(id => {
+      const p = playlistById(id);
+      if (!p || !Array.isArray(p.tracks)) return;
+      let dirty = false;
+      p.tracks.forEach((x, i) => {
+        const hit = whole ? albumKeys.has(artTrackKey(x)) : (id === plId ? i === trackIdx : false);
+        if (hit && setTrackArtOverride(x, image)){ dirty = true; changed++; }
+      });
+      // playlistById hands back the live state.playlist for the loaded
+      // playlist, so it's already updated in memory - just persist.
+      if (dirty) lsSet(LS_PL(id), p);
+    });
+    closeImportOverlay();
+    const panelId = openLibraryPanelId;
+    renderLibrary();
+    if (panelId) toggleLibraryPlaylistPanel(panelId);
+    const q = state.queue[state.queuePos];
+    const qPl = q && playlistById(q.plId);
+    const cur = qPl && qPl.tracks[q.idx];
+    if (cur) repaintNowPlayingArt(cur);
+    renderQueuePanel();
+    showToast(whole ? 'Art updated for ' + changed + ' tracks' : 'Track art updated');
+  }
+  openArtPicker('Change track art', resetLabel, albumHtml, apply, () => apply(undefined));
 }
 
 function duplicateLibraryPlaylist(id, pl){
@@ -5637,26 +5733,30 @@ function refreshRelinkedTrackArt(plId, trackIdx, t){
     // The playlist may have changed while the lookup was in flight (track
     // removed/reordered, or relinked again) - only touch the same track.
     if (!cur || cur.videoId !== videoId || cur.title !== t.title) return;
+    // A cover the listener picked by hand (openTrackArtFlow) outranks it.
+    if (Object.prototype.hasOwnProperty.call(cur, 'originalArt')) return;
     cur.art = art;
     lsSet(LS_PL(plId), pl);
     if (state.playlist && state.playlist.id === plId) state.playlist = pl;
     renderLibrary();
     repaintOpenLibPanelTrack(plId, trackIdx, pl);
     const q = state.queue[state.queuePos];
-    if (q && q.plId === plId && q.idx === trackIdx){
-      // Same art surfaces reflectCurrentTrackUI paints, without its
-      // play-count bump / resume write.
-      swapPlayerArt(cur);
-      swapFlowArt(cur);
-      swapAltArt(cur);
-      setAmbient(cur);
-      updatePlayerAccentColor(cur);
-      attachArtworkFallback(miniArt, cur);
-      cassetteSetLabelArt(cur);
-      updateMediaSessionMeta(cur);
-    }
+    if (q && q.plId === plId && q.idx === trackIdx) repaintNowPlayingArt(cur);
     renderQueuePanel();
   });
+}
+
+// Same art surfaces reflectCurrentTrackUI paints, without its play-count
+// bump / resume write - for when the playing track's art changes in place.
+function repaintNowPlayingArt(cur){
+  swapPlayerArt(cur);
+  swapFlowArt(cur);
+  swapAltArt(cur);
+  setAmbient(cur);
+  updatePlayerAccentColor(cur);
+  attachArtworkFallback(miniArt, cur);
+  cassetteSetLabelArt(cur);
+  updateMediaSessionMeta(cur);
 }
 
 /* =========================================================================
