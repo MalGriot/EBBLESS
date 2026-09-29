@@ -6580,12 +6580,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #185, #186.
 
 ### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Replace the delete-all-playlists confirm with a hold-to-confirm button (reference: reactbits.dev/micro/hold-button).
 - **Touches:** Settings clear-playlists control (follow-up to merged `clear-playlists-confirm`).
 - **Branch:** agent/clear-playlists-hold-button
-- **Notes:** Synced from Geethub issue #189.
+- **Notes:** Synced from Geethub issue #189. Pushed (commit `9fbd2cb`):
+  `#clearLibraryBtn` is now `.btn-danger.btn-hold` ("Hold to clear
+  playlists"), 1600ms fill sweep (`CLEAR_HOLD_MS` must match the CSS),
+  early release retracts. Pointer + Space/Enter hold, long-press menu
+  blocked, reduced-motion fades instead. Same delete logic and toast.
+  Removed the old danger confirm modal (`openDangerModal`/`closeDangerModal`);
+  `#danger-scrim` kept for the feedback form. Verified short press/early
+  release/leave don't delete and full hold does (scripted pointer + keyboard,
+  375px width). Mid-sweep visuals and real-device touch/haptics unchecked.
 
 ### mobile-resume-pause-regression: Mobile: returning from another app pauses and resets progress
 - **Status:** merged
