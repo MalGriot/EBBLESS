@@ -820,7 +820,8 @@ async function handleYtVideo(url, ctx) {
   if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/ytvideo/' + id);
+  // v2: payload gained loudnessDb (volume-equalizer) - older cached entries lack it
+  const cacheKey = new Request('https://cache.internal/ytvideo2/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -850,11 +851,226 @@ async function handleYtVideo(url, ctx) {
   const thumbs = details.thumbnail && details.thumbnail.thumbnails;
   const image = (thumbs && thumbs.length) ? thumbs[thumbs.length - 1].url : null;
 
-  const payload = { videoId: details.videoId, title: details.title || 'Untitled', artist: details.author || '', image };
+  // YouTube's own per-video loudness measurement (dB relative to its
+  // normalization target; positive = louder than target). The client uses
+  // it to even out volume between tracks - see levelGainFor in index.html.
+  const audioCfg = data.playerConfig && data.playerConfig.audioConfig;
+  const loudnessDb = audioCfg && typeof audioCfg.loudnessDb === 'number' ? audioCfg.loudnessDb : null;
+  const payload = { videoId: details.videoId, title: details.title || 'Untitled', artist: details.author || '', image, loudnessDb };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
+  })));
+  return response;
+}
+
+// ---------- GET /podcast?src=<spshow|spep|ap|apep|rss>&id=<...> ----------
+// Podcasts (GitHub #92). Unlike music, podcast episodes are published as
+// plain audio files in the show's public RSS feed, so there's nothing to
+// match against YouTube - the client plays each episode's own enclosure URL
+// directly in an <audio> element. The work here is just finding the feed:
+//   spshow / spep  - Spotify show / episode id. Spotify hosts no audio we can
+//                    use, so its embed page is only read for the show's name
+//                    (and the episode's title), then the show is looked up in
+//                    Apple's free iTunes podcast directory for its feedUrl.
+//                    Spotify-exclusive shows have no public feed and 404.
+//   ap / apep      - Apple Podcasts show id (apep: "<showId>:<episodeId>");
+//                    the iTunes lookup API hands back feedUrl directly.
+//   rss            - a feed URL pasted directly.
+// Response: { name, author, image, link, episodes:[{title,audio,duration,
+// published,image}], focus } - focus is the index of the linked episode
+// (-1 for a whole-show link). Newest episodes first, capped at
+// PODCAST_MAX_EPISODES.
+const PODCAST_CACHE_VERSION = 'pod1';
+const PODCAST_MAX_EPISODES = 300;
+
+function podNorm(s) {
+  return String(s || '').toLowerCase().replace(/&amp;/g, '&').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function xmlDecode(s) {
+  return String(s || '')
+    .replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/, '$1')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&amp;/g, '&')
+    .trim();
+}
+function xmlTag(block, tag) {
+  const m = block.match(new RegExp('<' + tag + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + tag + '>', 'i'));
+  return m ? xmlDecode(m[1]) : '';
+}
+function xmlAttr(block, tag, attr) {
+  const m = block.match(new RegExp('<' + tag + '\\s[^>]*?' + attr + '\\s*=\\s*["\']([^"\']+)["\']', 'i'));
+  return m ? xmlDecode(m[1]) : '';
+}
+// "01:02:03" / "62:03" / "3723" -> seconds
+function podDuration(s) {
+  s = String(s || '').trim();
+  if (!s) return 0;
+  if (/^\d+(\.\d+)?$/.test(s)) return Math.round(parseFloat(s));
+  const parts = s.split(':').map(x => parseInt(x, 10) || 0);
+  return parts.reduce((acc, n) => acc * 60 + n, 0);
+}
+function parsePodcastFeed(xml) {
+  const chanHead = (xml.split(/<item[\s>]/i)[0]) || '';
+  const name = xmlTag(chanHead, 'title');
+  const author = xmlTag(chanHead, 'itunes:author') || xmlTag(chanHead, 'managingEditor');
+  const imgBlock = chanHead.match(/<image[\s>][\s\S]*?<\/image>/i);
+  const image = xmlAttr(chanHead, 'itunes:image', 'href') || (imgBlock ? xmlTag(imgBlock[0], 'url') : '') || null;
+  const link = xmlTag(chanHead, 'link');
+  const episodes = [];
+  const itemRe = /<item[\s>][\s\S]*?<\/item>/gi;
+  let m;
+  while ((m = itemRe.exec(xml)) && episodes.length < PODCAST_MAX_EPISODES) {
+    const it = m[0];
+    let audio = xmlAttr(it, 'enclosure', 'url');
+    if (!audio) continue;
+    // an http:// enclosure would be blocked as mixed content on the https app
+    audio = audio.replace(/^http:\/\//i, 'https://');
+    const pub = Date.parse(xmlTag(it, 'pubDate'));
+    episodes.push({
+      title: xmlTag(it, 'title') || 'Episode',
+      audio,
+      duration: podDuration(xmlTag(it, 'itunes:duration')),
+      published: isNaN(pub) ? 0 : pub,
+      image: xmlAttr(it, 'itunes:image', 'href') || null,
+    });
+  }
+  // feeds are nearly always newest-first already; make sure
+  if (episodes.some(e => e.published)) episodes.sort((a, b) => b.published - a.published);
+  return { name, author, image, link, episodes };
+}
+async function itunesPodcastSearch(term, author) {
+  const params = new URLSearchParams({ media: 'podcast', entity: 'podcast', limit: '10', term });
+  const res = await fetch('https://itunes.apple.com/search?' + params.toString());
+  if (!res.ok) return null;
+  const data = await res.json();
+  const results = (data.results || []).filter(r => r.feedUrl);
+  if (!results.length) return null;
+  const want = podNorm(term), wantAuthor = podNorm(author);
+  const score = (r) => {
+    const n = podNorm(r.collectionName);
+    let s = n === want ? 10 : (n.includes(want) || want.includes(n)) ? 5 : 0;
+    if (wantAuthor && podNorm(r.artistName) === wantAuthor) s += 3;
+    return s;
+  };
+  const best = results.map(r => ({ r, s: score(r) })).sort((a, b) => b.s - a.s)[0];
+  return best.s > 0 ? best.r : null;
+}
+async function itunesLookup(id, extra) {
+  const params = new URLSearchParams(Object.assign({ id: String(id) }, extra || {}));
+  const res = await fetch('https://itunes.apple.com/lookup?' + params.toString());
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.results || [];
+}
+async function spotifyEmbedEntity(kind, id) {
+  const res = await fetch('https://open.spotify.com/embed/' + kind + '/' + id, { headers: { 'User-Agent': DESKTOP_UA } });
+  if (!res.ok) return null;
+  const html = await res.text();
+  const mi = html.indexOf('__NEXT_DATA__');
+  if (mi === -1) return null;
+  const jsonStr = extractBalancedJson(html, html.indexOf('{', html.indexOf('>', mi) + 1));
+  if (!jsonStr) return null;
+  let data;
+  try { data = JSON.parse(jsonStr); } catch (e) { return null; }
+  return (data && data.props && data.props.pageProps && data.props.pageProps.state &&
+    data.props.pageProps.state.data && data.props.pageProps.state.data.entity) || null;
+}
+async function spotifyOEmbedTitle(kind, id) {
+  try {
+    const res = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent('https://open.spotify.com/' + kind + '/' + id));
+    if (!res.ok) return '';
+    const d = await res.json();
+    return d.title || '';
+  } catch (e) { return ''; }
+}
+function matchEpisode(episodes, title) {
+  const want = podNorm(title);
+  if (!want) return -1;
+  let i = episodes.findIndex(e => podNorm(e.title) === want);
+  if (i === -1) i = episodes.findIndex(e => { const n = podNorm(e.title); return n && (n.includes(want) || want.includes(n)); });
+  return i;
+}
+
+async function handlePodcast(url, ctx) {
+  const src = url.searchParams.get('src');
+  const id = url.searchParams.get('id') || '';
+  if (!/^(spshow|spep|ap|apep|rss)$/.test(src || '') || !id) return json({ error: 'missing or invalid podcast link' }, 400);
+  if ((src === 'spshow' || src === 'spep') && !/^[a-zA-Z0-9]+$/.test(id)) return json({ error: 'invalid spotify id' }, 400);
+  if (src === 'ap' && !/^\d+$/.test(id)) return json({ error: 'invalid apple podcasts id' }, 400);
+  if (src === 'apep' && !/^\d+:\d+$/.test(id)) return json({ error: 'invalid apple podcasts id' }, 400);
+  if (src === 'rss' && !/^https?:\/\//i.test(id)) return json({ error: 'invalid feed url' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podcast/' + src + '/' + encodeURIComponent(id));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  let feedUrl = null, episodeTitle = '', episodeAudio = null, link = '';
+  if (src === 'rss') {
+    feedUrl = id; link = id;
+  } else if (src === 'ap' || src === 'apep') {
+    const [showId, epId] = id.split(':');
+    const results = await itunesLookup(showId, src === 'apep' ? { entity: 'podcastEpisode', limit: '200' } : { entity: 'podcast' });
+    const show = results.find(r => r.feedUrl);
+    feedUrl = show && show.feedUrl;
+    link = 'https://podcasts.apple.com/podcast/id' + showId + (epId ? '?i=' + epId : '');
+    if (epId) {
+      const ep = results.find(r => String(r.trackId) === epId);
+      if (ep) { episodeTitle = ep.trackName || ''; episodeAudio = ep.episodeUrl || null; }
+    }
+  } else {
+    const kind = src === 'spep' ? 'episode' : 'show';
+    link = 'https://open.spotify.com/' + kind + '/' + id;
+    const entity = await spotifyEmbedEntity(kind, id);
+    let showName = '', author = '';
+    if (kind === 'show') {
+      showName = (entity && (entity.name || entity.title)) || await spotifyOEmbedTitle('show', id);
+      author = (entity && entity.subtitle) || '';
+    } else {
+      episodeTitle = (entity && (entity.name || entity.title)) || await spotifyOEmbedTitle('episode', id);
+      showName = (entity && (entity.subtitle || (entity.show && entity.show.name) || (entity.podcast && entity.podcast.name))) || '';
+      const showUri = entity && (entity.relatedEntityUri || (entity.show && entity.show.uri) || '');
+      const sm = String(showUri || '').match(/show[:/]([a-zA-Z0-9]+)/);
+      if (!showName && sm) showName = await spotifyOEmbedTitle('show', sm[1]);
+    }
+    if (!showName) return json({ error: "Couldn't read that Spotify podcast link (private or invalid?)" }, 404);
+    const hit = await itunesPodcastSearch(showName, author);
+    feedUrl = hit && hit.feedUrl;
+    if (!feedUrl) return json({ error: '"' + showName + '" has no public feed - it may be a Spotify exclusive.' }, 404);
+  }
+  if (!feedUrl) return json({ error: 'no public feed found for that podcast' }, 404);
+
+  let feed;
+  try {
+    const res = await fetch(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
+    if (!res.ok) return json({ error: 'podcast feed returned ' + res.status }, 502);
+    feed = parsePodcastFeed(await res.text());
+  } catch (e) {
+    return json({ error: "couldn't read the podcast feed" }, 502);
+  }
+  if (!feed.episodes.length) return json({ error: 'that podcast feed has no playable episodes' }, 404);
+
+  let focus = -1;
+  if (episodeAudio) {
+    const a = episodeAudio.replace(/^http:\/\//i, 'https://').split('?')[0];
+    focus = feed.episodes.findIndex(e => e.audio.split('?')[0] === a);
+  }
+  if (focus === -1 && episodeTitle) focus = matchEpisode(feed.episodes, episodeTitle);
+  // linked episode is older than the capped list - still include it
+  if (focus === -1 && episodeAudio) {
+    feed.episodes.push({ title: episodeTitle || 'Episode', audio: episodeAudio.replace(/^http:\/\//i, 'https://'), duration: 0, published: 0, image: null });
+    focus = feed.episodes.length - 1;
+  }
+
+  const payload = { name: feed.name || 'Podcast', author: feed.author || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, episodes: feed.episodes, focus };
+  const response = json(payload);
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
   })));
   return response;
 }
@@ -2707,6 +2923,7 @@ export default {
       if (url.pathname === '/track') return await handleTrack(url, ctx);
       if (url.pathname === '/ytplaylist') return await handleYtPlaylist(url, ctx);
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);
+      if (url.pathname === '/podcast') return await handlePodcast(url, ctx);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);

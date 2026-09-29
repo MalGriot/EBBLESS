@@ -2604,13 +2604,23 @@ Add entries in this shape:
   comment pointing here.
 
 ### blend-playlist: Add an auto-updating "Blend" playlist across all saved playlists
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add a playlist that pulls tracks from all of the user's
   saved playlists, refreshing with a different set of songs every day.
 - **Touches:** new auto-playlist generation logic (parallel to Currents).
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #60.
+- **Branch:** claude/magical-franklin-cdyr5c
+- **Notes:** Synced from Geethub issue #60. Named **"SwiiiRrrLL"** per the
+  user (2026-09-29). Built as a system playlist (`BLEND_ID = 'blend'`),
+  pinned right behind CuRRentSSsss, no rename/delete. Built locally, no
+  network: up to 50 tracks from every saved playlist/album plus Liked Songs
+  (podcasts, CuRRentSSsss, and Discover overflow left out), a fair share per
+  source with unused slots handed to bigger sources, interleaved
+  round-robin. Yesterday's picks go to the back of the line so the list
+  rotates. Reblends once per local day (same 60s rollover poll as
+  CuRRentSSsss), fills itself the first time the library has anything, and
+  its 3-dot menu has "Reblend now". A reblend keeps the song playing now as
+  track 0 (shares CuRRentSSsss' queue-remap helper).
 
 ### encourage-liking-songs: Nudge users to like more songs
 - **Status:** draft
@@ -2763,16 +2773,24 @@ Add entries in this shape:
   `ebbless-shell-v*` cache exists after an update.
 
 ### volume-equalizer: Volume equalizer/normalization across tracks
-- **Status:** draft
+- **Status:** review
 - **Priority:** low
 - **Description:** Add a volume equalizer so loudness is consistent across
   different tracks (avoids jarring volume jumps between songs).
 - **Touches:** playback audio pipeline - likely Web Audio API gain
   normalization.
-- **Branch:** (unclaimed)
-- **Notes:** Synced from Geethub issue #37. No further detail given in the
-  issue - needs scoping (per-track normalization vs. a manual EQ UI) before
-  it's actionable.
+- **Branch:** claude/magical-franklin-cdyr5c
+- **Notes:** Synced from Geethub issue #37. Scoped as automatic per-track
+  leveling, not a manual EQ UI. Web Audio can't touch the cross-origin
+  YouTube iframe, so it works through `setVolume`: the worker's `/ytvideo`
+  now also returns YouTube's own `loudnessDb` for the video (cache key
+  bumped to `ytvideo2`), and `effectiveVolume(deck)` plays every track 5 dB
+  under YouTube's target, giving quieter-than-normal tracks that headroom
+  back (YouTube already turns loud ones down itself). Every crossfade/
+  pause-fade path now scales per deck. Settings > Playback > "Even out
+  volume" (default on). **Needs a worker deploy** for the loudness data; on
+  the old worker every track is treated as normal loudness (no leveling
+  effect, just the flat 5 dB headroom).
 
 ### clip-editor: Audio clip editor with a "My Clipsss" playlist
 - **Status:** draft
@@ -3031,7 +3049,7 @@ Add entries in this shape:
   ask is unconfirmed - left that entry as-is for your call.
 
 ### podcasts: Support loading and playing podcasts
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add podcast support - load single episodes, or paste a
   link to a podcast's page and have it load all episodes.
@@ -3048,6 +3066,24 @@ Add entries in this shape:
   `open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF`. User suspects a more
   reliable free, good-quality source is needed for podcast and audiobook
   audio (not just YouTube matching).
+- **Branch:** claude/magical-franklin-cdyr5c (2026-09-29)
+- **Built:** podcasts play the show's real audio file from its public RSS
+  feed, never a YouTube match. New worker endpoint `/podcast` takes a
+  Spotify show/episode id (reads the name off Spotify's embed page, then
+  finds the feed in Apple's free iTunes podcast directory), an Apple
+  Podcasts show/episode id (iTunes lookup gives the feed directly), or a
+  raw RSS URL, and returns up to 300 newest episodes. In the app: new
+  `pod_show` library type (ids `pod:<src>:<id>`); an episode link imports
+  the whole show and starts on that episode; episodes use a new `'au'` deck
+  kind (a plain `<audio>` element behind the same player surface as the YT/
+  SoundCloud decks, videoId `au:<file url>`). Discover, lyrics, loudness,
+  wrong-track flag, and relinking are all off for episodes; podcasts stay
+  out of CuRRentSSsss and SwiiiRrrLL. A saved show refreshes its episode list
+  in the background after 6h. **Needs a worker deploy.** Spotify-exclusive
+  shows have no public feed and give a clear error. Couldn't reach Spotify
+  or iTunes from the build container, so the Spotify embed field names for
+  show/episode are read defensively (with an oEmbed fallback). Check them
+  against the live worker first.
 
 ### currentsss-casing-followup: Fix "Currents" playlist casing to "CuRRentSSsss"
 - **Status:** merged
