@@ -568,10 +568,17 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .lyrics-scroller{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:44% 22px;text-align:center}
 .artwork-wrap.mode-lyrics .lyrics-scroller{padding:40px 22px}
 .lyric-line{padding:9px 4px;font-size:16px;font-weight:600;color:var(--faint-2);line-height:1.45;
-  transition:color var(--dur-ui) var(--ease-out),opacity var(--dur-ui) var(--ease-out)}
+  transition:color var(--dur-ui) var(--ease-out),opacity var(--dur-ui) var(--ease-out),text-shadow var(--dur-ui) var(--ease-out)}
 .lyric-line[data-time]{cursor:pointer}
 .lyric-line[data-time]:hover{color:var(--faint)}
-.lyric-line.is-current{color:var(--text);font-size:17.5px}
+.lyric-line.is-current{color:var(--text);font-size:17.5px;
+  color:color-mix(in srgb,var(--player-accent) 70%,var(--text));
+  text-shadow:0 0 14px color-mix(in srgb,var(--player-accent) 55%,transparent)}
+/* glow trail on synced lyrics: passed lines keep the accent glow, scaled by
+   --glow (0..1, set in updateLyricsHighlight) so it fades back to line one */
+.lyric-line.is-past{color:color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 60%),var(--faint-2));
+  text-shadow:0 0 12px color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 35%),transparent)}
+@media (prefers-reduced-motion: reduce){.lyric-line{transition:none}}
 .lyrics-empty{padding:0 24px;color:var(--faint);font-size:13.5px;text-align:center;line-height:1.6}
 .lyrics-credit{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;color:var(--faint-2);
   pointer-events:none}
@@ -8545,6 +8552,20 @@ function updateLyricsHighlight(cur){
   const prevEl = lyricsState.activeIdx >= 0 ? lyricsScroller.children[lyricsState.activeIdx] : null;
   if (prevEl) prevEl.classList.remove('is-current');
   lyricsState.activeIdx = idx;
+  // glow trail: lines before idx glow, strongest just behind the current
+  // line and fading toward line one; everything after idx is cleared so a
+  // backward seek (click on an earlier line) leaves no stale glow
+  for (let i = 0; i < lines.length; i++){
+    const lineEl = lyricsScroller.children[i];
+    if (!lineEl) break;
+    if (i < idx){
+      lineEl.classList.add('is-past');
+      lineEl.style.setProperty('--glow', ((i + 1) / (idx + 1)).toFixed(3));
+    } else if (lineEl.classList.contains('is-past')){
+      lineEl.classList.remove('is-past');
+      lineEl.style.removeProperty('--glow');
+    }
+  }
   if (idx >= 0){
     const el = lyricsScroller.children[idx];
     if (el){
