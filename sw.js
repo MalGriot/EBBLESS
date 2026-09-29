@@ -27,7 +27,7 @@
 //
 // IMPORTANT: bump CACHE_VERSION on every deploy you want existing
 // installs/tabs to pick up promptly.
-const CACHE_VERSION = 'ebbless-shell-v20';
+const CACHE_VERSION = 'ebbless-shell-v21';
 const SHELL_ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (e) => {

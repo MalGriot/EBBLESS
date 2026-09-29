@@ -1694,7 +1694,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #50.
 
 ### lyrics-glow-trail: Lyrics should glow with a fading trail effect
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The current lyric line should glow in a color. Passed
   lines should keep glowing in that same color but at progressively lower
@@ -6594,7 +6594,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #185, #186.
 
 ### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Replace the delete-all-playlists confirm with a hold-to-confirm button (reference: reactbits.dev/micro/hold-button).
 - **Touches:** Settings clear-playlists control (follow-up to merged `clear-playlists-confirm`).
