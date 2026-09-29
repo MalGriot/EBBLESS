@@ -5859,12 +5859,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #159.
 
 ### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, clicking the 3-dot menu button on a queue
   row just plays the track instead of opening the menu.
 - **Touches:** queue row click handling.
-- **Branch:**
+- **Branch:** agent/queue-3dot-menu-desktop
 - **Notes:** Synced from Geethub issue #152. Lane run 2026-09-23 could
   not reproduce: queue rows no longer have a 3-dot button (Playlist section
   removed in 39155e1). The playlist panel's "Track options" button
@@ -6283,11 +6283,11 @@ Add entries in this shape:
   headless touch emulation, not user-reported yet.
 
 ### pause-fade-cap: Cap the pause fade-out at a short fixed length
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Pausing fades out for too long. Cap the pause fade at a short duration regardless of the crossfade setting.
 - **Touches:** pause fade-out logic (follow-up to merged `pause-fade-out`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/pause-fade-cap
 - **Notes:** Synced from Geethub issue #177.
 
 ### cymatics-icon-morph: Cymatics button icon should morph between 3 cymatics shapes
@@ -6403,11 +6403,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #199.
 
 ### tester-report-no-github: Bug reporting for testers without a GitHub login
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Testers reporting bugs should not need a GitHub account, and should not be able to touch the user's own task list. Needs a separate intake mechanism.
 - **Touches:** Settings report-a-bug flow, maybe worker endpoint (see merged `tester-feedback-form`, `settings-bug-report-github-form`).
-- **Branch:** (unclaimed)
+- **Branch:** agent/tester-report-no-github
 - **Notes:** Synced from Geethub issue #200.
 
 ### android-ad-popup: An ad popped up during playback on a OnePlus 13R
