@@ -2581,7 +2581,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #24.
 
 ### currents-playlist-algorithm: Define Currents playlist selection rules
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The Currents playlist should be built from: one new/
   unplayed song per saved playlist, three suggested songs from the Liked
@@ -6069,7 +6069,7 @@ Add entries in this shape:
   invisible at rest (container opacity:0) - noted in a code comment.
 
 ### fullscreen-immersive-phase: Make the hidden "press F twice" big fullscreen a real third button phase
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In fullscreen (art/LP/cassette), pressing "f" again
   gives a larger graphic with UI that disappears after a while - the user
@@ -6175,7 +6175,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #156.
 
 ### lyrics-mode-load-crash: App stuck on splash when saved visual mode is lyrics
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** If the saved visual mode is lyrics, load throws
   "Cannot access 'lyricsState' before initialization" and the app never
@@ -6187,7 +6187,7 @@ Add entries in this shape:
   exists on main.
 
 ### keyboard-shortcuts-2: More keyboard shortcuts (playlist, shuffle, loop, art, cymatics, lyrics, seek)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add to the global keydown handler:
   - "p" and "l" toggle the library open/closed (previously open-only).
@@ -6210,6 +6210,9 @@ Add entries in this shape:
   the existing `keyboard-shortcuts` bindings; reuse existing button click
   paths (`toggleShuffle`, `cycleRepeat`, art-style/cymatics/lyrics buttons).
 - **Branch:** agent/keyboard-shortcuts-2
+- **Merge note (2026-09-30):** Library/Queue/Settings buttons added to the
+  flow overlay (library+queue left, settings beside the X) and lyrics
+  fullscreen; each clicks the matching #topnav button.
 - **Notes:** Added directly by the user in chat (2026-09-30). Extends
   `keyboard-shortcuts` (merged). Also update any in-app shortcut list /
   tutorial copy if one exists. `fullscreen-immersive-phase` also touches the
@@ -6277,7 +6280,7 @@ Add entries in this shape:
   timing untested.
 
 ### currents-add-reset-button: Button to add more tracks to or reset CuRRentSSsss
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a button on the CuRRentSSsss playlist to pull in
   more tracks, and one to reset it.

@@ -1002,6 +1002,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
 .flow-top{display:flex;justify-content:flex-end;align-items:flex-start;position:relative}
+/* Library/Queue/Settings in fullscreen (flow overlay + lyrics fullscreen):
+   each just clicks the matching #topnav button, whose handler already
+   leaves any fullscreen before opening its menu (see leaveFullscreen) */
+.fs-nav{display:flex;gap:4px}
+.fs-nav button{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.fs-nav button:hover{background:var(--panel-2);color:var(--text)}
+.fs-nav svg{width:18px;height:18px}
+.flow-nav{margin-right:auto}
+.lyrics-fs-nav{position:absolute;top:calc(16px + var(--safe-t));left:16px;z-index:2}
 .flow-exit{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .flow-exit:hover{background:var(--panel-2);color:var(--text)}
 .flow-exit svg{width:16px;height:16px}
@@ -2546,8 +2555,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
     <div class="flow-chrome">
       <div class="flow-top">
+        <!-- Library/Queue/Settings: leave fullscreen, then open that menu -->
+        <div class="fs-nav flow-nav"><button type="button" data-fs-nav="library" aria-label="Library"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg></button><button type="button" data-fs-nav="queue" aria-label="Queue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h11v2H4zm0 5h11v2H4zm0 5h7v2H4zm13-9v10.17a3 3 0 1 0 2 2.83V9h3V7z"/></svg></button></div>
         <!-- #visualTabs is moved in here while flow mode is open -->
         <div class="flow-art-style-anchor" id="flowArtStyleAnchor"></div>
+        <div class="fs-nav"><button type="button" data-fs-nav="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button></div>
         <button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
       </div>
       <div class="flow-bottom">
@@ -2593,6 +2605,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
   <!-- ===== LYRICS FULLSCREEN ===== -->
   <div id="lyricsFsLayer">
+    <div class="fs-nav lyrics-fs-nav"><button type="button" data-fs-nav="library" aria-label="Library"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg></button><button type="button" data-fs-nav="queue" aria-label="Queue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h11v2H4zm0 5h11v2H4zm0 5h7v2H4zm13-9v10.17a3 3 0 1 0 2 2.83V9h3V7z"/></svg></button><button type="button" data-fs-nav="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button></div>
     <button class="lyrics-fs-exit" id="lyricsFsExitBtn" aria-label="Exit fullscreen lyrics">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
     </button>
@@ -3878,6 +3891,12 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
   toggleQueuePanel();
 }));
 $('wordmarkBtn').addEventListener('click', () => setView('player'));
+document.querySelectorAll('[data-fs-nav]').forEach(btn => btn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const sel = btn.dataset.fsNav === 'queue' ? '[data-action="toggle-queue"]' : `[data-view="${btn.dataset.fsNav}"]`;
+  const target = document.querySelector('#topnav ' + sel);
+  if (target) target.click();
+}));
 
 /* wide desktop: library + player + queue all shown at once (see the
    min-width:1150px CSS block) instead of tab-switching between them */
