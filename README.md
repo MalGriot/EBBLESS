@@ -58,6 +58,19 @@ testing. Staging has its own separate KV namespaces (see `worker/wrangler.toml`)
 so nothing written there touches production's quota. Plain `npx wrangler
 deploy` (no `--env`) still targets production as before.
 
+## Reading tester feedback
+
+Settings > Support > "Send feedback" lets beta testers report bugs or ideas
+with no login and no GitHub. It POSTs to the worker's `/tester-report`,
+which stores each report in `MATCH_REPORTS` under a `tester:<ts>:<uuid>` key
+(max 5 per IP per 10 minutes). Read them with:
+
+```bash
+cd worker
+npx wrangler kv key list --binding=MATCH_REPORTS --prefix=tester:
+npx wrangler kv key get --binding=MATCH_REPORTS "tester:<ts>:<uuid>"
+```
+
 ## YouTube links
 
 Besides Spotify, you can paste a YouTube link directly — a playlist

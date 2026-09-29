@@ -2045,6 +2045,58 @@ async function handleReport(request, env, ctx) {
   return json({ ok: true });
 }
 
+// ---------- POST /tester-report ----------
+// Bug reports / ideas from beta testers, sent from the in-app "Send
+// feedback" form (Settings). No login and no GitHub on purpose: testers
+// shouldn't need an account, and they shouldn't be able to touch the
+// owner's own task list. Shares the MATCH_REPORTS namespace under a
+// separate `tester:` prefix, read back with
+// `wrangler kv key list --binding=MATCH_REPORTS --prefix=tester:`.
+// Throttled per IP through the Cache API rather than a KV counter, so the
+// limit itself doesn't eat into KV's daily put quota.
+const TESTER_REPORT_LIMIT = 5;          // reports per IP...
+const TESTER_REPORT_WINDOW_S = 600;     // ...per 10 minutes
+const TESTER_CATEGORIES = ['bug', 'idea', 'other'];
+async function handleTesterReport(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  body = body || {};
+  const message = String(body.message || '').trim();
+  if (!message) return json({ error: 'message is required' }, 400);
+  if (message.length > 4000) return json({ error: 'message too long (4000 max)' }, 400);
+
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const cache = caches.default;
+  const rlKey = new Request('https://ratelimit.internal/tester-report/' + encodeURIComponent(ip));
+  const hit = await cache.match(rlKey);
+  const count = hit ? (parseInt(await hit.text(), 10) || 0) : 0;
+  if (count >= TESTER_REPORT_LIMIT) return json({ error: 'too many reports, try again in a few minutes' }, 429);
+  ctx.waitUntil(cache.put(rlKey, new Response(String(count + 1), {
+    headers: { 'Cache-Control': 'max-age=' + TESTER_REPORT_WINDOW_S },
+  })));
+
+  const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+  const category = TESTER_CATEGORIES.includes(body.category) ? body.category : 'other';
+  const track = body.track && typeof body.track === 'object' ? body.track : {};
+  const report = {
+    category,
+    message,
+    name: str(body.name, 100),
+    contact: str(body.contact, 200),
+    appVersion: str(body.appVersion, 64),
+    userAgent: str(request.headers.get('User-Agent') || body.userAgent, 400),
+    viewport: str(body.viewport, 32),
+    view: str(body.view, 64),
+    track: { title: str(track.title, 300), artist: str(track.artist, 300) },
+    ts: Date.now(),
+  };
+  const key = 'tester:' + report.ts + ':' + crypto.randomUUID();
+  await env.MATCH_REPORTS.put(key, JSON.stringify(report));
+  return json({ ok: true });
+}
+
 // ---------- Google Sign-In profile sync ----------
 // Lets a signed-in visitor's library (playlists/queue/liked songs) survive
 // a wiped browser: the client silently obtains a Google ID token (One Tap,
@@ -2180,9 +2232,10 @@ export default {
       if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
+      if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

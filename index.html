@@ -746,6 +746,34 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 #danger-modal h2{font-size:16px;font-weight:700;margin:0 0 10px;color:var(--bad)}
 #danger-modal p{font-size:13px;color:var(--faint);line-height:1.5;margin:0}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+/* ---------- tester feedback form (no login, no GitHub - posts to the
+   worker's /tester-report). Reuses #danger-scrim and the danger modal's
+   centered-card look, just wider and with form fields ---------- */
+#feedback-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
+  max-height:calc(100dvh - 32px);overflow-y:auto;
+  background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
+  opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+#feedback-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#feedback-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
+#feedback-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 14px}
+.fb-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fb-field label{font-size:12px;font-weight:600;color:var(--faint)}
+.fb-field input,.fb-field textarea,.fb-field select{width:100%;background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:10px 12px;color:var(--text);font:inherit;font-size:14px;
+  transition:border-color var(--dur-ui) var(--ease-out)}
+.fb-field select{-webkit-appearance:none;appearance:none}
+.fb-field select option{background-color:var(--panel-2);color:var(--text)}
+.fb-field textarea{min-height:120px;resize:vertical;line-height:1.45}
+.fb-field input::placeholder,.fb-field textarea::placeholder{color:var(--faint-2)}
+.fb-field input:focus,.fb-field textarea:focus,.fb-field select:focus{outline:none;border-color:var(--accent)}
+.fb-row{display:flex;gap:10px}
+.fb-row .fb-field{flex:1;min-width:0}
+@media (max-width:420px){.fb-row{flex-direction:column;gap:0}}
+.fb-status{font-size:13px;line-height:1.45;margin:4px 0 0;min-height:1em}
+.fb-status.is-ok{color:var(--good)}
+.fb-status.is-err{color:var(--bad)}
 
 /* desktop: side panel */
 @media (min-width:860px){
@@ -1961,6 +1989,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <h2>Support</h2>
         <div class="settings-row">
           <div>
+            <div class="label">Send feedback</div>
+            <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
+          </div>
+          <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
+        </div>
+        <div class="settings-row">
+          <div>
             <div class="label">Report a bug</div>
             <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
@@ -1997,6 +2032,39 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <button class="btn-danger" id="dangerModalConfirmBtn">Clear playlists</button>
     </div>
   </div>
+
+  <!-- ===== TESTER FEEDBACK FORM ===== -->
+  <form id="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle" novalidate>
+    <h2 id="feedbackModalTitle">Send feedback</h2>
+    <p>Something broken, or an idea for EBBLESS? Tell us what happened. No account needed.</p>
+    <div class="fb-field">
+      <label for="fbCategory">What kind?</label>
+      <select id="fbCategory">
+        <option value="bug">Something's broken</option>
+        <option value="idea">An idea</option>
+        <option value="other">Something else</option>
+      </select>
+    </div>
+    <div class="fb-field">
+      <label for="fbMessage">What's up?</label>
+      <textarea id="fbMessage" maxlength="4000" placeholder="What happened, and what did you expect instead?"></textarea>
+    </div>
+    <div class="fb-row">
+      <div class="fb-field">
+        <label for="fbName">Name (optional)</label>
+        <input id="fbName" type="text" maxlength="100" autocomplete="name">
+      </div>
+      <div class="fb-field">
+        <label for="fbContact">Email or handle (optional)</label>
+        <input id="fbContact" type="text" maxlength="200" autocomplete="email" placeholder="So we can follow up">
+      </div>
+    </div>
+    <div class="fb-status" id="fbStatus" role="status" aria-live="polite"></div>
+    <div class="danger-modal-actions">
+      <button type="button" class="btn-ghost" id="fbCancelBtn">Cancel</button>
+      <button type="submit" class="btn-ghost is-active" id="fbSendBtn">Send</button>
+    </div>
+  </form>
 
   <!-- ===== IMPORT OVERLAY ===== -->
   <div id="import-overlay">
@@ -5551,6 +5619,75 @@ dangerModalConfirmBtn.addEventListener('click', () => {
   renderLibrary();
   closeDangerModal();
   showToast('Library cleared');
+});
+
+/* ---- tester feedback form: POSTs to the worker's /tester-report (stored
+   in KV, no login, no GitHub). Shares #danger-scrim with the danger modal.
+   Typed text is only cleared after a successful send. ---- */
+const feedbackModal = $('feedback-modal'), feedbackBtn = $('feedbackBtn');
+const fbCategory = $('fbCategory'), fbMessage = $('fbMessage'), fbName = $('fbName'), fbContact = $('fbContact');
+const fbStatus = $('fbStatus'), fbSendBtn = $('fbSendBtn'), fbCancelBtn = $('fbCancelBtn');
+let fbSending = false;
+function setFbStatus(msg, kind){
+  fbStatus.textContent = msg || '';
+  fbStatus.className = 'fb-status' + (kind ? ' is-' + kind : '');
+}
+function openFeedbackModal(){
+  setFbStatus('');
+  dangerScrim.classList.add('is-open');
+  feedbackModal.classList.add('is-open');
+  setTimeout(() => fbMessage.focus(), 50);
+}
+function closeFeedbackModal(){
+  feedbackModal.classList.remove('is-open');
+  if (!dangerModal.classList.contains('is-open')) dangerScrim.classList.remove('is-open');
+}
+feedbackBtn.addEventListener('click', openFeedbackModal);
+fbCancelBtn.addEventListener('click', closeFeedbackModal);
+dangerScrim.addEventListener('click', closeFeedbackModal);
+feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFeedbackModal(); });
+feedbackModal.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (fbSending) return;
+  const message = fbMessage.value.trim();
+  if (!message){ setFbStatus('Add a few words first, then hit Send.', 'err'); fbMessage.focus(); return; }
+  let appVersion = '';
+  try { appVersion = ((await caches.keys()).find(k => k.startsWith('ebbless-shell-')) || ''); } catch(err){}
+  const t = currentTrack();
+  const payload = {
+    category: fbCategory.value, message,
+    name: fbName.value.trim(), contact: fbContact.value.trim(),
+    appVersion, userAgent: navigator.userAgent,
+    viewport: window.innerWidth + 'x' + window.innerHeight,
+    view: state.currentView === 'settings' ? (state.preSettingsView || 'settings') : (state.currentView || ''),
+    track: t ? { title: t.title || '', artist: t.artist || '' } : null,
+  };
+  fbSending = true;
+  fbSendBtn.disabled = true;
+  fbSendBtn.textContent = 'Sending…';
+  setFbStatus('');
+  try {
+    const res = await fetch(BACKEND + '/tester-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok){
+      let err = '';
+      try { err = (await res.json()).error || ''; } catch(x){}
+      throw new Error(res.status === 429 ? 'You\'ve sent a few already. Give it a few minutes and try again.' : (err || 'HTTP ' + res.status));
+    }
+    fbMessage.value = '';
+    setFbStatus('Sent. Thank you, this really helps.', 'ok');
+    setTimeout(() => { if (!fbMessage.value) closeFeedbackModal(); }, 1400);
+    showToast('Feedback sent, thank you');
+  } catch(err){
+    setFbStatus('Couldn\'t send that. ' + (err && err.message && !/fetch/i.test(err.message) ? err.message : 'Check your connection and try again.') + ' Your message is still here.', 'err');
+  } finally {
+    fbSending = false;
+    fbSendBtn.disabled = false;
+    fbSendBtn.textContent = 'Send';
+  }
 });
 
 replayTutorialBtn.addEventListener('click', () => {
