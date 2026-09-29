@@ -286,6 +286,8 @@ body.onb-active .paste-guide{display:none}
   font-size:33.34cqh;font-weight:800;line-height:1;color:#fff}
 .lib-card .art .title-overlay .new-dot{position:absolute;top:6%;right:6%;width:14%;height:14%;max-width:10px;max-height:10px}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
+.lib-card.is-refreshing .count,.currents-status{animation:onb-load-pulse 1.4s ease-in-out infinite}
+.currents-status{padding:10px 14px;font-size:12.5px;color:var(--faint)}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
   opacity:0;z-index:4;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
@@ -3056,6 +3058,8 @@ const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built f
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
 const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
+const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist from /spotifyart (0 = looked up, none found)
+const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
 const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
 const BACKGROUND_RESET_MS = 10 * 60 * 1000;             // stay alive in background up to this long, then reopen fresh
@@ -4386,7 +4390,7 @@ function renderLibrary(){
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
-    if (!isSystemPl){
+    if (!isSystemPl || id === SWELL_ID){
       const menuBtn = document.createElement('button');
       menuBtn.className = 'menu-btn'; menuBtn.setAttribute('aria-label','Playlist options'); menuBtn.setAttribute('aria-haspopup','true'); menuBtn.setAttribute('aria-expanded','false');
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -4431,6 +4435,10 @@ function renderLibrary(){
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
     count.textContent = pl.tracks.length + (pl.tracks.length === 1 ? ' track' : ' tracks') + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
+    if (id === SWELL_ID && currentsBusy){
+      count.textContent = currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...';
+      card.classList.add('is-refreshing');
+    }
     const info = document.createElement('div'); info.className = 'info';
     info.appendChild(name); info.appendChild(count);
 
@@ -4460,7 +4468,7 @@ function renderLibrary(){
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(openBtn); card.appendChild(rowActions);
     card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
-    if (!isSystemPl){
+    if (!isSystemPl || id === SWELL_ID){
       attachLongPress(card, () => {
         const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
@@ -4543,8 +4551,14 @@ function toggleLibraryPlaylistPanel(id){
     libplArtWrap.hidden = true;
   }
   libplBody.innerHTML = '';
+  if (id === SWELL_ID && currentsBusy){
+    const status = document.createElement('div');
+    status.className = 'currents-status';
+    status.textContent = currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...';
+    libplBody.appendChild(status);
+  }
   if (!pl.tracks.length){
-    libplBody.innerHTML = '<div class="empty-lib">No tracks found.</div>';
+    libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No tracks found.</div>');
   } else {
     pl.tracks.forEach((t, i) => {
       const row = document.createElement('div');
@@ -4606,6 +4620,7 @@ const CTX_ICON_LINK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.
 const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h6V4l-2.35 2.35z"/></svg>';
 const CTX_ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V2L7 7l5 5V8c3.31 0 6 2.69 6 6a6 6 0 01-6 6 6 6 0 01-6-6H4a8 8 0 008 8 8 8 0 008-8c0-4.42-3.58-8-8-8z"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
+const CTX_ICON_ADD_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/></svg>';
 const CTX_ICON_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08a2.9 2.9 0 00-1.96.77l-7.13-4.15a2.92 2.92 0 000-1.4l7.05-4.11a3 3 0 10-.9-1.72l-7.05 4.11a3 3 0 100 4.84l7.13 4.15a2.92 2.92 0 10.86-1.49z"/></svg>';
 
 // Reverses a resolved playlist's {type,id} back into the URL it was
@@ -4654,13 +4669,18 @@ function openLibCtxMenu(id, btn){
   if (!pl) return;
   const pinned = isPinned(id);
   const link = canonicalLinkForPlaylist(pl);
-  const items = [
+  // CuRRentSSsss is generated, not saved: its menu is just its two refresh
+  // actions (rename/art/delete don't apply to a system playlist).
+  const items = id === SWELL_ID ? [
+    { action: 'currents-more', label: currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Add more tracks', icon: CTX_ICON_ADD_MORE },
+    { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding fresh tracks...' : 'Reset with fresh picks', icon: CTX_ICON_REFRESH },
+  ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
-  if (link){
+  if (id !== SWELL_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
     items.push({ action: 'replacelink', label: 'Replace link', icon: CTX_ICON_REPLACE });
@@ -4672,8 +4692,10 @@ function openLibCtxMenu(id, btn){
   if (pl.type !== 'custom'){
     items.push({ action: 'relinkall', label: 'Refresh links', icon: CTX_ICON_REFRESH });
   }
-  items.push({ sep: true });
-  items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
+  if (id !== SWELL_ID){
+    items.push({ sep: true });
+    items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
+  }
 
   libCtxMenu.innerHTML = '';
   items.forEach(item => {
@@ -4889,6 +4911,7 @@ window.addEventListener('resize', () => { if (openTrackCtxMenu) closeTrackCtxMen
 window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMenu(); }, true);
 
 function handleLibCtxAction(action, id){
+  if (action === 'currents-more' || action === 'currents-reset'){ refreshCurrents(action === 'currents-more' ? 'more' : 'reset'); return; }
   const pl = getCachedPlaylist(id);
   if (!pl) return;
   if (action === 'rename') openRenamePlaylistFlow(id, pl);
@@ -6749,6 +6772,7 @@ async function resolveDiscoverMetadata(title, artist){
     const res = await fetch(BACKEND + '/spotifyart?' + params.toString());
     if (res.ok){
       const data = await res.json();
+      noteSpotifyartYear(title, artist, data);
       if (data.image || data.title){
         return { title: data.title || title, artist: data.artist || artist, art: data.image || null };
       }
@@ -6757,6 +6781,70 @@ async function resolveDiscoverMetadata(title, artist){
   const art = await fetchDiscoverArt(title, artist);
   return { title, artist, art };
 }
+/* ---------- release year (CuRRentSSsss' soft era preference) ----------
+   /spotifyart returns `year` (iTunes releaseDate) on workers deployed after
+   it was added. Years are cached per title|artist in localStorage so repeat
+   runs don't refetch; a worker response with no `year` key at all (older
+   deploy) turns lookups off for the session and caches nothing, so
+   Currents ranks exactly as it did before year existed. */
+const YEAR_CACHE_MAX = 3000;
+let yearLookupUnsupported = false;
+function yearNormTitle(t){ return String(t || '').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').replace(/[^a-z0-9]/g, ''); }
+// iTunes' single best hit is sometimes a different song by the same artist
+// ("Nights" -> "White Ferrari"); only trust its year when the titles agree.
+function yearTitleAgrees(asked, got){
+  const a = yearNormTitle(asked), b = yearNormTitle(got);
+  if (!a || !b) return false;
+  const n = Math.min(a.length, b.length, 8);
+  return a.slice(0, n) === b.slice(0, n);
+}
+function noteSpotifyartYear(title, artist, data){
+  if (!data || !('year' in data)){ yearLookupUnsupported = true; return; }
+  const year = data.year && yearTitleAgrees(title, data.title) ? data.year : 0;
+  const cache = lsGet(LS_YEAR_CACHE, {}) || {};
+  const keys = Object.keys(cache);
+  if (keys.length >= YEAR_CACHE_MAX) keys.slice(0, keys.length - YEAR_CACHE_MAX + 1).forEach(k => delete cache[k]);
+  cache[tagCacheKey({ title, artist })] = year;
+  lsSet(LS_YEAR_CACHE, cache);
+}
+// Resolves to a year number, or null when unknown/unsupported.
+async function fetchTrackYear(title, artist){
+  if (!title) return null;
+  const cached = (lsGet(LS_YEAR_CACHE, {}) || {})[tagCacheKey({ title, artist })];
+  if (cached !== undefined) return cached || null;
+  if (yearLookupUnsupported) return null;
+  try{
+    const res = await fetch(BACKEND + '/spotifyart?' + new URLSearchParams({ title, artist: artist || '' }));
+    if (!res.ok) return null;
+    const data = await res.json();
+    noteSpotifyartYear(title, artist, data);
+    return (data && 'year' in data && data.year && yearTitleAgrees(title, data.title)) ? data.year : null;
+  } catch(e){ return null; }
+}
+// Soft bonus/penalty for release-year closeness to the seed, applied to the
+// top of an already tag-scored pool. Same year: +YEAR_WEIGHT/2; ~7 years
+// apart: neutral; decades apart: down to -YEAR_WEIGHT/2. Unknown year on
+// either side: no change. For scale, the recent-artist penalty is 0.15 and
+// DISCOVER_SAMPLE_TEMP is 0.1, so a same-era candidate is roughly twice as
+// likely to be drawn as a tag-equal one from another era - a preference,
+// never a filter.
+const YEAR_WEIGHT = 0.15;
+const YEAR_TOP_K = 8;          // only look up years for the strongest tag matches
+const YEAR_SCALE = 10;         // years for closeness to fall off by ~63%
+async function applyYearPreference(ranked, seed){
+  const seedYear = await fetchTrackYear(seed.title, seed.artist);
+  if (!seedYear) return ranked;
+  const top = ranked.slice(0, YEAR_TOP_K);
+  const years = await Promise.all(top.map(x => fetchTrackYear(x.c.title, x.c.artist)));
+  top.forEach((x, i) => {
+    if (!years[i]) return;
+    const closeness = Math.exp(-Math.abs(years[i] - seedYear) / YEAR_SCALE);
+    x.score += YEAR_WEIGHT * (closeness - 0.5);
+    x.c.year = years[i];
+  });
+  return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+
 // Last resort when /similar and /ytmix both come up empty for a seed - other
 // uploads by that same artist, scraped straight from YouTube search.
 async function fetchArtistSearch(artist){
@@ -6943,8 +7031,14 @@ function libraryVideoIdSet(){
    already has. Returns resolved, playable track objects (same shape
    resolvePlaylist produces), each carrying `.tags` for later signal use.
    allowLong: whether tracks over 15 min may be picked at all (see
-   discoverLongTrackOk); false for early/first picks. */
-async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong){
+   discoverLongTrackOk); false for early/first picks.
+   opts.skipArtists (optional): Set of primaryArtistKey() values to pass
+   over entirely - CuRRentSSsss uses it to keep every pick a different
+   artist from its seed and from each other (see buildCurrentsPicks).
+   opts.preferYear (optional): nudge the ranking toward the seed's release
+   era (see applyYearPreference); a no-op when years aren't available. */
+async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong, opts){
+  const skipArtists = opts && opts.skipArtists;
   const seed = seedTracks[0];
   if (!seed) return [];
   const recentArtists = new Set(seedTracks.slice(0, 5).map(t => (t.artist || '').toLowerCase()));
@@ -6978,11 +7072,12 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   if (!pool.length) return [];
 
   const crowd = await fetchPoolAffinity(Array.from(seedTagVec.keys()));
-  const ranked = pool
+  let ranked = pool
     .filter(c => c.title && c.artist)
     .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists, crowd) }))
     .sort((a, b) => b.score - a.score)
     .map((x, rank) => Object.assign(x, { rank }));
+  if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
   // unaffected by where the draw happened to place a candidate.
@@ -6997,6 +7092,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
     const dupeKey = (c.title + '|' + c.artist).toLowerCase();
     if (seenTitles.has(dupeKey)) continue;
     seenTitles.add(dupeKey);
+    if (skipArtists && skipArtists.has(primaryArtistKey(c.artist))) continue;
     const tagNames = (c.tags || []).map(t => t.name);
     if (c.videoId){
       if (excludeVideoIds.has(c.videoId)) continue;
@@ -7204,66 +7300,236 @@ function swellHasUnseenDrop(){
   if (played && isSameLocalDay(played, Date.now())) return false;
   return true;
 }
-async function generateSwell(){
-  const likedPl = getCachedPlaylist(LIKED_ID);
-  const recentPls = getLibrary()
-    .filter(id => id !== LIKED_ID && id !== SWELL_ID && !id.startsWith('discover-ext:'))
-    .map(id => ({ id, ts: getLastPlayed(id) || 0 }))
-    .filter(x => x.ts)
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, 5)
-    .map(x => getCachedPlaylist(x.id))
-    .filter(Boolean);
+/* CuRRentSSsss recipe (GitHub #36/#121/#170/#192). Every pick is a track the
+   listener has neither saved nor played, found by the shared Discover engine
+   (fetchDiscoverCandidates), which ranks candidates mostly on Last.fm tag
+   overlap with the seed - genre and mood tags - rather than on the same
+   artist or album. One seed "slot" yields one track:
+     - 1 from the most recently played song,
+     - 3 from the Liked Songs playlist (three different liked seeds),
+     - 1 per saved playlist/album (capped at CURRENTS_MAX_PLAYLISTS, most
+       recently played first).
+   Artist diversity: a slot skips its own seed artists and every artist
+   already picked, falling back to "just not a repeat inside this batch"
+   when that leaves nothing. Release year is a soft preference on top of
+   that (applyYearPreference, via /spotifyart's iTunes year) and silently
+   drops out on a worker that doesn't return years yet.
+   "Add more" runs a smaller round of the same recipe and appends; "Reset"
+   (and the once-a-day refresh) rebuilds the whole list from scratch. */
+const CURRENTS_MAX_PLAYLISTS = 10;
+const CURRENTS_MIN_TRACKS = 8;       // top up from the same seeds when slots come back short
+const CURRENTS_CONCURRENCY = 3;
+let currentsBusy = null;             // null | 'reset' | 'more'
 
-  const seedPool = [];
-  if (likedPl) seedPool.push.apply(seedPool, likedPl.tracks.slice(-15));
-  recentPls.forEach(pl => seedPool.push.apply(seedPool, pl.tracks.slice(0, 5)));
-  const seeds = seedPool.filter(t => t && t.videoId).sort(() => Math.random() - 0.5).slice(0, 6);
-  if (!seeds.length) return;
-
-  const exclude = libraryVideoIdSet();
-  const collected = [];
-  const seen = new Set();
-  for (const seed of seeds){
-    if (collected.length >= 20) break;
-    const found = await fetchDiscoverCandidates([seed], exclude, 6);
-    found.forEach(t => {
-      if (t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); exclude.add(t.videoId); collected.push(t); }
-    });
+// "Kaytranada, H.E.R." / "X feat. Y" / "A & B" -> "kaytranada" / "x" / "a"
+function primaryArtistKey(artist){
+  return String(artist || '').split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim().toLowerCase();
+}
+function currentsShuffled(arr){ return shuffleTail(arr.slice(), 0); }
+function currentsPlayable(pl){ return pl ? pl.tracks.filter(t => t && t.videoId) : []; }
+function latestPlayedTrack(){
+  const hist = lsGet(LS_PLAY_HISTORY, []) || [];
+  if (hist[0] && hist[0].v) return { title: hist[0].t, artist: hist[0].a, videoId: hist[0].v };
+  const now = state.queuePos >= 0 ? trackAt(state.queuePos) : null;
+  if (now && now.videoId) return now;
+  const r = lsGet(LS_RESUME, null);
+  const pl = r && getCachedPlaylist(r.playlistId);
+  const t = pl && pl.tracks[r.trackIndex];
+  return t && t.videoId ? t : null;
+}
+// Up to n seeds from a track list, each by a different artist.
+function currentsDistinctSeeds(tracks, n){
+  const out = [], artists = new Set();
+  for (const t of currentsShuffled(tracks)){
+    const a = primaryArtistKey(t.artist);
+    if (artists.has(a)) continue;
+    artists.add(a); out.push(t);
+    if (out.length >= n) break;
   }
-  if (!collected.length){
+  return out;
+}
+// A playlist's seed leans on tracks the listener has actually played from
+// it; the other tracks ride along as context so Discover steers away from
+// that playlist's own artists (its recentArtists penalty).
+function currentsPlaylistSlot(pl){
+  const playable = currentsPlayable(pl);
+  if (!playable.length) return null;
+  const played = playable.filter(t => t.plays > 0);
+  const seed = currentsShuffled(played.length ? played : playable)[0];
+  const context = currentsShuffled(playable.filter(t => t !== seed)).slice(0, 4);
+  return { kind: 'playlist', seeds: [seed].concat(context) };
+}
+function currentsSlots(mode){
+  const more = mode === 'more';
+  const slots = [];
+  const latest = latestPlayedTrack();
+  if (latest) slots.push({ kind: 'latest', seeds: [latest] });
+
+  const likedRecent = currentsPlayable(getCachedPlaylist(LIKED_ID)).slice(-30);
+  const likedSlots = currentsDistinctSeeds(likedRecent, more ? 2 : 3)
+    .map(seed => ({ kind: 'liked', seeds: [seed].concat(currentsShuffled(likedRecent.filter(t => t !== seed)).slice(0, 4)) }));
+
+  let plIds = getLibrary()
+    .filter(id => id !== LIKED_ID && id !== SWELL_ID && !id.startsWith('discover-ext:'))
+    .map((id, order) => ({ id, order, ts: getLastPlayed(id) || 0 }))
+    .sort((a, b) => (b.ts - a.ts) || (a.order - b.order))
+    .map(x => x.id);
+  plIds = more ? currentsShuffled(plIds).slice(0, 4) : plIds.slice(0, CURRENTS_MAX_PLAYLISTS);
+  const plSlots = plIds.map(id => currentsPlaylistSlot(getCachedPlaylist(id))).filter(Boolean);
+
+  // Interleave liked and playlist picks so the list doesn't play in blocks.
+  for (let i = 0; i < Math.max(likedSlots.length, plSlots.length); i++){
+    if (likedSlots[i]) slots.push(likedSlots[i]);
+    if (plSlots[i]) slots.push(plSlots[i]);
+  }
+  return slots;
+}
+async function currentsRunPool(items, limit, fn){
+  const out = new Array(items.length);
+  let next = 0;
+  const lanes = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length){
+      const k = next++;
+      try { out[k] = await fn(items[k]); } catch(e){ out[k] = null; }
+    }
+  });
+  await Promise.all(lanes);
+  return out;
+}
+// ctx: { exclude:Set<videoId>, used:Set<artistKey> (this batch),
+//        soft:Set<artistKey> (already in CuRRentSSsss - avoided when possible) }
+function currentsAccept(t, ctx){
+  if (!t || !t.videoId || ctx.exclude.has(t.videoId)) return false;
+  const a = primaryArtistKey(t.artist);
+  if (ctx.used.has(a)) return false;  // a parallel slot got there first
+  ctx.exclude.add(t.videoId); ctx.used.add(a);
+  return true;
+}
+async function currentsFillSlot(slot, ctx, count){
+  const strict = new Set([...ctx.used, ...ctx.soft]);
+  slot.seeds.forEach(t => strict.add(primaryArtistKey(t.artist)));
+  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict, preferYear: true });
+  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used), preferYear: true });
+  return found.filter(t => currentsAccept(t, ctx));
+}
+async function buildCurrentsPicks(mode){
+  const exclude = libraryVideoIdSet();
+  (lsGet(LS_PLAY_HISTORY, []) || []).forEach(h => { if (h && h.v) exclude.add(h.v); });
+  const current = playlistById(SWELL_ID);
+  const soft = new Set();
+  if (current) current.tracks.forEach(t => { if (t.videoId) exclude.add(t.videoId); if (mode === 'more') soft.add(primaryArtistKey(t.artist)); });
+  const ctx = { exclude, used: new Set(), soft };
+
+  const slots = currentsSlots(mode);
+  if (!slots.length) return [];
+  const results = await currentsRunPool(slots, CURRENTS_CONCURRENCY, slot => currentsFillSlot(slot, ctx, 1));
+  const picks = [];
+  results.forEach(r => { if (r) picks.push.apply(picks, r); });
+
+  // Short on picks (few playlists, thin Liked Songs, niche seeds): take a
+  // couple more from the latest/liked seeds, still one artist each.
+  const target = mode === 'more' ? Math.min(CURRENTS_MIN_TRACKS, slots.length + 2) : CURRENTS_MIN_TRACKS;
+  for (const slot of slots){
+    if (picks.length >= target) break;
+    picks.push.apply(picks, await currentsFillSlot(slot, ctx, Math.min(2, target - picks.length)));
+  }
+
+  if (!picks.length){
     // /similar and /ytmix had nothing for any seed (common for niche or
     // unreleased-to-charts catalogs) - fall back to searching YouTube for
-    // other tracks by the same artists. Still excludes anything already in
-    // the library so Current never just echoes what's already been played.
-    // Only the first credited artist per seed: a multi-artist string like
-    // "DJ Tunez, Wizkid" won't literally appear in another upload's title
-    // or channel name, so searching on the whole string finds nothing.
-    const artists = Array.from(new Set(seeds.map(s => (s.artist || '').split(',')[0].trim()).filter(Boolean)));
+    // other tracks by the same artists, still skipping anything saved or
+    // played. Only the first credited artist per seed: a multi-artist
+    // string like "DJ Tunez, Wizkid" won't literally appear in another
+    // upload's title or channel name.
+    const artists = Array.from(new Set(slots.map(s => (s.seeds[0].artist || '').split(',')[0].trim()).filter(Boolean)));
     for (const artist of artists){
-      if (collected.length >= 20) break;
+      if (picks.length >= CURRENTS_MIN_TRACKS) break;
       const found = await fetchArtistSearch(artist);
-      for (const t of found){
-        if (t.videoId && !seen.has(t.videoId) && !exclude.has(t.videoId)){
-          seen.add(t.videoId); exclude.add(t.videoId);
-          // t.title/artist here are straight off a YouTube search result -
-          // resolve the displayed title/artist/art back through Spotify/
-          // Apple Music the same as the main /similar path above.
-          const meta = await resolveDiscoverMetadata(t.title, artist);
-          collected.push({ title: meta.title, artist: meta.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.channel || '', plays: 0, art: meta.art, duration: t.duration || 0, tags: [] });
-        }
+      for (const t of found.slice(0, 3)){
+        if (!t.videoId || ctx.exclude.has(t.videoId)) continue;
+        ctx.exclude.add(t.videoId);
+        // t.title/artist are straight off a YouTube search result - resolve
+        // the displayed title/artist/art through Spotify/Apple Music.
+        const meta = await resolveDiscoverMetadata(t.title, artist);
+        picks.push({ title: meta.title, artist: meta.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.channel || '', plays: 0, art: meta.art, duration: t.duration || 0, tags: [] });
       }
     }
   }
-  if (!collected.length) return;
-
-  const pl = getCachedPlaylist(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
-  pl.tracks = collected;
-  lsSet(LS_PL(SWELL_ID), pl);
-  lsSet(LS_SWELL_GENERATED, Date.now());
-  if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
-  renderLibrary();
+  return picks;
 }
+// Reset swaps CuRRentSSsss' track list, so queue entries pointing into the
+// old list must be rewritten: the song playing now (if it came from
+// CuRRentSSsss) stays as track 0 and keeps playing, user-queued entries
+// from elsewhere are kept, and when CuRRentSSsss is what's playing the
+// fresh tracks follow on.
+function remapQueueAfterCurrentsReset(keptNow, newCount){
+  if (state.queuePos < 0 || !state.queue.length) return;
+  const cur = state.queue[state.queuePos];
+  const curIsCurrents = cur && cur.plId === SWELL_ID;
+  const before = state.queue.slice(0, state.queuePos).filter(e => e.plId !== SWELL_ID);
+  const after = state.queue.slice(state.queuePos + 1).filter(e => e.plId !== SWELL_ID);
+  const now = curIsCurrents ? (keptNow ? [Object.assign({}, cur, { idx: 0 })] : []) : [cur];
+  let fresh = [];
+  if (state.playlist && state.playlist.id === SWELL_ID){
+    for (let i = keptNow ? 1 : 0; i < newCount; i++) fresh.push({ plId: SWELL_ID, idx: i });
+    if (state.shuffle) fresh = shuffleTail(fresh, 0);
+  }
+  state.queue = before.concat(now, after, fresh);
+  state.queuePos = Math.min(before.length, state.queue.length - 1);
+  renderQueuePanel();
+  persistResume();
+}
+// renderLibrary() always closes the tracklist panel; put back whichever
+// one was open so an update doesn't yank it out from under the listener.
+function rerenderLibraryKeepPanel(){
+  const openId = openLibraryPanelId;
+  renderLibrary();
+  if (openId && getCachedPlaylist(openId)) toggleLibraryPlaylistPanel(openId);
+}
+async function refreshCurrents(mode, opts){
+  const silent = !!(opts && opts.silent);
+  if (currentsBusy){ if (!silent) showToast('CuRRentSSsss is already updating...'); return; }
+  currentsBusy = mode;
+  if (!silent) rerenderLibraryKeepPanel();
+  if (!silent) showToast(mode === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...');
+  let changed = false;
+  try {
+    const picks = await buildCurrentsPicks(mode);
+    if (!picks.length){
+      if (!silent) showToast("Couldn't find new tracks right now. Try again in a bit.");
+      return;
+    }
+    const pl = playlistById(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
+    changed = true;
+    if (mode === 'more'){
+      const have = new Set(pl.tracks.map(t => t.videoId).filter(Boolean));
+      const add = picks.filter(t => !have.has(t.videoId));
+      const start = pl.tracks.length;
+      pl.tracks = pl.tracks.concat(add);
+      lsSet(LS_PL(SWELL_ID), pl);
+      if (state.playlist && state.playlist.id === SWELL_ID){
+        state.playlist = pl;
+        if (state.queuePos >= 0) add.forEach((t, i) => state.queue.push({ plId: SWELL_ID, idx: start + i }));
+        renderQueuePanel();
+      }
+      if (!silent) showToast(add.length ? 'Added ' + add.length + (add.length === 1 ? ' track' : ' tracks') : 'No new tracks this time');
+    } else {
+      const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+      const nowTrack = cur && cur.plId === SWELL_ID ? trackAt(state.queuePos) : null;
+      const tracks = nowTrack ? [nowTrack].concat(picks.filter(t => t.videoId !== nowTrack.videoId)) : picks;
+      pl.tracks = tracks;
+      lsSet(LS_PL(SWELL_ID), pl);
+      lsSet(LS_SWELL_GENERATED, Date.now());
+      if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
+      remapQueueAfterCurrentsReset(!!nowTrack, tracks.length);
+      if (!silent) showToast('CuRRentSSsss refreshed: ' + picks.length + ' new tracks');
+    }
+  } finally {
+    currentsBusy = null;
+    if (changed || !silent) rerenderLibraryKeepPanel();
+  }
+}
+function generateSwell(){ return refreshCurrents('reset', { silent: true }); }
 function refreshSwellIfStale(){
   const last = lsGet(LS_SWELL_GENERATED, 0);
   if (last && isSameLocalDay(last, Date.now())) return;
@@ -9066,6 +9332,17 @@ function bumpPlayCount(entry){
   if (!t) return;
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
+  recordPlayHistory(t);
+}
+// Newest-first rolling log of what actually played, whatever playlist (or
+// Discover overflow) it came from. CuRRentSSsss reads it for its "based on
+// the latest song" seed and to never serve something already heard.
+const PLAY_HISTORY_MAX = 400;
+function recordPlayHistory(t){
+  if (!t || !t.videoId) return;
+  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.v !== t.videoId);
+  hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
+  lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
 }
 
 function reflectCurrentTrackUI(pos, opts){

@@ -1041,6 +1041,13 @@ async function handleArt(url, ctx) {
 // Spotify/Apple Music's own metadata, not YouTube's raw upload title. Every
 // other caller only ever read `.image` off the old string return, so adding
 // title/artist here is additive and doesn't change their behavior.
+//
+// Also returns `year` (from iTunes' releaseDate, or null) - CuRRentSSsss
+// uses it as a soft "same era as the seed" preference. Additive again; the
+// cache key below carries its own version segment (SPOTIFYART_CACHE_VERSION)
+// so hits cached before `year` existed aren't served without it, without
+// having to bump ART_CACHE_VERSION and cold-start every other art cache.
+const SPOTIFYART_CACHE_VERSION = 'y1';
 async function searchItunesTrackArt(title, artist) {
   try {
     const term = artist ? (artist + ' ' + title) : title;
@@ -1058,6 +1065,7 @@ async function searchItunesTrackArt(title, artist) {
       image: artwork ? artwork.replace('100x100', '1200x1200') : null,
       title: track.trackName || null,
       artist: track.artistName || null,
+      year: parseInt(String(track.releaseDate || '').slice(0, 4), 10) || null,
     };
   } catch (e) { return null; }
 }
@@ -1067,14 +1075,14 @@ async function handleSpotifyArt(url, env, ctx) {
   if (!title) return json({ error: 'missing title' }, 400);
 
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/spotifyart/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/spotifyart-' + SPOTIFYART_CACHE_VERSION + '/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
   const match = await searchItunesTrackArt(title, artist);
   const image = match && match.image;
 
-  const payload = { image: image || null, title: (match && match.title) || null, artist: (match && match.artist) || null };
+  const payload = { image: image || null, title: (match && match.title) || null, artist: (match && match.artist) || null, year: (match && match.year) || null };
   const response = json(payload);
   // Same miss-vs-hit caching split as /art: only cache real hits for the
   // long window so a transient miss doesn't lock a track out of art once
