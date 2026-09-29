@@ -6092,7 +6092,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #156.
 
 ### relink-soundcloud-suggestions: "Refresh link" should suggest SoundCloud for SoundCloud tracks
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The per-track refresh-link menu only offers YouTube
   candidates. For SoundCloud-sourced tracks it should offer SoundCloud
@@ -6100,6 +6100,16 @@ Add entries in this shape:
 - **Touches:** `track-relink-menu`, `#relinkCandidates`.
 - **Branch:** agent/relink-soundcloud-suggestions
 - **Notes:** Synced from Geethub issue #140.
+  Fix (`3806876`): **needs a worker deploy** (`cd worker && npx wrangler
+  deploy`) - new `GET /sctracksearch?q=&limit=` (SoundCloud track search,
+  same client_id/401-retry as `/playlistsearch`, 6h cache). App: for
+  tracks with an `sc:` videoId or in a SoundCloud playlist, "Refresh link"
+  queries SoundCloud + YouTube in parallel, SoundCloud first; picking one
+  sets `videoId: 'sc:<id>'` (native playback) and skips the shared match
+  cache. If the endpoint is missing/down it silently falls back to
+  YouTube-only. Tested with mocked responses; real SoundCloud search
+  response shape and post-relink audio untested. Follow-up idea: the
+  now-playing flag button still doesn't open this menu for SC tracks.
 
 ### paste-search-result-counts: Paste-bar search results should show track count and duration
 - **Status:** draft
