@@ -320,6 +320,18 @@ body.onb-active .paste-guide{display:none}
 .lib-grid.is-list .lib-card .row-actions button:hover{background:var(--panel-3);color:var(--text)}
 .lib-grid.is-list .lib-card .row-actions button svg{width:14px;height:14px}
 .lib-grid.is-list .lib-card .row-actions .row-pin.is-active{color:var(--accent,#1db954)}
+/* Desktop (real hover): while the row buttons are hidden, lift them out of
+   flow so the title runs to the pane edge; they rejoin the flow (shortening
+   the title) on hover/keyboard focus, or while the 3-dot menu is open.
+   (A pinned row's lit pin is still hidden at rest by the container's
+   opacity:0, so it doesn't hold the space; if that ever changes, add
+   .row-pin.is-active to the :has() below.) Touch keeps the always-reserved
+   layout above (Geethub #173). */
+@media (hover:hover) and (pointer:fine){
+  .lib-grid.is-list .lib-card:focus-within .row-actions{opacity:1}
+  .lib-grid.is-list .lib-card:not(:hover):not(:focus-within):not(:has(.row-menu.is-active)) .row-actions{
+    position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none}
+}
 
 /* ---------- playlist context menu (the 3-dot menu on each library card) ---------- */
 .lib-ctx-menu{position:fixed;z-index:60;min-width:200px;padding:6px;border-radius:14px;
