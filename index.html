@@ -1632,12 +1632,22 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
     width 550ms var(--ease-out),height 550ms var(--ease-out)}
 #onbSpotlight.is-visible{opacity:1}
 
-#onbSkip{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
-  z-index:10003;color:var(--faint-2);font-size:12px;letter-spacing:.03em;padding:10px 14px;opacity:.5;
+/* Skip sits bottom-left now that #onbNext owns the bottom-right corner, and
+   above #onbCapture (10005) - a tap on the capture layer advances a chapter
+   rather than ending the tutorial, so Skip has to be reachable on its own */
+#onbSkip{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));
+  z-index:10006;color:var(--faint-2);font-size:12px;letter-spacing:.03em;padding:10px 14px;opacity:.5;
   transition:opacity var(--dur-ui) var(--ease-out);background:none;border:0}
 #onbSkip:hover,#onbSkip:focus-visible{opacity:1}
 
 #onbCapture{position:fixed;inset:0;z-index:10005;background:transparent;border:0;cursor:pointer;padding:0}
+/* the per-chapter "Next" prompt (see runIntro()'s goToChapter()) - reuses
+   the splash's primary pill (.splash-choice-btn-primary) so the tutorial's
+   one real call to action looks like the button that started it. Hidden
+   until a chapter is up and again for the outro, which ends on its own */
+#onbNext{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
+  z-index:10006;opacity:0;pointer-events:none;transition:opacity 400ms var(--ease-out),background var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+#onbNext.is-visible{opacity:1;pointer-events:auto}
 
 #onbDiscovery{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;
   opacity:0;filter:blur(14px);transform:scale(.9);pointer-events:none;
@@ -1801,7 +1811,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 <div id="onbCaption" aria-live="polite"></div>
 <div id="onbCaptionMain" aria-live="polite"></div>
 <button id="onbSkip" type="button">Skip</button>
-<button id="onbCapture" type="button" aria-label="Skip intro"></button>
+<button id="onbCapture" type="button" aria-label="Next"></button>
+<button id="onbNext" type="button" class="splash-choice-btn splash-choice-btn-primary">Next</button>
 <audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
 
 <div id="splash">
@@ -10913,6 +10924,9 @@ function startApp(){
    to a fullscreen layer, see CSS above) and the real cymatics/art-style
    functions instead of a second, fake copy of the app. Runs only on the
    visitor's first load; startApp() (and the real splash) always follows.
+   The beats are grouped into chapters (see CHAPTERS in runIntro()): each
+   loops in place until the visitor taps Next, with its own clip of the
+   intro theme starting only when that chapter does.
    ========================================================================= */
 const ONB_KEY = 'ebbless_onboarding_complete';
 // sets a viewport-aware max-width on an #onbCaption/#onbCaptionMain span and
@@ -11023,7 +11037,7 @@ function runIntro(preview){
   // its way out - a replay reuses these same elements rather than
   // recreating them, so any leftover state from the previous run would
   // otherwise make it play out invisibly
-  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
+  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbNext','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
     if (el) { el.style.display = ''; el.style.opacity = ''; }
   });
@@ -11052,8 +11066,12 @@ function runIntro(preview){
         captionMainEl = $('onbCaptionMain'),
         spotlightEl = $('onbSpotlight'),
         skipEl = $('onbSkip'), captureEl = $('onbCapture'), discoveryEl = $('onbDiscovery'),
-        musicEl = $('onbMusic');
+        musicEl = $('onbMusic'), nextEl = $('onbNext');
   const MUSIC_PEAK = 0.55;
+  // the slider's real min, restored after animateCrossfadeDurDemo()'s sweep
+  // lowers it - hoisted here so a chapter cut short mid-sweep (Next, Skip)
+  // still gets it put back, by resetChapterState()/finish()
+  const cfRealMin = crossfadeDurSlider.getAttribute('min') === '0' ? '1000' : crossfadeDurSlider.getAttribute('min');
   let musicFadeTimer = null;
   // setTimeout-driven, not requestAnimationFrame - rAF is suspended in a
   // backgrounded/hidden tab, which would leave the fade (and the volume)
@@ -11114,14 +11132,17 @@ function runIntro(preview){
   function finish(){
     if (done) return;
     done = true;
+    clearChapterTimers();
     // a forced ?intro replay is just a preview - don't let it write the
     // real completion flag and affect whether a genuine first visit sees it
     if (!preview){ try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){} }
     // fade the track out over the same 700ms the logo/chrome take to leave,
     // so the music dies alongside the EBBLESS mark rather than cutting off
     fadeMusic(0, prefersReduced ? 30 : 700);
-    // let the echo ring on past the dry cutoff, into the real splash
-    if (!prefersReduced) echoOut();
+    // let the echo ring on past the dry cutoff, into the real splash - unless
+    // a chapter's clip already ran out and paused it, where the echo would
+    // just be a stray blip of music out of silence
+    if (!prefersReduced && musicEl && !musicEl.paused) echoOut();
     document.removeEventListener('keydown', onKey);
     vizStop();
     stopDemoLyricsScroll();
@@ -11142,6 +11163,7 @@ function runIntro(preview){
     if (playerLikeBtn) playerLikeBtn.classList.remove('is-liked');
     if (shuffleBtn) shuffleBtn.classList.remove('is-active');
     if (repeatBtn) repeatBtn.classList.remove('is-active');
+    crossfadeDurSlider.min = cfRealMin;
     renderCrossfadeUI();
     document.querySelectorAll('.onb-tap').forEach(el => el.classList.remove('onb-tap'));
     document.querySelectorAll('.onb-tap-ring').forEach(el => el.classList.remove('onb-tap-ring'));
@@ -11163,6 +11185,8 @@ function runIntro(preview){
     seekFill.style.width = '0%';
     timeCur.textContent = '0:00';
     timeDur.textContent = '0:00';
+    if (repeatOneBadge) repeatOneBadge.hidden = true;
+    if (nextEl) nextEl.classList.remove('is-visible');
     [backdrop, captionEl, captionMainEl, spotlightEl, skipEl, captureEl, discoveryEl].forEach(el => { if (el) el.style.opacity = '0'; });
     if (markEl){ if (prefersReduced) markEl.style.opacity = '0'; else markEl.classList.add('is-outro-blink'); }
     setTimeout(() => {
@@ -11174,7 +11198,21 @@ function runIntro(preview){
   }
   function onKey(e){ if (e.key === 'Escape') finish(); }
   document.addEventListener('keydown', onKey);
-  captureEl.addEventListener('click', finish);
+  // a tap anywhere (the capture layer) and the Next button both advance to
+  // the next chapter - Skip and Escape stay the ways out of the whole thing.
+  // The outro has no Next of its own, so a tap there just ends it early,
+  // the same thing a tap anywhere always did before chapters existed.
+  // Listeners are replaced, not added, since a replay reuses these same
+  // elements and would otherwise fire every previous run's handler too.
+  function onNext(e){
+    if (e) e.stopPropagation();
+    // chapter is -1 until waitForMusicReady() lets chapter 1 start
+    if (done || chapter < 0) return;
+    if (chapter >= CHAPTERS.length - 1) { finish(); return; }
+    goToChapter(chapter + 1);
+  }
+  captureEl.onclick = onNext;
+  if (nextEl) nextEl.onclick = onNext;
   skipEl.addEventListener('click', (e) => { e.stopPropagation(); finish(); });
   // hard-stop for the *next* runIntro() call to reach for, if this instance
   // is still mid-sequence when it does - just halts progression and frees
@@ -11182,13 +11220,30 @@ function runIntro(preview){
   // is about to overwrite all the same DOM anyway)
   cancelPrevIntro = function(){
     done = true;
+    clearChapterTimers();
     if (musicFadeTimer) clearTimeout(musicFadeTimer);
     document.removeEventListener('keydown', onKey);
   };
 
+  // every timer a chapter starts goes through later() (wait() included), so
+  // advancing past a chapter - or Skip - can cancel all of its pending
+  // timers in one clearChapterTimers() call. A wait() whose timer gets
+  // cleared never resolves, so the outgoing chapter's async function just
+  // parks where it was instead of carrying on over the new chapter's DOM,
+  // no per-beat "which chapter am I" checks needed.
+  const chapterTimers = new Set();
+  function later(fn, ms){
+    const id = setTimeout(() => { chapterTimers.delete(id); fn(); }, ms);
+    chapterTimers.add(id);
+    return id;
+  }
+  function clearChapterTimers(){
+    chapterTimers.forEach(id => clearTimeout(id));
+    chapterTimers.clear();
+  }
   function wait(ms){
     if (done) return Promise.resolve();
-    return new Promise(res => setTimeout(res, prefersReduced ? Math.min(ms, 220) : ms));
+    return new Promise(res => later(res, prefersReduced ? Math.min(ms, 220) : ms));
   }
   // sequence()'s beats are scored to #onbMusic's real playback (see the
   // timestamp comment above sequence()) - if the track hasn't buffered
@@ -11271,7 +11326,7 @@ function runIntro(preview){
   // so a position sampled at the very first frame can be slightly off
   function correctCaptionPos(el, forceAbove){
     if (!el) return;
-    setTimeout(() => { if (!done) placeCaptionNear(el, forceAbove); }, 400);
+    later(() => { if (!done) placeCaptionNear(el, forceAbove); }, 400);
   }
   function setCaption(text, el, forceAbove){
     if (done) return;
@@ -11317,7 +11372,7 @@ function runIntro(preview){
     fitOnbCaptionLine(span);
     placeMainCaptionNear(el);
     captionMainEl.classList.add('is-visible');
-    setTimeout(() => { if (!done) placeMainCaptionNear(el); }, 400);
+    later(() => { if (!done) placeMainCaptionNear(el); }, 400);
   }
   function clearMainCaption(){
     captionMainEl.classList.remove('is-visible');
@@ -11436,7 +11491,6 @@ function runIntro(preview){
   // tutorial ends. Temporarily lowers the slider's real min (1000ms) to 0 so
   // the sweep can visit 0s at all, then restores it before returning.
   async function animateCrossfadeDurDemo(){
-    const realMin = crossfadeDurSlider.min;
     crossfadeDurSlider.min = '0';
     const sweepTo = async (fromMs, toMs, steps, stepMs) => {
       for (let i = 1; i <= steps; i++){
@@ -11452,7 +11506,7 @@ function runIntro(preview){
       await wait(200);
       await sweepTo(10000, 5000, 8, 45);
     }
-    crossfadeDurSlider.min = realMin;
+    crossfadeDurSlider.min = cfRealMin;
   }
   // a real .lib-card, built with the same markup renderLibrary() uses, so
   // the "your playlist just loaded" beat shows the actual grid UI rather
@@ -11508,7 +11562,7 @@ function runIntro(preview){
     libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
     // wait out the slide-shut transition before re-hiding it, or it'd just
     // vanish instead of sliding away like the queue panel does
-    setTimeout(() => { if (!done) document.body.classList.remove('onb-show-libpl'); }, 500);
+    later(() => { if (!done) document.body.classList.remove('onb-show-libpl'); }, 500);
   }
   // a beat that's only a caption: show it, hold, clear it, breathe
   async function beat(text, holdMs, tailMs, el){
@@ -11531,24 +11585,25 @@ function runIntro(preview){
   // scored to the track rather than arbitrary:
   // 900 4400 7600 11200 12900 14700 18300 21900 25300 27200 28800 32300
   // 35800 39400 41100 42800
-  async function sequence(){
-    // score the sequence with the intro theme, fading in under the opening
-    // beat; finish() fades it back out again over the same 700ms the chrome
-    // takes to leave, so it never needs to play to the end
-    if (musicEl && !prefersReduced){
-      musicEl.volume = 0;
-      musicEl.play().catch(() => {});
-      fadeMusic(MUSIC_PEAK, 1400);
-    }
+  // The beats are grouped into chapters (see CHAPTERS below): each one's
+  // clip of the track is cut at those same marks, so a chapter still lands
+  // on its own part of the score however long the visitor lingers on the
+  // one before it.
 
+  // chapter 1: getting music in - paste, Load, the library [0->12900].
+  // `pass` is 0 the first time through and counts up as it loops in place
+  async function chapterLoad(pass){
     // 0. the mark alone, breathing - a longer beat to arrive on and actually
     // register, then a quick blur-out (rather than the slower plain fade
-    // used elsewhere) so it reads as "arrived, then whisked away" [->1800]
-    await wait(1800);
-    if (done) return;
-    markEl.classList.add('is-leaving');
-    await wait(380);
-    if (done) return;
+    // used elsewhere) so it reads as "arrived, then whisked away" [->1800].
+    // First pass only - a loop comes back around to the input box, not the logo
+    if (pass === 0){
+      await wait(1800);
+      if (done) return;
+      markEl.classList.add('is-leaving');
+      await wait(380);
+      if (done) return;
+    }
 
     // 1. the mark becomes the input [1800->4400]
     markEl.classList.remove('is-idle');
@@ -11624,13 +11679,15 @@ function runIntro(preview){
     // panel's own 500ms slide-open transition (--dur-surface) finishes, so
     // the spotlight can still be chasing a moving target - one more
     // re-measure once the slide has actually settled fixes the alignment
-    setTimeout(() => { if (!done) placeCaptionNear([libplPanel, bottomNav.querySelector('[data-view="library"]')]); }, 550);
+    later(() => { if (!done) placeCaptionNear([libplPanel, bottomNav.querySelector('[data-view="library"]')]); }, 550);
     await wait(1400);
     closeLoadedLibraryPanel();
     clearCaption();
     await wait(500);
-    if (done) return;
+  }
 
+  // chapter 2: the player and everything it can show [12900->27200]
+  async function chapterListen(){
     // 5. the library card becomes the player [12900->14700]
     setView('player');
     setStage('player');
@@ -11712,8 +11769,16 @@ function runIntro(preview){
     // touch has no equivalent shortcut, so it's skipped there
     if (!isTouchDevice){
       await beat('⛶ to full screen', 1100, 500, fsBtn);
-      if (done) return;
     }
+  }
+
+  // chapter 3: the transport row [27200->35800]
+  async function chapterControl(){
+    // the player is already up coming out of chapter 2, but a loop pass (or
+    // a Next tapped mid-chapter 2) needs it put back in a known state first
+    setView('player');
+    setStage('player');
+    seedDemoTrack();
 
     // 9. everything that lives in the transport row, one chapter: like,
     // shuffle, repeat land under a single caption (no clear/reset between
@@ -11766,9 +11831,12 @@ function runIntro(preview){
     if (repeatOneBadge) repeatOneBadge.hidden = true;
     clearCaption();
     await wait(900);
-    if (done) return;
+  }
 
+  // chapter 4: discovery and Settings [35800->42800]
+  async function chapterDiscover(){
     // 10. the field becomes discovery [35800->39400]
+    setView('player');
     setStage('discovery');
     setCaption('New music for you', discoveryEl.querySelector('.lib-card'));
     await wait(1400);
@@ -11822,7 +11890,11 @@ function runIntro(preview){
     await wait(800);
     clearCaption();
     await wait(400);
-    if (done) return;
+  }
+
+  // chapter 5: the outro - plays once and ends the tutorial exactly as the
+  // unchaptered sequence always did [42800->end]
+  async function chapterOutro(){
     renderCrossfadeUI();
     setView('player');
 
@@ -11906,6 +11978,98 @@ function runIntro(preview){
     if (done) return;
     finish();
   }
+
+  // clip = [start, end] ms into the intro theme; end null plays on until
+  // finish() fades it. once = no loop and no Next (it ends the tutorial)
+  const CHAPTERS = [
+    { run: chapterLoad, clip: [0, 12900] },
+    { run: chapterListen, clip: [12900, 27200] },
+    { run: chapterControl, clip: [27200, 35800] },
+    { run: chapterDiscover, clip: [35800, 42800] },
+    { run: chapterOutro, clip: [42800, null], once: true }
+  ];
+  let chapter = -1;
+  // plays one chapter's slice of the track: seek, fade in, then fade out
+  // and pause at the slice's end so a chapter looping in place past its
+  // clip goes quiet instead of bleeding into the next chapter's music.
+  // Both end timers go through later(), so Next cancels them along with
+  // the rest of the chapter
+  function playClip(clip){
+    if (!musicEl || prefersReduced) return;
+    const [fromMs, toMs] = clip;
+    try{ musicEl.currentTime = fromMs / 1000; }catch(e){}
+    musicEl.volume = 0;
+    musicEl.play().catch(() => {});
+    fadeMusic(MUSIC_PEAK, fromMs === 0 ? 1400 : 500);
+    if (toMs != null){
+      const fadeMs = 900;
+      later(() => fadeMusic(0, fadeMs), Math.max(0, toMs - fromMs - fadeMs));
+      later(() => { if (!done) musicEl.pause(); }, toMs - fromMs);
+    }
+  }
+  // puts back everything a chapter pass can leave half-done (a Next tapped
+  // mid-beat parks the outgoing chapter wherever it was, see wait()), so
+  // every pass - and every chapter - starts from the same clean slate.
+  // Deliberately leaves view/stage alone: each chapter sets its own
+  function resetChapterState(){
+    captionEl.classList.remove('is-visible');
+    if (spotlightEl) spotlightEl.classList.remove('is-visible');
+    clearMainCaption();
+    if (urlInput){ urlInput.value = ''; urlInput.classList.remove('onb-pasted'); }
+    if (loadBtn) loadBtn.classList.remove('onb-zoom', 'onb-press', 'onb-loading');
+    libraryGrid.innerHTML = '';
+    libraryListWrap.classList.add('hidden');
+    libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
+    document.body.classList.remove('onb-show-libpl');
+    closeArtStyleMenu();
+    artworkWrap.dataset.artStyle = 'default';
+    markArtStyleOptActive('default');
+    cassetteSetPlaying(false);
+    artworkWrap.classList.remove('is-playing');
+    showVisual('art');
+    stopDemoLyricsScroll();
+    if (playerLikeBtn) playerLikeBtn.classList.remove('is-liked');
+    if (shuffleBtn) shuffleBtn.classList.remove('is-active');
+    if (repeatBtn) repeatBtn.classList.remove('is-active');
+    if (repeatOneBadge) repeatOneBadge.hidden = true;
+    crossfadeDurSlider.min = cfRealMin;
+    renderCrossfadeUI();
+    ['onb-tap', 'onb-tap-ring', 'onb-sim-hover', 'onb-sim-press'].forEach(c =>
+      document.querySelectorAll('.' + c).forEach(el => el.classList.remove(c)));
+  }
+  async function runChapter(i){
+    const ch = CHAPTERS[i];
+    if (nextEl){
+      nextEl.textContent = i === CHAPTERS.length - 2 ? 'Done' : 'Next';
+      nextEl.classList.toggle('is-visible', !ch.once);
+    }
+    playClip(ch.clip);
+    for (let pass = 0; !done; pass++){
+      resetChapterState();
+      await ch.run(pass);
+      if (done || ch.once) return;
+      // a breath between loop passes, captions cleared, before it restarts
+      clearCaption();
+      await wait(1200);
+    }
+  }
+  // Next: cancel whatever the current chapter still has pending (its beats
+  // and its clip's end fade), duck its music out, then start the next one
+  function goToChapter(i){
+    clearChapterTimers();
+    chapter = i;
+    if (musicEl && !prefersReduced) fadeMusic(0, 250);
+    // Next can land before chapter 1's opening mark has left
+    markEl.classList.remove('is-idle', 'is-leaving');
+    if (nextEl) nextEl.classList.remove('is-visible');
+    clearCaption();
+    clearMainCaption();
+    later(() => { if (!done) runChapter(i); }, 300);
+  }
+  function sequence(){
+    chapter = 0;
+    runChapter(0);
+  }
   waitForMusicReady().then(() => { if (!done) sequence(); });
 }
 
@@ -11959,7 +12123,7 @@ function stopDemoLyricsScroll(){
 // app on a blurred/hidden screen with no stage class ever set to reveal it
 // again (body.onb-active hides the real UI until setStage() runs).
 function discardIntroChrome(){
-  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbDiscovery','onbMusic'].forEach(id => {
+  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbNext','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
     if (el) el.style.display = 'none';
   });
