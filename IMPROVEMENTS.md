@@ -5444,7 +5444,7 @@ Add entries in this shape:
   to just the one spot that needed it.
 
 ### cassette-fullscreen-animation: Cassette fullscreen should stack and orbit background cassettes
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On the cassette art style's fullscreen view: on mobile,
   additional cassettes should stack behind/above the main cassette one
@@ -5461,6 +5461,81 @@ Add entries in this shape:
 - **Branch:** agent/cassette-fullscreen-animation
 - **Notes:** Synced from Geethub issue #125. A substantial new animation
   build, not a bug fix - scope carefully before dispatching a lane.
+
+  Built on `agent/cassette-fullscreen-animation` as one self-contained
+  block in `index.html` (`csStackSync` and friends, right after
+  `closeFlow()`), plus a hidden `#csGhostSym` SVG symbol next to
+  `#artCassette` and a few `.cs-stack*`/`.cs-ghost` CSS rules after the
+  flow-mode cassette rules. The copies are lightweight `<use>` clones of
+  that one silhouette (no live reels), housing tinted with
+  `color-mix(var(--player-accent) 60% -> 26%, near-black)` so each copy
+  toward the back is darker. They live inside the fullscreen host
+  (`#flowArtWrap` in flow mode, or the split-desktop desktop-fs
+  `.artwork-wrap`) just before the real cassette, so all fullscreen
+  chrome and controls still paint over them, and the mobile chrome slide
+  carries them along. A dark plate under the real (translucent) shell
+  fades in with the copies so they never tint the main cassette and so
+  copies that slide behind it are truly out of sight. Path choice matches
+  `fsBtn`: `body.split-desktop` (>=1150px) gets the desktop sequence,
+  narrower gets mobile. Mobile: copies rise one every 0.7s (1.3s ease-out
+  each) until the last one's top meets the top of the screen (3-10 copies,
+  sized from the measured gap), hold 2.4s, collapse back into the main
+  cassette over 1.6s, rest 9s, loop (~16-21s cycle). Desktop: the same
+  stack (min 6 copies), then gather behind the main cassette, spread over
+  2.6s into an ellipse sized to the viewport (copies at 42% scale, rotated
+  bottom-toward-center, a little fainter toward the bottom under the
+  transport), turn at 10deg/s with a 2s ease-in, and as each copy reaches
+  the top it lifts ~10% of the cassette height and slides behind the main
+  one (0.8s + 1.8s); rest 9s after the last, loop (~57s at 1280x800). One
+  rAF, transform/opacity only. It stops and removes everything on flow
+  close, desktop-fs close, style change away from cassette, visual mode
+  change away from art, settings view, tab hidden, and restarts cleanly on
+  resize; prefers-reduced-motion shows nothing extra.
+
+  Verified against this worktree served with `python3 -m http.server`,
+  playlist loaded, Cassette Tape style. The preview pane reported
+  `document.visibilityState === 'hidden'` for the real page, so (as
+  designed) nothing ran there; the animation itself was checked in a
+  throwaway copy that forced visibility to 'visible' and exposed the
+  controller (deleted, not committed). At 375x812 flow mode: 10 copies,
+  last top edge at ~0px, rise/hold/collapse/rest observed live with rAF
+  running. At 1280x800 desktop-fs: 6 copies, stack reached the top, ring
+  formed with bottoms toward center, copies exited one by one at the top
+  and the cycle looped. Teardown checked: closing flow and desktop-fs,
+  switching to Record/Default (in and out of flow, record still moves into
+  `#flowArtWrap` as before), and switching to lyrics all leave zero
+  `.cs-stack`/`.cs-ghost`/`.cs-stack-host` nodes and no rAF; the cassette
+  returns to `#artworkWrap`. No console errors from `index.html`. Not
+  verified: real iOS/Android devices, reduced-motion mode, and
+  `flowPartsStart` (not present on this branch's base).
+
+  Owner feedback round (same branch): (1) Pause behavior - the stack now
+  follows the cassette's own play state (`cassetteSetPlaying` calls
+  `csStackSetPlaying`, no second source of truth). On pause every copy
+  retreats behind the main cassette in 0.5s (ease-in-out, from wherever
+  it is: stack, ring or mid-exit), then the loop goes idle with zero
+  opacity and no rAF. Opening fullscreen while paused starts idle. On
+  resume the cycle restarts from its beginning after a 0.8s rest. A pause
+  gets a 150ms grace normally and 2.5s within 5s of a track start
+  (`lastTrackStartTs`), so a track change's momentary not-playing report
+  doesn't trigger the retreat. (2) Graduated shades by stack order: the
+  first copy is the lightest, most opaque tint (74% album tone over a
+  mid-grey, opacity 0.96), each later copy darker and more see-through,
+  down to the last at 24% over near-black and opacity 0.30. The desktop
+  ring uses the same per-copy values. Owner confirmed the ring passing
+  under the transport and the simple shells are fine. The dark plate
+  under the main shell now stays solid while any copy is visible, so
+  faint copies sliding behind it still vanish.
+
+  Verified in a throwaway visibility-forced copy (deleted) in its own
+  browser tab, driving frames by hand: at 375x812 the 10-copy stack
+  showed the light/opaque to dark/transparent gradient with the last copy
+  faintly visible (computed colors checked); a pause mid-stack retreated
+  to all-zero opacity, plate 0, loop idle at 0.5s; a play/pause blip
+  inside the grace window did not retreat or restart; resume reset
+  the cycle with a 0.8s rest. At 1280x800 desktop fullscreen the ring
+  showed the same gradient and a pause mid-ring retreated and went idle;
+  closing fullscreen removed every node. No new console errors.
 
 ### fullscreen-lp-too-small: Fullscreen LP is too small again on mobile and desktop
 - **Status:** merged
