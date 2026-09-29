@@ -5968,7 +5968,7 @@ Add entries in this shape:
   LP/cassette, and rapid repeated skips are untested.
 
 ### library-title-full-width: Library playlist titles should use full width until hover
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In the library, unhovered playlist rows should let the
   title stretch to the edge of the pane. Only on hover, when the row
@@ -5976,6 +5976,14 @@ Add entries in this shape:
 - **Touches:** library row CSS (`desktop-playlist-hover-buttons` area).
 - **Branch:** agent/library-title-full-width
 - **Notes:** Synced from Geethub issue #173.
+  Fix (`c21424c`, CSS only): `.row-actions` was only `opacity:0` at rest,
+  so it still reserved ~100px. On real-hover devices it's now lifted out
+  of flow (absolute, no pointer events) unless the row is hovered,
+  keyboard-focused, or has its 3-dot menu open; title goes 119px -> 219px
+  at rest on 1440 wide, back to 119px on hover. Touch unchanged. Also shows
+  the buttons on keyboard focus. Uses `:has()` (Safari 15.4+, Firefox
+  121+); only tested in Chromium. Pre-existing: a pinned row's lit pin is
+  invisible at rest (container opacity:0) - noted in a code comment.
 
 ### fullscreen-immersive-phase: Make the hidden "press F twice" big fullscreen a real third button phase
 - **Status:** draft
