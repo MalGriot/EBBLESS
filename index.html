@@ -3381,6 +3381,8 @@ const LIKED_ID = 'liked';                    // fixed id for the built-in Liked 
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
 const BLEND_NAME = 'SwiiiRrrLL';
+const BLEND_THUMB_SRC = 'brand/assets/swirl-thumb.mp4';  // SwiiiRrrLL's looping library tile
+let blendThumbFailed = false;                // clip missing/unplayable - use the track collage instead
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
@@ -4164,12 +4166,14 @@ function setView(name){
   // while hidden a second chance once it's actually shown, so re-kick it
   // here on every switch into library rather than only at creation time.
   if (name === 'library'){
-    const swellVideo = libraryGrid && libraryGrid.querySelector('.lib-card[data-pl-id="' + SWELL_ID + '"] .video-face video');
-    if (swellVideo && swellVideo.paused){
-      swellVideo.muted = true;
-      const playPromise = swellVideo.play();
+    // same for SwiiiRrrLL's looping thumb
+    const teaserVideos = libraryGrid ? libraryGrid.querySelectorAll('.lib-card[data-pl-id="' + SWELL_ID + '"] .video-face video, .lib-card[data-pl-id="' + BLEND_ID + '"] .video-face video') : [];
+    teaserVideos.forEach(v => {
+      if (!v.paused) return;
+      v.muted = true;
+      const playPromise = v.play();
       if (playPromise && playPromise.catch) playPromise.catch(() => {});
-    }
+    });
   }
   syncHistoryBuffer();
 }
@@ -4767,6 +4771,20 @@ function renderLibrary(){
       if (swellVideo){
         swellVideo.muted = true;
         const playPromise = swellVideo.play();
+        if (playPromise && playPromise.catch) playPromise.catch(() => {});
+      }
+    } else if (id === BLEND_ID && !blendThumbFailed){
+      // SwiiiRrrLL's tile is always its own looping clip, not a track
+      // collage - its tracks change every day. Same autoplay handling as
+      // the CuRRentSSsss teaser above. If the clip can't load, fall back to
+      // the normal collage for the rest of the session.
+      artDiv.classList.add('single');
+      artDiv.innerHTML = '<div class="face video-face"><video autoplay muted loop playsinline src="' + BLEND_THUMB_SRC + '"></video></div>';
+      const blendVideo = artDiv.querySelector('.video-face video');
+      if (blendVideo){
+        blendVideo.muted = true;
+        blendVideo.addEventListener('error', () => { if (!blendThumbFailed){ blendThumbFailed = true; rerenderLibraryKeepPanel(); } });
+        const playPromise = blendVideo.play();
         if (playPromise && playPromise.catch) playPromise.catch(() => {});
       }
     } else if (withArt.length === 0 && !pl.image){
