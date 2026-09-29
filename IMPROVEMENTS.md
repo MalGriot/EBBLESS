@@ -5951,7 +5951,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #153.
 
 ### crossfade-art-lp-cassette: Crossfade art fade should also work on LP and cassette
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The art-to-art fade on crossfade works for plain art but
   not the LP or cassette styles. It should.
@@ -5968,7 +5968,7 @@ Add entries in this shape:
   LP/cassette, and rapid repeated skips are untested.
 
 ### library-title-full-width: Library playlist titles should use full width until hover
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the library, unhovered playlist rows should let the
   title stretch to the edge of the pane. Only on hover, when the row
@@ -6014,7 +6014,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #147.
 
 ### desktop-fullscreen-settings-only: In desktop fullscreen, Settings should open alone
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** If fullscreen is active on desktop and the user clicks
   Settings, show just the settings window, not the queue and library too.
