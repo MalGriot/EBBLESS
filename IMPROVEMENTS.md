@@ -2581,7 +2581,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #24.
 
 ### currents-playlist-algorithm: Define Currents playlist selection rules
-- **Status:** review
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The Currents playlist should be built from: one new/
   unplayed song per saved playlist, three suggested songs from the Liked
@@ -2590,6 +2590,8 @@ Add entries in this shape:
   album.
 - **Touches:** Currents/recommendation generation logic.
 - **Branch:** agent/currents-playlist-algorithm
+- **Notes (2026-09-30):** User asked to add release year via the worker
+  (soft year-closeness weighting); needs a worker deploy when merged.
 - **Notes:** Synced from Geethub issue #36. Related to `blend-playlist`
   below (a second, broader auto-playlist) and `discovery-pipeline-metadata`
   - all touch recommendation logic, worth reviewing together for shared
