@@ -9188,8 +9188,16 @@ function lpNeedleBuffer(ctx, kind){
     : Promise.resolve(lpSynthNeedle(ctx, kind));
   return (lpSfxBuffers[kind] = p);
 }
+// only when the record is actually showing: the fullscreen flow view's
+// record, or the player's record (not viz/lyrics, not a hidden player pane)
+function lpRecordOnScreen(){
+  if (artStyle !== 'record' || document.visibilityState !== 'visible') return false;
+  if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'record';
+  const rec = document.getElementById('artRecord');
+  return !!rec && rec.getClientRects().length > 0;
+}
 function playLpNeedle(kind){
-  if (artStyle !== 'record') return;
+  if (!lpRecordOnScreen()) return;
   try{
     if (!lpSfxCtx){
       const AC = window.AudioContext || window.webkitAudioContext;
