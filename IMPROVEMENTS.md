@@ -6850,26 +6850,37 @@ Add entries in this shape:
 
 
 ### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** The change-art page should have a checkbox to apply the
   chosen art to every track in the same album. The option should not be
   shown when changing a playlist's art.
 - **Touches:** track art picker / relink menu.
-- **Branch:**
+- **Branch:** agent/change-art-apply-album
 - **Notes:** Synced from Geethub issue #206. Related:
   `album-art-consistent-per-album`, `playlist-image-reset`.
+  **Built (2697f03):** app had no per-track art picker, so added "Change art"
+  to the track menu (shared `openArtPicker` with the playlist picker) plus the
+  "Apply to all tracks in <album>" checkbox (hidden for playlist art, no
+  album, or 1-track album). Album = album-type library entry holding the
+  track; applies to every title+artist match library-wide. Per-track
+  `originalArt` keeps reset working; relink no longer overwrites hand-picked
+  art. **At merge:** `albumForTrack` should call `isAlbumEntry(p)` (from
+  `playlist-menu-album-toggle`) instead of `isAlbumType(p.type)`.
 
 ### cassette-fullscreen-second-stack: Cassette fullscreen intro should do a second stack downward
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** After the tapes stack upward and slide behind the center
   tape, repeat the same move downward toward the bottom of the screen and
   slide behind the center tape again. Only then start the orbiting tapes.
 - **Touches:** cassette fullscreen animation.
-- **Branch:**
+- **Branch:** agent/cassette-fullscreen-second-stack
 - **Notes:** Synced from Geethub issue #207. Extends
   `cassette-fullscreen-animation` (merged).
+  **Built (eb3de82):** mirrored downward stack + slide-back after the upward
+  one (0.4s gap), then the ring. Intro ~9-11s longer; check pacing and the
+  mobile down stack vs. transport controls on a real device.
 
 ### settings-credits: Settings "Credits" button listing every service used, with links
 - **Status:** merged
@@ -6886,3 +6897,34 @@ Add entries in this shape:
   Music, GetSongBPM, ReccoBeats, Deezer, Last.fm, ListenBrainz,
   MusicBrainz, Cover Art Archive, LRCLIB, Cloudflare Workers, GitHub Pages,
   Sign in with Google. Update this list when a new service is added.
+
+### currents-12-tracks: CuRRentSSsss playlist should load 12 tracks
+- **Status:** review
+- **Priority:** medium
+- **Description:** When CuRRentSSsss is built, it should end up with 12
+  tracks (currently it tops up to a minimum of 8 via `CURRENTS_MIN_TRACKS`).
+- **Touches:** Currents generation (`CURRENTS_MIN_TRACKS` and the slot
+  top-up logic near it in `index.html`).
+- **Branch:** agent/currents-12-tracks
+- **Notes:** Synced from Geethub issue #208 (title only). Related (merged):
+  `currents-playlist-algorithm`, `currents-add-reset-button`.
+  **Built (c3b0ff1):** `CURRENTS_MIN_TRACKS` 8 -> 12, per-slot top-up 2 -> 3,
+  "Add more" keeps its old 8 target (new `CURRENTS_MORE_TRACKS`). Aims for
+  at least 12 (can still reach 14 with many saved playlists). Client-only.
+
+### playlist-menu-album-toggle: Playlist menu option to mark something as a playlist or album
+- **Status:** review
+- **Priority:** medium
+- **Description:** The playlist 3-dot menu should let the user manually
+  recategorize an entry as a playlist or an album, for when auto-detection
+  gets it wrong. Switching should update the library filter and the tile art
+  (album art only for albums, no 2x2 grid).
+- **Touches:** playlist menu, `isAlbumType()` / library entry type, library
+  filter, playlist thumbnail art.
+- **Branch:** agent/playlist-menu-album-toggle
+- **Notes:** Synced from Geethub issue #209. Manual override complementing
+  the merged `album-detection` auto-categorization.
+  **Built (6587e41):** "Mark as album / playlist" in a link-imported
+  entry's 3-dot menu; stored as `albumOverride` on the entry, read via new
+  `isAlbumEntry()` (library filter, sections, tile art, album-mode matching),
+  kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
