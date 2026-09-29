@@ -75,6 +75,8 @@ const THISIS_CACHE_VERSION = 'v1';
 const SOUNDCLOUD_CACHE_VERSION = 'v2';
 // /playlistsearch (see handlePlaylistSearch) - own version, same reasoning.
 const PLAYLIST_SEARCH_CACHE_VERSION = 'v1';
+// /sctracksearch (see handleSoundCloudTrackSearch) - own version, same reasoning.
+const SC_TRACK_SEARCH_CACHE_VERSION = 'v1';
 
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -1773,6 +1775,71 @@ async function handlePlaylistSearch(url, ctx) {
   return response;
 }
 
+// ---------- GET /sctracksearch?q=&limit= ----------
+// SoundCloud *track* search for the client's per-track "Refresh link" picker
+// (openRefreshLinkPicker in index.html): a SoundCloud-sourced track plays
+// natively off its SoundCloud id (see soundcloud-native-playback), so when
+// its link is wrong the useful alternatives are other SoundCloud uploads,
+// not YouTube videos. Same public web API + rotating client_id (and the
+// same retry-once-on-401) as /soundcloud and /playlistsearch above; each
+// result carries `scId`, which is all the client needs to build the
+// synthetic 'sc:<id>' videoId native playback plays from.
+async function scSearchTracksRaw(query, limit, clientId) {
+  const params = new URLSearchParams({ q: query, limit: String(limit), client_id: clientId });
+  const res = await fetch('https://api-v2.soundcloud.com/search/tracks?' + params.toString());
+  if (res.status === 401) return null; // client_id likely rotated, caller retries once
+  if (!res.ok) return { collection: [] };
+  try { return await res.json(); } catch (e) { return { collection: [] }; }
+}
+
+async function handleSoundCloudTrackSearch(url, ctx) {
+  const q = (url.searchParams.get('q') || '').trim();
+  if (!q) return json({ error: 'missing q' }, 400);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit'), 10) || 10, 1), 20);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + SC_TRACK_SEARCH_CACHE_VERSION + '/sctracksearch/' + limit + '/' + encodeURIComponent(q.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  let clientId;
+  try { clientId = await getSoundCloudClientId(ctx); }
+  catch (e) { return json({ error: 'could not reach soundcloud' }, 502); }
+  let data = await scSearchTracksRaw(q, limit, clientId);
+  if (data === null) {
+    try { clientId = await getSoundCloudClientId(ctx, { forceRefresh: true }); }
+    catch (e) { return json({ error: 'could not reach soundcloud' }, 502); }
+    data = await scSearchTracksRaw(q, limit, clientId);
+  }
+  if (!data) return json({ error: 'could not reach soundcloud' }, 502);
+
+  const candidates = (data.collection || [])
+    .filter(t => t && t.kind === 'track' && t.id && t.title && t.streamable !== false && t.policy !== 'BLOCK')
+    .slice(0, limit)
+    .map(t => {
+      const x = scTrackToTitleArtist(t);
+      return {
+        source: 'soundcloud',
+        scId: x.scId,
+        title: x.title,
+        // The uploader's name, the SoundCloud counterpart of a YouTube
+        // candidate's `channel`.
+        channel: (t.user && t.user.username) || x.artist,
+        artist: x.artist,
+        duration: Math.round((x.duration || 0) / 1000), // seconds, like /search's candidates
+        image: x.image,
+        permalink: t.permalink_url || null,
+      };
+    });
+
+  const response = json({ candidates });
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 // ---------- GET /similar?title=&artist=&limit= ----------
 // Discovery cascade for Radio / the queue's Discover toggle / the Swell
 // playlist. Tries Last.fm first (best tag coverage, needs LASTFM_API_KEY),
@@ -2229,6 +2296,7 @@ export default {
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
       if (url.pathname === '/playlistsearch') return await handlePlaylistSearch(url, ctx);
+      if (url.pathname === '/sctracksearch') return await handleSoundCloudTrackSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
