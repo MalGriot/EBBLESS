@@ -1223,7 +1223,8 @@ svg.load-spin{animation:load-spin .9s linear infinite}
    Mobile browsers won't honor manifest.json's orientation:"portrait" outside
    an installed, standalone PWA (iOS Safari in particular ignores it entirely),
    so a coarse-pointer device in landscape gets a blocking screen instead of
-   the app reflowing to fit sideways. */
+   the app reflowing to fit sideways. Limited to phone-height viewports so
+   tablets and touchscreen laptops in landscape stay usable. */
 #rotate-lock{
   display:none;position:fixed;inset:0;z-index:20000;
   background:var(--bg);color:var(--text);
@@ -1232,7 +1233,7 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 }
 #rotate-lock svg{width:48px;height:48px;opacity:.85}
 #rotate-lock p{font-size:14px;letter-spacing:.3px;opacity:.75;max-width:260px}
-@media (orientation:landscape) and (pointer:coarse){
+@media (orientation:landscape) and (pointer:coarse) and (max-height:500px){
   #rotate-lock{display:flex}
 }
 
