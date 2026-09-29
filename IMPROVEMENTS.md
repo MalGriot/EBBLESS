@@ -6187,7 +6187,7 @@ Add entries in this shape:
   exists on main.
 
 ### keyboard-shortcuts-2: More keyboard shortcuts (playlist, shuffle, loop, art, cymatics, lyrics, seek)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add to the global keydown handler:
   - "p" and "l" toggle the library open/closed (previously open-only).
