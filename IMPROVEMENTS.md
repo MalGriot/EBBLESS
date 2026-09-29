@@ -5859,7 +5859,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #159.
 
 ### queue-3dot-menu-desktop: Queue track 3-dot menu can't be clicked on desktop
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** On desktop, clicking the 3-dot menu button on a queue
   row just plays the track instead of opening the menu.
@@ -5871,7 +5871,8 @@ Add entries in this shape:
   (desktop right column) already stops propagation and opens its menu
   correctly in headless tests at every width. Needs an exact repro (which
   panel, browser, window width, click spot). Untested guess: clicks in the
-  row's right padding next to the button play the track.
+  row's right padding next to the button play the track. Dropped
+  2026-09-29: no repro, the button it describes no longer exists.
 
 ### bld-background-tab-autoadvance: SoundCloud tracks won't advance to the next track in a background tab
 - **Status:** merged
