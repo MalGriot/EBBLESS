@@ -914,6 +914,9 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 }
 
 /* ---------- fullscreen / flow mode ---------- */
+/* mobile queue opened from fullscreen sits above #flow-layer/#lyricsFsLayer */
+body.queue-over-fs #queue-scrim{z-index:56}
+body.queue-over-fs #queue-panel{z-index:57}
 #flow-layer{position:fixed;inset:0;z-index:50;background:var(--bg);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out);display:flex;flex-direction:column;align-items:center;justify-content:center}
 #flow-layer.is-open{opacity:1;pointer-events:auto}
@@ -3882,6 +3885,12 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
   });
 });
 document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', () => {
+  // mobile/tablet: the queue slides up over fullscreen instead of leaving it
+  if (!document.body.classList.contains('split-desktop') &&
+      (state.flowOpen || lyricsFsLayer.classList.contains('is-open'))){
+    toggleQueuePanel();
+    return;
+  }
   // same fullscreen exit and split-desktop carve-out as the Library button above
   leaveFullscreen(true);
   if (document.body.classList.contains('split-desktop')){
@@ -7789,6 +7798,7 @@ function openQueuePanel(){
   state.queueOpen = true;
   queuePanel.classList.add('is-open'); queueScrim.classList.add('is-open');
   document.body.classList.add('queue-open');
+  document.body.classList.toggle('queue-over-fs', state.flowOpen || lyricsFsLayer.classList.contains('is-open'));
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.add('is-active'));
   updateMiniBarVisibility();
   syncHistoryBuffer();
@@ -7801,7 +7811,7 @@ function openQueuePanel(){
 function closeQueuePanel(restoreView = true){
   state.queueOpen = false;
   queuePanel.classList.remove('is-open'); queueScrim.classList.remove('is-open');
-  document.body.classList.remove('queue-open');
+  document.body.classList.remove('queue-open', 'queue-over-fs');
   document.querySelectorAll('[data-action="toggle-queue"]').forEach(b => b.classList.remove('is-active'));
   updateMiniBarVisibility();
   if (restoreView && state.preQueueView && state.preQueueView !== state.currentView && views[state.preQueueView]){
@@ -10023,6 +10033,7 @@ document.addEventListener('keydown', (e) => {
       // playlist panel. A context menu / modal that already handled this
       // Escape marks it defaultPrevented, so one press closes one thing.
       if (e.defaultPrevented) break;
+      if (state.queueOpen && document.body.classList.contains('queue-over-fs')){ closeQueuePanel(); break; }
       if (leaveFullscreen()) break;
       if (openLibraryPanelId) closeLibraryPlaylistPanel();
       break;
