@@ -1082,6 +1082,25 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
     min-height:0;transform:none!important;border-left:1px solid var(--border);
   }
   body.split-desktop #queue-scrim{display:none!important}
+  /* issue #135/#198: the library playlist panel opens over the library pane
+     (column 1), not over the queue. It shares that grid cell with
+     #view-library (higher z-index), so it's exactly the pane's size and its
+     header X lands in the pane's top-right corner at the same inset the
+     queue pane's header controls use. Closed, it slides off to the left and
+     #app's overflow:hidden clips it; the shadow only applies while open so
+     it doesn't bleed onto the library's left edge when closed. */
+  body.split-desktop #libpl-panel{
+    position:relative;grid-column:1;grid-row:2;top:auto;right:auto;bottom:auto;left:auto;width:auto;height:auto;
+    min-height:0;border-left:0;border-right:1px solid var(--border);box-shadow:none;
+    transform:translateX(-100%);
+  }
+  body.split-desktop #libpl-panel.is-open{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.35)}
+  /* desktop-fs: the library is a fixed 340px drawer (z 46) over the fixed
+     player (z 44), so the playlist panel follows it out of the grid and sits
+     just above that drawer */
+  body.split-desktop.desktop-fs:not(.view-settings-active) #libpl-panel{
+    position:fixed;top:var(--topbar-h);left:0;bottom:0;width:340px;z-index:47;
+  }
   /* Settings (issue #146): while Settings holds the center pane the player's
      transport is gone, so the mini-bar (same one used below 1150px) comes
      back as a footer. updateMiniBarVisibility() already shows it whenever
