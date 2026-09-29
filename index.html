@@ -207,6 +207,22 @@ body.onb-active .paste-guide{display:none}
 
 .lib-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 16px}
 #libraryGrid{margin-top:14px}
+/* library-search: live filter over the user's own saved playlists/albums
+   and their tracks (see renderLibrary()). Styled like .import-row's input. */
+.lib-search{position:relative;margin-top:14px}
+.lib-search-icon{position:absolute;left:12px;top:50%;width:15px;height:15px;transform:translateY(-50%);color:var(--faint-2);pointer-events:none}
+.lib-search input{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:10px 38px 10px 36px;color:var(--text);font-size:13.5px;transition:border-color var(--dur-ui) var(--ease-out)}
+.lib-search input::placeholder{color:var(--faint-2)}
+.lib-search input:focus{outline:none;border-color:var(--accent)}
+.lib-search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.lib-search-clear{position:absolute;right:6px;top:50%;width:28px;height:28px;transform:translateY(-50%);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.lib-search-clear:hover{background:var(--panel-3);color:var(--text)}
+.lib-search-clear svg{width:12px;height:12px}
+#libSearchTracks .track-row .pl-name{color:var(--faint-2)}
+/* iOS zooms the page on focus for inputs under 16px */
+@media (max-width:859.98px){ .lib-search input{font-size:16px} }
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
 .lib-grid.is-compact{grid-template-columns:repeat(3,1fr);gap:14px 12px}
 .lib-card{position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
@@ -1895,11 +1911,22 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             </div>
           </div>
         </div>
+        <div class="lib-search" role="search">
+          <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+          <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
         <div class="lib-grid" id="libraryGrid"></div>
         <div class="section-label-row hidden" id="libraryAlbumsHead">
           <div class="section-label">Albums</div>
         </div>
         <div class="lib-grid" id="libraryAlbumsGrid"></div>
+        <div class="hidden" id="libSearchTracks">
+          <div class="section-label">Songs</div>
+          <div id="libSearchTracksList"></div>
+        </div>
         <div class="empty-lib hidden" id="libraryFilterEmpty"></div>
       </div>
     </div>
@@ -3555,6 +3582,8 @@ const libViewToggle = $('libViewToggle');
 const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
 const libFilter = $('libFilter');
 const libFilterCycle = $('libFilterCycle');
+const libSearch = $('libSearch'), libSearchClear = $('libSearchClear');
+const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 const artA = $('artA'), artB = $('artB');
@@ -4112,6 +4141,27 @@ libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
 });
 libFilterCycle.textContent = LIB_FILTER_LABEL[getLibraryFilter()];
 
+// library-search: case- and accent-insensitive match against the user's own
+// saved library only. Never focused programmatically, so the mobile keyboard
+// only appears when the field itself is tapped.
+function normLibSearch(s){
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+const LIB_SEARCH_TRACK_LIMIT = 100;
+libSearch.addEventListener('input', () => {
+  libSearchClear.classList.toggle('hidden', !libSearch.value);
+  renderLibrary();
+});
+libSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && libSearch.value){ e.preventDefault(); libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
+  else if (e.key === 'Enter'){ e.preventDefault(); libSearch.blur(); }
+});
+libSearchClear.addEventListener('click', () => {
+  libSearch.value = '';
+  libSearchClear.classList.add('hidden');
+  renderLibrary();
+});
+
 function renderLibrary(){
   closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
@@ -4124,10 +4174,39 @@ function renderLibrary(){
   const showPlaylists = filter !== 'albums';
   const showAlbums = filter !== 'playlists';
   libraryGrid.classList.toggle('hidden', !showPlaylists);
+  const searchQ = normLibSearch(libSearch.value);
+  libSearchTracksList.innerHTML = '';
+  let searchTrackCount = 0;
   let albumCount = 0;
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
+    if (searchQ){
+      try{
+        const plIsAlbum = isAlbumType(pl.type);
+        if ((plIsAlbum && !showAlbums) || (!plIsAlbum && !showPlaylists)) return;
+        (pl.tracks || []).forEach((t, i) => {
+          if (searchTrackCount >= LIB_SEARCH_TRACK_LIMIT) return;
+          if (!normLibSearch(t.title).includes(searchQ) && !normLibSearch(t.artist).includes(searchQ)) return;
+          searchTrackCount++;
+          const row = document.createElement('div');
+          row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
+          const img = document.createElement('img');
+          if (t.videoId || t.art) attachArtworkFallback(img, t);
+          const meta = document.createElement('div'); meta.className = 'meta';
+          const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
+          const artist = document.createElement('div'); artist.className = 'artist';
+          artist.textContent = (t.artist || '') + (t.artist ? ' · ' : '');
+          const plName = document.createElement('span'); plName.className = 'pl-name'; plName.textContent = pl.name;
+          artist.appendChild(plName);
+          meta.appendChild(title); meta.appendChild(artist);
+          row.appendChild(img); row.appendChild(meta);
+          if (t.videoId) row.addEventListener('click', () => playLibraryTrackInline(id, i));
+          libSearchTracksList.appendChild(row);
+        });
+      } catch(e){ /* a malformed entry is handled (and purged) by the card pass below */ }
+      if (!normLibSearch(pl.name).includes(searchQ)) return;
+    }
     // A single malformed/partial cache entry (e.g. a "resolving: true"
     // snapshot left behind by a resolve call that errored out or hit an
     // exhausted API/token budget mid-write - see startApp's bootstrap
@@ -4296,9 +4375,10 @@ function renderLibrary(){
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
-  const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length;
-  libraryFilterEmpty.textContent = filter === 'albums' ? 'No albums in your library yet.' : 'No playlists in your library yet.';
-  libraryFilterEmpty.classList.toggle('hidden', filter === 'all' || !nothingShown);
+  libSearchTracks.classList.toggle('hidden', !searchTrackCount);
+  const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !searchTrackCount;
+  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : 'No playlists in your library yet.';
+  libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
 }
 function refreshLibraryMarquees(){
