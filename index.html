@@ -865,6 +865,9 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 #flow-layer .flow-meta .title-row .title{flex:none;width:100%}
 #flow-layer .flow-meta .title{font-size:20px;font-weight:700}
 #flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
+/* issue #153: white title/artist vanished over white-heavy album art in
+   fullscreen - soft dark halo, near-invisible on dark art */
+#flow-layer .flow-meta .title,#flow-layer .flow-meta .artist{text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.3)}
 #flow-layer .flow-meta .player-like-btn{pointer-events:auto}
 #flow-layer .flow-meta .flow-meta-actions{display:flex;align-items:center;justify-content:center;gap:10px}
 #flow-layer .flow-meta .report-match-btn{pointer-events:auto}
@@ -1160,6 +1163,10 @@ svg.load-spin{animation:load-spin .9s linear infinite}
   body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta{
     position:absolute;left:50%;bottom:108px;transform:translateX(-50%);z-index:2;
     width:min(420px,80%);
+  }
+  body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta .title,
+  body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta .artist{
+    text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.3); /* issue #153, see #flow-layer .flow-meta */
   }
   body.split-desktop.desktop-fs:not(.view-settings-active) .transport-full{
     position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:2;
