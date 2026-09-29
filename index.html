@@ -3552,6 +3552,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
+  // A listener's manual album/playlist choice (see isAlbumEntry) lives on
+  // the cached entry this re-resolve is about to overwrite - carry it over.
+  const albumOverride = albumOverrideOf(getCachedPlaylist(playlistId));
+  const keepAlbumOverride = (p) => { if (albumOverride !== undefined) p.albumOverride = albumOverride; return p; };
   // Saved before album playlists were told apart (see youTubeListType) -
   // re-file on this (re-)resolve.
   if (type === 'yt_playlist' && youTubeListType(playlistId.replace(/^yt:/, '')) === 'album') type = 'yt_album';
@@ -3589,7 +3593,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
     // YouTube's public playlist feed (the only stable, unscraped source for a
     // full tracklist) only returns its ~15 most recent videos.
-    const payload = { id: playlistId, type, name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+    const payload = keepAlbumOverride({ id: playlistId, type, name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
@@ -3611,7 +3615,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   const sourceKind = sourceKindForType(type);
   // Album tracks are matched in album mode (see searchYouTubeCached): the
   // artist's Topic upload of the album cut, checked against the album cover.
-  const albumOpts = isAlbumType(type) ? { album: name, albumArt: image || null } : null;
+  const albumOpts = isAlbumEntry({ type, albumOverride }) ? { album: name, albumArt: image || null } : null;
   const resolved = [];
   let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
@@ -3642,7 +3646,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // passed by reference and keeps growing as the loop continues.
     if (!firstTrackFired && onFirstTrack && resolved.some(rt => rt.videoId)){
       firstTrackFired = true;
-      onFirstTrack({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
+      onFirstTrack(keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }));
     }
     // Mirror progress to storage too, not just the in-memory callback above -
     // mobile browsers/PWAs routinely kill the whole JS process the moment
@@ -3652,14 +3656,14 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // resume from. `resolving: true` marks this a snapshot-in-progress so
     // startApp's sweep can pick up a playlist a killed process left behind.
     if (firstTrackFired){
-      lsSet(LS_PL(playlistId), { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION, resolving: true });
+      lsSet(LS_PL(playlistId), keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION, resolving: true }));
     }
     // The 350ms spacing exists to be polite to the /search backend
     // (YouTube-scraping, rate-limit-sensitive) - a native SoundCloud track
     // never calls it, so there's nothing to pace here.
     if (i < tracks.length - 1 && !isNativeSC) await sleep(350);
   }
-  const payload = { id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+  const payload = keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
   lsSet(LS_PL(playlistId), payload);
   return payload;
 }
@@ -4439,6 +4443,16 @@ function setLibraryView(mode){
 // yt_album is a YouTube album playlist (list id "OLAK5uy_…", see
 // youTubeListType) - resolves like yt_playlist.
 function isAlbumType(type){ return type === 'album' || type === 'am_album' || type === 'sc_album' || type === 'yt_album'; }
+// Whether a saved library entry counts as an album: the listener's own
+// "Mark as album/playlist" choice (pl.albumOverride, Geethub #209) wins over
+// the type-based detection above, for when that guesses wrong. pl.type (and
+// so sourceKindForType etc.) is left alone, and resolvePlaylist carries the
+// override across re-resolves.
+function albumOverrideOf(pl){ return pl && typeof pl.albumOverride === 'boolean' ? pl.albumOverride : undefined; }
+function isAlbumEntry(pl){ const o = albumOverrideOf(pl); return o !== undefined ? o : isAlbumType(pl && pl.type); }
+// Only link-backed lists can be re-filed - not 'custom' (Liked Songs,
+// CuRRentSSsss, user-made, Discover overflow) or single tracks/videos.
+function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type); }
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
@@ -4537,7 +4551,7 @@ function renderLibrary(){
     if (!pl) return;
     if (searchQ){
       try{
-        const plIsAlbum = isAlbumType(pl.type);
+        const plIsAlbum = isAlbumEntry(pl);
         if ((plIsAlbum && !showAlbums) || (!plIsAlbum && !showPlaylists)) return;
         (pl.tracks || []).forEach((t, i) => {
           if (searchTrackCount >= LIB_SEARCH_TRACK_LIMIT) return;
@@ -4570,7 +4584,7 @@ function renderLibrary(){
     // the entry that caused it so the same throw can't recur on every future
     // load - self-healing instead of requiring a manual storage clear.
     try{
-    const isAlbum = isAlbumType(pl.type);
+    const isAlbum = isAlbumEntry(pl);
     if ((isAlbum && !showAlbums) || (!isAlbum && !showPlaylists)) return;
     if (isAlbum) albumCount++;
     const isLiked = id === LIKED_ID;
@@ -4881,6 +4895,7 @@ const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="
 const CTX_ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V2L7 7l5 5V8c3.31 0 6 2.69 6 6a6 6 0 01-6 6 6 6 0 01-6-6H4a8 8 0 008 8 8 8 0 008-8c0-4.42-3.58-8-8-8z"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
 const CTX_ICON_ADD_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/></svg>';
+const CTX_ICON_ALBUM = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 14.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm0-5.5a1 1 0 100 2 1 1 0 000-2z"/></svg>';
 const CTX_ICON_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08a2.9 2.9 0 00-1.96.77l-7.13-4.15a2.92 2.92 0 000-1.4l7.05-4.11a3 3 0 10-.9-1.72l-7.05 4.11a3 3 0 100 4.84l7.13 4.15a2.92 2.92 0 10.86-1.49z"/></svg>';
 
 // Reverses a resolved playlist's {type,id} back into the URL it was
@@ -4940,6 +4955,9 @@ function openLibCtxMenu(id, btn){
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
+  if (id !== SWELL_ID && canToggleAlbum(pl)){
+    items.push({ action: 'albumtoggle', label: isAlbumEntry(pl) ? 'Mark as playlist' : 'Mark as album', icon: CTX_ICON_ALBUM });
+  }
   if (id !== SWELL_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
@@ -5182,10 +5200,23 @@ function handleLibCtxAction(action, id){
   else if (action === 'copylink') copyPlaylistLink(pl);
   else if (action === 'replacelink') openReplaceLinkFlow(id, pl);
   else if (action === 'relinkall') manualRelinkPlaylist(id);
+  else if (action === 'albumtoggle') toggleAlbumOverride(id, pl);
   else if (action === 'delete'){
     if (!confirm(`Delete "${pl.name}"? This can't be undone.`)) return;
     removeFromLibrary(id); renderLibrary(); showToast('Deleted');
   }
+}
+
+// Manual album/playlist re-filing (Geethub #209). Always stored as an
+// explicit boolean (even when it matches today's detection) so a later
+// re-resolve that re-detects the type can't flip the listener's choice.
+function toggleAlbumOverride(id, pl){
+  const makeAlbum = !isAlbumEntry(pl);
+  pl.albumOverride = makeAlbum;
+  lsSet(LS_PL(id), pl);
+  if (state.playlist && state.playlist.id === id) state.playlist.albumOverride = makeAlbum;
+  renderLibrary();
+  showToast(makeAlbum ? 'Marked as album' : 'Marked as playlist');
 }
 
 function openRenamePlaylistFlow(id, pl){
@@ -11545,7 +11576,7 @@ function flagWrongTrack(){
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     ts: new Date().toISOString(),
     requested: {
-      title: t.title || '', artist: t.artist || '', album: t.album || (pl && /album/.test(pl.type || '') ? pl.name : '') || '',
+      title: t.title || '', artist: t.artist || '', album: t.album || (pl && isAlbumEntry(pl) ? pl.name : '') || '',
       srcDuration: t.srcDuration || null, art: t.art || '',
       playlistId: q.plId || '', playlistName: pl ? (pl.name || '') : '', playlistType: pl ? (pl.type || '') : '',
       trackIndex: typeof q.idx === 'number' ? q.idx : null, sourceLink,
