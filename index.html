@@ -11034,7 +11034,9 @@ function exitFlowToMain(){
    housing tinted from --player-accent and darker toward the back; no live
    reels. One rAF drives transform/opacity only. Layout picks its path the
    same way fsBtn does: body.split-desktop (>=1150px) gets the stack then
-   the ring, anything narrower gets the stack only. Everything is torn down
+   the ring, anything narrower gets the stack only. The stack runs twice:
+   up and back behind, then mirrored down and back (issue #207), and only
+   then does the desktop ring start. Everything is torn down
    (rAF cancelled, copies removed) when fullscreen closes, the style or
    visual mode changes away, the tab hides, or reduced motion is set. ---------- */
 const CS_STACK_REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -11145,11 +11147,14 @@ function csStackBuild(){
   const n = Math.max(desk ? 6 : 3, Math.min(10, Math.round(gap / (H * .14))));
   // last copy's top edge lands on the top of the screen
   const step = (gap + H * shrink * n / 2) / n;
+  // second, downward pass: same n, last copy's bottom edge on the bottom of the screen
+  const gapDown = Math.max(0, (window.innerHeight - cy) / k - H / 2);
+  const stepDown = (gapDown + H * shrink * n / 2) / n;
   const halfX = Math.min(cx, window.innerWidth - cx) / k, halfY = Math.min(cy, window.innerHeight - cy) / k;
   const rs = .42; // ring copy scale
   const rx = Math.min(W / 2 + rs * H / 2 + 40, halfX - rs * H / 2 - 12);
   const ry = Math.min(H / 2 + rs * H * .55 + 10, halfY - rs * H / 2 - 12);
-  csStack.geo = {n, step, shrink, H, rs, rx:Math.max(rx, W * .3), ry:Math.max(ry, H * .5), baseOp:[]};
+  csStack.geo = {n, step, stepDown, shrink, H, rs, rx:Math.max(rx, W * .3), ry:Math.max(ry, H * .5), baseOp:[]};
   csStack.wrap.textContent = '';
   csStack.ghosts = [];
   // farthest copy first in DOM so each nearer copy paints over it
@@ -11185,22 +11190,27 @@ function csStackBuild(){
 const csEaseOut = x => 1 - Math.pow(1 - x, 3);
 const csEaseInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 const csClamp = x => x < 0 ? 0 : x > 1 ? 1 : x;
-/* timings (seconds): copies rise one every 0.7s over 1.3s, hold, then
-   mobile collapses back into the main cassette and rests; desktop gathers
-   behind it, spreads into a ring, turns at 10deg/s, and each copy lifts
+/* timings (seconds): copies rise one every 0.7s over 1.3s, hold, slide
+   back behind the main cassette (mobile collapse / desktop gather), pause,
+   then do the same mirrored downward; after that mobile collapses back
+   into the main cassette and rests; desktop gathers behind it, spreads
+   into a ring, turns at 10deg/s, and each copy lifts
    and slides out of sight as it passes the top */
 const CS_T = {gapIn:.7, rise:1.3, hold:2.4, collapse:1.6, rest:9, gather:1.4, pause:.4, spread:2.6,
   omega:10, ramp:2, lift:.8, slide:1.8, retreat:.5, resume:.8};
 function csStackTimes(n){
-  const stackEnd = CS_T.gapIn * (n - 1) + CS_T.rise, holdEnd = stackEnd + CS_T.hold;
-  if (!csStack.desk) return {holdEnd, total: holdEnd + CS_T.collapse + CS_T.rest};
+  const stackEnd = CS_T.gapIn * (n - 1) + CS_T.rise, upHoldEnd = stackEnd + CS_T.hold;
+  // first (upward) pass slides back behind - collapse is staggered .06s per copy
+  const back = csStack.desk ? CS_T.gather : CS_T.collapse + .06 * (n - 1);
+  const downStart = upHoldEnd + back + CS_T.pause, holdEnd = downStart + stackEnd + CS_T.hold;
+  if (!csStack.desk) return {upHoldEnd, downStart, holdEnd, total: holdEnd + CS_T.collapse + CS_T.rest};
   const spreadStart = holdEnd + CS_T.gather + CS_T.pause, spinStart = spreadStart + CS_T.spread;
   const rampDeg = CS_T.omega * CS_T.ramp / 2, exits = [];
   for (let i = 0; i < n; i++){
     const target = 360 - (i + .5) * 360 / n; // degrees until this copy reaches the top
     exits[i] = target <= rampDeg ? Math.sqrt(2 * CS_T.ramp * target / CS_T.omega) : target / CS_T.omega + CS_T.ramp / 2;
   }
-  return {holdEnd, spreadStart, spinStart, exits, total: spinStart + Math.max(...exits) + CS_T.lift + CS_T.slide + CS_T.rest};
+  return {upHoldEnd, downStart, holdEnd, spreadStart, spinStart, exits, total: spinStart + Math.max(...exits) + CS_T.lift + CS_T.slide + CS_T.rest};
 }
 function csSpinDeg(ts){ // ring rotation after spinStart, eased in over CS_T.ramp
   if (ts <= 0) return 0;
@@ -11218,21 +11228,24 @@ function csStackFrame(now){
     csStack.t0 = now; t = 0; csStack.last = [];
   }
   const G = csStack.geo, T = G.times;
+  // second pass: same rise/hold/back-behind, mirrored downward
+  const down = t >= T.downStart, tt = down ? t - T.downStart : t;
+  const dy = down ? G.stepDown : -G.step, hEnd = down ? T.holdEnd : T.upHoldEnd;
   let maxOp = 0;
   for (let i = 0; i < G.n; i++){
     const slot = i + 1, bo = G.baseOp[i];
     // this copy's stacked slot, and the slot it rises out from behind
-    const yS = -G.step * slot, sS = 1 - G.shrink * slot;
-    const yP = -G.step * i, sP = 1 - G.shrink * i;
-    const a = csClamp((t - CS_T.gapIn * i) / CS_T.rise), e = csEaseOut(a);
+    const yS = dy * slot, sS = 1 - G.shrink * slot;
+    const yP = dy * i, sP = 1 - G.shrink * i;
+    const a = csClamp((tt - CS_T.gapIn * i) / CS_T.rise), e = csEaseOut(a);
     let x = 0, y = yP + (yS - yP) * e, s = sP + (sS - sP) * e, rot = 0, op = csClamp(a * 3) * bo;
-    if (t > T.holdEnd){
+    if (t > hEnd){
       if (!csStack.desk){
         // collapse, back copies first, into the main cassette
-        const c = csEaseInOut(csClamp((t - T.holdEnd - (G.n - 1 - i) * .06) / CS_T.collapse));
+        const c = csEaseInOut(csClamp((t - hEnd - (G.n - 1 - i) * .06) / CS_T.collapse));
         y = yS * (1 - c); s = sS + (1 - sS) * c * .98; op = bo * (1 - csClamp((c - .35) / .65));
       } else {
-        const g = csEaseInOut(csClamp((t - T.holdEnd) / CS_T.gather));
+        const g = csEaseInOut(csClamp((t - hEnd) / CS_T.gather));
         y = yS * (1 - g); s = sS + (.98 - sS) * g;
         if (t > T.spreadStart){
           const ex = T.spinStart + T.exits[i];
