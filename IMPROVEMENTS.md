@@ -6792,3 +6792,50 @@ Add entries in this shape:
   Grid rows became `60px 581px 259px` with `#flow-layer-orig` landing in
   the third row. Happens with or without that lane's fix. Not user-reported
   yet.
+
+### album-detection: Pasted albums should be treated as albums, not playlists
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When an album is added, categorize it as an album: the
+  library's album filter should include it, its thumbnail should be the
+  album art only (no 2x2 grid), and track matching should pull from the
+  artist's YouTube "Topic" channel (avoid remixes; compare album art to
+  the video thumbnail).
+- **Touches:** `isAlbumType()`, library filter, playlist thumbnail/grid art,
+  YouTube match selection.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #204. Related (merged):
+  `breathe-love-deep-album` (SoundCloud album categorization),
+  `album-art-2x2-grid-bug`, `link-match-accuracy`.
+
+### lp-needle-sfx-silent: LP needle-lift/drop sound not audible on pause/play
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In LP mode, the needle-lift sound on pause and needle-drop
+  on play can't be heard. Find out why and make it audible.
+- **Touches:** play/pause handlers for the record art style, `sfx/`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #205. Regression/follow-up of
+  `lp-needle-sfx` (merged). Possibly masked by `pause-fade-out`.
+
+### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The change-art page should have a checkbox to apply the
+  chosen art to every track in the same album. The option should not be
+  shown when changing a playlist's art.
+- **Touches:** track art picker / relink menu.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #206. Related:
+  `album-art-consistent-per-album`, `playlist-image-reset`.
+
+### cassette-fullscreen-second-stack: Cassette fullscreen intro should do a second stack downward
+- **Status:** draft
+- **Priority:** medium
+- **Description:** After the tapes stack upward and slide behind the center
+  tape, repeat the same move downward toward the bottom of the screen and
+  slide behind the center tape again. Only then start the orbiting tapes.
+- **Touches:** cassette fullscreen animation.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #207. Extends
+  `cassette-fullscreen-animation` (merged).
