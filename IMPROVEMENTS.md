@@ -2581,7 +2581,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #24.
 
 ### currents-playlist-algorithm: Define Currents playlist selection rules
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The Currents playlist should be built from: one new/
   unplayed song per saved playlist, three suggested songs from the Liked
@@ -2589,7 +2589,7 @@ Add entries in this shape:
   selection should weigh genre, year, and vibe, not just matching artist or
   album.
 - **Touches:** Currents/recommendation generation logic.
-- **Branch:** (unclaimed)
+- **Branch:** agent/currents-playlist-algorithm
 - **Notes:** Synced from Geethub issue #36. Related to `blend-playlist`
   below (a second, broader auto-playlist) and `discovery-pipeline-metadata`
   - all touch recommendation logic, worth reviewing together for shared
@@ -6067,7 +6067,7 @@ Add entries in this shape:
   invisible at rest (container opacity:0) - noted in a code comment.
 
 ### fullscreen-immersive-phase: Make the hidden "press F twice" big fullscreen a real third button phase
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In fullscreen (art/LP/cassette), pressing "f" again
   gives a larger graphic with UI that disappears after a while - the user
@@ -6079,7 +6079,7 @@ Add entries in this shape:
   button up top with the same 3-icon menu used in regular mode so users can
   switch to cymatics/lyrics seamlessly.
 - **Touches:** fullscreen controls, Fullscreen API, keyboard handler.
-- **Branch:**
+- **Branch:** agent/fullscreen-immersive-phase
 - **Notes:** Synced from Geethub issues #157, #142 (true full screen, no
   browser), #148 (redundant X), combined since they describe the same mode.
 
@@ -6172,6 +6172,31 @@ Add entries in this shape:
 - **Branch:** agent/keyboard-shortcuts
 - **Notes:** Synced from Geethub issue #156.
 
+### keyboard-shortcuts-2: More keyboard shortcuts (playlist, shuffle, loop, art, cymatics, lyrics, seek)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Add to the global keydown handler:
+  - "l" toggles the playlist panel open/closed (replaces "l" opening the
+    library; "p" keeps opening the library).
+  - "shift+l" jumps focus to the load-playlist (paste link) text box.
+  - "x" toggles shuffle.
+  - "o" cycles through the loop/repeat phases.
+  - "t" cycles through the album art phases (art / LP / cassette etc.).
+  - "y" toggles cymatics.
+  - "u" toggles lyrics.
+  - "shift+left" / "shift+right" rewind / fast-forward 10 seconds (plain
+    left/right keep prev/next track).
+  - "esc" closes an open playlist panel (after existing fullscreen exits).
+- **Touches:** global keydown handler in index.html (~line 9606), next to
+  the existing `keyboard-shortcuts` bindings; reuse existing button click
+  paths (`toggleShuffle`, `cycleRepeat`, art-style/cymatics/lyrics buttons).
+- **Branch:** agent/keyboard-shortcuts-2
+- **Notes:** Added directly by the user in chat (2026-09-30). Extends
+  `keyboard-shortcuts` (merged). Also update any in-app shortcut list /
+  tutorial copy if one exists. `fullscreen-immersive-phase` also touches the
+  keyboard handler ("f" phases) - merge whichever lands first before the
+  other rebases.
+
 ### relink-soundcloud-suggestions: "Refresh link" should suggest SoundCloud for SoundCloud tracks
 - **Status:** merged
 - **Priority:** medium
@@ -6233,13 +6258,13 @@ Add entries in this shape:
   timing untested.
 
 ### currents-add-reset-button: Button to add more tracks to or reset CuRRentSSsss
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add a button on the CuRRentSSsss playlist to pull in
   more tracks, and one to reset it.
 - **Touches:** Currents playlist; related to `currents-playlist-algorithm`
   (draft), which defines how tracks are chosen.
-- **Branch:**
+- **Branch:** agent/currents-playlist-algorithm
 - **Notes:** Synced from Geethub issue #170 (title only).
   Geethub #192 folded in: a button in the CuRRentSSsss menu to reshuffle/reload all tracks with new ones based on the most recent listening.
 
