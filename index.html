@@ -1692,6 +1692,22 @@ body.onb-stage-settings.split-desktop #onbBackdrop{opacity:0;pointer-events:none
   100%{opacity:0;transform:scale(1.45)}
 }
 
+/* everyday press feel for real button taps - the same squash-overshoot
+   shape as .onb-tap above, toned way down. Animates the individual `scale`
+   property (not `transform`), so it composes with whatever transform a
+   button already has (translate-centering, rotation, zoom) instead of
+   wiping it. Added on genuine taps by the click listener next to the
+   flow-mode idle handlers; buttons with their own :active squash are
+   skipped there. */
+.btn-press{animation:btn-press-kf 300ms cubic-bezier(.32,1.7,.5,1)}
+@keyframes btn-press-kf{
+  0%{scale:1}
+  30%{scale:.93}
+  62%{scale:1.04}
+  100%{scale:1}
+}
+@media (prefers-reduced-motion:reduce){.btn-press{animation:none}}
+
 /* simulated hover + press for the intro's art-style picker - nothing is
    actually under a cursor during the scripted walkthrough, so each option
    gets its real :hover look toggled on by class, then a brief scale-down
@@ -9992,6 +10008,31 @@ document.addEventListener('click', (e) => {
   fsSwallowClick = false;
   e.stopPropagation(); e.preventDefault();
 }, true);
+/* press feel for every button (see .btn-press in the CSS). Runs on click,
+   not pointerdown, so a scroll that starts on a button doesn't pulse it and
+   the feedback lands with the action. Capture phase so buttons that stop
+   propagation still get it; registered after the swallow handler above so
+   a swallowed reveal-tap (defaultPrevented) gets neither pulse nor buzz.
+   Only trusted pointer clicks (detail > 0): keyboard activation and
+   scripted .click() are left alone. Skips disabled buttons, ones with their
+   own :active squash (no double press), and ones already running an
+   animation (the class's `animation` would override theirs). */
+const BTN_PRESS_SKIP = '.ctl-btn,.big-play,.splash-choice-btn,.report-match-btn,.import-row button,.q-now .play-btn,.lib-card .play-overlay';
+document.addEventListener('click', (e) => {
+  if (!e.isTrusted || e.detail === 0 || e.defaultPrevented) return;
+  const btn = e.target.closest && e.target.closest('button');
+  if (!btn || btn.disabled) return;
+  if (e.pointerType === 'touch' && navigator.vibrate) navigator.vibrate(8);
+  if (btn.matches(BTN_PRESS_SKIP)) return;
+  if (btn.classList.contains('btn-press')){
+    btn.classList.remove('btn-press');
+    void btn.offsetWidth;
+  } else if (getComputedStyle(btn).animationName !== 'none') return;
+  btn.classList.add('btn-press');
+}, true);
+['animationend', 'animationcancel'].forEach(t => document.addEventListener(t, (e) => {
+  if (e.animationName === 'btn-press-kf') e.target.classList.remove('btn-press');
+}, true));
 ['pointermove', 'keydown', 'wheel'].forEach(t => document.addEventListener(t, (e) => {
   if (e.type === 'keydown') fsSwallowClick = false; // stale flag from a swipe must not eat a keyboard click
   if (fsIdleActive()) armFsIdleTimer();
