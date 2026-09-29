@@ -1250,7 +1250,7 @@ function cleanTitle(s) {
     .replace(/\s+(feat\.?|ft\.?|featuring)\s+.*$/i, ''); // bare "feat. X" credits
   // " - Remastered 2021" / " - Radio Edit": only strip a dash suffix that
   // looks like a version tag, so real titles with dashes survive.
-  const dash = t.match(/^(.*\S)\s+[-–—]\s+(.+)$/);
+  const dash = t.match(/^(.*\S)\s+[-\u2013\u2014]\s+(.+)$/);
   if (dash && VERSION_TAG.test(dash[2])) t = dash[1];
   return t.replace(/\s+/g, ' ').trim();
 }
@@ -1312,7 +1312,7 @@ async function getLrclibMatch(title, artist, duration) {
   // YouTube-only tracks often arrive with no artist and an "Artist - Title"
   // video title; split that so lrclib gets a real artist to filter on.
   if (!artist) {
-    const m = title.match(/^(.+?)\s+[-–—]\s+(.+)$/);
+    const m = title.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
     if (m && !VERSION_TAG.test(m[2])) { artist = m[1]; title = m[2]; }
   }
   const clean = cleanTitle(title) || title;
