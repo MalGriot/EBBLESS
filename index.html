@@ -6623,7 +6623,9 @@ function extendQueueWithDiscover(originPlId){
       if (!seedTracks.length) return;
       const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
       const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong);
-      if (!found.length) return;
+      // Discover may have been switched off (or the queue replaced) while
+      // the fetch was in flight - don't append a batch nobody asked for.
+      if (!found.length || !isDiscoverOn(originPlId) || discoverOriginId() !== originPlId) return;
       discoverQueuedThisSession += found.length;
       const extId = discoverExtId(originPlId);
       const ext = getOrCreateDiscoverExt(originPlId);
