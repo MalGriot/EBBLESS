@@ -6173,14 +6173,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #156.
 
 ### lyrics-mode-load-crash: App stuck on splash when saved visual mode is lyrics
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** If the saved visual mode is lyrics, load throws
   "Cannot access 'lyricsState' before initialization" and the app never
   gets past the splash. Top-level `applyVisualMode();` (~index.html 8749)
   runs before `let lyricsState` (~8772).
 - **Touches:** visual mode init / lyrics state.
-- **Branch:**
+- **Branch:** agent/lyrics-mode-load-crash
 - **Notes:** Found by the fullscreen-immersive-phase lane (2026-09-30),
   exists on main.
 
