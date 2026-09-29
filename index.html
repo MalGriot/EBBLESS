@@ -7509,7 +7509,7 @@ function onDeckStateChange(deck, e){
   if (deck !== activeDeck()) return;
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
-  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)) setPlayingUI(true); }
+  if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); } }
   else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
@@ -9481,6 +9481,27 @@ if ('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('nexttrack', () => playNext(false));
   try { navigator.mediaSession.setActionHandler('stop', pausePlayback); } catch(e){}
 }
+
+/* ---------- one EBBLESS tab at a time (audio-ducking, narrow) ----------
+   Browsers give a page no signal when another tab or app starts audio
+   (Chrome desktop deliberately doesn't enforce audio focus, Safari's
+   navigator.audioSession only reports platform interruptions like calls,
+   Firefox has nothing), so general ducking isn't possible without mic
+   access. What we can see is another EBBLESS tab/window on the same origin:
+   when one actually starts playing, every other EBBLESS tab pauses with
+   the normal pause fade. No auto-resume - the user picks it back up. */
+const TAB_ID = Math.random().toString(36).slice(2);
+const tabChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('ebbless:playback') : null;
+function announceTabPlaying(){
+  if (tabChannel) try { tabChannel.postMessage({ type: 'playing', from: TAB_ID }); } catch(e){}
+}
+if (tabChannel) tabChannel.onmessage = (e) => {
+  const m = e.data;
+  if (!m || m.type !== 'playing' || m.from === TAB_ID) return;
+  const ad = activeDeck();
+  if (!ad.player || !ad.player.getPlayerState || ad.player.getPlayerState() !== 1 || isFadingOut(ad)) return;
+  pausePlayback();
+};
 
 /* =========================================================================
    DESKTOP MINI PLAYER — Document Picture-in-Picture
