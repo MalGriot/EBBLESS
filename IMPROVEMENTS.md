@@ -1426,7 +1426,7 @@ Add entries in this shape:
   production.
 
 ### tutorial-chaptered-prompts: Tutorial should pause per chapter with a "next" prompt
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Restructure the onboarding tutorial into chapters. Each
   chapter's animation loops in place until the user taps "next" to advance;
