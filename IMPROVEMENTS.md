@@ -6197,7 +6197,7 @@ Add entries in this shape:
   before an agent can finish it.
 
 ### cassette-beautification: Make the cassette a premium physical object
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Visual polish pass on the Cassette Tape art style
   (sibling of `spinning-record-realism`). Full brief from issue #149:
@@ -6230,6 +6230,42 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #149. Keep sizing from
   `record-cassette-size` and fullscreen behavior from
   `fullscreen-lp-cassette-visual` intact.
+
+  Material/motion pass on `agent/cassette-beautification`, all inside the
+  existing `#artCassette` SVG (same viewBox/padding, so sizing and the
+  fullscreen move into `#flowArtWrap` are untouched). Shell is now a cool
+  smoky translucent gradient with one soft diagonal reflection band, a top
+  rim catch-light, and a grounding shadow ellipse outside the new
+  `.cs-body` group. `#artCassette[data-state]` (idle / playing / paused,
+  set by `cassetteSyncState()` from `cassetteSetPlaying` and
+  `cassetteUpdateTrack`) lives on the element itself so it holds in
+  fullscreen: playing lifts the body ~2 units off its shadow and brightens
+  the sheen/hub gleams; stopping drops it back with a slight overshoot.
+  Label pan only runs while playing. Reels mirror the record's rAF model:
+  separate eased speeds per reel (take-up side lags on start, coasts a bit
+  longer), a tiny per-reel once-per-turn variation, start out of phase, and
+  a small damped rock-back when they come to rest; now turn
+  counterclockwise to match the tape path. Fixed-light gleams over the hubs
+  and a satin gradient on the tape packs give the highlight shift. The tape
+  now leaves each pack at its real tangent point (recomputed from progress
+  in `cassetteSetProgress`, pack outline rings follow the radius too) and
+  a faint dash sheen travels along it at the hubs' tape speed. Window has a
+  glass overlay drawn over reels and tape. Label stripped to a small, faint
+  EBBLESS wordmark plus the track title (removed the `01 / 01` index,
+  divider rule and deck arrow). Track tint: `--player-accent` mixed at 6%
+  into the label panel/hub rings and 14% into the glass streak, with plain
+  fallbacks. Beige/warm tones replaced with neutrals; no grain/wear/etc.
+  Reduced motion: no rotation (as before), no lift/transition, no pan.
+  Verified on a worktree-local `python3 -m http.server` with the dev test
+  playlist playing for real: idle (no track), playing, paused (hub angle
+  sampled per frame: ~500ms coast then a sub-degree rock that lands exactly
+  at rest), next-track title/label/tape update, and fullscreen (cassette in
+  `#flowArtWrap`, state still `playing`/`paused`) at 375x812, the ~557px
+  pane, and 1280x800 split-desktop plus desktop fullscreen. No new console
+  errors (only the pre-existing identity-provider / GSI / script-fetch
+  ones). Not verified: the synced crossfade ghost on the label (needs
+  crossfade on and a track to end; code path unchanged) and
+  prefers-reduced-motion in a real browser setting.
 
 ### ebbless-deep: EBBLESS DEEP - an optional deeper tier to fund the app
 - **Status:** draft
