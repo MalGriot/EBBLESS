@@ -1077,6 +1077,10 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   body.split-desktop #view-settings{grid-column:2}
   body.split-desktop:not(.view-settings-active) #view-player{display:block!important}
   body.split-desktop.view-settings-active #view-settings{display:block!important}
+  /* issue #141: Settings opened from desktop fullscreen shows on its own -
+     no library/queue/playlist panes beside it (see setView()). */
+  body.split-desktop.settings-solo.view-settings-active :is(#view-library,#queue-panel,#libpl-panel){display:none!important}
+  body.split-desktop.settings-solo.view-settings-active #view-settings{grid-column:1/-1}
   body.split-desktop #queue-panel{
     position:static;grid-column:3;grid-row:2;width:auto;height:auto;top:auto;right:auto;bottom:auto;
     min-height:0;transform:none!important;border-left:1px solid var(--border);
@@ -1118,7 +1122,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
      every fullscreen album art style (default/record/cassette) well right
      of center. #topbar doesn't use margin:auto centering the same way, so
      it keeps this rule unconditionally. */
-  body.split-desktop:not(.desktop-fs) .view-scroll,
+  body.split-desktop:not(.desktop-fs):not(.settings-solo) .view-scroll,
   body.split-desktop #topbar{margin-right:0!important}
   /* the library column is only 240-300px here - as narrow as the mobile
      layout the filter/cycle split already handles, so reuse it - and let
@@ -3453,9 +3457,23 @@ function setView(name){
   // own state said closed. Cleanly exit fullscreen mode first so Settings
   // always lands on the one deterministic layout (plain split-desktop grid,
   // library/queue exactly as visible as they are outside fullscreen).
-  if (name === 'settings' && state.deskFsOpen && typeof closeDesktopFs === 'function') closeDesktopFs();
+  // Issue #141: but when Settings is opened FROM fullscreen, show it alone
+  // (.settings-solo hides the library/queue/playlist panes, see the CSS) and
+  // restore fullscreen when Settings is left again, instead of dropping the
+  // user back into the 3-pane grid.
+  if (name === 'settings' && state.deskFsOpen && typeof closeDesktopFs === 'function'){
+    closeDesktopFs();
+    state.settingsFromDeskFs = true;
+    document.body.classList.add('settings-solo');
+  }
+  const restoreDeskFs = name !== 'settings' && state.settingsFromDeskFs;
+  if (name !== 'settings'){
+    state.settingsFromDeskFs = false;
+    document.body.classList.remove('settings-solo');
+  }
   state.currentView = name;
   document.body.classList.toggle('view-settings-active', name === 'settings');
+  if (restoreDeskFs && document.body.classList.contains('split-desktop')) toggleDesktopFs();
   if (state.queueOpen) closeQueuePanel(false);
   if (name !== 'library' && typeof closeLibraryPlaylistPanel === 'function') closeLibraryPlaylistPanel();
   if (name === 'player' && prevView !== 'player' && typeof setVisualMode === 'function'){
