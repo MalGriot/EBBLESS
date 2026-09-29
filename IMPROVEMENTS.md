@@ -6092,13 +6092,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #156.
 
 ### relink-soundcloud-suggestions: "Refresh link" should suggest SoundCloud for SoundCloud tracks
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The per-track refresh-link menu only offers YouTube
   candidates. For SoundCloud-sourced tracks it should offer SoundCloud
   candidates too - match the source for accuracy.
 - **Touches:** `track-relink-menu`, `#relinkCandidates`.
-- **Branch:**
+- **Branch:** agent/relink-soundcloud-suggestions
 - **Notes:** Synced from Geethub issue #140.
 
 ### paste-search-result-counts: Paste-bar search results should show track count and duration
@@ -6369,11 +6369,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #180.
 
 ### footer-title-marquee: Mobile footer player: long titles should scroll like a marquee
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** In the mobile footer player, titles too long to fit should scroll as a marquee.
 - **Touches:** mobile footer player title.
-- **Branch:** (unclaimed)
+- **Branch:** agent/footer-title-marquee
 - **Notes:** Synced from Geethub issue #181.
 
 ### mobile-fullscreen-art-slide: Mobile fullscreen: art should slide to center when UI appears
@@ -6455,11 +6455,11 @@ Add entries in this shape:
 
 
 ### discover-randomness: Discover should vary its picks each time for the same song
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Discover should not produce the same queue every time from the same seed song. Each run should feel unique.
 - **Touches:** Discover candidate selection.
-- **Branch:** (unclaimed)
+- **Branch:** agent/discover-randomness
 - **Notes:** Synced from Geethub issue #199.
 
 ### tester-report-no-github: Bug reporting for testers without a GitHub login
