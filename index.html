@@ -3490,6 +3490,9 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
       return;
     }
     if (btn.dataset.view === 'player' && typeof setVisualMode === 'function') setVisualMode('art');
+    // Tapping Library with a playlist panel open returns to the library list
+    // (setView only closes the panel when leaving library, not re-entering it).
+    if (btn.dataset.view === 'library') closeLibraryPlaylistPanel();
     setView(btn.dataset.view);
   });
 });
