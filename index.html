@@ -5315,7 +5315,7 @@ function openArtPicker(heading, resetLabel, extraHtml, apply, onReset){
    `originalImage`.
    "Apply to all tracks in this album": tracks don't carry an album field of
    their own - album membership only exists as an album-type library entry
-   (isAlbumType) holding them. So the album is the album entry containing
+   (isAlbumEntry) holding them. So the album is the album entry containing
    this track (the one it was opened from, else any album in the library
    with the same title+artist), and "all tracks" is every track across the
    whole library (every playlist, Liked Songs included) whose title+artist
@@ -5327,7 +5327,7 @@ function artTrackKey(t){ return normLibSearch(t.title) + '|' + normLibSearch(t.a
 
 function albumForTrack(pl, t){
   const key = artTrackKey(t);
-  const holds = p => !!p && isAlbumType(p.type) && Array.isArray(p.tracks) && p.tracks.some(x => artTrackKey(x) === key);
+  const holds = p => !!p && isAlbumEntry(p) && Array.isArray(p.tracks) && p.tracks.some(x => artTrackKey(x) === key);
   if (holds(pl)) return pl;
   for (const id of getLibrary()){ const p = playlistById(id); if (holds(p)) return p; }
   return null;

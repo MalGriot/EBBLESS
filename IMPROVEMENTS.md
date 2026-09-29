@@ -6850,7 +6850,7 @@ Add entries in this shape:
 
 
 ### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The change-art page should have a checkbox to apply the
   chosen art to every track in the same album. The option should not be
@@ -6865,11 +6865,11 @@ Add entries in this shape:
   album, or 1-track album). Album = album-type library entry holding the
   track; applies to every title+artist match library-wide. Per-track
   `originalArt` keeps reset working; relink no longer overwrites hand-picked
-  art. **At merge:** `albumForTrack` should call `isAlbumEntry(p)` (from
-  `playlist-menu-album-toggle`) instead of `isAlbumType(p.type)`.
+  art. At merge, `albumForTrack` switched to `isAlbumEntry(p)` so manual
+  album/playlist overrides count. SW v28.
 
 ### cassette-fullscreen-second-stack: Cassette fullscreen intro should do a second stack downward
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** After the tapes stack upward and slide behind the center
   tape, repeat the same move downward toward the bottom of the screen and
@@ -6899,7 +6899,7 @@ Add entries in this shape:
   Sign in with Google. Update this list when a new service is added.
 
 ### currents-12-tracks: CuRRentSSsss playlist should load 12 tracks
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When CuRRentSSsss is built, it should end up with 12
   tracks (currently it tops up to a minimum of 8 via `CURRENTS_MIN_TRACKS`).
@@ -6913,7 +6913,7 @@ Add entries in this shape:
   at least 12 (can still reach 14 with many saved playlists). Client-only.
 
 ### playlist-menu-album-toggle: Playlist menu option to mark something as a playlist or album
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The playlist 3-dot menu should let the user manually
   recategorize an entry as a playlist or an album, for when auto-detection
