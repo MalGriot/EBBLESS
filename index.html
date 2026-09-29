@@ -7641,6 +7641,10 @@ let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
 async function fetchLyrics(t){
   if (lyricsCache.has(t.videoId)) return lyricsCache.get(t.videoId);
   const params = new URLSearchParams({ videoId: t.videoId, title: t.title || '', artist: t.artist || '' });
+  // Track length (seconds) lets the worker pick the right version (album
+  // cut vs live/acoustic) - prefer the source's own length, else the video's.
+  const dur = t.srcDuration || t.duration || 0;
+  if (dur) params.set('duration', String(Math.round(dur)));
   const res = await fetch(BACKEND + '/lyrics?' + params.toString());
   if (!res.ok) throw new Error('lyrics fetch failed');
   const data = await res.json();
