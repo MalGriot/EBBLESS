@@ -10925,7 +10925,8 @@ function startApp(){
    functions instead of a second, fake copy of the app. Runs only on the
    visitor's first load; startApp() (and the real splash) always follows.
    The beats are grouped into chapters (see CHAPTERS in runIntro()): each
-   loops in place until the visitor taps Next, with its own clip of the
+   plays once, then holds on its last frame until the visitor taps Next,
+   with its own clip of the
    intro theme starting only when that chapter does.
    ========================================================================= */
 const ONB_KEY = 'ebbless_onboarding_complete';
@@ -11590,20 +11591,16 @@ function runIntro(preview){
   // on its own part of the score however long the visitor lingers on the
   // one before it.
 
-  // chapter 1: getting music in - paste, Load, the library [0->12900].
-  // `pass` is 0 the first time through and counts up as it loops in place
-  async function chapterLoad(pass){
+  // chapter 1: getting music in - paste, Load, the library [0->12900]
+  async function chapterLoad(){
     // 0. the mark alone, breathing - a longer beat to arrive on and actually
     // register, then a quick blur-out (rather than the slower plain fade
-    // used elsewhere) so it reads as "arrived, then whisked away" [->1800].
-    // First pass only - a loop comes back around to the input box, not the logo
-    if (pass === 0){
-      await wait(1800);
-      if (done) return;
-      markEl.classList.add('is-leaving');
-      await wait(380);
-      if (done) return;
-    }
+    // used elsewhere) so it reads as "arrived, then whisked away" [->1800]
+    await wait(1800);
+    if (done) return;
+    markEl.classList.add('is-leaving');
+    await wait(380);
+    if (done) return;
 
     // 1. the mark becomes the input [1800->4400]
     markEl.classList.remove('is-idle');
@@ -11774,8 +11771,8 @@ function runIntro(preview){
 
   // chapter 3: the transport row [27200->35800]
   async function chapterControl(){
-    // the player is already up coming out of chapter 2, but a loop pass (or
-    // a Next tapped mid-chapter 2) needs it put back in a known state first
+    // the player is already up coming out of chapter 2, but a Next tapped
+    // mid-chapter 2 needs it put back in a known state first
     setView('player');
     setStage('player');
     seedDemoTrack();
@@ -11990,8 +11987,8 @@ function runIntro(preview){
   ];
   let chapter = -1;
   // plays one chapter's slice of the track: seek, fade in, then fade out
-  // and pause at the slice's end so a chapter looping in place past its
-  // clip goes quiet instead of bleeding into the next chapter's music.
+  // and pause at the slice's end so a chapter held on its last frame past
+  // its clip goes quiet instead of bleeding into the next chapter's music.
   // Both end timers go through later(), so Next cancels them along with
   // the rest of the chapter
   function playClip(clip){
@@ -12007,9 +12004,9 @@ function runIntro(preview){
       later(() => { if (!done) musicEl.pause(); }, toMs - fromMs);
     }
   }
-  // puts back everything a chapter pass can leave half-done (a Next tapped
+  // puts back everything a chapter can leave half-done (a Next tapped
   // mid-beat parks the outgoing chapter wherever it was, see wait()), so
-  // every pass - and every chapter - starts from the same clean slate.
+  // every chapter starts from the same clean slate.
   // Deliberately leaves view/stage alone: each chapter sets its own
   function resetChapterState(){
     captionEl.classList.remove('is-visible');
@@ -12044,14 +12041,11 @@ function runIntro(preview){
       nextEl.classList.toggle('is-visible', !ch.once);
     }
     playClip(ch.clip);
-    for (let pass = 0; !done; pass++){
-      resetChapterState();
-      await ch.run(pass);
-      if (done || ch.once) return;
-      // a breath between loop passes, captions cleared, before it restarts
-      clearCaption();
-      await wait(1200);
-    }
+    resetChapterState();
+    // plays through once, then just holds on its last frame (every chapter
+    // ends with its captions cleared and nothing mid-animation) until
+    // Next - nothing left pending to cancel but the clip's end fade
+    await ch.run();
   }
   // Next: cancel whatever the current chapter still has pending (its beats
   // and its clip's end fade), duck its music out, then start the next one
