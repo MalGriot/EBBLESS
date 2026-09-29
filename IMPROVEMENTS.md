@@ -5913,12 +5913,12 @@ Add entries in this shape:
   compositing over the video (separate CSS fix).
 
 ### lp-shadow-clipped: LP shadow is cut off by its own image box
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The LP's shadow gets clipped by the image border, which
   reveals a box. Make the edge softer/larger so the shadow never looks cut.
 - **Touches:** record art style CSS.
-- **Branch:**
+- **Branch:** agent/lp-shadow-clipped
 - **Notes:** Synced from Geethub issue #143.
 
 ### fullscreen-title-contrast: Fullscreen title unreadable over white-heavy art
@@ -5968,14 +5968,14 @@ Add entries in this shape:
   browser), #148 (redundant X), combined since they describe the same mode.
 
 ### fullscreen-ui-autohide: Fullscreen LP/cassette/cymatics UI should fade out when idle
-- **Status:** draft
+- **Status:** merged
 - **Priority:** high
 - **Description:** On desktop and mobile, in fullscreen LP, cassette or
   cymatics, the UI should fade out after some idle time and fade back in on
   interaction.
 - **Touches:** fullscreen chrome. Overlaps `fullscreen-immersive-phase`
   (that mode already auto-hides) - build both on one shared idle timer.
-- **Branch:**
+- **Branch:** agent/fullscreen-ui-autohide
 - **Notes:** Synced from Geethub issue #147.
 
 ### desktop-fullscreen-settings-only: In desktop fullscreen, Settings should open alone
@@ -5988,13 +5988,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #141.
 
 ### desktop-settings-footer-controls: Desktop Settings view should show footer player controls
-- **Status:** draft
+- **Status:** merged
 - **Priority:** high
 - **Description:** On desktop, while the Settings menu is active (replacing
   the player pane), show the footer player controls so playback stays
   controllable.
 - **Touches:** desktop settings inline view, footer player.
-- **Branch:**
+- **Branch:** agent/desktop-settings-footer-controls
 - **Notes:** Synced from Geethub issue #146 (title only, no description).
 
 ### pause-fade-out: Pausing should fade the music out briefly
