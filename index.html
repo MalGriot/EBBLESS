@@ -2786,6 +2786,7 @@ const LIKED_ID = 'liked';                    // fixed id for the built-in Liked 
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
+const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
 const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
@@ -6145,6 +6146,56 @@ const DISCOVER_BATCH = 6;       // tracks fetched per extension
 // Unknown duration (0) counts as normal. Anything over 15 min is also held
 // back until DISCOVER_LONG_AFTER Discover tracks have been queued this
 // session, so long tracks are never among the first picks.
+// Variety: the ranked pool for a given seed is effectively fixed (the
+// worker caches /similar per title+artist, and scoring is deterministic),
+// so walking it top-down served the exact same queue every time. Instead
+// the walk order is a weighted random draw without replacement: each
+// candidate's weight is exp((score - topScore) / DISCOVER_SAMPLE_TEMP), so
+// strong matches still come up far more often than weak ones, but every
+// run differs. Picks already served for this same seed recently are kept
+// in a small persisted memory and have their weight cut, so re-running
+// Discover on a song leans towards tracks it hasn't shown yet (without
+// excluding them - a small pool still fills). All hard filters (dupes,
+// library/queue exclusion, long-track rules, wrong-track guards inside
+// searchYouTube) still apply to whatever the draw picks.
+const DISCOVER_SAMPLE_TEMP = 0.1;  // 0.15 drifted to ~2.6/6 top-15 picks on repeat runs of one seed (sim of a Last.fm-shaped pool); 0.1 keeps ~3.5/6 with every run still distinct
+const DISCOVER_RECENT_PENALTY = 0.15;
+const DISCOVER_RECENT_PER_SEED = 36;
+const DISCOVER_RECENT_SEEDS = 80;
+function discoverSeedKey(seed){ return ((seed.title || '') + '|' + (seed.artist || '')).toLowerCase(); }
+function getDiscoverRecent(seedKey){
+  const all = lsGet(LS_DISCOVER_RECENT, {}) || {};
+  return new Set(Array.isArray(all[seedKey]) ? all[seedKey] : []);
+}
+function rememberDiscoverPicks(seedKey, pickKeys){
+  if (!pickKeys.length) return;
+  const all = lsGet(LS_DISCOVER_RECENT, {}) || {};
+  const prev = Array.isArray(all[seedKey]) ? all[seedKey].filter(k => !pickKeys.includes(k)) : [];
+  delete all[seedKey];  // re-insert so object key order tracks recency
+  all[seedKey] = prev.concat(pickKeys).slice(-DISCOVER_RECENT_PER_SEED);
+  const keys = Object.keys(all);
+  if (keys.length > DISCOVER_RECENT_SEEDS) keys.slice(0, keys.length - DISCOVER_RECENT_SEEDS).forEach(k => delete all[k]);
+  lsSet(LS_DISCOVER_RECENT, all);
+}
+// ranked: [{ c, score, rank }] sorted best-first. Returns the same entries
+// in a randomized, score-weighted order (Efraimidis-Spirakis via
+// exponential races: smallest -ln(u)/w goes first).
+function discoverSampleOrder(ranked, recentKeys, rand){
+  rand = rand || Math.random;
+  if (!ranked.length) return [];
+  const top = ranked[0].score;
+  return ranked
+    .map(x => {
+      const key = (x.c.title + '|' + x.c.artist).toLowerCase();
+      let w = Math.exp((x.score - top) / DISCOVER_SAMPLE_TEMP);
+      if (recentKeys && recentKeys.has(key)) w *= DISCOVER_RECENT_PENALTY;
+      const u = Math.max(rand(), 1e-12);
+      return { x, k: -Math.log(u) / Math.max(w, 1e-9) };
+    })
+    .sort((a, b) => a.k - b.k)
+    .map(o => o.x);
+}
+
 const DISCOVER_LONG_MIN = 15 * 60;
 const DISCOVER_LONG_STRONG_RANK = 5;  // 45+ min needs a top-5 scored candidate
 const DISCOVER_LONG_AFTER = DISCOVER_BATCH;
@@ -6433,15 +6484,21 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   if (!pool.length) return [];
 
   const crowd = await fetchPoolAffinity(Array.from(seedTagVec.keys()));
-  const scored = pool
+  const ranked = pool
     .filter(c => c.title && c.artist)
     .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists, crowd) }))
     .sort((a, b) => b.score - a.score)
-    .map(x => x.c);
+    .map((x, rank) => Object.assign(x, { rank }));
+  // Random, score-weighted walk order (see discoverSampleOrder). `rank`
+  // stays the true score rank, so the long-track strong-match rule is
+  // unaffected by where the draw happened to place a candidate.
+  const seedKey = discoverSeedKey(seed);
+  const order = discoverSampleOrder(ranked, getDiscoverRecent(seedKey));
 
   const resolved = [];
+  const pickedKeys = [];
   const seenTitles = new Set();
-  for (const [rank, c] of scored.entries()){
+  for (const { c, rank } of order){
     if (resolved.length >= count) break;
     const dupeKey = (c.title + '|' + c.artist).toLowerCase();
     if (seenTitles.has(dupeKey)) continue;
@@ -6455,6 +6512,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       // whatever the recommendation source called this candidate.
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
       resolved.push({ title: meta.title, artist: meta.artist, videoId: c.videoId, matchedTitle: c.title, channel: c.artist, plays: 0, art: meta.art, duration: c.duration || 0, tags: tagNames });
+      pickedKeys.push(dupeKey);
       continue;
     }
     try{
@@ -6463,8 +6521,10 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
       if (!discoverLongTrackOk(match.duration || 0, rank, allowLong)) continue;
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
       resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
+      pickedKeys.push(dupeKey);
     } catch(e){ /* discover is best-effort - a miss here never blocks playback */ }
   }
+  rememberDiscoverPicks(seedKey, pickedKeys);
   return resolved;
 }
 
