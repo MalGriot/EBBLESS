@@ -5922,13 +5922,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #143.
 
 ### fullscreen-title-contrast: Fullscreen title unreadable over white-heavy art
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In fullscreen, when album art has a lot of white, the
   white title text disappears. Fix contrast, e.g. a subtle character
   outline/shadow that only really shows when the text would vanish.
 - **Touches:** fullscreen title/artist styling.
-- **Branch:**
+- **Branch:** agent/fullscreen-title-contrast
 - **Notes:** Synced from Geethub issue #153.
 
 ### crossfade-art-lp-cassette: Crossfade art fade should also work on LP and cassette
@@ -6271,22 +6271,22 @@ Add entries in this shape:
   album art from Spotify; use the new link's thumbnail only if that fails.
 
 ### desktop-library-bg-video-fixed: Library background video shouldn't scroll on desktop
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, the Library's background video scrolls away
   with the list. It should stay fixed in place while the list scrolls over it.
 - **Touches:** Library view background video CSS.
-- **Branch:**
+- **Branch:** agent/desktop-library-bg-video-fixed
 - **Notes:** Synced from Geethub issue #175 (title only).
 
 ### touch-landscape-rotate-lock: "Rotate your device" overlay blocks touch devices in landscape
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On a touch device at 1280x800 landscape (e.g. an iPad or
   touchscreen laptop), the full-screen "rotate your device" overlay covers
   the whole app, so it may be unusable there.
 - **Touches:** `#rotate-lock`.
-- **Branch:**
+- **Branch:** agent/touch-landscape-rotate-lock
 - **Notes:** Found by the `queue-3dot-menu-desktop` lane 2026-09-23 in
   headless touch emulation, not user-reported yet.
 
