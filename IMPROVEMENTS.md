@@ -6186,6 +6186,9 @@ Add entries in this shape:
   - "shift+left" / "shift+right" rewind / fast-forward 10 seconds (plain
     left/right keep prev/next track).
   - "esc" closes an open playlist panel (after existing fullscreen exits).
+  - All shortcuts work in fullscreen. Menu ones (library, queue, settings,
+    load-playlist box, playlist panel) exit fullscreen to the main view
+    first, then open that menu; playback toggles stay in fullscreen.
 - **Touches:** global keydown handler in index.html (~line 9606), next to
   the existing `keyboard-shortcuts` bindings; reuse existing button click
   paths (`toggleShuffle`, `cycleRepeat`, art-style/cymatics/lyrics buttons).
