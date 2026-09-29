@@ -2055,6 +2055,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-5.41L15.59 9 17 10.41 11 16.41 7 12.41 8.41 11z"/></svg>
         Discover
       </button>
+      <button class="re" id="queueSaveBtn" title="Save this queue as a new playlist in your library">Save</button>
       <button class="clear" id="queueClearBtn">Clear</button>
     </div>
     <div class="queue-scroll">
@@ -6306,6 +6307,34 @@ function renderQueuePanel(){
 }
 
 queueClearBtn.addEventListener('click', queueClearUpcoming);
+
+// Saves the whole queue (played + now + upcoming, in its current order) as a
+// new custom playlist - the way to keep a Discover-generated radio or an
+// edited queue. Tracks are copied whole so their resolved videoId/art/
+// matched metadata come along and play straight from the library. Named
+// after the origin playlist; the listener can rename it from its menu.
+function saveQueueAsPlaylist(){
+  const seen = new Set();
+  const tracks = [];
+  let hasDiscover = false;
+  state.queue.forEach(e => {
+    const pl = playlistById(e.plId);
+    const t = pl && pl.tracks[e.idx];
+    if (!t || !t.videoId || seen.has(t.videoId)) return;
+    seen.add(t.videoId);
+    if (String(e.plId).startsWith('discover-ext:')) hasDiscover = true;
+    tracks.push(Object.assign({}, t, { plays: 0 }));
+  });
+  if (!tracks.length){ showToast('Nothing to save'); return; }
+  const origin = playlistById(discoverOriginId());
+  const base = (origin && origin.name && !origin.id.startsWith('discover-ext:')) ? origin.name : 'Queue';
+  const pl = createCustomPlaylist(base + (hasDiscover ? ' Radio' : ' Mix'));
+  pl.tracks = tracks;
+  persistPlaylistObj(pl);
+  renderLibrary();
+  showToast('Saved as ' + pl.name);
+}
+$('queueSaveBtn').addEventListener('click', saveQueueAsPlaylist);
 
 /* ---- queue row drag-to-reorder (pointer-based, works for mouse + touch) ---- */
 function wireQueueRowGestures(row, handle){
