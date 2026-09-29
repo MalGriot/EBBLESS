@@ -2212,7 +2212,7 @@ Add entries in this shape:
   before this fix - not a regression, just nothing to gain there).
 
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** On desktop, if audio starts playing from another source
   (another tab/app), EBBLESS should detect it and automatically lower its
