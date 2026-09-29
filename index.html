@@ -3249,9 +3249,35 @@ function currentTrackIndex(){
 // for a track whose resolved art couldn't be found at all. Any other
 // surface that needs "the art URL for this track" (e.g. lock-screen media-
 // session metadata) should read it the same way, through this function.
+// Source art often arrives (or was cached in localStorage) at a small
+// rendition that looks soft on desktop: Spotify's oembed/visualIdentity 300px
+// or 64px album hashes, iTunes/Apple Music 100x100-600x600 renders, SoundCloud's
+// 100x100 "-large" crop. Each CDN serves a bigger size of the same image from
+// a predictable URL, so this rewrites to that on read (old cached playlists
+// included). artworkUrls() keeps the original URL right after it as a fallback
+// in case the larger rendition is ever missing. Anything unrecognised
+// (data: URLs, YouTube, other hosts) comes back untouched.
+function upgradeArtUrl(url){
+  if (typeof url !== 'string') return url;
+  if (/^https:\/\/(i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab67616d(00001e02|00004851)/.test(url)){
+    return url.replace(/ab67616d(00001e02|00004851)/, 'ab67616d0000b273'); // 300/64 -> 640
+  }
+  if (/^https:\/\/[a-z0-9.-]*mzstatic\.com\//.test(url)){
+    return url.replace(/\/(\d{2,4})x(\d{2,4})(bb|cc)?\.(jpg|jpeg|png|webp)$/i, (m, w, h, suf, ext) =>
+      (+w < 1200 ? '/1200x1200' + (suf || 'bb') + '.' + ext : m));
+  }
+  if (/^https:\/\/[a-z0-9.-]*sndcdn\.com\//.test(url)){
+    return url.replace(/-(large|t300x300|t250x250|t200x200|badge|small|tiny|mini)\./, '-t500x500.');
+  }
+  return url;
+}
 function artworkUrls(track){
   const chain = [];
-  if (track && track.art) chain.push(track.art);
+  if (track && track.art){
+    const big = upgradeArtUrl(track.art);
+    if (big !== track.art) chain.push(big);
+    chain.push(track.art);
+  }
   const videoId = track && track.videoId;
   // A SoundCloud-native videoId (see isSoundCloudVideoId) was never a real
   // YouTube id - nothing to fall back to at img.youtube.com for it, and its
@@ -3901,7 +3927,7 @@ function renderLibrary(){
       // cover (see the branch below), just never a substitute for real art
       // once it's available.
       artDiv.classList.add('single');
-      const img = document.createElement('img'); img.src = pl.image; img.loading = 'lazy';
+      const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, { art: pl.image });
       artDiv.appendChild(img);
     } else {
       const gridFace = document.createElement('div');
@@ -4060,8 +4086,7 @@ function toggleLibraryPlaylistPanel(id){
   // has any resolvable artwork so a manual/matched playlist isn't left blank.
   const artTrack = pl.image ? null : pl.tracks.find(t => t.videoId || t.art);
   if (pl.image){
-    libplArt.onerror = null;
-    libplArt.src = pl.image;
+    attachArtworkFallback(libplArt, { art: pl.image });
     libplArtWrap.hidden = false;
   } else if (artTrack){
     attachArtworkFallback(libplArt, artTrack);
