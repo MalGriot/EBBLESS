@@ -1240,7 +1240,12 @@ svg.load-spin{animation:load-spin .9s linear infinite}
   transition:opacity 420ms var(--ease-out),visibility 420ms var(--ease-out),background 4s linear;
 }
 #splash.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
-#splash .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:grayscale(1) contrast(1.15) brightness(.9)}
+#splash .splash-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:grayscale(1) contrast(1.15) brightness(.9);opacity:0}
+/* Safari drops a <video>'s poster once media loads even when autoplay is
+   blocked, leaving just the tint - so the still lives on its own layer and
+   the video only covers it once it's actually playing. */
+#splash .splash-poster{position:absolute;inset:0;z-index:-2;background:url(brand/assets/splash-cymatics-poster.jpg) center/cover no-repeat;filter:grayscale(1) contrast(1.15) brightness(.9)}
+#splash .splash-video.is-playing{opacity:1}
 #splash .splash-tint{position:absolute;inset:0;z-index:-1;background:var(--clock-accent,#1db954);mix-blend-mode:color;transition:background 4s linear}
 #splash .splash-black{position:absolute;inset:0;z-index:0;background:#000;pointer-events:none;opacity:1}
 #splash.is-active .splash-black{animation:splash-reveal 2600ms var(--ease-out) forwards}
@@ -1599,6 +1604,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 <audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
 
 <div id="splash">
+  <div class="splash-poster"></div>
   <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
@@ -2317,6 +2323,14 @@ setTimeout(() => {
     });
   };
   ['pointerdown', 'touchstart', 'keydown'].forEach(t => document.addEventListener(t, kick, { once: true, capture: true, passive: true }));
+  // Splash video stays invisible over its poster layer until frames are
+  // really playing, so a blocked autoplay keeps the still up to the end.
+  const splashVid = document.querySelector('#splash .splash-video');
+  if (splashVid) {
+    const sync = () => splashVid.classList.toggle('is-playing', !splashVid.paused && splashVid.readyState >= 3);
+    ['playing', 'pause', 'waiting', 'emptied', 'ended'].forEach(t => splashVid.addEventListener(t, sync));
+    sync();
+  }
 })();
 
 /* ---- install prompt ----
