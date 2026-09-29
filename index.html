@@ -407,6 +407,20 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   color:var(--bad);background:rgba(224,101,94,.1);flex:none;
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .btn-danger:hover{background:var(--bad);color:#fff}
+/* press-and-hold confirm (Clear playlists): a fill sweeps across while held,
+   retracts if released early; --hold-ms must match CLEAR_HOLD_MS in the JS */
+.btn-hold{--hold-ms:1600ms;position:relative;overflow:hidden;isolation:isolate;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.btn-hold:hover{background:rgba(224,101,94,.18);color:var(--bad)}
+.btn-hold-fill{position:absolute;inset:0;z-index:-1;background:var(--bad);
+  transform:scaleX(0);transform-origin:left center;transition:transform 320ms var(--ease-out)}
+.btn-hold.is-holding{color:#fff;transition:color 120ms linear calc(var(--hold-ms) / 2)}
+.btn-hold.is-holding .btn-hold-fill{transform:scaleX(1);transition:transform var(--hold-ms) linear}
+@media (prefers-reduced-motion:reduce){
+  .btn-hold-fill,.btn-hold.is-holding .btn-hold-fill{transform:none}
+  .btn-hold-fill{opacity:0;transition:opacity 150ms linear}
+  .btn-hold.is-holding .btn-hold-fill{opacity:1;transition:opacity var(--hold-ms) linear}
+}
 #crossfadeDurRow{transition:opacity var(--dur-ui) var(--ease-out)}
 #import-overlay .close{position:absolute;top:calc(20px + var(--safe-t));right:20px;width:34px;height:34px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint)}
@@ -793,14 +807,6 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #danger-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #danger-scrim.is-open{opacity:1;pointer-events:auto}
-#danger-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(360px,calc(100vw - 48px));
-  background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
-  box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
-  opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
-  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-#danger-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-#danger-modal h2{font-size:16px;font-weight:700;margin:0 0 10px;color:var(--bad)}
-#danger-modal p{font-size:13px;color:var(--faint);line-height:1.5;margin:0}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 /* ---------- tester feedback form (no login, no GitHub - posts to the
    worker's /tester-report). Reuses #danger-scrim and the danger modal's
@@ -2276,22 +2282,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="label">Clear saved playlists</div>
             <div class="desc">Removes every playlist saved to your library on this device. Cached matches are cleared too. This can't be undone.</div>
           </div>
-          <button class="btn-danger" id="clearLibraryBtn">Clear playlists</button>
+          <button class="btn-danger btn-hold" id="clearLibraryBtn" aria-label="Clear all saved playlists. Press and hold to confirm."><span class="btn-hold-fill" aria-hidden="true"></span><span class="btn-hold-label">Hold to clear playlists</span></button>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- ===== CLEAR PLAYLISTS CONFIRM ===== -->
   <div id="danger-scrim"></div>
-  <div id="danger-modal" role="alertdialog" aria-modal="true" aria-labelledby="dangerModalTitle" aria-describedby="dangerModalDesc">
-    <h2 id="dangerModalTitle">Clear all saved playlists?</h2>
-    <p id="dangerModalDesc">This permanently removes every playlist saved to your library on this device, along with their cached matches. It can't be undone.</p>
-    <div class="danger-modal-actions">
-      <button class="btn-ghost" id="dangerModalCancelBtn">Cancel</button>
-      <button class="btn-danger" id="dangerModalConfirmBtn">Clear playlists</button>
-    </div>
-  </div>
 
   <!-- ===== TESTER FEEDBACK FORM ===== -->
   <form id="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle" novalidate>
@@ -6027,26 +6024,46 @@ if (pasteGuideEl){
   window.addEventListener('resize', () => { if (!pasteGuideEl.hidden) refreshPasteGuide(); });
 }
 
-const dangerScrim = $('danger-scrim'), dangerModal = $('danger-modal');
-const dangerModalCancelBtn = $('dangerModalCancelBtn'), dangerModalConfirmBtn = $('dangerModalConfirmBtn');
+const dangerScrim = $('danger-scrim');
 
-function openDangerModal(){
-  dangerScrim.classList.add('is-open');
-  dangerModal.classList.add('is-open');
+/* Clear playlists: press and hold (mouse, touch, or Space/Enter) instead of a
+   confirm dialog. Releasing, leaving the button or a scroll cancels and the
+   fill retracts; completing the hold clears the library. */
+const CLEAR_HOLD_MS = 1600;  // keep in sync with --hold-ms on .btn-hold
+let clearHoldTimer = 0;
+function startClearHold(){
+  if (clearHoldTimer) return;
+  clearLibraryBtn.classList.add('is-holding');
+  clearHoldTimer = setTimeout(() => {
+    clearHoldTimer = 0;
+    clearLibraryBtn.classList.remove('is-holding');
+    getLibrary().forEach(id => lsDel(LS_PL(id)));
+    lsSet(LS_LIB, []);
+    renderLibrary();
+    if (navigator.vibrate) navigator.vibrate(20);
+    showToast('Library cleared');
+  }, CLEAR_HOLD_MS);
 }
-function closeDangerModal(){
-  dangerScrim.classList.remove('is-open');
-  dangerModal.classList.remove('is-open');
+function cancelClearHold(){
+  if (!clearHoldTimer) return;
+  clearTimeout(clearHoldTimer);
+  clearHoldTimer = 0;
+  clearLibraryBtn.classList.remove('is-holding');
 }
-clearLibraryBtn.addEventListener('click', openDangerModal);
-dangerModalCancelBtn.addEventListener('click', closeDangerModal);
-dangerScrim.addEventListener('click', closeDangerModal);
-dangerModalConfirmBtn.addEventListener('click', () => {
-  getLibrary().forEach(id => lsDel(LS_PL(id)));
-  lsSet(LS_LIB, []);
-  renderLibrary();
-  closeDangerModal();
-  showToast('Library cleared');
+clearLibraryBtn.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  startClearHold();
+});
+['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(t => clearLibraryBtn.addEventListener(t, cancelClearHold));
+clearLibraryBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+clearLibraryBtn.addEventListener('keydown', (e) => {
+  if (e.key !== ' ' && e.key !== 'Enter') return;
+  e.preventDefault();
+  e.stopPropagation();  // keep Space from reaching the global play/pause shortcut
+  if (!e.repeat) startClearHold();
+});
+clearLibraryBtn.addEventListener('keyup', (e) => {
+  if (e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); cancelClearHold(); }
 });
 
 /* ---- tester feedback form: POSTs to the worker's /tester-report (stored
@@ -6068,7 +6085,7 @@ function openFeedbackModal(){
 }
 function closeFeedbackModal(){
   feedbackModal.classList.remove('is-open');
-  if (!dangerModal.classList.contains('is-open')) dangerScrim.classList.remove('is-open');
+  dangerScrim.classList.remove('is-open');
 }
 feedbackBtn.addEventListener('click', openFeedbackModal);
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
