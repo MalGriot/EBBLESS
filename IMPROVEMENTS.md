@@ -6067,7 +6067,7 @@ Add entries in this shape:
   invisible at rest (container opacity:0) - noted in a code comment.
 
 ### fullscreen-immersive-phase: Make the hidden "press F twice" big fullscreen a real third button phase
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In fullscreen (art/LP/cassette), pressing "f" again
   gives a larger graphic with UI that disappears after a while - the user
@@ -6171,6 +6171,18 @@ Add entries in this shape:
 - **Touches:** global keydown handler (alongside "f" fullscreen and Esc).
 - **Branch:** agent/keyboard-shortcuts
 - **Notes:** Synced from Geethub issue #156.
+
+### lyrics-mode-load-crash: App stuck on splash when saved visual mode is lyrics
+- **Status:** draft
+- **Priority:** high
+- **Description:** If the saved visual mode is lyrics, load throws
+  "Cannot access 'lyricsState' before initialization" and the app never
+  gets past the splash. Top-level `applyVisualMode();` (~index.html 8749)
+  runs before `let lyricsState` (~8772).
+- **Touches:** visual mode init / lyrics state.
+- **Branch:**
+- **Notes:** Found by the fullscreen-immersive-phase lane (2026-09-30),
+  exists on main.
 
 ### keyboard-shortcuts-2: More keyboard shortcuts (playlist, shuffle, loop, art, cymatics, lyrics, seek)
 - **Status:** in-progress
