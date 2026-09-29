@@ -1091,7 +1091,9 @@ async function handlePodcast(url, ctx) {
     // candidates in that order and search the directories with each until
     // one matches; the latest-episode title is only a last resort.
     const names = [];
-    const addName = (n, why) => { n = String(n || '').trim(); if (n && !names.some(x => x.n.toLowerCase() === n.toLowerCase())) names.push({ n, why }); };
+    // og:title is Spotify's generic "Spotify – Web Player" when it serves the
+    // bot-check shell instead of the real page - never a show name.
+    const addName = (n, why) => { n = String(n || '').trim(); if (/^spotify\b/i.test(n) && /web player/i.test(n)) return; if (n && !names.some(x => x.n.toLowerCase() === n.toLowerCase())) names.push({ n, why }); };
     let showId = kind === 'show' ? id : null;
     if (kind === 'episode') {
       episodeTitle = (entity && (entity.name || entity.title)) || await spotifyOEmbedTitle('episode', id);
@@ -1110,6 +1112,9 @@ async function handlePodcast(url, ctx) {
     }
     if (!showName && names.length) showName = names[0].n;
     if (!showName) return json({ error: "Couldn't read that Spotify podcast link (private or invalid?)", debug: dbg }, 404);
+    // Spotify marks subscriber-only shows with a 🔓 (e.g. "NoSleep Premium
+    // (🔓)") - those never have a free feed, so say that plainly.
+    if (!feedUrl && /\u{1F513}|\u{1F512}|\bpremium\b|\bsubscriber/iu.test(showName)) return json({ error: '"' + showName + '" is a subscriber-only show on Spotify, so there\'s no free feed to play.', debug: dbg }, 404);
     if (!feedUrl) return json({ error: '"' + showName + '" has no public feed - it may be a Spotify exclusive.', debug: dbg }, 404);
   }
   if (!feedUrl) return json({ error: 'no public feed found for that podcast' }, 404);
