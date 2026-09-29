@@ -2787,7 +2787,7 @@ Add entries in this shape:
   own lane, not a quick fix.
 
 ### feedback-prompt: "Are you feeling this app or nah?" periodic feedback prompt
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** After a few days of use, show a thumbs-up/thumbs-down
   prompt. Either choice should prompt for more detail, and that feedback
