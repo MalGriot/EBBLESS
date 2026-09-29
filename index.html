@@ -444,6 +444,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   flex-shrink:0}
 .artwork-wrap[data-mode="art"][data-art-style="record"],
 .artwork-wrap[data-mode="art"][data-art-style="cassette"]{background:transparent;box-shadow:none}
+/* issue #143: the record's own drop shadow reaches past this box, so the
+   default overflow:hidden sliced it into a hard rectangular edge */
+.artwork-wrap[data-mode="art"][data-art-style="record"]{overflow:visible}
 .artwork-wrap[data-mode="art"]{aspect-ratio:1!important;height:auto!important;flex-shrink:0}
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
@@ -847,6 +850,7 @@ svg.load-spin{animation:load-spin .9s linear infinite}
    closeFlow) instead of showing the generic art images */
 #flow-layer .flow-art[data-art-style="record"],
 #flow-layer .flow-art[data-art-style="cassette"]{background:transparent;box-shadow:none;border-radius:0}
+#flow-layer .flow-art[data-art-style="record"]{overflow:visible} /* issue #143, see .artwork-wrap */
 #flow-layer .flow-art[data-art-style="record"] .art,
 #flow-layer .flow-art[data-art-style="cassette"] .art{opacity:0!important}
 #flow-layer .flow-art[data-art-style="record"] .art-record,
