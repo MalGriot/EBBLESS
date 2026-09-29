@@ -1694,7 +1694,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #50.
 
 ### lyrics-glow-trail: Lyrics should glow with a fading trail effect
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The current lyric line should glow in a color. Passed
   lines should keep glowing in that same color but at progressively lower
@@ -1703,7 +1703,13 @@ Add entries in this shape:
   state should stay consistent with wherever they clicked.
 - **Touches:** lyrics view rendering.
 - **Branch:** agent/lyrics-glow-trail
-- **Notes:** Synced from Geethub issue #51.
+- **Notes:** Synced from Geethub issue #51. Pushed (commit `08537a2`):
+  `.lyric-line.is-current` glows in `--player-accent`; new `.lyric-line.is-past`
+  uses the same color/glow scaled by a per-line `--glow` (0-1) set in
+  `updateLyricsHighlight` only when the active line changes, so seeking back
+  clears later lines. Transition off under `prefers-reduced-motion`.
+  Verified against fake synced lines in the real `#lyricsScroller`; not yet
+  checked on a real track, visually, or on browsers lacking `color-mix()`.
 
 ### cymatics-heart-centering: Center the title in cymatics fullscreen (heart pushes it left)
 - **Status:** merged
