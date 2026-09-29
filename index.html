@@ -3681,6 +3681,40 @@ const swapFlowArt = makeArtSwapper(flowArtA, flowArtB);
 function swapAltArt(track){
   attachArtworkFallback(recordLabelImg, track);
 }
+/* LP label + cassette label version of the synced crossfade fade above
+   (issue #158). Those surfaces show one image each (the record label spins
+   with the disc, the cassette label pans), so instead of an A/B pair a
+   frozen copy of the outgoing art is laid on top, the real element switches
+   to the next track underneath, and the copy fades out over durationMs.
+   The same elements are moved into fullscreen, so this covers both. */
+function ghostFadeOut(el, durationMs, prep){
+  const ghost = el.cloneNode(false);
+  ghost.removeAttribute('id');
+  ghost.classList.add('art-xfade-ghost');
+  if (prep) prep(ghost);
+  ghost.style.pointerEvents = 'none';
+  ghost.style.transition = 'opacity ' + durationMs + 'ms var(--ease-in-out)';
+  ghost.style.opacity = '1';
+  el.after(ghost);
+  requestAnimationFrame(() => requestAnimationFrame(() => { ghost.style.opacity = '0'; }));
+  setTimeout(() => ghost.remove(), durationMs + 80);
+}
+function crossfadeAltArt(track, durationMs){
+  if (recordLabelImg.getAttribute('src') && recordLabelImg.complete && recordLabelImg.naturalWidth){
+    ghostFadeOut(recordLabelImg, durationMs);
+  }
+  if (cassetteLabelArt.classList.contains('is-loaded')){
+    // freeze the label's current pan position so the copy doesn't jump back
+    // to the start of cs-label-pan while it fades
+    const tf = getComputedStyle(cassetteLabelArt).transform;
+    ghostFadeOut(cassetteLabelArt, durationMs, g => {
+      g.style.animation = 'none';
+      if (tf && tf !== 'none') g.style.transform = tf;
+    });
+  }
+  swapAltArt(track);
+  cassetteSetLabelArt(track);
+}
 
 /* =========================================================================
    PLAYER ACCENT FROM ALBUM ART
@@ -8023,13 +8057,13 @@ function cassetteSetLabelArt(track){
   function setHref(url){ cassetteLabelArt.setAttribute('href', url); cassetteLabelArt.setAttribute('xlink:href', url); }
   setHref(chain[0]);
 }
-function cassetteUpdateTrack(t, pos){
+function cassetteUpdateTrack(t, pos, opts){
   csPendingTitle = (t && t.title) || '—';
   cassetteTitleEl.textContent = csPendingTitle;
   const total = state.queue.length || 1;
   const n = Math.max(1, (typeof pos === 'number' ? pos : state.queuePos) + 1);
   cassetteIdxEl.textContent = String(n).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
-  cassetteSetLabelArt(t);
+  if (!(opts && opts.skipLabelArt)) cassetteSetLabelArt(t);
   cassetteRefreshLabel();
 }
 cassetteSetProgress(0, 0);
@@ -8310,12 +8344,12 @@ function reflectCurrentTrackUI(pos, opts){
   if (!skipArt){
     swapPlayerArt(t);
     swapFlowArt(t);
+    swapAltArt(t);
   }
-  swapAltArt(t);
   setAmbient(t);
   updatePlayerAccentColor(t);
   attachArtworkFallback(miniArt, t);
-  cassetteUpdateTrack(t, pos);
+  cassetteUpdateTrack(t, pos, { skipLabelArt: skipArt });
   bumpPlayCount(entry);
   renderQueuePanel();
   persistResume();
@@ -8387,6 +8421,7 @@ function runCrossfade(nd, nextPos){
   if (nextTrack){
     swapPlayerArt(nextTrack, durationMs);
     swapFlowArt(nextTrack, durationMs);
+    crossfadeAltArt(nextTrack, durationMs);
   }
   const start = Date.now();
   old.fadeTimer = setInterval(() => {
@@ -8464,6 +8499,7 @@ function startSkipCrossfade(pos, t){
   reflectCurrentTrackUI(pos, { skipArtSwap: true });
   swapPlayerArt(t, durationMs);
   swapFlowArt(t, durationMs);
+  crossfadeAltArt(t, durationMs);
   setPlayingUI(true);
 
   const start = Date.now();
