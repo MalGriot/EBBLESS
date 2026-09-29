@@ -6197,7 +6197,7 @@ Add entries in this shape:
   before an agent can finish it.
 
 ### cassette-beautification: Make the cassette a premium physical object
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Visual polish pass on the Cassette Tape art style
   (sibling of `spinning-record-realism`). Full brief from issue #149:
