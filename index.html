@@ -388,6 +388,7 @@ body.onb-active .paste-guide{display:none}
 .search-pick.is-video img{width:78px}
 .search-pick.is-current{border-color:var(--accent)}
 .search-pick .s .cur{color:var(--accent)}
+.search-pick .s.m{margin-top:1px;font-variant-numeric:tabular-nums}
 .import-ready{display:flex;flex-direction:column;align-items:center;gap:18px}
 .import-ready .name{font-size:19px;font-weight:700;margin:0}
 .import-ready .meta{font-size:12.5px;color:var(--faint)}
@@ -5491,16 +5492,36 @@ const SEARCH_SOURCE_LABEL = { soundcloud: 'SoundCloud', applemusic: 'Apple Music
 // pickers look and behave the same. subHtml is already-escaped markup
 // (lets a caller add a highlighted "Current" tag); everything else is
 // escaped here.
-function searchPickRowHtml(i, image, name, subHtml, extraClass){
+// metaText (optional, plain text) adds a third line - the playlist
+// picker's "42 tracks · 2 hr 31 min".
+function searchPickRowHtml(i, image, name, subHtml, extraClass, metaText){
   return (
     '<button type="button" class="btn-ghost search-pick' + (extraClass ? ' ' + extraClass : '') + '" data-i="' + i + '">' +
       '<img src="' + escapeHtml(image || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' +
       '<span class="info">' +
         '<span class="n">' + escapeHtml(name || '') + '</span>' +
         '<span class="s">' + subHtml + '</span>' +
+        (metaText ? '<span class="s m">' + escapeHtml(metaText) + '</span>' : '') +
       '</span>' +
     '</button>'
   );
+}
+// "42 tracks · 2 hr 31 min" / "38 min" for a /playlistsearch result -
+// whichever of trackCount/durationMs the worker actually knows (Apple Music
+// results carry neither; responses cached before durationMs existed carry
+// only trackCount, possibly as 0). Anything missing, zero or non-numeric is
+// just left out, so this never renders "0 tracks" or "NaN".
+function searchResultMeta(r){
+  const parts = [];
+  const n = Number(r && r.trackCount);
+  if (isFinite(n) && n >= 1) parts.push(Math.round(n) + (Math.round(n) === 1 ? ' track' : ' tracks'));
+  const ms = Number(r && r.durationMs);
+  if (isFinite(ms) && ms > 0){
+    const totalMin = Math.max(1, Math.round(ms / 60000));
+    const h = Math.floor(totalMin / 60), m = totalMin % 60;
+    parts.push(h ? h + ' hr' + (m ? ' ' + m + ' min' : '') : m + ' min');
+  }
+  return parts.join(' · ');
 }
 function stageSearchResults(results, query){
   if (!results.length){
@@ -5514,7 +5535,7 @@ function stageSearchResults(results, query){
   const rows = results.map((r, i) => {
     const label = SEARCH_SOURCE_LABEL[r.source] || r.source;
     const sub = [r.subtitle, label].filter(Boolean).join(' · ');
-    return searchPickRowHtml(i, r.image, r.name, escapeHtml(sub));
+    return searchPickRowHtml(i, r.image, r.name, escapeHtml(sub), '', searchResultMeta(r));
   }).join('');
   importStage.innerHTML =
     '<div class="step">Results for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
