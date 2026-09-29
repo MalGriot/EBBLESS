@@ -3516,11 +3516,14 @@ updateSplitDesktop();
    which is the separate mobile/tablet "flow mode" overlay - fsBtn picks
    between the two based on whether split-desktop is active. */
 function closeDesktopFs(){
+  const wasOpen = state.deskFsOpen;
   state.deskFsOpen = false; state.deskFsLibOpen = false; state.deskFsQueueOpen = false;
   document.body.classList.remove('desktop-fs', 'desktop-fs-lib-open', 'desktop-fs-queue-open');
   document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
     .forEach(b => b.classList.remove('is-active'));
-  armFsIdleTimer();
+  // Skip when nothing was open: updateSplitDesktop() calls this at startup on
+  // narrow screens, before fsIdleTimer is declared (TDZ crash).
+  if (wasOpen) armFsIdleTimer();
 }
 function toggleDesktopFs(){
   if (state.deskFsOpen){ closeDesktopFs(); return; }
