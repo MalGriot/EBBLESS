@@ -6092,7 +6092,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #156.
 
 ### relink-soundcloud-suggestions: "Refresh link" should suggest SoundCloud for SoundCloud tracks
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The per-track refresh-link menu only offers YouTube
   candidates. For SoundCloud-sourced tracks it should offer SoundCloud
@@ -6385,7 +6385,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #180.
 
 ### footer-title-marquee: Mobile footer player: long titles should scroll like a marquee
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** In the mobile footer player, titles too long to fit should scroll as a marquee.
 - **Touches:** mobile footer player title.
@@ -6487,7 +6487,7 @@ Add entries in this shape:
 
 
 ### discover-randomness: Discover should vary its picks each time for the same song
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Discover should not produce the same queue every time from the same seed song. Each run should feel unique.
 - **Touches:** Discover candidate selection.
