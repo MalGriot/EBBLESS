@@ -2581,7 +2581,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #24.
 
 ### currents-playlist-algorithm: Define Currents playlist selection rules
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The Currents playlist should be built from: one new/
   unplayed song per saved playlist, three suggested songs from the Liked
