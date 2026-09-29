@@ -6176,8 +6176,7 @@ Add entries in this shape:
 - **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add to the global keydown handler:
-  - "l" toggles the playlist panel open/closed (replaces "l" opening the
-    library; "p" keeps opening the library).
+  - "p" and "l" toggle the library open/closed (previously open-only).
   - "shift+l" jumps focus to the load-playlist (paste link) text box.
   - "x" toggles shuffle.
   - "o" cycles through the loop/repeat phases.
