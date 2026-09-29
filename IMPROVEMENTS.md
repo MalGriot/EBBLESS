@@ -6456,3 +6456,17 @@ Add entries in this shape:
 - **Touches:** SoundCloud native playback path (see merged `soundcloud-native-playback`, draft `soundcloud-crossfade-cut`).
 - **Branch:** agent/bld-playback-glitch
 - **Notes:** Synced from Geethub issue #203.
+
+### desktop-grid-extra-row: Desktop panes shrink when an extra grid row appears after load
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On desktop (seen at 1440x900), a few seconds after load
+  the layout grows an extra row at the bottom, and the Library, player and
+  Queue panes shrink from full height (840px) to about 581px. The panes
+  should stay full height.
+- **Touches:** desktop split layout grid; `#flow-layer-orig`.
+- **Branch:**
+- **Notes:** Found by the `desktop-library-bg-video-fixed` lane 2026-09-29.
+  Grid rows became `60px 581px 259px` with `#flow-layer-orig` landing in
+  the third row. Happens with or without that lane's fix. Not user-reported
+  yet.
