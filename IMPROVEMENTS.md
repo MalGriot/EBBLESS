@@ -5444,7 +5444,7 @@ Add entries in this shape:
   to just the one spot that needed it.
 
 ### cassette-fullscreen-animation: Cassette fullscreen should stack and orbit background cassettes
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On the cassette art style's fullscreen view: on mobile,
   additional cassettes should stack behind/above the main cassette one
