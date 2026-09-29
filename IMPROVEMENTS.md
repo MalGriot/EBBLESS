@@ -6369,12 +6369,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #180.
 
 ### footer-title-marquee: Mobile footer player: long titles should scroll like a marquee
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** In the mobile footer player, titles too long to fit should scroll as a marquee.
 - **Touches:** mobile footer player title.
 - **Branch:** agent/footer-title-marquee
 - **Notes:** Synced from Geethub issue #181.
+  Fix (`3764918`): the mini-bar already used `setMarqueeText()`, but it's
+  `display:none` while the full player is open, so a track change there
+  measured 0px overflow and never re-checked. Added one lazy shared
+  ResizeObserver that re-measures marquees when their width changes (also
+  covers resize/rotation), reduced-motion opt-out with an ellipsis, and a
+  soft edge fade on the mini-bar only. Shared function, so the other
+  marquee titles gain the resize re-check + ellipsis too. Real playback,
+  swipe gestures, desktop mini-bar, and Safari mask untested.
 
 ### mobile-fullscreen-art-slide: Mobile fullscreen: art should slide to center when UI appears
 - **Status:** draft
