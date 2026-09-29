@@ -6681,12 +6681,22 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #193.
 
 ### discover-mood-matching: Use free BPM/key/energy lookups to improve mood matching
-- **Status:** draft
+- **Status:** merged
 - **Priority:** low
 - **Description:** Improve Discover and mood search using free online track-metric sources (Chosic BPM & Key Finder, Musicstax, SongBPM) for BPM, key, time signature and energy.
 - **Touches:** Discover backend (worker).
-- **Branch:** (unclaimed)
+- **Branch:** agent/discover-mood-matching
 - **Notes:** Synced from Geethub issue #194.
+
+  Built on branch (commit `9c98c1e`): new worker `POST /metrics` merging
+  GetSongBPM (only if `GETSONGBPM_API_KEY` secret set; needs a visible
+  backlink per its terms; sole source of key/time sig), ReccoBeats
+  (tempo/energy/danceability/valence via Deezer ISRC) and Deezer (BPM).
+  Chosic/Musicstax/SongBPM/Tunebat rejected (no API, scraping only).
+  Discover nudges candidates by BPM (half/double ok), Camelot key, energy,
+  valence; max +/-0.08, no-op without data; 1.8s client timeout. All
+  sources unreachable from sandbox - mock-tested only. Needs worker deploy.
+
 
 ### discover-long-track-weighting: Discover should rarely serve very long tracks
 - **Status:** merged
@@ -6792,3 +6802,71 @@ Add entries in this shape:
   Grid rows became `60px 581px 259px` with `#flow-layer-orig` landing in
   the third row. Happens with or without that lane's fix. Not user-reported
   yet.
+
+### album-detection: Pasted albums should be treated as albums, not playlists
+- **Status:** merged
+- **Priority:** medium
+- **Description:** When an album is added, categorize it as an album: the
+  library's album filter should include it, its thumbnail should be the
+  album art only (no 2x2 grid), and track matching should pull from the
+  artist's YouTube "Topic" channel (avoid remixes; compare album art to
+  the video thumbnail).
+- **Touches:** `isAlbumType()`, library filter, playlist thumbnail/grid art,
+  YouTube match selection.
+- **Branch:** agent/album-detection
+- **Notes:** Synced from Geethub issue #204. Related (merged):
+  `breathe-love-deep-album` (SoundCloud album categorization),
+  `album-art-2x2-grid-bug`, `link-match-accuracy`.
+
+  Fixed on branch (commits `541265c` worker, `ad8d16f` page): YouTube Music
+  album links (`OLAK5uy_` lists) and user-pasted SoundCloud album sets were
+  saved as playlists, so tiles fell back to the 2x2 grid. New `yt_album`
+  type, SC sets use worker `isAlbum`, one shared `libraryEntryForParsedLink()`
+  mapping, album tiles never use the grid. Album tracks search with
+  `album=` (worker keeps "<Artist> - Topic" uploads, drops unrequested
+  remix/live/sped-up) plus new client `pickAlbumArtMatch` cover-vs-thumb
+  check (depends on CORS; no-op if images can't be read). Needs a worker
+  deploy for matching + SC album detection. RESOLVE_LOGIC_VERSION 7 (all
+  playlists re-resolve once), SW v26. `browse/MPREb_` links still rejected.
+
+
+### lp-needle-sfx-silent: LP needle-lift/drop sound not audible on pause/play
+- **Status:** merged
+- **Priority:** medium
+- **Description:** In LP mode, the needle-lift sound on pause and needle-drop
+  on play can't be heard. Find out why and make it audible.
+- **Touches:** play/pause handlers for the record art style, `sfx/`.
+- **Branch:** agent/lp-needle-sfx-silent
+- **Notes:** Synced from Geethub issue #205. Regression/follow-up of
+  `lp-needle-sfx` (merged). Possibly masked by `pause-fade-out`.
+
+  Fixed on branch (commit `4db7fb5`): code path was sound (own gain, not
+  hit by pause fade), but SFX were too quiet under full-volume music
+  (vol drop 0.35->1, lift 0.2->0.5), the first press after load was dropped
+  while buffers fetched (now prefetched + unlocked on first gesture), and
+  iOS silent switch mutes Web Audio (`navigator.audioSession.type =
+  'playback'`, untested on device). SW cache v25->v26. Still only plays
+  while the record is visible (by design, `670a0ab`).
+
+
+### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The change-art page should have a checkbox to apply the
+  chosen art to every track in the same album. The option should not be
+  shown when changing a playlist's art.
+- **Touches:** track art picker / relink menu.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #206. Related:
+  `album-art-consistent-per-album`, `playlist-image-reset`.
+
+### cassette-fullscreen-second-stack: Cassette fullscreen intro should do a second stack downward
+- **Status:** draft
+- **Priority:** medium
+- **Description:** After the tapes stack upward and slide behind the center
+  tape, repeat the same move downward toward the bottom of the screen and
+  slide behind the center tape again. Only then start the orbiting tapes.
+- **Touches:** cassette fullscreen animation.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #207. Extends
+  `cassette-fullscreen-animation` (merged).
