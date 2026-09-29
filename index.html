@@ -2007,9 +2007,18 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <!-- tape window -->
               <rect class="cs-window" x="32" y="120" width="336" height="76" rx="4"/>
 
+              <!-- reel beds sit under the tape; the packs and hubs sit over it -->
+              <circle class="cs-reel-bed" cx="112" cy="158" r="34"/>
+              <circle class="cs-reel-bed" cx="288" cy="158" r="34"/>
+
+              <!-- magnetic tape, drawn behind the reels: endpoints track each
+                   pack's tangent (set in cassetteSetProgress), sheen dashes
+                   travel with the tape -->
+              <path class="cs-tape" id="csTape" d="M111,190 L168,192 L232,192 L289,190"/>
+              <path class="cs-tape-sheen" id="csTapeSheen" d="M111,190 L168,192 L232,192 L289,190"/>
+
               <!-- left reel (supply) -->
               <g id="cassetteReelL">
-                <circle class="cs-reel-bed" cx="112" cy="158" r="34"/>
                 <circle class="cs-reel-mass" id="reelMassL" cx="112" cy="158" r="32"/>
                 <circle class="cs-reel-mass-line" id="reelLineL" cx="112" cy="158" r="32"/>
                 <g class="cs-hub" id="hubL">
@@ -2027,7 +2036,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
               <!-- right reel (take-up) -->
               <g id="cassetteReelR">
-                <circle class="cs-reel-bed" cx="288" cy="158" r="34"/>
                 <circle class="cs-reel-mass" id="reelMassR" cx="288" cy="158" r="13"/>
                 <circle class="cs-reel-mass-line" id="reelLineR" cx="288" cy="158" r="13"/>
                 <g class="cs-hub" id="hubR">
@@ -2043,10 +2051,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
                 <circle class="cs-hub-gleam" cx="288" cy="158" r="14"/>
               </g>
 
-              <!-- magnetic tape: endpoints track each pack's tangent (set in
-                   cassetteSetProgress), sheen dashes travel with the tape -->
-              <path class="cs-tape" id="csTape" d="M111,190 L168,192 L232,192 L289,190"/>
-              <path class="cs-tape-sheen" id="csTapeSheen" d="M111,190 L168,192 L232,192 L289,190"/>
               <circle class="cs-guide" cx="168" cy="192" r="3.5"/>
               <circle class="cs-guide" cx="232" cy="192" r="3.5"/>
 
