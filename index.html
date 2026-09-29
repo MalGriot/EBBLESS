@@ -531,8 +531,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .art-cassette:not([data-state="playing"]) .cs-label-art.is-loaded{animation-play-state:paused}
 @keyframes cs-label-pan{0%,100%{transform:translateY(-127px)}50%{transform:translateY(127px)}}
 .cs-label-shade{fill:url(#csLabelShade);pointer-events:none}
-.cs-brand{fill:rgba(238,240,243,.5);font-size:7px;font-weight:600;letter-spacing:3.2px}
-.cs-track{fill:#eef0f3;font-size:12px;font-weight:500;letter-spacing:.2px}
+.cs-mark path{fill:none;stroke-width:22;stroke-linecap:round}
+.cs-mark-shade{stroke:rgba(0,0,0,.45)}
+.cs-mark-line{stroke:var(--accent);opacity:.42}
 .cs-label-rule{stroke:rgba(238,240,243,.14);stroke-width:1}
 .cs-window{fill:rgba(6,7,9,.78)}
 .cs-window-edge{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1}
@@ -2005,8 +2006,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
                 <path class="cs-label-shade" d="M32,30 H354 L368,44 V112 H32 Z"/>
               </g>
               <path class="cs-label-rule" d="M32,30 H354 L368,44 V112 H32 Z" fill="none"/>
-              <text class="cs-brand" x="44" y="50">EBBLESS</text>
-              <text class="cs-track" id="cassetteTrackTitle" x="44" y="98">—</text>
 
               <!-- tape window -->
               <rect class="cs-window" x="32" y="120" width="336" height="76" rx="4"/>
@@ -2064,6 +2063,12 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <rect class="cs-mech-well" x="160" y="208" width="80" height="18" rx="2"/>
               <circle class="cs-guide" cx="70" cy="217" r="7"/>
               <circle class="cs-guide" cx="330" cy="217" r="7"/>
+              <!-- compact mark (the app icon's single stroke), debossed into
+                   the lower strip -->
+              <g class="cs-mark" transform="translate(262 192.5) scale(.09)">
+                <path class="cs-mark-shade" d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272" transform="translate(0 7)"/>
+                <path class="cs-mark-line" d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272"/>
+              </g>
 
               <!-- screws -->
               <g>
@@ -8197,7 +8202,6 @@ function setArtStyle(style){
   lsSet(LS_ART_STYLE, style);
   applyArtStyle();
   closeArtStyleMenu();
-  if (style === 'cassette') cassetteRefreshLabel();
   if (typeof syncFlowArtStyle === 'function') syncFlowArtStyle();
 }
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
@@ -8258,7 +8262,7 @@ recordApplyRotation();
    drives the seek bar (see updateSeekUI), cassetteSetPlaying() mirrors
    setPlayingUI(), and cassetteUpdateTrack() runs from reflectCurrentTrackUI.
    ========================================================================= */
-const cassetteTitleEl = $('cassetteTrackTitle'), cassetteLabelArt = $('cassetteLabelArt');
+const cassetteLabelArt = $('cassetteLabelArt');
 const cassetteEl = $('artCassette');
 const reelMassL = $('reelMassL'), reelMassR = $('reelMassR');
 const reelLineL = $('reelLineL'), reelLineR = $('reelLineR');
@@ -8277,7 +8281,6 @@ let csRafId = null, csLastTs = 0;
 /* each reel has its own speed so the take-up side lags a touch on start
    and coasts a touch longer on stop - the small mismatch a real shell has */
 let csSpeedL = 0, csSpeedR = 0, csTargetMul = 0, csSettleT = -1, csPlaying = false, csHasTrack = false;
-let csPendingTitle = '—';
 const csReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function cassetteVisible(){ return artStyle === 'cassette' && artworkWrap.dataset.mode === 'art'; }
@@ -8360,17 +8363,6 @@ function cassetteSeekPulse(){
   cassetteStart();
 }
 
-function cassetteRefreshLabel(){
-  if (!cassetteVisible() || !cassetteTitleEl.getComputedTextLength) return;
-  const maxW = 312;
-  cassetteTitleEl.textContent = csPendingTitle;
-  if (cassetteTitleEl.getComputedTextLength() <= maxW) return;
-  let t = csPendingTitle;
-  while (t.length > 1 && cassetteTitleEl.getComputedTextLength() > maxW){
-    t = t.slice(0, -1);
-    cassetteTitleEl.textContent = t + '…';
-  }
-}
 function cassetteSetLabelArt(track){
   const chain = artworkUrls(track);
   cassetteLabelArt.classList.remove('is-loaded');
@@ -8382,12 +8374,9 @@ function cassetteSetLabelArt(track){
   setHref(chain[0]);
 }
 function cassetteUpdateTrack(t, pos, opts){
-  csPendingTitle = (t && t.title) || '—';
   csHasTrack = !!t;
   cassetteSyncState();
-  cassetteTitleEl.textContent = csPendingTitle;
   if (!(opts && opts.skipLabelArt)) cassetteSetLabelArt(t);
-  cassetteRefreshLabel();
 }
 cassetteSetProgress(0, 0);
 cassetteApplyRotation(0);
