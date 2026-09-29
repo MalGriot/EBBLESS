@@ -9151,6 +9151,18 @@ flowPrevBtn.addEventListener('click', playPrev);
 miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) playIndex(state.queuePos); });
 
 /* ---------- desktop keyboard shortcuts ---------- */
+// Library/Queue shortcuts reuse the top-nav buttons' own click handlers. In
+// the normal split-desktop 3-pane layout both panes are always visible (and
+// those buttons are hidden - clicking them there would only toggle the
+// fullscreen drawer state), so there the shortcut just leaves Settings if
+// it's open and otherwise does nothing.
+function kbShowPane(btn, alreadyOpen){
+  const split = document.body.classList.contains('split-desktop');
+  if (split && state.currentView === 'settings') setView(state.preSettingsView);
+  if (split && !state.deskFsOpen) return;
+  if (alreadyOpen && alreadyOpen()) return;
+  if (btn) btn.click();
+}
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
@@ -9170,6 +9182,24 @@ document.addEventListener('keydown', (e) => {
     case 'f': case 'F':
       if (state.flowOpen) closeFlow();
       else if (currentTrack()) openFlow();
+      break;
+    case 'i': case 'I':
+      if (!e.repeat) vizAutoBtn.click(); // cymatics infinity (hold pattern) toggle
+      break;
+    case 'p': case 'P': case 'l': case 'L':
+      if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-view="library"]'),
+        () => document.body.classList.contains('split-desktop') ? state.deskFsLibOpen : state.currentView === 'library' && !state.queueOpen);
+      break;
+    case 'q': case 'Q':
+      if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
+      break;
+    case 's': case 'S':
+      if (e.repeat) break;
+      if (e.shiftKey){ const a = $('suggestIdeaBtn'); if (a) a.click(); }
+      else { const b = document.querySelector('#topnav [data-view="settings"]'); if (b) b.click(); }
+      break;
+    case 'b': case 'B':
+      if (e.shiftKey && !e.repeat){ const a = $('reportBugBtn'); if (a) a.click(); }
       break;
     case 'Escape':
       // Same exit path as #flowExitBtn/#desktopFsExitBtn (see
