@@ -5444,8 +5444,8 @@ Add entries in this shape:
   to just the one spot that needed it.
 
 ### cassette-fullscreen-animation: Cassette fullscreen should stack and orbit background cassettes
-- **Status:** draft
-- **Priority:** low
+- **Status:** in-progress
+- **Priority:** medium
 - **Description:** On the cassette art style's fullscreen view: on mobile,
   additional cassettes should stack behind/above the main cassette one
   after another until they reach the top of the screen, then all
@@ -5458,7 +5458,7 @@ Add entries in this shape:
   each reaches the top.
 - **Touches:** cassette fullscreen visual (`fullscreen-lp-cassette-visual`
   area), cassette CSS/animation.
-- **Branch:** (unclaimed)
+- **Branch:** agent/cassette-fullscreen-animation
 - **Notes:** Synced from Geethub issue #125. A substantial new animation
   build, not a bug fix - scope carefully before dispatching a lane.
 
