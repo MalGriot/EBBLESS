@@ -6455,12 +6455,21 @@ Add entries in this shape:
 
 
 ### discover-randomness: Discover should vary its picks each time for the same song
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Discover should not produce the same queue every time from the same seed song. Each run should feel unique.
 - **Touches:** Discover candidate selection.
 - **Branch:** agent/discover-randomness
 - **Notes:** Synced from Geethub issue #199.
+  Fix (`99ce3b5`): the pool per seed is fixed (worker caches `/similar`,
+  scoring is deterministic) and was walked top-down, so the queue was
+  identical every run. Now `discoverSampleOrder()` walks it in a
+  score-weighted random order (weight `exp((score-top)/0.15)`), and picks
+  already served for the same seed (new `ebbless:discoverRecent` LS key,
+  36/seed, 80 seeds) get weight x0.15. All filters unchanged. Mock harness:
+  20/20 runs differ, 0 filter violations, top matches still picked
+  85-100%. Real-network variety untested; raise the 0.15 temperature if
+  it still feels samey.
 
 ### tester-report-no-github: Bug reporting for testers without a GitHub login
 - **Status:** merged
