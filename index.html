@@ -1632,22 +1632,65 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
     width 550ms var(--ease-out),height 550ms var(--ease-out)}
 #onbSpotlight.is-visible{opacity:1}
 
-/* Skip sits bottom-left now that #onbNext owns the bottom-right corner, and
-   above #onbCapture (10005) - a tap on the capture layer advances a chapter
-   rather than ending the tutorial, so Skip has to be reachable on its own */
+/* Skip sits bottom-left, clear of the centered #onbPager, and above
+   #onbCapture (10005) - the capture layer is the pager's swipe surface
+   now, not a tap-to-skip, so Skip has to be reachable on its own */
 #onbSkip{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));
   z-index:10006;color:var(--faint-2);font-size:12px;letter-spacing:.03em;padding:10px 14px;opacity:.5;
   transition:opacity var(--dur-ui) var(--ease-out);background:none;border:0}
 #onbSkip:hover,#onbSkip:focus-visible{opacity:1}
 
-#onbCapture{position:fixed;inset:0;z-index:10005;background:transparent;border:0;cursor:pointer;padding:0}
-/* the per-chapter "Next" prompt (see runIntro()'s goToChapter()) - reuses
-   the splash's primary pill (.splash-choice-btn-primary) so the tutorial's
-   one real call to action looks like the button that started it. Hidden
-   until a chapter is up and again for the outro, which ends on its own */
-#onbNext{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));
-  z-index:10006;opacity:0;pointer-events:none;transition:opacity 400ms var(--ease-out),background var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-#onbNext.is-visible{opacity:1;pointer-events:auto}
+#onbCapture{position:fixed;inset:0;z-index:10005;background:transparent;border:0;padding:0;touch-action:none}
+/* the chapter pager (see runIntro()'s goToChapter()): one dot per chapter,
+   the current one stretched into a pill that fills gold as the chapter
+   plays - the brand gold (--accent's own fallback, and the #onbCaption
+   hairline) pinned here rather than --accent itself, which follows the
+   time-of-day --clock-accent and can read slate-grey next to the gold
+   bubbles. Once a chapter has
+   played through and is holding (.is-waiting) the pill is full and the
+   next dot plus the chevron pulse gently - "your move". Same dark glass
+   and gold hairline as the #onbCaption bubbles; bottom center, lifted
+   above the mobile bottom nav. Hidden until a chapter is up, and again
+   for the outro */
+#onbPager{--onb-gold:#e0b26a;position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--safe-b) + 14px);transform:translateX(-50%);
+  z-index:10006;display:flex;align-items:center;padding:4px 4px 4px 8px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(224,178,106,.28);box-shadow:0 10px 26px rgba(0,0,0,.4);
+  opacity:0;pointer-events:none;transition:opacity 400ms var(--ease-out)}
+#onbPager.is-visible{opacity:1;pointer-events:auto}
+.onb-dots{display:flex;align-items:center}
+.onb-dot{display:flex;align-items:center;justify-content:center;width:22px;height:30px;padding:0;border:0;
+  background:none;cursor:pointer;transition:width 400ms var(--ease-out)}
+.onb-dot i{position:relative;display:block;width:7px;height:7px;border-radius:999px;overflow:hidden;
+  background:rgba(255,255,255,.28);transition:width 400ms var(--ease-out),background 400ms var(--ease-out)}
+.onb-dot.is-done i{background:rgba(255,255,255,.55)}
+.onb-dot[aria-current]{width:44px}
+.onb-dot[aria-current] i{width:32px;background:rgba(255,255,255,.16)}
+.onb-dot b{position:absolute;inset:0;border-radius:inherit;background:var(--onb-gold);transform:scaleX(0);transform-origin:left}
+.onb-dot:focus-visible,.onb-pager-next:focus-visible{outline:2px solid var(--onb-gold);outline-offset:-2px;border-radius:999px}
+.onb-pager-next{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin-left:2px;padding:0;
+  border:0;border-radius:999px;background:none;color:var(--faint-2);cursor:pointer;opacity:.6;
+  transition:opacity 400ms var(--ease-out),color 400ms var(--ease-out)}
+.onb-pager-next svg{width:16px;height:16px}
+#onbPager.is-waiting .onb-pager-next{opacity:1;color:var(--onb-gold)}
+#onbPager.is-waiting .onb-pager-next svg{animation:onb-chevron-nudge 1.6s var(--ease-in-out) infinite}
+#onbPager.is-waiting .onb-dot.is-next i{animation:onb-dot-pulse 1.6s var(--ease-in-out) infinite}
+/* desktop widths (the min-width:860px layout, no bottom nav): the player
+   column runs nearly the full viewport height there, so bottom center
+   would sit right on its play button - the pager moves to top center
+   instead, the one strip that's empty across every chapter's screen
+   (the topbar's logo and Settings sit at the far left and right) */
+@media (min-width:860px){
+  #onbPager{bottom:auto;top:max(10px,env(safe-area-inset-top))}
+}
+@keyframes onb-dot-pulse{0%,100%{background:rgba(255,255,255,.28);transform:scale(1)}
+  50%{background:var(--onb-gold);transform:scale(1.35)}}
+@keyframes onb-chevron-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+@media (prefers-reduced-motion: reduce){
+  #onbPager.is-waiting .onb-pager-next svg,#onbPager.is-waiting .onb-dot.is-next i{animation:none}
+  #onbPager.is-waiting .onb-dot.is-next i{background:var(--onb-gold)}
+}
 
 #onbDiscovery{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;
   opacity:0;filter:blur(14px);transform:scale(.9);pointer-events:none;
@@ -1811,8 +1854,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 <div id="onbCaption" aria-live="polite"></div>
 <div id="onbCaptionMain" aria-live="polite"></div>
 <button id="onbSkip" type="button">Skip</button>
-<button id="onbCapture" type="button" aria-label="Next"></button>
-<button id="onbNext" type="button" class="splash-choice-btn splash-choice-btn-primary">Next</button>
+<button id="onbCapture" type="button" aria-hidden="true" tabindex="-1"></button>
+<div id="onbPager" role="group" aria-label="Tutorial chapters">
+  <div class="onb-dots"></div>
+  <button class="onb-pager-next" type="button" aria-label="Next chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+</div>
 <audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
 
 <div id="splash">
@@ -10925,8 +10971,8 @@ function startApp(){
    functions instead of a second, fake copy of the app. Runs only on the
    visitor's first load; startApp() (and the real splash) always follows.
    The beats are grouped into chapters (see CHAPTERS in runIntro()): each
-   plays once, then holds on its last frame until the visitor taps Next,
-   with its own clip of the
+   plays once, then holds on its last frame until the visitor pages on
+   (the dot pager, a swipe or the arrow keys), with its own clip of the
    intro theme starting only when that chapter does.
    ========================================================================= */
 const ONB_KEY = 'ebbless_onboarding_complete';
@@ -11038,7 +11084,7 @@ function runIntro(preview){
   // its way out - a replay reuses these same elements rather than
   // recreating them, so any leftover state from the previous run would
   // otherwise make it play out invisibly
-  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbNext','onbDiscovery','onbMusic'].forEach(id => {
+  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbPager','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
     if (el) { el.style.display = ''; el.style.opacity = ''; }
   });
@@ -11067,7 +11113,7 @@ function runIntro(preview){
         captionMainEl = $('onbCaptionMain'),
         spotlightEl = $('onbSpotlight'),
         skipEl = $('onbSkip'), captureEl = $('onbCapture'), discoveryEl = $('onbDiscovery'),
-        musicEl = $('onbMusic'), nextEl = $('onbNext');
+        musicEl = $('onbMusic'), pagerEl = $('onbPager');
   const MUSIC_PEAK = 0.55;
   // the slider's real min, restored after animateCrossfadeDurDemo()'s sweep
   // lowers it - hoisted here so a chapter cut short mid-sweep (Next, Skip)
@@ -11144,7 +11190,7 @@ function runIntro(preview){
     // a chapter's clip already ran out and paused it, where the echo would
     // just be a stray blip of music out of silence
     if (!prefersReduced && musicEl && !musicEl.paused) echoOut();
-    document.removeEventListener('keydown', onKey);
+    document.removeEventListener('keydown', onKey, true);
     vizStop();
     stopDemoLyricsScroll();
     cassetteSetPlaying(false);
@@ -11187,7 +11233,7 @@ function runIntro(preview){
     timeCur.textContent = '0:00';
     timeDur.textContent = '0:00';
     if (repeatOneBadge) repeatOneBadge.hidden = true;
-    if (nextEl) nextEl.classList.remove('is-visible');
+    if (pagerEl) pagerEl.classList.remove('is-visible', 'is-waiting');
     [backdrop, captionEl, captionMainEl, spotlightEl, skipEl, captureEl, discoveryEl].forEach(el => { if (el) el.style.opacity = '0'; });
     if (markEl){ if (prefersReduced) markEl.style.opacity = '0'; else markEl.classList.add('is-outro-blink'); }
     setTimeout(() => {
@@ -11197,23 +11243,48 @@ function runIntro(preview){
       startApp();
     }, prefersReduced ? 30 : 700);
   }
-  function onKey(e){ if (e.key === 'Escape') finish(); }
-  document.addEventListener('keydown', onKey);
-  // a tap anywhere (the capture layer) and the Next button both advance to
-  // the next chapter - Skip and Escape stay the ways out of the whole thing.
-  // The outro has no Next of its own, so a tap there just ends it early,
-  // the same thing a tap anywhere always did before chapters existed.
-  // Listeners are replaced, not added, since a replay reuses these same
-  // elements and would otherwise fire every previous run's handler too.
-  function onNext(e){
-    if (e) e.stopPropagation();
-    // chapter is -1 until waitForMusicReady() lets chapter 1 start
-    if (done || chapter < 0) return;
-    if (chapter >= CHAPTERS.length - 1) { finish(); return; }
-    goToChapter(chapter + 1);
+  // Escape exits; the arrow keys page between chapters. Registered in the
+  // capture phase so it runs before the app's own document-level keydown
+  // handler, and stopImmediatePropagation() keeps an arrow from also
+  // skipping real tracks (playPrev/playNext) underneath the tutorial
+  function onKey(e){
+    if (e.key === 'Escape'){ finish(); return; }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      stepChapter(e.key === 'ArrowRight' ? 1 : -1);
+    }
   }
-  captureEl.onclick = onNext;
-  if (nextEl) nextEl.onclick = onNext;
+  document.addEventListener('keydown', onKey, true);
+  // Paging: arrows, a swipe, the pager's chevron or any of its dots. Skip
+  // and Escape stay the ways out of the whole thing. No paging during the
+  // outro (it's already on its way out) or before chapter 1 has started
+  // (chapter is -1 until waitForMusicReady() lets it) - a step past the
+  // last chapter starts the outro.
+  function stepChapter(delta){
+    if (done || chapter < 0 || CHAPTERS[chapter].once) return;
+    const to = chapter + delta;
+    if (to < 0) return;
+    goToChapter(to);
+  }
+  // Swipes land on the full-screen capture layer, which sits above the
+  // promoted app views - so a swipe here pages chapters and never reaches
+  // the real artwork's own swipe-to-skip handler underneath. A plain tap
+  // does nothing (an accidental tap shouldn't skip a chapter), except in
+  // the outro, where it still ends the tutorial early the way it always
+  // has. Handlers are assigned, not added, since a replay reuses these same
+  // elements and would otherwise fire every previous run's handler too.
+  let swipeStart = null;
+  captureEl.onpointerdown = (e) => { swipeStart = { x: e.clientX, y: e.clientY }; };
+  captureEl.onpointercancel = () => { swipeStart = null; };
+  captureEl.onpointerup = (e) => {
+    if (!swipeStart) return;
+    const dx = e.clientX - swipeStart.x, dy = e.clientY - swipeStart.y;
+    swipeStart = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    stepChapter(dx < 0 ? 1 : -1);
+  };
+  captureEl.onclick = () => { if (!done && chapter >= 0 && CHAPTERS[chapter].once) finish(); };
   skipEl.addEventListener('click', (e) => { e.stopPropagation(); finish(); });
   // hard-stop for the *next* runIntro() call to reach for, if this instance
   // is still mid-sequence when it does - just halts progression and frees
@@ -11223,7 +11294,7 @@ function runIntro(preview){
     done = true;
     clearChapterTimers();
     if (musicFadeTimer) clearTimeout(musicFadeTimer);
-    document.removeEventListener('keydown', onKey);
+    document.removeEventListener('keydown', onKey, true);
   };
 
   // every timer a chapter starts goes through later() (wait() included), so
@@ -11298,7 +11369,16 @@ function runIntro(preview){
   // screen and everything else reads as dimmed background. `el` can be a
   // single element or an array of elements (spotlit together as one region).
   function placeCaptionNear(el, forceAbove){
-    const vw = window.innerWidth, vh = window.innerHeight;
+    // treats the pager's top edge as the bottom of the screen while it's
+    // up at the bottom (mobile widths - desktop's sits at the top), so a
+    // bubble near the transport row flips above its target instead of
+    // landing on the dots
+    const vw = window.innerWidth;
+    let vh = window.innerHeight;
+    if (pagerEl && pagerEl.classList.contains('is-visible')){
+      const pagerTop = pagerEl.getBoundingClientRect().top;
+      if (pagerTop > vh / 2) vh = pagerTop - 4;
+    }
     const els = Array.isArray(el) ? el.filter(Boolean) : (el ? [el] : []);
     if (!els.length){
       const d = captionDefaultPos();
@@ -11595,12 +11675,16 @@ function runIntro(preview){
   async function chapterLoad(){
     // 0. the mark alone, breathing - a longer beat to arrive on and actually
     // register, then a quick blur-out (rather than the slower plain fade
-    // used elsewhere) so it reads as "arrived, then whisked away" [->1800]
-    await wait(1800);
-    if (done) return;
-    markEl.classList.add('is-leaving');
-    await wait(380);
-    if (done) return;
+    // used elsewhere) so it reads as "arrived, then whisked away" [->1800].
+    // Only while the mark is still up - paging back to this chapter later
+    // (goToChapter() clears is-idle) starts straight at the input box
+    if (markEl.classList.contains('is-idle')){
+      await wait(1800);
+      if (done) return;
+      markEl.classList.add('is-leaving');
+      await wait(380);
+      if (done) return;
+    }
 
     // 1. the mark becomes the input [1800->4400]
     markEl.classList.remove('is-idle');
@@ -11771,7 +11855,7 @@ function runIntro(preview){
 
   // chapter 3: the transport row [27200->35800]
   async function chapterControl(){
-    // the player is already up coming out of chapter 2, but a Next tapped
+    // the player is already up coming out of chapter 2, but paging here
     // mid-chapter 2 needs it put back in a known state first
     setView('player');
     setStage('player');
@@ -11977,19 +12061,80 @@ function runIntro(preview){
   }
 
   // clip = [start, end] ms into the intro theme; end null plays on until
-  // finish() fades it. once = no loop and no Next (it ends the tutorial)
+  // finish() fades it. est = roughly how long the chapter takes to play
+  // through (touch, desktop - desktop adds the keyboard beats), which only
+  // paces the pager pill's fill. once = no pager dot and no paging (the
+  // outro, which ends the tutorial)
   const CHAPTERS = [
-    { run: chapterLoad, clip: [0, 12900] },
-    { run: chapterListen, clip: [12900, 27200] },
-    { run: chapterControl, clip: [27200, 35800] },
-    { run: chapterDiscover, clip: [35800, 42800] },
-    { run: chapterOutro, clip: [42800, null], once: true }
+    { name: 'Load', run: chapterLoad, clip: [0, 12900], est: [17000, 17000] },
+    { name: 'Listen', run: chapterListen, clip: [12900, 27200], est: [15300, 16900] },
+    { name: 'Control', run: chapterControl, clip: [27200, 35800], est: [10700, 11400] },
+    { name: 'Discover', run: chapterDiscover, clip: [35800, 42800], est: [8700, 8700] },
+    { name: 'Outro', run: chapterOutro, clip: [42800, null], once: true }
   ];
+  const PAGED = CHAPTERS.filter(c => !c.once).length;
+  // one dot button per paged chapter, rebuilt each run (a replay reuses
+  // #onbPager itself). Each dot is an <i> track holding a <b> fill that
+  // pagerFill() scales left to right while its chapter plays
+  const pagerDots = [];
+  const pagerDotsEl = pagerEl && pagerEl.querySelector('.onb-dots');
+  const pagerNextEl = pagerEl && pagerEl.querySelector('.onb-pager-next');
+  if (pagerDotsEl){
+    pagerDotsEl.innerHTML = '';
+    CHAPTERS.slice(0, PAGED).forEach((c, j) => {
+      const d = document.createElement('button');
+      d.type = 'button';
+      d.className = 'onb-dot';
+      d.setAttribute('aria-label', 'Chapter ' + (j + 1) + ' of ' + PAGED + ': ' + c.name);
+      d.innerHTML = '<i><b></b></i>';
+      d.onclick = () => { if (!done && chapter >= 0 && !CHAPTERS[chapter].once) goToChapter(j); };
+      pagerDotsEl.appendChild(d);
+      pagerDots.push(d);
+    });
+  }
+  if (pagerNextEl) pagerNextEl.onclick = () => stepChapter(1);
+  // points the pager at chapter i right away (on the tap/swipe/key itself,
+  // not 300ms later when the chapter actually starts) with its pill empty
+  function pagerShow(i){
+    if (!pagerEl) return;
+    pagerEl.classList.toggle('is-visible', i < PAGED);
+    pagerEl.classList.remove('is-waiting');
+    pagerDots.forEach((d, j) => {
+      if (j === i) d.setAttribute('aria-current', 'step'); else d.removeAttribute('aria-current');
+      d.classList.toggle('is-done', j < i);
+      d.classList.toggle('is-next', j === i + 1);
+      const b = d.querySelector('b');
+      b.style.transition = 'none';
+      b.style.transform = 'scaleX(0)';
+    });
+    if (pagerNextEl) pagerNextEl.setAttribute('aria-label', i >= PAGED - 1 ? 'Finish tutorial' : 'Next chapter');
+  }
+  // fills the current pill over the chapter's estimated length, stopping
+  // just short of full - an estimate can run long, and a pill that fills
+  // before the chapter actually ends would read as "waiting" too early.
+  // pagerHold() tops it off once the chapter really has played through
+  function pagerFill(i){
+    const d = pagerDots[i];
+    if (!d) return;
+    const b = d.querySelector('b');
+    void b.offsetWidth;
+    const est = CHAPTERS[i].est[isTouchDevice ? 0 : 1];
+    b.style.transition = 'transform ' + (prefersReduced ? 0 : est) + 'ms linear';
+    b.style.transform = 'scaleX(.94)';
+  }
+  function pagerHold(i){
+    const d = pagerDots[i];
+    if (!d) return;
+    const b = d.querySelector('b');
+    b.style.transition = 'transform 300ms var(--ease-out)';
+    b.style.transform = 'scaleX(1)';
+    pagerEl.classList.add('is-waiting');
+  }
   let chapter = -1;
   // plays one chapter's slice of the track: seek, fade in, then fade out
   // and pause at the slice's end so a chapter held on its last frame past
   // its clip goes quiet instead of bleeding into the next chapter's music.
-  // Both end timers go through later(), so Next cancels them along with
+  // Both end timers go through later(), so paging cancels them along with
   // the rest of the chapter
   function playClip(clip){
     if (!musicEl || prefersReduced) return;
@@ -12004,7 +12149,7 @@ function runIntro(preview){
       later(() => { if (!done) musicEl.pause(); }, toMs - fromMs);
     }
   }
-  // puts back everything a chapter can leave half-done (a Next tapped
+  // puts back everything a chapter can leave half-done (paging away
   // mid-beat parks the outgoing chapter wherever it was, see wait()), so
   // every chapter starts from the same clean slate.
   // Deliberately leaves view/stage alone: each chapter sets its own
@@ -12036,32 +12181,34 @@ function runIntro(preview){
   }
   async function runChapter(i){
     const ch = CHAPTERS[i];
-    if (nextEl){
-      nextEl.textContent = i === CHAPTERS.length - 2 ? 'Done' : 'Next';
-      nextEl.classList.toggle('is-visible', !ch.once);
-    }
+    pagerFill(i);
     playClip(ch.clip);
     resetChapterState();
     // plays through once, then just holds on its last frame (every chapter
-    // ends with its captions cleared and nothing mid-animation) until
-    // Next - nothing left pending to cancel but the clip's end fade
+    // ends with its captions cleared and nothing mid-animation) until the
+    // visitor pages on - nothing left pending to cancel but the clip's end
+    // fade. A chapter paged away from mid-run never gets here (see wait())
     await ch.run();
+    if (!done && chapter === i) pagerHold(i);
   }
-  // Next: cancel whatever the current chapter still has pending (its beats
-  // and its clip's end fade), duck its music out, then start the next one
+  // paging to chapter i (forward, back, or the same one again - each
+  // replays from its start with its own music slice): cancel whatever the
+  // current chapter still has pending (its beats and its clip's end fade),
+  // duck its music out, then start chapter i
   function goToChapter(i){
     clearChapterTimers();
     chapter = i;
+    pagerShow(i);
     if (musicEl && !prefersReduced) fadeMusic(0, 250);
-    // Next can land before chapter 1's opening mark has left
+    // paging can land before chapter 1's opening mark has left
     markEl.classList.remove('is-idle', 'is-leaving');
-    if (nextEl) nextEl.classList.remove('is-visible');
     clearCaption();
     clearMainCaption();
     later(() => { if (!done) runChapter(i); }, 300);
   }
   function sequence(){
     chapter = 0;
+    pagerShow(0);
     runChapter(0);
   }
   waitForMusicReady().then(() => { if (!done) sequence(); });
@@ -12117,7 +12264,7 @@ function stopDemoLyricsScroll(){
 // app on a blurred/hidden screen with no stage class ever set to reveal it
 // again (body.onb-active hides the real UI until setStage() runs).
 function discardIntroChrome(){
-  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbNext','onbDiscovery','onbMusic'].forEach(id => {
+  ['onbBackdrop','onbMark','onbCaption','onbCaptionMain','onbSkip','onbCapture','onbPager','onbDiscovery','onbMusic'].forEach(id => {
     const el = $(id);
     if (el) el.style.display = 'none';
   });
