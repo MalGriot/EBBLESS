@@ -6738,6 +6738,16 @@ const UNMUTE_DELAY_MS = 5000;
 const UNMUTE_RECHECK_MS = 3000;
 const UNMUTE_MAX_WAIT_MS = 20000;
 const MIN_CONTENT_DURATION_S = 90;
+// Stronger version of the same signal: the matched video's real length is
+// already known from search (track.duration, parsed from YouTube's own
+// lengthText), so any player duration that doesn't match it is an ad - a
+// pre-roll that outlasts UNMUTE_MAX_WAIT_MS, or a mid-roll YouTube inserts
+// into a longer video after the track was confirmed and unmuted (the
+// android-ad-popup report). guardActiveDeckAd keeps the active deck muted
+// for as long as that mismatch lasts, capped by AD_MUTE_MAX_MS so a bad
+// duration from search can't silence a real track for good.
+const AD_DUR_TOLERANCE_S = 5;
+const AD_MUTE_MAX_MS = 120000;
 
 // kind: 'yt' (deck.player is a YT.Player bound to #<id>) or 'sc' (deck.player
 // is an SC.Widget-backed adapter bound to #<scId> - see createSCDeckPlayer).
@@ -6746,7 +6756,7 @@ const MIN_CONTENT_DURATION_S = 90;
 // YT.Player's synchronous ones every other deck consumer assumes.
 // gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
 // deck's player - see the gen-check comment on those functions for why.
-function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
+function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, adMutedAt: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
 const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
@@ -6776,6 +6786,7 @@ function resetDeck(deck){
   deck.confirmed = false;
   deck.muteStartTs = 0;
   deck.loadStartTs = 0;
+  deck.adMutedAt = 0;
   deck.pos = -1;
   deck.pendingVideoId = null;
   deck.videoId = null;
@@ -6790,11 +6801,22 @@ function resetDeck(deck){
 function scheduleAdCheck(deck){
   deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_DELAY_MS);
 }
+// True while a YouTube deck's player reports a duration that isn't its
+// matched video's (see AD_DUR_TOLERANCE_S). Falls back to the plain
+// too-short check when the expected length is unknown or stale.
+function deckShowsAd(deck){
+  if (deck.kind !== 'yt' || !deck.player || !deck.player.getDuration) return false;
+  const dur = deck.player.getDuration() || 0;
+  if (!dur) return false;
+  const track = trackAt(deck === activeDeck() ? state.queuePos : deck.pos);
+  const expected = track && track.videoId === deck.videoId ? (track.duration || 0) : 0;
+  if (expected) return Math.abs(dur - expected) > Math.max(AD_DUR_TOLERANCE_S, expected * 0.05);
+  return dur < MIN_CONTENT_DURATION_S;
+}
 function checkDeckReady(deck){
   if (!deck.player) return;
   const elapsed = Date.now() - deck.muteStartTs;
-  const dur = deck.player.getDuration ? (deck.player.getDuration() || 0) : 0;
-  const looksLikeAd = dur > 0 && dur < MIN_CONTENT_DURATION_S;
+  const looksLikeAd = deckShowsAd(deck);
   if (looksLikeAd && elapsed < UNMUTE_MAX_WAIT_MS){
     deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_RECHECK_MS);
     return;
@@ -6807,6 +6829,7 @@ function onDeckConfirmed(deck){
   if (deck.confirmed) return;
   deck.confirmed = true;
   deck.unmuteTimer = null;
+  deck.adMutedAt = 0;
   if (!deck.player) return;
   // A prewarmed standby deck (see prewarmResumeDeck) can be the one that
   // first reaches "confirmed" for a saved resume position, not just the
@@ -6831,7 +6854,10 @@ function onDeckConfirmed(deck){
     // time it's confirmed clean it has already drifted past the intro — snap
     // back to the start so the listener hears the song from 0:00.
     if (!resumed && deck.player.seekTo) deck.player.seekTo(0, true);
-    if (deck.player.unMute) deck.player.unMute();
+    // Confirmed only because the wait cap ran out with an ad still playing:
+    // stay muted and let guardActiveDeckAd unmute once the real video starts.
+    if (deckShowsAd(deck)) deck.adMutedAt = Date.now();
+    else if (deck.player.unMute) deck.player.unMute();
     const s = deck.player.getPlayerState ? deck.player.getPlayerState() : 1;
     setPlayingUI(s === YT.PlayerState.PLAYING || s === undefined);
   } else if (deck.player.pauseVideo){
@@ -8835,10 +8861,30 @@ document.addEventListener('visibilitychange', () => {
     if (wasPlayingBeforeHide) resumePlayback();
   }
 });
+// Runs every seek-poll tick: mutes the active deck while YouTube plays an ad
+// inside an already-confirmed track (mid-roll, or a pre-roll that outlasted
+// the load-time wait) and unmutes the moment the real video is back.
+// Returns true while an ad is being held muted, so the caller skips the
+// progress UI and the crossfade trigger (the ad's own short duration would
+// otherwise look like the track is about to end).
+function guardActiveDeckAd(){
+  const ad = activeDeck();
+  if (!ad.confirmed || swapInProgress || ad.adMutedAt < 0) return false;
+  if (deckShowsAd(ad)){
+    if (!ad.adMutedAt) ad.adMutedAt = Date.now();
+    if (Date.now() - ad.adMutedAt < AD_MUTE_MAX_MS){ ad.player.mute(); return true; }
+    ad.adMutedAt = -1; // gave up: likely a bad search duration, not an ad
+    ad.player.unMute();
+    return false;
+  }
+  if (ad.adMutedAt){ ad.adMutedAt = 0; ad.player.unMute(); }
+  return false;
+}
 function updateSeekUI(){
   updateAdLoadingIcon();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
+  if (guardActiveDeckAd()) return;
   const cur = ad.player.getCurrentTime() || 0;
   const dur = ad.player.getDuration() || 0;
   const pct = dur ? (cur / dur) * 100 : 0;
