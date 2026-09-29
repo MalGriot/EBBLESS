@@ -3072,6 +3072,7 @@ const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built f
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
 const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
+const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist from /spotifyart (0 = looked up, none found)
 const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
 const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
@@ -6768,6 +6769,7 @@ async function resolveDiscoverMetadata(title, artist){
     const res = await fetch(BACKEND + '/spotifyart?' + params.toString());
     if (res.ok){
       const data = await res.json();
+      noteSpotifyartYear(title, artist, data);
       if (data.image || data.title){
         return { title: data.title || title, artist: data.artist || artist, art: data.image || null };
       }
@@ -6776,6 +6778,70 @@ async function resolveDiscoverMetadata(title, artist){
   const art = await fetchDiscoverArt(title, artist);
   return { title, artist, art };
 }
+/* ---------- release year (CuRRentSSsss' soft era preference) ----------
+   /spotifyart returns `year` (iTunes releaseDate) on workers deployed after
+   it was added. Years are cached per title|artist in localStorage so repeat
+   runs don't refetch; a worker response with no `year` key at all (older
+   deploy) turns lookups off for the session and caches nothing, so
+   Currents ranks exactly as it did before year existed. */
+const YEAR_CACHE_MAX = 3000;
+let yearLookupUnsupported = false;
+function yearNormTitle(t){ return String(t || '').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').replace(/[^a-z0-9]/g, ''); }
+// iTunes' single best hit is sometimes a different song by the same artist
+// ("Nights" -> "White Ferrari"); only trust its year when the titles agree.
+function yearTitleAgrees(asked, got){
+  const a = yearNormTitle(asked), b = yearNormTitle(got);
+  if (!a || !b) return false;
+  const n = Math.min(a.length, b.length, 8);
+  return a.slice(0, n) === b.slice(0, n);
+}
+function noteSpotifyartYear(title, artist, data){
+  if (!data || !('year' in data)){ yearLookupUnsupported = true; return; }
+  const year = data.year && yearTitleAgrees(title, data.title) ? data.year : 0;
+  const cache = lsGet(LS_YEAR_CACHE, {}) || {};
+  const keys = Object.keys(cache);
+  if (keys.length >= YEAR_CACHE_MAX) keys.slice(0, keys.length - YEAR_CACHE_MAX + 1).forEach(k => delete cache[k]);
+  cache[tagCacheKey({ title, artist })] = year;
+  lsSet(LS_YEAR_CACHE, cache);
+}
+// Resolves to a year number, or null when unknown/unsupported.
+async function fetchTrackYear(title, artist){
+  if (!title) return null;
+  const cached = (lsGet(LS_YEAR_CACHE, {}) || {})[tagCacheKey({ title, artist })];
+  if (cached !== undefined) return cached || null;
+  if (yearLookupUnsupported) return null;
+  try{
+    const res = await fetch(BACKEND + '/spotifyart?' + new URLSearchParams({ title, artist: artist || '' }));
+    if (!res.ok) return null;
+    const data = await res.json();
+    noteSpotifyartYear(title, artist, data);
+    return (data && 'year' in data && data.year && yearTitleAgrees(title, data.title)) ? data.year : null;
+  } catch(e){ return null; }
+}
+// Soft bonus/penalty for release-year closeness to the seed, applied to the
+// top of an already tag-scored pool. Same year: +YEAR_WEIGHT/2; ~7 years
+// apart: neutral; decades apart: down to -YEAR_WEIGHT/2. Unknown year on
+// either side: no change. For scale, the recent-artist penalty is 0.15 and
+// DISCOVER_SAMPLE_TEMP is 0.1, so a same-era candidate is roughly twice as
+// likely to be drawn as a tag-equal one from another era - a preference,
+// never a filter.
+const YEAR_WEIGHT = 0.15;
+const YEAR_TOP_K = 8;          // only look up years for the strongest tag matches
+const YEAR_SCALE = 10;         // years for closeness to fall off by ~63%
+async function applyYearPreference(ranked, seed){
+  const seedYear = await fetchTrackYear(seed.title, seed.artist);
+  if (!seedYear) return ranked;
+  const top = ranked.slice(0, YEAR_TOP_K);
+  const years = await Promise.all(top.map(x => fetchTrackYear(x.c.title, x.c.artist)));
+  top.forEach((x, i) => {
+    if (!years[i]) return;
+    const closeness = Math.exp(-Math.abs(years[i] - seedYear) / YEAR_SCALE);
+    x.score += YEAR_WEIGHT * (closeness - 0.5);
+    x.c.year = years[i];
+  });
+  return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+
 // Last resort when /similar and /ytmix both come up empty for a seed - other
 // uploads by that same artist, scraped straight from YouTube search.
 async function fetchArtistSearch(artist){
@@ -6965,7 +7031,9 @@ function libraryVideoIdSet(){
    discoverLongTrackOk); false for early/first picks.
    opts.skipArtists (optional): Set of primaryArtistKey() values to pass
    over entirely - CuRRentSSsss uses it to keep every pick a different
-   artist from its seed and from each other (see buildCurrentsPicks). */
+   artist from its seed and from each other (see buildCurrentsPicks).
+   opts.preferYear (optional): nudge the ranking toward the seed's release
+   era (see applyYearPreference); a no-op when years aren't available. */
 async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong, opts){
   const skipArtists = opts && opts.skipArtists;
   const seed = seedTracks[0];
@@ -7001,11 +7069,12 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   if (!pool.length) return [];
 
   const crowd = await fetchPoolAffinity(Array.from(seedTagVec.keys()));
-  const ranked = pool
+  let ranked = pool
     .filter(c => c.title && c.artist)
     .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists, crowd) }))
     .sort((a, b) => b.score - a.score)
     .map((x, rank) => Object.assign(x, { rank }));
+  if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
   // unaffected by where the draw happened to place a candidate.
@@ -7239,9 +7308,9 @@ function swellHasUnseenDrop(){
        recently played first).
    Artist diversity: a slot skips its own seed artists and every artist
    already picked, falling back to "just not a repeat inside this batch"
-   when that leaves nothing. Release year isn't available anywhere
-   client-side today (the worker strips Last.fm's decade tags and /spotifyart
-   doesn't return a date), so year isn't weighed yet.
+   when that leaves nothing. Release year is a soft preference on top of
+   that (applyYearPreference, via /spotifyart's iTunes year) and silently
+   drops out on a worker that doesn't return years yet.
    "Add more" runs a smaller round of the same recipe and appends; "Reset"
    (and the once-a-day refresh) rebuilds the whole list from scratch. */
 const CURRENTS_MAX_PLAYLISTS = 10;
@@ -7336,8 +7405,8 @@ function currentsAccept(t, ctx){
 async function currentsFillSlot(slot, ctx, count){
   const strict = new Set([...ctx.used, ...ctx.soft]);
   slot.seeds.forEach(t => strict.add(primaryArtistKey(t.artist)));
-  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict });
-  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used) });
+  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict, preferYear: true });
+  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used), preferYear: true });
   return found.filter(t => currentsAccept(t, ctx));
 }
 async function buildCurrentsPicks(mode){
