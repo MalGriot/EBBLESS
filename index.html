@@ -4749,7 +4749,9 @@ function addTrackToPlaylist(playlistId, track){
   showToast(added ? 'Added to ' + pl.name : 'Already in playlist');
 }
 
-function openCreatePlaylistFlow(trackToAdd){
+// opts (optional): { prefill: default name, onCreate(name): called instead
+// of the normal create step; used by the queue's Save button }.
+function openCreatePlaylistFlow(trackToAdd, opts){
   openImportOverlay();
   importStage.innerHTML =
     '<div class="step">Name your playlist</div>' +
@@ -4757,10 +4759,12 @@ function openCreatePlaylistFlow(trackToAdd){
       'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
     '<button class="btn-ghost is-active" id="plCreateBtn" style="width:100%">Create</button>';
   const input = $('plNameInput');
+  if (opts && opts.prefill){ input.value = opts.prefill; input.select(); }
   input.focus();
   function submit(){
     const name = input.value.trim();
     if (!name) return;
+    if (opts && opts.onCreate){ closeImportOverlay(); opts.onCreate(name); return; }
     const pl = createCustomPlaylist(name);
     if (trackToAdd){
       addTrackToPlaylist(pl.id, trackToAdd);
@@ -6311,8 +6315,11 @@ queueClearBtn.addEventListener('click', queueClearUpcoming);
 // Saves the whole queue (played + now + upcoming, in its current order) as a
 // new custom playlist - the way to keep a Discover-generated radio or an
 // edited queue. Tracks are copied whole so their resolved videoId/art/
-// matched metadata come along and play straight from the library. Named
-// after the origin playlist; the listener can rename it from its menu.
+// matched metadata come along and play straight from the library. The
+// queue itself only ever holds matched tracks (validIndices), so the origin
+// playlist's unmatched rows (videoId null) are appended as-is, in the same
+// shape imports store them, rather than silently dropped. Opens the normal
+// "Name your playlist" prompt pre-filled with a default name.
 function saveQueueAsPlaylist(){
   const seen = new Set();
   const tracks = [];
@@ -6320,19 +6327,26 @@ function saveQueueAsPlaylist(){
   state.queue.forEach(e => {
     const pl = playlistById(e.plId);
     const t = pl && pl.tracks[e.idx];
-    if (!t || !t.videoId || seen.has(t.videoId)) return;
-    seen.add(t.videoId);
+    if (!t) return;
+    if (t.videoId){ if (seen.has(t.videoId)) return; seen.add(t.videoId); }
     if (String(e.plId).startsWith('discover-ext:')) hasDiscover = true;
     tracks.push(Object.assign({}, t, { plays: 0 }));
   });
   if (!tracks.length){ showToast('Nothing to save'); return; }
   const origin = playlistById(discoverOriginId());
-  const base = (origin && origin.name && !origin.id.startsWith('discover-ext:')) ? origin.name : 'Queue';
-  const pl = createCustomPlaylist(base + (hasDiscover ? ' Radio' : ' Mix'));
-  pl.tracks = tracks;
-  persistPlaylistObj(pl);
-  renderLibrary();
-  showToast('Saved as ' + pl.name);
+  const realOrigin = origin && !origin.id.startsWith('discover-ext:') ? origin : null;
+  if (realOrigin) realOrigin.tracks.forEach(t => { if (t && !t.videoId) tracks.push(Object.assign({}, t, { plays: 0 })); });
+  const base = (realOrigin && realOrigin.name) ? realOrigin.name : 'Queue';
+  openCreatePlaylistFlow(null, {
+    prefill: base + (hasDiscover ? ' Radio' : ' Mix'),
+    onCreate(name){
+      const pl = createCustomPlaylist(name);
+      pl.tracks = tracks;
+      persistPlaylistObj(pl);
+      renderLibrary();
+      showToast('Saved as ' + pl.name);
+    }
+  });
 }
 $('queueSaveBtn').addEventListener('click', saveQueueAsPlaylist);
 
