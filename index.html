@@ -7731,6 +7731,8 @@ function swellHasUnseenDrop(){
      - 3 from the Liked Songs playlist (three different liked seeds),
      - 1 per saved playlist/album (capped at CURRENTS_MAX_PLAYLISTS, most
        recently played first).
+   A full build aims for at least CURRENTS_MIN_TRACKS (12, GitHub #208),
+   topping up from the same seeds when slots come back short.
    Artist diversity: a slot skips its own seed artists and every artist
    already picked, falling back to "just not a repeat inside this batch"
    when that leaves nothing. Release year is a soft preference on top of
@@ -7739,7 +7741,8 @@ function swellHasUnseenDrop(){
    "Add more" runs a smaller round of the same recipe and appends; "Reset"
    (and the once-a-day refresh) rebuilds the whole list from scratch. */
 const CURRENTS_MAX_PLAYLISTS = 10;
-const CURRENTS_MIN_TRACKS = 8;       // top up from the same seeds when slots come back short
+const CURRENTS_MIN_TRACKS = 12;      // top up from the same seeds when slots come back short
+const CURRENTS_MORE_TRACKS = 8;      // "Add more" stays a smaller round
 const CURRENTS_CONCURRENCY = 3;
 let currentsBusy = null;             // null | 'reset' | 'more'
 
@@ -7849,11 +7852,12 @@ async function buildCurrentsPicks(mode){
   results.forEach(r => { if (r) picks.push.apply(picks, r); });
 
   // Short on picks (few playlists, thin Liked Songs, niche seeds): take a
-  // couple more from the latest/liked seeds, still one artist each.
-  const target = mode === 'more' ? Math.min(CURRENTS_MIN_TRACKS, slots.length + 2) : CURRENTS_MIN_TRACKS;
+  // few more from the latest/liked seeds, still one artist each. Up to 3 per
+  // slot so even latest + 3 liked alone can reach CURRENTS_MIN_TRACKS.
+  const target = mode === 'more' ? Math.min(CURRENTS_MORE_TRACKS, slots.length + 2) : CURRENTS_MIN_TRACKS;
   for (const slot of slots){
     if (picks.length >= target) break;
-    picks.push.apply(picks, await currentsFillSlot(slot, ctx, Math.min(2, target - picks.length)));
+    picks.push.apply(picks, await currentsFillSlot(slot, ctx, Math.min(3, target - picks.length)));
   }
 
   if (!picks.length){
@@ -7865,7 +7869,7 @@ async function buildCurrentsPicks(mode){
     // upload's title or channel name.
     const artists = Array.from(new Set(slots.map(s => (s.seeds[0].artist || '').split(',')[0].trim()).filter(Boolean)));
     for (const artist of artists){
-      if (picks.length >= CURRENTS_MIN_TRACKS) break;
+      if (picks.length >= target) break;
       const found = await fetchArtistSearch(artist);
       for (const t of found.slice(0, 3)){
         if (!t.videoId || ctx.exclude.has(t.videoId)) continue;
