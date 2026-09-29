@@ -1599,7 +1599,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 <audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
 
 <div id="splash">
-  <video class="splash-video" autoplay muted loop playsinline src="brand/assets/splash-cymatics.mp4"></video>
+  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
@@ -1645,7 +1645,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <!-- ===== LIBRARY ===== -->
   <main class="view" id="view-library">
     <div class="lib-bg">
-      <video class="lib-bg-video" autoplay muted loop playsinline src="brand/assets/library-bg.mp4"></video>
+      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video>
       <div class="lib-bg-tint"></div>
     </div>
     <div class="view-scroll">
@@ -2298,6 +2298,26 @@ setTimeout(() => {
     }
   }catch(e){}
 }, 12000);
+
+/* ---- background video autoplay fallback ----
+   iOS Safari refuses muted autoplay in Low Power Mode (and Safari does
+   whenever the site's Auto-Play setting is "Never"), and since iOS doesn't
+   load a frame until playback starts, the splash/library videos used to
+   render as nothing at all - just the tinted gradient behind them. Each
+   video now has a first-frame poster so there's always an image, and the
+   first tap/click anywhere (a user gesture, which those policies do allow)
+   retries play() on any background video autoplay left paused. */
+(() => {
+  const kick = () => {
+    document.querySelectorAll('video.splash-video, video.lib-bg-video').forEach(v => {
+      if (!v.paused) return;
+      v.muted = true;
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    });
+  };
+  ['pointerdown', 'touchstart', 'keydown'].forEach(t => document.addEventListener(t, kick, { once: true, capture: true, passive: true }));
+})();
 
 /* ---- install prompt ----
    Captured as early as possible (top of the script) since Chrome/Brave can
