@@ -6266,7 +6266,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #150.
 
 ### own-songs-lyrics: Lyrics for every Breathe Love Deep and This Is Mal Griot song
-- **Status:** review
+- **Status:** draft
 - **Priority:** medium
 - **Description:** All songs on Breathe Love Deep and This Is Mal Griot
   should have lyrics. The user wrote them and will supply the text, so
@@ -6282,11 +6282,14 @@ Add entries in this shape:
   Griot: I Tried It, Helicopter Man, How It Goes, Free Fall, Toxic Baby,
   Turn Around, The Call of the Jungle). Accepts LRC or plain text; title
   match ignores case/spacing/punctuation/brackets/feat./dash suffixes.
-  `OWN_LYRICS_ARTISTS` = Mal Griot, G R II O T, Deep Dawn (the last two
-  per data credits; Deep Dawn needs user confirmation). `fetchLyrics`
+  `OWN_LYRICS_ARTISTS` = Mal Griot, G R II O T, Deep Dawn (user confirmed
+  all three are their own artist names). `fetchLyrics`
   returns `{synced, source:'own', lines}` with no network call for a filled
   entry; empty falls through. `maybeLoadLyrics` no longer blocks SoundCloud
   tracks that have a filled entry. Still needs the lyric text.
+  Parked back to `draft` by the user (2026-09-29): they'll supply lyrics
+  later. The mechanism is done on `agent/own-songs-lyrics`; when lyrics
+  arrive, fill the slots on that branch and it's ready to review/merge.
 
 ### cassette-beautification: Make the cassette a premium physical object
 - **Status:** merged
