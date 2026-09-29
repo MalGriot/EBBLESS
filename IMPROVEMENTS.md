@@ -6157,7 +6157,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #155.
 
 ### keyboard-shortcuts: Add keyboard shortcuts
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** "i" toggles the cymatics infinity loop; "p" and "l" open
   the library; "q" the queue; "s" toggles settings; "shift+s" make a
@@ -6249,7 +6249,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #171.
 
 ### button-press-feel: Every button should feel great to press
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Give every button a subtle, satisfying press feel
   (micro-animation, maybe haptics on mobile) - a nice touch, never
@@ -6521,7 +6521,7 @@ Add entries in this shape:
   so it relights on close. CSS only, no-op at >=860px (footer nav hidden).
 
 ### swipe-track-animation: Mobile: animate swipe-to-change-track
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Swiping left/right to change songs should animate. Must feel unique to EBBLESS, flowy, nothing like Spotify/iTunes/macOS, and light on memory even with rapid repeated swipes.
 - **Touches:** album-art swipe nav (see merged `album-art-swipe-nav`).
