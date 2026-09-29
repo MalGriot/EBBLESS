@@ -6118,24 +6118,24 @@ Add entries in this shape:
   network blocks SoundCloud).
 
 ### paste-search-result-counts: Paste-bar search results should show track count and duration
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In the list of options that appears when searching in
   the paste bar, each playlist option should show how many tracks it has
   and its total duration.
 - **Touches:** `playlist-vibe-search` results UI.
-- **Branch:**
+- **Branch:** agent/paste-search-result-counts
 - **Notes:** Synced from Geethub issue #172.
 
 ### discover-append-to-queue: Discover should auto-append new songs to the end of the queue
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When Discover is active, keep adding new discovered
   songs to the end of the queue. Deactivating Discover removes them.
   Turning on shuffle should pull from both the original queue and the
   discovered tracks.
 - **Touches:** Discover / `discovery-radio-continuation`, queue, shuffle.
-- **Branch:**
+- **Branch:** agent/discover-append-to-queue
 - **Notes:** Synced from Geethub issue #169.
 
 ### currents-add-reset-button: Button to add more tracks to or reset CuRRentSSsss
@@ -6409,11 +6409,11 @@ Add entries in this shape:
   not run in WebKit (not available in sandbox).
 
 ### mobile-fullscreen-art-slide: Mobile fullscreen: art should slide to center when UI appears
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** In mobile fullscreen, when the screen is tapped and the UI pops up, the record/cassette/album art should slide up to sit centered between the lower player UI and the visual-style buttons at the top.
 - **Touches:** mobile fullscreen layout; related to `fullscreen-vertical-centering-nav-row`.
-- **Branch:** (unclaimed)
+- **Branch:** agent/mobile-fullscreen-art-slide
 - **Notes:** Synced from Geethub issue #184.
 
 ### conversational-vibe-search: Search by typing or speaking a mood/vibe to get a playlist
