@@ -61,7 +61,7 @@ function deepFindKey(obj, key, out) {
 // this on a scoring change is exactly what let two already-cached tracks
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
-const LYRICS_CACHE_VERSION = 'v2';
+const LYRICS_CACHE_VERSION = 'v3';
 const SEARCH_CACHE_VERSION = 'v7';
 // /search `candidates` count: the default every caller gets, and the most
 // the refresh-link picker may ask for via ?alts= (see handleSearch).
@@ -1230,41 +1230,113 @@ function parseLrc(lrc) {
 // lyrics for the wrong track entirely. Title match is now required, not
 // just rewarded: anything that doesn't match the requested title is
 // dropped before scoring.
+//
+// Misses came from three places: (1) accented titles - the old a-z0-9-only
+// normalizer turned "Pavão" into "pav o", which never matched a source
+// title spelled "Pavao" (or vice versa); (2) dash-suffixed version tags
+// ("Yellow - Remastered 2021") sent verbatim to lrclib, which then returns
+// nothing at all; (3) multi-artist strings ("KAYTRANADA, Kali Uchis") that
+// never substring-matched lrclib's "KAYTRANADA/Kali Uchis". So: fold
+// accents, strip version tags/feat. credits, compare artists word-by-word,
+// retry with the cleaned title and then a free-text q= search, and use the
+// track duration (when the client sends it) to pick the right version.
+function foldText(s) {
+  return (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+const VERSION_TAG = /\b(remaster(ed)?|remix|mix|version|edit|live|mono|stereo|deluxe|radio|single|bonus|acoustic|demo|instrumental|explicit|clean|official|audio|video|lyrics?|visuali[sz]er|from)\b/i;
+function cleanTitle(s) {
+  let t = (s || '')
+    .replace(/[([][^)\]]*[)\]]/g, ' ') // drop "(feat. X)", "(Remastered 2011)", etc.
+    .replace(/\s+(feat\.?|ft\.?|featuring)\s+.*$/i, ''); // bare "feat. X" credits
+  // " - Remastered 2021" / " - Radio Edit": only strip a dash suffix that
+  // looks like a version tag, so real titles with dashes survive.
+  const dash = t.match(/^(.*\S)\s+[-–—]\s+(.+)$/);
+  if (dash && VERSION_TAG.test(dash[2])) t = dash[1];
+  return t.replace(/\s+/g, ' ').trim();
+}
 function normTitle(s) {
-  return (s || '')
-    .toLowerCase()
-    .replace(/[([][^)\]]*[)\]]/g, '') // drop "(feat. X)", "(Remastered 2011)", etc.
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+  return foldText(cleanTitle(s)).replace(/[^a-z0-9]+/g, ' ').trim();
+}
+// "KAYTRANADA, Kali Uchis" / "A feat. B" / "A & B" -> [['kaytranada'], ['kali','uchis']]
+function artistNames(s) {
+  return foldText(s)
+    .replace(/\s+-\s+topic$/, '').replace(/vevo$/, '')
+    .split(/\s*(?:,|;|\/|&|\bx\b|\band\b|\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b)\s*/)
+    .map(n => n.replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean))
+    .filter(w => w.length);
+}
+// True when any requested artist's words all appear in the result's artist
+// string (word order ignored, so lrclib's "Luna, Luedji" still counts).
+function artistMatches(queryArtist, resultArtist) {
+  const words = new Set(foldText(resultArtist).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean));
+  return artistNames(queryArtist).some(ws => ws.every(w => words.has(w)));
 }
 
-async function getLrclibMatch(title, artist) {
-  const params = new URLSearchParams({ track_name: title, artist_name: artist || '' });
-  const res = await fetch('https://lrclib.net/api/search?' + params.toString(), {
+async function lrclibSearch(params) {
+  const res = await fetch('https://lrclib.net/api/search?' + new URLSearchParams(params).toString(), {
     headers: { 'User-Agent': 'EBBLESS (https://github.com/) - synced lyrics lookup' },
   });
-  if (!res.ok) return null;
-  let list;
-  try { list = JSON.parse(await res.text()); } catch (e) { return null; }
-  if (!Array.isArray(list) || !list.length) return null;
+  if (!res.ok) return [];
+  try {
+    const list = JSON.parse(await res.text());
+    return Array.isArray(list) ? list : [];
+  } catch (e) { return []; }
+}
 
+function pickLrclib(list, title, artist, duration) {
   const titleNorm = normTitle(title);
-  const artistNorm = (artist || '').toLowerCase();
   const scored = list
-    .filter(r => !r.instrumental)
+    .filter(r => !r.instrumental && (r.syncedLyrics || r.plainLyrics))
     .map(r => {
       const rTitleNorm = normTitle(r.trackName);
       let titleScore = 0;
       if (titleNorm && rTitleNorm === titleNorm) titleScore = 4;
       else if (titleNorm && rTitleNorm && (rTitleNorm.includes(titleNorm) || titleNorm.includes(rTitleNorm))) titleScore = 2;
+      const artistOk = !!artist && artistMatches(artist, r.artistName);
+      const diff = duration && r.duration ? Math.abs(r.duration - duration) : null;
       let score = titleScore;
-      if (artistNorm && (r.artistName || '').toLowerCase().includes(artistNorm)) score += 2;
+      if (artistOk) score += 3;
+      if (diff != null) score += diff <= 3 ? 3 : diff <= 10 ? 2 : diff > 20 ? -4 : 0;
       if (r.syncedLyrics) score += 1;
-      return { r, score, titleScore };
+      // Needs a title match plus one independent signal (artist or a close
+      // duration) - a bare title hit is how the wrong song slips through.
+      const ok = titleScore > 0 && (artistOk || (diff != null && diff <= 10) || (!artist && titleScore === 4));
+      return { r, score, ok };
     })
-    .filter(s => s.titleScore > 0) // no title overlap at all -> not the same song, drop it
+    .filter(s => s.ok)
     .sort((a, b) => b.score - a.score);
   return (scored[0] && scored[0].r) || null;
+}
+
+async function getLrclibMatch(title, artist, duration) {
+  // YouTube-only tracks often arrive with no artist and an "Artist - Title"
+  // video title; split that so lrclib gets a real artist to filter on.
+  if (!artist) {
+    const m = title.match(/^(.+?)\s+[-–—]\s+(.+)$/);
+    if (m && !VERSION_TAG.test(m[2])) { artist = m[1]; title = m[2]; }
+  }
+  const clean = cleanTitle(title) || title;
+  const primary = artistNames(artist)[0];
+  const primaryArtist = primary ? primary.join(' ') : '';
+  const seen = new Set();
+  const all = [];
+  const attempts = [
+    { track_name: title, artist_name: artist || '' },
+    { track_name: clean, artist_name: primaryArtist },
+    { q: (clean + ' ' + primaryArtist).trim() },
+  ];
+  let best = null;
+  for (const p of attempts) {
+    const key = JSON.stringify(p);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const r of await lrclibSearch(p)) if (!all.some(x => x.id === r.id)) all.push(r);
+    best = pickLrclib(all, title, artist, duration);
+    // Stop early once the pick is clearly right (exact title + artist) and
+    // either synced or duration-verified - no need for more lrclib calls.
+    if (best && normTitle(best.trackName) === normTitle(title) && artistMatches(artist, best.artistName) && (best.syncedLyrics || duration)) break;
+  }
+  return best;
 }
 
 async function handleLyrics(url, ctx) {
@@ -1273,6 +1345,9 @@ async function handleLyrics(url, ctx) {
   const artist = url.searchParams.get('artist') || '';
   if (!videoId || !/^[a-zA-Z0-9_-]+$/.test(videoId)) return json({ error: 'missing or invalid videoId' }, 400);
   if (!title) return json({ error: 'missing title' }, 400);
+  // Optional track length in seconds - used to pick the right version
+  // (album cut vs acoustic/live) and to verify a match. Older clients omit it.
+  const duration = Math.max(0, parseFloat(url.searchParams.get('duration')) || 0);
 
   const cache = caches.default;
   const cacheKey = new Request('https://cache.internal/lyrics/' + LYRICS_CACHE_VERSION + '/' + videoId);
@@ -1280,7 +1355,7 @@ async function handleLyrics(url, ctx) {
   if (cached) return applyCors(cached);
 
   let match = null;
-  try { match = await getLrclibMatch(title, artist); } catch (e) { match = null; }
+  try { match = await getLrclibMatch(title, artist, duration); } catch (e) { match = null; }
 
   let payload;
   if (match && match.syncedLyrics) {
