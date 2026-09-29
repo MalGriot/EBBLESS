@@ -681,6 +681,10 @@ svg.load-spin{animation:load-spin .9s linear infinite}
   color:var(--faint-2);font-size:10.5px;font-weight:500}
 #bottom-nav button svg{width:20px;height:20px}
 #bottom-nav button.is-active{color:var(--accent)}
+/* issue #179: while the queue sheet is open, Queue is the only lit footer
+   icon. The view button keeps its .is-active class (setView owns it), so
+   it relights by itself when closeQueuePanel restores the previous view. */
+body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 
 /* ---------- queue panel (and the library playlist panel, which shares
    this same sliding-sheet/side-panel presentation) ---------- */
