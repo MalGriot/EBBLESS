@@ -5795,7 +5795,7 @@ Add entries in this shape:
   `node --check` against the extracted `<script>` contents - passes.
 
 ### playlist-panel-side-desktop: Desktop playlist panel should open left-over-library, not right-over-queue
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On desktop, opening a playlist currently slides its
   panel in on the right side, over the queue. It should instead open on
@@ -6326,7 +6326,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #178.
 
 ### mobile-queue-icon-highlight: Mobile: only the queue icon should be lit while the queue is open
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, when the queue is open, the queue icon should be the only highlighted nav icon.
 - **Touches:** mobile footer nav active states.
