@@ -6794,7 +6794,7 @@ Add entries in this shape:
   yet.
 
 ### album-detection: Pasted albums should be treated as albums, not playlists
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** When an album is added, categorize it as an album: the
   library's album filter should include it, its thumbnail should be the
@@ -6807,6 +6807,18 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #204. Related (merged):
   `breathe-love-deep-album` (SoundCloud album categorization),
   `album-art-2x2-grid-bug`, `link-match-accuracy`.
+
+  Fixed on branch (commits `541265c` worker, `ad8d16f` page): YouTube Music
+  album links (`OLAK5uy_` lists) and user-pasted SoundCloud album sets were
+  saved as playlists, so tiles fell back to the 2x2 grid. New `yt_album`
+  type, SC sets use worker `isAlbum`, one shared `libraryEntryForParsedLink()`
+  mapping, album tiles never use the grid. Album tracks search with
+  `album=` (worker keeps "<Artist> - Topic" uploads, drops unrequested
+  remix/live/sped-up) plus new client `pickAlbumArtMatch` cover-vs-thumb
+  check (depends on CORS; no-op if images can't be read). Needs a worker
+  deploy for matching + SC album detection. RESOLVE_LOGIC_VERSION 7 (all
+  playlists re-resolve once), SW v26. `browse/MPREb_` links still rejected.
+
 
 ### lp-needle-sfx-silent: LP needle-lift/drop sound not audible on pause/play
 - **Status:** review
