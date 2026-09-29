@@ -74,7 +74,9 @@ const THISIS_CACHE_VERSION = 'v1';
 // below for why this endpoint doesn't share that constant.
 const SOUNDCLOUD_CACHE_VERSION = 'v2';
 // /playlistsearch (see handlePlaylistSearch) - own version, same reasoning.
-const PLAYLIST_SEARCH_CACHE_VERSION = 'v1';
+// v2: SoundCloud results gained durationMs (and trackCount is now null, not
+// 0, when unknown) - bumped so cached v1-shape responses aren't served.
+const PLAYLIST_SEARCH_CACHE_VERSION = 'v2';
 // /sctracksearch (see handleSoundCloudTrackSearch) - own version, same reasoning.
 const SC_TRACK_SEARCH_CACHE_VERSION = 'v1';
 
@@ -1673,6 +1675,9 @@ function scPlaylistArt(p) {
 // whose kind and URL shape the existing resolve pipeline was never built to
 // handle, so those are filtered out here rather than surfaced as a candidate
 // that would fail on import.
+function scPositiveInt(v) {
+  return typeof v === 'number' && isFinite(v) && v > 0 ? Math.round(v) : null;
+}
 const SC_SETS_URL_RE = /^https:\/\/soundcloud\.com\/[^/]+\/sets\/[^/]+$/i;
 async function searchSoundCloudPlaylists(query, limit, ctx) {
   let clientId;
@@ -1693,7 +1698,13 @@ async function searchSoundCloudPlaylists(query, limit, ctx) {
       name: p.title,
       subtitle: (p.user && p.user.username) || '',
       image: scPlaylistArt(p),
-      trackCount: p.track_count || (Array.isArray(p.tracks) ? p.tracks.length : 0),
+      // Both straight off the search response - no extra per-result request.
+      // Only a positive number is passed through (null otherwise) so the
+      // client never renders "0 tracks"/"0 min" for an unknown value. The
+      // old `tracks.length` fallback is gone: search results only embed a
+      // truncated preview of `tracks`, so it could badly undercount.
+      trackCount: scPositiveInt(p.track_count),
+      durationMs: scPositiveInt(p.duration),
     }));
 }
 
