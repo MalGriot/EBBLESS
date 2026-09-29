@@ -605,6 +605,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .ctl-btn.main svg{width:19px;height:19px}
 .ctl-btn.small{width:32px;height:32px}
 .ctl-btn.small svg{width:14px;height:14px}
+/* play/pause icons swap to a spinning partial ring while a track is still
+   connecting (before the filling pre-roll ring can start) - see
+   updateAdLoadingIcon */
+svg.load-spin{animation:load-spin .9s linear infinite}
+@keyframes load-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){svg.load-spin{animation-duration:2.4s}}
 .repeat-badge{position:relative}
 .repeat-badge .one{position:absolute;bottom:3px;right:2px;font-size:8px;font-weight:800;color:var(--player-accent)}
 
@@ -6494,7 +6500,7 @@ const MIN_CONTENT_DURATION_S = 90;
 // YT.Player's synchronous ones every other deck consumer assumes.
 // gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
 // deck's player - see the gen-check comment on those functions for why.
-function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
+function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
 const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
@@ -6523,6 +6529,7 @@ function resetDeck(deck){
   if (deck.fadeTimer){ clearInterval(deck.fadeTimer); deck.fadeTimer = null; }
   deck.confirmed = false;
   deck.muteStartTs = 0;
+  deck.loadStartTs = 0;
   deck.pos = -1;
   deck.pendingVideoId = null;
   deck.videoId = null;
@@ -6550,6 +6557,7 @@ function checkDeckReady(deck){
 }
 
 function onDeckConfirmed(deck){
+  deck.loadStartTs = 0;
   if (deck.confirmed) return;
   deck.confirmed = true;
   deck.unmuteTimer = null;
@@ -6608,6 +6616,8 @@ function forceLowestQuality(deck){
 
 function createDeckPlayer(deck, videoId){
   deck.videoId = videoId;
+  deck.loadStartTs = Date.now();
+  if (deck === activeDeck()) startLoadIconTicker();
   if (isSoundCloudVideoId(videoId)){ createSCDeckPlayer(deck, videoId); return; }
   deck.kind = 'yt';
   // See the matching comment in createSCDeckPlayer: this deck's player is
@@ -6847,6 +6857,7 @@ function createSCDeckPlayer(deck, videoId){
 
 function loadIntoDeck(deck, videoId, isActive){
   deck.videoId = videoId;
+  deck.loadStartTs = Date.now();
   const kind = isSoundCloudVideoId(videoId) ? 'sc' : 'yt';
   if (!deck.player || deck.kind !== kind){
     // Switching a deck between a YouTube and a SoundCloud track (a mixed-
@@ -6859,7 +6870,11 @@ function loadIntoDeck(deck, videoId, isActive){
     createDeckPlayer(deck, videoId);
     return;
   }
-  if (!deck.ready || !deck.player.loadVideoById){ deck.pendingVideoId = videoId; return; }
+  if (!deck.ready || !deck.player.loadVideoById){
+    deck.pendingVideoId = videoId;
+    if (deck === activeDeck()) startLoadIconTicker();
+    return;
+  }
   if (deck.unmuteTimer) clearTimeout(deck.unmuteTimer);
   deck.confirmed = false;
   deck.player.mute();
@@ -6879,7 +6894,7 @@ function loadIntoDeck(deck, videoId, isActive){
     deck.muteStartTs = Date.now();
     scheduleAdCheck(deck);
   }
-  if (deck === activeDeck()) updateAdLoadingIcon();
+  if (deck === activeDeck()) startLoadIconTicker();
 }
 
 function schedulePreload(afterPos){
@@ -6925,23 +6940,56 @@ function loadingRingIcon(progress){
     `<circle cx="12" cy="12" r="${LOADING_RING_R}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ` +
     `stroke-dasharray="${LOADING_RING_C.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" transform="rotate(-90 12 12)"/>`;
 }
-// Shows a filling ring in place of the play/pause icon while the active deck
-// is muted waiting out a possible pre-roll ad (see UNMUTE_DELAY_MS above).
-// Returns whether it drew the loading state, so callers can skip their own
-// icon update for that tick.
-function updateAdLoadingIcon(){
+// Loading state of the active deck for the play/pause icons: 'spin' while
+// the track is still connecting (player being built, not ready yet, or a
+// SoundCloud sound loading - no progress signal exists yet), a 0..1 fill
+// while it's muted waiting out a possible pre-roll ad (see UNMUTE_DELAY_MS
+// above), or null once it's confirmed playing. loadStartTs later than
+// muteStartTs means a newer load hasn't reached the ad-wait stage yet. The
+// spin gives up after LOAD_SPIN_MAX_MS so a load that never reports ready
+// (a failed/blocked embed) can't leave the icon stuck spinning forever.
+const LOAD_SPIN_MAX_MS = UNMUTE_MAX_WAIT_MS;
+function activeLoadProgress(){
   const ad = activeDeck();
-  if (!ad.player || ad.confirmed || !ad.muteStartTs) return false;
-  const svg = loadingRingIcon((Date.now() - ad.muteStartTs) / UNMUTE_DELAY_MS);
-  [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = svg; });
+  if (ad.loadStartTs > ad.muteStartTs) return (Date.now() - ad.loadStartTs < LOAD_SPIN_MAX_MS) ? 'spin' : null;
+  if (ad.player && !ad.confirmed && ad.muteStartTs) return (Date.now() - ad.muteStartTs) / UNMUTE_DELAY_MS;
+  return null;
+}
+function setPlayIcons(inner, spin){
+  [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => {
+    if (!el) return;
+    el.innerHTML = inner;
+    el.classList.toggle('load-spin', !!spin);
+  });
+}
+// Shows the loading ring in place of the play/pause icon (all player
+// variants: main, fullscreen flow, mini, queue now-playing row). Returns
+// whether it drew the loading state, so callers can skip their own icon
+// update for that tick.
+function updateAdLoadingIcon(){
+  const p = activeLoadProgress();
+  if (p === null) return false;
+  setPlayIcons(loadingRingIcon(p === 'spin' ? 0.25 : p), p === 'spin');
   return true;
+}
+// Keeps the loading ring animating even while nothing else is ticking (the
+// seek poll only runs once playback is reported) and puts the real play/
+// pause icon back the moment loading ends for any reason - confirmed, the
+// deck reset by a skip, or the spin timing out.
+let loadIconTimer = null;
+function stopLoadIconTicker(){ if (loadIconTimer){ clearInterval(loadIconTimer); loadIconTimer = null; } }
+function startLoadIconTicker(){
+  if (!updateAdLoadingIcon() || loadIconTimer) return;
+  loadIconTimer = setInterval(() => {
+    if (updateAdLoadingIcon()) return;
+    stopLoadIconTicker();
+    setPlayIcons(artworkWrap.classList.contains('is-playing') ? ICO_PAUSE : ICO_PLAY);
+  }, 250);
 }
 
 function setPlayingUI(isPlaying){
-  const ad = activeDeck();
-  const adLoading = isPlaying && ad.player && !ad.confirmed && ad.muteStartTs;
-  if (adLoading) updateAdLoadingIcon();
-  else [playIco, flowPlayIco, miniPlayIco, $('queueNowPlayIco')].forEach(el => { if (el) el.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY; });
+  if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
+  else { stopLoadIconTicker(); setPlayIcons(isPlaying ? ICO_PAUSE : ICO_PLAY); }
   artworkWrap.classList.toggle('is-playing', isPlaying);
   flowArtWrap.classList.toggle('is-playing', isPlaying);
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
