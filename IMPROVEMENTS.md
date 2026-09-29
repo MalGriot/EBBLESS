@@ -1426,7 +1426,7 @@ Add entries in this shape:
   production.
 
 ### tutorial-chaptered-prompts: Tutorial should pause per chapter with a "next" prompt
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Restructure the onboarding tutorial into chapters. Each
   chapter's animation loops in place until the user taps "next" to advance;
@@ -2212,7 +2212,7 @@ Add entries in this shape:
   before this fix - not a regression, just nothing to gain there).
 
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** On desktop, if audio starts playing from another source
   (another tab/app), EBBLESS should detect it and automatically lower its
@@ -2787,7 +2787,7 @@ Add entries in this shape:
   own lane, not a quick fix.
 
 ### feedback-prompt: "Are you feeling this app or nah?" periodic feedback prompt
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** After a few days of use, show a thumbs-up/thumbs-down
   prompt. Either choice should prompt for more detail, and that feedback
