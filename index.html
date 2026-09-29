@@ -3692,6 +3692,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     });
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
     tracks.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: t }));
+    // Linked episode missing from the public feed (subscriber-only bonus
+    // episodes etc.) - the show still loads; say why it starts elsewhere.
+    // First import only, not the silent periodic refresh.
+    if (pod.missingEpisode && !old) showToast('"' + pod.missingEpisode + '" isn\'t in the show\'s public feed (it may be subscriber-only). Playing the latest episode instead.');
     const payload = { id: playlistId, type, name: show, image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: pod.focus >= 0 ? pod.focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
     lsSet(LS_PL(playlistId), payload);
     return payload;

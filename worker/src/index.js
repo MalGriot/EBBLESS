@@ -882,7 +882,7 @@ async function handleYtVideo(url, ctx) {
 // published,image}], focus } - focus is the index of the linked episode
 // (-1 for a whole-show link). Newest episodes first, capped at
 // PODCAST_MAX_EPISODES.
-const PODCAST_CACHE_VERSION = 'pod1';
+const PODCAST_CACHE_VERSION = 'pod2';
 const PODCAST_MAX_EPISODES = 300;
 
 function podNorm(s) {
@@ -942,26 +942,65 @@ function parsePodcastFeed(xml) {
   if (episodes.some(e => e.published)) episodes.sort((a, b) => b.published - a.published);
   return { name, author, image, link, episodes };
 }
-async function itunesPodcastSearch(term, author) {
-  const params = new URLSearchParams({ media: 'podcast', entity: 'podcast', limit: '10', term });
-  const res = await fetch('https://itunes.apple.com/search?' + params.toString());
-  if (!res.ok) return null;
-  const data = await res.json();
-  const results = (data.results || []).filter(r => r.feedUrl);
-  if (!results.length) return null;
+// Best directory hit for a show name: exact title match first, then a
+// contains-match, with a matching author as a tiebreak. null if nothing
+// plausibly matches (never "just take the first result").
+function pickPodcastHit(list, term, author) {
   const want = podNorm(term), wantAuthor = podNorm(author);
+  const bare = (s) => podNorm(s).replace(/^the /, '').replace(/ podcast$/, '');
   const score = (r) => {
-    const n = podNorm(r.collectionName);
-    let s = n === want ? 10 : (n.includes(want) || want.includes(n)) ? 5 : 0;
-    if (wantAuthor && podNorm(r.artistName) === wantAuthor) s += 3;
+    const n = podNorm(r.title);
+    let s = n === want ? 10 : bare(r.title) === bare(term) ? 9 : (n && (n.includes(want) || want.includes(n))) ? 5 : 0;
+    if (s && wantAuthor && podNorm(r.author) === wantAuthor) s += 3;
     return s;
   };
-  const best = results.map(r => ({ r, s: score(r) })).sort((a, b) => b.s - a.s)[0];
-  return best.s > 0 ? best.r : null;
+  const best = list.filter(r => r.feedUrl).map(r => ({ r, s: score(r) })).sort((a, b) => b.s - a.s)[0];
+  return best && best.s > 0 ? best.r : null;
+}
+// Finds a show's public RSS feed by name. Apple's iTunes directory first
+// (largest), then fyyd and gpodder.net as fallbacks - all free, no key.
+// dbg collects one line per attempt so a failure can say where it broke.
+async function findPodcastFeed(term, author, dbg) {
+  const sources = [
+    ['itunes', async (q) => {
+      const params = new URLSearchParams({ media: 'podcast', entity: 'podcast', limit: '15', country: 'US', term: q });
+      const res = await fetch('https://itunes.apple.com/search?' + params.toString(), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      return (data.results || []).map(r => ({ title: r.collectionName, author: r.artistName, feedUrl: r.feedUrl }));
+    }],
+    ['fyyd', async (q) => {
+      const res = await fetch('https://api.fyyd.de/0.2/search/podcast?count=15&title=' + encodeURIComponent(q), { headers: { 'User-Agent': APP_UA } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      return (data.data || []).map(r => ({ title: r.title, author: r.author, feedUrl: r.xmlURL }));
+    }],
+    ['gpodder', async (q) => {
+      const res = await fetch('https://gpodder.net/search.json?q=' + encodeURIComponent(q), { headers: { 'User-Agent': APP_UA } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      return (Array.isArray(data) ? data : []).map(r => ({ title: r.title, author: r.author, feedUrl: r.url }));
+    }],
+  ];
+  const bareTerm = String(term).replace(/^the\s+/i, '').replace(/\s+podcast$/i, '').trim();
+  const terms = bareTerm && bareTerm.toLowerCase() !== String(term).toLowerCase() ? [term, bareTerm] : [term];
+  for (const [label, search] of sources) {
+    for (const q of terms) {
+      try {
+        const list = await search(q);
+        const hit = pickPodcastHit(list, term, author);
+        dbg.push(label + '("' + q + '"): ' + list.length + ' results' + (hit ? ', matched "' + hit.title + '"' : ', no match' + (list.length ? ' (top: "' + list[0].title + '")' : '')));
+        if (hit) return hit.feedUrl;
+      } catch (e) {
+        dbg.push(label + '("' + q + '"): ' + (e && e.message || 'failed'));
+      }
+    }
+  }
+  return null;
 }
 async function itunesLookup(id, extra) {
   const params = new URLSearchParams(Object.assign({ id: String(id) }, extra || {}));
-  const res = await fetch('https://itunes.apple.com/lookup?' + params.toString());
+  const res = await fetch('https://itunes.apple.com/lookup?' + params.toString(), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
   if (!res.ok) return [];
   const data = await res.json();
   return data.results || [];
@@ -976,8 +1015,9 @@ async function spotifyEmbedEntity(kind, id) {
   if (!jsonStr) return null;
   let data;
   try { data = JSON.parse(jsonStr); } catch (e) { return null; }
-  return (data && data.props && data.props.pageProps && data.props.pageProps.state &&
+  const entity = (data && data.props && data.props.pageProps && data.props.pageProps.state &&
     data.props.pageProps.state.data && data.props.pageProps.state.data.entity) || null;
+  return entity ? Object.assign({ __html: html }, entity) : null;
 }
 async function spotifyOEmbedTitle(kind, id) {
   try {
@@ -1010,6 +1050,7 @@ async function handlePodcast(url, ctx) {
   if (cached) return applyCors(cached);
 
   let feedUrl = null, episodeTitle = '', episodeAudio = null, link = '';
+  const dbg = [];
   if (src === 'rss') {
     feedUrl = id; link = id;
   } else if (src === 'ap' || src === 'apep') {
@@ -1032,15 +1073,24 @@ async function handlePodcast(url, ctx) {
       author = (entity && entity.subtitle) || '';
     } else {
       episodeTitle = (entity && (entity.name || entity.title)) || await spotifyOEmbedTitle('episode', id);
-      showName = (entity && (entity.subtitle || (entity.show && entity.show.name) || (entity.podcast && entity.podcast.name))) || '';
-      const showUri = entity && (entity.relatedEntityUri || (entity.show && entity.show.uri) || '');
-      const sm = String(showUri || '').match(/show[:/]([a-zA-Z0-9]+)/);
-      if (!showName && sm) showName = await spotifyOEmbedTitle('show', sm[1]);
+      // An episode page's own subtitle isn't reliably the show's name (seen:
+      // "<Show> - <episode>"), so find the parent show's id on the page and
+      // read the name off the show's own embed, same as a show link does.
+      const html = (entity && entity.__html) || '';
+      const uriMatch = html.match(/spotify:show:([a-zA-Z0-9]{22})/) || html.match(/open\.spotify\.com\/show\/([a-zA-Z0-9]{22})/);
+      if (uriMatch) {
+        const showEntity = await spotifyEmbedEntity('show', uriMatch[1]);
+        showName = (showEntity && (showEntity.name || showEntity.title)) || await spotifyOEmbedTitle('show', uriMatch[1]);
+        author = (showEntity && showEntity.subtitle) || '';
+        dbg.push('episode page -> show ' + uriMatch[1]);
+      } else {
+        dbg.push('episode page had no show id; using subtitle');
+      }
+      if (!showName) showName = (entity && (entity.subtitle || (entity.show && entity.show.name) || (entity.podcast && entity.podcast.name))) || '';
     }
-    if (!showName) return json({ error: "Couldn't read that Spotify podcast link (private or invalid?)" }, 404);
-    const hit = await itunesPodcastSearch(showName, author);
-    feedUrl = hit && hit.feedUrl;
-    if (!feedUrl) return json({ error: '"' + showName + '" has no public feed - it may be a Spotify exclusive.' }, 404);
+    if (!showName) return json({ error: "Couldn't read that Spotify podcast link (private or invalid?)", debug: dbg }, 404);
+    feedUrl = await findPodcastFeed(showName, author, dbg);
+    if (!feedUrl) return json({ error: '"' + showName + '" has no public feed - it may be a Spotify exclusive.', debug: dbg }, 404);
   }
   if (!feedUrl) return json({ error: 'no public feed found for that podcast' }, 404);
 
@@ -1066,7 +1116,10 @@ async function handlePodcast(url, ctx) {
     focus = feed.episodes.length - 1;
   }
 
-  const payload = { name: feed.name || 'Podcast', author: feed.author || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, episodes: feed.episodes, focus };
+  // The linked episode isn't in the public feed (subscriber-only/premium
+  // episodes, or since removed) - still return the show, and say so.
+  const missingEpisode = focus === -1 && episodeTitle ? episodeTitle : undefined;
+  const payload = { name: feed.name || 'Podcast', author: feed.author || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, episodes: feed.episodes, focus, missingEpisode };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
@@ -2944,7 +2997,7 @@ export default {
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
