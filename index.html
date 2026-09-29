@@ -1062,7 +1062,15 @@ svg.load-spin{animation:load-spin .9s linear infinite}
     min-height:0;transform:none!important;border-left:1px solid var(--border);
   }
   body.split-desktop #queue-scrim{display:none!important}
-  body.split-desktop #mini-bar{display:none!important}
+  /* Settings (issue #146): while Settings holds the center pane the player's
+     transport is gone, so the mini-bar (same one used below 1150px) comes
+     back as a footer. updateMiniBarVisibility() already shows it whenever
+     a track is loaded and currentView isn't 'player'. #app gets matching
+     bottom padding (38px art + 8px*2 padding + 1px border) only while it's
+     actually shown, so the 1fr pane row shrinks to sit above it instead of
+     being overlapped - and normal (non-Settings) desktop view is untouched. */
+  body.split-desktop:not(.view-settings-active) #mini-bar{display:none!important}
+  body.split-desktop.view-settings-active:has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
      margin:0 auto centering .view-scroll gets from its base rule (line
