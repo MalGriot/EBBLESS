@@ -1000,30 +1000,29 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
 #flow-layer.chrome-hidden{cursor:none}
 .flow-top{display:flex;justify-content:flex-end;align-items:flex-start;position:relative}
-.flow-exit,.flow-art-style-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
-.flow-exit:hover,.flow-art-style-btn:hover{background:var(--panel-2);color:var(--text)}
-.flow-exit svg,.flow-art-style-btn svg{width:16px;height:16px}
-/* desktop split-view "fullscreen" (toggleDesktopFs) exit button - hidden
-   outside that mode; shown/positioned by the body.split-desktop.desktop-fs
-   rule in the min-width:1150px block below, next to the other .desktop-fs*
-   overrides. Reuses .flow-exit's style so it matches #flowExitBtn exactly
-   (issue #133 - fullscreen-exit-button-consistency). */
-#desktopFsExitBtn{display:none}
-/* the class rule above sets display:flex unconditionally, which - at
-   equal specificity - beats the UA stylesheet's [hidden]{display:none}
-   in source order, so flowArtStyleBtn.hidden=true (set in openFlow() for
-   the cymatics/viz view, where there's no art style to pick) left the
-   button visible anyway. It just did nothing when clicked, since
-   syncFlowArtStyle() itself correctly no-ops while flowArtWrap is
-   hidden - so the button *looked* broken rather than simply absent. */
-.flow-art-style-btn[hidden]{display:none}
-/* centered to match where the art/viz/lyrics tabs sit (horizontally
-   centered above the artwork) in the normal, non-fullscreen player -
-   also anchors the shared #artStyleMenu (moved in from the normal player
-   while flow mode is open on the art view - see openFlow()/closeFlow())
-   below this button instead of wherever it'd land relative to the normal
-   player's layout */
+.flow-exit{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.flow-exit:hover{background:var(--panel-2);color:var(--text)}
+.flow-exit svg{width:16px;height:16px}
+/* desktop split-view "fullscreen" (toggleDesktopFs) exit X - sits right
+   next to #fsBtn in the art's corner (issues #148/#157: one click back to
+   the main screen, beside the button that goes one phase further) and is
+   hidden outside that mode; shown by the body.split-desktop.desktop-fs rule
+   in the min-width:1150px block below. */
+#desktopFsExitBtn{display:none;right:48px}
+/* centered where the art/viz/lyrics tabs sit in the normal player: the real
+   #visualTabs (with its #artStyleMenu) is moved in here while flow mode is
+   open - see flowMountVisual()/flowUnmountVisual() - so fullscreen gets
+   the same 3-icon switcher (issue #157) */
 .flow-art-style-anchor{position:absolute;left:50%;top:0;transform:translateX(-50%)}
+#flow-layer .visual-tabs{position:static;transform:none;margin:0}
+/* lyrics inside flow mode (picked from the tabs above), kept in the gap
+   between the top row and the player block so lines never run under the
+   controls */
+#flow-layer .flow-lyrics{position:absolute;left:0;right:0;top:76px;bottom:calc(236px + var(--safe-b));z-index:1}
+#flow-layer .flow-lyrics[hidden]{display:none}
+#flow-layer .flow-lyrics .lyrics-scroller{padding:24vh 28px}
+#flow-layer .flow-lyrics .lyric-line{font-size:19px}
+#flow-layer .flow-lyrics .lyric-line.is-current{font-size:21px}
 .flow-bottom{display:flex;flex-direction:column;align-items:center;gap:18px}
 .flow-seek{width:min(420px,80vw)}
 
@@ -1346,19 +1345,14 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
     position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:2;
     width:min(480px,90%);
   }
-  /* exit-fullscreen button (issue #133): same corner inset (26px) and same
-     .flow-exit visual style #flowExitBtn uses in #flow-layer, so LP/cassette
-     desktop fullscreen (this class-toggle mechanism) and cymatics desktop
-     fullscreen (which still goes through #flow-layer/openFlow(), see
-     fsBtn's click handler) present an identical exit affordance. Positioned
-     relative to the viewport, not #view-player, and offset below the topbar
-     (which - unlike #flow-layer - stays visible here so the Library/Queue
-     drawer toggles in #topnav remain reachable); z-index 45 sits above the
-     fixed player (44) but below the slide-in drawers (46) so an open drawer
-     covers it the same way it would cover anything else in that corner. */
-  body.split-desktop.desktop-fs:not(.view-settings-active) #desktopFsExitBtn{
-    display:flex;position:fixed;top:calc(var(--topbar-h) + 26px);right:26px;z-index:45;
-  }
+  /* exit X (issues #133/#148/#157): an .art-fs-btn twin parked beside
+     #fsBtn in the art's corner - fsBtn goes on to the immersive third
+     phase, this goes straight back to the main screen */
+  body.split-desktop.desktop-fs:not(.view-settings-active) #desktopFsExitBtn{display:flex}
+  /* the art's top edge is the viewport's here, so the corner buttons drop
+     below the overlaid topbar - otherwise the nav covers them on wide-ish
+     windows and fsBtn (the way into phase 3) can't be clicked */
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn){top:calc(var(--topbar-h) + 10px)}
   /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
      #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn){
@@ -2013,17 +2007,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
   <!-- ===== PLAYER ===== -->
   <main class="view" id="view-player" hidden>
-    <!-- desktop split-view "fullscreen" (toggleDesktopFs/.desktop-fs, see the
-         min-width:1150px CSS block) is a structurally different overlay from
-         #flow-layer's mobile/tablet + desktop-cymatics fullscreen, so it needs
-         its own exit button rather than reusing #flowExitBtn - but it reuses
-         the exact same .flow-exit visual style, positioned to match, so LP/
-         cassette/cymatics fullscreen all present the same exit affordance
-         (issue #133). Only shown while body.split-desktop.desktop-fs (see the
-         #desktopFsExitBtn CSS rule next to the other .desktop-fs* rules). -->
-    <button class="flow-exit" id="desktopFsExitBtn" aria-label="Exit fullscreen">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
-    </button>
     <div class="view-scroll">
       <div class="player-stage">
         <div class="visual-tabs" id="visualTabs">
@@ -2264,6 +2247,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
           <button class="art-fs-btn" id="fsBtn" title="Fullscreen" aria-label="Enter flow mode">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          </button>
+          <!-- split-desktop fullscreen (.desktop-fs) only: back to the main
+               screen in one click, beside fsBtn (which goes on to phase 3) -->
+          <button class="art-fs-btn" id="desktopFsExitBtn" title="Exit fullscreen" aria-label="Exit fullscreen">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
           </button>
         </div>
         <div class="track-meta">
@@ -2556,11 +2544,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
     <div class="flow-chrome">
       <div class="flow-top">
-        <div class="flow-art-style-anchor" id="flowArtStyleAnchor">
-          <button class="flow-art-style-btn" id="flowArtStyleBtn" title="Album art style" aria-label="Choose album art style" hidden>
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg>
-          </button>
-        </div>
+        <!-- #visualTabs is moved in here while flow mode is open -->
+        <div class="flow-art-style-anchor" id="flowArtStyleAnchor"></div>
         <button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
       </div>
       <div class="flow-bottom">
@@ -2601,6 +2586,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="flow-art" id="flowArtWrap"><img class="art" id="flowArtA" alt=""><img class="art" id="flowArtB" alt=""></div>
     <div class="flow-art flow-viz" id="flowVizWrap" hidden></div>
+    <div class="flow-lyrics" id="flowLyricsWrap" hidden></div>
   </div>
 
   <!-- ===== LYRICS FULLSCREEN ===== -->
@@ -3899,6 +3885,9 @@ updateSplitDesktop();
    between the two based on whether split-desktop is active. */
 function closeDesktopFs(){
   const wasOpen = state.deskFsOpen;
+  // phase 3 (flow overlay + browser fullscreen, entered from here) goes too,
+  // so this alone always lands back on the main screen
+  if (wasOpen && state.flowOpen) closeFlow();
   state.deskFsOpen = false; state.deskFsLibOpen = false; state.deskFsQueueOpen = false;
   document.body.classList.remove('desktop-fs', 'desktop-fs-lib-open', 'desktop-fs-queue-open');
   document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
@@ -3933,7 +3922,7 @@ function toggleDesktopFsQueue(){
   document.querySelectorAll('#topnav [data-action="toggle-queue"]')
     .forEach(b => b.classList.toggle('is-active', state.deskFsQueueOpen));
 }
-desktopFsExitBtn.addEventListener('click', closeDesktopFs);
+desktopFsExitBtn.addEventListener('click', (e) => { e.stopPropagation(); closeDesktopFs(); });
 
 /* =========================================================================
    AMBIENT BACKGROUND (blurred artwork, crossfade)
@@ -8550,6 +8539,7 @@ function setVisualMode(mode){
   visualMode = mode;
   lsSet(LS_VIZ, mode);
   applyVisualMode();
+  if (state.flowOpen) flowRemountVisual();
   csStackSync();
 }
 
@@ -10083,14 +10073,16 @@ const artRecord = $('artRecord'), artCassette = $('artCassette');
 const artRecordHome = artRecord.parentElement, artRecordAnchor = artRecord.nextElementSibling;
 const artCassetteHome = artCassette.parentElement, artCassetteAnchor = artCassette.nextElementSibling;
 
-/* ---------- album art style switcher, available in fullscreen too: the
-   shared #artStyleMenu (normally anchored under the player's art/viz/
-   lyrics tabs) is moved into flow-chrome's own anchor while flow mode is
-   open on the art view, and restored on close - same relocate-the-real-
-   element pattern as vizCanvas/artRecord/artCassette above, so there's
-   only ever one menu instance, one set of click handlers. ---------- */
-const artStyleMenuHome = artStyleMenu.parentElement, artStyleMenuAnchor = artStyleMenu.nextElementSibling;
-const flowArtStyleAnchor = $('flowArtStyleAnchor'), flowArtStyleBtn = $('flowArtStyleBtn');
+/* ---------- art/viz/lyrics tabs, available in fullscreen too (issue
+   #157): the real #visualTabs (which also holds the #artStyleMenu) is moved
+   into flow-chrome's own anchor while flow mode is open, and restored on
+   close - same relocate-the-real-element pattern as vizCanvas/artRecord/
+   artCassette above, so there's only ever one set of tabs and handlers.
+   Picking a tab in flow mode re-mounts the flow content (see
+   setVisualMode -> flowRemountVisual). ---------- */
+const flowArtStyleAnchor = $('flowArtStyleAnchor');
+const visualTabsEl = $('visualTabs'), visualTabsHome = visualTabsEl.parentElement, visualTabsAnchor = visualTabsEl.nextElementSibling;
+const flowLyricsWrap = $('flowLyricsWrap');
 function syncFlowArtStyle(){
   if (!state.flowOpen || flowArtWrap.hidden) return;
   if (artStyle === 'record' || artStyle === 'cassette'){
@@ -10107,32 +10099,20 @@ function syncFlowArtStyle(){
     delete flowArtWrap.dataset.artStyle;
   }
 }
-flowArtStyleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleArtStyleMenu(); armFsIdleTimer(); });
 
-function openFlow(){
-  state.flowOpen = true;
-  const showViz = visualMode === 'viz';
+/* mount/unmount the current visual (art / cymatics / lyrics) in #flow-layer */
+function flowMountVisual(){
+  const showViz = visualMode === 'viz', showLyrics = visualMode === 'lyrics';
   if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); flowVizWrap.appendChild(vizSpeedBtn); }
-  flowArtWrap.hidden = showViz;
+  if (showLyrics) flowLyricsWrap.appendChild(lyricsWrap);
+  flowArtWrap.hidden = showViz || showLyrics;
   flowVizWrap.hidden = !showViz;
+  flowLyricsWrap.hidden = !showLyrics;
   if (showViz) vizResize();
-  flowArtStyleBtn.hidden = showViz;
-  if (!showViz){
-    flowArtStyleAnchor.appendChild(artStyleMenu);
-    syncFlowArtStyle();
-  } else {
-    delete flowArtWrap.dataset.artStyle;
-  }
-  flowLayer.classList.add('is-open');
-  armFsIdleTimer();
-  csStackSync();
+  if (!flowArtWrap.hidden) syncFlowArtStyle();
+  else delete flowArtWrap.dataset.artStyle;
 }
-function closeFlow(){
-  state.flowOpen = false;
-  flowLayer.classList.remove('is-open');
-  // back to desktop-fs (F pressed from there) keeps idling on the shared
-  // timer; otherwise this just clears it and reveals everything
-  armFsIdleTimer();
+function flowUnmountVisual(){
   if (vizCanvas.parentElement === flowVizWrap){
     vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
     // Restore vizSpeedBtn before vizAutoBtn: vizAutoBtn's original anchor
@@ -10143,14 +10123,80 @@ function closeFlow(){
     vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
     vizResize();
   }
-  if (artStyleMenu.parentElement === flowArtStyleAnchor){
-    artStyleMenuHome.insertBefore(artStyleMenu, artStyleMenuAnchor);
-    closeArtStyleMenu();
-  }
+  if (lyricsWrap.parentElement === flowLyricsWrap) lyricsWrapHome.insertBefore(lyricsWrap, lyricsWrapAnchor);
   if (artRecord.parentElement === flowArtWrap) artRecordHome.insertBefore(artRecord, artRecordAnchor);
   if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
   delete flowArtWrap.dataset.artStyle;
+}
+function flowRemountVisual(){
+  if (!state.flowOpen) return;
+  flowUnmountVisual();
+  flowMountVisual();
+}
+
+/* true browser fullscreen for the immersive phase (issue #142): the whole
+   screen, no browser chrome, like a YouTube video. Only on split-desktop;
+   where the Fullscreen API is missing or refuses (iPhone Safari, iframes,
+   no user gesture) flow mode just opens as the in-page overlay it always
+   was. flowDocFs remembers that *we* asked, so closing flow only exits a
+   fullscreen it started, and leaving browser fullscreen some other way
+   (Esc, which the browser swallows, or the browser's own UI) steps back out
+   of flow mode too. */
+let flowDocFs = false;
+function docFsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function requestDocFs(){
+  const el = document.documentElement;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!fn || docFsElement()) return;
+  flowDocFs = true;
+  try {
+    const p = fn.call(el, {navigationUI:'hide'});
+    if (p && p.catch) p.catch(() => { flowDocFs = false; });
+  } catch (_){ flowDocFs = false; }
+}
+function exitDocFs(){
+  if (!flowDocFs) return;
+  flowDocFs = false;
+  if (!docFsElement()) return;
+  const fn = document.exitFullscreen || document.webkitExitFullscreen;
+  try { const p = fn && fn.call(document); if (p && p.catch) p.catch(() => {}); } catch (_){}
+}
+['fullscreenchange', 'webkitfullscreenchange'].forEach(t => document.addEventListener(t, () => {
+  if (docFsElement() || !flowDocFs) return;
+  flowDocFs = false;
+  if (state.flowOpen) closeFlow();
+}));
+
+// immersive: also take the browser fullscreen (defaults on for split-desktop;
+// the cymatics fsBtn path passes false so that one stays an in-page overlay)
+function openFlow(immersive = document.body.classList.contains('split-desktop')){
+  state.flowOpen = true;
+  flowArtStyleAnchor.appendChild(visualTabsEl);
+  flowMountVisual();
+  flowLayer.classList.add('is-open');
+  if (immersive) requestDocFs();
+  armFsIdleTimer();
   csStackSync();
+}
+function closeFlow(){
+  state.flowOpen = false;
+  flowLayer.classList.remove('is-open');
+  exitDocFs();
+  // back to desktop-fs (F pressed from there) keeps idling on the shared
+  // timer; otherwise this just clears it and reveals everything
+  armFsIdleTimer();
+  flowUnmountVisual();
+  if (visualTabsEl.parentElement === flowArtStyleAnchor){
+    visualTabsHome.insertBefore(visualTabsEl, visualTabsAnchor);
+    closeArtStyleMenu();
+  }
+  csStackSync();
+}
+// flow-mode X: one click all the way back to the main screen, even from the
+// immersive phase that was entered from split-desktop fullscreen (#157)
+function exitFlowToMain(){
+  if (state.deskFsOpen) closeDesktopFs(); // closes flow too
+  else closeFlow();
 }
 
 /* ---------- cassette fullscreen stack / orbit (issue #125): decorative
@@ -10523,16 +10569,22 @@ document.addEventListener('click', (e) => {
 fsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (!currentTrack()) return;
+  const split = document.body.classList.contains('split-desktop');
+  // split-desktop phase 3 (issue #157): from the panel-slide fullscreen
+  // below, fsBtn goes on to the immersive flow overlay in true browser
+  // fullscreen (what pressing F there used to be the only way into);
+  // #desktopFsExitBtn beside it is the way back out
+  if (split && state.deskFsOpen){ openFlow(true); return; }
   // Cymatics visualizer and lyrics always get the true full-bleed overlay
   // (position:fixed;inset:0, hides the topbar) on both mobile and desktop -
   // the split-desktop panel-slide treatment below is only for the album-art
   // view.
   if (visualMode === 'lyrics'){ openLyricsFs(); return; }
-  if (visualMode === 'viz'){ openFlow(); return; }
-  // split-desktop + art view: slide library/queue off instead of the
-  // mobile/tablet "flow mode" overlay - see the .desktop-fs* CSS and
+  if (visualMode === 'viz'){ openFlow(false); return; }
+  // split-desktop + art view, phase 2: slide library/queue off instead of
+  // the mobile/tablet "flow mode" overlay - see the .desktop-fs* CSS and
   // toggleDesktopFs().
-  if (document.body.classList.contains('split-desktop')){ toggleDesktopFs(); return; }
+  if (split){ toggleDesktopFs(); return; }
   openFlow();
 });
 
@@ -10756,13 +10808,17 @@ reportMatchBtn.addEventListener('click', handleWrongTrackFlagClick);
 if (flowReportBtn) flowReportBtn.addEventListener('click', handleWrongTrackFlagClick);
 if ($('copyWrongTrackLogBtn')) $('copyWrongTrackLogBtn').addEventListener('click', copyWrongTrackLog);
 updateWrongTrackLogDesc();
-flowExitBtn.addEventListener('click', closeFlow);
+flowExitBtn.addEventListener('click', exitFlowToMain);
 
 /* swipe left/right on flow artwork -> prev/next (or next pattern in cymatics view); swipe down -> exit */
 (function(){
   const artWrap = $('flowArtWrap');
   let sx = null, sy = null;
-  function start(e){ const p = e.touches ? e.touches[0] : e; sx = p.clientX; sy = p.clientY; }
+  function start(e){
+    // lyrics in flow mode scroll vertically - don't read that as swipe-to-exit
+    if (e.target.closest && e.target.closest('#flowLyricsWrap')){ sx = null; return; }
+    const p = e.touches ? e.touches[0] : e; sx = p.clientX; sy = p.clientY;
+  }
   function end(e){
     if (sx === null) return;
     const p = e.changedTouches ? e.changedTouches[0] : e;
