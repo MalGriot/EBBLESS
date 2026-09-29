@@ -3084,6 +3084,17 @@ Add entries in this shape:
   or iTunes from the build container, so the Spotify embed field names for
   show/episode are read defensively (with an oEmbed fallback). Check them
   against the live worker first.
+- **YouTube fallback (2026-09-30):** a non-subscriber Spotify show with no
+  public feed in any directory (iTunes rate-limits the worker; fyyd and
+  gpodder are the working fallbacks) now falls back to YouTube: episode
+  list from Spotify's embed (or the show's own YouTube channel uploads),
+  each episode matched via new `/podcastmatch` (strict: >=60% title overlap,
+  show's own channel or >=85% overlap, similar length, clips/trailers/
+  reactions rejected). Newest 25 + the linked episode; playback starts on
+  the first match; refresh reuses earlier matches. Subscriber-only shows
+  (🔓/"Premium") are never sent to YouTube. Verified live: Spotify show
+  5XhS5WBx... is "NoSleep Premium (🔓)" (paid), and episode 0F73EhH9...
+  resolves to The NoSleep Podcast's public feed.
 
 ### currentsss-casing-followup: Fix "Currents" playlist casing to "CuRRentSSsss"
 - **Status:** merged

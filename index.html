@@ -3203,6 +3203,13 @@ async function fetchYouTubeVideo(videoId){
   return data;
 }
 
+const PODCAST_YT_MAX_EPISODES = 25;   // YouTube-fallback shows: newest N episodes get matched
+async function fetchPodcastMatch(show, title, durationSec){
+  const res = await fetch(BACKEND + '/podcastmatch?show=' + encodeURIComponent(show) + '&title=' + encodeURIComponent(title) + '&duration=' + encodeURIComponent(durationSec || 0));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return data;
+}
 // key = "<src>:<id>" as built by parsePodcastLink (library id minus 'pod:')
 async function fetchPodcast(key){
   const i = key.indexOf(':');
@@ -3679,24 +3686,71 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     return payload;
   }
   if (type === 'pod_show'){
-    // Podcast (see fetchPodcast / the worker's /podcast): every episode is
-    // its own audio file straight from the feed - nothing to match. Plays
-    // already racked up on an episode survive the periodic refresh.
+    // Podcast (see fetchPodcast / the worker's /podcast). Normally every
+    // episode is its own audio file straight from the feed - nothing to
+    // match. For a show with no public feed the worker falls back to
+    // YouTube (pod.source === 'youtube'): episodes either come with a
+    // YouTube videoId already (the show's own channel uploads) or get
+    // matched here one by one through /podcastmatch, paced like song
+    // matching, with playback starting as soon as the first one lands.
+    // Plays - and earlier YouTube matches - survive the periodic refresh.
     const pod = await fetchPodcast(playlistId.replace(/^pod:/, ''));
     const old = getCachedPlaylist(playlistId);
     const oldPlays = new Map(old ? old.tracks.filter(t => t.videoId).map(t => [t.videoId, t.plays || 0]) : []);
+    const oldMatch = new Map(old ? old.tracks.filter(t => t.videoId && !isAudioVideoId(t.videoId)).map(t => [t.title, t.videoId]) : []);
     const show = pod.name || 'Podcast';
-    const tracks = pod.episodes.map(e => {
-      const videoId = 'au:' + e.audio;
-      return { title: e.title, artist: pod.author || show, videoId, matchedTitle: e.title, channel: show, plays: oldPlays.get(videoId) || 0, art: e.image || pod.image || null, duration: e.duration || 0, published: e.published || 0, podcast: true };
+    const fromYouTube = pod.source === 'youtube';
+    let episodes = pod.episodes;
+    let focus = pod.focus >= 0 ? pod.focus : -1;
+    if (fromYouTube && episodes.length > PODCAST_YT_MAX_EPISODES){
+      // matching is one YouTube search per episode - keep it to the newest
+      // few (plus the linked one)
+      const keep = episodes.slice(0, PODCAST_YT_MAX_EPISODES);
+      if (focus >= PODCAST_YT_MAX_EPISODES){ keep.push(episodes[focus]); focus = keep.length - 1; }
+      episodes = keep;
+    }
+    const tracks = episodes.map(e => {
+      const videoId = e.audio ? 'au:' + e.audio : (e.videoId || oldMatch.get(e.title) || null);
+      return { title: e.title, artist: pod.author || show, videoId, matchedTitle: e.title, channel: show, plays: videoId ? (oldPlays.get(videoId) || 0) : 0, art: e.image || pod.image || null, duration: e.duration || 0, published: e.published || 0, podcast: true };
     });
-    onProgress({ stage: 'matching', done: 0, total: tracks.length });
-    tracks.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: t }));
     // Linked episode missing from the public feed (subscriber-only bonus
     // episodes etc.) - the show still loads; say why it starts elsewhere.
     // First import only, not the silent periodic refresh.
     if (pod.missingEpisode && !old) showToast('"' + pod.missingEpisode + '" isn\'t in the show\'s public feed (it may be subscriber-only). Playing the latest episode instead.');
-    const payload = { id: playlistId, type, name: show, image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: pod.focus >= 0 ? pod.focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
+    const build = (extra) => Object.assign({ id: playlistId, type, name: show, image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, extra || {});
+    onProgress({ stage: 'matching', done: 0, total: tracks.length });
+    let fired = false;
+    const fireFirst = () => {
+      if (fired || !onFirstTrack || !tracks.some(t => t.videoId)) return;
+      fired = true;
+      onFirstTrack(build());
+    };
+    if (fromYouTube){
+      if (!old) showToast('No free feed for "' + show + '" - finding its episodes on YouTube.');
+      // linked episode first, then newest to oldest
+      const order = tracks.map((_, i) => i);
+      if (focus > 0){ order.splice(focus, 1); order.unshift(focus); }
+      let done = 0;
+      for (const i of order){
+        const t = tracks[i];
+        if (!t.videoId){
+          try {
+            const m = await fetchPodcastMatch(show, t.title, t.duration);
+            if (m && m.videoId){ t.videoId = m.videoId; t.duration = t.duration || m.duration || 0; }
+          } catch(e){}
+          await sleep(350);
+        }
+        onProgress({ stage: 'matching', done: ++done, total: tracks.length, track: t });
+        // the linked episode is tried first, so this starts on it when it
+        // matched, else on the first episode that did
+        fireFirst();
+        if (fired) lsSet(LS_PL(playlistId), build({ resolving: true }));
+      }
+    } else {
+      tracks.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: t }));
+    }
+    if (fromYouTube && !tracks.some(t => t.videoId)) throw new Error('Couldn\'t find full episodes of "' + show + '" on YouTube.');
+    const payload = build();
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
@@ -5728,7 +5782,7 @@ function openRefreshLinkPicker(plId, trackIdx){
   const pl = playlistById(plId) || getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
-  if (isAudioVideoId(t.videoId)){ showToast('Podcast episodes play straight from the show - nothing to relink.'); return; }
+  if (isAudioVideoId(t.videoId) || t.podcast){ showToast('Podcast episodes can\'t be relinked from here.'); return; }
   const token = String(++relinkPickerToken);
   openImportOverlay();
   const label = t.title + (t.artist ? ' - ' + t.artist : '');
@@ -6553,7 +6607,7 @@ async function beginImport(id, force, type, targetIndex){
       startedEarly = true;
       closeImportOverlay();
       loadPlaylistIntoPlayer(partial);
-      buildQueueFrom(0);
+      buildQueueFrom(partial.focusIndex && partial.tracks[partial.focusIndex] && partial.tracks[partial.focusIndex].videoId ? partial.focusIndex : 0);
       loadIndex(state.queuePos, true);
       setView('player');
       // Save to the library now rather than waiting for the full resolve -
@@ -10023,9 +10077,9 @@ function maybeLoadLyrics(){
   // 'sc:<id>' videoId would just 400 every time, so skip the doomed request
   // and say so plainly instead of leaving the previous track's lyrics on
   // screen or showing a generic "couldn't load" error.
-  if (isNativeVideoId(t.videoId)){
+  if (isNativeVideoId(t.videoId) || t.podcast){
     lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
-    lyricsScroller.innerHTML = '<div class="lyrics-empty">' + (isAudioVideoId(t.videoId) ? 'Lyrics aren\'t available for podcasts.' : 'Lyrics aren\'t available for SoundCloud tracks yet.') + '</div>';
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">' + (isAudioVideoId(t.videoId) || t.podcast ? 'Lyrics aren\'t available for podcasts.' : 'Lyrics aren\'t available for SoundCloud tracks yet.') + '</div>';
     return;
   }
   if (lyricsState.videoId === t.videoId) return;
@@ -10267,7 +10321,7 @@ function reflectCurrentTrackUI(pos, opts){
   const skipArt = opts && opts.skipArtSwap;
   updateTrackMetaUI(t);
   // a podcast episode is the show's own file - there's no match to flag
-  const isPod = isAudioVideoId(t.videoId);
+  const isPod = isAudioVideoId(t.videoId) || !!t.podcast;
   reportMatchBtn.hidden = isPod;
   if (flowReportBtn) flowReportBtn.hidden = isPod;
   if (!skipArt){

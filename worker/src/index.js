@@ -452,6 +452,8 @@ async function fetchYouTubeSearchCandidates(query) {
     try { vTitle = v.title.runs.map(r => r.text).join(''); } catch (e) {}
     let channel = '';
     try { channel = v.ownerText.runs[0].text; } catch (e) {}
+    let channelId = '';
+    try { channelId = v.ownerText.runs[0].navigationEndpoint.browseEndpoint.browseId || ''; } catch (e) {}
     let views = 0;
     try { views = parseViewCount(v.viewCountText.simpleText); } catch (e) {}
     let duration = 0;
@@ -462,7 +464,7 @@ async function fetchYouTubeSearchCandidates(query) {
     // belongs to (see albumMatches in handleSearch).
     let snippet = '';
     try { snippet = v.detailedMetadataSnippets[0].snippetText.runs.map(r => r.text).join(''); } catch (e) {}
-    return { videoId: v.videoId, title: vTitle, channel, views, duration, snippet };
+    return { videoId: v.videoId, title: vTitle, channel, channelId, views, duration, snippet };
   }).filter(v => v.videoId);
 }
 
@@ -882,7 +884,7 @@ async function handleYtVideo(url, ctx) {
 // published,image}], focus } - focus is the index of the linked episode
 // (-1 for a whole-show link). Newest episodes first, capped at
 // PODCAST_MAX_EPISODES.
-const PODCAST_CACHE_VERSION = 'pod4';
+const PODCAST_CACHE_VERSION = 'pod5';
 const PODCAST_MAX_EPISODES = 300;
 
 function podNorm(s) {
@@ -1051,6 +1053,107 @@ function matchEpisode(episodes, title) {
   return i;
 }
 
+// ---------- YouTube fallback for shows with no public feed ----------
+// Many podcasts also post full episodes to YouTube. When a (non-subscriber)
+// show has no feed anywhere, episodes are matched to those uploads instead:
+// the episode list comes from Spotify's embed where it has one, each episode
+// is matched by the client through /podcastmatch (paced like song matching),
+// and as a last resort the show's own YouTube channel's recent uploads are
+// used as the episode list. Paid/subscriber-only shows never get this - their
+// episodes aren't legitimately on YouTube.
+const PODCAST_CLIP_HINTS = ['reaction', 'clip', 'clips', 'highlight', 'highlights', '#shorts', 'shorts', 'trailer', 'teaser', 'preview', 'reupload', 're-upload', 'fan edit', 'compilation', 'best of', 'best moments', 'recap', 'review'];
+function podBare(s) { return podNorm(s).replace(/^the /, '').replace(/ (podcast|pod|show)$/, '').trim(); }
+function channelMatchesShow(channel, show) {
+  const c = podBare(channel), sh = podBare(show);
+  if (!c || !sh) return false;
+  return c === sh || c.includes(sh) || sh.includes(c);
+}
+function podClipLike(candTitle, epTitle) {
+  const t = String(candTitle || '').toLowerCase(), src = String(epTitle || '').toLowerCase();
+  return PODCAST_CLIP_HINTS.some(h => wordRegex(h).test(t) && !wordRegex(h).test(src));
+}
+// Best full-episode upload for one episode, or null. Strict on purpose: a
+// missing match just greys the episode out; a wrong one plays the wrong thing.
+async function youtubeEpisodeMatch(show, title, durationSec) {
+  const tokens = titleTokens(title);
+  let cands = [];
+  for (const q of [title + ' ' + show, title]) {
+    try { cands = await fetchYouTubeSearchCandidates(q); } catch (e) { cands = []; }
+    if (cands.length) break;
+  }
+  const maxViews = Math.max(1, ...cands.map(c => c.views || 0));
+  const scored = [];
+  for (const c of cands) {
+    const overlap = titleOverlapRatio(tokens, c.title);
+    if (overlap < 0.6) continue;
+    if (podClipLike(c.title, title)) continue;
+    if (durationSec >= 600 && c.duration && (c.duration < durationSec * 0.6 || c.duration > durationSec * 1.6)) continue;
+    if (!durationSec && c.duration && c.duration < 300) continue;
+    const ownChannel = channelMatchesShow(c.channel, show);
+    if (!ownChannel && overlap < 0.85) continue;
+    let score = overlap * 10 + (ownChannel ? 6 : 0) + (c.views / maxViews) * 1.5;
+    if (durationSec && c.duration) score += Math.max(0, 4 - Math.abs(c.duration - durationSec) / Math.max(60, durationSec * 0.05));
+    scored.push({ c, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  return best ? { videoId: best.c.videoId, title: best.c.title, channel: best.c.channel, duration: best.c.duration || 0 } : null;
+}
+// The show's own YouTube channel's most recent uploads (its public RSS feed,
+// ~15 entries) with clips/shorts-looking titles dropped.
+async function youtubeShowChannelEpisodes(show, dbg) {
+  let cands = [];
+  try { cands = await fetchYouTubeSearchCandidates(show + ' podcast full episode'); } catch (e) { dbg.push('youtube search failed: ' + (e && e.message)); return []; }
+  const counts = new Map();
+  cands.filter(c => c.channelId && channelMatchesShow(c.channel, show))
+    .forEach(c => counts.set(c.channelId, (counts.get(c.channelId) || 0) + 1));
+  const channelId = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0])[0];
+  if (!channelId) { dbg.push('youtube: no channel matching "' + show + '"'); return []; }
+  const res = await fetch('https://www.youtube.com/feeds/videos.xml?channel_id=' + encodeURIComponent(channelId));
+  if (!res.ok) { dbg.push('youtube channel feed: HTTP ' + res.status); return []; }
+  const xml = await res.text();
+  const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+  const eps = entries.map(e => ({
+    title: xmlDecode((e.match(/<title>([^<]*)<\/title>/) || [])[1] || ''),
+    videoId: (e.match(/<yt:videoId>([^<]+)<\/yt:videoId>/) || [])[1] || null,
+    published: Date.parse((e.match(/<published>([^<]+)<\/published>/) || [])[1] || '') || 0,
+  })).filter(e => e.videoId && e.title && !podClipLike(e.title, ''));
+  dbg.push('youtube channel ' + channelId + ': ' + eps.length + ' uploads');
+  return eps;
+}
+// Spotify's embed episode list for a show (defensive: the embed's shape isn't
+// documented; returns [] when there's no list).
+function spotifyEmbedEpisodes(entity) {
+  const list = entity && (entity.trackList || entity.episodes || (entity.episodeList && entity.episodeList.items));
+  if (!Array.isArray(list)) return [];
+  return list.map(t => ({
+    title: String((t && (t.title || t.name)) || '').trim(),
+    duration: Math.round(((t && (t.duration || t.durationMs)) || 0) / 1000),
+  })).filter(e => e.title);
+}
+
+// ---------- GET /podcastmatch?show=&title=&duration=<seconds> ----------
+async function handlePodcastMatch(url, ctx) {
+  const show = (url.searchParams.get('show') || '').slice(0, 200);
+  const title = (url.searchParams.get('title') || '').slice(0, 300);
+  const duration = parseInt(url.searchParams.get('duration'), 10) || 0;
+  if (!show || !title) return json({ error: 'missing show or title' }, 400);
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podcastmatch/' + encodeURIComponent(show + '|' + title + '|' + duration));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+  let match;
+  try { match = await youtubeEpisodeMatch(show, title, duration); }
+  catch (e) { return json({ error: (e && e.message) || 'youtube search failed' }, 502); }
+  const response = json(match || { videoId: null });
+  const toCache = response.clone();
+  // misses are cached briefly (the upload may appear later), hits for 30 days
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (match ? 2592000 : 86400) },
+  })));
+  return response;
+}
+
 async function handlePodcast(url, ctx) {
   const src = url.searchParams.get('src');
   const id = url.searchParams.get('id') || '';
@@ -1115,7 +1218,39 @@ async function handlePodcast(url, ctx) {
     // Spotify marks subscriber-only shows with a 🔓 (e.g. "NoSleep Premium
     // (🔓)") - those never have a free feed, so say that plainly.
     if (!feedUrl && /\u{1F513}|\u{1F512}|\bpremium\b|\bsubscriber/iu.test(showName)) return json({ error: '"' + showName + '" is a subscriber-only show on Spotify, so there\'s no free feed to play.', debug: dbg }, 404);
-    if (!feedUrl) return json({ error: '"' + showName + '" has no public feed - it may be a Spotify exclusive.', debug: dbg }, 404);
+    if (!feedUrl) {
+      // No feed anywhere: YouTube fallback (see youtubeEpisodeMatch).
+      let showEntity = kind === 'show' ? entity : (showId ? await spotifyEmbedEntity('show', showId) : null);
+      let eps = spotifyEmbedEpisodes(showEntity);
+      let focus = -1;
+      if (kind === 'episode' && episodeTitle) {
+        focus = eps.findIndex(e => podNorm(e.title) === podNorm(episodeTitle));
+        if (focus === -1) {
+          eps.unshift({ title: episodeTitle, duration: Math.round(((entity && entity.duration) || 0) / 1000) });
+          focus = 0;
+        }
+      }
+      let source = 'spotify list';
+      if (!eps.length) {
+        eps = await youtubeShowChannelEpisodes(showName, dbg);
+        source = 'youtube channel';
+      }
+      if (!eps.length) return json({ error: '"' + showName + '" has no public feed and no full episodes on YouTube - it may be a Spotify exclusive.', debug: dbg }, 404);
+      dbg.push('youtube fallback: ' + eps.length + ' episodes from ' + source);
+      const coverSources = showEntity && showEntity.coverArt && showEntity.coverArt.sources;
+      const payload = {
+        name: showName, author: '', image: (coverSources && coverSources[0] && coverSources[0].url) || null,
+        link, feedUrl: null, source: 'youtube',
+        episodes: eps.slice(0, PODCAST_MAX_EPISODES).map(e => ({ title: e.title, duration: e.duration || 0, published: e.published || 0, videoId: e.videoId || null, image: null })),
+        focus, debug: dbg,
+      };
+      const response = json(payload);
+      const toCache = response.clone();
+      ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+      })));
+      return response;
+    }
   }
   if (!feedUrl) return json({ error: 'no public feed found for that podcast' }, 404);
 
@@ -3002,6 +3137,7 @@ export default {
       if (url.pathname === '/ytplaylist') return await handleYtPlaylist(url, ctx);
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);
       if (url.pathname === '/podcast') return await handlePodcast(url, ctx);
+      if (url.pathname === '/podcastmatch') return await handlePodcastMatch(url, ctx);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
@@ -3022,7 +3158,7 @@ export default {
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
