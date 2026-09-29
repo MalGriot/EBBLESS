@@ -1814,7 +1814,9 @@ async function handleSoundCloudTrackSearch(url, ctx) {
   if (!data) return json({ error: 'could not reach soundcloud' }, 502);
 
   const candidates = (data.collection || [])
-    .filter(t => t && t.kind === 'track' && t.id && t.title && t.streamable !== false && t.policy !== 'BLOCK')
+    // BLOCK = not playable here; SNIP = Go+ track that only streams a 30s
+    // preview to non-subscribers, which would cut out mid-song after relinking.
+    .filter(t => t && t.kind === 'track' && t.id && t.title && t.streamable !== false && t.policy !== 'BLOCK' && t.policy !== 'SNIP')
     .slice(0, limit)
     .map(t => {
       const x = scTrackToTitleArtist(t);
