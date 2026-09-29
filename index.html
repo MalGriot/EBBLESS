@@ -1073,6 +1073,7 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
 .about-copy{font-size:13px;color:var(--faint);line-height:1.7;max-width:520px}
 .about-copy strong{color:var(--text);font-weight:600}
+.about-copy a{color:var(--text);text-decoration:underline;text-underline-offset:2px}
 
 .settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
 .slider-val{color:var(--faint);font-weight:400;margin-left:6px}
@@ -2324,6 +2325,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <div class="settings-block">
         <h2>About</h2>
         <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track, or paste a YouTube playlist or video link directly. Either way, playback threads through so the listening doesn't stop.</p>
+        <p class="about-copy">Tempo and key data for Discover: <a href="https://getsongbpm.com" target="_blank" rel="noopener">GetSongBPM</a>.</p>
         <div class="settings-row">
           <div>
             <div class="label">Replay tutorial</div>
@@ -6819,9 +6821,10 @@ function cycleRepeat(){
    plus the seed artist's official Spotify "This Is <Artist>" playlist when
    one exists (worker /thisis - a bonus source folded into the same pool,
    see fetchThisIsPlaylist), score them by tag overlap with the seed plus
-   this listener's own local graph, then fold the outcome of each play back
-   into that graph and into the pooled affinity data every listener
-   contributes to (/pool/signal).
+   this listener's own local graph (nudged by tempo/key/energy closeness
+   where the worker's /metrics knows them - see applyMetricPreference),
+   then fold the outcome of each play back into that graph and into the
+   pooled affinity data every listener contributes to (/pool/signal).
    ========================================================================= */
 const DISCOVER_LOOKAHEAD = 3;   // extend once this few tracks remain in the queue
 const DISCOVER_BATCH = 6;       // tracks fetched per extension
@@ -7016,6 +7019,160 @@ async function applyYearPreference(ranked, seed){
     x.c.year = years[i];
   });
   return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+
+/* ---------- mood matching: tempo / key / energy ---------- */
+// Tags say what genre a track is; these say how it *moves*. The worker's
+// /metrics looks up BPM (Deezer, ReccoBeats), energy/valence (ReccoBeats)
+// and - when configured - key and time signature (GetSongBPM) for the seed,
+// the two tracks before it, and the top of the candidate pool, and the
+// candidates closest to that reference get a small nudge up, the furthest a
+// small nudge down. Same shape as the year preference above: a preference,
+// never a filter, applied before the random walk so discoverSampleOrder's
+// variety is untouched. Anything missing (worker down, slow, track unknown
+// to every source, seed without metrics) leaves the ranking exactly as it
+// was. The lookup runs alongside the pooled-affinity fetch and is capped at
+// METRIC_TIMEOUT_MS (the worker answers at its own shorter deadline with
+// whatever is ready and finishes cold lookups into its cache in the
+// background), and extensions are fetched a few tracks ahead of need anyway.
+const METRIC_WEIGHT = 0.16;      // full-confidence swing is +-0.08 - about the year preference's
+const METRIC_TOP_K = 8;          // candidates looked up per extension (worker caps a request at 12 tracks)
+const METRIC_REF_TRACKS = 3;     // seed + the two tracks played before it
+const METRIC_TIMEOUT_MS = 1800;
+const METRIC_MEMO_MAX = 600;
+// Per-component weight in the similarity blend. Confidence scales with how
+// much of this was available on both sides (see metricSimilarity).
+const METRIC_PARTS = { bpm: 0.35, energy: 0.3, key: 0.2, valence: 0.1, timeSignature: 0.05 };
+const metricMemo = new Map();  // title|artist -> metrics | null, this session only (the worker caches for real)
+
+async function fetchTrackMetrics(tracks){
+  const want = [];
+  const seen = new Set();
+  tracks.forEach(t => {
+    const key = tagCacheKey(t);
+    if (!t.title || !t.artist || metricMemo.has(key) || seen.has(key)) return;
+    seen.add(key);
+    want.push({ title: t.title, artist: t.artist });
+  });
+  if (want.length){
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), METRIC_TIMEOUT_MS);
+    try{
+      const res = await fetch(BACKEND + '/metrics', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracks: want.slice(0, 12) }), signal: ctrl.signal,
+      });
+      if (res.ok){
+        const data = await res.json();
+        (data.metrics || []).forEach((m, i) => {
+          // A null may just mean "not ready yet" (the worker answers at its
+          // deadline and keeps looking up in the background), so only real
+          // answers are memoized - the next extension asks again.
+          if (m && want[i]) metricMemo.set(tagCacheKey(want[i]), m);
+        });
+        if (metricMemo.size > METRIC_MEMO_MAX) Array.from(metricMemo.keys()).slice(0, metricMemo.size - METRIC_MEMO_MAX).forEach(k => metricMemo.delete(k));
+      }
+    } catch(e){ /* best-effort: no metrics, no change */ }
+    finally { clearTimeout(timer); }
+  }
+  return tracks.map(t => metricMemo.get(tagCacheKey(t)) || null);
+}
+
+// Tempo closeness, treating half/double time as nearly the same groove
+// (a 70 BPM and a 140 BPM track feel alike). 3% apart ~0.87, 6% ~0.57,
+// 10% ~0.2.
+function bpmSimilarity(a, b){
+  if (!(a > 0) || !(b > 0)) return null;
+  let best = 0;
+  [1, 2, 0.5].forEach(f => {
+    const d = Math.abs(Math.log((b * f) / a));
+    const s = Math.exp(-Math.pow(d / 0.08, 2)) * (f === 1 ? 1 : 0.9);
+    if (s > best) best = s;
+  });
+  return best;
+}
+// Camelot wheel: number 1-12 (a step is a fifth), letter A minor / B major.
+function camelotNumber(key, mode){
+  if (!(key >= 0 && key <= 11) || (mode !== 0 && mode !== 1)) return null;
+  const majorPc = mode ? key : (key + 3) % 12;
+  return ((majorPc * 7) % 12 + 7) % 12 + 1;
+}
+// Same key 1; a neighbour on the wheel (+-1, or the relative major/minor)
+// is the classic harmonic-mixing move and scores 0.8; it falls away from
+// there.
+const KEY_STEP_SIM = [1, 0.8, 0.45, 0.25, 0.15, 0.1, 0.1];
+function keySimilarity(a, b){
+  const na = camelotNumber(a.key, a.mode), nb = camelotNumber(b.key, b.mode);
+  if (na == null || nb == null) return null;
+  const raw = Math.abs(na - nb);
+  const d = Math.min(raw, 12 - raw);
+  if (a.mode === b.mode) return KEY_STEP_SIM[d];
+  return d === 0 ? 0.8 : KEY_STEP_SIM[d] * 0.7;
+}
+function unitSimilarity(a, b, span){
+  if (typeof a !== 'number' || typeof b !== 'number') return null;
+  return Math.max(0, 1 - Math.abs(a - b) / span);
+}
+// -> { sim 0..1, conf 0..1 } or null when the two share nothing comparable.
+function metricSimilarity(ref, cand){
+  if (!ref || !cand) return null;
+  const parts = {
+    bpm: bpmSimilarity(ref.bpm, cand.bpm),
+    energy: unitSimilarity(ref.energy, cand.energy, 0.5),
+    key: keySimilarity(ref, cand),
+    valence: unitSimilarity(ref.valence, cand.valence, 0.6),
+    timeSignature: (ref.timeSignature > 0 && cand.timeSignature > 0) ? (ref.timeSignature === cand.timeSignature ? 1 : 0) : null,
+  };
+  let total = 0, weight = 0;
+  Object.keys(METRIC_PARTS).forEach(k => {
+    if (parts[k] == null) return;
+    total += parts[k] * METRIC_PARTS[k];
+    weight += METRIC_PARTS[k];
+  });
+  if (!weight) return null;
+  // BPM + energy alone (the common keyless case) already counts as full
+  // confidence; BPM alone is a bit over half.
+  return { sim: total / weight, conf: Math.min(1, weight / 0.6) };
+}
+// refs: [{ m: metrics, w: weight }] - the seed counts double the tracks
+// before it, so the pick follows where the listener is now while not
+// swinging on one outlier. Mutates score/rank like applyYearPreference.
+function applyMetricPreference(ranked, refs, candMetrics){
+  refs = refs.filter(r => r.m);
+  if (!refs.length || !candMetrics.size) return ranked;
+  let touched = false;
+  ranked.forEach(x => {
+    const cm = candMetrics.get(tagCacheKey(x.c));
+    if (!cm) return;
+    let sim = 0, conf = 0, w = 0;
+    refs.forEach(r => {
+      const s = metricSimilarity(r.m, cm);
+      if (!s) return;
+      sim += s.sim * r.w; conf += s.conf * r.w; w += r.w;
+    });
+    if (!w) return;
+    x.score += METRIC_WEIGHT * (conf / w) * (sim / w - 0.5);
+    touched = true;
+  });
+  if (!touched) return ranked;
+  return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+// Kicks off the lookup for the seed/recent tracks plus the strongest tag
+// matches (a cheap tag-only pre-rank, so it can run before the pooled
+// affinity data is back). Resolves to what applyMetricPreference needs.
+async function fetchMoodMetrics(seedTracks, pool, seedTagVec){
+  const refTracks = seedTracks.slice(0, METRIC_REF_TRACKS);
+  const top = pool
+    .filter(c => c.title && c.artist)
+    .map(c => ({ c, s: tagCosineSimilarity(seedTagVec, normalizeTagList(c.tags, 15)) * 0.7 + (c.matchScore || 0) * 0.3 }))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, METRIC_TOP_K)
+    .map(x => x.c);
+  const all = await fetchTrackMetrics(refTracks.concat(top));
+  const refs = refTracks.map((t, i) => ({ m: all[i], w: i === 0 ? 1 : 0.5 }));
+  const candMetrics = new Map();
+  top.forEach((c, i) => { const m = all[refTracks.length + i]; if (m) candMetrics.set(tagCacheKey(c), m); });
+  return { refs, candMetrics };
 }
 
 // Last resort when /similar and /ytmix both come up empty for a seed - other
@@ -7244,12 +7401,18 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   }
   if (!pool.length) return [];
 
-  const crowd = await fetchPoolAffinity(Array.from(seedTagVec.keys()));
+  // Tempo/key/energy lookup (see applyMetricPreference) runs alongside the
+  // pooled-affinity fetch, so it adds no wait of its own in the usual case.
+  const [crowd, mood] = await Promise.all([
+    fetchPoolAffinity(Array.from(seedTagVec.keys())),
+    fetchMoodMetrics(seedTracks, pool, seedTagVec).catch(() => null),
+  ]);
   let ranked = pool
     .filter(c => c.title && c.artist)
     .map(c => ({ c, score: scoreCandidate(seedTagVec, c, seed.artist, recentArtists, crowd) }))
     .sort((a, b) => b.score - a.score)
     .map((x, rank) => Object.assign(x, { rank }));
+  if (mood) ranked = applyMetricPreference(ranked, mood.refs, mood.candMetrics);
   if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is

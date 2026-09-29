@@ -2049,6 +2049,295 @@ async function getListenBrainzSimilar(mbid, limit) {
   } catch (e) { return []; }
 }
 
+// ---------- POST /metrics ----------
+// Per-track musical metrics (tempo, key/mode, time signature, energy) that
+// Discover folds into its ranking so a picked track sits near the seed in
+// BPM, key and intensity - "same mood" rather than just "same tags".
+// Body: { tracks: [{ title, artist }, ...] } (first entries first - the
+// client puts the seed/recent tracks at the front). Answers
+// { metrics: [ {bpm, key, mode, camelot, timeSignature, energy,
+// danceability, valence, sources} | null, ... ] } in the same order.
+//
+// Sources, all best-effort and merged field by field:
+//   - Deezer's public API (keyless, JSON): search + /track/{id} gives
+//     `bpm` (0 when Deezer never analysed the track - treated as unknown).
+//   - ReccoBeats (keyless, free; Spotify-style audio features): artist
+//     search -> that artist's track list -> /track/{id}/audio-features gives
+//     tempo, energy, danceability, valence. The artist's track list is
+//     cached on its own so neighbouring lookups for one artist share it.
+//   - GetSongBPM (free, but needs an API key plus a public backlink to
+//     getsongbpm.com - their terms): only used when GETSONGBPM_API_KEY is
+//     set. The one source here with key and time signature.
+// The BPM websites (Chosic, Musicstax, SongBPM, Tunebat) were passed over:
+// none offers a public API, so it would mean scraping bot-protected HTML
+// pages that break without notice and that the sites don't invite.
+//
+// Bounded on purpose - Discover must not wait noticeably on this: a
+// per-fetch timeout, a cap on tracks per request, a subrequest budget,
+// and a response deadline after which whatever is done is returned. Lookups
+// still in flight keep running under waitUntil and land in the cache, so a
+// cold track that missed this request is warm for the next one.
+const METRICS_CACHE_VERSION = 'v1';
+const METRICS_MAX_TRACKS = 12;
+const METRICS_FETCH_TIMEOUT_MS = 1200;
+const METRICS_DEADLINE_MS = 1500;  // client gives up at 1800
+// External fetches per request. Cache API calls may count against the same
+// 50-subrequest cap on the free plan; if a request ever overshoots, the
+// failing fetches throw, are caught, and those tracks come back null and
+// uncached - never an error response.
+const METRICS_SUBREQUEST_BUDGET = 30;
+
+// st: { req: { left, artists }, failed } - `req` is shared by the whole
+// request (subrequest budget, per-artist memo); `failed` is per track and
+// records whether any lookup died on the budget, a timeout, a network error
+// or a throttle - as opposed to a clean "not found" - so only clean misses
+// get cached as misses.
+async function fetchJsonTimeout(u, st) {
+  if (st.req.left <= 0) { st.failed = true; return null; }
+  st.req.left--;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), METRICS_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(u, { headers: { 'User-Agent': APP_UA }, signal: ctrl.signal });
+    if (!res.ok) { if (res.status !== 404) st.failed = true; return null; }
+    const data = await res.json();
+    // Deezer answers quota errors with HTTP 200 and an `error` object.
+    if (data && data.error && typeof data.error === 'object') { st.failed = true; return null; }
+    return data;
+  } catch (e) { st.failed = true; return null; }
+  finally { clearTimeout(timer); }
+}
+
+// Loose title/artist comparison: case, punctuation, "(feat. X)" and
+// "(Remastered 2011)"-style suffixes don't count as a different track.
+function metricsNorm(s) {
+  return String(s || '').toLowerCase()
+    .replace(/\s[-–—]\s.*$/, '')
+    .replace(/[([].*?[)\]]/g, ' ')
+    .replace(/\b(feat|ft|featuring)\b.*$/, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+// A remix/live/sped-up cut can sit at a different tempo or key from the
+// original, so one side carrying such a marker the other doesn't is a miss.
+const METRICS_VERSION_WORDS = /\b(remix|live|mix|edit|acoustic|instrumental|sped up|slowed|nightcore|cover|karaoke|reprise)\b/i;
+function metricsSame(a, b) {
+  if (METRICS_VERSION_WORDS.test(String(a || '')) !== METRICS_VERSION_WORDS.test(String(b || ''))) return false;
+  const x = metricsNorm(a), y = metricsNorm(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [s, l] = x.length < y.length ? [x, y] : [y, x];
+  return s.length >= 4 && (l.startsWith(s + ' ') || l.endsWith(' ' + s));
+}
+function metricsArtistMatch(want, got) {
+  const x = metricsNorm(want), y = metricsNorm(got);
+  if (!x || !y) return false;
+  return x === y || x.startsWith(y + ' ') || y.startsWith(x + ' ') || x.includes(' ' + y) || y.includes(' ' + x);
+}
+
+const PITCH_CLASS = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+// "C#m", "B♭m", "F♯", "Eb", "A minor" -> { key: pitch class, mode: 1 major / 0 minor }
+function parseKeyName(s) {
+  const m = /^\s*([A-Ga-g])\s*([#♯b♭]?)\s*(m(?:in(?:or)?)?|maj(?:or)?)?\s*$/i.exec(String(s || ''));
+  if (!m) return null;
+  let pc = PITCH_CLASS[m[1].toLowerCase()];
+  if (m[2] === '#' || m[2] === '♯') pc += 1;
+  else if (m[2] === 'b' || m[2] === '♭') pc -= 1;
+  const minor = !!m[3] && !/^maj/i.test(m[3]);
+  return { key: (pc + 12) % 12, mode: minor ? 0 : 1 };
+}
+// Open Key ("1d".."12d" major, "1m".."12m" minor; 1d = C major).
+function parseOpenKey(s) {
+  const m = /^\s*(\d{1,2})\s*([dm])\s*$/i.exec(String(s || ''));
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  if (n < 1 || n > 12) return null;
+  const mode = m[2].toLowerCase() === 'd' ? 1 : 0;
+  // Each Open Key step is a fifth (7 semitones); 1d = C, 1m = A minor.
+  const pc = ((n - 1) * 7 + (mode ? 0 : 9)) % 12;
+  return { key: pc, mode };
+}
+// Pitch class + mode -> Camelot wheel code ("8B" = C major, "8A" = A minor).
+function camelotCode(key, mode) {
+  if (!(key >= 0 && key <= 11) || (mode !== 0 && mode !== 1)) return null;
+  const majorPc = mode ? key : (key + 3) % 12;  // a minor key sits on its relative major's number
+  return String(((majorPc * 7) % 12 + 7) % 12 + 1) + (mode ? 'B' : 'A');
+}
+function num01(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return null;
+  const x = n > 1 ? n / 100 : n;  // GetSongBPM reports 0-100
+  return x >= 0 && x <= 1 ? x : null;
+}
+function sanitizeBpm(v) {
+  const n = Number(v);
+  return isFinite(n) && n >= 40 && n <= 250 ? Math.round(n * 10) / 10 : null;
+}
+
+async function deezerMetrics(title, artist, st) {
+  const q = 'artist:"' + artist.replace(/"/g, '') + '" track:"' + title.replace(/"/g, '') + '"';
+  const found = await fetchJsonTimeout('https://api.deezer.com/search?' + new URLSearchParams({ q, limit: '5' }), st);
+  const list = found && Array.isArray(found.data) ? found.data : [];
+  const hit = list.find(t => t && t.id && (metricsSame(title, t.title_short || t.title) || metricsSame(title, t.title)) && metricsArtistMatch(artist, t.artist && t.artist.name));
+  if (!hit) return null;
+  const detail = await fetchJsonTimeout('https://api.deezer.com/track/' + encodeURIComponent(hit.id), st);
+  if (!detail) return null;
+  const bpm = sanitizeBpm(detail.bpm);
+  return { bpm, isrc: detail.isrc || null };
+}
+
+// One artist's ReccoBeats id + first 100 tracks, cached for a week so every
+// lookup for that artist (seed, candidates, later requests) shares it.
+function reccoArtistTracks(artist, st, ctx) {
+  const memoKey = metricsNorm(artist);
+  if (!st.req.artists.has(memoKey)) st.req.artists.set(memoKey, reccoArtistTracksUncached(artist, st, ctx));
+  return st.req.artists.get(memoKey);
+}
+async function reccoArtistTracksUncached(artist, st, ctx) {
+  const cache = caches.default;
+  const key = new Request('https://cache.internal/' + METRICS_CACHE_VERSION + '/recco-artist/' + encodeURIComponent(metricsNorm(artist)));
+  const cached = await cache.match(key);
+  if (cached) { try { return await cached.json(); } catch (e) { /* refetch */ } }
+  const found = await fetchJsonTimeout('https://api.reccobeats.com/v1/artist/search?' + new URLSearchParams({ searchText: artist, size: '5' }), st);
+  if (!found) return null;  // network/rate-limit trouble: don't cache a miss
+  const artists = Array.isArray(found.content) ? found.content : [];
+  const hit = artists.find(a => a && a.id && metricsNorm(a.name) === metricsNorm(artist));
+  let tracks = [];
+  if (hit) {
+    const pages = await Promise.all([0, 1].map(page => fetchJsonTimeout('https://api.reccobeats.com/v1/artist/' + encodeURIComponent(hit.id) + '/track?' + new URLSearchParams({ size: '50', page: String(page) }), st)));
+    if (!pages[0]) return null;
+    const firstFull = Array.isArray(pages[0].content) && pages[0].content.length >= 50;
+    if (firstFull && !pages[1]) return { tracks: pages[0].content.filter(t => t && t.id && t.trackTitle).map(t => ({ id: t.id, title: t.trackTitle, isrc: t.isrc || null })) };  // usable now, not cached incomplete
+    pages.forEach(p => (p && Array.isArray(p.content) ? p.content : []).forEach(t => {
+      if (t && t.id && t.trackTitle) tracks.push({ id: t.id, title: t.trackTitle, isrc: t.isrc || null });
+    }));
+  }
+  const entry = { tracks };
+  ctx.waitUntil(cache.put(key, new Response(JSON.stringify(entry), {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (tracks.length ? 604800 : 86400) },
+  })));
+  return entry;
+}
+
+async function reccoMetrics(title, artist, isrcPromise, st, ctx) {
+  const entry = await reccoArtistTracks(artist, st, ctx);
+  // null = the artist lookup itself failed (it may have been shared with
+  // another track this request, whose flag it set) - mark this one too.
+  if (!entry) { st.failed = true; return null; }
+  if (!entry.tracks.length) return null;
+  const isrc = await isrcPromise;
+  const hit = (isrc && entry.tracks.find(t => t.isrc && t.isrc === isrc)) || entry.tracks.find(t => metricsSame(title, t.title));
+  if (!hit) return null;
+  const f = await fetchJsonTimeout('https://api.reccobeats.com/v1/track/' + encodeURIComponent(hit.id) + '/audio-features', st);
+  if (!f) return null;
+  const out = { bpm: sanitizeBpm(f.tempo), energy: num01(f.energy), danceability: num01(f.danceability), valence: num01(f.valence) };
+  // Not documented as returned, but Spotify-shaped key/mode are taken if
+  // they ever show up.
+  if (Number.isInteger(f.key) && f.key >= 0 && f.key <= 11 && (f.mode === 0 || f.mode === 1)) { out.key = f.key; out.mode = f.mode; }
+  return out;
+}
+
+async function getSongBpmMetrics(title, artist, env, st) {
+  if (!env.GETSONGBPM_API_KEY) return null;
+  const base = 'https://api.getsong.co';
+  const found = await fetchJsonTimeout(base + '/search/?' + new URLSearchParams({
+    api_key: env.GETSONGBPM_API_KEY, type: 'both',
+    lookup: 'song:' + title.toLowerCase() + ' artist:' + artist.toLowerCase(),
+  }), st);
+  const list = found && Array.isArray(found.search) ? found.search : [];
+  let song = list.find(s => s && metricsSame(title, s.title || s.song_title) && metricsArtistMatch(artist, s.artist && s.artist.name));
+  if (!song) return null;
+  // Search hits don't always carry key/time signature; the song record does.
+  if (!song.key_of && !song.open_key && !song.time_sig && (song.id || song.song_id)) {
+    const full = await fetchJsonTimeout(base + '/song/?' + new URLSearchParams({ api_key: env.GETSONGBPM_API_KEY, id: song.id || song.song_id }), st);
+    if (full && full.song) song = Object.assign({}, song, full.song);
+  }
+  const k = parseKeyName(song.key_of) || parseOpenKey(song.open_key);
+  const ts = /^\s*(\d{1,2})\s*\/\s*\d{1,2}\s*$/.exec(String(song.time_sig || ''));
+  return {
+    bpm: sanitizeBpm(song.tempo),
+    key: k ? k.key : null, mode: k ? k.mode : null,
+    timeSignature: ts ? parseInt(ts[1], 10) : null,
+    danceability: num01(song.danceability),
+  };
+}
+
+async function lookupTrackMetrics(title, artist, env, req, ctx) {
+  const st = { req, failed: false };
+  const deezerP = deezerMetrics(title, artist, st);
+  const [dz, rb, gs] = await Promise.all([
+    deezerP,
+    reccoMetrics(title, artist, deezerP.then(d => d && d.isrc), st, ctx),
+    getSongBpmMetrics(title, artist, env, st),
+  ]);
+  const pick = (field) => {
+    for (const src of [gs, rb, dz]) if (src && src[field] != null) return src[field];
+    return null;
+  };
+  const out = {
+    bpm: pick('bpm'),
+    key: pick('key'), mode: null,
+    timeSignature: gs ? gs.timeSignature : null,
+    energy: rb ? rb.energy : null,
+    danceability: pick('danceability'),
+    valence: rb ? rb.valence : null,
+    sources: [],
+  };
+  // key and mode must come from the same source.
+  const keySrc = [gs, rb].find(s => s && s.key != null && s.mode != null);
+  out.key = keySrc ? keySrc.key : null;
+  out.mode = keySrc ? keySrc.mode : null;
+  out.camelot = camelotCode(out.key, out.mode);
+  if (dz && dz.bpm != null) out.sources.push('deezer');
+  if (rb) out.sources.push('reccobeats');
+  if (gs) out.sources.push('getsongbpm');
+  const hasAny = out.bpm != null || out.key != null || out.energy != null;
+  // A partial answer (some source timed out or ran out of budget) is still
+  // returned, but only a complete one - hit or clean miss - is cached.
+  return { metrics: hasAny ? out : null, settled: !st.failed };
+}
+
+async function metricsForTrack(title, artist, env, req, ctx) {
+  const cache = caches.default;
+  const key = new Request('https://cache.internal/' + METRICS_CACHE_VERSION + '/metrics/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(key);
+  if (cached) { try { return (await cached.json()).metrics; } catch (e) { /* refetch */ } }
+  const { metrics, settled } = await lookupTrackMetrics(title, artist, env, req, ctx);
+  if (settled) {
+    // A track's tempo/key don't change: a month for a hit, three days for a
+    // clean miss (sources do add tracks over time).
+    ctx.waitUntil(cache.put(key, new Response(JSON.stringify({ metrics }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (metrics ? 2592000 : 259200) },
+    })));
+  }
+  return metrics;
+}
+
+async function handleMetrics(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  const tracks = (Array.isArray(body && body.tracks) ? body.tracks : [])
+    .slice(0, METRICS_MAX_TRACKS)
+    .map(t => ({ title: String((t && t.title) || '').slice(0, 200).trim(), artist: String((t && t.artist) || '').slice(0, 200).trim() }));
+  if (!tracks.length) return json({ metrics: [] });
+
+  const req = { left: METRICS_SUBREQUEST_BUDGET, artists: new Map() };
+  const results = new Array(tracks.length).fill(null);
+  // Three tracks at a time, in order, so the seed/recent tracks at the front
+  // are looked up first and get the subrequest budget before candidates do.
+  const all = mapWithConcurrency(tracks, 3, async (t, i) => {
+    if (!t.title || !t.artist) return;
+    try { results[i] = await metricsForTrack(t.title, t.artist, env, req, ctx); } catch (e) { /* stays null */ }
+  });
+  ctx.waitUntil(all);
+  let timer;
+  await Promise.race([all, new Promise(r => { timer = setTimeout(r, METRICS_DEADLINE_MS); })]);
+  clearTimeout(timer);
+  return json({ metrics: results.slice() });
+}
+
 // ---------- GET /tags ----------
 // Just a track's Last.fm tags - the light lookup the client uses to learn
 // from tracks that didn't come through /similar (anything from a pasted
@@ -2426,6 +2715,7 @@ export default {
       if (url.pathname === '/sctracksearch') return await handleSoundCloudTrackSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
+      if (url.pathname === '/metrics') return await handleMetrics(request, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
       if (url.pathname === '/art') return await handleArt(url, ctx);
@@ -2437,7 +2727,7 @@ export default {
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
