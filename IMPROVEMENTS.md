@@ -5951,13 +5951,21 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #153.
 
 ### crossfade-art-lp-cassette: Crossfade art fade should also work on LP and cassette
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The art-to-art fade on crossfade works for plain art but
   not the LP or cassette styles. It should.
 - **Touches:** follow-up to `crossfade-album-art-transition`.
 - **Branch:** agent/crossfade-art-lp-cassette
 - **Notes:** Synced from Geethub issue #158.
+  Fix (`9bf90e3`): new `crossfadeAltArt()` lays a frozen copy of the
+  outgoing LP label / cassette label over the real element, swaps the real
+  one to the next track, and fades the copy out over the crossfade length.
+  Called from both `runCrossfade` and `startSkipCrossfade`;
+  `reflectCurrentTrackUI` skips the label swap when the art swap is skipped
+  so the labels don't reset at fade end. Verified by calling the fade
+  directly (mid-fade blend, clean end); a real audio crossfade, fullscreen
+  LP/cassette, and rapid repeated skips are untested.
 
 ### library-title-full-width: Library playlist titles should use full width until hover
 - **Status:** in-progress
