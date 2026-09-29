@@ -5951,22 +5951,22 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #153.
 
 ### crossfade-art-lp-cassette: Crossfade art fade should also work on LP and cassette
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The art-to-art fade on crossfade works for plain art but
   not the LP or cassette styles. It should.
 - **Touches:** follow-up to `crossfade-album-art-transition`.
-- **Branch:**
+- **Branch:** agent/crossfade-art-lp-cassette
 - **Notes:** Synced from Geethub issue #158.
 
 ### library-title-full-width: Library playlist titles should use full width until hover
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In the library, unhovered playlist rows should let the
   title stretch to the edge of the pane. Only on hover, when the row
   buttons appear, should the title shorten to make room.
 - **Touches:** library row CSS (`desktop-playlist-hover-buttons` area).
-- **Branch:**
+- **Branch:** agent/library-title-full-width
 - **Notes:** Synced from Geethub issue #173.
 
 ### fullscreen-immersive-phase: Make the hidden "press F twice" big fullscreen a real third button phase
@@ -5998,12 +5998,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #147.
 
 ### desktop-fullscreen-settings-only: In desktop fullscreen, Settings should open alone
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** If fullscreen is active on desktop and the user clicks
   Settings, show just the settings window, not the queue and library too.
 - **Touches:** `desktop-settings-inline`, `desktop-settings-queue-popup` area.
-- **Branch:**
+- **Branch:** agent/desktop-fullscreen-settings-only
 - **Notes:** Synced from Geethub issue #141.
 
 ### desktop-settings-footer-controls: Desktop Settings view should show footer player controls
