@@ -868,6 +868,18 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
    already did at 96% of this box either way. */
 #flow-layer .flow-art{width:min(100vh,100vw);aspect-ratio:1;border-radius:16px;overflow:hidden;position:relative;
   box-shadow:0 30px 80px -16px rgba(0,0,0,.7);z-index:1}
+/* issue #184: on mobile/tablet portrait, while the chrome is showing the art
+   box slides (and, only if it has to, shrinks) to sit centered in the gap
+   between .flow-top and .flow-bottom, then slides back to viewport-center
+   when the chrome idles out. The transform itself is measured and set by
+   syncFlowArtSlide(); this just animates it on the chrome's 600ms fade
+   curve. .no-slide-anim snaps it (used on open so the art doesn't glide in
+   from the idle position while the layer is still fading up). */
+#flow-layer #flowArtWrap{transition:transform 600ms var(--ease-in-out)}
+#flow-layer #flowArtWrap.no-slide-anim{transition:none}
+@media (prefers-reduced-motion:reduce){
+  #flow-layer #flowArtWrap{transition:none}
+}
 #flow-layer .flow-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #flow-layer .flow-art .art.is-active{opacity:1}
@@ -9438,6 +9450,49 @@ function armFsIdleTimer(){
     else document.body.classList.add('fs-chrome-hidden');
   }, FS_IDLE_MS);
 }
+/* ---------- mobile fullscreen art slide (issue #184): with the chrome
+   showing, the flow-mode art (plain cover / LP / cassette - not cymatics,
+   which is full-bleed) moves to the vertical center of the free space
+   between the top button row and the bottom player block, scaling down
+   only if that space is shorter than the art (+ a small margin); with the
+   chrome idled out it returns to viewport-center. The two chrome blocks
+   are measured live (their heights vary with title length, safe-area
+   inset, etc.) - their layout boxes stay put while they fade, so the
+   measurement is the same shown or hidden. Only for the non-split
+   (<1150px) layouts in portrait: desktop fullscreen is untouched, and a
+   landscape box that already fills the viewport height would have to
+   shrink drastically rather than "slightly". ---------- */
+const flowTopEl = flowLayer.querySelector('.flow-top'), flowBottomEl = flowLayer.querySelector('.flow-bottom');
+const FLOW_ART_SLIDE_GAP = 12;
+let flowArtSlideWasOpen = false;
+function syncFlowArtSlide(){
+  const open = state.flowOpen && flowLayer.classList.contains('is-open');
+  const snap = open && !flowArtSlideWasOpen;
+  flowArtSlideWasOpen = open;
+  let tf = '';
+  if (open && !flowArtWrap.hidden && !flowLayer.classList.contains('chrome-hidden') &&
+      !document.body.classList.contains('split-desktop') && window.innerHeight > window.innerWidth){
+    const top = flowTopEl.getBoundingClientRect().bottom + FLOW_ART_SLIDE_GAP;
+    const bottom = flowBottomEl.getBoundingClientRect().top - FLOW_ART_SLIDE_GAP;
+    // untransformed layout box (offset* ignore transforms; #flow-layer is
+    // the fixed, inset:0 offsetParent, so these are viewport coordinates)
+    const h = flowArtWrap.offsetHeight, artMid = flowArtWrap.offsetTop + h / 2;
+    if (h > 0 && bottom > top){
+      const s = Math.min(1, (bottom - top) / h);
+      const dy = (top + bottom) / 2 - artMid;
+      if (Math.abs(dy) > 0.5 || s < 1) tf = `translateY(${dy.toFixed(1)}px)` + (s < 1 ? ` scale(${s.toFixed(4)})` : '');
+    }
+  }
+  if (snap) flowArtWrap.classList.add('no-slide-anim');
+  flowArtWrap.style.transform = tf;
+  if (snap){ void flowArtWrap.offsetWidth; flowArtWrap.classList.remove('no-slide-anim'); }
+}
+new MutationObserver(syncFlowArtSlide).observe(flowLayer, {attributes:true, attributeFilter:['class']});
+if (window.ResizeObserver){
+  const ro = new ResizeObserver(() => syncFlowArtSlide());
+  ro.observe(flowTopEl); ro.observe(flowBottomEl); ro.observe(flowArtWrap);
+}
+window.addEventListener('resize', syncFlowArtSlide);
 /* capture phase so activity anywhere counts, even on elements that stop
    propagation. While hidden, a touch/pen tap only reveals: its click is
    swallowed so it can't hit play/pause or a control underneath. Mouse
