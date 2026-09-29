@@ -1199,6 +1199,17 @@ svg.load-spin{animation:load-spin .9s linear infinite}
   body.split-desktop.desktop-fs:not(.view-settings-active) #desktopFsExitBtn{
     display:flex;position:fixed;top:calc(var(--topbar-h) + 26px);right:26px;z-index:45;
   }
+  /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
+     #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn){
+    /* background/color kept for #fsBtn's own .art-fs-btn hover transition */
+    transition:opacity 600ms var(--ease-in-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out);
+  }
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn){
+    opacity:0;pointer-events:none;
+  }
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active),
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) *{cursor:none}
   /* drawer overlays: only reachable while deskFsOpen, so it's fine for
      these to reuse the library/queue panes' own fixed positioning rather
      than the grid - they sit above the fixed fullscreen player (z-index 44)
@@ -3505,6 +3516,7 @@ function closeDesktopFs(){
   document.body.classList.remove('desktop-fs', 'desktop-fs-lib-open', 'desktop-fs-queue-open');
   document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
     .forEach(b => b.classList.remove('is-active'));
+  armFsIdleTimer();
 }
 function toggleDesktopFs(){
   if (state.deskFsOpen){ closeDesktopFs(); return; }
@@ -3517,6 +3529,7 @@ function toggleDesktopFs(){
   document.body.classList.remove('desktop-fs-lib-open', 'desktop-fs-queue-open');
   document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
     .forEach(b => b.classList.remove('is-active'));
+  armFsIdleTimer();
 }
 function toggleDesktopFsLib(){
   state.deskFsLibOpen = !state.deskFsLibOpen;
@@ -9036,7 +9049,7 @@ function tryResume(){
 /* =========================================================================
    FULLSCREEN / FLOW MODE
    ========================================================================= */
-let flowHideTimer = null;
+let fsIdleTimer = null;
 const flowVizWrap = $('flowVizWrap');
 const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
 const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
@@ -9074,7 +9087,7 @@ function syncFlowArtStyle(){
     delete flowArtWrap.dataset.artStyle;
   }
 }
-flowArtStyleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleArtStyleMenu(); armFlowChromeTimer(); });
+flowArtStyleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleArtStyleMenu(); armFsIdleTimer(); });
 
 function openFlow(){
   state.flowOpen = true;
@@ -9091,13 +9104,14 @@ function openFlow(){
     delete flowArtWrap.dataset.artStyle;
   }
   flowLayer.classList.add('is-open');
-  armFlowChromeTimer();
+  armFsIdleTimer();
 }
 function closeFlow(){
   state.flowOpen = false;
   flowLayer.classList.remove('is-open');
-  flowLayer.classList.remove('chrome-hidden');
-  clearTimeout(flowHideTimer);
+  // back to desktop-fs (F pressed from there) keeps idling on the shared
+  // timer; otherwise this just clears it and reveals everything
+  armFsIdleTimer();
   if (vizCanvas.parentElement === flowVizWrap){
     vizCanvasHome.insertBefore(vizCanvas, vizCanvasAnchor);
     // Restore vizSpeedBtn before vizAutoBtn: vizAutoBtn's original anchor
@@ -9116,11 +9130,58 @@ function closeFlow(){
   if (artCassette.parentElement === flowArtWrap) artCassetteHome.insertBefore(artCassette, artCassetteAnchor);
   delete flowArtWrap.dataset.artStyle;
 }
-function armFlowChromeTimer(){
-  flowLayer.classList.remove('chrome-hidden');
-  clearTimeout(flowHideTimer);
-  flowHideTimer = setTimeout(() => flowLayer.classList.add('chrome-hidden'), 3200);
+/* ---------- shared fullscreen idle auto-hide (fullscreen-ui-autohide,
+   issue #147): one timer for every fullscreen surface - the #flow-layer
+   overlay (mobile/tablet LP/cassette/art, cymatics everywhere, and the
+   "press F" bigger mode on desktop) via #flow-layer.chrome-hidden, and the
+   split-desktop LP/cassette panel-slide (toggleDesktopFs) via
+   body.fs-chrome-hidden. Any pointer/key activity reveals and re-arms it;
+   it won't hide while a menu/drawer is open or a pointer is held down
+   (scrubbing, dragging). ---------- */
+const FS_IDLE_MS = 3200;
+let fsPointerHeld = false, fsSwallowClick = false;
+function fsIdleActive(){ return state.flowOpen || state.deskFsOpen; }
+function fsChromeHidden(){ return flowLayer.classList.contains('chrome-hidden') || document.body.classList.contains('fs-chrome-hidden'); }
+function fsIdleBlocked(){
+  const b = document.body.classList;
+  return fsPointerHeld || artStyleMenu.classList.contains('is-open') ||
+    b.contains('desktop-fs-lib-open') || b.contains('desktop-fs-queue-open') || b.contains('view-settings-active');
 }
+function armFsIdleTimer(){
+  flowLayer.classList.remove('chrome-hidden');
+  document.body.classList.remove('fs-chrome-hidden');
+  clearTimeout(fsIdleTimer);
+  if (!fsIdleActive()) return;
+  fsIdleTimer = setTimeout(() => {
+    if (!fsIdleActive()) return;
+    if (fsIdleBlocked()){ armFsIdleTimer(); return; }
+    if (state.flowOpen) flowLayer.classList.add('chrome-hidden');
+    else document.body.classList.add('fs-chrome-hidden');
+  }, FS_IDLE_MS);
+}
+/* capture phase so activity anywhere counts, even on elements that stop
+   propagation. While hidden, a touch/pen tap only reveals: its click is
+   swallowed so it can't hit play/pause or a control underneath. Mouse
+   doesn't need this - the move before any click already reveals. */
+document.addEventListener('pointerdown', (e) => {
+  if (!fsIdleActive()) return;
+  fsSwallowClick = e.pointerType !== 'mouse' && fsChromeHidden();
+  fsPointerHeld = true;
+  armFsIdleTimer();
+}, true);
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, () => {
+  fsPointerHeld = false;
+  if (fsIdleActive()) armFsIdleTimer();
+}, true));
+document.addEventListener('click', (e) => {
+  if (!fsSwallowClick) return;
+  fsSwallowClick = false;
+  e.stopPropagation(); e.preventDefault();
+}, true);
+['pointermove', 'keydown', 'wheel'].forEach(t => document.addEventListener(t, (e) => {
+  if (e.type === 'keydown') fsSwallowClick = false; // stale flag from a swipe must not eat a keyboard click
+  if (fsIdleActive()) armFsIdleTimer();
+}, {capture:true, passive:true}));
 fsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (!currentTrack()) return;
@@ -9358,9 +9419,6 @@ if (flowReportBtn) flowReportBtn.addEventListener('click', handleWrongTrackFlagC
 if ($('copyWrongTrackLogBtn')) $('copyWrongTrackLogBtn').addEventListener('click', copyWrongTrackLog);
 updateWrongTrackLogDesc();
 flowExitBtn.addEventListener('click', closeFlow);
-flowLayer.addEventListener('pointermove', armFlowChromeTimer);
-flowLayer.addEventListener('pointerdown', armFlowChromeTimer);
-flowLayer.addEventListener('click', armFlowChromeTimer);
 
 /* swipe left/right on flow artwork -> prev/next (or next pattern in cymatics view); swipe down -> exit */
 (function(){
