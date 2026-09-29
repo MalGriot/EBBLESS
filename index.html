@@ -6997,7 +6997,7 @@ function renderQueuePanel(){
   nowPlayBtn.setAttribute('aria-label', 'Play or pause');
   const isPlaying = artworkWrap.classList.contains('is-playing');
   nowPlayBtn.innerHTML = '<svg id="queueNowPlayIco" viewBox="0 0 24 24" fill="currentColor">' + (isPlaying ? ICO_PAUSE : ICO_PLAY) + '</svg>';
-  nowPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) playIndex(state.queuePos); });
+  nowPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) userTogglePlayback(); });
   const nowMenuBtn = document.createElement('button'); nowMenuBtn.className = 'q-menu';
   nowMenuBtn.setAttribute('aria-label', 'Track options'); nowMenuBtn.setAttribute('aria-haspopup', 'true');
   nowMenuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -9134,6 +9134,91 @@ function playIndex(pos, opts){
   loadIndex(pos, true, opts);
 }
 
+/* ---------- LP needle sfx (Spinning Record art style only) ----------
+   A soft needle-drop on a user play and a needle-lift on a user pause.
+   Only userTogglePlayback() and the media session play/pause handlers fire
+   it - never auto-advance, crossfades, or programmatic pauses/resumes
+   (tutorial replay, visibility resume), which call playIndex/pausePlayback/
+   resumePlayback directly. It's fire-and-forget: nothing awaits it, so the
+   real play/pause (and its fade) runs exactly as before.
+   Real sound bites: drop the files in sfx/ and set the two paths below.
+   Empty = synthesized Web Audio placeholder. A file that fails to load
+   falls back to the placeholder too. */
+const LP_NEEDLE_DROP_SRC = ''; // e.g. 'sfx/needle-drop.mp3'
+const LP_NEEDLE_LIFT_SRC = ''; // e.g. 'sfx/needle-lift.mp3'
+const LP_NEEDLE_SFX_VOLUME = 0.25;
+// skip the sfx rather than play it late (slow first fetch, context waking)
+const LP_NEEDLE_MAX_LAG_MS = 300;
+let lpSfxCtx = null;
+const lpSfxBuffers = {};
+
+function lpSynthNeedle(ctx, kind){
+  const drop = kind === 'drop';
+  const sr = ctx.sampleRate, len = Math.floor(sr * (drop ? 0.38 : 0.26));
+  const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  let lp = 0;
+  for (let i = 0; i < len; i++){
+    const t = i / sr;
+    // surface hiss: low-passed noise that swells in (drop) or tails off (lift)
+    lp += 0.25 * ((Math.random() * 2 - 1) - lp);
+    const env = drop ? Math.min(1, t / 0.03) * Math.exp(-t * 7) : Math.exp(-t * 14);
+    let s = lp * 0.12 * env;
+    // sparse crackle
+    if (Math.random() < (drop ? 0.0009 : 0.0005)) s += (Math.random() * 2 - 1) * 0.35 * env;
+    // stylus contact: a short click plus a low thump (drop) or lighter pop (lift)
+    const ct = drop ? t - 0.012 : t;
+    if (ct >= 0){
+      s += Math.sin(2 * Math.PI * (drop ? 70 : 110) * ct) * Math.exp(-ct * (drop ? 45 : 60)) * (drop ? 0.55 : 0.3);
+      if (ct < 0.004) s += (Math.random() * 2 - 1) * (1 - ct / 0.004) * 0.45;
+    }
+    d[i] = s;
+  }
+  const tail = Math.min(len, Math.floor(sr * 0.01));
+  for (let i = 0; i < tail; i++) d[len - 1 - i] *= i / tail;
+  return buf;
+}
+function lpNeedleBuffer(ctx, kind){
+  if (lpSfxBuffers[kind]) return lpSfxBuffers[kind];
+  const src = kind === 'drop' ? LP_NEEDLE_DROP_SRC : LP_NEEDLE_LIFT_SRC;
+  const p = src
+    ? fetch(src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then(ab => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)))
+        .catch(() => lpSynthNeedle(ctx, kind))
+    : Promise.resolve(lpSynthNeedle(ctx, kind));
+  return (lpSfxBuffers[kind] = p);
+}
+function playLpNeedle(kind){
+  if (artStyle !== 'record') return;
+  try{
+    if (!lpSfxCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      lpSfxCtx = new AC();
+    }
+    const ctx = lpSfxCtx, t0 = Date.now();
+    // starts suspended until a user gesture - every caller runs inside one
+    // (or a media session action); if it won't wake, the sfx just doesn't play
+    const ready = ctx.state === 'running' ? null : ctx.resume();
+    Promise.all([lpNeedleBuffer(ctx, kind), ready]).then(([buf]) => {
+      if (!buf || ctx.state !== 'running' || Date.now() - t0 > LP_NEEDLE_MAX_LAG_MS) return;
+      const g = ctx.createGain();
+      g.gain.value = LP_NEEDLE_SFX_VOLUME;
+      const s = ctx.createBufferSource();
+      s.buffer = buf;
+      s.connect(g); g.connect(ctx.destination);
+      s.start();
+    }).catch(() => {});
+  } catch(e){}
+}
+// User-initiated toggle of the current track (play buttons, keyboard, art
+// tap, PiP mini player): playIndex(state.queuePos) plus the needle sfx.
+function userTogglePlayback(){
+  const ad = activeDeck();
+  const s = ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
+  playLpNeedle(s === 1 && !isFadingOut(ad) ? 'lift' : 'drop');
+  playIndex(state.queuePos);
+}
+
 // A manual skip within the first 15s (or first quarter of a known-duration
 // track) reads as "this wasn't the vibe" - the same implicit signal an
 // early completion doesn't send. Auto-advance (the track actually ending)
@@ -9196,13 +9281,13 @@ function playRickrollFallback(){
   state.queue = [{ plId: state.playlist.id, idx: 0 }];
   loadIndex(0, true);
 }
-playBtn.addEventListener('click', () => { if (state.queuePos >= 0) playIndex(state.queuePos); else playRickrollFallback(); });
+playBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); else playRickrollFallback(); });
 nextBtn.addEventListener('click', () => playNext(false));
 prevBtn.addEventListener('click', playPrev);
-flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) playIndex(state.queuePos); });
+flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); });
 flowNextBtn.addEventListener('click', () => playNext(false));
 flowPrevBtn.addEventListener('click', playPrev);
-miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) playIndex(state.queuePos); });
+miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) userTogglePlayback(); });
 
 /* ---------- desktop keyboard shortcuts ---------- */
 // Library/Queue shortcuts reuse the top-nav buttons' own click handlers. In
@@ -9225,7 +9310,7 @@ document.addEventListener('keydown', (e) => {
   switch (e.key){
     case ' ':
       e.preventDefault();
-      if (state.queuePos >= 0) playIndex(state.queuePos);
+      if (state.queuePos >= 0) userTogglePlayback();
       break;
     case 'ArrowLeft':
       playPrev();
@@ -9277,8 +9362,16 @@ shuffleBtn.addEventListener('click', toggleShuffle);
 repeatBtn.addEventListener('click', cycleRepeat);
 
 if ('mediaSession' in navigator){
-  navigator.mediaSession.setActionHandler('play', resumePlayback);
-  navigator.mediaSession.setActionHandler('pause', pausePlayback);
+  navigator.mediaSession.setActionHandler('play', () => {
+    const ad = activeDeck();
+    if (state.queuePos >= 0 && (!ad.player || !ad.player.getPlayerState || ad.player.getPlayerState() !== 1 || isFadingOut(ad))) playLpNeedle('drop');
+    resumePlayback();
+  });
+  navigator.mediaSession.setActionHandler('pause', () => {
+    const ad = activeDeck();
+    if (ad.player && ad.player.pauseVideo && !isFadingOut(ad)) playLpNeedle('lift');
+    pausePlayback();
+  });
   navigator.mediaSession.setActionHandler('previoustrack', playPrev);
   navigator.mediaSession.setActionHandler('nexttrack', () => playNext(false));
   try { navigator.mediaSession.setActionHandler('stop', pausePlayback); } catch(e){}
@@ -9341,7 +9434,7 @@ function buildMiniPlayerDOM(win){
   doc.getElementById('mpPrev').addEventListener('click', playPrev);
   doc.getElementById('mpNext').addEventListener('click', () => playNext(false));
   doc.getElementById('mpPlay').addEventListener('click', () => {
-    if (state.queuePos >= 0) playIndex(state.queuePos); else playRickrollFallback();
+    if (state.queuePos >= 0) userTogglePlayback(); else playRickrollFallback();
   });
 }
 function updateMiniPlayerUI(){
@@ -10367,7 +10460,7 @@ flowExitBtn.addEventListener('click', closeFlow);
 
 /* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
 (function(){
-  function toggleActivePlayback(){ if (state.queuePos >= 0) playIndex(state.queuePos); }
+  function toggleActivePlayback(){ if (state.queuePos >= 0) userTogglePlayback(); }
   $('artworkWrap').addEventListener('click', toggleActivePlayback);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
 })();
