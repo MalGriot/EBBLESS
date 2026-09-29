@@ -6809,7 +6809,7 @@ Add entries in this shape:
   `album-art-2x2-grid-bug`, `link-match-accuracy`.
 
 ### lp-needle-sfx-silent: LP needle-lift/drop sound not audible on pause/play
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In LP mode, the needle-lift sound on pause and needle-drop
   on play can't be heard. Find out why and make it audible.
@@ -6817,6 +6817,15 @@ Add entries in this shape:
 - **Branch:** agent/lp-needle-sfx-silent
 - **Notes:** Synced from Geethub issue #205. Regression/follow-up of
   `lp-needle-sfx` (merged). Possibly masked by `pause-fade-out`.
+
+  Fixed on branch (commit `4db7fb5`): code path was sound (own gain, not
+  hit by pause fade), but SFX were too quiet under full-volume music
+  (vol drop 0.35->1, lift 0.2->0.5), the first press after load was dropped
+  while buffers fetched (now prefetched + unlocked on first gesture), and
+  iOS silent switch mutes Web Audio (`navigator.audioSession.type =
+  'playback'`, untested on device). SW cache v25->v26. Still only plays
+  while the record is visible (by design, `670a0ab`).
+
 
 ### change-art-apply-album: "Change art" should offer "apply to all tracks in this album"
 - **Status:** draft
