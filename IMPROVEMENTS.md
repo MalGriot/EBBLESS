@@ -6189,6 +6189,9 @@ Add entries in this shape:
   - All shortcuts work in fullscreen. Menu ones (library, queue, settings,
     load-playlist box, playlist panel) exit fullscreen to the main view
     first, then open that menu; playback toggles stay in fullscreen.
+  - Same for the on-screen library/queue/settings/playlist/load buttons in
+    fullscreen: exit to the main view, then open the menu (replaces the old
+    desktop-fullscreen drawer-toggle behavior). One shared code path.
 - **Touches:** global keydown handler in index.html (~line 9606), next to
   the existing `keyboard-shortcuts` bindings; reuse existing button click
   paths (`toggleShuffle`, `cycleRepeat`, art-style/cymatics/lyrics buttons).
