@@ -6872,7 +6872,7 @@ Add entries in this shape:
   `cassette-fullscreen-animation` (merged).
 
 ### settings-credits: Settings "Credits" button listing every service used, with links
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a Credits row to Settings > About that opens a dialog
   listing every outside service/data source EBBLESS uses, each linking to
