@@ -9760,12 +9760,19 @@ function playIndex(pos, opts){
    falls back to the placeholder too. */
 const LP_NEEDLE_DROP_SRC = 'sfx/needle-drop.mp3';
 const LP_NEEDLE_LIFT_SRC = 'sfx/needle-lift.mp3';
-// per-kind: the lift file runs ~11dB hotter on average than the drop file
-const LP_NEEDLE_SFX_VOLUME = { drop: 0.35, lift: 0.2 };
+// per-kind: the lift file runs ~11dB hotter on average than the drop file.
+// Issue #205: at 0.35/0.2 the drop's loudest 50ms landed around -25dBFS and
+// the lift around -17dBFS - the lift fires at the top of the pause fade,
+// with the music still near full volume, so both were effectively masked.
+const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5 };
 // skip the sfx rather than play it late (slow first fetch, context waking)
 const LP_NEEDLE_MAX_LAG_MS = 300;
 let lpSfxCtx = null;
 const lpSfxBuffers = {};
+// raw file bytes, fetched ahead of the first toggle (issue #205: the first
+// play/pause after load used to start the fetch itself, and on a real
+// network fetch + decode blew LP_NEEDLE_MAX_LAG_MS so it was silently skipped)
+const lpSfxBytes = {};
 
 function lpSynthNeedle(ctx, kind){
   const drop = kind === 'drop';
@@ -9792,15 +9799,38 @@ function lpSynthNeedle(ctx, kind){
   for (let i = 0; i < tail; i++) d[len - 1 - i] *= i / tail;
   return buf;
 }
+function lpNeedlePrefetch(){
+  ['drop', 'lift'].forEach(kind => {
+    if (lpSfxBytes[kind]) return;
+    const src = kind === 'drop' ? LP_NEEDLE_DROP_SRC : LP_NEEDLE_LIFT_SRC;
+    lpSfxBytes[kind] = src
+      ? fetch(src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).catch(() => null)
+      : Promise.resolve(null);
+  });
+}
 function lpNeedleBuffer(ctx, kind){
   if (lpSfxBuffers[kind]) return lpSfxBuffers[kind];
-  const src = kind === 'drop' ? LP_NEEDLE_DROP_SRC : LP_NEEDLE_LIFT_SRC;
-  const p = src
-    ? fetch(src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-        .then(ab => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)))
-        .catch(() => lpSynthNeedle(ctx, kind))
-    : Promise.resolve(lpSynthNeedle(ctx, kind));
+  lpNeedlePrefetch();
+  const p = lpSfxBytes[kind]
+    .then(ab => ab ? new Promise((res, rej) => ctx.decodeAudioData(ab.slice(0), res, rej)) : null)
+    .catch(() => null)
+    .then(buf => buf || lpSynthNeedle(ctx, kind));
   return (lpSfxBuffers[kind] = p);
+}
+// create (or wake) the sfx context - only ever from inside a user gesture
+function lpSfxContext(){
+  if (!lpSfxCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    // iOS routes Web Audio through the ringer by default, so the silent
+    // switch muted the sfx while the YouTube video kept playing (issue #205)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
+    lpSfxCtx = new AC();
+    // warm both buffers so the first toggle of the other kind isn't lost to a decode
+    lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift');
+  }
+  if (lpSfxCtx.state !== 'running') lpSfxCtx.resume().catch(() => {});
+  return lpSfxCtx;
 }
 // only when the record is actually showing: the fullscreen flow view's
 // record, or the player's record (not viz/lyrics, not a hidden player pane)
@@ -9813,14 +9843,8 @@ function lpRecordOnScreen(){
 function playLpNeedle(kind){
   if (!lpRecordOnScreen()) return;
   try{
-    if (!lpSfxCtx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      lpSfxCtx = new AC();
-      // warm both buffers so the first toggle of the other kind isn't lost to a fetch
-      lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift');
-    }
-    const ctx = lpSfxCtx, t0 = Date.now();
+    const ctx = lpSfxContext(), t0 = Date.now();
+    if (!ctx) return;
     // starts suspended until a user gesture - every caller runs inside one
     // (or a media session action); if it won't wake, the sfx just doesn't play
     const ready = ctx.state === 'running' ? null : ctx.resume();
@@ -9835,6 +9859,16 @@ function playLpNeedle(kind){
     }).catch(() => {});
   } catch(e){}
 }
+// Fetch the files up front in LP mode, and unlock the context on the
+// pointerdown/keydown that precedes the play/pause click - so the context is
+// already running and both buffers decoded by the time the toggle fires.
+if (artStyle === 'record') lpNeedlePrefetch();
+function lpSfxUnlock(){
+  if (artStyle !== 'record') return;
+  try { if (!lpSfxContext()) return; } catch(e){ return; }
+  ['pointerdown', 'touchend', 'keydown'].forEach(t => document.removeEventListener(t, lpSfxUnlock, true));
+}
+['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, lpSfxUnlock, true));
 // User-initiated toggle of the current track (play buttons, keyboard, art
 // tap, PiP mini player): playIndex(state.queuePos) plus the needle sfx.
 function userTogglePlayback(){
