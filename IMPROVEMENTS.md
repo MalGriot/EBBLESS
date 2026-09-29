@@ -6110,6 +6110,12 @@ Add entries in this shape:
   YouTube-only. Tested with mocked responses; real SoundCloud search
   response shape and post-relink audio untested. Follow-up idea: the
   now-playing flag button still doesn't open this menu for SC tracks.
+  Follow-up (`cd507d8`): also skip `policy: 'SNIP'` (Go+ 30s previews) in
+  `/sctracksearch`. Response mapping reuses `scTrackToTitleArtist`, the
+  same mapper already live on `/soundcloud` and `/tracks?ids=`, and the
+  relink writes the same `soundCloudVideoId()` id native playback already
+  plays, so shape/playback risk is low; still unverified live (sandbox
+  network blocks SoundCloud).
 
 ### paste-search-result-counts: Paste-bar search results should show track count and duration
 - **Status:** draft
@@ -6393,6 +6399,14 @@ Add entries in this shape:
   soft edge fade on the mini-bar only. Shared function, so the other
   marquee titles gain the resize re-check + ellipsis too. Real playback,
   swipe gestures, desktop mini-bar, and Safari mask untested.
+  Follow-up check: horizontal/vertical touch swipes across the footer
+  behave identically on main and this branch (swipe-right to Player is
+  pre-existing), marquee keeps running through them, tap still opens the
+  player. Desktop: the in-page mini-bar only shows in Settings view and
+  marquees only if the title overflows; the Picture-in-Picture mini-player
+  is a separate document with its own ellipsis CSS, untouched. Safari:
+  ResizeObserver (13.1+) and prefixed `-webkit-mask-image` are supported;
+  not run in WebKit (not available in sandbox).
 
 ### mobile-fullscreen-art-slide: Mobile fullscreen: art should slide to center when UI appears
 - **Status:** draft
@@ -6488,6 +6502,11 @@ Add entries in this shape:
   20/20 runs differ, 0 filter violations, top matches still picked
   85-100%. Real-network variety untested; raise the 0.15 temperature if
   it still feels samey.
+  Follow-up (`42991dc`): sim on a Last.fm-shaped pool (50 candidates,
+  scores 0.88 -> 0.27) showed 0.15 drifting to ~2.6/6 top-15 picks on
+  repeat runs of one seed; lowered temperature to 0.1 (~3.5/6, still 20/20
+  distinct runs, ~1.4/6 overlap with the previous run). Live data still
+  unverified - sandbox network blocks the worker/Last.fm.
 
 ### tester-report-no-github: Bug reporting for testers without a GitHub login
 - **Status:** merged
