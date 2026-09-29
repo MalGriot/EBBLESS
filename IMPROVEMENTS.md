@@ -2817,13 +2817,13 @@ Add entries in this shape:
   not merged. Branch left in place, not deleted.
 
 ### library-search: Add a search function for the user's own library
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Users should be able to search their own library for a
   song or playlist they already have, rather than scrolling to find it.
 - **Touches:** library view UI, likely a new search input + filter over the
   in-library playlists/tracks list.
-- **Branch:** (unclaimed)
+- **Branch:** agent/library-search
 - **Notes:** Synced from Geethub issue #84.
 
 ### playlist-vibe-search: Search Spotify/Apple Music/SoundCloud for playlists by vibe/keyword
@@ -6143,14 +6143,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #160.
 
 ### lp-needle-sfx: LP mode needle-lift / needle-drop sound on pause and play
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In LP mode, pausing plays a slight needle-lift sound;
   pressing play plays the needle dropping back on the record. User can
   provide the sound bites.
 - **Touches:** play/pause handlers when art style is record. Pairs with
   `pause-fade-out`.
-- **Branch:**
+- **Branch:** agent/lp-needle-sfx
 - **Notes:** Synced from Geethub issue #162.
 
 ### cymatics-infinity-invert: Invert the cymatics infinity button
@@ -6521,11 +6521,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #177.
 
 ### cymatics-icon-morph: Cymatics button icon should morph between 3 cymatics shapes
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** The cymatics mode button icon should be a 3-phase cymatics form that fades between shapes, 3 full cycles per minute.
 - **Touches:** visual-style buttons (cymatics icon).
-- **Branch:** (unclaimed)
+- **Branch:** agent/cymatics-icon-morph
 - **Notes:** Synced from Geethub issue #178.
 
 ### mobile-queue-icon-highlight: Mobile: only the queue icon should be lit while the queue is open
