@@ -2817,7 +2817,7 @@ Add entries in this shape:
   not merged. Branch left in place, not deleted.
 
 ### library-search: Add a search function for the user's own library
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Users should be able to search their own library for a
   song or playlist they already have, rather than scrolling to find it.
@@ -6143,7 +6143,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #160.
 
 ### lp-needle-sfx: LP mode needle-lift / needle-drop sound on pause and play
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In LP mode, pausing plays a slight needle-lift sound;
   pressing play plays the needle dropping back on the record. User can
@@ -6521,7 +6521,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #177.
 
 ### cymatics-icon-morph: Cymatics button icon should morph between 3 cymatics shapes
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** The cymatics mode button icon should be a 3-phase cymatics form that fades between shapes, 3 full cycles per minute.
 - **Touches:** visual-style buttons (cymatics icon).
