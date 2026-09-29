@@ -8230,11 +8230,10 @@ function loadIndex(pos, autoplay, opts){
    onDeckStateChange ignores the PLAYING events a deck still emits while it
    fades out. A fade yields (volume restored, no pause) if the track changes
    under it or a track-to-track crossfade takes over the deck's volume. */
-// Fade-out length follows the listener's own transition preference: half
-// of the crossfade-length slider (read live at press time, used even while
-// crossfade itself is toggled off), never shorter than this floor.
-const PAUSE_FADE_OUT_MIN_MS = 550;
-function pauseFadeOutMs(){ return Math.max(PAUSE_FADE_OUT_MIN_MS, ((crossfadePrefs && crossfadePrefs.ms) || 0) / 2); }
+// Fixed, short fade-out on pause, independent of the crossfade-length slider
+// (a long crossfade setting used to stretch pause into a multi-second fade).
+const PAUSE_FADE_OUT_MS = 600;
+function pauseFadeOutMs(){ return PAUSE_FADE_OUT_MS; }
 const PAUSE_FADE_IN_MS = 320;
 const PAUSE_FADE_TICK_MS = 16;
 // how long a fade-in holds at silence waiting for the player to report it's
