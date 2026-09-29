@@ -6014,13 +6014,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #147.
 
 ### desktop-fullscreen-settings-only: In desktop fullscreen, Settings should open alone
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** If fullscreen is active on desktop and the user clicks
   Settings, show just the settings window, not the queue and library too.
 - **Touches:** `desktop-settings-inline`, `desktop-settings-queue-popup` area.
 - **Branch:** agent/desktop-fullscreen-settings-only
 - **Notes:** Synced from Geethub issue #141.
+  Fix (`86c9945`): the #131 fix made `setView('settings')` exit desktop
+  fullscreen, dropping into the 3-pane grid with library + queue showing.
+  Now it also flags `state.settingsFromDeskFs` + `body.settings-solo`
+  (CSS hides library/queue/playlist panes, Settings spans the full grid),
+  and leaving Settings re-enters fullscreen. Library/queue drawers open
+  before Settings come back closed. Browser-back exit and resizing below
+  1150px while in Settings are untested.
 
 ### desktop-settings-footer-controls: Desktop Settings view should show footer player controls
 - **Status:** merged
