@@ -8387,6 +8387,7 @@ function cassetteStart(){
 function cassetteSetPlaying(isPlaying){
   csPlaying = isPlaying;
   cassetteSyncState();
+  csStackSetPlaying(isPlaying);
   if (csReducedMotion) return;
   csTargetMul = isPlaying ? 1 : 0;
   if (isPlaying) csSettleT = -1;
@@ -9665,7 +9666,8 @@ function closeFlow(){
    (rAF cancelled, copies removed) when fullscreen closes, the style or
    visual mode changes away, the tab hides, or reduced motion is set. ---------- */
 const CS_STACK_REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-const csStack = {host:null, wrap:null, plate:null, ghosts:[], raf:0, t0:0, desk:false, geo:null, resizeT:0};
+const csStack = {host:null, wrap:null, plate:null, ghosts:[], raf:0, t0:0, desk:false, geo:null, resizeT:0,
+  last:[], idle:false, retreat:null, pauseT:0};
 function csStackHost(){
   if (CS_STACK_REDUCED || document.visibilityState === 'hidden' || artStyle !== 'cassette') return null;
   const p = artCassette.parentElement;
@@ -9677,6 +9679,8 @@ function csStackHost(){
 }
 function csStackStop(){
   cancelAnimationFrame(csStack.raf); csStack.raf = 0;
+  clearTimeout(csStack.pauseT); csStack.pauseT = 0;
+  csStack.idle = false; csStack.retreat = null; csStack.last = [];
   if (csStack.wrap) csStack.wrap.remove();
   if (csStack.host) csStack.host.classList.remove('cs-stack-host');
   csStack.host = csStack.wrap = csStack.plate = csStack.geo = null; csStack.ghosts = [];
@@ -9686,7 +9690,7 @@ function csStackSync(){
   const host = csStackHost();
   if (!host){ if (csStack.host) csStackStop(); return; }
   const desk = document.body.classList.contains('split-desktop');
-  if (host === csStack.host && desk === csStack.desk && csStack.raf) return;
+  if (host === csStack.host && desk === csStack.desk && (csStack.raf || csStack.idle)) return;
   csStackStop();
   csStack.host = host; csStack.desk = desk;
   host.classList.add('cs-stack-host');
@@ -9694,9 +9698,58 @@ function csStackSync(){
   csStack.wrap.className = 'cs-stack';
   csStack.wrap.setAttribute('aria-hidden', 'true');
   host.insertBefore(csStack.wrap, artCassette);
+  // paused: stay idle (no copies, no loop) until playback starts
+  if (!csPlaying){ csStack.idle = true; return; }
   // short settle before the first cycle so it doesn't start mid-fade-in
   csStack.t0 = performance.now() + 1600;
   csStack.raf = requestAnimationFrame(csStackFrame);
+}
+/* follows the cassette's own play state (cassetteSetPlaying/csPlaying).
+   Pause: every copy retreats quickly behind the main cassette, then the
+   loop goes idle. Play: the cycle restarts from its beginning after a
+   short rest. A pause right after a track start gets a longer grace so a
+   track change's momentary not-playing report doesn't trigger a retreat. */
+function csStackSetPlaying(playing){
+  if (!csStackReady || !csStack.host) return;
+  clearTimeout(csStack.pauseT); csStack.pauseT = 0;
+  if (playing){
+    if (!csStack.idle && !csStack.retreat) return;
+    csStack.idle = false; csStack.retreat = null; csStack.geo = null; csStack.last = [];
+    csStack.t0 = performance.now() + CS_T.resume * 1000;
+    if (!csStack.raf) csStack.raf = requestAnimationFrame(csStackFrame);
+    return;
+  }
+  if (csStack.idle || csStack.retreat) return;
+  const grace = Date.now() - lastTrackStartTs < 5000 ? 2500 : 150;
+  csStack.pauseT = setTimeout(() => {
+    csStack.pauseT = 0;
+    if (!csStack.host || csPlaying || csStack.idle || csStack.retreat) return;
+    if (!csStack.geo || !csStack.last.length){ csStackGoIdle(); return; }
+    csStack.retreat = {t0: performance.now(), from: csStack.last.map(a => a.slice())};
+    if (!csStack.raf) csStack.raf = requestAnimationFrame(csStackFrame);
+  }, grace);
+}
+function csStackGoIdle(){
+  cancelAnimationFrame(csStack.raf); csStack.raf = 0;
+  csStack.retreat = null; csStack.idle = true; csStack.geo = null; csStack.last = [];
+  csStack.ghosts.forEach(g => { g.style.opacity = '0'; });
+  if (csStack.plate) csStack.plate.style.opacity = '0';
+}
+function csStackRetreatFrame(now){
+  const R = csStack.retreat;
+  const u = csClamp((now - R.t0) / (CS_T.retreat * 1000)), e = csEaseInOut(u);
+  let maxOp = 0;
+  R.from.forEach((f, i) => {
+    const [x, y, rot, s, op] = f;
+    const sT = s < .9 ? s : .97; // ring-sized copies are already hidden at center
+    const o = op * (1 - csClamp((e - .5) / .5)); // fade only once it's behind
+    const el = csStack.ghosts[i];
+    el.style.transform = `translate3d(${(x * (1 - e)).toFixed(1)}px,${(y * (1 - e)).toFixed(1)}px,0) rotate(${(rot * (1 - e)).toFixed(2)}deg) scale(${(s + (sT - s) * e).toFixed(4)})`;
+    el.style.opacity = o.toFixed(3);
+    if (o > maxOp) maxOp = o;
+  });
+  csStack.plate.style.opacity = Math.min(1, maxOp / .25).toFixed(3);
+  if (u >= 1) csStackGoIdle();
 }
 /* geometry in the host's own (untransformed) px, so the flow-mode slide/
    scale transform on #flowArtWrap carries the copies along for free */
@@ -9724,7 +9777,7 @@ function csStackBuild(){
   const rs = .42; // ring copy scale
   const rx = Math.min(W / 2 + rs * H / 2 + 40, halfX - rs * H / 2 - 12);
   const ry = Math.min(H / 2 + rs * H * .55 + 10, halfY - rs * H / 2 - 12);
-  csStack.geo = {n, step, shrink, H, rs, rx:Math.max(rx, W * .3), ry:Math.max(ry, H * .5)};
+  csStack.geo = {n, step, shrink, H, rs, rx:Math.max(rx, W * .3), ry:Math.max(ry, H * .5), baseOp:[]};
   csStack.wrap.textContent = '';
   csStack.ghosts = [];
   // farthest copy first in DOM so each nearer copy paints over it
@@ -9733,9 +9786,14 @@ function csStackBuild(){
     g.className = 'cs-ghost';
     g.style.width = svgW + 'px'; g.style.height = svgH + 'px';
     g.style.marginLeft = (-svgW / 2) + 'px'; g.style.marginTop = (-svgH / 2) + 'px';
-    const p = Math.round(60 - 34 * (n > 1 ? i / (n - 1) : 0));
+    // graduated shades by stack order: the first copy is the lightest,
+    // most opaque tint of the album tone; each later one darker and more
+    // see-through, the last still faintly there
+    const f = n > 1 ? i / (n - 1) : 0;
+    const p = Math.round(74 - 50 * f), q = Math.round(100 - 100 * f);
     g.style.color = '#2c2e33';
-    g.style.color = `color-mix(in srgb, var(--player-accent) ${p}%, #141518)`;
+    g.style.color = `color-mix(in srgb, var(--player-accent) ${p}%, color-mix(in srgb, #3a3c42 ${q}%, #0b0c0e))`;
+    csStack.geo.baseOp[i] = .96 - .66 * f;
     g.innerHTML = '<svg viewBox="0 0 400 256"><use href="#csGhostSym"/></svg>';
     csStack.wrap.appendChild(g);
     csStack.ghosts[i] = g;
@@ -9760,7 +9818,7 @@ const csClamp = x => x < 0 ? 0 : x > 1 ? 1 : x;
    behind it, spreads into a ring, turns at 10deg/s, and each copy lifts
    and slides out of sight as it passes the top */
 const CS_T = {gapIn:.7, rise:1.3, hold:2.4, collapse:1.6, rest:9, gather:1.4, pause:.4, spread:2.6,
-  omega:10, ramp:2, lift:.8, slide:1.8};
+  omega:10, ramp:2, lift:.8, slide:1.8, retreat:.5, resume:.8};
 function csStackTimes(n){
   const stackEnd = CS_T.gapIn * (n - 1) + CS_T.rise, holdEnd = stackEnd + CS_T.hold;
   if (!csStack.desk) return {holdEnd, total: holdEnd + CS_T.collapse + CS_T.rest};
@@ -9779,27 +9837,28 @@ function csSpinDeg(ts){ // ring rotation after spinStart, eased in over CS_T.ram
 function csStackFrame(now){
   if (!csStack.host){ csStack.raf = 0; return; }
   csStack.raf = requestAnimationFrame(csStackFrame);
+  if (csStack.retreat){ csStackRetreatFrame(now); return; }
   let t = (now - csStack.t0) / 1000;
   if (t < 0) return;
   if (!csStack.geo || t > csStack.geo.times.total){
     if (!csStackBuild()){ csStack.t0 = now + 500; return; }
     csStack.geo.times = csStackTimes(csStack.geo.n);
-    csStack.t0 = now; t = 0;
+    csStack.t0 = now; t = 0; csStack.last = [];
   }
   const G = csStack.geo, T = G.times;
   let maxOp = 0;
   for (let i = 0; i < G.n; i++){
-    const slot = i + 1;
+    const slot = i + 1, bo = G.baseOp[i];
     // this copy's stacked slot, and the slot it rises out from behind
     const yS = -G.step * slot, sS = 1 - G.shrink * slot;
     const yP = -G.step * i, sP = 1 - G.shrink * i;
     const a = csClamp((t - CS_T.gapIn * i) / CS_T.rise), e = csEaseOut(a);
-    let x = 0, y = yP + (yS - yP) * e, s = sP + (sS - sP) * e, rot = 0, op = csClamp(a * 3) * .94;
+    let x = 0, y = yP + (yS - yP) * e, s = sP + (sS - sP) * e, rot = 0, op = csClamp(a * 3) * bo;
     if (t > T.holdEnd){
       if (!csStack.desk){
         // collapse, back copies first, into the main cassette
         const c = csEaseInOut(csClamp((t - T.holdEnd - (G.n - 1 - i) * .06) / CS_T.collapse));
-        y = yS * (1 - c); s = sS + (1 - sS) * c * .98; op = .94 * (1 - csClamp((c - .35) / .65));
+        y = yS * (1 - c); s = sS + (1 - sS) * c * .98; op = bo * (1 - csClamp((c - .35) / .65));
       } else {
         const g = csEaseInOut(csClamp((t - T.holdEnd) / CS_T.gather));
         y = yS * (1 - g); s = sS + (.98 - sS) * g;
@@ -9812,7 +9871,7 @@ function csStackFrame(now){
           const p = csEaseInOut(csClamp((t - T.spreadStart) / CS_T.spread));
           x = G.rx * sn * p; y = -G.ry * cs * p; s = .98 + (G.rs - .98) * p; rot = rr * p;
           // a touch fainter toward the bottom of the ring, under the transport
-          op = (.94 - .06 * p) * (1 - .35 * p * (1 - cs) / 2);
+          op = bo * (1 - .06 * p) * (1 - .35 * p * (1 - cs) / 2);
           if (t >= ex){
             // at the top: lift a little, then slide down behind the main cassette
             const lf = csEaseOut(csClamp((t - ex) / CS_T.lift));
@@ -9820,7 +9879,7 @@ function csStackFrame(now){
             x = 0; rot = 0;
             y = (-G.ry - G.H * .1 * lf) * (1 - sl);
             s = G.rs * (1 - .08 * sl);
-            op = .88 * (1 - csClamp((sl - .45) / .55));
+            op = bo * .94 * (1 - csClamp((sl - .45) / .55));
           }
         }
       }
@@ -9828,10 +9887,11 @@ function csStackFrame(now){
     const el = csStack.ghosts[i];
     el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${s.toFixed(4)})`;
     el.style.opacity = op.toFixed(3);
+    csStack.last[i] = [x, y, rot, s, op];
     if (op > maxOp) maxOp = op;
   }
   // plate is only there while copies are, so at rest the cassette is untouched
-  csStack.plate.style.opacity = Math.min(1, maxOp / .88).toFixed(3);
+  csStack.plate.style.opacity = Math.min(1, maxOp / .25).toFixed(3);
 }
 var csStackReady = true;
 document.addEventListener('visibilitychange', csStackSync);

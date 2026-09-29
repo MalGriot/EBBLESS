@@ -5509,6 +5509,34 @@ Add entries in this shape:
   verified: real iOS/Android devices, reduced-motion mode, and
   `flowPartsStart` (not present on this branch's base).
 
+  Owner feedback round (same branch): (1) Pause behavior - the stack now
+  follows the cassette's own play state (`cassetteSetPlaying` calls
+  `csStackSetPlaying`, no second source of truth). On pause every copy
+  retreats behind the main cassette in 0.5s (ease-in-out, from wherever
+  it is: stack, ring or mid-exit), then the loop goes idle with zero
+  opacity and no rAF. Opening fullscreen while paused starts idle. On
+  resume the cycle restarts from its beginning after a 0.8s rest. A pause
+  gets a 150ms grace normally and 2.5s within 5s of a track start
+  (`lastTrackStartTs`), so a track change's momentary not-playing report
+  doesn't trigger the retreat. (2) Graduated shades by stack order: the
+  first copy is the lightest, most opaque tint (74% album tone over a
+  mid-grey, opacity 0.96), each later copy darker and more see-through,
+  down to the last at 24% over near-black and opacity 0.30. The desktop
+  ring uses the same per-copy values. Owner confirmed the ring passing
+  under the transport and the simple shells are fine. The dark plate
+  under the main shell now stays solid while any copy is visible, so
+  faint copies sliding behind it still vanish.
+
+  Verified in a throwaway visibility-forced copy (deleted) in its own
+  browser tab, driving frames by hand: at 375x812 the 10-copy stack
+  showed the light/opaque to dark/transparent gradient with the last copy
+  faintly visible (computed colors checked); a pause mid-stack retreated
+  to all-zero opacity, plate 0, loop idle at 0.5s; a play/pause blip
+  inside the grace window did not retreat or restart; resume reset
+  the cycle with a 0.8s rest. At 1280x800 desktop fullscreen the ring
+  showed the same gradient and a pause mid-ring retreated and went idle;
+  closing fullscreen removed every node. No new console errors.
+
 ### fullscreen-lp-too-small: Fullscreen LP is too small again on mobile and desktop
 - **Status:** merged
 - **Priority:** medium
