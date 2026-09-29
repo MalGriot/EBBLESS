@@ -6870,3 +6870,19 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Synced from Geethub issue #207. Extends
   `cassette-fullscreen-animation` (merged).
+
+### settings-credits: Settings "Credits" button listing every service used, with links
+- **Status:** review
+- **Priority:** medium
+- **Description:** Add a Credits row to Settings > About that opens a dialog
+  listing every outside service/data source EBBLESS uses, each linking to
+  its homepage. Doubles as the visible getsongbpm.com backlink GetSongBPM's
+  API terms require (replaces the one-line About credit from
+  `discover-mood-matching`).
+- **Touches:** Settings > About, `#credits-modal` (reuses `#danger-scrim`
+  and the feedback modal's card look), `sw.js` cache v27.
+- **Branch:** claude/kind-mayer-ebmyoe
+- **Notes:** Requested in-session. Lists YouTube, SoundCloud, Spotify, Apple
+  Music, GetSongBPM, ReccoBeats, Deezer, Last.fm, ListenBrainz,
+  MusicBrainz, Cover Art Archive, LRCLIB, Cloudflare Workers, GitHub Pages,
+  Sign in with Google. Update this list when a new service is added.

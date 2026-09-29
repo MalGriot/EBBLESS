@@ -842,6 +842,24 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #danger-scrim.is-open{opacity:1;pointer-events:auto}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+/* ---------- credits (Settings > About). Same centered card as
+   #feedback-modal, over #danger-scrim ---------- */
+#credits-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
+  max-height:calc(100dvh - 32px);overflow-y:auto;outline:none;
+  background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
+  opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+#credits-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#credits-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
+#credits-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
+.credits-group h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:16px 0 6px}
+.credits-group ul{list-style:none;margin:0;padding:0}
+.credits-group li{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-top:1px solid var(--border)}
+.credits-group li:first-child{border-top:0}
+.credits-group a{color:var(--text);font-size:14px;font-weight:600;text-decoration:underline;text-decoration-color:var(--border-2);text-underline-offset:3px}
+.credits-group a:hover,.credits-group a:focus-visible{text-decoration-color:currentColor}
+.credits-group span{font-size:12px;color:var(--faint)}
 /* ---------- tester feedback form (no login, no GitHub - posts to the
    worker's /tester-report). Reuses #danger-scrim and the danger modal's
    centered-card look, just wider and with form fields ---------- */
@@ -1073,7 +1091,6 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
 .about-copy{font-size:13px;color:var(--faint);line-height:1.7;max-width:520px}
 .about-copy strong{color:var(--text);font-weight:600}
-.about-copy a{color:var(--text);text-decoration:underline;text-underline-offset:2px}
 
 .settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
 .slider-val{color:var(--faint);font-weight:400;margin-left:6px}
@@ -2325,7 +2342,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <div class="settings-block">
         <h2>About</h2>
         <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track, or paste a YouTube playlist or video link directly. Either way, playback threads through so the listening doesn't stop.</p>
-        <p class="about-copy">Tempo and key data for Discover: <a href="https://getsongbpm.com" target="_blank" rel="noopener">GetSongBPM</a>.</p>
         <div class="settings-row">
           <div>
             <div class="label">Replay tutorial</div>
@@ -2346,6 +2362,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="desc">Tell someone else about the app. Opens your device's share sheet, or copies the link if that's not available.</div>
           </div>
           <button class="btn-ghost" id="shareAppBtn">Share</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Credits</div>
+            <div class="desc">The services and open music data EBBLESS is built on, with links to each.</div>
+          </div>
+          <button class="btn-ghost" id="creditsBtn">View</button>
         </div>
       </div>
       <div class="settings-block">
@@ -2419,6 +2442,45 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   </main>
 
   <div id="danger-scrim"></div>
+
+  <!-- ===== CREDITS ===== -->
+  <div id="credits-modal" role="dialog" aria-modal="true" aria-labelledby="creditsModalTitle" tabindex="-1">
+    <h2 id="creditsModalTitle">Credits</h2>
+    <p>EBBLESS is built on these services and open data projects. Thank you.</p>
+    <div class="credits-group">
+      <h3>Music sources</h3>
+      <ul>
+        <li><a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a><span>Playback and track matching</span></li>
+        <li><a href="https://soundcloud.com" target="_blank" rel="noopener">SoundCloud</a><span>Playback and SoundCloud links</span></li>
+        <li><a href="https://open.spotify.com" target="_blank" rel="noopener">Spotify</a><span>Playlist, album and track links, cover art</span></li>
+        <li><a href="https://music.apple.com" target="_blank" rel="noopener">Apple Music</a><span>Playlist, album and track links, cover art</span></li>
+      </ul>
+    </div>
+    <div class="credits-group">
+      <h3>Music data</h3>
+      <ul>
+        <li><a href="https://getsongbpm.com" target="_blank" rel="noopener">GetSongBPM</a><span>Tempo, key and time signature for Discover</span></li>
+        <li><a href="https://reccobeats.com" target="_blank" rel="noopener">ReccoBeats</a><span>Tempo, energy and mood for Discover</span></li>
+        <li><a href="https://www.deezer.com" target="_blank" rel="noopener">Deezer</a><span>Tempo data for Discover</span></li>
+        <li><a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a><span>Similar tracks and tags for Discover</span></li>
+        <li><a href="https://listenbrainz.org" target="_blank" rel="noopener">ListenBrainz</a><span>Similar recordings for Discover</span></li>
+        <li><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a><span>Track and release metadata</span></li>
+        <li><a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a><span>Album art</span></li>
+        <li><a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a><span>Synced lyrics</span></li>
+      </ul>
+    </div>
+    <div class="credits-group">
+      <h3>Built with</h3>
+      <ul>
+        <li><a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a><span>Backend</span></li>
+        <li><a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a><span>Hosting</span></li>
+        <li><a href="https://developers.google.com/identity/gsi/web" target="_blank" rel="noopener">Sign in with Google</a><span>Optional sign-in</span></li>
+      </ul>
+    </div>
+    <div class="danger-modal-actions">
+      <button type="button" class="btn-ghost" id="creditsCloseBtn">Close</button>
+    </div>
+  </div>
 
   <!-- ===== TESTER FEEDBACK FORM ===== -->
   <form id="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle" novalidate>
@@ -3884,6 +3946,7 @@ const toastEl = $('toast');
 const clearLibraryBtn = $('clearLibraryBtn');
 const replayTutorialBtn = $('replayTutorialBtn');
 const shareAppBtn = $('shareAppBtn');
+const creditsBtn = $('creditsBtn');
 const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlider'), crossfadeDurRow = $('crossfadeDurRow'), crossfadeDurVal = $('crossfadeDurVal');
 
 /* =========================================================================
@@ -6507,6 +6570,29 @@ fbThumbs.forEach(btn => btn.addEventListener('click', () => {
 feedbackBtn.addEventListener('click', openFeedbackModal);
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);
+
+// Credits (Settings > About): the services EBBLESS relies on, with links.
+// Also the visible getsongbpm.com backlink its API terms require.
+const creditsModal = $('credits-modal');
+function openCreditsModal(){
+  dangerScrim.classList.add('is-open');
+  creditsModal.classList.add('is-open');
+  setTimeout(() => creditsModal.focus(), 50);
+}
+function closeCreditsModal(){
+  if (!creditsModal.classList.contains('is-open')) return;
+  creditsModal.classList.remove('is-open');
+  dangerScrim.classList.remove('is-open');
+  creditsBtn.focus();
+}
+creditsBtn.addEventListener('click', openCreditsModal);
+$('creditsCloseBtn').addEventListener('click', closeCreditsModal);
+dangerScrim.addEventListener('click', closeCreditsModal);
+// keep keys (Space, arrows, shortcuts) from reaching the player underneath
+creditsModal.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape'){ e.preventDefault(); closeCreditsModal(); }
+  e.stopPropagation();
+});
 feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.preventDefault(); closeFeedbackModal(); } });
 feedbackModal.addEventListener('submit', async (e) => {
   e.preventDefault();
