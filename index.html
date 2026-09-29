@@ -222,8 +222,7 @@ body.onb-active .paste-guide{display:none}
    playlist) - the app icon glyph, recolored to the same day's-color-clock
    accent as everything else, instead of an empty tile. */
 .lib-card .art .face.icon-face{display:flex;align-items:center;justify-content:center;background:#121212}
-.lib-card .art .face.icon-face svg{width:44%;height:44%}
-.lib-card .art .face.icon-face path{stroke:var(--clock-accent,#e0b26a)}
+.lib-card .art .face.icon-face img{width:44%;height:auto}
 /* Swell's own fallback for the same no-tracks-yet moment: a looping teaser
    clip instead of the generic icon glyph. Swapped out for the standard
    2x2 track grid the instant Swell's first generation lands. */
@@ -531,9 +530,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .art-cassette:not([data-state="playing"]) .cs-label-art.is-loaded{animation-play-state:paused}
 @keyframes cs-label-pan{0%,100%{transform:translateY(-127px)}50%{transform:translateY(127px)}}
 .cs-label-shade{fill:url(#csLabelShade);pointer-events:none}
-.cs-mark path{fill:none;stroke-width:22;stroke-linecap:round}
-.cs-mark-shade{stroke:rgba(0,0,0,.45)}
-.cs-mark-line{stroke:var(--accent);opacity:.42}
+.cs-mark{opacity:.28}
 .cs-label-rule{stroke:rgba(238,240,243,.14);stroke-width:1}
 .cs-window{fill:rgba(6,7,9,.78)}
 .cs-window-edge{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1}
@@ -2063,12 +2060,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <rect class="cs-mech-well" x="160" y="208" width="80" height="18" rx="2"/>
               <circle class="cs-guide" cx="70" cy="217" r="7"/>
               <circle class="cs-guide" cx="330" cy="217" r="7"/>
-              <!-- compact mark (the app icon's single stroke), debossed into
-                   the lower strip -->
-              <g class="cs-mark" transform="translate(262 192.5) scale(.09)">
-                <path class="cs-mark-shade" d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272" transform="translate(0 7)"/>
-                <path class="cs-mark-line" d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272"/>
-              </g>
+              <!-- the E mark, small and faint on the lower strip -->
+              <image class="cs-mark" href="brand/assets/mark-white.png" x="277.5" y="210" width="15.3" height="14"/>
 
               <!-- screws -->
               <g>
@@ -4125,10 +4118,9 @@ function renderLibrary(){
       }
     } else if (withArt.length === 0 && !pl.image){
       // No matched tracks yet and no source-provided image (an empty
-      // manual playlist) - the app icon glyph, recolored to today's
-      // color-clock accent, instead of an empty tile.
+      // manual playlist) - the E mark instead of an empty tile.
       artDiv.classList.add('single');
-      artDiv.innerHTML = '<div class="face icon-face"><svg viewBox="0 0 512 512"><path d="M80 272 C 160 272, 192 176, 256 176 S 352 368, 432 272" fill="none" stroke-width="46" stroke-linecap="round"/></svg></div>';
+      artDiv.innerHTML = '<div class="face icon-face"><img src="brand/assets/mark.png" alt=""></div>';
     } else if (pl.image){
       // A real source-provided cover (Spotify/SoundCloud/Apple) always wins
       // over the per-track collage below. This used to render both and

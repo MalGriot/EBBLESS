@@ -53,17 +53,18 @@ The wordmark **is** the logo. No separate pictorial symbol competes with it.
   including the gap between the two Bs. That unbroken line under an
   unbroken word is the entire concept: nothing in the mark is allowed to
   visually "ebb."
-- **Compact mark:** the rule alone — a single flowing horizontal stroke,
-  gently eased (not straight, not a literal wave), used where the wordmark
-  won't fit (favicon, app icon, loading state, tab bar). It must always read
-  as one continuous, unbroken line.
+- **E mark:** the stacked flowing "E" (`assets/mark.png`, white version
+  `assets/mark-white.png`), used where the wordmark won't fit (favicon, app
+  icon, loading state, tab bar, small in-app details). The E mark and the
+  EBBLESS wordmark are the only two logos; there is no standalone line or
+  wave mark.
 - **Color:** the line and wordmark render in `--accent` (`#E0B26A`) on dark
   surfaces, or `#121212` on light surfaces. The line is never a gradient and
   never dashed.
 - **Clear space:** minimum clear space on all sides equals the cap-height of
   the wordmark. Don't crowd it with UI chrome, edges, or other text.
 - **Minimum size:** wordmark no smaller than 14px cap-height on screen.
-  Below that, use the compact mark (the line alone).
+  Below that, use the E mark.
 - **Don't:**
   - don't add a music note, headphones, play triangle, or waveform as a
     lock-up symbol
