@@ -527,9 +527,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .art-cassette[data-state="idle"] .cs-shell-spec{opacity:.6}
 .cs-label-panel{fill:#1b1d21;fill:color-mix(in srgb,var(--player-accent) 6%,#1b1d21)}
 .cs-label-art{opacity:0;transition:opacity 260ms var(--ease-out);transform-box:fill-box;transform-origin:center}
-.cs-label-art.is-loaded{opacity:1;animation:cs-label-pan 20s ease-in-out infinite}
+.cs-label-art.is-loaded{opacity:1;animation:cs-label-pan 48s ease-in-out infinite}
 .art-cassette:not([data-state="playing"]) .cs-label-art.is-loaded{animation-play-state:paused}
-@keyframes cs-label-pan{0%,100%{transform:translateY(-50px)}50%{transform:translateY(50px)}}
+@keyframes cs-label-pan{0%,100%{transform:translateY(-127px)}50%{transform:translateY(127px)}}
 .cs-label-shade{fill:url(#csLabelShade);pointer-events:none}
 .cs-brand{fill:rgba(238,240,243,.5);font-size:7px;font-weight:600;letter-spacing:3.2px}
 .cs-track{fill:#eef0f3;font-size:12px;font-weight:500;letter-spacing:.2px}
@@ -2001,7 +2001,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <!-- label -->
               <g clip-path="url(#csLabelClip)">
                 <path class="cs-label-panel" d="M32,30 H354 L368,44 V112 H32 Z"/>
-                <image id="cassetteLabelArt" class="cs-label-art" x="32" y="-20" width="336" height="182" preserveAspectRatio="xMidYMid slice"/>
+                <image id="cassetteLabelArt" class="cs-label-art" x="32" y="-97" width="336" height="336" preserveAspectRatio="xMidYMid slice"/>
                 <path class="cs-label-shade" d="M32,30 H354 L368,44 V112 H32 Z"/>
               </g>
               <path class="cs-label-rule" d="M32,30 H354 L368,44 V112 H32 Z" fill="none"/>
