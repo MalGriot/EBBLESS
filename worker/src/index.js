@@ -882,7 +882,7 @@ async function handleYtVideo(url, ctx) {
 // published,image}], focus } - focus is the index of the linked episode
 // (-1 for a whole-show link). Newest episodes first, capped at
 // PODCAST_MAX_EPISODES.
-const PODCAST_CACHE_VERSION = 'pod2';
+const PODCAST_CACHE_VERSION = 'pod3';
 const PODCAST_MAX_EPISODES = 300;
 
 function podNorm(s) {
@@ -964,7 +964,10 @@ async function findPodcastFeed(term, author, dbg) {
   const sources = [
     ['itunes', async (q) => {
       const params = new URLSearchParams({ media: 'podcast', entity: 'podcast', limit: '15', country: 'US', term: q });
-      const res = await fetch('https://itunes.apple.com/search?' + params.toString(), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+      const go = () => fetch('https://itunes.apple.com/search?' + params.toString(), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+      let res = await go();
+      // Apple rate-limits Cloudflare's shared egress IPs - one short retry
+      if (res.status === 429) { await new Promise(r => setTimeout(r, 800)); res = await go(); }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       return (data.results || []).map(r => ({ title: r.collectionName, author: r.artistName, feedUrl: r.feedUrl }));
@@ -1068,25 +1071,25 @@ async function handlePodcast(url, ctx) {
     link = 'https://open.spotify.com/' + kind + '/' + id;
     const entity = await spotifyEmbedEntity(kind, id);
     let showName = '', author = '';
+    // Verified against the live embeds: a *show* embed page is really its
+    // latest episode (entity.name = that episode's title, subtitle = the
+    // show), and an *episode* embed has name = episode, subtitle = show. So
+    // the show's name comes from Spotify's oEmbed for the show URL (its own
+    // title), falling back to the embed's subtitle - never entity.name.
     if (kind === 'show') {
-      showName = (entity && (entity.name || entity.title)) || await spotifyOEmbedTitle('show', id);
-      author = (entity && entity.subtitle) || '';
+      showName = await spotifyOEmbedTitle('show', id);
+      if (showName) dbg.push('show name from oembed');
+      else { showName = (entity && entity.subtitle) || ''; dbg.push('show name from embed subtitle'); }
     } else {
       episodeTitle = (entity && (entity.name || entity.title)) || await spotifyOEmbedTitle('episode', id);
-      // An episode page's own subtitle isn't reliably the show's name (seen:
-      // "<Show> - <episode>"), so find the parent show's id on the page and
-      // read the name off the show's own embed, same as a show link does.
       const html = (entity && entity.__html) || '';
       const uriMatch = html.match(/spotify:show:([a-zA-Z0-9]{22})/) || html.match(/open\.spotify\.com\/show\/([a-zA-Z0-9]{22})/);
-      if (uriMatch) {
-        const showEntity = await spotifyEmbedEntity('show', uriMatch[1]);
-        showName = (showEntity && (showEntity.name || showEntity.title)) || await spotifyOEmbedTitle('show', uriMatch[1]);
-        author = (showEntity && showEntity.subtitle) || '';
-        dbg.push('episode page -> show ' + uriMatch[1]);
-      } else {
-        dbg.push('episode page had no show id; using subtitle');
+      if (uriMatch) showName = await spotifyOEmbedTitle('show', uriMatch[1]);
+      if (showName) dbg.push('show name from oembed (show ' + uriMatch[1] + ')');
+      else {
+        showName = (entity && (entity.subtitle || (entity.show && entity.show.name) || (entity.podcast && entity.podcast.name))) || '';
+        dbg.push('show name from embed subtitle');
       }
-      if (!showName) showName = (entity && (entity.subtitle || (entity.show && entity.show.name) || (entity.podcast && entity.podcast.name))) || '';
     }
     if (!showName) return json({ error: "Couldn't read that Spotify podcast link (private or invalid?)", debug: dbg }, 404);
     feedUrl = await findPodcastFeed(showName, author, dbg);
