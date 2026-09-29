@@ -2604,7 +2604,7 @@ Add entries in this shape:
   comment pointing here.
 
 ### blend-playlist: Add an auto-updating "Blend" playlist across all saved playlists
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a playlist that pulls tracks from all of the user's
   saved playlists, refreshing with a different set of songs every day.
@@ -2773,7 +2773,7 @@ Add entries in this shape:
   `ebbless-shell-v*` cache exists after an update.
 
 ### volume-equalizer: Volume equalizer/normalization across tracks
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Add a volume equalizer so loudness is consistent across
   different tracks (avoids jarring volume jumps between songs).
@@ -3049,7 +3049,7 @@ Add entries in this shape:
   ask is unconfirmed - left that entry as-is for your call.
 
 ### podcasts: Support loading and playing podcasts
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add podcast support - load single episodes, or paste a
   link to a podcast's page and have it load all episodes.
