@@ -4828,24 +4828,51 @@ function openRefreshLinkPicker(plId, trackIdx){
   // *matched* video's length, so searching with it biases the picker
   // toward the very video that was wrong. Older tracks resolved before
   // srcDuration was kept fall back to no duration hint at all.
-  searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT).then(data => {
+  // SoundCloud-sourced tracks (a native 'sc:' link, or any track in a
+  // SoundCloud playlist - same test applyRelinkChoice uses for its art
+  // exception) get SoundCloud uploads first, then YouTube's matches below
+  // them. Everything else keeps the YouTube-only list. Each search can fail
+  // on its own without taking the other down; only both failing is an error.
+  const wantsSC = isSoundCloudVideoId(t.videoId) || sourceKindForType(pl.type) === 'soundcloud';
+  const ytSearch = searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT).then(data =>
+    (data.candidates && data.candidates.length) ? data.candidates
+      : (data.videoId ? [{ videoId: data.videoId, title: data.title, channel: data.channel, duration: data.duration }] : []));
+  const scSearch = wantsSC ? searchSoundCloudTracks([t.title, t.artist].filter(Boolean).join(' '), RELINK_SC_CANDIDATE_COUNT) : Promise.resolve([]);
+  Promise.allSettled([scSearch, ytSearch]).then(([sc, yt]) => {
     if (!stillShowing()) return;
-    const candidates = (data.candidates && data.candidates.length) ? data.candidates
-      : (data.videoId ? [{ videoId: data.videoId, title: data.title, channel: data.channel, duration: data.duration }] : []);
+    if (sc.status === 'rejected' && yt.status === 'rejected'){
+      const e = yt.reason || sc.reason || {};
+      stageError(e.message || 'Search failed.', () => openRefreshLinkPicker(plId, trackIdx), 'Couldn’t search for other links.');
+      return;
+    }
+    const candidates = (sc.status === 'fulfilled' ? sc.value : []).concat(yt.status === 'fulfilled' ? yt.value : []);
     stageRelinkCandidates(candidates, plId, trackIdx, t);
-  }).catch(e => {
-    if (!stillShowing()) return;
-    stageError(e.message || 'Search failed.', () => openRefreshLinkPicker(plId, trackIdx), 'Couldn’t search for other links.');
   });
 }
 
-// Candidates are YouTube videos today. Each row reads its thumbnail/source
-// off the candidate itself when present (c.image / c.source) and only
-// falls back to YouTube's, so a future non-YouTube candidate (e.g. a
-// SoundCloud upload) can join this same list without a separate renderer.
+// SoundCloud uploads for the picker above, in the same candidate shape as
+// /search's YouTube ones - videoId is the synthetic 'sc:<id>' that native
+// SoundCloud playback plays from (soundCloudVideoId), so picking one relinks
+// the track onto the SoundCloud deck path exactly like a SoundCloud import.
+const RELINK_SC_CANDIDATE_COUNT = 10;
+async function searchSoundCloudTracks(query, limit){
+  const params = new URLSearchParams({ q: query, limit: String(limit || RELINK_SC_CANDIDATE_COUNT) });
+  const res = await fetch(BACKEND + '/sctracksearch?' + params.toString());
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  return (data.candidates || []).filter(c => c && c.scId).map(c => ({
+    videoId: soundCloudVideoId(c.scId), title: c.title || '', channel: c.channel || c.artist || '',
+    duration: c.duration || 0, image: c.image || '', source: 'soundcloud',
+  }));
+}
+
+// Candidates are YouTube videos, plus SoundCloud uploads (listed first) for
+// a SoundCloud-sourced track. Each row reads its thumbnail/source off the
+// candidate itself when present (c.image / c.source) and only falls back to
+// YouTube's, so both kinds share this one renderer.
 function stageRelinkCandidates(candidates, plId, trackIdx, t){
   const currentVideoId = t.videoId;
-  const list = candidates.slice();
+  const list = candidates.filter((c, i) => c && c.videoId && candidates.findIndex(x => x && x.videoId === c.videoId) === i);
   // The track's current link, if the fresh search didn't return it, goes
   // first so the listener can always see what's playing now next to the
   // alternatives - the same row the old picker marked as "current".
@@ -4870,7 +4897,8 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
     const sub = [c.channel, c.duration ? formatTime(c.duration) : '', SEARCH_SOURCE_LABEL[source] || source].filter(Boolean).join(' · ');
     const subHtml = (isCurrent ? '<span class="cur">Current</span> · ' : '') + escapeHtml(sub);
     const image = c.image || (source === 'youtube' ? refreshLinkCandidateThumb(c.videoId) : '');
-    return searchPickRowHtml(i, image, c.title || '(untitled)', subHtml, 'is-video' + (isCurrent ? ' is-current' : ''));
+    // SoundCloud art is square, so only YouTube rows get the 16:9 is-video thumb.
+    return searchPickRowHtml(i, image, c.title || '(untitled)', subHtml, (source === 'youtube' ? 'is-video' : '') + (isCurrent ? ' is-current' : ''));
   }).join('');
   importStage.innerHTML =
     '<div class="step">Pick a new link for &ldquo;' + escapeHtml(label) + '&rdquo;</div>' +
@@ -4897,12 +4925,18 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   t.matchedTitle = candidate.title || '';
   t.channel = candidate.channel || '';
   t.duration = candidate.duration || 0;
+  // A SoundCloud track with no art of its own yet borrows the chosen
+  // upload's (its native art is otherwise kept - see keepsNativeArt).
+  if (isSoundCloudVideoId(candidate.videoId) && !t.art && candidate.image) t.art = candidate.image;
   lsSet(LS_PL(plId), pl);
   if (state.playlist && state.playlist.id === plId) state.playlist = pl;
   // Also overwrite the cross-playlist title/artist match cache, otherwise
   // the same wrong video comes straight back the next time this song is
   // resolved in any playlist.
-  cacheTrackMatch(t.title, t.artist, candidate);
+  // A SoundCloud pick stays out of that cache, though: it's keyed by
+  // title/artist alone, so it would otherwise swap a same-named song in
+  // some Spotify/Apple Music playlist over to this SoundCloud upload too.
+  if (!isSoundCloudVideoId(candidate.videoId)) cacheTrackMatch(t.title, t.artist, candidate);
   recordWrongTrackCorrection(t, candidate);
   renderLibrary();
   repaintOpenLibPanelTrack(plId, trackIdx, pl);
