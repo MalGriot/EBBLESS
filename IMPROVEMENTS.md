@@ -6197,19 +6197,39 @@ Add entries in this shape:
   before an agent can finish it.
 
 ### cassette-beautification: Make the cassette a premium physical object
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
-- **Description:** Make the cassette feel like a beautiful physical object
-  floating in EBBLESS rather than a player UI: depth, shadow, space;
-  smoky/translucent plastic with subtle reflections and restrained
-  imperfections (contemporary, not retro); reels with slight rotational
-  variation and gentle inertia. See the issue for the full multi-point
-  brief.
-- **Touches:** cassette art style. Sibling of `spinning-record-realism`;
-  overlaps `cassette-fullscreen-animation` (draft) - same visual, do
-  together or sequence.
-- **Branch:**
-- **Notes:** Synced from Geethub issue #149.
+- **Description:** Visual polish pass on the Cassette Tape art style
+  (sibling of `spinning-record-realism`). Full brief from issue #149:
+  1. Physical object, not player UI: floats in EBBLESS with subtle depth,
+     shadow, materiality, and space around it.
+  2. Premium material: smoky/translucent plastic, subtle reflections,
+     realistic depth, restrained imperfections. Contemporary, not retro.
+  3. Physical reels: slight rotational variation between the two reels,
+     gentle inertia on play/stop, tiny highlight shifts as they turn.
+  4. Magnetic tape: visible tape subtly responds to playback as it winds
+     between reels. Slow, understated.
+  5. Minimal label: remove deck/mixtape graphics and excess labeling; use
+     the EBBLESS identity sparingly.
+  6. Tape window: subtle reflections, transparency, depth, so the moving
+     tape is a small hypnotic detail.
+  7. Environment: restrained ambient reflection and grounding shadow, no
+     literal tabletop or background scene.
+  8. Playback states: clear physical difference between idle, playing,
+     paused; stopping has a tiny sense of mechanical inertia.
+  9. Current-track influence: extremely subtle label-tone/reflection shift
+     from the current track or playlist. Stays recognizable, not a
+     visualizer.
+  10. No nostalgia filter: no VHS, grain, fake wear, sepia, handwritten
+      type, glitches, or excess beige.
+- **Touches:** cassette art style (`#artCassette` / `.cs-*` markup, CSS,
+  animation, play/pause hooks). Sibling of `spinning-record-realism`;
+  overlaps `cassette-fullscreen-animation` (draft) - same visual, sequence
+  after this one.
+- **Branch:** agent/cassette-beautification
+- **Notes:** Synced from Geethub issue #149. Keep sizing from
+  `record-cassette-size` and fullscreen behavior from
+  `fullscreen-lp-cassette-visual` intact.
 
 ### ebbless-deep: EBBLESS DEEP - an optional deeper tier to fund the app
 - **Status:** draft
