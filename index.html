@@ -8457,7 +8457,75 @@ applyVisualMode();
 const lyricsCache = new Map();
 let lyricsState = { videoId: null, lines: [], synced: false, activeIdx: -1 };
 
+/* ---------- OWN_LYRICS: MAL GRIOT's own songs ----------
+   Lyrics for the artist's own releases ("Breathe Love Deep" on SoundCloud
+   and the "This is Mal Griot" Spotify playlist), bundled here and checked
+   BEFORE the /lyrics lookup. To fill one in, paste the text between the
+   backticks of its entry:
+     - Timed (preferred): LRC lines, one per lyric line, e.g.
+         [00:12.50] first line
+         [01:03.00] another line
+       Timestamps are [minutes:seconds.hundredths] from the start of the track.
+     - Plain: just the lines, no timestamps. Shows as unsynced lyrics.
+   Keys are the track titles. Matching ignores case, spacing, punctuation,
+   accents, bracketed bits and version tags, so "b u r n" matches 'burn' and
+   "Free Fall - Dub Mix" matches 'Free Fall'. An empty entry falls through
+   to the normal lookup. Only used when the track's artist is one of
+   OWN_LYRICS_ARTISTS. */
+const OWN_LYRICS_ARTISTS = [
+  'Mal Griot', // also matches "MAL GRIOT MUSIC", "Unnayanaa, Mal Griot"
+  'G R II O T', // credit on "v a s t" (Breathe Love Deep)
+  'Deep Dawn' // solo credit on "Helicopter Man" / "How It Goes" (This is Mal Griot)
+];
+const OWN_LYRICS = {
+  // Breathe Love Deep (SoundCloud album)
+  'gasp': ``,
+  'deep': ``,
+  'high': ``,
+  'vast': ``,
+  'burn': ``,
+  'fume': ``,
+  'mute': ``,
+  'mmm': ``,
+  'doze': ``,
+  'void': ``,
+  // This is Mal Griot (Spotify playlist)
+  'I Tried It': ``, // also the Radio edit
+  'Helicopter Man': ``,
+  'How It Goes': ``,
+  'Free Fall': ``, // Disco Mix and Dub Mix
+  'Toxic Baby': ``,
+  'Turn Around': ``,
+  'The Call of the Jungle': `` // "(Overmind)"
+};
+function ownLyricsKey(s){
+  let t = (s || '')
+    .replace(/[([][^)\]]*[)\]]/g, ' ')
+    .replace(/\s+(feat\.?|ft\.?|featuring)\s+.*$/i, '');
+  const dash = t.match(/^(.*\S)\s+[-\u2013\u2014]\s+(.+)$/);
+  if (dash && /\b(remaster(ed)?|remix|mix|version|edit|live|radio|acoustic|demo|instrumental)\b/i.test(dash[2])) t = dash[1];
+  return t.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+// Same { synced, source, lines: [{ t, text }] } shape the /lyrics worker returns.
+function ownLyricsFor(t){
+  const artist = ownLyricsKey(t.artist);
+  if (!artist || !OWN_LYRICS_ARTISTS.some(a => artist.indexOf(ownLyricsKey(a)) !== -1)) return null;
+  const key = ownLyricsKey(t.title);
+  const hit = Object.keys(OWN_LYRICS).find(k => ownLyricsKey(k) === key);
+  const raw = hit ? String(OWN_LYRICS[hit]).trim() : '';
+  if (!raw) return null;
+  const rows = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const re = /^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/;
+  const timed = rows.map(l => l.match(re)).filter(m => m && m[3].trim());
+  if (timed.length){
+    return { synced: true, source: 'own', lines: timed.map(m => ({ t: parseInt(m[1], 10) * 60 + parseFloat(m[2]), text: m[3].trim() })) };
+  }
+  return { synced: false, source: 'own', lines: rows.map(l => ({ t: null, text: l })) };
+}
+
 async function fetchLyrics(t){
+  const own = ownLyricsFor(t);
+  if (own) return own;
   if (lyricsCache.has(t.videoId)) return lyricsCache.get(t.videoId);
   const params = new URLSearchParams({ videoId: t.videoId, title: t.title || '', artist: t.artist || '' });
   // Track length (seconds) lets the worker pick the right version (album
@@ -8525,7 +8593,7 @@ function maybeLoadLyrics(){
   // 'sc:<id>' videoId would just 400 every time, so skip the doomed request
   // and say so plainly instead of leaving the previous track's lyrics on
   // screen or showing a generic "couldn't load" error.
-  if (isSoundCloudVideoId(t.videoId)){
+  if (isSoundCloudVideoId(t.videoId) && !ownLyricsFor(t)){
     lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
     lyricsScroller.innerHTML = '<div class="lyrics-empty">Lyrics aren\'t available for SoundCloud tracks yet.</div>';
     return;
