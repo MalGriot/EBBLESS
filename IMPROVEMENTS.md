@@ -6681,7 +6681,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #193.
 
 ### discover-mood-matching: Use free BPM/key/energy lookups to improve mood matching
-- **Status:** approved
+- **Status:** merged
 - **Priority:** low
 - **Description:** Improve Discover and mood search using free online track-metric sources (Chosic BPM & Key Finder, Musicstax, SongBPM) for BPM, key, time signature and energy.
 - **Touches:** Discover backend (worker).
@@ -6804,7 +6804,7 @@ Add entries in this shape:
   yet.
 
 ### album-detection: Pasted albums should be treated as albums, not playlists
-- **Status:** approved
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When an album is added, categorize it as an album: the
   library's album filter should include it, its thumbnail should be the
@@ -6831,7 +6831,7 @@ Add entries in this shape:
 
 
 ### lp-needle-sfx-silent: LP needle-lift/drop sound not audible on pause/play
-- **Status:** approved
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In LP mode, the needle-lift sound on pause and needle-drop
   on play can't be heard. Find out why and make it audible.
