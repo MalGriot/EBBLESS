@@ -21,9 +21,20 @@ Two intake channels, both feed this same backlog:
   Only needs a GitHub login — nothing Claude-specific. It files a GitHub
   issue labeled `idea`, not an entry in this file directly. The manager
   syncs those into the backlog below (`gh issue list --label idea --state
-  open`), appends each as an entry here, and closes the issue with a
-  comment linking to the entry it became — ask it to sync, or it checks at
-  the start of a session. Entries from here default to **`draft`** — this
+  open`), appends each as an entry here, and comments on the issue with a
+  link to the entry it became — ask it to sync, or it checks at the start
+  of a session. **Synced issues stay open until the change actually
+  ships** (per Geethub issue #197), so the open-issue list always shows
+  what's still pending:
+  - at sync: comment linking the entry; the issue stays open (skip any open
+    issue whose number already appears in an entry here — it's synced).
+  - entry reaches `review`/`approved`/`merged` (built, not yet live): add
+    the `waiting-for-deployment` label.
+  - deployed live: swap to the `completed` label and close the issue as
+    completed.
+  - entry `dropped` or folded into another entry as a duplicate: close the
+    issue as not planned / duplicate, with a one-line reason.
+  Entries from here default to **`draft`** — this
   channel is reachable by anyone with the app open (not necessarily you in
   person), so a synced idea waits for you to flip it to `ready` in this
   file before any agent is dispatched on it. Only Title is required on
@@ -5784,14 +5795,14 @@ Add entries in this shape:
   `node --check` against the extracted `<script>` contents - passes.
 
 ### playlist-panel-side-desktop: Desktop playlist panel should open left-over-library, not right-over-queue
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On desktop, opening a playlist currently slides its
   panel in on the right side, over the queue. It should instead open on
   the left side, over the library.
 - **Touches:** desktop playlist panel/slide-up (same area as
   `playlist-queue-slide-height`, `playlist-art-at-top`, both merged).
-- **Branch:** (unclaimed)
+- **Branch:** agent/playlist-panel-side-desktop
 - **Notes:** Synced from Geethub issue #135. Issue body had no further
   detail beyond the title.
   Geethub #198 folded in: desktop playlist panel currently shows two close buttons - remove the top one. The remaining X should be identical to the queue's X in the window's top-right corner. User wants this done as part of this entry.
@@ -6307,11 +6318,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #178.
 
 ### mobile-queue-icon-highlight: Mobile: only the queue icon should be lit while the queue is open
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On mobile, when the queue is open, the queue icon should be the only highlighted nav icon.
 - **Touches:** mobile footer nav active states.
-- **Branch:** (unclaimed)
+- **Branch:** agent/mobile-queue-icon-highlight
 - **Notes:** Synced from Geethub issue #179.
 
 ### swipe-track-animation: Mobile: animate swipe-to-change-track
@@ -6395,12 +6406,18 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #196.
 
 ### geethub-open-closed-tracking: Geethub: synced ideas shouldn't look "closed" before they ship
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Synced ideas get closed on GitHub before they are built or deployed, so when writing a new issue you can't tell if something is already done. Keep issues open (or clearly labeled) until they actually ship.
 - **Touches:** Geethub workflow only (manager auto-close rule + existing `waiting-for-deployment`/`completed` labels) - no app code.
-- **Branch:** (unclaimed)
+- **Branch:** n/a — workflow/doc change only, no code lane
 - **Notes:** Synced from Geethub issue #197.
+  Done directly in this file: the intake section now keeps synced issues
+  open, labels them `waiting-for-deployment` once built, and closes them
+  (labeled `completed`) only when deployed. Resolves the open tension
+  flagged in `github-issues-status-tabs`. Applies to newly synced issues
+  going forward; already-closed issues were left as they are.
+
 
 ### discover-randomness: Discover should vary its picks each time for the same song
 - **Status:** draft
