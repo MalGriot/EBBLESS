@@ -1426,14 +1426,14 @@ Add entries in this shape:
   production.
 
 ### tutorial-chaptered-prompts: Tutorial should pause per chapter with a "next" prompt
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Restructure the onboarding tutorial into chapters. Each
   chapter's animation loops in place until the user taps "next" to advance;
   music plays in per-chapter clips, only starting when that chapter begins
   (on "next"), rather than running continuously start to finish.
 - **Touches:** `runIntro()` and the tutorial beat sequence in `index.html`.
-- **Branch:** (unclaimed)
+- **Branch:** agent/tutorial-chaptered-prompts
 - **Notes:** Synced from Geethub issue #25. Large-ish rework of the existing
   timed-beat tutorial system - touches the same code as
   `tutorial-preload-pacing`, `tutorial-crossfade-demo`, `tutorial-keyboard-disable`,
@@ -2212,7 +2212,7 @@ Add entries in this shape:
   before this fix - not a regression, just nothing to gain there).
 
 ### audio-ducking: Auto-dip EBBLESS volume when other audio plays (desktop)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** On desktop, if audio starts playing from another source
   (another tab/app), EBBLESS should detect it and automatically lower its
@@ -2221,7 +2221,7 @@ Add entries in this shape:
   audio-detection API exists in browsers - needs research into feasibility
   (e.g. only detectable for other tabs in the same browser via the Web Audio
   API, not system-wide).
-- **Branch:** (unclaimed)
+- **Branch:** agent/audio-ducking
 - **Notes:** Synced from Geethub issue #80. Flagging a feasibility risk -
   true system-wide audio detection isn't available to web apps; may only be
   partially achievable.
@@ -2787,7 +2787,7 @@ Add entries in this shape:
   own lane, not a quick fix.
 
 ### feedback-prompt: "Are you feeling this app or nah?" periodic feedback prompt
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** After a few days of use, show a thumbs-up/thumbs-down
   prompt. Either choice should prompt for more detail, and that feedback
@@ -2797,7 +2797,7 @@ Add entries in this shape:
   as everything else synced from GitHub.
 - **Touches:** new in-app prompt/survey UI, feeds into the GitHub-issue
   intake channel already described above.
-- **Branch:** (unclaimed)
+- **Branch:** agent/feedback-prompt
 - **Notes:** Synced from Geethub issue #44.
 
 ### tester-feedback-form: Form for beta testers to report on the app
