@@ -202,6 +202,12 @@ body.onb-active .paste-guide{display:none}
   .lib-filter{display:none}
   .lib-filter-cycle{display:inline-flex;align-items:center}
 }
+/* the filter cycle sits in .lib-head-actions right after "+ New playlist"
+   (#214); on the narrowest phones that row can't fit the longest cycle
+   label ("Podcasts"), so shorten the button to "+ New" there */
+@media (max-width:369.98px){
+  .lib-new-word{display:none}
+}
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
 
@@ -1365,10 +1371,12 @@ body.queue-over-fs #queue-scrim{bottom:0}
   body.split-desktop:not(.desktop-fs):not(.settings-solo) .view-scroll,
   body.split-desktop #topbar{margin-right:0!important}
   /* the library column is only 240-300px here - as narrow as the mobile
-     layout the filter/cycle split already handles, so reuse it - and let
-     the head-actions row wrap rather than clip when it still doesn't fit */
+     layout the filter/cycle split already handles, so reuse it, and shorten
+     "+ New playlist" to "+ New" so the cycle fits on the same row (#214) -
+     the row may still wrap rather than clip as a last resort */
   body.split-desktop .lib-filter{display:none}
   body.split-desktop .lib-filter-cycle{display:inline-flex;align-items:center}
+  body.split-desktop .lib-new-word{display:none}
   body.split-desktop .section-label-row{flex-wrap:wrap;row-gap:8px}
 
   /* ---- desktop "fullscreen" mode: player expands to the full split-view
@@ -2067,15 +2075,15 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
       <div id="libraryListWrap" class="hidden">
         <div class="section-label-row">
-          <div class="lib-filter" id="libFilter" role="group" aria-label="Filter library">
-            <button type="button" class="lib-filter-btn" data-filter="all">All</button>
-            <button type="button" class="lib-filter-btn" data-filter="playlists">Playlists</button>
-            <button type="button" class="lib-filter-btn" data-filter="albums">Albums</button>
-            <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
-          </div>
-          <button type="button" class="lib-filter-cycle" id="libFilterCycle" aria-label="Filter library"></button>
           <div class="lib-head-actions">
-            <button class="btn-ghost" id="newPlaylistBtn" style="padding:5px 14px;font-size:12.5px">+ New playlist</button>
+            <button class="btn-ghost" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
+            <div class="lib-filter" id="libFilter" role="group" aria-label="Filter library">
+              <button type="button" class="lib-filter-btn" data-filter="all">All</button>
+              <button type="button" class="lib-filter-btn" data-filter="playlists">Playlists</button>
+              <button type="button" class="lib-filter-btn" data-filter="albums">Albums</button>
+              <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
+            </div>
+            <button type="button" class="lib-filter-cycle" id="libFilterCycle" aria-label="Filter library"></button>
             <div class="lib-sort">
               <button type="button" class="view-toggle-btn lib-sort-btn" id="libSortBtn" aria-label="Sort library" aria-haspopup="true" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
