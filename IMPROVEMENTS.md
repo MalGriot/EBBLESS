@@ -6496,7 +6496,7 @@ Add entries in this shape:
   **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Beyond mood playlists: adapt recommendations to local
   weather, time of day, or movement speed (phone sensors).
@@ -6505,6 +6505,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #164.
   Geethub #187 folded in: track the user's time of day, time zone, weather and location to curate Discover and offer automatic time-based playlists; also asks to incorporate Rosicrucian knowledge about the time of day and day of the week.
   **Decision (2026-09-30):** time-based only for now (time of day, day of week, incl. the Rosicrucian day/hour idea). No location or weather.
+  **Built (6923771):** `getTimeContext()` time blocks (weekend nights hotter, small hours = previous night); planetary day + Chaldean hour ruler (06:00/18:00 approximation) as a smaller secondary bias and label ("Hour of Venus · Friday"); soft score bias in `fetchDiscoverCandidates` (full on CuRRentSSsss, half on queue Discover) + time-weighted CuRRentSSsss seeds; library row that plays an on-device 30-track `timemix`. Console helper `ebblessTimeContext()`.
 
 ### algorithm-sliders: Sliders to steer recommendations
 - **Status:** draft
