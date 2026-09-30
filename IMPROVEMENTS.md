@@ -7079,7 +7079,7 @@ Add entries in this shape:
   **Built (4aa5daf):** cassette inline SVG redrawn in place (charcoal grain shell, chamfered label with album art, ivory hubs, tape window, lower panel with holes, 4 screws); same 400x256 frame so fullscreen/stack/crossfade/reels unchanged. Reference photo was unreachable from the sandbox - compare against it.
 
 ### ytvideo-lookup-broken: Backend YouTube video lookup says "not found" for real videos
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** The worker's `/ytvideo?id=` route returns
   `{"error":"video not found (private, deleted, or invalid link?)"}` for
@@ -7094,18 +7094,18 @@ Add entries in this shape:
 - **Touches:** worker `handleYtVideo` / `fetchYouTubePage`; client callers
   of `/ytvideo` (pasting a YouTube link - `youtube-link-paste-play`;
   loudness for `volume-equalizer`).
-- **Branch:**
+- **Branch:** agent/ytvideo-lookup-broken
 - **Notes:** Found 2026-09-30 while checking vibe-search playback. Not
   caused by that change. Confirm what breaks for users on the live app.
 
 ### library-search-toggle: Library search should be a magnifying-glass button
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Replace the always-visible "Search your library" box
   with a magnifying-glass icon button aligned with the other library header
   buttons; tapping it toggles the search box open/closed as a drop-down.
 - **Touches:** library header, `#libSearch` / `#libSearchClear`.
-- **Branch:**
+- **Branch:** agent/library-search-toggle
 - **Notes:** Synced from Geethub issue #218.
 
 ### hour-currents: Replace the time-of-day row with Currents growing 7 tracks per hour phase
@@ -7160,7 +7160,7 @@ Add entries in this shape:
   need recorded source + license.
 
 ### cassette-rewind-sfx: Cassette rewind sound when restarting a song
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When the Cassette art style is active and the user
   restarts the current song (prev pressed past the restart threshold, or
@@ -7169,7 +7169,7 @@ Add entries in this shape:
   previous song.
 - **Touches:** mirror the LP needle sfx block (`LP_NEEDLE_*`); prev/restart
   handling; `sw.js` cache list + version bump.
-- **Branch:**
+- **Branch:** agent/cassette-rewind-sfx
 - **Notes:** Requested in-session 2026-09-30. File supplied by the user
   (`son_duquotidient-rembobinage-cassette-audio-391096.mp3`, looks like a
   Pixabay sound: add to Credits if other sfx sources are credited).
