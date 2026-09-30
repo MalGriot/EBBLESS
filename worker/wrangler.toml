@@ -39,4 +39,7 @@ binding = "PROFILES"
 id = "00d30b10ad134d8ab7952fa3e5a621e9"
 
 [env.staging.vars]
+# Keeps staging's entries out of production's cache - both workers share
+# the workers.dev zone's caches.default (see CACHE_NAMESPACE in src/index.js).
+CACHE_NAMESPACE = "staging"
 GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"
