@@ -553,16 +553,18 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
 
-/* cassette: physical-object rebuild — SVG shell/reels/tape driven by real
-   playback progress (see CASSETTE PHYSICAL OBJECT block in the script). The
-   wrap only positions the SVG; all geometry/material lives in the markup.
-   Material pass (issue #149): smoky translucent cool-neutral plastic, one
-   soft reflection band, fixed-light gleams over the turning hubs, glass over
-   the tape window, and a grounding shadow the body lifts off while playing
-   and settles back onto when stopped. #artCassette[data-state] is set from
-   cassetteSetPlaying/cassetteUpdateTrack (idle / playing / paused) and lives
-   on the element itself so it holds in fullscreen (#flowArtWrap) too.
-   --player-accent (album-art tone) is mixed in at 6-14% only. */
+/* cassette (issue #215): modelled on a real dark charcoal compact cassette -
+   one hand-authored vector shell (fine molded-plastic grain, recessed label
+   with clipped corners, reel housings, narrow tape window, four screws and
+   the trapezoid lower panel with its row of openings), the album art as the
+   label layer clipped to the recess, and two small hub groups as the only
+   moving parts (see CASSETTE PHYSICAL OBJECT block in the script: the hubs
+   turn only while playing/coasting, pack radii follow real progress). The
+   body lifts off its grounding shadow while playing and settles when
+   stopped. #artCassette[data-state] is set from cassetteSetPlaying /
+   cassetteUpdateTrack (idle / playing / paused) and lives on the element
+   itself so it holds in fullscreen (#flowArtWrap) too. --player-accent
+   (album-art tone) is mixed in at 6-14% only. */
 .art-cassette{padding:2% 1%}
 .cassette-svg{width:100%;height:100%;display:block;overflow:visible}
 .cs-ground{fill:url(#csGroundGrad);transform-box:fill-box;transform-origin:center;
@@ -571,43 +573,55 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .art-cassette[data-state="playing"] .cs-body{transform:translateY(-2.2px);transition:transform 900ms var(--ease-out)}
 .art-cassette[data-state="playing"] .cs-ground{transform:scale(1.04,1.18);opacity:.62}
 .art-cassette[data-state="idle"] .cs-ground{opacity:.75}
-.cs-shell-outer{fill:url(#csShellGrad)}
-.cs-shell-face{fill:rgba(40,43,49,.42)}
-.cs-shell-edge{fill:none;stroke:rgba(255,255,255,.06);stroke-width:1}
+.cs-interior{fill:#0a0a0b}
+.cs-shell{fill:url(#csShellGrad)}
+.cs-grain{fill:url(#csGrain);pointer-events:none}
+.cs-grain2{fill:url(#csGrain2);pointer-events:none}
+.cs-parting{fill:none;stroke:rgba(0,0,0,.42);stroke-width:.9}
 .cs-shell-rim{fill:none;stroke:url(#csRimGrad);stroke-width:1}
-.cs-shell-sheen{fill:url(#csSheenGrad);mix-blend-mode:screen;opacity:.5;pointer-events:none}
 .cs-shell-spec{fill:url(#csSpecGrad);pointer-events:none;transition:opacity 700ms var(--ease-out);opacity:.8}
 .art-cassette[data-state="playing"] .cs-shell-spec{opacity:1}
 .art-cassette[data-state="idle"] .cs-shell-spec{opacity:.6}
-.cs-label-panel{fill:#1b1d21;fill:color-mix(in srgb,var(--player-accent) 6%,#1b1d21)}
+.cs-label-panel{fill:#1b1c1f;fill:color-mix(in srgb,var(--player-accent) 6%,#1b1c1f)}
 .cs-label-art{opacity:0;transition:opacity 260ms var(--ease-out);transform-box:fill-box;transform-origin:center}
 .cs-label-art.is-loaded{opacity:1;animation:cs-label-pan 48s ease-in-out infinite}
 .art-cassette:not([data-state="playing"]) .cs-label-art.is-loaded{animation-play-state:paused}
-@keyframes cs-label-pan{0%,100%{transform:translateY(-127px)}50%{transform:translateY(127px)}}
+@keyframes cs-label-pan{0%,100%{transform:translateY(-89px)}50%{transform:translateY(89px)}}
 .cs-label-shade{fill:url(#csLabelShade);pointer-events:none}
-.cs-mark{opacity:.28}
-.cs-label-rule{stroke:rgba(238,240,243,.14);stroke-width:1}
-.cs-window{fill:rgba(6,7,9,.78)}
-.cs-window-edge{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1}
+.cs-label-side{fill:url(#csLabelSide);pointer-events:none}
+/* recess walls: dark inner edge all round, a thin lit lip along the bottom */
+.cs-label-recess{fill:none;stroke:rgba(0,0,0,.6);stroke-width:1.6;stroke-linejoin:round}
+.cs-label-lip{fill:none;stroke:rgba(255,255,255,.1);stroke-width:.8}
+.cs-band-edge{fill:none;stroke:rgba(0,0,0,.55);stroke-width:1.8}
+.cs-band-lip{fill:none;stroke:rgba(255,255,255,.07);stroke-width:.8}
+.cs-housing{fill:none;stroke:#0d0d0f;stroke-width:3.4}
+.cs-mark{opacity:.22}
 .cs-glass{fill:url(#csGlassGrad);pointer-events:none}
+.cs-window-edge{fill:none;stroke:rgba(0,0,0,.7);stroke-width:1.4}
+.cs-window-marks{fill:none;stroke:rgba(255,255,255,.1);stroke-width:.6}
 .cs-tint-stop{stop-color:#fff;stop-color:color-mix(in srgb,var(--player-accent) 14%,#fff)}
-.cs-tape{fill:none;stroke:#2e2822;stroke-width:2.6;stroke-linecap:round}
-.cs-tape-sheen{fill:none;stroke:rgba(255,255,255,.1);stroke-width:1;stroke-linecap:round;stroke-dasharray:5 31}
-.cs-guide{fill:#0e0f11;stroke:rgba(255,255,255,.09);stroke-width:1}
-.cs-reel-bed{fill:rgba(10,11,13,.6)}
+.cs-tape{fill:none;stroke:#3a2e25;stroke-width:2.6;stroke-linecap:round}
+.cs-tape-sheen{fill:none;stroke:rgba(255,255,255,.12);stroke-width:1;stroke-linecap:round;stroke-dasharray:5 31}
 .cs-reel-mass{fill:url(#csPackGrad);transition:r 90ms linear}
-.cs-reel-mass-line{fill:none;stroke:rgba(255,255,255,.05);stroke-width:.75;transition:r 90ms linear}
+.cs-reel-mass-line{fill:none;stroke:rgba(255,255,255,.06);stroke-width:.75;transition:r 90ms linear}
 .cs-hub{transform-box:fill-box;transform-origin:center;will-change:transform}
-.cs-hub-ring{fill:#c9ccd1;fill:color-mix(in srgb,var(--player-accent) 6%,#c9ccd1)}
-.cs-hub-core{fill:#0b0c0e}
-.cs-hub-tooth{stroke:rgba(11,12,14,.55);stroke-width:1.6;stroke-linecap:round}
-.cs-hub-gleam{fill:url(#csHubGleam);pointer-events:none;transition:opacity 700ms var(--ease-out);opacity:.7}
+.cs-hub-ring{fill:url(#csHubGrad)}
+.cs-hub-groove{fill:none;stroke:rgba(60,55,48,.28);stroke-width:.8}
+.cs-hub-slot{fill:#16140f}
+.cs-hub-core{fill:#0b0b0c;stroke:rgba(90,84,74,.6);stroke-width:.8}
+.cs-hub-tooth{stroke:#d6d1c5;stroke-width:1.9;stroke-linecap:round}
+.cs-hub-gleam{fill:url(#csHubGleam);pointer-events:none;transition:opacity 700ms var(--ease-out);opacity:.75}
 .art-cassette[data-state="playing"] .cs-hub-gleam{opacity:1}
-.cs-mech{fill:rgba(16,17,20,.72)}
-.cs-mech-edge{fill:none;stroke:rgba(255,255,255,.05);stroke-width:1}
-.cs-mech-well{fill:rgba(5,5,6,.85)}
-.cs-screw{fill:#0e0f11;stroke:rgba(255,255,255,.07);stroke-width:.75}
-.cs-screw-slot{stroke:rgba(255,255,255,.11);stroke-width:1;stroke-linecap:round}
+.cs-trap{fill:url(#csTrapGrad)}
+.cs-trap-edge{fill:none;stroke:rgba(0,0,0,.55);stroke-width:1.2;stroke-linejoin:round}
+.cs-trap-lip{fill:none;stroke:rgba(255,255,255,.11);stroke-width:.8}
+.cs-ridge{fill:none;stroke:rgba(0,0,0,.35);stroke-width:.8}
+.cs-hole-rim{fill:none;stroke:rgba(0,0,0,.7);stroke-width:1.1}
+.cs-boss{fill:url(#csBossGrad);stroke:rgba(0,0,0,.6);stroke-width:1}
+.cs-boss-in{fill:#141416;stroke:rgba(255,255,255,.07);stroke-width:.7}
+.cs-screw-well{fill:#0c0c0e;stroke:rgba(255,255,255,.06);stroke-width:.6}
+.cs-screw-head{fill:url(#csScrewGrad)}
+.cs-screw-slot{fill:none;stroke:rgba(20,21,24,.85);stroke-width:1.1;stroke-linecap:round}
 @media (prefers-reduced-motion:reduce){
   .cs-hub{transition:none!important}
   .cs-body,.cs-ground{transition:none!important}
@@ -2205,175 +2219,225 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
                 <stop offset="100%" stop-color="#000" stop-opacity=".42"/>
               </linearGradient>
               <symbol id="csGhostSym" viewBox="0 0 400 256">
-                <rect x="8" y="8" width="384" height="240" rx="14" fill="currentColor"/>
-                <rect x="8" y="8" width="384" height="240" rx="14" fill="url(#csGhostShade)"/>
-                <rect x="8.5" y="8.5" width="383" height="239" rx="13.5" fill="none" stroke="rgba(255,255,255,.1)"/>
-                <path d="M32,30 H354 L368,44 V112 H32 Z" fill="rgba(0,0,0,.34)"/>
-                <rect x="32" y="120" width="336" height="76" rx="4" fill="rgba(0,0,0,.5)"/>
-                <circle cx="112" cy="158" r="26" fill="rgba(0,0,0,.35)"/>
-                <circle cx="288" cy="158" r="26" fill="rgba(0,0,0,.35)"/>
-                <circle cx="112" cy="158" r="12" fill="rgba(255,255,255,.12)"/>
-                <circle cx="288" cy="158" r="12" fill="rgba(255,255,255,.12)"/>
-                <rect x="32" y="200" width="336" height="34" rx="3" fill="rgba(0,0,0,.3)"/>
-                <rect x="160" y="208" width="80" height="18" rx="2" fill="rgba(0,0,0,.4)"/>
-                <g fill="rgba(0,0,0,.45)"><circle cx="30" cy="30" r="4.5"/><circle cx="370" cy="30" r="4.5"/><circle cx="30" cy="234" r="4.5"/><circle cx="370" cy="234" r="4.5"/></g>
+                <rect x="8" y="8" width="384" height="240" rx="9" fill="currentColor"/>
+                <rect x="8" y="8" width="384" height="240" rx="9" fill="url(#csGhostShade)"/>
+                <rect x="8.5" y="8.5" width="383" height="239" rx="8.5" fill="none" stroke="rgba(255,255,255,.1)"/>
+                <path fill-rule="evenodd" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z M112,84 H288 A28,28 0 0 1 288,140 H112 A28,28 0 0 1 112,84 Z" fill="rgba(0,0,0,.34)"/>
+                <circle cx="119" cy="112" r="20" fill="rgba(0,0,0,.45)"/>
+                <circle cx="281" cy="112" r="20" fill="rgba(0,0,0,.45)"/>
+                <circle cx="119" cy="112" r="15" fill="rgba(255,255,255,.14)"/>
+                <circle cx="281" cy="112" r="15" fill="rgba(255,255,255,.14)"/>
+                <rect x="165" y="95" width="70" height="34" fill="rgba(0,0,0,.5)"/>
+                <path d="M104,206 H296 L316,248 H84 Z" fill="rgba(0,0,0,.22)"/>
+                <g fill="rgba(0,0,0,.5)"><rect x="178" y="233.5" width="44" height="10"/><circle cx="140" cy="238.5" r="6.5"/><circle cx="260" cy="238.5" r="6.5"/><circle cx="166" cy="238.5" r="4"/><circle cx="234" cy="238.5" r="4"/><circle cx="200" cy="220" r="7"/></g>
+                <g fill="rgba(0,0,0,.45)"><circle cx="22" cy="22" r="5"/><circle cx="378" cy="22" r="5"/><circle cx="22" cy="234" r="5"/><circle cx="378" cy="234" r="5"/></g>
               </symbol>
             </defs>
           </svg>
           <div class="art-cassette" id="artCassette" data-state="idle">
+            <!-- issue #215: cassette rebuilt to match a real dark charcoal
+                 compact cassette - one hand-authored vector shell (fine
+                 molded-plastic grain, recessed chamfered label, reel
+                 housings, narrow tape window, four screws, trapezoid lower
+                 panel with its row of openings). Only the two small hub
+                 groups turn; the album art is the label layer, clipped to
+                 the recess. Geometry is authored at the real cassette
+                 ratio inside the same 400x256 viewBox as before (body at
+                 8,8 384x240), so the stack/orbit maths is unchanged. -->
             <svg class="cassette-svg" id="cassetteSvg" viewBox="0 0 400 256" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cassette tape, now playing">
               <defs>
-                <!-- smoky translucent shell: cool neutral, a touch lighter at
-                     the top where the ambient light lands -->
+                <!-- charcoal molded plastic: a touch lighter where the light
+                     lands at the top, darker toward the bottom edge -->
                 <linearGradient id="csShellGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#3a3d44" stop-opacity=".7"/>
-                  <stop offset="55%" stop-color="#1f2126" stop-opacity=".76"/>
-                  <stop offset="100%" stop-color="#121316" stop-opacity=".86"/>
+                  <stop offset="0%" stop-color="#34353a"/>
+                  <stop offset="45%" stop-color="#27282c"/>
+                  <stop offset="100%" stop-color="#1b1c1f"/>
                 </linearGradient>
-                <linearGradient id="csSheenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#fff" stop-opacity=".09"/>
-                  <stop offset="24%" stop-color="#fff" stop-opacity="0"/>
-                  <stop offset="76%" stop-color="#fff" stop-opacity="0"/>
-                  <stop offset="100%" stop-color="#000" stop-opacity=".26"/>
+                <linearGradient id="csTrapGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#2e2f33"/>
+                  <stop offset="100%" stop-color="#1e1f22"/>
                 </linearGradient>
+                <!-- fine, irregular stipple grain: two tiles of different
+                     size laid over each other so the repeat doesn't read -->
+                <pattern id="csGrain" width="4" height="4" patternUnits="userSpaceOnUse">
+                  <rect x=".2" y=".3" width=".8" height=".8" fill="#fff" fill-opacity=".055"/>
+                  <rect x="2.1" y="1.2" width=".9" height=".9" fill="#000" fill-opacity=".2"/>
+                  <rect x="1.1" y="2.9" width=".8" height=".8" fill="#fff" fill-opacity=".04"/>
+                  <rect x="3.1" y="2.6" width=".7" height=".7" fill="#000" fill-opacity=".16"/>
+                </pattern>
+                <pattern id="csGrain2" width="7" height="6.2" patternUnits="userSpaceOnUse">
+                  <rect x="1.4" y="1" width="1" height="1" fill="#000" fill-opacity=".14"/>
+                  <rect x="4.8" y="3.9" width=".9" height=".9" fill="#fff" fill-opacity=".045"/>
+                  <rect x="5.9" y=".4" width=".8" height=".8" fill="#000" fill-opacity=".12"/>
+                  <rect x="2.6" y="4.6" width=".7" height=".7" fill="#fff" fill-opacity=".035"/>
+                </pattern>
                 <!-- one soft diagonal reflection band across the plastic -->
                 <linearGradient id="csSpecGrad" x1="0%" y1="0%" x2="100%" y2="62%">
-                  <stop offset="30%" stop-color="#fff" stop-opacity="0"/>
-                  <stop offset="40%" stop-color="#fff" stop-opacity=".055"/>
+                  <stop offset="28%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="39%" stop-color="#fff" stop-opacity=".045"/>
                   <stop offset="47%" stop-color="#fff" stop-opacity="0"/>
                 </linearGradient>
-                <!-- top rim catch-light -->
+                <!-- outer rim: catch-light along the top, falls off below -->
                 <linearGradient id="csRimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#fff" stop-opacity=".16"/>
-                  <stop offset="8%" stop-color="#fff" stop-opacity=".03"/>
-                  <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="0%" stop-color="#fff" stop-opacity=".2"/>
+                  <stop offset="6%" stop-color="#fff" stop-opacity=".05"/>
+                  <stop offset="94%" stop-color="#fff" stop-opacity=".02"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".5"/>
                 </linearGradient>
+                <!-- label printed under the frame: recess shadow at the top,
+                     a lighter middle, soft falloff at the bottom -->
                 <linearGradient id="csLabelShade" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#000" stop-opacity=".46"/>
-                  <stop offset="34%" stop-color="#000" stop-opacity=".18"/>
-                  <stop offset="62%" stop-color="#000" stop-opacity=".3"/>
-                  <stop offset="100%" stop-color="#000" stop-opacity=".64"/>
+                  <stop offset="0%" stop-color="#000" stop-opacity=".42"/>
+                  <stop offset="9%" stop-color="#000" stop-opacity=".12"/>
+                  <stop offset="55%" stop-color="#000" stop-opacity=".06"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".4"/>
                 </linearGradient>
-                <!-- window glass: dark at the edges, one faint streak whose
-                     tone leans very slightly toward the current track -->
+                <linearGradient id="csLabelSide" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#000" stop-opacity=".28"/>
+                  <stop offset="5%" stop-color="#000" stop-opacity="0"/>
+                  <stop offset="95%" stop-color="#000" stop-opacity="0"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".28"/>
+                </linearGradient>
+                <!-- window glass: dark, one faint streak whose tone leans
+                     very slightly toward the current track -->
                 <linearGradient id="csGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#fff" stop-opacity=".07"/>
-                  <stop offset="18%" stop-color="#fff" stop-opacity="0"/>
-                  <stop offset="52%" class="cs-tint-stop" stop-color="#fff" stop-opacity="0"/>
-                  <stop offset="60%" class="cs-tint-stop" stop-color="#fff" stop-opacity=".07"/>
-                  <stop offset="66%" class="cs-tint-stop" stop-color="#fff" stop-opacity="0"/>
-                  <stop offset="100%" stop-color="#000" stop-opacity=".22"/>
+                  <stop offset="0%" stop-color="#fff" stop-opacity=".1"/>
+                  <stop offset="22%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="50%" class="cs-tint-stop" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="58%" class="cs-tint-stop" stop-color="#fff" stop-opacity=".09"/>
+                  <stop offset="65%" class="cs-tint-stop" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".3"/>
                 </linearGradient>
-                <!-- satin sheen on the wound tape pack (fixed light, so it
-                     reads as a real surface while the hub turns under it) -->
-                <radialGradient id="csPackGrad" cx="50%" cy="50%" r="50%" fx="38%" fy="32%">
-                  <stop offset="0%" stop-color="#2b2724"/>
-                  <stop offset="62%" stop-color="#1b1917"/>
-                  <stop offset="86%" stop-color="#23201d"/>
-                  <stop offset="100%" stop-color="#141311"/>
+                <!-- satin sheen on the wound tape pack (fixed light) -->
+                <radialGradient id="csPackGrad" cx="50%" cy="50%" r="50%" fx="40%" fy="34%">
+                  <stop offset="0%" stop-color="#3a2e25"/>
+                  <stop offset="70%" stop-color="#2a211b"/>
+                  <stop offset="92%" stop-color="#3b2f26"/>
+                  <stop offset="100%" stop-color="#1c1612"/>
+                </radialGradient>
+                <!-- ivory hub face, lit from the upper left -->
+                <radialGradient id="csHubGrad" cx="50%" cy="50%" r="50%" fx="38%" fy="32%">
+                  <stop offset="0%" stop-color="#f1ede4"/>
+                  <stop offset="70%" stop-color="#d9d4c8"/>
+                  <stop offset="100%" stop-color="#b3ada1"/>
                 </radialGradient>
                 <radialGradient id="csHubGleam" cx="50%" cy="50%" r="50%" fx="34%" fy="28%">
-                  <stop offset="0%" stop-color="#fff" stop-opacity=".42"/>
-                  <stop offset="55%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="0%" stop-color="#fff" stop-opacity=".32"/>
+                  <stop offset="50%" stop-color="#fff" stop-opacity="0"/>
+                  <stop offset="86%" stop-color="#000" stop-opacity="0"/>
+                  <stop offset="100%" stop-color="#000" stop-opacity=".35"/>
+                </radialGradient>
+                <radialGradient id="csScrewGrad" cx="50%" cy="50%" r="50%" fx="36%" fy="30%">
+                  <stop offset="0%" stop-color="#d7d9dc"/>
+                  <stop offset="45%" stop-color="#9a9da2"/>
+                  <stop offset="100%" stop-color="#4b4d52"/>
+                </radialGradient>
+                <radialGradient id="csBossGrad" cx="50%" cy="50%" r="50%" fx="40%" fy="34%">
+                  <stop offset="0%" stop-color="#34353a"/>
+                  <stop offset="100%" stop-color="#1a1b1e"/>
                 </radialGradient>
                 <radialGradient id="csGroundGrad" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stop-color="#000" stop-opacity=".62"/>
                   <stop offset="55%" stop-color="#000" stop-opacity=".22"/>
                   <stop offset="100%" stop-color="#000" stop-opacity="0"/>
                 </radialGradient>
-                <clipPath id="csLabelClip"><path d="M32,30 H354 L368,44 V112 H32 Z"/></clipPath>
-                <line id="csHubSpoke" x1="0" y1="-6.5" x2="0" y2="-12.5"/>
+                <!-- label recess minus the reel/window band (evenodd) -->
+                <clipPath id="csLabelClip"><path clip-rule="evenodd" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z M112,84 H288 A28,28 0 0 1 316,112 V112 A28,28 0 0 1 288,140 H112 A28,28 0 0 1 84,112 V112 A28,28 0 0 1 112,84 Z"/></clipPath>
               </defs>
 
               <!-- grounding shadow: stays put while the body lifts/settles -->
               <ellipse class="cs-ground" cx="200" cy="252" rx="188" ry="13"/>
 
               <g class="cs-body">
-              <!-- shell -->
-              <rect class="cs-shell-outer" x="8" y="8" width="384" height="240" rx="14"/>
-              <rect class="cs-shell-face" x="15" y="15" width="370" height="226" rx="10"/>
-              <rect class="cs-shell-sheen" x="15" y="15" width="370" height="226" rx="10"/>
-              <rect class="cs-shell-spec" x="8" y="8" width="384" height="240" rx="14"/>
-              <rect class="cs-shell-rim" x="8.5" y="8.5" width="383" height="239" rx="13.5"/>
-              <rect class="cs-shell-edge" x="15" y="15" width="370" height="226" rx="10"/>
+              <!-- inside of the shell, seen through the window and openings -->
+              <rect class="cs-interior" x="12" y="12" width="376" height="232" rx="6"/>
 
-              <!-- label -->
+              <!-- wound tape packs: radius follows real playback progress
+                   (cassetteSetProgress), seen through the window + hub holes -->
+              <circle class="cs-reel-mass" id="reelMassL" cx="119" cy="112" r="92"/>
+              <circle class="cs-reel-mass-line" id="reelLineL" cx="119" cy="112" r="92"/>
+              <circle class="cs-reel-mass" id="reelMassR" cx="281" cy="112" r="40"/>
+              <circle class="cs-reel-mass-line" id="reelLineR" cx="281" cy="112" r="40"/>
+
+              <!-- tape: from each pack's outer tangent to the corner guides,
+                   along the bottom edge (visible through the openings) -->
+              <path class="cs-tape" id="csTape" d="M60,238 L340,238"/>
+              <path class="cs-tape-sheen" id="csTapeSheen" d="M60,238 L340,238"/>
+
+              <!-- the only moving parts: two small ivory hubs -->
+              <g class="cs-hub" id="hubL">
+                <circle class="cs-hub-ring" cx="119" cy="112" r="17.2"/>
+                <circle class="cs-hub-groove" cx="119" cy="112" r="10.4"/>
+                <g class="cs-hub-slot"><circle cx="129.91" cy="118.30" r="2.1"/><circle cx="108.09" cy="118.30" r="2.1"/><circle cx="119.00" cy="99.40" r="2.1"/></g>
+                <circle class="cs-hub-core" cx="119" cy="112" r="8.2"/>
+                <g class="cs-hub-tooth"><line x1="119.00" y1="103.80" x2="119.00" y2="106.60"/><line x1="126.10" y1="107.90" x2="123.68" y2="109.30"/><line x1="126.10" y1="116.10" x2="123.68" y2="114.70"/><line x1="119.00" y1="120.20" x2="119.00" y2="117.40"/><line x1="111.90" y1="116.10" x2="114.32" y2="114.70"/><line x1="111.90" y1="107.90" x2="114.32" y2="109.30"/></g>
+              </g>
+              <g class="cs-hub" id="hubR">
+                <circle class="cs-hub-ring" cx="281" cy="112" r="17.2"/>
+                <circle class="cs-hub-groove" cx="281" cy="112" r="10.4"/>
+                <g class="cs-hub-slot"><circle cx="291.91" cy="118.30" r="2.1"/><circle cx="270.09" cy="118.30" r="2.1"/><circle cx="281.00" cy="99.40" r="2.1"/></g>
+                <circle class="cs-hub-core" cx="281" cy="112" r="8.2"/>
+                <g class="cs-hub-tooth"><line x1="281.00" y1="103.80" x2="281.00" y2="106.60"/><line x1="288.10" y1="107.90" x2="285.68" y2="109.30"/><line x1="288.10" y1="116.10" x2="285.68" y2="114.70"/><line x1="281.00" y1="120.20" x2="281.00" y2="117.40"/><line x1="273.90" y1="116.10" x2="276.32" y2="114.70"/><line x1="273.90" y1="107.90" x2="276.32" y2="109.30"/></g>
+              </g>
+
+              <!-- shell face with the window, hub holes and lower openings cut through -->
+              <path class="cs-shell" fill-rule="evenodd" d="M17,8 H383 A9,9 0 0 1 392,17 V239 A9,9 0 0 1 383,248 H17 A9,9 0 0 1 8,239 V17 A9,9 0 0 1 17,8 Z M165,95 H235 V129 H165 Z M138.5,112 A19.5,19.5 0 1 0 99.5,112 A19.5,19.5 0 1 0 138.5,112 Z M300.5,112 A19.5,19.5 0 1 0 261.5,112 A19.5,19.5 0 1 0 300.5,112 Z M178,233.5 H222 V243.5 H178 Z M170,238.5 A4,4 0 1 0 162,238.5 A4,4 0 1 0 170,238.5 Z M238,238.5 A4,4 0 1 0 230,238.5 A4,4 0 1 0 238,238.5 Z M146.5,238.5 A6.5,6.5 0 1 0 133.5,238.5 A6.5,6.5 0 1 0 146.5,238.5 Z M266.5,238.5 A6.5,6.5 0 1 0 253.5,238.5 A6.5,6.5 0 1 0 266.5,238.5 Z M118,238.5 A3,3 0 1 0 112,238.5 A3,3 0 1 0 118,238.5 Z M288,238.5 A3,3 0 1 0 282,238.5 A3,3 0 1 0 288,238.5 Z M159.2,219 A3.2,3.2 0 1 0 152.8,219 A3.2,3.2 0 1 0 159.2,219 Z M247.2,219 A3.2,3.2 0 1 0 240.8,219 A3.2,3.2 0 1 0 247.2,219 Z"/>
+              <path class="cs-grain" fill-rule="evenodd" d="M17,8 H383 A9,9 0 0 1 392,17 V239 A9,9 0 0 1 383,248 H17 A9,9 0 0 1 8,239 V17 A9,9 0 0 1 17,8 Z M165,95 H235 V129 H165 Z M138.5,112 A19.5,19.5 0 1 0 99.5,112 A19.5,19.5 0 1 0 138.5,112 Z M300.5,112 A19.5,19.5 0 1 0 261.5,112 A19.5,19.5 0 1 0 300.5,112 Z M178,233.5 H222 V243.5 H178 Z M170,238.5 A4,4 0 1 0 162,238.5 A4,4 0 1 0 170,238.5 Z M238,238.5 A4,4 0 1 0 230,238.5 A4,4 0 1 0 238,238.5 Z M146.5,238.5 A6.5,6.5 0 1 0 133.5,238.5 A6.5,6.5 0 1 0 146.5,238.5 Z M266.5,238.5 A6.5,6.5 0 1 0 253.5,238.5 A6.5,6.5 0 1 0 266.5,238.5 Z M118,238.5 A3,3 0 1 0 112,238.5 A3,3 0 1 0 118,238.5 Z M288,238.5 A3,3 0 1 0 282,238.5 A3,3 0 1 0 288,238.5 Z M159.2,219 A3.2,3.2 0 1 0 152.8,219 A3.2,3.2 0 1 0 159.2,219 Z M247.2,219 A3.2,3.2 0 1 0 240.8,219 A3.2,3.2 0 1 0 247.2,219 Z"/>
+              <path class="cs-grain2" fill-rule="evenodd" d="M17,8 H383 A9,9 0 0 1 392,17 V239 A9,9 0 0 1 383,248 H17 A9,9 0 0 1 8,239 V17 A9,9 0 0 1 17,8 Z M165,95 H235 V129 H165 Z M138.5,112 A19.5,19.5 0 1 0 99.5,112 A19.5,19.5 0 1 0 138.5,112 Z M300.5,112 A19.5,19.5 0 1 0 261.5,112 A19.5,19.5 0 1 0 300.5,112 Z M178,233.5 H222 V243.5 H178 Z M170,238.5 A4,4 0 1 0 162,238.5 A4,4 0 1 0 170,238.5 Z M238,238.5 A4,4 0 1 0 230,238.5 A4,4 0 1 0 238,238.5 Z M146.5,238.5 A6.5,6.5 0 1 0 133.5,238.5 A6.5,6.5 0 1 0 146.5,238.5 Z M266.5,238.5 A6.5,6.5 0 1 0 253.5,238.5 A6.5,6.5 0 1 0 266.5,238.5 Z M118,238.5 A3,3 0 1 0 112,238.5 A3,3 0 1 0 118,238.5 Z M288,238.5 A3,3 0 1 0 282,238.5 A3,3 0 1 0 288,238.5 Z M159.2,219 A3.2,3.2 0 1 0 152.8,219 A3.2,3.2 0 1 0 159.2,219 Z M247.2,219 A3.2,3.2 0 1 0 240.8,219 A3.2,3.2 0 1 0 247.2,219 Z"/>
+              <!-- overlapping halves: parting line just inside the rim -->
+              <rect class="cs-parting" x="12.5" y="12.5" width="375" height="231" rx="6"/>
+              <rect class="cs-shell-spec" x="8" y="8" width="384" height="240" rx="9"/>
+              <rect class="cs-shell-rim" x="8.5" y="8.5" width="383" height="239" rx="8.5"/>
+
+              <!-- label: album art in the recessed, chamfered label area -->
               <g clip-path="url(#csLabelClip)">
-                <path class="cs-label-panel" d="M32,30 H354 L368,44 V112 H32 Z"/>
-                <image id="cassetteLabelArt" class="cs-label-art" x="32" y="-97" width="336" height="336" preserveAspectRatio="xMidYMid slice"/>
-                <path class="cs-label-shade" d="M32,30 H354 L368,44 V112 H32 Z"/>
+                <path class="cs-label-panel" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+                <image id="cassetteLabelArt" class="cs-label-art" x="22" y="-71" width="356" height="356" preserveAspectRatio="xMidYMid slice"/>
+                <path class="cs-label-shade" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+                <path class="cs-label-side" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
               </g>
-              <path class="cs-label-rule" d="M32,30 H354 L368,44 V112 H32 Z" fill="none"/>
+              <path class="cs-label-recess" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+              <path class="cs-label-lip" d="M34,196.8 H366 L378.8,184"/>
+              <!-- reel/window band: recessed plastic between the label halves -->
+              <path class="cs-band-edge" d="M112,84 H288 A28,28 0 0 1 316,112 V112 A28,28 0 0 1 288,140 H112 A28,28 0 0 1 84,112 V112 A28,28 0 0 1 112,84 Z"/>
+              <path class="cs-band-lip" d="M112,140.8 H288 A28.8,28.8 0 0 0 316.4,118"/>
+              <!-- reel housings: dark rim around each hub hole -->
+              <circle class="cs-housing" cx="119" cy="112" r="21.2"/>
+              <circle class="cs-housing" cx="281" cy="112" r="21.2"/>
+              <circle class="cs-hub-gleam" cx="119" cy="112" r="17.2"/>
+              <circle class="cs-hub-gleam" cx="281" cy="112" r="17.2"/>
+              <!-- narrow tape window: glass + frame -->
+              <rect class="cs-glass" x="165" y="95" width="70" height="34"/>
+              <rect class="cs-window-edge" x="164.5" y="94.5" width="71" height="35" rx="1"/>
+              <path class="cs-window-marks" d="M175,95 V99 M185,95 V98 M195,95 V99 M205,95 V98 M215,95 V99 M225,95 V98"/>
 
-              <!-- tape window -->
-              <rect class="cs-window" x="32" y="120" width="336" height="76" rx="4"/>
-
-              <!-- reel beds sit under the tape; the packs and hubs sit over it -->
-              <circle class="cs-reel-bed" cx="112" cy="158" r="34"/>
-              <circle class="cs-reel-bed" cx="288" cy="158" r="34"/>
-
-              <!-- magnetic tape, drawn behind the reels: endpoints track each
-                   pack's tangent (set in cassetteSetProgress), sheen dashes
-                   travel with the tape -->
-              <path class="cs-tape" id="csTape" d="M111,190 L168,192 L232,192 L289,190"/>
-              <path class="cs-tape-sheen" id="csTapeSheen" d="M111,190 L168,192 L232,192 L289,190"/>
-
-              <!-- left reel (supply) -->
-              <g id="cassetteReelL">
-                <circle class="cs-reel-mass" id="reelMassL" cx="112" cy="158" r="32"/>
-                <circle class="cs-reel-mass-line" id="reelLineL" cx="112" cy="158" r="32"/>
-                <g class="cs-hub" id="hubL">
-                  <circle class="cs-hub-ring" cx="112" cy="158" r="14"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(0)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(60)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(120)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(180)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(240)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(112 158) rotate(300)"/>
-                  <circle class="cs-hub-core" cx="112" cy="158" r="4.5"/>
-                </g>
-                <circle class="cs-hub-gleam" cx="112" cy="158" r="14"/>
+              <!-- lower trapezoid panel, raised, with its openings -->
+              <path class="cs-trap" fill-rule="evenodd" d="M104,206 H296 L316,248 H84 Z M178,233.5 H222 V243.5 H178 Z M170,238.5 A4,4 0 1 0 162,238.5 A4,4 0 1 0 170,238.5 Z M238,238.5 A4,4 0 1 0 230,238.5 A4,4 0 1 0 238,238.5 Z M146.5,238.5 A6.5,6.5 0 1 0 133.5,238.5 A6.5,6.5 0 1 0 146.5,238.5 Z M266.5,238.5 A6.5,6.5 0 1 0 253.5,238.5 A6.5,6.5 0 1 0 266.5,238.5 Z M118,238.5 A3,3 0 1 0 112,238.5 A3,3 0 1 0 118,238.5 Z M288,238.5 A3,3 0 1 0 282,238.5 A3,3 0 1 0 288,238.5 Z M159.2,219 A3.2,3.2 0 1 0 152.8,219 A3.2,3.2 0 1 0 159.2,219 Z M247.2,219 A3.2,3.2 0 1 0 240.8,219 A3.2,3.2 0 1 0 247.2,219 Z"/>
+              <path class="cs-grain" fill-rule="evenodd" d="M104,206 H296 L316,248 H84 Z M178,233.5 H222 V243.5 H178 Z M170,238.5 A4,4 0 1 0 162,238.5 A4,4 0 1 0 170,238.5 Z M238,238.5 A4,4 0 1 0 230,238.5 A4,4 0 1 0 238,238.5 Z M146.5,238.5 A6.5,6.5 0 1 0 133.5,238.5 A6.5,6.5 0 1 0 146.5,238.5 Z M266.5,238.5 A6.5,6.5 0 1 0 253.5,238.5 A6.5,6.5 0 1 0 266.5,238.5 Z M118,238.5 A3,3 0 1 0 112,238.5 A3,3 0 1 0 118,238.5 Z M288,238.5 A3,3 0 1 0 282,238.5 A3,3 0 1 0 288,238.5 Z M159.2,219 A3.2,3.2 0 1 0 152.8,219 A3.2,3.2 0 1 0 159.2,219 Z M247.2,219 A3.2,3.2 0 1 0 240.8,219 A3.2,3.2 0 1 0 247.2,219 Z"/>
+              <path class="cs-trap-edge" d="M84,248 L104,206 H296 L316,248"/>
+              <path class="cs-trap-lip" d="M104.6,206.8 H295.4"/>
+              <path class="cs-ridge" d="M112,212.5 H288 M96,228 H130 M270,228 H304"/>
+              <!-- rims on the lower openings -->
+              <g class="cs-hole-rim">
+                <rect x="178" y="233.5" width="44" height="10" rx="1"/>
+                <circle cx="166" cy="238.5" r="4"/><circle cx="234" cy="238.5" r="4"/>
+                <circle cx="140" cy="238.5" r="6.5"/><circle cx="260" cy="238.5" r="6.5"/>
+                <circle cx="115" cy="238.5" r="3"/><circle cx="285" cy="238.5" r="3"/>
+                <circle cx="156" cy="219" r="3.2"/><circle cx="244" cy="219" r="3.2"/>
               </g>
+              <!-- central molded boss -->
+              <circle class="cs-boss" cx="200" cy="220" r="7.4"/>
+              <circle class="cs-boss-in" cx="200" cy="220" r="3.4"/>
 
-              <!-- right reel (take-up) -->
-              <g id="cassetteReelR">
-                <circle class="cs-reel-mass" id="reelMassR" cx="288" cy="158" r="13"/>
-                <circle class="cs-reel-mass-line" id="reelLineR" cx="288" cy="158" r="13"/>
-                <g class="cs-hub" id="hubR">
-                  <circle class="cs-hub-ring" cx="288" cy="158" r="14"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(0)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(60)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(120)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(180)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(240)"/>
-                  <use href="#csHubSpoke" class="cs-hub-tooth" transform="translate(288 158) rotate(300)"/>
-                  <circle class="cs-hub-core" cx="288" cy="158" r="4.5"/>
-                </g>
-                <circle class="cs-hub-gleam" cx="288" cy="158" r="14"/>
-              </g>
+              <!-- the E mark, small and faint on the lower shell -->
+              <image class="cs-mark" href="brand/assets/mark-white.png" x="44" y="214" width="15.3" height="14"/>
 
-              <circle class="cs-guide" cx="168" cy="192" r="3.5"/>
-              <circle class="cs-guide" cx="232" cy="192" r="3.5"/>
-
-              <!-- window glass over reels + tape -->
-              <rect class="cs-glass" x="32" y="120" width="336" height="76" rx="4"/>
-              <rect class="cs-window-edge" x="32" y="120" width="336" height="76" rx="4"/>
-
-              <!-- lower mechanical area -->
-              <rect class="cs-mech" x="32" y="200" width="336" height="34" rx="3"/>
-              <rect class="cs-mech-edge" x="32" y="200" width="336" height="34" rx="3"/>
-              <rect class="cs-mech-well" x="160" y="208" width="80" height="18" rx="2"/>
-              <circle class="cs-guide" cx="70" cy="217" r="7"/>
-              <circle class="cs-guide" cx="330" cy="217" r="7"/>
-              <!-- the E mark, small and faint on the lower strip -->
-              <image class="cs-mark" href="brand/assets/mark-white.png" x="277.5" y="210" width="15.3" height="14"/>
-
-              <!-- screws -->
-              <g>
-                <circle class="cs-screw" cx="30" cy="30" r="4.5"/><line class="cs-screw-slot" x1="27" y1="30" x2="33" y2="30"/>
-                <circle class="cs-screw" cx="370" cy="30" r="4.5"/><line class="cs-screw-slot" x1="367" y1="29" x2="373" y2="31"/>
-                <circle class="cs-screw" cx="30" cy="234" r="4.5"/><line class="cs-screw-slot" x1="27" y1="233" x2="33" y2="235"/>
-                <circle class="cs-screw" cx="370" cy="234" r="4.5"/><line class="cs-screw-slot" x1="368" y1="231" x2="372" y2="237"/>
+              <!-- four corner screws -->
+              <g class="cs-screws">
+                <g transform="translate(22 22)"><circle class="cs-screw-well" r="5.8"/><circle class="cs-screw-head" r="4.4"/><path class="cs-screw-slot" transform="rotate(14)" d="M-2.7,0 H2.7 M0,-2.7 V2.7"/></g>
+                <g transform="translate(378 22)"><circle class="cs-screw-well" r="5.8"/><circle class="cs-screw-head" r="4.4"/><path class="cs-screw-slot" transform="rotate(-32)" d="M-2.7,0 H2.7 M0,-2.7 V2.7"/></g>
+                <g transform="translate(22 234)"><circle class="cs-screw-well" r="5.8"/><circle class="cs-screw-head" r="4.4"/><path class="cs-screw-slot" transform="rotate(51)" d="M-2.7,0 H2.7 M0,-2.7 V2.7"/></g>
+                <g transform="translate(378 234)"><circle class="cs-screw-well" r="5.8"/><circle class="cs-screw-head" r="4.4"/><path class="cs-screw-slot" transform="rotate(-8)" d="M-2.7,0 H2.7 M0,-2.7 V2.7"/></g>
               </g>
               </g>
             </svg>
@@ -11282,11 +11346,12 @@ const reelMassL = $('reelMassL'), reelMassR = $('reelMassR');
 const reelLineL = $('reelLineL'), reelLineR = $('reelLineR');
 const csTape = $('csTape'), csTapeSheen = $('csTapeSheen');
 const hubL = $('hubL'), hubR = $('hubR');
-const CS_MIN_R = 13, CS_MAX_R = 32;
-const CS_ANG_K = 2600; /* deg·r / s - tape speed constant; angular speed = k / radius */
+const CS_MIN_R = 40, CS_MAX_R = 92; /* bare hub flange .. full pack, viewBox units (issue #215 geometry) */
+const CS_ANG_K = 8000; /* deg·r / s - tape speed constant; angular speed = k / radius */
 const CS_TAPE_SPEED = CS_ANG_K * Math.PI / 180; /* linear tape speed in viewBox units/s, matches the hubs */
-/* tape runs from each pack's lower tangent to the two guides at y=192 */
-const CS_REEL_L = [112, 158], CS_REEL_R = [288, 158], CS_GUIDE_L = [168, 192], CS_GUIDE_R = [232, 192];
+/* tape runs from each pack's outer tangent down to the corner guides, then
+   along the bottom edge where it shows through the lower openings */
+const CS_REEL_L = [119, 112], CS_REEL_R = [281, 112], CS_GUIDE_L = [60, 238], CS_GUIDE_R = [340, 238];
 const CS_SETTLE_MS = 420;
 let csLeftR = CS_MAX_R, csRightR = CS_MIN_R;
 /* reels start out of phase so their spokes never line up like a render */
@@ -11309,14 +11374,20 @@ function csTangent(c, g, r, sign){
 }
 function cassetteSetProgress(cur, dur){
   const p = dur ? Math.min(1, Math.max(0, cur / dur)) : 0;
-  csLeftR = CS_MAX_R - p * (CS_MAX_R - CS_MIN_R);
-  csRightR = CS_MIN_R + p * (CS_MAX_R - CS_MIN_R);
+  // tape length moves from one pack to the other, so their areas (not
+  // radii) trade off: both packs bulge past the middle of the window midway
+  const a2 = CS_MAX_R * CS_MAX_R - CS_MIN_R * CS_MIN_R;
+  csLeftR = Math.sqrt(CS_MAX_R * CS_MAX_R - p * a2);
+  csRightR = Math.sqrt(CS_MIN_R * CS_MIN_R + p * a2);
   if (!reelMassL) return;
   const l = csLeftR.toFixed(2), r = csRightR.toFixed(2);
   reelMassL.setAttribute('r', l); reelLineL.setAttribute('r', l);
   reelMassR.setAttribute('r', r); reelLineR.setAttribute('r', r);
-  const d = 'M' + csTangent(CS_REEL_L, CS_GUIDE_L, csLeftR, 1) + ' L168,192 L232,192 L' + csTangent(CS_REEL_R, CS_GUIDE_R, csRightR, -1);
-  csTape.setAttribute('d', d); csTapeSheen.setAttribute('d', d);
+  const d = 'M' + csTangent(CS_REEL_L, CS_GUIDE_L, csLeftR, 1) + ' L' + CS_GUIDE_L + ' L' + CS_GUIDE_R + ' L' + csTangent(CS_REEL_R, CS_GUIDE_R, csRightR, -1);
+  // the sheen stays on the bottom run only (the part seen through the lower
+  // openings) - its dash offset moves every frame, so a short static path
+  // keeps that per-frame repaint to a thin strip
+  csTape.setAttribute('d', d);
 }
 
 function cassetteApplyRotation(settle){
@@ -14054,7 +14125,7 @@ function csStackBuild(){
   plate.className = 'cs-stack-plate';
   plate.style.width = W + 'px'; plate.style.height = H + 'px';
   plate.style.marginLeft = (-W / 2) + 'px'; plate.style.marginTop = (-H / 2) + 'px';
-  plate.style.borderRadius = (14 * sc) + 'px';
+  plate.style.borderRadius = (9 * sc) + 'px';
   csStack.wrap.appendChild(plate);
   csStack.plate = plate;
   return true;
