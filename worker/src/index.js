@@ -3017,11 +3017,13 @@ async function handleTesterReport(request, env, ctx) {
 }
 
 // ---------- Google Sign-In profile sync ----------
-// Lets a signed-in visitor's library (playlists/queue/liked songs) survive
-// a wiped browser: the client silently obtains a Google ID token (One Tap,
-// see the GSI wiring in index.html) and POSTs the whole library blob here
-// keyed to the token's verified `sub`, then pulls it back on a fresh device
-// or after storage was cleared. Verifying the token server-side (rather
+// Keeps a signed-in visitor's library (playlists, pins, liked songs) and
+// settings the same on every device they use: the client silently obtains a
+// Google ID token (One Tap, see the GSI wiring in index.html) and POSTs its
+// whole local profile here keyed to the token's verified `sub`; this merges
+// it with what's stored (see mergeProfiles) and hands the result back for
+// the client to apply. A fresh device or wiped browser gets everything back
+// the same way. Verifying the token server-side (rather
 // than trusting whatever `sub`/email the client claims) is what makes this
 // safe to key a KV write off of - anyone could otherwise overwrite anyone
 // else's saved library just by guessing an id.
@@ -3071,33 +3073,256 @@ async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
   return payload; // { sub, email, email_verified, name, picture, ... }
 }
 
+// ---- profile merge (schema v2) - kept identical in index.html and
+// worker/src/index.js, so the client and the Worker always agree on the
+// merged result (a copy drifting would make two devices fight forever).
+// A v2 profile is:
+//   { v: 2,
+//     lib: { order: [ids], at, m: { id: { at, del? } } },  // library membership + order
+//     pin: { order: [ids], at, m: { ... } },               // pinned, same shape
+//     pl:  { id: { at, d: playlistData, tr?: { trackKey: { at, del? } } } | { at, del: 1 } },
+//     set: { lsKey: { at, val } | { at, del: 1 } } }       // synced settings
+// Every entry carries `at` (ms of the last local change to it) and a removal
+// is kept as a tombstone ({ at, del: 1 }) rather than just going missing, so
+// it propagates instead of being resurrected by a device that still has it.
+// Each entry is last-writer-wins; membership, custom-playlist tracks and
+// settings merge per item, so neither device's additions are lost.
+const PROFILE_SCHEMA = 2;
+const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
+const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+
+function profStamp(e) { return e && typeof e.at === 'number' && isFinite(e.at) ? e.at : 0; }
+
+// Key-sorted JSON, so equal content always serializes equal (used for tie
+// breaks and "did anything change" checks, never for storage).
+function profStable(v) {
+  if (v === null || v === undefined || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+  if (Array.isArray(v)) return '[' + v.map(profStable).join(',') + ']';
+  return '{' + Object.keys(v).sort().filter(k => v[k] !== undefined)
+    .map(k => JSON.stringify(k) + ':' + profStable(v[k])).join(',') + '}';
+}
+
+// Last-writer-wins between two stamped entries. A tie goes to the deletion,
+// then to whichever serializes larger - arbitrary, but identical on every
+// device and on the Worker, so everyone converges on the same answer.
+function profPick(x, y) {
+  if (!x) return y;
+  if (!y) return x;
+  const ax = profStamp(x), ay = profStamp(y);
+  if (ax !== ay) return ax > ay ? x : y;
+  if (!!x.del !== !!y.del) return x.del ? x : y;
+  return profStable(x) >= profStable(y) ? x : y;
+}
+
+function profTrackKey(t) {
+  return (t && t.videoId) ? String(t.videoId) : '?' + ((t && t.title) || '') + '|' + ((t && t.artist) || '');
+}
+
+function profObj(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+
+function profStampMap(src) {
+  const out = {};
+  Object.entries(profObj(src)).forEach(([k, e]) => {
+    if (!e || typeof e !== 'object') return;
+    out[k] = e.del ? { at: profStamp(e), del: 1 } : { at: profStamp(e) };
+  });
+  return out;
+}
+
+// Coerces anything (a v2 profile, a pre-v2 { lib, pinned, playlists }
+// snapshot as stored by older clients, null, garbage) into a well-formed v2
+// profile. Pre-v2 data has no stamps at all, so it comes in at `at` 0 (a
+// playlist falls back to its own resolve `ts`) - any real change wins over it.
+function normalizeProfile(p) {
+  const out = { v: PROFILE_SCHEMA, lib: { order: [], at: 0, m: {} }, pin: { order: [], at: 0, m: {} }, pl: {}, set: {} };
+  if (!p || typeof p !== 'object') return out;
+  if (p.v !== PROFILE_SCHEMA) {
+    const legacy = { lib: { order: p.lib }, pin: { order: p.pinned }, pl: {} };
+    Object.entries(profObj(p.playlists)).forEach(([id, d]) => {
+      if (d && typeof d === 'object') legacy.pl[id] = { at: typeof d.ts === 'number' ? d.ts : 0, d };
+    });
+    p = legacy;
+  }
+  ['lib', 'pin'].forEach(k => {
+    const src = profObj(p[k]), o = out[k];
+    o.at = profStamp(src);
+    o.m = profStampMap(src.m);
+    const seen = new Set();
+    (Array.isArray(src.order) ? src.order : []).forEach(id => {
+      if (typeof id !== 'string' || !id || seen.has(id)) return;
+      if (!o.m[id]) o.m[id] = { at: 0 };
+      if (o.m[id].del) return; // the stamp map is authoritative over a stale order list
+      seen.add(id); o.order.push(id);
+    });
+    Object.keys(o.m).sort().forEach(id => { if (!o.m[id].del && !seen.has(id)) { seen.add(id); o.order.push(id); } });
+  });
+  Object.entries(profObj(p.pl)).forEach(([id, e]) => {
+    if (!e || typeof e !== 'object') return;
+    if (e.del) { out.pl[id] = { at: profStamp(e), del: 1 }; return; }
+    if (!e.d || typeof e.d !== 'object' || Array.isArray(e.d)) return;
+    const d = Array.isArray(e.d.tracks) ? e.d : Object.assign({}, e.d, { tracks: [] });
+    out.pl[id] = { at: profStamp(e), d };
+    if (e.tr) out.pl[id].tr = profStampMap(e.tr);
+  });
+  Object.entries(profObj(p.set)).forEach(([k, e]) => {
+    if (!e || typeof e !== 'object') return;
+    out.set[k] = e.del ? { at: profStamp(e), del: 1 } : { at: profStamp(e), val: e.val === undefined ? null : e.val };
+  });
+  return out;
+}
+
+function mergeStampMaps(x, y, cutoff) {
+  const out = {};
+  new Set([...Object.keys(x || {}), ...Object.keys(y || {})]).forEach(k => {
+    const e = profPick((x || {})[k], (y || {})[k]);
+    if (e.del && profStamp(e) < cutoff) return; // expired tombstone
+    out[k] = e;
+  });
+  return out;
+}
+
+// Membership merges per id; order comes from whichever side reordered last.
+// Ids only the other side has go in front if they were added after that
+// reorder (new saves and new pins are both unshifted in the app, so that's
+// where they'd have landed), otherwise at the end, in the other side's order.
+function mergeOrdered(x, y, cutoff) {
+  const m = mergeStampMaps(x.m, y.m, cutoff);
+  const alive = id => m[id] && !m[id].del;
+  const win = profPick({ at: x.at, o: x.order }, { at: y.at, o: y.order });
+  const lose = win.o === x.order ? y.order : x.order;
+  const order = win.o.filter(alive);
+  const seen = new Set(order);
+  const front = [], back = [];
+  lose.forEach(id => {
+    if (!alive(id) || seen.has(id)) return;
+    seen.add(id);
+    (profStamp(m[id]) > win.at ? front : back).push(id);
+  });
+  Object.keys(m).sort().forEach(id => { if (alive(id) && !seen.has(id)) { seen.add(id); back.push(id); } });
+  return { order: front.concat(order, back), at: Math.max(x.at, y.at), m };
+}
+
+// Whole-playlist LWW, except user-built ('custom') playlists - Liked Songs
+// included - whose tracks merge one by one: the newer copy supplies name,
+// art and order, and tracks only the other copy has are appended unless a
+// tombstone says they were removed.
+function mergePlaylistEntry(id, x, y, cutoff) {
+  const w = profPick(x, y);
+  if (w.del) return profStamp(w) < cutoff ? null : w;
+  const l = w === x ? y : x;
+  const perTrack = w.d.type === 'custom' && !PROFILE_REGENERATED_IDS.includes(id);
+  if (!perTrack) return w;
+  const tr = mergeStampMaps(w.tr, l && !l.del ? l.tr : null, cutoff);
+  const dead = k => tr[k] && tr[k].del;
+  const tracks = w.d.tracks.filter(t => !dead(profTrackKey(t)));
+  if (l && !l.del) {
+    const seen = new Set(tracks.map(profTrackKey));
+    l.d.tracks.forEach(t => {
+      const k = profTrackKey(t);
+      if (dead(k) || seen.has(k)) return;
+      seen.add(k); tracks.push(t);
+    });
+  }
+  const out = { at: w.at, d: Object.assign({}, w.d, { tracks }) };
+  if (Object.keys(tr).length) out.tr = tr;
+  return out;
+}
+
+// Symmetric and deterministic: merge(a, b) and merge(b, a) produce the same
+// profile, which is what lets the client and the Worker each merge on their
+// own and still agree.
+function mergeProfiles(a, b, now) {
+  a = normalizeProfile(a); b = normalizeProfile(b);
+  const cutoff = (now || Date.now()) - PROFILE_TOMBSTONE_TTL_MS;
+  const lib = mergeOrdered(a.lib, b.lib, cutoff);
+  const pin = mergeOrdered(a.pin, b.pin, cutoff);
+  const libAlive = new Set(lib.order);
+  pin.order = pin.order.filter(id => libAlive.has(id));
+  const pl = {};
+  new Set([...Object.keys(a.pl), ...Object.keys(b.pl)]).forEach(id => {
+    let e = mergePlaylistEntry(id, a.pl[id], b.pl[id], cutoff);
+    if (!e) return;
+    // Data for something no longer in the library (removed on one device
+    // while edited on another) goes too - the library removal wins.
+    if (!e.del && !libAlive.has(id)) e = { at: e.at, del: 1 };
+    pl[id] = e;
+  });
+  const set = mergeStampMaps(a.set, b.set, cutoff);
+  return { v: PROFILE_SCHEMA, lib, pin, pl, set };
+}
+// ---- end profile merge ----
+
 function profileKey(sub) { return 'profile:' + sub; }
 
+// Serialized profile cap - KV values top out at 25MB and nothing legitimate
+// should ever approach this. The raw request body gets a little slack on
+// top for the token and envelope.
+const PROFILE_MAX_BYTES = 5 * 1024 * 1024;
+
+// A stored record is either the pre-v2 { email, library, ts } (library =
+// { lib, pinned, playlists }, no stamps) or v2 { v: 2, email, profile, ts }.
+// Either way this hands back a normalized v2 profile (empty if none/corrupt).
+function storedProfileOf(raw) {
+  if (!raw) return null;
+  let record;
+  try { record = JSON.parse(raw); } catch (e) { return null; }
+  if (!record || typeof record !== 'object') return null;
+  return { record, profile: normalizeProfile(record.v === PROFILE_SCHEMA ? record.profile : record.library) };
+}
+
+// What a pre-v2 client's /profile/fetch expects: plain id lists and the
+// live playlists' data, no stamps.
+function legacyLibraryView(profile) {
+  const playlists = {};
+  profile.lib.order.forEach(id => { const e = profile.pl[id]; if (e && !e.del) playlists[id] = e.d; });
+  return { lib: profile.lib.order, pinned: profile.pin.order, playlists };
+}
+
+// Reads the request body with a size guard before parsing, so an oversized
+// payload is refused without buffering it all into a JSON parse.
+async function readProfileBody(request) {
+  const len = Number(request.headers.get('Content-Length') || 0);
+  if (len > PROFILE_MAX_BYTES + 64 * 1024) return { error: json({ error: 'profile too large' }, 413) };
+  const text = await request.text();
+  if (text.length > PROFILE_MAX_BYTES + 64 * 1024) return { error: json({ error: 'profile too large' }, 413) };
+  try { return { body: JSON.parse(text) }; } catch (e) { return { error: json({ error: 'invalid json body' }, 400) }; }
+}
+
+// Two-way sync: the client sends its whole local profile, this merges it
+// into what's stored (so two devices pushing around the same time can't
+// clobber each other's additions) and returns the merged result for the
+// client to apply. v2 clients send `profile`; pre-v2 clients still send
+// `library` ({ lib, pinned, playlists }), which merges in unstamped. KV is
+// only written when the merge actually changed something - the free tier
+// caps daily puts account-wide, and most syncs (every signed-in page load)
+// are no-ops.
 async function handleProfileSync(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.PROFILES) return json({ error: 'profiles not configured' }, 500);
   if (!env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return json({ error: 'google sign-in not configured' }, 500);
-  let body;
-  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
-  const { idToken, library } = body || {};
-  if (!idToken || !library || typeof library !== 'object') return json({ error: 'missing idToken or library' }, 400);
+  const { body, error } = await readProfileBody(request);
+  if (error) return error;
+  const { idToken, library, profile } = body || {};
+  const incoming = (profile && typeof profile === 'object') ? profile : (library && typeof library === 'object') ? library : null;
+  if (!idToken || !incoming) return json({ error: 'missing idToken or profile' }, 400);
 
   let payload;
   try { payload = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID, env, ctx); }
   catch (e) { return json({ error: 'invalid id token: ' + e.message }, 401); }
 
-  // Cap stored library size generously but finitely - KV values top out at
-  // 25MB, and nothing legitimate should ever approach this.
-  const serialized = JSON.stringify(library);
-  if (serialized.length > 5 * 1024 * 1024) return json({ error: 'library too large' }, 413);
+  const stored = storedProfileOf(await env.PROFILES.get(profileKey(payload.sub)));
+  const now = Date.now();
+  const merged = mergeProfiles(stored ? stored.profile : null, incoming, now);
+  const mergedStr = profStable(merged);
+  if (mergedStr.length > PROFILE_MAX_BYTES) return json({ error: 'profile too large' }, 413);
 
-  const record = {
-    email: payload.email || null,
-    library,
-    ts: Date.now(),
-  };
-  await env.PROFILES.put(profileKey(payload.sub), JSON.stringify(record));
-  return json({ ok: true, ts: record.ts });
+  const unchanged = stored && stored.record.v === PROFILE_SCHEMA && profStable(stored.profile) === mergedStr;
+  let ts = stored ? stored.record.ts : now;
+  if (!unchanged) {
+    ts = now;
+    await env.PROFILES.put(profileKey(payload.sub), JSON.stringify({ v: PROFILE_SCHEMA, email: payload.email || null, profile: merged, ts }));
+  }
+  return json({ ok: true, v: PROFILE_SCHEMA, changed: !unchanged, ts, profile: merged });
 }
 
 async function handleProfileFetch(request, env, ctx) {
@@ -3113,10 +3338,10 @@ async function handleProfileFetch(request, env, ctx) {
   try { payload = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID, env, ctx); }
   catch (e) { return json({ error: 'invalid id token: ' + e.message }, 401); }
 
-  const raw = await env.PROFILES.get(profileKey(payload.sub));
-  if (!raw) return json({ library: null });
-  const record = JSON.parse(raw);
-  return json({ library: record.library, ts: record.ts });
+  const stored = storedProfileOf(await env.PROFILES.get(profileKey(payload.sub)));
+  if (!stored) return json({ library: null, profile: null });
+  // `library` keeps pre-v2 clients' restore-into-a-wiped-library path working.
+  return json({ v: PROFILE_SCHEMA, profile: stored.profile, library: legacyLibraryView(stored.profile), ts: stored.record.ts });
 }
 
 function applyCors(res) {
