@@ -1794,7 +1794,7 @@ Add entries in this shape:
   toggles fullscreen (not like/heart).
 
 ### video-playback-option: Add a video-playback button next to lyrics
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Add an option to play the actual YouTube video (not just
   audio) for the current track, via a new button placed next to the existing
@@ -7079,7 +7079,7 @@ Add entries in this shape:
   **Built (4aa5daf):** cassette inline SVG redrawn in place (charcoal grain shell, chamfered label with album art, ivory hubs, tape window, lower panel with holes, 4 screws); same 400x256 frame so fullscreen/stack/crossfade/reels unchanged. Reference photo was unreachable from the sandbox - compare against it.
 
 ### ytvideo-lookup-broken: Backend YouTube video lookup says "not found" for real videos
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** The worker's `/ytvideo?id=` route returns
   `{"error":"video not found (private, deleted, or invalid link?)"}` for
@@ -7099,7 +7099,7 @@ Add entries in this shape:
   caused by that change. Confirm what breaks for users on the live app.
 
 ### library-search-toggle: Library search should be a magnifying-glass button
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Replace the always-visible "Search your library" box
   with a magnifying-glass icon button aligned with the other library header
@@ -7109,7 +7109,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #218.
 
 ### hour-currents: Replace the time-of-day row with Currents growing 7 tracks per hour phase
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Remove the time-of-day / planetary-hour row (button and
   its whole container) and use its mood-of-the-hour selection to feed
@@ -7125,7 +7125,7 @@ Add entries in this shape:
   "7 phases a day" needs defining before build.
 
 ### vibe-search-named-playlists: Vibe search should compile a named playlist of heard + new songs
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When someone searches a vibe, compile an actual
   playlist for it with a short, unique, intelligent name (one or a few
@@ -7138,7 +7138,7 @@ Add entries in this shape:
   version already does before building; may be a partial gap only.
 
 ### platform-compliance-audit: Spotify attribution + YouTube player compliance audit
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Audit how Spotify metadata, YouTube playback, the visual
   field, Credits, lyrics and album art interact; report must-fix /
@@ -7158,4 +7158,19 @@ Add entries in this shape:
   `ebbless-deep`: paid value must be EBBLESS-owned (skins, visuals, themes,
   original ambient audio), never third-party playback; external sounds
   need recorded source + license.
+
+### cassette-rewind-sfx: Cassette rewind sound when restarting a song
+- **Status:** ready
+- **Priority:** medium
+- **Description:** When the Cassette art style is active and the user
+  restarts the current song (prev pressed past the restart threshold, or
+  any other "back to start of this track" action), play
+  `sfx/cassette-rewind.mp3`. Not on skip-next and not when going to the
+  previous song.
+- **Touches:** mirror the LP needle sfx block (`LP_NEEDLE_*`); prev/restart
+  handling; `sw.js` cache list + version bump.
+- **Branch:**
+- **Notes:** Requested in-session 2026-09-30. File supplied by the user
+  (`son_duquotidient-rembobinage-cassette-audio-391096.mp3`, looks like a
+  Pixabay sound: add to Credits if other sfx sources are credited).
 
