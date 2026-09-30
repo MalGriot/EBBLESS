@@ -7183,15 +7183,14 @@ Add entries in this shape:
   (`son_duquotidient-rembobinage-cassette-audio-391096.mp3`, looks like a
   Pixabay sound: add to Credits if other sfx sources are credited).
 
-### currents-reload-reroll: CuRRentSSsss re-rolls on reopen (max 2 a day), with a "like first" prompt
+### currents-reload-reroll: CuRRentSSsss menu re-roll: all songs, max 2 a day, "like first" prompt
 - **Status:** in-progress
 - **Priority:** medium
-- **Description:** Follow-up to `hour-currents`. Reopening/reloading
-  EBBLESS on the same day should re-roll the whole day's CuRRentSSsss
-  (fresh picks per period, count stays on schedule), not keep the same
-  tracks. Before re-rolling, prompt the listener to like any songs they
-  want to keep, because everything is about to change. Cap at 2 re-rolls
-  per day; after that the list stays fixed until midnight.
+- **Description:** Follow-up to `hour-currents`. Reloading keeps the list
+  as built (7 per period). The CuRRentSSsss playlist menu's re-roll
+  ("Reset with fresh picks") replaces all of today's songs, limited to 2
+  re-rolls per day. Before re-rolling, a prompt tells them to like the
+  songs they want to keep or add them to playlists.
 - **Touches:** `refreshSwellIfDue()`, `ebbless:swellBlocks`, launch flow,
   CuRRentSSsss "Reset with fresh picks" menu item.
 - **Branch:** agent/currents-reload-reroll
