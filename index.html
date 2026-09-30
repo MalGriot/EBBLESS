@@ -10157,26 +10157,39 @@ function lyricsSetPlaying(isPlaying){
 // Created lazily (function-scoped var, not a top-level const) because
 // setMarqueeText already runs during startup, before this point in the
 // script would have initialised a const.
+// An element in another window (the desktop PiP mini player) gets that
+// window's own observer: observations are delivered by the observer's
+// window's rendering, and the main tab doesn't render while it's hidden.
 var marqueeResizeObs;
-function marqueeObserve(el){
-  if (el._marqueeObserved || typeof ResizeObserver !== 'function') return;
-  if (!marqueeResizeObs) marqueeResizeObs = new ResizeObserver(entries => {
-    entries.forEach(({ target, contentRect }) => {
-      // Content-box width: the mini-bar's scrolling state adds padding for
-      // its edge fade, which must not read as a resize.
-      const w = contentRect.width;
-      if (target._marqueeW !== undefined && Math.abs(w - target._marqueeW) < 1) return;
-      target._marqueeW = w;
-      if (w > 0 && typeof target._marqueeText === 'string') setMarqueeText(target, target._marqueeText);
-    });
+function marqueeOnResize(entries){
+  entries.forEach(({ target, contentRect }) => {
+    // Content-box width: the mini-bar's scrolling state adds padding for
+    // its edge fade, which must not read as a resize.
+    const w = contentRect.width;
+    if (target._marqueeW !== undefined && Math.abs(w - target._marqueeW) < 1) return;
+    target._marqueeW = w;
+    if (w > 0 && typeof target._marqueeText === 'string') setMarqueeText(target, target._marqueeText);
   });
+}
+function marqueeObserve(el){
+  const win = el.ownerDocument.defaultView || window;
+  if (el._marqueeObserved || typeof win.ResizeObserver !== 'function') return;
+  if (win === window){
+    if (!marqueeResizeObs) marqueeResizeObs = new ResizeObserver(marqueeOnResize);
+    marqueeResizeObs.observe(el);
+  } else {
+    if (!win._marqueeResizeObs) win._marqueeResizeObs = new win.ResizeObserver(marqueeOnResize);
+    win._marqueeResizeObs.observe(el);
+  }
   el._marqueeObserved = true;
-  marqueeResizeObs.observe(el);
 }
 function marqueeReducedMotion(){
   return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 function setMarqueeText(el, text){
+  // el's own document/window, not the globals: the PiP mini player's title
+  // and artist live in another window (see marqueeObserve)
+  const doc = el.ownerDocument, win = doc.defaultView || window;
   el._marqueeText = text;
   marqueeObserve(el);
   if (el._marqueeAnim){ el._marqueeAnim.cancel(); el._marqueeAnim = null; }
@@ -10184,7 +10197,7 @@ function setMarqueeText(el, text){
   el.style.removeProperty('--marquee-shift');
   el.style.removeProperty('--marquee-dur');
   el.innerHTML = '';
-  const span = document.createElement('span');
+  const span = doc.createElement('span');
   span.textContent = text;
   el.appendChild(span);
   // Measuring on the very next frame can race container-query font sizing
@@ -10194,19 +10207,19 @@ function setMarqueeText(el, text){
   // distance is wrong, causing a visible snap before the scroll naturally
   // reaches its seamless point. Wait for fonts plus a second frame instead
   // of just one to measure the settled layout.
-  const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-  ready.then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+  const ready = doc.fonts && doc.fonts.ready ? doc.fonts.ready : Promise.resolve();
+  ready.then(() => win.requestAnimationFrame(() => win.requestAnimationFrame(() => {
     if (!el.isConnected || el.querySelector('span') !== span) return;
     // Reduced motion: never scroll - the static span keeps its ellipsis.
     // Hidden (0px wide): nothing to measure yet; the ResizeObserver above
     // re-runs this once the element actually gets a width.
-    const cs = getComputedStyle(el);
+    const cs = win.getComputedStyle(el);
     el._marqueeW = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     if (marqueeReducedMotion() || !el.clientWidth) return;
     const overflow = span.scrollWidth - el.clientWidth;
     if (overflow > 4){
       const gap = 48;
-      const track = document.createElement('span');
+      const track = doc.createElement('span');
       track.className = 'marquee-track';
       const span2 = span.cloneNode(true);
       span2.style.marginLeft = gap + 'px';
@@ -11072,50 +11085,347 @@ if (tabChannel) tabChannel.onmessage = (e) => {
    and the user switches away from the tab. The browser also auto-closes the
    window when the tab becomes visible again, so no manual visibilitychange
    bookkeeping is needed on our end.
-   No playback logic lives here — every control below just calls the same
-   resumePlayback/pausePlayback/playPrev/playNext/playIndex functions the
-   main transport uses, so the mini player can never drift from real state.
+   No playback logic lives here — every control below just clicks the main
+   player's own button (or calls the same seekFromClientX/queueJumpTo), and
+   its toggle states are read back off those buttons, so the mini player can
+   never drift from real state.
    Unsupported browsers (most non-Chromium ones, and 'documentPictureInPicture'
    missing entirely) fall through to a no-op: audio keeps playing in the
    backgrounded tab exactly as it already did before this feature existed. */
 let miniPlayerWin = null;
+// What the PiP window's own chrome shows is the browser's call, not ours:
+// Chrome always prints the opener's origin in the title bar and adds its own
+// site-information and back-to-tab buttons there (anti-spoofing - a page
+// can't dress a PiP window up as something else). requestWindow() only
+// takes width/height, disallowReturnToOpener and preferInitialWindowPlacement,
+// and a PiP window can't be positioned by script. So the EBBLESS mark lives
+// in our own header row instead, and "remember how I left it" means: size
+// and look in localStorage (below), position left to Chrome, which already
+// reopens a PiP window where it was last closed unless
+// preferInitialWindowPlacement asks it not to.
+const LS_MINI_PLAYER = 'ebbless:miniPlayer';  // { w, h, style } - PiP mini player's last content size and look
+const MP_DEFAULT = { w: 380, h: 148, style: 'solid' };
+const MP_MIN_W = 300, MP_MIN_H = 120;
+const MP_QUEUE_H = 260;        // extra height the queue popover grows the window by
+const MP_OVERLAY_MIN_H = 300;  // a window at least this tall shows the queue over the player instead of growing
+const MP_ICO = {
+  shuffle: '<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>',
+  prev: '<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>',
+  next: '<path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/>',
+  repeat: '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>',
+  like: '<path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/>',
+  flag: '<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>',
+  queue: '<path d="M3 6h13v2H3zm0 5h13v2H3zm0 5h9v2H3zm15-1V9l5 4z"/>',
+  style: '<path d="M12 3a9 9 0 000 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16a5 5 0 005-5c0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm5 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3 4a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>',
+  reset: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>'
+};
 const MINI_PLAYER_STYLE = `
-  :root{color-scheme:dark}
+  :root{color-scheme:dark;--accent:#e0b26a;--card-h:100vh}
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{margin:0;background:#121212;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    height:100vh;display:flex;align-items:center;gap:12px;padding:12px;overflow:hidden}
-  #mpArt{width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none;background:#282828}
-  #mpMeta{flex:1;min-width:0}
-  #mpTitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #mpArtist{font-size:12px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-  #mpControls{display:flex;align-items:center;gap:6px;flex:none}
-  #mpControls button{width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:#fff;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-  #mpControls button:hover{background:rgba(255,255,255,.12)}
-  #mpPlay{width:38px;height:38px;background:#e0b26a;color:#151107}
-  #mpPlay:hover{background:#e0b26a;filter:brightness(1.08)}
+    display:flex;flex-direction:column;overflow:hidden;position:relative;user-select:none}
+  button{font:inherit;color:inherit}
   svg{width:18px;height:18px;fill:currentColor}
+  #mpBg{position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(28px) brightness(.42) saturate(1.3);
+    opacity:0;transition:opacity .4s ease;pointer-events:none}
+  body.style-art #mpBg{opacity:1}
+  #mpCard{position:relative;flex:none;height:var(--card-h);padding:12px;display:grid;gap:4px 12px;
+    grid-template-columns:calc(var(--card-h) - 24px) minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) 16px 36px;
+    grid-template-areas:"art head" "art meta" "art seek" "art ctl";
+    transition:background .2s ease}
+  body:hover #mpCard{background:rgba(255,255,255,.035)}
+  body.shape-card #mpCard{grid-template-columns:minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) auto 16px 36px;
+    grid-template-areas:"head" "art" "meta" "seek" "ctl"}
+  #mpArtWrap{grid-area:art;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#282828;min-height:0;
+    box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  #mpArt{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
+  #mpArt[src=""],.mpq-row img[src=""]{visibility:hidden}
+  body:hover #mpArt{transform:scale(1.04)}
+  #mpHead{grid-area:head;display:flex;align-items:center;gap:2px;min-width:0}
+  #mpLogo{width:18px;height:17px;object-fit:contain;margin-right:auto;opacity:.9}
+  .mp-tool{width:24px;height:22px;border-radius:6px;border:none;background:transparent;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;padding:0;color:rgba(255,255,255,.55);transition:background .15s ease,color .15s ease,opacity .2s ease}
+  .mp-tool svg{width:15px;height:15px}
+  #mpStyle,#mpReset{opacity:0}
+  body:hover #mpStyle,body:hover #mpReset,#mpStyle:focus-visible,#mpReset:focus-visible{opacity:1}
+  .mp-tool:hover{background:rgba(255,255,255,.12);color:#fff}
+  .mp-tool.is-active,#mpLike.is-liked{color:var(--accent)}
+  #mpMeta{grid-area:meta;min-width:0;display:flex;flex-direction:column;justify-content:center}
+  #mpTitle{font-size:14px;font-weight:600;line-height:18px}
+  #mpArtist{font-size:12px;color:#aaa;line-height:16px;margin-top:1px}
+  .marquee{overflow:hidden;white-space:nowrap;position:relative}
+  .marquee>span{display:inline-block;white-space:nowrap}
+  .marquee .marquee-track{display:inline-flex;white-space:nowrap;will-change:transform}
+  .marquee .marquee-track>span{display:inline-block;white-space:nowrap;flex:none}
+  .marquee:not(.is-marquee)>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+  .marquee.is-marquee{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 18px),transparent 100%);
+    mask-image:linear-gradient(to right,#000 calc(100% - 18px),transparent 100%)}
+  #mpSeek{grid-area:seek;display:flex;align-items:center;gap:8px;font-size:10px;color:#999;font-variant-numeric:tabular-nums}
+  #mpSeekTrack{flex:1;height:16px;display:flex;align-items:center;cursor:pointer}
+  #mpSeekRail{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden;transition:height .15s ease}
+  #mpSeekTrack:hover #mpSeekRail{height:5px}
+  #mpSeekFill{height:100%;width:0;background:#fff;border-radius:2px}
+  #mpSeekTrack:hover #mpSeekFill{background:var(--accent)}
+  #mpControls{grid-area:ctl;display:flex;align-items:center;justify-content:center;gap:4px}
+  #mpControls button{width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:#fff;position:relative;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background .15s ease,transform .15s ease}
+  #mpControls button:hover{background:rgba(255,255,255,.12)}
+  #mpControls button:active{transform:scale(.92)}
+  #mpShuffle,#mpRepeat{color:rgba(255,255,255,.6)!important}
+  #mpShuffle.is-active,#mpRepeat.is-active{color:var(--accent)!important}
+  #mpShuffle svg,#mpRepeat svg{width:16px;height:16px}
+  #mpRepeatOne{position:absolute;top:3px;right:3px;font-size:8px;font-weight:700;line-height:1}
+  #mpControls #mpPlay{width:36px;height:36px;background:var(--accent);color:#151107}
+  #mpControls #mpPlay:hover{background:var(--accent);filter:brightness(1.08);transform:scale(1.06)}
   #mpPlay svg{width:20px;height:20px}
+  #mpQueue{display:none;position:relative;flex:1;min-height:0;overflow-y:auto;background:#181818;
+    border-top:1px solid rgba(255,255,255,.08);padding:6px}
+  body.q-open #mpQueue{display:block}
+  body.q-up #mpQueue{order:-1;border-top:none;border-bottom:1px solid rgba(255,255,255,.08)}
+  body.q-overlay #mpQueue{position:absolute;left:0;right:0;height:72%;z-index:2;box-shadow:0 0 24px rgba(0,0,0,.6)}
+  body.q-overlay.q-down #mpQueue{top:0;animation:mpDrop .18s ease-out}
+  body.q-overlay.q-up #mpQueue{bottom:0;animation:mpPull .18s ease-out}
+  @keyframes mpDrop{from{transform:translateY(-100%)}to{transform:none}}
+  @keyframes mpPull{from{transform:translateY(100%)}to{transform:none}}
+  .mpq-head{position:sticky;top:-6px;z-index:1;display:flex;align-items:center;justify-content:space-between;margin:-6px -6px 0;
+    padding:6px 6px 4px 12px;background:#181818;font-size:12px;font-weight:600}
+  .mpq-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#888;padding:6px 6px 4px}
+  .mpq-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer}
+  .mpq-row:hover{background:rgba(255,255,255,.08)}
+  .mpq-row.is-now{cursor:default;background:rgba(224,178,106,.1)}
+  .mpq-row img{width:32px;height:32px;border-radius:4px;object-fit:cover;background:#282828;flex:none}
+  .mpq-row .t{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mpq-row .a{font-size:11px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mpq-row>div{min-width:0}
+  .mpq-empty{font-size:12px;color:#888;padding:14px 6px;text-align:center}
 `;
 function miniPlayerSupported(){ return 'documentPictureInPicture' in window; }
+function miniPlayerPrefs(){
+  const p = lsGet(LS_MINI_PLAYER, null) || {};
+  return {
+    w: Math.max(MP_MIN_W, Math.round(p.w) || MP_DEFAULT.w),
+    h: Math.max(MP_MIN_H, Math.round(p.h) || MP_DEFAULT.h),
+    style: p.style === 'art' ? 'art' : MP_DEFAULT.style
+  };
+}
+function saveMiniPlayerPrefs(patch){
+  lsSet(LS_MINI_PLAYER, Object.assign(lsGet(LS_MINI_PLAYER, null) || {}, patch));
+}
+// Queue popover state for the current PiP window: grown = px the window was
+// resized by to fit it (0 = shown over the player instead), up = it sits
+// above the player because the window is in the lower half of the screen.
+let mpQueue = null;
 function buildMiniPlayerDOM(win){
   const doc = win.document;
+  const brandUrl = (p) => new URL(p, location.href).href;  // PiP doc is about:blank - resolve against the app
+  doc.title = 'EBBLESS';
+  const icon = doc.createElement('link');
+  icon.rel = 'icon'; icon.href = brandUrl('brand/assets/icons/favicon-32.png');
+  doc.head.appendChild(icon);
   const style = doc.createElement('style');
   style.textContent = MINI_PLAYER_STYLE;
   doc.head.appendChild(style);
+  const btn = (id, cls, label, ico) =>
+    '<button id="' + id + '" class="' + cls + '" title="' + label + '" aria-label="' + label + '"><svg viewBox="0 0 24 24">' + ico + '</svg></button>';
   doc.body.innerHTML =
-    '<img id="mpArt" alt="">' +
-    '<div id="mpMeta"><div id="mpTitle"></div><div id="mpArtist"></div></div>' +
-    '<div id="mpControls">' +
-      '<button id="mpPrev" title="Previous" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>' +
-      '<button id="mpPlay" title="Play/Pause" aria-label="Play/Pause"><svg id="mpPlayIco" viewBox="0 0 24 24">' + ICO_PLAY + '</svg></button>' +
-      '<button id="mpNext" title="Next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg></button>' +
-    '</div>';
-  doc.getElementById('mpPrev').addEventListener('click', playPrev);
-  doc.getElementById('mpNext').addEventListener('click', () => playNext(false));
-  doc.getElementById('mpPlay').addEventListener('click', () => {
-    if (state.queuePos >= 0) userTogglePlayback(); else playRickrollFallback();
+    '<div id="mpBg"></div>' +
+    '<div id="mpCard">' +
+      '<div id="mpArtWrap"><img id="mpArt" alt=""></div>' +
+      '<div id="mpHead">' +
+        '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
+        btn('mpStyle', 'mp-tool', 'Switch style', MP_ICO.style) +
+        btn('mpReset', 'mp-tool', 'Reset shape', MP_ICO.reset) +
+        btn('mpFlag', 'mp-tool', 'Flag: wrong track playing', MP_ICO.flag) +
+        '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
+        btn('mpQueueBtn', 'mp-tool', 'Queue', MP_ICO.queue) +
+      '</div>' +
+      '<div id="mpMeta"><div id="mpTitle" class="marquee"></div><div id="mpArtist" class="marquee"></div></div>' +
+      '<div id="mpSeek"><span id="mpCur">0:00</span><div id="mpSeekTrack"><div id="mpSeekRail"><div id="mpSeekFill"></div></div></div><span id="mpDur">0:00</span></div>' +
+      '<div id="mpControls">' +
+        btn('mpShuffle', '', 'Shuffle', MP_ICO.shuffle) +
+        btn('mpPrev', '', 'Previous', MP_ICO.prev) +
+        '<button id="mpPlay" title="Play/Pause" aria-label="Play/Pause"><svg id="mpPlayIco" viewBox="0 0 24 24">' + ICO_PLAY + '</svg></button>' +
+        btn('mpNext', '', 'Next', MP_ICO.next) +
+        '<button id="mpRepeat" title="Repeat" aria-label="Repeat"><svg viewBox="0 0 24 24">' + MP_ICO.repeat + '</svg><span id="mpRepeatOne" hidden>1</span></button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="mpQueue" role="dialog" aria-label="Queue"></div>';
+  // Every control forwards to the main player's own button, so the mini
+  // player runs exactly the same handler (and needle sfx, skip signal,
+  // like/flag bookkeeping) as a click on the real thing.
+  const forward = (id, target) => doc.getElementById(id).addEventListener('click', () => { target.click(); updateMiniPlayerUI(); });
+  forward('mpPrev', prevBtn);
+  forward('mpNext', nextBtn);
+  forward('mpPlay', playBtn);
+  forward('mpShuffle', shuffleBtn);
+  forward('mpRepeat', repeatBtn);
+  forward('mpLike', playerLikeBtn);
+  forward('mpFlag', reportMatchBtn);
+  const seekEl = doc.getElementById('mpSeekTrack');
+  seekEl.addEventListener('click', (e) => { seekFromClientX(seekEl, e.clientX); updateMiniPlayerUI(); });
+  doc.getElementById('mpQueueBtn').addEventListener('click', toggleMiniQueue);
+  doc.getElementById('mpStyle').addEventListener('click', () => {
+    const next = doc.body.classList.contains('style-art') ? 'solid' : 'art';
+    applyMiniPlayerStyle(next);
+    saveMiniPlayerPrefs({ style: next });
   });
+  doc.getElementById('mpReset').addEventListener('click', resetMiniPlayerShape);
+  // Shortcuts keep working with the mini player focused: replay the key on
+  // the main document, where the app's one keydown handler lives, rather
+  // than keeping a second copy of the keymap here. Q is the exception - it
+  // toggles this window's own queue popover, since the main queue panel
+  // isn't visible while the tab is in the background.
+  doc.addEventListener('keydown', (e) => {
+    const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
+    if (plain && (e.key === 'q' || e.key === 'Q')){ e.preventDefault(); if (!e.repeat) toggleMiniQueue(); return; }
+    if (plain && e.key === 'Escape' && mpQueue){ e.preventDefault(); closeMiniQueue(); return; }
+    const fwd = new KeyboardEvent('keydown', {
+      key: e.key, code: e.code, repeat: e.repeat, bubbles: true, cancelable: true,
+      shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, altKey: e.altKey
+    });
+    document.dispatchEvent(fwd);
+    // Space on a focused mini-player button would otherwise also "click" it
+    if (fwd.defaultPrevented) e.preventDefault();
+    updateMiniPlayerUI();
+  });
+  win.addEventListener('resize', onMiniPlayerResize);
+  // The main tab is hidden while this window is up, so its rAF-driven seek
+  // updates are paused - the mini player keeps its own (cheap) clock.
+  win.setInterval(updateMiniPlayerUI, 500);
+  applyMiniPlayerStyle(miniPlayerPrefs().style);
+  applyMiniPlayerShape();
+}
+function applyMiniPlayerStyle(style){
+  if (miniPlayerWin) miniPlayerWin.document.body.classList.toggle('style-art', style === 'art');
+}
+// Shape follows the window's proportions: a wide window is a bar (art at the
+// side), a squarer/taller one a card (art on top). Measured on the player
+// part only, so a grown queue popover doesn't flip it.
+function applyMiniPlayerShape(){
+  const win = miniPlayerWin;
+  if (!win) return;
+  const h = mpQueue ? mpQueue.cardH : win.innerHeight;
+  win.document.body.classList.toggle('shape-card', h >= win.innerWidth * 0.75);
+}
+let mpSaveTimer = 0;
+function onMiniPlayerResize(){
+  const win = miniPlayerWin;
+  if (!win) return;
+  // In overlay mode the queue sits over the player, so the card is simply
+  // the whole window again; when the window was grown, the card keeps its
+  // pre-queue height and the popover gets the rest.
+  if (mpQueue && !mpQueue.grown) mpQueue.cardH = win.innerHeight;
+  applyMiniPlayerShape();
+  win.clearTimeout(mpSaveTimer);
+  // A window grown for the queue popover isn't the user's chosen size
+  if (mpQueue) return;
+  // (the PiP window's own timers - the hidden main tab's are throttled)
+  mpSaveTimer = win.setTimeout(() => {
+    if (miniPlayerWin === win && !mpQueue) saveMiniPlayerPrefs({ w: win.innerWidth, h: win.innerHeight });
+  }, 400);
+}
+function resetMiniPlayerShape(){
+  const win = miniPlayerWin;
+  if (!win) return;
+  closeMiniQueue();
+  lsSet(LS_MINI_PLAYER, null);
+  applyMiniPlayerStyle(MP_DEFAULT.style);
+  // resizeTo works in outer (window-chrome-inclusive) pixels; the click that
+  // got us here is the user gesture Document PiP requires for it.
+  try { win.resizeTo(MP_DEFAULT.w + (win.outerWidth - win.innerWidth), MP_DEFAULT.h + (win.outerHeight - win.innerHeight)); } catch(e){}
+}
+function toggleMiniQueue(){ mpQueue ? closeMiniQueue() : openMiniQueue(); }
+// The popover drops down from the player when the window sits in the top
+// half of the screen and pulls up above it in the bottom half. A short
+// window grows to fit it (resizeBy needs the click/keypress that opened
+// it); a tall enough one - or one the browser wouldn't grow - shows it over
+// the player instead. Moving a PiP window isn't allowed in Chrome, so
+// pulling up relies on the browser keeping a grown window on screen; the
+// moveBy() below is a best-effort for browsers that do honour it.
+function openMiniQueue(){
+  const win = miniPlayerWin;
+  if (!win || mpQueue) return;
+  const scr = win.screen;
+  const availTop = scr.availTop || 0, availH = scr.availHeight || scr.height;
+  const up = win.screenY + win.outerHeight / 2 > availTop + availH / 2;
+  const cardH = win.innerHeight;
+  const room = Math.max(0, availH - win.outerHeight);
+  const grow = cardH >= MP_OVERLAY_MIN_H ? 0 : Math.min(MP_QUEUE_H, room);
+  mpQueue = { up, grown: 0, cardH };
+  const body = win.document.body;
+  body.classList.add('q-open', up ? 'q-up' : 'q-down');
+  body.style.setProperty('--card-h', cardH + 'px');
+  win.document.getElementById('mpQueueBtn').classList.add('is-active');
+  renderMiniQueue();
+  if (grow >= 120){
+    mpQueue.grown = grow;
+    try { win.resizeBy(0, grow); if (up) win.moveBy(0, -grow); } catch(e){}
+    // No resize arrived (no gesture, or the browser refused): overlay instead
+    const q = mpQueue;
+    win.setTimeout(() => { if (mpQueue === q && win.innerHeight < cardH + 100){ q.grown = 0; showMiniQueueOverlay(); } }, 250);
+  } else showMiniQueueOverlay();
+}
+function showMiniQueueOverlay(){
+  const body = miniPlayerWin.document.body;
+  body.classList.add('q-overlay');
+  body.style.removeProperty('--card-h');
+  mpQueue.cardH = miniPlayerWin.innerHeight;
+  applyMiniPlayerShape();
+}
+function closeMiniQueue(){
+  const win = miniPlayerWin, q = mpQueue;
+  if (!q) return;
+  mpQueue = null;
+  if (!win) return;
+  const body = win.document.body;
+  body.classList.remove('q-open', 'q-up', 'q-down', 'q-overlay');
+  body.style.removeProperty('--card-h');
+  win.document.getElementById('mpQueueBtn').classList.remove('is-active');
+  win.document.getElementById('mpQueue').innerHTML = '';
+  if (q.grown){
+    try { win.resizeBy(0, -q.grown); if (q.up) win.moveBy(0, q.grown); } catch(e){}
+  }
+  applyMiniPlayerShape();
+}
+// Now + upcoming, read straight from state.queue; a row click is the same
+// queueJumpTo() the main queue panel's rows use.
+function renderMiniQueue(){
+  if (!miniPlayerWin || !mpQueue) return;
+  const doc = miniPlayerWin.document;
+  const box = doc.getElementById('mpQueue');
+  mpQueue.sig = state.queuePos + ':' + state.queue.length;
+  box.innerHTML = '<div class="mpq-head"><span>Queue</span><button class="mp-tool" title="Close queue" aria-label="Close queue">' +
+    '<svg viewBox="0 0 24 24"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>';
+  box.querySelector('.mpq-head button').addEventListener('click', closeMiniQueue);
+  const row = (t, pos) => {
+    const r = doc.createElement('div');
+    r.className = 'mpq-row' + (pos === state.queuePos ? ' is-now' : '');
+    const img = doc.createElement('img'); img.alt = '';
+    img.onerror = () => { img.style.visibility = 'hidden'; };
+    img.src = artworkUrls(t)[0] || '';
+    const meta = doc.createElement('div');
+    meta.innerHTML = '<div class="t"></div><div class="a"></div>';
+    meta.firstChild.textContent = t.title || '';
+    meta.lastChild.textContent = t.artist || '';
+    r.appendChild(img); r.appendChild(meta);
+    if (pos !== state.queuePos) r.addEventListener('click', () => { queueJumpTo(pos); updateMiniPlayerUI(); });
+    return r;
+  };
+  const label = (text) => { const l = doc.createElement('div'); l.className = 'mpq-label'; l.textContent = text; return l; };
+  const now = currentTrack();
+  if (!now){ box.insertAdjacentHTML('beforeend', '<div class="mpq-empty">Nothing queued yet.</div>'); return; }
+  box.appendChild(label('Now'));
+  box.appendChild(row(now, state.queuePos));
+  let shown = 0;
+  for (let pos = state.queuePos + 1; pos < state.queue.length && shown < 50; pos++){
+    const t = trackAt(pos);
+    if (!t) continue;
+    if (!shown) box.appendChild(label('Next'));
+    box.appendChild(row(t, pos));
+    shown++;
+  }
+  if (!shown){ const e = doc.createElement('div'); e.className = 'mpq-empty'; e.textContent = 'End of queue.'; box.appendChild(e); }
 }
 function updateMiniPlayerUI(){
   if (!miniPlayerWin || miniPlayerWin.closed) return;
@@ -11127,23 +11437,53 @@ function updateMiniPlayerUI(){
   const playIcoEl = doc.getElementById('mpPlayIco');
   if (!artEl || !titleEl || !artistEl || !playIcoEl) return;
   if (t){
-    const urls = artworkUrls(t);
-    artEl.src = urls[0] || '';
-    titleEl.textContent = t.title || '';
-    artistEl.textContent = t.artist || '';
+    const art = artworkUrls(t)[0] || '';
+    if (artEl.getAttribute('src') !== art){
+      artEl.style.visibility = '';
+      artEl.onerror = () => { artEl.style.visibility = 'hidden'; };
+      artEl.src = art;
+      doc.getElementById('mpBg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : '';
+    }
+    // Same marquee as the main player; only re-set on change, since this
+    // runs on the mini player's twice-a-second clock too.
+    if (titleEl._marqueeText !== (t.title || '')) setMarqueeText(titleEl, t.title || '');
+    if (artistEl._marqueeText !== (t.artist || '')) setMarqueeText(artistEl, t.artist || '');
   }
   const isPlaying = artworkWrap.classList.contains('is-playing');
   playIcoEl.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY;
+  // Toggle states mirror the main player's own buttons rather than
+  // re-deriving them, so they can't disagree.
+  doc.getElementById('mpShuffle').classList.toggle('is-active', shuffleBtn.classList.contains('is-active'));
+  doc.getElementById('mpRepeat').classList.toggle('is-active', repeatBtn.classList.contains('is-active'));
+  doc.getElementById('mpRepeatOne').hidden = repeatOneBadge.hidden;
+  const like = doc.getElementById('mpLike');
+  const liked = playerLikeBtn.classList.contains('is-liked');
+  like.classList.toggle('is-liked', liked);
+  like.title = playerLikeBtn.title; like.setAttribute('aria-label', playerLikeBtn.title);
+  like.querySelector('svg').setAttribute('fill', liked ? 'currentColor' : 'none');
+  const flag = doc.getElementById('mpFlag');
+  flag.classList.toggle('is-active', reportMatchBtn.classList.contains('is-sent'));
+  flag.title = reportMatchBtn.title;
+  const ad = activeDeck();
+  if (ad.player && ad.player.getCurrentTime && ad.player.getDuration){
+    const cur = ad.player.getCurrentTime() || 0, dur = ad.player.getDuration() || 0;
+    doc.getElementById('mpSeekFill').style.width = (dur ? (cur / dur) * 100 : 0) + '%';
+    doc.getElementById('mpCur').textContent = formatTime(cur);
+    doc.getElementById('mpDur').textContent = formatTime(dur);
+  }
+  if (mpQueue && mpQueue.sig !== state.queuePos + ':' + state.queue.length) renderMiniQueue();
 }
 async function openMiniPlayer(){
   if (!miniPlayerSupported() || !currentTrack()) return;
   if (miniPlayerWin && !miniPlayerWin.closed){ updateMiniPlayerUI(); return; }
   try {
-    const win = await documentPictureInPicture.requestWindow({ width: 300, height: 88 });
+    const prefs = miniPlayerPrefs();
+    const win = await documentPictureInPicture.requestWindow({ width: prefs.w, height: prefs.h });
     miniPlayerWin = win;
+    mpQueue = null;
     buildMiniPlayerDOM(win);
     updateMiniPlayerUI();
-    win.addEventListener('pagehide', () => { miniPlayerWin = null; }, { once: true });
+    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; } }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,
