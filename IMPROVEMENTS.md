@@ -7111,7 +7111,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #218.
 
 ### hour-currents: Replace the time-of-day row with Currents growing 7 tracks per hour phase
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Remove the time-of-day / planetary-hour row (button and
   its whole container) and use its mood-of-the-hour selection to feed
@@ -7121,7 +7121,8 @@ Add entries in this shape:
   users what drives the picks.
 - **Touches:** `#timeRow*` (from merged `contextual-awareness`), Currents
   generation (`currents-playlist-algorithm`, `currents-12-tracks`).
-- **Branch:**
+- **Branch:** agent/hour-currents
+- **Decision (2026-09-30, owner):** 7 equal blocks per day (24h / 7, about 3h25m43s each) starting at local midnight, each block's mood taken from the Rosicrucian daily cycles (the seven periods of the day). Not the 24 planetary hours.
 - **Notes:** Synced from Geethub issue #219 ("hour of the moon playlist").
   The current code treats each planetary hour as one clock hour (24 a day);
   "7 phases a day" needs defining before build.
