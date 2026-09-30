@@ -1794,13 +1794,13 @@ Add entries in this shape:
   toggles fullscreen (not like/heart).
 
 ### video-playback-option: Add a video-playback button next to lyrics
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add an option to play the actual YouTube video (not just
   audio) for the current track, via a new button placed next to the existing
   lyrics button.
 - **Touches:** player view controls, YouTube embed/player logic.
-- **Branch:** (unclaimed)
+- **Branch:** agent/platform-compliance-audit
 - **Notes:** Synced from Geethub issue #45.
 
 ### desktop-mini-player: Floating desktop mini-player when tab loses focus
@@ -7139,7 +7139,7 @@ Add entries in this shape:
   version already does before building; may be a partial gap only.
 
 ### platform-compliance-audit: Spotify attribution + YouTube player compliance audit
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Audit how Spotify metadata, YouTube playback, the visual
   field, Credits, lyrics and album art interact; report must-fix /
@@ -7153,7 +7153,7 @@ Add entries in this shape:
   cymatics (visuals only slow on pause), no overlays on the YouTube player,
   no redesign, no Spotify-based trivia.
 - **Touches:** player controls row, YouTube embed, Credits modal, docs.
-- **Branch:**
+- **Branch:** agent/platform-compliance-audit
 - **Notes:** Synced from Geethub issue #221 (full brief there). Its YouTube
   control supersedes `video-playback-option`. Also sets rules for
   `ebbless-deep`: paid value must be EBBLESS-owned (skins, visuals, themes,
