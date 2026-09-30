@@ -6495,12 +6495,12 @@ Add entries in this shape:
   **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Beyond mood playlists: adapt recommendations to local
   weather, time of day, or movement speed (phone sensors).
 - **Touches:** Discover / Currents recommendation logic.
-- **Branch:**
+- **Branch:** agent/contextual-awareness
 - **Notes:** Synced from Geethub issue #164.
   Geethub #187 folded in: track the user's time of day, time zone, weather and location to curate Discover and offer automatic time-based playlists; also asks to incorporate Rosicrucian knowledge about the time of day and day of the week.
   **Decision (2026-09-30):** time-based only for now (time of day, day of week, incl. the Rosicrucian day/hour idea). No location or weather.
@@ -6999,7 +6999,7 @@ Add entries in this shape:
   browser chrome the page can't control; confirm per item when built.
 
 ### podcast-library-category: Podcast category in the library
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Give podcasts their own category/filter in the library,
   alongside playlists and albums.
@@ -7007,6 +7007,7 @@ Add entries in this shape:
 - **Branch:** agent/podcast-library-category
 - **Notes:** Synced from Geethub issue #211 (title only). Builds on merged
   `podcasts` and `playlist-menu-album-toggle`.
+  **Built (e8fd1bb):** new `isPodcastEntry()` (`pod_show` type / `pod:` id, fallback: all tracks are episodes); Podcasts filter chip + cycle step (shown only when a podcast exists), Podcasts section, show art, "N episodes" count; "Mark as album" hidden for podcasts.
 
 ### settings-reorganize: Reorganize the Settings menu for comfort and logic
 - **Status:** review
