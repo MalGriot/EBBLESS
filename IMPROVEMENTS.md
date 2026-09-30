@@ -7079,7 +7079,7 @@ Add entries in this shape:
   **Built (4aa5daf):** cassette inline SVG redrawn in place (charcoal grain shell, chamfered label with album art, ivory hubs, tape window, lower panel with holes, 4 screws); same 400x256 frame so fullscreen/stack/crossfade/reels unchanged. Reference photo was unreachable from the sandbox - compare against it.
 
 ### ytvideo-lookup-broken: Backend YouTube video lookup says "not found" for real videos
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** high
 - **Description:** The worker's `/ytvideo?id=` route returns
   `{"error":"video not found (private, deleted, or invalid link?)"}` for
@@ -7095,6 +7095,7 @@ Add entries in this shape:
   of `/ytvideo` (pasting a YouTube link - `youtube-link-paste-play`;
   loudness for `volume-equalizer`).
 - **Branch:** agent/ytvideo-lookup-broken
+- **Build (b1dff89):** intermittent (~30-40% of uncached lookups got a watch page with no `videoDetails`; cause inferred, not captured). `handleYtVideo` now retries the watch page once, then falls back to oEmbed (title/channel/thumb, `loudnessDb: null`, `partial: true`, cached 1h); failure reasons are logged. Client `ensureLoudness` skips caching partial responses. SW v37. **Needs `wrangler deploy` (staging, then prod): not yet deployed.**
 - **Notes:** Found 2026-09-30 while checking vibe-search playback. Not
   caused by that change. Confirm what breaks for users on the live app.
 
