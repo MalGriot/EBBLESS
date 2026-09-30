@@ -6693,13 +6693,13 @@ Add entries in this shape:
   cymatics and landscape excluded. Real devices/long wrapping titles untested.
 
 ### conversational-vibe-search: Search by typing or speaking a mood/vibe to get a playlist
-- **Status:** approved
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Let users type conversationally (like talking to an LLM) or speak a sentence into the search bar describing their mood, vibe or environment, and get back a playlist of existing songs that fit. Needs a free tool or LLM working silently in the background to interpret the request.
 - **Touches:** search bar / paste bar, discovery backend (worker). Follow-on to merged `playlist-vibe-search`.
 - **Branch:** agent/conversational-vibe-search
 - **Notes:** Synced from Geethub issue #185, #186.
-  **Built:** worker `/vibe-interpret` (Workers AI llama-3.1-8b-instruct-fast, Last.fm-verified picks, heuristic fallback, `AI` binding in wrangler.toml) + bar sentence detection, mic (Web Speech), results screen. Cover art fix (061c3dc): `/spotifyart` now iTunes + Deezer in parallel, Last.fm fallback. **Needs production worker deploy at ship.** No sound verified in sandbox (YouTube blocked) - real-device check.
+  **Built:** worker `/vibe-interpret` (Workers AI llama-3.1-8b-instruct-fast, Last.fm-verified picks, heuristic fallback, `AI` binding in wrangler.toml) + bar sentence detection, mic (Web Speech), results screen. Cover art fix (061c3dc): `/spotifyart` now iTunes + Deezer in parallel, Last.fm fallback. Production worker deployed 2026-09-30 (by owner). No sound verified in sandbox (YouTube blocked) - real-device check.
 
 
 ### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
