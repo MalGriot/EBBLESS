@@ -12610,11 +12610,16 @@ function playIndex(pos, opts){
    falls back to the placeholder too. */
 const LP_NEEDLE_DROP_SRC = 'sfx/needle-drop.mp3';
 const LP_NEEDLE_LIFT_SRC = 'sfx/needle-lift.mp3';
+// Cassette art style: a tape-rewind sound when the user restarts the current
+// song (prev past the restart threshold). Shares the needle sfx context,
+// prefetch and decode path below; no synth fallback, a failed load is silent.
+const CASSETTE_REWIND_SRC = 'sfx/cassette-rewind.mp3';
+const LP_SFX_SRC = { drop: LP_NEEDLE_DROP_SRC, lift: LP_NEEDLE_LIFT_SRC, rewind: CASSETTE_REWIND_SRC };
 // per-kind: the lift file runs ~11dB hotter on average than the drop file.
 // Issue #205: at 0.35/0.2 the drop's loudest 50ms landed around -25dBFS and
 // the lift around -17dBFS - the lift fires at the top of the pause fade,
 // with the music still near full volume, so both were effectively masked.
-const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5 };
+const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5, rewind: 0.6 };
 // skip the sfx rather than play it late (slow first fetch, context waking)
 const LP_NEEDLE_MAX_LAG_MS = 300;
 let lpSfxCtx = null;
@@ -12649,10 +12654,10 @@ function lpSynthNeedle(ctx, kind){
   for (let i = 0; i < tail; i++) d[len - 1 - i] *= i / tail;
   return buf;
 }
-function lpNeedlePrefetch(){
-  ['drop', 'lift'].forEach(kind => {
+function lpNeedlePrefetch(kinds){
+  (kinds || ['drop', 'lift']).forEach(kind => {
     if (lpSfxBytes[kind]) return;
-    const src = kind === 'drop' ? LP_NEEDLE_DROP_SRC : LP_NEEDLE_LIFT_SRC;
+    const src = LP_SFX_SRC[kind];
     lpSfxBytes[kind] = src
       ? fetch(src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).catch(() => null)
       : Promise.resolve(null);
@@ -12660,11 +12665,11 @@ function lpNeedlePrefetch(){
 }
 function lpNeedleBuffer(ctx, kind){
   if (lpSfxBuffers[kind]) return lpSfxBuffers[kind];
-  lpNeedlePrefetch();
+  lpNeedlePrefetch([kind]);
   const p = lpSfxBytes[kind]
     .then(ab => ab ? new Promise((res, rej) => ctx.decodeAudioData(ab.slice(0), res, rej)) : null)
     .catch(() => null)
-    .then(buf => buf || lpSynthNeedle(ctx, kind));
+    .then(buf => buf || (kind === 'rewind' ? null : lpSynthNeedle(ctx, kind)));
   return (lpSfxBuffers[kind] = p);
 }
 // create (or wake) the sfx context - only ever from inside a user gesture
@@ -12676,8 +12681,8 @@ function lpSfxContext(){
     // switch muted the sfx while the YouTube video kept playing (issue #205)
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
     lpSfxCtx = new AC();
-    // warm both buffers so the first toggle of the other kind isn't lost to a decode
-    lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift');
+    // warm all buffers so the first toggle of the other kind isn't lost to a decode
+    lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift'); lpNeedleBuffer(lpSfxCtx, 'rewind');
   }
   if (lpSfxCtx.state !== 'running') lpSfxCtx.resume().catch(() => {});
   return lpSfxCtx;
@@ -12690,8 +12695,15 @@ function lpRecordOnScreen(){
   const rec = document.getElementById('artRecord');
   return !!rec && rec.getClientRects().length > 0;
 }
+// same idea for the cassette: fullscreen flow cassette or the player's cassette
+function cassetteOnScreen(){
+  if (artStyle !== 'cassette' || document.visibilityState !== 'visible') return false;
+  if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'cassette';
+  const cs = document.getElementById('artCassette');
+  return !!cs && cs.getClientRects().length > 0;
+}
 function playLpNeedle(kind){
-  if (!lpRecordOnScreen()) return;
+  if (!(kind === 'rewind' ? cassetteOnScreen() : lpRecordOnScreen())) return;
   try{
     const ctx = lpSfxContext(), t0 = Date.now();
     if (!ctx) return;
@@ -12713,8 +12725,9 @@ function playLpNeedle(kind){
 // pointerdown/keydown that precedes the play/pause click - so the context is
 // already running and both buffers decoded by the time the toggle fires.
 if (artStyle === 'record') lpNeedlePrefetch();
+if (artStyle === 'cassette') lpNeedlePrefetch(['rewind']);
 function lpSfxUnlock(){
-  if (artStyle !== 'record') return;
+  if (artStyle !== 'record' && artStyle !== 'cassette') return;
   try { if (!lpSfxContext()) return; } catch(e){ return; }
   ['pointerdown', 'touchend', 'keydown'].forEach(t => document.removeEventListener(t, lpSfxUnlock, true));
 }
@@ -12772,11 +12785,14 @@ function playNext(auto){
 function playPrev(){
   const ad = activeDeck();
   if (ad.player && ad.player.getCurrentTime && ad.player.getCurrentTime() > 3){
+    playLpNeedle('rewind');
     ad.player.seekTo(0, true);
     return;
   }
   let pos = state.queuePos - 1;
   if (pos < 0){ if (state.repeat === 'all') pos = state.queue.length - 1; else return; }
+  // a one-track queue on repeat-all wraps back onto the same song: a restart
+  if (pos === state.queuePos) playLpNeedle('rewind');
   playIndex(pos, { crossfade: true });
 }
 
