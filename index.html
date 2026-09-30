@@ -656,6 +656,25 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   backdrop-filter:blur(6px);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .art-fs-btn svg{width:15px;height:15px}
 .art-fs-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
+/* cast/AirPlay (cross-platform-handoff): an .art-fs-btn twin in the art's
+   other top corner, only shown once a target exists (see castRenderUI) */
+.art-cast-btn{right:auto;left:10px}
+.art-cast-btn[hidden]{display:none}
+.art-cast-btn.is-active{color:var(--player-accent)}
+.art-cast-btn.is-connecting svg{animation:cast-connecting 1.2s var(--ease-in-out) infinite}
+@keyframes cast-connecting{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.art-cast-btn.is-connecting svg{animation:none;opacity:.6}}
+.cast-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;font-size:12px;color:var(--player-accent);min-width:0}
+.cast-bar[hidden]{display:none}
+.cast-bar>svg{width:14px;height:14px;flex:none}
+.cast-bar-label{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cast-bar-label strong{font-weight:600}
+.cast-bar .cast-vol{width:72px;flex:none;margin:0}
+.cast-bar .cast-vol[hidden]{display:none}
+.cast-stop-btn{flex:none;padding:3px 10px;border-radius:12px;background:var(--panel-2);color:var(--faint);font-size:11.5px;font-weight:600;
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.cast-stop-btn:hover{background:var(--panel-3);color:var(--text)}
+.cast-stop-btn[hidden]{display:none}
 .track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
 .track-meta .title-row .title{flex:1;min-width:0}
 
@@ -1446,14 +1465,14 @@ body.queue-over-fs #queue-scrim{bottom:0}
   /* the art's top edge is the viewport's here, so the corner buttons drop
      below the overlaid topbar - otherwise the nav covers them on wide-ish
      windows and fsBtn (the way into phase 3) can't be clicked */
-  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn){top:calc(var(--topbar-h) + 10px)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn,#castBtn){top:calc(var(--topbar-h) + 10px)}
   /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
      #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
-  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn){
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn){
     /* background/color kept for #fsBtn's own .art-fs-btn hover transition */
     transition:opacity 600ms var(--ease-in-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out);
   }
-  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn){
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn){
     opacity:0;pointer-events:none;
   }
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active),
@@ -2362,6 +2381,12 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <button class="art-fs-btn" id="desktopFsExitBtn" title="Exit fullscreen" aria-label="Exit fullscreen">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
           </button>
+          <!-- cross-platform-handoff: Cast (Chromecast / Google TV) or, for a
+               podcast episode on Safari, AirPlay. Hidden until a target is
+               actually available - see castRenderUI() -->
+          <button class="art-fs-btn art-cast-btn" id="castBtn" title="Play on a speaker or TV" aria-label="Play on a speaker or TV" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor" id="castIco"></svg>
+          </button>
         </div>
         <div class="track-meta">
           <div class="title-row">
@@ -2374,6 +2399,12 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             </button>
           </div>
           <div class="artist marquee" id="trackArtist"><span>—</span></div>
+          <div class="cast-bar" id="castBar" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/></svg>
+            <span class="cast-bar-label">Playing on <strong id="castBarName"></strong></span>
+            <input type="range" class="slider cast-vol" id="castVol" min="0" max="100" step="1" value="50" title="Volume on this device" aria-label="Volume on the cast device">
+            <button type="button" class="cast-stop-btn" id="castStopBtn" title="Stop casting and keep listening here">Stop</button>
+          </div>
         </div>
 
         <div class="transport-full">
@@ -9184,6 +9215,26 @@ const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-de
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
 const standbyDeck = () => decks[1 - activeIdx];
+// Cast (speakers/TVs) state - declared up here, ahead of every deck function
+// that checks castActive(); the rest of the Cast code lives in the "CAST"
+// block after the desktop mini player. While casting, the active deck's
+// `player` is swapped for a Cast-backed adapter (kind 'cast') and its real
+// local player is parked in cast.saved until casting stops.
+const cast = { ready: false, available: false, connecting: false, session: null, appId: null, deck: null, saved: null,
+  media: null, expectId: null, loadSeq: 0, state: -1, pos: 0, posAt: 0, dur: 0, fails: 0, everPlayed: false, endedFor: null,
+  airplayAvail: false, ui: null };
+function castActive(){ return !!(cast.session && cast.deck); }
+// A podcast deck whose <audio> element is currently routed to an AirPlay
+// target (Safari). The route belongs to that one element, so while it holds,
+// transitions reuse the active deck instead of promoting the standby one.
+function airplayHoldsActiveDeck(){
+  const ad = activeDeck();
+  const el = ad.kind === 'au' && ad.audioEl;
+  return !!(el && (el.webkitCurrentPlaybackTargetIsWireless || (el.remote && el.remote.state === 'connected')));
+}
+// Playback is on another device: no preloading into, crossfading with, or
+// promoting the (local) standby deck.
+function routeLocked(){ return castActive() || airplayHoldsActiveDeck(); }
 
 let seekPollTimer = null;
 let lastTrackStartTs = 0;
@@ -9290,6 +9341,9 @@ function onDeckConfirmed(deck){
 
 function onDeckStateChange(deck, e){
   if (deck !== activeDeck()) return;
+  // While casting, only the receiver's status speaks for this deck - the
+  // parked local player (paused/muted under it) still fires its own events.
+  if (deck.kind === 'cast' && !e.cast) return;
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
   if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); } }
@@ -9567,6 +9621,8 @@ function createAudioDeckPlayer(deck, videoId){
     deck.audioEl = new Audio();
     deck.audioEl.preload = 'auto';
     deck.audioEl.setAttribute('playsinline', '');
+    deck.audioEl.setAttribute('x-webkit-airplay', 'allow');
+    castWatchAirPlay(deck.audioEl);
   }
   const el = deck.audioEl;
   let auState = -1, loadSeq = 0;
@@ -9575,7 +9631,7 @@ function createAudioDeckPlayer(deck, videoId){
   el.onpause = () => { if (!el.ended) emit(YT.PlayerState.PAUSED); };
   el.onended = () => emit(YT.PlayerState.ENDED);
   el.onerror = () => {
-    if (deck.gen !== myGen || deck !== activeDeck()) return;
+    if (deck.gen !== myGen || deck !== activeDeck() || deck.kind !== 'au') return;
     showToast("Couldn't play this episode - skipping.");
     playNext(true);
   };
@@ -9613,6 +9669,9 @@ function createAudioDeckPlayer(deck, videoId){
 }
 
 function loadIntoDeck(deck, videoId, isActive){
+  // Casting: the "deck" is the receiver - send it there instead (castLoad
+  // hands playback back here if this receiver can't play this track).
+  if (deck.kind === 'cast'){ deck.videoId = videoId; deck.player.loadVideoById({ videoId: videoId }); return; }
   deck.videoId = videoId;
   ensureLoudness(videoId);
   deck.loadStartTs = Date.now();
@@ -9658,6 +9717,9 @@ function loadIntoDeck(deck, videoId, isActive){
 }
 
 function schedulePreload(afterPos){
+  // The next track will play on the cast/AirPlay target, not this device -
+  // a warm local standby deck would only be promoted by mistake.
+  if (routeLocked()) return;
   const deck = standbyDeck();
   const pos = computeNextPos(afterPos, true);
   if (pos < 0){ if (deck.pos !== -1) resetDeck(deck); return; }
@@ -9678,7 +9740,7 @@ function schedulePreload(afterPos){
 // this up automatically, so that tap promotes an already-buffered deck
 // instead of creating a fresh YouTube player from cold.
 function prewarmResumeDeck(){
-  if (state.queuePos < 0) return;
+  if (state.queuePos < 0 || castActive()) return;
   if (typeof YT === 'undefined' || !YT.Player){ setTimeout(prewarmResumeDeck, 300); return; }
   const t = trackAt(state.queuePos);
   if (!t || !t.videoId) return;
@@ -9754,6 +9816,7 @@ function setPlayingUI(isPlaying){
   flowArtWrap.classList.toggle('is-playing', isPlaying);
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  syncMediaPositionState(true);
   setKeepAliveAudio(isPlaying);
   vizSetPlaying(isPlaying);
   recordSetPlaying(isPlaying);
@@ -10689,6 +10752,7 @@ function updateTrackMetaUI(t){
   updatePlayerLikeBtn(t);
   updateMediaSessionMeta(t);
   updateMiniPlayerUI();
+  castRenderUI();
 }
 
 function updatePlayerLikeBtn(t){
@@ -10710,13 +10774,94 @@ function updateMediaSessionMeta(t){
   // of sync with what's shown in-app. track.art (when present) is always
   // first in the chain; a bare YouTube thumbnail only shows up as the
   // last-resort fallback when no resolved/native art exists at all.
-  const artwork = artworkUrls(t).map(src => ({ src, sizes: '512x512', type: 'image/jpeg' }));
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: t.title || 'EBBLESS',
-    artist: t.artist || '',
-    album: 'EBBLESS',
-    artwork
+  const pl = state.queuePos >= 0 && state.queue[state.queuePos] ? playlistById(state.queue[state.queuePos].plId) : null;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: t.title || 'EBBLESS',
+      artist: t.artist || '',
+      // car head units / lock screens show this as the third line - the
+      // playlist (or podcast show) it's playing from reads better than a
+      // constant app name, which the OS already shows on its own
+      album: (t.podcast && t.channel) || (pl && pl.name) || 'EBBLESS',
+      artwork: mediaSessionArtwork(t)
+    });
+  } catch(e){}
+  // new track: the old one's duration/position no longer apply - cleared
+  // here, re-sent by syncMediaPositionState once the new deck reports them
+  msPos = { dur: -1, pos: 0, at: 0, rate: 1, playing: false };
+  if (navigator.mediaSession.setPositionState){ try { navigator.mediaSession.setPositionState(); } catch(e){} }
+}
+// Every candidate from artworkUrls() at its real pixel size, plus the
+// smaller siblings the same CDN serves, so each surface (a 64px car head
+// unit, a 300px notification, a full-bleed lock screen) picks its own best
+// fit instead of all of them downscaling one image that claimed to be
+// 512x512. Unknown sizes are left unset rather than guessed. The brand icon
+// is only a fallback when the track has no art at all - with explicit sizes
+// it would otherwise outrank a real 300px cover.
+const SPOTIFY_ART_RE = /^(https:\/\/(?:i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab67616d)(0000b273|00001e02|00004851)(.*)$/;
+const SPOTIFY_ART_SIZES = [['0000b273', '640x640'], ['00001e02', '300x300'], ['00004851', '64x64']];
+const YT_THUMB_SIZES = { maxres: '1280x720', hq: '480x360', mq: '320x180' };
+function artImageType(src){
+  const m = /\.(jpe?g|png|webp)(?:$|\?)/i.exec(src);
+  return m ? 'image/' + m[1].toLowerCase().replace('jpg', 'jpeg') : '';
+}
+function mediaSessionArtwork(t){
+  const out = [], seen = new Set();
+  const add = (src, sizes, type) => {
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    const img = { src };
+    if (sizes) img.sizes = sizes;
+    type = type || artImageType(src);
+    if (type) img.type = type;
+    out.push(img);
+  };
+  artworkUrls(t).forEach(src => {
+    let m;
+    if ((m = SPOTIFY_ART_RE.exec(src))) SPOTIFY_ART_SIZES.forEach(([code, size]) => add(m[1] + code + m[3], size, 'image/jpeg'));
+    else if ((m = /\/(maxres|hq|mq)default\.jpg$/.exec(src))) add(src, YT_THUMB_SIZES[m[1]], 'image/jpeg');
+    else if ((m = /mzstatic\.com\/.*\/(\d{2,4})x(\d{2,4})(?:bb|cc)?\.(?:jpe?g|png|webp)$/i.exec(src))){
+      add(src, m[1] + 'x' + m[2]);
+      // Apple's art CDN resizes on the fly - a small one for tiny surfaces
+      if (+m[1] > 300) add(src.replace(/\/\d{2,4}x\d{2,4}((?:bb|cc)?\.(?:jpe?g|png|webp))$/i, '/300x300$1'), '300x300');
+    }
+    else if ((m = /sndcdn\.com\/.*-t(\d+)x(\d+)\./.exec(src))) add(src, m[1] + 'x' + m[2]);
+    else add(src);
   });
+  if (!out.length){
+    add(new URL('brand/assets/icons/icon-512.png', location.href).href, '512x512', 'image/png');
+    add(new URL('brand/assets/icons/icon-192.png', location.href).href, '192x192', 'image/png');
+  }
+  return out;
+}
+// Keeps navigator.mediaSession's position state (the lock-screen / car /
+// notification scrubber) in step with the active deck. The OS extrapolates
+// between calls from playbackRate, so this only re-sends on a real change:
+// new duration, play/pause flip, rate change, or drift past MS_POS_DRIFT_S
+// (a seek, a stall, the pre-roll snap back to 0:00). Never sends NaN/
+// Infinity/zero-duration values (setPositionState throws on those), nor
+// anything while an unconfirmed deck may still be reporting a pre-roll ad's
+// duration. posOverride: a just-issued seek target, since getCurrentTime()
+// lags a seekTo() while the player rebuffers.
+const MS_POS_DRIFT_S = 1.5;
+let msPos = { dur: -1, pos: 0, at: 0, rate: 1, playing: false };
+function syncMediaPositionState(force, posOverride){
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  const ad = activeDeck();
+  if (!ad || !ad.player || !ad.confirmed || !ad.player.getDuration || !ad.player.getCurrentTime || ad.adMutedAt > 0) return;
+  const dur = +ad.player.getDuration();
+  let pos = typeof posOverride === 'number' ? posOverride : +ad.player.getCurrentTime();
+  if (!isFinite(dur) || dur <= 0 || !isFinite(pos)) return;
+  pos = Math.min(Math.max(0, pos), dur);
+  const r = ad.player.getPlaybackRate ? +ad.player.getPlaybackRate() : 1;
+  const rate = isFinite(r) && r > 0 ? r : 1;
+  const playing = artworkWrap.classList.contains('is-playing');
+  const expected = msPos.playing ? msPos.pos + (Date.now() - msPos.at) / 1000 * msPos.rate : msPos.pos;
+  if (!force && Math.abs(dur - msPos.dur) < 0.5 && playing === msPos.playing && rate === msPos.rate && Math.abs(expected - pos) < MS_POS_DRIFT_S) return;
+  try {
+    navigator.mediaSession.setPositionState({ duration: dur, playbackRate: rate, position: pos });
+    msPos = { dur, pos, at: Date.now(), rate, playing };
+  } catch(e){}
 }
 
 /* bumps and persists the play count for the queue entry's OWN playlist, even
@@ -10802,7 +10947,7 @@ function promoteDeckDirect(nd, pos, shouldPlay){
 }
 
 function maybeStartCrossfade(cur, dur){
-  if (!crossfadePrefs.on || crossfadeTriggered || swapInProgress) return;
+  if (!crossfadePrefs.on || crossfadeTriggered || swapInProgress || routeLocked()) return;
   if (!dur || dur - cur > crossfadePrefs.ms / 1000) return;
   const nd = standbyDeck();
   const nextPos = computeNextPos(state.queuePos, false);
@@ -10879,7 +11024,7 @@ function finishCrossfade(old, nd, nextPos){
 let skipFade = null;
 function startSkipCrossfade(pos, t){
   const old = activeDeck(), nd = standbyDeck();
-  if (!crossfadePrefs.on || !old.player || !old.confirmed || isFadingOut(old)) return false;
+  if (!crossfadePrefs.on || !old.player || !old.confirmed || isFadingOut(old) || routeLocked()) return false;
   if (!old.player.getPlayerState || old.player.getPlayerState() !== 1) return false;
   if (old.kind === 'sc' && isSoundCloudVideoId(t.videoId)) return false;
   // Skipping again mid skip-fade: pick the outgoing ramp up from wherever
@@ -10965,7 +11110,7 @@ function loadIndex(pos, autoplay, opts){
   // (wrong-song-kaytranada-glowed-up). Only promote when the deck actually
   // holds this track's video.
   const nd = standbyDeck();
-  if (nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId){
+  if (nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
     promoteDeckDirect(nd, pos, autoplay !== false);
     maybeExtendDiscoverQueue();
     return;
@@ -11008,7 +11153,9 @@ function loadIndex(pos, autoplay, opts){
 // Fixed, short fade-out on pause, independent of the crossfade-length slider
 // (a long crossfade setting used to stretch pause into a multi-second fade).
 const PAUSE_FADE_OUT_MS = 600;
-function pauseFadeOutMs(){ return PAUSE_FADE_OUT_MS; }
+// No fade while casting - the receiver has its own volume, so a fade would
+// only delay the pause.
+function pauseFadeOutMs(){ return castActive() ? 1 : PAUSE_FADE_OUT_MS; }
 const PAUSE_FADE_IN_MS = 320;
 const PAUSE_FADE_TICK_MS = 16;
 // how long a fade-in holds at silence waiting for the player to report it's
@@ -11364,6 +11511,7 @@ function kbSeekBy(delta){
   ad.player.seekTo(to, true);
   cassetteSeekPulse();
   updateSeekUI();
+  return to;
 }
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -11465,7 +11613,38 @@ if ('mediaSession' in navigator){
   });
   navigator.mediaSession.setActionHandler('previoustrack', playPrev);
   navigator.mediaSession.setActionHandler('nexttrack', () => playNext(false));
-  try { navigator.mediaSession.setActionHandler('stop', pausePlayback); } catch(e){}
+  // Each of these may be unsupported (setActionHandler throws on an unknown
+  // action in some browsers), so they're registered one by one.
+  const msSet = (action, fn) => { try { navigator.mediaSession.setActionHandler(action, fn); } catch(e){} };
+  msSet('stop', pausePlayback);
+  // Scrubbing from the lock screen / notification / car display. Same
+  // clamping as the in-app seek bar; the explicit position goes straight to
+  // setPositionState since getCurrentTime() lags a fresh seekTo().
+  msSet('seekto', (d) => {
+    if (!d || typeof d.seekTime !== 'number' || !isFinite(d.seekTime) || state.queuePos < 0) return;
+    const ad = activeDeck();
+    if (!ad.player || !ad.player.seekTo || !ad.player.getDuration) return;
+    const dur = ad.player.getDuration() || 0;
+    if (!dur) return;
+    const to = Math.min(Math.max(0, dur - 1), Math.max(0, d.seekTime));
+    ad.player.seekTo(to, true);
+    kbSeekLast = { player: ad.player, to, at: Date.now() };
+    cassetteSeekPulse();
+    updateSeekUI();
+    syncMediaPositionState(true, to);
+  });
+  // +/-10s skip buttons. Not on iOS: there (lock screen, Control Center,
+  // CarPlay) registering these replaces the previous/next *track* buttons
+  // with +/-seconds ones, and track skipping matters more for music.
+  if (!isIOS){
+    const msSkip = (dir) => (d) => {
+      const step = d && d.seekOffset > 0 ? d.seekOffset : KB_SEEK_S;
+      const to = kbSeekBy(dir * step);
+      if (typeof to === 'number') syncMediaPositionState(true, to);
+    };
+    msSet('seekbackward', msSkip(-1));
+    msSet('seekforward', msSkip(1));
+  }
 }
 
 /* ---------- one EBBLESS tab at a time (audio-ducking, narrow) ----------
@@ -11484,6 +11663,8 @@ function announceTabPlaying(){
 if (tabChannel) tabChannel.onmessage = (e) => {
   const m = e.data;
   if (!m || m.type !== 'playing' || m.from === TAB_ID) return;
+  // this tab is playing on a TV/speaker, not competing for this device's audio
+  if (castActive()) return;
   const ad = activeDeck();
   if (!ad.player || !ad.player.getPlayerState || ad.player.getPlayerState() !== 1 || isFadingOut(ad)) return;
   pausePlayback();
@@ -11915,6 +12096,465 @@ if ('mediaSession' in navigator){
   catch(e){ /* Chromium-only action; unsupported browsers just skip it */ }
 }
 
+/* =========================================================================
+   CAST — speakers & TVs (cross-platform-handoff, part 1)
+   Nearly everything plays inside a YouTube <iframe>, which a web page can't
+   hand to another device itself: the Remote Playback API and AirPlay only
+   work on a real media element the page owns. What does exist:
+   - Google Cast (Chrome desktop + Android): the Cast sender SDK launches
+     YouTube's own receiver app (CAST_YT_APP_ID) on a Chromecast / Google TV
+     and loads a track there by its video id, or - for a podcast episode,
+     which is a plain audio file - Google's Default Media Receiver by URL.
+     The receiver plays one item at a time; EBBLESS stays the queue. When the
+     receiver reports an item finished, the normal track-end path
+     (onDeckStateChange ENDED -> playNext) runs and the next track is loaded
+     onto the receiver, so repeat/shuffle/Discover all keep working.
+   - AirPlay (Safari): only for a podcast episode's own <audio> element (see
+     createAudioDeckPlayer / airplayHoldsActiveDeck). On iOS, picking an
+     AirPlay speaker in Control Center routes the whole device's audio,
+     YouTube tracks included, with no code needed here.
+   How it plugs in: casting swaps the active deck's player for a Cast-backed
+   adapter with the same YT.Player-shaped surface every deck consumer already
+   calls (the pattern the SoundCloud and podcast decks use), so transport
+   buttons, the lock screen / car controls (media session), the seek bar,
+   the queue panel and resume-on-reload all drive the receiver unmodified.
+   The local player is parked, paused and muted, in cast.saved; routeLocked()
+   keeps the standby deck out of it. When casting ends - Stop, the device
+   going away, or a track this receiver can't play - playback comes back to
+   this device at the receiver's last position.
+   Limitations (documented, not papered over): YouTube's receiver accepting a
+   plain LOAD by video id through the generic sender isn't an officially
+   documented contract, so a first load that fails hands straight back here
+   with a toast rather than pretending. SoundCloud-native tracks can't be
+   cast (no stream URL the page can hand over). One receiver app per session,
+   so crossing between a YouTube track and a podcast episode hands back here
+   too - tapping Cast again starts the right receiver. Loudness levelling and
+   crossfades don't apply on the receiver; its volume is its own (the
+   slider in #castBar).
+   ========================================================================= */
+const CAST_SENDER_SRC = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+const CAST_YT_APP_ID = '233637DE';
+// a run of receiver load errors this long (a dead video, embedding
+// disabled...) gives up and brings playback back here
+const CAST_MAX_LOAD_FAILS = 3;
+const CAST_VOL_THROTTLE_MS = 150;
+function castUI(){
+  if (cast.ui) return cast.ui;
+  const btn = $('castBtn'), ico = $('castIco'), bar = $('castBar'), name = $('castBarName'), vol = $('castVol'), stop = $('castStopBtn');
+  if (!btn || !ico || !bar || !name || !vol || !stop) return null;
+  cast.ui = { btn, ico, bar, name, vol, stop };
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (btn.dataset.mode === 'airplay'){ castShowAirPlayPicker(); return; }
+    castStart();
+  });
+  stop.addEventListener('click', castStop);
+  let volTimer = null;
+  const sendVol = () => {
+    volTimer = null;
+    if (cast.session && cast.session.setReceiverVolumeLevel){
+      try { cast.session.setReceiverVolumeLevel(Math.max(0, Math.min(1, vol.value / 100)), () => {}, () => {}); } catch(e){}
+    }
+  };
+  vol.addEventListener('input', () => { cast.volDragging = true; if (!volTimer) volTimer = setTimeout(sendVol, CAST_VOL_THROTTLE_MS); });
+  vol.addEventListener('change', () => { cast.volDragging = false; if (volTimer){ clearTimeout(volTimer); } sendVol(); });
+  return cast.ui;
+}
+function castDeviceName(){
+  const r = cast.session && cast.session.receiver;
+  return (r && r.friendlyName) || 'your TV';
+}
+function castDefaultAppId(){
+  return (window.chrome && chrome.cast && chrome.cast.media && chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID) || 'CC1AD845';
+}
+// Which receiver app can play this track: YouTube's for a matched video, the
+// Default Media Receiver for a podcast file, none for SoundCloud-native.
+function castAppFor(videoId){
+  if (!videoId || isSoundCloudVideoId(videoId)) return null;
+  return isAudioVideoId(videoId) ? castDefaultAppId() : CAST_YT_APP_ID;
+}
+function castContentId(videoId){ return isAudioVideoId(videoId) ? audioUrlOf(videoId) : videoId; }
+function castAudioType(url){
+  const m = /\.(mp3|m4a|mp4|aac|ogg|oga|opus|wav)(?:$|\?)/i.exec(url || '');
+  const ext = m ? m[1].toLowerCase() : 'mp3';
+  return { mp3: 'audio/mpeg', m4a: 'audio/mp4', mp4: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', wav: 'audio/wav' }[ext];
+}
+function castCurrentTime(){
+  const m = cast.media;
+  if (m && m.getEstimatedTime){
+    const v = +m.getEstimatedTime();
+    if (isFinite(v) && v >= 0) return v;
+  }
+  return cast.state === 1 ? cast.pos + (Date.now() - cast.posAt) / 1000 : cast.pos;
+}
+
+// YT.Player-shaped stand-in for the active deck's player while casting.
+// Volume/mute calls are no-ops on purpose: they come from fades, ad-muting
+// and loudness levelling, none of which should touch the TV's own volume.
+function makeCastPlayerAdapter(){
+  const noop = () => {};
+  return {
+    playVideo(){ const m = cast.media; if (!m) return; if (cast.state !== 1) cast.state = 3; try { m.play(null, noop, noop); } catch(e){} },
+    pauseVideo(){ const m = cast.media; if (m) try { m.pause(null, noop, noop); } catch(e){} },
+    stopVideo(){ this.pauseVideo(); },
+    mute: noop, unMute: noop, isMuted(){ return false; }, setVolume: noop,
+    setPlaybackQuality: noop,
+    getPlayerState(){ return cast.state; },
+    getCurrentTime(){ return castCurrentTime(); },
+    getDuration(){ return cast.dur || 0; },
+    getPlaybackRate(){ const m = cast.media; return m && m.playbackRate > 0 ? m.playbackRate : 1; },
+    seekTo(sec){
+      const m = cast.media;
+      if (!m) return;
+      const r = new chrome.cast.media.SeekRequest();
+      r.currentTime = Math.max(0, +sec || 0);
+      cast.pos = r.currentTime; cast.posAt = Date.now();
+      try { m.seek(r, noop, noop); } catch(e){}
+    },
+    loadVideoById(opts){
+      const v = typeof opts === 'string' ? opts : opts.videoId;
+      castLoad(v, (typeof opts === 'object' && opts.startSeconds) || 0);
+    },
+  };
+}
+
+function castStart(){
+  if (castActive()){ castStop(); return; }
+  if (cast.connecting || !(window.chrome && chrome.cast && chrome.cast.requestSession)) return;
+  const t = trackAt(state.queuePos);
+  if (!t || !t.videoId){ showToast('Pick something to play first.'); return; }
+  const appId = castAppFor(t.videoId);
+  if (!appId){ showToast("SoundCloud tracks can't be cast yet."); return; }
+  if (typeof YT === 'undefined' || !YT.PlayerState){ showToast('Still loading - try again in a moment.'); return; }
+  cast.connecting = true;
+  castRenderUI();
+  try {
+    chrome.cast.requestSession((s) => {
+      cast.connecting = false;
+      if (!castBegin(s, appId)){ try { s.stop(() => {}, () => {}); } catch(e){} castRenderUI(); }
+    }, (err) => {
+      cast.connecting = false;
+      castRenderUI();
+      const cancelled = err && chrome.cast.ErrorCode && (err.code === chrome.cast.ErrorCode.CANCEL || err.code === chrome.cast.ErrorCode.RECEIVER_UNAVAILABLE);
+      if (!cancelled) showToast("Couldn't connect to that device.");
+    }, new chrome.cast.SessionRequest(appId));
+  } catch(e){ cast.connecting = false; castRenderUI(); }
+}
+function castStop(){
+  if (!castActive()) return;
+  castEnd({ stop: true });
+}
+
+// Hands the current track (at the listener's current position) to a fresh
+// session. opts.rejoin: a session auto-joined after a reload - adopt the
+// receiver's item if it's still this track instead of reloading it.
+function castBegin(session, appId, opts){
+  opts = opts || {};
+  const t = trackAt(state.queuePos);
+  if (!session || castActive() || !t || !t.videoId || castAppFor(t.videoId) !== appId) return false;
+  if (typeof YT === 'undefined' || !YT.PlayerState) return false;
+  const ad = activeDeck();
+  const entry = state.queue[state.queuePos];
+  let startAt = 0;
+  if (ad.player && ad.confirmed && ad.videoId === t.videoId && ad.player.getCurrentTime) startAt = ad.player.getCurrentTime() || 0;
+  else if (pendingResume && entry && pendingResume.plId === entry.plId && pendingResume.idx === entry.idx) startAt = pendingResume.position || 0;
+  pendingResume = null;
+  const cid = castContentId(t.videoId);
+  const existing = opts.rejoin ? (session.media || []).find(m => m && m.media && m.media.contentId === cid) : null;
+  if (opts.rejoin && !existing) return false;
+
+  // silence this device: no crossfade/pause-fade left running, both decks
+  // paused and muted, the standby one emptied (routeLocked keeps it so)
+  cancelCrossfade();
+  if (playFade){ clearTimeout(playFade.timer); playFade = null; }
+  decks.forEach(d => {
+    if (d.unmuteTimer){ clearTimeout(d.unmuteTimer); d.unmuteTimer = null; }
+    if (d.player){ try { d.player.mute && d.player.mute(); d.player.pauseVideo && d.player.pauseVideo(); } catch(e){} }
+  });
+  const sd = standbyDeck();
+  if (sd.pos !== -1 || sd.videoId) resetDeck(sd);
+
+  // gen is bumped so the parked player's own late callbacks (an onReady or
+  // ad-check still in flight) can't act on the Cast adapter - castEnd puts
+  // the saved gen back, which revives them for the parked player
+  cast.saved = { player: ad.player, kind: ad.kind, videoId: ad.videoId, ready: ad.ready, confirmed: ad.confirmed, gen: ad.gen };
+  ad.gen++;
+  ad.pendingVideoId = null;
+  cast.session = session; cast.deck = ad; cast.appId = appId;
+  cast.fails = 0; cast.everPlayed = false; cast.state = -1; cast.media = null; cast.volDragging = false;
+  ad.kind = 'cast'; ad.player = makeCastPlayerAdapter(); ad.ready = true; ad.confirmed = true;
+  ad.muteStartTs = 0; ad.adMutedAt = 0; ad.videoId = t.videoId;
+  try { session.addUpdateListener(castOnSessionUpdate); } catch(e){}
+  try { session.addMediaListener(castAttachMedia); } catch(e){}
+  castSyncVolume();
+  castRenderUI();
+  if (existing){
+    cast.expectId = cid; cast.sawExpect = true; cast.everPlayed = true; cast.endedFor = null;
+    cast.dur = t.duration || 0;
+    castAttachMedia(existing);
+  } else {
+    ad.player.loadVideoById({ videoId: t.videoId, startSeconds: startAt });
+  }
+  showToast('Playing on ' + castDeviceName());
+  return true;
+}
+
+function castLoad(videoId, startAt){
+  if (!castActive()) return;
+  const appId = castAppFor(videoId);
+  if (appId !== cast.appId){
+    const name = castDeviceName();
+    castEnd({ stop: true, position: 0, play: true, msg: isSoundCloudVideoId(videoId)
+      ? "SoundCloud tracks can't play on " + name + ' - playing here.'
+      : 'This one needs a different cast app - playing here. Tap cast to send it to ' + name + '.' });
+    return;
+  }
+  const t = trackAt(state.queuePos);
+  const meta = t && t.videoId === videoId ? t : null;
+  const info = new chrome.cast.media.MediaInfo(castContentId(videoId), isAudioVideoId(videoId) ? castAudioType(audioUrlOf(videoId)) : 'x-youtube/video');
+  info.streamType = chrome.cast.media.StreamType.BUFFERED;
+  if (meta){
+    const md = new chrome.cast.media.MusicTrackMediaMetadata();
+    md.title = meta.title || '';
+    md.artist = meta.artist || '';
+    if (meta.podcast && meta.channel) md.albumName = meta.channel;
+    md.images = artworkUrls(meta).slice(0, 2).map(u => new chrome.cast.Image(u));
+    info.metadata = md;
+    if (meta.duration > 0) info.duration = meta.duration;
+  }
+  const req = new chrome.cast.media.LoadRequest(info);
+  req.autoplay = true;
+  req.currentTime = Math.max(0, +startAt || 0);
+  const seq = ++cast.loadSeq;
+  // detach the previous item first: its own trailing IDLE/FINISHED updates
+  // must not count as this new track ending
+  cast.media = null; cast.expectId = info.contentId; cast.sawExpect = false; cast.endedFor = null;
+  cast.loadStart = req.currentTime; cast.pos = req.currentTime; cast.posAt = Date.now();
+  cast.dur = (meta && meta.duration) || 0;
+  cast.state = 3;
+  cast.deck.loadStartTs = Date.now();
+  startLoadIconTicker();
+  try {
+    cast.session.loadMedia(req, (m) => {
+      if (seq !== cast.loadSeq || !castActive()) return;
+      castAttachMedia(m);
+    }, (err) => {
+      if (seq !== cast.loadSeq || !castActive()) return;
+      castLoadFailed(err);
+    });
+  } catch(e){ castLoadFailed(e); }
+}
+function castLoadFailed(){
+  if (!castActive()) return;
+  const name = castDeviceName();
+  cast.fails++;
+  if (!cast.everPlayed || cast.fails >= CAST_MAX_LOAD_FAILS){
+    castEnd({ stop: true, position: cast.loadStart || 0, play: true, msg: name + " couldn't play this - playing here instead." });
+    return;
+  }
+  showToast("Couldn't play that one on " + name + ' - skipping.');
+  playNext(true);
+}
+
+function castAttachMedia(m){
+  if (!castActive() || !m || m === cast.media) return;
+  const cid = m.media && m.media.contentId;
+  // an item our loads didn't create (the receiver's own autoplay, another
+  // sender) after ours was already seen playing: ours is over
+  if (cast.sawExpect && cid && cid !== cast.expectId){ castTrackEnded(); return; }
+  cast.media = m;
+  try { m.addUpdateListener((alive) => castOnMediaUpdate(m, alive)); } catch(e){}
+  castOnMediaUpdate(m, true);
+}
+function castOnMediaUpdate(m, alive){
+  if (!castActive() || m !== cast.media) return;
+  const PS = chrome.cast.media.PlayerState, IR = chrome.cast.media.IdleReason;
+  const cid = m.media && m.media.contentId;
+  if (cid && cid === cast.expectId) cast.sawExpect = true;
+  else if (cid && cast.sawExpect){ castTrackEnded(); return; }
+  const d = m.media ? +m.media.duration : NaN;
+  if (isFinite(d) && d > 0) cast.dur = d;
+  const est = m.getEstimatedTime ? +m.getEstimatedTime() : +m.currentTime;
+  if (isFinite(est) && est >= 0){ cast.pos = est; cast.posAt = Date.now(); }
+  if (m.playerState === PS.PLAYING) castSetState(1);
+  else if (m.playerState === PS.PAUSED) castSetState(2);
+  else if (m.playerState === PS.BUFFERING){ if (cast.state !== 2) cast.state = 3; }
+  else if (m.playerState === PS.IDLE){
+    if (m.idleReason === IR.FINISHED) castTrackEnded();
+    else if (m.idleReason === IR.ERROR) castLoadFailed();
+    // stopped from the TV remote / Google Home: nothing playing any more
+    else if (m.idleReason === IR.CANCELLED) castSetState(2);
+  }
+  if (alive === false && cast.media === m) cast.media = null;
+}
+// YT.PlayerState numbering (1 playing, 2 paused, 3 buffering, 0 ended), so
+// onDeckStateChange treats the receiver like any other deck
+function castSetState(s){
+  if (!castActive()) return;
+  const prev = cast.state;
+  cast.state = s;
+  if (s === 1){ cast.everPlayed = true; cast.fails = 0; cast.deck.loadStartTs = 0; }
+  if (s !== prev) onDeckStateChange(cast.deck, { data: s, cast: true });
+}
+function castTrackEnded(){
+  if (!castActive() || cast.endedFor === cast.expectId) return;
+  cast.endedFor = cast.expectId;
+  cast.state = 0;
+  onDeckStateChange(cast.deck, { data: 0, cast: true });
+}
+function castOnSessionUpdate(isAlive){
+  if (!castActive()) return;
+  if (!isAlive){ castEnd({}); return; }
+  castSyncVolume();
+}
+function castSyncVolume(){
+  const ui = castUI();
+  const v = cast.session && cast.session.receiver && cast.session.receiver.volume;
+  if (!ui || cast.volDragging || !v || typeof v.level !== 'number' || !isFinite(v.level)) return;
+  ui.vol.value = Math.round(Math.max(0, Math.min(1, v.level)) * 100);
+}
+
+// Back to this device. opts.stop: also stop the receiver (our Stop button,
+// or a hand-back); otherwise the session already ended on its own.
+// opts.position / opts.play override where to pick up and whether to keep
+// playing - by default the receiver's last position and play state.
+function castEnd(opts){
+  opts = opts || {};
+  if (!cast.deck) return;
+  const deck = cast.deck, saved = cast.saved, s = cast.session;
+  const position = typeof opts.position === 'number' ? opts.position : castCurrentTime();
+  const play = 'play' in opts ? !!opts.play : (cast.state === 1 || cast.state === 3);
+  const name = castDeviceName();
+  cast.session = null; cast.deck = null; cast.saved = null; cast.media = null; cast.expectId = null;
+  cast.loadSeq++; cast.state = -1; cast.connecting = false;
+  if (s){
+    try { s.removeUpdateListener(castOnSessionUpdate); } catch(e){}
+    try { s.removeMediaListener(castAttachMedia); } catch(e){}
+    if (opts.stop){ try { s.stop(() => {}, () => {}); } catch(e){} }
+  }
+  deck.player = saved.player; deck.kind = saved.kind; deck.videoId = saved.videoId; deck.gen = saved.gen;
+  deck.ready = saved.ready; deck.confirmed = saved.confirmed; deck.loadStartTs = 0;
+  // a player still being built when casting began had its onReady dropped
+  // (gen bump above) - it would wait for that forever, so start over
+  if (deck.player && !deck.ready) deck.player = null;
+  castRenderUI();
+  showToast(opts.msg || (play ? 'Stopped casting to ' + name + ' - playing here.' : 'Stopped casting to ' + name + '.'));
+  castResumeLocal(deck, position, play);
+}
+function castResumeLocal(deck, position, play){
+  const t = trackAt(state.queuePos);
+  if (!t || !t.videoId){ setPlayingUI(false); return; }
+  const entry = state.queue[state.queuePos];
+  position = isFinite(position) && position > 0 ? position : 0;
+  if (deck.player && deck.ready && deck.confirmed && deck.videoId === t.videoId){
+    // same track still parked here: just pick it back up
+    if (deck.player.unMute) deck.player.unMute();
+    if (deck.player.seekTo) deck.player.seekTo(position, true);
+    if (play) fadeInAndPlay(deck); else setPlayingUI(false);
+  } else {
+    // the queue moved on while casting (or nothing was loaded here): load
+    // the current track; onDeckConfirmed applies pendingResume's position
+    pendingResume = position > 1 ? { plId: entry.plId, idx: entry.idx, position } : null;
+    if (!deck.player){
+      if (play) createDeckPlayer(deck, t.videoId); else setPlayingUI(false);
+    } else {
+      loadIntoDeck(deck, t.videoId, true);
+      if (!play){ if (deck.player.pauseVideo) deck.player.pauseVideo(); setPlayingUI(false); }
+    }
+  }
+  schedulePreload(state.queuePos);
+  syncMediaPositionState(true);
+}
+
+// ---- AirPlay (Safari, podcast episodes) ----
+function castWatchAirPlay(el){
+  if (!el || !window.WebKitPlaybackTargetAvailabilityEvent) return;
+  el.addEventListener('webkitplaybacktargetavailabilitychanged', (e) => {
+    cast.airplayAvail = e.availability === 'available';
+    castRenderUI();
+  });
+  el.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', () => {
+    castRenderUI();
+    // route back on this device: warm the standby deck again
+    if (!routeLocked() && state.queuePos >= 0) schedulePreload(state.queuePos);
+  });
+}
+function castShowAirPlayPicker(){
+  const ad = activeDeck();
+  const el = ad.kind === 'au' ? ad.audioEl : null;
+  if (el && el.webkitShowPlaybackTargetPicker){ try { el.webkitShowPlaybackTargetPicker(); } catch(e){} }
+}
+
+function castRenderUI(){
+  const ui = castUI();
+  if (!ui) return;
+  const on = castActive();
+  const t = trackAt(state.queuePos);
+  const ad = activeDeck();
+  const el = ad.kind === 'au' ? ad.audioEl : null;
+  const airplayOn = !on && airplayHoldsActiveDeck();
+  const airplayOffer = !on && cast.airplayAvail && !!(el && el.webkitShowPlaybackTargetPicker) && !!(t && isAudioVideoId(t.videoId));
+  const castOffer = on || cast.connecting || (cast.ready && cast.available);
+  const mode = castOffer ? 'cast' : (airplayOffer || airplayOn) ? 'airplay' : '';
+  const CAST_ICO = '<path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/>';
+  const CAST_ON_ICO = CAST_ICO + '<path d="M19 7H5v1.63c3.96 1.28 7.09 4.41 8.37 8.37H19V7z"/>';
+  const AIRPLAY_ICO = '<path d="M6 22h12l-6-6zM21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v-2H3V5h18v12h-4v2h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>';
+  ui.btn.hidden = !mode;
+  ui.btn.dataset.mode = mode;
+  ui.btn.classList.toggle('is-active', on || airplayOn);
+  ui.btn.classList.toggle('is-connecting', cast.connecting);
+  ui.ico.innerHTML = mode === 'airplay' ? AIRPLAY_ICO : on ? CAST_ON_ICO : CAST_ICO;
+  const label = on ? 'Playing on ' + castDeviceName() + ' - tap to stop casting'
+    : mode === 'airplay' ? 'AirPlay to a speaker or TV' : 'Play on a speaker or TV';
+  ui.btn.title = label;
+  ui.btn.setAttribute('aria-label', label);
+  ui.bar.hidden = !(on || airplayOn);
+  ui.name.textContent = on ? castDeviceName() : 'AirPlay';
+  ui.vol.hidden = !on;
+  ui.stop.hidden = !on;
+}
+
+// ---- Cast SDK bootstrap ----
+function castOnReceiverAvailability(a){
+  cast.available = a === chrome.cast.ReceiverAvailability.AVAILABLE;
+  castRenderUI();
+}
+// PAGE_SCOPED auto-join: a reload of this same tab re-attaches to its
+// session (see castBegin's rejoin) - other EBBLESS tabs never grab it, so
+// two queues can't both advance one receiver.
+function castOnExistingSession(s){
+  if (!s || castActive()) return;
+  if (s.appId !== CAST_YT_APP_ID && s.appId !== castDefaultAppId()) return;
+  castBegin(s, s.appId, { rejoin: true });
+}
+function castInit(){
+  const cc = window.chrome && chrome.cast;
+  if (!cc || !cc.SessionRequest || !cc.ApiConfig || cast.ready) return;
+  try {
+    const cfg = new cc.ApiConfig(new cc.SessionRequest(CAST_YT_APP_ID), castOnExistingSession, castOnReceiverAvailability,
+      cc.AutoJoinPolicy ? cc.AutoJoinPolicy.PAGE_SCOPED : undefined);
+    cc.initialize(cfg, () => { cast.ready = true; castRenderUI(); }, () => {});
+  } catch(e){}
+}
+// Loaded lazily once the page has settled, and only where Cast can exist
+// (Chromium; not iOS, where every browser is WebKit without Cast). The SDK
+// itself calls __onGCastApiAvailable(false) on a Chromium without it.
+function castLoadSdk(){
+  if (isIOS || !window.chrome || document.getElementById('castSenderSdk')) return;
+  window.__onGCastApiAvailable = function(ok){ if (ok) castInit(); };
+  const s = document.createElement('script');
+  s.id = 'castSenderSdk';
+  s.async = true;
+  s.src = CAST_SENDER_SRC;
+  s.onerror = () => {};
+  document.head.appendChild(s);
+}
+{
+  const later = () => setTimeout(castLoadSdk, 1500);
+  if (document.readyState === 'complete') later(); else window.addEventListener('load', later, { once: true });
+  castWatchAirPlay(keepAliveAudio);
+}
+
 /* ---- PWA update propagation ----
    The service worker's own skipWaiting/clients.claim mean a new sw.js takes
    control fast once the browser notices one - but the browser only checks
@@ -12037,7 +12677,8 @@ document.addEventListener('visibilitychange', () => {
     lsSet(LS_WAS_PLAYING, wasPlayingBeforeHide);
   } else {
     const hiddenAt = lsGet(LS_BACKGROUNDED_AT, null);
-    if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS){
+    // (never while casting - the reload would orphan the receiver mid-queue)
+    if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS && !castActive()){
       location.reload();
       return;
     }
@@ -12079,6 +12720,7 @@ function updateSeekUI(){
   flowTimeCur.textContent = formatTime(cur); flowTimeDur.textContent = formatTime(dur);
   miniLineFill.style.width = pct + '%';
   updateLyricsHighlight(cur);
+  syncMediaPositionState(false);
   maybeStartCrossfade(cur, dur);
   cassetteSetProgress(cur, dur);
 }
