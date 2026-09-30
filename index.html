@@ -221,6 +221,20 @@ body.onb-active .paste-guide{display:none}
 .lib-search-clear:hover{background:var(--panel-3);color:var(--text)}
 .lib-search-clear svg{width:12px;height:12px}
 #libSearchTracks .track-row .pl-name{color:var(--faint-2)}
+/* contextual-awareness: time-of-day row above the library grid (renderTimeRow) */
+.time-row{margin-top:14px}
+.time-row-btn{width:100%;display:flex;align-items:center;gap:14px;text-align:left;padding:12px 14px;
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);
+  transition:background var(--dur-ui) var(--ease-out)}
+.time-row-btn:hover{background:var(--panel-2)}
+.time-row-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.time-row-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.time-row-kicker{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--faint-2)}
+.time-row-title{font-size:16px;font-weight:600;line-height:1.2}
+.time-row-sub{font-size:12.5px;color:var(--faint);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.time-row-play{flex:none;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#121212;
+  display:flex;align-items:center;justify-content:center}
+.time-row-play svg{width:16px;height:16px;margin-left:2px}
 /* iOS zooms the page on focus for inputs under 16px */
 @media (max-width:859.98px){ .lib-search input{font-size:16px} }
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
@@ -2039,6 +2053,16 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
           <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="time-row hidden" id="timeRow">
+          <button type="button" class="time-row-btn" id="timeRowPlay">
+            <span class="time-row-text">
+              <span class="time-row-kicker" id="timeRowKicker"></span>
+              <span class="time-row-title" id="timeRowTitle"></span>
+              <span class="time-row-sub" id="timeRowSub"></span>
+            </span>
+            <span class="time-row-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
           </button>
         </div>
         <div class="lib-grid" id="libraryGrid"></div>
@@ -4726,6 +4750,7 @@ libSearch.addEventListener('input', () => {
   libSearchClear.classList.toggle('hidden', !libSearch.value);
   renderLibrary();
 });
+$('timeRowPlay').addEventListener('click', () => playTimeMix());
 libSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && libSearch.value){ e.preventDefault(); libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
   else if (e.key === 'Enter'){ e.preventDefault(); libSearch.blur(); }
@@ -4980,6 +5005,7 @@ function renderLibrary(){
   const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !searchTrackCount;
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
+  renderTimeRow();
   refreshLibraryMarquees();
 }
 function refreshLibraryMarquees(){
@@ -7631,6 +7657,201 @@ async function fetchMoodMetrics(seedTracks, pool, seedTagVec){
   return { refs, candMetrics };
 }
 
+/* ---------- time context: the listener's own clock (GitHub #164, #187) ----------
+   Curation leans with the time of day and the day of the week - and nothing
+   else. No location, weather, sensors, new permissions or network calls:
+   just `new Date()` read in the device's own local time zone (getHours/
+   getDay already are local, so a listener in Lagos and one in LA each get
+   their own evening). Morning leans calm and warm, the weekday stretch
+   steady and focused, evening livelier, late night slower and closer;
+   weekends loosen the middle of the day and keep Friday/Saturday nights up
+   a notch.
+
+   Hermetic layer, kept deliberately secondary: each weekday has its
+   traditional planetary ruler (Sun-Sunday, Moon-Monday, Mars-Tuesday,
+   Mercury-Wednesday, Jupiter-Thursday, Venus-Friday, Saturn-Saturday) and
+   each hour its planetary ruler in the Chaldean order (Saturn, Jupiter,
+   Mars, Sun, Venus, Mercury, Moon), the first hour after sunrise going to
+   the day's own planet. Real planetary hours split sunrise-sunset into 12
+   unequal parts and need the listener's location; since location is off
+   the table, sunrise/sunset are taken as 06:00/18:00 local, which makes
+   every planetary hour exactly one clock hour and starts the planetary day
+   at 06:00 (so 02:00 Saturday is still Friday's night, hour of Venus's
+   day). Each planet gets a musical character that adds a smaller nudge on
+   top of the time block's, and names the time-of-day row in the library.
+
+   Both are preferences, never filters - same shape as the year and
+   tempo/key/energy preferences above: a candidate's tags (and energy/
+   valence when /metrics has them) are scored against the moment, and that
+   moves its score by at most +-TIME_WEIGHT (+PLANET_WEIGHT) before the
+   random, score-weighted walk. A candidate with no tags and no metrics is
+   left exactly where it was. */
+const TIME_WEIGHT = 0.1;         // block fit swing: +-0.1, about the tempo/key/energy preference
+const PLANET_WEIGHT = 0.035;     // planetary fit: a boost only, well under the block's
+const TIME_QUEUE_SCALE = 0.5;    // queue continuation follows what's playing first, the clock second
+const TIME_BLOCKS = {
+  morning: {
+    title: 'For this morning', lean: 'Easing in: warm and unhurried.', energy: 0.4, valence: 0.6,
+    tags: ['acoustic', 'chill', 'chillout', 'mellow', 'folk', 'indie folk', 'soft', 'soft rock', 'jazz', 'soul', 'singer-songwriter', 'bossa nova', 'easy listening', 'morning', 'coffee', 'piano', 'neo-soul'],
+    avoid: ['hardcore', 'metal', 'death metal', 'dubstep', 'drum and bass', 'hard rock', 'party', 'trap', 'grime', 'industrial'],
+  },
+  workday: {
+    title: 'For the workday', lean: 'Steady and focused.', energy: 0.5, valence: 0.5,
+    tags: ['instrumental', 'lo-fi', 'lofi', 'chillhop', 'ambient', 'electronic', 'downtempo', 'post-rock', 'focus', 'study', 'jazz', 'deep house', 'house', 'minimal', 'beats', 'idm', 'soundtrack'],
+    avoid: ['party', 'hardcore', 'screamo', 'christmas', 'comedy'],
+  },
+  afternoon: {
+    title: 'For this afternoon', lean: 'Loose and bright.', energy: 0.6, valence: 0.7,
+    tags: ['indie', 'indie pop', 'pop', 'funk', 'soul', 'summer', 'feel good', 'happy', 'reggae', 'disco', 'r&b', 'afrobeats', 'highlife', 'bossa nova', 'sunshine pop'],
+    avoid: ['sad', 'dark', 'doom', 'depressive', 'dark ambient'],
+  },
+  evening: {
+    title: 'For this evening', lean: 'Picking up: more groove, more lift.', energy: 0.7, valence: 0.65,
+    tags: ['dance', 'house', 'funk', 'disco', 'hip-hop', 'hip hop', 'rap', 'electronic', 'upbeat', 'energetic', 'rock', 'afrobeats', 'amapiano', 'dancehall', 'r&b', 'garage', 'uk garage'],
+    avoid: ['sleep', 'ambient', 'lullaby', 'meditation', 'dark ambient', 'drone'],
+  },
+  late: {
+    title: 'Late night', lean: 'Winding down: slower, softer, closer.', energy: 0.3, valence: 0.4,
+    tags: ['ambient', 'downtempo', 'chill', 'chillout', 'trip-hop', 'trip hop', 'slowcore', 'dream pop', 'night', 'late night', 'sleep', 'neo-soul', 'r&b', 'jazz', 'piano', 'atmospheric', 'mellow', 'lo-fi', 'lofi'],
+    avoid: ['party', 'hardcore', 'metal', 'punk', 'happy hardcore', 'edm', 'big room'],
+  },
+};
+// Musical character per planet. `tags` feed the secondary nudge; energy/
+// valence shift the block's target by half these amounts.
+const PLANETS = {
+  Saturn:  { character: 'sparse and contemplative', energy: -0.1,  valence: -0.1,
+    tags: ['ambient', 'minimal', 'drone', 'classical', 'modern classical', 'slowcore', 'post-rock', 'dark ambient', 'instrumental', 'doom'] },
+  Jupiter: { character: 'expansive and uplifting', energy: 0.05, valence: 0.1,
+    tags: ['gospel', 'orchestral', 'soundtrack', 'cinematic', 'epic', 'anthem', 'post-rock', 'soul', 'uplifting', 'symphonic'] },
+  Mars:    { character: 'driving and intense', energy: 0.15, valence: 0,
+    tags: ['rock', 'punk', 'metal', 'hard rock', 'techno', 'drum and bass', 'trap', 'grime', 'industrial', 'energetic', 'drill'] },
+  Sun:     { character: 'bright and radiant', energy: 0.05, valence: 0.15,
+    tags: ['pop', 'funk', 'disco', 'summer', 'feel good', 'happy', 'afrobeats', 'highlife', 'reggae', 'sunshine pop'] },
+  Venus:   { character: 'lush and romantic', energy: -0.05, valence: 0.1,
+    tags: ['r&b', 'soul', 'neo-soul', 'love', 'romantic', 'bossa nova', 'dream pop', 'sensual', 'ballad', 'lovers rock', 'quiet storm'] },
+  Mercury: { character: 'quick and clever', energy: 0.05, valence: 0,
+    tags: ['jazz', 'hip-hop', 'hip hop', 'rap', 'math rock', 'breakbeat', 'idm', 'experimental', 'bebop', 'garage', 'uk garage'] },
+  Moon:    { character: 'dreamy and reflective', energy: -0.1, valence: -0.05,
+    tags: ['dream pop', 'shoegaze', 'ambient', 'trip-hop', 'trip hop', 'ethereal', 'folk', 'singer-songwriter', 'piano', 'atmospheric', 'lo-fi'] },
+};
+const CHALDEAN_ORDER = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon'];
+const DAY_RULERS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];   // by getDay(): 0 = Sunday
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const PLANETARY_SUNRISE_HOUR = 6;   // stand-in for sunrise (and 18:00 for sunset) - no location, see above
+
+// -> { block, title, lean, energy, valence, tags, avoid, weekend, weekendNight,
+//      dayPlanet, hourPlanet, planetDay (0-6), label, key, ... }
+function getTimeContext(now){
+  now = now || new Date();
+  const h = now.getHours(), dow = now.getDay();
+  // Planetary day/hour: day begins at the approximate sunrise, one planet per clock hour.
+  const planetDay = h < PLANETARY_SUNRISE_HOUR ? (dow + 6) % 7 : dow;
+  const hourIndex = (h - PLANETARY_SUNRISE_HOUR + 24) % 24;   // 0 = first hour after sunrise
+  const dayPlanet = DAY_RULERS[planetDay];
+  const hourPlanet = CHALDEAN_ORDER[(CHALDEAN_ORDER.indexOf(dayPlanet) + hourIndex) % 7];
+  // Time block. The small hours belong to the night they started on, so
+  // 01:00 Saturday is still Friday night.
+  const weekend = dow === 0 || dow === 6;
+  const nightOf = h < 5 ? (dow + 6) % 7 : dow;
+  const weekendNight = nightOf === 5 || nightOf === 6;
+  const block = (h >= 5 && h < 10) ? 'morning'
+    : (h >= 10 && h < 17) ? (weekend ? 'afternoon' : 'workday')
+    : (h >= 17 && h < 22) ? 'evening' : 'late';
+  const base = TIME_BLOCKS[block];
+  const ctx = Object.assign({}, base, { tags: base.tags.slice(), avoid: base.avoid.slice() });
+  if (block === 'morning' && dow === 0){ ctx.lean = 'Slow Sunday: warm and unhurried.'; ctx.energy -= 0.08; }
+  if (block === 'evening' && weekendNight){ ctx.lean = 'Turned up a notch: more groove, more lift.'; ctx.energy += 0.08; ctx.tags.push('party'); }
+  if (block === 'late' && weekendNight){
+    ctx.lean = 'Still going: deep, after-hours groove.';
+    ctx.energy = 0.5; ctx.valence = 0.5;
+    ctx.tags = ctx.tags.filter(t => t !== 'sleep').concat(['deep house', 'house', 'electronic', 'disco', 'minimal techno']);
+    ctx.avoid = ctx.avoid.filter(t => t !== 'party' && t !== 'edm');
+  }
+  const planet = PLANETS[hourPlanet];
+  ctx.energy = Math.max(0.05, Math.min(0.95, ctx.energy + planet.energy * 0.5));
+  ctx.valence = Math.max(0.05, Math.min(0.95, ctx.valence + planet.valence * 0.5));
+  let timeZone = '';
+  try{ timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch(e){}
+  return Object.assign(ctx, {
+    block, weekend, weekendNight, hour: h, weekday: dow, timeZone,
+    planetDay, hourIndex, dayPlanet, hourPlanet,
+    planetTags: planet.tags, planetCharacter: planet.character,
+    label: 'Hour of ' + hourPlanet + ' · ' + WEEKDAY_NAMES[planetDay],
+    key: block + '|' + hourPlanet + '|' + planetDay + '|' + (weekendNight ? 1 : 0),
+  });
+}
+
+// Whole-word match so 'rap' doesn't fire on 'trap' or 'pop' on 'popular'.
+const timeKwRegexMemo = new Map();
+function timeKwMatches(tag, kw){
+  if (tag === kw) return true;
+  let re = timeKwRegexMemo.get(kw);
+  if (!re){
+    re = new RegExp('(^|[\\s/-])' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[\\s/-])');
+    timeKwRegexMemo.set(kw, re);
+  }
+  return re.test(tag);
+}
+// tags: [{name}] (Discover candidates) or ['name'] (resolved tracks / tag cache).
+function timeTagNames(tags){
+  return (tags || []).map(t => String(t && typeof t === 'object' ? t.name : t || '').toLowerCase()).filter(Boolean).slice(0, 8);
+}
+// Earlier tags (Last.fm's strongest) count more. -> 0..1
+function timeTagHits(names, kws){
+  let w = 0;
+  names.forEach((tag, i) => { if (kws.some(kw => timeKwMatches(tag, kw))) w += 1 / (1 + i * 0.25); });
+  return Math.min(1, w / 1.5);
+}
+// -> { block: -1..1 | null, planet: 0..1 | null } - null = nothing to go on
+function timeFit(tags, metrics, ctx){
+  const names = timeTagNames(tags);
+  let tagFit = null, planet = null;
+  if (names.length){
+    tagFit = timeTagHits(names, ctx.tags) - timeTagHits(names, ctx.avoid);
+    planet = timeTagHits(names, ctx.planetTags);
+  }
+  let metricFit = null;
+  if (metrics && typeof metrics.energy === 'number'){
+    const e = Math.max(0, 1 - Math.abs(metrics.energy - ctx.energy) / 0.5);
+    const v = typeof metrics.valence === 'number' ? Math.max(0, 1 - Math.abs(metrics.valence - ctx.valence) / 0.6) : null;
+    metricFit = ((v == null ? e : e * 0.7 + v * 0.3) - 0.5) * 2;
+  }
+  const block = tagFit == null ? metricFit : metricFit == null ? tagFit : (tagFit + metricFit) / 2;
+  return { block, planet };
+}
+// Same shape as applyMetricPreference: mutates score/rank, re-sorts only if
+// anything moved.
+function applyTimePreference(ranked, candMetrics, ctx, scale){
+  if (!ranked.length || !(scale > 0)) return ranked;
+  let touched = false;
+  ranked.forEach(x => {
+    const fit = timeFit(x.c.tags, candMetrics ? candMetrics.get(tagCacheKey(x.c)) : null, ctx);
+    if (fit.block == null && fit.planet == null) return;
+    x.score += scale * (TIME_WEIGHT * (fit.block || 0) + PLANET_WEIGHT * (fit.planet || 0));
+    touched = true;
+  });
+  if (!touched) return ranked;
+  return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+// Library tracks mostly carry no tags of their own; any that have been
+// played have had theirs looked up into the tag cache (lookupTrackTags).
+function timeTrackFit(t, ctx, tagCache){
+  const tags = (t.tags && t.tags.length) ? t.tags : (tagCache[tagCacheKey(t)] || []);
+  const fit = timeFit(tags, metricMemo.get(tagCacheKey(t)) || null, ctx);
+  return (fit.block || 0) + 0.4 * (fit.planet || 0);
+}
+// Weighted shuffle (exponential race): a track that fits the moment is up
+// to ~2x as likely to come early, one that clashes about half - never
+// excluded. CuRRentSSsss uses it to lean which seeds it picks.
+function timeWeightedShuffle(tracks, ctx, strength){
+  const tagCache = lsGet(LS_TAG_CACHE, {}) || {};
+  const k = strength || 0.7;
+  return tracks
+    .map(t => ({ t, r: -Math.log(1 - Math.random()) / Math.exp(k * timeTrackFit(t, ctx, tagCache)) }))
+    .sort((a, b) => a.r - b.r)
+    .map(x => x.t);
+}
+
 // Last resort when /similar and /ytmix both come up empty for a seed - other
 // uploads by that same artist, scraped straight from YouTube search.
 async function fetchArtistSearch(artist){
@@ -7822,7 +8043,9 @@ function libraryVideoIdSet(){
    over entirely - CuRRentSSsss uses it to keep every pick a different
    artist from its seed and from each other (see buildCurrentsPicks).
    opts.preferYear (optional): nudge the ranking toward the seed's release
-   era (see applyYearPreference); a no-op when years aren't available. */
+   era (see applyYearPreference); a no-op when years aren't available.
+   opts.timeBias (optional): 0..1 strength of the time-of-day lean (see
+   applyTimePreference); defaults to TIME_QUEUE_SCALE. */
 async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong, opts){
   const skipArtists = opts && opts.skipArtists;
   const seed = seedTracks[0];
@@ -7869,6 +8092,11 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
     .sort((a, b) => b.score - a.score)
     .map((x, rank) => Object.assign(x, { rank }));
   if (mood) ranked = applyMetricPreference(ranked, mood.refs, mood.candMetrics);
+  // Time of day / day of week (applyTimePreference): full strength for
+  // CuRRentSSsss (opts.timeBias = 1), half for queue continuation, which
+  // follows what's playing first.
+  const timeScale = opts && typeof opts.timeBias === 'number' ? opts.timeBias : TIME_QUEUE_SCALE;
+  ranked = applyTimePreference(ranked, mood && mood.candMetrics, getTimeContext(), timeScale);
   if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
@@ -8108,6 +8336,9 @@ function swellHasUnseenDrop(){
    when that leaves nothing. Release year is a soft preference on top of
    that (applyYearPreference, via /spotifyart's iTunes year) and silently
    drops out on a worker that doesn't return years yet.
+   Time of day / day of week leans both which seeds get drawn and how
+   candidates rank (getTimeContext / applyTimePreference) - so a build made
+   in the morning comes out calmer than one made at night.
    "Add more" runs a smaller round of the same recipe and appends; "Reset"
    (and the once-a-day refresh) rebuilds the whole list from scratch. */
 const CURRENTS_MAX_PLAYLISTS = 10;
@@ -8133,9 +8364,9 @@ function latestPlayedTrack(){
   return t && t.videoId ? t : null;
 }
 // Up to n seeds from a track list, each by a different artist.
-function currentsDistinctSeeds(tracks, n){
+function currentsDistinctSeeds(tracks, n, timeCtx){
   const out = [], artists = new Set();
-  for (const t of currentsShuffled(tracks)){
+  for (const t of (timeCtx ? timeWeightedShuffle(tracks, timeCtx) : currentsShuffled(tracks))){
     const a = primaryArtistKey(t.artist);
     if (artists.has(a)) continue;
     artists.add(a); out.push(t);
@@ -8146,22 +8377,25 @@ function currentsDistinctSeeds(tracks, n){
 // A playlist's seed leans on tracks the listener has actually played from
 // it; the other tracks ride along as context so Discover steers away from
 // that playlist's own artists (its recentArtists penalty).
-function currentsPlaylistSlot(pl){
+function currentsPlaylistSlot(pl, timeCtx){
   const playable = currentsPlayable(pl);
   if (!playable.length) return null;
   const played = playable.filter(t => t.plays > 0);
-  const seed = currentsShuffled(played.length ? played : playable)[0];
+  const seed = timeWeightedShuffle(played.length ? played : playable, timeCtx)[0];
   const context = currentsShuffled(playable.filter(t => t !== seed)).slice(0, 4);
   return { kind: 'playlist', seeds: [seed].concat(context) };
 }
 function currentsSlots(mode){
   const more = mode === 'more';
   const slots = [];
+  // Seeds lean toward tracks that fit the time of day (see
+  // timeWeightedShuffle) - a weighted draw, not a filter.
+  const timeCtx = getTimeContext();
   const latest = latestPlayedTrack();
   if (latest) slots.push({ kind: 'latest', seeds: [latest] });
 
   const likedRecent = currentsPlayable(getCachedPlaylist(LIKED_ID)).slice(-30);
-  const likedSlots = currentsDistinctSeeds(likedRecent, more ? 2 : 3)
+  const likedSlots = currentsDistinctSeeds(likedRecent, more ? 2 : 3, timeCtx)
     .map(seed => ({ kind: 'liked', seeds: [seed].concat(currentsShuffled(likedRecent.filter(t => t !== seed)).slice(0, 4)) }));
 
   let plIds = getLibrary()
@@ -8170,7 +8404,7 @@ function currentsSlots(mode){
     .sort((a, b) => (b.ts - a.ts) || (a.order - b.order))
     .map(x => x.id);
   plIds = more ? currentsShuffled(plIds).slice(0, 4) : plIds.slice(0, CURRENTS_MAX_PLAYLISTS);
-  const plSlots = plIds.map(id => currentsPlaylistSlot(getCachedPlaylist(id))).filter(Boolean);
+  const plSlots = plIds.map(id => currentsPlaylistSlot(getCachedPlaylist(id), timeCtx)).filter(Boolean);
 
   // Interleave liked and playlist picks so the list doesn't play in blocks.
   for (let i = 0; i < Math.max(likedSlots.length, plSlots.length); i++){
@@ -8203,8 +8437,8 @@ function currentsAccept(t, ctx){
 async function currentsFillSlot(slot, ctx, count){
   const strict = new Set([...ctx.used, ...ctx.soft]);
   slot.seeds.forEach(t => strict.add(primaryArtistKey(t.artist)));
-  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict, preferYear: true });
-  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used), preferYear: true });
+  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict, preferYear: true, timeBias: 1 });
+  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used), preferYear: true, timeBias: 1 });
   return found.filter(t => currentsAccept(t, ctx));
 }
 async function buildCurrentsPicks(mode){
@@ -8431,6 +8665,82 @@ function refreshBlendIfStale(){
   if (empty && !blendSources().length) return;
   refreshBlend({ silent: true });
 }
+
+/* ---------- time-of-day row: "For this morning" / "Late night" ----------
+   A slim row above the library grid that follows the clock (see
+   getTimeContext): its title changes with the time block and its small
+   label with the planetary hour. Play builds a mix from the listener's own
+   library plus CuRRentSSsss, locally and instantly like SwiiiRrrLL, leaning
+   toward tracks whose (cached) tags and energy fit the moment via a
+   weighted draw - tracks with nothing known about them still get in, just
+   less often. The mix is a synthetic playlist (never saved to the library,
+   like Discover's discover-ext lists), rebuilt fresh on every play. */
+const TIME_MIX_ID = 'timemix';
+const TIME_MIX_TARGET = 30;
+const TIME_MIX_PER_ARTIST = 2;
+let timeRowKey = null;
+
+function timeMixSources(){
+  const sources = blendSources();
+  const swell = getCachedPlaylist(SWELL_ID);
+  if (swell && swell.tracks && swell.tracks.some(t => t && t.videoId)) sources.push(swell);
+  return sources;
+}
+function buildTimeMixTracks(ctx){
+  const seen = new Set();
+  const all = [];
+  timeMixSources().forEach(pl => pl.tracks.forEach(t => {
+    if (!t || !t.videoId || isAudioVideoId(t.videoId) || seen.has(t.videoId)) return;
+    seen.add(t.videoId);
+    all.push(t);
+  }));
+  const perArtist = new Map();
+  const picks = [];
+  for (const t of timeWeightedShuffle(all, ctx, 1.6)){
+    if (picks.length >= TIME_MIX_TARGET) break;
+    const a = primaryArtistKey(t.artist);
+    if ((perArtist.get(a) || 0) >= TIME_MIX_PER_ARTIST) continue;
+    perArtist.set(a, (perArtist.get(a) || 0) + 1);
+    picks.push(Object.assign({}, t, { plays: 0 }));
+  }
+  return picks;
+}
+function playTimeMix(){
+  const ctx = getTimeContext();
+  const tracks = buildTimeMixTracks(ctx);
+  if (!tracks.length){ showToast('Save a playlist or like a few songs first - this mix draws from your library.'); return; }
+  const pl = { id: TIME_MIX_ID, type: 'custom', name: ctx.title, image: null, tracks, ts: Date.now(), timeKey: ctx.key };
+  lsSet(LS_PL(TIME_MIX_ID), pl);
+  loadPlaylistIntoPlayer(pl);
+  setView('player');
+  buildQueueFrom(0, pl.id);
+  loadIndex(state.queuePos, true);
+}
+function renderTimeRow(){
+  const row = $('timeRow');
+  if (!row) return;
+  const ctx = getTimeContext();
+  timeRowKey = ctx.key;
+  const searching = !!normLibSearch(libSearch.value);
+  const hasSource = timeMixSources().length > 0;
+  row.classList.toggle('hidden', searching || !hasSource);
+  $('timeRowKicker').textContent = ctx.label;
+  $('timeRowTitle').textContent = ctx.title;
+  $('timeRowSub').textContent = ctx.lean;
+  const tz = ctx.timeZone ? ' (' + ctx.timeZone + ')' : '';
+  $('timeRowKicker').title = 'Planetary hour by your local clock' + tz + ', with 6am and 6pm standing in for sunrise and sunset. '
+    + ctx.hourPlanet + ' leans ' + ctx.planetCharacter + '.';
+  $('timeRowPlay').setAttribute('aria-label', 'Play ' + ctx.title + ', ' + ctx.label);
+}
+// Cheap minute poll: only redraws when the block or planetary hour turns over.
+function refreshTimeRowIfDue(){
+  if (getTimeContext().key !== timeRowKey) renderTimeRow();
+}
+// Console helpers, like ebblessVibeCheck: ebblessTimeContext() / (someDate),
+// .rank(ranked, candMetrics, date, scale) and .mix(date) for checking the lean.
+window.ebblessTimeContext = function(d){ return getTimeContext(d ? new Date(d) : new Date()); };
+window.ebblessTimeContext.rank = function(ranked, candMetrics, d, scale){ return applyTimePreference(ranked, candMetrics || null, getTimeContext(d ? new Date(d) : new Date()), scale == null ? 1 : scale); };
+window.ebblessTimeContext.mix = function(d){ return buildTimeMixTracks(getTimeContext(d ? new Date(d) : new Date())); };
 
 function renderQueuePanel(){
   renderDiscoverToggle();
@@ -12415,6 +12725,9 @@ function startApp(){
     // library seeds further down).
     refreshBlendIfStale();
     setInterval(refreshBlendIfStale, 60 * 1000);
+    // Time-of-day row: retitles itself as the block / planetary hour turns.
+    refreshTimeRowIfDue();
+    setInterval(refreshTimeRowIfDue, 60 * 1000);
     // One-time sweep for playlists that were cached under an older resolve
     // version (see RESOLVE_LOGIC_VERSION) - covers library playlists that get
     // played straight from the library/queue and never pass back through
