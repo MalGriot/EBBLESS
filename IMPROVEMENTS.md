@@ -6486,14 +6486,15 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #166.
 
 ### cross-platform-handoff: Hand off playback between phone, desktop, speakers, car
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Move playback from phone to desktop, smart speaker, or
   car without the queue disappearing or glitching.
 - **Touches:** depends on `accounts-profiles` (cross-device sync).
-- **Branch:**
+- **Branch:** agent/cross-platform-handoff
 - **Notes:** Synced from Geethub issue #165.
   **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
+  **Split (2026-09-30):** part 1 (this lane, started now): speakers (Cast / Remote Playback) + car/lock-screen (Media Session completeness). Part 2, phone <-> desktop session handoff, starts after `accounts-profiles` lands.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
 - **Status:** review
