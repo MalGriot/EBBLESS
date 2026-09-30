@@ -7125,7 +7125,7 @@ Add entries in this shape:
   "7 phases a day" needs defining before build.
 
 ### vibe-search-named-playlists: Vibe search should compile a named playlist of heard + new songs
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When someone searches a vibe, compile an actual
   playlist for it with a short, unique, intelligent name (one or a few
@@ -7133,7 +7133,7 @@ Add entries in this shape:
   with new discoveries that fit the mood.
 - **Touches:** vibe search flow (follow-up to merged
   `conversational-vibe-search`), worker.
-- **Branch:**
+- **Branch:** agent/vibe-search-named-playlists
 - **Notes:** Synced from Geethub issue #220. Check what the shipped
   version already does before building; may be a partial gap only.
 
