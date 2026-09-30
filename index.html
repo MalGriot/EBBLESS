@@ -1128,6 +1128,20 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .sw-update-toast.is-open{opacity:1;transform:translate(-50%,0)}
 .sw-update-toast button{background:var(--accent);color:#1a1a1a;border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
+/* "Continue from <device>?" - top of the screen so it clears the mini player; never blocks anything */
+.handoff-prompt{position:fixed;left:50%;top:calc(var(--safe-t) + var(--topbar-h) + 8px);transform:translate(-50%,-8px);z-index:79;
+  display:flex;align-items:center;gap:8px;width:max-content;max-width:calc(100vw - 32px);background:var(--panel-3);color:var(--text);
+  border:1px solid var(--border);border-radius:var(--r-lg);padding:10px 10px 10px 16px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.handoff-prompt[hidden]{display:none}
+.handoff-prompt.is-open{opacity:1;transform:translate(-50%,0)}
+.handoff-prompt .hp-text{min-width:0;flex:1 1 auto;margin-right:4px}
+.handoff-prompt .hp-title{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.handoff-prompt .hp-sub{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch}
+.handoff-prompt button{flex:none;border:0;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.handoff-prompt .hp-dismiss{background:transparent;color:var(--faint)}
+.handoff-prompt .hp-dismiss:hover{color:var(--text)}
+.handoff-prompt .hp-go{background:var(--accent);color:#1a1a1a}
 
 /* ---------- responsive layout switches ---------- */
 @media (max-width:859.98px){
@@ -3448,7 +3462,9 @@ function lsDel(key){
    Synced: the library list and order, pins, the saved playlists' data
    (Liked Songs and user-built playlists merge per track), the per-playlist
    Discover flag, the like streak, and the durable preferences in
-   PROFILE_SETTING_KEYS.
+   PROFILE_SETTING_KEYS. Separately, each device publishes a small
+   now-playing session (queue, index, position, playing) so another device
+   can offer to continue it - see NOW PLAYING HANDOFF below.
    Deliberately not synced: anything device-local or cheap to rebuild -
    playback position (LS_RESUME), background/wake state, last-played/opened
    stamps, play history, the taste graph and Discover's recent list, every
@@ -3468,7 +3484,10 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak'];
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
-const PROFILE_RESYNC_ON_SHOW_MS = 5 * 60 * 1000; // coming back to the tab after this long pulls other devices' changes
+// Coming back to the tab (or window) after this long pulls other devices'
+// changes - short, since that's the moment a handoff prompt matters. A pull
+// that changes nothing costs a KV read, not a write.
+const PROFILE_RESYNC_ON_SHOW_MS = 60 * 1000;
 let profileIdToken = null;     // this page load's ID token; re-obtained via One Tap every visit, never persisted
 let profileTokenExp = 0;       // ms the token expires (from its own payload - display/refresh hint only)
 let profileSyncTimer = null;
@@ -3485,15 +3504,25 @@ let profileMetaMemo = null;
 //     lib: { order: [ids], at, m: { id: { at, del? } } },  // library membership + order
 //     pin: { order: [ids], at, m: { ... } },               // pinned, same shape
 //     pl:  { id: { at, d: playlistData, tr?: { trackKey: { at, del? } } } | { at, del: 1 } },
-//     set: { lsKey: { at, val } | { at, del: 1 } } }       // synced settings
+//     set: { lsKey: { at, val } | { at, del: 1 } },        // synced settings
+//     now: { deviceId: session } }                        // what each device is playing
 // Every entry carries `at` (ms of the last local change to it) and a removal
 // is kept as a tombstone ({ at, del: 1 }) rather than just going missing, so
 // it propagates instead of being resurrected by a device that still has it.
 // Each entry is last-writer-wins; membership, custom-playlist tracks and
 // settings merge per item, so neither device's additions are lost.
+// `now` is the small "now playing" session each signed-in device publishes
+// for handoff (see NOW PLAYING HANDOFF): not library data, just the latest
+// word from each device, whole-entry LWW per device id and never tombstoned
+// - it ages out instead. Clients from before it existed drop it on normalize
+// and never send it, so it rides along in the same v2 record.
 const PROFILE_SCHEMA = 2;
 const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
 const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+const PROFILE_NOW_TTL_MS = 24 * 60 * 60 * 1000; // a session this much older than the newest one is dropped
+const PROFILE_NOW_MAX_DEVICES = 8;              // newest sessions kept; older devices age out
+const PROFILE_NOW_MAX_QUEUE = 100;              // queue entries per session
+const PROFILE_NOW_MAX_BYTES = 64 * 1024;        // a session bigger than this is dropped whole
 
 function profStamp(e) { return e && typeof e.at === 'number' && isFinite(e.at) ? e.at : 0; }
 
@@ -3538,7 +3567,7 @@ function profStampMap(src) {
 // profile. Pre-v2 data has no stamps at all, so it comes in at `at` 0 (a
 // playlist falls back to its own resolve `ts`) - any real change wins over it.
 function normalizeProfile(p) {
-  const out = { v: PROFILE_SCHEMA, lib: { order: [], at: 0, m: {} }, pin: { order: [], at: 0, m: {} }, pl: {}, set: {} };
+  const out = { v: PROFILE_SCHEMA, lib: { order: [], at: 0, m: {} }, pin: { order: [], at: 0, m: {} }, pl: {}, set: {}, now: {} };
   if (!p || typeof p !== 'object') return out;
   if (p.v !== PROFILE_SCHEMA) {
     const legacy = { lib: { order: p.lib }, pin: { order: p.pinned }, pl: {} };
@@ -3572,6 +3601,34 @@ function normalizeProfile(p) {
     if (!e || typeof e !== 'object') return;
     out.set[k] = e.del ? { at: profStamp(e), del: 1 } : { at: profStamp(e), val: e.val === undefined ? null : e.val };
   });
+  Object.entries(profObj(p.now)).forEach(([d, e]) => {
+    const s = normalizeNowSession(e);
+    if (d && s) out.now[d] = s;
+  });
+  return out;
+}
+
+// A device's now-playing session: { at, n: device name, q: [queue refs],
+// i: index into q, src, pos, play, pa, act, c, from? } - see nowSnapshot.
+// Only shape and size are enforced here; anything else is the client's to
+// interpret. Idempotent, so a stored profile re-normalizes to itself.
+function normalizeNowSession(e) {
+  if (!e || typeof e !== 'object' || Array.isArray(e) || !profStamp(e)) return null;
+  const q = (Array.isArray(e.q) ? e.q : []).slice(0, PROFILE_NOW_MAX_QUEUE);
+  const s = Object.assign({}, e, { q });
+  return profStable(s).length > PROFILE_NOW_MAX_BYTES ? null : s;
+}
+
+// Whole-session LWW per device. Age is measured against the newest session
+// rather than the clock, so the client and the Worker can't disagree about
+// what has expired (a device with a skewed clock would otherwise ping-pong).
+function mergeNowPlaying(x, y) {
+  const all = {};
+  new Set([...Object.keys(x || {}), ...Object.keys(y || {})]).forEach(d => { all[d] = profPick((x || {})[d], (y || {})[d]); });
+  const ids = Object.keys(all).sort((p, q) => (profStamp(all[q]) - profStamp(all[p])) || (p < q ? -1 : p > q ? 1 : 0));
+  const newest = ids.length ? profStamp(all[ids[0]]) : 0;
+  const out = {};
+  ids.slice(0, PROFILE_NOW_MAX_DEVICES).forEach(d => { if (profStamp(all[d]) >= newest - PROFILE_NOW_TTL_MS) out[d] = all[d]; });
   return out;
 }
 
@@ -3652,7 +3709,7 @@ function mergeProfiles(a, b, now) {
     pl[id] = e;
   });
   const set = mergeStampMaps(a.set, b.set, cutoff);
-  return { v: PROFILE_SCHEMA, lib, pin, pl, set };
+  return { v: PROFILE_SCHEMA, lib, pin, pl, set, now: mergeNowPlaying(a.now, b.now) };
 }
 // ---- end profile merge ----
 
@@ -3755,6 +3812,9 @@ function localProfileForSync(){
     if (raw !== null) prof.set[key] = { at: k[key] || 0, val: lsGet(key, null) };
     else if (k[key]) prof.set[key] = { at: k[key], del: 1 };
   });
+  prof.now = {};
+  const mine = nowSessionForSync();
+  if (mine) prof.now[nowDeviceId()] = mine;
   return prof;
 }
 
@@ -3869,8 +3929,19 @@ function refreshSyncedSettings(){
   steps.forEach(fn => { try { fn(); } catch(e){ console.warn('[ebbless] profile sync: settings refresh step failed', e); } });
 }
 
-function scheduleProfileSync(){
+// `minor` (a now-playing session that only moved on a track or had its
+// queue edited) doesn't restart a pending push, and waits until at least
+// NOW_PUSH_MIN_GAP_MS after the last sync - a long listen would otherwise
+// cost a KV write per track. Pause/play, tab hide and library changes go
+// out on the normal debounce.
+function scheduleProfileSync(minor){
   if (!profileIdToken || applyingRemoteProfile) return;
+  if (minor === true){
+    if (profileSyncTimer) return;
+    const wait = Math.max(PROFILE_PUSH_DEBOUNCE_MS, lsGet(LS_PROFILE_SYNCED_AT, 0) + NOW_PUSH_MIN_GAP_MS - Date.now());
+    profileSyncTimer = setTimeout(() => { profileSyncTimer = null; syncProfileNow(); }, wait);
+    return;
+  }
   clearTimeout(profileSyncTimer);
   profileSyncTimer = setTimeout(() => { profileSyncTimer = null; syncProfileNow(); }, PROFILE_PUSH_DEBOUNCE_MS);
 }
@@ -3914,11 +3985,17 @@ async function syncProfileNow(opts){
       const changedHere = applyMergedProfile(merged);
       lsSet(LS_PROFILE_SYNCED_AT, Date.now());
       profileSyncStatus = '';
+      // A Worker from before now-playing sessions drops `now` - don't read
+      // that as "the Worker is behind" and push again every beat.
+      const serverKeepsNow = !!(data.profile && typeof data.profile === 'object' && 'now' in data.profile);
+      if (!serverKeepsNow) merged.now = server.now;
+      nowRemote = merged.now;
       if (profStable(merged) !== profStable(server)) scheduleProfileSync();
       // What this device looks like now = what the Worker has; a later
       // push only goes out once that stops being true.
       else lsSet(LS_PROFILE_SYNCED_HASH, profileHash(localProfileForSync()));
       if (changedHere && force && opts.announce) showToast('Synced with your other devices');
+      try { checkHandoff(); } catch(e){ console.warn('[ebbless] handoff check failed', e); }
     } catch(e){
       profileSyncStatus = 'error';
     } finally {
@@ -3977,6 +4054,8 @@ function signOutProfile(){
   lsDel(LS_PROFILE_SYNCED_AT);
   lsDel(LS_PROFILE_SYNCED_HASH);
   lsSet(LS_PROFILE_SIGNED_OUT, true);
+  nowRemote = {};
+  hideHandoffPrompt();
   renderAccountRow();
   showToast('Signed out. Your library stays on this device.');
 }
@@ -3987,11 +4066,277 @@ function signOutProfile(){
 document.addEventListener('visibilitychange', () => {
   if (!profileIdToken) return;
   if (document.visibilityState === 'hidden'){
+    try { noteNowPlaying(null, 'hide'); } catch(e){}
     if (profileSyncTimer){ clearTimeout(profileSyncTimer); profileSyncTimer = null; syncProfileNow(); }
   } else if (Date.now() - lsGet(LS_PROFILE_SYNCED_AT, 0) > PROFILE_RESYNC_ON_SHOW_MS){
     syncProfileNow({ force: true });
   }
 });
+// Desktop windows side by side never change visibility - focus counts too.
+window.addEventListener('focus', () => {
+  if (profileIdToken && Date.now() - lsGet(LS_PROFILE_SYNCED_AT, 0) > PROFILE_RESYNC_ON_SHOW_MS) syncProfileNow({ force: true });
+});
+
+/* ---------- NOW PLAYING HANDOFF ----------
+   Moving playback between a signed-in person's devices. Each device
+   publishes a small session (the queue as queue refs, where it is in it,
+   position, playing or paused) inside the synced profile's `now` map, keyed
+   by a random per-browser id. It rides the same push as everything else, so
+   it goes out on pause/play, a new queue and tab hide (the normal debounce),
+   and on plain track changes or queue edits at most every
+   NOW_PUSH_MIN_GAP_MS - never on position ticks, which it doesn't carry.
+   Picking up: after a sync (every open, and returning to the tab or window),
+   if another device's session is newer than the last time this one was
+   playing and was playing within HANDOFF_RECENT_MS, a small prompt offers
+   to continue it. Handing off: continuing records `from` (whose session,
+   when) in this device's own session - nobody writes another device's
+   entry. The device that was taken over sees that on its next sync and, if
+   it's still playing and hasn't been played since, pauses with a note; any
+   other device treats the taken-over session as spent and won't offer it.
+   There's no push channel, so "next sync" means its next push or focus. */
+const LS_DEVICE_ID = 'ebbless:deviceId';          // random per browser; never synced
+const LS_NOW_SESSION = 'ebbless:nowSession';      // this device's own session, as last published (+ its change signature)
+const LS_HANDOFF_DISMISSED = 'ebbless:handoffDismissed'; // { d, act } - the session last dismissed here
+const HANDOFF_PL_ID = 'handoff';                  // never saved: holds handed-off tracks this device has no playlist copy of
+const NOW_PUSH_MIN_GAP_MS = 5 * 60 * 1000;        // floor between session-only pushes for track changes / queue edits
+const HANDOFF_RECENT_MS = 30 * 60 * 1000;         // only offer sessions that were playing this recently
+const NOW_KEEP_BEHIND = 20;                       // already-played entries kept in a published queue
+let nowRemote = {};                               // every device's session, from the last sync
+let nowLocal;                                     // memo of LS_NOW_SESSION
+
+function nowLocalGet(){
+  if (nowLocal === undefined){ const s = lsGet(LS_NOW_SESSION, null); nowLocal = s && typeof s === 'object' ? s : null; }
+  return nowLocal;
+}
+function nowLocalSet(s){ nowLocal = s; lsSet(LS_NOW_SESSION, s); }
+
+function nowDeviceId(){
+  let id = lsGet(LS_DEVICE_ID, '');
+  if (typeof id !== 'string' || !id){
+    id = ((window.crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g, '') : Date.now().toString(36) + Math.random().toString(36).slice(2)).slice(0, 16);
+    lsSet(LS_DEVICE_ID, id);
+  }
+  return id;
+}
+// "iPhone · Safari", "Mac · Chrome" - what the prompt on the other device calls this one.
+function nowDeviceName(){
+  const ua = navigator.userAgent || '';
+  const os = /iPhone|iPod/.test(ua) ? 'iPhone'
+    : (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) ? 'iPad'
+    : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet')
+    : /CrOS/.test(ua) ? 'Chromebook'
+    : /Macintosh|Mac OS X/.test(ua) ? 'Mac'
+    : /Windows/.test(ua) ? 'Windows'
+    : /Linux/.test(ua) ? 'Linux' : 'Browser';
+  const br = /Edg[A-Z]?\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
+    : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return br && os !== 'Browser' ? os + ' · ' + br : (br || os);
+}
+function nowIsPlaying(){ return artworkWrap.classList.contains('is-playing'); }
+function nowPosition(){
+  const ad = activeDeck();
+  return (ad && ad.player && ad.player.getCurrentTime) ? (ad.player.getCurrentTime() || 0) : 0;
+}
+// Cheap "did the queue change" check, run on every resume save.
+function nowQueueSig(){
+  return state.queuePos + '|' + ((state.playlist && state.playlist.id) || '') + '|' + state.queue.map(e => e.plId + ':' + e.idx + (e.discover ? 'x' : '')).join(',');
+}
+// The published part of a session: queue refs as the app stores them
+// ({plId, idx} -> p, i) plus each track's key, so the other device can find
+// the same track even if its copy of the playlist is ordered differently.
+// Playlists that don't sync as-is (not in the library, or rebuilt per
+// device like Swell) carry the track itself.
+function nowSnapshot(){
+  const cur = trackAt(state.queuePos);
+  if (!cur) return null;
+  const lib = new Set(getLibrary());
+  const cache = new Map();
+  const plOf = id => { if (!cache.has(id)) cache.set(id, playlistById(id)); return cache.get(id); };
+  const start = Math.max(0, Math.min(state.queuePos - NOW_KEEP_BEHIND, state.queue.length - PROFILE_NOW_MAX_QUEUE));
+  const q = state.queue.slice(start, start + PROFILE_NOW_MAX_QUEUE).map(e => {
+    const pl = plOf(e.plId), t = pl && pl.tracks && pl.tracks[e.idx];
+    const r = { p: e.plId, i: e.idx, k: t ? profTrackKey(t) : '' };
+    if (e.discover) r.x = 1;
+    if (t && t.videoId && (!lib.has(e.plId) || e.plId === HANDOFF_PL_ID || PROFILE_REGENERATED_IDS.includes(e.plId))){
+      r.t = { videoId: t.videoId, title: t.title || '', artist: t.artist || '', art: t.art || null, duration: t.duration || 0 };
+      if (t.podcast) r.t.podcast = true;
+    }
+    return r;
+  });
+  return { q, i: state.queuePos - start, src: (state.playlist && state.playlist.id) || state.queue[state.queuePos].plId, c: { t: cur.title || '', a: cur.artist || '' } };
+}
+
+// Called from persistResume (track change, queue edit, pause, every few
+// seconds while playing) and on tab hide. Only a real change - the queue,
+// where it is, playing vs paused - makes a new session; a hide also records
+// the position if it has moved.
+function noteNowPlaying(position, reason){
+  if (state.queuePos < 0 || !state.queue[state.queuePos]) return;
+  const playing = nowIsPlaying();
+  if (playing) hideHandoffPrompt();
+  const prev = nowLocalGet();
+  const sig = nowQueueSig();
+  const playChanged = !prev || !!prev.play !== playing;
+  const pos = position != null ? position : nowPosition();
+  const now = Date.now();
+  if (prev && prev.sig === sig && !playChanged){
+    if (reason !== 'hide') return;
+    if (playing ? now - (prev.at || 0) < 60000 : Math.abs((prev.pos || 0) - pos) < 3) return;
+  }
+  const snap = (prev && prev.sig === sig && prev.q) ? { q: prev.q, i: prev.i, src: prev.src, c: prev.c } : nowSnapshot();
+  if (!snap) return;
+  const s = Object.assign(snap, {
+    sig, at: now, n: nowDeviceName(), pos: Math.round(pos * 10) / 10, play: playing ? 1 : 0,
+    pa: (playing || (prev && prev.play)) ? now : ((prev && prev.pa) || 0),   // last seen playing here
+    act: (playing && !(prev && prev.play)) ? now : ((prev && prev.act) || 0), // last started playing here
+  });
+  if (prev && prev.from) s.from = prev.from;
+  nowLocalSet(s);
+  scheduleProfileSync(!(playChanged || reason === 'hide' || !prev || prev.src !== s.src));
+}
+function nowSessionForSync(){
+  const s = nowLocalGet();
+  if (!s || !profStamp(s) || !Array.isArray(s.q) || Date.now() - s.at > PROFILE_NOW_TTL_MS) return null;
+  const out = Object.assign({}, s);
+  delete out.sig;
+  return out;
+}
+
+// Runs after every sync.
+function checkHandoff(){
+  if (!profileIdToken) return;
+  const me = nowDeviceId(), mine = nowLocalGet() || {};
+  const now = Date.now();
+  const others = Object.entries(nowRemote || {}).filter(([d, s]) => d !== me && s && typeof s === 'object');
+  const playing = nowIsPlaying();
+  // Taken over: another device continued this one's session after it last
+  // started playing here.
+  const taker = others.find(([, s]) => s.from && s.from.d === me && (s.from.t || 0) > (mine.act || 0));
+  if (taker){
+    if (playing){ pausePlayback(); showToast('Playing on ' + (taker[1].n || 'another device')); }
+    hideHandoffPrompt();
+    return;
+  }
+  if (playing || document.visibilityState === 'hidden') return;
+  const dismissed = lsGet(LS_HANDOFF_DISMISSED, null);
+  const everyone = others.concat([[me, mine]]);
+  const spent = (d, s) => everyone.some(([d2, x]) => d2 !== d && x.from && x.from.d === d && (x.from.t || 0) > (s.act || 0));
+  const cand = others.filter(([d, s]) => Array.isArray(s.q) && s.q.length && s.c && (s.c.t || s.c.a)
+      && profStamp(s) > (mine.pa || 0)
+      && now - (s.play ? profStamp(s) : (s.pa || 0)) < HANDOFF_RECENT_MS
+      && !spent(d, s)
+      && !(dismissed && dismissed.d === d && dismissed.act === (s.act || 0)))
+    .sort((x, y) => profStamp(y[1]) - profStamp(x[1]))[0];
+  if (cand) showHandoffPrompt(cand[0], cand[1]); else hideHandoffPrompt();
+}
+
+// Maps a session's queue refs onto this device's playlists: the same
+// playlist and index when the track there matches, else the same track
+// found elsewhere in that playlist, else the track it carried (collected
+// into the HANDOFF_PL_ID playlist). Refs that resolve to nothing are
+// dropped; the current track must survive.
+function resolveHandoffQueue(s){
+  const cache = new Map();
+  const plOf = id => { if (!cache.has(id)) cache.set(id, playlistById(id)); return cache.get(id); };
+  const extra = [], extraIdx = new Map(), queue = [];
+  let pos = -1;
+  s.q.forEach((r, i) => {
+    if (!r || typeof r !== 'object') return;
+    let entry = null;
+    const pl = (typeof r.p === 'string' && r.p !== HANDOFF_PL_ID) ? plOf(r.p) : null;
+    if (pl && Array.isArray(pl.tracks) && r.k){
+      let idx = (typeof r.i === 'number' && pl.tracks[r.i] && profTrackKey(pl.tracks[r.i]) === r.k) ? r.i : -1;
+      if (idx < 0) idx = pl.tracks.findIndex(t => profTrackKey(t) === r.k);
+      if (idx >= 0 && pl.tracks[idx].videoId) entry = { plId: r.p, idx };
+    }
+    if (!entry && r.t && typeof r.t === 'object' && typeof r.t.videoId === 'string' && r.t.videoId){
+      const t = { title: String(r.t.title || ''), artist: String(r.t.artist || ''), videoId: r.t.videoId, plays: 0,
+        art: typeof r.t.art === 'string' ? r.t.art : null, duration: Number(r.t.duration) || 0 };
+      if (r.t.podcast === true) t.podcast = true;
+      const key = profTrackKey(t);
+      if (!extraIdx.has(key)){ extraIdx.set(key, extra.length); extra.push(t); }
+      entry = { plId: HANDOFF_PL_ID, idx: extraIdx.get(key) };
+    }
+    if (!entry) return;
+    if (r.x) entry.discover = true;
+    if (i === s.i) pos = queue.length;
+    queue.push(entry);
+  });
+  return pos < 0 ? null : { queue, pos, extra };
+}
+
+// Continue: load that queue at that track and position (the same restore
+// path a reload's resume uses) and play. The library isn't touched.
+function continueHandoff(d, s){
+  hideHandoffPrompt();
+  const r = resolveHandoffQueue(s);
+  if (!r){ showToast("Couldn't find that track on this device yet."); return; }
+  if (r.extra.length){
+    // Straight to storage rather than lsSet: it's never in the library, so
+    // there's nothing for sync to stamp.
+    const hp = { id: HANDOFF_PL_ID, type: 'custom', name: 'From ' + (s.n || 'another device'), tracks: r.extra, ts: Date.now() };
+    try { localStorage.setItem(LS_PL(HANDOFF_PL_ID), JSON.stringify(hp)); } catch(e){}
+  }
+  const cur = r.queue[r.pos];
+  const src = (typeof s.src === 'string' && s.src !== HANDOFF_PL_ID && getCachedPlaylist(s.src)) || playlistById(cur.plId);
+  if (src) loadPlaylistIntoPlayer(src);
+  state.queue = r.queue;
+  state.queuePos = r.pos;
+  renderQueuePanel();
+  let position = Math.max(0, Number(s.pos) || 0);
+  // Still playing over there, so it has moved on since - follow along, but
+  // only within the same track (past its end, the session doesn't say where).
+  const t = trackAt(r.pos);
+  if (s.play){
+    const est = position + (Date.now() - profStamp(s)) / 1000;
+    if (t && t.duration && est < t.duration - 5) position = est;
+  }
+  pendingResume = position > 1 ? { plId: cur.plId, idx: cur.idx, position } : null;
+  nowLocalSet(Object.assign({}, nowLocalGet() || {}, { from: { d, t: Date.now() } }));
+  loadIndex(r.pos, true);
+}
+
+let handoffPromptEl = null, handoffPromptFor = null, handoffHideTimer = null;
+function ensureHandoffPrompt(){
+  if (handoffPromptEl) return handoffPromptEl;
+  const el = document.createElement('div');
+  el.className = 'handoff-prompt';
+  el.id = 'handoffPrompt';
+  el.hidden = true;
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.innerHTML = '<div class="hp-text"><div class="hp-title"></div><div class="hp-sub"></div></div>'
+    + '<button type="button" class="hp-dismiss" data-act="dismiss">Dismiss</button><button type="button" class="hp-go" data-act="continue">Continue</button>';
+  el.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn || !handoffPromptFor) return;
+    const { d, s } = handoffPromptFor;
+    if (btn.dataset.act === 'continue') continueHandoff(d, s);
+    else { lsSet(LS_HANDOFF_DISMISSED, { d, act: s.act || 0 }); hideHandoffPrompt(); }
+  });
+  document.body.appendChild(el);
+  handoffPromptEl = el;
+  return el;
+}
+function showHandoffPrompt(d, s){
+  const el = ensureHandoffPrompt();
+  handoffPromptFor = { d, s };
+  clearTimeout(handoffHideTimer);
+  el.querySelector('.hp-title').textContent = 'Continue from ' + (s.n || 'another device') + '?';
+  el.querySelector('.hp-sub').textContent = [s.c.t, s.c.a].filter(Boolean).join(' — ');
+  if (!el.hidden && el.classList.contains('is-open')) return;
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('is-open'));
+}
+function hideHandoffPrompt(){
+  handoffPromptFor = null;
+  const el = handoffPromptEl;
+  if (!el || el.hidden) return;
+  el.classList.remove('is-open');
+  clearTimeout(handoffHideTimer);
+  handoffHideTimer = setTimeout(() => { if (!handoffPromptFor) el.hidden = true; }, 220);
+}
+
 
 /* ---------- Settings > Account row ----------
    Built and inserted from here (after the first Settings block) rather than
@@ -11955,6 +12300,7 @@ function persistResume(){
   // than rebuilding a plain queue from whichever playlist the current track
   // belongs to.
   lsSet(LS_RESUME, { playlistId: entry.plId, trackIndex: entry.idx, position, queue: state.queue, queuePos: state.queuePos });
+  try { noteNowPlaying(position); } catch(e){} // handoff session - only a real change goes anywhere (see NOW PLAYING HANDOFF)
 }
 // A saved queue is only trusted if every entry still resolves to a playable
 // track and it still points at the resumed track; anything stale falls back
