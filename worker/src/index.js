@@ -820,6 +820,73 @@ async function handleYtPlaylist(url, ctx) {
 // ---------- GET /ytvideo?id=<youtube video id> ----------
 // Scrapes the watch page's ytInitialPlayerResponse for a single video's
 // title/channel/thumbnail — treated as a one-track "playlist" by the client.
+//
+// From Cloudflare's egress IPs YouTube intermittently answers the watch page
+// with a 200 whose player response has no videoDetails (its "confirm you're
+// not a bot" LOGIN_REQUIRED response) - the same public video flips between
+// working and not on consecutive requests. So: try the watch page twice, and
+// if neither attempt yields videoDetails, fall back to the oEmbed endpoint
+// (not bot-gated) for title/channel/thumbnail. oEmbed has no loudness, so
+// that payload carries partial:true (the client won't remember its null
+// loudnessDb as final) and is only cached briefly.
+async function scrapeYtWatchPage(id) {
+  let res;
+  try {
+    res = await fetchYouTubePage('https://www.youtube.com/watch?v=' + encodeURIComponent(id));
+  } catch (e) {
+    if (e instanceof YouTubeBlockedError) return { error: e.message };
+    throw e;
+  }
+  if (!res.ok) return { error: 'youtube returned ' + res.status };
+  const html = await res.text();
+
+  const marker = 'var ytInitialPlayerResponse';
+  const mi = html.indexOf(marker);
+  if (mi === -1) return { error: 'no video data found' };
+  const jsonStr = extractBalancedJson(html, html.indexOf('{', mi));
+  if (!jsonStr) return { error: 'could not parse video data' };
+
+  let data;
+  try { data = JSON.parse(jsonStr); } catch (e) { return { error: 'malformed video data' }; }
+
+  const details = data && data.videoDetails;
+  if (!details || !details.videoId) {
+    const ps = data && data.playabilityStatus;
+    return { error: 'no videoDetails' + (ps ? ' (' + [ps.status, ps.reason].filter(Boolean).join(': ') + ')' : '') };
+  }
+
+  const thumbs = details.thumbnail && details.thumbnail.thumbnails;
+  const image = (thumbs && thumbs.length) ? thumbs[thumbs.length - 1].url : null;
+
+  // YouTube's own per-video loudness measurement (dB relative to its
+  // normalization target; positive = louder than target). The client uses
+  // it to even out volume between tracks - see levelGainFor in index.html.
+  const audioCfg = data.playerConfig && data.playerConfig.audioConfig;
+  const loudnessDb = audioCfg && typeof audioCfg.loudnessDb === 'number' ? audioCfg.loudnessDb : null;
+  return { payload: { videoId: details.videoId, title: details.title || 'Untitled', artist: details.author || '', image, loudnessDb } };
+}
+
+// Returns { payload } or { status } (oEmbed's own answer: 401/403 = embedding
+// disabled, 400/404 = private, deleted, or bad id).
+async function fetchYtOembed(id) {
+  const res = await fetch('https://www.youtube.com/oembed?format=json&url=' +
+    encodeURIComponent('https://www.youtube.com/watch?v=' + id), {
+    headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9' },
+  });
+  if (!res.ok) return { status: res.status };
+  let data;
+  try { data = await res.json(); } catch (e) { return { status: 502 }; }
+  if (!data || !data.title) return { status: 502 };
+  return { payload: {
+    videoId: id,
+    title: data.title,
+    artist: data.author_name || '',
+    image: 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg',
+    loudnessDb: null,
+    partial: true,
+  } };
+}
+
 async function handleYtVideo(url, ctx) {
   const id = url.searchParams.get('id');
   if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
@@ -830,42 +897,26 @@ async function handleYtVideo(url, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  let res;
-  try {
-    res = await fetchYouTubePage('https://www.youtube.com/watch?v=' + encodeURIComponent(id));
-  } catch (e) {
-    if (e instanceof YouTubeBlockedError) return json({ error: e.message }, 503);
-    throw e;
+  let scraped = await scrapeYtWatchPage(id);
+  if (!scraped.payload) scraped = await scrapeYtWatchPage(id);
+
+  let payload = scraped.payload, maxAge = 2592000;
+  if (!payload) {
+    const oe = await fetchYtOembed(id);
+    if (!oe.payload) {
+      console.log('ytvideo ' + id + ': watch page failed (' + scraped.error + '), oembed ' + oe.status);
+      if (oe.status === 401 || oe.status === 403) return json({ error: 'this video can\'t be played outside YouTube (embedding disabled)' }, 404);
+      if (oe.status === 400 || oe.status === 404) return json({ error: 'video not found (private, deleted, or invalid link?)' }, 404);
+      return json({ error: 'could not look up video (' + scraped.error + ')' }, 502);
+    }
+    payload = oe.payload;
+    maxAge = 3600;
   }
-  if (!res.ok) return json({ error: 'youtube returned ' + res.status }, 502);
-  const html = await res.text();
 
-  const marker = 'var ytInitialPlayerResponse';
-  const mi = html.indexOf(marker);
-  if (mi === -1) return json({ error: 'no video data found (private or invalid link?)' }, 502);
-  const braceIdx = html.indexOf('{', mi);
-  const jsonStr = extractBalancedJson(html, braceIdx);
-  if (!jsonStr) return json({ error: 'could not parse video data' }, 502);
-
-  let data;
-  try { data = JSON.parse(jsonStr); } catch (e) { return json({ error: 'malformed video data' }, 502); }
-
-  const details = data && data.videoDetails;
-  if (!details || !details.videoId) return json({ error: 'video not found (private, deleted, or invalid link?)' }, 404);
-
-  const thumbs = details.thumbnail && details.thumbnail.thumbnails;
-  const image = (thumbs && thumbs.length) ? thumbs[thumbs.length - 1].url : null;
-
-  // YouTube's own per-video loudness measurement (dB relative to its
-  // normalization target; positive = louder than target). The client uses
-  // it to even out volume between tracks - see levelGainFor in index.html.
-  const audioCfg = data.playerConfig && data.playerConfig.audioConfig;
-  const loudnessDb = audioCfg && typeof audioCfg.loudnessDb === 'number' ? audioCfg.loudnessDb : null;
-  const payload = { videoId: details.videoId, title: details.title || 'Untitled', artist: details.author || '', image, loudnessDb };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + maxAge },
   })));
   return response;
 }
