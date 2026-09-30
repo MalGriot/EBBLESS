@@ -2635,6 +2635,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #40. Vague/directional - needs a
   concrete design decision (what nudge, when, how often) before it's
   actionable as a lane.
+  **Decision (2026-09-30):** build all three nudges: a gentle "like this?" prompt after a full listen, a like-streak counter, and a Discover hint that likes are shaping picks.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
 - **Status:** ready
@@ -2651,6 +2652,7 @@ Add entries in this shape:
   batch by far - architectural decision, not a quick lane. Recommend
   discussing approach before queuing.
   Geethub #182 folded in (bug report): user is signed in on desktop and mobile but playlists and settings differ between them - i.e. cross-device sync is what's expected.
+  **Decision (2026-09-30):** use a hosted backend (Supabase: auth + Postgres with row-level security), not the Cloudflare worker. Needs the owner's Supabase project URL + anon key; build with config placeholders until provided.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
 - **Status:** merged
@@ -6490,6 +6492,7 @@ Add entries in this shape:
 - **Touches:** depends on `accounts-profiles` (cross-device sync).
 - **Branch:**
 - **Notes:** Synced from Geethub issue #165.
+  **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
 - **Status:** ready
@@ -6500,6 +6503,7 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Synced from Geethub issue #164.
   Geethub #187 folded in: track the user's time of day, time zone, weather and location to curate Discover and offer automatic time-based playlists; also asks to incorporate Rosicrucian knowledge about the time of day and day of the week.
+  **Decision (2026-09-30):** time-based only for now (time of day, day of week, incl. the Rosicrucian day/hour idea). No location or weather.
 
 ### algorithm-sliders: Sliders to steer recommendations
 - **Status:** draft
