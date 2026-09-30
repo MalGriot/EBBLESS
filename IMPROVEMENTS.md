@@ -2623,7 +2623,7 @@ Add entries in this shape:
   track 0 (shares CuRRentSSsss' queue-remap helper).
 
 ### encourage-liking-songs: Nudge users to like more songs
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Add UX nudges that encourage users to like more songs, to
   build a richer per-user dataset - goal is a personal algorithm that
@@ -2639,7 +2639,7 @@ Add entries in this shape:
   **Built (fa1c2db):** post-listen "Like <title>?" chip (every 3+ played-through tracks, 10-min cooldown, backs off on ignores, never same track twice); like streak (toast + Liked Songs line, only when >=2 days, never mentions a broken streak); CuRRentSSsss hint "Based on your N liked songs...". Console helper `ebblessLikeNudge()`.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Add accounts/profiles so the experience (library,
   playlists, likes) is consistent between mobile and desktop, survives a
@@ -6487,7 +6487,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #166.
 
 ### cross-platform-handoff: Hand off playback between phone, desktop, speakers, car
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Move playback from phone to desktop, smart speaker, or
   car without the queue disappearing or glitching.
@@ -6501,7 +6501,7 @@ Add entries in this shape:
   **Part 2 built (0a47011, `agent/handoff-devices`, contains accounts):** per-device `now` session in the synced profile (queue <=100, index, position, play state; newest per device, <=8 devices, 24h expiry relative to newest); "Continue from <device>?" prompt on open/focus when another device played in the last 30 min; Continue restores queue/index/position; the other device pauses with "Playing on <device>" on its next sync. ~12 KV writes/hour of listening max. Merge note: one trivial CSS conflict with `encourage-liking-songs` (both append a block after `.sw-update-toast` rules) - keep both.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Beyond mood playlists: adapt recommendations to local
   weather, time of day, or movement speed (phone sensors).
@@ -6988,7 +6988,7 @@ Add entries in this shape:
   kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
 
 ### mini-player-polish: Mini-player branding, controls, remembered size/position
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Polish the desktop mini-player: show the EBBLESS "E" logo
   instead of "malgriot.github.io"; marquee-scroll long title/artist; keep
@@ -7007,7 +7007,7 @@ Add entries in this shape:
   **Built (88041a9):** in-window E logo + PiP title/favicon; marquee (setMarqueeText made window-aware); shortcuts forwarded from PiP (Q = mini queue); saved size/style (`ebbless:miniPlayer`), bar/card by aspect; reset button; hover states; full controls; direction-aware queue. Impossible: origin text and site-info button (Chrome chrome); position is Chrome-managed. Needs real desktop Chrome check: window grow/moveBy for queue, placement memory.
 
 ### podcast-library-category: Podcast category in the library
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Give podcasts their own category/filter in the library,
   alongside playlists and albums.
@@ -7018,7 +7018,7 @@ Add entries in this shape:
   **Built (e8fd1bb):** new `isPodcastEntry()` (`pod_show` type / `pod:` id, fallback: all tracks are episodes); Podcasts filter chip + cycle step (shown only when a podcast exists), Podcasts section, show art, "N episodes" count; "Mark as album" hidden for podcasts.
 
 ### settings-reorganize: Reorganize the Settings menu for comfort and logic
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Regroup and reorder the Settings menu so related options
   sit together and the most-used ones are easiest to reach.
