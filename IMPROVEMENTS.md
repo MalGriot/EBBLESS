@@ -46,8 +46,10 @@ Two intake channels, both feed this same backlog:
    new Geethub-sourced ideas (checking the *unfiltered* open-issue list, not
    just ones labeled `idea` — that label doesn't always get auto-applied)
    and runs the dedup check in step 2 below on anything new. Then, instead
-   of silently dispatching anything, it renders the **entire backlog** (all
-   statuses, not just `draft`/`ready`) as a plain list: manager's own
+   of silently dispatching anything, it renders the **open backlog** (every
+   entry not yet `merged` or `dropped`) as a plain list. Never list
+   `merged`/`dropped` entries unless explicitly asked (wasted tokens).
+   Order: manager's own
    priority order top to bottom, each entry with a short, jargon-free
    description in plain English — something you can read at a glance and
    understand without opening the file. It stops there and waits. You reply
@@ -7029,7 +7031,7 @@ Add entries in this shape:
   **Built (b54d82b):** Settings regrouped into Playback / App / Feedback & support / About / Library & data (was Danger zone). Same ids and handlers; install row now a row in App; onboarding CSS retargeted to `#settingsAboutBlock`.
 
 ### autoadvance-stall-full-progress: Next track sometimes stalls with a full progress bar
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Sometimes when a song ends and the player should move to
   the next one, it switches to the next track's art and UI colors but
@@ -7037,24 +7039,24 @@ Add entries in this shape:
   as if that song had finished. The next track should start playing from 0
   with its progress bar reset.
 - **Touches:** track-end / auto-advance handling, progress bar state.
-- **Branch:**
+- **Branch:** agent/autoadvance-stall-full-progress
 - **Notes:** Synced from Geethub issue #213 (bug). Related to merged
   `bld-background-tab-autoadvance`, but a different symptom (advances the UI
   and stalls, stale progress), so not a duplicate. No repro steps given.
 
 ### library-filter-inline: Put the All/Playlist/Album/Podcast filter on the button row
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In the library, the All/Playlist/Album/Podcast filter
   button should sit on the same line as the other library buttons below it,
   placed after "New playlist", instead of on its own line.
 - **Touches:** library header/toolbar layout.
-- **Branch:**
+- **Branch:** agent/library-filter-inline
 - **Notes:** Synced from Geethub issue #214. Filter chips come from merged
   `podcast-library-category` / `playlist-menu-album-toggle`.
 
 ### cassette-reference-match: Rebuild the cassette to match a real reference cassette
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Upgrade the existing cassette art style to closely match
   a reference photo of a real cassette (dark charcoal textured shell,
@@ -7064,7 +7066,7 @@ Add entries in this shape:
   shell image + album-art label layer + small CSS/SVG spinning reels tied to
   play/pause (respecting reduced motion). No canvas/WebGL/video.
 - **Touches:** cassette art style (miniplayer + fullscreen cassette).
-- **Branch:**
+- **Branch:** agent/cassette-reference-match
 - **Notes:** Synced from Geethub issue #215 - full brief, reference image
   and app screenshot links are in the issue body. Follow-up to merged
   `cassette-beautification` (new ask, not a duplicate): that pass was
