@@ -3058,7 +3058,7 @@ async function handleSimilar(url, env, ctx) {
 // Privacy: the sentence is never logged or stored anywhere but the edge
 // cache entry keyed by its normalized text (which holds only the derived
 // interpretation, not who asked).
-const VIBE_CACHE_VERSION = 'v2';
+const VIBE_CACHE_VERSION = 'v3';
 const VIBE_MAX_INPUT = 300;
 const VIBE_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
 const VIBE_AI_TIMEOUT_MS = 9000;
@@ -3123,7 +3123,7 @@ function vibeHeuristic(text) {
   bpm = Math.min(170, Math.max(60, bpm));
   const keywords = t.replace(/[^\p{L}\p{N}\s-]/gu, ' ').split(/\s+/).filter(w => w.length > 2 && !VIBE_STOPWORDS.has(w)).slice(0, 5);
   return {
-    title: vibeTitleFrom(keywords),
+    title: vibeTitleFrom(keywords, energy),
     tags: tags.slice(0, VIBE_MAX_TAGS),
     keywords: keywords.length ? [keywords.slice(0, 3).join(' ')] : [tags[0]],
     energy: [Math.max(0, +(energy - 0.2).toFixed(2)), Math.min(1, +(energy + 0.2).toFixed(2))],
@@ -3131,15 +3131,21 @@ function vibeHeuristic(text) {
     seeds: [],
   };
 }
-function vibeTitleFrom(words) {
-  const w = (words || []).slice(0, 3).join(' ');
-  return w ? w.replace(/\b\p{L}/gu, c => c.toUpperCase()) : 'Your Vibe';
+// No-AI name: the sentence's strongest word plus a word for its energy
+// ("rainy sunday morning, want something slow" -> "Rainy Drift"), not the
+// sentence itself. The client still renames on a clash with the library.
+const VIBE_TITLE_NOUNS = { low: ['Drift', 'Haze', 'Hush'], mid: ['Glow', 'Current', 'Groove'], high: ['Rush', 'Surge', 'Heat'] };
+function vibeTitleFrom(words, energy) {
+  const key = (words || []).find(w => w.length > 3) || (words || [])[0] || '';
+  const nouns = VIBE_TITLE_NOUNS[energy < 0.4 ? 'low' : energy > 0.62 ? 'high' : 'mid'];
+  const noun = nouns[key.length % nouns.length];
+  return key ? key.replace(/^\p{L}/u, c => c.toUpperCase()) + ' ' + noun : 'Your ' + noun;
 }
 
 const VIBE_SYSTEM_PROMPT =
   'You turn a listener\'s description of their mood, activity or surroundings into music search parameters. ' +
   'Reply with ONLY a JSON object, no prose, with exactly these keys: ' +
-  '"title": a short evocative playlist name (2-5 words); ' +
+  '"title": a short, distinctive playlist name of 1-3 words that distills the feeling (e.g. "Slow Steam", "Neon Drive", "Bruised"), never a restatement of the listener\'s words and never containing "playlist", "vibes" or "mix"; ' +
   '"tags": 2-4 lowercase Last.fm-style genre or mood tags (e.g. "acoustic", "jazz", "chillout", "indie folk", "soul", "lo-fi", "dance"); ' +
   '"keywords": 1-3 short playlist search phrases; ' +
   '"energy": [min, max] between 0 and 1; ' +
@@ -3191,7 +3197,7 @@ function vibeSanitizeAi(raw, fallback) {
     .slice(0, VIBE_MAX_SEEDS);
   if (!uniqTags.length && !seeds.length) return null;
   return {
-    title: vibeStr(obj.title, 40) || fallback.title,
+    title: vibeStr(obj.title, 40).replace(/^["'\u201c\u201d]+|["'\u201c\u201d]+$/g, '').split(' ').slice(0, 3).join(' ') || fallback.title,
     tags: uniqTags.length ? uniqTags : fallback.tags,
     keywords: keywords.length ? keywords : fallback.keywords,
     energy: vibeClampRange(obj.energy, 0, 1, fallback.energy),
