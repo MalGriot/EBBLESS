@@ -3509,103 +3509,675 @@ function lsGet(key, fallback){
   catch(e){ return fallback; }
 }
 function lsSet(key, val){
+  // Profile sync: stamp the change (what, when) before the write so a
+  // library/pin diff can see the old value, then queue a debounced push to
+  // the signed-in visitor's cloud profile (see PROFILE SYNC below). Stamping
+  // happens signed in or not, so changes made while signed out still merge
+  // correctly later; the push itself is a no-op until a Google session exists.
+  const synced = isProfileSyncedKey(key) && noteProfileWrite(key, val);
   try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
-  // Silent profile backup: any write to library/playlist/pinned state queues
-  // a debounced push to the signed-in visitor's cloud profile (see PROFILE
-  // SYNC below) so a wiped browser can reclaim it later. No-op until a
-  // Google session has actually been established.
-  if (isLibraryRelevantKey(key)) scheduleProfileSync();
+  if (synced) scheduleProfileSync();
 }
 let crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {}));
 function lsDel(key){
+  const synced = isProfileSyncedKey(key) && localStorage.getItem(key) !== null && noteProfileWrite(key, undefined);
   try { localStorage.removeItem(key); } catch(e){}
-  if (isLibraryRelevantKey(key)) scheduleProfileSync();
+  if (synced) scheduleProfileSync();
 }
 
 /* =========================================================================
-   PROFILE SYNC (Google Sign-In) - silently backs a visitor's library up to
-   the Worker (BACKEND, above) keyed to their verified Google account, so a
-   wiped browser or a new device can reclaim their playlists without ever
-   having to know an account exists. Google Identity Services' One Tap
-   (script tag in <head>) silently re-establishes the session on every
-   visit where the browser already has a Google login - the only moment a
-   real person sees anything is that small corner prompt the first time
-   they consent. See the Worker's /profile/sync and /profile/fetch, which
+   PROFILE SYNC (Google Sign-In) - keeps a visitor's library, pins, liked
+   songs and settings the same on every device they're signed in on, keyed
+   to their verified Google account via the Worker (BACKEND, above). Google
+   Identity Services' One Tap (script tag in <head>) silently re-establishes
+   the session on every visit where the browser already has a Google login -
+   the only moment a real person sees anything is that small corner prompt
+   the first time they consent (or the Settings > Account row, if they go
+   looking). See the Worker's /profile/sync and /profile/fetch, which
    independently verify the ID token's signature before trusting the `sub`
    it's keyed to - this file only ever sends the raw token, never anything
    claiming to already be a verified identity.
+
+   Sync is two-way: every signed-in load (and a debounced beat after any
+   synced change) POSTs the whole local profile; the Worker merges it with
+   the stored one and returns the result, which is merged once more with
+   whatever changed locally in the meantime and written back. Every synced
+   thing carries a last-changed stamp and removals leave tombstones (both
+   kept in LS_SYNC_META, maintained by lsSet/lsDel above), so a removal on
+   one device propagates instead of being resurrected and neither device's
+   additions are lost - see mergeProfiles.
+
+   Synced: the library list and order, pins, the saved playlists' data
+   (Liked Songs and user-built playlists merge per track), the per-playlist
+   Discover flag, the like streak, and the durable preferences in
+   PROFILE_SETTING_KEYS.
+   Deliberately not synced: anything device-local or cheap to rebuild -
+   playback position (LS_RESUME), background/wake state, last-played/opened
+   stamps, play history, the taste graph and Discover's recent list, every
+   lookup cache (loudness, tags, years, track matches), onboarding / tutorial
+   / paste-guide / vibe-check flags, install state, the backend override,
+   the wrong-track log, and this block's own sign-in bookkeeping.
    ========================================================================= */
 const GOOGLE_CLIENT_ID = '1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com';
 const LS_PROFILE_EMAIL = 'ebbless:profileEmail'; // last-known signed-in email - display-only, never trusted server-side
+const LS_PROFILE_SIGNED_OUT = 'ebbless:profileSignedOut'; // true = they signed out here; no One Tap until they tap Sign in
+const LS_PROFILE_SYNCED_AT = 'ebbless:profileSyncedAt';   // ms of the last successful sync, for the account row
+const LS_PROFILE_SYNCED_HASH = 'ebbless:profileSyncedHash'; // hash of the profile the Worker last confirmed - skip pushes that would change nothing
+const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {at,del?} }, tr: { plId: { trackKey: {at,del?} } } }
+// Durable preferences worth following a person between devices. String
+// literals, not the LS_* constants, where the constant is declared further
+// down the file (lsSet can run before those lines have).
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak'];
+const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
+const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
+const PROFILE_RESYNC_ON_SHOW_MS = 5 * 60 * 1000; // coming back to the tab after this long pulls other devices' changes
 let profileIdToken = null;     // this page load's ID token; re-obtained via One Tap every visit, never persisted
+let profileTokenExp = 0;       // ms the token expires (from its own payload - display/refresh hint only)
 let profileSyncTimer = null;
-let applyingRemoteProfile = false; // true while writing a pulled snapshot back into localStorage, so that write doesn't itself queue a redundant push
+let profileSyncInFlight = null;
+let profileSyncStatus = '';    // '' | 'syncing' | 'error' | 'expired' - for the account row
+let applyingRemoteProfile = false; // true while writing a merged profile back into localStorage, so those writes aren't stamped or re-pushed
+let profileMetaMemo = null;
 
-function isLibraryRelevantKey(key){
-  return key === LS_LIB || key === LS_PINNED || (typeof key === 'string' && key.indexOf('ebbless:playlist:') === 0);
+// ---- profile merge (schema v2) - kept identical in index.html and
+// worker/src/index.js, so the client and the Worker always agree on the
+// merged result (a copy drifting would make two devices fight forever).
+// A v2 profile is:
+//   { v: 2,
+//     lib: { order: [ids], at, m: { id: { at, del? } } },  // library membership + order
+//     pin: { order: [ids], at, m: { ... } },               // pinned, same shape
+//     pl:  { id: { at, d: playlistData, tr?: { trackKey: { at, del? } } } | { at, del: 1 } },
+//     set: { lsKey: { at, val } | { at, del: 1 } } }       // synced settings
+// Every entry carries `at` (ms of the last local change to it) and a removal
+// is kept as a tombstone ({ at, del: 1 }) rather than just going missing, so
+// it propagates instead of being resurrected by a device that still has it.
+// Each entry is last-writer-wins; membership, custom-playlist tracks and
+// settings merge per item, so neither device's additions are lost.
+const PROFILE_SCHEMA = 2;
+const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
+const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+
+function profStamp(e) { return e && typeof e.at === 'number' && isFinite(e.at) ? e.at : 0; }
+
+// Key-sorted JSON, so equal content always serializes equal (used for tie
+// breaks and "did anything change" checks, never for storage).
+function profStable(v) {
+  if (v === null || v === undefined || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+  if (Array.isArray(v)) return '[' + v.map(profStable).join(',') + ']';
+  return '{' + Object.keys(v).sort().filter(k => v[k] !== undefined)
+    .map(k => JSON.stringify(k) + ':' + profStable(v[k])).join(',') + '}';
 }
 
-function libraryBlobForSync(){
-  const lib = getLibrary();
-  const playlists = {};
-  lib.forEach(id => { const pl = getCachedPlaylist(id); if (pl) playlists[id] = pl; });
-  return { lib, pinned: getPinnedLibrary(), playlists };
+// Last-writer-wins between two stamped entries. A tie goes to the deletion,
+// then to whichever serializes larger - arbitrary, but identical on every
+// device and on the Worker, so everyone converges on the same answer.
+function profPick(x, y) {
+  if (!x) return y;
+  if (!y) return x;
+  const ax = profStamp(x), ay = profStamp(y);
+  if (ax !== ay) return ax > ay ? x : y;
+  if (!!x.del !== !!y.del) return x.del ? x : y;
+  return profStable(x) >= profStable(y) ? x : y;
+}
+
+function profTrackKey(t) {
+  return (t && t.videoId) ? String(t.videoId) : '?' + ((t && t.title) || '') + '|' + ((t && t.artist) || '');
+}
+
+function profObj(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+
+function profStampMap(src) {
+  const out = {};
+  Object.entries(profObj(src)).forEach(([k, e]) => {
+    if (!e || typeof e !== 'object') return;
+    out[k] = e.del ? { at: profStamp(e), del: 1 } : { at: profStamp(e) };
+  });
+  return out;
+}
+
+// Coerces anything (a v2 profile, a pre-v2 { lib, pinned, playlists }
+// snapshot as stored by older clients, null, garbage) into a well-formed v2
+// profile. Pre-v2 data has no stamps at all, so it comes in at `at` 0 (a
+// playlist falls back to its own resolve `ts`) - any real change wins over it.
+function normalizeProfile(p) {
+  const out = { v: PROFILE_SCHEMA, lib: { order: [], at: 0, m: {} }, pin: { order: [], at: 0, m: {} }, pl: {}, set: {} };
+  if (!p || typeof p !== 'object') return out;
+  if (p.v !== PROFILE_SCHEMA) {
+    const legacy = { lib: { order: p.lib }, pin: { order: p.pinned }, pl: {} };
+    Object.entries(profObj(p.playlists)).forEach(([id, d]) => {
+      if (d && typeof d === 'object') legacy.pl[id] = { at: typeof d.ts === 'number' ? d.ts : 0, d };
+    });
+    p = legacy;
+  }
+  ['lib', 'pin'].forEach(k => {
+    const src = profObj(p[k]), o = out[k];
+    o.at = profStamp(src);
+    o.m = profStampMap(src.m);
+    const seen = new Set();
+    (Array.isArray(src.order) ? src.order : []).forEach(id => {
+      if (typeof id !== 'string' || !id || seen.has(id)) return;
+      if (!o.m[id]) o.m[id] = { at: 0 };
+      if (o.m[id].del) return; // the stamp map is authoritative over a stale order list
+      seen.add(id); o.order.push(id);
+    });
+    Object.keys(o.m).sort().forEach(id => { if (!o.m[id].del && !seen.has(id)) { seen.add(id); o.order.push(id); } });
+  });
+  Object.entries(profObj(p.pl)).forEach(([id, e]) => {
+    if (!e || typeof e !== 'object') return;
+    if (e.del) { out.pl[id] = { at: profStamp(e), del: 1 }; return; }
+    if (!e.d || typeof e.d !== 'object' || Array.isArray(e.d)) return;
+    const d = Array.isArray(e.d.tracks) ? e.d : Object.assign({}, e.d, { tracks: [] });
+    out.pl[id] = { at: profStamp(e), d };
+    if (e.tr) out.pl[id].tr = profStampMap(e.tr);
+  });
+  Object.entries(profObj(p.set)).forEach(([k, e]) => {
+    if (!e || typeof e !== 'object') return;
+    out.set[k] = e.del ? { at: profStamp(e), del: 1 } : { at: profStamp(e), val: e.val === undefined ? null : e.val };
+  });
+  return out;
+}
+
+function mergeStampMaps(x, y, cutoff) {
+  const out = {};
+  new Set([...Object.keys(x || {}), ...Object.keys(y || {})]).forEach(k => {
+    const e = profPick((x || {})[k], (y || {})[k]);
+    if (e.del && profStamp(e) < cutoff) return; // expired tombstone
+    out[k] = e;
+  });
+  return out;
+}
+
+// Membership merges per id; order comes from whichever side reordered last.
+// Ids only the other side has go in front if they were added after that
+// reorder (new saves and new pins are both unshifted in the app, so that's
+// where they'd have landed), otherwise at the end, in the other side's order.
+function mergeOrdered(x, y, cutoff) {
+  const m = mergeStampMaps(x.m, y.m, cutoff);
+  const alive = id => m[id] && !m[id].del;
+  const win = profPick({ at: x.at, o: x.order }, { at: y.at, o: y.order });
+  const lose = win.o === x.order ? y.order : x.order;
+  const order = win.o.filter(alive);
+  const seen = new Set(order);
+  const front = [], back = [];
+  lose.forEach(id => {
+    if (!alive(id) || seen.has(id)) return;
+    seen.add(id);
+    (profStamp(m[id]) > win.at ? front : back).push(id);
+  });
+  Object.keys(m).sort().forEach(id => { if (alive(id) && !seen.has(id)) { seen.add(id); back.push(id); } });
+  return { order: front.concat(order, back), at: Math.max(x.at, y.at), m };
+}
+
+// Whole-playlist LWW, except user-built ('custom') playlists - Liked Songs
+// included - whose tracks merge one by one: the newer copy supplies name,
+// art and order, and tracks only the other copy has are appended unless a
+// tombstone says they were removed.
+function mergePlaylistEntry(id, x, y, cutoff) {
+  const w = profPick(x, y);
+  if (w.del) return profStamp(w) < cutoff ? null : w;
+  const l = w === x ? y : x;
+  const perTrack = w.d.type === 'custom' && !PROFILE_REGENERATED_IDS.includes(id);
+  if (!perTrack) return w;
+  const tr = mergeStampMaps(w.tr, l && !l.del ? l.tr : null, cutoff);
+  const dead = k => tr[k] && tr[k].del;
+  const tracks = w.d.tracks.filter(t => !dead(profTrackKey(t)));
+  if (l && !l.del) {
+    const seen = new Set(tracks.map(profTrackKey));
+    l.d.tracks.forEach(t => {
+      const k = profTrackKey(t);
+      if (dead(k) || seen.has(k)) return;
+      seen.add(k); tracks.push(t);
+    });
+  }
+  const out = { at: w.at, d: Object.assign({}, w.d, { tracks }) };
+  if (Object.keys(tr).length) out.tr = tr;
+  return out;
+}
+
+// Symmetric and deterministic: merge(a, b) and merge(b, a) produce the same
+// profile, which is what lets the client and the Worker each merge on their
+// own and still agree.
+function mergeProfiles(a, b, now) {
+  a = normalizeProfile(a); b = normalizeProfile(b);
+  const cutoff = (now || Date.now()) - PROFILE_TOMBSTONE_TTL_MS;
+  const lib = mergeOrdered(a.lib, b.lib, cutoff);
+  const pin = mergeOrdered(a.pin, b.pin, cutoff);
+  const libAlive = new Set(lib.order);
+  pin.order = pin.order.filter(id => libAlive.has(id));
+  const pl = {};
+  new Set([...Object.keys(a.pl), ...Object.keys(b.pl)]).forEach(id => {
+    let e = mergePlaylistEntry(id, a.pl[id], b.pl[id], cutoff);
+    if (!e) return;
+    // Data for something no longer in the library (removed on one device
+    // while edited on another) goes too - the library removal wins.
+    if (!e.del && !libAlive.has(id)) e = { at: e.at, del: 1 };
+    pl[id] = e;
+  });
+  const set = mergeStampMaps(a.set, b.set, cutoff);
+  return { v: PROFILE_SCHEMA, lib, pin, pl, set };
+}
+// ---- end profile merge ----
+
+function isProfileSettingKey(key){
+  return PROFILE_SETTING_KEYS.includes(key) || PROFILE_SETTING_PREFIXES.some(p => key.indexOf(p) === 0);
+}
+function isProfileSyncedKey(key){
+  return typeof key === 'string' && (key === LS_LIB || key === LS_PINNED || key.indexOf('ebbless:playlist:') === 0 || isProfileSettingKey(key));
+}
+function isPerTrackPlaylist(id, pl){ return !!pl && pl.type === 'custom' && !PROFILE_REGENERATED_IDS.includes(id); }
+
+function profileMeta(){
+  if (!profileMetaMemo){
+    const m = lsGet(LS_SYNC_META, {});
+    profileMetaMemo = { k: profObj(m.k), lib: profObj(m.lib), pin: profObj(m.pin), tr: profObj(m.tr) };
+  }
+  return profileMetaMemo;
+}
+function saveProfileMeta(){
+  try { localStorage.setItem(LS_SYNC_META, JSON.stringify(profileMeta())); } catch(e){}
+}
+
+// Plays counters and the in-progress resolve flag change on every listen;
+// they're not worth a stamp (or a KV write) of their own.
+function playlistSyncShape(pl){
+  if (!pl || typeof pl !== 'object') return pl;
+  return Object.assign({}, pl, { resolving: undefined, tracks: (pl.tracks || []).map(t => Object.assign({}, t, { plays: undefined })) });
+}
+
+// Records a local change to a synced key: its stamp, plus which library /
+// pin ids or custom-playlist tracks came and went. Returns false when the
+// write changed nothing sync cares about (so lsSet skips the push).
+function noteProfileWrite(key, val){
+  if (applyingRemoteProfile) return false;
+  const now = Date.now();
+  const meta = profileMeta();
+  if (key === LS_LIB || key === LS_PINNED){
+    const m = key === LS_LIB ? meta.lib : meta.pin;
+    const before = lsGet(key, []), after = Array.isArray(val) ? val : [];
+    if (profStable(before) === profStable(after)) return false;
+    const b = new Set(before), a = new Set(after);
+    a.forEach(id => { if (!b.has(id)) m[id] = { at: now }; });
+    b.forEach(id => { if (!a.has(id)) m[id] = { at: now, del: 1 }; });
+  } else if (key.indexOf('ebbless:playlist:') === 0){
+    const id = key.slice('ebbless:playlist:'.length);
+    const before = lsGet(key, null);
+    // (Mid-resolve writes are real changes anyway - skip the compare.)
+    if (val !== undefined && before && !val.resolving && !before.resolving &&
+        profStable(playlistSyncShape(before)) === profStable(playlistSyncShape(val))) return false;
+    if (val !== undefined && isPerTrackPlaylist(id, val)){
+      const tr = meta.tr[id] = profObj(meta.tr[id]);
+      const b = new Set(((before && before.tracks) || []).map(profTrackKey));
+      const a = new Set((val.tracks || []).map(profTrackKey));
+      a.forEach(k => { if (!b.has(k)) tr[k] = { at: now }; });
+      b.forEach(k => { if (!a.has(k)) tr[k] = { at: now, del: 1 }; });
+    }
+  } else if (val !== undefined && profStable(lsGet(key, null)) === profStable(val)){
+    return false;
+  }
+  meta.k[key] = now;
+  saveProfileMeta();
+  return true;
+}
+
+// This device's state as a v2 profile (see mergeProfiles).
+function localProfileForSync(){
+  const meta = profileMeta();
+  const k = meta.k;
+  const lib = getLibrary(), libSet = new Set(lib);
+  const orderedSide = (order, m, key) => {
+    const out = { order: order.slice(), at: k[key] || 0, m: {} };
+    order.forEach(id => { out.m[id] = (m[id] && !m[id].del) ? m[id] : { at: k[key] || 0 }; });
+    Object.entries(m).forEach(([id, e]) => { if (e && e.del && !out.m[id]) out.m[id] = e; });
+    return out;
+  };
+  const prof = { v: PROFILE_SCHEMA, lib: orderedSide(lib, meta.lib, LS_LIB), pin: orderedSide(getPinnedLibrary(), meta.pin, LS_PINNED), pl: {}, set: {} };
+  const knownIds = new Set([...lib, ...Object.keys(meta.lib)]);
+  knownIds.forEach(id => {
+    const key = LS_PL(id), data = libSet.has(id) ? getCachedPlaylist(id) : null;
+    if (data){
+      prof.pl[id] = { at: k[key] || (typeof data.ts === 'number' ? data.ts : 0), d: data };
+      if (meta.tr[id]) prof.pl[id].tr = meta.tr[id];
+    } else if (k[key]){
+      prof.pl[id] = { at: k[key], del: 1 };
+    }
+  });
+  const settingKeys = new Set(PROFILE_SETTING_KEYS);
+  try {
+    for (let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      if (key && PROFILE_SETTING_PREFIXES.some(p => key.indexOf(p) === 0)) settingKeys.add(key);
+    }
+  } catch(e){}
+  Object.keys(k).forEach(key => { if (isProfileSettingKey(key)) settingKeys.add(key); });
+  settingKeys.forEach(key => {
+    const prefix = PROFILE_SETTING_PREFIXES.find(p => key.indexOf(p) === 0);
+    if (prefix && !libSet.has(key.slice(prefix.length))) return;
+    let raw = null;
+    try { raw = localStorage.getItem(key); } catch(e){}
+    if (raw !== null) prof.set[key] = { at: k[key] || 0, val: lsGet(key, null) };
+    else if (k[key]) prof.set[key] = { at: k[key], del: 1 };
+  });
+  return prof;
+}
+
+// Short, stable fingerprint of a profile (FNV-1a) - only to tell "same as
+// what the Worker already has" from "something changed".
+function profileHash(prof){
+  const s = profStable(prof);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return s.length + ':' + h.toString(36);
+}
+
+// A remote change to a playlist the queue points into shifts track indices;
+// re-point each queue entry at the same track (by key) in the new list, and
+// drop entries whose track is gone.
+function remapQueueForPlaylist(id, oldPl, newPl){
+  const oldTracks = (oldPl && oldPl.tracks) || [];
+  const newIdx = new Map();
+  ((newPl && newPl.tracks) || []).forEach((t, i) => { const key = profTrackKey(t); if (!newIdx.has(key)) newIdx.set(key, i); });
+  const queue = [];
+  let pos = -1;
+  state.queue.forEach((e, i) => {
+    if (e.plId === id){
+      const t = oldTracks[e.idx];
+      const ni = t ? newIdx.get(profTrackKey(t)) : undefined;
+      // The now-playing track itself went away: point at the one before it,
+      // so "next" still carries on from here.
+      if (ni === undefined){ if (i === state.queuePos) pos = queue.length - 1; return; }
+      e = { ...e, idx: ni };
+    }
+    if (i === state.queuePos) pos = queue.length;
+    queue.push(e);
+  });
+  state.queue = queue;
+  state.queuePos = state.queuePos < 0 || !queue.length ? -1 : Math.min(Math.max(pos, 0), queue.length - 1);
+}
+
+// Writes a merged profile into localStorage (only what differs), adopts its
+// stamps/tombstones as this device's own, and refreshes whatever's on
+// screen. Setters are reused for settings so every bit of UI they touch
+// follows along; applyingRemoteProfile keeps their own lsSet calls from
+// being stamped as new local changes.
+function applyMergedProfile(M){
+  const meta = profileMeta();
+  const changedPl = [];
+  let libChanged = false, setChanged = false;
+  const oldPls = {};
+  applyingRemoteProfile = true;
+  try{
+    if (profStable(getLibrary()) !== profStable(M.lib.order)){ lsSet(LS_LIB, M.lib.order); libChanged = true; }
+    if (profStable(getPinnedLibrary()) !== profStable(M.pin.order)){ lsSet(LS_PINNED, M.pin.order); libChanged = true; }
+    meta.lib = M.lib.m; meta.pin = M.pin.m;
+    meta.k[LS_LIB] = M.lib.at; meta.k[LS_PINNED] = M.pin.at;
+    Object.entries(M.pl).forEach(([id, e]) => {
+      const key = LS_PL(id);
+      meta.k[key] = e.at;
+      if (e.tr) meta.tr[id] = e.tr; else delete meta.tr[id];
+      const cur = getCachedPlaylist(id);
+      if (e.del){
+        if (cur){ oldPls[id] = cur; lsDel(key); changedPl.push(id); }
+      } else if (!cur || profStable(cur) !== profStable(e.d)){
+        oldPls[id] = cur; lsSet(key, e.d); changedPl.push(id);
+      }
+    });
+    Object.keys(meta.tr).forEach(id => { if (!M.pl[id]) delete meta.tr[id]; });
+    // Drop stamps nothing refers to any more (expired tombstones, playlists
+    // cached but never saved), so the meta doesn't grow forever.
+    Object.keys(meta.k).forEach(key => {
+      if (key === LS_LIB || key === LS_PINNED) return;
+      if (key.indexOf('ebbless:playlist:') === 0){ if (!M.pl[key.slice('ebbless:playlist:'.length)]) delete meta.k[key]; }
+      else if (!M.set[key] && localStorage.getItem(key) === null) delete meta.k[key];
+    });
+    Object.entries(M.set).forEach(([key, e]) => {
+      if (!isProfileSettingKey(key)) return;
+      meta.k[key] = e.at;
+      let raw = null;
+      try { raw = localStorage.getItem(key); } catch(e){}
+      if (e.del){
+        if (raw !== null){ lsDel(key); setChanged = true; }
+      } else if (raw === null || profStable(lsGet(key, null)) !== profStable(e.val)){
+        lsSet(key, e.val); setChanged = true;
+      }
+    });
+    saveProfileMeta();
+    if (setChanged) refreshSyncedSettings();
+  } finally { applyingRemoteProfile = false; }
+  changedPl.forEach(id => {
+    if (state.queue.some(q => q.plId === id)) remapQueueForPlaylist(id, oldPls[id], getCachedPlaylist(id));
+    if (state.playlist && state.playlist.id === id){
+      const fresh = getCachedPlaylist(id);
+      if (fresh) state.playlist = fresh;
+    }
+  });
+  if (libChanged || changedPl.length){ renderLibrary(); renderQueuePanel(); }
+  return libChanged || setChanged || changedPl.length > 0;
+}
+
+// Re-reads the synced preferences into the in-memory state the rest of the
+// app runs on, through the same setters a tap would use. Each is guarded -
+// a feature missing or mid-refactor shouldn't take the rest down with it.
+function refreshSyncedSettings(){
+  const steps = [
+    () => { crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {})); if (!crossfadePrefs.on) cancelCrossfade(); renderCrossfadeUI(); },
+    () => { levelOn = lsGet(LS_LEVEL, true) !== false; renderLevelUI(); reapplyLevel(); },
+    () => vizSetHoldMode(lsGet(LS_VIZ_HOLD, false) === true),
+    () => { const v = lsGet(LS_VIZ_SPEED, 1); vizSetSpeed(VIZ_SPEEDS.includes(v) ? v : 1); },
+    () => { const m = lsGet(LS_VIZ, 'art'); if (['art', 'viz', 'lyrics'].includes(m)) setVisualMode(m); },
+    () => { const s = lsGet('ebbless:artstyle', 'default'); if (['default', 'record', 'cassette'].includes(s)) setArtStyle(s); },
+    () => setLibraryView(getLibraryView()),
+    () => setLibraryFilter(getLibraryFilter()),
+  ];
+  steps.forEach(fn => { try { fn(); } catch(e){ console.warn('[ebbless] profile sync: settings refresh step failed', e); } });
 }
 
 function scheduleProfileSync(){
   if (!profileIdToken || applyingRemoteProfile) return;
   clearTimeout(profileSyncTimer);
-  profileSyncTimer = setTimeout(pushProfileNow, 2500);
+  profileSyncTimer = setTimeout(() => { profileSyncTimer = null; syncProfileNow(); }, PROFILE_PUSH_DEBOUNCE_MS);
 }
 
-async function pushProfileNow(){
-  if (!profileIdToken) return;
-  try{
-    await fetch(BACKEND + '/profile/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken: profileIdToken, library: libraryBlobForSync() }),
-    });
-  } catch(e){}
-}
+function profileTokenUsable(){ return !!profileIdToken && (!profileTokenExp || Date.now() < profileTokenExp - 30000); }
 
-// Only restores into a library that looks freshly wiped (nothing but the
-// always-present system playlists) - never clobbers an active local
-// library with a possibly-older cloud snapshot just because a sign-in
-// happened to fire.
-async function pullProfileIfEmpty(){
+// One round trip: send the local profile, get the merged one back, apply.
+// `force` (sign-in, Sync now, returning to the tab) always goes to the
+// Worker so other devices' changes come down; a debounced push after a
+// local change skips the request when nothing differs from what the Worker
+// last confirmed.
+async function syncProfileNow(opts){
+  const force = !!(opts && opts.force);
   if (!profileIdToken) return;
-  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
-  if (hasRealLibrary) return;
-  try{
-    const res = await fetch(BACKEND + '/profile/fetch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken: profileIdToken }),
-    });
-    const data = await res.json();
-    if (!data || !data.library || !Array.isArray(data.library.lib) || !data.library.lib.length) return;
-    applyingRemoteProfile = true;
+  if (!profileTokenUsable()){ profileSyncStatus = 'expired'; renderAccountRow(); return; }
+  if (profileSyncInFlight){ if (force) scheduleProfileSync(); return profileSyncInFlight; }
+  const local = localProfileForSync();
+  if (!force && profileHash(local) === lsGet(LS_PROFILE_SYNCED_HASH, '')) return;
+  profileSyncStatus = 'syncing'; renderAccountRow();
+  profileSyncInFlight = (async () => {
     try{
-      const { lib, pinned, playlists } = data.library;
-      lsSet(LS_LIB, lib);
-      lsSet(LS_PINNED, pinned || []);
-      Object.entries(playlists || {}).forEach(([id, pl]) => lsSet(LS_PL(id), pl));
-    } finally { applyingRemoteProfile = false; }
-    renderLibrary(); renderQueuePanel();
-    showToast('Library restored from your account');
-  } catch(e){}
+      const res = await fetch(BACKEND + '/profile/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: profileIdToken, v: PROFILE_SCHEMA, profile: local }),
+      });
+      if (res.status === 401){ profileSyncStatus = 'expired'; return; }
+      const data = await res.json().catch(() => null);
+      // A pre-v2 Worker 400s a body without `library` - see legacyProfileSync.
+      if (data && !data.profile && (res.ok || res.status === 400)){
+        await legacyProfileSync();
+        lsSet(LS_PROFILE_SYNCED_AT, Date.now());
+        profileSyncStatus = '';
+        return;
+      }
+      if (!res.ok || !data){ profileSyncStatus = 'error'; return; }
+      // Fold in anything changed locally while the request was out, so it
+      // isn't overwritten - and gets pushed on the next beat.
+      const server = normalizeProfile(data.profile);
+      const merged = mergeProfiles(localProfileForSync(), server);
+      const changedHere = applyMergedProfile(merged);
+      lsSet(LS_PROFILE_SYNCED_AT, Date.now());
+      profileSyncStatus = '';
+      if (profStable(merged) !== profStable(server)) scheduleProfileSync();
+      // What this device looks like now = what the Worker has; a later
+      // push only goes out once that stops being true.
+      else lsSet(LS_PROFILE_SYNCED_HASH, profileHash(localProfileForSync()));
+      if (changedHere && force && opts.announce) showToast('Synced with your other devices');
+    } catch(e){
+      profileSyncStatus = 'error';
+    } finally {
+      profileSyncInFlight = null;
+      renderAccountRow();
+    }
+  })();
+  return profileSyncInFlight;
+}
+
+// Until the Worker is redeployed with v2 sync it answers without a
+// `profile`: fall back to the old behavior (restore only into a wiped
+// library, then back the library up) rather than doing nothing.
+async function legacyProfileSync(){
+  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+  const post = (path, extra) => fetch(BACKEND + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ idToken: profileIdToken }, extra || {})),
+  });
+  if (!hasRealLibrary){
+    const data = await (await post('/profile/fetch')).json().catch(() => null);
+    if (data && data.library && Array.isArray(data.library.lib) && data.library.lib.length){
+      applyMergedProfile(mergeProfiles(localProfileForSync(), data.library));
+      showToast('Library restored from your account');
+    }
+  }
+  const lib = getLibrary(), playlists = {};
+  lib.forEach(id => { const pl = getCachedPlaylist(id); if (pl) playlists[id] = pl; });
+  await post('/profile/sync', { library: { lib, pinned: getPinnedLibrary(), playlists } });
 }
 
 function handleGoogleCredential(response){
   profileIdToken = response.credential;
+  profileTokenExp = 0;
   try{
     const payloadB64 = response.credential.split('.')[1];
     const payload = JSON.parse(atob(payloadB64.replace(/-/g,'+').replace(/_/g,'/')));
     if (payload.email) lsSet(LS_PROFILE_EMAIL, payload.email);
+    if (payload.exp) profileTokenExp = payload.exp * 1000;
   } catch(e){}
-  pullProfileIfEmpty().then(pushProfileNow);
+  lsDel(LS_PROFILE_SIGNED_OUT);
+  profileSyncStatus = '';
+  syncProfileNow({ force: true, announce: true });
 }
+
+// Local data stays put (it's this device's library too); its change stamps
+// do as well, so anything done while signed out still merges correctly on
+// the next sign-in. disableAutoSelect + LS_PROFILE_SIGNED_OUT keep One Tap
+// from quietly signing them straight back in on the next load.
+function signOutProfile(){
+  clearTimeout(profileSyncTimer); profileSyncTimer = null;
+  profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
+  lsDel(LS_PROFILE_EMAIL);
+  lsDel(LS_PROFILE_SYNCED_AT);
+  lsDel(LS_PROFILE_SYNCED_HASH);
+  lsSet(LS_PROFILE_SIGNED_OUT, true);
+  renderAccountRow();
+  showToast('Signed out. Your library stays on this device.');
+}
+
+// Push anything still debounced before the tab goes away, and pull other
+// devices' changes when coming back to a tab that's been in the background
+// a while.
+document.addEventListener('visibilitychange', () => {
+  if (!profileIdToken) return;
+  if (document.visibilityState === 'hidden'){
+    if (profileSyncTimer){ clearTimeout(profileSyncTimer); profileSyncTimer = null; syncProfileNow(); }
+  } else if (Date.now() - lsGet(LS_PROFILE_SYNCED_AT, 0) > PROFILE_RESYNC_ON_SHOW_MS){
+    syncProfileNow({ force: true });
+  }
+});
+
+/* ---------- Settings > Account row ----------
+   Built and inserted from here (after the first Settings block) rather than
+   written into the Settings markup, so it stays one self-contained piece.
+   Signed out, it offers Google's own Sign in button - an explicit tap, so it
+   works regardless of the One Tap cooldown below and never pops up on its
+   own. */
+let gsiReady = false;
+function fmtSyncedAgo(ts){
+  if (!ts) return 'Not synced yet';
+  const min = Math.floor((Date.now() - ts) / 60000);
+  if (min < 1) return 'Synced just now';
+  if (min < 60) return 'Synced ' + min + 'm ago';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return 'Synced ' + hr + 'h ago';
+  return 'Synced ' + new Date(ts).toLocaleDateString();
+}
+function ensureAccountBlock(){
+  let block = document.getElementById('accountBlock');
+  if (block) return block;
+  const scroll = document.querySelector('#view-settings .view-scroll');
+  if (!scroll) return null;
+  block = document.createElement('div');
+  block.className = 'settings-block';
+  block.id = 'accountBlock';
+  block.innerHTML = '<h2>Account</h2><div class="settings-row" style="gap:12px"><div style="min-width:0"><div class="label" id="accountLabel" style="overflow-wrap:anywhere"></div><div class="desc" id="accountDesc"></div></div>'
+    + '<div id="accountActions" style="display:flex;flex:none;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center"></div></div>';
+  const first = scroll.querySelector('.settings-block');
+  // Top of Settings, above every other section - who you're signed in as
+  // frames everything below it that syncs.
+  if (first) first.parentNode.insertBefore(block, first);
+  else scroll.appendChild(block);
+  block.querySelector('#accountActions').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    if (btn.dataset.act === 'sync') syncProfileNow({ force: true, announce: true });
+    else if (btn.dataset.act === 'signout') signOutProfile();
+    else if (btn.dataset.act === 'signin'){
+      lsDel(LS_PROFILE_SIGNED_OUT);
+      try { google.accounts.id.prompt(); } catch(e){ showToast("Google sign-in didn't load - try again in a moment"); }
+    }
+  });
+  return block;
+}
+function renderAccountRow(){
+  const block = ensureAccountBlock();
+  if (!block) return;
+  const label = block.querySelector('#accountLabel'), desc = block.querySelector('#accountDesc'), actions = block.querySelector('#accountActions');
+  const email = lsGet(LS_PROFILE_EMAIL, '');
+  const signedIn = !!profileIdToken;
+  const syncedAt = fmtSyncedAgo(lsGet(LS_PROFILE_SYNCED_AT, 0));
+  label.textContent = email || 'Sync across devices';
+  if (signedIn && profileSyncStatus !== 'expired'){
+    desc.textContent = profileSyncStatus === 'syncing' ? 'Syncing…'
+      : profileSyncStatus === 'error' ? "Couldn't sync just now. " + syncedAt + '.'
+      : syncedAt + '. Your library, liked songs and settings follow you to any device you sign in on.';
+    const key = 'in:' + (profileSyncStatus === 'syncing');
+    if (actions.dataset.state !== key){
+      actions.dataset.state = key;
+      actions.innerHTML = '<button class="btn-ghost" data-act="sync"' + (profileSyncStatus === 'syncing' ? ' disabled' : '') + '>Sync now</button><button class="btn-ghost" data-act="signout">Sign out</button>';
+    }
+    return;
+  }
+  desc.textContent = email
+    ? (profileSyncStatus === 'expired' ? 'Session expired. Sign in again to keep syncing. ' : 'Not connected on this visit. ') + syncedAt + '.'
+    : 'Sign in with Google to keep your library, liked songs and settings the same on every device.';
+  const key = 'out:' + gsiReady;
+  if (actions.dataset.state === key) return;
+  actions.dataset.state = key;
+  actions.innerHTML = '';
+  if (gsiReady){
+    const holder = document.createElement('div');
+    actions.appendChild(holder);
+    try{
+      google.accounts.id.renderButton(holder, { type: 'standard', theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin' });
+      holder.addEventListener('click', () => lsDel(LS_PROFILE_SIGNED_OUT), true);
+      return;
+    } catch(e){ holder.remove(); }
+  }
+  actions.innerHTML = '<button class="btn-ghost" data-act="signin"' + (gsiReady ? '' : ' disabled') + '>Sign in</button>';
+}
+renderAccountRow();
+// Keep "Synced Xm ago" honest while Settings is open.
+setInterval(() => { if (!document.hidden && profileIdToken) renderAccountRow(); }, 60000);
 
 // Polls briefly for the async Google Identity Services script (tag in
 // <head>) rather than depending on load ordering between it and this
@@ -3621,14 +4193,22 @@ function handleGoogleCredential(response){
 // every load"). LS_ONETAP_DISMISSED is a first-party fallback so *this*
 // app remembers the dismissal even when Google's own throttle doesn't,
 // and stays quiet for a day rather than re-asking on every single visit.
+// GSI is still initialized during that cooldown (and after an explicit
+// sign-out) - only the automatic prompt is held back - so the Account
+// row's Sign in button keeps working.
 const LS_ONETAP_DISMISSED = 'ebbless:oneTapDismissedAt';
 const ONETAP_DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 function initGoogleOneTap(attempt){
   if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
-  if (Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
   if (window.google && window.google.accounts && window.google.accounts.id){
     try{
       google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
+      gsiReady = true;
+      renderAccountRow();
+    } catch(e){ return; }
+    if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true) return;
+    if (Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
+    try{
       google.accounts.id.prompt((notification) => {
         // Only a moment that didn't lead to sign-in (blocked, skipped, or
         // actively dismissed) starts the cooldown - a real credential
