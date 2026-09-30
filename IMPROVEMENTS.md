@@ -6497,6 +6497,7 @@ Add entries in this shape:
   **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
   **Split (2026-09-30):** part 1 (this lane, started now): speakers (Cast / Remote Playback) + car/lock-screen (Media Session completeness). Part 2, phone <-> desktop session handoff, starts after `accounts-profiles` lands.
   **Part 2 started (2026-09-30):** phone <-> desktop handoff on `agent/handoff-devices`, branched from `agent/accounts-profiles` (merge accounts first).
+  **Part 1 built (ff8c79a, `agent/cross-platform-handoff`):** full Media Session (real-size artwork, all actions except ±10s on iOS so prev/next stay, guarded position state); Chromecast via lazy Cast SDK - YouTube tracks to YouTube receiver by id, podcasts to Default Media Receiver, EBBLESS keeps the queue and advances on the device, mirrored controls, "Playing on <device>" bar, local resume at position on stop; AirPlay button for podcast episodes on Safari. Unverified on real hardware: YouTube receiver accepting load-by-id (falls back locally with a toast if not). Part 2 still in progress.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
 - **Status:** review
