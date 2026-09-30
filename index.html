@@ -10137,7 +10137,7 @@ const AD_MUTE_MAX_MS = 120000;
 // YT.Player's synchronous ones every other deck consumer assumes.
 // gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
 // deck's player - see the gen-check comment on those functions for why.
-function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, adMutedAt: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1 }; }
+function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, adMutedAt: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1, resumeSeeked: false }; }
 const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
@@ -10188,6 +10188,7 @@ function resetDeck(deck){
   deck.muteStartTs = 0;
   deck.loadStartTs = 0;
   deck.adMutedAt = 0;
+  deck.resumeSeeked = false;
   deck.pos = -1;
   deck.pendingVideoId = null;
   deck.videoId = null;
@@ -10247,6 +10248,7 @@ function onDeckConfirmed(deck){
     if (entry && entry.plId === pendingResume.plId && entry.idx === pendingResume.idx){
       deck.player.seekTo(pendingResume.position, true);
       resumed = true;
+      deck.resumeSeeked = true;
       pendingResume = null;
     }
   }
@@ -11823,6 +11825,10 @@ function reflectCurrentTrackUI(pos, opts){
   // the same art back and forth for no visual gain.
   const skipArt = opts && opts.skipArtSwap;
   updateTrackMetaUI(t);
+  // new track: never carry the previous one's position/duration over - the
+  // seek poll stops while paused, so a stale full bar would otherwise stick
+  // until the new track actually starts reporting (issue #213)
+  resetSeekUI(t);
   // a podcast episode is the show's own file - there's no match to flag
   const isPod = isAudioVideoId(t.videoId) || !!t.podcast;
   reportMatchBtn.hidden = isPod;
@@ -11865,6 +11871,23 @@ function promoteDeckDirect(nd, pos, shouldPlay){
   reflectCurrentTrackUI(pos);
 
   nd.player.setVolume(effectiveVolume(nd));
+  // Issue #213 (auto-advance lands on the next track paused, its progress
+  // bar already full): a preloaded standby deck is only *asked* to pause
+  // once its ad check confirms it (onDeckConfirmed). Until then - and for
+  // good if that pause doesn't take, e.g. in a background tab where the
+  // ad-check timer chain gets throttled to about once a minute - it keeps
+  // playing muted, and can run all the way to its own end before it's
+  // promoted. playVideo() on that ENDED player doesn't reliably restart
+  // it, so the deck sat at duration/duration: full bar, paused UI, no
+  // audio. A confirmed deck never gets onDeckConfirmed's snap back to 0:00
+  // again, so rewind it here unless that position is a deliberate resume
+  // (prewarmResumeDeck). An unconfirmed deck gets the snap on confirm.
+  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
+    const cur = nd.player.getCurrentTime ? (nd.player.getCurrentTime() || 0) : 0;
+    const st = nd.player.getPlayerState ? nd.player.getPlayerState() : -1;
+    if (cur > 1 || st === YT.PlayerState.ENDED) nd.player.seekTo(0, true);
+  }
+  nd.resumeSeeked = false;
   if (nd.confirmed && nd.player.unMute) nd.player.unMute();
   if (shouldPlay && nd.player.playVideo) nd.player.playVideo();
   else if (!shouldPlay && nd.player.pauseVideo) nd.player.pauseVideo();
@@ -11928,6 +11951,9 @@ function finishCrossfade(old, nd, nextPos){
   crossfadeTriggered = false;
   reflectCurrentTrackUI(nextPos, { skipArtSwap: true });
   setPlayingUI(true);
+  // the incoming deck is already seconds in - repaint straight away rather
+  // than leave reflectCurrentTrackUI's 0:00 up until the next poll tick
+  updateSeekUI();
   resetDeck(old);
   schedulePreload(nextPos);
 }
@@ -13633,19 +13659,40 @@ function guardActiveDeckAd(){
   if (ad.adMutedAt){ ad.adMutedAt = 0; ad.player.unMute(); }
   return false;
 }
-function updateSeekUI(){
-  updateAdLoadingIcon();
-  const ad = activeDeck();
-  if (!ad.player || !ad.player.getCurrentTime) return;
-  if (guardActiveDeckAd()) return;
-  const cur = ad.player.getCurrentTime() || 0;
-  const dur = ad.player.getDuration() || 0;
-  const pct = dur ? (cur / dur) * 100 : 0;
+function paintSeekUI(cur, dur){
+  const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   seekFill.style.width = pct + '%'; seekKnob.style.left = pct + '%';
   flowSeekFill.style.width = pct + '%'; flowSeekKnob.style.left = pct + '%';
   timeCur.textContent = formatTime(cur); timeDur.textContent = formatTime(dur);
   flowTimeCur.textContent = formatTime(cur); flowTimeDur.textContent = formatTime(dur);
   miniLineFill.style.width = pct + '%';
+}
+// Back to 0:00 for a track change (reflectCurrentTrackUI), showing the new
+// track's known length until its deck reports its own.
+function resetSeekUI(t){
+  const dur = (t && t.duration) || 0;
+  paintSeekUI(0, dur);
+  cassetteSetProgress(0, dur);
+}
+function updateSeekUI(){
+  updateAdLoadingIcon();
+  const ad = activeDeck();
+  if (!ad.player || !ad.player.getCurrentTime) return;
+  if (guardActiveDeckAd()) return;
+  // A deck that hasn't confirmed its new track yet is still either on the
+  // previous sound (SC/YT report the old position/duration until the load
+  // lands) or playing muted through the ad wait, which onDeckConfirmed then
+  // snaps back to 0:00 - hold at 0 rather than showing either (issue #213).
+  if (!ad.confirmed){
+    const t = trackAt(state.queuePos);
+    const dur = (t && t.duration) || 0;
+    paintSeekUI(0, dur);
+    cassetteSetProgress(0, dur);
+    return;
+  }
+  const cur = ad.player.getCurrentTime() || 0;
+  const dur = ad.player.getDuration() || 0;
+  paintSeekUI(cur, dur);
   updateLyricsHighlight(cur);
   syncMediaPositionState(false);
   maybeStartCrossfade(cur, dur);
