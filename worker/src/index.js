@@ -2481,6 +2481,54 @@ async function getListenBrainzSimilar(mbid, limit) {
   } catch (e) { return []; }
 }
 
+// Artist-level fallback for tracks neither Last.fm nor MusicBrainz knows
+// yet - typically a brand-new release (Last.fm answers "Track not found",
+// MusicBrainz has no recording) whose artist Last.fm does know. Candidates
+// are the top tracks of the seed artist's similar artists, each tagged with
+// its artist's tags since there are no track tags to lean on. About a dozen
+// Last.fm calls, only on this path, and cached like any other /similar answer.
+const ARTIST_FALLBACK_ARTISTS = 5;
+
+async function getLastfmArtistTopTags(artist, env) {
+  const data = await lastfmCall('artist.getTopTags', { artist }, env);
+  const tags = data && data.toptags && data.toptags.tag;
+  if (!Array.isArray(tags) || !tags.length) return [];
+  return tags
+    .filter(t => t.name && !TAG_BLACKLIST.has(t.name.toLowerCase()))
+    .slice(0, 15)
+    .map(t => ({ name: t.name.toLowerCase(), weight: Number(t.count) || 0 }));
+}
+
+async function getLastfmArtistFallback(artist, env, limit) {
+  if (!artist) return [];
+  const data = await lastfmCall('artist.getSimilar', { artist, limit: String(ARTIST_FALLBACK_ARTISTS) }, env);
+  const similar = ((data && data.similarartists && data.similarartists.artist) || [])
+    .filter(a => a && a.name)
+    .slice(0, ARTIST_FALLBACK_ARTISTS);
+  if (!similar.length) return [];
+  const perArtist = Math.ceil(limit / similar.length);
+  const lists = await mapWithConcurrency(similar, 5, async (a) => {
+    const [top, tags] = await Promise.all([
+      lastfmCall('artist.getTopTracks', { artist: a.name, limit: String(perArtist) }, env),
+      getLastfmArtistTopTags(a.name, env),
+    ]);
+    const tracks = (top && top.toptracks && top.toptracks.track) || [];
+    const artistMatch = Number(a.match) || 0;
+    return (Array.isArray(tracks) ? tracks : [])
+      .filter(t => t && t.name)
+      .slice(0, perArtist)
+      // Below track-level matches: an artist-level guess, decaying down
+      // each artist's top-track list.
+      .map((t, i) => ({ title: t.name, artist: a.name, matchScore: 0.6 * artistMatch * (1 - 0.05 * i), tags }));
+  });
+  // Round-robin across artists so truncating to `limit` keeps the variety.
+  const out = [];
+  for (let i = 0; out.length < limit && lists.some(l => i < l.length); i++) {
+    for (const l of lists) if (i < l.length && out.length < limit) out.push(l[i]);
+  }
+  return out;
+}
+
 // ---------- POST /metrics ----------
 // Per-track musical metrics (tempo, key/mode, time signature, energy) that
 // Discover folds into its ranking so a picked track sits near the seed in
@@ -2824,6 +2872,14 @@ async function handleSimilar(url, env, ctx) {
       if (lbCandidates.length) {
         source = 'listenbrainz';
         candidates = lbCandidates.map(c => Object.assign({}, c, { tags: [] }));
+      }
+    }
+    if (!candidates.length) {
+      const artistCandidates = await getLastfmArtistFallback(artist, env, limit);
+      if (artistCandidates.length) {
+        source = 'lastfm-artist';
+        seedTags = await getLastfmArtistTopTags(artist, env);
+        candidates = artistCandidates;
       }
     }
   }
