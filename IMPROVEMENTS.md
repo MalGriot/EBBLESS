@@ -6693,11 +6693,11 @@ Add entries in this shape:
   cymatics and landscape excluded. Real devices/long wrapping titles untested.
 
 ### conversational-vibe-search: Search by typing or speaking a mood/vibe to get a playlist
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Let users type conversationally (like talking to an LLM) or speak a sentence into the search bar describing their mood, vibe or environment, and get back a playlist of existing songs that fit. Needs a free tool or LLM working silently in the background to interpret the request.
 - **Touches:** search bar / paste bar, discovery backend (worker). Follow-on to merged `playlist-vibe-search`.
-- **Branch:** (unclaimed)
+- **Branch:** agent/conversational-vibe-search
 - **Notes:** Synced from Geethub issue #185, #186.
 
 ### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
