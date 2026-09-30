@@ -7127,7 +7127,7 @@ Add entries in this shape:
   "7 phases a day" needs defining before build.
 
 ### vibe-search-named-playlists: Vibe search should compile a named playlist of heard + new songs
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When someone searches a vibe, compile an actual
   playlist for it with a short, unique, intelligent name (one or a few
@@ -7136,6 +7136,7 @@ Add entries in this shape:
 - **Touches:** vibe search flow (follow-up to merged
   `conversational-vibe-search`), worker.
 - **Branch:** agent/vibe-search-named-playlists
+- **Build (0510ddc):** results now blend ~30% songs the listener knows (liked, history, saved playlists; tag-matched to the vibe; every third slot, "you know this") with new finds; 1-3 word distilled, collision-free names (`vibePlaylistName()`); main button "Save & play" saves a real playlist, "Just play N songs" keeps the unsaved play. Worker prompt tightened, `VIBE_CACHE_VERSION` v3. SW v38. **Needs `wrangler deploy` for the worker naming (client works without it).** Blend not yet seen with a real library; playback untested.
 - **Notes:** Synced from Geethub issue #220. Check what the shipped
   version already does before building; may be a partial gap only.
 
