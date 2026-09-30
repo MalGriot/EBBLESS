@@ -1994,6 +1994,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <button type="button" class="lib-filter-btn" data-filter="all">All</button>
             <button type="button" class="lib-filter-btn" data-filter="playlists">Playlists</button>
             <button type="button" class="lib-filter-btn" data-filter="albums">Albums</button>
+            <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
           </div>
           <button type="button" class="lib-filter-cycle" id="libFilterCycle" aria-label="Filter library"></button>
           <div class="lib-head-actions">
@@ -2046,6 +2047,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <div class="section-label">Albums</div>
         </div>
         <div class="lib-grid" id="libraryAlbumsGrid"></div>
+        <div class="section-label-row hidden" id="libraryPodcastsHead">
+          <div class="section-label">Podcasts</div>
+        </div>
+        <div class="lib-grid" id="libraryPodcastsGrid"></div>
         <div class="hidden" id="libSearchTracks">
           <div class="section-label">Songs</div>
           <div id="libSearchTracksList"></div>
@@ -3383,7 +3388,7 @@ const LS_VIZ_HOLD = 'ebbless:vizHold';     // true = stay within the current pat
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
-const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'albums'
+const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'albums' | 'podcasts'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
@@ -4105,6 +4110,8 @@ const views = { library: $('view-library'), player: $('view-player'), settings: 
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
+const libraryPodcastsHead = $('libraryPodcastsHead'), libraryPodcastsGrid = $('libraryPodcastsGrid');
+const libFilterPodcasts = $('libFilterPodcasts');
 const libraryFilterEmpty = $('libraryFilterEmpty');
 const libViewToggle = $('libViewToggle');
 const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
@@ -4633,6 +4640,8 @@ function setLibraryView(mode){
   libraryGrid.classList.toggle('is-compact', mode === 'compact');
   libraryAlbumsGrid.classList.toggle('is-list', mode === 'list');
   libraryAlbumsGrid.classList.toggle('is-compact', mode === 'compact');
+  libraryPodcastsGrid.classList.toggle('is-list', mode === 'list');
+  libraryPodcastsGrid.classList.toggle('is-compact', mode === 'compact');
   libViewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
@@ -4655,17 +4664,40 @@ function isAlbumType(type){ return type === 'album' || type === 'am_album' || ty
 // so sourceKindForType etc.) is left alone, and resolvePlaylist carries the
 // override across re-resolves.
 function albumOverrideOf(pl){ return pl && typeof pl.albumOverride === 'boolean' ? pl.albumOverride : undefined; }
-function isAlbumEntry(pl){ const o = albumOverrideOf(pl); return o !== undefined ? o : isAlbumType(pl && pl.type); }
+function isAlbumEntry(pl){
+  if (isPodcastEntry(pl)) return false;
+  const o = albumOverrideOf(pl); return o !== undefined ? o : isAlbumType(pl && pl.type);
+}
+// Podcasts get their own library category (Geethub #211), outside both the
+// Playlists and Albums buckets. An imported show is saved as type 'pod_show'
+// under a 'pod:<src>:<id>' id (see resolvePlaylist); the id prefix and the
+// per-episode `podcast: true` / 'au:' audio ids are read-only fallbacks for
+// any older saved entry missing the type - nothing is rewritten.
+function isPodcastEntry(pl){
+  if (!pl || pl.type === 'custom') return false;
+  if (pl.type === 'pod_show' || isPodcastPlaylistId(pl.id)) return true;
+  const tr = Array.isArray(pl.tracks) ? pl.tracks : [];
+  return tr.length > 0 && tr.every(t => t && (t.podcast === true || isAudioVideoId(t.videoId)));
+}
 // Only link-backed lists can be re-filed - not 'custom' (Liked Songs,
-// CuRRentSSsss, user-made, Discover overflow) or single tracks/videos.
-function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type); }
+// CuRRentSSsss, user-made, Discover overflow), single tracks/videos, or
+// podcasts (always filed under Podcasts).
+function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isPodcastEntry(pl); }
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
 });
-const LIB_FILTER_CYCLE = ['all', 'playlists', 'albums'];
-const LIB_FILTER_LABEL = { all: 'All', playlists: 'Playlists', albums: 'Albums' };
-function getLibraryFilter(){ return lsGet(LS_LIB_FILTER, 'all'); }
+const LIB_FILTER_CYCLE = ['all', 'playlists', 'albums', 'podcasts'];
+const LIB_FILTER_LABEL = { all: 'All', playlists: 'Playlists', albums: 'Albums', podcasts: 'Podcasts' };
+// The Podcasts filter only exists while the library holds a podcast (kept
+// current by renderLibrary); a saved 'podcasts' choice reads as 'all' when
+// there are none.
+let libHasPodcasts = false;
+function libFilterCycleModes(){ return libHasPodcasts ? LIB_FILTER_CYCLE : LIB_FILTER_CYCLE.filter(m => m !== 'podcasts'); }
+function getLibraryFilter(){
+  const mode = lsGet(LS_LIB_FILTER, 'all');
+  return libFilterCycleModes().includes(mode) ? mode : 'all';
+}
 function setLibraryFilter(mode){
   lsSet(LS_LIB_FILTER, mode);
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
@@ -4679,7 +4711,8 @@ libFilter.addEventListener('click', (e) => {
   if (btn) setLibraryFilter(btn.dataset.filter);
 });
 libFilterCycle.addEventListener('click', () => {
-  const next = LIB_FILTER_CYCLE[(LIB_FILTER_CYCLE.indexOf(getLibraryFilter()) + 1) % LIB_FILTER_CYCLE.length];
+  const modes = libFilterCycleModes();
+  const next = modes[(modes.indexOf(getLibraryFilter()) + 1) % modes.length];
   setLibraryFilter(next);
 });
 function applyLibSortUI(){
@@ -4744,21 +4777,29 @@ function renderLibrary(){
   libraryEmpty.classList.add('hidden'); libraryListWrap.classList.remove('hidden');
   libraryGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
+  libraryPodcastsGrid.innerHTML = '';
+  libHasPodcasts = ids.some(id => isPodcastEntry(getCachedPlaylist(id)));
+  libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
   const filter = getLibraryFilter();
-  const showPlaylists = filter !== 'albums';
-  const showAlbums = filter !== 'playlists';
+  libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', btn.dataset.filter === filter));
+  libFilterCycle.textContent = LIB_FILTER_LABEL[filter];
+  const showPlaylists = filter === 'all' || filter === 'playlists';
+  const showAlbums = filter === 'all' || filter === 'albums';
+  const showPodcasts = filter === 'all' || filter === 'podcasts';
+  // which bucket a saved entry is filed under
+  const kindOf = (p) => isPodcastEntry(p) ? 'podcast' : isAlbumEntry(p) ? 'album' : 'playlist';
+  const kindShown = (k) => k === 'podcast' ? showPodcasts : k === 'album' ? showAlbums : showPlaylists;
   libraryGrid.classList.toggle('hidden', !showPlaylists);
   const searchQ = normLibSearch(libSearch.value);
   libSearchTracksList.innerHTML = '';
   let searchTrackCount = 0;
-  let albumCount = 0;
+  let albumCount = 0, podcastCount = 0;
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
     if (searchQ){
       try{
-        const plIsAlbum = isAlbumEntry(pl);
-        if ((plIsAlbum && !showAlbums) || (!plIsAlbum && !showPlaylists)) return;
+        if (!kindShown(kindOf(pl))) return;
         (pl.tracks || []).forEach((t, i) => {
           if (searchTrackCount >= LIB_SEARCH_TRACK_LIMIT) return;
           if (!normLibSearch(t.title).includes(searchQ) && !normLibSearch(t.artist).includes(searchQ)) return;
@@ -4790,9 +4831,11 @@ function renderLibrary(){
     // the entry that caused it so the same throw can't recur on every future
     // load - self-healing instead of requiring a manual storage clear.
     try{
-    const isAlbum = isAlbumEntry(pl);
-    if ((isAlbum && !showAlbums) || (!isAlbum && !showPlaylists)) return;
+    const kind = kindOf(pl);
+    if (!kindShown(kind)) return;
+    const isAlbum = kind === 'album', isPodcast = kind === 'podcast';
     if (isAlbum) albumCount++;
+    if (isPodcast) podcastCount++;
     const isLiked = id === LIKED_ID;
     const isSystemPl = isLiked || id === SWELL_ID || id === BLEND_ID;
     const pinned = isPinned(id);
@@ -4864,12 +4907,13 @@ function renderLibrary(){
       artDiv.classList.add('single');
       const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, { art: pl.image });
       artDiv.appendChild(img);
-    } else if (isAlbum){
+    } else if (isAlbum || isPodcast){
       // An album with no source cover on file (e.g. a Spotify album
       // resolved while the worker's /album returned image: null - see
       // album-art-consistent-per-album) still gets one cover, never the
       // 2x2 grid (Geethub #204): every track on an album carries that same
-      // album art, so the first track's stands in for it.
+      // album art, so the first track's stands in for it. Same for a podcast
+      // with no show artwork saved: its episodes carry the show's art.
       artDiv.classList.add('single');
       const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, pl.tracks.find(t => t.art) || withArt[0]);
       artDiv.appendChild(img);
@@ -4928,7 +4972,7 @@ function renderLibrary(){
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
-    count.textContent = pl.tracks.length + (pl.tracks.length === 1 ? ' track' : ' tracks') + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
+    count.textContent = pl.tracks.length + (isPodcast ? (pl.tracks.length === 1 ? ' episode' : ' episodes') : (pl.tracks.length === 1 ? ' track' : ' tracks')) + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
     if (id === SWELL_ID && currentsBusy){
       count.textContent = currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...';
       card.classList.add('is-refreshing');
@@ -4968,7 +5012,7 @@ function renderLibrary(){
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
       });
     }
-    (isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
+    (isPodcast ? libraryPodcastsGrid : isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
     } catch(e){
       console.warn('[ebbless] dropping corrupted library entry', id, e);
       lsDel(LS_PL(id));
@@ -4976,9 +5020,11 @@ function renderLibrary(){
   });
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
+  libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
+  libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
-  const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !searchTrackCount;
-  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : 'No playlists in your library yet.';
+  const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
+  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
 }
