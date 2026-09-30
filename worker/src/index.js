@@ -1574,27 +1574,106 @@ async function handleArt(url, ctx) {
 // cache key below carries its own version segment (SPOTIFYART_CACHE_VERSION)
 // so hits cached before `year` existed aren't served without it, without
 // having to bump ART_CACHE_VERSION and cold-start every other art cache.
-const SPOTIFYART_CACHE_VERSION = 'y1';
-async function searchItunesTrackArt(title, artist) {
+//
+// iTunes from Cloudflare's shared egress IPs is unreliable (bare requests
+// with no User-Agent come back empty, and Apple rate-limits with 429), which
+// left most covers blank. So: iTunes with APP_UA and one 429 retry first,
+// alongside Deezer's public search (free, no key, 1000x1000 covers), then
+// Last.fm's track.getInfo album image. iTunes wins when both have one.
+const SPOTIFYART_CACHE_VERSION = 'y3';
+const artNorm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+-\s+.*$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// Loose "is this the same artist" check so a fallback source can't hand
+// back some other artist's cover for a common title.
+function artistLooksRight(want, got) {
+  const a = artNorm(want), b = artNorm(got);
+  if (!a || !b) return true;
+  return a === b || a.includes(b) || b.includes(a) || a.split(' ')[0] === b.split(' ')[0];
+}
+async function searchItunesTrackArt(title, artist, dbg) {
   try {
     const term = artist ? (artist + ' ' + title) : title;
-    const params = new URLSearchParams({ term, media: 'music', entity: 'song', limit: '1' });
-    const res = await fetch('https://itunes.apple.com/search?' + params.toString());
+    const params = new URLSearchParams({ term, media: 'music', entity: 'song', limit: '1', country: 'US' });
+    const go = () => fetch('https://itunes.apple.com/search?' + params.toString(), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+    let res = await go();
+    if (res.status === 429) { await new Promise(r => setTimeout(r, 800)); res = await go(); }
+    if (dbg) dbg.push('itunes: HTTP ' + res.status);
     if (!res.ok) return null;
     const data = await res.json();
     const track = data.results && data.results[0];
+    if (dbg) dbg.push('itunes: ' + ((data.results || []).length) + ' results');
     if (!track) return null;
     const artwork = track.artworkUrl100;
+    if (!artwork) return null;
     return {
       // iTunes' default artwork URLs are 100x100 thumbnails; upsizing by
       // string-replacing the size segment is the documented trick for
       // getting a much larger image from the same CDN path.
-      image: artwork ? artwork.replace('100x100', '1200x1200') : null,
+      image: artwork.replace('100x100', '1200x1200'),
       title: track.trackName || null,
       artist: track.artistName || null,
       year: parseInt(String(track.releaseDate || '').slice(0, 4), 10) || null,
     };
   } catch (e) { return null; }
+}
+async function searchDeezerTrackArt(title, artist, dbg) {
+  try {
+    const q = artist ? ('artist:"' + artist + '" track:"' + title + '"') : title;
+    // Deezer allows ~50 requests / 5s per IP and signals the limit with a
+    // 200 + { error: { code: 4 } } body, so back off and retry on that.
+    const go = async (query) => {
+      for (let attempt = 0; attempt < 3; attempt++){
+        const res = await fetch('https://api.deezer.com/search?limit=5&q=' + encodeURIComponent(query), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+        if (dbg) dbg.push('deezer: HTTP ' + res.status);
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (dbg && data.error) dbg.push('deezer: error ' + JSON.stringify(data.error).slice(0, 80));
+        if (data.error && data.error.code === 4){ await new Promise(r => setTimeout(r, 1200 * (attempt + 1))); continue; }
+        return Array.isArray(data.data) ? data.data : [];
+      }
+      return [];
+    };
+    let list = await go(q);
+    if (!list.length && artist) list = await go(artist + ' ' + title);
+    const hit = list.find(t => t.album && (t.album.cover_xl || t.album.cover_big) && artistLooksRight(artist, t.artist && t.artist.name));
+    if (!hit) return null;
+    // Search results don't carry a release date; the album record does.
+    let year = null;
+    try {
+      const ar = await fetch('https://api.deezer.com/album/' + encodeURIComponent(hit.album.id), { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+      if (ar.ok) year = parseInt(String((await ar.json()).release_date || '').slice(0, 4), 10) || null;
+    } catch (e) {}
+    return {
+      image: hit.album.cover_xl || hit.album.cover_big,
+      title: hit.title || null,
+      artist: (hit.artist && hit.artist.name) || null,
+      year,
+    };
+  } catch (e) { return null; }
+}
+async function searchLastfmTrackArt(title, artist, env) {
+  if (!artist) return null;
+  const data = await lastfmCall('track.getInfo', { track: title, artist, autocorrect: '1' }, env);
+  const t = data && data.track;
+  const imgs = t && t.album && Array.isArray(t.album.image) ? t.album.image : [];
+  const best = imgs.map(i => i['#text']).filter(Boolean).pop();
+  // Last.fm's "no image" placeholder star
+  if (!best || /2a96cbd8b46e442fc41c2b86b821562f/.test(best)) return null;
+  return {
+    image: best.replace(/\/i\/u\/\d+x\d+\//, '/i/u/600x600/'),
+    title: t.name || null,
+    artist: (t.artist && t.artist.name) || null,
+    year: null,
+  };
+}
+async function findTrackArt(title, artist, env, dbg) {
+  // iTunes and Deezer run side by side so a slow/failing iTunes (the usual
+  // case from Cloudflare) doesn't hold up the row; iTunes still wins a tie.
+  const [it, dz] = await Promise.all([searchItunesTrackArt(title, artist, dbg), searchDeezerTrackArt(title, artist, dbg)]);
+  if (it || dz) return it || dz;
+  const lf = await searchLastfmTrackArt(title, artist, env);
+  if (dbg) dbg.push('lastfm: ' + (lf ? 'hit' : 'miss'));
+  return lf;
 }
 async function handleSpotifyArt(url, env, ctx) {
   const title = (url.searchParams.get('title') || '').trim();
@@ -1606,8 +1685,10 @@ async function handleSpotifyArt(url, env, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
-  const match = await searchItunesTrackArt(title, artist);
+  const dbg = url.searchParams.get('debug') === '1' ? [] : null;
+  const match = await findTrackArt(title, artist, env, dbg);
   const image = match && match.image;
+  if (dbg) return json({ image: image || null, debug: dbg });
 
   const payload = { image: image || null, title: (match && match.title) || null, artist: (match && match.artist) || null, year: (match && match.year) || null };
   const response = json(payload);

@@ -8058,17 +8058,25 @@ function stageVibeResults(text, interp, tracks){
     '<div class="search-results">' + rows + '</div>' +
     '<button class="btn-ghost" id="vibePlaylistsBtn" style="width:100%;margin-bottom:8px">Browse playlists for this vibe instead</button>' +
     '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Cancel</button>';
-  // Art the worker didn't have (most Last.fm entries) fills in as it lands.
+  // Art the worker didn't have (most Last.fm entries) fills in as it lands,
+  // a few at a time so 25 rows don't trip the art sources' rate limits.
+  const artJobs = [], token = vibeResultsToken;
   importStage.querySelectorAll('.search-pick').forEach(btn => {
     const i = parseInt(btn.dataset.i, 10), t = tracks[i];
-    if (!t.image) resolveTrackArt('applemusic', t.title, t.artist, null).then(art => {
+    // One retry after a pause: a dropped request or a rate-limited burst
+    // otherwise leaves the row blank for good.
+    const lookup = () => resolveTrackArt('applemusic', t.title, t.artist, null)
+      .then(art => art || new Promise(r => setTimeout(r, 1500)).then(() => resolveTrackArt('applemusic', t.title, t.artist, null)));
+    if (!t.image) artJobs.push(() => lookup().then(art => {
       if (!art) return;
       t.image = art;
       const img = btn.querySelector('img');
       if (img){ img.style.visibility = ''; img.src = art; }
-    });
+    }));
     btn.addEventListener('click', () => playVibePlaylist(interp, tracks, i, false, text));
   });
+  const artWorker = async () => { while (artJobs.length && token === vibeResultsToken){ try { await artJobs.shift()(); } catch(e){} } };
+  for (let w = 0; w < 4; w++) artWorker();
   $('vibePlayBtn').addEventListener('click', () => playVibePlaylist(interp, tracks, 0, false, text));
   $('vibeSaveBtn').addEventListener('click', () => playVibePlaylist(interp, tracks, 0, true, text));
   $('vibePlaylistsBtn').addEventListener('click', () => beginVibeSearch((interp.keywords && interp.keywords[0]) || text));
