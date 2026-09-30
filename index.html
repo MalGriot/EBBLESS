@@ -1128,6 +1128,33 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .sw-update-toast.is-open{opacity:1;transform:translate(-50%,0)}
 .sw-update-toast button{background:var(--accent);color:#1a1a1a;border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
+/* encourage-liking-songs (#40): post-listen "Like this?" chip. Same shape
+   as the SW update toast, sitting one row above the regular toast so the
+   two never overlap (tapping Like fires the usual "Added..." toast below). */
+.like-nudge{position:fixed;left:50%;bottom:calc(var(--nav-h) + 72px);transform:translate(-50%,10px);z-index:81;
+  display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);background:var(--panel-3);color:var(--text);
+  font-size:12.5px;padding:6px 6px 6px 14px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.like-nudge[hidden]{display:none}
+.like-nudge.is-open{opacity:1;transform:translate(-50%,0)}
+.like-nudge .ln-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.like-nudge .ln-text b{font-weight:600}
+.like-nudge .ln-like{flex:none;display:flex;align-items:center;gap:6px;background:var(--accent);color:#1a1a1a;
+  border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
+.like-nudge .ln-like svg{width:13px;height:13px}
+.like-nudge .ln-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.like-nudge .ln-close:hover{background:var(--panel-2);color:var(--text)}
+.like-nudge .ln-close svg{width:14px;height:14px}
+/* like streak: a single soft pulse on the heart when the streak grows */
+@keyframes like-streak-pulse{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
+.player-like-btn.streak-pulse svg{animation:like-streak-pulse 520ms var(--ease-out)}
+.like-streak-line{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
+.like-streak-line b{color:var(--accent);font-weight:600}
+.currents-hint{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
+@media (prefers-reduced-motion:reduce){
+  .like-nudge{transition:opacity var(--dur-ui) linear;transform:translate(-50%,0)}
+  .player-like-btn.streak-pulse svg{animation:none}
+}
 
 /* ---------- responsive layout switches ---------- */
 @media (max-width:859.98px){
@@ -2708,6 +2735,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <div class="sw-update-toast" id="swUpdateToast" hidden>
     <span>Update available</span>
     <button type="button" id="swUpdateBtn">Refresh</button>
+  </div>
+  <div class="like-nudge" id="likeNudge" role="status" hidden>
+    <span class="ln-text" id="likeNudgeText"></span>
+    <button type="button" class="ln-like" id="likeNudgeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>Like</button>
+    <button type="button" class="ln-close" id="likeNudgeClose" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
   </div>
   <!-- sc-deck-a/b: companion slots for the yt-deck-a/b decks below, used
        instead of the YouTube iframe for a SoundCloud-native track (see
@@ -5045,6 +5077,22 @@ function toggleLibraryPlaylistPanel(id){
     libplArtWrap.hidden = true;
   }
   libplBody.innerHTML = '';
+  // encourage-liking-songs (#40): say plainly what tunes these picks, and
+  // show a live like streak on Liked Songs (never mentions a broken one).
+  if (id === SWELL_ID){
+    const hint = document.createElement('div');
+    hint.className = 'currents-hint';
+    hint.textContent = currentsLikesHint();
+    libplBody.appendChild(hint);
+  } else if (id === LIKED_ID){
+    const streak = currentLikeStreak();
+    if (streak >= 2){
+      const line = document.createElement('div');
+      line.className = 'like-streak-line';
+      line.innerHTML = '<b>' + streak + ' days</b> in a row with a new like';
+      libplBody.appendChild(line);
+    }
+  }
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
     status.className = 'currents-status';
@@ -6057,8 +6105,10 @@ function toggleLikeTrack(track){
   } else {
     addTracksToPlaylist(LIKED_ID, [track]);
     recordListenSignal(track, 2);
-    showToast('Added to Liked Songs');
+    const streak = noteLikeStreak();
+    showToast(streak.grew && streak.count >= 2 ? 'Added to Liked Songs · ' + streak.count + '-day streak' : 'Added to Liked Songs');
   }
+  likeNudgeTrackChanged(track);
   renderQueuePanel();
 }
 
@@ -6175,7 +6225,9 @@ function openSingleTrackDestinationPicker(track){
     '<button class="btn-ghost" id="plNewFromSingleTrackBtn" style="width:100%">+ New playlist</button>';
   $('singleTrackLikedBtn').addEventListener('click', () => {
     ensureLikedPlaylist();
+    const wasLiked = isTrackLiked(track.videoId);
     addTrackToPlaylist(LIKED_ID, track);
+    if (!wasLiked && isTrackLiked(track.videoId)){ noteLikeStreak(); likeNudgeTrackChanged(track); }
     closeImportOverlay();
   });
   importStage.querySelectorAll('.pl-pick').forEach(btn => {
@@ -8878,7 +8930,7 @@ function onDeckStateChange(deck, e){
   else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
-    if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); playNext(true); }
+    if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); }
   }
 }
 
@@ -10385,6 +10437,7 @@ function maybeStartCrossfade(cur, dur){
   // standby deck straight away (bld-playback-glitch).
   if (activeDeck().kind === 'sc' && nd.kind === 'sc') return;
   crossfadeTriggered = true;
+  notePlayedThrough(state.queuePos);
   runCrossfade(nd, nextPos);
 }
 
@@ -11995,6 +12048,158 @@ function handleLikeBtnClick(e){
 playerLikeBtn.addEventListener('click', handleLikeBtnClick);
 miniLikeBtn.addEventListener('click', handleLikeBtnClick);
 flowLikeBtn.addEventListener('click', handleLikeBtnClick);
+
+/* =========================================================================
+   ENCOURAGE LIKING (encourage-liking-songs, GitHub #40)
+   Likes are the strongest taste signal CuRRentSSsss has (its seeds lean on
+   the last 30 liked songs), so three light nudges:
+   - a post-listen "Like <title>?" chip when a track plays through unliked,
+     throttled hard (see notePlayedThrough),
+   - a day streak for liking at least one song, shown only while it's alive,
+   - a line on CuRRentSSsss saying the picks come from your likes.
+   ========================================================================= */
+const LS_LIKE_STREAK = 'ebbless:likeStreak';  // { day: 'YYYY-MM-DD' (local) of the last like, count }
+const LS_LIKE_NUDGE = 'ebbless:likeNudge';    // { since, lastAt, ignored, restUntil, seen: [videoId] }
+const LIKE_NUDGE_BASE_GAP = 3;                // played-through tracks between prompts, doubled per ignored prompt...
+const LIKE_NUDGE_MAX_GAP = 24;                // ...up to this
+const LIKE_NUDGE_COOLDOWN_MS = 10 * 60 * 1000; // and never two prompts within this window
+const LIKE_NUDGE_SHOW_MS = 9000;              // auto-dismiss after this long (paused while hovered)
+const LIKE_NUDGE_REST_AFTER = 4;              // this many ignored in a row...
+const LIKE_NUDGE_REST_MS = 3 * 24 * 60 * 60 * 1000; // ...rests the prompt for 3 days
+const LIKE_NUDGE_SEEN_CAP = 400;              // remembered prompted videoIds (never prompt the same track twice)
+
+function localDayKey(ts){
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function yesterdayDayKey(){
+  const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - 1);
+  return localDayKey(d.getTime());
+}
+
+// Called on every new like. Returns { count, grew }: grew is true only on the
+// first like of a new day. A gap of more than a day quietly restarts at 1.
+function noteLikeStreak(){
+  const s = lsGet(LS_LIKE_STREAK, null) || {};
+  const today = localDayKey(Date.now());
+  if (s.day === today) return { count: s.count || 1, grew: false };
+  const count = s.day === yesterdayDayKey() ? (s.count || 0) + 1 : 1;
+  lsSet(LS_LIKE_STREAK, { day: today, count });
+  if (count >= 2) pulseLikeButtons();
+  return { count, grew: true };
+}
+// The streak as it stands right now: still alive through today if the last
+// like was yesterday, 0 (never shown) once it's lapsed.
+function currentLikeStreak(){
+  const s = lsGet(LS_LIKE_STREAK, null);
+  if (!s || !s.day) return 0;
+  return (s.day === localDayKey(Date.now()) || s.day === yesterdayDayKey()) ? (s.count || 0) : 0;
+}
+function pulseLikeButtons(){
+  [playerLikeBtn, miniLikeBtn, flowLikeBtn].forEach(btn => {
+    btn.classList.remove('streak-pulse');
+    void btn.offsetWidth;
+    btn.classList.add('streak-pulse');
+    setTimeout(() => btn.classList.remove('streak-pulse'), 700);
+  });
+}
+
+function likedSongCount(){
+  const pl = getCachedPlaylist(LIKED_ID);
+  return pl ? pl.tracks.filter(t => t.videoId).length : 0;
+}
+function currentsLikesHint(){
+  const n = likedSongCount();
+  if (!n) return 'Like songs to tune these picks.';
+  if (n < 10) return 'Based on your ' + n + ' liked ' + (n === 1 ? 'song' : 'songs') + ' and recent plays. More likes sharpen the picks.';
+  return 'Based on your ' + n + ' liked songs and recent plays.';
+}
+
+const likeNudgeEl = $('likeNudge'), likeNudgeText = $('likeNudgeText');
+let likeNudgeTrack = null, likeNudgeTimer = null, likeNudgeHideTimer = null;
+
+function likeNudgeState(){
+  const s = lsGet(LS_LIKE_NUDGE, null) || {};
+  return { since: s.since | 0, lastAt: +s.lastAt || 0, ignored: s.ignored | 0, restUntil: +s.restUntil || 0, seen: Array.isArray(s.seen) ? s.seen : [] };
+}
+
+// A track reached its natural end (ENDED, or the track-end crossfade kicked
+// in). Counts toward the gap and maybe offers the chip for that track.
+function notePlayedThrough(pos){
+  try {
+    const t = trackAt(pos);
+    const entry = state.queue[pos];
+    if (!t || !t.videoId || (entry && isPodcastPlaylistId(entry.plId))) return;
+    const s = likeNudgeState();
+    s.since++;
+    const now = Date.now();
+    const gap = Math.min(LIKE_NUDGE_MAX_GAP, LIKE_NUDGE_BASE_GAP * Math.pow(2, s.ignored));
+    const show = !likeNudgeTrack && document.visibilityState === 'visible'
+      && s.since >= gap && now - s.lastAt >= LIKE_NUDGE_COOLDOWN_MS && now >= s.restUntil
+      && !isTrackLiked(t.videoId) && !s.seen.includes(t.videoId);
+    if (show){
+      s.since = 0;
+      s.lastAt = now;
+      s.seen.push(t.videoId);
+      if (s.seen.length > LIKE_NUDGE_SEEN_CAP) s.seen = s.seen.slice(-LIKE_NUDGE_SEEN_CAP);
+    }
+    lsSet(LS_LIKE_NUDGE, s);
+    if (show) openLikeNudge(t);
+  } catch(e){}
+}
+
+function openLikeNudge(t){
+  likeNudgeTrack = t;
+  likeNudgeText.innerHTML = 'Like <b>' + escapeHtml(t.title || 'that one') + '</b>?';
+  likeNudgeEl.title = 'Likes tune your CuRRentSSsss picks';
+  clearTimeout(likeNudgeHideTimer);
+  likeNudgeEl.hidden = false;
+  void likeNudgeEl.offsetWidth;
+  likeNudgeEl.classList.add('is-open');
+  armLikeNudgeTimer();
+}
+function armLikeNudgeTimer(){
+  clearTimeout(likeNudgeTimer);
+  likeNudgeTimer = setTimeout(() => closeLikeNudge('timeout'), LIKE_NUDGE_SHOW_MS);
+}
+// reason: 'liked' resets the back-off; 'timeout'/'dismissed' count as ignored.
+function closeLikeNudge(reason){
+  if (!likeNudgeTrack) return;
+  likeNudgeTrack = null;
+  clearTimeout(likeNudgeTimer);
+  const s = likeNudgeState();
+  if (reason === 'liked') s.ignored = 0;
+  else {
+    s.ignored++;
+    if (s.ignored >= LIKE_NUDGE_REST_AFTER){ s.restUntil = Date.now() + LIKE_NUDGE_REST_MS; s.ignored = 2; }
+  }
+  lsSet(LS_LIKE_NUDGE, s);
+  likeNudgeEl.classList.remove('is-open');
+  likeNudgeHideTimer = setTimeout(() => { likeNudgeEl.hidden = true; }, 220);
+}
+// Called from toggleLikeTrack: liking the prompted track any other way
+// (player heart, track menu) also closes the chip as a success.
+function likeNudgeTrackChanged(track){
+  if (likeNudgeTrack && track && track.videoId === likeNudgeTrack.videoId && isTrackLiked(track.videoId)) closeLikeNudge('liked');
+}
+$('likeNudgeBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const t = likeNudgeTrack;
+  if (!t) return;
+  if (!isTrackLiked(t.videoId)) toggleLikeTrack(t);
+  closeLikeNudge('liked');
+  const cur = currentTrack();
+  if (cur) updatePlayerLikeBtn(cur);
+});
+$('likeNudgeClose').addEventListener('click', (e) => { e.stopPropagation(); closeLikeNudge('dismissed'); });
+likeNudgeEl.addEventListener('pointerenter', () => clearTimeout(likeNudgeTimer));
+likeNudgeEl.addEventListener('pointerleave', () => { if (likeNudgeTrack) armLikeNudgeTimer(); });
+
+// Console helpers, same pattern as ebblessVibeCheck: force the chip for the
+// current track, inspect or clear the throttle state.
+window.ebblessLikeNudge = function(){ const t = currentTrack(); if (t && t.videoId) openLikeNudge(t); };
+window.ebblessLikeNudge.state = function(){ return { nudge: lsGet(LS_LIKE_NUDGE, null), streak: lsGet(LS_LIKE_STREAK, null) }; };
+window.ebblessLikeNudge.reset = function(){ lsDel(LS_LIKE_NUDGE); lsDel(LS_LIKE_STREAK); };
 /* =========================================================================
    WRONG-TRACK FLAG (flag-wrong-track, issues #168/#174)
    One tap on the flag in the player (main player + flow layer) reports the
