@@ -2623,7 +2623,7 @@ Add entries in this shape:
   track 0 (shares CuRRentSSsss' queue-remap helper).
 
 ### encourage-liking-songs: Nudge users to like more songs
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Add UX nudges that encourage users to like more songs, to
   build a richer per-user dataset - goal is a personal algorithm that
@@ -2631,7 +2631,7 @@ Add entries in this shape:
   love, not just generic popularity.
 - **Touches:** UI prompts around the like button; unclear exact mechanism -
   needs design thought before implementation.
-- **Branch:** (unclaimed)
+- **Branch:** agent/encourage-liking-songs
 - **Notes:** Synced from Geethub issue #40. Vague/directional - needs a
   concrete design decision (what nudge, when, how often) before it's
   actionable as a lane.
@@ -7009,7 +7009,7 @@ Add entries in this shape:
   `podcasts` and `playlist-menu-album-toggle`.
 
 ### settings-reorganize: Reorganize the Settings menu for comfort and logic
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Regroup and reorder the Settings menu so related options
   sit together and the most-used ones are easiest to reach.
@@ -7017,3 +7017,4 @@ Add entries in this shape:
 - **Branch:** agent/settings-reorganize
 - **Notes:** Synced from Geethub issue #212 (title only). Touches the same
   view as many merged Settings entries (install, share, credits, bug report).
+  **Built (b54d82b):** Settings regrouped into Playback / App / Feedback & support / About / Library & data (was Danger zone). Same ids and handlers; install row now a row in App; onboarding CSS retargeted to `#settingsAboutBlock`.
