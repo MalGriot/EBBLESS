@@ -67,7 +67,10 @@ const SEARCH_CACHE_VERSION = 'v7';
 // the refresh-link picker may ask for via ?alts= (see handleSearch).
 const SEARCH_DEFAULT_ALTS = 5;
 const SEARCH_MAX_ALTS = 20;
-const SIMILAR_CACHE_VERSION = 'v1';
+// v2 (and METRICS v2, TAGS v1): flushes empty/partial answers staging
+// cached under production's keys before CACHE_NAMESPACE existed.
+const SIMILAR_CACHE_VERSION = 'v2';
+const TAGS_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
 const THISIS_CACHE_VERSION = 'v1';
 // Bumped independently of ART_CACHE_VERSION - see the /soundcloud cache key
@@ -2506,7 +2509,7 @@ async function getListenBrainzSimilar(mbid, limit) {
 // and a response deadline after which whatever is done is returned. Lookups
 // still in flight keep running under waitUntil and land in the cache, so a
 // cold track that missed this request is warm for the next one.
-const METRICS_CACHE_VERSION = 'v1';
+const METRICS_CACHE_VERSION = 'v2';
 const METRICS_MAX_TRACKS = 12;
 const METRICS_FETCH_TIMEOUT_MS = 1200;
 const METRICS_DEADLINE_MS = 1500;  // client gives up at 1800
@@ -2778,7 +2781,7 @@ async function handleTags(url, env, ctx) {
   if (!title) return json({ error: 'missing title' }, 400);
 
   const cache = envCache;
-  const cacheKey = new Request('https://cache.internal/tags/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cacheKey = new Request('https://cache.internal/' + TAGS_CACHE_VERSION + '/tags/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
