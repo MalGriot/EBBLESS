@@ -2639,7 +2639,7 @@ Add entries in this shape:
   **Built (fa1c2db):** post-listen "Like <title>?" chip (every 3+ played-through tracks, 10-min cooldown, backs off on ignores, never same track twice); like streak (toast + Liked Songs line, only when >=2 days, never mentions a broken streak); CuRRentSSsss hint "Based on your N liked songs...". Console helper `ebblessLikeNudge()`.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Add accounts/profiles so the experience (library,
   playlists, likes) is consistent between mobile and desktop, survives a
@@ -2654,6 +2654,7 @@ Add entries in this shape:
   discussing approach before queuing.
   Geethub #182 folded in (bug report): user is signed in on desktop and mobile but playlists and settings differ between them - i.e. cross-device sync is what's expected.
   **Decision (2026-09-30):** ~~Supabase~~ revised same day: the app already has Google Sign-In profile sync to the Worker's `PROFILES` KV (restore-only-when-wiped, library only). Owner chose to extend that: full two-way sync of library, likes and settings with merge, plus a visible signed-in state.
+  **Built (9283539):** schema-v2 profile (library/pins/playlists/settings) with per-item timestamps + 180-day tombstones, symmetric/idempotent merge shared by client and Worker; Worker `/profile/sync` merges server-side, writes KV only on change, backward-compatible with old records/clients; client pushes 20s after changes / on hide / on return, skips if hash unchanged; injected Account row (email, last synced, Sync now, Sign out/in). **Worker must be deployed** (staging first) - old client/new worker and new client/old worker both still work. Merge-time follow-ups: consider adding `likeStreak` to `PROFILE_SETTING_KEYS`; Account row lands between Playback and App after the Settings regroup.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
 - **Status:** merged
