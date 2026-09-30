@@ -6487,7 +6487,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #166.
 
 ### cross-platform-handoff: Hand off playback between phone, desktop, speakers, car
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Move playback from phone to desktop, smart speaker, or
   car without the queue disappearing or glitching.
@@ -6497,7 +6497,8 @@ Add entries in this shape:
   **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
   **Split (2026-09-30):** part 1 (this lane, started now): speakers (Cast / Remote Playback) + car/lock-screen (Media Session completeness). Part 2, phone <-> desktop session handoff, starts after `accounts-profiles` lands.
   **Part 2 started (2026-09-30):** phone <-> desktop handoff on `agent/handoff-devices`, branched from `agent/accounts-profiles` (merge accounts first).
-  **Part 1 built (ff8c79a, `agent/cross-platform-handoff`):** full Media Session (real-size artwork, all actions except ±10s on iOS so prev/next stay, guarded position state); Chromecast via lazy Cast SDK - YouTube tracks to YouTube receiver by id, podcasts to Default Media Receiver, EBBLESS keeps the queue and advances on the device, mirrored controls, "Playing on <device>" bar, local resume at position on stop; AirPlay button for podcast episodes on Safari. Unverified on real hardware: YouTube receiver accepting load-by-id (falls back locally with a toast if not). Part 2 still in progress.
+  **Part 1 built (ff8c79a, `agent/cross-platform-handoff`):** full Media Session (real-size artwork, all actions except ±10s on iOS so prev/next stay, guarded position state); Chromecast via lazy Cast SDK - YouTube tracks to YouTube receiver by id, podcasts to Default Media Receiver, EBBLESS keeps the queue and advances on the device, mirrored controls, "Playing on <device>" bar, local resume at position on stop; AirPlay button for podcast episodes on Safari. Unverified on real hardware: YouTube receiver accepting load-by-id (falls back locally with a toast if not). 
+  **Part 2 built (0a47011, `agent/handoff-devices`, contains accounts):** per-device `now` session in the synced profile (queue <=100, index, position, play state; newest per device, <=8 devices, 24h expiry relative to newest); "Continue from <device>?" prompt on open/focus when another device played in the last 30 min; Continue restores queue/index/position; the other device pauses with "Playing on <device>" on its next sync. ~12 KV writes/hour of listening max. Merge note: one trivial CSS conflict with `encourage-liking-songs` (both append a block after `.sw-update-toast` rules) - keep both.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
 - **Status:** review
