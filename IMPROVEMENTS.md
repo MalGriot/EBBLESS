@@ -7031,7 +7031,7 @@ Add entries in this shape:
   **Built (b54d82b):** Settings regrouped into Playback / App / Feedback & support / About / Library & data (was Danger zone). Same ids and handlers; install row now a row in App; onboarding CSS retargeted to `#settingsAboutBlock`.
 
 ### autoadvance-stall-full-progress: Next track sometimes stalls with a full progress bar
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Sometimes when a song ends and the player should move to
   the next one, it switches to the next track's art and UI colors but
@@ -7045,7 +7045,7 @@ Add entries in this shape:
   and stalls, stale progress), so not a duplicate. No repro steps given.
 
 ### library-filter-inline: Put the All/Playlist/Album/Podcast filter on the button row
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In the library, the All/Playlist/Album/Podcast filter
   button should sit on the same line as the other library buttons below it,
@@ -7056,7 +7056,7 @@ Add entries in this shape:
   `podcast-library-category` / `playlist-menu-album-toggle`.
 
 ### cassette-reference-match: Rebuild the cassette to match a real reference cassette
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Upgrade the existing cassette art style to closely match
   a reference photo of a real cassette (dark charcoal textured shell,
