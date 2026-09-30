@@ -2623,22 +2623,24 @@ Add entries in this shape:
   track 0 (shares CuRRentSSsss' queue-remap helper).
 
 ### encourage-liking-songs: Nudge users to like more songs
-- **Status:** draft
-- **Priority:** low
+- **Status:** merged
+- **Priority:** high
 - **Description:** Add UX nudges that encourage users to like more songs, to
   build a richer per-user dataset - goal is a personal algorithm that
   surfaces both known favorites and undiscovered music the user will likely
   love, not just generic popularity.
 - **Touches:** UI prompts around the like button; unclear exact mechanism -
   needs design thought before implementation.
-- **Branch:** (unclaimed)
+- **Branch:** agent/encourage-liking-songs
 - **Notes:** Synced from Geethub issue #40. Vague/directional - needs a
   concrete design decision (what nudge, when, how often) before it's
   actionable as a lane.
+  **Decision (2026-09-30):** build all three nudges: a gentle "like this?" prompt after a full listen, a like-streak counter, and a Discover hint that likes are shaping picks.
+  **Built (fa1c2db):** post-listen "Like <title>?" chip (every 3+ played-through tracks, 10-min cooldown, backs off on ignores, never same track twice); like streak (toast + Liked Songs line, only when >=2 days, never mentions a broken streak); CuRRentSSsss hint "Based on your N liked songs...". Console helper `ebblessLikeNudge()`.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
-- **Status:** draft
-- **Priority:** low
+- **Status:** merged
+- **Priority:** high
 - **Description:** Add accounts/profiles so the experience (library,
   playlists, likes) is consistent between mobile and desktop, survives a
   device switch, and builds a long-term per-person dataset for
@@ -2646,11 +2648,13 @@ Add entries in this shape:
 - **Touches:** major feature - needs backend auth, a database/storage layer
   beyond the current per-device `localStorage` model, and a data-migration
   story for existing users' local data.
-- **Branch:** (unclaimed)
+- **Branch:** agent/accounts-profiles
 - **Notes:** Synced from Geethub issue #75. Largest-scope item in this
   batch by far - architectural decision, not a quick lane. Recommend
   discussing approach before queuing.
   Geethub #182 folded in (bug report): user is signed in on desktop and mobile but playlists and settings differ between them - i.e. cross-device sync is what's expected.
+  **Decision (2026-09-30):** ~~Supabase~~ revised same day: the app already has Google Sign-In profile sync to the Worker's `PROFILES` KV (restore-only-when-wiped, library only). Owner chose to extend that: full two-way sync of library, likes and settings with merge, plus a visible signed-in state.
+  **Built (9283539):** schema-v2 profile (library/pins/playlists/settings) with per-item timestamps + 180-day tombstones, symmetric/idempotent merge shared by client and Worker; Worker `/profile/sync` merges server-side, writes KV only on change, backward-compatible with old records/clients; client pushes 20s after changes / on hide / on return, skips if hash unchanged; injected Account row (email, last synced, Sync now, Sign out/in). **Worker must be deployed** (staging first) - old client/new worker and new client/old worker both still work. **18eba4a:** like streak (`ebbless:likeStreak`) now synced; Account row moved to the top of Settings.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
 - **Status:** merged
@@ -6483,23 +6487,30 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #166.
 
 ### cross-platform-handoff: Hand off playback between phone, desktop, speakers, car
-- **Status:** draft
-- **Priority:** medium
+- **Status:** merged
+- **Priority:** high
 - **Description:** Move playback from phone to desktop, smart speaker, or
   car without the queue disappearing or glitching.
 - **Touches:** depends on `accounts-profiles` (cross-device sync).
-- **Branch:**
+- **Branch:** agent/cross-platform-handoff
 - **Notes:** Synced from Geethub issue #165.
+  **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
+  **Split (2026-09-30):** part 1 (this lane, started now): speakers (Cast / Remote Playback) + car/lock-screen (Media Session completeness). Part 2, phone <-> desktop session handoff, starts after `accounts-profiles` lands.
+  **Part 2 started (2026-09-30):** phone <-> desktop handoff on `agent/handoff-devices`, branched from `agent/accounts-profiles` (merge accounts first).
+  **Part 1 built (ff8c79a, `agent/cross-platform-handoff`):** full Media Session (real-size artwork, all actions except ±10s on iOS so prev/next stay, guarded position state); Chromecast via lazy Cast SDK - YouTube tracks to YouTube receiver by id, podcasts to Default Media Receiver, EBBLESS keeps the queue and advances on the device, mirrored controls, "Playing on <device>" bar, local resume at position on stop; AirPlay button for podcast episodes on Safari. Unverified on real hardware: YouTube receiver accepting load-by-id (falls back locally with a toast if not). 
+  **Part 2 built (0a47011, `agent/handoff-devices`, contains accounts):** per-device `now` session in the synced profile (queue <=100, index, position, play state; newest per device, <=8 devices, 24h expiry relative to newest); "Continue from <device>?" prompt on open/focus when another device played in the last 30 min; Continue restores queue/index/position; the other device pauses with "Playing on <device>" on its next sync. ~12 KV writes/hour of listening max. Merge note: one trivial CSS conflict with `encourage-liking-songs` (both append a block after `.sw-update-toast` rules) - keep both.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
-- **Status:** draft
-- **Priority:** medium
+- **Status:** merged
+- **Priority:** high
 - **Description:** Beyond mood playlists: adapt recommendations to local
   weather, time of day, or movement speed (phone sensors).
 - **Touches:** Discover / Currents recommendation logic.
-- **Branch:**
+- **Branch:** agent/contextual-awareness
 - **Notes:** Synced from Geethub issue #164.
   Geethub #187 folded in: track the user's time of day, time zone, weather and location to curate Discover and offer automatic time-based playlists; also asks to incorporate Rosicrucian knowledge about the time of day and day of the week.
+  **Decision (2026-09-30):** time-based only for now (time of day, day of week, incl. the Rosicrucian day/hour idea). No location or weather.
+  **Built (6923771):** `getTimeContext()` time blocks (weekend nights hotter, small hours = previous night); planetary day + Chaldean hour ruler (06:00/18:00 approximation) as a smaller secondary bias and label ("Hour of Venus · Friday"); soft score bias in `fetchDiscoverCandidates` (full on CuRRentSSsss, half on queue Discover) + time-weighted CuRRentSSsss seeds; library row that plays an on-device 30-track `timemix`. Console helper `ebblessTimeContext()`.
 
 ### algorithm-sliders: Sliders to steer recommendations
 - **Status:** draft
@@ -6975,3 +6986,44 @@ Add entries in this shape:
   entry's 3-dot menu; stored as `albumOverride` on the entry, read via new
   `isAlbumEntry()` (library filter, sections, tile art, album-mode matching),
   kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
+
+### mini-player-polish: Mini-player branding, controls, remembered size/position
+- **Status:** merged
+- **Priority:** high
+- **Description:** Polish the desktop mini-player: show the EBBLESS "E" logo
+  instead of "malgriot.github.io"; marquee-scroll long title/artist; keep
+  keyboard shortcuts working while the mini-player is focused; hide the
+  "view site information" button; remember the user's position, style,
+  shape and size for next time, plus a "reset shape" button; react on
+  hover; give it every control the main player has; add a queue button
+  whose menu drops down or pulls up depending on where the mini-player sits.
+- **Touches:** desktop mini-player (Document Picture-in-Picture window) in
+  `index.html`.
+- **Branch:** agent/mini-player-polish
+- **Notes:** Synced from Geethub issue #210. Follow-up to merged
+  `desktop-mini-player` (and dropped `desktop-mini-player-reopen`) - new
+  asks, not a duplicate. Some items (site-info button, origin label) may be
+  browser chrome the page can't control; confirm per item when built.
+  **Built (88041a9):** in-window E logo + PiP title/favicon; marquee (setMarqueeText made window-aware); shortcuts forwarded from PiP (Q = mini queue); saved size/style (`ebbless:miniPlayer`), bar/card by aspect; reset button; hover states; full controls; direction-aware queue. Impossible: origin text and site-info button (Chrome chrome); position is Chrome-managed. Needs real desktop Chrome check: window grow/moveBy for queue, placement memory.
+
+### podcast-library-category: Podcast category in the library
+- **Status:** merged
+- **Priority:** high
+- **Description:** Give podcasts their own category/filter in the library,
+  alongside playlists and albums.
+- **Touches:** library filter + sections, entry type detection.
+- **Branch:** agent/podcast-library-category
+- **Notes:** Synced from Geethub issue #211 (title only). Builds on merged
+  `podcasts` and `playlist-menu-album-toggle`.
+  **Built (e8fd1bb):** new `isPodcastEntry()` (`pod_show` type / `pod:` id, fallback: all tracks are episodes); Podcasts filter chip + cycle step (shown only when a podcast exists), Podcasts section, show art, "N episodes" count; "Mark as album" hidden for podcasts.
+
+### settings-reorganize: Reorganize the Settings menu for comfort and logic
+- **Status:** merged
+- **Priority:** high
+- **Description:** Regroup and reorder the Settings menu so related options
+  sit together and the most-used ones are easiest to reach.
+- **Touches:** Settings view markup/CSS in `index.html`.
+- **Branch:** agent/settings-reorganize
+- **Notes:** Synced from Geethub issue #212 (title only). Touches the same
+  view as many merged Settings entries (install, share, credits, bug report).
+  **Built (b54d82b):** Settings regrouped into Playback / App / Feedback & support / About / Library & data (was Danger zone). Same ids and handlers; install row now a row in App; onboarding CSS retargeted to `#settingsAboutBlock`.
