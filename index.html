@@ -150,6 +150,20 @@ video.lib-bg-video.is-playing{opacity:1}
 }
 .import-row button:active{transform:scale(.97)}
 .import-err{font-size:12.5px;color:var(--bad);margin:8px 0 0;min-height:0}
+/* conversational-vibe-search: mic in the input bar (hidden where the Web
+   Speech API is missing) + the interpreter's stages in the import overlay */
+.import-row .mic-btn{flex:none;width:48px;padding:0;display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);border:1px solid var(--border);color:var(--faint)}
+.import-row .mic-btn[hidden]{display:none}
+.import-row .mic-btn svg{width:20px;height:20px}
+.import-row .mic-btn:hover,.import-row .mic-btn:focus-visible{color:var(--text)}
+.import-row .mic-btn.is-listening{color:var(--accent);border-color:var(--accent);animation:paste-guide-ring 1.6s var(--ease-in-out) infinite}
+.vibe-heard{font-size:13px;color:var(--faint);font-style:italic;line-height:1.45;margin:-4px 0 14px;max-width:420px;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.vibe-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.vibe-chip{font-size:11.5px;color:var(--faint);border:1px solid var(--border);border-radius:12px;padding:3px 9px}
+.vibe-actions{display:flex;gap:8px;width:100%;margin:0 0 12px}
+.vibe-actions .btn-ghost{flex:1}
 /* first-run paste guide: bubble hanging off the paste bar, arrow pointing up
    at the input, plus a soft accent ring on the input while it's up */
 .paste-guide{position:absolute;top:calc(100% + 12px);left:0;z-index:20;width:min(320px,100%);
@@ -2071,7 +2085,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="view-scroll">
       <form class="import-row" id="importForm">
-        <input id="urlInput" type="text" placeholder="Paste a link, or search a vibe or keyword" autocomplete="off" spellcheck="false">
+        <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+        <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
+        </button>
         <button type="submit" id="loadBtn">Load</button>
         <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
           <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
@@ -7879,8 +7896,295 @@ importForm.addEventListener('submit', (e) => {
   }
   importErr.textContent = '';
   urlInput.value = '';
-  beginVibeSearch(val);
+  // conversational-vibe-search: a sentence ("rainy sunday morning, want
+  // something warm and slow") goes to the interpreter and comes back as a
+  // playlist of songs; a short keyword query keeps the playlist picker.
+  if (looksConversational(val)) beginConversationalVibe(val);
+  else beginVibeSearch(val);
 });
+
+/* ---------- conversational-vibe-search ----------
+   A sentence typed (or spoken, see the mic button below) into the input
+   bar - "rainy sunday morning, making coffee, want something warm and
+   slow" - becomes a playlist of real songs. The worker's /vibe-interpret
+   does the language part (Workers AI, with a keyword-heuristic fallback)
+   and grounds it in real tracks (model seeds checked against Last.fm, plus
+   Last.fm tag top-tracks). This side reuses what Discover already has:
+   /metrics mood matching (fetchTrackMetrics/metricSimilarity) to order the
+   list by how close each track sits to the asked-for energy/tempo, /similar
+   (fetchSimilar) to pad a thin list, and searchYouTubeCached to turn each
+   into a playable match. Anything short of a sentence keeps going to the
+   older /playlistsearch picker exactly as before. */
+const VIBE_PLAYLIST_SIZE = 25;
+const VIBE_INTERPRET_TIMEOUT_MS = 20000;
+const VIBE_SESSION_ID = 'custom-vibe-session';   // an unsaved vibe playlist - reused, so plays don't pile up in storage
+// "sunday morning jazz" / "Radiohead - Creep" stay a keyword search; a
+// sentence goes to the interpreter. Five-plus words is a sentence; three or
+// four count when they read like talking (a comma, "I'm", "want",
+// "something", "while"...).
+const VIBE_TALK_RE = /[,.!?;]|\b(i'?m|i am|i want|want|wanna|need|feel|feeling|something|some songs|while|when i|for a|for my|mood|vibe|vibes|like|kinda|help me|play me|give me)\b/i;
+function looksConversational(input){
+  const s = String(input || '').trim();
+  if (!s || looksLikeUrl(s) || /\s[-–—]\s/.test(s)) return false;
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length >= 5) return true;
+  return words.length >= 3 && VIBE_TALK_RE.test(s);
+}
+
+async function fetchVibeInterpretation(text){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), VIBE_INTERPRET_TIMEOUT_MS);
+  try{
+    const res = await fetch(BACKEND + '/vibe-interpret?' + new URLSearchParams({ q: text.slice(0, 300) }), { signal: ctrl.signal });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+    return data;
+  } finally { clearTimeout(timer); }
+}
+
+function stageInterpreting(text, line){
+  if (!$('vibeCounter')){
+    importStage.innerHTML =
+      '<div class="step">Interpreting your vibe&hellip;</div>' +
+      '<div class="vibe-heard">&ldquo;' + escapeHtml(text) + '&rdquo;</div>' +
+      '<div class="flow-line indeterminate"><div class="fill"></div></div>' +
+      '<div class="counter" id="vibeCounter"></div>';
+  }
+  $('vibeCounter').textContent = line || 'Reading the mood';
+}
+
+// 0..1 - how well a track's /metrics sit inside the asked-for energy and
+// tempo ranges (distance outside the range falls off; half/double time
+// counts, same as bpmSimilarity). null when nothing comparable is known.
+function vibeMetricFit(m, interp){
+  if (!m) return null;
+  let total = 0, w = 0;
+  const e = interp.energy, b = interp.bpm;
+  if (typeof m.energy === 'number' && Array.isArray(e)){
+    const d = m.energy < e[0] ? e[0] - m.energy : (m.energy > e[1] ? m.energy - e[1] : 0);
+    total += Math.max(0, 1 - d / 0.35) * 0.6; w += 0.6;
+  }
+  if (m.bpm > 0 && Array.isArray(b)){
+    const mid = (b[0] + b[1]) / 2;
+    const s = Math.max(bpmSimilarity(mid, m.bpm) || 0, (m.bpm >= b[0] && m.bpm <= b[1]) ? 1 : 0);
+    const s2 = [m.bpm * 2, m.bpm / 2].some(x => x >= b[0] && x <= b[1]) ? 0.85 : 0;
+    total += Math.max(s, s2) * 0.4; w += 0.4;
+  }
+  return w ? total / w : null;
+}
+
+// Orders the worker's grounded list into the playlist: model-picked seeds
+// get a head start, everything is nudged by metric fit (unknown = neutral),
+// at most two songs per artist, and no artist twice in a row.
+async function rankVibeTracks(interp, onStep){
+  let pool = (interp.tracks || []).filter(t => t && t.title && t.artist);
+  if (pool.length < 12 && pool.length){
+    onStep && onStep('Finding more like it');
+    const seed = pool.find(t => t.from === 'seed') || pool[0];
+    const sim = await fetchSimilar(seed.title, seed.artist, 20);
+    const have = new Set(pool.map(tagCacheKey));
+    (sim.candidates || []).forEach(c => { if (c.title && c.artist && !have.has(tagCacheKey(c))){ have.add(tagCacheKey(c)); pool.push({ title: c.title, artist: c.artist, image: null, from: 'similar' }); } });
+  }
+  onStep && onStep('Matching tempo and energy');
+  const head = pool.slice(0, 24);
+  const metrics = (await Promise.all([fetchTrackMetrics(head.slice(0, 12)), fetchTrackMetrics(head.slice(12, 24))])).flat();
+  const scored = pool.map((t, i) => {
+    const fit = i < metrics.length ? vibeMetricFit(metrics[i], interp) : null;
+    const base = t.from === 'seed' ? 0.75 : 0.5;
+    return { t, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 };
+  }).sort((a, b) => b.s - a.s);
+  const perArtist = new Map();
+  const picked = [];
+  scored.forEach(x => {
+    const a = String(x.t.artist).toLowerCase();
+    if ((perArtist.get(a) || 0) >= 2 || picked.length >= VIBE_PLAYLIST_SIZE) return;
+    perArtist.set(a, (perArtist.get(a) || 0) + 1);
+    picked.push(x.t);
+  });
+  for (let i = 1; i < picked.length; i++){
+    if (String(picked[i].artist).toLowerCase() !== String(picked[i - 1].artist).toLowerCase()) continue;
+    const j = picked.findIndex((t, k) => k > i && String(t.artist).toLowerCase() !== String(picked[i].artist).toLowerCase());
+    if (j > i) picked.splice(i, 0, picked.splice(j, 1)[0]);
+  }
+  return picked;
+}
+
+function vibeMoodWords(interp){
+  const e = Array.isArray(interp.energy) ? (interp.energy[0] + interp.energy[1]) / 2 : null;
+  const b = Array.isArray(interp.bpm) ? Math.round((interp.bpm[0] + interp.bpm[1]) / 2) : null;
+  const parts = (interp.tags || []).slice(0, 3);
+  if (e != null) parts.push(e < 0.4 ? 'low energy' : e > 0.62 ? 'high energy' : 'mid energy');
+  if (b) parts.push('~' + b + ' bpm');
+  return parts;
+}
+
+let vibeResultsToken = 0;
+async function beginConversationalVibe(text){
+  const token = ++vibeResultsToken;
+  openImportOverlay();
+  stageInterpreting(text);
+  let interp;
+  try{
+    interp = await fetchVibeInterpretation(text);
+  } catch(e){
+    if (token !== vibeResultsToken) return;
+    // Interpreter unreachable - the plain playlist search still works.
+    beginVibeSearch(text);
+    return;
+  }
+  if (token !== vibeResultsToken || !importOverlay.classList.contains('is-open')) return;
+  stageInterpreting(text, 'Finding real songs');
+  let tracks = [];
+  try { tracks = await rankVibeTracks(interp, (line) => { if (token === vibeResultsToken && $('vibeCounter')) stageInterpreting(text, line); }); } catch(e){ tracks = []; }
+  if (token !== vibeResultsToken || !importOverlay.classList.contains('is-open')) return;
+  if (!tracks.length){
+    beginVibeSearch((interp.keywords && interp.keywords[0]) || text);
+    return;
+  }
+  stageVibeResults(text, interp, tracks);
+}
+
+function stageVibeResults(text, interp, tracks){
+  const rows = tracks.map((t, i) => searchPickRowHtml(i, t.image || '', t.title, escapeHtml(t.artist), 'vibe-pick')).join('');
+  const chips = vibeMoodWords(interp).map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join('');
+  importStage.innerHTML =
+    '<div class="step">' + escapeHtml(interp.title || 'Your vibe') + '</div>' +
+    '<div class="vibe-heard">&ldquo;' + escapeHtml(text) + '&rdquo;</div>' +
+    '<div class="vibe-chips">' + chips + '</div>' +
+    '<div class="vibe-actions">' +
+      '<button class="btn-ghost is-active" id="vibePlayBtn">Play ' + tracks.length + ' songs</button>' +
+      '<button class="btn-ghost" id="vibeSaveBtn">Save to library</button>' +
+    '</div>' +
+    '<div class="search-results">' + rows + '</div>' +
+    '<button class="btn-ghost" id="vibePlaylistsBtn" style="width:100%;margin-bottom:8px">Browse playlists for this vibe instead</button>' +
+    '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Cancel</button>';
+  // Art the worker didn't have (most Last.fm entries) fills in as it lands.
+  importStage.querySelectorAll('.search-pick').forEach(btn => {
+    const i = parseInt(btn.dataset.i, 10), t = tracks[i];
+    if (!t.image) resolveTrackArt('applemusic', t.title, t.artist, null).then(art => {
+      if (!art) return;
+      t.image = art;
+      const img = btn.querySelector('img');
+      if (img){ img.style.visibility = ''; img.src = art; }
+    });
+    btn.addEventListener('click', () => playVibePlaylist(interp, tracks, i, false, text));
+  });
+  $('vibePlayBtn').addEventListener('click', () => playVibePlaylist(interp, tracks, 0, false, text));
+  $('vibeSaveBtn').addEventListener('click', () => playVibePlaylist(interp, tracks, 0, true, text));
+  $('vibePlaylistsBtn').addEventListener('click', () => beginVibeSearch((interp.keywords && interp.keywords[0]) || text));
+  $('searchBackBtn').addEventListener('click', closeImportOverlay);
+}
+
+// Matches the list to playable videos (same /search pipeline and pacing as
+// an imported playlist) into a 'custom' playlist, and jumps into the player
+// on the first match while the rest keeps resolving underneath - beginImport's
+// early start. Unsaved plays reuse one fixed id (the queue's Save button can
+// still keep it); "Save to library" gets its own custom playlist.
+let vibeSessionGen = 0;
+async function playVibePlaylist(interp, list, startIdx, save, text){
+  // A newer unsaved play reuses VIBE_SESSION_ID - stop an older loop still
+  // resolving under that id so the two don't write over each other.
+  const gen = save ? null : ++vibeSessionGen;
+  const order = list.slice(startIdx).concat(list.slice(0, startIdx));
+  const id = save ? 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) : VIBE_SESSION_ID;
+  const pl = { id, type: 'custom', name: interp.title || 'Your vibe', image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: String(text || '').slice(0, 300) };
+  persistPlaylistObj(pl);
+  if (save){ saveToLibrary(id); renderLibrary(); }
+  stageMatching(null, order.length);
+  let started = false;
+  for (let i = 0; i < order.length; i++){
+    if (gen !== null && gen !== vibeSessionGen) return;
+    const t = order[i];
+    const [match, art] = await Promise.all([
+      searchYouTubeCached(t.title, t.artist).catch(() => null),
+      t.image ? Promise.resolve(t.image) : resolveTrackArt('applemusic', t.title, t.artist, null),
+    ]);
+    const row = { title: t.title, artist: t.artist, videoId: (match && match.videoId) || null, matchedTitle: (match && match.title) || '', channel: (match && match.channel) || '', plays: 0, art, duration: (match && match.duration) || 0 };
+    pl.tracks.push(row);
+    pl.ts = Date.now();
+    persistPlaylistObj(pl);
+    if (!started) stageMatchingProgress(i + 1, order.length, row);
+    else if (state.playlist && state.playlist.id === id){
+      if (i + 1 < order.length) bgResolveProgress.set(id, { done: i + 1, total: order.length }); else bgResolveProgress.delete(id);
+      renderQueuePanel();
+    }
+    if (!started && row.videoId){
+      started = true;
+      closeImportOverlay();
+      loadPlaylistIntoPlayer(pl);
+      buildQueueFrom(pl.tracks.length - 1, id);
+      loadIndex(state.queuePos, true);
+      setView('player');
+      showToast(save ? 'Saved “' + pl.name + '” to your library' : 'Playing “' + pl.name + '”');
+    }
+    if (i < order.length - 1) await sleep(350);
+  }
+  bgResolveProgress.delete(id);
+  if (!started){
+    stageError("Couldn't find playable versions of those songs right now.", () => playVibePlaylist(interp, list, startIdx, save, text), 'Couldn’t build that playlist.');
+    return;
+  }
+  if (save) renderLibrary();
+  // Same as beginImport's early start: only touch the live queue if the
+  // listener is still on this playlist.
+  if (state.playlist && state.playlist.id === id){
+    const cur = state.queue[state.queuePos];
+    const anchor = cur && cur.plId === id ? cur.idx : 0;
+    buildQueueFrom(anchor, id);
+  }
+}
+
+/* ---- mic: speak the vibe (Web Speech API) ----
+   Chrome/Edge/Safari expose it (webkit-prefixed); Firefox doesn't, and the
+   button simply stays hidden there. A spoken sentence always goes through
+   the interpreter, whatever its length. */
+(function setupVibeMic(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = $('micBtn');
+  if (!btn || !SR) return;
+  btn.hidden = false;
+  let rec = null;
+  const placeholder = urlInput.placeholder;
+  function stop(){ if (rec){ try { rec.stop(); } catch(e){} } }
+  btn.addEventListener('click', () => {
+    if (rec){ stop(); return; }
+    importErr.textContent = '';
+    rec = new SR();
+    rec.lang = navigator.language || 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    let finalText = '';
+    rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        const r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript;
+      }
+      urlInput.value = (finalText + interim).trim();
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') importErr.textContent = 'Microphone access is blocked - allow it in your browser to speak a vibe.';
+      else if (e.error !== 'no-speech' && e.error !== 'aborted') importErr.textContent = "Couldn't hear that - try again or type it.";
+    };
+    rec.onend = () => {
+      rec = null;
+      btn.classList.remove('is-listening');
+      btn.setAttribute('aria-pressed', 'false');
+      urlInput.placeholder = placeholder;
+      const said = (finalText || urlInput.value).trim();
+      if (said && !looksLikeUrl(said)){
+        urlInput.value = '';
+        beginConversationalVibe(said);
+      }
+    };
+    btn.classList.add('is-listening');
+    btn.setAttribute('aria-pressed', 'true');
+    urlInput.value = '';
+    urlInput.placeholder = 'Listening…';
+    try { rec.start(); } catch(e){ rec = null; btn.classList.remove('is-listening'); urlInput.placeholder = placeholder; }
+  });
+})();
 
 // Starter library for anyone with nothing saved yet: the artist's own
 // SoundCloud album plus a curated Spotify playlist. Resolves and saves each
