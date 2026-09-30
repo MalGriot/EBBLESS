@@ -3447,7 +3447,8 @@ function lsDel(key){
 
    Synced: the library list and order, pins, the saved playlists' data
    (Liked Songs and user-built playlists merge per track), the per-playlist
-   Discover flag, and the durable preferences in PROFILE_SETTING_KEYS.
+   Discover flag, the like streak, and the durable preferences in
+   PROFILE_SETTING_KEYS.
    Deliberately not synced: anything device-local or cheap to rebuild -
    playback position (LS_RESUME), background/wake state, last-played/opened
    stamps, play history, the taste graph and Discover's recent list, every
@@ -3464,7 +3465,7 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak'];
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
 const PROFILE_RESYNC_ON_SHOW_MS = 5 * 60 * 1000; // coming back to the tab after this long pulls other devices' changes
@@ -4019,7 +4020,10 @@ function ensureAccountBlock(){
   block.innerHTML = '<h2>Account</h2><div class="settings-row" style="gap:12px"><div style="min-width:0"><div class="label" id="accountLabel" style="overflow-wrap:anywhere"></div><div class="desc" id="accountDesc"></div></div>'
     + '<div id="accountActions" style="display:flex;flex:none;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center"></div></div>';
   const first = scroll.querySelector('.settings-block');
-  scroll.insertBefore(block, first ? first.nextSibling : scroll.firstChild);
+  // Top of Settings, above every other section - who you're signed in as
+  // frames everything below it that syncs.
+  if (first) first.parentNode.insertBefore(block, first);
+  else scroll.appendChild(block);
   block.querySelector('#accountActions').addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn) return;
