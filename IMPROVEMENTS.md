@@ -7112,7 +7112,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #218.
 
 ### hour-currents: Replace the time-of-day row with Currents growing 7 tracks per hour phase
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Remove the time-of-day / planetary-hour row (button and
   its whole container) and use its mood-of-the-hour selection to feed
@@ -7124,6 +7124,7 @@ Add entries in this shape:
   generation (`currents-playlist-algorithm`, `currents-12-tracks`).
 - **Branch:** agent/hour-currents
 - **Decision (2026-09-30, owner):** 7 equal blocks per day (24h / 7, about 3h25m43s each) starting at local midnight, each block's mood taken from the Rosicrucian daily cycles (the seven periods of the day). Not the 24 planetary hours.
+- **Build (d0a099d):** time-of-day row and timemix code removed (`getTimeContext()` kept for Queue Discover at half strength). Shared `rosicrucianPeriod()` (color output unchanged). CuRRentSSsss: 7 at midnight, +7 per period to 49, mid-day catch-up, stable on reload (`ebbless:swellBlocks`), appends never interrupt playback; `refreshSwellIfDue()` polls every 60s. Mood per period follows its letter (A-G) via `PERIOD_MOODS`, qualities taken from CYCLES-OF-LIFE-APP `letters.ts`. "Reset with fresh picks" re-rolls today's due drops; "Add more" still adds 8. SW v40.
 - **Notes:** Synced from Geethub issue #219 ("hour of the moon playlist").
   The current code treats each planetary hour as one clock hour (24 a day);
   "7 phases a day" needs defining before build.

@@ -246,20 +246,6 @@ body.onb-active .paste-guide{display:none}
 .lib-search-clear:hover{background:var(--panel-3);color:var(--text)}
 .lib-search-clear svg{width:12px;height:12px}
 #libSearchTracks .track-row .pl-name{color:var(--faint-2)}
-/* contextual-awareness: time-of-day row above the library grid (renderTimeRow) */
-.time-row{margin-top:14px}
-.time-row-btn{width:100%;display:flex;align-items:center;gap:14px;text-align:left;padding:12px 14px;
-  background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);
-  transition:background var(--dur-ui) var(--ease-out)}
-.time-row-btn:hover{background:var(--panel-2)}
-.time-row-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.time-row-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.time-row-kicker{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--faint-2)}
-.time-row-title{font-size:16px;font-weight:600;line-height:1.2}
-.time-row-sub{font-size:12.5px;color:var(--faint);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.time-row-play{flex:none;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#121212;
-  display:flex;align-items:center;justify-content:center}
-.time-row-play svg{width:16px;height:16px;margin-left:2px}
 /* iOS zooms the page on focus for inputs under 16px */
 @media (max-width:859.98px){ .lib-search input{font-size:16px} }
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
@@ -2178,16 +2164,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
         </div>
-        <div class="time-row hidden" id="timeRow">
-          <button type="button" class="time-row-btn" id="timeRowPlay">
-            <span class="time-row-text">
-              <span class="time-row-kicker" id="timeRowKicker"></span>
-              <span class="time-row-title" id="timeRowTitle"></span>
-              <span class="time-row-sub" id="timeRowSub"></span>
-            </span>
-            <span class="time-row-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-          </button>
-        </div>
         <div class="lib-grid" id="libraryGrid"></div>
         <div class="section-label-row hidden" id="libraryAlbumsHead">
           <div class="section-label">Albums</div>
@@ -3637,6 +3613,7 @@ const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built f
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
 const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
+const LS_SWELL_BLOCKS = 'ebbless:swellBlocks';  // { day: 'YYYY-MM-DD', n } - CuRRentSSsss daily drops built so far today (refreshSwellIfDue)
 const LS_BLEND_GENERATED = 'ebbless:blendGeneratedAt';  // ms timestamp SwiiiRrrLL was last reblended
 const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist from /spotifyart (0 = looked up, none found)
 const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
@@ -5910,7 +5887,6 @@ libSearch.addEventListener('input', () => {
   libSearchClear.classList.toggle('hidden', !libSearch.value);
   renderLibrary();
 });
-$('timeRowPlay').addEventListener('click', () => playTimeMix());
 libSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && libSearch.value){ e.preventDefault(); libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
   else if (e.key === 'Escape'){ e.preventDefault(); setLibSearchOpen(false); libSearchToggle.focus(); }
@@ -6188,7 +6164,6 @@ function renderLibrary(){
   const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
-  renderTimeRow();
   refreshLibraryMarquees();
 }
 function refreshLibraryMarquees(){
@@ -6641,7 +6616,8 @@ window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMen
 
 function handleLibCtxAction(action, id){
   if (action === 'blend-reshuffle'){ refreshBlend({ reshuffle: true }); return; }
-  if (action === 'currents-more' || action === 'currents-reset'){ refreshCurrents(action === 'currents-more' ? 'more' : 'reset'); return; }
+  if (action === 'currents-more'){ refreshCurrents('more'); return; }
+  if (action === 'currents-reset'){ resetCurrentsDay(); return; }
   const pl = getCachedPlaylist(id);
   if (!pl) return;
   if (action === 'rename') openRenamePlaylistFlow(id, pl);
@@ -7224,9 +7200,9 @@ function ensureLikedPlaylist(){
   saveToLibrary(LIKED_ID);
 }
 
-// Built-in "Swell" playlist - a daily discovery drop, regenerated once per
-// calendar day from a blend of Liked Songs and whatever's actually been
-// played recently (see generateSwell). Always pinned to the very front of
+// Built-in "Swell" playlist - a discovery drop that grows through the day
+// and resets each midnight, seeded from Liked Songs, saved playlists and
+// whatever's actually been played recently (see refreshSwellIfDue). Always pinned to the very front of
 // the library (see orderedLibraryIds), same mechanism as Liked Songs.
 function ensureSwellPlaylist(){
   const existing = getCachedPlaylist(SWELL_ID);
@@ -9431,7 +9407,7 @@ async function fetchMoodMetrics(seedTracks, pool, seedTagVec){
    every planetary hour exactly one clock hour and starts the planetary day
    at 06:00 (so 02:00 Saturday is still Friday's night, hour of Venus's
    day). Each planet gets a musical character that adds a smaller nudge on
-   top of the time block's, and names the time-of-day row in the library.
+   top of the time block's.
 
    Both are preferences, never filters - same shape as the year and
    tempo/key/energy preferences above: a candidate's tags (and energy/
@@ -9849,7 +9825,8 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   // CuRRentSSsss (opts.timeBias = 1), half for queue continuation, which
   // follows what's playing first.
   const timeScale = opts && typeof opts.timeBias === 'number' ? opts.timeBias : TIME_QUEUE_SCALE;
-  ranked = applyTimePreference(ranked, mood && mood.candMetrics, getTimeContext(), timeScale);
+  // opts.timeCtx: CuRRentSSsss passes the mood of the period it's filling.
+  ranked = applyTimePreference(ranked, mood && mood.candMetrics, (opts && opts.timeCtx) || getTimeContext(), timeScale);
   if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
@@ -10080,25 +10057,73 @@ function swellHasUnseenDrop(){
    artist or album. One seed "slot" yields one track:
      - 1 from the most recently played song,
      - 3 from the Liked Songs playlist (three different liked seeds),
-     - 1 per saved playlist/album (capped at CURRENTS_MAX_PLAYLISTS, most
-       recently played first).
-   A full build aims for at least CURRENTS_MIN_TRACKS (12, GitHub #208),
-   topping up from the same seeds when slots come back short.
+     - 1 per saved playlist/album (most recently played first).
+   Daily schedule (GitHub #219, replaces the 12-track build of #208): the
+   list grows by CURRENTS_BLOCK_TRACKS (7) at each of the day's 7 periods
+   (rosicrucianPeriod: 24h / 7 from local midnight), so it holds 7 after
+   midnight and 49 by the end of the day, then resets to a fresh 7. Each
+   drop is picked for its own period's mood (currentsPeriodContext) and runs
+   1 latest + 3 liked + CURRENTS_BLOCK_PLAYLISTS playlist slots, the saved
+   playlists rotating from drop to drop, topped up from the same seeds when
+   slots come back short. See refreshSwellIfDue.
    Artist diversity: a slot skips its own seed artists and every artist
    already picked, falling back to "just not a repeat inside this batch"
    when that leaves nothing. Release year is a soft preference on top of
    that (applyYearPreference, via /spotifyart's iTunes year) and silently
    drops out on a worker that doesn't return years yet.
-   Time of day / day of week leans both which seeds get drawn and how
-   candidates rank (getTimeContext / applyTimePreference) - so a build made
-   in the morning comes out calmer than one made at night.
-   "Add more" runs a smaller round of the same recipe and appends; "Reset"
-   (and the once-a-day refresh) rebuilds the whole list from scratch. */
-const CURRENTS_MAX_PLAYLISTS = 10;
-const CURRENTS_MIN_TRACKS = 12;      // top up from the same seeds when slots come back short
+   The period's mood leans both which seeds get drawn and how candidates
+   rank (timeWeightedShuffle / applyTimePreference). Nothing user-facing
+   says what drives the picks.
+   "Add more" runs a smaller round for the current period and appends;
+   "Reset" re-rolls today's drops from scratch (resetCurrentsDay). */
+const CURRENTS_BLOCK_TRACKS = 7;     // per daily period: 7 at midnight, 49 by the end of the day
+const CURRENTS_BLOCK_PLAYLISTS = 3;  // saved-playlist slots per drop, rotating through the library
 const CURRENTS_MORE_TRACKS = 8;      // "Add more" stays a smaller round
 const CURRENTS_CONCURRENCY = 3;
-let currentsBusy = null;             // null | 'reset' | 'more'
+let currentsBusy = null;             // null | 'reset' | 'block' | 'more'
+
+/* Mood of each daily period. The period's letter is the Rosicrucian (AMORC)
+   daily-cycle letter (rosicrucianPeriod, same clock as the grain colors);
+   its mood is a musical reading of that letter's qualities as the
+   CYCLES-OF-LIFE-APP reference summarizes them (data/letters.ts,
+   primaryIdea / coreAction):
+     A Influence, advancement, authority -> confident, regal, anthemic
+     B Attraction, social, beauty         -> warm, romantic, social
+     C Intellect, learning, communication -> focused, lyrical, thoughtful
+     D Materialization, practical affairs -> steady working groove
+     E Endurance, strategy, persistence   -> deep, patient slow burn
+     F Fortune, expansion, opportunity    -> bright, open, uplifting
+     G Force, physical energy, hard work  -> driving, high energy
+   Same shape as TIME_BLOCKS, so it drops into timeFit / applyTimePreference
+   / timeWeightedShuffle in place of getTimeContext(). */
+const PERIOD_MOODS = {
+  A: { energy: 0.6, valence: 0.6,
+    tags: ['hip-hop', 'hip hop', 'rap', 'soul', 'funk', 'gospel', 'anthem', 'epic', 'cinematic', 'jazz', 'big band', 'boom bap'],
+    avoid: ['lo-fi', 'lofi', 'sleep', 'lullaby'] },
+  B: { energy: 0.55, valence: 0.75,
+    tags: ['r&b', 'soul', 'neo-soul', 'love', 'romantic', 'disco', 'bossa nova', 'dream pop', 'lovers rock', 'quiet storm', 'sensual', 'afrobeats'],
+    avoid: ['metal', 'hardcore', 'industrial', 'screamo', 'grime'] },
+  C: { energy: 0.4, valence: 0.5,
+    tags: ['instrumental', 'jazz', 'lo-fi', 'lofi', 'chillhop', 'ambient', 'idm', 'spoken word', 'singer-songwriter', 'conscious hip hop', 'modern classical', 'piano'],
+    avoid: ['party', 'edm', 'big room', 'happy hardcore'] },
+  D: { energy: 0.55, valence: 0.55,
+    tags: ['deep house', 'house', 'funk', 'afrobeat', 'afro house', 'electronic', 'minimal', 'beats', 'nu jazz', 'downtempo', 'groove'],
+    avoid: ['sleep', 'lullaby', 'screamo'] },
+  E: { energy: 0.45, valence: 0.4,
+    tags: ['downtempo', 'trip-hop', 'trip hop', 'post-rock', 'blues', 'dub', 'soul', 'atmospheric', 'slowcore', 'neo-soul', 'ambient', 'drone'],
+    avoid: ['party', 'happy hardcore', 'bubblegum pop', 'edm'] },
+  F: { energy: 0.7, valence: 0.8,
+    tags: ['afrobeats', 'highlife', 'disco', 'funk', 'pop', 'reggae', 'feel good', 'happy', 'gospel', 'afro house', 'amapiano', 'sunshine pop', 'uplifting'],
+    avoid: ['sad', 'dark', 'doom', 'depressive', 'dark ambient'] },
+  G: { energy: 0.8, valence: 0.5,
+    tags: ['techno', 'drum and bass', 'rock', 'hard rock', 'trap', 'grime', 'drill', 'energetic', 'workout', 'house', 'punk', 'jersey club'],
+    avoid: ['sleep', 'ambient', 'lullaby', 'meditation', 'easy listening'] },
+};
+// -> a getTimeContext()-shaped mood for period k (0-6) of a given weekday.
+function currentsPeriodContext(weekday, k){
+  const m = PERIOD_MOODS[vizLetterForWeekdayPeriod(weekday, k)];
+  return { energy: m.energy, valence: m.valence, tags: m.tags, avoid: m.avoid, planetTags: [] };
+}
 
 // "Kaytranada, H.E.R." / "X feat. Y" / "A & B" -> "kaytranada" / "x" / "a"
 function primaryArtistKey(artist){
@@ -10138,12 +10163,11 @@ function currentsPlaylistSlot(pl, timeCtx){
   const context = currentsShuffled(playable.filter(t => t !== seed)).slice(0, 4);
   return { kind: 'playlist', seeds: [seed].concat(context) };
 }
-function currentsSlots(mode){
+function currentsSlots(mode, timeCtx, block){
   const more = mode === 'more';
   const slots = [];
-  // Seeds lean toward tracks that fit the time of day (see
+  // Seeds lean toward tracks that fit the period's mood (see
   // timeWeightedShuffle) - a weighted draw, not a filter.
-  const timeCtx = getTimeContext();
   const latest = latestPlayedTrack();
   if (latest) slots.push({ kind: 'latest', seeds: [latest] });
 
@@ -10156,7 +10180,13 @@ function currentsSlots(mode){
     .map((id, order) => ({ id, order, ts: getLastPlayed(id) || 0 }))
     .sort((a, b) => (b.ts - a.ts) || (a.order - b.order))
     .map(x => x.id);
-  plIds = more ? currentsShuffled(plIds).slice(0, 4) : plIds.slice(0, CURRENTS_MAX_PLAYLISTS);
+  if (more) plIds = currentsShuffled(plIds).slice(0, 4);
+  else {
+    // each drop takes the next few, most recently played first, so over a
+    // day every saved playlist gets its turn
+    const n = Math.min(CURRENTS_BLOCK_PLAYLISTS, plIds.length);
+    plIds = Array.from({ length: n }, (_, j) => plIds[((block || 0) * CURRENTS_BLOCK_PLAYLISTS + j) % plIds.length]);
+  }
   const plSlots = plIds.map(id => currentsPlaylistSlot(getCachedPlaylist(id), timeCtx)).filter(Boolean);
 
   // Interleave liked and playlist picks so the list doesn't play in blocks.
@@ -10190,19 +10220,21 @@ function currentsAccept(t, ctx){
 async function currentsFillSlot(slot, ctx, count){
   const strict = new Set([...ctx.used, ...ctx.soft]);
   slot.seeds.forEach(t => strict.add(primaryArtistKey(t.artist)));
-  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict, preferYear: true, timeBias: 1 });
-  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used), preferYear: true, timeBias: 1 });
+  let found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: strict, preferYear: true, timeBias: 1, timeCtx: ctx.timeCtx });
+  if (!found.length) found = await fetchDiscoverCandidates(slot.seeds, ctx.exclude, count, false, { skipArtists: new Set(ctx.used), preferYear: true, timeBias: 1, timeCtx: ctx.timeCtx });
   return found.filter(t => currentsAccept(t, ctx));
 }
-async function buildCurrentsPicks(mode){
+// mode: 'reset' (the day's first drop) | 'block' (a later drop) | 'more'.
+// timeCtx: the mood to pick for (currentsPeriodContext); block: drop index.
+async function buildCurrentsPicks(mode, timeCtx, block){
   const exclude = libraryVideoIdSet();
   (lsGet(LS_PLAY_HISTORY, []) || []).forEach(h => { if (h && h.v) exclude.add(h.v); });
   const current = playlistById(SWELL_ID);
   const soft = new Set();
-  if (current) current.tracks.forEach(t => { if (t.videoId) exclude.add(t.videoId); if (mode === 'more') soft.add(primaryArtistKey(t.artist)); });
-  const ctx = { exclude, used: new Set(), soft };
+  if (current) current.tracks.forEach(t => { if (t.videoId) exclude.add(t.videoId); if (mode !== 'reset') soft.add(primaryArtistKey(t.artist)); });
+  const ctx = { exclude, used: new Set(), soft, timeCtx };
 
-  const slots = currentsSlots(mode);
+  const slots = currentsSlots(mode, timeCtx, block);
   if (!slots.length) return [];
   const results = await currentsRunPool(slots, CURRENTS_CONCURRENCY, slot => currentsFillSlot(slot, ctx, 1));
   const picks = [];
@@ -10210,8 +10242,8 @@ async function buildCurrentsPicks(mode){
 
   // Short on picks (few playlists, thin Liked Songs, niche seeds): take a
   // few more from the latest/liked seeds, still one artist each. Up to 3 per
-  // slot so even latest + 3 liked alone can reach CURRENTS_MIN_TRACKS.
-  const target = mode === 'more' ? Math.min(CURRENTS_MORE_TRACKS, slots.length + 2) : CURRENTS_MIN_TRACKS;
+  // slot so even latest + 3 liked alone can reach CURRENTS_BLOCK_TRACKS.
+  const target = mode === 'more' ? Math.min(CURRENTS_MORE_TRACKS, slots.length + 2) : CURRENTS_BLOCK_TRACKS;
   for (const slot of slots){
     if (picks.length >= target) break;
     picks.push.apply(picks, await currentsFillSlot(slot, ctx, Math.min(3, target - picks.length)));
@@ -10238,7 +10270,7 @@ async function buildCurrentsPicks(mode){
       }
     }
   }
-  return picks;
+  return mode === 'more' ? picks : picks.slice(0, CURRENTS_BLOCK_TRACKS);
 }
 // Reset swaps CuRRentSSsss' track list, so queue entries pointing into the
 // old list must be rewritten: the song playing now (if it came from
@@ -10271,22 +10303,31 @@ function rerenderLibraryKeepPanel(){
   renderLibrary();
   if (openId && getCachedPlaylist(openId)) toggleLibraryPlaylistPanel(openId);
 }
+// mode: 'reset' | 'block' | 'more' (see buildCurrentsPicks). opts: silent,
+// doneToast (false skips the closing toast), timeCtx + block (which drop and
+// its mood; defaults to the current period). -> number of tracks added.
 async function refreshCurrents(mode, opts){
   const silent = !!(opts && opts.silent);
-  if (currentsBusy){ if (!silent) showToast('CuRRentSSsss is already updating...'); return; }
+  if (currentsBusy){ if (!silent) showToast('CuRRentSSsss is already updating...'); return 0; }
   currentsBusy = mode;
   if (!silent) rerenderLibraryKeepPanel();
   if (!silent) showToast(mode === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...');
-  let changed = false;
+  const doneToast = !silent && !(opts && opts.doneToast === false);
+  let changed = false, added = 0;
   try {
-    const picks = await buildCurrentsPicks(mode);
+    const period = rosicrucianPeriod();
+    const timeCtx = (opts && opts.timeCtx) || currentsPeriodContext(period.weekday, period.periodIndex);
+    const block = opts && typeof opts.block === 'number' ? opts.block : period.periodIndex;
+    const picks = await buildCurrentsPicks(mode, timeCtx, block);
     if (!picks.length){
-      if (!silent) showToast("Couldn't find new tracks right now. Try again in a bit.");
-      return;
+      if (doneToast) showToast("Couldn't find new tracks right now. Try again in a bit.");
+      return 0;
     }
     const pl = playlistById(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
     changed = true;
-    if (mode === 'more'){
+    if (mode !== 'reset'){
+      // Appends only: whatever is playing keeps playing, and when it's
+      // CuRRentSSsss the new tracks queue up behind it.
       const have = new Set(pl.tracks.map(t => t.videoId).filter(Boolean));
       const add = picks.filter(t => !have.has(t.videoId));
       const start = pl.tracks.length;
@@ -10297,7 +10338,8 @@ async function refreshCurrents(mode, opts){
         if (state.queuePos >= 0) add.forEach((t, i) => state.queue.push({ plId: SWELL_ID, idx: start + i }));
         renderQueuePanel();
       }
-      if (!silent) showToast(add.length ? 'Added ' + add.length + (add.length === 1 ? ' track' : ' tracks') : 'No new tracks this time');
+      added = add.length;
+      if (doneToast) showToast(add.length ? 'Added ' + add.length + (add.length === 1 ? ' track' : ' tracks') : 'No new tracks this time');
     } else {
       const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
       const nowTrack = cur && cur.plId === SWELL_ID ? trackAt(state.queuePos) : null;
@@ -10307,18 +10349,46 @@ async function refreshCurrents(mode, opts){
       lsSet(LS_SWELL_GENERATED, Date.now());
       if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
       remapQueueAfterCurrentsReset(!!nowTrack, tracks.length);
-      if (!silent) showToast('CuRRentSSsss refreshed: ' + picks.length + ' new tracks');
+      added = picks.length;
+      if (doneToast) showToast('CuRRentSSsss refreshed: ' + picks.length + ' new tracks');
     }
   } finally {
     currentsBusy = null;
     if (changed || !silent) rerenderLibraryKeepPanel();
   }
+  return added;
 }
-function generateSwell(){ return refreshCurrents('reset', { silent: true }); }
-function refreshSwellIfStale(){
-  const last = lsGet(LS_SWELL_GENERATED, 0);
-  if (last && isSameLocalDay(last, Date.now())) return;
-  generateSwell();
+// Daily schedule: CuRRentSSsss should hold one drop per period started so
+// far today (periodIndex + 1). The first drop of a new day resets the list;
+// the rest append. Opening mid-day catches up, each missed drop picked for
+// its own period, and LS_SWELL_BLOCKS keeps a reload on the same day from
+// rebuilding anything. Polled every minute (and on launch).
+async function refreshSwellIfDue(opts){
+  const loud = !!(opts && opts.loud);
+  if (currentsBusy) return;
+  const now = new Date();
+  const day = localDayKey(now.getTime());
+  const due = rosicrucianPeriod(now).periodIndex + 1;
+  const sched = lsGet(LS_SWELL_BLOCKS, null);
+  let n = sched && sched.day === day ? sched.n : 0;
+  let total = 0;
+  while (n < due){
+    const got = await refreshCurrents(n === 0 ? 'reset' : 'block', {
+      silent: !(loud && n === 0 && !total), doneToast: false,
+      timeCtx: currentsPeriodContext(now.getDay(), n), block: n,
+    });
+    if (!got) break;   // offline / nothing to seed from: the next poll tries again
+    total += got;
+    n++;
+    lsSet(LS_SWELL_BLOCKS, { day, n });
+  }
+  if (loud) showToast(total ? 'CuRRentSSsss refreshed: ' + total + ' new tracks' : "Couldn't find new tracks right now. Try again in a bit.");
+}
+// "Reset with fresh picks": re-roll every drop due so far today.
+function resetCurrentsDay(){
+  if (currentsBusy){ showToast('CuRRentSSsss is already updating...'); return; }
+  lsSet(LS_SWELL_BLOCKS, null);
+  refreshSwellIfDue({ loud: true });
 }
 
 /* ---------- SwiiiRrrLL (blend-playlist, GitHub #60) ----------
@@ -10419,81 +10489,10 @@ function refreshBlendIfStale(){
   refreshBlend({ silent: true });
 }
 
-/* ---------- time-of-day row: "For this morning" / "Late night" ----------
-   A slim row above the library grid that follows the clock (see
-   getTimeContext): its title changes with the time block and its small
-   label with the planetary hour. Play builds a mix from the listener's own
-   library plus CuRRentSSsss, locally and instantly like SwiiiRrrLL, leaning
-   toward tracks whose (cached) tags and energy fit the moment via a
-   weighted draw - tracks with nothing known about them still get in, just
-   less often. The mix is a synthetic playlist (never saved to the library,
-   like Discover's discover-ext lists), rebuilt fresh on every play. */
-const TIME_MIX_ID = 'timemix';
-const TIME_MIX_TARGET = 30;
-const TIME_MIX_PER_ARTIST = 2;
-let timeRowKey = null;
-
-function timeMixSources(){
-  const sources = blendSources();
-  const swell = getCachedPlaylist(SWELL_ID);
-  if (swell && swell.tracks && swell.tracks.some(t => t && t.videoId)) sources.push(swell);
-  return sources;
-}
-function buildTimeMixTracks(ctx){
-  const seen = new Set();
-  const all = [];
-  timeMixSources().forEach(pl => pl.tracks.forEach(t => {
-    if (!t || !t.videoId || isAudioVideoId(t.videoId) || seen.has(t.videoId)) return;
-    seen.add(t.videoId);
-    all.push(t);
-  }));
-  const perArtist = new Map();
-  const picks = [];
-  for (const t of timeWeightedShuffle(all, ctx, 1.6)){
-    if (picks.length >= TIME_MIX_TARGET) break;
-    const a = primaryArtistKey(t.artist);
-    if ((perArtist.get(a) || 0) >= TIME_MIX_PER_ARTIST) continue;
-    perArtist.set(a, (perArtist.get(a) || 0) + 1);
-    picks.push(Object.assign({}, t, { plays: 0 }));
-  }
-  return picks;
-}
-function playTimeMix(){
-  const ctx = getTimeContext();
-  const tracks = buildTimeMixTracks(ctx);
-  if (!tracks.length){ showToast('Save a playlist or like a few songs first - this mix draws from your library.'); return; }
-  const pl = { id: TIME_MIX_ID, type: 'custom', name: ctx.title, image: null, tracks, ts: Date.now(), timeKey: ctx.key };
-  lsSet(LS_PL(TIME_MIX_ID), pl);
-  loadPlaylistIntoPlayer(pl);
-  setView('player');
-  buildQueueFrom(0, pl.id);
-  loadIndex(state.queuePos, true);
-}
-function renderTimeRow(){
-  const row = $('timeRow');
-  if (!row) return;
-  const ctx = getTimeContext();
-  timeRowKey = ctx.key;
-  const searching = !!normLibSearch(libSearch.value);
-  const hasSource = timeMixSources().length > 0;
-  row.classList.toggle('hidden', searching || !hasSource);
-  $('timeRowKicker').textContent = ctx.label;
-  $('timeRowTitle').textContent = ctx.title;
-  $('timeRowSub').textContent = ctx.lean;
-  const tz = ctx.timeZone ? ' (' + ctx.timeZone + ')' : '';
-  $('timeRowKicker').title = 'Planetary hour by your local clock' + tz + ', with 6am and 6pm standing in for sunrise and sunset. '
-    + ctx.hourPlanet + ' leans ' + ctx.planetCharacter + '.';
-  $('timeRowPlay').setAttribute('aria-label', 'Play ' + ctx.title + ', ' + ctx.label);
-}
-// Cheap minute poll: only redraws when the block or planetary hour turns over.
-function refreshTimeRowIfDue(){
-  if (getTimeContext().key !== timeRowKey) renderTimeRow();
-}
-// Console helpers, like ebblessVibeCheck: ebblessTimeContext() / (someDate),
-// .rank(ranked, candMetrics, date, scale) and .mix(date) for checking the lean.
+// Console helpers, like ebblessVibeCheck: ebblessTimeContext() / (someDate)
+// and .rank(ranked, candMetrics, date, scale) for checking the lean.
 window.ebblessTimeContext = function(d){ return getTimeContext(d ? new Date(d) : new Date()); };
 window.ebblessTimeContext.rank = function(ranked, candMetrics, d, scale){ return applyTimePreference(ranked, candMetrics || null, getTimeContext(d ? new Date(d) : new Date()), scale == null ? 1 : scale); };
-window.ebblessTimeContext.mix = function(d){ return buildTimeMixTracks(getTimeContext(d ? new Date(d) : new Date())); };
 
 function renderQueuePanel(){
   renderDiscoverToggle();
@@ -11503,6 +11502,16 @@ const VIZ_LETTER_WINDOW_S = 300;
 function vizLetterForWeekdayPeriod(weekday, periodIndex){
   return VIZ_LETTER_ORDER[(VIZ_START_LETTER_INDEX[weekday] + periodIndex) % 7];
 }
+// Which of the day's 7 periods a moment falls in (local wall clock from
+// midnight). Shared by the color clock below and CuRRentSSsss' daily
+// schedule (refreshSwellIfDue). -> { weekday, periodIndex 0-6, s, letter }
+function rosicrucianPeriod(now){
+  now = now || new Date();
+  const weekday = now.getDay();
+  const s = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
+  const periodIndex = Math.min(6, Math.max(0, Math.floor(s / VIZ_SECONDS_PER_PERIOD)));
+  return { weekday, periodIndex, s, letter: vizLetterForWeekdayPeriod(weekday, periodIndex) };
+}
 function vizHexToRgb(hex){
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -11515,13 +11524,9 @@ function vizLerpColor(hexA, hexB, t){
   return `rgb(${r},${g},${bl})`;
 }
 function vizRosicrucianColor(){
-  const now = new Date();
-  const weekday = now.getDay();
-  const s = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
-  const periodIndex = Math.min(6, Math.max(0, Math.floor(s / VIZ_SECONDS_PER_PERIOD)));
+  const { weekday, periodIndex, s, letter: currentLetter } = rosicrucianPeriod();
   const periodStart = periodIndex * VIZ_SECONDS_PER_PERIOD;
   const periodEnd = periodStart + VIZ_SECONDS_PER_PERIOD;
-  const currentLetter = vizLetterForWeekdayPeriod(weekday, periodIndex);
 
   const distanceToNext = periodEnd - s;
   if (distanceToNext <= VIZ_LETTER_WINDOW_S){
@@ -15650,20 +15655,16 @@ function startApp(){
     // show on the player view, so land them on the library instead.
     setView(currentTrack() ? 'player' : 'library');
     if (!currentTrack()) updateMiniBarVisibility();
-    refreshSwellIfStale();
-    // Sessions left open across midnight would otherwise keep showing
-    // yesterday's Current until the next reload - poll periodically so the
-    // day-rollover check in refreshSwellIfStale also fires while the app is
-    // just sitting open.
-    setInterval(refreshSwellIfStale, 60 * 1000);
+    refreshSwellIfDue();
+    // CuRRentSSsss grows once per daily period and resets at midnight - poll
+    // so a session left open picks up each period change (and the midnight
+    // reset) without a reload.
+    setInterval(refreshSwellIfDue, 60 * 1000);
     // SwiiiRrrLL: same once-a-day rollover, plus it fills itself in the first
     // time the library has anything to blend (e.g. right after the starter
     // library seeds further down).
     refreshBlendIfStale();
     setInterval(refreshBlendIfStale, 60 * 1000);
-    // Time-of-day row: retitles itself as the block / planetary hour turns.
-    refreshTimeRowIfDue();
-    setInterval(refreshTimeRowIfDue, 60 * 1000);
     // One-time sweep for playlists that were cached under an older resolve
     // version (see RESOLVE_LOGIC_VERSION) - covers library playlists that get
     // played straight from the library/queue and never pass back through
