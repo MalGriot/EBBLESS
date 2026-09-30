@@ -231,3 +231,7 @@ search, or Spotify sourcing (items 1 to 6); those need a decision.
   playlist's titles (the III.9 "user's playlists" exception fits a user's own
   playlists best), stop using Spotify client credentials, and prefer
   non-Spotify art for the stylized art modes.
+
+## Owner decision (2026-09-30)
+
+YouTube must-fix items 1-5: **option D**, accept the risk while EBBLESS is a small beta. No changes to the hidden player, ad muting or preload. Revisit before any wider launch.
