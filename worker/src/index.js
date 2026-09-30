@@ -2836,6 +2836,334 @@ async function handleSimilar(url, env, ctx) {
   return response;
 }
 
+// ---------- GET /vibe-interpret?q= ----------
+// conversational-vibe-search: turns a free-text sentence typed (or spoken)
+// into the playlist-input bar - "rainy sunday morning, making coffee, want
+// something warm and slow" - into something the existing music plumbing
+// can act on, then does the first cheap pass of that plumbing here so the
+// client gets back real, existing songs rather than just words:
+//
+//   1. interpret: Cloudflare Workers AI (free tier, `AI` binding in
+//      wrangler.toml) with a small instruct model returns compact JSON -
+//      a playlist title, Last.fm-style tags, search keywords, target
+//      energy/tempo ranges and a handful of seed songs. When the binding is
+//      missing, the model errors, times out, or returns anything that
+//      doesn't parse into that shape, a deterministic keyword lexicon
+//      (vibeHeuristic) produces the same shape instead - the feature never
+//      hard-breaks, it just gets less clever.
+//   2. ground: the model's seed songs are checked against iTunes' keyless
+//      catalog search (the same lookup /spotifyart uses) and anything that
+//      doesn't come back as that artist + that title is dropped - a small
+//      model will happily invent plausible-sounding songs. Then each tag's
+//      Last.fm top tracks (tag.getTopTracks, same LASTFM_API_KEY /similar
+//      and /tags use) fill the rest of the list with real, tagged songs.
+//
+// The client (see beginConversationalVibe in index.html) takes `tracks`,
+// re-ranks them against energy/bpm through the existing /metrics mood
+// matching, extends thin lists with /similar, and matches each to a
+// playable video through the normal /search pipeline. `keywords` also
+// feed the older /playlistsearch picker as a fallback.
+//
+// Privacy: the sentence is never logged or stored anywhere but the edge
+// cache entry keyed by its normalized text (which holds only the derived
+// interpretation, not who asked).
+const VIBE_CACHE_VERSION = 'v2';
+const VIBE_MAX_INPUT = 300;
+const VIBE_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
+const VIBE_AI_TIMEOUT_MS = 9000;
+const VIBE_MAX_TAGS = 4;
+const VIBE_MAX_SEEDS = 8;
+const VIBE_TRACKS_PER_TAG = 12;
+const VIBE_MAX_TRACKS = 40;
+
+function vibeNormalizeInput(s) {
+  return String(s || '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, VIBE_MAX_INPUT);
+}
+// Cache key form: case, punctuation and spacing differences between two
+// otherwise identical sentences (typed vs. dictated) share one entry.
+function vibeCacheText(s) {
+  return s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Word -> tags/energy lexicon for the no-AI path. Tags are ones Last.fm's
+// tag.getTopTracks actually has deep lists for. energy/bpm nudges add up
+// across every matched word and are clamped at the end.
+const VIBE_LEXICON = [
+  { re: /\b(rain|rainy|drizzle|storm|stormy|grey|gray|cloudy)\b/, tags: ['chill', 'acoustic', 'rainy day'], energy: -0.15 },
+  { re: /\b(coffee|cafe|café|breakfast|brunch)\b/, tags: ['acoustic', 'jazz', 'chill'], energy: -0.1 },
+  { re: /\b(morning|sunrise|wake|waking)\b/, tags: ['acoustic', 'folk', 'chill'], energy: -0.05 },
+  { re: /\b(sunday|lazy|slow|mellow|calm|cozy|cosy|warm|soft|gentle|relax|relaxing|unwind)\b/, tags: ['chill', 'mellow', 'soul'], energy: -0.2, bpm: -15 },
+  { re: /\b(study|studying|focus|focusing|concentrate|reading|work|working|coding|homework)\b/, tags: ['lo-fi', 'instrumental', 'ambient'], energy: -0.15 },
+  { re: /\b(sleep|sleeping|bed|bedtime|night|late|midnight|dream|dreamy)\b/, tags: ['ambient', 'chillout', 'dream pop'], energy: -0.25, bpm: -20 },
+  { re: /\b(workout|gym|run|running|lift|lifting|cardio|training|hype|pump)\b/, tags: ['workout', 'electronic', 'hip-hop'], energy: 0.35, bpm: 25 },
+  { re: /\b(party|dance|dancing|club|rave|friday|saturday|pregame)\b/, tags: ['dance', 'house', 'pop'], energy: 0.3, bpm: 20 },
+  { re: /\b(drive|driving|road|roadtrip|highway|cruise|cruising)\b/, tags: ['road trip', 'indie rock', 'classic rock'], energy: 0.1 },
+  { re: /\b(sad|cry|crying|breakup|heartbreak|heartbroken|lonely|miss|missing|melancholy|melancholic)\b/, tags: ['sad', 'singer-songwriter', 'indie'], energy: -0.2 },
+  { re: /\b(happy|sunny|summer|beach|bright|upbeat|cheerful|joy|good mood)\b/, tags: ['happy', 'summer', 'feel good'], energy: 0.2 },
+  { re: /\b(love|romantic|romance|date|candle|candles|dinner)\b/, tags: ['romantic', 'soul', 'rnb'], energy: -0.1 },
+  { re: /\b(angry|rage|mad|furious|aggressive|heavy)\b/, tags: ['metal', 'punk', 'hard rock'], energy: 0.4, bpm: 20 },
+  { re: /\b(autumn|fall|winter|snow|fireplace|christmas)\b/, tags: ['folk', 'acoustic', 'indie folk'], energy: -0.1 },
+  { re: /\b(nostalgic|nostalgia|throwback|retro|oldies)\b/, tags: ['oldies', 'classic rock', '80s'], energy: 0 },
+  { re: /\b(cook|cooking|kitchen|clean|cleaning|chores)\b/, tags: ['funk', 'soul', 'feel good'], energy: 0.1 },
+  { re: /\b(energetic|energy|fast|loud|intense|pumped)\b/, tags: [], energy: 0.3, bpm: 20 },
+];
+// Genre words taken as tags verbatim when they appear in the sentence.
+const VIBE_GENRES = ['jazz', 'blues', 'soul', 'funk', 'folk', 'rock', 'indie', 'pop', 'hip-hop', 'hip hop', 'rap', 'rnb', 'r&b', 'house', 'techno', 'ambient', 'classical', 'piano', 'lo-fi', 'lofi', 'reggae', 'country', 'metal', 'punk', 'disco', 'bossa nova', 'latin', 'afrobeats', 'edm', 'trap', 'shoegaze', 'synthwave', 'gospel', 'acoustic', 'electronic', 'instrumental'];
+const VIBE_STOPWORDS = new Set('a an and the i im i\'m me my we our you your to of for in on at with while want wanna need some something songs song music playlist play give make making just like kind sort feel feeling mood vibe vibes that this it is am are be been being get got really very so bit little please can could would should some any about into from up down out'.split(' '));
+
+function vibeHeuristic(text) {
+  const t = text.toLowerCase();
+  const tags = [];
+  let energy = 0.5, bpm = 110;
+  const add = (x) => { if (x && !tags.includes(x)) tags.push(x); };
+  VIBE_GENRES.forEach(g => { if (new RegExp('\\b' + g.replace(/[&-]/g, m => '\\' + m) + '\\b').test(t)) add(g === 'hip hop' ? 'hip-hop' : g === 'lofi' ? 'lo-fi' : g === 'r&b' ? 'rnb' : g); });
+  VIBE_LEXICON.forEach(e => {
+    if (!e.re.test(t)) return;
+    e.tags.forEach(add);
+    energy += e.energy || 0;
+    bpm += e.bpm || 0;
+  });
+  if (!tags.length) add('chill');
+  energy = Math.min(0.9, Math.max(0.15, energy));
+  bpm = Math.min(170, Math.max(60, bpm));
+  const keywords = t.replace(/[^\p{L}\p{N}\s-]/gu, ' ').split(/\s+/).filter(w => w.length > 2 && !VIBE_STOPWORDS.has(w)).slice(0, 5);
+  return {
+    title: vibeTitleFrom(keywords),
+    tags: tags.slice(0, VIBE_MAX_TAGS),
+    keywords: keywords.length ? [keywords.slice(0, 3).join(' ')] : [tags[0]],
+    energy: [Math.max(0, +(energy - 0.2).toFixed(2)), Math.min(1, +(energy + 0.2).toFixed(2))],
+    bpm: [Math.round(bpm - 20), Math.round(bpm + 20)],
+    seeds: [],
+  };
+}
+function vibeTitleFrom(words) {
+  const w = (words || []).slice(0, 3).join(' ');
+  return w ? w.replace(/\b\p{L}/gu, c => c.toUpperCase()) : 'Your Vibe';
+}
+
+const VIBE_SYSTEM_PROMPT =
+  'You turn a listener\'s description of their mood, activity or surroundings into music search parameters. ' +
+  'Reply with ONLY a JSON object, no prose, with exactly these keys: ' +
+  '"title": a short evocative playlist name (2-5 words); ' +
+  '"tags": 2-4 lowercase Last.fm-style genre or mood tags (e.g. "acoustic", "jazz", "chillout", "indie folk", "soul", "lo-fi", "dance"); ' +
+  '"keywords": 1-3 short playlist search phrases; ' +
+  '"energy": [min, max] between 0 and 1; ' +
+  '"bpm": [min, max] tempo range; ' +
+  '"seeds": 8 objects {"artist": "...", "title": "..."} naming REAL, well-known, officially released songs that fit. Never invent songs; if unsure, pick famous ones.';
+
+const VIBE_JSON_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    tags: { type: 'array', items: { type: 'string' } },
+    keywords: { type: 'array', items: { type: 'string' } },
+    energy: { type: 'array', items: { type: 'number' } },
+    bpm: { type: 'array', items: { type: 'number' } },
+    seeds: { type: 'array', items: { type: 'object', properties: { artist: { type: 'string' }, title: { type: 'string' } }, required: ['artist', 'title'] } },
+  },
+  required: ['title', 'tags', 'keywords', 'energy', 'bpm', 'seeds'],
+};
+
+function vibeClampRange(r, lo, hi, fallback) {
+  if (!Array.isArray(r) || r.length < 2) return fallback;
+  let a = Number(r[0]), b = Number(r[1]);
+  if (!isFinite(a) || !isFinite(b)) return fallback;
+  if (a > b) [a, b] = [b, a];
+  a = Math.min(hi, Math.max(lo, a)); b = Math.min(hi, Math.max(lo, b));
+  return [+a.toFixed(2), +b.toFixed(2)];
+}
+const vibeStr = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n);
+
+// Strictly validates whatever the model produced into the response shape;
+// null if there isn't enough usable signal (then the heuristic takes over).
+function vibeSanitizeAi(raw, fallback) {
+  let obj = raw;
+  if (typeof obj === 'string') {
+    const start = obj.indexOf('{');
+    if (start < 0) return null;
+    const blob = extractBalancedJson(obj, start);
+    if (!blob) return null;
+    try { obj = JSON.parse(blob); } catch (e) { return null; }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  const tags = (Array.isArray(obj.tags) ? obj.tags : [])
+    .map(x => vibeStr(x, 30).toLowerCase()).filter(x => x && /^[\p{L}\p{N} &'-]+$/u.test(x));
+  const uniqTags = Array.from(new Set(tags)).slice(0, VIBE_MAX_TAGS);
+  const keywords = (Array.isArray(obj.keywords) ? obj.keywords : []).map(x => vibeStr(x, 60)).filter(Boolean).slice(0, 3);
+  const seeds = (Array.isArray(obj.seeds) ? obj.seeds : [])
+    .map(s => s && typeof s === 'object' ? { artist: vibeStr(s.artist, 80), title: vibeStr(s.title, 120) } : null)
+    .filter(s => s && s.artist && s.title)
+    .slice(0, VIBE_MAX_SEEDS);
+  if (!uniqTags.length && !seeds.length) return null;
+  return {
+    title: vibeStr(obj.title, 40) || fallback.title,
+    tags: uniqTags.length ? uniqTags : fallback.tags,
+    keywords: keywords.length ? keywords : fallback.keywords,
+    energy: vibeClampRange(obj.energy, 0, 1, fallback.energy),
+    bpm: vibeClampRange(obj.bpm, 40, 200, fallback.bpm).map(Math.round),
+    seeds,
+  };
+}
+
+async function vibeAskAi(text, env) {
+  if (!env.AI || typeof env.AI.run !== 'function') return { result: null, why: 'no-binding' };
+  let timer;
+  try {
+    const run = env.AI.run(VIBE_AI_MODEL, {
+      messages: [
+        { role: 'system', content: VIBE_SYSTEM_PROMPT },
+        { role: 'user', content: text },
+      ],
+      max_tokens: 600,
+      temperature: 0.4,
+      response_format: { type: 'json_schema', json_schema: VIBE_JSON_SCHEMA },
+    });
+    const out = await Promise.race([run, new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), VIBE_AI_TIMEOUT_MS); })]);
+    const raw = out && (out.response !== undefined ? out.response : out);
+    return { result: raw, why: null };
+  } catch (e) {
+    return { result: null, why: /timeout/.test(String(e && e.message)) ? 'timeout' : 'error' };
+  } finally { clearTimeout(timer); }
+}
+
+// Keeps a model-suggested seed only when Last.fm's catalog knows that song
+// by that artist with a real audience behind it; returns Last.fm's own
+// (autocorrected) spelling so the client matches/displays the canonical
+// version. Last.fm rather than iTunes (which /spotifyart uses): iTunes'
+// search rate-limits shared Cloudflare egress IPs hard enough that most
+// lookups from a Worker come back empty, which would silently drop every
+// seed; Last.fm is keyed and already the backbone of /similar and /tags.
+const VIBE_SEED_MIN_LISTENERS = 5000;
+function vibeTitleNorm(s) {
+  return String(s || '').toLowerCase().replace(/[([].*?[)\]]/g, ' ').replace(/\s[-–—]\s.*$/, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+async function vibeVerifySeed(seed, env) {
+  const data = await lastfmCall('track.getInfo', { track: seed.title, artist: seed.artist, autocorrect: '1' }, env);
+  const t = data && data.track;
+  if (!t || !t.name || !t.artist || !t.artist.name) return null;
+  if ((parseInt(t.listeners, 10) || 0) < VIBE_SEED_MIN_LISTENERS) return null;
+  const a = vibeTitleNorm(seed.title), b = vibeTitleNorm(t.name);
+  if (!(a && b && (a === b || a.startsWith(b + ' ') || b.startsWith(a + ' ')))) return null;
+  if (!metricsArtistMatch(seed.artist, t.artist.name)) return null;
+  const imgs = t.album && Array.isArray(t.album.image) ? t.album.image : [];
+  // Last.fm serves a generic grey star for anything without real art -
+  // not worth showing; the client resolves art itself when this is null.
+  const img = imgs.length && !/2a96cbd8b46e442fc41c2b86b821562f/.test(imgs[imgs.length - 1]['#text'] || '') ? imgs[imgs.length - 1]['#text'] : '';
+  return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed' };
+}
+
+async function vibeTagTracks(tag, env) {
+  const data = await lastfmCall('tag.getTopTracks', { tag, limit: String(VIBE_TRACKS_PER_TAG * 2) }, env);
+  const list = data && data.tracks && data.tracks.track;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter(t => t && t.name && t.artist && t.artist.name)
+    .map(t => ({ title: t.name, artist: t.artist.name, image: null, from: 'tag:' + tag }));
+}
+
+// Deterministic per-sentence shuffle (so a cached answer and a fresh one
+// agree) - Last.fm's top lists are popularity-ordered, and taking just the
+// top N of each would give every "chill" request the same five songs.
+function vibeSeededShuffle(arr, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) { h ^= seedText.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    const j = (h >>> 0) % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+async function vibeGroundTracks(interp, env, cacheText) {
+  const [verified, tagLists] = await Promise.all([
+    mapWithConcurrency(interp.seeds, 4, s => vibeVerifySeed(s, env).catch(() => null)),
+    mapWithConcurrency(interp.tags, 4, t => vibeTagTracks(t, env).catch(() => [])),
+  ]);
+  const tracks = [];
+  const seen = new Set();
+  const push = (t) => {
+    const k = vibeTitleNorm(t.title) + '|' + vibeTitleNorm(t.artist);
+    if (seen.has(k)) return;
+    seen.add(k);
+    tracks.push(t);
+  };
+  const seeds = verified.filter(Boolean);
+  seeds.forEach(push);
+  // Round-robin across tags so no one tag dominates the list.
+  const shuffled = tagLists.map(l => vibeSeededShuffle(l, cacheText).slice(0, VIBE_TRACKS_PER_TAG));
+  for (let i = 0; i < VIBE_TRACKS_PER_TAG && tracks.length < VIBE_MAX_TRACKS; i++) {
+    shuffled.forEach(l => { if (l[i] && tracks.length < VIBE_MAX_TRACKS) push(l[i]); });
+  }
+  return { tracks, seedsVerified: seeds.length, seedsSuggested: interp.seeds.length };
+}
+
+async function handleVibeInterpret(url, env, ctx) {
+  const rawQ = url.searchParams.get('q') || '';
+  if (rawQ.length > VIBE_MAX_INPUT * 2) return json({ error: 'too long' }, 413);
+  const text = vibeNormalizeInput(rawQ);
+  if (text.length < 3) return json({ error: 'missing q' }, 400);
+  const cacheText = vibeCacheText(text);
+  if (!cacheText) return json({ error: 'missing q' }, 400);
+
+  const cache = caches.default;
+  const cacheKey = new Request('https://cache.internal/' + VIBE_CACHE_VERSION + '/vibe-interpret/' + encodeURIComponent(cacheText));
+  // ?ai=0 forces the no-AI path (testing the fallback) - uncached both ways.
+  const forceHeuristic = url.searchParams.get('ai') === '0';
+  const cached = forceHeuristic ? null : await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const heuristic = vibeHeuristic(text);
+  let interp = null, source = 'heuristic', why = null;
+  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(text, env);
+  if (ai.result != null) {
+    interp = vibeSanitizeAi(ai.result, heuristic);
+    if (interp) source = 'ai'; else why = 'unparseable';
+  } else why = ai.why;
+  if (!interp) interp = heuristic;
+
+  const grounded = await vibeGroundTracks(interp, env, cacheText);
+  // An AI answer whose tags all came back empty on Last.fm (too exotic) -
+  // top up with the heuristic's broader tags so there's still a list.
+  if (source === 'ai' && grounded.tracks.length < 10) {
+    const extraTags = heuristic.tags.filter(t => !interp.tags.includes(t));
+    if (extraTags.length) {
+      const more = await vibeGroundTracks({ seeds: [], tags: extraTags }, env, cacheText);
+      const seen = new Set(grounded.tracks.map(t => vibeTitleNorm(t.title) + '|' + vibeTitleNorm(t.artist)));
+      more.tracks.forEach(t => { const k = vibeTitleNorm(t.title) + '|' + vibeTitleNorm(t.artist); if (!seen.has(k) && grounded.tracks.length < VIBE_MAX_TRACKS) { seen.add(k); grounded.tracks.push(t); } });
+    }
+  }
+
+  const payload = {
+    v: VIBE_CACHE_VERSION,
+    source,
+    fallbackReason: source === 'heuristic' ? why : null,
+    title: interp.title,
+    tags: interp.tags,
+    keywords: interp.keywords,
+    energy: interp.energy,
+    bpm: interp.bpm,
+    seeds: { suggested: grounded.seedsSuggested, verified: grounded.seedsVerified },
+    tracks: grounded.tracks,
+  };
+  const response = json(payload);
+  // A real AI answer is stable for a given sentence - keep it a week. A
+  // heuristic answer only an hour, so a transient AI outage doesn't pin the
+  // dumber answer to that sentence. An empty list isn't cached at all.
+  if (grounded.tracks.length && !forceHeuristic) {
+    const toCache = response.clone();
+    ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': source === 'ai' ? 'max-age=604800' : 'max-age=3600' },
+    })));
+  }
+  return response;
+}
+
 // ---------- POST /pool/signal, GET /pool/affinity ----------
 // The listening graph every EBBLESS listener quietly contributes to and
 // draws from. A completed/liked/skipped play submits the seed track's tags
@@ -3409,6 +3737,7 @@ export default {
       if (url.pathname === '/sctracksearch') return await handleSoundCloudTrackSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
+      if (url.pathname === '/vibe-interpret') return await handleVibeInterpret(url, env, ctx);
       if (url.pathname === '/metrics') return await handleMetrics(request, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
@@ -3421,7 +3750,7 @@ export default {
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
