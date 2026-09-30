@@ -156,6 +156,13 @@ async function mapWithConcurrency(items, limit, fn) {
 // oembed requests for one resolve.
 const PER_TRACK_ART_CAP = 150;
 
+// The track's own Spotify id (from its "spotify:track:<id>" uri), passed
+// through so the client can link each track back to Spotify (Credits).
+function spotifyTrackIdFromUri(uri) {
+  const m = /^spotify:track:([a-zA-Z0-9]+)$/.exec(uri || '');
+  return m ? m[1] : null;
+}
+
 // ---------- GET /playlist?id=<spotify playlist id> ----------
 // ---------- GET /album?id=<spotify album id> ----------
 // Both are served by Spotify's generic embed app, which returns the same
@@ -202,7 +209,7 @@ async function handleEmbed(kind, url, ctx) {
   if (kind === 'album') {
     // Every track on an album shares the album's own cover — no per-track
     // lookup needed, it's already correct.
-    tracks = entity.trackList.map(t => ({ title: t.title, artist: t.subtitle || '', image, duration: t.duration || 0 }));
+    tracks = entity.trackList.map(t => ({ title: t.title, artist: t.subtitle || '', image, duration: t.duration || 0, spotifyId: spotifyTrackIdFromUri(t.uri) }));
   } else {
     // A playlist can span many albums, so each track needs its own art.
     const inCap = entity.trackList.slice(0, PER_TRACK_ART_CAP);
@@ -212,6 +219,7 @@ async function handleEmbed(kind, url, ctx) {
       artist: t.subtitle || '',
       image: (i < PER_TRACK_ART_CAP ? thumbs[i] : null) || image,
       duration: t.duration || 0,
+      spotifyId: spotifyTrackIdFromUri(t.uri),
     }));
   }
 

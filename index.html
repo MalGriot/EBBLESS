@@ -496,6 +496,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .visual-tabs .v-tab svg{width:16px;height:16px}
 .visual-tabs .v-tab:hover{color:var(--text)}
 .visual-tabs .v-tab.is-active{background:var(--player-accent);color:#151107}
+.visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
 /* visualizer tab icon: three cymatics plate figures crossfading, one full
    3-shape cycle every 20s (3 cycles/min). each phase holds ~5s, fades ~1.7s.
    reduced motion: first figure only, static. */
@@ -916,15 +917,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 /* ---------- credits (Settings > About). Same centered card as
    #feedback-modal, over #danger-scrim ---------- */
-#credits-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
+#credits-modal,#yt-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
   max-height:calc(100dvh - 32px);overflow-y:auto;outline:none;
   background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
   box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
   opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-#credits-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-#credits-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
-#credits-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
+#credits-modal.is-open,#yt-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#credits-modal h2,#yt-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
+#credits-modal > p,#yt-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
 .credits-group h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:16px 0 6px}
 .credits-group ul{list-style:none;margin:0;padding:0}
 .credits-group li{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-top:1px solid var(--border)}
@@ -932,6 +933,17 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .credits-group a{color:var(--text);font-size:14px;font-weight:600;text-decoration:underline;text-decoration-color:var(--border-2);text-underline-offset:3px}
 .credits-group a:hover,.credits-group a:focus-visible{text-decoration-color:currentColor}
 .credits-group span{font-size:12px;color:var(--faint)}
+/* ---------- YouTube player card (4th player tab). Same card as
+   #credits-modal. YouTube's embed rules need the player at least 200x200,
+   hence the min-height on a 16:9 slot. #yt-host.is-shown (see ytPanelSync)
+   is the real player placed over the slot, one layer above the card. ---------- */
+#yt-modal{width:min(640px,calc(100vw - 32px))}
+.yt-slot{position:relative;width:100%;aspect-ratio:16/9;min-height:200px;margin-top:12px;border-radius:var(--r-md);
+  background:#000;display:flex;align-items:center;justify-content:center;padding:16px;text-align:center}
+.yt-slot-note{font-size:13px;color:var(--faint);line-height:1.5}
+#yt-host.is-shown{position:fixed;z-index:72;opacity:1;pointer-events:auto;border-radius:var(--r-md);background:#000}
+#yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
+#yt-host.is-shown > .yt-on{z-index:1}
 /* ---------- tester feedback form (no login, no GitHub - posts to the
    worker's /tester-report). Reuses #danger-scrim and the danger modal's
    centered-card look, just wider and with form fields ---------- */
@@ -2212,6 +2224,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
           </button>
+          <button class="v-tab" id="ytPanelBtn" title="YouTube" aria-label="Open the YouTube player for this track" aria-haspopup="dialog" disabled aria-disabled="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
+          </button>
           <div class="art-style-menu" id="artStyleMenu">
             <button class="art-style-opt" data-style="default">
               <span class="art-style-swatch swatch-default"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg></span>
@@ -2676,7 +2691,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <ul>
         <li><a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a><span>Playback and track matching</span></li>
         <li><a href="https://soundcloud.com" target="_blank" rel="noopener">SoundCloud</a><span>Playback and SoundCloud links</span></li>
-        <li><a href="https://open.spotify.com" target="_blank" rel="noopener">Spotify</a><span>Playlist, album and track links, cover art</span></li>
+        <li><a href="https://open.spotify.com" target="_blank" rel="noopener" id="creditsSpotifyLink">Spotify</a><span id="creditsSpotifyDesc">Playlist, album and track links, cover art</span></li>
         <li><a href="https://music.apple.com" target="_blank" rel="noopener">Apple Music</a><span>Playlist, album and track links, cover art</span></li>
       </ul>
     </div>
@@ -2703,6 +2718,19 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
     <div class="danger-modal-actions">
       <button type="button" class="btn-ghost" id="creditsCloseBtn">Close</button>
+    </div>
+  </div>
+
+  <!-- ===== YOUTUBE PLAYER (4th player tab) =====
+       #ytSlot only reserves the space: the real YouTube player (the active
+       deck's iframe in #yt-host) is positioned over it while this is open,
+       above this card, so nothing here ever covers the player. -->
+  <div id="yt-modal" role="dialog" aria-modal="true" aria-labelledby="ytModalTitle" tabindex="-1">
+    <h2 id="ytModalTitle">YouTube</h2>
+    <p>The YouTube video this track is playing from.</p>
+    <div class="yt-slot" id="ytSlot"><span class="yt-slot-note" id="ytSlotNote" hidden></span></div>
+    <div class="danger-modal-actions">
+      <button type="button" class="btn-ghost" id="ytCloseBtn">Close</button>
     </div>
   </div>
 
@@ -4804,7 +4832,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       trySearchYouTube(),
       resolveTrackArt(sourceKindForType(type), title, artist, art),
     ]);
-    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: resolvedArt, duration: match.duration || 0 };
+    const track = { title, artist, videoId: match.videoId || null, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: resolvedArt, duration: match.duration || 0, spotifyId: type === 'track' ? playlistId : undefined };
     onProgress({ stage: 'matching', done: 1, total: 1, track });
     const payload = { id: playlistId, type, name: title, image: null, tracks: withManualTracks(playlistId, [track]), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION };
     lsSet(LS_PL(playlistId), payload);
@@ -4961,10 +4989,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       // srcDuration = the source's own length (seconds), kept separately
       // from `duration` (the matched video's) for the wrong-track log and
       // the refresh-link picker's search.
-      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, srcDuration: Math.round((t.duration || 0) / 1000) || null });
+      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
     } catch(e){
       const art = await resolveTrackArt(sourceKind, t.title, t.artist, t.image || null);
-      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null });
+      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
     // Fire as soon as the first *playable* track lands (not necessarily
@@ -5259,7 +5287,7 @@ const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = 
 const desktopFsExitBtn = $('desktopFsExitBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
-const visualTabs = document.querySelectorAll('#visualTabs .v-tab');
+const visualTabs = document.querySelectorAll('#visualTabs .v-tab[data-mode]');
 const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
       miniPlayBtn = $('miniPlayBtn'), miniPlayIco = $('miniPlayIco'), miniLineFill = $('miniLineFill'),
@@ -8437,6 +8465,110 @@ function closeCreditsModal(){
   dangerScrim.classList.remove('is-open');
   creditsBtn.focus();
 }
+// Spotify's Developer Policy (II.4.b) wants Spotify metadata and cover art
+// accompanied by a link back to the applicable content on Spotify. So while
+// a Spotify-sourced track is current, the Spotify credit links to that
+// track, or, for tracks imported before per-track ids were kept, to the
+// album/playlist it came from. Anything else keeps the generic link.
+// Looked up per call (not cached) so this is safe to run from anywhere.
+const CREDITS_SPOTIFY_DESC = 'Playlist, album and track links, cover art';
+function spotifyLinkForEntry(entry, t){
+  if (t && t.spotifyId) return { url: 'https://open.spotify.com/track/' + t.spotifyId, kind: 'track' };
+  const pl = entry && playlistById(entry.plId);
+  if (pl && (pl.type === 'playlist' || pl.type === 'album' || pl.type === 'track')) return { url: canonicalLinkForPlaylist(pl), kind: pl.type };
+  return null;
+}
+function updateCreditsSpotifyLink(entry, t){
+  const a = $('creditsSpotifyLink'), desc = $('creditsSpotifyDesc');
+  if (!a || !desc) return;
+  const link = spotifyLinkForEntry(entry, t);
+  a.href = link ? link.url : 'https://open.spotify.com';
+  if (!link){ desc.textContent = CREDITS_SPOTIFY_DESC; a.removeAttribute('aria-label'); return; }
+  const what = link.kind === 'track' ? '\u201c' + (t.title || 'this track') + '\u201d' : 'this ' + link.kind;
+  desc.textContent = 'Listen to ' + what + ' on Spotify';
+  a.setAttribute('aria-label', 'Spotify: listen to ' + what + ' on Spotify');
+}
+
+// YouTube player card (4th player tab, issue #221): shows the real YouTube
+// player that is producing the audio, with its own controls, branding and
+// links untouched. It is the active deck's iframe itself, not a second
+// embed, and it is never reparented (moving an iframe reloads it): it is
+// only placed over #ytSlot with fixed positioning, and re-synced while open
+// so track changes, deck swaps and resizes follow along.
+const ytModal = $('yt-modal'), ytSlot = $('ytSlot'), ytSlotNote = $('ytSlotNote'), ytHost = $('yt-host'), ytPanelBtn = $('ytPanelBtn');
+let ytPanelTimer = null;
+function ytPanelOpen(){ return ytModal.classList.contains('is-open'); }
+// The YouTube tab only works while the current track is actually playing
+// from a YouTube video: disabled (not hidden, so the other tabs never shift)
+// for SoundCloud/podcast tracks, unmatched tracks, casting, or a video whose
+// embed errored. Re-checked on every track change and player state change;
+// an open card closes if the track stops qualifying. Judged on the track,
+// not the deck, so the brief gap while a deck swaps or loads the next
+// video doesn't count (the card just says it's loading).
+function ytPanelAvailable(){
+  const t = trackAt(state.queuePos);
+  if (!t || !t.videoId || isNativeVideoId(t.videoId) || castActive()) return false;
+  const deck = activeDeck();
+  return !(deck && deck.videoId === t.videoId && deck.ytErrorFor === t.videoId);
+}
+function ytPanelBtnSync(){
+  let ok = false;
+  try { ok = ytPanelAvailable(); } catch(e){ /* called before the deck code has initialized */ }
+  const btn = $('ytPanelBtn');
+  if (!btn) return ok;
+  btn.disabled = !ok;
+  btn.setAttribute('aria-disabled', String(!ok));
+  if (!ok && $('yt-modal').classList.contains('is-open')) closeYtPanel(true);
+  return ok;
+}
+function ytPanelSync(){
+  if (ytPanelOpen() && !ytPanelBtnSync()) return;
+  const open = ytPanelOpen();
+  const deck = activeDeck(), t = trackAt(state.queuePos);
+  const el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
+  const show = open && !!el && el.tagName === 'IFRAME';
+  Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
+  ytHost.classList.toggle('is-shown', show);
+  ytSlotNote.hidden = show || !open;
+  if (open && !show) ytSlotNote.textContent = 'Loading the video\u2026';
+  if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
+  const r = ytSlot.getBoundingClientRect();
+  ytHost.style.left = r.left + 'px';
+  ytHost.style.top = r.top + 'px';
+  ytHost.style.width = r.width + 'px';
+  ytHost.style.height = r.height + 'px';
+}
+function openYtPanel(){
+  if (!ytPanelBtnSync()) return;
+  closeArtStyleMenu();
+  dangerScrim.classList.add('is-open');
+  ytModal.classList.add('is-open');
+  ytPanelBtn.classList.add('is-active');
+  ytPanelSync();
+  clearInterval(ytPanelTimer);
+  ytPanelTimer = setInterval(ytPanelSync, 250);
+  setTimeout(() => ytModal.focus(), 50);
+}
+function closeYtPanel(auto){
+  if (!ytPanelOpen()) return;
+  ytModal.classList.remove('is-open');
+  dangerScrim.classList.remove('is-open');
+  ytPanelBtn.classList.remove('is-active');
+  clearInterval(ytPanelTimer);
+  ytPanelTimer = null;
+  ytPanelSync();
+  if (auto !== true) ytPanelBtn.focus();
+}
+ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); openYtPanel(); });
+$('ytCloseBtn').addEventListener('click', () => closeYtPanel());
+dangerScrim.addEventListener('click', () => closeYtPanel());
+ytModal.addEventListener('transitionend', ytPanelSync);
+ytModal.addEventListener('scroll', ytPanelSync);
+window.addEventListener('resize', () => { if (ytPanelOpen()) ytPanelSync(); });
+ytModal.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape'){ e.preventDefault(); closeYtPanel(); }
+  e.stopPropagation();
+});
 creditsBtn.addEventListener('click', openCreditsModal);
 $('creditsCloseBtn').addEventListener('click', closeCreditsModal);
 dangerScrim.addEventListener('click', closeCreditsModal);
@@ -10691,6 +10823,8 @@ function onDeckStateChange(deck, e){
 // re-force it on every ready/quality-change/load rather than setting once.
 const LOWEST_QUALITY = 'tiny';
 function forceLowestQuality(deck){
+  // ...except while that player is on screen in the YouTube card
+  if (deck === activeDeck() && ytPanelOpen()) return;
   if (deck.player && deck.player.setPlaybackQuality) deck.player.setPlaybackQuality(LOWEST_QUALITY);
 }
 
@@ -10723,8 +10857,11 @@ function createDeckPlayer(deck, videoId){
         deck.muteStartTs = Date.now();
         scheduleAdCheck(deck);
         if (deck === activeDeck()) updateAdLoadingIcon();
+        if (deck === activeDeck()) ytPanelBtnSync();
       },
-      onStateChange: function(e){ if (deck.gen === myGen) onDeckStateChange(deck, e); },
+      onStateChange: function(e){ if (deck.gen === myGen){ onDeckStateChange(deck, e); if (deck === activeDeck()) ytPanelBtnSync(); } },
+      // only recorded, for the YouTube tab's availability (ytPanelBtnSync)
+      onError: function(){ if (deck.gen === myGen){ deck.ytErrorFor = deck.videoId; if (deck === activeDeck()) ytPanelBtnSync(); } },
       onPlaybackQualityChange: function(){ if (deck.gen === myGen) forceLowestQuality(deck); }
     }
   });
@@ -11141,6 +11278,7 @@ function startLoadIconTicker(){
 }
 
 function setPlayingUI(isPlaying){
+  ytPanelBtnSync();
   if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
   else { stopLoadIconTicker(); setPlayIcons(isPlaying ? ICO_PAUSE : ICO_PLAY); }
   artworkWrap.classList.toggle('is-playing', isPlaying);
@@ -12234,6 +12372,8 @@ function reflectCurrentTrackUI(pos, opts){
   // the same art back and forth for no visual gain.
   const skipArt = opts && opts.skipArtSwap;
   updateTrackMetaUI(t);
+  updateCreditsSpotifyLink(entry, t);
+  ytPanelBtnSync();
   // new track: never carry the previous one's position/duration over - the
   // seek poll stops while paused, so a stale full bar would otherwise stick
   // until the new track actually starts reporting (issue #213)
