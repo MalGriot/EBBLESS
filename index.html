@@ -387,6 +387,7 @@ body.onb-active .paste-guide{display:none}
 .lib-ctx-item:hover{background:var(--panel-2);color:var(--text)}
 .lib-ctx-item svg{width:15px;height:15px;flex:none;opacity:.85}
 .lib-ctx-item.is-danger{color:var(--bad)}
+.lib-ctx-item.is-off{opacity:.5}
 .lib-ctx-item.is-danger:hover{background:rgba(255,80,80,.12);color:var(--bad)}
 .lib-ctx-sep{height:1px;background:var(--border-2);margin:6px 4px}
 
@@ -904,15 +905,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 /* ---------- credits (Settings > About). Same centered card as
    #feedback-modal, over #danger-scrim ---------- */
-#credits-modal,#yt-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
+#credits-modal,#yt-modal,#reroll-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
   max-height:calc(100dvh - 32px);overflow-y:auto;outline:none;
   background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
   box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
   opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-#credits-modal.is-open,#yt-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-#credits-modal h2,#yt-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
-#credits-modal > p,#yt-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
+#credits-modal.is-open,#yt-modal.is-open,#reroll-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#credits-modal h2,#yt-modal h2,#reroll-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
+#credits-modal > p,#yt-modal > p,#reroll-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
 .credits-group h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:16px 0 6px}
 .credits-group ul{list-style:none;margin:0;padding:0}
 .credits-group li{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-top:1px solid var(--border)}
@@ -2698,6 +2699,17 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     </div>
   </div>
 
+  <!-- ===== CuRRentSSsss "Reset with fresh picks" confirm (resetCurrentsDay) ===== -->
+  <div id="reroll-modal" role="dialog" aria-modal="true" aria-labelledby="rerollModalTitle" tabindex="-1">
+    <h2 id="rerollModalTitle">Re-roll all of today's CuRRentSSsss?</h2>
+    <p>Every song in it gets swapped for new ones. Like the ones you want to keep, or add them to a playlist, before you re-roll.</p>
+    <p id="rerollModalLeft" hidden></p>
+    <div class="danger-modal-actions">
+      <button type="button" class="btn-ghost" id="rerollCancelBtn">Cancel</button>
+      <button type="button" class="btn-ghost is-active" id="rerollNowBtn">Re-roll</button>
+    </div>
+  </div>
+
   <!-- ===== YOUTUBE PLAYER (4th player tab) =====
        #ytSlot only reserves the space: the real YouTube player (the active
        deck's iframe in #yt-host) is positioned over it while this is open,
@@ -3613,7 +3625,7 @@ const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built f
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
 const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
 const LS_SWELL_GENERATED = 'ebbless:swellGeneratedAt';  // ms timestamp Swell was last regenerated
-const LS_SWELL_BLOCKS = 'ebbless:swellBlocks';  // { day: 'YYYY-MM-DD', n } - CuRRentSSsss daily drops built so far today (refreshSwellIfDue)
+const LS_SWELL_BLOCKS = 'ebbless:swellBlocks';  // { day: 'YYYY-MM-DD', n, rerolls } - CuRRentSSsss daily drops built so far today, and "Reset with fresh picks" re-rolls used today (refreshSwellIfDue)
 const LS_BLEND_GENERATED = 'ebbless:blendGeneratedAt';  // ms timestamp SwiiiRrrLL was last reblended
 const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist from /spotifyart (0 = looked up, none found)
 const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
@@ -6370,7 +6382,7 @@ function openLibCtxMenu(id, btn){
   // SwiiiRrrLL is generated too - its only action is a fresh reblend.
   const items = id === SWELL_ID ? [
     { action: 'currents-more', label: currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Add more tracks', icon: CTX_ICON_ADD_MORE },
-    { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding fresh tracks...' : 'Reset with fresh picks', icon: CTX_ICON_REFRESH },
+    { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding fresh tracks...' : currentsRerollsLeft() ? 'Reset with fresh picks' : 'No re-rolls left today', icon: CTX_ICON_REFRESH, off: !currentsRerollsLeft() },
   ] : id === BLEND_ID ? [
     { action: 'blend-reshuffle', label: 'Reblend now', icon: CTX_ICON_REFRESH },
   ] : [
@@ -6407,8 +6419,9 @@ function openLibCtxMenu(id, btn){
       return;
     }
     const b = document.createElement('button');
-    b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '');
+    b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '') + (item.off ? ' is-off' : '');
     b.innerHTML = item.icon + '<span>' + item.label + '</span>';
+    if (item.off) b.setAttribute('aria-disabled', 'true');
     b.addEventListener('click', (e) => { e.stopPropagation(); closeLibCtxMenu(); handleLibCtxAction(item.action, id); });
     libCtxMenu.appendChild(b);
   });
@@ -10075,10 +10088,13 @@ function swellHasUnseenDrop(){
    rank (timeWeightedShuffle / applyTimePreference). Nothing user-facing
    says what drives the picks.
    "Add more" runs a smaller round for the current period and appends;
-   "Reset" re-rolls today's drops from scratch (resetCurrentsDay). */
+   "Reset" re-rolls today's drops from scratch (resetCurrentsDay).
+   Reset asks first (like or save anything worth keeping) and is capped at
+   CURRENTS_REROLLS_PER_DAY a day; a reload never changes the list. */
 const CURRENTS_BLOCK_TRACKS = 7;     // per daily period: 7 at midnight, 49 by the end of the day
 const CURRENTS_BLOCK_PLAYLISTS = 3;  // saved-playlist slots per drop, rotating through the library
 const CURRENTS_MORE_TRACKS = 8;      // "Add more" stays a smaller round
+const CURRENTS_REROLLS_PER_DAY = 2;  // "Reset with fresh picks", per local day
 const CURRENTS_CONCURRENCY = 3;
 let currentsBusy = null;             // null | 'reset' | 'block' | 'more'
 
@@ -10226,8 +10242,10 @@ async function currentsFillSlot(slot, ctx, count){
 }
 // mode: 'reset' (the day's first drop) | 'block' (a later drop) | 'more'.
 // timeCtx: the mood to pick for (currentsPeriodContext); block: drop index.
-async function buildCurrentsPicks(mode, timeCtx, block){
+// avoid: optional Set of videoIds to skip too (the list a re-roll replaces).
+async function buildCurrentsPicks(mode, timeCtx, block, avoid){
   const exclude = libraryVideoIdSet();
+  if (avoid) avoid.forEach(v => exclude.add(v));
   (lsGet(LS_PLAY_HISTORY, []) || []).forEach(h => { if (h && h.v) exclude.add(h.v); });
   const current = playlistById(SWELL_ID);
   const soft = new Set();
@@ -10305,7 +10323,8 @@ function rerenderLibraryKeepPanel(){
 }
 // mode: 'reset' | 'block' | 'more' (see buildCurrentsPicks). opts: silent,
 // doneToast (false skips the closing toast), timeCtx + block (which drop and
-// its mood; defaults to the current period). -> number of tracks added.
+// its mood; defaults to the current period), avoid (see buildCurrentsPicks).
+// -> number of tracks added.
 async function refreshCurrents(mode, opts){
   const silent = !!(opts && opts.silent);
   if (currentsBusy){ if (!silent) showToast('CuRRentSSsss is already updating...'); return 0; }
@@ -10318,7 +10337,7 @@ async function refreshCurrents(mode, opts){
     const period = rosicrucianPeriod();
     const timeCtx = (opts && opts.timeCtx) || currentsPeriodContext(period.weekday, period.periodIndex);
     const block = opts && typeof opts.block === 'number' ? opts.block : period.periodIndex;
-    const picks = await buildCurrentsPicks(mode, timeCtx, block);
+    const picks = await buildCurrentsPicks(mode, timeCtx, block, opts && opts.avoid);
     if (!picks.length){
       if (doneToast) showToast("Couldn't find new tracks right now. Try again in a bit.");
       return 0;
@@ -10343,7 +10362,8 @@ async function refreshCurrents(mode, opts){
     } else {
       const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
       const nowTrack = cur && cur.plId === SWELL_ID ? trackAt(state.queuePos) : null;
-      const tracks = nowTrack ? [nowTrack].concat(picks.filter(t => t.videoId !== nowTrack.videoId)) : picks;
+      // the kept track takes a slot, so the day's count stays on schedule
+      const tracks = nowTrack ? [nowTrack].concat(picks.filter(t => t.videoId !== nowTrack.videoId)).slice(0, CURRENTS_BLOCK_TRACKS) : picks;
       pl.tracks = tracks;
       lsSet(LS_PL(SWELL_ID), pl);
       lsSet(LS_SWELL_GENERATED, Date.now());
@@ -10358,38 +10378,82 @@ async function refreshCurrents(mode, opts){
   }
   return added;
 }
+// Today's LS_SWELL_BLOCKS record (a fresh one once the day has rolled over).
+function swellSchedule(day){
+  const s = lsGet(LS_SWELL_BLOCKS, null);
+  if (!s || s.day !== day) return { day, n: 0, rerolls: 0 };
+  return { day, n: s.n | 0, rerolls: s.rerolls | 0 };
+}
+function currentsRerollsLeft(){
+  return Math.max(0, CURRENTS_REROLLS_PER_DAY - swellSchedule(localDayKey(Date.now())).rerolls);
+}
 // Daily schedule: CuRRentSSsss should hold one drop per period started so
 // far today (periodIndex + 1). The first drop of a new day resets the list;
 // the rest append. Opening mid-day catches up, each missed drop picked for
-// its own period, and LS_SWELL_BLOCKS keeps a reload on the same day from
-// rebuilding anything. Polled every minute (and on launch).
+// its own period, and LS_SWELL_BLOCKS keeps track of how far today got.
+// Polled every minute (and on launch).
+// opts.reroll rebuilds every drop due so far from scratch, skipping the
+// tracks it replaces; it only counts toward today's re-rolls once the first
+// drop actually lands.
 async function refreshSwellIfDue(opts){
   const loud = !!(opts && opts.loud);
+  const reroll = !!(opts && opts.reroll);
   if (currentsBusy) return;
   const now = new Date();
   const day = localDayKey(now.getTime());
   const due = rosicrucianPeriod(now).periodIndex + 1;
-  const sched = lsGet(LS_SWELL_BLOCKS, null);
-  let n = sched && sched.day === day ? sched.n : 0;
+  const sched = swellSchedule(day);
+  let n = reroll ? 0 : sched.n;
+  let avoid = null;
+  if (reroll){
+    const old = playlistById(SWELL_ID);
+    avoid = new Set(old ? old.tracks.map(t => t.videoId).filter(Boolean) : []);
+  }
   let total = 0;
   while (n < due){
     const got = await refreshCurrents(n === 0 ? 'reset' : 'block', {
       silent: !(loud && n === 0 && !total), doneToast: false,
-      timeCtx: currentsPeriodContext(now.getDay(), n), block: n,
+      timeCtx: currentsPeriodContext(now.getDay(), n), block: n, avoid,
     });
     if (!got) break;   // offline / nothing to seed from: the next poll tries again
+    if (reroll && n === 0) sched.rerolls++;
     total += got;
     n++;
-    lsSet(LS_SWELL_BLOCKS, { day, n });
+    sched.n = n;
+    lsSet(LS_SWELL_BLOCKS, sched);
   }
   if (loud) showToast(total ? 'CuRRentSSsss refreshed: ' + total + ' new tracks' : "Couldn't find new tracks right now. Try again in a bit.");
 }
-// "Reset with fresh picks": re-roll every drop due so far today.
+// "Reset with fresh picks": after a confirm, re-roll every drop due so far
+// today. CURRENTS_REROLLS_PER_DAY a day; Cancel costs nothing.
+const rerollModal = $('reroll-modal');
 function resetCurrentsDay(){
   if (currentsBusy){ showToast('CuRRentSSsss is already updating...'); return; }
-  lsSet(LS_SWELL_BLOCKS, null);
-  refreshSwellIfDue({ loud: true });
+  if (!currentsRerollsLeft()){ showToast('No re-rolls left today. CuRRentSSsss starts fresh at midnight.'); return; }
+  const last = currentsRerollsLeft() === 1;
+  $('rerollModalLeft').hidden = !last;
+  $('rerollModalLeft').textContent = last ? "This is today's last re-roll." : '';
+  dangerScrim.classList.add('is-open');
+  rerollModal.classList.add('is-open');
+  setTimeout(() => $('rerollCancelBtn').focus(), 50);
 }
+function closeRerollPrompt(){
+  if (!rerollModal.classList.contains('is-open')) return;
+  rerollModal.classList.remove('is-open');
+  dangerScrim.classList.remove('is-open');
+}
+$('rerollNowBtn').addEventListener('click', () => {
+  closeRerollPrompt();
+  if (currentsBusy){ showToast('CuRRentSSsss is already updating...'); return; }
+  if (!currentsRerollsLeft()) return;
+  refreshSwellIfDue({ loud: true, reroll: true });
+});
+$('rerollCancelBtn').addEventListener('click', closeRerollPrompt);
+dangerScrim.addEventListener('click', closeRerollPrompt);
+rerollModal.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape'){ e.preventDefault(); closeRerollPrompt(); }
+  e.stopPropagation();
+});
 
 /* ---------- SwiiiRrrLL (blend-playlist, GitHub #60) ----------
    A built-in playlist blended from the listener's own library - every saved
