@@ -7096,7 +7096,7 @@ Add entries in this shape:
   of `/ytvideo` (pasting a YouTube link - `youtube-link-paste-play`;
   loudness for `volume-equalizer`).
 - **Branch:** agent/ytvideo-lookup-broken
-- **Build (b1dff89):** intermittent (~30-40% of uncached lookups got a watch page with no `videoDetails`; cause inferred, not captured). `handleYtVideo` now retries the watch page once, then falls back to oEmbed (title/channel/thumb, `loudnessDb: null`, `partial: true`, cached 1h); failure reasons are logged. Client `ensureLoudness` skips caching partial responses. SW v37. **Needs `wrangler deploy` (staging, then prod): not yet deployed.**
+- **Build (b1dff89):** intermittent (~30-40% of uncached lookups got a watch page with no `videoDetails`; cause inferred, not captured). `handleYtVideo` now retries the watch page once, then falls back to oEmbed (title/channel/thumb, `loudnessDb: null`, `partial: true`, cached 1h); failure reasons are logged. Client `ensureLoudness` skips caching partial responses. SW v37. Worker deployed to staging + prod 2026-09-30.
 - **Notes:** Found 2026-09-30 while checking vibe-search playback. Not
   caused by that change. Confirm what breaks for users on the live app.
 
@@ -7139,7 +7139,7 @@ Add entries in this shape:
 - **Touches:** vibe search flow (follow-up to merged
   `conversational-vibe-search`), worker.
 - **Branch:** agent/vibe-search-named-playlists
-- **Build (0510ddc):** results now blend ~30% songs the listener knows (liked, history, saved playlists; tag-matched to the vibe; every third slot, "you know this") with new finds; 1-3 word distilled, collision-free names (`vibePlaylistName()`); main button "Save & play" saves a real playlist, "Just play N songs" keeps the unsaved play. Worker prompt tightened, `VIBE_CACHE_VERSION` v3. SW v38. **Needs `wrangler deploy` for the worker naming (client works without it).** Blend not yet seen with a real library; playback untested.
+- **Build (0510ddc):** results now blend ~30% songs the listener knows (liked, history, saved playlists; tag-matched to the vibe; every third slot, "you know this") with new finds; 1-3 word distilled, collision-free names (`vibePlaylistName()`); main button "Save & play" saves a real playlist, "Just play N songs" keeps the unsaved play. Worker prompt tightened, `VIBE_CACHE_VERSION` v3. SW v38. Worker deployed 2026-09-30. Blend not yet seen with a real library; playback untested.
 - **Notes:** Synced from Geethub issue #220. Check what the shipped
   version already does before building; may be a partial gap only.
 
@@ -7159,7 +7159,7 @@ Add entries in this shape:
   no redesign, no Spotify-based trivia.
 - **Touches:** player controls row, YouTube embed, Credits modal, docs.
 - **Branch:** agent/platform-compliance-audit
-- **Build (65269b4):** audit + compliance list in `docs/PLATFORM-AUDIT.md`; license log in `docs/AUDIO-LICENSES.md`. Credits Spotify row links the current track ("Listen to ... on Spotify"; falls back to album/playlist link; worker now returns `spotifyId`). Fourth "YouTube" tab (`#ytPanelBtn`) opens `#yt-modal` showing the real playing YouTube player (16:9, min 200px tall, nothing overlaid); disabled/dimmed (not hidden) when the track has no working YouTube video (no id, SoundCloud/podcast, casting, embed error), closes if the track loses it (owner follow-up). SW v39. **Needs `wrangler deploy` for per-track Spotify links.**
+- **Build (65269b4):** audit + compliance list in `docs/PLATFORM-AUDIT.md`; license log in `docs/AUDIO-LICENSES.md`. Credits Spotify row links the current track ("Listen to ... on Spotify"; falls back to album/playlist link; worker now returns `spotifyId`). Fourth "YouTube" tab (`#ytPanelBtn`) opens `#yt-modal` showing the real playing YouTube player (16:9, min 200px tall, nothing overlaid); disabled/dimmed (not hidden) when the track has no working YouTube video (no id, SoundCloud/podcast, casting, embed error), closes if the track loses it (owner follow-up). SW v39. Worker deployed to prod 2026-09-30.
 - **Open owner decisions (from audit, nothing changed):** YouTube must-fix 1-5 (hidden 1x1 player used for audio, muting through ads, parallel muted autoplay preload, scraping YouTube pages): options A visible player / B drop ad-muting + preload / C YouTube Data API / D accept risk for small beta. Spotify item 6 (Developer Policy III.5 / scraping embed pages): product positioning. Item 8: altered Spotify cover art in record/cassette/blurred styles. Item 7: small "Listen on Spotify" near the title? Confirm cassette-rewind Pixabay license; supply needle/intro sources.
 - **Notes:** Synced from Geethub issue #221 (full brief there). Its YouTube
   control supersedes `video-playback-option`. Also sets rules for
