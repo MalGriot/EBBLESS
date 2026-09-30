@@ -6693,7 +6693,7 @@ Add entries in this shape:
   cymatics and landscape excluded. Real devices/long wrapping titles untested.
 
 ### conversational-vibe-search: Search by typing or speaking a mood/vibe to get a playlist
-- **Status:** review
+- **Status:** approved
 - **Priority:** medium
 - **Description:** Let users type conversationally (like talking to an LLM) or speak a sentence into the search bar describing their mood, vibe or environment, and get back a playlist of existing songs that fit. Needs a free tool or LLM working silently in the background to interpret the request.
 - **Touches:** search bar / paste bar, discovery backend (worker). Follow-on to merged `playlist-vibe-search`.
@@ -7077,3 +7077,23 @@ Add entries in this shape:
   CSS-drawn; this asks for a reference-accurate, asset-based shell.
 
   **Built (4aa5daf):** cassette inline SVG redrawn in place (charcoal grain shell, chamfered label with album art, ivory hubs, tape window, lower panel with holes, 4 screws); same 400x256 frame so fullscreen/stack/crossfade/reels unchanged. Reference photo was unreachable from the sandbox - compare against it.
+
+### ytvideo-lookup-broken: Backend YouTube video lookup says "not found" for real videos
+- **Status:** draft
+- **Priority:** high
+- **Description:** The worker's `/ytvideo?id=` route returns
+  `{"error":"video not found (private, deleted, or invalid link?)"}` for
+  normal public videos (e.g. `lbjZPFBD6JU` Norah Jones "Come Away With Me",
+  `-2u7PWUWcJM`, `BqqPgA-yuuc`) on both production and staging; only a
+  likely-cached `dQw4w9WgXcQ` still resolves. `/search` still works.
+  Likely YouTube now serving a bot-check/consent page to Cloudflare's
+  egress IPs for the watch-page scrape (`handleYtVideo` ->
+  `fetchYouTubePage`), so `videoDetails` is missing. Find the cause and a
+  robust source (e.g. oEmbed for title/author, a different page or
+  endpoint for duration/loudness), with graceful fallback.
+- **Touches:** worker `handleYtVideo` / `fetchYouTubePage`; client callers
+  of `/ytvideo` (pasting a YouTube link - `youtube-link-paste-play`;
+  loudness for `volume-equalizer`).
+- **Branch:**
+- **Notes:** Found 2026-09-30 while checking vibe-search playback. Not
+  caused by that change. Confirm what breaks for users on the live app.
