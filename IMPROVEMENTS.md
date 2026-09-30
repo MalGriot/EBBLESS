@@ -7027,3 +7027,45 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #212 (title only). Touches the same
   view as many merged Settings entries (install, share, credits, bug report).
   **Built (b54d82b):** Settings regrouped into Playback / App / Feedback & support / About / Library & data (was Danger zone). Same ids and handlers; install row now a row in App; onboarding CSS retargeted to `#settingsAboutBlock`.
+
+### autoadvance-stall-full-progress: Next track sometimes stalls with a full progress bar
+- **Status:** draft
+- **Priority:** high
+- **Description:** Sometimes when a song ends and the player should move to
+  the next one, it switches to the next track's art and UI colors but
+  doesn't play: it sits paused, with the progress bar already shown as full
+  as if that song had finished. The next track should start playing from 0
+  with its progress bar reset.
+- **Touches:** track-end / auto-advance handling, progress bar state.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #213 (bug). Related to merged
+  `bld-background-tab-autoadvance`, but a different symptom (advances the UI
+  and stalls, stale progress), so not a duplicate. No repro steps given.
+
+### library-filter-inline: Put the All/Playlist/Album/Podcast filter on the button row
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In the library, the All/Playlist/Album/Podcast filter
+  button should sit on the same line as the other library buttons below it,
+  placed after "New playlist", instead of on its own line.
+- **Touches:** library header/toolbar layout.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #214. Filter chips come from merged
+  `podcast-library-category` / `playlist-menu-album-toggle`.
+
+### cassette-reference-match: Rebuild the cassette to match a real reference cassette
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Upgrade the existing cassette art style to closely match
+  a reference photo of a real cassette (dark charcoal textured shell,
+  chamfered recessed label, two reels, central tape window, four corner
+  screws, detailed lower openings). Keep album art as the label and all
+  existing playback behavior. Suggested approach: one optimized static
+  shell image + album-art label layer + small CSS/SVG spinning reels tied to
+  play/pause (respecting reduced motion). No canvas/WebGL/video.
+- **Touches:** cassette art style (miniplayer + fullscreen cassette).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #215 - full brief, reference image
+  and app screenshot links are in the issue body. Follow-up to merged
+  `cassette-beautification` (new ask, not a duplicate): that pass was
+  CSS-drawn; this asks for a reference-accurate, asset-based shell.
