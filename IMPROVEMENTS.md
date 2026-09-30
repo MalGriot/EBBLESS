@@ -7099,13 +7099,14 @@ Add entries in this shape:
   caused by that change. Confirm what breaks for users on the live app.
 
 ### library-search-toggle: Library search should be a magnifying-glass button
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Replace the always-visible "Search your library" box
   with a magnifying-glass icon button aligned with the other library header
   buttons; tapping it toggles the search box open/closed as a drop-down.
 - **Touches:** library header, `#libSearch` / `#libSearchClear`.
 - **Branch:** agent/library-search-toggle
+- **Build (2c76afc):** `#libSearchToggle` in `.lib-head-actions` opens/closes `#libSearchBox`; closing clears the query; Esc on empty closes. "+ New playlist" shortens to "+ New" below 402px (was 370px) so the row fits. SW v36.
 - **Notes:** Synced from Geethub issue #218.
 
 ### hour-currents: Replace the time-of-day row with Currents growing 7 tracks per hour phase

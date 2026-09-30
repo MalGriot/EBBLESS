@@ -218,9 +218,12 @@ body.onb-active .paste-guide{display:none}
 }
 /* the filter cycle sits in .lib-head-actions right after "+ New playlist"
    (#214); on the narrowest phones that row can't fit the longest cycle
-   label ("Podcasts"), so shorten the button to "+ New" there */
-@media (max-width:369.98px){
+   label ("Podcasts") plus the search toggle (#218), so shorten the button
+   to "+ New" there, and let the row wrap rather than overflow on the
+   very smallest screens */
+@media (max-width:401.98px){
   .lib-new-word{display:none}
+  .lib-head-actions{flex-wrap:wrap;row-gap:8px;flex-shrink:1;min-width:0}
 }
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
@@ -228,7 +231,8 @@ body.onb-active .paste-guide{display:none}
 .lib-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 16px}
 #libraryGrid{margin-top:14px}
 /* library-search: live filter over the user's own saved playlists/albums
-   and their tracks (see renderLibrary()). Styled like .import-row's input. */
+   and their tracks (see renderLibrary()). Styled like .import-row's input.
+   Hidden until the magnifying-glass button in .lib-head-actions opens it (#218). */
 .lib-search{position:relative;margin-top:14px}
 .lib-search-icon{position:absolute;left:12px;top:50%;width:15px;height:15px;transform:translateY(-50%);color:var(--faint-2);pointer-events:none}
 .lib-search input{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -2115,6 +2119,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
             </div>
             <button type="button" class="lib-filter-cycle" id="libFilterCycle" aria-label="Filter library"></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn" id="libSearchToggle" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+            </button>
             <div class="lib-sort">
               <button type="button" class="view-toggle-btn lib-sort-btn" id="libSortBtn" aria-label="Sort library" aria-haspopup="true" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
@@ -2151,7 +2158,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             </div>
           </div>
         </div>
-        <div class="lib-search" role="search">
+        <div class="lib-search hidden" id="libSearchBox" role="search">
           <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
           <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
@@ -5231,6 +5238,7 @@ const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
 const libFilter = $('libFilter');
 const libFilterCycle = $('libFilterCycle');
 const libSearch = $('libSearch'), libSearchClear = $('libSearchClear');
+const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
@@ -5862,8 +5870,8 @@ libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
 libFilterCycle.textContent = LIB_FILTER_LABEL[getLibraryFilter()];
 
 // library-search: case- and accent-insensitive match against the user's own
-// saved library only. Never focused programmatically, so the mobile keyboard
-// only appears when the field itself is tapped.
+// saved library only. The field is a drop-down behind #libSearchToggle (#218):
+// opening focuses it, closing clears the query so the library returns to normal.
 function normLibSearch(s){
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
@@ -5875,6 +5883,7 @@ libSearch.addEventListener('input', () => {
 $('timeRowPlay').addEventListener('click', () => playTimeMix());
 libSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && libSearch.value){ e.preventDefault(); libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); setLibSearchOpen(false); libSearchToggle.focus(); }
   else if (e.key === 'Enter'){ e.preventDefault(); libSearch.blur(); }
 });
 libSearchClear.addEventListener('click', () => {
@@ -5882,6 +5891,15 @@ libSearchClear.addEventListener('click', () => {
   libSearchClear.classList.add('hidden');
   renderLibrary();
 });
+function setLibSearchOpen(open){
+  libSearchBox.classList.toggle('hidden', !open);
+  libSearchToggle.classList.toggle('is-active', open);
+  libSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open){ libSearch.focus(); return; }
+  libSearch.blur();
+  if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
+}
+libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
 
 function renderLibrary(){
   closeLibraryPlaylistPanel();
