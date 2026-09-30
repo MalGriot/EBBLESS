@@ -3081,15 +3081,25 @@ async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
 //     lib: { order: [ids], at, m: { id: { at, del? } } },  // library membership + order
 //     pin: { order: [ids], at, m: { ... } },               // pinned, same shape
 //     pl:  { id: { at, d: playlistData, tr?: { trackKey: { at, del? } } } | { at, del: 1 } },
-//     set: { lsKey: { at, val } | { at, del: 1 } } }       // synced settings
+//     set: { lsKey: { at, val } | { at, del: 1 } },        // synced settings
+//     now: { deviceId: session } }                        // what each device is playing
 // Every entry carries `at` (ms of the last local change to it) and a removal
 // is kept as a tombstone ({ at, del: 1 }) rather than just going missing, so
 // it propagates instead of being resurrected by a device that still has it.
 // Each entry is last-writer-wins; membership, custom-playlist tracks and
 // settings merge per item, so neither device's additions are lost.
+// `now` is the small "now playing" session each signed-in device publishes
+// for handoff (see NOW PLAYING HANDOFF): not library data, just the latest
+// word from each device, whole-entry LWW per device id and never tombstoned
+// - it ages out instead. Clients from before it existed drop it on normalize
+// and never send it, so it rides along in the same v2 record.
 const PROFILE_SCHEMA = 2;
 const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
 const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+const PROFILE_NOW_TTL_MS = 24 * 60 * 60 * 1000; // a session this much older than the newest one is dropped
+const PROFILE_NOW_MAX_DEVICES = 8;              // newest sessions kept; older devices age out
+const PROFILE_NOW_MAX_QUEUE = 100;              // queue entries per session
+const PROFILE_NOW_MAX_BYTES = 64 * 1024;        // a session bigger than this is dropped whole
 
 function profStamp(e) { return e && typeof e.at === 'number' && isFinite(e.at) ? e.at : 0; }
 
@@ -3134,7 +3144,7 @@ function profStampMap(src) {
 // profile. Pre-v2 data has no stamps at all, so it comes in at `at` 0 (a
 // playlist falls back to its own resolve `ts`) - any real change wins over it.
 function normalizeProfile(p) {
-  const out = { v: PROFILE_SCHEMA, lib: { order: [], at: 0, m: {} }, pin: { order: [], at: 0, m: {} }, pl: {}, set: {} };
+  const out = { v: PROFILE_SCHEMA, lib: { order: [], at: 0, m: {} }, pin: { order: [], at: 0, m: {} }, pl: {}, set: {}, now: {} };
   if (!p || typeof p !== 'object') return out;
   if (p.v !== PROFILE_SCHEMA) {
     const legacy = { lib: { order: p.lib }, pin: { order: p.pinned }, pl: {} };
@@ -3168,6 +3178,34 @@ function normalizeProfile(p) {
     if (!e || typeof e !== 'object') return;
     out.set[k] = e.del ? { at: profStamp(e), del: 1 } : { at: profStamp(e), val: e.val === undefined ? null : e.val };
   });
+  Object.entries(profObj(p.now)).forEach(([d, e]) => {
+    const s = normalizeNowSession(e);
+    if (d && s) out.now[d] = s;
+  });
+  return out;
+}
+
+// A device's now-playing session: { at, n: device name, q: [queue refs],
+// i: index into q, src, pos, play, pa, act, c, from? } - see nowSnapshot.
+// Only shape and size are enforced here; anything else is the client's to
+// interpret. Idempotent, so a stored profile re-normalizes to itself.
+function normalizeNowSession(e) {
+  if (!e || typeof e !== 'object' || Array.isArray(e) || !profStamp(e)) return null;
+  const q = (Array.isArray(e.q) ? e.q : []).slice(0, PROFILE_NOW_MAX_QUEUE);
+  const s = Object.assign({}, e, { q });
+  return profStable(s).length > PROFILE_NOW_MAX_BYTES ? null : s;
+}
+
+// Whole-session LWW per device. Age is measured against the newest session
+// rather than the clock, so the client and the Worker can't disagree about
+// what has expired (a device with a skewed clock would otherwise ping-pong).
+function mergeNowPlaying(x, y) {
+  const all = {};
+  new Set([...Object.keys(x || {}), ...Object.keys(y || {})]).forEach(d => { all[d] = profPick((x || {})[d], (y || {})[d]); });
+  const ids = Object.keys(all).sort((p, q) => (profStamp(all[q]) - profStamp(all[p])) || (p < q ? -1 : p > q ? 1 : 0));
+  const newest = ids.length ? profStamp(all[ids[0]]) : 0;
+  const out = {};
+  ids.slice(0, PROFILE_NOW_MAX_DEVICES).forEach(d => { if (profStamp(all[d]) >= newest - PROFILE_NOW_TTL_MS) out[d] = all[d]; });
   return out;
 }
 
@@ -3248,7 +3286,7 @@ function mergeProfiles(a, b, now) {
     pl[id] = e;
   });
   const set = mergeStampMaps(a.set, b.set, cutoff);
-  return { v: PROFILE_SCHEMA, lib, pin, pl, set };
+  return { v: PROFILE_SCHEMA, lib, pin, pl, set, now: mergeNowPlaying(a.now, b.now) };
 }
 // ---- end profile merge ----
 
