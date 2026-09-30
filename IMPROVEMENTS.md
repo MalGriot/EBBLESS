@@ -7160,7 +7160,7 @@ Add entries in this shape:
   need recorded source + license.
 
 ### cassette-rewind-sfx: Cassette rewind sound when restarting a song
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When the Cassette art style is active and the user
   restarts the current song (prev pressed past the restart threshold, or
@@ -7170,6 +7170,7 @@ Add entries in this shape:
 - **Touches:** mirror the LP needle sfx block (`LP_NEEDLE_*`); prev/restart
   handling; `sw.js` cache list + version bump.
 - **Branch:** agent/cassette-rewind-sfx
+- **Build (09c0e9b):** plays on every playPrev() restart (current time > 3s, or a one-track repeat wrap) when the cassette is on screen; reuses the needle sfx audio path at volume 0.6; SW v35. Not heard in a real browser yet.
 - **Notes:** Requested in-session 2026-09-30. File supplied by the user
   (`son_duquotidient-rembobinage-cassette-audio-391096.mp3`, looks like a
   Pixabay sound: add to Credits if other sfx sources are credited).
