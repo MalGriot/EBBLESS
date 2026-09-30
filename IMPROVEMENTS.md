@@ -6699,6 +6699,8 @@ Add entries in this shape:
 - **Touches:** search bar / paste bar, discovery backend (worker). Follow-on to merged `playlist-vibe-search`.
 - **Branch:** agent/conversational-vibe-search
 - **Notes:** Synced from Geethub issue #185, #186.
+  **Built:** worker `/vibe-interpret` (Workers AI llama-3.1-8b-instruct-fast, Last.fm-verified picks, heuristic fallback, `AI` binding in wrangler.toml) + bar sentence detection, mic (Web Speech), results screen. Cover art fix (061c3dc): `/spotifyart` now iTunes + Deezer in parallel, Last.fm fallback. **Needs production worker deploy at ship.** No sound verified in sandbox (YouTube blocked) - real-device check.
+
 
 ### clear-playlists-hold-button: "Delete all playlists" should be a press-and-hold button
 - **Status:** merged
