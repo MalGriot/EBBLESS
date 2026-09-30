@@ -6975,3 +6975,41 @@ Add entries in this shape:
   entry's 3-dot menu; stored as `albumOverride` on the entry, read via new
   `isAlbumEntry()` (library filter, sections, tile art, album-mode matching),
   kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
+
+### mini-player-polish: Mini-player branding, controls, remembered size/position
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Polish the desktop mini-player: show the EBBLESS "E" logo
+  instead of "malgriot.github.io"; marquee-scroll long title/artist; keep
+  keyboard shortcuts working while the mini-player is focused; hide the
+  "view site information" button; remember the user's position, style,
+  shape and size for next time, plus a "reset shape" button; react on
+  hover; give it every control the main player has; add a queue button
+  whose menu drops down or pulls up depending on where the mini-player sits.
+- **Touches:** desktop mini-player (Document Picture-in-Picture window) in
+  `index.html`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #210. Follow-up to merged
+  `desktop-mini-player` (and dropped `desktop-mini-player-reopen`) - new
+  asks, not a duplicate. Some items (site-info button, origin label) may be
+  browser chrome the page can't control; confirm per item when built.
+
+### podcast-library-category: Podcast category in the library
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Give podcasts their own category/filter in the library,
+  alongside playlists and albums.
+- **Touches:** library filter + sections, entry type detection.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #211 (title only). Builds on merged
+  `podcasts` and `playlist-menu-album-toggle`.
+
+### settings-reorganize: Reorganize the Settings menu for comfort and logic
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Regroup and reorder the Settings menu so related options
+  sit together and the most-used ones are easiest to reach.
+- **Touches:** Settings view markup/CSS in `index.html`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #212 (title only). Touches the same
+  view as many merged Settings entries (install, share, credits, bug report).
