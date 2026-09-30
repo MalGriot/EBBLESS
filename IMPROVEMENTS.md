@@ -1794,13 +1794,14 @@ Add entries in this shape:
   toggles fullscreen (not like/heart).
 
 ### video-playback-option: Add a video-playback button next to lyrics
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add an option to play the actual YouTube video (not just
   audio) for the current track, via a new button placed next to the existing
   lyrics button.
 - **Touches:** player view controls, YouTube embed/player logic.
 - **Branch:** agent/platform-compliance-audit
+- **Build:** covered by `platform-compliance-audit` (65269b4), YouTube tab.
 - **Notes:** Synced from Geethub issue #45.
 
 ### desktop-mini-player: Floating desktop mini-player when tab loses focus
@@ -7142,7 +7143,7 @@ Add entries in this shape:
   version already does before building; may be a partial gap only.
 
 ### platform-compliance-audit: Spotify attribution + YouTube player compliance audit
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Audit how Spotify metadata, YouTube playback, the visual
   field, Credits, lyrics and album art interact; report must-fix /
@@ -7157,6 +7158,8 @@ Add entries in this shape:
   no redesign, no Spotify-based trivia.
 - **Touches:** player controls row, YouTube embed, Credits modal, docs.
 - **Branch:** agent/platform-compliance-audit
+- **Build (65269b4):** audit + compliance list in `docs/PLATFORM-AUDIT.md`; license log in `docs/AUDIO-LICENSES.md`. Credits Spotify row links the current track ("Listen to ... on Spotify"; falls back to album/playlist link; worker now returns `spotifyId`). Fourth "YouTube" tab (`#ytPanelBtn`) opens `#yt-modal` showing the real playing YouTube player (16:9, min 200px tall, nothing overlaid); disabled/dimmed (not hidden) when the track has no working YouTube video (no id, SoundCloud/podcast, casting, embed error), closes if the track loses it (owner follow-up). SW v39. **Needs `wrangler deploy` for per-track Spotify links.**
+- **Open owner decisions (from audit, nothing changed):** YouTube must-fix 1-5 (hidden 1x1 player used for audio, muting through ads, parallel muted autoplay preload, scraping YouTube pages): options A visible player / B drop ad-muting + preload / C YouTube Data API / D accept risk for small beta. Spotify item 6 (Developer Policy III.5 / scraping embed pages): product positioning. Item 8: altered Spotify cover art in record/cassette/blurred styles. Item 7: small "Listen on Spotify" near the title? Confirm cassette-rewind Pixabay license; supply needle/intro sources.
 - **Notes:** Synced from Geethub issue #221 (full brief there). Its YouTube
   control supersedes `video-playback-option`. Also sets rules for
   `ebbless-deep`: paid value must be EBBLESS-owned (skins, visuals, themes,
