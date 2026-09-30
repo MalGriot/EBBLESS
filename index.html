@@ -3572,6 +3572,7 @@ function ensureLoudness(videoId){
   if (!videoId || isNativeVideoId(videoId) || videoId in loudnessMap() || loudnessInFlight.has(videoId)) return;
   loudnessInFlight.add(videoId);
   fetchYouTubeVideo(videoId).then((d) => {
+    if (d && d.partial) return;   // worker's oEmbed fallback: loudness unknown, not "none" - ask again later
     const m = loudnessMap();
     m[videoId] = (d && typeof d.loudnessDb === 'number') ? Math.round(d.loudnessDb * 100) / 100 : null;
     const keys = Object.keys(m);
