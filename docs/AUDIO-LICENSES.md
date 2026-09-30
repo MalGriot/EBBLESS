@@ -21,10 +21,10 @@ Rules (from Geethub #221):
 
 | File | Used for | Source | Author | License | Status |
 |------|----------|--------|--------|---------|--------|
-| `sfx/cassette-rewind.mp3` | Cassette art style: rewind sound when restarting a song | Supplied by the owner as `son_duquotidient-rembobinage-cassette-audio-391096.mp3`. The filename pattern matches a Pixabay sound download (item 391096) | son_duquotidient (per filename) | Probably the [Pixabay Content License](https://pixabay.com/service/license-summary/) (commercial use allowed, no attribution required, no standalone redistribution). Not confirmed | Confirm the Pixabay page for item 391096 and record its URL here |
-| `sfx/needle-drop.mp3` | Spinning Record art style: needle drop on play | Unknown. Added in commit `1c27cfe` ("Use real needle drop/lift recordings") with no source noted; the file carries only an ffmpeg encoder tag | unknown | unknown | Needs source + license before any paid use |
-| `sfx/needle-lift.mp3` | Spinning Record art style: needle lift on pause | Unknown, same commit and situation as needle-drop | unknown | unknown | Needs source + license before any paid use |
-| `brand/assets/intro-theme.mp3` | Onboarding intro music (`#onbMusic`) | Unknown. Added in commit `b176a5a` with no source noted; no metadata tags in the file | unknown | unknown | Owner to confirm (original MAL GRIOT work, or licensed) |
+| `sfx/cassette-rewind.mp3` | Cassette art style: rewind sound when restarting a song | Original | MAL GRIOT | EBBLESS-owned | Fine |
+| `sfx/needle-drop.mp3` | Spinning Record art style: needle drop on play | Original | MAL GRIOT | EBBLESS-owned | Fine |
+| `sfx/needle-lift.mp3` | Spinning Record art style: needle lift on pause | Original | MAL GRIOT | EBBLESS-owned | Fine |
+| `brand/assets/intro-theme.mp3` | Onboarding intro music (`#onbMusic`) | Original | MAL GRIOT | EBBLESS-owned | Fine |
 | `keepAliveAudio` (inline `data:audio/wav` in `index.html`) | Near-silent loop that keeps mobile browsers from suspending the tab | Generated for EBBLESS (dither noise, no recording) | EBBLESS | EBBLESS-owned | Fine |
 | Synthesized needle fallback (`lpSynthNeedle` in `index.html`) | Played only if a needle file fails to load | Generated in code with Web Audio | EBBLESS | EBBLESS-owned | Fine |
 

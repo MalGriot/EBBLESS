@@ -7161,7 +7161,7 @@ Add entries in this shape:
 - **Branch:** agent/platform-compliance-audit
 - **Build (65269b4):** audit + compliance list in `docs/PLATFORM-AUDIT.md`; license log in `docs/AUDIO-LICENSES.md`. Credits Spotify row links the current track ("Listen to ... on Spotify"; falls back to album/playlist link; worker now returns `spotifyId`). Fourth "YouTube" tab (`#ytPanelBtn`) opens `#yt-modal` showing the real playing YouTube player (16:9, min 200px tall, nothing overlaid); disabled/dimmed (not hidden) when the track has no working YouTube video (no id, SoundCloud/podcast, casting, embed error), closes if the track loses it (owner follow-up). SW v39. Worker deployed to prod 2026-09-30.
 - **Owner decision 2026-09-30:** YouTube must-fix 1-5 -> option D, accept the risk for the small beta; keep the hidden player, ad muting and preload as they are. Revisit before any wider launch.
-- **Open owner decisions (from audit, nothing changed):** ~~YouTube must-fix 1-5~~ (decided: D) (hidden 1x1 player used for audio, muting through ads, parallel muted autoplay preload, scraping YouTube pages): options A visible player / B drop ad-muting + preload / C YouTube Data API / D accept risk for small beta. Spotify item 6 (Developer Policy III.5 / scraping embed pages): product positioning. Item 8: altered Spotify cover art in record/cassette/blurred styles. Item 7: small "Listen on Spotify" near the title? Confirm cassette-rewind Pixabay license; supply needle/intro sources.
+- **Open owner decisions (from audit, nothing changed):** ~~YouTube must-fix 1-5~~ (decided: D) (hidden 1x1 player used for audio, muting through ads, parallel muted autoplay preload, scraping YouTube pages): options A visible player / B drop ad-muting + preload / C YouTube Data API / D accept risk for small beta. Spotify item 6 (Developer Policy III.5 / scraping embed pages): product positioning. Item 8: altered Spotify cover art in record/cassette/blurred styles. Item 7: small "Listen on Spotify" near the title? ~~Sound licenses~~ (resolved: all EBBLESS sounds are original MAL GRIOT work, metadata stripped).
 - **Notes:** Synced from Geethub issue #221 (full brief there). Its YouTube
   control supersedes `video-playback-option`. Also sets rules for
   `ebbless-deep`: paid value must be EBBLESS-owned (skins, visuals, themes,
@@ -7180,9 +7180,8 @@ Add entries in this shape:
   handling; `sw.js` cache list + version bump.
 - **Branch:** agent/cassette-rewind-sfx
 - **Build (09c0e9b):** plays on every playPrev() restart (current time > 3s, or a one-track repeat wrap) when the cassette is on screen; reuses the needle sfx audio path at volume 0.6; SW v35. Not heard in a real browser yet.
-- **Notes:** Requested in-session 2026-09-30. File supplied by the user
-  (`son_duquotidient-rembobinage-cassette-audio-391096.mp3`, looks like a
-  Pixabay sound: add to Credits if other sfx sources are credited).
+- **Notes:** Requested in-session 2026-09-30. Original MAL GRIOT sound
+  (all file metadata stripped).
 
 ### currents-reload-reroll: CuRRentSSsss menu re-roll: all songs, max 2 a day, "like first" prompt
 - **Status:** merged
