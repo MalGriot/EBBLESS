@@ -161,7 +161,7 @@ async function handleEmbed(kind, url, ctx) {
   const id = url.searchParams.get('id');
   if (!id || !/^[a-zA-Z0-9]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/' + kind + '/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -555,7 +555,7 @@ async function handleSearch(url, ctx) {
   const album = (url.searchParams.get('album') || '').trim().slice(0, 200);
 
   const firstArtist = artist.split(',')[0].trim().toLowerCase();
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist + '|' + sourceDurationSeconds) +
     (altCount !== SEARCH_DEFAULT_ALTS ? '/alts' + altCount : '') +
     (album ? '/album/' + encodeURIComponent(album) : '');
@@ -721,7 +721,7 @@ async function handleTrack(url, ctx) {
   const id = url.searchParams.get('id');
   if (!id || !/^[a-zA-Z0-9]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/track/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -782,7 +782,7 @@ async function handleYtPlaylist(url, ctx) {
   const id = url.searchParams.get('id');
   if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/ytplaylist/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -821,7 +821,7 @@ async function handleYtVideo(url, ctx) {
   const id = url.searchParams.get('id');
   if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   // v2: payload gained loudnessDb (volume-equalizer) - older cached entries lack it
   const cacheKey = new Request('https://cache.internal/ytvideo2/' + id);
   const cached = await cache.match(cacheKey);
@@ -1138,7 +1138,7 @@ async function handlePodcastMatch(url, ctx) {
   const title = (url.searchParams.get('title') || '').slice(0, 300);
   const duration = parseInt(url.searchParams.get('duration'), 10) || 0;
   if (!show || !title) return json({ error: 'missing show or title' }, 400);
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podcastmatch/' + encodeURIComponent(show + '|' + title + '|' + duration));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1163,7 +1163,7 @@ async function handlePodcast(url, ctx) {
   if (src === 'apep' && !/^\d+:\d+$/.test(id)) return json({ error: 'invalid apple podcasts id' }, 400);
   if (src === 'rss' && !/^https?:\/\//i.test(id)) return json({ error: 'invalid feed url' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podcast/' + src + '/' + encodeURIComponent(id));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1303,7 +1303,7 @@ async function handleYtMix(url, ctx) {
   const videoId = url.searchParams.get('videoId');
   if (!videoId || !/^[a-zA-Z0-9_-]+$/.test(videoId)) return json({ error: 'missing or invalid videoId' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + YTMIX_CACHE_VERSION + '/ytmix/' + videoId);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1362,7 +1362,7 @@ async function handleArtistSearch(url, ctx) {
   const limit = Math.min(parseInt(url.searchParams.get('limit'), 10) || 15, 25);
   if (!artist) return json({ error: 'missing artist' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + SEARCH_CACHE_VERSION + '/artistsearch/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1511,7 +1511,7 @@ async function handleArt(url, ctx) {
   const artist = (url.searchParams.get('artist') || '').trim();
   if (!title) return json({ error: 'missing title' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/art/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1598,7 +1598,7 @@ async function handleSpotifyArt(url, env, ctx) {
   const artist = (url.searchParams.get('artist') || '').trim();
   if (!title) return json({ error: 'missing title' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/spotifyart-' + SPOTIFYART_CACHE_VERSION + '/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1697,7 +1697,7 @@ async function handleThisIsPlaylist(url, env, ctx) {
   const artist = (url.searchParams.get('artist') || '').trim();
   if (!artist) return json({ error: 'missing artist' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + THISIS_CACHE_VERSION + '/thisis/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1892,7 +1892,7 @@ async function handleLyrics(url, ctx) {
   // (album cut vs acoustic/live) and to verify a match. Older clients omit it.
   const duration = Math.max(0, parseFloat(url.searchParams.get('duration')) || 0);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/lyrics/' + LYRICS_CACHE_VERSION + '/' + videoId);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -1950,7 +1950,7 @@ async function handleAppleMusicList(url, ctx) {
   if (!/^[a-z]{2}$/.test(storefront)) return json({ error: 'invalid storefront' }, 400);
   if (!id || !/^[a-zA-Z0-9.]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/amlist/' + kind + '/' + storefront + '/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2002,7 +2002,7 @@ async function handleAppleMusicTrack(url, ctx) {
   if (!/^[a-z]{2}$/.test(storefront)) return json({ error: 'invalid storefront' }, 400);
   if (!id || !/^[a-zA-Z0-9.]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/amtrack/' + storefront + '/' + id);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2044,7 +2044,7 @@ async function handleAppleMusicTrack(url, ctx) {
 // A playlist's /resolve response only fully hydrates its first ~5 tracks and
 // leaves the rest as bare {id} stubs, so those get a follow-up batch fetch.
 async function getSoundCloudClientId(ctx, { forceRefresh } = {}) {
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/sc-client-id');
   if (!forceRefresh) {
     const cached = await cache.match(cacheKey);
@@ -2111,7 +2111,7 @@ async function handleSoundCloud(url, ctx) {
   const permalinkUrl = url.searchParams.get('url');
   if (!permalinkUrl || !/^https:\/\/(www\.)?soundcloud\.com\//i.test(permalinkUrl)) return json({ error: 'missing or invalid url' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   // Own version segment, not ART_CACHE_VERSION - bumping it (when this
   // payload's shape changes, e.g. adding scId below) shouldn't also evict
   // every unrelated Spotify/Apple Music art cache entry that constant guards.
@@ -2290,7 +2290,7 @@ async function handlePlaylistSearch(url, ctx) {
   const storefront = (url.searchParams.get('storefront') || 'us').toLowerCase();
   if (!/^[a-z]{2}$/.test(storefront)) return json({ error: 'invalid storefront' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PLAYLIST_SEARCH_CACHE_VERSION + '/playlistsearch/' + storefront + '/' + limit + '/' + encodeURIComponent(q.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2345,7 +2345,7 @@ async function handleSoundCloudTrackSearch(url, ctx) {
   if (!q) return json({ error: 'missing q' }, 400);
   const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit'), 10) || 10, 1), 20);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + SC_TRACK_SEARCH_CACHE_VERSION + '/sctracksearch/' + limit + '/' + encodeURIComponent(q.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2624,7 +2624,7 @@ function reccoArtistTracks(artist, st, ctx) {
   return st.req.artists.get(memoKey);
 }
 async function reccoArtistTracksUncached(artist, st, ctx) {
-  const cache = caches.default;
+  const cache = envCache;
   const key = new Request('https://cache.internal/' + METRICS_CACHE_VERSION + '/recco-artist/' + encodeURIComponent(metricsNorm(artist)));
   const cached = await cache.match(key);
   if (cached) { try { return await cached.json(); } catch (e) { /* refetch */ } }
@@ -2728,7 +2728,7 @@ async function lookupTrackMetrics(title, artist, env, req, ctx) {
 }
 
 async function metricsForTrack(title, artist, env, req, ctx) {
-  const cache = caches.default;
+  const cache = envCache;
   const key = new Request('https://cache.internal/' + METRICS_CACHE_VERSION + '/metrics/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(key);
   if (cached) { try { return (await cached.json()).metrics; } catch (e) { /* refetch */ } }
@@ -2777,7 +2777,7 @@ async function handleTags(url, env, ctx) {
   const artist = url.searchParams.get('artist') || '';
   if (!title) return json({ error: 'missing title' }, 400);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/tags/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2797,7 +2797,7 @@ async function handleSimilar(url, env, ctx) {
   if (!title) return json({ error: 'missing title' }, 400);
   const limit = Math.min(30, parseInt(url.searchParams.get('limit'), 10) || 20);
 
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + SIMILAR_CACHE_VERSION + '/similar/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()) + '/' + limit);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2899,7 +2899,7 @@ async function handlePoolAffinity(url, env, ctx) {
   // 25 gets per tag - a short edge cache keeps that cheap while still letting
   // fresh crowd signals show up within minutes. Sorted so tag order doesn't
   // split the cache.
-  const cache = caches.default;
+  const cache = envCache;
   const cacheKey = new Request('https://cache.internal/pool-affinity/' + encodeURIComponent(tags.slice().sort().join(',')));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -2982,7 +2982,7 @@ async function handleTesterReport(request, env, ctx) {
   if (message.length > 4000) return json({ error: 'message too long (4000 max)' }, 400);
 
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const cache = caches.default;
+  const cache = envCache;
   const rlKey = new Request('https://ratelimit.internal/tester-report/' + encodeURIComponent(ip));
   const hit = await cache.match(rlKey);
   const count = hit ? (parseInt(await hit.text(), 10) || 0) : 0;
@@ -3388,8 +3388,28 @@ function applyCors(res) {
   return new Response(res.body, { status: res.status, headers });
 }
 
+// Staging and production are both on the malgriot.workers.dev zone, so they
+// share one caches.default: without this, staging (no Last.fm/GetSongBPM
+// keys, its own KV) caches empty or partial answers that production then
+// serves as hits - /similar coming back {"source":"none"} for tracks Last.fm
+// knows well. Staging sets CACHE_NAMESPACE in wrangler.toml; production
+// leaves it unset, so its keys (and its warm cache) are unchanged.
+let CACHE_NAMESPACE = '';
+function namespacedCacheKey(req) {
+  if (!CACHE_NAMESPACE) return req;
+  const u = new URL(typeof req === 'string' ? req : req.url);
+  u.pathname = '/' + CACHE_NAMESPACE + u.pathname;
+  return new Request(u.toString());
+}
+const envCache = {
+  match: (req, opts) => caches.default.match(namespacedCacheKey(req), opts),
+  put: (req, res) => caches.default.put(namespacedCacheKey(req), res),
+  delete: (req, opts) => caches.default.delete(namespacedCacheKey(req), opts),
+};
+
 export default {
   async fetch(request, env, ctx) {
+    CACHE_NAMESPACE = env.CACHE_NAMESPACE || '';
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
     try {
