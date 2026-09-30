@@ -7097,3 +7097,65 @@ Add entries in this shape:
 - **Branch:**
 - **Notes:** Found 2026-09-30 while checking vibe-search playback. Not
   caused by that change. Confirm what breaks for users on the live app.
+
+### library-search-toggle: Library search should be a magnifying-glass button
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Replace the always-visible "Search your library" box
+  with a magnifying-glass icon button aligned with the other library header
+  buttons; tapping it toggles the search box open/closed as a drop-down.
+- **Touches:** library header, `#libSearch` / `#libSearchClear`.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #218.
+
+### hour-currents: Replace the time-of-day row with Currents growing 7 tracks per hour phase
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Remove the time-of-day / planetary-hour row (button and
+  its whole container) and use its mood-of-the-hour selection to feed
+  CuRRentSSsss instead: add 7 tracks at each of the 7 Rosicrucian-clock
+  phase changes from midnight to midnight, ending the day at 49 tracks
+  instead of 12. Every midnight, reset and start again with 7. Don't show
+  users what drives the picks.
+- **Touches:** `#timeRow*` (from merged `contextual-awareness`), Currents
+  generation (`currents-playlist-algorithm`, `currents-12-tracks`).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #219 ("hour of the moon playlist").
+  The current code treats each planetary hour as one clock hour (24 a day);
+  "7 phases a day" needs defining before build.
+
+### vibe-search-named-playlists: Vibe search should compile a named playlist of heard + new songs
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When someone searches a vibe, compile an actual
+  playlist for it with a short, unique, intelligent name (one or a few
+  words distilled from what they typed), mixing songs they've already heard
+  with new discoveries that fit the mood.
+- **Touches:** vibe search flow (follow-up to merged
+  `conversational-vibe-search`), worker.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #220. Check what the shipped
+  version already does before building; may be a partial gap only.
+
+### platform-compliance-audit: Spotify attribution + YouTube player compliance audit
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Audit how Spotify metadata, YouTube playback, the visual
+  field, Credits, lyrics and album art interact; report must-fix /
+  recommended / already-fine against current Spotify and YouTube developer
+  terms; then implement: Spotify attribution in Credits linking to the
+  current track on Spotify (updates per track, no raw URLs, no big
+  branding); a fourth "YouTube" control beside Lyrics / Sync / Album Art
+  opening the real, unobscured YouTube embed in a panel/sheet; any needed
+  fixes to the hidden-player architecture; license docs for EBBLESS-owned
+  ambient audio. Constraints: no Spotify playback, no audio-reactive
+  cymatics (visuals only slow on pause), no overlays on the YouTube player,
+  no redesign, no Spotify-based trivia.
+- **Touches:** player controls row, YouTube embed, Credits modal, docs.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #221 (full brief there). Its YouTube
+  control supersedes `video-playback-option`. Also sets rules for
+  `ebbless-deep`: paid value must be EBBLESS-owned (skins, visuals, themes,
+  original ambient audio), never third-party playback; external sounds
+  need recorded source + license.
+
