@@ -2623,8 +2623,8 @@ Add entries in this shape:
   track 0 (shares CuRRentSSsss' queue-remap helper).
 
 ### encourage-liking-songs: Nudge users to like more songs
-- **Status:** draft
-- **Priority:** low
+- **Status:** ready
+- **Priority:** high
 - **Description:** Add UX nudges that encourage users to like more songs, to
   build a richer per-user dataset - goal is a personal algorithm that
   surfaces both known favorites and undiscovered music the user will likely
@@ -2637,8 +2637,8 @@ Add entries in this shape:
   actionable as a lane.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
-- **Status:** draft
-- **Priority:** low
+- **Status:** ready
+- **Priority:** high
 - **Description:** Add accounts/profiles so the experience (library,
   playlists, likes) is consistent between mobile and desktop, survives a
   device switch, and builds a long-term per-person dataset for
@@ -6483,8 +6483,8 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #166.
 
 ### cross-platform-handoff: Hand off playback between phone, desktop, speakers, car
-- **Status:** draft
-- **Priority:** medium
+- **Status:** ready
+- **Priority:** high
 - **Description:** Move playback from phone to desktop, smart speaker, or
   car without the queue disappearing or glitching.
 - **Touches:** depends on `accounts-profiles` (cross-device sync).
@@ -6492,8 +6492,8 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #165.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
-- **Status:** draft
-- **Priority:** medium
+- **Status:** ready
+- **Priority:** high
 - **Description:** Beyond mood playlists: adapt recommendations to local
   weather, time of day, or movement speed (phone sensors).
 - **Touches:** Discover / Currents recommendation logic.
@@ -6977,8 +6977,8 @@ Add entries in this shape:
   kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
 
 ### mini-player-polish: Mini-player branding, controls, remembered size/position
-- **Status:** draft
-- **Priority:** medium
+- **Status:** in-progress
+- **Priority:** high
 - **Description:** Polish the desktop mini-player: show the EBBLESS "E" logo
   instead of "malgriot.github.io"; marquee-scroll long title/artist; keep
   keyboard shortcuts working while the mini-player is focused; hide the
@@ -6988,28 +6988,28 @@ Add entries in this shape:
   whose menu drops down or pulls up depending on where the mini-player sits.
 - **Touches:** desktop mini-player (Document Picture-in-Picture window) in
   `index.html`.
-- **Branch:**
+- **Branch:** agent/mini-player-polish
 - **Notes:** Synced from Geethub issue #210. Follow-up to merged
   `desktop-mini-player` (and dropped `desktop-mini-player-reopen`) - new
   asks, not a duplicate. Some items (site-info button, origin label) may be
   browser chrome the page can't control; confirm per item when built.
 
 ### podcast-library-category: Podcast category in the library
-- **Status:** draft
-- **Priority:** medium
+- **Status:** in-progress
+- **Priority:** high
 - **Description:** Give podcasts their own category/filter in the library,
   alongside playlists and albums.
 - **Touches:** library filter + sections, entry type detection.
-- **Branch:**
+- **Branch:** agent/podcast-library-category
 - **Notes:** Synced from Geethub issue #211 (title only). Builds on merged
   `podcasts` and `playlist-menu-album-toggle`.
 
 ### settings-reorganize: Reorganize the Settings menu for comfort and logic
-- **Status:** draft
-- **Priority:** medium
+- **Status:** in-progress
+- **Priority:** high
 - **Description:** Regroup and reorder the Settings menu so related options
   sit together and the most-used ones are easiest to reach.
 - **Touches:** Settings view markup/CSS in `index.html`.
-- **Branch:**
+- **Branch:** agent/settings-reorganize
 - **Notes:** Synced from Geethub issue #212 (title only). Touches the same
   view as many merged Settings entries (install, share, credits, bug report).
