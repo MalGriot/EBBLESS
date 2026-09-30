@@ -172,3 +172,26 @@ unmutes after a flat 5-second timer (`UNMUTE_DELAY_MS` in `index.html`), and the
 `ENDED` event (which an ad ending also fires) is ignored until that timer has
 confirmed real content. It's a delay heuristic, not ad detection — a real
 tradeoff, not a fix.
+
+## Speakers, TVs and cars
+
+- **Cars / lock screen / Bluetooth / headsets** run off the Media Session
+  API (`updateMediaSessionMeta`, `syncMediaPositionState` and the
+  `setActionHandler` block in `index.html`): title/artist/playlist,
+  artwork at its real sizes, play/pause/stop/prev/next/seek, and a
+  position state kept in sync (never NaN/Infinity). On iOS the +/-10s seek
+  handlers are left off on purpose - registering them replaces the
+  previous/next *track* buttons on the lock screen and in CarPlay.
+- **Chromecast / Google TV** (Chrome desktop + Android) uses the Cast sender
+  SDK, loaded lazily. YouTube tracks go to YouTube's receiver app
+  (`233637DE`) by video id, podcast episodes to the Default Media Receiver by
+  URL. The receiver plays one item at a time and EBBLESS stays the queue:
+  when an item finishes, the next queue track is loaded onto the receiver.
+  Stopping (or the device going away) resumes playback here at the
+  receiver's position. If the receiver refuses a load, playback comes
+  straight back here with a toast - loading YouTube's receiver through the
+  generic sender isn't a documented contract, so this needs real-device
+  checking. SoundCloud-native tracks can't be cast.
+- **AirPlay**: on iOS, picking a speaker in Control Center routes all audio
+  (YouTube included). The in-app AirPlay button only exists for podcast
+  episodes on Safari, since AirPlay needs a real media element.
