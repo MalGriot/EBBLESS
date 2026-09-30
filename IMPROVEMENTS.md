@@ -2638,7 +2638,7 @@ Add entries in this shape:
   **Decision (2026-09-30):** build all three nudges: a gentle "like this?" prompt after a full listen, a like-streak counter, and a Discover hint that likes are shaping picks.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Add accounts/profiles so the experience (library,
   playlists, likes) is consistent between mobile and desktop, survives a
@@ -2647,12 +2647,12 @@ Add entries in this shape:
 - **Touches:** major feature - needs backend auth, a database/storage layer
   beyond the current per-device `localStorage` model, and a data-migration
   story for existing users' local data.
-- **Branch:** (unclaimed)
+- **Branch:** agent/accounts-profiles
 - **Notes:** Synced from Geethub issue #75. Largest-scope item in this
   batch by far - architectural decision, not a quick lane. Recommend
   discussing approach before queuing.
   Geethub #182 folded in (bug report): user is signed in on desktop and mobile but playlists and settings differ between them - i.e. cross-device sync is what's expected.
-  **Decision (2026-09-30):** use a hosted backend (Supabase: auth + Postgres with row-level security), not the Cloudflare worker. Needs the owner's Supabase project URL + anon key; build with config placeholders until provided.
+  **Decision (2026-09-30):** ~~Supabase~~ revised same day: the app already has Google Sign-In profile sync to the Worker's `PROFILES` KV (restore-only-when-wiped, library only). Owner chose to extend that: full two-way sync of library, likes and settings with merge, plus a visible signed-in state.
 
 ### instant-resume-caching: Cache current track for instant resume across app switches
 - **Status:** merged
