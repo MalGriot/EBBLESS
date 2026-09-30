@@ -2623,7 +2623,7 @@ Add entries in this shape:
   track 0 (shares CuRRentSSsss' queue-remap helper).
 
 ### encourage-liking-songs: Nudge users to like more songs
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Add UX nudges that encourage users to like more songs, to
   build a richer per-user dataset - goal is a personal algorithm that
@@ -2636,6 +2636,7 @@ Add entries in this shape:
   concrete design decision (what nudge, when, how often) before it's
   actionable as a lane.
   **Decision (2026-09-30):** build all three nudges: a gentle "like this?" prompt after a full listen, a like-streak counter, and a Discover hint that likes are shaping picks.
+  **Built (fa1c2db):** post-listen "Like <title>?" chip (every 3+ played-through tracks, 10-min cooldown, backs off on ignores, never same track twice); like streak (toast + Liked Songs line, only when >=2 days, never mentions a broken streak); CuRRentSSsss hint "Based on your N liked songs...". Console helper `ebblessLikeNudge()`.
 
 ### accounts-profiles: Add accounts and cross-device profile sync
 - **Status:** in-progress
