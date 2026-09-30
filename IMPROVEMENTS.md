@@ -6982,7 +6982,7 @@ Add entries in this shape:
   kept across re-resolve. Not offered on CuRRentSSsss, Liked, `custom`.
 
 ### mini-player-polish: Mini-player branding, controls, remembered size/position
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Polish the desktop mini-player: show the EBBLESS "E" logo
   instead of "malgriot.github.io"; marquee-scroll long title/artist; keep
@@ -6998,6 +6998,7 @@ Add entries in this shape:
   `desktop-mini-player` (and dropped `desktop-mini-player-reopen`) - new
   asks, not a duplicate. Some items (site-info button, origin label) may be
   browser chrome the page can't control; confirm per item when built.
+  **Built (88041a9):** in-window E logo + PiP title/favicon; marquee (setMarqueeText made window-aware); shortcuts forwarded from PiP (Q = mini queue); saved size/style (`ebbless:miniPlayer`), bar/card by aspect; reset button; hover states; full controls; direction-aware queue. Impossible: origin text and site-info button (Chrome chrome); position is Chrome-managed. Needs real desktop Chrome check: window grow/moveBy for queue, placement memory.
 
 ### podcast-library-category: Podcast category in the library
 - **Status:** review
