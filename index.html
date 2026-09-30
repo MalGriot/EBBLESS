@@ -1096,6 +1096,9 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .settings-block h2{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 12px}
 .settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-top:1px solid var(--border)}
 .settings-row:first-of-type{border-top:none}
+.settings-row[hidden]{display:none}
+/* a hidden first row (e.g. #installBlock off mobile) shouldn't leave the next row with a stray top border */
+.settings-row[hidden]:first-of-type+.settings-row{border-top:none}
 .settings-row .label{font-size:14px}
 .settings-row .desc{font-size:12px;color:var(--faint);margin-top:2px;max-width:420px;line-height:1.5}
 .settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
@@ -1786,7 +1789,7 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
   transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
-body.onb-stage-settings #view-settings .settings-block:first-child{display:none}
+body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
@@ -2349,46 +2352,15 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <!-- ===== SETTINGS ===== -->
   <main class="view" id="view-settings" hidden>
     <div class="view-scroll">
-      <div class="settings-block">
-        <h2>About</h2>
-        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track, or paste a YouTube playlist or video link directly. Podcasts work too: paste a Spotify or Apple Podcasts show or episode link, or a podcast's RSS feed. Either way, playback threads through so the listening doesn't stop.</p>
-        <div class="settings-row">
-          <div>
-            <div class="label">Replay tutorial</div>
-            <div class="desc">Watch the intro walkthrough again, from the top.</div>
-          </div>
-          <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="label">Suggest an improvement</div>
-            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
-          </div>
-          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="label">Share EBBLESS</div>
-            <div class="desc">Tell someone else about the app. Opens your device's share sheet, or copies the link if that's not available.</div>
-          </div>
-          <button class="btn-ghost" id="shareAppBtn">Share</button>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="label">Credits</div>
-            <div class="desc">The services and open music data EBBLESS is built on, with links to each.</div>
-          </div>
-          <button class="btn-ghost" id="creditsBtn">View</button>
-        </div>
-      </div>
-      <div class="settings-block">
+      <!-- Settings layout (issue #212): most-used first. Playback controls
+           lead; App actions (install/share/tutorial) next; Feedback & support
+           groups every way to report something; About + Credits read-only;
+           the destructive Library & data block stays last. Ids are unchanged
+           - JS (crossfade/level/install/wrong-track log) and the onboarding
+           tour look these up directly. #installBlock is now a single row in
+           the App block (same show/hide JS), not its own block. -->
+      <div class="settings-block" id="settingsPlaybackBlock">
         <h2>Playback</h2>
-        <div class="settings-row">
-          <div>
-            <div class="label">Pre-roll ad handling</div>
-            <div class="desc">The next track is preloaded muted in the background while the current one plays, so any pre-roll ad burns off before it's your turn to hear it. There's no signal that tells EBBLESS an ad is showing — this is a delay heuristic, not a guarantee.</div>
-          </div>
-        </div>
         <div class="settings-row">
           <div>
             <div class="label">Crossfade between tracks</div>
@@ -2410,19 +2382,39 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
           <button class="btn-ghost" id="levelBtn">On</button>
         </div>
-      </div>
-      <div class="settings-block" id="installBlock" hidden>
-        <h2>App</h2>
         <div class="settings-row">
+          <div>
+            <div class="label">Pre-roll ad handling</div>
+            <div class="desc">The next track is preloaded muted in the background while the current one plays, so any pre-roll ad burns off before it's your turn to hear it. There's no signal that tells EBBLESS an ad is showing — this is a delay heuristic, not a guarantee.</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-block" id="settingsAppBlock">
+        <h2>App</h2>
+        <div class="settings-row" id="installBlock" hidden>
           <div>
             <div class="label">Install EBBLESS</div>
             <div class="desc">Adds EBBLESS to your home screen as its own app, no browser tabs or address bar.</div>
           </div>
           <button class="btn-ghost" id="installBtn">Install</button>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Share EBBLESS</div>
+            <div class="desc">Tell someone else about the app. Opens your device's share sheet, or copies the link if that's not available.</div>
+          </div>
+          <button class="btn-ghost" id="shareAppBtn">Share</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Replay tutorial</div>
+            <div class="desc">Watch the intro walkthrough again, from the top.</div>
+          </div>
+          <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
+        </div>
       </div>
-      <div class="settings-block">
-        <h2>Support</h2>
+      <div class="settings-block" id="settingsSupportBlock">
+        <h2>Feedback &amp; support</h2>
         <div class="settings-row">
           <div>
             <div class="label">Send feedback</div>
@@ -2439,14 +2431,32 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         </div>
         <div class="settings-row">
           <div>
+            <div class="label">Suggest an improvement</div>
+            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+          </div>
+          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
+        </div>
+        <div class="settings-row">
+          <div>
             <div class="label">Wrong-track log</div>
             <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
           </div>
           <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
         </div>
       </div>
-      <div class="settings-block">
-        <h2>Danger zone</h2>
+      <div class="settings-block" id="settingsAboutBlock">
+        <h2>About</h2>
+        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track, or paste a YouTube playlist or video link directly. Podcasts work too: paste a Spotify or Apple Podcasts show or episode link, or a podcast's RSS feed. Either way, playback threads through so the listening doesn't stop.</p>
+        <div class="settings-row">
+          <div>
+            <div class="label">Credits</div>
+            <div class="desc">The services and open music data EBBLESS is built on, with links to each.</div>
+          </div>
+          <button class="btn-ghost" id="creditsBtn">View</button>
+        </div>
+      </div>
+      <div class="settings-block" id="settingsDataBlock">
+        <h2>Library &amp; data</h2>
         <div class="settings-row">
           <div>
             <div class="label">Clear saved playlists</div>
