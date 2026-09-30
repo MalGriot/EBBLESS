@@ -60,7 +60,7 @@ deploy` (no `--env`) still targets production as before.
 
 ## Reading tester feedback
 
-Settings > Support > "Send feedback" lets beta testers report bugs or ideas
+Settings > Feedback & support > "Send feedback" lets beta testers report bugs or ideas
 with no login and no GitHub. It POSTs to the worker's `/tester-report`,
 which stores each report in `MATCH_REPORTS` under a `tester:<ts>:<uuid>` key
 (max 5 per IP per 10 minutes). The same form also opens on its own as a
