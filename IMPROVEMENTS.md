@@ -7031,7 +7031,7 @@ Add entries in this shape:
   **Built (b54d82b):** Settings regrouped into Playback / App / Feedback & support / About / Library & data (was Danger zone). Same ids and handlers; install row now a row in App; onboarding CSS retargeted to `#settingsAboutBlock`.
 
 ### autoadvance-stall-full-progress: Next track sometimes stalls with a full progress bar
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Sometimes when a song ends and the player should move to
   the next one, it switches to the next track's art and UI colors but
@@ -7043,9 +7043,10 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #213 (bug). Related to merged
   `bld-background-tab-autoadvance`, but a different symptom (advances the UI
   and stalls, stale progress), so not a duplicate. No repro steps given.
+  **Built (65adcce):** preloaded next track is rewound to 0 on handoff (`promoteDeckDirect`, `deck.resumeSeeked` protects saved-position resume); progress bar/time/reels reset on every track change (`resetSeekUI`); bar held at 0 until the new track's ad check passes. Needs real-device check of background/locked-phone auto-advance.
 
 ### library-filter-inline: Put the All/Playlist/Album/Podcast filter on the button row
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the library, the All/Playlist/Album/Podcast filter
   button should sit on the same line as the other library buttons below it,
@@ -7054,9 +7055,10 @@ Add entries in this shape:
 - **Branch:** agent/library-filter-inline
 - **Notes:** Synced from Geethub issue #214. Filter chips come from merged
   `podcast-library-category` / `playlist-menu-album-toggle`.
+  **Built (e5345a6):** `#libFilter`/`#libFilterCycle` moved into `.lib-head-actions` after `#newPlaylistBtn`; "+ New playlist" shortens to "+ New" below 370px and in the desktop library column. Margins are tight at 320px.
 
 ### cassette-reference-match: Rebuild the cassette to match a real reference cassette
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Upgrade the existing cassette art style to closely match
   a reference photo of a real cassette (dark charcoal textured shell,
@@ -7071,3 +7073,5 @@ Add entries in this shape:
   and app screenshot links are in the issue body. Follow-up to merged
   `cassette-beautification` (new ask, not a duplicate): that pass was
   CSS-drawn; this asks for a reference-accurate, asset-based shell.
+
+  **Built (4aa5daf):** cassette inline SVG redrawn in place (charcoal grain shell, chamfered label with album art, ivory hubs, tape window, lower panel with holes, 4 screws); same 400x256 frame so fullscreen/stack/crossfade/reels unchanged. Reference photo was unreachable from the sandbox - compare against it.
