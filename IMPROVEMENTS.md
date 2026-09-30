@@ -7184,7 +7184,7 @@ Add entries in this shape:
   Pixabay sound: add to Credits if other sfx sources are credited).
 
 ### currents-reload-reroll: CuRRentSSsss menu re-roll: all songs, max 2 a day, "like first" prompt
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to `hour-currents`. Reloading keeps the list
   as built (7 per period). The CuRRentSSsss playlist menu's re-roll
@@ -7194,5 +7194,6 @@ Add entries in this shape:
 - **Touches:** `refreshSwellIfDue()`, `ebbless:swellBlocks`, launch flow,
   CuRRentSSsss "Reset with fresh picks" menu item.
 - **Branch:** agent/currents-reload-reroll
+- **Build (352a9fc):** "Reset with fresh picks" opens `#reroll-modal` ("Re-roll all of today's CuRRentSSsss?" / like or add to a playlist first; Cancel focused). Re-roll rebuilds every due period, avoids the replaced tracks, keeps a playing track at slot 0. `CURRENTS_REROLLS_PER_DAY = 2` (stored as `rerolls` in `ebbless:swellBlocks`, counts only when picks land); when spent the item reads "No re-rolls left today". Reload never re-rolls. SW v41. Full menu path verified by harness only.
 - **Notes:** Owner request 2026-09-30.
 
