@@ -5445,8 +5445,11 @@ function updateMiniBarVisibility(){
 
 document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-view], #mobileSettingsBtn').forEach(btn => {
   btn.addEventListener('click', () => {
-    // Library/Settings from any fullscreen leave it for the main view first,
-    // then open (see leaveFullscreen).
+    // Split-desktop phase 1 (panel-slide fullscreen, issue #227): Library
+    // slides its drawer in/out and stays in fullscreen.
+    if (btn.dataset.view === 'library' && deskFsPhase1()){ toggleDesktopFsLib(); return; }
+    // Library/Settings from any other fullscreen leave it for the main view
+    // first, then open (see leaveFullscreen).
     if (btn.dataset.view !== 'player') leaveFullscreen(true);
     if (btn.dataset.view === 'settings'){
       setView(state.currentView === 'settings' ? state.preSettingsView : 'settings');
@@ -5474,6 +5477,8 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
     toggleQueuePanel();
     return;
   }
+  // split-desktop phase 1: slide the queue drawer, stay in fullscreen
+  if (deskFsPhase1()){ toggleDesktopFsQueue(); return; }
   // same fullscreen exit and split-desktop carve-out as the Library button above
   leaveFullscreen(true);
   if (document.body.classList.contains('split-desktop')){
@@ -5529,8 +5534,34 @@ function toggleDesktopFs(){
   document.body.classList.remove('desktop-fs-lib-open', 'desktop-fs-queue-open');
   document.querySelectorAll('#topnav [data-view="library"], #topnav [data-action="toggle-queue"]')
     .forEach(b => b.classList.remove('is-active'));
+  // the library just slid off, so its playlist panel goes with it (#225)
+  closeLibraryPlaylistPanel();
   armFsIdleTimer();
   csStackSync();
+}
+// Phase 1 = the panel-slide fullscreen alone, with nothing (the immersive
+// flow overlay, lyrics fullscreen, Settings) on top of it. Only here do the
+// Library/Queue buttons and shortcuts slide their drawers in/out over the
+// player instead of leaving fullscreen (issue #227).
+function deskFsPhase1(){
+  return state.deskFsOpen && !state.flowOpen && state.currentView !== 'settings' &&
+    !lyricsFsLayer.classList.contains('is-open') && document.body.classList.contains('split-desktop');
+}
+function toggleDesktopFsLib(){
+  state.deskFsLibOpen = !state.deskFsLibOpen;
+  document.body.classList.toggle('desktop-fs-lib-open', state.deskFsLibOpen);
+  const b = document.querySelector('#topnav [data-view="library"]');
+  if (b) b.classList.toggle('is-active', state.deskFsLibOpen);
+  // whenever the library closes, any open playlist panel closes with it
+  if (!state.deskFsLibOpen) closeLibraryPlaylistPanel();
+  armFsIdleTimer();
+}
+function toggleDesktopFsQueue(){
+  state.deskFsQueueOpen = !state.deskFsQueueOpen;
+  document.body.classList.toggle('desktop-fs-queue-open', state.deskFsQueueOpen);
+  const b = document.querySelector('#topnav [data-action="toggle-queue"]');
+  if (b) b.classList.toggle('is-active', state.deskFsQueueOpen);
+  armFsIdleTimer();
 }
 // The one "leave fullscreen" path for menu buttons, keyboard shortcuts and
 // Escape: the same closeLyricsFs()/closeFlow()/closeDesktopFs() calls as
@@ -5541,9 +5572,8 @@ function toggleDesktopFs(){
 // toggleDesktopFs() panel-slide; flow can sit on top of desktop-fs. Without
 // `all` it peels one layer, topmost first (Escape); with `all` (before
 // opening a menu) it leaves every layer. Returns whether anything closed.
-// The Library/Queue buttons used to slide deskFsLibOpen/deskFsQueueOpen
-// drawers in over desktop-fs instead; they now exit to the grid, so those
-// flags just stay false.
+// In phase 1 alone (see deskFsPhase1) the Library/Queue buttons skip this
+// and slide the deskFsLibOpen/deskFsQueueOpen drawers in/out instead.
 function leaveFullscreen(all){
   let did = false;
   if (lyricsFsLayer.classList.contains('is-open')){ closeLyricsFs(); did = true; if (!all) return true; }
@@ -6302,6 +6332,9 @@ function toggleLibraryPlaylistPanel(id){
     });
   }
 
+  // phase-1 fullscreen: the panel sits over the library drawer, so make
+  // sure that drawer is in (it closes the panel again when toggled off)
+  if (deskFsPhase1() && !state.deskFsLibOpen) toggleDesktopFsLib();
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
   // Same staleness check as playPlaylistNow/beginImport - this is the
@@ -13203,7 +13236,8 @@ miniPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.qu
 
 /* ---------- desktop keyboard shortcuts ---------- */
 // Library/Queue/Settings shortcuts click the nav buttons themselves, so they
-// share the buttons' "leave fullscreen, then open" path (leaveFullscreen).
+// share the buttons' "leave fullscreen, then open" path (leaveFullscreen) -
+// and, in split-desktop phase-1 fullscreen, their drawer slide instead.
 // alreadyOpen: the pane is already the one showing under any fullscreen, so
 // just leave fullscreen rather than clicking (which could toggle it away).
 function kbShowPane(btn, alreadyOpen){
@@ -13215,7 +13249,7 @@ function kbShowLibrary(){
     () => !document.body.classList.contains('split-desktop') && state.currentView === 'library' && !state.queueOpen);
 }
 // p/l: toggle the library. From fullscreen it exits to the main view with
-// the library showing; on mobile/tablet a second press "closes" it back to
+// the library showing (split-desktop phase 1 slides its drawer instead); on mobile/tablet a second press "closes" it back to
 // the player, the same rest view the back button uses. On the plain
 // split-desktop grid the library is a permanent column, so there is
 // nothing to close.
