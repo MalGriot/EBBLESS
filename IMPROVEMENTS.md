@@ -7270,7 +7270,7 @@ Add entries in this shape:
   research list, not code.
 
 ### non-latin-match-scoring: Search matching ignores Cyrillic, Chinese, Japanese and Korean characters
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The worker's YouTube match scoring lowercases and strips
   everything outside `[a-z0-9]`, so non-Latin titles/artists (Cyrillic,
@@ -7282,7 +7282,7 @@ Add entries in this shape:
   listener, not just those in restricted regions.
 - **Touches:** `worker/` match scoring / tokenisers (and any matching
   tokeniser copy in `index.html`).
-- **Branch:**
+- **Branch:** agent/non-latin-match-scoring
 - **Notes:** Item 2 of `docs/REGIONAL-SOURCES.md` section 7 (see 6.1 for
   the concrete bug). Follow-up from Geethub issue #226, which stays open
   until this and `regional-source-fallbacks` ship. Needs a worker deploy.
@@ -7309,4 +7309,4 @@ Add entries in this shape:
   questions (section 8) should be answered first, especially: is Russia
   a target market (hosting implications), and are link-outs acceptable.
   Avoid reverse-engineered APIs and anything that helps evade a national
-  block.
+  block. **On hold until after launch** (owner, 2026-10-01): a separate region-specific app may be the better option than retrofitting EBBLESS.
