@@ -8749,6 +8749,10 @@ ytModal.addEventListener('scroll', ytPanelSync);
 window.addEventListener('resize', () => { if (ytPanelOpen()) ytPanelSync(); });
 ytModal.addEventListener('keydown', (e) => {
   if (e.key === 'Escape'){ e.preventDefault(); closeYtPanel(); }
+  // V (its global shortcut) closes it again; Z/X/C go on to the global
+  // handler, which closes it and switches the visual (kbSetVisual)
+  else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[vV]$/.test(e.key)){ e.preventDefault(); if (!e.repeat) closeYtPanel(); }
+  else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[zxcZXC]$/.test(e.key)) return;
   e.stopPropagation();
 });
 creditsBtn.addEventListener('click', openCreditsModal);
@@ -13261,14 +13265,17 @@ function kbToggleLibrary(){
   }
   kbShowLibrary();
 }
-// y/u/t: same path as tapping the visual tabs. #flow-layer picks art vs
+// z/x/c: same path as tapping the visual tabs. #flow-layer picks art vs
 // cymatics once in openFlow(), so when that choice flips while it's open,
 // re-run it through the existing close/open pair to stay in fullscreen.
+// The YouTube card (V) sits over the tabs, so close it first or the
+// switch wouldn't be visible.
 function kbSetVisual(mode){
+  if (ytPanelOpen()) closeYtPanel();
   closeArtStyleMenu();
   setVisualMode(mode);
 }
-// y/u: pressing again goes back to art
+// x/c: pressing again goes back to art
 function kbToggleVisual(mode){
   kbSetVisual(visualMode === mode ? 'art' : mode);
 }
@@ -13329,26 +13336,32 @@ document.addEventListener('keydown', (e) => {
         urlInput.focus();
       } else kbToggleLibrary();
       break;
-    case 'x': case 'X':
+    case 'k': case 'K':
       if (!e.repeat) toggleShuffle();
       break;
     case 'o': case 'O':
       if (!e.repeat) cycleRepeat();
       break;
-    case 't': case 'T': {
-      // first press from cymatics/lyrics just shows the art; after that it
+    // z/x/c/v: the visual tabs as one row - art, cymatics, lyrics, video
+    case 'z': case 'Z': {
+      // first press from cymatics/lyrics/video just shows the art; after that it
       // steps default -> record -> cassette, same order as #artStyleMenu
       if (e.repeat) break;
-      if (visualMode !== 'art'){ kbSetVisual('art'); break; }
+      if (visualMode !== 'art' || ytPanelOpen()){ kbSetVisual('art'); break; }
       const styles = Array.from(artStyleMenu.querySelectorAll('.art-style-opt'), b => b.dataset.style);
       setArtStyle(styles[(styles.indexOf(artStyle) + 1) % styles.length]);
       break;
     }
-    case 'y': case 'Y':
+    case 'x': case 'X':
       if (!e.repeat) kbToggleVisual('viz');
       break;
-    case 'u': case 'U':
+    case 'c': case 'C':
       if (!e.repeat) kbToggleVisual('lyrics');
+      break;
+    case 'v': case 'V':
+      // toggles the YouTube tab's card; openYtPanel is a no-op while the
+      // tab is disabled (no YouTube video behind the current track)
+      if (!e.repeat){ if (ytPanelOpen()) closeYtPanel(); else openYtPanel(); }
       break;
     case 'q': case 'Q':
       if (!e.repeat) kbShowPane(document.querySelector('#topnav [data-action="toggle-queue"]'));
