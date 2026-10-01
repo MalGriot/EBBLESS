@@ -7197,3 +7197,69 @@ Add entries in this shape:
 - **Build (352a9fc):** "Reset with fresh picks" opens `#reroll-modal` ("Re-roll all of today's CuRRentSSsss?" / like or add to a playlist first; Cancel focused). Re-roll rebuilds every due period, avoids the replaced tracks, keeps a playing track at slot 0. `CURRENTS_REROLLS_PER_DAY = 2` (stored as `rerolls` in `ebbless:swellBlocks`, counts only when picks land); when spent the item reads "No re-rolls left today". Reload never re-rolls. SW v41. Full menu path verified by harness only.
 - **Notes:** Owner request 2026-09-30.
 
+
+### desktop-fs-slide-panels: Browser-fullscreen should slide Library/Queue in place, and close an open playlist with the Library
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Two related problems in the first (in-browser, not
+  whole-screen) fullscreen phase on desktop:
+  1. Bug: if a playlist panel is open when you enter fullscreen, the
+     Library and Queue close but the playlist panel stays open. Whenever
+     the Library closes, any open playlist panel should close with it.
+  2. In that first fullscreen phase, toggling Queue or Library (button or
+     shortcut) should stay in fullscreen and just slide the panel in/out,
+     instead of exiting to the main view first.
+- **Touches:** desktop fullscreen (`toggleDesktopFs*` / `.desktop-fs-*`
+  CSS), the shared "exit fullscreen then open menu" path added by
+  `keyboard-shortcuts-2`, playlist panel open/close.
+- **Branch:**
+- **Notes:** Synced from Geethub issues #227 (bug) and #225 (idea), combined
+  since both describe phase-1 fullscreen panel behavior. Item 2 partly
+  reverses `keyboard-shortcuts-2`'s "menus exit fullscreen first" rule —
+  for phase 1 only; the immersive (whole-screen) phase keeps current
+  behavior unless told otherwise. Builds on `desktop-player-fullscreen-toggle`.
+
+### shortcuts-zxcv-visuals: Remap visual-mode shortcuts to Z / X / C / V
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Visual-mode shortcuts should sit in a row: Z = Art,
+  X = Cymatics, C = Lyrics, V = Video.
+- **Touches:** global keydown handler, shortcut help/listing.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #222. Conflicts with
+  `keyboard-shortcuts-2`: "x" is currently shuffle (and "y"/"u" are
+  cymatics/lyrics, "t" cycles art phases). Needs a decision on where
+  shuffle moves and whether y/u/t stay as aliases before building.
+
+### cassette-cycle-7-tapes: Cassette cycling animation should use 7 tapes, not 6
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The cassette fullscreen cycling/orbit animation shows 6
+  tapes; it should show 7.
+- **Touches:** cassette fullscreen stack/orbit animation.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #223. Related to merged
+  `cassette-fullscreen-animation` / `cassette-fullscreen-second-stack`.
+
+### library-icon-redesign: Library icon should replace the queue icon, with a more distinct themed design
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The Library button should use a new, more distinct icon
+  that still fits the EBBLESS theme, and it should take the place currently
+  used by the queue icon.
+- **Touches:** nav/header icons (Library, Queue).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #224 (title only, no description).
+  Unclear what the Queue button gets instead — confirm before building.
+
+### regional-source-alternatives: Regional alternatives where YouTube is blocked (e.g. Russia)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** YouTube is restricted in some countries (e.g. Russia).
+  Research and list regional playback alternatives (e.g. Yandex Music, VK)
+  so EBBLESS keeps working everywhere, and consider translating track
+  metadata for matching.
+- **Touches:** playback source resolution / worker search; possibly i18n.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #226. First deliverable is a
+  research list, not code.
