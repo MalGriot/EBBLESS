@@ -7221,12 +7221,13 @@ Add entries in this shape:
   behavior unless told otherwise. Builds on `desktop-player-fullscreen-toggle`.
 
 ### shortcuts-zxcv-visuals: Remap visual-mode shortcuts to Z / X / C / V
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Visual-mode shortcuts should sit in a row: Z = Art,
   X = Cymatics, C = Lyrics, V = Video.
 - **Touches:** global keydown handler, shortcut help/listing.
 - **Branch:** agent/shortcuts-zxcv-visuals
+- **Build (8de903c):** Keydown handler: Z = art (first press shows art, then cycles default/record/cassette - old T), X = cymatics, C = lyrics (press again -> art), V = toggle YouTube card (no-op when its tab is disabled), K = shuffle; T/Y/U unbound. `kbSetVisual` closes an open YouTube card first; the card's own keydown lets V close it and Z/X/C through. Ctrl/Cmd combos and typing in inputs untouched. No user-facing shortcut docs exist to update.
 - **Notes:** Synced from Geethub issue #222. Conflicts with
   `keyboard-shortcuts-2`: "x" is currently shuffle (and "y"/"u" are
   cymatics/lyrics, "t" cycles art phases). Needs a decision on where
