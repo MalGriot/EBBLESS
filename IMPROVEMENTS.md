@@ -4293,7 +4293,7 @@ Add entries in this shape:
   narrower (e.g. only the queue), that would need a follow-up.
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** A minigame on the spinning record visual: the record
   spins slowly, and tapping/clicking it right when it returns to its
@@ -7394,7 +7394,7 @@ Add entries in this shape:
   block. **On hold until after launch** (owner, 2026-10-01): a separate region-specific app may be the better option than retrofitting EBBLESS.
 
 ### unplaying-next-track: Next track shows but play/pause flips back without playing
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Long-standing bug: the next track's art and title are
   correct, but it won't play. Pressing play (button or space bar) turns the
