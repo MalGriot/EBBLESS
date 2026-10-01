@@ -2297,7 +2297,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <symbol id="csGhostSym" viewBox="0 0 400 256" overflow="visible">
                 <!-- thickness: seen from slightly above, the shell's bottom
                      side shows as a foreshortened band under the face, with
-                     the seam where the two shell halves meet -->
+                     the seam where the two shell halves meet. It hangs 12
+                     units below the main cassette's outline, so csGhostPlace
+                     shrinks/lifts a copy to fit inside it while tucked -->
                 <rect x="8" y="226" width="384" height="34" rx="9" fill="currentColor"/>
                 <rect x="8" y="226" width="384" height="34" rx="9" fill="rgba(0,0,0,.5)"/>
                 <path d="M16,254.5 H384" stroke="rgba(0,0,0,.45)" stroke-width="2.8"/>
@@ -15218,9 +15220,8 @@ function csStackRetreatFrame(now){
     const sT = s < .9 ? s : .97; // ring-sized copies are already hidden at center
     const o = op * (1 - csClamp((e - .5) / .5)); // fade only once it's behind
     const el = csStack.ghosts[i];
-    el.style.transform = `translate3d(${(x * (1 - e)).toFixed(1)}px,${(y * (1 - e)).toFixed(1)}px,0) rotate(${(rot * (1 - e)).toFixed(2)}deg) scale(${(s + (sT - s) * e).toFixed(4)})`;
+    csGhostPlace(el, x * (1 - e), y * (1 - e), rot * (1 - e), s + (sT - s) * e);
     el.style.opacity = o.toFixed(3);
-    csGhostShadow(el, x * (1 - e), y * (1 - e));
     if (o > maxOp) maxOp = o;
   });
   csStack.plate.style.opacity = Math.min(1, maxOp / .25).toFixed(3);
@@ -15292,10 +15293,17 @@ function csStackBuild(){
 const csEaseOut = x => 1 - Math.pow(1 - x, 3);
 const csEaseInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 const csClamp = x => x < 0 ? 0 : x > 1 ? 1 : x;
-// shadow strength from a copy's offset off center: none while tucked
-// behind the main cassette, full once it's out about an eighth of its height
-function csGhostShadow(el, x, y){
-  el.firstChild.style.opacity = csClamp(Math.hypot(x, y) / (csStack.geo.H * .12)).toFixed(3);
+// writes a copy's transform. k is how far it is off center: 0 while tucked
+// behind the main cassette, 1 once it's out about an eighth of its height.
+// Tucked, the face + 12-unit thickness band (252 units) would reach past the
+// main cassette's 240-unit outline, so the copy eases down to <=.95 scale
+// and up by half the band to fit inside it; the shadow is off there too.
+function csGhostPlace(el, x, y, rot, s){
+  const k = csClamp(Math.hypot(x, y) / (csStack.geo.H * .12)), t = 1 - k;
+  s += (Math.min(s, .95) - s) * t;
+  y -= t * s * csStack.geo.H / 40;
+  el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+  el.firstChild.style.opacity = k.toFixed(3);
 }
 /* timings (seconds): copies rise one every 0.7s over 1.3s, hold, slide
    back behind the main cassette (mobile collapse / desktop gather), pause,
@@ -15376,9 +15384,8 @@ function csStackFrame(now){
       }
     }
     const el = csStack.ghosts[i];
-    el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+    csGhostPlace(el, x, y, rot, s);
     el.style.opacity = op.toFixed(3);
-    csGhostShadow(el, x, y);
     csStack.last[i] = [x, y, rot, s, op];
     if (op > maxOp) maxOp = op;
   }
