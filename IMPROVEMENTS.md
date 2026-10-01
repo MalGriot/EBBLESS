@@ -7313,7 +7313,7 @@ Add entries in this shape:
   block. **On hold until after launch** (owner, 2026-10-01): a separate region-specific app may be the better option than retrofitting EBBLESS.
 
 ### unplaying-next-track: Next track shows but play/pause flips back without playing
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Long-standing bug: the next track's art and title are
   correct, but it won't play. Pressing play (button or space bar) turns the
@@ -7328,3 +7328,22 @@ Add entries in this shape:
   different symptom (play attempts are swallowed, not a stale full progress
   bar), so not a duplicate. Also see the SoundCloud autoplay-policy note in
   merged `soundcloud-native-playback`.
+  **Built (d0f943e):** root cause: the play toggle (`playIndex` same-track
+  branch / `fadeInAndPlay`) only called `playVideo()` on the active deck's
+  existing player and assumed it was alive. A deck can be dead while showing
+  the right art/title (YT.Player whose onReady never fired so the track sits
+  in `pendingVideoId` forever, a player that hit `onError`, an iframe killed
+  in the background); `playVideo()` no-ops, `runPlayFade` gives up after
+  1.5s and flips the icon back, and nothing ever reloads the deck since
+  `playIndex` only reloads when there is no player at all. Fix:
+  `deckLooksDead` (not ready 8s+ after load, or errored and not
+  playing/paused/buffering) rebuilds right on the press, and the fade-in
+  give-up path now calls `rebuildActiveDeck` (destroy, fresh placeholder
+  div, `createDeckPlayer` for the current track, resume position via
+  `pendingResume`) instead of just reverting the UI. Verified locally that a
+  press on a stuck deck builds a fresh iframe and shows the loading ring;
+  the browser pane can't play YouTube embeds, so real playback after the
+  rebuild still needs a real-device check (mobile background/locked, and an
+  SC track). A video that is permanently unembeddable still won't play
+  (each press retries once, then shows play). SW not bumped (done on main at
+  merge).
