@@ -7270,7 +7270,7 @@ Add entries in this shape:
   research list, not code.
 
 ### non-latin-match-scoring: Search matching ignores Cyrillic, Chinese, Japanese and Korean characters
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The worker's YouTube match scoring lowercases and strips
   everything outside `[a-z0-9]`, so non-Latin titles/artists (Cyrillic,
@@ -7283,6 +7283,7 @@ Add entries in this shape:
 - **Touches:** `worker/` match scoring / tokenisers (and any matching
   tokeniser copy in `index.html`).
 - **Branch:** agent/non-latin-match-scoring
+- **Build (150d6e7):** New `worker/src/match-text.js`: NFKC + Latin/Greek accent folding, Unicode tokens (`\p{L}\p{N}\p{M}`), CJK/Thai/etc. character bigrams, Cyrillic/Greek transliteration with spelling tolerance; title overlap = max(direct, transliterated). Used by search overlap, album Topic-channel check, podcast matching, Spotify-art artist check and lyrics (lrclib) title/artist checks. Pure-ASCII scoring unchanged (tested against the old tokeniser). Non-ASCII requests get a `/u1` cache-key suffix; ASCII caches stay warm. index.html: `yearNormTitle` and `wrongTrackTitleOverlap` made Unicode-aware. `npm test` in worker/ (13 tests). SW v44; worker deployed to production.
 - **Notes:** Item 2 of `docs/REGIONAL-SOURCES.md` section 7 (see 6.1 for
   the concrete bug). Follow-up from Geethub issue #226, which stays open
   until this and `regional-source-fallbacks` ship. Needs a worker deploy.
