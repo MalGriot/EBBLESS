@@ -4332,7 +4332,8 @@ Add entries in this shape:
   - **End:** a tap outside the window, a second tap in the same window,
     letting a required pass go by, or pausing: score blinks 3x and goes,
     best holds then blinks 3x more and goes (order confirmed by owner),
-    platter eases back to normal pace, dot back to the rim. Leaving
+    platter eases back to normal pace, dot back to the rim (Best stays
+    accent through the blink if this run set a new best). Leaving
     fullscreen (X, swipe-down, switching art style) ends a run silently,
     best kept.
   - **Double-tap during a run** restarts a fresh run at 0; any best the
@@ -4348,6 +4349,26 @@ Add entries in this shape:
     not) plays a 180ms Web Animation on the `.art-record` wrapper, scale 1
     -> 1.05 at 40% -> 1; the rotating `.record-disc` is untouched, no
     layout shift, skipped under reduced motion.
+  - **Hit feedback:** every scoring tap pops the score (300ms overshoot
+    scale), flashes the fixed target tick, and bursts a thin accent ring
+    from where the dot was hit (380ms; a little bigger and brighter every
+    5 points, capped at 20). Each hit cancels the previous hit's
+    animations so fast streaks don't stack.
+  - **New best:** once per run, at the point the score passes the best
+    the run started with (only if there was one, i.e. best > 0): a "New
+    best" accent flare above the score pill (1.3s), the Best number pulses
+    3x, 14 small accent sparks drift off the record edge (~1-1.3s), and
+    the splash's entry sound plays: a clone of `#onbMusic`
+    (`brand/assets/intro-theme.mp3`, same plain `<audio>` path and 0.5s
+    trim as the splash), volume 0.6, held ~0.9s then faded over 1.4s. It
+    mixes over the YouTube player without touching it; no app sound
+    setting governs the splash sound so none here; a blocked play() is
+    swallowed. No per-hit tick: the only UI sounds (LP needle sfx) have no
+    setting to switch them off.
+  - **Effects rules:** Web Animations on transform/opacity only, every
+    effect element `pointer-events:none`, nothing awaited, so taps and
+    timing are untouched; reduced-motion fallbacks are opacity/color only
+    (moot today, since the game is off under reduced motion).
   - **Storage:** best in localStorage `ebbless:recordTapBest` (local only,
     not profile-synced). SW v45.
 
@@ -4361,8 +4382,15 @@ Add entries in this shape:
   with the run still on, and the next untapped pass ended it; X during a
   run cancels silently. `#flowPlayBtn` is visible (58px) and wired to
   `userTogglePlayback`, but real playback couldn't be exercised in the
-  sandbox. Needs real-device check: double-tap to arm on touch, feel of
-  the +/-10deg window, pulse feel, cue tick/dot against real label art.
+  sandbox. Feedback pass: hits 1-5 from a stored best of 2 fired the
+  pop/tick/ring each hit, the best moment only at 3 (one `play()` of the
+  `intro-theme.mp3` clone at volume 0.6, none on later hits), no page
+  errors; frames frozen mid-animation and checked at desktop and 375px
+  (flare sits above the pill, no overlap). Needs real-device check:
+  double-tap to arm on touch, feel of the +/-16deg window, pulse and
+  burst feel, the new-best sound mixing over YouTube on iOS (an `<audio>`
+  start there could interrupt the player), cue tick/dot against real
+  label art.
 
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged
