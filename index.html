@@ -12234,12 +12234,15 @@ function recordGameHitFx(dotTop){
    faded. An <audio> element mixes over the YouTube player without pausing
    or ducking it; there's no app sound setting governing the splash sound,
    so none here either. Blocked or failed playback is swallowed. Fired from
-   inside the scoring click, so it counts as a user gesture. */
+   inside the scoring click, so it counts as a user gesture. Plays again on
+   every further point of a new-best run; each play cuts the previous one. */
+let recBestAudio = null;
 function recordGameBestSound(){
   try {
     const src = document.getElementById('onbMusic');
     if (!src) return;
-    const a = src.cloneNode(true), VOL = 0.6;
+    if (recBestAudio){ try { recBestAudio.pause(); } catch(e){} }
+    const a = recBestAudio = src.cloneNode(true), VOL = 0.6;
     a.removeAttribute('id');
     a.volume = VOL;
     const trim = () => { try { a.currentTime = 0.5; } catch(e){} };
@@ -12252,6 +12255,7 @@ function recordGameBestSound(){
         try {
           const k = Math.min(1, (Date.now() - t0) / 1400);
           a.volume = VOL * (1 - k);
+          if (recBestAudio !== a) return;
           if (k < 1) setTimeout(step, 40); else a.pause();
         } catch(e){}
       };
@@ -12330,7 +12334,10 @@ function recordGameTap(){
   }
   recordGameRender();
   recordGameHitFx(hitDotTop);
-  if (!recGame.newBest && recGame.startBest > 0 && recGame.score > recGame.startBest){ recGame.newBest = true; recordGameBestFx(); }
+  if (recGame.startBest > 0 && recGame.score > recGame.startBest){
+    if (!recGame.newBest){ recGame.newBest = true; recordGameBestFx(); }
+    else recordGameBestSound(); // every further point of a new-best run raises the best again
+  }
 }
 recGameEl.addEventListener('click', recordGameTap);
 

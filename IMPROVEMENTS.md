@@ -4363,8 +4363,11 @@ Add entries in this shape:
     trim as the splash), volume 0.6, held ~0.9s then faded over 1.4s. It
     mixes over the YouTube player without touching it; no app sound
     setting governs the splash sound so none here; a blocked play() is
-    swallowed. No per-hit tick: the only UI sounds (LP needle sfx) have no
-    setting to switch them off.
+    swallowed. The sound replays on every further point of that run (each
+    one raises the best again; a new play cuts the previous one), per
+    owner 2026-10-01; the visual flare stays once per run. SW v46. No
+    per-hit tick: the only UI sounds (LP needle sfx) have no setting to
+    switch them off.
   - **Effects rules:** Web Animations on transform/opacity only, every
     effect element `pointer-events:none`, nothing awaited, so taps and
     timing are untouched; reduced-motion fallbacks are opacity/color only
