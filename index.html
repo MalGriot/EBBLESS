@@ -570,6 +570,26 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
+/* record tap minigame (issue #116, see RECORD TAP GAME in the script): a
+   fixed cue tick above the rim and a dot on the disc at 0deg - both only
+   while a run is active, so the record stays restrained otherwise - plus a
+   score / best readout that doesn't turn with the disc */
+.rec-game-mark{position:absolute;top:2%;left:50%;width:2px;height:9px;margin:-12px 0 0 -1px;border-radius:1px;
+  background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out);pointer-events:none}
+.rec-game-dot{position:absolute;top:3.5%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out);pointer-events:none}
+.art-record.is-game .rec-game-mark,.art-record.is-game .rec-game-dot{opacity:.9}
+.rec-game-hud{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);display:flex;align-items:baseline;gap:10px;
+  padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.55);color:var(--text);font-variant-numeric:tabular-nums;
+  white-space:nowrap;pointer-events:none;opacity:0}
+.rec-game-hud[data-phase="run"]{opacity:1;transition:opacity var(--dur-ui) var(--ease-out)}
+.rec-game-hud[data-phase="over"]{opacity:1}
+.rec-game-score{font-size:18px;font-weight:700}
+.rec-game-best{font-size:11px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase}
+/* miss: score blinks 3x and goes, then best blinks 3x more and goes */
+@keyframes recGameBlink{0%,49.9%{opacity:1}50%,100%{opacity:0}}
+.rec-game-hud[data-phase="over"] .rec-game-score{animation:recGameBlink 360ms linear 3 forwards}
+.rec-game-hud[data-phase="over"] .rec-game-best{animation:recGameBlink 360ms linear 1080ms 3 forwards}
 
 /* cassette (issue #215): modelled on a real dark charcoal compact cassette -
    one hand-authored vector shell (fine molded-plastic grain, recessed label
@@ -2238,7 +2258,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="record-disc">
               <img class="record-label" id="recordLabelImg" alt="">
               <div class="record-spindle"></div>
+              <div class="rec-game-dot"></div>
             </div>
+            <div class="rec-game-mark"></div>
+            <div class="rec-game-hud" aria-hidden="true"><span class="rec-game-score"></span><span class="rec-game-best"></span></div>
           </div>
           <!-- issue #125: one shared silhouette for the fullscreen cassette
                stack/orbit copies; housing takes currentColor (album tone,
@@ -12074,17 +12097,83 @@ function recordTick(ts){
   // hole isn't perfectly centered - amplitude stays small enough to read
   // as "a real object", not a wobble.
   const wow = 1 + 0.004 * Math.sin(recAngle * Math.PI / 180);
-  recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * wow;
+  if (!recGame.on && recGameMul > 1) recGameMul = Math.max(1, recGameMul - dt / 1500); /* run over: ease back to normal pace */
+  recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * recGameMul * wow;
   recordApplyRotation();
+  // let 0deg go by untapped and the run is over
+  if (recGame.on && recAngle > (recGame.rev + 1) * 360 + REC_GAME_HIT_DEG) recordGameEnd();
   if (recSpeedMul <= 0 && recTargetMul === 0){ recRafId = null; recLastTs = 0; return; }
   recRafId = requestAnimationFrame(recordTick);
 }
 function recordSetPlaying(isPlaying){
   if (recReducedMotion){ recTargetMul = 0; recSpeedMul = 0; recAngle = 0; recordApplyRotation(); return; }
   recTargetMul = isPlaying ? 1 : 0;
+  if (!isPlaying){ if (recGame.on) recordGameEnd(); recGameMul = 1; }
   if (!recRafId){ recLastTs = 0; recRafId = requestAnimationFrame(recordTick); }
 }
 recordApplyRotation();
+
+/* RECORD TAP GAME (issue #116): while the record is spinning at full
+   speed, a tap landing within REC_GAME_HIT_DEG of 0deg (album art upright)
+   starts a run / scores a point, and each point speeds the platter up a
+   little (recGameMul). Any other tap during a run, or letting 0deg pass
+   untapped, ends it: score blinks 3x and goes, best blinks 3x more and goes,
+   and the platter eases back to normal pace. Hooked into the album-art
+   tap handler (toggleActivePlayback): a tap the game uses (a hit, or any tap
+   during a run) skips play/pause, so a run never stops the music; a tap
+   outside the window with no run going does exactly what it always did.
+   The angle is read at pointerdown (and extrapolated past the last frame),
+   not at click, so touch click latency doesn't eat the window. */
+const REC_GAME_HIT_DEG = 10;        /* +/- around 0deg; ~83ms each side at the base 120deg/s */
+const REC_GAME_SPEEDUP = 1.07, REC_GAME_MAX_MUL = 3;
+const LS_REC_GAME_BEST = 'ebbless:recordTapBest';
+const recGameEl = recordDisc.parentElement;
+const recGameHud = recGameEl.querySelector('.rec-game-hud');
+const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestEl = recGameHud.querySelector('.rec-game-best');
+const recGame = { on: false, score: 0, best: 0, rev: 0, downAt: 0, downAngle: 0, overT: 0 };
+let recGameMul = 1;
+function recordGameAngleNow(){
+  const rate = REC_DEG_PER_S * recSpeedMul * recGameMul / 1000;
+  return recAngle + (recLastTs ? Math.max(0, Math.min(64, performance.now() - recLastTs)) * rate : 0);
+}
+function recordGameRender(){
+  recGameScoreEl.textContent = recGame.score;
+  recGameBestEl.textContent = 'Best ' + recGame.best;
+}
+function recordGameEnd(){
+  recGame.on = false;
+  recGameEl.classList.remove('is-game');
+  recGameHud.dataset.phase = 'over';
+  clearTimeout(recGame.overT);
+  recGame.overT = setTimeout(() => { recGameHud.dataset.phase = ''; }, 2200);
+}
+recGameEl.addEventListener('pointerdown', () => {
+  recGame.downAt = performance.now(); recGame.downAngle = recordGameAngleNow();
+});
+// returns true when the game took this tap (caller then skips play/pause)
+function recordGameTap(e){
+  if (!e || !recGameEl.contains(e.target) || !recGameEl.getClientRects().length) return false;
+  const fresh = performance.now() - recGame.downAt < 1000;
+  const a = fresh ? recGame.downAngle : recordGameAngleNow();
+  recGame.downAt = 0;
+  const rev = Math.round(a / 360), hit = Math.abs(a - rev * 360) <= REC_GAME_HIT_DEG;
+  if (!recGame.on){
+    if (!hit || recReducedMotion || recTargetMul !== 1 || recSpeedMul < 0.98) return false;
+    clearTimeout(recGame.overT);
+    let best = 0; try { best = parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){}
+    Object.assign(recGame, { on: true, score: 0, best });
+    recGameEl.classList.add('is-game');
+    recGameHud.dataset.phase = 'run';
+  } else if (!hit || rev <= recGame.rev){ recordGameEnd(); return true; }
+  recGame.score++; recGame.rev = rev;
+  recGameMul = Math.min(REC_GAME_MAX_MUL, recGameMul * REC_GAME_SPEEDUP);
+  if (recGame.score > recGame.best){
+    recGame.best = recGame.score;
+    try { localStorage.setItem(LS_REC_GAME_BEST, String(recGame.best)); } catch(err){}
+  }
+  recordGameRender();
+  return true;
+}
 
 /* =========================================================================
    CASSETTE — physical object driven by real playback state.
@@ -15618,7 +15707,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
 
 /* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
 (function(){
-  function toggleActivePlayback(){ if (state.queuePos >= 0) userTogglePlayback(); }
+  function toggleActivePlayback(e){ if (recordGameTap(e)) return; if (state.queuePos >= 0) userTogglePlayback(); }
   $('artworkWrap').addEventListener('click', toggleActivePlayback);
   $('flowArtWrap').addEventListener('click', toggleActivePlayback);
 })();
