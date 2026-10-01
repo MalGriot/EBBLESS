@@ -570,6 +570,36 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
+/* record tap minigame (issue #116, see RECORD TAP GAME in the script): a
+   fixed cue tick above the rim and a dot on the disc at 0deg - both only
+   while a run is active, so the record stays restrained otherwise - plus a
+   score / best readout that doesn't turn with the disc */
+.rec-game-mark{position:absolute;top:2%;left:50%;width:2px;height:9px;margin:-12px 0 0 -1px;border-radius:1px;
+  background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out);pointer-events:none}
+.rec-game-dot{position:absolute;top:3.5%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out),top var(--dur-surface) var(--ease-out);pointer-events:none}
+.art-record.is-game .rec-game-mark,.art-record.is-game .rec-game-dot{opacity:.9}
+.rec-game-hud{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);display:flex;align-items:baseline;gap:10px;
+  padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.55);color:var(--text);font-variant-numeric:tabular-nums;
+  white-space:nowrap;pointer-events:none;opacity:0}
+.rec-game-hud[data-phase="run"]{opacity:1;transition:opacity var(--dur-ui) var(--ease-out)}
+.rec-game-hud[data-phase="over"]{opacity:1}
+.rec-game-score{display:inline-block;font-size:18px;font-weight:700}
+.rec-game-best{display:inline-block;font-size:11px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase;
+  transition:color var(--dur-ui) var(--ease-out)}
+/* hit + new-best feedback: all absolutely placed, transform/opacity only
+   (driven by Web Animations in RECORD TAP GAME), never take a tap */
+.rec-game-hud.is-new .rec-game-best{color:var(--accent)}
+.rec-game-ring{position:absolute;left:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;
+  border:1.5px solid var(--accent);opacity:0;pointer-events:none}
+.rec-game-flare{position:absolute;left:50%;bottom:calc(13% + 40px);transform:translateX(-50%);color:var(--accent);
+  font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;opacity:0;pointer-events:none}
+.rec-game-spark{position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
+  background:var(--accent);opacity:0;pointer-events:none}
+/* miss: score blinks 3x and goes, then best blinks 3x more and goes */
+@keyframes recGameBlink{0%,49.9%{opacity:1}50%,100%{opacity:0}}
+.rec-game-hud[data-phase="over"] .rec-game-score{animation:recGameBlink 360ms linear 3 forwards}
+.rec-game-hud[data-phase="over"] .rec-game-best{animation:recGameBlink 360ms linear 1080ms 3 forwards}
 
 /* cassette (issue #215): modelled on a real dark charcoal compact cassette -
    one hand-authored vector shell (fine molded-plastic grain, recessed label
@@ -2238,7 +2268,12 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="record-disc">
               <img class="record-label" id="recordLabelImg" alt="">
               <div class="record-spindle"></div>
+              <div class="rec-game-dot"></div>
             </div>
+            <div class="rec-game-mark"></div>
+            <div class="rec-game-ring"></div>
+            <div class="rec-game-flare" aria-hidden="true">New best</div>
+            <div class="rec-game-hud" aria-hidden="true"><span class="rec-game-score"></span><span class="rec-game-best"></span></div>
           </div>
           <!-- issue #125: one shared silhouette for the fullscreen cassette
                stack/orbit copies; housing takes currentColor (album tone,
@@ -12074,17 +12109,230 @@ function recordTick(ts){
   // hole isn't perfectly centered - amplitude stays small enough to read
   // as "a real object", not a wobble.
   const wow = 1 + 0.004 * Math.sin(recAngle * Math.PI / 180);
-  recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * wow;
+  if (!recGame.on && recGameMul > 1) recGameMul = Math.max(1, recGameMul - dt / 1500); /* run over: ease back to normal pace */
+  recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * recGameMul * wow;
   recordApplyRotation();
+  if (recGame.on){
+    // the game only lives in fullscreen: leaving it (or the record style) drops the run quietly
+    if (!recordGameInFlow()) recordGameCancel();
+    // let the required 0deg pass go by untapped and the run is over
+    else if (recAngle > (recGame.rev + (recGame.grace ? 2 : 1)) * 360 + REC_GAME_HIT_DEG) recordGameEnd();
+  }
   if (recSpeedMul <= 0 && recTargetMul === 0){ recRafId = null; recLastTs = 0; return; }
   recRafId = requestAnimationFrame(recordTick);
 }
 function recordSetPlaying(isPlaying){
   if (recReducedMotion){ recTargetMul = 0; recSpeedMul = 0; recAngle = 0; recordApplyRotation(); return; }
   recTargetMul = isPlaying ? 1 : 0;
+  if (!isPlaying){ if (recGame.on) recordGameEnd(); recGameMul = 1; }
   if (!recRafId){ recLastTs = 0; recRafId = requestAnimationFrame(recordTick); }
 }
 recordApplyRotation();
+
+/* RECORD TAP GAME (issue #116): lives only in the fullscreen flow view
+   with the record showing. A double-tap on the spinning record arms a run
+   at 0 (base speed, dot at the rim); a double-tap during a run restarts it
+   fresh. Single taps never start anything; during a run, a single tap
+   within REC_GAME_HIT_DEG of 0deg (album art upright) scores and speeds the
+   platter up a little (recGameMul). Any other tap, or letting a required
+   0deg pass go by untapped, ends it: score blinks 3x and goes, best blinks
+   3x more and goes, platter eases back to normal pace. The first 0deg pass
+   after arming is a free one (recGame.grace). Each point walks the 0deg
+   dot one REC_GAME_DOT_STEP toward the label (clamped at REC_GAME_DOT_MAX).
+   Leaving fullscreen ends a run silently, best kept. Tapping the art never
+   plays/pauses; in fullscreen double-tap no longer exits either.
+   The angle is read at pointerdown (and extrapolated past the last frame),
+   not at click, so touch click latency doesn't eat the window. */
+const REC_GAME_HIT_DEG = 16;        /* +/- around 0deg; ~133ms each side at the base 120deg/s */
+const REC_GAME_SPEEDUP = 1.04, REC_GAME_MAX_MUL = 2.2;
+const REC_GAME_DOT_TOP = 3.5, REC_GAME_DOT_STEP = 1, REC_GAME_DOT_MAX = 25; /* % of the disc from its top edge; label edge is at 31% */
+const LS_REC_GAME_BEST = 'ebbless:recordTapBest';
+const recGameEl = recordDisc.parentElement;
+const recGameHud = recGameEl.querySelector('.rec-game-hud');
+const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestEl = recGameHud.querySelector('.rec-game-best');
+const recGameDot = recGameEl.querySelector('.rec-game-dot');
+const recGameMark = recGameEl.querySelector('.rec-game-mark'), recGameRing = recGameEl.querySelector('.rec-game-ring');
+const recGameFlare = recGameEl.querySelector('.rec-game-flare');
+const recGame = { on: false, score: 0, best: 0, startBest: 0, newBest: false, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
+/* same window as DOUBLE_TAP_MS in the art double-tap handler */
+const REC_GAME_DBL_MS = 300;
+function recordGameReadBest(){ try { return parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){ return 0; } }
+function recordGameInFlow(){ return !!state.flowOpen && flowArtWrap.contains(recGameEl); }
+// end a run with no blink (left fullscreen); best already saved as it grew
+function recordGameCancel(){
+  recGame.on = false;
+  clearTimeout(recGame.overT);
+  recGameEl.classList.remove('is-game');
+  recGameDot.style.top = '';
+  recGameHud.dataset.phase = '';
+  recGameHud.classList.remove('is-new');
+}
+let recGameMul = 1;
+function recordGameAngleNow(){
+  const rate = REC_DEG_PER_S * recSpeedMul * recGameMul / 1000;
+  return recAngle + (recLastTs ? Math.max(0, Math.min(64, performance.now() - recLastTs)) * rate : 0);
+}
+function recordGameRender(){
+  recGameScoreEl.textContent = recGame.score;
+  recGameBestEl.textContent = 'Best ' + recGame.best;
+  recGameDot.style.top = Math.min(REC_GAME_DOT_MAX, REC_GAME_DOT_TOP + Math.max(0, recGame.score - 1) * REC_GAME_DOT_STEP) + '%';
+}
+function recordGameStart(){
+  clearTimeout(recGame.overT);
+  // grace: the next 0deg pass may be tapped but needn't be, so a run armed
+  // just before 0deg isn't lost on a pass the player had no time for
+  const best = recordGameReadBest();
+  Object.assign(recGame, { on: true, score: 0, best, startBest: best, newBest: false, rev: Math.floor(recordGameAngleNow() / 360), grace: true });
+  recGameMul = 1;
+  recGameHud.classList.remove('is-new');
+  recGameEl.classList.add('is-game');
+  recGameHud.dataset.phase = 'run';
+  recordGameRender();
+}
+function recordGameEnd(){
+  recGame.on = false;
+  recGameEl.classList.remove('is-game');
+  recGameDot.style.top = '';
+  recGameHud.dataset.phase = 'over';
+  clearTimeout(recGame.overT);
+  recGame.overT = setTimeout(() => { recGameHud.dataset.phase = ''; }, 2200);
+}
+/* scoring feedback. Every hit: the score pops, the target tick flashes and
+   a thin accent ring bursts from where the dot was hit (bigger and
+   brighter every 5 points, so a streak builds). Each hit cancels the last
+   hit's animations so rapid hits never stack. Passing the run's starting
+   best (once per run, only if there was a best to beat): a "New best"
+   flare, the Best number pulsing, and a ring of small accent sparks off
+   the record edge, plus the splash's entry sound (recordGameBestSound);
+   Best stays accent through the end blink. No per-hit tick: the app's
+   only UI sounds (LP needle sfx) have no setting to turn them off. Web
+   Animations on transform/opacity only, all pointer-events:none, nothing
+   awaited, so taps and timing are untouched. Reduced motion (the game is
+   off there anyway) would get opacity-only versions. */
+let recHitAnims = [], recSparks = null, recBestAnims = [];
+function recAnimate(el, frames, opts, bag){ const a = el.animate(frames, opts); bag.push(a); return a; }
+function recordGameHitFx(dotTop){
+  recHitAnims.forEach(a => a.cancel()); recHitAnims = [];
+  if (!recGameEl.animate) return;
+  if (recReducedMotion){ recAnimate(recGameScoreEl, [{ opacity: .4 }, { opacity: 1 }], 220, recHitAnims); return; }
+  const tier = Math.min(4, Math.floor(recGame.score / 5));
+  recAnimate(recGameScoreEl, [
+    { transform: 'scale(1)', easing: 'cubic-bezier(.2,1.8,.4,1)' },
+    { transform: 'scale(1.3)', offset: .35, easing: 'cubic-bezier(.65,0,.35,1)' },
+    { transform: 'scale(1)' }], 300, recHitAnims);
+  recAnimate(recGameMark, [{ transform: 'scaleY(1)', opacity: .9 }, { transform: 'scaleY(1.9)', opacity: 1, offset: .3 }, { transform: 'scaleY(1)', opacity: .9 }], 280, recHitAnims);
+  recGameRing.style.top = 'calc(' + (2 + dotTop * .96).toFixed(2) + '% + 3px)';
+  recAnimate(recGameRing, [
+    { transform: 'scale(.35)', opacity: Math.min(1, .55 + tier * .11) },
+    { transform: 'scale(' + (2.4 + tier * .55).toFixed(2) + ')', opacity: 0 }],
+    { duration: 380, easing: 'cubic-bezier(.16,1,.3,1)' }, recHitAnims);
+}
+/* new-best sound: the same intro-theme snippet the splash plays on entry
+   (#onbMusic, brand/assets/intro-theme.mp3) through the same plain <audio>
+   path, on a clone so the original's state is never touched (as the
+   tutorial's echo taps do). Same 0.5s trim as the splash, held briefly then
+   faded. An <audio> element mixes over the YouTube player without pausing
+   or ducking it; there's no app sound setting governing the splash sound,
+   so none here either. Blocked or failed playback is swallowed. Fired from
+   inside the scoring click, so it counts as a user gesture. */
+function recordGameBestSound(){
+  try {
+    const src = document.getElementById('onbMusic');
+    if (!src) return;
+    const a = src.cloneNode(true), VOL = 0.6;
+    a.removeAttribute('id');
+    a.volume = VOL;
+    const trim = () => { try { a.currentTime = 0.5; } catch(e){} };
+    if (a.readyState >= 1) trim(); else a.addEventListener('loadedmetadata', trim, { once: true });
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {});
+    setTimeout(() => {
+      const t0 = Date.now();
+      const step = () => {
+        try {
+          const k = Math.min(1, (Date.now() - t0) / 1400);
+          a.volume = VOL * (1 - k);
+          if (k < 1) setTimeout(step, 40); else a.pause();
+        } catch(e){}
+      };
+      step();
+    }, 900);
+  } catch(e){}
+}
+function recordGameBestFx(){
+  recGameHud.classList.add('is-new');
+  recordGameBestSound();
+  recBestAnims.forEach(a => a.cancel()); recBestAnims = [];
+  if (!recGameEl.animate) return;
+  recAnimate(recGameFlare, recReducedMotion
+    ? [{ opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 1, offset: .75 }, { opacity: 0 }]
+    : [{ opacity: 0, transform: 'translate(-50%,6px) scale(.9)', easing: 'cubic-bezier(.16,1,.3,1)' },
+       { opacity: 1, transform: 'translate(-50%,0) scale(1)', offset: .15 },
+       { opacity: 1, transform: 'translate(-50%,0) scale(1)', offset: .75, easing: 'ease-in' },
+       { opacity: 0, transform: 'translate(-50%,-4px) scale(1)' }], 1300, recBestAnims);
+  if (recReducedMotion) return;
+  recAnimate(recGameBestEl, [{ transform: 'scale(1)' }, { transform: 'scale(1.25)', offset: .4 }, { transform: 'scale(1)' }],
+    { duration: 400, iterations: 3, easing: 'ease-in-out' }, recBestAnims);
+  if (!recSparks){
+    recSparks = [];
+    for (let i = 0; i < 14; i++){ const el = document.createElement('div'); el.className = 'rec-game-spark'; recGameEl.appendChild(el); recSparks.push(el); }
+  }
+  const R = recordDisc.offsetWidth / 2;
+  recSparks.forEach((el, i) => {
+    const th = i * (360 / recSparks.length) + (Math.random() * 14 - 7), out = R + 16 + Math.random() * 18;
+    recAnimate(el, [
+      { transform: 'rotate(' + th + 'deg) translateY(' + (-R * .94).toFixed(1) + 'px) scale(.4)', opacity: 0 },
+      { transform: 'rotate(' + th + 'deg) translateY(' + (-R).toFixed(1) + 'px) scale(1)', opacity: 1, offset: .18 },
+      { transform: 'rotate(' + (th + 5) + 'deg) translateY(' + (-out).toFixed(1) + 'px) scale(.3)', opacity: 0 }],
+      { duration: 900 + Math.random() * 400, delay: i * 18, easing: 'cubic-bezier(.16,1,.3,1)' }, recBestAnims);
+  });
+}
+// every press on the record gets a quick grow-and-settle pulse (hit or
+// miss, game or not). Scales the .art-record wrapper, never the rotating
+// .record-disc, so the spin angle is untouched; transform-only, no layout.
+let recPressAnim = null;
+recGameEl.addEventListener('pointerdown', () => {
+  recGame.downAt = performance.now(); recGame.downAngle = recordGameAngleNow();
+  if (recReducedMotion || !recGameEl.animate) return;
+  if (recPressAnim) recPressAnim.cancel();
+  recPressAnim = recGameEl.animate([
+    { transform: 'scale(1)', easing: 'cubic-bezier(.16,1,.3,1)' },
+    { transform: 'scale(1.05)', offset: .4, easing: 'cubic-bezier(.65,0,.35,1)' },
+    { transform: 'scale(1)' }], 180);
+});
+function recordGameTap(){
+  if (!recordGameInFlow()) return;
+  const now = Date.now();
+  const a = performance.now() - recGame.downAt < 1000 ? recGame.downAngle : recordGameAngleNow();
+  recGame.downAt = 0;
+  if (now - recGame.lastTap < REC_GAME_DBL_MS){
+    // double-tap: (re)start a fresh run. The pair's first tap may already
+    // have scored into a new best during a run - that write is dropped.
+    recGame.lastTap = 0;
+    if (recGame.stored !== null){
+      try { if (recGame.stored) localStorage.setItem(LS_REC_GAME_BEST, String(recGame.stored)); else localStorage.removeItem(LS_REC_GAME_BEST); } catch(err){}
+    }
+    recGame.stored = null;
+    if (!recReducedMotion && recTargetMul === 1) recordGameStart();
+    return;
+  }
+  recGame.lastTap = now;
+  recGame.stored = recGame.on ? recordGameReadBest() : null;
+  if (!recGame.on) return;
+  const rev = Math.round(a / 360), hit = Math.abs(a - rev * 360) <= REC_GAME_HIT_DEG;
+  if (!hit || rev <= recGame.rev){ recordGameEnd(); return; }
+  const hitDotTop = parseFloat(recGameDot.style.top) || REC_GAME_DOT_TOP;
+  recGame.score++; recGame.rev = rev; recGame.grace = false;
+  recGameMul = Math.min(REC_GAME_MAX_MUL, recGameMul * REC_GAME_SPEEDUP);
+  if (recGame.score > recGame.best){
+    recGame.best = recGame.score;
+    try { localStorage.setItem(LS_REC_GAME_BEST, String(recGame.best)); } catch(err){}
+  }
+  recordGameRender();
+  recordGameHitFx(hitDotTop);
+  if (!recGame.newBest && recGame.startBest > 0 && recGame.score > recGame.startBest){ recGame.newBest = true; recordGameBestFx(); }
+}
+recGameEl.addEventListener('click', recordGameTap);
 
 /* =========================================================================
    CASSETTE — physical object driven by real playback state.
@@ -15677,24 +15925,15 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
   flowLayer.addEventListener('touchend', end);
 })();
 
-/* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
-(function(){
-  function toggleActivePlayback(){ if (state.queuePos >= 0) userTogglePlayback(); }
-  $('artworkWrap').addEventListener('click', toggleActivePlayback);
-  $('flowArtWrap').addEventListener('click', toggleActivePlayback);
-})();
-
-/* double-tap (or double-click) album art / cymatics view -> toggle fullscreen.
-   Layered on top of the single-tap handling above rather than replacing it -
-   every tap still does what it always did (play/pause in the player view,
-   nothing but revealing chrome in flow mode), and a second tap/click landing
-   within DOUBLE_TAP_MS additionally fires the fullscreen toggle. Listening
-   on 'click' (fired for both a touch tap and a mouse click) rather than
-   separate touch/mouse handlers covers desktop and mobile with one path, same
-   as the single-tap handler above. Entering fullscreen reuses fsBtn's own
-   click handler (art/viz/lyrics/split-desktop branching) instead of
-   reimplementing it; exiting calls the same closeFlow() the exit button and
-   swipe-down gesture use. */
+/* double-tap (or double-click) album art -> enter fullscreen; fullscreen
+   cymatics view -> exit. The fullscreen art view has no double-tap exit
+   (there a double-tap on the record starts the tap game, see RECORD TAP
+   GAME; exit is the X button or swipe-down). A single tap on the art never
+   plays/pauses. Listening on 'click' (fired for both a touch tap and a
+   mouse click) covers desktop and mobile with one path. Entering reuses
+   fsBtn's own click handler (art/viz/lyrics/split-desktop branching)
+   instead of reimplementing it; exiting calls the same closeFlow() the
+   exit button and swipe-down gesture use. */
 (function(){
   const DOUBLE_TAP_MS = 300;
   function onDoubleTap(el, fn){
@@ -15706,7 +15945,6 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     });
   }
   onDoubleTap(artworkWrap, () => fsBtn.click());
-  onDoubleTap(flowArtWrap, closeFlow);
   onDoubleTap(flowVizWrap, closeFlow);
 })();
 

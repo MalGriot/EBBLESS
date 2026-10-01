@@ -4293,7 +4293,7 @@ Add entries in this shape:
   narrower (e.g. only the queue), that would need a follow-up.
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** A minigame on the spinning record visual: the record
   spins slowly, and tapping/clicking it right when it returns to its
@@ -4310,6 +4310,87 @@ Add entries in this shape:
   gameplay) - worth sequencing after that one if both are built, so the
   minigame's interaction layer sits on top of the finished visual rather
   than the other way around.
+
+  **Built** (aa10c9c, owner follow-ups 960befd, b0d1dea, b59d03c, and
+  the start-rule rework after them). Current behavior:
+  - **Where:** only in the fullscreen flow view with the Spinning Record
+    style showing. No game in the normal player (or the split-desktop
+    panel-slide fullscreen): there a double-tap still goes on to
+    fullscreen, single taps do nothing.
+  - **Start:** a double-tap (second click within 300ms, same window as
+    the art `DOUBLE_TAP_MS`) on the spinning record arms a run at 0: base
+    speed, dot at the rim, "0 / Best n" showing. Single taps never start
+    a run. Needs playback running (record spinning); reduced motion
+    disables it. Fair start: the first 0deg pass after arming is a free
+    one (may be tapped, ends nothing if missed); from then on every pass
+    must be hit.
+  - **Play:** during a run, a single tap within +/-16deg of 0deg (art
+    upright; ~133ms each side at base 120deg/s) scores, speeds the platter
+    x1.04 (cap 2.2x; eased twice from 10deg/x1.07/3x per owner "slightly easier") and walks the 0deg dot 1% of the disc inward per point
+    after the first (3.5% to a 25% clamp; label edge at 31%). Angle is
+    sampled at pointerdown and extrapolated past the last frame.
+  - **End:** a tap outside the window, a second tap in the same window,
+    letting a required pass go by, or pausing: score blinks 3x and goes,
+    best holds then blinks 3x more and goes (order confirmed by owner),
+    platter eases back to normal pace, dot back to the rim (Best stays
+    accent through the blink if this run set a new best). Leaving
+    fullscreen (X, swipe-down, switching art style) ends a run silently,
+    best kept.
+  - **Double-tap during a run** restarts a fresh run at 0; any best the
+    pair's first tap wrote is put back.
+  - **Taps elsewhere:** tapping the art (any style, viz, lyrics, player
+    or fullscreen) never plays/pauses; play/pause is the transport
+    buttons (fullscreen has its own `#flowPlayBtn`), Space and media keys.
+    Fullscreen art view has no double-tap exit any more (X button and
+    swipe-down remain); fullscreen cymatics (`#flowVizWrap`) keeps its
+    double-tap exit since the record isn't shown there. Swipe prev/next
+    unchanged.
+  - **Press pulse:** every pointerdown on the record (any view, game or
+    not) plays a 180ms Web Animation on the `.art-record` wrapper, scale 1
+    -> 1.05 at 40% -> 1; the rotating `.record-disc` is untouched, no
+    layout shift, skipped under reduced motion.
+  - **Hit feedback:** every scoring tap pops the score (300ms overshoot
+    scale), flashes the fixed target tick, and bursts a thin accent ring
+    from where the dot was hit (380ms; a little bigger and brighter every
+    5 points, capped at 20). Each hit cancels the previous hit's
+    animations so fast streaks don't stack.
+  - **New best:** once per run, at the point the score passes the best
+    the run started with (only if there was one, i.e. best > 0): a "New
+    best" accent flare above the score pill (1.3s), the Best number pulses
+    3x, 14 small accent sparks drift off the record edge (~1-1.3s), and
+    the splash's entry sound plays: a clone of `#onbMusic`
+    (`brand/assets/intro-theme.mp3`, same plain `<audio>` path and 0.5s
+    trim as the splash), volume 0.6, held ~0.9s then faded over 1.4s. It
+    mixes over the YouTube player without touching it; no app sound
+    setting governs the splash sound so none here; a blocked play() is
+    swallowed. No per-hit tick: the only UI sounds (LP needle sfx) have no
+    setting to switch them off.
+  - **Effects rules:** Web Animations on transform/opacity only, every
+    effect element `pointer-events:none`, nothing awaited, so taps and
+    timing are untouched; reduced-motion fallbacks are opacity/color only
+    (moot today, since the game is off under reduced motion).
+  - **Storage:** best in localStorage `ebbless:recordTapBest` (local only,
+    not profile-synced). SW v45.
+
+  Verified on a worktree-local server with a temporary debug hook and
+  synthetic pointerdown/click pairs (rAF is throttled in the hidden
+  preview pane): normal player single tap in-window does nothing, double
+  tap opens fullscreen with no run; in fullscreen single tap with no run
+  does nothing, double tap arms "0 / Best 5" without exiting, next-pass hit
+  scores 1, double tap mid-run restarts at 0 and reverts a best 5 -> 6
+  write, off-window tap blinks out; armed at 340deg the 360deg pass went by
+  with the run still on, and the next untapped pass ended it; X during a
+  run cancels silently. `#flowPlayBtn` is visible (58px) and wired to
+  `userTogglePlayback`, but real playback couldn't be exercised in the
+  sandbox. Feedback pass: hits 1-5 from a stored best of 2 fired the
+  pop/tick/ring each hit, the best moment only at 3 (one `play()` of the
+  `intro-theme.mp3` clone at volume 0.6, none on later hits), no page
+  errors; frames frozen mid-animation and checked at desktop and 375px
+  (flare sits above the pill, no overlap). Needs real-device check:
+  double-tap to arm on touch, feel of the +/-16deg window, pulse and
+  burst feel, the new-best sound mixing over YouTube on iOS (an `<audio>`
+  start there could interrupt the player), cue tick/dot against real
+  label art.
 
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged
