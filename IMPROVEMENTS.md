@@ -4293,7 +4293,7 @@ Add entries in this shape:
   narrower (e.g. only the queue), that would need a follow-up.
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** A minigame on the spinning record visual: the record
   spins slowly, and tapping/clicking it right when it returns to its
@@ -4310,6 +4310,36 @@ Add entries in this shape:
   gameplay) - worth sequencing after that one if both are built, so the
   minigame's interaction layer sits on top of the finished visual rather
   than the other way around.
+
+  **Built (aa10c9c):** While the record is spinning at full speed, a tap
+  landing within +/-10deg of 0deg (album art upright; ~83ms each side at
+  the base 120deg/s) starts a run and scores; each hit multiplies platter
+  speed by 1.07 (cap 3x), so the time window tightens as you go. A tap
+  outside the window, a second tap in the same window, letting 0deg pass
+  untapped, or pausing ends the run: score blinks 3x and goes, best holds
+  then blinks 3x more and goes, platter eases back to normal pace. During
+  a run an accent cue tick sits fixed above the rim and an accent dot rides
+  the disc at 0deg (hidden otherwise); the score / "Best N" pill sits low
+  on the disc, not rotating. Hooked into the album-art tap handler
+  (`toggleActivePlayback` -> `recordGameTap`): any tap the game uses skips
+  play/pause, so a run never stops the music; a non-hit tap with no run
+  still plays/pauses as before. Double-tap fullscreen and swipe prev/next
+  untouched (separate listeners; swipes never produce a click). Angle is
+  sampled at pointerdown and extrapolated past the last frame, so touch
+  click latency doesn't eat the window. Works in the fullscreen flow view
+  too (same #artRecord element). Disabled under reduced motion (record
+  doesn't spin). Best stored in localStorage `ebbless:recordTapBest`
+  (local only, not profile-synced). SW v45.
+  Verified on a worktree-local server with a temporary debug hook (rAF is
+  throttled in the hidden preview pane, so taps were synthetic
+  pointerdown+click at measured angles): non-hit tap with no run falls
+  through, hit starts run (1 / Best 1), next-rev hit scores and speeds up,
+  off-window tap ends with blink sequence, same-window double tap ends,
+  untapped revolution ends, best persisted, speed decays to 1. Layout
+  checked at desktop and 375px. Needs real-device check: feel of the
+  +/-10deg window on touch, accidental run starts when tapping to pause
+  (~5% of taps land in-window), and the cue tick/HUD against real label
+  art.
 
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged
