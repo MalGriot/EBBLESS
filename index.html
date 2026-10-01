@@ -1108,8 +1108,12 @@ body.queue-over-fs #queue-scrim{bottom:0}
    every piece of fullscreen chrome still paints over them. */
 .cs-stack-host{overflow:visible!important}
 .cs-stack{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
-.cs-ghost{position:absolute;left:0;top:0;opacity:0;will-change:transform,opacity;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.cs-ghost svg{display:block;width:100%;height:100%;overflow:visible}
+/* housing color comes from var(--player-accent), so a song change fades
+   each copy to the new album tone instead of snapping */
+.cs-ghost{position:absolute;left:0;top:0;opacity:0;will-change:transform,opacity;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  transition:color 1.2s var(--ease-in-out)}
+.cs-ghost svg{display:block;width:100%;height:100%;overflow:visible;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)) drop-shadow(0 12px 22px rgba(0,0,0,.4))}
 .cs-stack-plate{position:absolute;left:0;top:0;background:rgba(12,13,15,.94);opacity:0;will-change:opacity}
 /* mobile/tablet flow: the downward pass runs to the bottom edge, behind the
    title/seek/controls block - a backing under .flow-bottom (fading in from
@@ -15249,14 +15253,13 @@ function csStackBuild(){
     g.className = 'cs-ghost';
     g.style.width = svgW + 'px'; g.style.height = svgH + 'px';
     g.style.marginLeft = (-svgW / 2) + 'px'; g.style.marginTop = (-svgH / 2) + 'px';
-    // graduated shades by stack order: the first copy is the lightest,
-    // most opaque tint of the album tone; each later one darker and more
-    // see-through, the last still faintly there
+    // graduated shades by stack order: the first copy is the lightest
+    // tint of the album tone, each later one darker; all fully opaque
     const f = n > 1 ? i / (n - 1) : 0;
     const p = Math.round(74 - 50 * f), q = Math.round(100 - 100 * f);
     g.style.color = '#2c2e33';
     g.style.color = `color-mix(in srgb, var(--player-accent) ${p}%, color-mix(in srgb, #3a3c42 ${q}%, #0b0c0e))`;
-    csStack.geo.baseOp[i] = .96 - .66 * f;
+    csStack.geo.baseOp[i] = 1;
     g.innerHTML = '<svg viewBox="0 0 400 256"><use href="#csGhostSym"/></svg>';
     csStack.wrap.appendChild(g);
     csStack.ghosts[i] = g;
@@ -15329,7 +15332,7 @@ function csStackFrame(now){
       if (!csStack.desk){
         // collapse, back copies first, into the main cassette
         const c = csEaseInOut(csClamp((t - hEnd - (G.n - 1 - i) * .06) / CS_T.collapse));
-        y = yS * (1 - c); s = sS + (1 - sS) * c * .98; op = bo * (1 - csClamp((c - .35) / .65));
+        y = yS * (1 - c); s = sS + (1 - sS) * c * .98; op = bo * (1 - csClamp((c - .7) / .3));
       } else {
         const g = csEaseInOut(csClamp((t - hEnd) / CS_T.gather));
         y = yS * (1 - g); s = sS + (.98 - sS) * g;
@@ -15341,8 +15344,7 @@ function csStackFrame(now){
           const rr = Math.atan2(G.rx * sn, G.ry * cs) * 180 / Math.PI;
           const p = csEaseInOut(csClamp((t - T.spreadStart) / CS_T.spread));
           x = G.rx * sn * p; y = -G.ry * cs * p; s = .98 + (G.rs - .98) * p; rot = rr * p;
-          // a touch fainter toward the bottom of the ring, under the transport
-          op = bo * (1 - .06 * p) * (1 - .35 * p * (1 - cs) / 2);
+          op = bo;
           if (t >= ex){
             // at the top: lift a little, then slide down behind the main cassette
             const lf = csEaseOut(csClamp((t - ex) / CS_T.lift));
@@ -15350,7 +15352,7 @@ function csStackFrame(now){
             x = 0; rot = 0;
             y = (-G.ry - G.H * .1 * lf) * (1 - sl);
             s = G.rs * (1 - .08 * sl);
-            op = bo * .94 * (1 - csClamp((sl - .45) / .55));
+            op = bo * (1 - csClamp((sl - .7) / .3));
           }
         }
       }
