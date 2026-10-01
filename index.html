@@ -577,7 +577,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .rec-game-mark{position:absolute;top:2%;left:50%;width:2px;height:9px;margin:-12px 0 0 -1px;border-radius:1px;
   background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out);pointer-events:none}
 .rec-game-dot{position:absolute;top:3.5%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;
-  background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out);pointer-events:none}
+  background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out),top var(--dur-surface) var(--ease-out);pointer-events:none}
 .art-record.is-game .rec-game-mark,.art-record.is-game .rec-game-dot{opacity:.9}
 .rec-game-hud{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);display:flex;align-items:baseline;gap:10px;
   padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.55);color:var(--text);font-variant-numeric:tabular-nums;
@@ -12118,18 +12118,21 @@ recordApplyRotation();
    starts a run / scores a point, and each point speeds the platter up a
    little (recGameMul). Any other tap during a run, or letting 0deg pass
    untapped, ends it: score blinks 3x and goes, best blinks 3x more and goes,
-   and the platter eases back to normal pace. Hooked into the album-art
-   tap handler (toggleActivePlayback): a tap the game uses (a hit, or any tap
-   during a run) skips play/pause, so a run never stops the music; a tap
-   outside the window with no run going does exactly what it always did.
+   and the platter eases back to normal pace. Each point also walks the
+   0deg dot one REC_GAME_DOT_STEP toward the label (clamped at
+   REC_GAME_DOT_MAX), back to the rim when the run ends. Tapping the art
+   (any style, viz, lyrics, player or fullscreen) no longer plays/pauses at
+   all, so the record's taps belong to the game alone.
    The angle is read at pointerdown (and extrapolated past the last frame),
    not at click, so touch click latency doesn't eat the window. */
 const REC_GAME_HIT_DEG = 10;        /* +/- around 0deg; ~83ms each side at the base 120deg/s */
 const REC_GAME_SPEEDUP = 1.07, REC_GAME_MAX_MUL = 3;
+const REC_GAME_DOT_TOP = 3.5, REC_GAME_DOT_STEP = 1, REC_GAME_DOT_MAX = 25; /* % of the disc from its top edge; label edge is at 31% */
 const LS_REC_GAME_BEST = 'ebbless:recordTapBest';
 const recGameEl = recordDisc.parentElement;
 const recGameHud = recGameEl.querySelector('.rec-game-hud');
 const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestEl = recGameHud.querySelector('.rec-game-best');
+const recGameDot = recGameEl.querySelector('.rec-game-dot');
 const recGame = { on: false, score: 0, best: 0, rev: 0, downAt: 0, downAngle: 0, overT: 0 };
 let recGameMul = 1;
 function recordGameAngleNow(){
@@ -12139,10 +12142,12 @@ function recordGameAngleNow(){
 function recordGameRender(){
   recGameScoreEl.textContent = recGame.score;
   recGameBestEl.textContent = 'Best ' + recGame.best;
+  recGameDot.style.top = Math.min(REC_GAME_DOT_MAX, REC_GAME_DOT_TOP + Math.max(0, recGame.score - 1) * REC_GAME_DOT_STEP) + '%';
 }
 function recordGameEnd(){
   recGame.on = false;
   recGameEl.classList.remove('is-game');
+  recGameDot.style.top = '';
   recGameHud.dataset.phase = 'over';
   clearTimeout(recGame.overT);
   recGame.overT = setTimeout(() => { recGameHud.dataset.phase = ''; }, 2200);
@@ -12150,21 +12155,20 @@ function recordGameEnd(){
 recGameEl.addEventListener('pointerdown', () => {
   recGame.downAt = performance.now(); recGame.downAngle = recordGameAngleNow();
 });
-// returns true when the game took this tap (caller then skips play/pause)
-function recordGameTap(e){
-  if (!e || !recGameEl.contains(e.target) || !recGameEl.getClientRects().length) return false;
+function recordGameTap(){
+  if (!recGameEl.getClientRects().length) return;
   const fresh = performance.now() - recGame.downAt < 1000;
   const a = fresh ? recGame.downAngle : recordGameAngleNow();
   recGame.downAt = 0;
   const rev = Math.round(a / 360), hit = Math.abs(a - rev * 360) <= REC_GAME_HIT_DEG;
   if (!recGame.on){
-    if (!hit || recReducedMotion || recTargetMul !== 1 || recSpeedMul < 0.98) return false;
+    if (!hit || recReducedMotion || recTargetMul !== 1 || recSpeedMul < 0.98) return;
     clearTimeout(recGame.overT);
     let best = 0; try { best = parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){}
     Object.assign(recGame, { on: true, score: 0, best });
     recGameEl.classList.add('is-game');
     recGameHud.dataset.phase = 'run';
-  } else if (!hit || rev <= recGame.rev){ recordGameEnd(); return true; }
+  } else if (!hit || rev <= recGame.rev){ recordGameEnd(); return; }
   recGame.score++; recGame.rev = rev;
   recGameMul = Math.min(REC_GAME_MAX_MUL, recGameMul * REC_GAME_SPEEDUP);
   if (recGame.score > recGame.best){
@@ -12172,8 +12176,8 @@ function recordGameTap(e){
     try { localStorage.setItem(LS_REC_GAME_BEST, String(recGame.best)); } catch(err){}
   }
   recordGameRender();
-  return true;
 }
+recGameEl.addEventListener('click', recordGameTap);
 
 /* =========================================================================
    CASSETTE — physical object driven by real playback state.
@@ -15705,21 +15709,12 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
   flowLayer.addEventListener('touchend', end);
 })();
 
-/* tap album art -> play/pause (cymatics view excluded: tapping there just reveals controls) */
-(function(){
-  function toggleActivePlayback(e){ if (recordGameTap(e)) return; if (state.queuePos >= 0) userTogglePlayback(); }
-  $('artworkWrap').addEventListener('click', toggleActivePlayback);
-  $('flowArtWrap').addEventListener('click', toggleActivePlayback);
-})();
-
 /* double-tap (or double-click) album art / cymatics view -> toggle fullscreen.
-   Layered on top of the single-tap handling above rather than replacing it -
-   every tap still does what it always did (play/pause in the player view,
-   nothing but revealing chrome in flow mode), and a second tap/click landing
-   within DOUBLE_TAP_MS additionally fires the fullscreen toggle. Listening
-   on 'click' (fired for both a touch tap and a mouse click) rather than
-   separate touch/mouse handlers covers desktop and mobile with one path, same
-   as the single-tap handler above. Entering fullscreen reuses fsBtn's own
+   A single tap on the art no longer plays/pauses (the record's taps feed
+   its tap game, see RECORD TAP GAME); a second tap/click landing within
+   DOUBLE_TAP_MS fires the fullscreen toggle. Listening on 'click' (fired
+   for both a touch tap and a mouse click) rather than separate touch/mouse
+   handlers covers desktop and mobile with one path. Entering fullscreen reuses fsBtn's own
    click handler (art/viz/lyrics/split-desktop branching) instead of
    reimplementing it; exiting calls the same closeFlow() the exit button and
    swipe-down gesture use. */

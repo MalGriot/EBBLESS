@@ -4341,6 +4341,23 @@ Add entries in this shape:
   (~5% of taps land in-window), and the cue tick/HUD against real label
   art.
 
+  **Owner follow-up:** (1) Tapping the art no longer plays/pauses
+  anywhere: removed the `toggleActivePlayback` click handlers on
+  `#artworkWrap` (art/record/cassette/viz/lyrics in the player) and
+  `#flowArtWrap` (fullscreen). Those were the only tap-to-play paths;
+  play/pause stays on the transport buttons, mini/now-playing buttons,
+  Space, and media keys. The record's own click listener now only feeds
+  the game (a non-hit tap with no run does nothing), so accidental runs
+  replacing a pause are moot. Double-tap fullscreen and swipe prev/next
+  are unchanged; there was no lyric tap-to-seek and no tutorial copy about
+  tapping art to pause. (2) The 0deg dot walks inward 1% of the disc per
+  point after the first (from 3.5% to a 25% clamp; the label edge is at
+  31%, so about 12px of groove stays clear at the 326px desktop disc) and
+  snaps back to the rim when the run ends. The fixed tick above the rim
+  still marks 0deg, since alignment is angular. Verified with synthetic
+  taps: off-window tap with no run is a no-op, dot 3.5% -> 4.5% -> 5.5%
+  over 3 hits, clamped at 25% at score 41, reset on run end.
+
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged
 - **Priority:** medium
