@@ -7199,7 +7199,7 @@ Add entries in this shape:
 
 
 ### desktop-fs-slide-panels: Browser-fullscreen should slide Library/Queue in place, and close an open playlist with the Library
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Two related problems in the first (in-browser, not
   whole-screen) fullscreen phase on desktop:
@@ -7212,7 +7212,7 @@ Add entries in this shape:
 - **Touches:** desktop fullscreen (`toggleDesktopFs*` / `.desktop-fs-*`
   CSS), the shared "exit fullscreen then open menu" path added by
   `keyboard-shortcuts-2`, playlist panel open/close.
-- **Branch:**
+- **Branch:** agent/desktop-fs-slide-panels
 - **Notes:** Synced from Geethub issues #227 (bug) and #225 (idea), combined
   since both describe phase-1 fullscreen panel behavior. Item 2 partly
   reverses `keyboard-shortcuts-2`'s "menus exit fullscreen first" rule —
@@ -7220,7 +7220,7 @@ Add entries in this shape:
   behavior unless told otherwise. Builds on `desktop-player-fullscreen-toggle`.
 
 ### shortcuts-zxcv-visuals: Remap visual-mode shortcuts to Z / X / C / V
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Visual-mode shortcuts should sit in a row: Z = Art,
   X = Cymatics, C = Lyrics, V = Video.
@@ -7232,17 +7232,17 @@ Add entries in this shape:
   shuffle moves and whether y/u/t stay as aliases before building.
 
 ### cassette-cycle-7-tapes: Cassette cycling animation should use 7 tapes, not 6
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The cassette fullscreen cycling/orbit animation shows 6
   tapes; it should show 7.
 - **Touches:** cassette fullscreen stack/orbit animation.
-- **Branch:**
+- **Branch:** agent/cassette-cycle-7-tapes
 - **Notes:** Synced from Geethub issue #223. Related to merged
   `cassette-fullscreen-animation` / `cassette-fullscreen-second-stack`.
 
 ### library-icon-redesign: Library icon should replace the queue icon, with a more distinct themed design
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The Library button should use a new, more distinct icon
   that still fits the EBBLESS theme, and it should take the place currently
@@ -7253,13 +7253,13 @@ Add entries in this shape:
   Unclear what the Queue button gets instead — confirm before building.
 
 ### regional-source-alternatives: Regional alternatives where YouTube is blocked (e.g. Russia)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** YouTube is restricted in some countries (e.g. Russia).
   Research and list regional playback alternatives (e.g. Yandex Music, VK)
   so EBBLESS keeps working everywhere, and consider translating track
   metadata for matching.
 - **Touches:** playback source resolution / worker search; possibly i18n.
-- **Branch:**
+- **Branch:** agent/regional-source-alternatives
 - **Notes:** Synced from Geethub issue #226. First deliverable is a
   research list, not code.
