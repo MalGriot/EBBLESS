@@ -623,9 +623,6 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .art-cassette[data-state="idle"] .cs-ground{opacity:.75}
 .cs-interior{fill:#0a0a0b}
 .cs-shell{fill:url(#csShellGrad)}
-.cs-side{fill:#121315}
-.cs-side-seam{stroke:rgba(0,0,0,.6);stroke-width:1.4}
-.cs-side-lip{stroke:rgba(255,255,255,.08);stroke-width:1}
 .cs-grain{fill:url(#csGrain);pointer-events:none}
 .cs-grain2{fill:url(#csGrain2);pointer-events:none}
 .cs-parting{fill:none;stroke:rgba(0,0,0,.42);stroke-width:.9}
@@ -1118,9 +1115,8 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .cs-ghost svg{position:relative;display:block;width:100%;height:100%;overflow:visible}
 /* drop shadow as its own layer under the housing (8,8 384x240 rx9 of the
    400x256 box) so csStackFrame can fade it by distance from center - copies
-   tucked behind the main cassette would otherwise cast past its edges.
-   Runs to y=266 to cover the shell's bottom side band too */
-.cs-ghost-sh{position:absolute;left:2%;top:3.125%;width:96%;height:100.8%;border-radius:2.34%/3.49%;
+   tucked behind the main cassette would otherwise cast past its edges */
+.cs-ghost-sh{position:absolute;left:2%;top:3.125%;width:96%;height:93.75%;border-radius:2.34%/3.75%;
   box-shadow:0 4px 6px rgba(0,0,0,.45),0 12px 22px rgba(0,0,0,.4);opacity:0;will-change:opacity}
 .cs-stack-plate{position:absolute;left:0;top:0;background:rgba(12,13,15,.94);opacity:0;will-change:opacity}
 /* mobile/tablet flow: the downward pass runs to the bottom edge, behind the
@@ -2297,19 +2293,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
                 <stop offset="18%" stop-color="#fff" stop-opacity=".02"/>
                 <stop offset="100%" stop-color="#000" stop-opacity=".42"/>
               </linearGradient>
-              <symbol id="csGhostSym" viewBox="0 0 400 256" overflow="visible">
-                <!-- thickness: a real shell is ~12mm deep on a 63.8mm face
-                     (~45 units here); seen from slightly above, the bottom
-                     side shows as a foreshortened band under the face, with
-                     the seam where the two shell halves meet -->
-                <rect x="8" y="226" width="384" height="40" rx="9" fill="currentColor"/>
-                <rect x="8" y="226" width="384" height="40" rx="9" fill="rgba(0,0,0,.5)"/>
-                <path d="M16,257.5 H384" stroke="rgba(0,0,0,.45)" stroke-width="1.4"/>
-                <path d="M17,249.5 H383" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+              <symbol id="csGhostSym" viewBox="0 0 400 256">
                 <rect x="8" y="8" width="384" height="240" rx="9" fill="currentColor"/>
                 <rect x="8" y="8" width="384" height="240" rx="9" fill="url(#csGhostShade)"/>
                 <rect x="8.5" y="8.5" width="383" height="239" rx="8.5" fill="none" stroke="rgba(255,255,255,.1)"/>
-                <path d="M17,9.6 H383" stroke="rgba(255,255,255,.22)" stroke-width="1.2"/>
                 <path fill-rule="evenodd" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z M112,84 H288 A28,28 0 0 1 288,140 H112 A28,28 0 0 1 112,84 Z" fill="rgba(0,0,0,.34)"/>
                 <circle cx="119" cy="112" r="20" fill="rgba(0,0,0,.45)"/>
                 <circle cx="281" cy="112" r="20" fill="rgba(0,0,0,.45)"/>
@@ -2434,14 +2421,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               </defs>
 
               <!-- grounding shadow: stays put while the body lifts/settles -->
-              <ellipse class="cs-ground" cx="200" cy="258" rx="188" ry="13"/>
+              <ellipse class="cs-ground" cx="200" cy="252" rx="188" ry="13"/>
 
               <g class="cs-body">
-              <!-- shell thickness: same foreshortened bottom side band as the
-                   fullscreen stack copies (#csGhostSym), with the seam -->
-              <rect class="cs-side" x="8" y="226" width="384" height="40" rx="9"/>
-              <path class="cs-side-seam" d="M16,257.5 H384"/>
-              <path class="cs-side-lip" d="M17,249.5 H383"/>
               <!-- inside of the shell, seen through the window and openings -->
               <rect class="cs-interior" x="12" y="12" width="376" height="232" rx="6"/>
 
