@@ -4311,73 +4311,58 @@ Add entries in this shape:
   minigame's interaction layer sits on top of the finished visual rather
   than the other way around.
 
-  **Built (aa10c9c):** While the record is spinning at full speed, a tap
-  landing within +/-10deg of 0deg (album art upright; ~83ms each side at
-  the base 120deg/s) starts a run and scores; each hit multiplies platter
-  speed by 1.07 (cap 3x), so the time window tightens as you go. A tap
-  outside the window, a second tap in the same window, letting 0deg pass
-  untapped, or pausing ends the run: score blinks 3x and goes, best holds
-  then blinks 3x more and goes, platter eases back to normal pace. During
-  a run an accent cue tick sits fixed above the rim and an accent dot rides
-  the disc at 0deg (hidden otherwise); the score / "Best N" pill sits low
-  on the disc, not rotating. Hooked into the album-art tap handler
-  (`toggleActivePlayback` -> `recordGameTap`): any tap the game uses skips
-  play/pause, so a run never stops the music; a non-hit tap with no run
-  still plays/pauses as before. Double-tap fullscreen and swipe prev/next
-  untouched (separate listeners; swipes never produce a click). Angle is
-  sampled at pointerdown and extrapolated past the last frame, so touch
-  click latency doesn't eat the window. Works in the fullscreen flow view
-  too (same #artRecord element). Disabled under reduced motion (record
-  doesn't spin). Best stored in localStorage `ebbless:recordTapBest`
-  (local only, not profile-synced). SW v45.
-  Verified on a worktree-local server with a temporary debug hook (rAF is
-  throttled in the hidden preview pane, so taps were synthetic
-  pointerdown+click at measured angles): non-hit tap with no run falls
-  through, hit starts run (1 / Best 1), next-rev hit scores and speeds up,
-  off-window tap ends with blink sequence, same-window double tap ends,
-  untapped revolution ends, best persisted, speed decays to 1. Layout
-  checked at desktop and 375px. Needs real-device check: feel of the
-  +/-10deg window on touch, accidental run starts when tapping to pause
-  (~5% of taps land in-window), and the cue tick/HUD against real label
-  art.
+  **Built** (aa10c9c, owner follow-ups 960befd, b0d1dea, b59d03c, and
+  the start-rule rework after them). Current behavior:
+  - **Where:** only in the fullscreen flow view with the Spinning Record
+    style showing. No game in the normal player (or the split-desktop
+    panel-slide fullscreen): there a double-tap still goes on to
+    fullscreen, single taps do nothing.
+  - **Start:** a double-tap (second click within 300ms, same window as
+    the art `DOUBLE_TAP_MS`) on the spinning record arms a run at 0: base
+    speed, dot at the rim, "0 / Best n" showing. Single taps never start
+    a run. Needs playback running (record spinning); reduced motion
+    disables it. Fair start: the first 0deg pass after arming is a free
+    one (may be tapped, ends nothing if missed); from then on every pass
+    must be hit.
+  - **Play:** during a run, a single tap within +/-10deg of 0deg (art
+    upright; ~83ms each side at base 120deg/s) scores, speeds the platter
+    x1.07 (cap 3x) and walks the 0deg dot 1% of the disc inward per point
+    after the first (3.5% to a 25% clamp; label edge at 31%). Angle is
+    sampled at pointerdown and extrapolated past the last frame.
+  - **End:** a tap outside the window, a second tap in the same window,
+    letting a required pass go by, or pausing: score blinks 3x and goes,
+    best holds then blinks 3x more and goes (order confirmed by owner),
+    platter eases back to normal pace, dot back to the rim. Leaving
+    fullscreen (X, swipe-down, switching art style) ends a run silently,
+    best kept.
+  - **Double-tap during a run** restarts a fresh run at 0; any best the
+    pair's first tap wrote is put back.
+  - **Taps elsewhere:** tapping the art (any style, viz, lyrics, player
+    or fullscreen) never plays/pauses; play/pause is the transport
+    buttons (fullscreen has its own `#flowPlayBtn`), Space and media keys.
+    Fullscreen art view has no double-tap exit any more (X button and
+    swipe-down remain); fullscreen cymatics (`#flowVizWrap`) keeps its
+    double-tap exit since the record isn't shown there. Swipe prev/next
+    unchanged.
+  - **Press pulse:** every pointerdown on the record (any view, game or
+    not) plays a 180ms Web Animation on the `.art-record` wrapper, scale 1
+    -> 1.05 at 40% -> 1; the rotating `.record-disc` is untouched, no
+    layout shift, skipped under reduced motion.
+  - **Storage:** best in localStorage `ebbless:recordTapBest` (local only,
+    not profile-synced). SW v45.
 
-  **Owner follow-up:** (1) Tapping the art no longer plays/pauses
-  anywhere: removed the `toggleActivePlayback` click handlers on
-  `#artworkWrap` (art/record/cassette/viz/lyrics in the player) and
-  `#flowArtWrap` (fullscreen). Those were the only tap-to-play paths;
-  play/pause stays on the transport buttons, mini/now-playing buttons,
-  Space, and media keys. The record's own click listener now only feeds
-  the game (a non-hit tap with no run does nothing), so accidental runs
-  replacing a pause are moot. Double-tap fullscreen and swipe prev/next
-  are unchanged; there was no lyric tap-to-seek and no tutorial copy about
-  tapping art to pause. (2) The 0deg dot walks inward 1% of the disc per
-  point after the first (from 3.5% to a 25% clamp; the label edge is at
-  31%, so about 12px of groove stays clear at the 326px desktop disc) and
-  snaps back to the rim when the run ends. The fixed tick above the rim
-  still marks 0deg, since alignment is angular. Verified with synthetic
-  taps: off-window tap with no run is a no-op, dot 3.5% -> 4.5% -> 5.5%
-  over 3 hits, clamped at 25% at score 41, reset on run end.
-  **Press pulse:** every pointerdown on the record (hit, miss, or no run)
-  plays a 180ms Web Animation on the `.art-record` wrapper: scale 1 ->
-  1.05 at 40% (ease-out) -> 1 (ease-in-out). The rotating `.record-disc`
-  transform is untouched and it's transform-only, so no layout shift.
-  Skipped under prefers-reduced-motion; a new press cancels the previous
-  pulse. Verified by stepping the animation (1, 1.049, 1.05, 1.025, 1),
-  disc transform and artwork box unchanged. Blink order confirmed by owner.
-  **Double-tap fix:** a double-tap (fullscreen in or out) no longer starts
-  or scores. The game's click handler treats a second click within 300ms
-  (same window as the art `DOUBLE_TAP_MS`) as that gesture and undoes
-  what the first tap did: a run the first tap started vanishes silently
-  (no blink, high score restored or removed in localStorage, speed and dot
-  reset at once); a run already going before the gesture is restored to
-  its pre-gesture score, then ended normally with the blink. Game taps
-  still read the angle at pointerdown, no added latency; the press pulse
-  still plays. Covers the player and fullscreen views, mouse and touch
-  (both use the same click-based double-tap). Verified with synthetic
-  pointerdown/click pairs 120-150ms apart, first tap in the hit window:
-  player (fullscreen opened, run voided, empty best stayed empty),
-  fullscreen exit (flow closed, run voided, best 5 kept), and a live run
-  at 3 (restored to 3, then the blink).
+  Verified on a worktree-local server with a temporary debug hook and
+  synthetic pointerdown/click pairs (rAF is throttled in the hidden
+  preview pane): normal player single tap in-window does nothing, double
+  tap opens fullscreen with no run; in fullscreen single tap with no run
+  does nothing, double tap arms "0 / Best 5" without exiting, next-pass hit
+  scores 1, double tap mid-run restarts at 0 and reverts a best 5 -> 6
+  write, off-window tap blinks out; armed at 340deg the 360deg pass went by
+  with the run still on, and the next untapped pass ended it; X during a
+  run cancels silently. `#flowPlayBtn` is visible (58px) and wired to
+  `userTogglePlayback`, but real playback couldn't be exercised in the
+  sandbox. Needs real-device check: double-tap to arm on touch, feel of
+  the +/-10deg window, pulse feel, cue tick/dot against real label art.
 
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged

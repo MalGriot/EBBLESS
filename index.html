@@ -12100,8 +12100,12 @@ function recordTick(ts){
   if (!recGame.on && recGameMul > 1) recGameMul = Math.max(1, recGameMul - dt / 1500); /* run over: ease back to normal pace */
   recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * recGameMul * wow;
   recordApplyRotation();
-  // let 0deg go by untapped and the run is over
-  if (recGame.on && recAngle > (recGame.rev + 1) * 360 + REC_GAME_HIT_DEG) recordGameEnd();
+  if (recGame.on){
+    // the game only lives in fullscreen: leaving it (or the record style) drops the run quietly
+    if (!recordGameInFlow()) recordGameCancel();
+    // let the required 0deg pass go by untapped and the run is over
+    else if (recAngle > (recGame.rev + (recGame.grace ? 2 : 1)) * 360 + REC_GAME_HIT_DEG) recordGameEnd();
+  }
   if (recSpeedMul <= 0 && recTargetMul === 0){ recRafId = null; recLastTs = 0; return; }
   recRafId = requestAnimationFrame(recordTick);
 }
@@ -12113,16 +12117,18 @@ function recordSetPlaying(isPlaying){
 }
 recordApplyRotation();
 
-/* RECORD TAP GAME (issue #116): while the record is spinning at full
-   speed, a tap landing within REC_GAME_HIT_DEG of 0deg (album art upright)
-   starts a run / scores a point, and each point speeds the platter up a
-   little (recGameMul). Any other tap during a run, or letting 0deg pass
-   untapped, ends it: score blinks 3x and goes, best blinks 3x more and goes,
-   and the platter eases back to normal pace. Each point also walks the
-   0deg dot one REC_GAME_DOT_STEP toward the label (clamped at
-   REC_GAME_DOT_MAX), back to the rim when the run ends. Tapping the art
-   (any style, viz, lyrics, player or fullscreen) no longer plays/pauses at
-   all, so the record's taps belong to the game alone.
+/* RECORD TAP GAME (issue #116): lives only in the fullscreen flow view
+   with the record showing. A double-tap on the spinning record arms a run
+   at 0 (base speed, dot at the rim); a double-tap during a run restarts it
+   fresh. Single taps never start anything; during a run, a single tap
+   within REC_GAME_HIT_DEG of 0deg (album art upright) scores and speeds the
+   platter up a little (recGameMul). Any other tap, or letting a required
+   0deg pass go by untapped, ends it: score blinks 3x and goes, best blinks
+   3x more and goes, platter eases back to normal pace. The first 0deg pass
+   after arming is a free one (recGame.grace). Each point walks the 0deg
+   dot one REC_GAME_DOT_STEP toward the label (clamped at REC_GAME_DOT_MAX).
+   Leaving fullscreen ends a run silently, best kept. Tapping the art never
+   plays/pauses; in fullscreen double-tap no longer exits either.
    The angle is read at pointerdown (and extrapolated past the last frame),
    not at click, so touch click latency doesn't eat the window. */
 const REC_GAME_HIT_DEG = 10;        /* +/- around 0deg; ~83ms each side at the base 120deg/s */
@@ -12133,23 +12139,15 @@ const recGameEl = recordDisc.parentElement;
 const recGameHud = recGameEl.querySelector('.rec-game-hud');
 const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestEl = recGameHud.querySelector('.rec-game-best');
 const recGameDot = recGameEl.querySelector('.rec-game-dot');
-const recGame = { on: false, score: 0, best: 0, rev: 0, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, pre: null };
-/* same window as DOUBLE_TAP_MS in the art double-tap -> fullscreen handler:
-   a second click inside it is that gesture, never a game tap */
+const recGame = { on: false, score: 0, best: 0, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
+/* same window as DOUBLE_TAP_MS in the art double-tap handler */
 const REC_GAME_DBL_MS = 300;
 function recordGameReadBest(){ try { return parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){ return 0; } }
-// a double-tap (fullscreen in / out) silently voids whatever its first tap
-// did: a run that tap started vanishes (no blink, no best write, speed and
-// dot back at once); a run already going before the gesture is put back
-// as it was, then ended normally (blink), since tapping twice is a miss
-function recordGameUndo(){
-  const p = recGame.pre; recGame.pre = null;
-  if (!p) return;
+function recordGameInFlow(){ return !!state.flowOpen && flowArtWrap.contains(recGameEl); }
+// end a run with no blink (left fullscreen); best already saved as it grew
+function recordGameCancel(){
+  recGame.on = false;
   clearTimeout(recGame.overT);
-  try { if (p.stored) localStorage.setItem(LS_REC_GAME_BEST, String(p.stored)); else localStorage.removeItem(LS_REC_GAME_BEST); } catch(err){}
-  Object.assign(recGame, { on: p.on, score: p.score, best: p.best, rev: p.rev });
-  recGameMul = p.mul;
-  if (p.on){ recGameEl.classList.add('is-game'); recordGameRender(); recordGameEnd(); return; }
   recGameEl.classList.remove('is-game');
   recGameDot.style.top = '';
   recGameHud.dataset.phase = '';
@@ -12163,6 +12161,16 @@ function recordGameRender(){
   recGameScoreEl.textContent = recGame.score;
   recGameBestEl.textContent = 'Best ' + recGame.best;
   recGameDot.style.top = Math.min(REC_GAME_DOT_MAX, REC_GAME_DOT_TOP + Math.max(0, recGame.score - 1) * REC_GAME_DOT_STEP) + '%';
+}
+function recordGameStart(){
+  clearTimeout(recGame.overT);
+  // grace: the next 0deg pass may be tapped but needn't be, so a run armed
+  // just before 0deg isn't lost on a pass the player had no time for
+  Object.assign(recGame, { on: true, score: 0, best: recordGameReadBest(), rev: Math.floor(recordGameAngleNow() / 360), grace: true });
+  recGameMul = 1;
+  recGameEl.classList.add('is-game');
+  recGameHud.dataset.phase = 'run';
+  recordGameRender();
 }
 function recordGameEnd(){
   recGame.on = false;
@@ -12186,23 +12194,27 @@ recGameEl.addEventListener('pointerdown', () => {
     { transform: 'scale(1)' }], 180);
 });
 function recordGameTap(){
-  if (!recGameEl.getClientRects().length) return;
+  if (!recordGameInFlow()) return;
   const now = Date.now();
-  if (now - recGame.lastTap < REC_GAME_DBL_MS){ recGame.lastTap = 0; recGame.downAt = 0; recordGameUndo(); return; }
-  recGame.lastTap = now;
-  recGame.pre = { on: recGame.on, score: recGame.score, best: recGame.best, rev: recGame.rev, mul: recGameMul, stored: recordGameReadBest() };
-  const fresh = performance.now() - recGame.downAt < 1000;
-  const a = fresh ? recGame.downAngle : recordGameAngleNow();
+  const a = performance.now() - recGame.downAt < 1000 ? recGame.downAngle : recordGameAngleNow();
   recGame.downAt = 0;
+  if (now - recGame.lastTap < REC_GAME_DBL_MS){
+    // double-tap: (re)start a fresh run. The pair's first tap may already
+    // have scored into a new best during a run - that write is dropped.
+    recGame.lastTap = 0;
+    if (recGame.stored !== null){
+      try { if (recGame.stored) localStorage.setItem(LS_REC_GAME_BEST, String(recGame.stored)); else localStorage.removeItem(LS_REC_GAME_BEST); } catch(err){}
+    }
+    recGame.stored = null;
+    if (!recReducedMotion && recTargetMul === 1) recordGameStart();
+    return;
+  }
+  recGame.lastTap = now;
+  recGame.stored = recGame.on ? recordGameReadBest() : null;
+  if (!recGame.on) return;
   const rev = Math.round(a / 360), hit = Math.abs(a - rev * 360) <= REC_GAME_HIT_DEG;
-  if (!recGame.on){
-    if (!hit || recReducedMotion || recTargetMul !== 1 || recSpeedMul < 0.98) return;
-    clearTimeout(recGame.overT);
-    Object.assign(recGame, { on: true, score: 0, best: recGame.pre.stored });
-    recGameEl.classList.add('is-game');
-    recGameHud.dataset.phase = 'run';
-  } else if (!hit || rev <= recGame.rev){ recordGameEnd(); return; }
-  recGame.score++; recGame.rev = rev;
+  if (!hit || rev <= recGame.rev){ recordGameEnd(); return; }
+  recGame.score++; recGame.rev = rev; recGame.grace = false;
   recGameMul = Math.min(REC_GAME_MAX_MUL, recGameMul * REC_GAME_SPEEDUP);
   if (recGame.score > recGame.best){
     recGame.best = recGame.score;
@@ -15742,15 +15754,15 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
   flowLayer.addEventListener('touchend', end);
 })();
 
-/* double-tap (or double-click) album art / cymatics view -> toggle fullscreen.
-   A single tap on the art no longer plays/pauses (the record's taps feed
-   its tap game, see RECORD TAP GAME); a second tap/click landing within
-   DOUBLE_TAP_MS fires the fullscreen toggle. Listening on 'click' (fired
-   for both a touch tap and a mouse click) rather than separate touch/mouse
-   handlers covers desktop and mobile with one path. Entering fullscreen reuses fsBtn's own
-   click handler (art/viz/lyrics/split-desktop branching) instead of
-   reimplementing it; exiting calls the same closeFlow() the exit button and
-   swipe-down gesture use. */
+/* double-tap (or double-click) album art -> enter fullscreen; fullscreen
+   cymatics view -> exit. The fullscreen art view has no double-tap exit
+   (there a double-tap on the record starts the tap game, see RECORD TAP
+   GAME; exit is the X button or swipe-down). A single tap on the art never
+   plays/pauses. Listening on 'click' (fired for both a touch tap and a
+   mouse click) covers desktop and mobile with one path. Entering reuses
+   fsBtn's own click handler (art/viz/lyrics/split-desktop branching)
+   instead of reimplementing it; exiting calls the same closeFlow() the
+   exit button and swipe-down gesture use. */
 (function(){
   const DOUBLE_TAP_MS = 300;
   function onDoubleTap(el, fn){
@@ -15762,7 +15774,6 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     });
   }
   onDoubleTap(artworkWrap, () => fsBtn.click());
-  onDoubleTap(flowArtWrap, closeFlow);
   onDoubleTap(flowVizWrap, closeFlow);
 })();
 
