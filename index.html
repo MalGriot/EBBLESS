@@ -14857,7 +14857,9 @@ function csStackBuild(){
   const cy = flow ? host.offsetTop + hh / 2 : r.top + r.height / 2;
   const gap = Math.max(0, (cy / k) - H / 2); // main cassette top to viewport top, local px
   const shrink = desk ? .02 : .03;
-  const n = Math.max(desk ? 6 : 3, Math.min(10, Math.round(gap / (H * .14))));
+  // desktop: always 7 copies, so the ring is the same 7 evenly spaced tapes
+  // on every screen (issue #223); mobile sizes the stack from the gap (3-10)
+  const n = desk ? 7 : Math.max(3, Math.min(10, Math.round(gap / (H * .14))));
   // last copy's top edge lands on the top of the screen
   const step = (gap + H * shrink * n / 2) / n;
   // second, downward pass: same n, last copy's bottom edge on the bottom of the screen
