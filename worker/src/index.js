@@ -10,6 +10,11 @@
 //      hits, is the most reliable option short of running locally like the
 //      site's own discover-weekly refresh script does.
 
+import {
+  titleOverlapRatio, foldMatchText, matchKey,
+  crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
+} from './match-text.js';
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -326,65 +331,17 @@ function durationScore(candidateSeconds, sourceSeconds) {
   if (diff <= 5) return DURATION_MATCH_WEIGHT;
   return DURATION_MATCH_WEIGHT * (1 - Math.min(diff, 65) / 30);
 }
-const TITLE_STOPWORDS = new Set([
-  'a', 'an', 'the', 'of', 'and', 'feat', 'ft', 'featuring', 'with', 'vs',
-  'remix', 'version', 'edit', 'radio', 'official', 'audio', 'video',
-  'lyrics', 'lyric', 'music',
-]);
-// All non-stopword words in a title, including single-character ones (e.g.
-// the stray "t"/"s" left over from splitting "don't"/"it's" on the
-// apostrophe). Used for the *candidate* side of a title-overlap check below,
-// where extra noise tokens are harmless - they only matter if a source token
-// happens to equal one, which is exactly the case titleTokens() (below)
-// exists to catch.
-function titleTokensRaw(t) {
-  return (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
-    .filter(w => w.length > 0 && !TITLE_STOPWORDS.has(w));
-}
-// The *significant* words in a title: same as titleTokensRaw but with
-// single-character tokens (usually apostrophe-split noise, or throwaway
-// pronouns) dropped too, since normally those aren't what makes one title
-// distinct from another.
-//
-// Falls back to the raw (single-character-inclusive) token list when that
-// filtering would leave nothing at all - a title made entirely of
-// single-character "words", like Amel Larrieux's "i n i", would otherwise
-// tokenize to an empty array. An empty source-token list makes
-// titleOverlapRatio below treat *every* candidate as a full match (nothing
-// to compare against), which silently disables the title-match signal -
-// the dominant scoring weight and the hard title-relevance filter both stop
-// discriminating, leaving channel/view-count signals alone to pick between
-// same-artist tracks. That's exactly how "i n i" could resolve to a
-// different, more popular Amel Larrieux upload instead of itself.
-function titleTokens(t) {
-  const raw = titleTokensRaw(t);
-  const significant = raw.filter(w => w.length > 1);
-  return significant.length ? significant : raw;
-}
-// Fraction of the source track's significant words that show up in a
-// candidate's title. 1 if the source title has no significant words of its
-// own (nothing to compare against, so don't penalize).
-//
-// The candidate side is matched against titleTokensRaw (not titleTokens) so
-// that a single-character source token - only possible via the all-short
-// fallback above - can still be found in a candidate title that also
-// contains other, longer words (e.g. matching the "i"/"n" in "Amel Larrieux
-// - i n i" even though "amel"/"larrieux" are what titleTokens would normally
-// keep). This doesn't change matching for ordinary titles: titleTokens only
-// ever drops single-character tokens from sourceTokens when longer words
-// survive, so a normal sourceTokens list never contains one for the raw
-// candidate set to spuriously match against.
-function titleOverlapRatio(sourceTokens, candidateTitle) {
-  if (!sourceTokens.length) return 1;
-  const set = new Set(titleTokensRaw(candidateTitle));
-  return sourceTokens.filter(w => set.has(w)).length / sourceTokens.length;
-}
+// Title tokenising and overlap scoring (titleTokensRaw, titleTokens,
+// titleOverlapRatio, TITLE_STOPWORDS) live in ./match-text.js - Unicode-
+// aware (Cyrillic, CJK bigrams, Greek, ...) with a transliterated second
+// pass; see the notes there. titleOverlapRatio now takes the source *title*
+// (it tokenises it itself, so it can also transliterate it).
 
 // Some artists stylize a track title as individually space-separated
 // letters/punctuation - confirmed live on the "Breathe Love Deep" SoundCloud
 // release, whose entire tracklist is written this way ("h i g h", "b u r n",
 // "d o z e .", ". . . g a s p", ...). That's exactly the "i n i" edge case
-// titleTokens() above already has to fall back for (an all-single-character
+// titleTokens() (match-text.js) already has to fall back for (an all-single-character
 // source title can't be filtered down to "significant" words), but the
 // fallback only prevents an empty token list - it doesn't restore any real
 // discriminating power, since no ordinary YouTube video title contains an
@@ -403,7 +360,7 @@ function titleOverlapRatio(sourceTokens, candidateTitle) {
 function collapseLetterSpacedTitle(title) {
   const words = String(title || '').trim().split(/\s+/).filter(Boolean);
   if (words.length < 3) return title;
-  const core = w => w.replace(/[^a-z0-9]/gi, '');
+  const core = w => w.replace(/[^\p{L}\p{N}]/gu, '');
   if (!words.every(w => core(w).length <= 1)) return title;
   const collapsed = words.map(core).join('');
   return collapsed.length > 1 ? collapsed : title;
@@ -523,9 +480,12 @@ const ALBUM_EXCLUDE_WORDS = [
 ];
 const ALBUM_TOPIC_WEIGHT = 6;
 const ALBUM_NAME_WEIGHT = 4;
+// Unicode-aware (and Cyrillic/Greek-transliterated, so "Кино - Topic" and
+// "Kino - Topic" both name the artist "Кино") - see matchKey in
+// match-text.js. Was [a-z0-9]-only, so a non-Latin artist's own Topic
+// channel normalised to "" and was never recognised.
 function albumNorm(s) {
-  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ').trim();
+  return matchKey(s);
 }
 function wordRegex(phrase) {
   return new RegExp('(^|[^a-z0-9])' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])', 'i');
@@ -569,7 +529,11 @@ async function handleSearch(url, ctx) {
   const cache = envCache;
   const cacheKeyStr = 'https://cache.internal/search/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(title + '|' + artist + '|' + sourceDurationSeconds) +
     (altCount !== SEARCH_DEFAULT_ALTS ? '/alts' + altCount : '') +
-    (album ? '/album/' + encodeURIComponent(album) : '');
+    (album ? '/album/' + encodeURIComponent(album) : '') +
+    // Non-Latin matching changed only non-ASCII requests' results, so only
+    // those get new keys (see nonAsciiCacheTag) - ASCII-only searches keep
+    // their warm cache instead of a full cold start.
+    nonAsciiCacheTag(title, artist, album);
   const cacheKey = new Request(cacheKeyStr);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
@@ -646,8 +610,7 @@ async function handleSearch(url, ctx) {
   // outright rather than let scoreCandidate's other signals outvote a
   // mismatch. Fall back to the unfiltered pool only if every candidate
   // fails (e.g. a title made entirely of stopwords/numbers).
-  const sourceTokens = titleTokens(searchTitle);
-  pool.forEach(c => { c.titleOverlap = titleOverlapRatio(sourceTokens, c.title); });
+  pool.forEach(c => { c.titleOverlap = titleOverlapRatio(searchTitle, c.title); });
   const titleMatched = pool.filter(c => c.titleOverlap > 0);
   pool = titleMatched.length ? titleMatched : pool;
 
@@ -949,8 +912,11 @@ async function handleYtVideo(url, ctx) {
 const PODCAST_CACHE_VERSION = 'pod5';
 const PODCAST_MAX_EPISODES = 300;
 
+// Unicode-aware via matchKey (was [a-z0-9]-only: every non-Latin show
+// name normalised to "", so pickPodcastHit scored any non-Latin directory
+// hit as an exact match).
 function podNorm(s) {
-  return String(s || '').toLowerCase().replace(/&amp;/g, '&').replace(/[^a-z0-9]+/g, ' ').trim();
+  return matchKey(String(s || '').replace(/&amp;/g, '&'));
 }
 function xmlDecode(s) {
   return String(s || '')
@@ -1137,7 +1103,6 @@ function podClipLike(candTitle, epTitle) {
 // Best full-episode upload for one episode, or null. Strict on purpose: a
 // missing match just greys the episode out; a wrong one plays the wrong thing.
 async function youtubeEpisodeMatch(show, title, durationSec) {
-  const tokens = titleTokens(title);
   let cands = [];
   for (const q of [title + ' ' + show, title]) {
     try { cands = await fetchYouTubeSearchCandidates(q); } catch (e) { cands = []; }
@@ -1146,7 +1111,7 @@ async function youtubeEpisodeMatch(show, title, durationSec) {
   const maxViews = Math.max(1, ...cands.map(c => c.views || 0));
   const scored = [];
   for (const c of cands) {
-    const overlap = titleOverlapRatio(tokens, c.title);
+    const overlap = titleOverlapRatio(title, c.title);
     if (overlap < 0.6) continue;
     if (podClipLike(c.title, title)) continue;
     if (durationSec >= 600 && c.duration && (c.duration < durationSec * 0.6 || c.duration > durationSec * 1.6)) continue;
@@ -1201,7 +1166,7 @@ async function handlePodcastMatch(url, ctx) {
   const duration = parseInt(url.searchParams.get('duration'), 10) || 0;
   if (!show || !title) return json({ error: 'missing show or title' }, 400);
   const cache = envCache;
-  const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podcastmatch/' + encodeURIComponent(show + '|' + title + '|' + duration));
+  const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podcastmatch/' + encodeURIComponent(show + '|' + title + '|' + duration) + nonAsciiCacheTag(show, title));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
   let match;
@@ -1640,13 +1605,19 @@ async function handleArt(url, ctx) {
 // alongside Deezer's public search (free, no key, 1000x1000 covers), then
 // Last.fm's track.getInfo album image. iTunes wins when both have one.
 const SPOTIFYART_CACHE_VERSION = 'y3';
-const artNorm = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+-\s+.*$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const artNorm = (s) => matchKey(String(s || '')
+  .replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+-\s+.*$/, ''));
 // Loose "is this the same artist" check so a fallback source can't hand
 // back some other artist's cover for a common title.
 function artistLooksRight(want, got) {
-  const a = artNorm(want), b = artNorm(got);
-  if (!a || !b) return true;
+  let a = artNorm(want), b = artNorm(got);
+  // No evidence either way: one side empty, or a CJK name vs a romanised
+  // one ("米津玄師" / "Kenshi Yonezu") that no table here can bridge. Both
+  // used to normalise to "" for any non-Latin name, which also allowed.
+  if (!a || !b || crossScriptIncomparable(a, b)) return true;
+  // Cyrillic/Greek on either side: compare romanisation-tolerant forms
+  // ("Цой" -> "tsoy" vs "Tsoi").
+  if (hasTranslitScript(want) || hasTranslitScript(got)) { a = looseTranslitKey(a); b = looseTranslitKey(b); }
   return a === b || a.includes(b) || b.includes(a) || a.split(' ')[0] === b.split(' ')[0];
 }
 async function searchItunesTrackArt(title, artist, dbg) {
@@ -1740,7 +1711,7 @@ async function handleSpotifyArt(url, env, ctx) {
   if (!title) return json({ error: 'missing title' }, 400);
 
   const cache = envCache;
-  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/spotifyart-' + SPOTIFYART_CACHE_VERSION + '/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()));
+  const cacheKey = new Request('https://cache.internal/' + ART_CACHE_VERSION + '/spotifyart-' + SPOTIFYART_CACHE_VERSION + '/' + encodeURIComponent(title.toLowerCase()) + '/' + encodeURIComponent(artist.toLowerCase()) + nonAsciiCacheTag(title, artist));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
@@ -1926,8 +1897,12 @@ function parseLrc(lrc) {
 // accents, strip version tags/feat. credits, compare artists word-by-word,
 // retry with the cleaned title and then a free-text q= search, and use the
 // track duration (when the client sends it) to pick the right version.
+// (4) non-Latin titles/artists normalised to "" under the old normalizer,
+// so pickLrclib could never title-match them at all. foldText/normTitle/
+// artistNames now go through match-text.js (Unicode-aware, Latin accents
+// folded, Cyrillic/Greek transliterated so "Кино" == "Kino").
 function foldText(s) {
-  return (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return foldMatchText(s);
 }
 const VERSION_TAG = /\b(remaster(ed)?|remix|mix|version|edit|live|mono|stereo|deluxe|radio|single|bonus|acoustic|demo|instrumental|explicit|clean|official|audio|video|lyrics?|visuali[sz]er|from)\b/i;
 function cleanTitle(s) {
@@ -1941,20 +1916,20 @@ function cleanTitle(s) {
   return t.replace(/\s+/g, ' ').trim();
 }
 function normTitle(s) {
-  return foldText(cleanTitle(s)).replace(/[^a-z0-9]+/g, ' ').trim();
+  return matchKey(cleanTitle(s));
 }
 // "KAYTRANADA, Kali Uchis" / "A feat. B" / "A & B" -> [['kaytranada'], ['kali','uchis']]
 function artistNames(s) {
   return foldText(s)
     .replace(/\s+-\s+topic$/, '').replace(/vevo$/, '')
     .split(/\s*(?:,|;|\/|&|\bx\b|\band\b|\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b)\s*/)
-    .map(n => n.replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean))
+    .map(n => matchKey(n).split(' ').filter(Boolean))
     .filter(w => w.length);
 }
 // True when any requested artist's words all appear in the result's artist
 // string (word order ignored, so lrclib's "Luna, Luedji" still counts).
 function artistMatches(queryArtist, resultArtist) {
-  const words = new Set(foldText(resultArtist).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean));
+  const words = new Set(matchKey(resultArtist).split(' ').filter(Boolean));
   return artistNames(queryArtist).some(ws => ws.every(w => words.has(w)));
 }
 
@@ -2036,7 +2011,7 @@ async function handleLyrics(url, ctx) {
   const duration = Math.max(0, parseFloat(url.searchParams.get('duration')) || 0);
 
   const cache = envCache;
-  const cacheKey = new Request('https://cache.internal/lyrics/' + LYRICS_CACHE_VERSION + '/' + videoId);
+  const cacheKey = new Request('https://cache.internal/lyrics/' + LYRICS_CACHE_VERSION + '/' + videoId + nonAsciiCacheTag(title, artist));
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
 
