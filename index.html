@@ -12974,7 +12974,12 @@ function runPlayFade(deck, dir){
         // volume parked at 0 or the UI claiming it's playing
         playFade = null;
         setVol(1);
-        if (s !== 3) setPlayingUI(false);
+        // Issue #228 (unplaying-next-track): a play that never takes on a
+        // deck that isn't even buffering means that deck's player is dead,
+        // not merely slow - rebuild it for this track rather than flipping
+        // the icon back and swallowing the press (which then repeated on
+        // every press, forever, since nothing else ever reloads the deck).
+        if (s !== 3 && !rebuildActiveDeck()) setPlayingUI(false);
         return;
       }
     }
@@ -12994,12 +12999,68 @@ function runPlayFade(deck, dir){
   tick();
 }
 
+// Issue #228 (unplaying-next-track): the play toggle (playIndex's same-
+// track branch, resumePlayback) only ever called playVideo() on the active
+// deck's existing player and assumed it was alive. A deck can be dead while
+// still showing the right art/title: a YT.Player whose onReady never fired
+// (its API methods never appear, and loadIntoDeck parks the track in
+// pendingVideoId waiting for that ready forever), a player that hit a load
+// error (onError only recorded it), or an iframe the browser/OS killed in
+// the background. playVideo() is then a no-op, runPlayFade gives up after
+// PAUSE_FADE_START_WAIT_MS and flips the icon back (the "pause for ~2s,
+// then play again" loop), and because playIndex only reloads when there's
+// no player at all, every later press did exactly the same.
+// How long a deck may sit not-ready after a load before it counts as stuck
+// (a healthy YT/SC player is ready well inside this).
+const DECK_STUCK_LOAD_MS = 8000;
+function deckLooksDead(deck){
+  if (!deck.player || deck.kind === 'cast') return false;
+  if (!deck.ready || !deck.player.playVideo) return !deck.loadStartTs || Date.now() - deck.loadStartTs > DECK_STUCK_LOAD_MS;
+  if (deck.kind === 'yt' && deck.videoId && deck.ytErrorFor === deck.videoId){
+    const s = deck.player.getPlayerState ? deck.player.getPlayerState() : -1;
+    return s !== 1 && s !== 2 && s !== 3;
+  }
+  return false;
+}
+// Throws away the active deck's player and builds a fresh one for the
+// current track, picking up where it was (via pendingResume, applied in
+// onDeckConfirmed). The new player autoplays (YT muted-then-unmute on
+// confirm, SC/audio via their own ready nudge), so the UI goes straight to
+// the loading ring. Returns false when there's nothing it can rebuild.
+function rebuildActiveDeck(){
+  const ad = activeDeck(), t = currentTrack(), entry = state.queue[state.queuePos];
+  if (!t || !t.videoId || !entry || ad.kind === 'cast' || routeLocked()) return false;
+  if (typeof YT === 'undefined' || !YT.Player) return false;
+  if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)) return false;
+  let pos = 0;
+  try { pos = ad.player && ad.player.getCurrentTime ? (ad.player.getCurrentTime() || 0) : 0; } catch(e){}
+  if (pos > 1) pendingResume = { plId: entry.plId, idx: entry.idx, position: pos };
+  if (playFade && playFade.deck === ad){ clearTimeout(playFade.timer); playFade = null; }
+  const wasYt = ad.kind === 'yt' && ad.player;
+  resetDeck(ad);
+  if (wasYt){ try { ad.player.destroy && ad.player.destroy(); } catch(e){} }
+  // new YT.Player() on an element that's already an <iframe> re-attaches to
+  // that same (dead) iframe instead of building a fresh one - always hand it
+  // a plain placeholder div.
+  const el = document.getElementById(ad.id);
+  if (!el || el.tagName === 'IFRAME'){
+    const div = document.createElement('div');
+    div.id = ad.id;
+    if (el) el.replaceWith(div); else document.getElementById('yt-host').appendChild(div);
+  }
+  ad.player = null; ad.ready = false; ad.ytErrorFor = null;
+  createDeckPlayer(ad, t.videoId);
+  setPlayingUI(true);
+  return true;
+}
+
 function fadeOutAndPause(deck){
   if (swapInProgress) cancelCrossfade();
   setPlayingUI(false);
   runPlayFade(deck, 'out');
 }
 function fadeInAndPlay(deck){
+  if (deck === activeDeck() && deckLooksDead(deck) && rebuildActiveDeck()) return;
   const wasFadingOut = isFadingOut(deck);
   if (!wasFadingOut && deck.player.setVolume) deck.player.setVolume(0);
   if (deck.player.playVideo) deck.player.playVideo();
