@@ -7199,7 +7199,7 @@ Add entries in this shape:
 
 
 ### desktop-fs-slide-panels: Browser-fullscreen should slide Library/Queue in place, and close an open playlist with the Library
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Two related problems in the first (in-browser, not
   whole-screen) fullscreen phase on desktop:
@@ -7221,7 +7221,7 @@ Add entries in this shape:
   behavior unless told otherwise. Builds on `desktop-player-fullscreen-toggle`.
 
 ### shortcuts-zxcv-visuals: Remap visual-mode shortcuts to Z / X / C / V
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Visual-mode shortcuts should sit in a row: Z = Art,
   X = Cymatics, C = Lyrics, V = Video.
@@ -7234,7 +7234,7 @@ Add entries in this shape:
   shuffle moves and whether y/u/t stay as aliases before building. Owner decision 2026-10-01: shuffle moves to K; Z/X/C/V replace T/Y/U (no aliases). V toggles the YouTube video panel (`#ytPanelBtn`, the 4th album-art tab next to Lyrics) per owner.
 
 ### cassette-cycle-7-tapes: Cassette cycling animation should use 7 tapes, not 6
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The cassette fullscreen cycling/orbit animation shows 6
   tapes; it should show 7.
@@ -7245,7 +7245,7 @@ Add entries in this shape:
   `cassette-fullscreen-animation` / `cassette-fullscreen-second-stack`.
 
 ### library-icon-redesign: Library icon should replace the queue icon, with a more distinct themed design
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The Library button should use a new, more distinct icon
   that still fits the EBBLESS theme, and it should take the place currently
@@ -7257,7 +7257,7 @@ Add entries in this shape:
   Unclear what the Queue button gets instead — confirm before building. Owner decision 2026-10-01: Queue button takes the current Library glyph; Library gets a new distinct themed icon; positions unchanged.
 
 ### regional-source-alternatives: Regional alternatives where YouTube is blocked (e.g. Russia)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** YouTube is restricted in some countries (e.g. Russia).
   Research and list regional playback alternatives (e.g. Yandex Music, VK)
