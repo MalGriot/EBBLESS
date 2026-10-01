@@ -7268,3 +7268,45 @@ Add entries in this shape:
 - **Build (336d2e7):** `docs/REGIONAL-SOURCES.md` (research only, no app code). Key findings: in Russia YouTube, SoundCloud and Spotify are all blocked and Cloudflare (the worker) is throttled, so a new source alone does not fix it; regional services mostly lack public embed/playback APIs. Recommends: (1) fail clearly when YouTube/worker is unreachable (today `loadIndex` retries forever), (2) fix the worker matcher dropping all non-Latin characters, (3) worker country/client hints, (4) "Open in <regional service>" link-outs, (5) optionally Audius. Ends with 7 owner questions.
 - **Notes:** Synced from Geethub issue #226. First deliverable is a
   research list, not code.
+
+### non-latin-match-scoring: Search matching ignores Cyrillic, Chinese, Japanese and Korean characters
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The worker's YouTube match scoring lowercases and strips
+  everything outside `[a-z0-9]`, so non-Latin titles/artists (Cyrillic,
+  CJK, Arabic, etc.) get no title-relevance check at all and can match the
+  wrong upload. Tokenise with Unicode letter/number classes (`\p{L}\p{N}`),
+  use character bigrams for CJK (no spaces between words), and add a
+  transliterated second pass so a Latin-script query can still match a
+  Cyrillic upload and vice versa. Should improve matches for every
+  listener, not just those in restricted regions.
+- **Touches:** `worker/` match scoring / tokenisers (and any matching
+  tokeniser copy in `index.html`).
+- **Branch:**
+- **Notes:** Item 2 of `docs/REGIONAL-SOURCES.md` section 7 (see 6.1 for
+  the concrete bug). Follow-up from Geethub issue #226, which stays open
+  until this and `regional-source-fallbacks` ship. Needs a worker deploy.
+
+### regional-source-fallbacks: Keep EBBLESS usable where YouTube is blocked
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Act on the research in `docs/REGIONAL-SOURCES.md`
+  section 7, in order:
+  1. Fail clearly: time out the YouTube IFrame API load (today `loadIndex`
+     retries every 300 ms forever when `YT.Player` is undefined), act on
+     embed error codes, add timeouts to worker calls, and show a plain
+     "not available on your network" message instead of spinning.
+  2. Worker-side country/client hints (`request.cf.country`, timezone,
+     language) to order fallbacks; hints only, not hard blocks.
+  3. "Open in <regional service>" link-outs (Yandex Music, NetEase Cloud
+     Music, Apple Music, etc.) built from public search URLs, with no
+     scraping or unofficial APIs.
+  4. Optionally one extra playable source (Audius first).
+- **Touches:** YouTube deck loading / error handling in `index.html`,
+  `worker/`, track menu or player UI for link-outs.
+- **Branch:**
+- **Notes:** Follow-up from Geethub issue #226. The report's 7 open
+  questions (section 8) should be answered first, especially: is Russia
+  a target market (hosting implications), and are link-outs acceptable.
+  Avoid reverse-engineered APIs and anything that helps evade a national
+  block.
