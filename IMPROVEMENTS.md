@@ -4324,9 +4324,9 @@ Add entries in this shape:
     disables it. Fair start: the first 0deg pass after arming is a free
     one (may be tapped, ends nothing if missed); from then on every pass
     must be hit.
-  - **Play:** during a run, a single tap within +/-10deg of 0deg (art
-    upright; ~83ms each side at base 120deg/s) scores, speeds the platter
-    x1.07 (cap 3x) and walks the 0deg dot 1% of the disc inward per point
+  - **Play:** during a run, a single tap within +/-13deg of 0deg (art
+    upright; ~108ms each side at base 120deg/s) scores, speeds the platter
+    x1.05 (cap 2.5x; eased from 10deg/x1.07/3x per owner "slightly easier") and walks the 0deg dot 1% of the disc inward per point
     after the first (3.5% to a 25% clamp; label edge at 31%). Angle is
     sampled at pointerdown and extrapolated past the last frame.
   - **End:** a tap outside the window, a second tap in the same window,
