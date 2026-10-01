@@ -7245,13 +7245,14 @@ Add entries in this shape:
   `cassette-fullscreen-animation` / `cassette-fullscreen-second-stack`.
 
 ### library-icon-redesign: Library icon should replace the queue icon, with a more distinct themed design
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The Library button should use a new, more distinct icon
   that still fits the EBBLESS theme, and it should take the place currently
   used by the queue icon.
 - **Touches:** nav/header icons (Library, Queue).
 - **Branch:** agent/library-icon-redesign
+- **Build (7c67070):** New Library glyph: a stack of record sleeves (front sleeve with a vinyl cutout, two offset sleeve edges behind). Queue now uses the old Library list-and-note glyph; the old near-identical Queue path is gone. 8 SVGs swapped: #topnav, #bottom-nav, flow fs-nav, lyrics fs-nav (Library + Queue each). No CSS/JS changes.
 - **Notes:** Synced from Geethub issue #224 (title only, no description).
   Unclear what the Queue button gets instead — confirm before building. Owner decision 2026-10-01: Queue button takes the current Library glyph; Library gets a new distinct themed icon; positions unchanged.
 
