@@ -12133,7 +12133,27 @@ const recGameEl = recordDisc.parentElement;
 const recGameHud = recGameEl.querySelector('.rec-game-hud');
 const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestEl = recGameHud.querySelector('.rec-game-best');
 const recGameDot = recGameEl.querySelector('.rec-game-dot');
-const recGame = { on: false, score: 0, best: 0, rev: 0, downAt: 0, downAngle: 0, overT: 0 };
+const recGame = { on: false, score: 0, best: 0, rev: 0, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, pre: null };
+/* same window as DOUBLE_TAP_MS in the art double-tap -> fullscreen handler:
+   a second click inside it is that gesture, never a game tap */
+const REC_GAME_DBL_MS = 300;
+function recordGameReadBest(){ try { return parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){ return 0; } }
+// a double-tap (fullscreen in / out) silently voids whatever its first tap
+// did: a run that tap started vanishes (no blink, no best write, speed and
+// dot back at once); a run already going before the gesture is put back
+// as it was, then ended normally (blink), since tapping twice is a miss
+function recordGameUndo(){
+  const p = recGame.pre; recGame.pre = null;
+  if (!p) return;
+  clearTimeout(recGame.overT);
+  try { if (p.stored) localStorage.setItem(LS_REC_GAME_BEST, String(p.stored)); else localStorage.removeItem(LS_REC_GAME_BEST); } catch(err){}
+  Object.assign(recGame, { on: p.on, score: p.score, best: p.best, rev: p.rev });
+  recGameMul = p.mul;
+  if (p.on){ recGameEl.classList.add('is-game'); recordGameRender(); recordGameEnd(); return; }
+  recGameEl.classList.remove('is-game');
+  recGameDot.style.top = '';
+  recGameHud.dataset.phase = '';
+}
 let recGameMul = 1;
 function recordGameAngleNow(){
   const rate = REC_DEG_PER_S * recSpeedMul * recGameMul / 1000;
@@ -12167,6 +12187,10 @@ recGameEl.addEventListener('pointerdown', () => {
 });
 function recordGameTap(){
   if (!recGameEl.getClientRects().length) return;
+  const now = Date.now();
+  if (now - recGame.lastTap < REC_GAME_DBL_MS){ recGame.lastTap = 0; recGame.downAt = 0; recordGameUndo(); return; }
+  recGame.lastTap = now;
+  recGame.pre = { on: recGame.on, score: recGame.score, best: recGame.best, rev: recGame.rev, mul: recGameMul, stored: recordGameReadBest() };
   const fresh = performance.now() - recGame.downAt < 1000;
   const a = fresh ? recGame.downAngle : recordGameAngleNow();
   recGame.downAt = 0;
@@ -12174,8 +12198,7 @@ function recordGameTap(){
   if (!recGame.on){
     if (!hit || recReducedMotion || recTargetMul !== 1 || recSpeedMul < 0.98) return;
     clearTimeout(recGame.overT);
-    let best = 0; try { best = parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){}
-    Object.assign(recGame, { on: true, score: 0, best });
+    Object.assign(recGame, { on: true, score: 0, best: recGame.pre.stored });
     recGameEl.classList.add('is-game');
     recGameHud.dataset.phase = 'run';
   } else if (!hit || rev <= recGame.rev){ recordGameEnd(); return; }

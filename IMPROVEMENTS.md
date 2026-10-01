@@ -4364,6 +4364,20 @@ Add entries in this shape:
   Skipped under prefers-reduced-motion; a new press cancels the previous
   pulse. Verified by stepping the animation (1, 1.049, 1.05, 1.025, 1),
   disc transform and artwork box unchanged. Blink order confirmed by owner.
+  **Double-tap fix:** a double-tap (fullscreen in or out) no longer starts
+  or scores. The game's click handler treats a second click within 300ms
+  (same window as the art `DOUBLE_TAP_MS`) as that gesture and undoes
+  what the first tap did: a run the first tap started vanishes silently
+  (no blink, high score restored or removed in localStorage, speed and dot
+  reset at once); a run already going before the gesture is restored to
+  its pre-gesture score, then ended normally with the blink. Game taps
+  still read the angle at pointerdown, no added latency; the press pulse
+  still plays. Covers the player and fullscreen views, mouse and touch
+  (both use the same click-based double-tap). Verified with synthetic
+  pointerdown/click pairs 120-150ms apart, first tap in the hit window:
+  player (fullscreen opened, run voided, empty best stayed empty),
+  fullscreen exit (flow closed, run voided, best 5 kept), and a live run
+  at 3 (restored to 3, then the blink).
 
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged
