@@ -7199,7 +7199,7 @@ Add entries in this shape:
 
 
 ### desktop-fs-slide-panels: Browser-fullscreen should slide Library/Queue in place, and close an open playlist with the Library
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Two related problems in the first (in-browser, not
   whole-screen) fullscreen phase on desktop:
@@ -7213,6 +7213,7 @@ Add entries in this shape:
   CSS), the shared "exit fullscreen then open menu" path added by
   `keyboard-shortcuts-2`, playlist panel open/close.
 - **Branch:** agent/desktop-fs-slide-panels
+- **Build (68f1f48):** New `deskFsPhase1()` (desk-fs open, no flow/lyrics-fs/Settings on top). In phase 1 the Library/Queue nav buttons and p/l/q shortcuts call new `toggleDesktopFsLib()`/`toggleDesktopFsQueue()` (slide drawers, stay in fullscreen); everywhere else keeps the `leaveFullscreen(true)` path. Entering desk-fs and closing the library drawer both call `closeLibraryPlaylistPanel()`; opening a playlist in phase 1 slides the library drawer in first. Manager smoke test could not reach desk-fs without a loaded track (YouTube blocked in the container) - needs a real-browser check.
 - **Notes:** Synced from Geethub issues #227 (bug) and #225 (idea), combined
   since both describe phase-1 fullscreen panel behavior. Item 2 partly
   reverses `keyboard-shortcuts-2`'s "menus exit fullscreen first" rule —
@@ -7220,40 +7221,41 @@ Add entries in this shape:
   behavior unless told otherwise. Builds on `desktop-player-fullscreen-toggle`.
 
 ### shortcuts-zxcv-visuals: Remap visual-mode shortcuts to Z / X / C / V
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Visual-mode shortcuts should sit in a row: Z = Art,
   X = Cymatics, C = Lyrics, V = Video.
 - **Touches:** global keydown handler, shortcut help/listing.
-- **Branch:**
+- **Branch:** agent/shortcuts-zxcv-visuals
 - **Notes:** Synced from Geethub issue #222. Conflicts with
   `keyboard-shortcuts-2`: "x" is currently shuffle (and "y"/"u" are
   cymatics/lyrics, "t" cycles art phases). Needs a decision on where
-  shuffle moves and whether y/u/t stay as aliases before building.
+  shuffle moves and whether y/u/t stay as aliases before building. Owner decision 2026-10-01: shuffle moves to K; Z/X/C/V replace T/Y/U (no aliases). No "video" visual mode exists yet - lane binds V only if a real video view exists.
 
 ### cassette-cycle-7-tapes: Cassette cycling animation should use 7 tapes, not 6
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The cassette fullscreen cycling/orbit animation shows 6
   tapes; it should show 7.
 - **Touches:** cassette fullscreen stack/orbit animation.
 - **Branch:** agent/cassette-cycle-7-tapes
+- **Build (1857b8a):** `csStackBuild()` now always uses 7 copies on desktop (was `max(6, gap-derived)`, so 6 on most screens); mobile keeps the gap-sized 3-10 stack.
 - **Notes:** Synced from Geethub issue #223. Related to merged
   `cassette-fullscreen-animation` / `cassette-fullscreen-second-stack`.
 
 ### library-icon-redesign: Library icon should replace the queue icon, with a more distinct themed design
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The Library button should use a new, more distinct icon
   that still fits the EBBLESS theme, and it should take the place currently
   used by the queue icon.
 - **Touches:** nav/header icons (Library, Queue).
-- **Branch:**
+- **Branch:** agent/library-icon-redesign
 - **Notes:** Synced from Geethub issue #224 (title only, no description).
-  Unclear what the Queue button gets instead — confirm before building.
+  Unclear what the Queue button gets instead — confirm before building. Owner decision 2026-10-01: Queue button takes the current Library glyph; Library gets a new distinct themed icon; positions unchanged.
 
 ### regional-source-alternatives: Regional alternatives where YouTube is blocked (e.g. Russia)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** YouTube is restricted in some countries (e.g. Russia).
   Research and list regional playback alternatives (e.g. Yandex Music, VK)
@@ -7261,5 +7263,6 @@ Add entries in this shape:
   metadata for matching.
 - **Touches:** playback source resolution / worker search; possibly i18n.
 - **Branch:** agent/regional-source-alternatives
+- **Build (336d2e7):** `docs/REGIONAL-SOURCES.md` (research only, no app code). Key findings: in Russia YouTube, SoundCloud and Spotify are all blocked and Cloudflare (the worker) is throttled, so a new source alone does not fix it; regional services mostly lack public embed/playback APIs. Recommends: (1) fail clearly when YouTube/worker is unreachable (today `loadIndex` retries forever), (2) fix the worker matcher dropping all non-Latin characters, (3) worker country/client hints, (4) "Open in <regional service>" link-outs, (5) optionally Audius. Ends with 7 owner questions.
 - **Notes:** Synced from Geethub issue #226. First deliverable is a
   research list, not code.
