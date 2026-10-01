@@ -12131,8 +12131,8 @@ recordApplyRotation();
    plays/pauses; in fullscreen double-tap no longer exits either.
    The angle is read at pointerdown (and extrapolated past the last frame),
    not at click, so touch click latency doesn't eat the window. */
-const REC_GAME_HIT_DEG = 13;        /* +/- around 0deg; ~108ms each side at the base 120deg/s */
-const REC_GAME_SPEEDUP = 1.05, REC_GAME_MAX_MUL = 2.5;
+const REC_GAME_HIT_DEG = 16;        /* +/- around 0deg; ~133ms each side at the base 120deg/s */
+const REC_GAME_SPEEDUP = 1.04, REC_GAME_MAX_MUL = 2.2;
 const REC_GAME_DOT_TOP = 3.5, REC_GAME_DOT_STEP = 1, REC_GAME_DOT_MAX = 25; /* % of the disc from its top edge; label edge is at 31% */
 const LS_REC_GAME_BEST = 'ebbless:recordTapBest';
 const recGameEl = recordDisc.parentElement;
