@@ -7230,7 +7230,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #222. Conflicts with
   `keyboard-shortcuts-2`: "x" is currently shuffle (and "y"/"u" are
   cymatics/lyrics, "t" cycles art phases). Needs a decision on where
-  shuffle moves and whether y/u/t stay as aliases before building. Owner decision 2026-10-01: shuffle moves to K; Z/X/C/V replace T/Y/U (no aliases). No "video" visual mode exists yet - lane binds V only if a real video view exists.
+  shuffle moves and whether y/u/t stay as aliases before building. Owner decision 2026-10-01: shuffle moves to K; Z/X/C/V replace T/Y/U (no aliases). V toggles the YouTube video panel (`#ytPanelBtn`, the 4th album-art tab next to Lyrics) per owner.
 
 ### cassette-cycle-7-tapes: Cassette cycling animation should use 7 tapes, not 6
 - **Status:** review
