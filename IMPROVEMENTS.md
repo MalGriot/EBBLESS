@@ -4357,6 +4357,13 @@ Add entries in this shape:
   still marks 0deg, since alignment is angular. Verified with synthetic
   taps: off-window tap with no run is a no-op, dot 3.5% -> 4.5% -> 5.5%
   over 3 hits, clamped at 25% at score 41, reset on run end.
+  **Press pulse:** every pointerdown on the record (hit, miss, or no run)
+  plays a 180ms Web Animation on the `.art-record` wrapper: scale 1 ->
+  1.05 at 40% (ease-out) -> 1 (ease-in-out). The rotating `.record-disc`
+  transform is untouched and it's transform-only, so no layout shift.
+  Skipped under prefers-reduced-motion; a new press cancels the previous
+  pulse. Verified by stepping the animation (1, 1.049, 1.05, 1.025, 1),
+  disc transform and artwork box unchanged. Blink order confirmed by owner.
 
 ### queue-panel-remove-playlist-section: Remove the "Playlist" section from the queue panel
 - **Status:** merged

@@ -12152,8 +12152,18 @@ function recordGameEnd(){
   clearTimeout(recGame.overT);
   recGame.overT = setTimeout(() => { recGameHud.dataset.phase = ''; }, 2200);
 }
+// every press on the record gets a quick grow-and-settle pulse (hit or
+// miss, game or not). Scales the .art-record wrapper, never the rotating
+// .record-disc, so the spin angle is untouched; transform-only, no layout.
+let recPressAnim = null;
 recGameEl.addEventListener('pointerdown', () => {
   recGame.downAt = performance.now(); recGame.downAngle = recordGameAngleNow();
+  if (recReducedMotion || !recGameEl.animate) return;
+  if (recPressAnim) recPressAnim.cancel();
+  recPressAnim = recGameEl.animate([
+    { transform: 'scale(1)', easing: 'cubic-bezier(.16,1,.3,1)' },
+    { transform: 'scale(1.05)', offset: .4, easing: 'cubic-bezier(.65,0,.35,1)' },
+    { transform: 'scale(1)' }], 180);
 });
 function recordGameTap(){
   if (!recGameEl.getClientRects().length) return;
