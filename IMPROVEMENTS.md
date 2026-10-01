@@ -4293,7 +4293,7 @@ Add entries in this shape:
   narrower (e.g. only the queue), that would need a follow-up.
 
 ### record-tap-minigame: Rhythm-tap minigame on the spinning record
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** A minigame on the spinning record visual: the record
   spins slowly, and tapping/clicking it right when it returns to its
@@ -4304,7 +4304,7 @@ Add entries in this shape:
   visible for an extra 3 blinks before it also disappears.
 - **Touches:** spinning-record visual element (new interaction layer on top
   of it), local high-score persistence.
-- **Branch:** (unclaimed)
+- **Branch:** agent/record-tap-minigame
 - **Notes:** Synced from Geethub issue #116. New feature, not overlapping
   `spinning-record-realism` (that's a visual/physicality polish pass with no
   gameplay) - worth sequencing after that one if both are built, so the
@@ -7311,3 +7311,20 @@ Add entries in this shape:
   a target market (hosting implications), and are link-outs acceptable.
   Avoid reverse-engineered APIs and anything that helps evade a national
   block. **On hold until after launch** (owner, 2026-10-01): a separate region-specific app may be the better option than retrofitting EBBLESS.
+
+### unplaying-next-track: Next track shows but play/pause flips back without playing
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Long-standing bug: the next track's art and title are
+  correct, but it won't play. Pressing play (button or space bar) turns the
+  icon to pause for about 2 seconds, then it flips back to play. Repeating
+  it does the same thing every time; the track never starts. Find why the
+  deck rejects or loses the play request in this state and make one press
+  reliably start the track.
+- **Touches:** play/pause handling, deck promotion/loading, player state sync.
+- **Branch:** agent/unplaying-next-track
+- **Notes:** Synced from Geethub issue #228 (bug, no repro steps or device
+  given). Related to merged `autoadvance-stall-full-progress` (#213) but a
+  different symptom (play attempts are swallowed, not a stale full progress
+  bar), so not a duplicate. Also see the SoundCloud autoplay-policy note in
+  merged `soundcloud-native-playback`.
