@@ -9233,7 +9233,15 @@ async function resolveDiscoverMetadata(title, artist){
    Currents ranks exactly as it did before year existed. */
 const YEAR_CACHE_MAX = 3000;
 let yearLookupUnsupported = false;
-function yearNormTitle(t){ return String(t || '').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').replace(/[^a-z0-9]/g, ''); }
+// Unicode-aware (non-latin-match-scoring): the old [a-z0-9] strip turned
+// every Cyrillic/CJK/etc. title into "", so yearTitleAgrees never trusted
+// a year for them. Latin accents are folded the same way as the worker's
+// match-text.js foldMatchText; ASCII titles normalise exactly as before.
+function yearNormTitle(t){
+  return String(t || '').normalize('NFKC').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '')
+    .normalize('NFD').replace(/([\p{Script=Latin}\p{Script=Greek}])\p{M}+/gu, '$1').normalize('NFC')
+    .replace(/[^\p{L}\p{N}\p{M}]/gu, '');
+}
 // iTunes' single best hit is sometimes a different song by the same artist
 // ("Nights" -> "White Ferrari"); only trust its year when the titles agree.
 function yearTitleAgrees(asked, got){
@@ -15420,8 +15428,26 @@ function syncWrongTrackFlagUI(t){
     btn.setAttribute('aria-label', label);
   });
 }
+// Diagnostic mirror of the worker's title overlap (worker/src/match-text.js):
+// Unicode words, and character bigrams for scripts written without spaces
+// (Han, kana, Hangul, Thai...) - the old [a-z0-9À-￿] split left a whole
+// CJK title as one token, so any difference read as 0% overlap.
+const WRONG_TRACK_UNSPACED = /[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Hangul}\p{scx=Thai}\p{scx=Lao}\p{scx=Khmer}\p{scx=Myanmar}]/u;
 function wrongTrackTitleOverlap(a, b){
-  const tok = (x) => (x || '').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, ' ').split(/[^a-z0-9À-￿]+/).filter(w => w.length > 1);
+  const tok = (x) => {
+    const out = [];
+    const words = String(x || '').normalize('NFKC').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, ' ')
+      .normalize('NFD').replace(/([\p{Script=Latin}\p{Script=Greek}])\p{M}+/gu, '$1').normalize('NFC')
+      .split(/[^\p{L}\p{N}\p{M}]+/u);
+    for (const w of words){
+      if (!w) continue;
+      if (!WRONG_TRACK_UNSPACED.test(w)){ if (w.length > 1) out.push(w); continue; }
+      const cl = w.match(/\P{M}\p{M}*/gu) || [];
+      if (cl.length === 1) out.push(cl[0]);
+      for (let i = 0; i < cl.length - 1; i++) out.push(cl[i] + cl[i + 1]);
+    }
+    return out;
+  };
   const src = tok(a);
   if (!src.length) return null;
   const other = new Set(tok(b));
