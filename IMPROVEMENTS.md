@@ -7197,3 +7197,74 @@ Add entries in this shape:
 - **Build (352a9fc):** "Reset with fresh picks" opens `#reroll-modal` ("Re-roll all of today's CuRRentSSsss?" / like or add to a playlist first; Cancel focused). Re-roll rebuilds every due period, avoids the replaced tracks, keeps a playing track at slot 0. `CURRENTS_REROLLS_PER_DAY = 2` (stored as `rerolls` in `ebbless:swellBlocks`, counts only when picks land); when spent the item reads "No re-rolls left today". Reload never re-rolls. SW v41. Full menu path verified by harness only.
 - **Notes:** Owner request 2026-09-30.
 
+
+### desktop-fs-slide-panels: Browser-fullscreen should slide Library/Queue in place, and close an open playlist with the Library
+- **Status:** review
+- **Priority:** medium
+- **Description:** Two related problems in the first (in-browser, not
+  whole-screen) fullscreen phase on desktop:
+  1. Bug: if a playlist panel is open when you enter fullscreen, the
+     Library and Queue close but the playlist panel stays open. Whenever
+     the Library closes, any open playlist panel should close with it.
+  2. In that first fullscreen phase, toggling Queue or Library (button or
+     shortcut) should stay in fullscreen and just slide the panel in/out,
+     instead of exiting to the main view first.
+- **Touches:** desktop fullscreen (`toggleDesktopFs*` / `.desktop-fs-*`
+  CSS), the shared "exit fullscreen then open menu" path added by
+  `keyboard-shortcuts-2`, playlist panel open/close.
+- **Branch:** agent/desktop-fs-slide-panels
+- **Build (68f1f48):** New `deskFsPhase1()` (desk-fs open, no flow/lyrics-fs/Settings on top). In phase 1 the Library/Queue nav buttons and p/l/q shortcuts call new `toggleDesktopFsLib()`/`toggleDesktopFsQueue()` (slide drawers, stay in fullscreen); everywhere else keeps the `leaveFullscreen(true)` path. Entering desk-fs and closing the library drawer both call `closeLibraryPlaylistPanel()`; opening a playlist in phase 1 slides the library drawer in first. Manager smoke test could not reach desk-fs without a loaded track (YouTube blocked in the container) - needs a real-browser check.
+- **Notes:** Synced from Geethub issues #227 (bug) and #225 (idea), combined
+  since both describe phase-1 fullscreen panel behavior. Item 2 partly
+  reverses `keyboard-shortcuts-2`'s "menus exit fullscreen first" rule —
+  for phase 1 only; the immersive (whole-screen) phase keeps current
+  behavior unless told otherwise. Builds on `desktop-player-fullscreen-toggle`.
+
+### shortcuts-zxcv-visuals: Remap visual-mode shortcuts to Z / X / C / V
+- **Status:** review
+- **Priority:** medium
+- **Description:** Visual-mode shortcuts should sit in a row: Z = Art,
+  X = Cymatics, C = Lyrics, V = Video.
+- **Touches:** global keydown handler, shortcut help/listing.
+- **Branch:** agent/shortcuts-zxcv-visuals
+- **Build (8de903c):** Keydown handler: Z = art (first press shows art, then cycles default/record/cassette - old T), X = cymatics, C = lyrics (press again -> art), V = toggle YouTube card (no-op when its tab is disabled), K = shuffle; T/Y/U unbound. `kbSetVisual` closes an open YouTube card first; the card's own keydown lets V close it and Z/X/C through. Ctrl/Cmd combos and typing in inputs untouched. No user-facing shortcut docs exist to update.
+- **Notes:** Synced from Geethub issue #222. Conflicts with
+  `keyboard-shortcuts-2`: "x" is currently shuffle (and "y"/"u" are
+  cymatics/lyrics, "t" cycles art phases). Needs a decision on where
+  shuffle moves and whether y/u/t stay as aliases before building. Owner decision 2026-10-01: shuffle moves to K; Z/X/C/V replace T/Y/U (no aliases). V toggles the YouTube video panel (`#ytPanelBtn`, the 4th album-art tab next to Lyrics) per owner.
+
+### cassette-cycle-7-tapes: Cassette cycling animation should use 7 tapes, not 6
+- **Status:** review
+- **Priority:** medium
+- **Description:** The cassette fullscreen cycling/orbit animation shows 6
+  tapes; it should show 7.
+- **Touches:** cassette fullscreen stack/orbit animation.
+- **Branch:** agent/cassette-cycle-7-tapes
+- **Build (1857b8a):** `csStackBuild()` now always uses 7 copies on desktop (was `max(6, gap-derived)`, so 6 on most screens); mobile keeps the gap-sized 3-10 stack.
+- **Notes:** Synced from Geethub issue #223. Related to merged
+  `cassette-fullscreen-animation` / `cassette-fullscreen-second-stack`.
+
+### library-icon-redesign: Library icon should replace the queue icon, with a more distinct themed design
+- **Status:** review
+- **Priority:** medium
+- **Description:** The Library button should use a new, more distinct icon
+  that still fits the EBBLESS theme, and it should take the place currently
+  used by the queue icon.
+- **Touches:** nav/header icons (Library, Queue).
+- **Branch:** agent/library-icon-redesign
+- **Build (7c67070):** New Library glyph: a stack of record sleeves (front sleeve with a vinyl cutout, two offset sleeve edges behind). Queue now uses the old Library list-and-note glyph; the old near-identical Queue path is gone. 8 SVGs swapped: #topnav, #bottom-nav, flow fs-nav, lyrics fs-nav (Library + Queue each). No CSS/JS changes.
+- **Notes:** Synced from Geethub issue #224 (title only, no description).
+  Unclear what the Queue button gets instead — confirm before building. Owner decision 2026-10-01: Queue button takes the current Library glyph; Library gets a new distinct themed icon; positions unchanged.
+
+### regional-source-alternatives: Regional alternatives where YouTube is blocked (e.g. Russia)
+- **Status:** review
+- **Priority:** medium
+- **Description:** YouTube is restricted in some countries (e.g. Russia).
+  Research and list regional playback alternatives (e.g. Yandex Music, VK)
+  so EBBLESS keeps working everywhere, and consider translating track
+  metadata for matching.
+- **Touches:** playback source resolution / worker search; possibly i18n.
+- **Branch:** agent/regional-source-alternatives
+- **Build (336d2e7):** `docs/REGIONAL-SOURCES.md` (research only, no app code). Key findings: in Russia YouTube, SoundCloud and Spotify are all blocked and Cloudflare (the worker) is throttled, so a new source alone does not fix it; regional services mostly lack public embed/playback APIs. Recommends: (1) fail clearly when YouTube/worker is unreachable (today `loadIndex` retries forever), (2) fix the worker matcher dropping all non-Latin characters, (3) worker country/client hints, (4) "Open in <regional service>" link-outs, (5) optionally Audius. Ends with 7 owner questions.
+- **Notes:** Synced from Geethub issue #226. First deliverable is a
+  research list, not code.
