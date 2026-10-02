@@ -55,13 +55,15 @@
         <div class="field"><label for="deviceModel">Device model</label><input type="text" id="deviceModel" maxlength="100" placeholder="e.g. iPhone 15, Pixel 8"></div>
         <div class="field"><label for="os">OS + version</label><input type="text" id="os" maxlength="80" placeholder="e.g. iOS 18.2"></div>
       </div>
-      <div class="field"><span class="q">Main browser</span><div id="browserPills"></div></div>
+      <div class="field"><span class="q">Browsers you use <span class="hint">(pick any)</span></span><div id="browserPills"></div></div>
+      <div class="field" id="browserOtherField" hidden><label for="browserOther">Which other browser?</label><input type="text" id="browserOther" maxlength="100"></div>
       <div class="field"><span class="q">How technical are you?</span><div id="comfortPills"></div></div>
     </div>
 
     <div class="section">
       <h2>Your listening</h2>
-      <div class="field"><span class="q">Where do you mostly listen?</span><div id="platformPills"></div></div>
+      <div class="field"><span class="q">Where do you listen? <span class="hint">(pick any)</span></span><div id="platformPills"></div></div>
+      <div class="field" id="platformOtherField" hidden><label for="platformOther">Where else?</label><input type="text" id="platformOther" maxlength="100"></div>
       <div class="field"><label for="music">What do you listen to most?</label><input type="text" id="music" maxlength="500" placeholder="Artists, genres, whatever"></div>
       <div class="field"><label for="playlist">A Spotify playlist you'd want to try with EBBLESS <span class="hint">(optional)</span></label><input type="url" id="playlist" maxlength="300" placeholder="https://open.spotify.com/playlist/..." autocapitalize="off" inputmode="url"></div>
     </div>
@@ -97,14 +99,22 @@
   const $ = (id) => document.getElementById(id);
   const form = $('signup');
   Beta.pills($('devicePills'), 'device', ['iPhone', 'Android phone', 'iPad / tablet', 'Mac', 'Windows PC', 'Other']);
-  Beta.pills($('browserPills'), 'browser', ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other']);
+  Beta.pills($('browserPills'), 'browser', ['Chrome', 'Safari', 'Firefox', 'Edge', 'Brave', 'Opera', 'Samsung Internet', 'Arc', 'Other'], { multi: true });
   Beta.pills($('comfortPills'), 'comfort', ['Not very technical', 'Comfortable with apps/websites', 'Very comfortable / technical'], { stack: true });
-  Beta.pills($('platformPills'), 'platform', ['Spotify', 'YouTube', 'Apple Music', 'Other']);
+  Beta.pills($('platformPills'), 'platform', ['Spotify', 'YouTube / YouTube Music', 'Apple Music', 'SoundCloud', 'Amazon Music', 'Tidal', 'Deezer', 'Bandcamp', 'Pandora', 'Audiomack', 'Other'], { multi: true });
+  // "Other" opens a text box for the specifics
+  [['browser', 'browserOther'], ['platform', 'platformOther']].forEach(([name, box]) => {
+    form.querySelectorAll('input[name="' + name + '"]').forEach(i => i.addEventListener('change', () => {
+      const on = Beta.checked(form, name).includes('Other');
+      $(box + 'Field').hidden = !on;
+      if (on && i.value === 'Other' && i.checked) $(box).focus();
+    }));
+  });
 
   // Prefill setup from this browser; people often sign up on the device they'll use.
   Beta.detect().then(d => {
     if (d.device !== 'Other') Beta.setRadio(form, 'device', d.device);
-    Beta.setRadio(form, 'browser', d.inApp ? 'Other' : d.browser);
+    if (!d.inApp && d.browser !== 'Other') Beta.setRadio(form, 'browser', d.browser);
     if (d.os) $('os').value = d.os;
     if (d.model && !/^(iPhone|iPad)$/.test(d.model)) $('deviceModel').value = d.model;
     const parts = [d.model || d.device, d.os, d.browserDetail].filter(Boolean);
@@ -141,17 +151,20 @@
     const body = {
       name: $('name').value.trim(), email: $('email').value.trim(), social: $('social').value.trim(),
       device: Beta.radio(form, 'device'), deviceModel: $('deviceModel').value.trim(), os: $('os').value.trim(),
-      browser: Beta.radio(form, 'browser'), comfort: Beta.radio(form, 'comfort'),
-      platform: Beta.radio(form, 'platform'), music: $('music').value.trim(), playlist: $('playlist').value.trim(),
+      browsers: Beta.checked(form, 'browser'), browserOther: $('browserOther').value.trim(),
+      comfort: Beta.radio(form, 'comfort'),
+      platforms: Beta.checked(form, 'platform'), platformOther: $('platformOther').value.trim(), music: $('music').value.trim(), playlist: $('playlist').value.trim(),
       motivation: $('motivation').value.trim(), wants: $('wants').value.trim(),
       agree: $('agree').checked, contactOk: $('contactOk').checked,
     };
     const miss = !body.name ? ['name', 'Add your name or a nickname.']
       : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email) ? ['email', 'That email doesn\'t look right.']
       : !body.device ? ['devicePills', 'Pick the device you\'ll mostly use.']
-      : !body.browser ? ['browserPills', 'Pick your main browser.']
+      : !body.browsers.length ? ['browserPills', 'Pick at least one browser.']
+      : body.browsers.includes('Other') && !body.browserOther ? ['browserOther', 'Say which other browser.']
       : !body.comfort ? ['comfortPills', 'Pick how technical you are.']
-      : !body.platform ? ['platformPills', 'Pick where you mostly listen.']
+      : !body.platforms.length ? ['platformPills', 'Pick at least one place you listen.']
+      : body.platforms.includes('Other') && !body.platformOther ? ['platformOther', 'Say where else you listen.']
       : !body.agree ? ['agree', 'Tick the honest-feedback box to sign up.'] : null;
     if (miss){
       Beta.status(st, miss[1], 'err');

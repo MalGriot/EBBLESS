@@ -24,9 +24,9 @@ export const BETA_CAP = 50;
 const FILLED = ['accepted', 'active', 'inactive'];   // statuses that hold a numbered spot
 const STATUSES = ['pending', 'accepted', 'waitlisted', 'rejected', 'active', 'inactive'];
 const DEVICES = ['iPhone', 'Android phone', 'iPad / tablet', 'Mac', 'Windows PC', 'Other'];
-const BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other'];
+const BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Edge', 'Brave', 'Opera', 'Samsung Internet', 'Arc', 'Other'];
 const COMFORT = ['Not very technical', 'Comfortable with apps/websites', 'Very comfortable / technical'];
-const PLATFORMS = ['Spotify', 'YouTube', 'Apple Music', 'Other'];
+const PLATFORMS = ['Spotify', 'YouTube / YouTube Music', 'Apple Music', 'SoundCloud', 'Amazon Music', 'Tidal', 'Deezer', 'Bandcamp', 'Pandora', 'Audiomack', 'Other'];
 const FB_CATEGORIES = ['Overall experience', 'Music / playlist loading', 'Visuals', 'Cymatics', 'LP mode', 'Cassette mode', 'Lyrics', 'YouTube video', 'Controls', 'Performance', 'Mobile experience', 'Something else'];
 const FEELINGS = ['fire', 'good', 'alright', 'off', 'skull'];
 const KEEP_USING = ['Absolutely', 'Probably', 'Maybe', 'Probably not', 'No'];
@@ -38,6 +38,11 @@ const REPORT_LIMIT = 10, REPORT_WINDOW_S = 600;
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, n);
 const pick = (v, list) => (list.includes(v) ? v : '');
+// Multi-select answer -> "A, B, Other: <text>" (stored as one readable string).
+function pickMany(v, list, other) {
+  const vals = (Array.isArray(v) ? v : []).filter(x => list.includes(x));
+  return [...new Set(vals)].map(x => (x === 'Other' && other ? 'Other: ' + other : x)).join(', ');
+}
 const pad = (n, w) => String(n).padStart(w, '0');
 const testerLabel = (n) => (n ? 'EBBLESS TESTER #' + pad(n, 3) : '');
 
@@ -125,9 +130,11 @@ async function handleSignup(request, env, ctx, h) {
   const email = str(body.email, 200).toLowerCase();
   if (!name) return h.json({ error: 'Add your name or a nickname.' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return h.json({ error: 'That email doesn\'t look right.' }, 400);
-  const device = pick(body.device, DEVICES), browser = pick(body.browser, BROWSERS);
-  const comfort = pick(body.comfort, COMFORT), platform = pick(body.platform, PLATFORMS);
-  if (!device || !browser || !comfort || !platform) return h.json({ error: 'Pick an option for device, browser, technical comfort and music platform.' }, 400);
+  const device = pick(body.device, DEVICES), comfort = pick(body.comfort, COMFORT);
+  // older clients sent a single `browser` / `platform` string
+  const browser = pickMany(body.browsers || [body.browser], BROWSERS, str(body.browserOther, 100));
+  const platform = pickMany(body.platforms || [body.platform], PLATFORMS, str(body.platformOther, 100));
+  if (!device || !browser || !comfort || !platform) return h.json({ error: 'Pick an option for device, browser, technical comfort and where you listen.' }, 400);
   if (body.agree !== true) return h.json({ error: 'Tick the honest-feedback box to sign up.' }, 400);
   if (await throttled(request, ctx, h.envCache, 'signup', SIGNUP_LIMIT, SIGNUP_WINDOW_S)) return h.json({ error: 'Too many signups from here. Try again in a few minutes.' }, 429);
 

@@ -87,12 +87,12 @@
     opts = opts || {};
     el.classList.add('pills');
     if (opts.stack) el.classList.add('stack');
-    el.setAttribute('role', 'radiogroup');
+    if (!opts.multi) el.setAttribute('role', 'radiogroup');
     options.forEach(o => {
       const value = typeof o === 'string' ? o : o.value;
       const lab = document.createElement('label');
       const inp = document.createElement('input');
-      inp.type = 'radio'; inp.name = name; inp.value = value;
+      inp.type = opts.multi ? 'checkbox' : 'radio'; inp.name = name; inp.value = value;
       const span = document.createElement('span');
       if (o.emoji){ const e = document.createElement('i'); e.className = 'emo'; e.style.fontStyle = 'normal'; e.textContent = o.emoji; span.append(e); }
       span.append(document.createTextNode(typeof o === 'string' ? o : o.label));
@@ -101,6 +101,7 @@
     });
   }
   function radio(form, name){ const r = form.querySelector('input[name="' + name + '"]:checked'); return r ? r.value : ''; }
+  function checked(form, name){ return [...form.querySelectorAll('input[name="' + name + '"]:checked')].map(r => r.value); }
   function setRadio(form, name, value){ const r = form.querySelector('input[name="' + name + '"][value="' + CSS.escape(value) + '"]'); if (r) r.checked = true; }
 
   // Downscale an image to a JPEG data URL small enough for one KV value.
@@ -127,5 +128,5 @@
 
   function status(el, text, kind){ el.textContent = text || ''; el.className = 'status' + (kind ? ' ' + kind : ''); }
 
-  window.Beta = { BACKEND, api, token, detect, pills, radio, setRadio, compressImage, status, LS_TOKEN };
+  window.Beta = { BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN };
 })();
