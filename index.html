@@ -5721,7 +5721,16 @@ document.querySelectorAll('[data-fs-nav]').forEach(btn => btn.addEventListener('
    min-width:1150px CSS block) instead of tab-switching between them */
 const splitDesktopMQ = window.matchMedia('(min-width:1150px)');
 function updateSplitDesktop(){
+  // Toggling split-desktop moves the queue/playlist panels between the
+  // fixed side-drawer rules (translateX(100%)) and their grid-pane rules
+  // (translateX(-100%) / none). Their transform transition would play that
+  // layout jump as a slide - on a desktop reload #libpl-panel visibly slid
+  // left from the center (#233) - so snap them without it, then restore.
+  const panels = [queuePanel, libplPanel];
+  panels.forEach(p => { p.style.transition = 'none'; });
   document.body.classList.toggle('split-desktop', splitDesktopMQ.matches);
+  void document.body.offsetWidth;
+  panels.forEach(p => { p.style.transition = ''; });
   if (!splitDesktopMQ.matches) closeDesktopFs();
   updateMiniBarVisibility();
 }
