@@ -14221,7 +14221,14 @@ async function openMiniPlayer(){
     mpQueue = null;
     buildMiniPlayerDOM(win);
     updateMiniPlayerUI();
-    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; } }, { once: true });
+    win.addEventListener('pagehide', () => {
+      if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; }
+      // The mini player was the app in use while this tab sat hidden, so the
+      // "reopen fresh after a long background" clock (see the visibilitychange
+      // handler) only starts now that it's gone. Covers PiP's own "back to
+      // tab" button too, which closes the window just before the tab shows.
+      if (document.visibilityState === 'hidden') lsSet(LS_BACKGROUNDED_AT, Date.now());
+    }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,
@@ -14813,10 +14820,17 @@ document.addEventListener('visibilitychange', () => {
     // doesn't survive that, but startApp()'s cold-boot path below reads
     // this back to know playback was active when it got cut off.
     lsSet(LS_WAS_PLAYING, wasPlayingBeforeHide);
+    // Hidden behind the mini player, playback stays live and under the
+    // listener's control there (play/pause in PiP), so coming back must
+    // leave it exactly as they left it, not force-resume a track they paused.
+    if (miniPlayerWin && !miniPlayerWin.closed) wasPlayingBeforeHide = false;
   } else {
     const hiddenAt = lsGet(LS_BACKGROUNDED_AT, null);
-    // (never while casting - the reload would orphan the receiver mid-queue)
-    if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS && !castActive()){
+    // (never while casting - the reload would orphan the receiver mid-queue,
+    // and never while the mini player is open - the listener has been using
+    // the app the whole time, so returning must be seamless, not a restart)
+    const miniPlayerOpen = !!(miniPlayerWin && !miniPlayerWin.closed);
+    if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS && !castActive() && !miniPlayerOpen){
       location.reload();
       return;
     }
