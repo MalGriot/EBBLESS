@@ -1948,6 +1948,9 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
 body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
+/* beta testers report through Send feedback; the GitHub bug/idea rows and the
+   wrong-track log copy stay for the owner (Shift+B / Shift+S still click them) */
+body.is-beta-tester .owner-only{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
@@ -2672,21 +2675,21 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
           <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
         </div>
-        <div class="settings-row">
+        <div class="settings-row owner-only">
           <div>
             <div class="label">Report a bug</div>
             <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
           <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
         </div>
-        <div class="settings-row">
+        <div class="settings-row owner-only">
           <div>
             <div class="label">Suggest an improvement</div>
             <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
           <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
         </div>
-        <div class="settings-row">
+        <div class="settings-row owner-only">
           <div>
             <div class="label">Wrong-track log</div>
             <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
@@ -15933,6 +15936,8 @@ window.ebblessWrongTrackLog.clear = function(){ saveWrongTrackLog([]); flaggedTr
 reportMatchBtn.addEventListener('click', handleWrongTrackFlagClick);
 if (flowReportBtn) flowReportBtn.addEventListener('click', handleWrongTrackFlagClick);
 if ($('copyWrongTrackLogBtn')) $('copyWrongTrackLogBtn').addEventListener('click', copyWrongTrackLog);
+// beta/tester.html stores ebbless:betaToken; its presence marks this device as a beta tester's
+try { if (localStorage.getItem('ebbless:betaToken')) document.body.classList.add('is-beta-tester'); } catch(e){}
 updateWrongTrackLogDesc();
 flowExitBtn.addEventListener('click', exitFlowToMain);
 
@@ -17301,7 +17306,7 @@ function runIntro(preview){
     clearCaption();
     await wait(400);
     if (done) return;
-    const bugRow = document.getElementById('reportBugBtn');
+    const bugRow = document.getElementById(document.body.classList.contains('is-beta-tester') ? 'feedbackBtn' : 'reportBugBtn');
     if (bugRow && bugRow.scrollIntoView) bugRow.scrollIntoView({ block: 'center' });
     setCaption('Tell us if you find a bug', bugRow);
     await wait(500);
@@ -17945,7 +17950,7 @@ if (introBeatCapture){
     case 'bug':
       setView('settings');
       capStage('settings');
-      const capBugRow = document.getElementById('reportBugBtn');
+      const capBugRow = document.getElementById(document.body.classList.contains('is-beta-tester') ? 'feedbackBtn' : 'reportBugBtn');
       if (capBugRow && capBugRow.scrollIntoView) capBugRow.scrollIntoView({ block: 'center' });
       capCaptionText('Tell us if you find a bug', capBugRow);
       break;
