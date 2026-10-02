@@ -2266,7 +2266,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
           <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
           <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
-          <p>Paste a Spotify, Apple Music, YouTube or SoundCloud link to a playlist or album, then hit Load.</p>
+          <p>Paste a Spotify, Apple Music, YouTube or SoundCloud link to a playlist, album, song or artist, then hit Load. Podcasts work too: a Spotify or Apple Podcasts show or episode, or an RSS feed. No link? Search, or describe your vibe.</p>
           <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
         </div>
       </form>
@@ -17208,10 +17208,10 @@ function runIntro(preview){
     // attention moves to Load - rather than swapping/clearing mid-beat, so
     // the app's one core action reads as a headline instead of a caption
     // that flashes past with everything else
-    setMainCaption('Paste a link to a playlist, album, or song', urlInput);
+    setMainCaption('Paste a link to a playlist, album, song, or artist', urlInput);
     await wait(500);
     if (done) return;
-    setCaption('Spotify, YouTube, SoundCloud, or Apple Music', urlInput);
+    setCaption('Spotify, YouTube, SoundCloud, Apple Music, or a podcast', urlInput);
     await wait(1500);
     if (done) return;
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
@@ -17991,7 +17991,7 @@ if (introBeatCapture){
       capMark.classList.remove('is-idle');
       setView('library');
       capStage('input');
-      capCaptionText('Paste a link to a playlist or album', urlInput);
+      capCaptionText('Paste a link to a playlist, album, song, or artist', urlInput);
       break;
     case 'load':
       capMark.classList.remove('is-idle');
