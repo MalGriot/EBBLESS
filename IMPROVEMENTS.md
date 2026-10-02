@@ -7498,3 +7498,15 @@ Add entries in this shape:
   confirmed in the live app. That lane's playlist-page reader in the worker
   `/artist` handler could likely replace the RSS fetch.
   **Worker deployed 2026-10-02** (version 89515831, built from main + this branch so the beta email worker code stays live; `/artist` endpoint is live too, unused until artist-link-playlist merges). Live `/ytplaylist` verified returning 100 tracks. Merged to main with artist-link-playlist, SW v55. **Built (9741085):** 404 not reproduced 2026-10-02 (RSS and live worker returned 200; may be intermittent or edge/region dependent). `/ytplaylist` now reads the playlist page first (shared `readYtPlaylistPage`, parsers in `worker/src/yt-page.js`), RSS kept as fallback, same response shape, cache key bumped to `p2`. Cap 100 (was 15 via RSS). Worker tests 19/19. **Needs a worker deploy.** Follow-ups: client fires up to 100 `/spotifyart` calls at once on import (add a concurrency limit); [throttle d26183a merged and live, SW v54]; stale "~15 videos" comment near index.html:5034; `/artist` fails on handles YouTube 303-redirects (e.g. `@daftpunk`).
+
+### artist-link-yt-redirect: Some YouTube artist links fail with "channel not found"
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Pasting some YouTube artist handles (e.g. lowercase
+  `@daftpunk`) fails with "channel not found". YouTube answers with a 303
+  redirect to the canonical handle, and the worker's `fetchYouTubePage`
+  treats any redirect as a bot-check. Follow same-site redirects to the
+  canonical channel page instead.
+- **Touches:** worker `/artist` YouTube handler, `fetchYouTubePage`.
+- **Branch:**
+- **Notes:** Found by the `artist-link-playlist` lane (2026-10-02).
