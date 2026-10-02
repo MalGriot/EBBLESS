@@ -7500,7 +7500,7 @@ Add entries in this shape:
   **Worker deployed 2026-10-02** (version 89515831, built from main + this branch so the beta email worker code stays live; `/artist` endpoint is live too, unused until artist-link-playlist merges). Live `/ytplaylist` verified returning 100 tracks. Merged to main with artist-link-playlist, SW v55. **Built (9741085):** 404 not reproduced 2026-10-02 (RSS and live worker returned 200; may be intermittent or edge/region dependent). `/ytplaylist` now reads the playlist page first (shared `readYtPlaylistPage`, parsers in `worker/src/yt-page.js`), RSS kept as fallback, same response shape, cache key bumped to `p2`. Cap 100 (was 15 via RSS). Worker tests 19/19. **Needs a worker deploy.** Follow-ups: client fires up to 100 `/spotifyart` calls at once on import (add a concurrency limit); [throttle d26183a merged and live, SW v54]; stale "~15 videos" comment near index.html:5034; `/artist` fails on handles YouTube 303-redirects (e.g. `@daftpunk`).
 
 ### artist-link-yt-redirect: Some YouTube artist links fail with "channel not found"
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Pasting some YouTube artist handles (e.g. lowercase
   `@daftpunk`) fails with "channel not found". YouTube answers with a 303
@@ -7508,5 +7508,6 @@ Add entries in this shape:
   treats any redirect as a bot-check. Follow same-site redirects to the
   canonical channel page instead.
 - **Touches:** worker `/artist` YouTube handler, `fetchYouTubePage`.
-- **Branch:**
+- **Branch:** agent/artist-link-yt-redirect
 - **Notes:** Found by the `artist-link-playlist` lane (2026-10-02).
+  **Built (see branch):** `fetchYouTubePage` follows up to 2 redirects that stay on www.youtube.com and are not `/sorry`; consent and bot-check redirects still throw. Verified locally: `@daftpunk` 125 tracks, `@radiohead` 112, bogus handle still errors. Worker-only; merged (22671b0) and deployed 2026-10-02 (version c2bdd6d5).
