@@ -11,7 +11,6 @@
 <link rel="stylesheet" href="beta.css">
 </head>
 <body>
-<div class="hero-bg"></div>
 <main class="wrap">
   <div class="top"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"><span class="tag">Beta</span></div>
 
@@ -72,6 +71,7 @@
       $('inAppNote').hidden = false;
     }
     $('loading').hidden = true; $('in').hidden = false;
+    Beta.introOnArrival();
   } catch(e){
     $('loading').hidden = true;
     if (e.status === 404){ try { localStorage.removeItem(Beta.LS_TOKEN); } catch(x){} $('nope').hidden = false; }

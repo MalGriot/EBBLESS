@@ -2060,23 +2060,33 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 #beta-lock{position:fixed;inset:0;z-index:20000;background:#121212;color:#f2f2f2;overflow-y:auto;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.5}
 #beta-lock[hidden]{display:none}
+#beta-lock .bl-bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
+#beta-lock .bl-bg > *{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#beta-lock .bl-poster,#beta-lock .bl-video{filter:grayscale(1) contrast(1.15) brightness(.9)}
+#beta-lock .bl-poster{background:url(brand/assets/splash-cymatics-poster.jpg) center/cover no-repeat}
+#beta-lock .bl-video{opacity:0;transition:opacity 900ms ease}
+#beta-lock .bl-video.is-playing{opacity:1}
+#beta-lock .bl-tint{background:var(--accent);mix-blend-mode:color;transition:background 4s linear}
+#beta-lock .bl-fade{background:linear-gradient(rgba(18,18,18,.45) 0%, rgba(18,18,18,.82) 38%, #121212 72%)}
+#beta-lock{isolation:isolate}
 #beta-lock .bl-wrap{max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) 16px 64px}
 #beta-lock .bl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:56px}
 #beta-lock .bl-top img{height:20px;width:auto;display:block}
 #beta-lock .bl-tag{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#9a9a9a}
 #beta-lock h1{font-size:clamp(34px,10vw,48px);font-weight:700;letter-spacing:-.01em;line-height:1.02;margin:0;text-transform:uppercase}
-#beta-lock .bl-rule{height:1px;background:#e0b26a;margin:18px 0}
+#beta-lock .bl-rule{height:1px;background:var(--accent);margin:18px 0}
 #beta-lock p{color:#9a9a9a;margin:0 0 8px;max-width:46ch}
 #beta-lock form{display:flex;flex-direction:column;gap:10px;margin:28px 0 0}
 #beta-lock input{width:100%;font:inherit;color:#f2f2f2;background:#181818;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:12px 14px}
-#beta-lock input:focus{outline:none;border-color:#e0b26a}
+#beta-lock input:focus{outline:none;border-color:var(--accent)}
 #beta-lock .bl-btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;letter-spacing:1.2px;font-size:13px;
-  padding:14px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:none;color:#f2f2f2;text-decoration:none;cursor:pointer}
-#beta-lock .bl-btn.primary{background:#e0b26a;border-color:#e0b26a;color:#121212}
+  padding:13px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#f2f2f2;text-decoration:none;cursor:pointer}
+#beta-lock .bl-btn.primary{background:var(--accent);border-color:var(--accent);color:#121212}
 #beta-lock .bl-msg{min-height:1.5em;font-size:13px;color:#e0645e;margin:4px 0 0}
 #beta-lock .bl-or{margin:28px 0 10px;font-size:13px}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
+  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><div class="bl-tint"></div><div class="bl-fade"></div></div>
   <div class="bl-wrap">
     <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
     <h1 id="bl-title">EBBLESS IS IN PRIVATE BETA.</h1>
@@ -2110,8 +2120,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   if (ls.get('ebbless_backend') === 'staging' || new URLSearchParams(location.search).get('backend') === 'staging') backend = 'https://spotify-youtube-search-staging.malgriot.workers.dev';
 
   const extract = (s) => { const m = /t[0-9a-f]{12}-[0-9a-f]{32}/.exec(String(s || '')); return m ? m[0] : ''; };
-  const unlock = () => { lock.hidden = true; };
-  const relock = () => { lock.hidden = false; };
+  const video = lock.querySelector('.bl-video');
+  video.addEventListener('playing', () => video.classList.add('is-playing'));
+  const unlock = () => { lock.hidden = true; video.pause(); };
+  const relock = () => { lock.hidden = false; const p = video.play(); if (p && p.catch) p.catch(() => {}); };
   const msg = (t) => { document.getElementById('bl-msg').textContent = t || ''; };
 
   // ?t=<token> on the app URL itself (e.g. an invite link pointed straight at the app)
@@ -2132,6 +2144,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   const token = ls.get(LS_TOKEN);
   const okAt = +ls.get(LS_OK) || 0;
   if (token && TOKEN_RE.test(token) && Date.now() - okAt < FRESH_MS) unlock();
+  if (!lock.hidden) relock();
   if (token && TOKEN_RE.test(token)){
     check(token).then((r) => {
       if (r === 'ok'){ ls.set(LS_OK, String(Date.now())); unlock(); }

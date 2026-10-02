@@ -14,7 +14,6 @@
 <link rel="stylesheet" href="beta.css">
 </head>
 <body>
-<div class="hero-bg"></div>
 <main class="wrap">
   <div class="top"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"><span class="tag">Beta</span></div>
 
@@ -178,6 +177,7 @@
     Beta.status(st, 'Sending...');
     try {
       const r = await Beta.api('/beta/signup', body);
+      Beta.intro();
       show('done');
       if (r.already){
         $('doneTitle').textContent = 'YOU\'RE ALREADY ON THE LIST.';

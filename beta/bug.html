@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
 <link rel="stylesheet" href="beta.css">
 </head>
-<body>
+<body data-bg="quiet">
 <main class="wrap">
   <div class="top"><a id="homeLink" href="tester.html"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"></a><span class="tag" id="label">Beta</span></div>
 
@@ -106,7 +106,7 @@
     try {
       const r = await Beta.api('/beta/report', body);
       $('doneId').textContent = r.id;
-      form.hidden = true; $('done').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
+      Beta.intro(); form.hidden = true; $('done').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
       form.reset(); fillEnv(); $('shotClear').click(); Beta.status(st, '');
     } catch(err){ Beta.status(st, err.message + ' Your report is still here.', 'err'); }
     $('submitBtn').disabled = false;

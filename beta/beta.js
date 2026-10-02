@@ -128,5 +128,95 @@
 
   function status(el, text, kind){ el.textContent = text || ''; el.className = 'status' + (kind ? ' ' + kind : ''); }
 
-  window.Beta = { BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN };
+
+  // ---- the app's look: color clock, background video, intro sound ----
+
+  // Same Rosicrucian daily-period color clock as the app (index.html
+  // vizRosicrucianColor / updateLibraryClockColor): 7 periods a day, the
+  // letter depends on the weekday, 5-minute crossfade at each boundary.
+  // Drives --accent (buttons, rule, pills) and the background wash.
+  const LETTERS = ['A','B','C','D','E','F','G'];
+  const LETTER_COLORS = { A: '#e0b45c', B: '#d98aa3', C: '#a89aef', D: '#d68a63', E: '#9aa9bd', F: '#5fcabf', G: '#d17a72' };
+  const START_LETTER = [6, 2, 5, 1, 4, 0, 3];
+  const PERIOD_S = 86400 / 7, WINDOW_S = 300;
+  const letterAt = (wd, i) => LETTERS[(START_LETTER[wd] + i) % 7];
+  const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const mix = (a, b, t) => { a = rgb(a); b = rgb(b); return a.map((v, k) => Math.round(v + (b[k] - v) * t)); };
+  function clockColor(){
+    const now = new Date(), wd = now.getDay();
+    const sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const i = Math.min(6, Math.floor(sec / PERIOD_S));
+    const cur = letterAt(wd, i), toNext = (i + 1) * PERIOD_S - sec, sincePrev = sec - i * PERIOD_S;
+    if (toNext <= WINDOW_S){
+      const next = i === 6 ? letterAt((wd + 1) % 7, 0) : letterAt(wd, i + 1);
+      return mix(LETTER_COLORS[cur], LETTER_COLORS[next], (WINDOW_S - toNext) / (2 * WINDOW_S));
+    }
+    if (sincePrev <= WINDOW_S){
+      const prev = i === 0 ? letterAt((wd + 6) % 7, 6) : letterAt(wd, i - 1);
+      return mix(LETTER_COLORS[prev], LETTER_COLORS[cur], .5 + sincePrev / (2 * WINDOW_S));
+    }
+    return rgb(LETTER_COLORS[cur]);
+  }
+  function applyClock(){
+    const [r, g, b] = clockColor(), root = document.documentElement.style;
+    root.setProperty('--clock-accent', 'rgb(' + r + ',' + g + ',' + b + ')');
+    root.setProperty('--accent-dim', 'rgba(' + r + ',' + g + ',' + b + ',.16)');
+    root.setProperty('--clock-tint', 'rgba(' + r + ',' + g + ',' + b + ',.4)');
+  }
+  applyClock();
+  setInterval(applyClock, 10000);
+
+  // Background layers (see .bg in beta.css). Form pages pass quiet so the
+  // video stays up top and the fields sit on solid --bg.
+  function background(){
+    const bg = document.createElement('div');
+    bg.className = 'bg' + (document.body.dataset.bg === 'quiet' ? ' quiet' : '');
+    bg.setAttribute('aria-hidden', 'true');
+    bg.innerHTML = '<div class="bg-poster"></div><video class="bg-video" autoplay muted loop playsinline preload="auto" src="../brand/assets/splash-cymatics.mp4"></video><div class="bg-tint"></div>';
+    document.body.prepend(bg);
+    const v = bg.querySelector('video');
+    v.addEventListener('playing', () => v.classList.add('is-playing'));
+    const p = v.play(); if (p && p.catch) p.catch(() => {});
+  }
+  if (document.body) background(); else document.addEventListener('DOMContentLoaded', background);
+
+  // The app's splash sound: intro-theme.mp3 from 0.5s, a 3.5s beat, then a
+  // 2.5s fade (index.html startApp). Browsers block it before a gesture, so
+  // pages call this from a submit, or with onFirstTap for an arrival moment.
+  let introEl = null;
+  function intro(){
+    try {
+      if (introEl){ try { introEl.pause(); } catch(e){} }
+      const a = introEl = new Audio('../brand/assets/intro-theme.mp3');
+      const trim = () => { try { a.currentTime = 0.5; } catch(e){} };
+      if (a.readyState >= 1) trim(); else a.addEventListener('loadedmetadata', trim, { once: true });
+      const started = a.play();
+      setTimeout(() => {
+        const t0 = Date.now(), from = a.volume;
+        const step = () => {
+          if (introEl !== a) return;
+          const k = Math.min(1, (Date.now() - t0) / 2500);
+          a.volume = from * (1 - k);
+          if (k < 1) setTimeout(step, 40); else a.pause();
+        };
+        step();
+      }, 3500);
+      return started && started.then ? started.then(() => true, () => false) : Promise.resolve(true);
+    } catch(e){ return Promise.resolve(false); }
+  }
+  // Try now (works when the browser already allows sound here); if blocked,
+  // play on the first tap or key instead.
+  function introOnArrival(){
+    intro().then((ok) => {
+      if (ok) return;
+      const go = (e) => {
+        if (e.target && e.target.closest && e.target.closest('a[href]')) return;   // leaving the page anyway
+        off(); intro();
+      };
+      const off = () => { removeEventListener('pointerdown', go, true); removeEventListener('keydown', go, true); };
+      addEventListener('pointerdown', go, true); addEventListener('keydown', go, true);
+    });
+  }
+
+  window.Beta = { BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN, intro, introOnArrival };
 })();
