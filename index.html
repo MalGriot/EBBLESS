@@ -3130,7 +3130,7 @@ function parseSpotifyLink(input){
   // false-positive on other services' URLs (e.g. Apple Music's own
   // /playlist/ and /album/ path segments).
   if (!/^spotify:|spotify\.com/i.test(input)) return null;
-  let m = input.match(/(playlist|album|track)[/:]([a-zA-Z0-9]+)/);
+  let m = input.match(/(playlist|album|track|artist)[/:]([a-zA-Z0-9]+)/);
   return m ? { type: m[1], id: m[2] } : null;
 }
 
@@ -3170,11 +3170,17 @@ function parseYouTubeLink(input){
     return { type: 'video', id: v };
   }
   if (isRealPlaylist) return { type: youTubeListType(list), id: list };
+  // A channel page (@handle, /channel/UC..., legacy /c/ and /user/ names,
+  // YouTube Music's /channel/ too) - an artist link (see fetchArtist).
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts[0] && /^@[^/]+$/.test(parts[0])) return { type: 'artist', id: parts[0] };
+  if (/^(channel|c|user)$/.test(parts[0] || '') && parts[1]) return { type: 'artist', id: parts[0] + '/' + parts[1] };
   return null;
 }
 
 // A soundcloud.com/{user}/{track} link is a track, /{user}/sets/{name} is a
-// playlist. Non-content top-level paths (the stream, search, account pages)
+// playlist, and /{user} (or one of its tabs - /tracks, /popular-tracks, ...)
+// is the artist's own page (see fetchArtist). Non-content top-level paths (the stream, search, account pages)
 // are excluded so they don't get misread as a user's track. Mobile share
 // links (on.soundcloud.com/...) aren't handled — they need a redirect
 // resolved before the path shape can be read at all.
@@ -3184,6 +3190,7 @@ const SOUNDCLOUD_RESERVED_PATHS = new Set([
   'notifications', 'messages', 'mobile', 'jobs', 'about', 'terms-of-use',
   'contact', 'creators', 'imprint', 'privacy',
 ]);
+const SOUNDCLOUD_ARTIST_TABS = new Set(['tracks', 'popular-tracks', 'albums', 'sets', 'reposts']);
 function parseSoundCloudLink(input){
   input = (input || '').trim();
   if (!/soundcloud\.com/i.test(input)) return null;
@@ -3193,13 +3200,16 @@ function parseSoundCloudLink(input){
   const host = url.hostname.replace(/^www\.|^m\./i, '').toLowerCase();
   if (host !== 'soundcloud.com') return null;
   const parts = url.pathname.split('/').filter(Boolean);
-  if (parts.length < 2 || SOUNDCLOUD_RESERVED_PATHS.has(parts[0])) return null;
+  if (!parts.length || SOUNDCLOUD_RESERVED_PATHS.has(parts[0])) return null;
+  if (parts.length === 1 || (parts.length === 2 && SOUNDCLOUD_ARTIST_TABS.has(parts[1]))){
+    return { type: 'artist', url: 'https://soundcloud.com/' + parts[0] + (parts[1] === 'popular-tracks' ? '/popular-tracks' : '') };
+  }
   if (parts[1] === 'sets' && parts[2]) return { type: 'playlist', url: 'https://soundcloud.com/' + parts[0] + '/sets/' + parts[2] };
   if (parts.length === 2) return { type: 'track', url: 'https://soundcloud.com/' + parts[0] + '/' + parts[1] };
   return null;
 }
 
-// music.apple.com links are /{storefront}/{album|playlist|song}/{slug}/{id}.
+// music.apple.com links are /{storefront}/{album|playlist|song|artist}/{slug}/{id}.
 // An album link carrying ?i=<songId> points at one song within that album
 // (the id Apple shows in the URL bar when you play a single track from an
 // album view) — treated the same as a direct /song/ link.
@@ -3221,6 +3231,7 @@ function parseAppleMusicLink(input){
   if (kind === 'album') return { type: 'album', id, storefront };
   if (kind === 'playlist') return { type: 'playlist', id, storefront };
   if (kind === 'song') return { type: 'track', id, storefront };
+  if (kind === 'artist' && /^\d+$/.test(id)) return { type: 'artist', id, storefront };
   return null;
 }
 
@@ -3281,13 +3292,13 @@ function parseImportLink(input){
 function libraryEntryForParsedLink(parsed){
   if (parsed.source === 'podcast') return { id: 'pod:' + parsed.id, type: 'pod_show' };
   if (parsed.source === 'youtube'){
-    return { id: 'yt:' + parsed.id, type: parsed.type === 'video' ? 'yt_video' : parsed.type === 'album' ? 'yt_album' : 'yt_playlist' };
+    return { id: 'yt:' + parsed.id, type: parsed.type === 'video' ? 'yt_video' : parsed.type === 'album' ? 'yt_album' : parsed.type === 'artist' ? 'yt_artist' : 'yt_playlist' };
   }
   if (parsed.source === 'soundcloud'){
-    return { id: 'sc:' + encodeURIComponent(parsed.id), type: parsed.type === 'track' ? 'sc_track' : parsed.type === 'album' ? 'sc_album' : 'sc_playlist' };
+    return { id: 'sc:' + encodeURIComponent(parsed.id), type: parsed.type === 'track' ? 'sc_track' : parsed.type === 'album' ? 'sc_album' : parsed.type === 'artist' ? 'sc_artist' : 'sc_playlist' };
   }
   if (parsed.source === 'applemusic'){
-    return { id: parsed.storefront + ':' + parsed.id, type: parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : 'am_playlist' };
+    return { id: parsed.storefront + ':' + parsed.id, type: parsed.type === 'track' ? 'am_track' : parsed.type === 'album' ? 'am_album' : parsed.type === 'artist' ? 'am_artist' : 'am_playlist' };
   }
   return { id: parsed.id, type: parsed.type };
 }
@@ -3525,6 +3536,29 @@ async function fetchSoundCloudLink(permalinkUrl){
   return data;
 }
 
+// Artist page links (GitHub #229) - 'artist' (Spotify, bare like the other
+// Spotify types), sc_artist, yt_artist, am_artist. The worker's /artist reads
+// the page and hands back { name, image, tracks } in the same shape the
+// playlist endpoints use (SoundCloud rows carry scId, YouTube rows videoId),
+// so resolvePlaylist runs them through its normal loop.
+function isArtistType(type){ return type === 'artist' || type === 'sc_artist' || type === 'yt_artist' || type === 'am_artist'; }
+function artistPageUrl(type, id){
+  if (type === 'artist') return 'https://open.spotify.com/artist/' + id;
+  if (type === 'sc_artist') return decodeURIComponent(id.replace(/^sc:/, ''));
+  if (type === 'yt_artist') return 'https://www.youtube.com/' + id.replace(/^yt:/, '');
+  if (type === 'am_artist'){
+    const idx = id.indexOf(':');
+    return 'https://music.apple.com/' + id.slice(0, idx) + '/artist/artist/' + id.slice(idx + 1);
+  }
+  return null;
+}
+async function fetchArtist(type, id){
+  const res = await fetch(BACKEND + '/artist?url=' + encodeURIComponent(artistPageUrl(type, id)));
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ? "Couldn't load that artist page: " + data.error + '.' : ('backend returned ' + res.status));
+  return data;
+}
+
 async function fetchAppleMusicList(kind, storefront, id){
   const params = new URLSearchParams({ kind, storefront, id });
   const res = await fetch(BACKEND + '/amlist?' + params.toString());
@@ -3556,11 +3590,11 @@ async function fetchAppleMusicTrack(storefront, id){
 // session metadata, for instance — should call this too rather than
 // re-deriving the same source/SoundCloud-exception logic on its own.
 function sourceKindForType(type){
-  if (type === 'sc_track' || type === 'sc_playlist' || type === 'sc_album') return 'soundcloud';
-  if (type === 'am_track' || type === 'am_playlist' || type === 'am_album') return 'applemusic';
-  if (type === 'yt_video' || type === 'yt_playlist' || type === 'yt_album') return 'youtube';
+  if (type === 'sc_track' || type === 'sc_playlist' || type === 'sc_album' || type === 'sc_artist') return 'soundcloud';
+  if (type === 'am_track' || type === 'am_playlist' || type === 'am_album' || type === 'am_artist') return 'applemusic';
+  if (type === 'yt_video' || type === 'yt_playlist' || type === 'yt_album' || type === 'yt_artist') return 'youtube';
   if (type === 'pod_show') return 'podcast';
-  return 'spotify'; // track | playlist | album (bare Spotify types)
+  return 'spotify'; // track | playlist | album | artist (bare Spotify types)
 }
 
 // A SoundCloud-sourced track's `videoId` (every other surface's "is this
@@ -5004,7 +5038,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     return payload;
   }
   let name, image, tracks;
-  if (type === 'sc_playlist' || type === 'sc_album'){
+  if (isArtistType(type)){
+    ({ name, image, tracks } = await fetchArtist(type, playlistId));
+  } else if (type === 'sc_playlist' || type === 'sc_album'){
     const sc = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
     if (sc.kind !== 'playlist') throw new Error("That SoundCloud link isn't a playlist.");
     ({ name, image, tracks } = sc);
@@ -5030,10 +5066,14 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // playback) - build the match straight off t.scId instead of asking
     // searchYouTubeCached() to find a YouTube stand-in for it.
     const isNativeSC = sourceKind === 'soundcloud' && t.scId;
+    // A YouTube artist page's rows (yt_artist) are already videos.
+    const isNativeYT = sourceKind === 'youtube' && t.videoId;
     try{
       const [match, art] = await Promise.all([
         isNativeSC
           ? Promise.resolve({ videoId: soundCloudVideoId(t.scId), title: t.title, channel: t.artist, duration: Math.round((t.duration || 0) / 1000) })
+          : isNativeYT
+          ? Promise.resolve({ videoId: t.videoId, title: t.title, channel: t.artist, duration: 0 })
           : searchYouTubeCached(t.title, t.artist, t.duration, albumOpts && { album: albumOpts.album, albumArt: albumOpts.albumArt || t.image || null }),
         resolveTrackArt(sourceKind, t.title, t.artist, t.image || null),
       ]);
@@ -5067,7 +5107,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // The 350ms spacing exists to be polite to the /search backend
     // (YouTube-scraping, rate-limit-sensitive) - a native SoundCloud track
     // never calls it, so there's nothing to pace here.
-    if (i < tracks.length - 1 && !isNativeSC) await sleep(350);
+    if (i < tracks.length - 1 && !isNativeSC && !isNativeYT) await sleep(350);
   }
   const payload = keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
   lsSet(LS_PL(playlistId), payload);
@@ -6430,6 +6470,7 @@ const CTX_ICON_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1
 function canonicalLinkForPlaylist(pl){
   const t = pl.type;
   if (t === 'pod_show') return pl.link || null;
+  if (isArtistType(t)) return artistPageUrl(t, pl.id);
   if (t === 'playlist' || t === 'album' || t === 'track') return 'https://open.spotify.com/' + t + '/' + pl.id;
   if (t === 'yt_playlist' || t === 'yt_album') return 'https://www.youtube.com/playlist?list=' + pl.id.replace(/^yt:/, '');
   if (t === 'yt_video') return 'https://www.youtube.com/watch?v=' + pl.id.replace(/^yt:/, '');
@@ -7501,6 +7542,8 @@ function openSingleTrackDestinationPicker(track){
 // tracks. onProgress(done, total) fires per-track for multi-track sources,
 // same shape as beginImport's matching-stage callback.
 async function resolveTracksFromLink(input, onProgress){
+  const parsedLink = parseImportLink(input);
+  if (parsedLink && parsedLink.type === 'artist') throw new Error('Artist links make a playlist of their own - paste it in the main link bar instead.');
   const yt = parseYouTubeLink(input);
   if (yt){
     if (yt.type === 'video'){
@@ -8021,7 +8064,9 @@ importForm.addEventListener('submit', (e) => {
   // of just erroring, so the input bar doubles as "paste a link" and
   // "search a vibe" without a separate affordance.
   if (looksLikeUrl(val)){
-    importErr.textContent = "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link.";
+    importErr.textContent = /\/(artist|channel)s?\/|\/@/i.test(val)
+      ? "Artist pages can be imported from Spotify, YouTube, SoundCloud, or Apple Music - that one isn't supported."
+      : "That doesn't look like a Spotify, YouTube, SoundCloud, or Apple Music link.";
     return;
   }
   importErr.textContent = '';

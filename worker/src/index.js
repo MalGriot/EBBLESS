@@ -2287,6 +2287,301 @@ async function handleSoundCloud(url, ctx) {
   return response;
 }
 
+// ---------- GET /artist?url=<artist page url> ----------
+// GitHub #229: an artist page link (Spotify, Apple Music, SoundCloud,
+// YouTube) becomes one playlist of what that page shows, through the same
+// public pages the other endpoints here already read - no new API access:
+//   Spotify      the artist page's server-rendered initialState (popular
+//                releases, albums, singles, compilations - the open.spotify
+//                .com page only renders it for a non-browser UA, so this
+//                sends APP_UA) + the artist embed's top 10, each release's
+//                tracks via the same embed /album uses.
+//   Apple Music  the artist page's serialized-server-data (top songs +
+//                album/single/live/compilation shelves), each release's
+//                tracks via the same album page /amlist reads.
+//   SoundCloud   the user's uploads (or their popular tracks for a
+//                /popular-tracks link) via the public web API /soundcloud
+//                uses.
+//   YouTube      the channel's Releases tab (album playlists, each read off
+//                its playlist page) + its Videos tab (latest uploads). The
+//                RSS feeds /ytplaylist relies on 404 for channels now.
+// Tracks come back in that page order, deduped by title, capped - matched
+// sources (Spotify/Apple Music, one YouTube search per track on the client)
+// lower than ones that are already playable (SoundCloud ids, YouTube ids).
+const ARTIST_CACHE_VERSION = 'a1';
+const ARTIST_MAX_MATCHED_TRACKS = 100;
+const ARTIST_MAX_NATIVE_TRACKS = 200;
+const ARTIST_MAX_RELEASES = 12;
+const ARTIST_MAX_YT_RELEASES = 8;
+const SOUNDCLOUD_ARTIST_TABS = new Set(['tracks', 'popular-tracks', 'albums', 'sets', 'reposts']);
+
+// One entry per song: case/punctuation-insensitive title, with remaster
+// tags dropped so a "- 2011 Remaster" reissue folds into the original.
+function artistTrackKey(title) {
+  return String(title || '').toLowerCase()
+    .replace(/[([][^)\]]*remaster[^)\]]*[)\]]/g, '')
+    .replace(/\s-\s.*remaster.*$/, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+function addArtistTracks(out, seen, list, cap, keyOf) {
+  for (const t of list) {
+    if (out.length >= cap) return;
+    if (!t || !t.title) continue;
+    const key = keyOf ? keyOf(t) : artistTrackKey(t.title);
+    if (!key) continue;
+    const prev = seen.get(key);
+    if (prev) { if (!prev.image && t.image) prev.image = t.image; continue; }
+    seen.set(key, t);
+    out.push(t);
+  }
+}
+
+function spotifyLargestImage(sources) {
+  const list = (Array.isArray(sources) ? sources : []).filter(s => s && s.url);
+  list.sort((a, b) => (b.width || b.maxWidth || 0) - (a.width || a.maxWidth || 0));
+  return list[0] ? list[0].url : null;
+}
+function spotifyArtistInitialState(html) {
+  const m = html.match(/<script id="initialState" type="text\/plain">([^<]+)<\/script>/);
+  if (!m) return null;
+  try {
+    const bytes = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (e) { return null; }
+}
+async function spotifyArtistPayload(id) {
+  const [embed, page] = await Promise.all([
+    spotifyEmbedEntity('artist', id),
+    fetch('https://open.spotify.com/artist/' + id, { headers: { 'User-Agent': APP_UA } })
+      .then(r => r.ok ? r.text() : '').catch(() => ''),
+  ]);
+  const state = page ? spotifyArtistInitialState(page) : null;
+  const artist = state && state.entities && state.entities.items && state.entities.items['spotify:artist:' + id];
+  if (!embed && !artist) return { error: 'artist not found on spotify (invalid link?)', status: 404 };
+  const name = (artist && artist.profile && artist.profile.name) || (embed && embed.name) || 'Artist';
+  const image = spotifyLargestImage(artist && artist.visuals && artist.visuals.avatarImage && artist.visuals.avatarImage.sources) ||
+    spotifyLargestImage(embed && embed.visualIdentity && embed.visualIdentity.image);
+  const disc = (artist && artist.discography) || {};
+
+  // Top tracks: the embed's list (10), with album art from the page's own
+  // top-track rows where it has them (the embed's rows carry none).
+  const topArt = new Map();
+  ((disc.topTracks && disc.topTracks.items) || []).forEach(it => {
+    const t = it && it.track;
+    if (t && t.uri) topArt.set(t.uri, spotifyLargestImage(t.albumOfTrack && t.albumOfTrack.coverArt && t.albumOfTrack.coverArt.sources));
+  });
+  const top = ((embed && embed.trackList) || []).map(t => ({
+    title: t.title, artist: t.subtitle || name, image: topArt.get(t.uri) || null,
+    duration: t.duration || 0, spotifyId: spotifyTrackIdFromUri(t.uri),
+  }));
+
+  const releases = [];
+  const seenRelease = new Set();
+  ['popularReleasesAlbums', 'albums', 'singles', 'compilations'].forEach(group => {
+    ((disc[group] && disc[group].items) || []).forEach(it => {
+      const r = (it && it.releases && it.releases.items && it.releases.items[0]) || it;
+      const m = /^spotify:album:([a-zA-Z0-9]+)$/.exec((r && r.uri) || '');
+      if (!m || seenRelease.has(m[1])) return;
+      seenRelease.add(m[1]);
+      releases.push({ id: m[1], image: spotifyLargestImage(r.coverArt && r.coverArt.sources) });
+    });
+  });
+  const albums = await mapWithConcurrency(releases.slice(0, ARTIST_MAX_RELEASES), 4, async r => {
+    const e = await spotifyEmbedEntity('album', r.id).catch(() => null);
+    return ((e && e.trackList) || []).map(t => ({
+      title: t.title, artist: t.subtitle || name, image: r.image,
+      duration: t.duration || 0, spotifyId: spotifyTrackIdFromUri(t.uri),
+    }));
+  });
+
+  const tracks = [];
+  const seen = new Map();
+  addArtistTracks(tracks, seen, top, ARTIST_MAX_MATCHED_TRACKS);
+  albums.forEach(list => addArtistTracks(tracks, seen, list, ARTIST_MAX_MATCHED_TRACKS));
+  return { name, image, tracks };
+}
+
+function appleArtworkUrl(artwork) {
+  const tpl = artwork && artwork.dictionary && artwork.dictionary.url;
+  return tpl ? tpl.replace('{w}', '600').replace('{h}', '600').replace('{c}', 'cc').replace('{f}', 'jpg') : null;
+}
+async function appleMusicArtistPayload(storefront, id) {
+  const res = await fetch(`https://music.apple.com/${storefront}/artist/x/${encodeURIComponent(id)}`, { headers: { 'User-Agent': DESKTOP_UA } });
+  if (res.status === 404) return { error: 'artist not found on apple music (invalid link?)', status: 404 };
+  if (!res.ok) return { error: 'apple music returned ' + res.status, status: 502 };
+  const data = extractServerData(await res.text());
+  const sections = data && data.data && data.data[0] && data.data[0].data && data.data[0].data.sections;
+  if (!Array.isArray(sections)) return { error: 'no artist data found (invalid link?)', status: 502 };
+  const header = sections.find(s => s.itemKind === 'artistDetailHeader');
+  const headerItem = header && header.items && header.items[0];
+  const name = (headerItem && headerItem.title) || 'Artist';
+  const image = headerItem ? (appleArtworkUrl(headerItem.artwork) || appleArtworkUrl(headerItem.circleArtwork)) : null;
+
+  const featured = sections.find(s => s.itemKind === 'artistFeaturedContentAndTracks');
+  const topSongs = ((featured && featured.items && featured.items[0] && featured.items[0].tracks) || [])
+    .map(t => ({ title: t.title || '', artist: name, image: appleArtworkUrl(t.artwork), duration: t.duration || 0 }));
+
+  // Release shelves only - not the artist's playlists, "appears on", or
+  // music videos.
+  const releases = [];
+  const seenRelease = new Set();
+  sections.filter(s => s.itemKind === 'squareLockup' && /\.(Albums|ArtistSingles|LiveAlbums|CompilationAlbums)-/.test(s.id || '')).forEach(s => {
+    (s.items || []).forEach(it => {
+      const cd = it && it.contentDescriptor;
+      const rid = cd && cd.kind === 'album' && cd.identifiers && cd.identifiers.storeAdamID;
+      if (!rid || seenRelease.has(rid)) return;
+      seenRelease.add(rid);
+      releases.push({ id: rid, image: appleArtworkUrl(it.artwork) });
+    });
+  });
+  const albums = await mapWithConcurrency(releases.slice(0, ARTIST_MAX_RELEASES), 4, async r => {
+    try {
+      const ar = await fetch(`https://music.apple.com/${storefront}/album/x/${encodeURIComponent(r.id)}`, { headers: { 'User-Agent': DESKTOP_UA } });
+      if (!ar.ok) return [];
+      const ad = extractServerData(await ar.text());
+      const asec = ad && ad.data && ad.data[0] && ad.data[0].data && ad.data[0].data.sections;
+      const ts = Array.isArray(asec) && asec.find(s => s.itemKind === 'trackLockup');
+      return ((ts && ts.items) || []).map(t => ({ title: t.title || '', artist: t.artistName || name, image: appleArtworkUrl(t.artwork) || r.image, duration: t.duration || 0 }));
+    } catch (e) { return []; }
+  });
+
+  const tracks = [];
+  const seen = new Map();
+  addArtistTracks(tracks, seen, topSongs, ARTIST_MAX_MATCHED_TRACKS);
+  albums.forEach(list => addArtistTracks(tracks, seen, list, ARTIST_MAX_MATCHED_TRACKS));
+  return { name, image, tracks };
+}
+
+async function soundCloudArtistPayload(user, tab, ctx) {
+  let clientId;
+  try { clientId = await getSoundCloudClientId(ctx); }
+  catch (e) { return { error: 'could not reach soundcloud', status: 502 }; }
+  const profileUrl = 'https://soundcloud.com/' + user;
+  let result = await soundCloudResolve(profileUrl, clientId);
+  if (!result) {
+    try { clientId = await getSoundCloudClientId(ctx, { forceRefresh: true }); }
+    catch (e) { return { error: 'could not reach soundcloud', status: 502 }; }
+    result = await soundCloudResolve(profileUrl, clientId);
+  }
+  if (!result || result.notFound || result.data.kind !== 'user') return { error: 'artist not found on soundcloud (private or invalid link?)', status: 404 };
+  const u = result.data;
+  const name = u.username || user;
+  const image = u.avatar_url ? u.avatar_url.replace('-large.', '-t500x500.') : null;
+
+  const raw = [];
+  let next = 'https://api-v2.soundcloud.com/users/' + u.id + (tab === 'popular-tracks' ? '/toptracks' : '/tracks') + '?limit=200';
+  for (let page = 0; next && page < 2 && raw.length < ARTIST_MAX_NATIVE_TRACKS; page++) {
+    const r = await fetch(next + (next.includes('client_id=') ? '' : '&client_id=' + clientId)).catch(() => null);
+    if (!r || !r.ok) break;
+    const d = await r.json().catch(() => null);
+    if (!d || !Array.isArray(d.collection)) break;
+    raw.push(...d.collection.filter(t => t && t.kind === 'track'));
+    next = d.next_href || null;
+  }
+  const tracks = [];
+  addArtistTracks(tracks, new Map(), raw.map(scTrackToTitleArtist), ARTIST_MAX_NATIVE_TRACKS, t => t.scId ? 'sc' + t.scId : '');
+  return { name, image, tracks };
+}
+
+// SOCS (on top of fetchYouTubePage's CONSENT) gets past the consent wall
+// YouTube puts in front of channel pages for EU-located requests.
+async function ytInitialDataOf(pageUrl) {
+  const res = await fetchYouTubePage(pageUrl, { 'Cookie': 'CONSENT=YES+1; SOCS=CAI' });
+  if (!res.ok) return null;
+  const html = await res.text();
+  const mi = html.indexOf('var ytInitialData');
+  if (mi === -1) return null;
+  const jsonStr = extractBalancedJson(html, html.indexOf('{', mi));
+  if (!jsonStr) return null;
+  try { return JSON.parse(jsonStr); } catch (e) { return null; }
+}
+function ytLockupVideos(data, artist) {
+  const lockups = [];
+  deepFindKey(data, 'lockupViewModel', lockups);
+  const out = [];
+  const seen = new Set();
+  for (const l of lockups) {
+    if (!l || l.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO' || !/^[a-zA-Z0-9_-]{11}$/.test(l.contentId || '') || seen.has(l.contentId)) continue;
+    const md = l.metadata && l.metadata.lockupMetadataViewModel;
+    const title = md && md.title && md.title.content;
+    if (!title) continue;
+    seen.add(l.contentId);
+    out.push({ videoId: l.contentId, title, artist });
+  }
+  return out;
+}
+async function youTubeArtistPayload(path) {
+  const base = 'https://www.youtube.com/' + path;
+  const [releasesData, videosData] = await Promise.all([
+    ytInitialDataOf(base + '/releases').catch(() => null),
+    ytInitialDataOf(base + '/videos').catch(() => null),
+  ]);
+  const meta = [];
+  deepFindKey(releasesData || videosData, 'channelMetadataRenderer', meta);
+  if (!meta[0]) return { error: 'channel not found on youtube (invalid link, or youtube is rate-limiting - try again shortly)', status: 404 };
+  const name = String(meta[0].title || 'Artist').replace(/\s+-\s+Topic$/i, '');
+  const avatars = (meta[0].avatar && meta[0].avatar.thumbnails) || [];
+  const image = avatars.length ? avatars[avatars.length - 1].url : null;
+
+  // Album releases are YouTube's auto-generated "OLAK5uy_" playlists.
+  const releaseIds = [];
+  if (releasesData) {
+    const pls = [];
+    deepFindKey(releasesData, 'playlistRenderer', pls);
+    pls.forEach(p => { if (p && /^OLAK5uy_[a-zA-Z0-9_-]+$/.test(p.playlistId || '') && !releaseIds.includes(p.playlistId)) releaseIds.push(p.playlistId); });
+  }
+  const albums = await mapWithConcurrency(releaseIds.slice(0, ARTIST_MAX_YT_RELEASES), 3, async pid => {
+    try {
+      const d = await ytInitialDataOf('https://www.youtube.com/playlist?list=' + pid);
+      return d ? ytLockupVideos(d, name) : [];
+    } catch (e) { return []; }
+  });
+  const uploads = videosData ? ytLockupVideos(videosData, name) : [];
+
+  const tracks = [];
+  const seen = new Map();
+  const seenIds = new Set();
+  const keyOf = t => { if (seenIds.has(t.videoId)) return ''; seenIds.add(t.videoId); return artistTrackKey(t.title); };
+  albums.forEach(list => addArtistTracks(tracks, seen, list, ARTIST_MAX_NATIVE_TRACKS, keyOf));
+  addArtistTracks(tracks, seen, uploads, ARTIST_MAX_NATIVE_TRACKS, keyOf);
+  return { name, image, tracks };
+}
+
+async function handleArtist(url, ctx) {
+  let page;
+  try { page = new URL(url.searchParams.get('url') || ''); }
+  catch (e) { return json({ error: 'missing or invalid url' }, 400); }
+  const host = page.hostname.toLowerCase().replace(/^(www|m)\./, '');
+  const parts = page.pathname.split('/').filter(Boolean);
+  let source, run;
+  if (host === 'open.spotify.com' && parts[0] === 'artist' && /^[a-zA-Z0-9]+$/.test(parts[1] || '')) {
+    source = 'spotify'; run = () => spotifyArtistPayload(parts[1]);
+  } else if (host === 'music.apple.com' && /^[a-z]{2}$/.test(parts[0] || '') && parts[1] === 'artist' && /^\d+$/.test(parts[parts.length - 1] || '')) {
+    source = 'applemusic'; run = () => appleMusicArtistPayload(parts[0], parts[parts.length - 1]);
+  } else if (host === 'soundcloud.com' && /^[a-zA-Z0-9_-]+$/.test(parts[0] || '') && (parts.length === 1 || SOUNDCLOUD_ARTIST_TABS.has(parts[1]))) {
+    source = 'soundcloud'; run = () => soundCloudArtistPayload(parts[0], parts[1] || '', ctx);
+  } else if ((host === 'youtube.com' || host === 'music.youtube.com') && parts[0] && (/^@[^/]+$/.test(parts[0]) || (/^(channel|c|user)$/.test(parts[0]) && parts[1]))) {
+    source = 'youtube'; run = () => youTubeArtistPayload(parts[0].startsWith('@') ? parts[0] : parts[0] + '/' + parts[1]);
+  } else {
+    return json({ error: 'not a supported artist page link' }, 400);
+  }
+
+  const cache = envCache;
+  const cacheKey = new Request('https://cache.internal/' + ARTIST_CACHE_VERSION + '/artist/' + source + '/' + encodeURIComponent(parts.join('/').toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  const result = await run();
+  if (result.error) return json({ error: result.error }, result.status || 502);
+  if (!result.tracks.length) return json({ error: 'no tracks found on that artist page' }, 404);
+  const response = json(Object.assign({ source }, result));
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 // ---------- GET /playlistsearch?q=&storefront=&limit= ----------
 // Powers the playlist-input bar's "search by vibe/keyword" mode (see
 // beginVibeSearch/stageSearchResults in index.html): when what's pasted
@@ -3940,6 +4235,7 @@ export default {
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
+      if (url.pathname === '/artist') return await handleArtist(url, ctx);
       if (url.pathname === '/playlistsearch') return await handlePlaylistSearch(url, ctx);
       if (url.pathname === '/sctracksearch') return await handleSoundCloudTrackSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
