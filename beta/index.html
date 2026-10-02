@@ -182,7 +182,7 @@
       if (r.already){
         $('doneTitle').textContent = 'YOU\'RE ALREADY ON THE LIST.';
         $('doneText').textContent = 'That email already signed up. Nothing else to do. If you get in, you\'ll hear from me directly.';
-      } else if (r.status === 'waitlisted'){
+      } else if (r.full || r.status === 'waitlisted'){
         $('doneTitle').textContent = 'YOU\'RE ON THE WAITLIST.';
         $('doneText').textContent = 'If a spot opens up, you\'ll hear from me directly.';
       } else {

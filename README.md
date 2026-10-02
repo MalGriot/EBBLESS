@@ -81,35 +81,38 @@ npx wrangler kv key get --binding=MATCH_REPORTS "tester:<ts>:<uuid>"
 ## Beta tester system
 
 `beta/` holds the 50-person beta: static pages on the same GitHub Pages site,
-backed by `worker/src/beta.js` (routes under `/beta/*`) and its own KV
-namespace, `BETA`.
+backed by `worker/src/beta.js` (routes under `/beta/*`). The worker validates
+and throttles requests, then hands them to a Google Sheet's Apps Script web
+app ([`tools/beta-sheet.gs`](tools/beta-sheet.gs), setup steps at the top).
+The Sheet is the source of truth and the admin view.
 
-- `beta/` - public signup (shows `17 / 50 testers`; switches to "THE BETA IS
-  FULL." plus a waitlist option once 50 spots are filled)
-- `beta/tester.html?t=<token>` - an accepted tester's page ("YOU'RE IN.")
+- `beta/` - public signup (shows `17 / 50 testers`, counting Active testers;
+  switches to "THE BETA IS FULL." plus a waitlist option at 50)
+- `beta/tester.html?t=<token>` - an Active tester's page ("YOU'RE IN.")
 - `beta/feedback.html`, `beta/bug.html` - feedback (`EBB-FB-0001`) and bug
   reports (`EBB-TEST-0001`), tied to the tester by their link token, optional
-  screenshot
-- `beta/admin.html` - sign in with Google (account must be in the
-  `ADMIN_EMAILS` worker secret) to see counts, change tester status, copy
-  invites, and read feedback, bugs, and in-app "Send feedback" reports in one feed
+  screenshot (saved to a Drive folder, linked from the row)
 
-Emails go out through a Google Apps Script web app on a Gmail account
-([`tools/beta-mailer.gs`](tools/beta-mailer.gs), setup steps at the top):
-a confirmation on signup (or a waitlist note), and the tester invite the
-first time someone is accepted. Needs the `MAILER_URL` and `MAILER_SECRET`
-worker secrets; without them nothing is emailed and invites are copied by
-hand from the admin page.
+Sheet tabs, kept as separate records so the history survives:
 
-Nobody is accepted automatically. Setting a tester to accepted/active hands
-out the next tester number (`#001`...) and their secret link; accepted,
-active and inactive all hold one of the 50 spots, and the worker refuses a
-51st. Waitlisted/rejected frees the spot (numbers are never reused).
+- **Applicants** - one row per signup (`APP-0001`...), always starts
+  `Pending`. Statuses: Pending, Accepted, Waitlisted, Rejected.
+- **Testers** - only created when you set an applicant to `Accepted` (or use
+  the "EBBLESS Beta" menu). Gets the next tester number (`EBBLESS TESTER
+  #001`...), a private token and access link, references `applicant_id`, and
+  the invite is emailed. Statuses: Active, Inactive. Only Active rows have
+  working links.
+- **Feedback** / **Bug Reports** - reference `tester_id` and `tester_number`.
+  In-app "Send feedback" from a tester also lands in Feedback
+  (`source = in-app`).
+- **Dashboard** - applicant, tester, feedback and bug counts, `X / 50`.
 
-Admin locally: put `BETA_DEV_ADMIN_KEY=<anything>` in `worker/.dev.vars`
-(gitignored), run `npx wrangler dev --local`, and open
-`beta/admin.html?backend=local&devKey=<same>` from a localhost server. The
-key is only honored on localhost.
+The 50 cap counts Active testers only. Accepting a 51st (or reactivating
+someone past the cap) is reverted with a message in the Sheet. Tester numbers
+are never reused: if #017 goes Inactive, the next person is #051.
+
+Emails (signup confirmation, invite) go out from the Gmail account that owns
+the script. The worker needs the `SHEET_URL` and `SHEET_SECRET` secrets.
 
 ## YouTube links
 

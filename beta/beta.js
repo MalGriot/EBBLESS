@@ -1,4 +1,4 @@
-// Shared helpers for the EBBLESS beta pages (signup, tester, feedback, bug, admin).
+// Shared helpers for the EBBLESS beta pages (signup, tester, feedback, bug).
 // Talks to the same Worker as the app; see worker/src/beta.js.
 (function(){
   const BACKENDS = {
