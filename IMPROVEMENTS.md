@@ -7431,3 +7431,70 @@ Add entries in this shape:
   SC track). A video that is permanently unembeddable still won't play
   (each press retries once, then shows play). SW not bumped (done on main at
   merge).
+
+### miniplayer-return-reload: Returning from the mini-player after a long time reloads the page
+- **Status:** merged
+- **Priority:** high
+- **Description:** (Owner 2026-10-02: remove the 10-minute background reset entirely, all devices.) After the desktop mini-player has been in use for a long
+  time, going back to the main EBBLESS tab reloads the whole page instead of
+  picking up seamlessly. Returning should land on the same player state,
+  track and position with no reload or splash.
+- **Touches:** desktop mini-player (Document Picture-in-Picture) and main-tab
+  visibility/resume handling.
+- **Branch:** agent/miniplayer-return-reload
+- **Notes:** Synced from Geethub issue #230 (bug, no repro or device given).
+  Likely Chrome discarding/freezing the background tab (Memory Saver) while
+  the PiP window keeps playing; check `document.wasDiscarded`, the
+  `freeze`/`resume` page lifecycle events, and whether state restore from
+  merged `mobile-background-resume` covers this path. Related to merged
+  `mini-player-polish`, but a different symptom, so not a duplicate.
+  **Built (15df370, 5b8df21):** root cause was the app itself: the
+  visibilitychange handler reloaded after 10 min hidden (BACKGROUND_RESET_MS),
+  and PiP time counted as hidden. Per owner, the 10-minute reset is now
+  removed entirely on all devices. LS_BACKGROUNDED_AT / LS_WAS_PLAYING kept
+  for killed-page recovery in startApp, now with no time limit (any reopen
+  after the OS kills the page goes to the restored player, no splash; owner confirmed no time limit, 2026-10-02).
+  Paused-in-PiP stays paused on return. Needs real-device checks (desktop
+  PiP 10+ min, mobile backgrounded 10+ min, mobile after OS kill).
+
+### artist-link-playlist: Paste an artist page link to get a playlist of their catalog
+- **Status:** review
+- **Priority:** medium
+- **Description:** Pasting a link to an artist's page (Spotify, SoundCloud,
+  YouTube, Apple Music and the other supported sources) should build a
+  playlist of everything on that artist's page, the same way pasting a
+  playlist link works today.
+- **Touches:** paste/import link parsing and the per-source playlist
+  resolvers (and worker endpoints where a source needs server-side fetch).
+- **Branch:** agent/artist-link-playlist
+- **Notes:** Synced from Geethub issue #229. Spotify artist pages may hit the
+  same API/blocking limits noted in `spotify-art-source`; decide per source
+  what "everything" means (top tracks vs full discography) and cap size.
+  **Built (81b693f):** new types `artist` (Spotify), `am_artist`, `sc_artist`, `yt_artist` in the link parsers; new worker endpoint `GET /artist?url=` (6h cache). Spotify: top 10 + up to 12 releases via embeds, cap 100. Apple Music: top songs + album/single/live/compilation shelves, cap 100. SoundCloud: uploads via existing web API, cap 200. YouTube: partial, first 8 Releases albums + 30 latest uploads, cap 200. Title-level dedupe. Clear errors for bad/unsupported artist links. Side fix: `soundcloud.com/user/tracks` no longer misread as a track. **Needs a worker deploy.** Not verified from Cloudflare egress or for real YouTube playback.
+
+### beta-hide-feedback-buttons: Hide suggest / bug / copy-log buttons for beta testers
+- **Status:** merged
+- **Priority:** medium
+- **Description:** For the beta, remove the "Suggest an improvement",
+  "Report a bug" and "Copy log" buttons from what testers see. Keep the
+  owner's own shortcuts to these working.
+- **Touches:** Settings/About buttons, beta tester access gating.
+- **Branch:** agent/beta-hide-feedback-buttons
+- **Notes:** Synced from Geethub issue #231. Testers already have the beta
+  feedback and bug-report flow from the beta tester system (523586c), so
+  these are redundant for them.
+  **Built (9ecbe9c, 7ed30f5):** per owner ("shortcuts" = keyboard shortcuts), the three rows carry `.beta-hidden` and are hidden for everyone during beta; Send feedback stays. Shift+B (bug) and Shift+S (suggest) still work. Copy log has no shortcut, so it is unreachable from the UI while hidden. Owner: no shortcut needed, the log is mainly a debugging aid. Tutorial bug-report step now points at Send feedback.
+
+### youtube-playlist-rss-404: YouTube playlist and album imports appear broken
+- **Status:** review
+- **Priority:** high
+- **Description:** YouTube playlist RSS feeds, which the worker's
+  `/ytplaylist` endpoint depends on, return 404 for every playlist and
+  channel tried, including through the live worker. Pasting a YouTube
+  playlist or album link likely fails today. Replace the RSS dependency.
+- **Touches:** worker `/ytplaylist`, YouTube playlist import path.
+- **Branch:** agent/youtube-playlist-rss-404 (based on agent/artist-link-playlist)
+- **Notes:** Found by the `artist-link-playlist` lane (2026-10-02), not yet
+  confirmed in the live app. That lane's playlist-page reader in the worker
+  `/artist` handler could likely replace the RSS fetch.
+  **Worker deployed 2026-10-02** (version 89515831, built from main + this branch so the beta email worker code stays live; `/artist` endpoint is live too, unused until artist-link-playlist merges). Live `/ytplaylist` verified returning 100 tracks. Branch itself not yet merged to main. **Built (9741085):** 404 not reproduced 2026-10-02 (RSS and live worker returned 200; may be intermittent or edge/region dependent). `/ytplaylist` now reads the playlist page first (shared `readYtPlaylistPage`, parsers in `worker/src/yt-page.js`), RSS kept as fallback, same response shape, cache key bumped to `p2`. Cap 100 (was 15 via RSS). Worker tests 19/19. **Needs a worker deploy.** Follow-ups: client fires up to 100 `/spotifyart` calls at once on import (add a concurrency limit); stale "~15 videos" comment near index.html:5034; `/artist` fails on handles YouTube 303-redirects (e.g. `@daftpunk`).
