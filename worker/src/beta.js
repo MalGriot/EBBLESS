@@ -19,6 +19,11 @@ const FB_CATEGORIES = ['Overall experience', 'Music / playlist loading', 'Visual
 const FEELINGS = ['fire', 'good', 'alright', 'off', 'skull'];
 const KEEP_USING = ['Absolutely', 'Probably', 'Maybe', 'Probably not', 'No'];
 const BUG_AREAS = ['Playlist loading', 'Playback', 'Visuals', 'Cymatics', 'Lyrics', 'LP', 'Cassette', 'YouTube', 'Controls', 'Other'];
+// beta/feedback.html survey (form: 'survey')
+const TRIED = ['My own playlist', 'Album art', 'LP', 'Cassette', 'Cymatics', 'Lyrics', 'YouTube video', 'Fullscreen', 'Other'];
+const VISUAL_MODES = ['Album art', 'LP', 'Cassette', 'Cymatics', 'Lyrics', 'YouTube video', 'No favorite yet'];
+const CHANGES_MUSIC = ['Yes, completely', 'Yes, a little', 'Not really', 'No'];
+const BUG_ID_RE = /^EBB-TEST-\d{4,}$/;
 const SHOT_MAX_CHARS = 2_000_000;   // ~1.5MB image; the client downsizes before sending
 
 const SIGNUP_LIMIT = 4, SIGNUP_WINDOW_S = 600;
@@ -140,7 +145,20 @@ async function handleReport(request, env, ctx, h) {
   const kind = body.kind === 'bug' ? 'bug' : 'feedback';
   const tech = { device: str(body.device, 100), operating_system: str(body.os, 80), browser: str(body.browser, 80), viewport: str(body.viewport, 32), user_agent: str(request.headers.get('User-Agent'), 400) };
   let fields;
-  if (kind === 'feedback') {
+  if (kind === 'feedback' && body.form === 'survey') {
+    const first = str(body.firstImpression, 3000), feeling = pick(body.feeling, FEELINGS), keep = pick(body.keepUsing, KEEP_USING);
+    if (!first) return h.json({ error: 'Tell me your first impression.' }, 400);
+    if (!feeling) return h.json({ error: 'Pick how it felt to use.' }, 400);
+    if (!keep) return h.json({ error: 'Say whether you\'d use it regularly.' }, 400);
+    // A bug from this form is filed first as its own Bug Reports row; this just links it.
+    const bug = BUG_ID_RE.test(String(body.bugId || '')) ? String(body.bugId) : pick(body.hitBug, ['Yes', 'No']);
+    fields = {
+      source: 'feedback survey', first_impression: first, what_they_tried: pickMany(body.tried, TRIED, str(body.triedOther, 300)),
+      feeling, enjoyed_most: str(body.enjoyed, 3000), could_be_better: str(body.better, 3000),
+      favorite_visual_mode: pick(body.favoriteMode, VISUAL_MODES), changes_music_experience: pick(body.changesMusic, CHANGES_MUSIC),
+      keep_using: keep, would_bring_them_back: str(body.bringBack, 3000), bug_report: bug, one_change: str(body.oneChange, 3000),
+    };
+  } else if (kind === 'feedback') {
     const category = pick(body.category, FB_CATEGORIES), feeling = pick(body.feeling, FEELINGS);
     const happened = str(body.happened, 5000), expected = str(body.expected, 5000), extra = str(body.extra, 5000);
     if (!category) return h.json({ error: 'Pick what you\'re telling me about.' }, 400);

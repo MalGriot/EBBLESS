@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="beta.css">
 </head>
 <body data-bg="quiet">
+<div class="progress" id="progress" hidden aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
 <main class="wrap">
   <div class="top"><a id="homeLink" href="tester.html"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"></a><span class="tag" id="label">Beta</span></div>
 
@@ -20,29 +21,52 @@
     <p class="lede">This form needs the tester link I sent you, so your feedback lands with your tester number. Open that link, then hit Tester Feedback.</p>
   </section>
 
-  <form id="fb" novalidate hidden>
+  <form id="fb" class="survey" novalidate hidden>
     <h1 class="display">TELL ME WHAT YOU THINK.</h1>
     <div class="rule"></div>
     <p class="lede">You don't need to be nice. Tell me what works, what sucks, what's confusing, and what you wish EBBLESS did.</p>
+    <p class="lede">Only the <span class="req">*</span> ones are required. Short answers are fine.</p>
 
-    <div class="section" style="margin-top:32px">
-      <div class="field"><span class="q">What are you telling me about?</span><div id="catPills"></div></div>
-      <div class="field"><span class="q">How did it feel?</span><div id="feelPills"></div></div>
-    </div>
     <div class="section">
-      <div class="field"><label for="happened">What happened?</label><textarea class="big" id="happened" maxlength="5000"></textarea></div>
-      <div class="field"><label for="expected">What were you expecting to happen?</label><textarea class="big" id="expected" maxlength="5000"></textarea></div>
-      <div class="field"><label for="extra">Anything else?</label><textarea class="big" id="extra" maxlength="5000"></textarea></div>
+      <h2><span class="num">01</span>First take</h2>
+      <div class="field"><label for="firstImpression">What was your first impression? <span class="req">*</span></label><textarea id="firstImpression" maxlength="3000" placeholder="The first thing you thought or felt when it opened"></textarea></div>
+      <div class="field"><span class="q">What did you try?</span><div id="triedPills"></div>
+        <input type="text" id="triedOther" maxlength="300" placeholder="What else?" hidden></div>
+      <div class="field"><span class="q">How did EBBLESS feel to use? <span class="req">*</span></span><div id="feelPills"></div></div>
     </div>
+
     <div class="section">
-      <div class="field"><span class="q">Would you keep using EBBLESS if it were available today?</span><div id="keepPills"></div></div>
+      <h2><span class="num">02</span>The experience</h2>
+      <div class="field"><label for="enjoyed">What did you enjoy most?</label><textarea id="enjoyed" maxlength="3000"></textarea></div>
+      <div class="field"><label for="better">What could be better?</label><textarea id="better" maxlength="3000" placeholder="Confusing, slow, ugly, unnecessary, anything"></textarea></div>
+      <div class="field"><span class="q">Favorite visual mode?</span><div id="modePills"></div></div>
+      <div class="field"><span class="q">Does EBBLESS change how you experience music?</span><div id="changesPills"></div></div>
     </div>
+
     <div class="section">
-      <div class="field">
-        <span class="q">Screenshot <span class="hint">(optional)</span></span>
-        <input type="file" id="shot" accept="image/*" hidden>
-        <div class="shot-preview"><button class="btn sm" type="button" id="shotBtn">Add a screenshot</button><img id="shotImg" alt="" hidden><button class="linkish" type="button" id="shotClear" hidden>Remove</button></div>
+      <h2><span class="num">03</span>Coming back</h2>
+      <div class="field"><span class="q">Would you use EBBLESS regularly? <span class="req">*</span></span><div id="keepPills"></div></div>
+      <div class="field"><label for="bringBack">What would make you come back?</label><textarea id="bringBack" maxlength="3000"></textarea></div>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">04</span>Anything broken?</h2>
+      <div class="field"><span class="q">Did you run into a bug? <span class="req">*</span></span><div id="bugPills"></div></div>
+      <div class="reveal fade-in" id="bugBox" hidden>
+        <div class="field"><label for="bugWrong">What went wrong? <span class="req">*</span></label><input type="text" id="bugWrong" maxlength="300" placeholder="Short version"></div>
+        <div class="field"><span class="q">Which part of EBBLESS?</span><div id="areaPills"></div></div>
+        <div class="field"><label for="bugSteps">How can I make it happen again? <span class="hint">(if you know)</span></label><textarea id="bugSteps" maxlength="3000" placeholder="1. Loaded a playlist&#10;2. Switched to cassette&#10;3. ..."></textarea></div>
+        <div class="field">
+          <span class="q">Screenshot <span class="hint">(optional)</span></span>
+          <input type="file" id="shot" accept="image/*" hidden>
+          <div class="shot-preview"><button class="btn sm" type="button" id="shotBtn">Add a screenshot</button><img id="shotImg" alt="" hidden><button class="linkish" type="button" id="shotClear" hidden>Remove</button></div>
+        </div>
       </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="num">05</span>Last word</h2>
+      <div class="field"><label for="oneChange">One thing you'd change, add or remove?</label><textarea id="oneChange" maxlength="3000"></textarea></div>
       <p class="detected" id="detected"></p>
     </div>
 
@@ -56,7 +80,7 @@
     <p class="lede">Thank you. That's exactly what this beta is for.</p>
     <p class="lede tnum" id="doneId"></p>
     <div class="actions">
-      <button class="btn" id="againBtn" type="button">Tell me something else</button>
+      <a class="btn" id="bugLink" href="bug.html">Report a bug</a>
       <a class="btn" href="../">Back to EBBLESS</a>
     </div>
   </section>
@@ -70,8 +94,10 @@
   const token = Beta.token();
   if (!token){ $('nope').hidden = false; return; }
   $('homeLink').href = 'tester.html?t=' + encodeURIComponent(token);
+  $('bugLink').href = 'bug.html?t=' + encodeURIComponent(token);
 
-  Beta.pills($('catPills'), 'category', ['Overall experience', 'Music / playlist loading', 'Visuals', 'Cymatics', 'LP mode', 'Cassette mode', 'Lyrics', 'YouTube video', 'Controls', 'Performance', 'Mobile experience', 'Something else']);
+  // Option values must match worker/src/beta.js (TRIED, FEELINGS, VISUAL_MODES, CHANGES_MUSIC, KEEP_USING, BUG_AREAS).
+  Beta.pills($('triedPills'), 'tried', ['My own playlist', 'Album art', 'LP', 'Cassette', 'Cymatics', 'Lyrics', 'YouTube video', 'Fullscreen', { value: 'Other', label: 'Something else' }], { multi: true });
   Beta.pills($('feelPills'), 'feeling', [
     { value: 'fire', emoji: '🔥', label: 'Fuck yeah' },
     { value: 'good', emoji: '🙂', label: 'Pretty good' },
@@ -79,14 +105,54 @@
     { value: 'off', emoji: '😕', label: 'Something\'s off' },
     { value: 'skull', emoji: '💀', label: 'What the fuck is this' },
   ], { stack: true });
+  Beta.pills($('modePills'), 'favoriteMode', ['Album art', 'LP', 'Cassette', 'Cymatics', 'Lyrics', 'YouTube video', 'No favorite yet']);
+  Beta.pills($('changesPills'), 'changesMusic', ['Yes, completely', 'Yes, a little', 'Not really', 'No']);
   Beta.pills($('keepPills'), 'keepUsing', ['Absolutely', 'Probably', 'Maybe', 'Probably not', 'No']);
-  form.hidden = false;
+  Beta.pills($('bugPills'), 'hitBug', ['No', 'Yes']);
+  Beta.pills($('areaPills'), 'area', ['Playlist loading', 'Playback', 'Visuals', 'Cymatics', 'Lyrics', 'LP', 'Cassette', 'YouTube', 'Controls', 'Other']);
+
+  const TEXTS = ['firstImpression', 'triedOther', 'enjoyed', 'better', 'bringBack', 'bugWrong', 'bugSteps', 'oneChange'];
+  const REQUIRED = [() => $('firstImpression').value.trim(), () => Beta.radio(form, 'feeling'), () => Beta.radio(form, 'keepUsing'), () => Beta.radio(form, 'hitBug')];
+
+  // Textareas grow with what's typed instead of scrolling inside a box.
+  const grow = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 2 + 'px'; };
+  form.querySelectorAll('textarea').forEach(t => t.addEventListener('input', () => grow(t)));
+
+  function sync(){
+    $('triedOther').hidden = !Beta.checked(form, 'tried').includes('Other');
+    $('bugBox').hidden = Beta.radio(form, 'hitBug') !== 'Yes';
+    $('progressFill').style.width = (REQUIRED.filter(f => f()).length / REQUIRED.length * 100) + '%';
+  }
+
+  // Unsent answers survive a reload or a trip back to the app (this browser only).
+  const DRAFT = 'ebbless:betaFeedbackDraft:' + token;
+  function saveDraft(){
+    const d = { checked: [...form.querySelectorAll('input:checked')].map(i => i.name + '=' + i.value) };
+    TEXTS.forEach(id => { d[id] = $(id).value; });
+    try { localStorage.setItem(DRAFT, JSON.stringify(d)); } catch(e){}
+  }
+  function loadDraft(){
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); } catch(e){}
+    if (!d) return;
+    TEXTS.forEach(id => { if (typeof d[id] === 'string') $(id).value = d[id]; });
+    (d.checked || []).forEach(s => { const i = s.indexOf('='); Beta.setRadio(form, s.slice(0, i), s.slice(i + 1)); });
+  }
+  function clearDraft(){ try { localStorage.removeItem(DRAFT); } catch(e){} }
+
+  loadDraft();
+  form.hidden = false; $('progress').hidden = false;
+  form.querySelectorAll('textarea').forEach(t => { if (t.value) grow(t); });
+  sync();
+  form.addEventListener('input', () => { sync(); saveDraft(); });
+  form.addEventListener('change', () => { sync(); saveDraft(); });
 
   Beta.api('/beta/me', { token }).then(me => { $('label').textContent = me.label; })
-    .catch(e => { if (e.status === 404){ form.hidden = true; $('nope').hidden = false; } });
+    .catch(e => { if (e.status === 404){ form.hidden = true; $('progress').hidden = true; $('nope').hidden = false; } });
 
   const env = await Beta.detect();
-  $('detected').textContent = 'Sent with: ' + [env.model || env.device, env.os, env.browserDetail].filter(Boolean).join(' · ');
+  const tech = { device: env.model || env.device, os: env.os, browser: env.browserDetail, viewport: env.viewport };
+  $('detected').textContent = 'Sent with your tester number and: ' + [tech.device, tech.os, tech.browser].filter(Boolean).join(' · ');
 
   let shot = '';
   $('shotBtn').onclick = () => $('shot').click();
@@ -97,32 +163,54 @@
   };
   $('shotClear').onclick = () => { shot = ''; $('shot').value = ''; $('shotImg').hidden = true; $('shotClear').hidden = true; $('shotBtn').textContent = 'Add a screenshot'; };
 
+  // A bug filed on an earlier attempt isn't filed again if the feedback half fails.
+  let bugId = '', bugSentFor = '';
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const st = $('status');
-    const body = {
-      token, kind: 'feedback',
-      category: Beta.radio(form, 'category'), feeling: Beta.radio(form, 'feeling'),
-      happened: $('happened').value.trim(), expected: $('expected').value.trim(), extra: $('extra').value.trim(),
-      keepUsing: Beta.radio(form, 'keepUsing'),
-      device: env.model || env.device, os: env.os, browser: env.browserDetail, viewport: env.viewport,
-      screenshot: shot || undefined,
+    const hitBug = Beta.radio(form, 'hitBug');
+    const bug = {
+      token, kind: 'bug', wrong: $('bugWrong').value.trim(), steps: $('bugSteps').value.trim(), area: Beta.radio(form, 'area'),
+      ...tech, screenshot: shot || undefined,
     };
-    const miss = !body.category ? ['catPills', 'Pick what you\'re telling me about.']
-      : !body.feeling ? ['feelPills', 'Pick how it felt.']
-      : !(body.happened || body.expected || body.extra) ? ['happened', 'Write something first.'] : null;
-    if (miss){ Beta.status(st, miss[1], 'err'); $(miss[0]).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const miss = !$('firstImpression').value.trim() ? ['firstImpression', 'Tell me your first impression.']
+      : !Beta.radio(form, 'feeling') ? ['feelPills', 'Pick how it felt to use.']
+      : !Beta.radio(form, 'keepUsing') ? ['keepPills', 'Say whether you\'d use it regularly.']
+      : !hitBug ? ['bugPills', 'Say whether you ran into a bug.']
+      : hitBug === 'Yes' && !bug.wrong ? ['bugWrong', 'Say what went wrong.'] : null;
+    if (miss){
+      Beta.status(st, miss[1], 'err');
+      $(miss[0]).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if ($(miss[0]).focus && /^(INPUT|TEXTAREA)$/.test($(miss[0]).tagName)) $(miss[0]).focus({ preventScroll: true });
+      return;
+    }
     $('submitBtn').disabled = true;
     Beta.status(st, 'Sending...');
     try {
-      const r = await Beta.api('/beta/report', body);
-      $('doneId').textContent = 'Reference: ' + r.id;
-      Beta.intro(); form.hidden = true; $('done').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
-      form.reset(); $('shotClear').click(); Beta.status(st, '');
-    } catch(err){ Beta.status(st, err.message + ' Your words are still here.', 'err'); }
+      if (hitBug === 'Yes'){
+        const key = JSON.stringify([bug.wrong, bug.steps, bug.area, !!shot]);
+        if (!bugId || bugSentFor !== key){ bugId = (await Beta.api('/beta/report', bug)).id; bugSentFor = key; }
+      }
+      const r = await Beta.api('/beta/report', {
+        token, kind: 'feedback', form: 'survey',
+        firstImpression: $('firstImpression').value.trim(),
+        tried: Beta.checked(form, 'tried'), triedOther: $('triedOther').value.trim(),
+        feeling: Beta.radio(form, 'feeling'),
+        enjoyed: $('enjoyed').value.trim(), better: $('better').value.trim(),
+        favoriteMode: Beta.radio(form, 'favoriteMode'), changesMusic: Beta.radio(form, 'changesMusic'),
+        keepUsing: Beta.radio(form, 'keepUsing'), bringBack: $('bringBack').value.trim(),
+        hitBug, bugId: hitBug === 'Yes' ? bugId : '',
+        oneChange: $('oneChange').value.trim(),
+        ...tech,
+      });
+      $('doneId').textContent = 'Reference: ' + r.id + (hitBug === 'Yes' ? ' · Bug: ' + bugId : '');
+      clearDraft(); bugId = ''; bugSentFor = '';
+      Beta.intro(); form.hidden = true; $('progress').hidden = true; $('done').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
+      Beta.status(st, '');
+    } catch(err){ Beta.status(st, err.message + ' Your answers are still here.', 'err'); }
     $('submitBtn').disabled = false;
   });
-  $('againBtn').onclick = () => { $('done').hidden = true; form.hidden = false; window.scrollTo({ top: 0 }); };
 })();
 </script>
 </body>

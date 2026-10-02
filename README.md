@@ -91,7 +91,11 @@ The Sheet is the source of truth and the admin view.
 - `beta/tester.html?t=<token>` - an Active tester's page ("YOU'RE IN.")
 - `beta/feedback.html`, `beta/bug.html` - feedback (`EBB-FB-0001`) and bug
   reports (`EBB-TEST-0001`), tied to the tester by their link token, optional
-  screenshot (saved to a Drive folder, linked from the row)
+  screenshot (saved to a Drive folder, linked from the row). Feedback is the
+  tester survey (`source = feedback survey`): first impression, what they
+  tried, feel, favorite visual mode, would they come back, etc. A bug flagged
+  in the survey is filed as its own Bug Reports row and linked in
+  `bug_report`. Device / OS / browser are detected, never asked.
 
 Sheet tabs, kept as separate records so the history survives:
 
@@ -105,6 +109,8 @@ Sheet tabs, kept as separate records so the history survives:
 - **Feedback** / **Bug Reports** - reference `tester_id` and `tester_number`.
   In-app "Send feedback" from a tester also lands in Feedback
   (`source = in-app`).
+  24 hours after acceptance, an hourly trigger emails each Active tester the
+  feedback form once and stamps `feedback_request_sent`.
 - **Dashboard** - applicant, tester, feedback and bug counts, `X / 50`.
 
 The app itself (`/`) is locked to Active testers: a full-screen gate at the

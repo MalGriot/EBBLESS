@@ -10,7 +10,9 @@
 // Day to day you never touch code: set an applicant's applicant_status to
 // Accepted and this script creates their Tester row (next tester number,
 // private token, access link) and emails the invite. Set a tester's
-// tester_status to Inactive and their link stops working. The 50 cap counts
+// tester_status to Inactive and their link stops working. 24 hours after
+// acceptance, each Active tester is emailed the feedback form once
+// (feedback_request_sent records when). The 50 cap counts
 // Active testers only; tester numbers are never reused.
 //
 // The worker (worker/src/beta.js) calls this as a web app with a shared
@@ -46,10 +48,13 @@ HEADERS[APPLICANTS] = ['applicant_id', 'name', 'email', 'Instagram', 'device', '
   'technical_comfort', 'music_platform', 'music_preferences', 'Spotify_playlist', 'why_they_want_to_test',
   'what_they_want_EBBLESS_to_do', 'signup_timestamp', 'applicant_status', 'notes', 'ok_to_contact_later', 'user_agent'];
 HEADERS[TESTERS] = ['tester_id', 'tester_number', 'applicant_id', 'name', 'email', 'accepted_timestamp',
-  'access_token', 'access_link', 'tester_status', 'notes'];
+  'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent'];
 HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'source', 'category', 'feeling',
   'what_happened', 'what_they_expected', 'anything_else', 'keep_using', 'screenshot',
-  'device', 'operating_system', 'browser', 'viewport', 'user_agent'];
+  'device', 'operating_system', 'browser', 'viewport', 'user_agent',
+  // feedback survey (beta/feedback.html); keep_using / feeling above are shared
+  'first_impression', 'what_they_tried', 'enjoyed_most', 'could_be_better', 'favorite_visual_mode',
+  'changes_music_experience', 'would_bring_them_back', 'bug_report', 'one_change'];
 HEADERS[BUGS] = ['bug_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'area', 'what_went_wrong',
   'expected', 'actual', 'steps', 'screenshot', 'device', 'operating_system', 'browser', 'viewport', 'user_agent'];
 
@@ -82,6 +87,12 @@ function append_(sh, obj) {
   const row = new Array(sh.getLastColumn()).fill('');
   Object.keys(obj).forEach(function (k) { if (k in c) row[c[k]] = safe_(obj[k]); });
   sh.appendRow(row);
+}
+// Adds any of `headers` the tab is missing, after its last column.
+function ensureHeaders_(sh, headers) {
+  const have = cols_(sh);
+  const missing = headers.filter(function (h) { return !(h in have); });
+  if (missing.length) sh.getRange(1, Object.keys(have).length ? sh.getLastColumn() + 1 : 1, 1, missing.length).setValues([missing]).setFontWeight('bold');
 }
 function setCell_(sh, rowNum, header, value) {
   const c = cols_(sh);
@@ -119,11 +130,63 @@ function inviteText_(t) {
     'Have fun with it.';
 }
 
-function sendMail_(to, subject, text) {
+function sendMail_(to, subject, text, html) {
   try {
-    MailApp.sendEmail({ to: to, subject: subject, body: text, name: SENDER_NAME });
+    MailApp.sendEmail({ to: to, subject: subject, body: text, htmlBody: html || undefined, name: SENDER_NAME });
     return '';
   } catch (err) { return String(err); }
+}
+
+// ---------- feedback request (24h after access) ----------
+
+const FEEDBACK_REQUEST_AFTER_MS = 24 * 3600 * 1000;
+
+function feedbackRequestText_(first, link) {
+  return 'Peace and love, ' + first + '.\n\n' +
+    'Just checking in now that you\u2019ve had a little time with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.\n\n' +
+    'What did you love? What confused you? What broke? What would make you want to come back?\n\n' +
+    'Take a few minutes and tell me here:\n\n' + link + '\n\n' +
+    'The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
+    'No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F\n\n' +
+    'Mal';
+}
+function feedbackRequestHtml_(first, link) {
+  const esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  const p = function (h) { return '<p style="margin:0 0 16px">' + h + '</p>'; };
+  return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.5;color:#121212">' +
+    p('Peace and love, ' + esc(first) + '.') +
+    p('Just checking in now that you\u2019ve had a little time with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.') +
+    p('What did you love? What confused you? What broke? What would make you want to come back?') +
+    p('Take a few minutes and tell me here:') +
+    p('<a href="' + esc(link) + '">' + esc(link) + '</a>') +
+    p('<b>The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
+    p('No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F') +
+    p('Mal') + '</div>';
+}
+
+// Hourly time trigger (created by setup): emails each Active tester the
+// feedback form once, 24h after accepted_timestamp, and stamps
+// feedback_request_sent so it never goes out twice. A failed send leaves the
+// cell blank (retried next hour) and notes why.
+function sendFeedbackRequests() {
+  const sh = sheet_(TESTERS);
+  withLock_(function () {
+    ensureHeaders_(sh, HEADERS[TESTERS]);
+    const now = Date.now();
+    records_(sh).forEach(function (t) {
+      if (t.tester_status !== 'Active' || t.feedback_request_sent || !t.access_token || !t.email) return;
+      const accepted = t.accepted_timestamp instanceof Date ? t.accepted_timestamp.getTime() : Date.parse(t.accepted_timestamp);
+      if (!accepted || now - accepted < FEEDBACK_REQUEST_AFTER_MS) return;
+      const first = String(t.name || '').split(/\s+/)[0] || 'friend';
+      const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
+      const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link), feedbackRequestHtml_(first, link));
+      if (err) {
+        const note = 'Feedback request NOT emailed: ' + err;
+        if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
+      }
+      else setCell_(sh, t._row, 'feedback_request_sent', new Date());
+    });
+  });
 }
 
 // ---------- web app (called by the worker) ----------
@@ -207,6 +270,7 @@ function report_(b) {
   const f = b.fields || {};
   const id = withLock_(function () {
     const sh = sheet_(bug ? BUGS : FEEDBACK);
+    ensureHeaders_(sh, HEADERS[bug ? BUGS : FEEDBACK]);   // new columns land without re-running setup
     const id = bug ? nextId_(sh, 'bug_id', 'EBB-TEST-', 4) : nextId_(sh, 'feedback_id', 'EBB-FB-', 4);
     const rec = {};
     HEADERS[bug ? BUGS : FEEDBACK].forEach(function (h) { if (h in f) rec[h] = f[h]; });
@@ -347,9 +411,7 @@ function setup() {
   props.setProperty('SHEET_ID', ss.getId());
   [APPLICANTS, TESTERS, FEEDBACK, BUGS].forEach(function (name) {
     const sh = ss.getSheetByName(name) || ss.insertSheet(name);
-    const have = cols_(sh);
-    const missing = HEADERS[name].filter(function (h) { return !(h in have); });
-    if (missing.length) sh.getRange(1, Object.keys(have).length ? sh.getLastColumn() + 1 : 1, 1, missing.length).setValues([missing]);
+    ensureHeaders_(sh, HEADERS[name]);
     sh.setFrozenRows(1);
     sh.getRange(1, 1, 1, sh.getLastColumn()).setFontWeight('bold');
   });
@@ -390,8 +452,11 @@ function setup() {
   const def = ss.getSheetByName('Sheet1');
   if (def && def.getLastRow() === 0) ss.deleteSheet(def);
 
-  ScriptApp.getProjectTriggers().forEach(function (tr) { if (tr.getHandlerFunction() === 'onBetaEdit') ScriptApp.deleteTrigger(tr); });
+  ScriptApp.getProjectTriggers().forEach(function (tr) {
+    if (tr.getHandlerFunction() === 'onBetaEdit' || tr.getHandlerFunction() === 'sendFeedbackRequests') ScriptApp.deleteTrigger(tr);
+  });
   ScriptApp.newTrigger('onBetaEdit').forSpreadsheet(ss).onEdit().create();
+  ScriptApp.newTrigger('sendFeedbackRequests').timeBased().everyHours(1).create();
 
   let secret = props.getProperty('SHEET_SECRET');
   if (!secret) { secret = hex_(48); props.setProperty('SHEET_SECRET', secret); }
