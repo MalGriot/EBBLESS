@@ -798,6 +798,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .ctl-btn.main svg{width:19px;height:19px}
 .ctl-btn.small{width:32px;height:32px}
 .ctl-btn.small svg{width:14px;height:14px}
+/* podcast-only +/-15s skip buttons (Geethub #234), shown while body.pod-playing */
+.ctl-btn.pod-skip{display:none}
+body.pod-playing .ctl-btn.pod-skip{display:flex}
+.ctl-btn.pod-skip svg text{font:700 7.5px/1 system-ui,sans-serif}
 /* play/pause icons swap to a spinning partial ring while a track is still
    connecting (before the filling pre-roll ring can start) - see
    updateAdLoadingIcon */
@@ -856,6 +860,15 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 #mini-bar .mini-line .fill{height:100%;background:var(--player-accent);width:0%}
 @media (max-width:420px){
   #mini-bar #miniShuffleBtn,#mini-bar #miniRepeatBtn{display:none}
+  /* two extra podcast skip buttons: tighten the transport rows instead of
+     squeezing the title/seek out (Geethub #234) */
+  body.pod-playing .controls-row{gap:0}
+  body.pod-playing .controls-row .ctl-btn:not(.main){width:38px;height:38px}
+  body.pod-playing .controls-row .ctl-btn.small{width:34px;height:34px}
+  body.pod-playing #mini-bar .mini-ctl .ctl-btn{width:28px;height:28px}
+}
+@media (max-width:340px){
+  body.pod-playing #mini-bar .ctl-btn.pod-skip{display:none}
 }
 
 /* ---------- bottom nav (mobile) ---------- */
@@ -2706,9 +2719,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <button class="ctl-btn" id="prevBtn" title="Previous" aria-label="Previous">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
             </button>
+            <button class="ctl-btn pod-skip" id="skipBackBtn" title="Back 15 seconds" aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
             <button class="ctl-btn main" id="playBtn" title="Play/Pause" aria-label="Play or pause">
               <svg id="playIco" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
+            <button class="ctl-btn pod-skip" id="skipFwdBtn" title="Forward 15 seconds" aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path transform="matrix(-1 0 0 1 24 0)" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
             <button class="ctl-btn" id="nextBtn" title="Next" aria-label="Next">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
             </button>
@@ -2973,9 +2988,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <button class="ctl-btn small" id="miniPrevBtn" title="Previous" aria-label="Previous">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
       </button>
+      <button class="ctl-btn small pod-skip" id="miniSkipBackBtn" title="Back 15 seconds" aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
       <button class="ctl-btn small" id="miniPlayBtn" aria-label="Play or pause">
         <svg id="miniPlayIco" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
+      <button class="ctl-btn small pod-skip" id="miniSkipFwdBtn" title="Forward 15 seconds" aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path transform="matrix(-1 0 0 1 24 0)" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
       <button class="ctl-btn small" id="miniNextBtn" title="Next" aria-label="Next">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
       </button>
@@ -3086,7 +3103,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
           </button>
           <button class="ctl-btn" id="flowPrevBtn" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+          <button class="ctl-btn pod-skip" id="flowSkipBackBtn" title="Back 15 seconds" aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
           <button class="ctl-btn main" id="flowPlayBtn" aria-label="Play or pause"><svg id="flowPlayIco" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+          <button class="ctl-btn pod-skip" id="flowSkipFwdBtn" title="Forward 15 seconds" aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path transform="matrix(-1 0 0 1 24 0)" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
           <button class="ctl-btn" id="flowNextBtn" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg></button>
           <button class="ctl-btn small repeat-badge" id="flowRepeatBtn" title="Repeat" aria-label="Repeat">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
@@ -13102,7 +13121,8 @@ function reflectCurrentTrackUI(pos, opts){
   // until the new track actually starts reporting (issue #213)
   resetSeekUI(t);
   // a podcast episode is the show's own file - there's no match to flag
-  const isPod = isAudioVideoId(t.videoId) || !!t.podcast;
+  const isPod = isPodcastTrack(t);
+  document.body.classList.toggle('pod-playing', isPod);
   reportMatchBtn.hidden = isPod;
   if (flowReportBtn) flowReportBtn.hidden = isPod;
   if (!skipArt){
@@ -13803,6 +13823,11 @@ function kbToggleVisual(mode){
 // getCurrentTime() lags a just-issued seekTo() while the player rebuffers,
 // so rapid presses build on the last target instead of the stale position.
 const KB_SEEK_S = 10;
+// Podcasts skip in 15s steps instead (Geethub #234): the +/-15 buttons,
+// shift+arrows and the lock-screen seek buttons all go through seekStepS().
+const POD_SKIP_S = 15;
+function isPodcastTrack(t){ return !!t && (isAudioVideoId(t.videoId) || !!t.podcast); }
+function seekStepS(){ return isPodcastTrack(currentTrack()) ? POD_SKIP_S : KB_SEEK_S; }
 let kbSeekLast = null; // { player, to, at }
 function kbSeekBy(delta){
   if (state.queuePos < 0) return;
@@ -13830,11 +13855,11 @@ document.addEventListener('keydown', (e) => {
       if (state.queuePos >= 0) userTogglePlayback();
       break;
     case 'ArrowLeft':
-      if (e.shiftKey){ e.preventDefault(); kbSeekBy(-KB_SEEK_S); }
+      if (e.shiftKey){ e.preventDefault(); kbSeekBy(-seekStepS()); }
       else playPrev();
       break;
     case 'ArrowRight':
-      if (e.shiftKey){ e.preventDefault(); kbSeekBy(KB_SEEK_S); }
+      if (e.shiftKey){ e.preventDefault(); kbSeekBy(seekStepS()); }
       else playNext(false);
       break;
     case 'f': case 'F':
@@ -13904,6 +13929,16 @@ document.addEventListener('keydown', (e) => {
   }
 });
 miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); });
+// podcast +/-15s buttons: same clamped seek path as shift+arrows (player
+// adapter, so it follows a Chromecast session too); the mini bar's stop
+// propagation so the tap doesn't also open the full player
+[['skipBackBtn', -1], ['skipFwdBtn', 1], ['miniSkipBackBtn', -1], ['miniSkipFwdBtn', 1], ['flowSkipBackBtn', -1], ['flowSkipFwdBtn', 1]].forEach(([id, dir]) => {
+  $(id).addEventListener('click', (e) => {
+    e.stopPropagation();
+    const to = kbSeekBy(dir * POD_SKIP_S);
+    if (typeof to === 'number') syncMediaPositionState(true, to);
+  });
+});
 miniNextBtn.addEventListener('click', (e) => { e.stopPropagation(); playNext(false); });
 miniShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
 miniRepeatBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleRepeat(); });
@@ -13950,7 +13985,7 @@ if ('mediaSession' in navigator){
   // with +/-seconds ones, and track skipping matters more for music.
   if (!isIOS){
     const msSkip = (dir) => (d) => {
-      const step = d && d.seekOffset > 0 ? d.seekOffset : KB_SEEK_S;
+      const step = d && d.seekOffset > 0 ? d.seekOffset : seekStepS();
       const to = kbSeekBy(dir * step);
       if (typeof to === 'number') syncMediaPositionState(true, to);
     };
