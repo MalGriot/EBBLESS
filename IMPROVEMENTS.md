@@ -7458,7 +7458,7 @@ Add entries in this shape:
   PiP 10+ min, mobile backgrounded 10+ min, mobile after OS kill).
 
 ### artist-link-playlist: Paste an artist page link to get a playlist of their catalog
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Pasting a link to an artist's page (Spotify, SoundCloud,
   YouTube, Apple Music and the other supported sources) should build a
@@ -7486,7 +7486,7 @@ Add entries in this shape:
   **Built (9ecbe9c, 7ed30f5):** per owner ("shortcuts" = keyboard shortcuts), the three rows carry `.beta-hidden` and are hidden for everyone during beta; Send feedback stays. Shift+B (bug) and Shift+S (suggest) still work. Copy log has no shortcut, so it is unreachable from the UI while hidden. Owner: no shortcut needed, the log is mainly a debugging aid. Tutorial bug-report step now points at Send feedback.
 
 ### youtube-playlist-rss-404: YouTube playlist and album imports appear broken
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** YouTube playlist RSS feeds, which the worker's
   `/ytplaylist` endpoint depends on, return 404 for every playlist and
@@ -7497,4 +7497,4 @@ Add entries in this shape:
 - **Notes:** Found by the `artist-link-playlist` lane (2026-10-02), not yet
   confirmed in the live app. That lane's playlist-page reader in the worker
   `/artist` handler could likely replace the RSS fetch.
-  **Worker deployed 2026-10-02** (version 89515831, built from main + this branch so the beta email worker code stays live; `/artist` endpoint is live too, unused until artist-link-playlist merges). Live `/ytplaylist` verified returning 100 tracks. Branch itself not yet merged to main. **Built (9741085):** 404 not reproduced 2026-10-02 (RSS and live worker returned 200; may be intermittent or edge/region dependent). `/ytplaylist` now reads the playlist page first (shared `readYtPlaylistPage`, parsers in `worker/src/yt-page.js`), RSS kept as fallback, same response shape, cache key bumped to `p2`. Cap 100 (was 15 via RSS). Worker tests 19/19. **Needs a worker deploy.** Follow-ups: client fires up to 100 `/spotifyart` calls at once on import (add a concurrency limit); [throttle d26183a merged and live, SW v54]; stale "~15 videos" comment near index.html:5034; `/artist` fails on handles YouTube 303-redirects (e.g. `@daftpunk`).
+  **Worker deployed 2026-10-02** (version 89515831, built from main + this branch so the beta email worker code stays live; `/artist` endpoint is live too, unused until artist-link-playlist merges). Live `/ytplaylist` verified returning 100 tracks. Merged to main with artist-link-playlist, SW v55. **Built (9741085):** 404 not reproduced 2026-10-02 (RSS and live worker returned 200; may be intermittent or edge/region dependent). `/ytplaylist` now reads the playlist page first (shared `readYtPlaylistPage`, parsers in `worker/src/yt-page.js`), RSS kept as fallback, same response shape, cache key bumped to `p2`. Cap 100 (was 15 via RSS). Worker tests 19/19. **Needs a worker deploy.** Follow-ups: client fires up to 100 `/spotifyart` calls at once on import (add a concurrency limit); [throttle d26183a merged and live, SW v54]; stale "~15 videos" comment near index.html:5034; `/artist` fails on handles YouTube 303-redirects (e.g. `@daftpunk`).
