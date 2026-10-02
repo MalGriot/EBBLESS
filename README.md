@@ -107,6 +107,12 @@ Sheet tabs, kept as separate records so the history survives:
   (`source = in-app`).
 - **Dashboard** - applicant, tester, feedback and bug counts, `X / 50`.
 
+The app itself (`/`) is locked to Active testers: a full-screen gate at the
+top of `index.html` checks the browser's tester token (saved by the tester
+page, a `?t=` on the app URL, or a link pasted into the gate) against
+`/beta/me`, and re-locks if the tester goes Inactive. localhost is never
+locked. It's client-side, so it keeps the public out, not a determined dev.
+
 The 50 cap counts Active testers only. Accepting a 51st (or reactivating
 someone past the cap) is reverted with a message in the Sheet. Tester numbers
 are never reused: if #017 goes Inactive, the next person is #051.
