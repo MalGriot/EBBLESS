@@ -15,6 +15,7 @@ import {
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, testerFromToken } from './beta.js';
+import { deepFindKey, ytPlaylistFromData, ytLockupVideos } from './yt-page.js';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -49,14 +50,6 @@ function extractBalancedJson(str, startIndex) {
     else if (c === close) { depth--; if (depth === 0) return str.slice(startIndex, i + 1); }
   }
   return null;
-}
-
-function deepFindKey(obj, key, out) {
-  if (!obj || typeof obj !== 'object') return;
-  if (Object.prototype.hasOwnProperty.call(obj, key)) out.push(obj[key]);
-  for (const k in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, k)) deepFindKey(obj[k], key, out);
-  }
 }
 
 // Bump this when an endpoint's cached response *shape* OR *selection logic*
@@ -736,35 +729,46 @@ async function handleTrack(url, ctx) {
   return response;
 }
 
+// ---------- GET /ytplaylist?id=<youtube playlist id> ----------
+// Reads the playlist page itself (ytInitialData -> lockupViewModel rows, see
+// ytPlaylistFromData). That page only carries the first ~100 videos; the
+// rest sit behind YouTube's internal "innertube" continuation API (unstable
+// clientVersion/visitorData requirements), which this app avoids, so a
+// longer playlist comes back capped at what the page gives, truncated:true.
+// YouTube's public playlist RSS feed (first ~15 videos only) is kept as a
+// fallback for when the page read fails (bot-check interstitial, or a page
+// shape change); it has been reported 404ing for valid playlists, which is why
+// it's no longer the primary source.
+const YTPLAYLIST_CACHE_VERSION = 'p2';
+
+// SOCS (on top of fetchYouTubePage's CONSENT) gets past the consent wall
+// YouTube puts in front of channel and playlist pages for EU-located requests.
+async function ytInitialDataOf(pageUrl) {
+  const res = await fetchYouTubePage(pageUrl, { 'Cookie': 'CONSENT=YES+1; SOCS=CAI' });
+  if (!res.ok) return null;
+  const html = await res.text();
+  const mi = html.indexOf('var ytInitialData');
+  if (mi === -1) return null;
+  const jsonStr = extractBalancedJson(html, html.indexOf('{', mi));
+  if (!jsonStr) return null;
+  try { return JSON.parse(jsonStr); } catch (e) { return null; }
+}
+// Shared by /ytplaylist and /artist (album playlists). null when the page
+// couldn't be read at all; `artist` overrides each row's channel name.
+async function readYtPlaylistPage(id, artist) {
+  const data = await ytInitialDataOf('https://www.youtube.com/playlist?list=' + encodeURIComponent(id));
+  return data ? ytPlaylistFromData(data, artist) : null;
+}
+
 // XML entity-decode for the small set YouTube's feed actually emits.
 function decodeXmlEntities(s) {
   return String(s || '').replace(/&(amp|lt|gt|quot|#39|apos);/g, (m, e) => (
     { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'" }[e]
   ));
 }
-
-// ---------- GET /ytplaylist?id=<youtube playlist id> ----------
-// YouTube's playlist page used to embed the full tracklist in its initial
-// page JSON (ytInitialData -> playlistVideoRenderer), which is what this
-// endpoint originally scraped. YouTube has since moved that listing behind
-// its internal, undocumented "innertube" browse/continuation API (unstable
-// clientVersion/visitorData requirements, view-model shapes that change
-// often) - too brittle to reverse-engineer here. Instead this uses YouTube's
-// long-standing public playlist RSS feed, which is stable and needs no
-// scraping, at the cost of only returning the most recent ~15 videos in the
-// playlist (a hard limit of that feed, not something this endpoint controls).
-async function handleYtPlaylist(url, ctx) {
-  const id = url.searchParams.get('id');
-  if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
-
-  const cache = envCache;
-  const cacheKey = new Request('https://cache.internal/ytplaylist/' + id);
-  const cached = await cache.match(cacheKey);
-  if (cached) return applyCors(cached);
-
+async function ytPlaylistFromRss(id) {
   const res = await fetch('https://www.youtube.com/feeds/videos.xml?playlist_id=' + encodeURIComponent(id));
-  if (res.status === 404) return json({ error: 'playlist not found (private or invalid link?)' }, 404);
-  if (!res.ok) return json({ error: 'youtube returned ' + res.status }, 502);
+  if (!res.ok) return { status: res.status };
   const xml = await res.text();
 
   const feedTitleMatch = xml.slice(0, xml.indexOf('<entry>') === -1 ? xml.length : xml.indexOf('<entry>')).match(/<title>([^<]*)<\/title>/);
@@ -777,10 +781,32 @@ async function handleYtPlaylist(url, ctx) {
     const artist = decodeXmlEntities((entry.match(/<author>\s*<name>([^<]*)<\/name>/) || [])[1] || '');
     return { videoId, title, artist };
   }).filter(t => t.videoId && t.title);
+  return { name, tracks, truncated: tracks.length >= 15 };
+}
 
-  if (!tracks.length) return json({ error: 'playlist has no videos (private or invalid link?)' }, 404);
+async function handleYtPlaylist(url, ctx) {
+  const id = url.searchParams.get('id');
+  if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) return json({ error: 'missing or invalid id' }, 400);
 
-  const payload = { name, image: null, tracks, truncated: tracks.length >= 15 };
+  const cache = envCache;
+  const cacheKey = new Request('https://cache.internal/' + YTPLAYLIST_CACHE_VERSION + '/ytplaylist/' + id);
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  let page = null;
+  try { page = await readYtPlaylistPage(id); } catch (e) { page = null; }
+  if (page && page.missing) return json({ error: 'playlist not found (private or invalid link?)' }, 404);
+
+  let result = page && page.tracks.length ? page : null;
+  if (!result) {
+    const rss = await ytPlaylistFromRss(id);
+    if (rss.tracks && rss.tracks.length) result = rss;
+    else if (page) return json({ error: 'playlist has no videos (private or invalid link?)' }, 404);
+    else if (rss.status === 404 || rss.tracks) return json({ error: 'playlist not found (private or invalid link, or youtube is rate-limiting - try again shortly)' }, 404);
+    else return json({ error: 'youtube returned ' + rss.status }, 502);
+  }
+
+  const payload = { name: result.name, image: null, tracks: result.tracks, truncated: result.truncated };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
@@ -2303,8 +2329,9 @@ async function handleSoundCloud(url, ctx) {
 //                /popular-tracks link) via the public web API /soundcloud
 //                uses.
 //   YouTube      the channel's Releases tab (album playlists, each read off
-//                its playlist page) + its Videos tab (latest uploads). The
-//                RSS feeds /ytplaylist relies on 404 for channels now.
+//                its playlist page, as /ytplaylist does) + its Videos tab
+//                (latest uploads). Pages, not RSS feeds, which have been
+//                reported 404ing.
 // Tracks come back in that page order, deduped by title, capped - matched
 // sources (Spotify/Apple Music, one YouTube search per track on the client)
 // lower than ones that are already playable (SoundCloud ids, YouTube ids).
@@ -2483,33 +2510,6 @@ async function soundCloudArtistPayload(user, tab, ctx) {
   return { name, image, tracks };
 }
 
-// SOCS (on top of fetchYouTubePage's CONSENT) gets past the consent wall
-// YouTube puts in front of channel pages for EU-located requests.
-async function ytInitialDataOf(pageUrl) {
-  const res = await fetchYouTubePage(pageUrl, { 'Cookie': 'CONSENT=YES+1; SOCS=CAI' });
-  if (!res.ok) return null;
-  const html = await res.text();
-  const mi = html.indexOf('var ytInitialData');
-  if (mi === -1) return null;
-  const jsonStr = extractBalancedJson(html, html.indexOf('{', mi));
-  if (!jsonStr) return null;
-  try { return JSON.parse(jsonStr); } catch (e) { return null; }
-}
-function ytLockupVideos(data, artist) {
-  const lockups = [];
-  deepFindKey(data, 'lockupViewModel', lockups);
-  const out = [];
-  const seen = new Set();
-  for (const l of lockups) {
-    if (!l || l.contentType !== 'LOCKUP_CONTENT_TYPE_VIDEO' || !/^[a-zA-Z0-9_-]{11}$/.test(l.contentId || '') || seen.has(l.contentId)) continue;
-    const md = l.metadata && l.metadata.lockupMetadataViewModel;
-    const title = md && md.title && md.title.content;
-    if (!title) continue;
-    seen.add(l.contentId);
-    out.push({ videoId: l.contentId, title, artist });
-  }
-  return out;
-}
 async function youTubeArtistPayload(path) {
   const base = 'https://www.youtube.com/' + path;
   const [releasesData, videosData] = await Promise.all([
@@ -2532,8 +2532,8 @@ async function youTubeArtistPayload(path) {
   }
   const albums = await mapWithConcurrency(releaseIds.slice(0, ARTIST_MAX_YT_RELEASES), 3, async pid => {
     try {
-      const d = await ytInitialDataOf('https://www.youtube.com/playlist?list=' + pid);
-      return d ? ytLockupVideos(d, name) : [];
+      const p = await readYtPlaylistPage(pid, name);
+      return p ? p.tracks : [];
     } catch (e) { return []; }
   });
   const uploads = videosData ? ytLockupVideos(videosData, name) : [];
