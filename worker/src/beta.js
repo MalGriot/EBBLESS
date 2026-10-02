@@ -45,6 +45,45 @@ function pickMany(v, list, other) {
 }
 const pad = (n, w) => String(n).padStart(w, '0');
 const testerLabel = (n) => (n ? 'EBBLESS TESTER #' + pad(n, 3) : '');
+const SITE_URL = 'https://malgriot.github.io/EBBLESS/beta/';
+
+// ---------- email ----------
+// Sent through a small Google Apps Script web app running on a Gmail account
+// (tools/beta-mailer.gs): Workers can't send mail to arbitrary addresses on
+// their own, and this needs no domain. MAILER_URL + MAILER_SECRET are worker
+// secrets; without them, emails are skipped and everything else still works.
+async function sendMail(env, to, subject, text) {
+  if (!env.MAILER_URL || !env.MAILER_SECRET) return false;
+  try {
+    const res = await fetch(env.MAILER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: env.MAILER_SECRET, to, subject, text }),
+    });
+    const out = await res.json().catch(() => ({}));
+    return res.ok && out.ok === true;
+  } catch (e) { return false; }
+}
+
+function inviteText(env, t) {
+  const base = env.BETA_SITE_URL || SITE_URL;
+  const tok = encodeURIComponent(t.id + '-' + t.secret);
+  return 'Peace. You\'re one of the 50 people testing EBBLESS. You\'re ' + testerLabel(t.number) + '.\n\n' +
+    'Open it:\n' + base + 'tester.html?t=' + tok + '\n\n' +
+    'Throw one of your playlists into it (Spotify, YouTube, Apple Music, SoundCloud) and fuck around with it.\n' +
+    'Try the different visual modes, lyrics, YouTube, etc.\n\n' +
+    'The point of this beta isn\'t to be nice to me. If something is confusing, broken, slow, ugly, unnecessary, or just doesn\'t make sense, tell me.\n\n' +
+    'Feedback:\n' + base + 'feedback.html?t=' + tok + '\n\n' +
+    'If something is seriously broken, use Report a Bug:\n' + base + 'bug.html?t=' + tok + '\n\n' +
+    'Have fun with it.';
+}
+
+function signupEmail(t) {
+  const first = t.name.split(/\s+/)[0];
+  return t.status === 'waitlisted'
+    ? ['EBBLESS BETA: you\'re on the waitlist', 'Peace ' + first + ',\n\nThe first 50 EBBLESS beta spots are filled, so you\'re on the waitlist. If a spot opens up, you\'ll hear from me here.\n\nMAL GRIOT']
+    : ['EBBLESS BETA: you\'re on the list', 'Peace ' + first + ',\n\nGot your signup for the EBBLESS beta. I\'m going through everyone by hand, so give me a little time. If you\'re in, your tester link comes to this address.\n\nMAL GRIOT'];
+}
 
 async function sha256Hex(s) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
@@ -160,6 +199,8 @@ async function handleSignup(request, env, ctx, h) {
     number: null, secret: null,
   };
   await env.BETA.put('beta:t:' + id, JSON.stringify(tester));
+  const [subject, text] = signupEmail(tester);
+  ctx.waitUntil(sendMail(env, email, subject, text));
   return h.json({ ok: true, status: tester.status });
 }
 
@@ -256,6 +297,7 @@ async function adminList(env, h) {
     inApp = (await Promise.all(keys.map(k => env.MATCH_REPORTS.get(k, 'json')))).filter(Boolean)
       .map(r => ({ kind: 'in-app', id: '', ...r }));
   }
+  testers.forEach(t => { if (t.secret && FILLED.includes(t.status)) t.invite = inviteText(env, t); });
   return h.json({ counts: counts(testers), testers, reports: reports.concat(inApp).sort((a, b) => b.ts - a.ts) });
 }
 
@@ -276,9 +318,16 @@ async function adminSetStatus(body, env, h) {
     if (!t.acceptedAt) t.acceptedAt = Date.now();
   }
   t.status = status;
+  // First acceptance emails the invite; later status flips never re-send it.
+  let emailed = false;
+  if (FILLED.includes(status) && !t.invitedAt) {
+    emailed = await sendMail(env, t.email, 'You\'re in: ' + testerLabel(t.number), inviteText(env, t));
+    if (emailed) t.invitedAt = Date.now();
+  }
   await env.BETA.put('beta:t:' + t.id, JSON.stringify(t));
+  if (t.secret && FILLED.includes(t.status)) t.invite = inviteText(env, t);
   const filled = await writeMeta(env, testers);
-  return h.json({ ok: true, tester: t, filled });
+  return h.json({ ok: true, tester: t, filled, emailed, mailer: !!(env.MAILER_URL && env.MAILER_SECRET) });
 }
 
 async function adminShot(body, env, h) {

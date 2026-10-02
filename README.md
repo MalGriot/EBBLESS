@@ -94,6 +94,13 @@ namespace, `BETA`.
   `ADMIN_EMAILS` worker secret) to see counts, change tester status, copy
   invites, and read feedback, bugs, and in-app "Send feedback" reports in one feed
 
+Emails go out through a Google Apps Script web app on a Gmail account
+([`tools/beta-mailer.gs`](tools/beta-mailer.gs), setup steps at the top):
+a confirmation on signup (or a waitlist note), and the tester invite the
+first time someone is accepted. Needs the `MAILER_URL` and `MAILER_SECRET`
+worker secrets; without them nothing is emailed and invites are copied by
+hand from the admin page.
+
 Nobody is accepted automatically. Setting a tester to accepted/active hands
 out the next tester number (`#001`...) and their secret link; accepted,
 active and inactive all hold one of the 50 spots, and the worker refuses a

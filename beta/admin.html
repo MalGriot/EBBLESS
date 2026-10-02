@@ -155,19 +155,6 @@ textarea.invite{width:100%;min-height:260px;background:var(--panel);border:1px s
     });
   }
 
-  function inviteText(t){
-    const base = new URL('./', location.href).href;
-    const tok = encodeURIComponent(t.id + '-' + t.secret);
-    return 'Peace. You\'re one of the 50 people testing EBBLESS. You\'re EBBLESS TESTER ' + pad3(t.number) + '.\n\n' +
-      'Open it:\n' + base + 'tester.html?t=' + tok + '\n\n' +
-      'Throw one of your playlists into it (Spotify, YouTube, Apple Music, SoundCloud) and fuck around with it.\n' +
-      'Try the different visual modes, lyrics, YouTube, etc.\n\n' +
-      'The point of this beta isn\'t to be nice to me. If something is confusing, broken, slow, ugly, unnecessary, or just doesn\'t make sense, tell me.\n\n' +
-      'Feedback:\n' + base + 'feedback.html?t=' + tok + '\n\n' +
-      'If something is seriously broken, use Report a Bug:\n' + base + 'bug.html?t=' + tok + '\n\n' +
-      'Have fun with it.';
-  }
-
   const open = new Set();
   function renderTesters(){
     const box = $('testers'); box.innerHTML = '';
@@ -195,6 +182,8 @@ textarea.invite{width:100%;min-height:260px;background:var(--panel);border:1px s
           data.counts = recount();
           if (['accepted', 'active'].includes(t.status)) open.add(t.id);
           render();
+          if (r.emailed) Beta.status($('status'), 'Invite emailed to ' + t.email + '.', 'ok');
+          else if (r.mailer && r.tester.secret && !r.tester.invitedAt) Beta.status($('status'), 'Invite email didn\'t send. Copy it from ' + t.name + '\'s row instead.', 'err');
         } catch(e){ sel.value = t.status; Beta.status($('status'), e.message, 'err'); }
         sel.disabled = false;
       };
@@ -217,10 +206,11 @@ textarea.invite{width:100%;min-height:260px;background:var(--panel);border:1px s
     [['Social', t.social], ['Device', [t.device, t.deviceModel].filter(Boolean).join(' · ')], ['OS', t.os], ['Browser', t.browser],
      ['Technical', t.comfort], ['Listens on', t.platform], ['Listens to', t.music], ['Playlist', t.playlist],
      ['Why', t.motivation], ['Wants', t.wants], ['Contact OK', t.contactOk ? 'Yes' : 'No'], ['Signed up', new Date(t.ts).toLocaleString()],
+     ['Invite emailed', t.invitedAt ? new Date(t.invitedAt).toLocaleString() : (t.secret ? 'No' : '')],
      ['Tester ID', t.id]].forEach(([k, v]) => { if (v){ dl.append(el('dt', '', k), el('dd', '', v)); } });
     wrap.append(dl);
     if (t.secret && ['accepted', 'active', 'inactive'].includes(t.status)){
-      const ta = el('textarea', 'invite'); ta.readOnly = true; ta.value = inviteText(t);
+      const ta = el('textarea', 'invite'); ta.readOnly = true; ta.value = t.invite || '';
       const acts = el('div', 'row-actions');
       const copy = el('button', 'btn sm primary', 'Copy invite'); copy.type = 'button';
       copy.onclick = async () => {
