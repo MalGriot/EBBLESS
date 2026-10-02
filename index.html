@@ -1948,6 +1948,9 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
 body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
+/* hidden during beta (everyone reports through Send feedback); Shift+B / Shift+S
+   still click the hidden bug / idea links */
+.settings-row.beta-hidden{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
@@ -2672,21 +2675,21 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
           <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
         </div>
-        <div class="settings-row">
+        <div class="settings-row beta-hidden">
           <div>
             <div class="label">Report a bug</div>
             <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
           <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
         </div>
-        <div class="settings-row">
+        <div class="settings-row beta-hidden">
           <div>
             <div class="label">Suggest an improvement</div>
             <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
           </div>
           <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
         </div>
-        <div class="settings-row">
+        <div class="settings-row beta-hidden">
           <div>
             <div class="label">Wrong-track log</div>
             <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
@@ -3691,7 +3694,6 @@ const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist 
 const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
 const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
-const BACKGROUND_RESET_MS = 10 * 60 * 1000;             // stay alive in background up to this long, then reopen fresh
 
 function lsGet(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
@@ -14813,13 +14815,13 @@ document.addEventListener('visibilitychange', () => {
     // doesn't survive that, but startApp()'s cold-boot path below reads
     // this back to know playback was active when it got cut off.
     lsSet(LS_WAS_PLAYING, wasPlayingBeforeHide);
+    // Hidden behind the mini player, playback stays live and under the
+    // listener's control there (play/pause in PiP), so coming back must
+    // leave it exactly as they left it, not force-resume a track they paused.
+    if (miniPlayerWin && !miniPlayerWin.closed) wasPlayingBeforeHide = false;
   } else {
-    const hiddenAt = lsGet(LS_BACKGROUNDED_AT, null);
-    // (never while casting - the reload would orphan the receiver mid-queue)
-    if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS && !castActive()){
-      location.reload();
-      return;
-    }
+    // No matter how long it sat hidden, coming back always resumes in place -
+    // never a reload/restart.
     lsDel(LS_BACKGROUNDED_AT);
     lsDel(LS_WAS_PLAYING);
     if (wasPlayingBeforeHide) resumePlayback();
@@ -16082,18 +16084,18 @@ miniBar.addEventListener('click', () => setView('player'));
 function startApp(){
   // Mobile browsers/PWAs routinely kill the whole page (and its JS state)
   // while backgrounded, then reload from scratch the moment the user
-  // switches back - well before the 10-minute "reopen fresh" timer in the
-  // visibilitychange handler above ever gets a chance to run (that handler
-  // needs a live JS process to fire in). From here that's indistinguishable
-  // from a genuine cold launch... except LS_BACKGROUNDED_AT/LS_WAS_PLAYING,
+  // switches back - before the visibilitychange handler above ever gets a
+  // chance to run (it needs a live JS process to fire in). From here that's
+  // indistinguishable from a genuine cold launch... except LS_BACKGROUNDED_AT/LS_WAS_PLAYING,
   // which were written to storage (not just an in-memory flag) right before
-  // the page was hidden and are still sitting there, recent, because the
+  // the page was hidden and are still sitting there because the
   // handler never got to clear them on the way back in. Treat that as
   // "resuming from background", not a first launch: skip the splash replay
   // and try to pick playback back up, instead of stranding the visitor on
   // the splash screen looking like the app just restarted.
   const bgAt = lsGet(LS_BACKGROUNDED_AT, null);
-  const resumingFromBackground = !!(bgAt && (Date.now() - bgAt) < BACKGROUND_RESET_MS);
+  // However long ago that was: time spent hidden never turns a return into a restart.
+  const resumingFromBackground = !!bgAt;
   const wasPlayingAtBackground = lsGet(LS_WAS_PLAYING, false);
   lsDel(LS_BACKGROUNDED_AT);
   lsDel(LS_WAS_PLAYING);
@@ -17301,7 +17303,7 @@ function runIntro(preview){
     clearCaption();
     await wait(400);
     if (done) return;
-    const bugRow = document.getElementById('reportBugBtn');
+    const bugRow = document.getElementById('feedbackBtn');
     if (bugRow && bugRow.scrollIntoView) bugRow.scrollIntoView({ block: 'center' });
     setCaption('Tell us if you find a bug', bugRow);
     await wait(500);
@@ -17945,7 +17947,7 @@ if (introBeatCapture){
     case 'bug':
       setView('settings');
       capStage('settings');
-      const capBugRow = document.getElementById('reportBugBtn');
+      const capBugRow = document.getElementById('feedbackBtn');
       if (capBugRow && capBugRow.scrollIntoView) capBugRow.scrollIntoView({ block: 'center' });
       capCaptionText('Tell us if you find a bug', capBugRow);
       break;
