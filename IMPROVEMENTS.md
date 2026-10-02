@@ -7511,3 +7511,40 @@ Add entries in this shape:
 - **Branch:** agent/artist-link-yt-redirect
 - **Notes:** Found by the `artist-link-playlist` lane (2026-10-02).
   **Built (see branch):** `fetchYouTubePage` follows up to 2 redirects that stay on www.youtube.com and are not `/sorry`; consent and bot-check redirects still throw. Verified locally: `@daftpunk` 125 tracks, `@radiohead` 112, bogus handle still errors. Worker-only; merged (22671b0) and deployed 2026-10-02 (version c2bdd6d5).
+
+### start-here-paste-guide: "Start here" bubble and tutorial should cover everything you can paste
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** The "start here" help bubble only introduces part of what
+  the paste box accepts. Update it (and the tutorial copy that covers
+  pasting) to introduce every kind of link/input the app actually supports
+  today (e.g. Spotify/YouTube/SoundCloud links, podcasts, albums, etc.;
+  derive the real list from the paste-handling code, don't guess).
+- **Touches:** "start here" help bubble, tutorial paste caption.
+- **Branch:** agent/start-here-paste-guide
+- **Notes:** Synced from Geethub issue #232. Follow-up to the merged
+  `tutorial-paste-link-copy`.
+
+### desktop-reload-playlist-slide: Playlist panel slides offscreen for a few frames on desktop reload
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** On desktop, reloading the page makes the playlist panel
+  visibly slide left offscreen from the center for the first few frames.
+  It should appear in its final position with no slide animation on load
+  (likely a transition firing before initial layout/state is applied).
+- **Touches:** playlist panel CSS transitions / initial layout on desktop.
+- **Branch:** agent/desktop-reload-playlist-slide
+- **Notes:** Synced from Geethub issue #233 (bug).
+
+### podcast-skip-15: ±15s skip buttons for podcasts
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** When a podcast episode is playing, add two buttons to the
+  player: skip back 15s and skip ahead 15s. Keep the existing previous/next
+  track buttons. Keyboard shortcuts for skipping should also jump ±15s while
+  a podcast is playing. Music playback is unchanged.
+- **Touches:** player transport controls, keyboard shortcuts, podcast
+  detection (`isPodcastEntry()` / `pod:` ids).
+- **Branch:** agent/podcast-skip-15
+- **Notes:** Synced from Geethub issue #234. Related: `keyboard-shortcuts-2`
+  (seek shortcuts), Media Session ±10s actions from `cross-platform-handoff`.
