@@ -50,7 +50,8 @@
     <div class="section">
       <h2>Your setup</h2>
       <p class="detected" id="detected" hidden></p>
-      <div class="field"><span class="q">What will you mostly use EBBLESS on?</span><div id="devicePills"></div></div>
+      <div class="field"><span class="q">What will you use EBBLESS on? <span class="hint">(pick any)</span></span><div id="devicePills"></div></div>
+      <div class="field" id="deviceOtherField" hidden><label for="deviceOther">Which other device?</label><input type="text" id="deviceOther" maxlength="100"></div>
       <div class="row2">
         <div class="field"><label for="deviceModel">Device model</label><input type="text" id="deviceModel" maxlength="100" placeholder="e.g. iPhone 15, Pixel 8"></div>
         <div class="field"><label for="os">OS + version</label><input type="text" id="os" maxlength="80" placeholder="e.g. iOS 18.2"></div>
@@ -98,12 +99,12 @@
 (async function(){
   const $ = (id) => document.getElementById(id);
   const form = $('signup');
-  Beta.pills($('devicePills'), 'device', ['iPhone', 'Android phone', 'iPad / tablet', 'Mac', 'Windows PC', 'Other']);
+  Beta.pills($('devicePills'), 'device', ['iPhone', 'Android phone', 'iPad / tablet', 'Mac', 'Windows PC', 'Other'], { multi: true });
   Beta.pills($('browserPills'), 'browser', ['Chrome', 'Safari', 'Firefox', 'Edge', 'Brave', 'Opera', 'Samsung Internet', 'Arc', 'Other'], { multi: true });
   Beta.pills($('comfortPills'), 'comfort', ['Not very technical', 'Comfortable with apps/websites', 'Very comfortable / technical'], { stack: true });
   Beta.pills($('platformPills'), 'platform', ['Spotify', 'YouTube / YouTube Music', 'Apple Music', 'SoundCloud', 'Amazon Music', 'Tidal', 'Deezer', 'Bandcamp', 'Pandora', 'Audiomack', 'Other'], { multi: true });
   // "Other" opens a text box for the specifics
-  [['browser', 'browserOther'], ['platform', 'platformOther']].forEach(([name, box]) => {
+  [['device', 'deviceOther'], ['browser', 'browserOther'], ['platform', 'platformOther']].forEach(([name, box]) => {
     form.querySelectorAll('input[name="' + name + '"]').forEach(i => i.addEventListener('change', () => {
       const on = Beta.checked(form, name).includes('Other');
       $(box + 'Field').hidden = !on;
@@ -150,7 +151,7 @@
     const st = $('status');
     const body = {
       name: $('name').value.trim(), email: $('email').value.trim(), social: $('social').value.trim(),
-      device: Beta.radio(form, 'device'), deviceModel: $('deviceModel').value.trim(), os: $('os').value.trim(),
+      devices: Beta.checked(form, 'device'), deviceOther: $('deviceOther').value.trim(), deviceModel: $('deviceModel').value.trim(), os: $('os').value.trim(),
       browsers: Beta.checked(form, 'browser'), browserOther: $('browserOther').value.trim(),
       comfort: Beta.radio(form, 'comfort'),
       platforms: Beta.checked(form, 'platform'), platformOther: $('platformOther').value.trim(), music: $('music').value.trim(), playlist: $('playlist').value.trim(),
@@ -159,7 +160,8 @@
     };
     const miss = !body.name ? ['name', 'Add your name or a nickname.']
       : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email) ? ['email', 'That email doesn\'t look right.']
-      : !body.device ? ['devicePills', 'Pick the device you\'ll mostly use.']
+      : !body.devices.length ? ['devicePills', 'Pick at least one device.']
+      : body.devices.includes('Other') && !body.deviceOther ? ['deviceOther', 'Say which other device.']
       : !body.browsers.length ? ['browserPills', 'Pick at least one browser.']
       : body.browsers.includes('Other') && !body.browserOther ? ['browserOther', 'Say which other browser.']
       : !body.comfort ? ['comfortPills', 'Pick how technical you are.']

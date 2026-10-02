@@ -130,8 +130,9 @@ async function handleSignup(request, env, ctx, h) {
   const email = str(body.email, 200).toLowerCase();
   if (!name) return h.json({ error: 'Add your name or a nickname.' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return h.json({ error: 'That email doesn\'t look right.' }, 400);
-  const device = pick(body.device, DEVICES), comfort = pick(body.comfort, COMFORT);
-  // older clients sent a single `browser` / `platform` string
+  const comfort = pick(body.comfort, COMFORT);
+  // older clients sent a single `device` / `browser` / `platform` string
+  const device = pickMany(body.devices || [body.device], DEVICES, str(body.deviceOther, 100));
   const browser = pickMany(body.browsers || [body.browser], BROWSERS, str(body.browserOther, 100));
   const platform = pickMany(body.platforms || [body.platform], PLATFORMS, str(body.platformOther, 100));
   if (!device || !browser || !comfort || !platform) return h.json({ error: 'Pick an option for device, browser, technical comfort and where you listen.' }, 400);
