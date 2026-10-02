@@ -3691,7 +3691,6 @@ const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist 
 const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
 const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
-const BACKGROUND_RESET_MS = 10 * 60 * 1000;             // stay alive in background up to this long, then reopen fresh
 
 function lsGet(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
@@ -14221,14 +14220,7 @@ async function openMiniPlayer(){
     mpQueue = null;
     buildMiniPlayerDOM(win);
     updateMiniPlayerUI();
-    win.addEventListener('pagehide', () => {
-      if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; }
-      // The mini player was the app in use while this tab sat hidden, so the
-      // "reopen fresh after a long background" clock (see the visibilitychange
-      // handler) only starts now that it's gone. Covers PiP's own "back to
-      // tab" button too, which closes the window just before the tab shows.
-      if (document.visibilityState === 'hidden') lsSet(LS_BACKGROUNDED_AT, Date.now());
-    }, { once: true });
+    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; } }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,
@@ -14825,15 +14817,8 @@ document.addEventListener('visibilitychange', () => {
     // leave it exactly as they left it, not force-resume a track they paused.
     if (miniPlayerWin && !miniPlayerWin.closed) wasPlayingBeforeHide = false;
   } else {
-    const hiddenAt = lsGet(LS_BACKGROUNDED_AT, null);
-    // (never while casting - the reload would orphan the receiver mid-queue,
-    // and never while the mini player is open - the listener has been using
-    // the app the whole time, so returning must be seamless, not a restart)
-    const miniPlayerOpen = !!(miniPlayerWin && !miniPlayerWin.closed);
-    if (hiddenAt && (Date.now() - hiddenAt) >= BACKGROUND_RESET_MS && !castActive() && !miniPlayerOpen){
-      location.reload();
-      return;
-    }
+    // No matter how long it sat hidden, coming back always resumes in place -
+    // never a reload/restart.
     lsDel(LS_BACKGROUNDED_AT);
     lsDel(LS_WAS_PLAYING);
     if (wasPlayingBeforeHide) resumePlayback();
@@ -16096,18 +16081,18 @@ miniBar.addEventListener('click', () => setView('player'));
 function startApp(){
   // Mobile browsers/PWAs routinely kill the whole page (and its JS state)
   // while backgrounded, then reload from scratch the moment the user
-  // switches back - well before the 10-minute "reopen fresh" timer in the
-  // visibilitychange handler above ever gets a chance to run (that handler
-  // needs a live JS process to fire in). From here that's indistinguishable
-  // from a genuine cold launch... except LS_BACKGROUNDED_AT/LS_WAS_PLAYING,
+  // switches back - before the visibilitychange handler above ever gets a
+  // chance to run (it needs a live JS process to fire in). From here that's
+  // indistinguishable from a genuine cold launch... except LS_BACKGROUNDED_AT/LS_WAS_PLAYING,
   // which were written to storage (not just an in-memory flag) right before
-  // the page was hidden and are still sitting there, recent, because the
+  // the page was hidden and are still sitting there because the
   // handler never got to clear them on the way back in. Treat that as
   // "resuming from background", not a first launch: skip the splash replay
   // and try to pick playback back up, instead of stranding the visitor on
   // the splash screen looking like the app just restarted.
   const bgAt = lsGet(LS_BACKGROUNDED_AT, null);
-  const resumingFromBackground = !!(bgAt && (Date.now() - bgAt) < BACKGROUND_RESET_MS);
+  // However long ago that was: time spent hidden never turns a return into a restart.
+  const resumingFromBackground = !!bgAt;
   const wasPlayingAtBackground = lsGet(LS_WAS_PLAYING, false);
   lsDel(LS_BACKGROUNDED_AT);
   lsDel(LS_WAS_PLAYING);
