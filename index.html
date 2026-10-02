@@ -2897,9 +2897,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
        #ytSlot only reserves the space: the real YouTube player (the active
        deck's iframe in #yt-host) is positioned over it while this is open,
        above this card, so nothing here ever covers the player. -->
-  <div id="yt-modal" role="dialog" aria-modal="true" aria-labelledby="ytModalTitle" tabindex="-1">
-    <h2 id="ytModalTitle">YouTube</h2>
-    <p>The YouTube video this track is playing from.</p>
+  <div id="yt-modal" role="dialog" aria-modal="true" aria-label="Video player" tabindex="-1">
     <div class="yt-slot" id="ytSlot"><span class="yt-slot-note" id="ytSlotNote" hidden></span></div>
     <div class="danger-modal-actions">
       <button type="button" class="btn-ghost" id="ytCloseBtn">Close</button>
