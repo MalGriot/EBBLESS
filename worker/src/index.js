@@ -103,21 +103,37 @@ const DESKTOP_UA =
 // round-trip rather than several seconds, with an error the caller can
 // recognize and retry.
 class YouTubeBlockedError extends Error {}
+// Exception: a redirect that stays on www.youtube.com and isn't the /sorry
+// bot-check is a real canonical-URL hop (e.g. a lowercase `@daftpunk` handle
+// 303s to `/daftpunk`), so follow up to two of those.
+function isYouTubeCanonicalRedirect(location, base) {
+  try {
+    const u = new URL(location, base);
+    return u.hostname === 'www.youtube.com' && !u.pathname.startsWith('/sorry');
+  } catch (e) { return false; }
+}
 async function fetchYouTubePage(pageUrl, extraHeaders) {
-  const res = await fetch(pageUrl, {
-    redirect: 'manual',
-    headers: Object.assign({
-      'User-Agent': DESKTOP_UA,
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Cookie': 'CONSENT=YES+1',
-    }, extraHeaders || {}),
-  });
-  // A 3xx here means YouTube didn't serve the page - almost always the
-  // interstitial described above, not a legitimate redirect to follow.
-  if (res.status >= 300 && res.status < 400) {
-    throw new YouTubeBlockedError('youtube redirected to an interstitial (likely a transient bot-check) instead of serving results');
+  for (let hop = 0; ; hop++) {
+    const res = await fetch(pageUrl, {
+      redirect: 'manual',
+      headers: Object.assign({
+        'User-Agent': DESKTOP_UA,
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': 'CONSENT=YES+1',
+      }, extraHeaders || {}),
+    });
+    // A 3xx here means YouTube didn't serve the page - almost always the
+    // interstitial described above, not a legitimate redirect to follow.
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('Location') || '';
+      if (hop < 2 && isYouTubeCanonicalRedirect(location, pageUrl)) {
+        pageUrl = new URL(location, pageUrl).toString();
+        continue;
+      }
+      throw new YouTubeBlockedError('youtube redirected to an interstitial (likely a transient bot-check) instead of serving results');
+    }
+    return res;
   }
-  return res;
 }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
