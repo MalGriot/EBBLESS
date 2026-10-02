@@ -7513,7 +7513,7 @@ Add entries in this shape:
   **Built (see branch):** `fetchYouTubePage` follows up to 2 redirects that stay on www.youtube.com and are not `/sorry`; consent and bot-check redirects still throw. Verified locally: `@daftpunk` 125 tracks, `@radiohead` 112, bogus handle still errors. Worker-only; merged (22671b0) and deployed 2026-10-02 (version c2bdd6d5).
 
 ### start-here-paste-guide: "Start here" bubble and tutorial should cover everything you can paste
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The "start here" help bubble only introduces part of what
   the paste box accepts. Update it (and the tutorial copy that covers
@@ -7524,9 +7524,10 @@ Add entries in this shape:
 - **Branch:** agent/start-here-paste-guide
 - **Notes:** Synced from Geethub issue #232. Follow-up to the merged
   `tutorial-paste-link-copy`.
+  **Built (f030567):** bubble lists Spotify/Apple Music/YouTube/SoundCloud links (playlist, album, song, artist), podcasts (Spotify/Apple show or episode, RSS), plus search/vibe; tutorial captions updated to match. Left alone: empty-library line "Paste a Spotify playlist to begin." and Replace-link placeholder (no podcasts) - possible follow-up.
 
 ### desktop-reload-playlist-slide: Playlist panel slides offscreen for a few frames on desktop reload
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On desktop, reloading the page makes the playlist panel
   visibly slide left offscreen from the center for the first few frames.
@@ -7535,9 +7536,10 @@ Add entries in this shape:
 - **Touches:** playlist panel CSS transitions / initial layout on desktop.
 - **Branch:** agent/desktop-reload-playlist-slide
 - **Notes:** Synced from Geethub issue #233 (bug).
+  **Built (9f35be2):** cause: until `updateSplitDesktop()` adds `body.split-desktop`, `#libpl-panel` uses the 860px drawer rule (translateX(100%)), then the 1150px grid rule (translateX(-100%)) and the transform transition animates it. Fix: `updateSplitDesktop()` disables transitions on `#libpl-panel`/`#queue-panel` around the class toggle, forces a reflow, restores them. Side effect: resizing across 1150px snaps instead of slides. Needs one manual desktop reload check.
 
 ### podcast-skip-15: ±15s skip buttons for podcasts
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** When a podcast episode is playing, add two buttons to the
   player: skip back 15s and skip ahead 15s. Keep the existing previous/next
@@ -7548,3 +7550,4 @@ Add entries in this shape:
 - **Branch:** agent/podcast-skip-15
 - **Notes:** Synced from Geethub issue #234. Related: `keyboard-shortcuts-2`
   (seek shortcuts), Media Session ±10s actions from `cross-platform-handoff`.
+  **Built (9b02bd6):** -15/+15 buttons beside play (main player, mini bar, flow view), shown only with `body.pod-playing` (set in `reflectCurrentTrackUI` via new `isPodcastTrack()`); handlers reuse `kbSeekBy`. Shift+Left/Right = ±15s on podcasts (10s music, `seekStepS()`); Media Session seek default 15s on podcasts. ≤420px tightens rows; ≤340px mini bar drops skip buttons. Open: plain Left/Right still prev/next; iOS lock-screen seek not registered; PiP mini player has no skip buttons; `pod-playing` lingers after queue clear.
