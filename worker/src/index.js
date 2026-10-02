@@ -14,6 +14,7 @@ import {
   titleOverlapRatio, foldMatchText, matchKey,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
+import { handleBeta, testerFromToken } from './beta.js';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -3519,6 +3520,12 @@ async function handleTesterReport(request, env, ctx) {
   // clients just omit these; the thumbs value is also in `message` text.
   if (TESTER_SOURCES.includes(body.source)) report.source = body.source;
   if (body.sentiment === 'up' || body.sentiment === 'down') report.sentiment = body.sentiment;
+  // Beta testers' in-app reports carry their tester link token (saved by
+  // beta/tester.html), so they show up against the right tester number.
+  if (body.betaToken && env.BETA) {
+    const t = await testerFromToken(env, body.betaToken).catch(() => null);
+    if (t) { report.testerId = t.id; report.testerNumber = t.number; }
+  }
   const key = 'tester:' + report.ts + ':' + crypto.randomUUID();
   await env.MATCH_REPORTS.put(key, JSON.stringify(report));
   return json({ ok: true });
@@ -3950,7 +3957,8 @@ export default {
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)'] }, 404);
+      if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/admin/* (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

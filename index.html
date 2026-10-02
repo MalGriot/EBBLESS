@@ -8841,6 +8841,8 @@ feedbackModal.addEventListener('submit', async (e) => {
     viewport: window.innerWidth + 'x' + window.innerHeight,
     view: state.currentView === 'settings' ? (state.preSettingsView || 'settings') : (state.currentView || ''),
     track: t ? { title: t.title || '', artist: t.artist || '' } : null,
+    // set by beta/tester.html, so a beta tester's in-app report carries their tester number
+    betaToken: (() => { try { return localStorage.getItem('ebbless:betaToken') || undefined; } catch(e){ return undefined; } })(),
   };
   fbSending = true;
   fbSendBtn.disabled = true;

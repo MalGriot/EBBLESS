@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>EBBLESS BETA</title>
+<meta name="description" content="50 people. One beta.">
+<meta name="theme-color" content="#121212">
+<meta property="og:title" content="EBBLESS BETA">
+<meta property="og:description" content="50 people. One beta.">
+<meta property="og:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="../brand/assets/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="beta.css">
+</head>
+<body>
+<div class="hero-bg"></div>
+<main class="wrap">
+  <div class="top"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"><span class="tag">Beta</span></div>
+
+  <!-- open -->
+  <section id="intro">
+    <h1 class="display">EBBLESS BETA</h1>
+    <div class="rule"></div>
+    <p class="sub">50 people. One beta.</p>
+    <p class="lede">I'm opening EBBLESS to a small group before anyone else. Use it the way you actually listen to music, then tell me the truth about it. Signing up takes about two minutes.</p>
+    <div id="meter" hidden>
+      <div class="meter"><b class="tnum" id="meterCount">0 / 50</b><span id="meterLeft"></span></div>
+      <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+    </div>
+  </section>
+
+  <!-- full -->
+  <section id="full" hidden>
+    <h1 class="display">THE BETA IS FULL.</h1>
+    <div class="rule"></div>
+    <p class="lede">Thanks for wanting to test EBBLESS. The first 50 tester spots are currently filled.</p>
+    <p class="lede">If a spot opens up, it goes to the waitlist first.</p>
+    <div class="actions"><button class="btn" id="waitlistBtn" type="button">Put me on the waitlist</button></div>
+  </section>
+
+  <form id="signup" novalidate hidden>
+    <div class="section">
+      <h2>You</h2>
+      <div class="field"><label for="name">Name or nickname</label><input type="text" id="name" maxlength="80" autocomplete="nickname" required></div>
+      <div class="field"><label for="email">Email</label><input type="email" id="email" maxlength="200" autocomplete="email" inputmode="email" required></div>
+      <div class="field"><label for="social">Instagram / social handle <span class="hint">(optional)</span></label><input type="text" id="social" maxlength="100" placeholder="@" autocapitalize="off"></div>
+    </div>
+
+    <div class="section">
+      <h2>Your setup</h2>
+      <p class="detected" id="detected" hidden></p>
+      <div class="field"><span class="q">What will you mostly use EBBLESS on?</span><div id="devicePills"></div></div>
+      <div class="row2">
+        <div class="field"><label for="deviceModel">Device model</label><input type="text" id="deviceModel" maxlength="100" placeholder="e.g. iPhone 15, Pixel 8"></div>
+        <div class="field"><label for="os">OS + version</label><input type="text" id="os" maxlength="80" placeholder="e.g. iOS 18.2"></div>
+      </div>
+      <div class="field"><span class="q">Main browser</span><div id="browserPills"></div></div>
+      <div class="field"><span class="q">How technical are you?</span><div id="comfortPills"></div></div>
+    </div>
+
+    <div class="section">
+      <h2>Your listening</h2>
+      <div class="field"><span class="q">Where do you mostly listen?</span><div id="platformPills"></div></div>
+      <div class="field"><label for="music">What do you listen to most?</label><input type="text" id="music" maxlength="500" placeholder="Artists, genres, whatever"></div>
+      <div class="field"><label for="playlist">A Spotify playlist you'd want to try with EBBLESS <span class="hint">(optional)</span></label><input type="url" id="playlist" maxlength="300" placeholder="https://open.spotify.com/playlist/..." autocapitalize="off" inputmode="url"></div>
+    </div>
+
+    <div class="section">
+      <h2>Why you</h2>
+      <div class="field"><label for="motivation">What made you want to test EBBLESS?</label><textarea id="motivation" maxlength="1500"></textarea></div>
+      <div class="field"><label for="wants">Anything you especially want to see EBBLESS do?</label><textarea id="wants" maxlength="1500"></textarea></div>
+    </div>
+
+    <div class="section">
+      <label class="check"><input type="checkbox" id="agree"> <span>I'm willing to use EBBLESS and give honest feedback during the beta.</span></label>
+      <label class="check"><input type="checkbox" id="contactOk"> <span>I'm okay with being contacted if more information is needed about something I report.</span></label>
+    </div>
+
+    <button class="btn primary block" id="submitBtn" type="submit">Sign me up</button>
+    <p class="status" id="status" role="status"></p>
+  </form>
+
+  <!-- done -->
+  <section id="done" hidden class="fade-in">
+    <h1 class="display" id="doneTitle">GOT IT.</h1>
+    <div class="rule"></div>
+    <p class="lede" id="doneText"></p>
+  </section>
+
+  <p class="foot">Your answers are only seen by me and are only used to run the EBBLESS beta.</p>
+</main>
+
+<script src="beta.js"></script>
+<script>
+(async function(){
+  const $ = (id) => document.getElementById(id);
+  const form = $('signup');
+  Beta.pills($('devicePills'), 'device', ['iPhone', 'Android phone', 'iPad / tablet', 'Mac', 'Windows PC', 'Other']);
+  Beta.pills($('browserPills'), 'browser', ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other']);
+  Beta.pills($('comfortPills'), 'comfort', ['Not very technical', 'Comfortable with apps/websites', 'Very comfortable / technical'], { stack: true });
+  Beta.pills($('platformPills'), 'platform', ['Spotify', 'YouTube', 'Apple Music', 'Other']);
+
+  // Prefill setup from this browser; people often sign up on the device they'll use.
+  Beta.detect().then(d => {
+    if (d.device !== 'Other') Beta.setRadio(form, 'device', d.device);
+    Beta.setRadio(form, 'browser', d.inApp ? 'Other' : d.browser);
+    if (d.os) $('os').value = d.os;
+    if (d.model && !/^(iPhone|iPad)$/.test(d.model)) $('deviceModel').value = d.model;
+    const parts = [d.model || d.device, d.os, d.browserDetail].filter(Boolean);
+    $('detected').textContent = '';
+    $('detected').append('Looks like you\'re on ', Object.assign(document.createElement('b'), { textContent: parts.join(' · ') }), '. Change anything that\'s off.');
+    $('detected').hidden = false;
+  });
+
+  let waitlist = false;
+  function show(state){
+    $('intro').hidden = state !== 'open';
+    $('full').hidden = state !== 'full';
+    form.hidden = !(state === 'open' || state === 'waitlist');
+    $('done').hidden = state !== 'done';
+    if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; }
+  }
+
+  try {
+    const s = await Beta.api('/beta/status');
+    const left = Math.max(0, s.cap - s.filled);
+    $('meterCount').textContent = s.filled + ' / ' + s.cap + ' testers';
+    $('meterLeft').textContent = left ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full';
+    requestAnimationFrame(() => { $('meterFill').style.width = Math.min(100, s.filled / s.cap * 100) + '%'; });
+    $('meter').hidden = false;
+    show(s.open ? 'open' : 'full');
+  } catch(e){
+    show('open');   // the worker still enforces the cap on submit
+  }
+  $('waitlistBtn').addEventListener('click', () => { waitlist = true; show('waitlist'); $('name').focus(); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const st = $('status');
+    const body = {
+      name: $('name').value.trim(), email: $('email').value.trim(), social: $('social').value.trim(),
+      device: Beta.radio(form, 'device'), deviceModel: $('deviceModel').value.trim(), os: $('os').value.trim(),
+      browser: Beta.radio(form, 'browser'), comfort: Beta.radio(form, 'comfort'),
+      platform: Beta.radio(form, 'platform'), music: $('music').value.trim(), playlist: $('playlist').value.trim(),
+      motivation: $('motivation').value.trim(), wants: $('wants').value.trim(),
+      agree: $('agree').checked, contactOk: $('contactOk').checked,
+    };
+    const miss = !body.name ? ['name', 'Add your name or a nickname.']
+      : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email) ? ['email', 'That email doesn\'t look right.']
+      : !body.device ? ['devicePills', 'Pick the device you\'ll mostly use.']
+      : !body.browser ? ['browserPills', 'Pick your main browser.']
+      : !body.comfort ? ['comfortPills', 'Pick how technical you are.']
+      : !body.platform ? ['platformPills', 'Pick where you mostly listen.']
+      : !body.agree ? ['agree', 'Tick the honest-feedback box to sign up.'] : null;
+    if (miss){
+      Beta.status(st, miss[1], 'err');
+      const el = $(miss[0]); el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el.focus) el.focus({ preventScroll: true });
+      return;
+    }
+    $('submitBtn').disabled = true;
+    Beta.status(st, 'Sending...');
+    try {
+      const r = await Beta.api('/beta/signup', body);
+      show('done');
+      if (r.already){
+        $('doneTitle').textContent = 'YOU\'RE ALREADY ON THE LIST.';
+        $('doneText').textContent = 'That email already signed up. Nothing else to do. If you get in, you\'ll hear from me directly.';
+      } else if (r.status === 'waitlisted'){
+        $('doneTitle').textContent = 'YOU\'RE ON THE WAITLIST.';
+        $('doneText').textContent = 'If a spot opens up, you\'ll hear from me directly.';
+      } else {
+        $('doneText').textContent = 'You\'re on the list. I\'m going through signups by hand, so give me a little time. If you\'re in, you\'ll get your tester link from me directly.';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch(err){
+      Beta.status(st, err.message, 'err');
+      $('submitBtn').disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

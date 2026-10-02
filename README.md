@@ -78,6 +78,32 @@ npx wrangler kv key list --binding=MATCH_REPORTS --prefix=tester:
 npx wrangler kv key get --binding=MATCH_REPORTS "tester:<ts>:<uuid>"
 ```
 
+## Beta tester system
+
+`beta/` holds the 50-person beta: static pages on the same GitHub Pages site,
+backed by `worker/src/beta.js` (routes under `/beta/*`) and its own KV
+namespace, `BETA`.
+
+- `beta/` - public signup (shows `17 / 50 testers`; switches to "THE BETA IS
+  FULL." plus a waitlist option once 50 spots are filled)
+- `beta/tester.html?t=<token>` - an accepted tester's page ("YOU'RE IN.")
+- `beta/feedback.html`, `beta/bug.html` - feedback (`EBB-FB-0001`) and bug
+  reports (`EBB-TEST-0001`), tied to the tester by their link token, optional
+  screenshot
+- `beta/admin.html` - sign in with Google (account must be in the
+  `ADMIN_EMAILS` worker secret) to see counts, change tester status, copy
+  invites, and read feedback, bugs, and in-app "Send feedback" reports in one feed
+
+Nobody is accepted automatically. Setting a tester to accepted/active hands
+out the next tester number (`#001`...) and their secret link; accepted,
+active and inactive all hold one of the 50 spots, and the worker refuses a
+51st. Waitlisted/rejected frees the spot (numbers are never reused).
+
+Admin locally: put `BETA_DEV_ADMIN_KEY=<anything>` in `worker/.dev.vars`
+(gitignored), run `npx wrangler dev --local`, and open
+`beta/admin.html?backend=local&devKey=<same>` from a localhost server. The
+key is only honored on localhost.
+
 ## YouTube links
 
 Besides Spotify, you can paste a YouTube link directly — a playlist

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>EBBLESS BETA</title>
+<meta name="theme-color" content="#121212">
+<link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
+<link rel="stylesheet" href="beta.css">
+</head>
+<body>
+<div class="hero-bg"></div>
+<main class="wrap">
+  <div class="top"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"><span class="tag">Beta</span></div>
+
+  <p class="lede" id="loading">One sec...</p>
+
+  <section id="nope" hidden>
+    <h1 class="display">THIS LINK ISN'T ACTIVE.</h1>
+    <div class="rule"></div>
+    <p class="lede">Use the exact tester link I sent you. If it still doesn't work, message me and I'll sort it out.</p>
+    <div class="actions"><a class="btn" href="./">EBBLESS BETA</a></div>
+  </section>
+
+  <section id="in" hidden class="fade-in">
+    <p class="tester-label" id="label"></p>
+    <h1 class="display">YOU'RE IN.</h1>
+    <div class="rule"></div>
+    <p class="sub" id="welcome">Welcome to the EBBLESS beta.</p>
+    <p class="lede">EBBLESS turns your music into a visual listening experience.</p>
+
+    <div class="actions">
+      <a class="btn primary block" href="../">OPEN EBBLESS</a>
+      <div class="pair">
+        <a class="btn" id="fbLink" href="feedback.html">TESTER FEEDBACK</a>
+        <a class="btn" id="bugLink" href="bug.html">REPORT A BUG</a>
+      </div>
+    </div>
+
+    <p class="note" id="inAppNote" hidden></p>
+
+    <ol class="steps">
+      <li>Load one of your Spotify playlists.</li>
+      <li>Let EBBLESS find the music.</li>
+      <li>Try the different visual modes. LP, cassette, cymatics, lyrics, video.</li>
+      <li>Fuck around with it.</li>
+      <li>Tell me what you think.</li>
+    </ol>
+    <p class="foot">Bookmark this page. It's your way back to the feedback and bug forms.</p>
+  </section>
+</main>
+
+<script src="beta.js"></script>
+<script>
+(async function(){
+  const $ = (id) => document.getElementById(id);
+  const token = Beta.token();
+  if (!token){ $('loading').hidden = true; $('nope').hidden = false; return; }
+  try {
+    const me = await Beta.api('/beta/me', { token });
+    $('label').textContent = me.label;
+    if (me.name) $('welcome').textContent = 'Welcome to the EBBLESS beta, ' + me.name + '.';
+    // Carry the token so the forms work even if this browser forgets it.
+    $('fbLink').href = 'feedback.html?t=' + encodeURIComponent(token);
+    $('bugLink').href = 'bug.html?t=' + encodeURIComponent(token);
+    document.title = me.label;
+    const d = await Beta.detect();
+    if (d.inApp){
+      $('inAppNote').textContent = 'You opened this inside ' + d.inApp + '. EBBLESS works a lot better in your real browser: tap the ••• menu and choose "Open in browser" (or Safari / Chrome).';
+      $('inAppNote').hidden = false;
+    }
+    $('loading').hidden = true; $('in').hidden = false;
+  } catch(e){
+    $('loading').hidden = true;
+    if (e.status === 404){ try { localStorage.removeItem(Beta.LS_TOKEN); } catch(x){} $('nope').hidden = false; }
+    else { $('loading').hidden = false; $('loading').textContent = e.message; }
+  }
+})();
+</script>
+</body>
+</html>
