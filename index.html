@@ -4988,7 +4988,16 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       name = String(name || '').replace(/^Album\s+-\s+/i, '') || name;
     }
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
-    const arts = await Promise.all(tracks.map(t => resolveTrackArt('youtube', t.title, t.artist, null)));
+    // Up to 100 tracks now (playlist page, not the old ~15-item feed), so
+    // look art up a few at a time instead of firing every request at once.
+    const arts = new Array(tracks.length);
+    let nextArt = 0;
+    await Promise.all(Array.from({ length: Math.min(4, tracks.length) }, async () => {
+      while (nextArt < tracks.length){
+        const i = nextArt++;
+        arts[i] = await resolveTrackArt('youtube', tracks[i].title, tracks[i].artist, null).catch(() => null);
+      }
+    }));
     const resolved = tracks.map((t, i) => ({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0, art: arts[i] }));
     // YouTube's feed carries no cover for a playlist. An album's tracks all
     // share one cover, so use it (first track's resolved art, else its
@@ -4999,8 +5008,8 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       image = resolved[0].art || ('https://i.ytimg.com/vi/' + resolved[0].videoId + '/hqdefault.jpg');
     }
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
-    // YouTube's public playlist feed (the only stable, unscraped source for a
-    // full tracklist) only returns its ~15 most recent videos.
+    // The worker reads the playlist page, which holds at most the first 100
+    // videos; `truncated` says there were more.
     const payload = keepAlbumOverride({ id: playlistId, type, name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
     lsSet(LS_PL(playlistId), payload);
     return payload;
