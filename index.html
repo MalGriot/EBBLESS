@@ -8195,12 +8195,39 @@ function applySharedImportFromUrl(){
     sourceLink = params.get('import');
     trackParam = params.get('track');
   } catch(e){ return; }
-  if (!sourceLink) return;
+  if (!sourceLink){ applyShareTargetFromUrl(); return; }
   try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
   const parsed = parseImportLink(sourceLink);
   if (!parsed){ showToast("That share link isn't valid anymore."); return; }
   const targetIndex = trackParam != null ? parseInt(trackParam, 10) : undefined;
   beginImportFromParsedLink(parsed, targetIndex);
+}
+
+// Android Share sheet -> EBBLESS (manifest.json share_target, GET to
+// ./index.html?share_title=&share_text=&share_url=). Apps like Spotify put
+// "Listen to X on Spotify: https://..." in text rather than url, so the
+// first http(s) URL from either wins; with no URL at all the shared text is
+// used as-is. Either way it goes through the paste box's own submit handler
+// below, so link parsing, the "not a supported link" message and the
+// vibe-search fallback all behave exactly as if it had been pasted. Params
+// are stripped first so a reload can't re-import. Called via
+// applySharedImportFromUrl from startApp(), so a cold start (splash or
+// onboarding still up) only gets here once the app is ready.
+function applyShareTargetFromUrl(){
+  let title, text, url;
+  try{
+    const params = new URLSearchParams(location.search);
+    title = params.get('share_title') || '';
+    text = params.get('share_text') || '';
+    url = params.get('share_url') || '';
+  } catch(e){ return; }
+  if (!title && !text && !url) return;
+  try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
+  const m = (url + ' ' + text).match(/https?:\/\/\S+/i);
+  const candidate = (m ? m[0] : (text || title)).trim();
+  if (!candidate) return;
+  urlInput.value = candidate;
+  try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
 }
 
 importForm.addEventListener('submit', (e) => {
