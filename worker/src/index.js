@@ -16,6 +16,7 @@ import {
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos } from './yt-page.js';
+import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -952,7 +953,7 @@ async function handleYtVideo(url, ctx) {
 // published,image}], focus } - focus is the index of the linked episode
 // (-1 for a whole-show link). Newest episodes first, capped at
 // PODCAST_MAX_EPISODES.
-const PODCAST_CACHE_VERSION = 'pod5';
+const PODCAST_CACHE_VERSION = 'pod6';
 const PODCAST_MAX_EPISODES = 300;
 
 // Unicode-aware via matchKey (was [a-z0-9]-only: every non-Latin show
@@ -1009,6 +1010,7 @@ function parsePodcastFeed(xml) {
       duration: podDuration(xmlTag(it, 'itunes:duration')),
       published: isNaN(pub) ? 0 : pub,
       image: xmlAttr(it, 'itunes:image', 'href') || null,
+      ...itemPodText(it),
     });
   }
   // feeds are nearly always newest-first already; make sure
@@ -1200,6 +1202,42 @@ function spotifyEmbedEpisodes(entity) {
     title: String((t && (t.title || t.name)) || '').trim(),
     duration: Math.round(((t && (t.duration || t.durationMs)) || 0) / 1000),
   })).filter(e => e.title);
+}
+
+// ---------- GET /podtext?kind=<chapters|transcript>&url=<...>[&type=<vtt|srt|json>] ----------
+// Podcast chapters and captions (GitHub #241). Fetches a feed item's
+// <podcast:chapters> / <podcast:transcript> file (most hosts send no CORS
+// headers, so the app can't read them itself) and returns it parsed:
+// { chapters: [{ t, title }] } or { lines: [{ t, text }] }. Only the parsed
+// result goes back, never the raw file, so this isn't an open proxy.
+const PODTEXT_MAX_BYTES = 3 * 1024 * 1024;
+async function handlePodText(url, ctx) {
+  const kind = url.searchParams.get('kind');
+  const src = url.searchParams.get('url') || '';
+  const type = url.searchParams.get('type') || '';
+  if (!/^(chapters|transcript)$/.test(kind || '') || !/^https:\/\//i.test(src) || src.length > 2000) return json({ error: 'missing or invalid podtext request' }, 400);
+  if (kind === 'transcript' && !/^(vtt|srt|json)$/.test(type)) return json({ error: 'invalid transcript type' }, 400);
+  const cache = envCache;
+  const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podtext/' + kind + '/' + type + '/' + encodeURIComponent(src));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+  let text;
+  try {
+    const res = await fetch(src, { headers: { 'User-Agent': APP_UA } });
+    if (!res.ok) return json({ error: kind + ' file returned ' + res.status }, 502);
+    if (Number(res.headers.get('content-length')) > PODTEXT_MAX_BYTES) return json({ error: kind + ' file too large' }, 502);
+    text = await res.text();
+    if (text.length > PODTEXT_MAX_BYTES) return json({ error: kind + ' file too large' }, 502);
+  } catch (e) {
+    return json({ error: "couldn't fetch the " + kind + ' file' }, 502);
+  }
+  const payload = kind === 'chapters' ? { chapters: parseChaptersJson(text) } : { lines: parseTranscript(text, type) };
+  const response = json(payload);
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=86400' },
+  })));
+  return response;
 }
 
 // ---------- GET /podcastmatch?show=&title=&duration=<seconds> ----------
@@ -4248,6 +4286,7 @@ export default {
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);
       if (url.pathname === '/podcast') return await handlePodcast(url, ctx);
       if (url.pathname === '/podcastmatch') return await handlePodcastMatch(url, ctx);
+      if (url.pathname === '/podtext') return await handlePodText(url, ctx);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
@@ -4271,7 +4310,7 @@ export default {
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
