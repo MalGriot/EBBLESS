@@ -17,6 +17,8 @@ import {
 import { handleBeta, betaInAppReport } from './beta.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos } from './yt-page.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
+import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
+export { PodCaptioner, PodCaptionBudget };
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -1271,6 +1273,28 @@ async function handlePodAudio(url) {
     'Content-Type': ct, 'X-Total-Length': /^\d+$/.test(total) ? total : '',
     'Access-Control-Expose-Headers': 'X-Total-Length', ...CORS_HEADERS,
   } });
+}
+
+// ---------- POST /podcaption/start  ·  POST /podcaption/collect ----------
+// iPhone background captions (see pod-captioner.js). start: the app is
+// leaving the screen mid-generation - body (text/plain JSON, sent as a
+// beacon) { url, total, dur, lang, from, done }. collect: the app is back -
+// body { url }; returns { parts, state } and the handoff is erased.
+async function handlePodCaption(request, url, env) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.POD_CAPTIONER || !env.AI) return json({ error: 'background captions not configured' }, 501);
+  let body;
+  try { body = JSON.parse(await request.text()); } catch (e) { return json({ error: 'bad body' }, 400); }
+  const src = String((body && body.url) || '');
+  if (!/^https:\/\//i.test(src) || src.length > 2000) return json({ error: 'invalid url' }, 400);
+  const stub = env.POD_CAPTIONER.get(env.POD_CAPTIONER.idFromName(src));
+  if (url.pathname === '/podcaption/collect') return json(await stub.collect());
+  const total = Number(body.total), dur = Number(body.dur), from = Number(body.from) || 0;
+  if (!(total > 0) || !(dur > 0)) return json({ error: 'missing length' }, 400);
+  const n = Math.ceil(total / POD_CAPTION_CHUNK_BYTES);
+  const done = Array.isArray(body.done) ? body.done.map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < n) : [];
+  await stub.start({ url: src, total, dur, lang: String(body.lang || 'en').slice(0, 8), from: Math.min(n - 1, Math.max(0, Math.floor(from))), done });
+  return json({ ok: true });
 }
 
 // ---------- GET /podcastmatch?show=&title=&duration=<seconds> ----------
@@ -4333,6 +4357,7 @@ export default {
       if (url.pathname === '/podcastmatch') return await handlePodcastMatch(url, ctx);
       if (url.pathname === '/podtext') return await handlePodText(url, ctx);
       if (url.pathname === '/podaudio') return await handlePodAudio(url);
+      if (url.pathname === '/podcaption/start' || url.pathname === '/podcaption/collect') return await handlePodCaption(request, url, env);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
@@ -4356,7 +4381,7 @@ export default {
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

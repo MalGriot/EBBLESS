@@ -9283,6 +9283,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // Plain-English bullets only: no issue numbers, no internal names.
 // Versions with nothing user-facing are simply left out.
 const WHATS_NEW = [
+  { version: 72, date: '2026-10-03', items: [
+    'Your screen stays on while podcast captions are being made, so they keep going.',
+    'iPhone: when you leave the app mid-episode, captions keep being made in the background and are waiting when you come back.',
+    'App updates no longer re-download the captions model.'
+  ]},
   { version: 71, date: '2026-10-03', items: [
     'Better at keeping YouTube ads silent, including ones that slipped through before.',
     'If an ad runs long, the next song starts instead of leaving you in silence. The song you skipped comes back once its ad is over.'
@@ -12825,6 +12830,7 @@ function setVisualMode(mode){
   visualMode = mode;
   lsSet(LS_VIZ, mode);
   applyVisualMode();
+  capSyncWakeLock();
   if (state.flowOpen) flowRemountVisual();
   csStackSync();
 }
@@ -13466,15 +13472,17 @@ async function generateCaptions(t, onUpdate){
   const id = t.videoId, url = audioUrlOf(id);
   if (capJob && capJob.id === id && !capJob.cancelled){ capJob.onUpdate = onUpdate; return; }
   if (capJob) capJob.cancelled = true;
-  const job = capJob = { id, cancelled: false, onUpdate, onProgress: null };
+  const job = capJob = { id, t, cancelled: false, onUpdate, onProgress: null, lastActivity: Date.now(), rec: null, dur: 0, next: null };
+  capSyncWakeLock();
   capPrune();
   const lang = capLang(t), english = lang === 'en';
   const rec = (await capGet(id)) || { ts: Date.now(), total: 0, parts: {}, done: false };
+  job.rec = rec; job.lang = lang;
   if (job.cancelled) return;
   if (rec.done){ job.onUpdate(capLines(rec), 'done'); return; }
   if (!english && !capMultiInstalled()){ job.onUpdate(capLines(rec), 'need-multi'); return; }
   const model = english ? CAP_MODEL_EN : CAP_MODEL_MULTI;
-  job.onProgress = () => { if (!job.cancelled) job.onUpdate(capLines(rec), 'working', capModelPct(model)); };
+  job.onProgress = () => { job.lastActivity = Date.now(); if (!job.cancelled) job.onUpdate(capLines(rec), 'working', capModelPct(model)); };
   job.onUpdate(capLines(rec), 'working');
   try {
     if (!rec.total){
@@ -13495,6 +13503,7 @@ async function generateCaptions(t, onUpdate){
       for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i]) return i; }
       return -1;
     };
+    job.dur = dur; job.next = next;
     let decoded = 0, first = true;
     for (let i = next(); i >= 0; i = next()){
       if (job.cancelled) return;
@@ -13512,6 +13521,7 @@ async function generateCaptions(t, onUpdate){
         .filter(c => c[2] && !/^[\[(][^\])]*[\])]$/.test(c[2]))
         .map(c => [Math.round(c[0] * 100) / 100, Math.round(c[1] * 100) / 100, c[2]]);
       await capPut(id, rec);
+      job.lastActivity = Date.now();
       if (!job.cancelled) job.onUpdate(capLines(rec), 'working');
     }
     rec.done = true;
@@ -13522,8 +13532,84 @@ async function generateCaptions(t, onUpdate){
     if (!job.cancelled) job.onUpdate(capLines(rec), 'failed');
   } finally {
     if (capJob === job) capJob = null;
+    capSyncWakeLock();
   }
 }
+
+// Keep the screen on while captions are being made and the captions view
+// is open (phones would otherwise lock and pause it); let go once done.
+var capWakeLock = null;
+async function capSyncWakeLock(){
+  const want = !!(capJob && !capJob.cancelled) && document.visibilityState === 'visible' &&
+    visualMode === 'lyrics' && 'wakeLock' in navigator;
+  if (want && !capWakeLock){
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      capWakeLock = lock;
+      lock.addEventListener('release', () => { if (capWakeLock === lock) capWakeLock = null; });
+    } catch(e){}
+  } else if (!want && capWakeLock){
+    const lock = capWakeLock; capWakeLock = null;
+    try { await lock.release(); } catch(e){}
+  }
+}
+// Throw away a stuck worker (a phone can kill it while the app is in the
+// background, leaving a transcription that never answers) and start a
+// fresh job from what's already saved.
+function capRestart(){
+  const j = capJob;
+  if (!j) return;
+  j.cancelled = true; capJob = null;
+  if (capWorkerObj){ capWorkerObj.terminate(); capWorkerObj = null; }
+  capPending.forEach(p => p.reject(new Error('restart')));
+  capPending.clear();
+  generateCaptions(j.t, j.onUpdate);
+}
+// iPhone: iOS freezes the app as soon as it leaves the screen, so the rest
+// of the episode is handed to Cloudflare (worker /podcaption/start) until
+// the app comes back - then whatever it finished is collected (and erased
+// there), saved on this device, and the device's own generator carries on.
+var capHandoff = null;
+async function capCollect(h){
+  let got = null;
+  try {
+    const res = await fetch(BACKEND + '/podcaption/collect', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ url: audioUrlOf(h.id) }) });
+    if (res.ok) got = await res.json();
+  } catch(e){}
+  const parts = (got && got.parts) || {};
+  const merge = (rec) => {
+    let added = 0;
+    Object.entries(parts).forEach(([i, cues]) => { if (!rec.parts[i] || !rec.parts[i].length){ rec.parts[i] = cues; added++; } });
+    return added;
+  };
+  const j = capJob;
+  if (j && j.id === h.id && !j.cancelled && j.rec){
+    // still running here: fold the results into it (its next slice skips
+    // them) - only restart it if it actually went stuck while away
+    if (merge(j.rec)){ await capPut(h.id, j.rec); j.onUpdate(capLines(j.rec), 'working'); }
+    if (Date.now() - j.lastActivity > 60000) capRestart();
+    return;
+  }
+  const rec = await capGet(h.id);
+  if (rec && merge(rec)) await capPut(h.id, rec);
+  if (!capJob) generateCaptions(h.t, h.onUpdate);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden'){
+    const j = capJob;
+    if (isIOS && j && !j.cancelled && j.rec && j.rec.total && j.dur && j.next && navigator.sendBeacon){
+      const from = j.next();
+      if (from < 0) return;
+      const body = JSON.stringify({ url: audioUrlOf(j.id), total: j.rec.total, dur: j.dur, lang: j.lang, from, done: Object.keys(j.rec.parts).map(Number) });
+      if (navigator.sendBeacon(BACKEND + '/podcaption/start', new Blob([body], { type: 'text/plain' }))) capHandoff = { id: j.id, t: j.t, onUpdate: j.onUpdate };
+    }
+    return;
+  }
+  capSyncWakeLock();
+  if (capHandoff){ const h = capHandoff; capHandoff = null; capCollect(h); }
+  // a job that went quiet while the app was away may have lost its worker
+  else if (capJob && Date.now() - capJob.lastActivity > 60000) capRestart();
+});
 
 function renderLyrics(data){
   lyricsState = { videoId: data._videoId, lines: data.lines || [], synced: !!data.synced, activeIdx: -1 };

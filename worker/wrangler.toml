@@ -25,6 +25,21 @@ id = "7ba1ba2734224136b5e998365a37ea67"
 [ai]
 binding = "AI"
 
+# Background podcast captions for iPhone (src/pod-captioner.js): one
+# PodCaptioner per episode (a short-lived handoff buffer, never kept) and
+# one shared PodCaptionBudget keeping Workers AI use under the free tier.
+[[durable_objects.bindings]]
+name = "POD_CAPTIONER"
+class_name = "PodCaptioner"
+
+[[durable_objects.bindings]]
+name = "POD_CAPTION_BUDGET"
+class_name = "PodCaptionBudget"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PodCaptioner", "PodCaptionBudget"]
+
 [vars]
 GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"
 
@@ -52,6 +67,14 @@ id = "00d30b10ad134d8ab7952fa3e5a621e9"
 # Bindings aren't inherited by environments - repeat the AI binding.
 [env.staging.ai]
 binding = "AI"
+
+[[env.staging.durable_objects.bindings]]
+name = "POD_CAPTIONER"
+class_name = "PodCaptioner"
+
+[[env.staging.durable_objects.bindings]]
+name = "POD_CAPTION_BUDGET"
+class_name = "PodCaptionBudget"
 
 [env.staging.vars]
 # Keeps staging's entries out of production's cache - both workers share

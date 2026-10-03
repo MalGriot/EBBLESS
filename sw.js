@@ -27,7 +27,7 @@
 //
 // IMPORTANT: bump CACHE_VERSION on every deploy you want existing
 // installs/tabs to pick up promptly.
-const CACHE_VERSION = 'ebbless-shell-v71';
+const CACHE_VERSION = 'ebbless-shell-v72';
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './sfx/needle-drop.mp3', './sfx/needle-lift.mp3', './sfx/cassette-rewind.mp3'];
 
 self.addEventListener('install', (e) => {
@@ -46,7 +46,9 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k))))
+      // only old app-shell versions - other caches (the on-device captions
+      // model, transformers-cache) belong to the page and must survive updates
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('ebbless-shell-') && k !== CACHE_VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
