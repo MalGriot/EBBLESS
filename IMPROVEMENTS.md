@@ -7644,7 +7644,7 @@ Add entries in this shape:
   **Built (46efa84):** new `addablePlaylists()` used by `openAddToPlaylistPicker` and `openSingleTrackDestinationPicker`; was filtering to `type === "custom"` only. Now lists imported playlists too; excludes CuRRentSSsss, SwiiiRrrLL, albums, podcasts, single tracks. Lists grow to 55vh/50vh. Unverified in browser.
 
 ### podcast-chapters-captions: Podcast chapters and captions
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Show chapter markers (jump between chapters) and
   captions/transcript for podcasts when the source provides them.
