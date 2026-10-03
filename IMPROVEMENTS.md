@@ -7666,6 +7666,11 @@ Add entries in this shape:
   pointed at the local worker - captions sync and highlight, 37 seek-bar
   gaps, tapping a chapter jumped to 5:38. **Needs a worker deploy** for
   `/podtext` before the app side works live.
+  **Follow-up (user ask):** chapter-list button in the art's bottom-left
+  corner (podcast episodes with chapters only) toggles a list of chapters
+  with start times over the art; tap a row to jump, current chapter
+  highlighted, click anywhere outside closes it. Verified in preview: 38
+  rows, row tap jumped to 5:38 and highlighted, outside click closed.
 
 ### dj-mode: DJ mode - play two songs at once, set markers, and mix
 - **Status:** draft

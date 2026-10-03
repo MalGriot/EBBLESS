@@ -752,6 +752,23 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 /* cast/AirPlay (cross-platform-handoff): an .art-fs-btn twin in the art's
    other top corner, only shown once a target exists (see castRenderUI) */
 .art-cast-btn{right:auto;left:10px}
+/* podcast chapter list (#241): toggle in the art's bottom-left corner
+   (cymatics controls own bottom-right), list overlays the art */
+.art-chap-btn{top:auto;right:auto;bottom:10px;left:10px}
+.art-chap-btn[hidden]{display:none}
+.art-chap-btn.is-active{color:var(--player-accent)}
+.chap-panel{position:absolute;inset:0;z-index:5;border-radius:inherit;overflow:hidden;
+  background:rgba(10,10,10,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;pointer-events:none;transition:opacity var(--dur-surface) var(--ease-in-out)}
+.chap-panel.is-open{opacity:1;pointer-events:auto}
+.chap-list{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 10px 54px}
+.chap-row{display:flex;gap:12px;align-items:baseline;width:100%;text-align:left;padding:9px 10px;border-radius:8px;
+  color:var(--faint);font-size:14px;font-weight:600;line-height:1.35;
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.chap-row:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.chap-row .chap-time{flex:none;min-width:46px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--faint-2)}
+.chap-row.is-current,.chap-row.is-current .chap-time{color:var(--player-accent)}
+.chap-empty{padding:40% 24px 0;color:var(--faint);font-size:13.5px;text-align:center}
 .art-cast-btn[hidden]{display:none}
 .art-cast-btn.is-active{color:var(--player-accent)}
 .art-cast-btn.is-connecting svg{animation:cast-connecting 1.2s var(--ease-in-out) infinite}
@@ -2768,6 +2785,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Cymatics speed" aria-label="Change cymatics animation speed">1x</button>
           </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
+          <div class="chap-panel" id="chapPanel" role="region" aria-label="Chapters"><div class="chap-list" id="chapList"></div></div>
+          <button class="art-fs-btn art-chap-btn" id="chapBtn" title="Chapters" aria-label="Show chapters" aria-pressed="false" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h2v2H3zm4 0h14v2H7zM3 11h2v2H3zm4 0h14v2H7zm-4 6h2v2H3zm4 0h14v2H7z"/></svg>
+          </button>
           <button class="art-fs-btn" id="fsBtn" title="Fullscreen" aria-label="Enter flow mode">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
           </button>
@@ -13654,6 +13675,7 @@ function reflectCurrentTrackUI(pos, opts){
   // seek poll stops while paused, so a stale full bar would otherwise stick
   // until the new track actually starts reporting (issue #213)
   resetSeekUI(t);
+  syncChapterList(t);
   // a podcast episode is the show's own file - there's no match to flag
   const isPod = isPodcastTrack(t);
   document.body.classList.toggle('pod-playing', isPod);
@@ -15705,8 +15727,97 @@ function paintChapterTicks(dur){
     });
   });
 }
+// Podcast chapter list (#241): the art's chapter button shows/hides a list of
+// the episode's chapters with their start times; tap one to jump there.
+// The button only appears for an episode that has chapters.
+var chapListFor = '', chapListItems = [], chapCurIdx = -1;
+function chapBtnEl(){ return document.getElementById('chapBtn'); }
+function chapPanelEl(){ return document.getElementById('chapPanel'); }
+function setChapterPanel(open){
+  const btn = chapBtnEl(), panel = chapPanelEl();
+  if (!btn || !panel) return;
+  panel.classList.toggle('is-open', open);
+  btn.classList.toggle('is-active', open);
+  btn.setAttribute('aria-pressed', String(open));
+  btn.setAttribute('aria-label', open ? 'Hide chapters' : 'Show chapters');
+  if (!open) return;
+  renderChapterList(currentTrack());
+  const ad = activeDeck();
+  markCurrentChapter(ad.player && ad.player.getCurrentTime ? ad.player.getCurrentTime() || 0 : 0, true);
+}
+function syncChapterList(t){
+  const btn = chapBtnEl();
+  if (!btn) return;
+  const has = !!t && isPodcastTrack(t) && !!(t.chapters || t.chaptersUrl);
+  btn.hidden = !has;
+  if (!has){ setChapterPanel(false); return; }
+  if (chapPanelEl().classList.contains('is-open')) renderChapterList(t);
+}
+function renderChapterList(t){
+  const list = document.getElementById('chapList');
+  if (!list || !t || chapListFor === t.videoId) return;
+  chapListFor = t.videoId; chapListItems = []; chapCurIdx = -1;
+  list.innerHTML = '<div class="chap-empty">Loading chapters…</div>';
+  podText(t).then(pt => {
+    if (chapListFor !== t.videoId) return;
+    list.innerHTML = '';
+    chapListItems = pt.chapters;
+    if (!chapListItems.length){
+      list.innerHTML = '<div class="chap-empty">Couldn\'t load chapters for this episode.</div>';
+      chapListFor = ''; // try again next time it's opened
+      return;
+    }
+    chapListItems.forEach(c => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'chap-row';
+      const time = document.createElement('span');
+      time.className = 'chap-time';
+      time.textContent = formatTime(c.t);
+      const title = document.createElement('span');
+      title.textContent = c.title;
+      row.append(time, title);
+      row.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ad = activeDeck();
+        if (ad.player && ad.player.seekTo) ad.player.seekTo(c.t, true);
+        if (ad.player && ad.player.playVideo) ad.player.playVideo();
+      });
+      list.appendChild(row);
+    });
+    const ad = activeDeck();
+    markCurrentChapter(ad.player && ad.player.getCurrentTime ? ad.player.getCurrentTime() || 0 : 0, true);
+  });
+}
+function markCurrentChapter(cur, scroll){
+  if (!chapListItems.length || !chapPanelEl() || !chapPanelEl().classList.contains('is-open')) return;
+  let idx = -1;
+  for (let i = 0; i < chapListItems.length && chapListItems[i].t <= cur + 0.5; i++) idx = i;
+  if (idx === chapCurIdx && !scroll) return;
+  const rows = document.getElementById('chapList').children;
+  if (rows[chapCurIdx]) rows[chapCurIdx].classList.remove('is-current');
+  chapCurIdx = idx;
+  if (rows[idx]){
+    rows[idx].classList.add('is-current');
+    if (scroll) rows[idx].scrollIntoView({ block: 'center' });
+  }
+}
+document.getElementById('chapBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  setChapterPanel(!chapPanelEl().classList.contains('is-open'));
+});
+['click', 'dblclick'].forEach(ev => document.getElementById('chapPanel').addEventListener(ev, (e) => e.stopPropagation()));
+// a click anywhere outside the list (or its button) closes it; capture
+// phase so it still fires when the clicked control stops propagation
+document.addEventListener('click', (e) => {
+  const panel = chapPanelEl();
+  if (!panel || !panel.classList.contains('is-open')) return;
+  if (e.target.closest && e.target.closest('#chapPanel, #chapBtn')) return;
+  setChapterPanel(false);
+}, true);
 function paintSeekUI(cur, dur){
   paintChapterTicks(dur);
+  markCurrentChapter(cur);
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   seekFill.style.width = pct + '%'; seekKnob.style.left = pct + '%';
   flowSeekFill.style.width = pct + '%'; flowSeekKnob.style.left = pct + '%';
