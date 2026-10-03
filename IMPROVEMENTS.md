@@ -7524,7 +7524,7 @@ Add entries in this shape:
 - **Branch:** agent/start-here-paste-guide
 - **Notes:** Synced from Geethub issue #232. Follow-up to the merged
   `tutorial-paste-link-copy`.
-  **Built (f030567):** bubble lists Spotify/Apple Music/YouTube/SoundCloud links (playlist, album, song, artist), podcasts (Spotify/Apple show or episode, RSS), plus search/vibe; tutorial captions updated to match. Left alone: empty-library line "Paste a Spotify playlist to begin." and Replace-link placeholder (no podcasts) - possible follow-up.
+  **Built (f030567):** bubble lists Spotify/Apple Music/YouTube/SoundCloud links (playlist, album, song, artist), podcasts (Spotify/Apple show or episode, RSS), plus search/vibe; tutorial captions updated to match. Follow-up (a3acacb): empty-library line now "Paste a playlist, album, song, or podcast link to begin." Replace-link placeholder left as is (owner).
 
 ### desktop-reload-playlist-slide: Playlist panel slides offscreen for a few frames on desktop reload
 - **Status:** review
@@ -7550,4 +7550,4 @@ Add entries in this shape:
 - **Branch:** agent/podcast-skip-15
 - **Notes:** Synced from Geethub issue #234. Related: `keyboard-shortcuts-2`
   (seek shortcuts), Media Session ±10s actions from `cross-platform-handoff`.
-  **Built (9b02bd6):** -15/+15 buttons beside play (main player, mini bar, flow view), shown only with `body.pod-playing` (set in `reflectCurrentTrackUI` via new `isPodcastTrack()`); handlers reuse `kbSeekBy`. Shift+Left/Right = ±15s on podcasts (10s music, `seekStepS()`); Media Session seek default 15s on podcasts. ≤420px tightens rows; ≤340px mini bar drops skip buttons. Open: plain Left/Right still prev/next; iOS lock-screen seek not registered; PiP mini player has no skip buttons; `pod-playing` lingers after queue clear.
+  **Built (9b02bd6):** -15/+15 buttons beside play (main player, mini bar, flow view), shown only with `body.pod-playing` (set in `reflectCurrentTrackUI` via new `isPodcastTrack()`); handlers reuse `kbSeekBy`. Shift+Left/Right = ±15s on podcasts (10s music, `seekStepS()`); Media Session seek default 15s on podcasts. ≤420px tightens rows; ≤340px mini bar drops skip buttons. Follow-up (c3b2dab, owner decisions): plain Left/Right = ±15s on podcasts, Shift+Left/Right = prev/next episode (music unchanged); PiP mini player gets podcast-only ±15 buttons; iOS registers seekbackward/seekforward per podcast track, cleared to null for music (`syncIosPodSkip`); `pod-playing` cleared when no current track. Untested on real podcast/iOS/PiP.
