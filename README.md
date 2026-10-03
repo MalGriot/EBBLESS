@@ -280,6 +280,15 @@ receiver itself is muted during any ad break it reports (`castGuardAd`).
 and why. Ads can't be skipped: the YouTube player is a cross-origin iframe, so
 nothing on the page can press its skip button.
 
+Since an ad can't be skipped, a long one is dodged instead (`maybeDodgeAd`).
+If a pre-roll is still running 8s in (`AD_DODGE_AFTER_MS`) and the next track
+is already preloaded past its own ad, the next track starts now and the
+skipped one waits out its ad muted on the other deck; the two swap queue
+places. A track that came on by itself (auto-advance, shuffle, discover)
+just plays after the fill-in. A track the listener picked cuts back in as
+soon as its ad clears (`returnFromAdDodge`), and the fill-in goes back behind
+it to play in full.
+
 ## Speakers, TVs and cars
 
 - **Cars / lock screen / Bluetooth / headsets** run off the Media Session
