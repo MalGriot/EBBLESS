@@ -1276,19 +1276,17 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .like-nudge .ln-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .like-nudge .ln-close:hover{background:var(--panel-2);color:var(--text)}
 .like-nudge .ln-close svg{width:14px;height:14px}
-/* tester-version banner (#236): slim pill in a strip added to the bottom of
-   the topbar (--topbar-h grows by 50px while it's up, so views shift down
-   instead of being covered). Beta testers only, from day 3. Same shape as
-   .like-nudge. Hidden while the splash, tutorial, a fullscreen mode, the
-   beta lock or a dialog is up. */
-body:has(#testerBanner:not([hidden])):not(.desktop-fs):not(.onb-active){--topbar-h:110px}
-body.split-desktop:has(#testerBanner:not([hidden])):not(.desktop-fs):not(.onb-active){--topbar-h:102px}
-body:has(#testerBanner:not([hidden])):not(.desktop-fs):not(.onb-active) #topbar{padding-bottom:50px}
-.tester-banner{position:fixed;left:50%;top:calc(var(--topbar-h) - 47px);transform:translateX(-50%);z-index:81;
-  display:flex;align-items:center;gap:10px;width:max-content;max-width:calc(100vw - 32px);background:var(--panel-3);color:var(--text);
-  font-size:12px;line-height:1.3;padding:5px 5px 5px 14px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+/* tester-version banner (#236): a pill inside the topbar, pushed right next
+   to the nav (margin-left:auto), so it never covers anything. Beta testers
+   only, from day 3. Short label on phones. Hidden while the splash,
+   tutorial, a fullscreen mode, the beta lock or a dialog is up. */
+.tester-banner{display:flex;align-items:center;gap:8px;margin:0 10px 0 auto;min-width:0;background:var(--panel-3);color:var(--text);
+  font-size:12px;line-height:1.3;padding:4px 4px 4px 12px;border-radius:20px;white-space:nowrap}
+#topbar:has(#testerBanner:not([hidden])){gap:8px}
+.tester-banner .tb-short{display:none}
+@media (max-width:700px){.tester-banner .tb-long{display:none}.tester-banner .tb-short{display:inline}}
 .tester-banner[hidden]{display:none}
-.tester-banner .tb-text{min-width:0}
+.tester-banner .tb-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .tester-banner .tb-send{flex:none;background:var(--accent);color:#1a1a1a;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
 .tester-banner .tb-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .tester-banner .tb-close:hover{background:var(--panel-2);color:var(--text)}
@@ -2257,6 +2255,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
       <img src="brand/assets/mark.png" alt="EBBLESS">
     </button>
+    <div class="tester-banner" id="testerBanner" role="status" hidden>
+      <span class="tb-text"><span class="tb-long">Tester version of EBBLESS. How's it treating you?</span><span class="tb-short">Tester version</span></span>
+      <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
+      <button type="button" class="tb-close" id="testerBannerClose" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
+    </div>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
         <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.5 2h11A1.5 1.5 0 0 1 22 3.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 8 14.5v-11A1.5 1.5 0 0 1 9.5 2zM15 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M5 5h1.5v11.5A1.5 1.5 0 0 0 8 18h11.5v1.5H7.5A2.5 2.5 0 0 1 5 17V5zM2 8h1.5v11a1.5 1.5 0 0 0 1.5 1.5h11.5V22H4.5A2.5 2.5 0 0 1 2 19.5V8z"/></svg>
@@ -3152,11 +3155,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <div class="sw-update-toast" id="swUpdateToast" hidden>
     <span>Update available</span>
     <button type="button" id="swUpdateBtn">Refresh</button>
-  </div>
-  <div class="tester-banner" id="testerBanner" role="status" hidden>
-    <span class="tb-text">Tester version of EBBLESS. How's it treating you?</span>
-    <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
-    <button type="button" class="tb-close" id="testerBannerClose" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
   </div>
   <div class="like-nudge" id="likeNudge" role="status" hidden>
     <span class="ln-text" id="likeNudgeText"></span>
