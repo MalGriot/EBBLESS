@@ -953,7 +953,7 @@ async function handleYtVideo(url, ctx) {
 // published,image}], focus } - focus is the index of the linked episode
 // (-1 for a whole-show link). Newest episodes first, capped at
 // PODCAST_MAX_EPISODES.
-const PODCAST_CACHE_VERSION = 'pod7';
+const PODCAST_CACHE_VERSION = 'pod8';
 const PODCAST_MAX_EPISODES = 300;
 
 // Unicode-aware via matchKey (was [a-z0-9]-only: every non-Latin show
@@ -994,6 +994,7 @@ function parsePodcastFeed(xml) {
   const imgBlock = chanHead.match(/<image[\s>][\s\S]*?<\/image>/i);
   const image = xmlAttr(chanHead, 'itunes:image', 'href') || (imgBlock ? xmlTag(imgBlock[0], 'url') : '') || null;
   const link = xmlTag(chanHead, 'link');
+  const language = xmlTag(chanHead, 'language').toLowerCase();
   const episodes = [];
   const itemRe = /<item[\s>][\s\S]*?<\/item>/gi;
   let m;
@@ -1015,7 +1016,7 @@ function parsePodcastFeed(xml) {
   }
   // feeds are nearly always newest-first already; make sure
   if (episodes.some(e => e.published)) episodes.sort((a, b) => b.published - a.published);
-  return { name, author, image, link, episodes };
+  return { name, author, image, link, language, episodes };
 }
 // Best directory hit for a show name: exact title match first, then a
 // contains-match, with a matching author as a tiebreak. null if nothing
@@ -1240,6 +1241,38 @@ async function handlePodText(url, ctx) {
   return response;
 }
 
+// ---------- GET /podaudio?url=<episode audio>&start=<byte>&end=<byte> ----------
+// On-device podcast captions (#241): the app transcribes an episode in the
+// listener's own browser, a slice at a time, and needs the raw audio bytes -
+// which most podcast hosts won't hand a browser (no CORS on enclosures). This
+// passes one byte range through. Audio only, ranges only, 4 MB max per call,
+// nothing stored.
+const PODAUDIO_MAX_BYTES = 4 * 1024 * 1024;
+async function handlePodAudio(url) {
+  const src = url.searchParams.get('url') || '';
+  const start = Number(url.searchParams.get('start')), end = Number(url.searchParams.get('end'));
+  if (!/^https:\/\//i.test(src) || src.length > 2000 || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end - start + 1 > PODAUDIO_MAX_BYTES) {
+    return json({ error: 'missing or invalid podaudio request' }, 400);
+  }
+  let res;
+  try {
+    res = await fetch(src, { headers: { 'User-Agent': APP_UA, 'Range': 'bytes=' + start + '-' + end } });
+  } catch (e) {
+    return json({ error: "couldn't reach the audio host" }, 502);
+  }
+  const ct = res.headers.get('content-type') || '';
+  // a host that ignores Range would send the whole episode - never relay that
+  if (res.status !== 206 || !/^audio\/|octet-stream/i.test(ct)) {
+    try { if (res.body) await res.body.cancel(); } catch (e) {}
+    return json({ error: res.status !== 206 ? 'audio host does not support partial downloads' : 'not an audio file' }, 502);
+  }
+  const total = ((res.headers.get('content-range') || '').split('/')[1] || '').trim();
+  return new Response(res.body, { status: 200, headers: {
+    'Content-Type': ct, 'X-Total-Length': /^\d+$/.test(total) ? total : '',
+    'Access-Control-Expose-Headers': 'X-Total-Length', ...CORS_HEADERS,
+  } });
+}
+
 // ---------- GET /podcastmatch?show=&title=&duration=<seconds> ----------
 async function handlePodcastMatch(url, ctx) {
   const show = (url.searchParams.get('show') || '').slice(0, 200);
@@ -1399,7 +1432,7 @@ async function handlePodcast(url, ctx) {
   // The linked episode isn't in the public feed (subscriber-only/premium
   // episodes, or since removed) - still return the show, and say so.
   const missingEpisode = focus === -1 && episodeTitle ? episodeTitle : undefined;
-  const payload = { name: feed.name || 'Podcast', author: feed.author || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, episodes: feed.episodes, focus, missingEpisode };
+  const payload = { name: feed.name || 'Podcast', author: feed.author || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, language: feed.language || '', episodes: feed.episodes, focus, missingEpisode };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
@@ -4299,6 +4332,7 @@ export default {
       if (url.pathname === '/podcast') return await handlePodcast(url, ctx);
       if (url.pathname === '/podcastmatch') return await handlePodcastMatch(url, ctx);
       if (url.pathname === '/podtext') return await handlePodText(url, ctx);
+      if (url.pathname === '/podaudio') return await handlePodAudio(url);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
@@ -4322,7 +4356,7 @@ export default {
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

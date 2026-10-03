@@ -7671,6 +7671,15 @@ Add entries in this shape:
   with start times over the art; tap a row to jump, current chapter
   highlighted, click anywhere outside closes it. Verified in preview: 38
   rows, row tap jumped to 5:38 and highlighted, outside click closed.
+  **Follow-ups (2026-10-03, shipped):** chapters parsed from episode show
+  notes when there's no chapters file (NoSleep: 592/731 episodes). Captions
+  for episodes with no transcript are generated on the listener's device
+  (Whisper via transformers.js in a Web Worker; tiny.en ~41 MB default,
+  multilingual base ~77 MB offered in the captions view only for non-English
+  shows). Audio comes a 2 MB slice at a time through new worker `/podaudio`
+  (byte-range passthrough, nothing stored), starting at the playhead. Results
+  kept in this device's IndexedDB for 7 days, nothing server-side - free,
+  no limits. Verified in preview: ~2 min of audio per ~40 s on a laptop.
 
 ### dj-mode: DJ mode - play two songs at once, set markers, and mix
 - **Status:** draft

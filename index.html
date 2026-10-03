@@ -728,6 +728,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .lyric-line.is-chapter{margin-top:14px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 .lyric-line.is-chapter:first-child{margin-top:0}
 .lyric-line.is-chapter.is-current{font-size:12px}
+.cap-install-btn{margin-top:12px;padding:8px 16px;border-radius:20px;background:var(--player-accent);color:#151107;font-size:13px;font-weight:700}
 .lyrics-credit{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;color:var(--faint-2);
   pointer-events:none}
 .viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
@@ -5290,6 +5291,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
         if (e.chapters) tr.chapters = e.chapters;
         else if (e.chaptersUrl) tr.chaptersUrl = e.chaptersUrl;
         if (e.transcriptUrl){ tr.transcriptUrl = e.transcriptUrl; tr.transcriptType = e.transcriptType; }
+        if (pod.language) tr.lang = pod.language;
       }
       return tr;
     });
@@ -9281,6 +9283,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // Plain-English bullets only: no issue numbers, no internal names.
 // Versions with nothing user-facing are simply left out.
 const WHATS_NEW = [
+  { version: 69, date: '2026-10-03', items: [
+    'Captions for any podcast episode, even shows that don\'t publish them: they\'re generated right on your device, free, and kept for 7 days.',
+    'Chapters now come from episode notes too, so shows like NoSleep get a chapter for every story.'
+  ]},
   { version: 68, date: '2026-10-03', items: [
     'Podcasts now show captions in the lyrics view, synced to the episode, with chapter titles you can tap to jump.',
     'New chapters button on the podcast player: see every chapter with its start time and jump straight to one.'
@@ -13254,6 +13260,210 @@ function podTextLines(pt){
   return out.sort((a, b) => a.t - b.t || (b.chapter ? 1 : 0) - (a.chapter ? 1 : 0));
 }
 
+// On-device podcast captions (#241). An episode with no transcript of its
+// own is transcribed in the listener's browser by Whisper (transformers.js,
+// in a Web Worker) - free, no limits, nothing stored on any server. Audio
+// comes through the worker's /podaudio a slice at a time, starting at the
+// playhead so the part being listened to comes first. Results are kept on
+// this device only, for 7 days, then made fresh.
+// Models: English-only tiny (~41 MB, one-time download) by default. A
+// non-English show needs the multilingual base model (~77 MB), which the
+// captions view offers to install - the small one can't do those at all.
+var CAP_MODEL_EN = 'onnx-community/whisper-tiny.en';
+var CAP_MODEL_MULTI = 'onnx-community/whisper-base';
+var CAP_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0';
+var CAP_CHUNK_BYTES = 2 * 1024 * 1024;
+var CAP_TTL_MS = 7 * 24 * 3600 * 1000;
+var LS_CAP_MULTI = 'ebbless_caption_multilingual';
+var capJob = null, capWorkerObj = null, capSeq = 0, capPending = new Map(), capModelProgress = {};
+function capLang(t){ return String((t && t.lang) || 'en').toLowerCase().split(/[-_]/)[0]; }
+function capMultiInstalled(){ return lsGet(LS_CAP_MULTI, false) === true; }
+function capWorker(){
+  if (capWorkerObj) return capWorkerObj;
+  const src = `import { pipeline, env } from '${CAP_LIB}';
+env.allowLocalModels = false;
+const pipes = {};
+function getPipe(model){
+  if (!pipes[model]) pipes[model] = pipeline('automatic-speech-recognition', model, {
+    dtype: 'q8', device: 'wasm',
+    progress_callback: (p) => postMessage({ type: 'progress', model, p }),
+  });
+  return pipes[model];
+}
+onmessage = async (e) => {
+  const { id, model, audio, language } = e.data;
+  try {
+    const asr = await getPipe(model);
+    const opts = { return_timestamps: true, chunk_length_s: 30, stride_length_s: 5 };
+    if (language){ opts.language = language; opts.task = 'transcribe'; }
+    const out = await asr(audio, opts);
+    postMessage({ type: 'result', id, chunks: (out && out.chunks) || [] });
+  } catch (err){ postMessage({ type: 'error', id, message: String((err && err.message) || err) }); }
+};`;
+  capWorkerObj = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
+  // the library or a model file failed to load: fail what's waiting
+  capWorkerObj.onerror = (e) => {
+    console.warn('[captions] worker error', e && e.message);
+    capPending.forEach(p => p.reject(new Error('captions worker failed')));
+    capPending.clear();
+    capWorkerObj = null;
+  };
+  capWorkerObj.onmessage = (e) => {
+    const m = e.data || {};
+    if (m.type === 'progress'){
+      const p = m.p || {};
+      if (p.file && p.total){
+        const files = capModelProgress[m.model] || (capModelProgress[m.model] = {});
+        files[p.file] = { loaded: p.loaded || 0, total: p.total };
+      }
+      if (capJob && capJob.onProgress) capJob.onProgress();
+      return;
+    }
+    const pend = capPending.get(m.id);
+    if (!pend) return;
+    capPending.delete(m.id);
+    if (m.type === 'result') pend.resolve(m.chunks); else pend.reject(new Error(m.message));
+  };
+  return capWorkerObj;
+}
+function capModelPct(model){
+  const files = Object.values(capModelProgress[model] || {});
+  if (!files.length) return null;
+  const tot = files.reduce((a, f) => a + f.total, 0), got = files.reduce((a, f) => a + Math.min(f.loaded, f.total), 0);
+  return tot ? Math.round(got / tot * 100) : null;
+}
+function capRun(model, audio, language){
+  const id = ++capSeq;
+  return new Promise((resolve, reject) => {
+    capPending.set(id, { resolve, reject });
+    capWorker().postMessage({ id, model, audio, language }, [audio.buffer]);
+  });
+}
+// this device's caption store (IndexedDB - Cache Storage gets cleared by the
+// service worker on every app update)
+var capDbP = null;
+function capDb(){
+  if (!capDbP) capDbP = new Promise((resolve, reject) => {
+    const req = indexedDB.open('ebbless-captions', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('caps');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return capDbP;
+}
+async function capGet(id){
+  try {
+    const db = await capDb();
+    const rec = await new Promise((res, rej) => { const r = db.transaction('caps').objectStore('caps').get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    if (rec && Date.now() - rec.ts > CAP_TTL_MS){ capDel(id); return null; }
+    return rec || null;
+  } catch(e){ return null; }
+}
+async function capPut(id, rec){
+  try { const db = await capDb(); db.transaction('caps', 'readwrite').objectStore('caps').put(rec, id); } catch(e){}
+}
+async function capDel(id){
+  try { const db = await capDb(); db.transaction('caps', 'readwrite').objectStore('caps').delete(id); } catch(e){}
+}
+// drop anything past its 7 days, once per session
+var capPruned = false;
+async function capPrune(){
+  if (capPruned) return; capPruned = true;
+  try {
+    const db = await capDb();
+    const cur = db.transaction('caps', 'readwrite').objectStore('caps').openCursor();
+    cur.onsuccess = () => { const c = cur.result; if (!c) return; if (!c.value || Date.now() - c.value.ts > CAP_TTL_MS) c.delete(); c.continue(); };
+  } catch(e){}
+}
+async function capFetch(url, start, end){
+  const res = await fetch(BACKEND + '/podaudio?' + new URLSearchParams({ url, start, end }).toString());
+  if (!res.ok) throw new Error('audio ' + res.status);
+  return { buf: await res.arrayBuffer(), total: Number(res.headers.get('X-Total-Length')) || 0 };
+}
+// any slice of an mp3 decodes on its own; resampled to Whisper's 16 kHz mono
+async function capDecode(buf){
+  const ctx = new OfflineAudioContext(1, 16000, 16000);
+  const ab = await ctx.decodeAudioData(buf);
+  if (ab.numberOfChannels === 1) return ab.getChannelData(0).slice();
+  const out = new Float32Array(ab.length);
+  for (let c = 0; c < ab.numberOfChannels; c++){ const d = ab.getChannelData(c); for (let i = 0; i < d.length; i++) out[i] += d[i] / ab.numberOfChannels; }
+  return out;
+}
+// same joining as the worker's cuesToLines: short cues become readable lines
+function capLines(rec){
+  const cues = [];
+  Object.values(rec.parts || {}).forEach(p => p.forEach(c => cues.push(c)));
+  cues.sort((a, b) => a[0] - b[0]);
+  const lines = [];
+  let cur = null;
+  cues.forEach(([t, end, text]) => {
+    const join = cur && t - cur.end <= 2 && cur.text.length + text.length < 110 && !/[.?!…]["')\]]?$/.test(cur.text);
+    if (join){ cur.text += ' ' + text; cur.end = Math.max(cur.end, end); }
+    else { if (cur) lines.push(cur); cur = { t, end, text }; }
+  });
+  if (cur) lines.push(cur);
+  return lines.map(l => ({ t: Math.round(l.t * 100) / 100, text: l.text }));
+}
+// onUpdate(lines, state): state is 'working' | 'done' | 'need-multi' | 'failed'
+async function generateCaptions(t, onUpdate){
+  const id = t.videoId, url = audioUrlOf(id);
+  if (capJob && capJob.id === id && !capJob.cancelled){ capJob.onUpdate = onUpdate; return; }
+  if (capJob) capJob.cancelled = true;
+  const job = capJob = { id, cancelled: false, onUpdate, onProgress: null };
+  capPrune();
+  const lang = capLang(t), english = lang === 'en';
+  const rec = (await capGet(id)) || { ts: Date.now(), total: 0, parts: {}, done: false };
+  if (job.cancelled) return;
+  if (rec.done){ job.onUpdate(capLines(rec), 'done'); return; }
+  if (!english && !capMultiInstalled()){ job.onUpdate(capLines(rec), 'need-multi'); return; }
+  const model = english ? CAP_MODEL_EN : CAP_MODEL_MULTI;
+  job.onProgress = () => { if (!job.cancelled) job.onUpdate(capLines(rec), 'working', capModelPct(model)); };
+  job.onUpdate(capLines(rec), 'working');
+  try {
+    if (!rec.total){
+      rec.total = (await capFetch(url, 0, 1)).total;
+      if (!rec.total) throw new Error('no length');
+    }
+    const ad = activeDeck();
+    const dur = (ad.player && ad.player.getDuration && ad.player.getDuration()) || t.duration || 0;
+    if (!dur) throw new Error('no duration');
+    rec.dur = dur;
+    const n = Math.ceil(rec.total / CAP_CHUNK_BYTES);
+    const at = (ad.player && ad.player.getCurrentTime && ad.player.getCurrentTime()) || 0;
+    const first = Math.min(n - 1, Math.max(0, Math.floor(at / dur * n)));
+    const order = [];
+    for (let i = first; i < n; i++) order.push(i);
+    for (let i = 0; i < first; i++) order.push(i);
+    let decoded = 0;
+    for (const i of order){
+      if (job.cancelled) return;
+      if (rec.parts[i]) continue;
+      const start = i * CAP_CHUNK_BYTES, end = Math.min(rec.total, start + CAP_CHUNK_BYTES) - 1;
+      const { buf } = await capFetch(url, start, end);
+      let audio;
+      try { audio = await capDecode(buf); decoded++; }
+      catch(e){ if (!decoded && i === first) throw e; rec.parts[i] = []; continue; }
+      const chunks = await capRun(model, audio, english ? null : lang);
+      const offset = start / rec.total * dur;
+      rec.parts[i] = chunks
+        .map(c => [offset + ((c.timestamp && c.timestamp[0]) || 0), offset + ((c.timestamp && (c.timestamp[1] != null ? c.timestamp[1] : c.timestamp[0])) || 0), String(c.text || '').trim()])
+        // drop Whisper's sound tags ("[Music]", "(upbeat)") - not words
+        .filter(c => c[2] && !/^[\[(][^\])]*[\])]$/.test(c[2]))
+        .map(c => [Math.round(c[0] * 100) / 100, Math.round(c[1] * 100) / 100, c[2]]);
+      await capPut(id, rec);
+      if (!job.cancelled) job.onUpdate(capLines(rec), 'working');
+    }
+    rec.done = true;
+    await capPut(id, rec);
+    if (!job.cancelled) job.onUpdate(capLines(rec), 'done');
+  } catch(e){
+    console.warn('[captions]', e);
+    if (!job.cancelled) job.onUpdate(capLines(rec), 'failed');
+  } finally {
+    if (capJob === job) capJob = null;
+  }
+}
+
 function renderLyrics(data){
   lyricsState = { videoId: data._videoId, lines: data.lines || [], synced: !!data.synced, activeIdx: -1 };
   lyricsScroller.innerHTML = '';
@@ -13311,15 +13521,61 @@ function maybeLoadLyrics(){
   if (isPodcastTrack(t)){
     if (lyricsState.videoId === t.videoId) return;
     lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
-    if (!podHasText(t)){
+    // feed audio can be captioned on this device; a YouTube-matched
+    // episode can't (no audio bytes to read)
+    const canGen = isAudioVideoId(t.videoId) && typeof Worker === 'function' && typeof OfflineAudioContext === 'function' && 'indexedDB' in window;
+    if (!podHasText(t) && !canGen){
       lyricsScroller.innerHTML = '<div class="lyrics-empty">This episode has no captions or chapters.</div>';
       return;
     }
     lyricsScroller.innerHTML = '<div class="lyrics-empty">Loading captions…</div>';
     podText(t).then(pt => {
-      const ct = currentTrack();
-      if (!ct || ct.videoId !== t.videoId) return;
-      renderLyrics({ _videoId: t.videoId, synced: true, lines: podTextLines(pt), emptyText: 'Couldn\'t load captions for this episode.' });
+      const live = () => { const ct = currentTrack(); return ct && ct.videoId === t.videoId && lyricsState.videoId === t.videoId; };
+      if (!live()) return;
+      if (pt.lines.length || !canGen){
+        renderLyrics({ _videoId: t.videoId, synced: true, lines: podTextLines(pt), emptyText: 'Couldn\'t load captions for this episode.' });
+        return;
+      }
+      generateCaptions(t, (lines, state, modelPct) => {
+        if (!live()) return;
+        if (state === 'need-multi'){
+          lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
+          lyricsScroller.innerHTML = '<div class="lyrics-empty">This episode isn\'t in English. Captions for it need the multilingual speech model, a one-time ' +
+            '77 MB download that stays on this device.<br><button type="button" class="cap-install-btn">Install it</button></div>';
+          lyricsScroller.querySelector('.cap-install-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            lsSet(LS_CAP_MULTI, true);
+            lyricsState.videoId = null;
+            maybeLoadLyrics();
+          });
+          return;
+        }
+        const waiting = modelPct != null && modelPct < 100
+          ? 'Downloading the captions model to this device (one time)… ' + modelPct + '%'
+          : 'Generating captions on this device…';
+        const emptyText = state === 'failed' ? 'Captions can\'t be generated for this episode\'s audio.' : waiting;
+        const all = podTextLines({ chapters: pt.chapters, lines });
+        const noteText = state === 'working' ? (lines.length ? 'More captions on the way - generating on this device.' : waiting)
+          : state === 'failed' && all.length ? 'Captions can\'t be generated for this episode\'s audio.' : '';
+        // keep the reader's place: when the lines haven't changed, only
+        // update the status note instead of rebuilding the list
+        const noteEl = lyricsScroller.querySelector('.cap-status');
+        if (all.length && lyricsState.videoId === t.videoId && lyricsState.lines.length === all.length && (noteEl || !noteText)){
+          if (noteEl){ if (noteText) noteEl.textContent = noteText; else noteEl.remove(); }
+          return;
+        }
+        renderLyrics({ _videoId: t.videoId, synced: true, lines: all, emptyText });
+        // a failed run (network blip, host hiccup) retries the next time the
+        // captions view is opened, picking up from the parts already done
+        if (state === 'failed') lyricsState.videoId = null;
+        if (all.length && noteText){
+          const note = document.createElement('div');
+          note.className = 'lyrics-empty cap-status';
+          note.style.marginTop = '18px';
+          note.textContent = noteText;
+          lyricsScroller.appendChild(note);
+        }
+      });
     });
     return;
   }
@@ -13680,6 +13936,7 @@ function reflectCurrentTrackUI(pos, opts){
   // until the new track actually starts reporting (issue #213)
   resetSeekUI(t);
   syncChapterList(t);
+  if (capJob && capJob.id !== t.videoId) capJob.cancelled = true;
   // a podcast episode is the show's own file - there's no match to flag
   const isPod = isPodcastTrack(t);
   document.body.classList.toggle('pod-playing', isPod);
