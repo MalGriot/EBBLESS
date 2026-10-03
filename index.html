@@ -615,10 +615,16 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
    flow-chrome's title/seek/controls block overlays its lower part and
    bottom:13% put the HUD between the title and the seek bar. Lift it (and
    the new-best flare) clear above that block, the same 236px it reserves
-   for .flow-lyrics. Portrait already slides the art above it (#184). */
+   for .flow-lyrics. Portrait already slides the art above it (#184).
+   The cue tick has the same problem at the top: with the art at 100vh it
+   sits under flow-top's icon bar (26px padding + 38px buttons), so stretch
+   it down from its usual spot (2vh - 12px) to 20px below that bar, tapered
+   to a needle point at the bottom. */
 @media (min-aspect-ratio:1/1){
   #flow-layer .rec-game-hud{bottom:calc(236px + var(--safe-b))}
   #flow-layer .rec-game-flare{bottom:calc(276px + var(--safe-b))}
+  #flow-layer .rec-game-mark{height:calc(96px - 2vh);width:3px;margin-left:-1.5px;border-radius:0;
+    clip-path:polygon(0 0,100% 0,50% 100%)}
 }
 
 /* cassette (issue #215): modelled on a real dark charcoal compact cassette -
