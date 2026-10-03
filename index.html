@@ -7690,9 +7690,23 @@ function openCreatePlaylistFlow(trackToAdd, opts){
 $('newPlaylistBtn').addEventListener('click', () => openCreatePlaylistFlow());
 $('newPlaylistBtnEmpty').addEventListener('click', () => openCreatePlaylistFlow());
 
+// Every library entry a hand-picked track can land in (Geethub #243). Used to
+// be type === 'custom' only, which hid every imported Spotify/YouTube/
+// SoundCloud/Apple Music playlist even though addTracksToPlaylist works on
+// them and withManualTracks carries hand-added songs across re-resolves.
+// Still left out: SwiiiRrrLL and CuRRentSSsss (PROFILE_REGENERATED_IDS -
+// rebuilt wholesale, so an added song would vanish on the next rebuild),
+// albums and podcasts (filed outside the Playlists bucket, not lists you
+// curate), and single-track/video entries (one song, not a playlist).
+function addablePlaylists(){
+  return getLibrary().map(id => getCachedPlaylist(id)).filter(p =>
+    p && Array.isArray(p.tracks) && !PROFILE_REGENERATED_IDS.includes(p.id) &&
+    !isSingleTrackType(p.type) && !isPodcastEntry(p) && !isAlbumEntry(p));
+}
+
 function openAddToPlaylistPicker(track){
   openImportOverlay();
-  const customs = getLibrary().map(id => getCachedPlaylist(id)).filter(p => p && p.type === 'custom' && p.id !== BLEND_ID);
+  const customs = addablePlaylists();
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
       escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span>' +
@@ -7700,7 +7714,7 @@ function openAddToPlaylistPicker(track){
   ).join('');
   importStage.innerHTML =
     '<div class="step">Add to playlist</div>' +
-    '<div style="width:100%;max-height:260px;overflow-y:auto;margin-bottom:16px">' +
+    '<div style="width:100%;max-height:55vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
       (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
     '</div>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
@@ -7719,7 +7733,7 @@ function openAddToPlaylistPicker(track){
 // destination for a single song and Liked Songs may not exist yet.
 function openSingleTrackDestinationPicker(track){
   openImportOverlay();
-  const customs = getLibrary().map(id => getCachedPlaylist(id)).filter(p => p && p.type === 'custom' && p.id !== LIKED_ID && p.id !== BLEND_ID);
+  const customs = addablePlaylists().filter(p => p.id !== LIKED_ID);
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
       escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span>' +
@@ -7728,7 +7742,7 @@ function openSingleTrackDestinationPicker(track){
   importStage.innerHTML =
     '<div class="step">Add &ldquo;' + escapeHtml(track.title) + '&rdquo; to&hellip;</div>' +
     '<button class="btn-ghost" id="singleTrackLikedBtn" style="width:100%;text-align:left;margin-bottom:14px;display:block">&#9825; Liked Songs</button>' +
-    '<div style="width:100%;max-height:220px;overflow-y:auto;margin-bottom:16px">' +
+    '<div style="width:100%;max-height:50vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
       (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No other playlists yet.</div>') +
     '</div>' +
     '<button class="btn-ghost" id="plNewFromSingleTrackBtn" style="width:100%">+ New playlist</button>';
