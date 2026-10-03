@@ -1241,6 +1241,12 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
 .about-copy{font-size:13px;color:var(--faint);line-height:1.7;max-width:520px}
 .about-copy strong{color:var(--text);font-weight:600}
+.kbd-list{list-style:none;margin:0;padding:0;max-width:520px}
+.kbd-list li{display:flex;align-items:baseline;gap:12px;padding:6px 0;border-top:1px solid var(--border);font-size:13px;color:var(--faint)}
+.kbd-list li:first-child{border-top:0}
+.kbd-list li>span{flex:none;width:118px;color:var(--faint-2);font-size:11px}
+.kbd-list kbd{font-family:inherit;font-size:11px;font-weight:600;line-height:1;color:var(--text);padding:3px 6px;border:1px solid var(--border-2);border-radius:5px}
+@media (hover: none) and (pointer: coarse){ #settingsKeysBlock{display:none} }
 
 .settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
 .slider-val{color:var(--faint);font-weight:400;margin-left:6px}
@@ -2864,6 +2870,33 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
         </div>
+      </div>
+      <!-- Keyboard shortcuts (Geethub #246): mirrors the document keydown
+           handler ("desktop keyboard shortcuts"); keep the two in sync.
+           Hidden on touch-only devices, where there's no keyboard to use. -->
+      <div class="settings-block" id="settingsKeysBlock">
+        <h2>Keyboard shortcuts</h2>
+        <ul class="kbd-list">
+          <li><span><kbd>Space</kbd></span>Play / pause</li>
+          <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Previous / next track (podcasts: back / forward 15s)</li>
+          <li><span><kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Back / forward 10s (podcasts: previous / next episode)</li>
+          <li><span><kbd>H</kbd></span>Home: back to the player</li>
+          <li><span><kbd>P</kbd> or <kbd>L</kbd></span>Library</li>
+          <li><span><kbd>Shift</kbd>+<kbd>L</kbd></span>Paste a link</li>
+          <li><span><kbd>Q</kbd></span>Queue</li>
+          <li><span><kbd>S</kbd></span>Settings</li>
+          <li><span><kbd>F</kbd></span>Fullscreen</li>
+          <li><span><kbd>Esc</kbd></span>Leave fullscreen, close a playlist</li>
+          <li><span><kbd>Z</kbd></span>Art (again to change style)</li>
+          <li><span><kbd>X</kbd></span>Cymatics</li>
+          <li><span><kbd>C</kbd></span>Lyrics</li>
+          <li><span><kbd>V</kbd></span>Video</li>
+          <li><span><kbd>I</kbd></span>Cymatics infinity on / off</li>
+          <li><span><kbd>K</kbd></span>Shuffle</li>
+          <li><span><kbd>O</kbd></span>Repeat</li>
+          <li><span><kbd>Shift</kbd>+<kbd>S</kbd></span>Suggest an improvement</li>
+          <li><span><kbd>Shift</kbd>+<kbd>B</kbd></span>Report a bug</li>
+        </ul>
       </div>
       <div class="settings-block" id="settingsAboutBlock">
         <h2>About</h2>
@@ -14178,6 +14211,16 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'b': case 'B':
       if (e.shiftKey && !e.repeat){ const a = $('reportBugBtn'); if (a) a.click(); }
+      break;
+    case 'h': case 'H':
+      // home (Geethub #245): back to the main player view from anywhere -
+      // every fullscreen layer closed, then the wordmark's own setView('player')
+      // (closes the queue / playlist panel, steps out of Settings). Settings
+      // opened from desktop fullscreen would otherwise restore it.
+      if (e.repeat) break;
+      leaveFullscreen(true);
+      state.settingsFromDeskFs = false;
+      $('wordmarkBtn').click();
       break;
     case 'Escape':
       // Fullscreen first (one layer, see leaveFullscreen), then an open
