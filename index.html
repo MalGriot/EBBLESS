@@ -600,6 +600,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @keyframes recGameBlink{0%,49.9%{opacity:1}50%,100%{opacity:0}}
 .rec-game-hud[data-phase="over"] .rec-game-score{animation:recGameBlink 360ms linear 3 forwards}
 .rec-game-hud[data-phase="over"] .rec-game-best{animation:recGameBlink 360ms linear 1080ms 3 forwards}
+/* issue #235: landscape flow (desktop fullscreen) - the art is 100vh, so
+   flow-chrome's title/seek/controls block overlays its lower part and
+   bottom:13% put the HUD between the title and the seek bar. Lift it (and
+   the new-best flare) clear above that block, the same 236px it reserves
+   for .flow-lyrics. Portrait already slides the art above it (#184). */
+@media (min-aspect-ratio:1/1){
+  #flow-layer .rec-game-hud{bottom:calc(236px + var(--safe-b))}
+  #flow-layer .rec-game-flare{bottom:calc(276px + var(--safe-b))}
+}
 
 /* cassette (issue #215): modelled on a real dark charcoal compact cassette -
    one hand-authored vector shell (fine molded-plastic grain, recessed label
@@ -12409,6 +12418,7 @@ function recordGameStart(){
   recGameMul = 1;
   recGameHud.classList.remove('is-new');
   recGameEl.classList.add('is-game');
+  closeArtStyleMenu(); // issue #235: no art-style menu over a run
   recGameHud.dataset.phase = 'run';
   recordGameRender();
 }
@@ -12700,6 +12710,10 @@ cassetteApplyRotation(0);
 visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   if (btn.dataset.mode === 'art'){
     e.stopPropagation();
+    // issue #235: during a record tap run the art tab sits over the top of
+    // the disc where the cue is, so a click there is a tap on the record,
+    // never the art-style menu
+    if (recGame.on){ recordGameTap(); return; }
     if (visualMode !== 'art'){ setVisualMode('art'); closeArtStyleMenu(); }
     else toggleArtStyleMenu();
     return;
