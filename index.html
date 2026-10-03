@@ -962,15 +962,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 /* ---------- credits (Settings > About). Same centered card as
    #feedback-modal, over #danger-scrim ---------- */
-#credits-modal,#yt-modal,#reroll-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
+#credits-modal,#whatsnew-modal,#yt-modal,#reroll-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
   max-height:calc(100dvh - 32px);overflow-y:auto;outline:none;
   background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
   box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
   opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-#credits-modal.is-open,#yt-modal.is-open,#reroll-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-#credits-modal h2,#yt-modal h2,#reroll-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
-#credits-modal > p,#yt-modal > p,#reroll-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
+#credits-modal.is-open,#whatsnew-modal.is-open,#yt-modal.is-open,#reroll-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#credits-modal h2,#whatsnew-modal h2,#yt-modal h2,#reroll-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
+#credits-modal > p,#whatsnew-modal > p,#yt-modal > p,#reroll-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
 .credits-group h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:16px 0 6px}
 .credits-group ul{list-style:none;margin:0;padding:0}
 .credits-group li{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-top:1px solid var(--border)}
@@ -978,6 +978,12 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .credits-group a{color:var(--text);font-size:14px;font-weight:600;text-decoration:underline;text-decoration-color:var(--border-2);text-underline-offset:3px}
 .credits-group a:hover,.credits-group a:focus-visible{text-decoration-color:currentColor}
 .credits-group span{font-size:12px;color:var(--faint)}
+/* What's new (Settings > App): reuses the credits card + .credits-group
+   headings; one group per WHATS_NEW entry */
+#whatsnew-modal .credits-group li{display:block;font-size:13px;color:var(--text);line-height:1.5}
+.whatsnew-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
+  background:var(--accent);vertical-align:middle}
+.whatsnew-dot[hidden]{display:none}
 /* ---------- YouTube player card (4th player tab). Same card as
    #credits-modal. YouTube's embed rules need the player at least 200x200,
    hence the min-height on a 16:9 slot. #yt-host.is-shown (see ytPanelSync)
@@ -2875,6 +2881,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           </div>
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">What's new<span class="whatsnew-dot" id="whatsNewDot" hidden aria-hidden="true"></span></div>
+            <div class="desc">New features and fixes in each version of EBBLESS.</div>
+          </div>
+          <button class="btn-ghost" id="whatsNewBtn">View</button>
+        </div>
       </div>
       <!-- Keyboard shortcuts (Geethub #246): mirrors the document keydown
            handler ("desktop keyboard shortcuts"); keep the two in sync.
@@ -2929,6 +2942,16 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   </main>
 
   <div id="danger-scrim"></div>
+
+  <!-- ===== WHAT'S NEW (filled from WHATS_NEW) ===== -->
+  <div id="whatsnew-modal" role="dialog" aria-modal="true" aria-labelledby="whatsNewModalTitle" tabindex="-1">
+    <h2 id="whatsNewModalTitle">What's new</h2>
+    <p id="whatsNewIntro">Recent features and fixes, newest first.</p>
+    <div id="whatsNewList"></div>
+    <div class="danger-modal-actions">
+      <button type="button" class="btn-ghost" id="whatsNewCloseBtn">Close</button>
+    </div>
+  </div>
 
   <!-- ===== CREDITS ===== -->
   <div id="credits-modal" role="dialog" aria-modal="true" aria-labelledby="creditsModalTitle" tabindex="-1">
@@ -9155,6 +9178,69 @@ creditsModal.addEventListener('keydown', (e) => {
   e.stopPropagation();
 });
 feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.preventDefault(); closeFeedbackModal(); } });
+
+// What's new (Settings > App). `version` matches the number in sw.js
+// CACHE_VERSION ('ebbless-shell-v60' -> 60). When a deploy bumps
+// CACHE_VERSION and has user-facing changes, add an entry at the TOP.
+// Plain-English bullets only: no issue numbers, no internal names.
+// Versions with nothing user-facing are simply left out.
+const WHATS_NEW = [
+  { version: 60, date: '2026-10-03', items: [
+    'Send feedback is now the first thing in Settings.',
+    'YouTube artist names no longer end in " - Topic".',
+    'Record tap game: cleaner fullscreen layout on desktop.',
+    'Android: share a music link from another app straight into EBBLESS.',
+    'Beta testers get a small reminder to send feedback.'
+  ]},
+  { version: 58, date: '2026-10-03', items: [
+    'Podcasts: skip back or forward 15 seconds with buttons, arrow keys, or the lock screen.',
+    'The Start here tip lists every kind of link you can paste.',
+    'An empty library no longer suggests only Spotify playlists.',
+    'Desktop: the playlist panel no longer slides in when you reload.',
+    'The video player is cleaner, with no extra heading or caption.'
+  ]},
+  { version: 55, date: '2026-10-02', items: [
+    'Artist links on the artist page now make a playlist of that artist\'s tracks.',
+    'YouTube playlist import reads up to about 100 videos.',
+    'YouTube playlist import loads track art more smoothly.'
+  ]},
+  { version: 53, date: '2026-10-02', items: [
+    'Coming back to EBBLESS after a long time in the mini player no longer reloads the page.'
+  ]}
+];
+const WHATS_NEW_SEEN_KEY = 'ebbless:whatsNewSeen';
+const whatsNewModal = $('whatsnew-modal'), whatsNewBtn = $('whatsNewBtn'), whatsNewDot = $('whatsNewDot');
+function whatsNewLatest(){ return WHATS_NEW.length ? WHATS_NEW[0].version : 0; }
+(function initWhatsNew(){
+  const fmt = (d) => { try { return new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch(e){ return d; } };
+  $('whatsNewList').innerHTML = WHATS_NEW.map(v =>
+    '<div class="credits-group"><h3>Version ' + v.version + ' &middot; ' + escapeHtml(fmt(v.date)) + '</h3><ul>' +
+    v.items.map(t => '<li>' + escapeHtml(t) + '</li>').join('') + '</ul></div>').join('');
+  // subtle one-time dot on the row until this version's notes are opened
+  let seen = 0;
+  try { seen = parseInt(localStorage.getItem(WHATS_NEW_SEEN_KEY), 10) || 0; } catch(e){}
+  whatsNewDot.hidden = seen >= whatsNewLatest();
+})();
+function openWhatsNewModal(){
+  dangerScrim.classList.add('is-open');
+  whatsNewModal.classList.add('is-open');
+  whatsNewDot.hidden = true;
+  try { localStorage.setItem(WHATS_NEW_SEEN_KEY, String(whatsNewLatest())); } catch(e){}
+  setTimeout(() => whatsNewModal.focus(), 50);
+}
+function closeWhatsNewModal(){
+  if (!whatsNewModal.classList.contains('is-open')) return;
+  whatsNewModal.classList.remove('is-open');
+  dangerScrim.classList.remove('is-open');
+  whatsNewBtn.focus();
+}
+whatsNewBtn.addEventListener('click', openWhatsNewModal);
+$('whatsNewCloseBtn').addEventListener('click', closeWhatsNewModal);
+dangerScrim.addEventListener('click', closeWhatsNewModal);
+whatsNewModal.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape'){ e.preventDefault(); closeWhatsNewModal(); }
+  e.stopPropagation();
+});
 feedbackModal.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (fbSending) return;
