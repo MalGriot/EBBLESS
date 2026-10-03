@@ -187,6 +187,11 @@ video.lib-bg-video.is-playing{opacity:1}
   background:var(--panel-2);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}
 .paste-guide-title{font-size:13.5px;font-weight:700;margin:0 24px 6px 0;color:var(--accent)}
 .paste-guide p{font-size:13px;line-height:1.45;color:var(--text);margin:0}
+.paste-guide-list{margin:0 0 8px;padding:0;list-style:none;font-size:13px;line-height:1.4;color:var(--text)}
+.paste-guide-list li{position:relative;padding-left:12px}
+.paste-guide-list li+li{margin-top:6px}
+.paste-guide-list li::before{content:'';position:absolute;left:0;top:.6em;width:4px;height:4px;border-radius:50%;background:var(--accent)}
+.paste-guide-list b{font-weight:700}
 .import-row .paste-guide-x{position:absolute;top:6px;right:8px;width:28px;height:28px;font-size:18px;line-height:1;
   color:var(--faint);background:none;padding:0}
 .import-row .paste-guide-x:hover,.import-row .paste-guide-x:focus-visible{color:var(--text)}
@@ -1950,11 +1955,23 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 .onb-dot[aria-current] i{width:32px;background:rgba(255,255,255,.16)}
 .onb-dot b{position:absolute;inset:0;border-radius:inherit;background:var(--onb-gold);transform:scaleX(0);transform-origin:left}
 .onb-dot:focus-visible,.onb-pager-next:focus-visible{outline:2px solid var(--onb-gold);outline-offset:-2px;border-radius:999px}
-.onb-pager-next{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin-left:2px;padding:0;
-  border:0;border-radius:999px;background:none;color:var(--faint-2);cursor:pointer;opacity:.6;
-  transition:opacity 400ms var(--ease-out),color 400ms var(--ease-out)}
-.onb-pager-next svg{width:16px;height:16px}
-#onbPager.is-waiting .onb-pager-next{opacity:1;color:var(--onb-gold)}
+.onb-pager-next{position:relative;display:flex;align-items:center;gap:3px;height:30px;margin-left:4px;padding:0 9px 0 13px;
+  border:1px solid rgba(224,178,106,.3);border-radius:999px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(180deg,rgba(224,178,106,.16),rgba(224,178,106,.06));color:var(--onb-gold);
+  font-family:inherit;font-size:12px;font-weight:600;line-height:1;letter-spacing:.04em;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);
+  transition:background 400ms var(--ease-out),color 400ms var(--ease-out),box-shadow 400ms var(--ease-out),border-color 400ms var(--ease-out),transform 160ms var(--ease-out)}
+.onb-pager-next svg{width:14px;height:14px;flex:none}
+.onb-pager-next:active{transform:scale(.95)}
+/* glassy gold "your move" state (after Markus's "Glassy button" on
+   Dribbble): solid gold fill, a bright top edge, a breathing glow, and a
+   shine that sweeps across every cycle */
+#onbPager.is-waiting .onb-pager-next{color:#1d1407;border-color:rgba(255,236,200,.55);
+  background:linear-gradient(180deg,#f3cf8f 0%,#e0b26a 55%,#c9944a 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(120,80,30,.35),0 0 0 0 rgba(224,178,106,.5),0 4px 16px rgba(224,178,106,.35);
+  animation:onb-next-glow 1.6s var(--ease-in-out) infinite}
+.onb-pager-next::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:40%;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.65),transparent);transform:skewX(-18deg)}
+#onbPager.is-waiting .onb-pager-next::after{animation:onb-next-shine 3.2s var(--ease-in-out) infinite}
 #onbPager.is-waiting .onb-pager-next svg{animation:onb-chevron-nudge 1.6s var(--ease-in-out) infinite}
 #onbPager.is-waiting .onb-dot.is-next i{animation:onb-dot-pulse 1.6s var(--ease-in-out) infinite}
 /* desktop widths (the min-width:860px layout, no bottom nav): the player
@@ -1968,8 +1985,11 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 @keyframes onb-dot-pulse{0%,100%{background:rgba(255,255,255,.28);transform:scale(1)}
   50%{background:var(--onb-gold);transform:scale(1.35)}}
 @keyframes onb-chevron-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+@keyframes onb-next-glow{0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(120,80,30,.35),0 0 0 0 rgba(224,178,106,.5),0 4px 16px rgba(224,178,106,.35)}
+  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(120,80,30,.35),0 0 0 5px rgba(224,178,106,0),0 4px 22px rgba(224,178,106,.6)}}
+@keyframes onb-next-shine{0%,55%{left:-60%;opacity:0}60%{opacity:1}85%,100%{left:130%;opacity:0}}
 @media (prefers-reduced-motion: reduce){
-  #onbPager.is-waiting .onb-pager-next svg,#onbPager.is-waiting .onb-dot.is-next i{animation:none}
+  #onbPager.is-waiting .onb-pager-next,#onbPager.is-waiting .onb-pager-next::after,#onbPager.is-waiting .onb-pager-next svg,#onbPager.is-waiting .onb-dot.is-next i{animation:none}
   #onbPager.is-waiting .onb-dot.is-next i{background:var(--onb-gold)}
 }
 
@@ -2261,7 +2281,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 <button id="onbCapture" type="button" aria-hidden="true" tabindex="-1"></button>
 <div id="onbPager" role="group" aria-label="Tutorial chapters">
   <div class="onb-dots"></div>
-  <button class="onb-pager-next" type="button" aria-label="Next chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  <button class="onb-pager-next" type="button" aria-label="Next chapter"><span>Next</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
 </div>
 <audio id="onbMusic" src="brand/assets/intro-theme.mp3" preload="auto"></audio>
 
@@ -2337,7 +2357,12 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
         <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
           <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
           <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
-          <p>Paste a Spotify, Apple Music, YouTube or SoundCloud link to a playlist, album, song or artist, then hit Load. Podcasts work too: a Spotify or Apple Podcasts show or episode, or an RSS feed. No link? Search, or describe your vibe.</p>
+          <ul class="paste-guide-list">
+            <li><b>A link</b> to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud</li>
+            <li><b>A podcast</b>: a show, an episode, or an RSS feed</li>
+            <li><b>A vibe</b>: search an artist or genre, or describe a mood, like &ldquo;rainy Sunday, something warm and slow&rdquo;</li>
+          </ul>
+          <p>Then hit Load.</p>
           <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
         </div>
       </form>
@@ -17720,10 +17745,10 @@ function runIntro(preview){
     // attention moves to Load - rather than swapping/clearing mid-beat, so
     // the app's one core action reads as a headline instead of a caption
     // that flashes past with everything else
-    setMainCaption('Paste a link to a playlist, album, song, or artist', urlInput);
+    setMainCaption('Paste a link, search, or describe your vibe', urlInput);
     await wait(500);
     if (done) return;
-    setCaption('Spotify, YouTube, SoundCloud, Apple Music, or a podcast', urlInput);
+    setCaption('Spotify, Apple Music, YouTube, SoundCloud, or a podcast', urlInput);
     await wait(1500);
     if (done) return;
     const demoUrl = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
@@ -17913,12 +17938,12 @@ function runIntro(preview){
 
     // -> 28800
     setCaption('Shuffle it', shuffleBtn);
-    await wait(600);
+    await wait(300);
     tap(shuffleBtn, true);
     if (shuffleBtn) shuffleBtn.classList.add('is-active');
-    await wait(2000);
+    await wait(1000);
     if (shuffleBtn) shuffleBtn.classList.remove('is-active');
-    await wait(900);
+    await wait(450);
     if (done) return;
     // -> 32300
     setCaption('Loop it', repeatBtn);
@@ -18092,7 +18117,7 @@ function runIntro(preview){
   const CHAPTERS = [
     { name: 'Load', run: chapterLoad, clip: [0, 12900], est: [17000, 17000] },
     { name: 'Listen', run: chapterListen, clip: [12900, 27200], est: [15300, 16900] },
-    { name: 'Control', run: chapterControl, clip: [27200, 35800], est: [10700, 11400] },
+    { name: 'Control', run: chapterControl, clip: [27200, 35800], est: [8950, 9650] },
     { name: 'Discover', run: chapterDiscover, clip: [35800, 42800], est: [8700, 8700] },
     { name: 'Outro', run: chapterOutro, clip: [42800, null], once: true }
   ];
@@ -18131,7 +18156,10 @@ function runIntro(preview){
       b.style.transition = 'none';
       b.style.transform = 'scaleX(0)';
     });
-    if (pagerNextEl) pagerNextEl.setAttribute('aria-label', i >= PAGED - 1 ? 'Finish tutorial' : 'Next chapter');
+    if (pagerNextEl){
+      pagerNextEl.setAttribute('aria-label', i >= PAGED - 1 ? 'Finish tutorial' : 'Next chapter');
+      pagerNextEl.firstChild.textContent = i >= PAGED - 1 ? 'Finish' : 'Next';
+    }
   }
   // fills the current pill over the chapter's estimated length, stopping
   // just short of full - an estimate can run long, and a pill that fills
@@ -18155,23 +18183,27 @@ function runIntro(preview){
     pagerEl.classList.add('is-waiting');
   }
   let chapter = -1;
-  // plays one chapter's slice of the track: seek, fade in, then fade out
-  // and pause at the slice's end so a chapter held on its last frame past
-  // its clip goes quiet instead of bleeding into the next chapter's music.
-  // Both end timers go through later(), so paging cancels them along with
-  // the rest of the chapter
+  // starts one chapter's slice of the track: seek and fade in. The slice's
+  // start is what the chapter's beats are scored to; its end is not a hard
+  // stop - the music keeps running until the chapter has actually played
+  // through and endClip() fades it out, so a chapter that runs past its
+  // slice never finishes in silence
   function playClip(clip){
     if (!musicEl || prefersReduced) return;
-    const [fromMs, toMs] = clip;
+    const [fromMs] = clip;
     try{ musicEl.currentTime = fromMs / 1000; }catch(e){}
     musicEl.volume = 0;
     musicEl.play().catch(() => {});
     fadeMusic(MUSIC_PEAK, fromMs === 0 ? 1400 : 500);
-    if (toMs != null){
-      const fadeMs = 900;
-      later(() => fadeMusic(0, fadeMs), Math.max(0, toMs - fromMs - fadeMs));
-      later(() => { if (!done) musicEl.pause(); }, toMs - fromMs);
-    }
+  }
+  // fades the chapter's music out as it settles into its hold, then pauses
+  // it. The pause goes through later(), so paging on mid-fade cancels it
+  // rather than stopping the next chapter's music
+  function endClip(){
+    if (!musicEl || prefersReduced) return;
+    const fadeMs = 900;
+    fadeMusic(0, fadeMs);
+    later(() => { if (!done) musicEl.pause(); }, fadeMs);
   }
   // puts back everything a chapter can leave half-done (paging away
   // mid-beat parks the outgoing chapter wherever it was, see wait()), so
@@ -18213,7 +18245,10 @@ function runIntro(preview){
     // visitor pages on - nothing left pending to cancel but the clip's end
     // fade. A chapter paged away from mid-run never gets here (see wait())
     await ch.run();
-    if (!done && chapter === i) pagerHold(i);
+    if (!done && chapter === i){
+      if (!ch.once) endClip();
+      pagerHold(i);
+    }
   }
   // paging to chapter i (forward, back, or the same one again - each
   // replays from its start with its own music slice): cancel whatever the
