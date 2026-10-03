@@ -2740,13 +2740,45 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <!-- ===== SETTINGS ===== -->
   <main class="view" id="view-settings" hidden>
     <div class="view-scroll">
-      <!-- Settings layout (issue #212): most-used first. Playback controls
-           lead; App actions (install/share/tutorial) next; Feedback & support
-           groups every way to report something; About + Credits read-only;
+      <!-- Settings layout (issue #212): most-used first. Feedback & support
+           leads so Send feedback is the top row (#239) and groups every way
+           to report something; Playback controls next; App actions
+           (install/share/tutorial) after; About + Credits read-only;
            the destructive Library & data block stays last. Ids are unchanged
            - JS (crossfade/level/install/wrong-track log) and the onboarding
            tour look these up directly. #installBlock is now a single row in
            the App block (same show/hide JS), not its own block. -->
+      <div class="settings-block" id="settingsSupportBlock">
+        <h2>Feedback &amp; support</h2>
+        <div class="settings-row">
+          <div>
+            <div class="label">Send feedback</div>
+            <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
+          </div>
+          <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
+        </div>
+        <div class="settings-row beta-hidden">
+          <div>
+            <div class="label">Report a bug</div>
+            <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+          </div>
+          <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
+        </div>
+        <div class="settings-row beta-hidden">
+          <div>
+            <div class="label">Suggest an improvement</div>
+            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+          </div>
+          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
+        </div>
+        <div class="settings-row beta-hidden">
+          <div>
+            <div class="label">Wrong-track log</div>
+            <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
+          </div>
+          <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
+        </div>
+      </div>
       <div class="settings-block" id="settingsPlaybackBlock">
         <h2>Playback</h2>
         <div class="settings-row">
@@ -2799,37 +2831,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="desc">Watch the intro walkthrough again, from the top.</div>
           </div>
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
-        </div>
-      </div>
-      <div class="settings-block" id="settingsSupportBlock">
-        <h2>Feedback &amp; support</h2>
-        <div class="settings-row">
-          <div>
-            <div class="label">Send feedback</div>
-            <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
-          </div>
-          <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
-        </div>
-        <div class="settings-row beta-hidden">
-          <div>
-            <div class="label">Report a bug</div>
-            <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
-          </div>
-          <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
-        </div>
-        <div class="settings-row beta-hidden">
-          <div>
-            <div class="label">Suggest an improvement</div>
-            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
-          </div>
-          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
-        </div>
-        <div class="settings-row beta-hidden">
-          <div>
-            <div class="label">Wrong-track log</div>
-            <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
-          </div>
-          <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
         </div>
       </div>
       <div class="settings-block" id="settingsAboutBlock">
@@ -4816,9 +4817,10 @@ function ensureAccountBlock(){
   block.id = 'accountBlock';
   block.innerHTML = '<h2>Account</h2><div class="settings-row" style="gap:12px"><div style="min-width:0"><div class="label" id="accountLabel" style="overflow-wrap:anywhere"></div><div class="desc" id="accountDesc"></div></div>'
     + '<div id="accountActions" style="display:flex;flex:none;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center"></div></div>';
-  const first = scroll.querySelector('.settings-block');
-  // Top of Settings, above every other section - who you're signed in as
-  // frames everything below it that syncs.
+  const first = scroll.querySelector('.settings-block:not(#settingsSupportBlock)');
+  // Top of Settings, below only Feedback & support (Send feedback stays the
+  // first row, #239) - who you're signed in as frames everything below it
+  // that syncs.
   if (first) first.parentNode.insertBefore(block, first);
   else scroll.appendChild(block);
   block.querySelector('#accountActions').addEventListener('click', (e) => {
