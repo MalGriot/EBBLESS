@@ -5679,6 +5679,7 @@ window.addEventListener('popstate', () => {
 });
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
+  if (!hasTrack){ document.body.classList.remove('pod-playing'); syncIosPodSkip(false); }
   const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen);
   miniBar.hidden = !showMini;
   if (showMini) miniBar.setAttribute('data-shown', '1'); else miniBar.removeAttribute('data-shown');
@@ -13123,6 +13124,7 @@ function reflectCurrentTrackUI(pos, opts){
   // a podcast episode is the show's own file - there's no match to flag
   const isPod = isPodcastTrack(t);
   document.body.classList.toggle('pod-playing', isPod);
+  syncIosPodSkip(isPod);
   reportMatchBtn.hidden = isPod;
   if (flowReportBtn) flowReportBtn.hidden = isPod;
   if (!skipArt){
@@ -13828,6 +13830,26 @@ const KB_SEEK_S = 10;
 const POD_SKIP_S = 15;
 function isPodcastTrack(t){ return !!t && (isAudioVideoId(t.videoId) || !!t.podcast); }
 function seekStepS(){ return isPodcastTrack(currentTrack()) ? POD_SKIP_S : KB_SEEK_S; }
+// kbSeekBy plus the lock screen's position, for the skip buttons/keys
+function kbSkipBy(delta){
+  const to = kbSeekBy(delta);
+  if (typeof to === 'number') syncMediaPositionState(true, to);
+}
+// Lock-screen -/+ seconds handler (seekbackward/seekforward)
+function mediaSessionSkip(dir){
+  return (d) => kbSkipBy(dir * (d && d.seekOffset > 0 ? d.seekOffset : seekStepS()));
+}
+// iOS swaps the lock screen's previous/next track buttons for -/+ seconds
+// ones whenever seekbackward/seekforward are registered, so there they're
+// only set while a podcast plays and cleared again for music.
+var iosPodSkipOn = false; // var: may be read before this line runs (startup UI sync)
+function syncIosPodSkip(isPod){
+  if (!isIOS || !('mediaSession' in navigator) || isPod === iosPodSkipOn) return;
+  iosPodSkipOn = isPod;
+  ['seekbackward', 'seekforward'].forEach((a, i) => {
+    try { navigator.mediaSession.setActionHandler(a, isPod ? mediaSessionSkip(i ? 1 : -1) : null); } catch(e){}
+  });
+}
 let kbSeekLast = null; // { player, to, at }
 function kbSeekBy(delta){
   if (state.queuePos < 0) return;
@@ -13854,13 +13876,15 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       if (state.queuePos >= 0) userTogglePlayback();
       break;
+    // Podcasts swap the two (Geethub #234): plain arrows skip -/+15s,
+    // shift+arrows go to the previous/next episode. Music is unchanged.
     case 'ArrowLeft':
-      if (e.shiftKey){ e.preventDefault(); kbSeekBy(-seekStepS()); }
-      else playPrev();
+      if (e.shiftKey === isPodcastTrack(currentTrack())) playPrev();
+      else { e.preventDefault(); kbSkipBy(-seekStepS()); }
       break;
     case 'ArrowRight':
-      if (e.shiftKey){ e.preventDefault(); kbSeekBy(seekStepS()); }
-      else playNext(false);
+      if (e.shiftKey === isPodcastTrack(currentTrack())) playNext(false);
+      else { e.preventDefault(); kbSkipBy(seekStepS()); }
       break;
     case 'f': case 'F':
       if (state.flowOpen) closeFlow();
@@ -13933,11 +13957,7 @@ miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); 
 // adapter, so it follows a Chromecast session too); the mini bar's stop
 // propagation so the tap doesn't also open the full player
 [['skipBackBtn', -1], ['skipFwdBtn', 1], ['miniSkipBackBtn', -1], ['miniSkipFwdBtn', 1], ['flowSkipBackBtn', -1], ['flowSkipFwdBtn', 1]].forEach(([id, dir]) => {
-  $(id).addEventListener('click', (e) => {
-    e.stopPropagation();
-    const to = kbSeekBy(dir * POD_SKIP_S);
-    if (typeof to === 'number') syncMediaPositionState(true, to);
-  });
+  $(id).addEventListener('click', (e) => { e.stopPropagation(); kbSkipBy(dir * POD_SKIP_S); });
 });
 miniNextBtn.addEventListener('click', (e) => { e.stopPropagation(); playNext(false); });
 miniShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
@@ -13983,14 +14003,10 @@ if ('mediaSession' in navigator){
   // +/-10s skip buttons. Not on iOS: there (lock screen, Control Center,
   // CarPlay) registering these replaces the previous/next *track* buttons
   // with +/-seconds ones, and track skipping matters more for music.
+  // (iOS: podcasts only, see syncIosPodSkip.)
   if (!isIOS){
-    const msSkip = (dir) => (d) => {
-      const step = d && d.seekOffset > 0 ? d.seekOffset : seekStepS();
-      const to = kbSeekBy(dir * step);
-      if (typeof to === 'number') syncMediaPositionState(true, to);
-    };
-    msSet('seekbackward', msSkip(-1));
-    msSet('seekforward', msSkip(1));
+    msSet('seekbackward', mediaSessionSkip(-1));
+    msSet('seekforward', mediaSessionSkip(1));
   }
 }
 
@@ -14064,6 +14080,8 @@ const MP_ICO = {
   flag: '<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>',
   queue: '<path d="M3 6h13v2H3zm0 5h13v2H3zm0 5h9v2H3zm15-1V9l5 4z"/>',
   style: '<path d="M12 3a9 9 0 000 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16a5 5 0 005-5c0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm5 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3 4a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>',
+  skipBack: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text>',
+  skipFwd: '<path transform="matrix(-1 0 0 1 24 0)" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text>',
   reset: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>'
 };
 const MINI_PLAYER_STYLE = `
@@ -14124,6 +14142,11 @@ const MINI_PLAYER_STYLE = `
   #mpShuffle svg,#mpRepeat svg{width:16px;height:16px}
   #mpRepeatOne{position:absolute;top:3px;right:3px;font-size:8px;font-weight:700;line-height:1}
   #mpControls #mpPlay{width:36px;height:36px;background:var(--accent);color:#151107}
+  .mp-skip{display:none!important}
+  body.pod-playing .mp-skip{display:flex!important}
+  .mp-skip text{font:700 7.5px/1 system-ui,sans-serif}
+  body.pod-playing #mpControls{gap:0}
+  body.pod-playing #mpControls button:not(#mpPlay){width:28px}
   #mpControls #mpPlay:hover{background:var(--accent);filter:brightness(1.08);transform:scale(1.06)}
   #mpPlay svg{width:20px;height:20px}
   #mpQueue{display:none;position:relative;flex:1;min-height:0;overflow-y:auto;background:#181818;
@@ -14192,7 +14215,9 @@ function buildMiniPlayerDOM(win){
       '<div id="mpControls">' +
         btn('mpShuffle', '', 'Shuffle', MP_ICO.shuffle) +
         btn('mpPrev', '', 'Previous', MP_ICO.prev) +
+        btn('mpSkipBack', 'mp-skip', 'Back 15 seconds', MP_ICO.skipBack) +
         '<button id="mpPlay" title="Play/Pause" aria-label="Play/Pause"><svg id="mpPlayIco" viewBox="0 0 24 24">' + ICO_PLAY + '</svg></button>' +
+        btn('mpSkipFwd', 'mp-skip', 'Forward 15 seconds', MP_ICO.skipFwd) +
         btn('mpNext', '', 'Next', MP_ICO.next) +
         '<button id="mpRepeat" title="Repeat" aria-label="Repeat"><svg viewBox="0 0 24 24">' + MP_ICO.repeat + '</svg><span id="mpRepeatOne" hidden>1</span></button>' +
       '</div>' +
@@ -14204,6 +14229,8 @@ function buildMiniPlayerDOM(win){
   const forward = (id, target) => doc.getElementById(id).addEventListener('click', () => { target.click(); updateMiniPlayerUI(); });
   forward('mpPrev', prevBtn);
   forward('mpNext', nextBtn);
+  forward('mpSkipBack', $('skipBackBtn'));
+  forward('mpSkipFwd', $('skipFwdBtn'));
   forward('mpPlay', playBtn);
   forward('mpShuffle', shuffleBtn);
   forward('mpRepeat', repeatBtn);
@@ -14403,6 +14430,7 @@ function updateMiniPlayerUI(){
   doc.getElementById('mpShuffle').classList.toggle('is-active', shuffleBtn.classList.contains('is-active'));
   doc.getElementById('mpRepeat').classList.toggle('is-active', repeatBtn.classList.contains('is-active'));
   doc.getElementById('mpRepeatOne').hidden = repeatOneBadge.hidden;
+  doc.body.classList.toggle('pod-playing', document.body.classList.contains('pod-playing'));
   const like = doc.getElementById('mpLike');
   const liked = playerLikeBtn.classList.contains('is-liked');
   like.classList.toggle('is-liked', liked);
