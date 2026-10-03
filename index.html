@@ -9283,6 +9283,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // Plain-English bullets only: no issue numbers, no internal names.
 // Versions with nothing user-facing are simply left out.
 const WHATS_NEW = [
+  { version: 70, date: '2026-10-03', items: [
+    'Podcast captions now follow you: jump to a chapter or seek ahead and captions start generating right where you are.'
+  ]},
   { version: 69, date: '2026-10-03', items: [
     'Captions for any podcast episode, even shows that don\'t publish them: they\'re generated right on your device, free, and kept for 7 days.',
     'Chapters now come from episode notes too, so shows like NoSleep get a chapter for every story.'
@@ -13429,20 +13432,24 @@ async function generateCaptions(t, onUpdate){
     if (!dur) throw new Error('no duration');
     rec.dur = dur;
     const n = Math.ceil(rec.total / CAP_CHUNK_BYTES);
-    const at = (ad.player && ad.player.getCurrentTime && ad.player.getCurrentTime()) || 0;
-    const first = Math.min(n - 1, Math.max(0, Math.floor(at / dur * n)));
-    const order = [];
-    for (let i = first; i < n; i++) order.push(i);
-    for (let i = 0; i < first; i++) order.push(i);
-    let decoded = 0;
-    for (const i of order){
+    // next slice to do: the first missing one at or after the playhead,
+    // re-read every round so a seek or chapter jump pulls generation along
+    const next = () => {
+      const p = activeDeck().player;
+      const at = (p && p.getCurrentTime && p.getCurrentTime()) || 0;
+      const here = Math.min(n - 1, Math.max(0, Math.floor(at / dur * n)));
+      for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i]) return i; }
+      return -1;
+    };
+    let decoded = 0, first = true;
+    for (let i = next(); i >= 0; i = next()){
       if (job.cancelled) return;
-      if (rec.parts[i]) continue;
       const start = i * CAP_CHUNK_BYTES, end = Math.min(rec.total, start + CAP_CHUNK_BYTES) - 1;
       const { buf } = await capFetch(url, start, end);
       let audio;
       try { audio = await capDecode(buf); decoded++; }
-      catch(e){ if (!decoded && i === first) throw e; rec.parts[i] = []; continue; }
+      catch(e){ if (!decoded && first) throw e; rec.parts[i] = []; continue; }
+      finally { first = false; }
       const chunks = await capRun(model, audio, english ? null : lang);
       const offset = start / rec.total * dur;
       rec.parts[i] = chunks
