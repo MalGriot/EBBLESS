@@ -267,6 +267,19 @@ unmutes after a flat 5-second timer (`UNMUTE_DELAY_MS` in `index.html`), and the
 confirmed real content. It's a delay heuristic, not ad detection — a real
 tradeoff, not a fix.
 
+On top of the timer, `deckAdReason` checks several independent signals, because
+the player's duration alone misses ads (it can report 0, or the real track's
+length, during one): the player reporting a different video id than the one
+loaded, the content clock frozen while the state says PLAYING, no duration yet
+(pre-confirm only), and a length mismatch against the search result. Any one
+keeps the deck muted. `guardActiveDeckAd` runs on every seek-poll tick and on
+every player state change; if it gives up after `AD_MUTE_MAX_MS` it stops
+trusting only the signal that held it, for that track. While casting, the
+receiver itself is muted during any ad break it reports (`castGuardAd`).
+`window.ebblessAdLog` in the console keeps the last 40 mute/unmute decisions
+and why. Ads can't be skipped: the YouTube player is a cross-origin iframe, so
+nothing on the page can press its skip button.
+
 ## Speakers, TVs and cars
 
 - **Cars / lock screen / Bluetooth / headsets** run off the Media Session

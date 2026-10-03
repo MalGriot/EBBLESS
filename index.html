@@ -11709,7 +11709,7 @@ const standbyDeck = () => decks[1 - activeIdx];
 // local player is parked in cast.saved until casting stops.
 const cast = { ready: false, available: false, connecting: false, session: null, appId: null, deck: null, saved: null,
   media: null, expectId: null, loadSeq: 0, state: -1, pos: 0, posAt: 0, dur: 0, fails: 0, everPlayed: false, endedFor: null,
-  airplayAvail: false, ui: null };
+  airplayAvail: false, ui: null, adMuted: false };
 function castActive(){ return !!(cast.session && cast.deck); }
 // A podcast deck whose <audio> element is currently routed to an AirPlay
 // target (Safari). The route belongs to that one element, so while it holds,
@@ -11748,6 +11748,8 @@ function resetDeck(deck){
   deck.muteStartTs = 0;
   deck.loadStartTs = 0;
   deck.adMutedAt = 0;
+  deck.adIgnore = null;
+  deck.adClock = null;
   deck.resumeSeeked = false;
   deck.pos = -1;
   deck.pendingVideoId = null;
@@ -11763,26 +11765,60 @@ function resetDeck(deck){
 function scheduleAdCheck(deck){
   deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_DELAY_MS);
 }
-// True while a YouTube deck's player reports a duration that isn't its
-// matched video's (see AD_DUR_TOLERANCE_S). Falls back to the plain
-// too-short check when the expected length is unknown or stale.
-function deckShowsAd(deck){
-  if (deck.kind !== 'yt' || !deck.player || !deck.player.getDuration) return false;
-  const dur = deck.player.getDuration() || 0;
-  if (!dur) return false;
+// Why a YouTube deck looks like it's showing an ad right now, or '' if it
+// doesn't. Duration alone misses ads (the player can report 0, or the real
+// track's length, during one), so several independent signals are checked:
+//  - 'video-id': the player says it's on a different video than we loaded
+//  - 'frozen': state is PLAYING but the content clock isn't moving (the
+//    content is parked under an ad), held for AD_FROZEN_MS
+//  - 'no-duration': nothing measurable yet - only counted before a track is
+//    confirmed (strict), where staying muted a bit longer is harmless
+//  - 'duration': length doesn't match the matched video's (AD_DUR_TOLERANCE_S)
+//  - 'short': length unknown and under MIN_CONTENT_DURATION_S
+const AD_FROZEN_MS = 2000;
+// deck.adIgnore holds signals guardActiveDeckAd gave up on for this track.
+function deckAdReason(deck, strict){
+  if (deck.kind !== 'yt' || !deck.player || !deck.player.getDuration) return '';
+  const p = deck.player, skip = deck.adIgnore || {};
+  try {
+    const vd = p.getVideoData ? p.getVideoData() : null;
+    if (!skip['video-id'] && vd && vd.video_id && deck.videoId && vd.video_id !== deck.videoId) return 'video-id';
+  } catch(e){}
+  const playing = !!p.getPlayerState && p.getPlayerState() === YT.PlayerState.PLAYING;
+  const cur = p.getCurrentTime ? (+p.getCurrentTime() || 0) : 0;
+  const now = Date.now();
+  if (!playing || !deck.adClock || Math.abs(cur - deck.adClock.t) > 0.05) deck.adClock = { t: cur, at: now };
+  else if (!skip.frozen && now - deck.adClock.at >= AD_FROZEN_MS) return 'frozen';
+  const dur = p.getDuration() || 0;
+  if (!dur) return strict && playing ? 'no-duration' : '';
   const track = trackAt(deck === activeDeck() ? state.queuePos : deck.pos);
   const expected = track && track.videoId === deck.videoId ? (track.duration || 0) : 0;
-  if (expected) return Math.abs(dur - expected) > Math.max(AD_DUR_TOLERANCE_S, expected * 0.05);
-  return dur < MIN_CONTENT_DURATION_S;
+  if (expected) return !skip.duration && Math.abs(dur - expected) > Math.max(AD_DUR_TOLERANCE_S, expected * 0.05) ? 'duration' : '';
+  return !skip.short && dur < MIN_CONTENT_DURATION_S ? 'short' : '';
+}
+function deckShowsAd(deck, strict){ return !!deckAdReason(deck, strict); }
+// Last few ad decisions, readable from the console as window.ebblessAdLog,
+// so an "I still heard an ad" report can say which signal missed.
+const AD_LOG_MAX = 40;
+window.ebblessAdLog = [];
+function adLog(deck, what, reason){
+  let dur = 0, cur = 0, vid = '';
+  try { const p = deck.player; dur = +p.getDuration() || 0; cur = +p.getCurrentTime() || 0; vid = (p.getVideoData && p.getVideoData().video_id) || ''; } catch(e){}
+  const t = trackAt(deck === activeDeck() ? state.queuePos : deck.pos);
+  const row = { at: new Date().toISOString().slice(11, 19), deck: deck.id, what, reason: reason || '', videoId: deck.videoId, playerVideoId: vid, dur: Math.round(dur), expected: (t && t.duration) || 0, cur: Math.round(cur) };
+  window.ebblessAdLog.push(row);
+  if (window.ebblessAdLog.length > AD_LOG_MAX) window.ebblessAdLog.shift();
+  try { console.info('[ad]', what, row); } catch(e){}
 }
 function checkDeckReady(deck){
   if (!deck.player) return;
   const elapsed = Date.now() - deck.muteStartTs;
-  const looksLikeAd = deckShowsAd(deck);
-  if (looksLikeAd && elapsed < UNMUTE_MAX_WAIT_MS){
+  const reason = deckAdReason(deck, true);
+  if (reason && elapsed < UNMUTE_MAX_WAIT_MS){
     deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_RECHECK_MS);
     return;
   }
+  if (reason) adLog(deck, 'wait-cap', reason);
   onDeckConfirmed(deck);
 }
 
@@ -11792,6 +11828,8 @@ function onDeckConfirmed(deck){
   deck.confirmed = true;
   deck.unmuteTimer = null;
   deck.adMutedAt = 0;
+  deck.adIgnore = null;
+  deck.adClock = null;
   if (!deck.player) return;
   // A prewarmed standby deck (see prewarmResumeDeck) can be the one that
   // first reaches "confirmed" for a saved resume position, not just the
@@ -11819,7 +11857,8 @@ function onDeckConfirmed(deck){
     if (!resumed && deck.player.seekTo) deck.player.seekTo(0, true);
     // Confirmed only because the wait cap ran out with an ad still playing:
     // stay muted and let guardActiveDeckAd unmute once the real video starts.
-    if (deckShowsAd(deck)) deck.adMutedAt = Date.now();
+    const reason = deckAdReason(deck, true);
+    if (reason){ deck.adMutedAt = Date.now(); adLog(deck, 'confirm-muted', reason); }
     else if (deck.player.unMute) deck.player.unMute();
     const s = deck.player.getPlayerState ? deck.player.getPlayerState() : 1;
     setPlayingUI(s === YT.PlayerState.PLAYING || s === undefined);
@@ -11833,6 +11872,9 @@ function onDeckStateChange(deck, e){
   // While casting, only the receiver's status speaks for this deck - the
   // parked local player (paused/muted under it) still fires its own events.
   if (deck.kind === 'cast' && !e.cast) return;
+  // react to a mid-roll the moment YouTube switches over, not on the next
+  // seek-poll tick (which is throttled to 1s+ in a background tab)
+  if (deck.kind === 'yt') guardActiveDeckAd();
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
   if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); } }
@@ -15651,7 +15693,23 @@ function castOnMediaUpdate(m, alive){
     // stopped from the TV remote / Google Home: nothing playing any more
     else if (m.idleReason === IR.CANCELLED) castSetState(2);
   }
+  castGuardAd(m);
   if (alive === false && cast.media === m) cast.media = null;
+}
+// Ads on a cast target play inside the receiver app, out of reach of the
+// local deck's mute. When the receiver reports an ad break (Cast's
+// breakStatus), mute the receiver itself until the break clears. Best
+// effort: it only works on receivers that report their ad breaks.
+function castGuardAd(m){
+  const bs = m && m.breakStatus;
+  const inBreak = !!(bs && (bs.currentBreakId || bs.currentBreakClipId));
+  if (inBreak === !!cast.adMuted) return;
+  castSetAdMuted(inBreak);
+}
+function castSetAdMuted(on){
+  cast.adMuted = on;
+  if (cast.deck) adLog(cast.deck, on ? 'cast-mute' : 'cast-unmute', on ? 'break' : '');
+  try { cast.session.setReceiverMuted(on, () => {}, () => {}); } catch(e){}
 }
 // YT.PlayerState numbering (1 playing, 2 paused, 3 buffering, 0 ended), so
 // onDeckStateChange treats the receiver like any other deck
@@ -15691,6 +15749,8 @@ function castEnd(opts){
   const position = typeof opts.position === 'number' ? opts.position : castCurrentTime();
   const play = 'play' in opts ? !!opts.play : (cast.state === 1 || cast.state === 3);
   const name = castDeviceName();
+  // never leave the TV muted by an ad break we were holding
+  if (cast.adMuted && s) castSetAdMuted(false);
   cast.session = null; cast.deck = null; cast.saved = null; cast.media = null; cast.expectId = null;
   cast.loadSeq++; cast.state = -1; cast.connecting = false;
   if (s){
@@ -15962,14 +16022,21 @@ document.addEventListener('visibilitychange', () => {
 function guardActiveDeckAd(){
   const ad = activeDeck();
   if (!ad.confirmed || swapInProgress || ad.adMutedAt < 0) return false;
-  if (deckShowsAd(ad)){
-    if (!ad.adMutedAt) ad.adMutedAt = Date.now();
+  const reason = deckAdReason(ad, false);
+  if (reason){
+    if (!ad.adMutedAt){ ad.adMutedAt = Date.now(); adLog(ad, 'mute', reason); }
     if (Date.now() - ad.adMutedAt < AD_MUTE_MAX_MS){ ad.player.mute(); return true; }
-    ad.adMutedAt = -1; // gave up: likely a bad search duration, not an ad
+    // Gave up: the signal that held it this long is probably a false alarm
+    // for this track (e.g. a bad duration from search). Stop trusting just
+    // that one until the next track; the others stay armed, so a later
+    // mid-roll is still caught.
+    adLog(ad, 'give-up', reason);
+    (ad.adIgnore = ad.adIgnore || {})[reason] = true;
+    ad.adMutedAt = 0;
     ad.player.unMute();
     return false;
   }
-  if (ad.adMutedAt){ ad.adMutedAt = 0; ad.player.unMute(); }
+  if (ad.adMutedAt){ ad.adMutedAt = 0; adLog(ad, 'unmute', ''); ad.player.unMute(); }
   return false;
 }
 // Podcast chapter gaps on the seek bar (#241). Keyed on track + length so
