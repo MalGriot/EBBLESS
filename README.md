@@ -126,6 +126,36 @@ are never reused: if #017 goes Inactive, the next person is #051.
 Emails (signup confirmation, invite) go out from the Gmail account that owns
 the script. The worker needs the `SHEET_URL` and `SHEET_SECRET` secrets.
 
+### Beta analytics
+
+Anonymous usage counts per tester, in the Sheet's **Analytics** tab (one row
+per tester, keyed by tester number, no name or email): first/last active,
+`days_since_active`, sessions, listening minutes, songs played, playlists
+played, playlists added, days active, `returned_within_7d`, and `uses_<feature>`
+(sessions in which a tester used lyrics, cymatics, LP, cassette, YouTube
+video, fullscreen, Discover, podcasts, SoundCloud, cast, vibe search, share).
+The Dashboard tab adds an ACTIVITY block (active in 24h / 7 days, listening
+hours, 7-day return rate) and a FEATURE USAGE column. Sort or filter the
+Analytics tab to compare testers.
+
+- A **session** starts on open, or on activity after 30 idle minutes.
+- **Songs / playlists played** count a new track or playlist actually
+  playing, not just loaded.
+- **7-day return**: the tester was active on a later day within 7 days of
+  their first day. The Dashboard rate only counts testers whose first day is
+  at least 7 days back, so newcomers don't drag it down.
+
+What leaves the browser is counts only: no track or playlist names, links,
+IP, or device info. The app (`index.html`, "BETA ANALYTICS") keeps a pending
+batch in localStorage and flushes it to `POST /beta/activity` every 10
+minutes while open and when the tab hides; never on localhost. In the
+console, `ebblessStats()` shows the pending batch and `ebblessStats.off()`
+opts a browser out (use it on your own devices).
+
+After updating `tools/beta-sheet.gs`: paste it into Apps Script, run "Set up
+/ repair sheet" (adds the tab and Dashboard rows), then Deploy > Manage
+deployments > New version. Then `npx wrangler deploy` for the worker route.
+
 ## YouTube links
 
 Besides Spotify, you can paste a YouTube link directly — a playlist

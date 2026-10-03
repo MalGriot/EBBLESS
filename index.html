@@ -7171,6 +7171,7 @@ function buildShareUrl(sourceLink, trackIndex){
 // just the link, mirroring copyPlaylistLink/shareAppBtn's existing
 // clipboard-fallback pattern (see the Settings "Share EBBLESS" row).
 function shareEbblessLink(shareData){
+  statsFeature('share');
   if (navigator.share){
     navigator.share(shareData).catch(() => { /* user cancelled the share sheet - nothing to do */ });
     return;
@@ -8030,6 +8031,7 @@ function looksLikeUrl(input){
 }
 
 async function beginVibeSearch(query){
+  statsFeature('vibe_search');
   openImportOverlay();
   stageSearching(query);
   try{
@@ -8128,6 +8130,7 @@ async function beginImport(id, force, type, targetIndex){
       // and killed before this finishes, startApp's sweep can find this by
       // id and pick the rest of the match-up back up next launch instead of
       // the whole import silently vanishing.
+      statsImport(id);
       saveToLibrary(id);
       renderLibrary();
     });
@@ -8145,6 +8148,7 @@ async function beginImport(id, force, type, targetIndex){
       openSingleTrackDestinationPicker(pl.tracks[0]);
       return;
     }
+    if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
     if (startedEarly){
@@ -8489,6 +8493,7 @@ function vibeMoodWords(interp){
 
 let vibeResultsToken = 0;
 async function beginConversationalVibe(text){
+  statsFeature('vibe_search');
   const token = ++vibeResultsToken;
   openImportOverlay();
   stageInterpreting(text);
@@ -9146,6 +9151,119 @@ function scheduleVibeCheck(){
 window.ebblessVibeCheck = function(){ openVibeCheck(true); };
 window.ebblessVibeCheck.state = function(){ return lsGet(VIBE_KEY, null); };
 window.ebblessVibeCheck.reset = function(){ lsDel(VIBE_KEY); };
+
+/* ---------- BETA ANALYTICS ----------
+   Anonymous usage counts for beta testers (README "Beta analytics"): sessions,
+   listening time, songs and playlists played, playlists added, and which
+   features were used in a session. Only counts leave the browser: no track or
+   playlist names, links, IPs or device info. Runs only with a tester token and
+   never on localhost. Counts pile up in localStorage and flush in a batch to
+   /beta/activity every 10 minutes while open and when the tab hides; the Sheet
+   adds them to the tester's Analytics row. Console: ebblessStats() shows the
+   pending batch, ebblessStats.off() / .on() opts this browser out / back in. */
+const STATS_KEY = 'ebbless:stats', STATS_OFF_KEY = 'ebbless:statsOff';
+const STATS_SESSION_GAP_MS = 30 * 60 * 1000;   // idle this long = next activity is a new session
+const STATS_TICK_MS = 15 * 1000, STATS_FLUSH_MS = 10 * 60 * 1000, STATS_HIDE_FLUSH_MIN_MS = 60 * 1000;
+const statsHostOk = !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && location.protocol !== 'file:';
+function statsEmpty(){ return { sessions: 0, listenSec: 0, songs: 0, playlists: 0, imports: 0, features: {} }; }
+let stats = (() => {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(STATS_KEY)); } catch(e){}
+  s = s && typeof s === 'object' ? s : {};
+  return { lastSeen: +s.lastSeen || 0, seen: Array.isArray(s.seen) ? s.seen : [], playKey: s.playKey || '', plId: s.plId || '',
+    lastFlush: +s.lastFlush || 0, pend: Object.assign(statsEmpty(), s.pend || {}) };
+})();
+function statsSave(){ try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){} }
+function statsToken(){
+  try { const t = localStorage.getItem('ebbless:betaToken') || ''; return /^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(t) ? t : ''; } catch(e){ return ''; }
+}
+function statsEnabled(){
+  try { if (localStorage.getItem(STATS_OFF_KEY)) return false; } catch(e){}
+  return statsHostOk && !!statsToken();
+}
+// Any real activity: starts a new session if the last one went idle.
+function statsTouch(){
+  const now = Date.now();
+  if (now - stats.lastSeen > STATS_SESSION_GAP_MS){
+    stats.pend.sessions++;
+    stats.seen = []; stats.playKey = ''; stats.plId = '';
+  }
+  stats.lastSeen = now;
+}
+// Once per session per feature.
+function statsFeature(name){
+  if (!statsEnabled()) return;
+  statsTouch();
+  if (!stats.seen.includes(name)){
+    stats.seen.push(name);
+    stats.pend.features[name] = (stats.pend.features[name] || 0) + 1;
+  }
+  statsSave();
+}
+// A playlist newly added to the library (not a refresh of one already there).
+function statsImport(id){ if (statsEnabled() && !getLibrary().includes(id)){ statsTouch(); stats.pend.imports++; statsSave(); } }
+let statsLastTick = 0;
+function statsTick(){
+  const now = Date.now(), prev = statsLastTick;
+  statsLastTick = 0;
+  if (!statsEnabled() || document.body.classList.contains('onb-active')) return;
+  if (!artworkWrap.classList.contains('is-playing')) return;
+  statsLastTick = now;
+  statsTouch();
+  // Background tabs can be throttled to a tick a minute; cap so a suspended
+  // tab waking up doesn't count the whole gap.
+  if (prev) stats.pend.listenSec += Math.min(now - prev, 70 * 1000) / 1000;
+  const q = state.queue[state.queuePos], t = currentTrack();
+  const key = t ? state.queuePos + ':' + t.videoId : '';
+  if (key && key !== stats.playKey){ stats.playKey = key; stats.pend.songs++; }
+  if (q && q.plId && q.plId !== stats.plId){ stats.plId = q.plId; stats.pend.playlists++; }
+  const used = [];
+  if (visualMode === 'lyrics') used.push('lyrics');
+  else if (visualMode === 'viz') used.push('cymatics');
+  else if (artStyle === 'record') used.push('lp');
+  else if (artStyle === 'cassette') used.push('cassette');
+  if (ytPanelOpen()) used.push('youtube_video');
+  if (state.flowOpen || state.deskFsOpen) used.push('fullscreen');
+  if (q && q.discover) used.push('discover');
+  if (q && isPodcastPlaylistId(q.plId)) used.push('podcast');
+  if (t && isSoundCloudVideoId(t.videoId)) used.push('soundcloud');
+  if (castActive()) used.push('cast');
+  used.forEach(f => { if (!stats.seen.includes(f)){ stats.seen.push(f); stats.pend.features[f] = (stats.pend.features[f] || 0) + 1; } });
+  statsSave();
+}
+function statsFlush(onHide){
+  if (!statsEnabled()) return;
+  const p = stats.pend;
+  p.listenSec = Math.round(p.listenSec);
+  if (!p.sessions && !p.listenSec && !p.songs && !p.playlists && !p.imports && !Object.keys(p.features).length) return;
+  const body = JSON.stringify(Object.assign({ token: statsToken() }, p));
+  const url = BACKEND + '/beta/activity';
+  // text/plain keeps it a simple CORS request (no preflight) for sendBeacon and fetch alike.
+  let sent = false;
+  if (onHide && navigator.sendBeacon){ try { sent = navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' })); } catch(e){} }
+  if (!sent) fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body, keepalive: true }).catch(() => {});
+  // Fire and forget: a lost batch just undercounts a little.
+  stats.pend = statsEmpty();
+  stats.lastFlush = Date.now();
+  statsSave();
+}
+if (statsHostOk){
+  if (statsEnabled()){ statsTouch(); statsSave(); }
+  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
+    if (statsEnabled() && Date.now() - stats.lastSeen > 5000){ statsTouch(); statsSave(); }
+  }, { capture: true, passive: true }));
+  setInterval(() => {
+    statsTick();
+    if (Date.now() - stats.lastFlush > STATS_FLUSH_MS) statsFlush(false);
+  }, STATS_TICK_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden'){ if (Date.now() - stats.lastFlush > STATS_HIDE_FLUSH_MIN_MS) statsFlush(true); }
+    else if (statsEnabled()){ statsTouch(); statsSave(); }
+  });
+}
+window.ebblessStats = function(){ return JSON.parse(JSON.stringify(stats)); };
+window.ebblessStats.off = function(){ try { localStorage.setItem(STATS_OFF_KEY, '1'); localStorage.removeItem(STATS_KEY); } catch(e){} stats.pend = statsEmpty(); };
+window.ebblessStats.on = function(){ try { localStorage.removeItem(STATS_OFF_KEY); } catch(e){} };
 
 replayTutorialBtn.addEventListener('click', () => {
   // stop any real track first - the intro has its own theme music and
