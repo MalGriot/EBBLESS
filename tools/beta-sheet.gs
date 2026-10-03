@@ -50,7 +50,7 @@ HEADERS[APPLICANTS] = ['applicant_id', 'name', 'email', 'Instagram', 'device', '
   'technical_comfort', 'music_platform', 'music_preferences', 'Spotify_playlist', 'why_they_want_to_test',
   'what_they_want_EBBLESS_to_do', 'signup_timestamp', 'applicant_status', 'notes', 'ok_to_contact_later', 'user_agent'];
 HEADERS[TESTERS] = ['tester_id', 'tester_number', 'applicant_id', 'name', 'email', 'accepted_timestamp',
-  'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent'];
+  'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent', 'exclude_from_analytics'];
 HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'source', 'category', 'feeling',
   'what_happened', 'what_they_expected', 'anything_else', 'keep_using', 'screenshot',
   'device', 'operating_system', 'browser', 'viewport', 'user_agent',
@@ -312,6 +312,8 @@ function dayDiff_(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date
 function activity_(b) {
   const t = activeTester_(b.token);
   if (!t) return { ok: true, tester: null };
+  // Ticked on the Testers tab (e.g. your own devices): accepted, not recorded.
+  if (t.exclude_from_analytics === true) return { ok: true, tester: { id: t.tester_id } };
   const d = b.delta || {}, now = new Date(), today = day_(now);
   withLock_(function () {
     const ss = ss_();
@@ -473,6 +475,7 @@ function setup() {
   const dv = function (list) { return SpreadsheetApp.newDataValidation().requireValueInList(list, true).setAllowInvalid(false).build(); };
   ash.getRange(2, cols_(ash).applicant_status + 1, ash.getMaxRows() - 1, 1).setDataValidation(dv(APPLICANT_STATUSES));
   tsh.getRange(2, cols_(tsh).tester_status + 1, tsh.getMaxRows() - 1, 1).setDataValidation(dv(TESTER_STATUSES));
+  tsh.getRange(2, cols_(tsh).exclude_from_analytics + 1, tsh.getMaxRows() - 1, 1).insertCheckboxes();
 
   const dash = ss.getSheetByName(DASHBOARD) || ss.insertSheet(DASHBOARD);
   const aS = colLetter_(cols_(ash).applicant_status), tS = colLetter_(cols_(tsh).tester_status);
