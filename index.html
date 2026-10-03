@@ -13274,7 +13274,19 @@ function mediaSessionArtwork(t){
     if (type) img.type = type;
     out.push(img);
   };
-  artworkUrls(t).forEach(src => {
+  // artworkUrls() tacks the matched video's YouTube thumbnails onto the end
+  // of the chain as an <img> onerror fallback. The OS doesn't walk that chain
+  // in order, though - it scores every entry by size/type and picks one - so
+  // a sized 480x360 hqdefault outranks resolved art whose size can't be read
+  // off its URL (any CDN not recognised below), and the lock screen showed
+  // the YouTube thumb while the player showed the real cover. When the track
+  // has resolved art, offer only that.
+  let urls = artworkUrls(t);
+  if (t && t.art){
+    const own = urls.filter(src => src.indexOf('https://img.youtube.com/vi/') !== 0);
+    if (own.length) urls = own;
+  }
+  urls.forEach(src => {
     let m;
     if ((m = SPOTIFY_ART_RE.exec(src))) SPOTIFY_ART_SIZES.forEach(([code, size]) => add(m[1] + code + m[3], size, 'image/jpeg'));
     else if ((m = /\/(maxres|hq|mq)default\.jpg$/.exec(src))) add(src, YT_THUMB_SIZES[m[1]], 'image/jpeg');
