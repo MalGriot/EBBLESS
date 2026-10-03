@@ -953,7 +953,7 @@ async function handleYtVideo(url, ctx) {
 // published,image}], focus } - focus is the index of the linked episode
 // (-1 for a whole-show link). Newest episodes first, capped at
 // PODCAST_MAX_EPISODES.
-const PODCAST_CACHE_VERSION = 'pod6';
+const PODCAST_CACHE_VERSION = 'pod7';
 const PODCAST_MAX_EPISODES = 300;
 
 // Unicode-aware via matchKey (was [a-z0-9]-only: every non-Latin show

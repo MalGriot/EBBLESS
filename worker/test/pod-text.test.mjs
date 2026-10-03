@@ -2,7 +2,7 @@
 // Dependency-free: run with `npm test` in worker/ (node --test).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clockToSeconds, itemPodText, parseChaptersJson, parseTranscript } from '../src/pod-text.js';
+import { clockToSeconds, descriptionChapters, itemPodText, parseChaptersJson, parseTranscript } from '../src/pod-text.js';
 
 test('clockToSeconds reads clock, comma and bare-seconds forms', () => {
   assert.equal(clockToSeconds('01:02:03.500'), 3723.5);
@@ -76,4 +76,25 @@ test('parseTranscript (json) handles word-level segments', () => {
     { startTime: 1.2, endTime: 1.5, body: 'Next' },
   ] });
   assert.deepEqual(parseTranscript(json, 'json'), [{ t: 0.5, text: 'Hi there.' }, { t: 1.2, text: 'Next' }]);
+});
+
+test('descriptionChapters: trailing "(Story starts around ...)" times, title times ignored', () => {
+  const html = `<![CDATA[<div><p>It's Episode 06. Starts at 1:00 sharp.</p><p>"The Footsteps at 3:33" by <a href="x">Marwa Ayad</a> (Story starts around 00:05:00)<br>Produced by Jeff</p><p>"Random" by David (Story starts around 00:25:20)<br>Cast: Narrator - Dan</p></div>]]>`;
+  assert.deepEqual(descriptionChapters(html), [
+    { t: 300, title: '"The Footsteps at 3:33" by Marwa Ayad' },
+    { t: 1520, title: '"Random" by David' },
+  ]);
+});
+
+test('descriptionChapters: leading timestamps, one lone mention is not a list', () => {
+  assert.deepEqual(descriptionChapters('<p>00:00 Intro<br>(12:30) - Interview<br>[1:02:03] Outro</p>'), [
+    { t: 0, title: 'Intro' }, { t: 750, title: 'Interview' }, { t: 3723, title: 'Outro' },
+  ]);
+  assert.deepEqual(descriptionChapters('<p>Skip to 12:30 for the good part.</p><p>12:30 the good part</p>'), []);
+});
+
+test('itemPodText falls back to show-notes chapters only without a chapters file', () => {
+  const desc = '<description>&lt;p&gt;00:00 Intro&lt;br&gt;05:00 Story&lt;/p&gt;</description>';
+  assert.deepEqual(itemPodText('<item>' + desc + '</item>'), { chapters: [{ t: 0, title: 'Intro' }, { t: 300, title: 'Story' }] });
+  assert.deepEqual(itemPodText('<item><podcast:chapters url="https://x.test/c.json" />' + desc + '</item>'), { chaptersUrl: 'https://x.test/c.json' });
 });

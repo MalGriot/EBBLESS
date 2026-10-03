@@ -38,6 +38,35 @@ function cleanChapters(list) {
   return out.filter((c, i) => i === 0 || c.t !== out[i - 1].t).slice(0, MAX_CHAPTERS);
 }
 
+// Chapters written into an episode's show notes, the way many shows do
+// without a chapters file. Two shapes, one chapter per line:
+//   "00:05:00 Intro" / "(05:00) - Intro" / "[1:02:03] Intro"   (time first)
+//   "Story title by Author (Story starts around 00:05:00)"      (time after)
+// Only a time in that leading or trailing slot counts, so a time inside a
+// title ("The Footsteps at 3:33") isn't read as a chapter.
+const TS = '((?:\\d{1,2}:)?\\d{1,2}:\\d{2})';
+const LEAD_RE = new RegExp('^[\\[(]?' + TS + '[\\])]?\\s*(?:[-\\u2013\\u2014:|.]\\s*)?(.+)$');
+const TRAIL_RE = new RegExp('^(.+?)\\s*[\\[(][^\\])]*?' + TS + '\\s*[\\])]\\s*$');
+export function descriptionChapters(html) {
+  // feeds send the HTML either in CDATA or entity-escaped - decode first
+  const lines = decodeEntities(decodeEntities(String(html || '').replace(/<!\[CDATA\[|\]\]>/g, ''))
+    .replace(/<br\s*\/?>|<\/(?:p|div|li|h\d)>/gi, '\n')
+    .replace(/<[^>]+>/g, ''))
+    .split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const found = [];
+  lines.forEach(line => {
+    let m = line.match(LEAD_RE), t, title;
+    if (m) { t = clockToSeconds(m[1]); title = m[2]; }
+    else if ((m = line.match(TRAIL_RE))) { t = clockToSeconds(m[2]); title = m[1]; }
+    else return;
+    title = String(title || '').replace(/^[-\u2013\u2014:|.\s]+|[-\u2013\u2014:|\s]+$/g, '').trim();
+    if (title && title.length <= 200) found.push({ t, title });
+  });
+  const chapters = cleanChapters(found);
+  // a lone timestamp is a mention, not a chapter list
+  return chapters.length > 1 ? chapters : [];
+}
+
 // One feed <item>'s chapter/transcript pointers. Inline Podlove chapters come
 // back parsed; the Podcasting 2.0 files are only urls, fetched on demand by
 // /podtext so a 300-episode feed doesn't cost 300 extra fetches.
@@ -53,6 +82,11 @@ export function itemPodText(item) {
     const tag = (item.match(/<podcast:chapters\s[^>]*>/i) || [])[0];
     const u = tag && attr(tag, 'url');
     if (u && /^https?:\/\//i.test(u)) out.chaptersUrl = u.replace(/^http:\/\//i, 'https://');
+  }
+  if (!out.chapters && !out.chaptersUrl) {
+    const desc = (item.match(/<content:encoded>([\s\S]*?)<\/content:encoded>/i) || item.match(/<description>([\s\S]*?)<\/description>/i) || [])[1];
+    const chapters = descriptionChapters(desc);
+    if (chapters.length) out.chapters = chapters;
   }
   // several transcript formats are often listed - take the one with timing
   const rank = { vtt: 3, srt: 2, json: 1 };
