@@ -7553,37 +7553,43 @@ Add entries in this shape:
   **Built (9b02bd6):** -15/+15 buttons beside play (main player, mini bar, flow view), shown only with `body.pod-playing` (set in `reflectCurrentTrackUI` via new `isPodcastTrack()`); handlers reuse `kbSeekBy`. Shift+Left/Right = ±15s on podcasts (10s music, `seekStepS()`); Media Session seek default 15s on podcasts. ≤420px tightens rows; ≤340px mini bar drops skip buttons. Follow-up (c3b2dab, owner decisions): plain Left/Right = ±15s on podcasts, Shift+Left/Right = prev/next episode (music unchanged); PiP mini player gets podcast-only ±15 buttons; iOS registers seekbackward/seekforward per podcast track, cleared to null for music (`syncIosPodSkip`); `pod-playing` cleared when no current track. Untested on real podcast/iOS/PiP.
 
 ### lp-game-desktop-fullscreen-layout: LP game layout and album-art menu in desktop fullscreen
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In desktop fullscreen LP mode while the record-tap game
   is running: reposition the LP game UI, stop the album-art tap/button menu
   from activating while the game is active, and place the score counter
   above the title and player controls.
 - **Touches:** record-tap minigame, fullscreen LP layout (desktop), album-art menu.
-- **Branch:**
+- **Branch:** agent/lp-game-desktop-fullscreen-layout
 - **Notes:** Synced from Geethub issue #235 (bug). Follow-up to merged `record-tap-minigame`.
+  **Built (0ee815e):** during a run, clicking the art tab (it sits over the cue tick) counts as a record tap instead of opening the art menu; run start closes the menu. Wide-screen rule lifts score + "New best" flare 236px from bottom, above title/controls. Layout verified at 1440x900; menu gating untested in a live run; phone landscape unchecked.
 
 ### tester-version-banner: Remind testers after a few days that this is the tester version
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** A few days after a tester starts using the app, show a
   banner at the top saying this is the tester version and asking them to
   send feedback (link to the existing Send feedback flow). Dismissible.
 - **Touches:** beta tester system, Send feedback flow.
-- **Branch:**
+- **Branch:** agent/tester-version-banner
 - **Notes:** Synced from Geethub issue #236. Related: merged `feedback-prompt`, `beta-hide-feedback-buttons`.
+  **Built (5d54f20):** shows for anyone holding `ebbless:betaToken`, 3 days after vibe-check first-seen (`ebbless_vibe_check`), not in sessions where the vibe check is due. x or Send feedback hides it 7 days. Top bar grows 50px while shown; hidden in splash/tutorial/fullscreen/dialogs. Revised (b4095ff, owner): now a pill inside the header nav, next to the nav / mobile Settings button, "Tester version" label on phones; no top bar growth. Verified locally with faked token; live beta check, iPhone notch, 320px wrap unverified.
 
-### open-music-links-in-ebbless: Spotify / Apple Music / YouTube Music links open in EBBLESS
-- **Status:** draft
+### open-music-links-in-ebbless: Share Spotify / Apple Music / YouTube Music links to EBBLESS (Android)
+- **Status:** merged
 - **Priority:** medium
-- **Description:** Let the installed app receive Spotify, Apple Music and
-  YouTube Music links from the device: ideally as a default handler, at
-  minimum as an option in the OS share/open-with menu (PWA share target),
-  then load them as if pasted.
+- **Description:** On Android, make the installed EBBLESS PWA appear in the
+  system Share sheet (Web Share Target in manifest.json). Sharing a
+  Spotify, Apple Music or YouTube Music link (song, album, playlist,
+  artist, podcast) to EBBLESS opens the app and loads it exactly as if
+  pasted. Handle the link arriving in the shared text or url field, with
+  extra text around it. Scope: Android only; no iOS Shortcut or desktop
+  bookmarklet for now.
 - **Touches:** manifest.json (share_target), paste/link handling.
-- **Branch:**
+- **Branch:** agent/open-music-links-in-ebbless
 - **Notes:** Synced from Geethub issue #237. Browsers don't let a PWA claim
   other sites' https links as default handler; share-target is the realistic path.
+  **Built (7b2376b):** manifest `share_target` (GET, action ./index.html, params share_title/share_text/share_url). `applyShareTargetFromUrl()` (called from `applySharedImportFromUrl()` in `startApp()`) clears params, extracts first URL, fills `urlInput` and calls `importForm.requestSubmit()` so the paste handler does everything. Tested in local browser (cold start, onboarded, plain text); real Android share sheet, Apple Music/podcast links and offline untested. Installed PWAs need a manifest refresh/reinstall to show in share sheet.
 
 ### lp-game-skins: EBBLESS DEEP skins for the LP game
 - **Status:** draft
@@ -7595,20 +7601,22 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #238. Depends on `ebbless-deep` (draft) for gating.
 
 ### settings-feedback-first: Send feedback should be the first item in Settings
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Move the Send feedback row to the top of Settings.
 - **Touches:** Settings layout.
-- **Branch:**
+- **Branch:** agent/settings-feedback-first
 - **Notes:** Synced from Geethub issue #239 (bug).
+  **Built (be10352):** whole Feedback & support block moved to top of Settings (its other rows are beta-hidden, so moving only the row would leave an empty heading). `ensureAccountBlock()` now inserts Account below it. Unverified in browser; check the tutorial crossfade step still shows the toggle on small screens.
 
 ### strip-topic-artist-names: Artist names still show " - Topic" in places
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Artist names should never display the YouTube channel
   suffix " - Topic". Some import paths already strip it (YouTube album
   imports); find where it still leaks through and strip it everywhere a
   track's artist is set or displayed.
 - **Touches:** track artist normalization (see existing `- Topic` strip near index.html:5158, 7716).
-- **Branch:**
+- **Branch:** agent/strip-topic-artist-names
 - **Notes:** Synced from Geethub issue #240 (bug).
+  **Built (6e4965c):** `stripTopicSuffix()` / `stripTopicArtists()` applied in fetchYouTubePlaylist, fetchYouTubeVideo, fetchArtist, getCachedPlaylist (cleans old saved data on load), resolveDiscoverMetadata, device handoff; old album-only inline replaces removed. Matching/search and worker untouched. Side effect: stored `channel` also stripped on non-album YouTube imports. Unverified in browser.

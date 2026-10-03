@@ -600,6 +600,15 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 @keyframes recGameBlink{0%,49.9%{opacity:1}50%,100%{opacity:0}}
 .rec-game-hud[data-phase="over"] .rec-game-score{animation:recGameBlink 360ms linear 3 forwards}
 .rec-game-hud[data-phase="over"] .rec-game-best{animation:recGameBlink 360ms linear 1080ms 3 forwards}
+/* issue #235: landscape flow (desktop fullscreen) - the art is 100vh, so
+   flow-chrome's title/seek/controls block overlays its lower part and
+   bottom:13% put the HUD between the title and the seek bar. Lift it (and
+   the new-best flare) clear above that block, the same 236px it reserves
+   for .flow-lyrics. Portrait already slides the art above it (#184). */
+@media (min-aspect-ratio:1/1){
+  #flow-layer .rec-game-hud{bottom:calc(236px + var(--safe-b))}
+  #flow-layer .rec-game-flare{bottom:calc(276px + var(--safe-b))}
+}
 
 /* cassette (issue #215): modelled on a real dark charcoal compact cassette -
    one hand-authored vector shell (fine molded-plastic grain, recessed label
@@ -1276,6 +1285,24 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .like-nudge .ln-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .like-nudge .ln-close:hover{background:var(--panel-2);color:var(--text)}
 .like-nudge .ln-close svg{width:14px;height:14px}
+/* tester-version banner (#236): a pill inside the topbar, pushed right next
+   to the nav (margin-left:auto), so it never covers anything. Beta testers
+   only, from day 3. Short label on phones. Hidden while the splash,
+   tutorial, a fullscreen mode, the beta lock or a dialog is up. */
+.tester-banner{display:flex;align-items:center;gap:8px;margin:0 10px 0 auto;min-width:0;background:var(--panel-3);color:var(--text);
+  font-size:12px;line-height:1.3;padding:4px 4px 4px 12px;border-radius:20px;white-space:nowrap}
+#topbar:has(#testerBanner:not([hidden])){gap:8px}
+.tester-banner .tb-short{display:none}
+@media (max-width:700px){.tester-banner .tb-long{display:none}.tester-banner .tb-short{display:inline}}
+.tester-banner[hidden]{display:none}
+.tester-banner .tb-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tester-banner .tb-send{flex:none;background:var(--accent);color:#1a1a1a;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
+.tester-banner .tb-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.tester-banner .tb-close:hover{background:var(--panel-2);color:var(--text)}
+.tester-banner .tb-close svg{width:14px;height:14px}
+body.onb-active .tester-banner,body.desktop-fs .tester-banner,body:has(#splash:not(.is-hidden)) .tester-banner,
+body:has(#flow-layer.is-open) .tester-banner,body:has(#lyricsFsLayer.is-open) .tester-banner,
+body:has(#danger-scrim.is-open) .tester-banner,body:has(#beta-lock:not([hidden])) .tester-banner{display:none}
 /* like streak: a single soft pulse on the heart when the streak grows */
 @keyframes like-streak-pulse{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
 .player-like-btn.streak-pulse svg{animation:like-streak-pulse 520ms var(--ease-out)}
@@ -2237,6 +2264,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
       <img src="brand/assets/mark.png" alt="EBBLESS">
     </button>
+    <div class="tester-banner" id="testerBanner" role="status" hidden>
+      <span class="tb-text"><span class="tb-long">Tester version of EBBLESS. How's it treating you?</span><span class="tb-short">Tester version</span></span>
+      <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
+      <button type="button" class="tb-close" id="testerBannerClose" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
+    </div>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
         <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.5 2h11A1.5 1.5 0 0 1 22 3.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 8 14.5v-11A1.5 1.5 0 0 1 9.5 2zM15 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M5 5h1.5v11.5A1.5 1.5 0 0 0 8 18h11.5v1.5H7.5A2.5 2.5 0 0 1 5 17V5zM2 8h1.5v11a1.5 1.5 0 0 0 1.5 1.5h11.5V22H4.5A2.5 2.5 0 0 1 2 19.5V8z"/></svg>
@@ -2740,13 +2772,45 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   <!-- ===== SETTINGS ===== -->
   <main class="view" id="view-settings" hidden>
     <div class="view-scroll">
-      <!-- Settings layout (issue #212): most-used first. Playback controls
-           lead; App actions (install/share/tutorial) next; Feedback & support
-           groups every way to report something; About + Credits read-only;
+      <!-- Settings layout (issue #212): most-used first. Feedback & support
+           leads so Send feedback is the top row (#239) and groups every way
+           to report something; Playback controls next; App actions
+           (install/share/tutorial) after; About + Credits read-only;
            the destructive Library & data block stays last. Ids are unchanged
            - JS (crossfade/level/install/wrong-track log) and the onboarding
            tour look these up directly. #installBlock is now a single row in
            the App block (same show/hide JS), not its own block. -->
+      <div class="settings-block" id="settingsSupportBlock">
+        <h2>Feedback &amp; support</h2>
+        <div class="settings-row">
+          <div>
+            <div class="label">Send feedback</div>
+            <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
+          </div>
+          <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
+        </div>
+        <div class="settings-row beta-hidden">
+          <div>
+            <div class="label">Report a bug</div>
+            <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+          </div>
+          <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
+        </div>
+        <div class="settings-row beta-hidden">
+          <div>
+            <div class="label">Suggest an improvement</div>
+            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+          </div>
+          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
+        </div>
+        <div class="settings-row beta-hidden">
+          <div>
+            <div class="label">Wrong-track log</div>
+            <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
+          </div>
+          <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
+        </div>
+      </div>
       <div class="settings-block" id="settingsPlaybackBlock">
         <h2>Playback</h2>
         <div class="settings-row">
@@ -2799,37 +2863,6 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
             <div class="desc">Watch the intro walkthrough again, from the top.</div>
           </div>
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
-        </div>
-      </div>
-      <div class="settings-block" id="settingsSupportBlock">
-        <h2>Feedback &amp; support</h2>
-        <div class="settings-row">
-          <div>
-            <div class="label">Send feedback</div>
-            <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
-          </div>
-          <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
-        </div>
-        <div class="settings-row beta-hidden">
-          <div>
-            <div class="label">Report a bug</div>
-            <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
-          </div>
-          <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
-        </div>
-        <div class="settings-row beta-hidden">
-          <div>
-            <div class="label">Suggest an improvement</div>
-            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
-          </div>
-          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
-        </div>
-        <div class="settings-row beta-hidden">
-          <div>
-            <div class="label">Wrong-track log</div>
-            <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
-          </div>
-          <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
         </div>
       </div>
       <div class="settings-block" id="settingsAboutBlock">
@@ -3629,10 +3662,20 @@ async function pickAlbumArtMatch(match, artUrl){
   return match;
 }
 
+// A YouTube-sourced artist is often the auto-generated "<Artist> - Topic"
+// channel name - the credit is the artist (GitHub #240). Display/stored
+// credit only: matching still reads the raw channel off /search results.
+function stripTopicSuffix(artist){ return String(artist || '').replace(/\s+-\s+Topic$/i, ''); }
+function stripTopicArtists(tracks){
+  if (Array.isArray(tracks)) tracks.forEach(t => { if (t && t.artist) t.artist = stripTopicSuffix(t.artist); });
+  return tracks;
+}
+
 async function fetchYouTubePlaylist(playlistId){
   const res = await fetch(BACKEND + '/ytplaylist?id=' + encodeURIComponent(playlistId));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  stripTopicArtists(data.tracks);
   return data;
 }
 
@@ -3640,6 +3683,7 @@ async function fetchYouTubeVideo(videoId){
   const res = await fetch(BACKEND + '/ytvideo?id=' + encodeURIComponent(videoId));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  if (data.artist) data.artist = stripTopicSuffix(data.artist);
   return data;
 }
 
@@ -3696,6 +3740,7 @@ async function fetchArtist(type, id){
   const res = await fetch(BACKEND + '/artist?url=' + encodeURIComponent(artistPageUrl(type, id)));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ? "Couldn't load that artist page: " + data.error + '.' : ('backend returned ' + res.status));
+  stripTopicArtists(data.tracks);
   return data;
 }
 
@@ -4702,7 +4747,7 @@ function resolveHandoffQueue(s){
       if (idx >= 0 && pl.tracks[idx].videoId) entry = { plId: r.p, idx };
     }
     if (!entry && r.t && typeof r.t === 'object' && typeof r.t.videoId === 'string' && r.t.videoId){
-      const t = { title: String(r.t.title || ''), artist: String(r.t.artist || ''), videoId: r.t.videoId, plays: 0,
+      const t = { title: String(r.t.title || ''), artist: stripTopicSuffix(r.t.artist), videoId: r.t.videoId, plays: 0,
         art: typeof r.t.art === 'string' ? r.t.art : null, duration: Number(r.t.duration) || 0 };
       if (r.t.podcast === true) t.podcast = true;
       const key = profTrackKey(t);
@@ -4816,9 +4861,10 @@ function ensureAccountBlock(){
   block.id = 'accountBlock';
   block.innerHTML = '<h2>Account</h2><div class="settings-row" style="gap:12px"><div style="min-width:0"><div class="label" id="accountLabel" style="overflow-wrap:anywhere"></div><div class="desc" id="accountDesc"></div></div>'
     + '<div id="accountActions" style="display:flex;flex:none;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center"></div></div>';
-  const first = scroll.querySelector('.settings-block');
-  // Top of Settings, above every other section - who you're signed in as
-  // frames everything below it that syncs.
+  const first = scroll.querySelector('.settings-block:not(#settingsSupportBlock)');
+  // Top of Settings, below only Feedback & support (Send feedback stays the
+  // first row, #239) - who you're signed in as frames everything below it
+  // that syncs.
   if (first) first.parentNode.insertBefore(block, first);
   else scroll.appendChild(block);
   block.querySelector('#accountActions').addEventListener('click', (e) => {
@@ -5153,9 +5199,8 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     let { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
     if (type === 'yt_album'){
       // An album playlist's videos are the artist's auto-generated "<Artist>
-      // - Topic" uploads - the credit is the artist, not the channel name,
-      // and the feed titles the list "Album - <name>".
-      tracks = tracks.map(t => Object.assign({}, t, { artist: String(t.artist || '').replace(/\s+-\s+Topic$/i, '') }));
+      // - Topic" uploads (fetchYouTubePlaylist already strips that from the
+      // credit), and the feed titles the list "Album - <name>".
       name = String(name || '').replace(/^Album\s+-\s+/i, '') || name;
     }
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
@@ -5262,7 +5307,12 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   return payload;
 }
 
-function getCachedPlaylist(id){ return lsGet(LS_PL(id), null); }
+// Strips " - Topic" from tracks saved before #240 too.
+function getCachedPlaylist(id){
+  const pl = lsGet(LS_PL(id), null);
+  if (pl) stripTopicArtists(pl.tracks);
+  return pl;
+}
 
 // 'custom' playlists (Liked Songs, CURRENT/Swell, user-made playlists,
 // Discover overflow) aren't built by resolvePlaylist and have no
@@ -7714,7 +7764,7 @@ async function resolveTracksFromLink(input, onProgress){
     if (!tracks.length) throw new Error("That playlist has no videos.");
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
-      const t = yt.type === 'album' ? Object.assign({}, tracks[i], { artist: String(tracks[i].artist || '').replace(/\s+-\s+Topic$/i, '') }) : tracks[i];
+      const t = tracks[i];
       const art = await resolveTrackArt('youtube', t.title, t.artist, null);
       resolved.push({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art, duration: 0 });
       if (onProgress) onProgress(i + 1, tracks.length);
@@ -8199,12 +8249,39 @@ function applySharedImportFromUrl(){
     sourceLink = params.get('import');
     trackParam = params.get('track');
   } catch(e){ return; }
-  if (!sourceLink) return;
+  if (!sourceLink){ applyShareTargetFromUrl(); return; }
   try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
   const parsed = parseImportLink(sourceLink);
   if (!parsed){ showToast("That share link isn't valid anymore."); return; }
   const targetIndex = trackParam != null ? parseInt(trackParam, 10) : undefined;
   beginImportFromParsedLink(parsed, targetIndex);
+}
+
+// Android Share sheet -> EBBLESS (manifest.json share_target, GET to
+// ./index.html?share_title=&share_text=&share_url=). Apps like Spotify put
+// "Listen to X on Spotify: https://..." in text rather than url, so the
+// first http(s) URL from either wins; with no URL at all the shared text is
+// used as-is. Either way it goes through the paste box's own submit handler
+// below, so link parsing, the "not a supported link" message and the
+// vibe-search fallback all behave exactly as if it had been pasted. Params
+// are stripped first so a reload can't re-import. Called via
+// applySharedImportFromUrl from startApp(), so a cold start (splash or
+// onboarding still up) only gets here once the app is ready.
+function applyShareTargetFromUrl(){
+  let title, text, url;
+  try{
+    const params = new URLSearchParams(location.search);
+    title = params.get('share_title') || '';
+    text = params.get('share_text') || '';
+    url = params.get('share_url') || '';
+  } catch(e){ return; }
+  if (!title && !text && !url) return;
+  try{ history.replaceState(null, '', location.pathname + location.hash); } catch(e){}
+  const m = (url + ' ' + text).match(/https?:\/\/\S+/i);
+  const candidate = (m ? m[0] : (text || title)).trim();
+  if (!candidate) return;
+  urlInput.value = candidate;
+  try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
 }
 
 importForm.addEventListener('submit', (e) => {
@@ -9095,6 +9172,7 @@ feedbackModal.addEventListener('submit', async (e) => {
 const VIBE_KEY = 'ebbless_vibe_check';
 const VIBE_MIN_DAYS = 3, VIBE_REASK_MS = 7 * 86400000, VIBE_MAX_DISMISSALS = 3;
 const VIBE_FIRST_DELAY_MS = 45000, VIBE_RETRY_MS = 30000, VIBE_MAX_TRIES = 10;
+let vibeCheckPending = false;
 function vibeState(){
   const v = lsGet(VIBE_KEY, null);
   return (v && typeof v === 'object') ? v : { first: Date.now(), days: 0, lastDay: '', answered: false, dismissals: 0, lastAsked: 0 };
@@ -9134,6 +9212,7 @@ function scheduleVibeCheck(){
     lsSet(VIBE_KEY, v);
     if (!vibeCheckEligible(v)) return;
   }
+  vibeCheckPending = true;   // keeps the tester banner (#236) out of this session
   let tries = 0;
   const attempt = () => {
     if (vibeCheckCalm()){
@@ -9264,6 +9343,33 @@ if (statsHostOk){
 window.ebblessStats = function(){ return JSON.parse(JSON.stringify(stats)); };
 window.ebblessStats.off = function(){ try { localStorage.setItem(STATS_OFF_KEY, '1'); localStorage.removeItem(STATS_KEY); } catch(e){} stats.pend = statsEmpty(); };
 window.ebblessStats.on = function(){ try { localStorage.removeItem(STATS_OFF_KEY); } catch(e){} };
+
+/* ---- tester-version banner (issue #236) ----
+   Beta testers only (a tester token stored by the beta lock / tester link).
+   Shows once 3 days have passed since the vibe check's first-seen stamp
+   (vibeState().first), and never in a session where the vibe check is
+   queued. The x hides it for 7 days; "Send feedback" opens the same form
+   as Settings > Send feedback and counts as a dismissal. CSS keeps it
+   hidden under the splash, tutorial, fullscreen modes and dialogs. */
+const TESTER_BANNER_KEY = 'ebbless:testerBannerDismissedAt';
+const TESTER_BANNER_MIN_MS = 3 * 86400000, TESTER_BANNER_SNOOZE_MS = 7 * 86400000;
+const testerBanner = $('testerBanner');
+function initTesterBanner(){
+  let token = null;
+  try { token = localStorage.getItem('ebbless:betaToken'); } catch(e){}
+  if (!token || !/^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(token)) return;
+  if (vibeCheckPending) return;
+  const now = Date.now();
+  if (now - (vibeState().first || now) < TESTER_BANNER_MIN_MS) return;
+  if (now - (+lsGet(TESTER_BANNER_KEY, 0) || 0) < TESTER_BANNER_SNOOZE_MS) return;
+  testerBanner.hidden = false;
+}
+function dismissTesterBanner(){
+  testerBanner.hidden = true;
+  lsSet(TESTER_BANNER_KEY, Date.now());
+}
+$('testerBannerClose').addEventListener('click', dismissTesterBanner);
+$('testerBannerSend').addEventListener('click', () => { dismissTesterBanner(); openFeedbackModal(); });
 
 replayTutorialBtn.addEventListener('click', () => {
   // stop any real track first - the intro has its own theme music and
@@ -9594,12 +9700,12 @@ async function resolveDiscoverMetadata(title, artist){
       const data = await res.json();
       noteSpotifyartYear(title, artist, data);
       if (data.image || data.title){
-        return { title: data.title || title, artist: data.artist || artist, art: data.image || null };
+        return { title: data.title || title, artist: stripTopicSuffix(data.artist || artist), art: data.image || null };
       }
     }
   } catch(e){ /* fall through to MusicBrainz art + original title/artist */ }
   const art = await fetchDiscoverArt(title, artist);
-  return { title, artist, art };
+  return { title, artist: stripTopicSuffix(artist), art };
 }
 /* ---------- release year (CuRRentSSsss' soft era preference) ----------
    /spotifyart returns `year` (iTunes releaseDate) on workers deployed after
@@ -12527,6 +12633,7 @@ function recordGameStart(){
   recGameMul = 1;
   recGameHud.classList.remove('is-new');
   recGameEl.classList.add('is-game');
+  closeArtStyleMenu(); // issue #235: no art-style menu over a run
   recGameHud.dataset.phase = 'run';
   recordGameRender();
 }
@@ -12818,6 +12925,10 @@ cassetteApplyRotation(0);
 visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   if (btn.dataset.mode === 'art'){
     e.stopPropagation();
+    // issue #235: during a record tap run the art tab sits over the top of
+    // the disc where the cue is, so a click there is a tap on the record,
+    // never the art-style menu
+    if (recGame.on){ recordGameTap(); return; }
     if (visualMode !== 'art'){ setVisualMode('art'); closeArtStyleMenu(); }
     else toggleArtStyleMenu();
     return;
@@ -16559,6 +16670,7 @@ function startApp(){
 
   try{ schedulePasteGuide(); } catch(e){}
   try{ scheduleVibeCheck(); } catch(e){}
+  try{ initTesterBanner(); } catch(e){}
 
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
