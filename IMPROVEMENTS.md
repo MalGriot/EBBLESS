@@ -7697,3 +7697,42 @@ Add entries in this shape:
 - **Touches:** desktop library CSS.
 - **Branch:** agent/desktop-library-section-title-size
 - **Notes:** Synced from Geethub issue #248. Title only.
+
+### miniplayer-tab-favicon-leak: Main browser tab shows the "mini-player open" icon instead of the EBBLESS logo
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** When the user is on another browser tab, the EBBLESS tab's
+  icon shows the "mini-player open" symbol instead of the EBBLESS logo. The
+  main tab should always keep the EBBLESS favicon; any mini-player icon
+  belongs only to the Picture-in-Picture window.
+- **Touches:** desktop mini-player (Document PiP) title/favicon handling,
+  main document `<link rel="icon">`.
+- **Branch:** agent/miniplayer-tab-favicon-leak
+- **Notes:** Synced from Geethub issue #251. Likely a side effect of
+  merged `mini-player-polish` (88041a9, "PiP title/favicon") writing to the
+  main document's icon instead of the PiP window's.
+
+### miniplayer-art-fade: Mini-player album art should fade on track change
+- **Status:** merged
+- **Priority:** medium
+- **Description:** In the desktop mini-player, album art should fade into
+  the next track's art on track change instead of snapping, matching the
+  main player's crossfade art transition.
+- **Touches:** desktop mini-player art element; reuse the main player's
+  crossfade-art logic.
+- **Branch:** agent/miniplayer-art-fade
+- **Notes:** Synced from Geethub issue #250. Extends merged
+  `crossfade-album-art-transition` / `crossfade-art-lp-cassette` to the
+  mini-player; not a duplicate.
+
+### esc-close-video: Esc should close the video window
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Pressing Esc while the YouTube video window/tab is open
+  should close it, same as Esc exits fullscreen.
+- **Touches:** keyboard shortcut handler, video playback view (from
+  `video-playback-option` / `platform-compliance-audit`).
+- **Branch:** agent/esc-close-video
+- **Notes:** Synced from Geethub issue #249. Related to merged
+  `fullscreen-esc-exit`; check Esc priority order (fullscreen first, then
+  video, then other panels).
