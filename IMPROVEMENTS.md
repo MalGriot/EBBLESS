@@ -7699,7 +7699,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #248. Title only.
 
 ### miniplayer-tab-favicon-leak: Main browser tab shows the "mini-player open" icon instead of the EBBLESS logo
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** When the user is on another browser tab, the EBBLESS tab's
   icon shows the "mini-player open" symbol instead of the EBBLESS logo. The
@@ -7713,7 +7713,8 @@ Add entries in this shape:
   main document's icon instead of the PiP window's.
   **Investigated 2026-10-03:** no code writes the main tab icon/title (PiP
   writes only to its own window). Likely Chrome's picture-in-picture tab
-  indicator, which pages can't control. Needs a desktop Chrome check.
+  indicator, which pages can't control. Confirmed in Chrome: logo stays, PiP indicator
+  sits beside it. Dropped as browser behaviour.
 
 ### miniplayer-art-fade: Mini-player album art should fade on track change
 - **Status:** merged
