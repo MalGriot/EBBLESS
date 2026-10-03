@@ -1324,8 +1324,20 @@ async function handlePodcast(url, ctx) {
     if (!showName && names.length) showName = names[0].n;
     if (!showName) return json({ error: "Couldn't read that Spotify podcast link (private or invalid?)", debug: dbg }, 404);
     // Spotify marks subscriber-only shows with a 🔓 (e.g. "NoSleep Premium
-    // (🔓)") - those never have a free feed, so say that plainly.
-    if (!feedUrl && /\u{1F513}|\u{1F512}|\bpremium\b|\bsubscriber/iu.test(showName)) return json({ error: '"' + showName + '" is a subscriber-only show on Spotify, so there\'s no free feed to play.', debug: dbg }, 404);
+    // (🔓)") - those never have a free feed. If the show has a free version
+    // ("NoSleep" -> The NoSleep Podcast), load that instead, silently; only
+    // the free episodes play. Otherwise say plainly there's nothing free.
+    const paidRe = /\u{1F513}|\u{1F512}|\bpremium\b|\bsubscriber/iu;
+    if (!feedUrl && paidRe.test(showName)) {
+      const free = showName.replace(/[\u{1F513}\u{1F512}]/gu, '').replace(/\(\s*\)|\[\s*\]/g, '')
+        .replace(/\b(premium|subscribers?(\s+only)?|subscription|plus|bonus)\b/gi, '')
+        .replace(/[\s\-\u2013:|()]+$/, '').replace(/\s{2,}/g, ' ').trim();
+      if (free && free.toLowerCase() !== showName.toLowerCase()) {
+        dbg.push('subscriber-only show - trying free version "' + free + '"');
+        feedUrl = await findPodcastFeed(free, author, dbg);
+      }
+    }
+    if (!feedUrl && paidRe.test(showName)) return json({ error: '"' + showName + '" is a subscriber-only show on Spotify, so there\'s no free feed to play.', debug: dbg }, 404);
     if (!feedUrl) {
       // No feed anywhere: YouTube fallback (see youtubeEpisodeMatch).
       let showEntity = kind === 'show' ? entity : (showId ? await spotifyEmbedEntity('show', showId) : null);
