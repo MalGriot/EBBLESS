@@ -6100,6 +6100,7 @@ function crossfadeAltArt(track, durationMs){
   }
   swapAltArt(track);
   cassetteSetLabelArt(track);
+  miniPlayerLeadArt(track, durationMs);
 }
 
 /* =========================================================================
@@ -14588,8 +14589,10 @@ const MINI_PLAYER_STYLE = `
   body:hover #mpCard{background:rgba(255,255,255,.035)}
   body.shape-card #mpCard{grid-template-columns:minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) auto 16px 36px;
     grid-template-areas:"head" "art" "meta" "seek" "ctl"}
-  #mpArtWrap{grid-area:art;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#282828;min-height:0;
+  #mpArtWrap{grid-area:art;position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#282828;min-height:0;
     box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .mp-art-ghost{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .35s ease}
+  body:hover .mp-art-ghost{transform:scale(1.04)}
   #mpArt{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
   #mpArt[src=""],.mpq-row img[src=""]{visibility:hidden}
   body:hover #mpArt{transform:scale(1.04)}
@@ -14672,6 +14675,52 @@ function saveMiniPlayerPrefs(patch){
 // resized by to fit it (0 = shown over the player instead), up = it sits
 // above the player because the window is in the lower half of the screen.
 let mpQueue = null;
+// Album art crossfade (#250), same look as the main player's art swap: a
+// frozen copy of the outgoing art sits on top of #mpArt and fades out once
+// the next cover has actually loaded underneath, so there's never a blank
+// frame. Default speed matches --dur-surface; during an audio crossfade the
+// fade is stretched to its length and started alongside it (mpArtLead), like
+// the player art. Timers run on the PiP window - the main tab is hidden and
+// its rAF is paused while the mini player is up.
+const MP_ART_FADE_MS = 500;
+const MP_ART_EASE = 'cubic-bezier(.65,0,.35,1)';  // --ease-in-out
+let mpArtLead = null;  // { url, ms, pos, until } - art shown ahead of currentTrack() during a synced fade
+function miniPlayerLeadArt(track, durationMs){
+  if (!miniPlayerWin || miniPlayerWin.closed) return;
+  mpArtLead = { url: artworkUrls(track)[0] || '', ms: durationMs, pos: state.queuePos, until: Date.now() + durationMs + 2000 };
+  updateMiniPlayerUI();
+}
+function setMiniPlayerArt(artEl, art, ms){
+  const win = artEl.ownerDocument.defaultView;
+  const wrap = artEl.parentNode;
+  // Freeze what's showing now. If the previous cover is still loading (rapid
+  // skips), keep the existing frozen copy instead - it's the last art that
+  // actually rendered.
+  if (artEl.getAttribute('src') && artEl.complete && artEl.naturalWidth && artEl.style.visibility !== 'hidden'){
+    wrap.querySelectorAll('.mp-art-ghost').forEach(g => g.remove());
+    const ghost = artEl.cloneNode(false);
+    ghost.removeAttribute('id');
+    ghost.className = 'mp-art-ghost';
+    ghost.style.cssText = '';
+    wrap.appendChild(ghost);
+  }
+  artEl._mpFadeMs = ms;
+  const fadeGhosts = () => {
+    const fadeMs = artEl._mpFadeMs;
+    wrap.querySelectorAll('.mp-art-ghost').forEach(g => {
+      if (g._fading) return;
+      g._fading = true;
+      g.style.transition = 'opacity ' + fadeMs + 'ms ' + MP_ART_EASE + ',transform .35s ease';
+      win.requestAnimationFrame(() => win.requestAnimationFrame(() => { g.style.opacity = '0'; }));
+      win.setTimeout(() => g.remove(), fadeMs + 80);
+    });
+  };
+  artEl.style.visibility = '';
+  artEl.onload = fadeGhosts;
+  artEl.onerror = () => { artEl.style.visibility = 'hidden'; fadeGhosts(); };
+  artEl.src = art;
+  if (!art) fadeGhosts();
+}
 function buildMiniPlayerDOM(win){
   const doc = win.document;
   const brandUrl = (p) => new URL(p, location.href).href;  // PiP doc is about:blank - resolve against the app
@@ -14897,12 +14946,18 @@ function updateMiniPlayerUI(){
   const playIcoEl = doc.getElementById('mpPlayIco');
   if (!artEl || !titleEl || !artistEl || !playIcoEl) return;
   if (t){
-    const art = artworkUrls(t)[0] || '';
+    // A synced crossfade starts the art fade before currentTrack() moves on
+    // (see runCrossfade) - hold its art until the track catches up.
+    const lead = mpArtLead && mpArtLead.pos === state.queuePos && Date.now() < mpArtLead.until ? mpArtLead : null;
+    if (!lead) mpArtLead = null;
+    const art = lead ? lead.url : (artworkUrls(t)[0] || '');
     if (artEl.getAttribute('src') !== art){
-      artEl.style.visibility = '';
-      artEl.onerror = () => { artEl.style.visibility = 'hidden'; };
-      artEl.src = art;
+      setMiniPlayerArt(artEl, art, lead ? lead.ms : MP_ART_FADE_MS);
       doc.getElementById('mpBg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : '';
+    } else if (lead){
+      // a skip crossfade moves currentTrack() first, so the swap may already
+      // be waiting on its cover - stretch that pending fade to match
+      artEl._mpFadeMs = lead.ms;
     }
     // Same marquee as the main player; only re-set on change, since this
     // runs on the mini player's twice-a-second clock too.
