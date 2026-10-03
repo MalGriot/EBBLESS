@@ -3629,10 +3629,20 @@ async function pickAlbumArtMatch(match, artUrl){
   return match;
 }
 
+// A YouTube-sourced artist is often the auto-generated "<Artist> - Topic"
+// channel name - the credit is the artist (GitHub #240). Display/stored
+// credit only: matching still reads the raw channel off /search results.
+function stripTopicSuffix(artist){ return String(artist || '').replace(/\s+-\s+Topic$/i, ''); }
+function stripTopicArtists(tracks){
+  if (Array.isArray(tracks)) tracks.forEach(t => { if (t && t.artist) t.artist = stripTopicSuffix(t.artist); });
+  return tracks;
+}
+
 async function fetchYouTubePlaylist(playlistId){
   const res = await fetch(BACKEND + '/ytplaylist?id=' + encodeURIComponent(playlistId));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  stripTopicArtists(data.tracks);
   return data;
 }
 
@@ -3640,6 +3650,7 @@ async function fetchYouTubeVideo(videoId){
   const res = await fetch(BACKEND + '/ytvideo?id=' + encodeURIComponent(videoId));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+  if (data.artist) data.artist = stripTopicSuffix(data.artist);
   return data;
 }
 
@@ -3696,6 +3707,7 @@ async function fetchArtist(type, id){
   const res = await fetch(BACKEND + '/artist?url=' + encodeURIComponent(artistPageUrl(type, id)));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ? "Couldn't load that artist page: " + data.error + '.' : ('backend returned ' + res.status));
+  stripTopicArtists(data.tracks);
   return data;
 }
 
@@ -4702,7 +4714,7 @@ function resolveHandoffQueue(s){
       if (idx >= 0 && pl.tracks[idx].videoId) entry = { plId: r.p, idx };
     }
     if (!entry && r.t && typeof r.t === 'object' && typeof r.t.videoId === 'string' && r.t.videoId){
-      const t = { title: String(r.t.title || ''), artist: String(r.t.artist || ''), videoId: r.t.videoId, plays: 0,
+      const t = { title: String(r.t.title || ''), artist: stripTopicSuffix(r.t.artist), videoId: r.t.videoId, plays: 0,
         art: typeof r.t.art === 'string' ? r.t.art : null, duration: Number(r.t.duration) || 0 };
       if (r.t.podcast === true) t.podcast = true;
       const key = profTrackKey(t);
@@ -5153,9 +5165,8 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     let { name, image, tracks, truncated } = await fetchYouTubePlaylist(rawId);
     if (type === 'yt_album'){
       // An album playlist's videos are the artist's auto-generated "<Artist>
-      // - Topic" uploads - the credit is the artist, not the channel name,
-      // and the feed titles the list "Album - <name>".
-      tracks = tracks.map(t => Object.assign({}, t, { artist: String(t.artist || '').replace(/\s+-\s+Topic$/i, '') }));
+      // - Topic" uploads (fetchYouTubePlaylist already strips that from the
+      // credit), and the feed titles the list "Album - <name>".
       name = String(name || '').replace(/^Album\s+-\s+/i, '') || name;
     }
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
@@ -5262,7 +5273,12 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   return payload;
 }
 
-function getCachedPlaylist(id){ return lsGet(LS_PL(id), null); }
+// Strips " - Topic" from tracks saved before #240 too.
+function getCachedPlaylist(id){
+  const pl = lsGet(LS_PL(id), null);
+  if (pl) stripTopicArtists(pl.tracks);
+  return pl;
+}
 
 // 'custom' playlists (Liked Songs, CURRENT/Swell, user-made playlists,
 // Discover overflow) aren't built by resolvePlaylist and have no
@@ -7713,7 +7729,7 @@ async function resolveTracksFromLink(input, onProgress){
     if (!tracks.length) throw new Error("That playlist has no videos.");
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
-      const t = yt.type === 'album' ? Object.assign({}, tracks[i], { artist: String(tracks[i].artist || '').replace(/\s+-\s+Topic$/i, '') }) : tracks[i];
+      const t = tracks[i];
       const art = await resolveTrackArt('youtube', t.title, t.artist, null);
       resolved.push({ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, art, duration: 0 });
       if (onProgress) onProgress(i + 1, tracks.length);
@@ -9476,12 +9492,12 @@ async function resolveDiscoverMetadata(title, artist){
       const data = await res.json();
       noteSpotifyartYear(title, artist, data);
       if (data.image || data.title){
-        return { title: data.title || title, artist: data.artist || artist, art: data.image || null };
+        return { title: data.title || title, artist: stripTopicSuffix(data.artist || artist), art: data.image || null };
       }
     }
   } catch(e){ /* fall through to MusicBrainz art + original title/artist */ }
   const art = await fetchDiscoverArt(title, artist);
-  return { title, artist, art };
+  return { title, artist: stripTopicSuffix(artist), art };
 }
 /* ---------- release year (CuRRentSSsss' soft era preference) ----------
    /spotifyart returns `year` (iTunes releaseDate) on workers deployed after
