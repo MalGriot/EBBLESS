@@ -2944,7 +2944,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <li><span><kbd>Q</kbd></span>Queue</li>
           <li><span><kbd>S</kbd></span>Settings</li>
           <li><span><kbd>F</kbd></span>Fullscreen</li>
-          <li><span><kbd>Esc</kbd></span>Leave fullscreen, close a playlist</li>
+          <li><span><kbd>Esc</kbd></span>Close the video, leave fullscreen, close a playlist</li>
           <li><span><kbd>Z</kbd></span>Art (again to change style)</li>
           <li><span><kbd>X</kbd></span>Cymatics</li>
           <li><span><kbd>C</kbd></span>Lyrics</li>
@@ -14424,10 +14424,14 @@ document.addEventListener('keydown', (e) => {
       $('wordmarkBtn').click();
       break;
     case 'Escape':
-      // Fullscreen first (one layer, see leaveFullscreen), then an open
-      // playlist panel. A context menu / modal that already handled this
-      // Escape marks it defaultPrevented, so one press closes one thing.
+      // The YouTube video card first (Geethub #249: it sits over everything,
+      // fullscreen included, and focus may have left it so its own Escape
+      // handler never ran), then fullscreen (one layer, see leaveFullscreen),
+      // then an open playlist panel. A context menu / modal that already
+      // handled this Escape marks it defaultPrevented, so one press closes
+      // one thing.
       if (e.defaultPrevented) break;
+      if (ytPanelOpen()){ closeYtPanel(); break; }
       if (state.queueOpen && document.body.classList.contains('queue-over-fs')){ closeQueuePanel(); break; }
       if (leaveFullscreen()) break;
       if (openLibraryPanelId) closeLibraryPlaylistPanel();
