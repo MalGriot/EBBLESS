@@ -7620,3 +7620,80 @@ Add entries in this shape:
 - **Branch:** agent/strip-topic-artist-names
 - **Notes:** Synced from Geethub issue #240 (bug).
   **Built (6e4965c):** `stripTopicSuffix()` / `stripTopicArtists()` applied in fetchYouTubePlaylist, fetchYouTubeVideo, fetchArtist, getCachedPlaylist (cleans old saved data on load), resolveDiscoverMetadata, device handoff; old album-only inline replaces removed. Matching/search and worker untouched. Side effect: stored `channel` also stripped on non-album YouTube imports. Unverified in browser.
+
+### lockscreen-art-youtube-thumb: Lock screen shows YouTube thumbnail instead of album art for one track
+- **Status:** merged
+- **Priority:** medium
+- **Description:** "Walking on the Moon" by Thundercat shows the YouTube
+  thumbnail on the lock screen and notification bar, while the app itself
+  shows the correct album art. Only this track noticed so far. Find why the
+  media session artwork falls back to the YouTube thumb for it and fix.
+- **Touches:** media session artwork (see merged `lockscreen-album-art`).
+- **Branch:** agent/lockscreen-art-youtube-thumb
+- **Notes:** Synced from Geethub issue #242 (bug). Possible regression or edge case of `lockscreen-album-art`.
+  **Built (18d5c13):** `mediaSessionArtwork()` drops img.youtube.com fallback thumbs when `t.art` is set (OS picked the sized YT thumb over unsized resolved art). Untested on a real Android lock screen; broken art URL now shows no lock-screen art instead of the YT thumb.
+
+### add-to-playlist-all-playlists: "Add to playlist" screen should list all your playlists
+- **Status:** merged
+- **Priority:** medium
+- **Description:** The add-to-playlist picker should show every playlist
+  in the user's library, not a subset.
+- **Touches:** add-to-playlist picker.
+- **Branch:** agent/add-to-playlist-all-playlists
+- **Notes:** Synced from Geethub issue #243 (bug). Title only, no repro details.
+  **Built (46efa84):** new `addablePlaylists()` used by `openAddToPlaylistPicker` and `openSingleTrackDestinationPicker`; was filtering to `type === "custom"` only. Now lists imported playlists too; excludes CuRRentSSsss, SwiiiRrrLL, albums, podcasts, single tracks. Lists grow to 55vh/50vh. Unverified in browser.
+
+### podcast-chapters-captions: Podcast chapters and captions
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Show chapter markers (jump between chapters) and
+  captions/transcript for podcasts when the source provides them.
+- **Touches:** podcast playback (see `podcasts`, `podcast-skip-15`).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #241. Title only.
+
+### dj-mode: DJ mode - play two songs at once, set markers, and mix
+- **Status:** draft
+- **Priority:** low
+- **Description:** A DJ mode with two decks playing at once, play/sample
+  cue markers per track, and manual mixing between them.
+- **Touches:** playback engine (crossfade), new UI.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #244. Title only. Large feature; two simultaneous YouTube players may hit platform limits.
+
+### h-key-home: "h" key returns to home (main player)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Pressing "h" on desktop should return to the main
+  player view from anywhere (library, queue, settings).
+- **Touches:** global keydown handler (see merged `keyboard-shortcuts`).
+- **Branch:** agent/h-key-home
+- **Notes:** Synced from Geethub issue #245. Title only.
+
+### keyboard-shortcuts-settings-page: Keyboard shortcut reference page in Settings
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Add a page/section in Settings listing every keyboard
+  shortcut and what it does.
+- **Touches:** Settings view; shortcut list from `keyboard-shortcuts`.
+- **Branch:** agent/h-key-home
+- **Notes:** Synced from Geethub issue #246. Title only. Should include `h-key-home` if that ships first.
+
+### whats-new-list: "What's new" list of features and fixes per version
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Show users a "What's new" list of features and fixes
+  for each app version (e.g. after an update, or from Settings).
+- **Touches:** Settings / update flow (see `pwa-update-propagation`).
+- **Branch:** agent/whats-new-list
+- **Notes:** Synced from Geethub issue #247. Title only.
+
+### desktop-library-section-title-size: Desktop library section titles should match 2x2 grid title size
+- **Status:** merged
+- **Priority:** low
+- **Description:** On desktop library, the Playlists / Albums / Podcasts
+  section titles should use the same font size as playlist titles in the
+  2x2 grid view.
+- **Touches:** desktop library CSS.
+- **Branch:** agent/desktop-library-section-title-size
+- **Notes:** Synced from Geethub issue #248. Title only.

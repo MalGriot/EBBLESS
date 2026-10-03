@@ -12,12 +12,12 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="apple-touch-icon" href="brand/assets/icons/apple-touch-icon.png">
 <meta property="og:title" content="EBBLESS">
-<meta property="og:description" content="Music without the ebb. Paste a playlist, keep listening.">
+<meta property="og:description" content="Flow with the go. Music surf through WAVs that never crash.">
 <meta property="og:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="EBBLESS">
-<meta name="twitter:description" content="Music without the ebb. Paste a playlist, keep listening.">
+<meta name="twitter:description" content="Flow with the go. Music surf through WAVs that never crash.">
 <meta name="twitter:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -96,6 +96,12 @@ svg{display:block}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
+/* subtle tutorial replay; margin-left:auto keeps it packed with the nav on
+   the right unless the tester banner (also margin-left:auto) is ahead of it */
+#helpBtn{padding:8px;border-radius:50%;margin-left:auto;opacity:.7}
+#helpBtn:hover{opacity:1}
+#helpBtn svg{width:18px;height:18px}
+.tester-banner:not([hidden]) ~ #helpBtn{margin-left:0}
 #mobileSettingsBtn{display:none;padding:8px;border-radius:50%}
 #mobileSettingsBtn svg{width:20px;height:20px}
 
@@ -2286,6 +2292,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
       <button type="button" class="tb-close" id="testerBannerClose" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
     </div>
+    <button class="nav-btn" id="helpBtn" type="button" aria-label="Play tutorial" title="Play tutorial">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4.1"/><circle cx="12" cy="17.4" r=".4" fill="currentColor"/></svg>
+    </button>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
         <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.5 2h11A1.5 1.5 0 0 1 22 3.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 8 14.5v-11A1.5 1.5 0 0 1 9.5 2zM15 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M5 5h1.5v11.5A1.5 1.5 0 0 0 8 18h11.5v1.5H7.5A2.5 2.5 0 0 1 5 17V5zM2 8h1.5v11a1.5 1.5 0 0 0 1.5 1.5h11.5V22H4.5A2.5 2.5 0 0 1 2 19.5V8z"/></svg>
@@ -3354,6 +3363,25 @@ async function runInstallPrompt(){
   prompt.prompt();
   const choice = await prompt.userChoice;
   return choice.outcome === 'accepted';
+}
+// Daily nudges: the splash install invite and the Tutorial/Enter choice each
+// run on the first load of a local calendar day only, and keep doing so daily
+// until the visitor installs (installed launches are standalone, so
+// isStandaloneDisplay() stops it for good) / starts the tutorial (TUTORIAL_
+// WATCHED_KEY, set by runIntro()).
+const INSTALL_INVITE_DAY_KEY = 'ebbless:installInviteDay';
+const TUTORIAL_INVITE_DAY_KEY = 'ebbless:tutorialInviteDay';
+const TUTORIAL_WATCHED_KEY = 'ebbless:tutorialWatched';
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+};
+function inviteDueToday(key){
+  try { return localStorage.getItem(key) !== todayKey(); }
+  catch (e) { return true; }
+}
+function markInviteShown(key){
+  try { localStorage.setItem(key, todayKey()); } catch (e) {}
 }
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -9526,6 +9554,7 @@ replayTutorialBtn.addEventListener('click', () => {
   // never touches the real ONB_KEY completion flag
   runIntro(true);
 });
+$('helpBtn').addEventListener('click', () => replayTutorialBtn.click());
 
 shareAppBtn.addEventListener('click', async () => {
   const shareData = {
@@ -16902,7 +16931,7 @@ function startApp(){
     // Android/Chrome if the event arrived after the splash already timed
     // out. Detection is now based on install state (isStandaloneDisplay),
     // not on whether that event happened to show up in time.
-    if (isMobileUA && !isStandaloneDisplay()){
+    if (isMobileUA && !isStandaloneDisplay() && inviteDueToday(INSTALL_INVITE_DAY_KEY)){
       // Let the logo settle in for a beat before turning it into the install
       // invite - showing it instantly alongside the logo read as cluttered
       // and gave visitors no chance to register the brand first.
@@ -16911,6 +16940,8 @@ function startApp(){
         // The splash may already be gone (backgrounded, dismissed some other
         // way) by the time this fires - don't resurrect the install invite.
         if (splashEl.classList.contains('is-hidden')) return;
+        // Only count the day as used once the invite actually appears.
+        markInviteShown(INSTALL_INVITE_DAY_KEY);
         splashEl.classList.add('is-install');
         let tapped = false;
         splashLogoBtn.addEventListener('click', async () => {
@@ -17062,6 +17093,9 @@ function positionOnbBubble(bubbleEl, r, vw, vh, mode, forceAbove, gapOverride){
 let cancelPrevIntro = null;
 function runIntro(preview){
   if (cancelPrevIntro){ cancelPrevIntro(); cancelPrevIntro = null; }
+  // Any real start (first-visit choice, Settings replay, the topbar "?")
+  // counts as watched, which ends the daily Tutorial/Enter re-invite.
+  try{ localStorage.setItem(TUTORIAL_WATCHED_KEY, 'true'); }catch(e){}
   // undo discardIntroChrome()'s display:none from a prior run/skip, plus
   // the inline opacity:0 and outro-blink classes finish() leaves behind on
   // its way out - a replay reuses these same elements rather than
@@ -18342,6 +18376,8 @@ const introEligibleNow = true;
 
 let onboardingComplete = false;
 try{ onboardingComplete = localStorage.getItem(ONB_KEY) === 'true'; }catch(e){}
+let tutorialWatched = false;
+try{ tutorialWatched = localStorage.getItem(TUTORIAL_WATCHED_KEY) === 'true'; }catch(e){}
 
 // ?intro replays the sequence on demand (for demos/checking changes) even
 // on a device/browser that's already past its one real showing - it never
@@ -18625,8 +18661,13 @@ if (introBeatCapture){
   // the forced gold set earlier with the real time-of-day color again
   document.documentElement.style.setProperty('--clock-accent', '#e0b26a');
 } else if (forceIntroPreview) runIntro(true);
+else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVITE_DAY_KEY)){
+  // Took "Enter" without ever watching - offer the choice again, once a day.
+  markInviteShown(TUTORIAL_INVITE_DAY_KEY);
+  showSplashChoice();
+}
 else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startApp(); }
-else showSplashChoice();
+else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
 })();
 </script>
 </body>
