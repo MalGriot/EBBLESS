@@ -26,6 +26,13 @@ const CHANGES_MUSIC = ['Yes, completely', 'Yes, a little', 'Not really', 'No'];
 const BUG_ID_RE = /^EBB-TEST-\d{4,}$/;
 const SHOT_MAX_CHARS = 2_000_000;   // ~1.5MB image; the client downsizes before sending
 
+// In-app usage analytics (POST /beta/activity): counts only, keyed to the
+// tester record in the Sheet's Analytics tab. Keep in sync with FEATURES in
+// tools/beta-sheet.gs.
+const FEATURES = ['lyrics', 'cymatics', 'lp', 'cassette', 'youtube_video', 'fullscreen', 'discover', 'podcast',
+  'soundcloud', 'cast', 'vibe_search', 'share'];
+const ACTIVITY_LIMIT = 20, ACTIVITY_WINDOW_S = 600;
+
 const SIGNUP_LIMIT = 4, SIGNUP_WINDOW_S = 600;
 const REPORT_LIMIT = 10, REPORT_WINDOW_S = 600;
 
@@ -182,6 +189,28 @@ async function handleReport(request, env, ctx, h) {
   return h.json({ ok: true, id: r.id });
 }
 
+// Batched counts from the app (index.html "beta analytics"). Sent with
+// sendBeacon, so the body may arrive as text/plain. No IP, user agent or
+// content (track/playlist names) is stored, just the numbers below.
+async function handleActivity(request, env, ctx, h) {
+  const { body, error } = await readBody(request, h.json, 4_000);
+  if (error) return error;
+  if (!TOKEN_RE.test(String(body.token || ''))) return h.json({ error: 'not a tester' }, 403);
+  const n = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+  const delta = {
+    sessions: n(body.sessions, 50), listenSec: n(body.listenSec, 86_400), songs: n(body.songs, 2_000),
+    playlists: n(body.playlists, 500), imports: n(body.imports, 500),
+    features: {},   // feature -> sessions it was used in
+  };
+  const f = body.features && typeof body.features === 'object' ? body.features : {};
+  FEATURES.forEach(k => { const v = n(f[k], 50); if (v) delta.features[k] = v; });
+  if (!delta.sessions && !delta.listenSec && !delta.songs && !delta.playlists && !delta.imports && !Object.keys(delta.features).length) return h.json({ ok: true });
+  if (await throttled(request, ctx, h.envCache, 'activity', ACTIVITY_LIMIT, ACTIVITY_WINDOW_S)) return h.json({ error: 'slow down' }, 429);
+  const r = await sheet(env, 'activity', { token: body.token, delta });
+  if (!r.tester) return h.json({ error: 'not a tester' }, 403);
+  return h.json({ ok: true });
+}
+
 export async function handleBeta(request, url, env, ctx, h) {
   if (!env.SHEET_URL || !env.SHEET_SECRET) return h.json({ error: 'beta not configured' }, 500);
   const p = url.pathname;
@@ -190,6 +219,7 @@ export async function handleBeta(request, url, env, ctx, h) {
     if (p === '/beta/signup') return await handleSignup(request, env, ctx, h);
     if (p === '/beta/me') return await handleMe(request, env, ctx, h);
     if (p === '/beta/report') return await handleReport(request, env, ctx, h);
+    if (p === '/beta/activity') return await handleActivity(request, env, ctx, h);
   } catch (e) {
     console.error(e);
     return h.json({ error: 'Something broke on our side. Try again in a minute.' }, 502);

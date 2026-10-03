@@ -5,7 +5,9 @@
 //   Testers      only people you accepted; references applicant_id
 //   Feedback     what active testers said (references tester_id)
 //   Bug Reports  problems active testers reported (references tester_id)
-//   Dashboard    counts
+//   Analytics    anonymous app usage, one row per tester (no names/emails,
+//                no track or playlist names - counts and dates only)
+//   Dashboard    counts, activity and 7-day return
 //
 // Day to day you never touch code: set an applicant's applicant_status to
 // Accepted and this script creates their Tester row (next tester number,
@@ -16,7 +18,7 @@
 // Active testers only; tester numbers are never reused.
 //
 // The worker (worker/src/beta.js) calls this as a web app with a shared
-// secret: signup, status, me (token check) and report. Columns are found by
+// secret: signup, status, me (token check), report and activity. Columns are found by
 // header name, so you can add your own columns or reorder them freely
 // (re-run setup afterwards so the Dashboard formulas follow).
 //
@@ -40,7 +42,7 @@ const SITE_URL = 'https://malgriot.github.io/EBBLESS/beta/';
 const SENDER_NAME = 'EBBLESS BETA';
 const SHOTS_FOLDER = 'EBBLESS Beta Screenshots';
 
-const APPLICANTS = 'Applicants', TESTERS = 'Testers', FEEDBACK = 'Feedback', BUGS = 'Bug Reports', DASHBOARD = 'Dashboard';
+const APPLICANTS = 'Applicants', TESTERS = 'Testers', FEEDBACK = 'Feedback', BUGS = 'Bug Reports', DASHBOARD = 'Dashboard', ANALYTICS = 'Analytics';
 const APPLICANT_STATUSES = ['Pending', 'Accepted', 'Waitlisted', 'Rejected'];
 const TESTER_STATUSES = ['Active', 'Inactive'];
 const HEADERS = {};
@@ -57,6 +59,13 @@ HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_tim
   'changes_music_experience', 'would_bring_them_back', 'bug_report', 'one_change'];
 HEADERS[BUGS] = ['bug_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'area', 'what_went_wrong',
   'expected', 'actual', 'steps', 'screenshot', 'device', 'operating_system', 'browser', 'viewport', 'user_agent'];
+// Feature names the app reports (worker/src/beta.js FEATURES). uses_<name>
+// counts sessions in which the tester used it.
+const FEATURES = ['lyrics', 'cymatics', 'lp', 'cassette', 'youtube_video', 'fullscreen', 'discover', 'podcast',
+  'soundcloud', 'cast', 'vibe_search', 'share'];
+HEADERS[ANALYTICS] = ['tester_number', 'tester_id', 'first_active', 'last_active', 'days_since_active', 'sessions',
+  'listening_minutes', 'songs_played', 'playlists_played', 'playlists_added', 'days_active', 'returned_within_7d',
+  'active_days'].concat(FEATURES.map(function (f) { return 'uses_' + f; }));
 
 // ---------- sheet helpers ----------
 
@@ -201,6 +210,7 @@ function doPost(e) {
     if (b.action === 'signup') return out_(signup_(b.applicant || {}));
     if (b.action === 'me') return out_(me_(b.token));
     if (b.action === 'report') return out_(report_(b));
+    if (b.action === 'activity') return out_(activity_(b));
     return out_({ ok: false, error: 'unknown action' });
   } catch (err) {
     return out_({ ok: false, error: String(err) });
@@ -290,6 +300,50 @@ function report_(b) {
     }
   }
   return { ok: true, id: id, tester: { id: t.tester_id, number: numFrom_(t.tester_number) } };
+}
+
+// ---------- analytics ----------
+
+function day_(d) { return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
+function dayDiff_(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000); }
+
+// One batched usage ping from the app (worker already validated and clamped
+// it): adds the counts to the tester's Analytics row, creating it on first use.
+function activity_(b) {
+  const t = activeTester_(b.token);
+  if (!t) return { ok: true, tester: null };
+  const d = b.delta || {}, now = new Date(), today = day_(now);
+  withLock_(function () {
+    const ss = ss_();
+    const sh = ss.getSheetByName(ANALYTICS) || ss.insertSheet(ANALYTICS);
+    ensureHeaders_(sh, HEADERS[ANALYTICS]);
+    const c = cols_(sh);
+    let r = records_(sh).filter(function (x) { return x.tester_id === t.tester_id; })[0];
+    if (!r) {
+      append_(sh, { tester_number: t.tester_number, tester_id: t.tester_id, first_active: now });
+      r = records_(sh).filter(function (x) { return x.tester_id === t.tester_id; })[0];
+    }
+    const add = function (h, v) { r[h] = (Number(r[h]) || 0) + (Number(v) || 0); };
+    add('sessions', d.sessions);
+    r.listening_minutes = Math.round(((Number(r.listening_minutes) || 0) + (Number(d.listenSec) || 0) / 60) * 10) / 10;
+    add('songs_played', d.songs);
+    add('playlists_played', d.playlists);
+    add('playlists_added', d.imports);
+    FEATURES.forEach(function (f) { if (d.features && d.features[f]) add('uses_' + f, d.features[f]); });
+    const days = String(r.active_days || '').split(',').filter(Boolean);
+    if (days.indexOf(today) < 0) days.push(today);
+    const first = r.first_active instanceof Date ? day_(r.first_active) : days[0];
+    r.active_days = "'" + days.slice(-120).join(',');   // ' keeps a lone date as text
+    r.days_active = days.length;
+    // Came back on a later day within a week of their first day.
+    r.returned_within_7d = days.some(function (x) { const n = dayDiff_(first, x); return n >= 1 && n <= 7; }) ? 'Yes' : 'No';
+    r.last_active = now;
+    const row = sh.getRange(r._row, 1, 1, sh.getLastColumn()).getValues()[0];
+    Object.keys(c).forEach(function (h) { if (h !== 'days_since_active' && h in r && h !== '_row') row[c[h]] = r[h]; });
+    sh.getRange(r._row, 1, 1, row.length).setValues([row]);
+    sh.getRange(r._row, c.days_since_active + 1).setFormulaR1C1('=IF(RC' + (c.last_active + 1) + '="","",ROUND(NOW()-RC' + (c.last_active + 1) + ',1))');
+  });
+  return { ok: true, tester: { id: t.tester_id } };
 }
 
 // ---------- accepting applicants ----------
@@ -409,7 +463,7 @@ function colLetter_(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26
 function setup() {
   const ss = ss_(), props = PropertiesService.getScriptProperties();
   props.setProperty('SHEET_ID', ss.getId());
-  [APPLICANTS, TESTERS, FEEDBACK, BUGS].forEach(function (name) {
+  [APPLICANTS, TESTERS, FEEDBACK, BUGS, ANALYTICS].forEach(function (name) {
     const sh = ss.getSheetByName(name) || ss.insertSheet(name);
     ensureHeaders_(sh, HEADERS[name]);
     sh.setFrozenRows(1);
@@ -423,6 +477,9 @@ function setup() {
   const dash = ss.getSheetByName(DASHBOARD) || ss.insertSheet(DASHBOARD);
   const aS = colLetter_(cols_(ash).applicant_status), tS = colLetter_(cols_(tsh).tester_status);
   const A = "'" + APPLICANTS + "'!", T = "'" + TESTERS + "'!";
+  const nsh = ss.getSheetByName(ANALYTICS), nc = cols_(nsh), N = "'" + ANALYTICS + "'!";
+  const nCol = function (h) { const l = colLetter_(nc[h]); return N + l + '2:' + l; };
+  const week = 'NOW()-7';
   const rows = [
     ['APPLICANTS', ''],
     ['Total applicants', '=COUNTA(' + A + 'A2:A)'],
@@ -442,10 +499,31 @@ function setup() {
     ['', ''],
     ['BUGS', ''],
     ['Total bug reports', "=COUNTA('" + BUGS + "'!A2:A)"],
+    ['', ''],
+    ['ACTIVITY (Analytics tab, anonymous)', ''],
+    ['Testers who opened the app', '=COUNTA(' + nCol('tester_id') + ')'],
+    ['Active in the last 24 hours', '=COUNTIF(' + nCol('last_active') + ',">="&(NOW()-1))'],
+    ['Active in the last 7 days', '=COUNTIF(' + nCol('last_active') + ',">="&(' + week + '))'],
+    ['Total listening hours', '=ROUND(SUM(' + nCol('listening_minutes') + ')/60,1)'],
+    ['Avg sessions per tester', '=IFERROR(ROUND(AVERAGE(' + nCol('sessions') + '),1),0)'],
+    ['Songs played', '=SUM(' + nCol('songs_played') + ')'],
+    ['Playlists played', '=SUM(' + nCol('playlists_played') + ')'],
+    // Cohort: testers whose first day is at least 7 days back, so everyone
+    // counted has had the full week to come back.
+    ['7-day return (eligible testers)', '=COUNTIF(' + nCol('first_active') + ',"<="&(' + week + '))'],
+    ['7-day return (came back)', '=COUNTIFS(' + nCol('first_active') + ',"<="&(' + week + '),' + nCol('returned_within_7d') + ',"Yes")'],
+    ['7-day return rate', '=IFERROR(TEXT(B29/B28,"0%"),"-")'],
   ];
   dash.clear();
   dash.getRange(1, 1, rows.length, 2).setValues(rows);
-  [1, 8, 14, 17].forEach(function (r) { dash.getRange(r, 1).setFontWeight('bold'); });
+  [1, 8, 14, 17, 20].forEach(function (r) { dash.getRange(r, 1).setFontWeight('bold'); });
+  // Feature usage: sessions using each feature, summed across testers.
+  const fRows = [['FEATURE USAGE (sessions)', '']].concat(FEATURES.map(function (f) { return [f.replace(/_/g, ' '), '=SUM(' + nCol('uses_' + f) + ')']; }));
+  dash.getRange(1, 4, fRows.length, 2).setValues(fRows);
+  dash.getRange(1, 4).setFontWeight('bold');
+  dash.setColumnWidth(4, 200);
+  ss.setRecalculationInterval(SpreadsheetApp.RecalculationInterval.HOUR);   // keeps NOW()-based counts fresh
+  nsh.hideColumns(nc.active_days + 1);
   dash.setColumnWidth(1, 220);
   ss.setActiveSheet(dash);
   ss.moveActiveSheet(1);
