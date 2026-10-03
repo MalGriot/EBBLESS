@@ -15,7 +15,8 @@ interruption in the tide. EBBLESS is the music that doesn't do that.
 
 **One sentence:** EBBLESS turns a playlist into one continuous listen.
 
-**Mission:** Keep the listening going.
+**Mission:** Make listening feel like listening again. Full statement in
+[README.md](../README.md#mission).
 
 **Personality:** Quiet, confident, precise, a little dry, unbothered.
 It explains itself once, plainly, and moves on.

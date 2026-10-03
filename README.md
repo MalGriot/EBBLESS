@@ -1,5 +1,18 @@
 # EBBLESS
 
+## Mission
+
+EBBLESS exists to make listening feel like listening again.
+
+We bring your music together, keep it moving, and make discovery feel effortless.
+No ads. No sign-up. Simple but layered. Music, visuals, nostalgia, curiosity, and
+the freedom to wander.
+
+We believe music should be something you flow through, not something trying to
+own you.
+
+## What it is
+
 Paste a public Spotify playlist link, get it played back as YouTube audio, with a
 mute-on-load / auto-unmute heuristic to blunt pre-roll ads. Same core trick as the
 "Currently On Repeat" widget on the Griot site's about.html, generalized to any
