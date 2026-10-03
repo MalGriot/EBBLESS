@@ -7551,3 +7551,64 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #234. Related: `keyboard-shortcuts-2`
   (seek shortcuts), Media Session ±10s actions from `cross-platform-handoff`.
   **Built (9b02bd6):** -15/+15 buttons beside play (main player, mini bar, flow view), shown only with `body.pod-playing` (set in `reflectCurrentTrackUI` via new `isPodcastTrack()`); handlers reuse `kbSeekBy`. Shift+Left/Right = ±15s on podcasts (10s music, `seekStepS()`); Media Session seek default 15s on podcasts. ≤420px tightens rows; ≤340px mini bar drops skip buttons. Follow-up (c3b2dab, owner decisions): plain Left/Right = ±15s on podcasts, Shift+Left/Right = prev/next episode (music unchanged); PiP mini player gets podcast-only ±15 buttons; iOS registers seekbackward/seekforward per podcast track, cleared to null for music (`syncIosPodSkip`); `pod-playing` cleared when no current track. Untested on real podcast/iOS/PiP.
+
+### lp-game-desktop-fullscreen-layout: LP game layout and album-art menu in desktop fullscreen
+- **Status:** ready
+- **Priority:** medium
+- **Description:** In desktop fullscreen LP mode while the record-tap game
+  is running: reposition the LP game UI, stop the album-art tap/button menu
+  from activating while the game is active, and place the score counter
+  above the title and player controls.
+- **Touches:** record-tap minigame, fullscreen LP layout (desktop), album-art menu.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #235 (bug). Follow-up to merged `record-tap-minigame`.
+
+### tester-version-banner: Remind testers after a few days that this is the tester version
+- **Status:** ready
+- **Priority:** medium
+- **Description:** A few days after a tester starts using the app, show a
+  banner at the top saying this is the tester version and asking them to
+  send feedback (link to the existing Send feedback flow). Dismissible.
+- **Touches:** beta tester system, Send feedback flow.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #236. Related: merged `feedback-prompt`, `beta-hide-feedback-buttons`.
+
+### open-music-links-in-ebbless: Spotify / Apple Music / YouTube Music links open in EBBLESS
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Let the installed app receive Spotify, Apple Music and
+  YouTube Music links from the device: ideally as a default handler, at
+  minimum as an option in the OS share/open-with menu (PWA share target),
+  then load them as if pasted.
+- **Touches:** manifest.json (share_target), paste/link handling.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #237. Browsers don't let a PWA claim
+  other sites' https links as default handler; share-target is the realistic path.
+
+### lp-game-skins: EBBLESS DEEP skins for the LP game
+- **Status:** draft
+- **Priority:** low
+- **Description:** Alternate visual skins for the record-tap game (solar
+  system, animations, bat and ball, clock), offered as an EBBLESS DEEP perk.
+- **Touches:** record-tap minigame visuals.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #238. Depends on `ebbless-deep` (draft) for gating.
+
+### settings-feedback-first: Send feedback should be the first item in Settings
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Move the Send feedback row to the top of Settings.
+- **Touches:** Settings layout.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #239 (bug).
+
+### strip-topic-artist-names: Artist names still show " - Topic" in places
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Artist names should never display the YouTube channel
+  suffix " - Topic". Some import paths already strip it (YouTube album
+  imports); find where it still leaks through and strip it everywhere a
+  track's artist is set or displayed.
+- **Touches:** track artist normalization (see existing `- Topic` strip near index.html:5158, 7716).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #240 (bug).
