@@ -723,6 +723,11 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   text-shadow:0 0 12px color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 35%),transparent)}
 @media (prefers-reduced-motion: reduce){.lyric-line{transition:none}}
 .lyrics-empty{padding:0 24px;color:var(--faint);font-size:13.5px;text-align:center;line-height:1.6}
+/* podcast captions (#241): chapter titles sit in the line list as small
+   caps headings, still clickable to jump there */
+.lyric-line.is-chapter{margin-top:14px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.lyric-line.is-chapter:first-child{margin-top:0}
+.lyric-line.is-chapter.is-current{font-size:12px}
 .lyrics-credit{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;color:var(--faint-2);
   pointer-events:none}
 .viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
@@ -808,6 +813,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .seek-track{flex:1;height:14px;display:flex;align-items:center;cursor:pointer;position:relative}
 .seek-track .rail{width:100%;height:3px;border-radius:2px;background:var(--border);position:relative;overflow:hidden}
 .seek-track .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--player-accent);border-radius:2px}
+/* podcast chapter boundaries (#241): small gaps cut into the rail */
+.seek-track .chap-tick{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg);z-index:1;pointer-events:none}
 .seek-track .knob{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--player-accent);
   transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
 .seek-track:hover .knob{opacity:1}
@@ -5255,7 +5262,15 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     }
     const tracks = episodes.map(e => {
       const videoId = e.audio ? 'au:' + e.audio : (e.videoId || oldMatch.get(e.title) || null);
-      return { title: e.title, artist: pod.author || show, videoId, matchedTitle: e.title, channel: show, plays: videoId ? (oldPlays.get(videoId) || 0) : 0, art: e.image || pod.image || null, duration: e.duration || 0, published: e.published || 0, podcast: true };
+      const tr = { title: e.title, artist: pod.author || show, videoId, matchedTitle: e.title, channel: show, plays: videoId ? (oldPlays.get(videoId) || 0) : 0, art: e.image || pod.image || null, duration: e.duration || 0, published: e.published || 0, podcast: true };
+      // chapters/captions (#241) - only for the feed's own audio, whose
+      // timing they match (a YouTube upload may be cut differently)
+      if (e.audio){
+        if (e.chapters) tr.chapters = e.chapters;
+        else if (e.chaptersUrl) tr.chaptersUrl = e.chaptersUrl;
+        if (e.transcriptUrl){ tr.transcriptUrl = e.transcriptUrl; tr.transcriptType = e.transcriptType; }
+      }
+      return tr;
     });
     // Linked episode missing from the public feed (subscriber-only bonus
     // episodes etc.) - the show still loads; say why it starts elsewhere.
@@ -13188,16 +13203,42 @@ async function fetchLyrics(t){
   return data;
 }
 
+// Podcast chapters and captions (#241). An episode's chapters come inline
+// from the feed or as a url; its transcript is always a url. Both urls go
+// through the worker's /podtext (hosts rarely send CORS headers), and a
+// failed fetch just means that half is empty. Cached per episode.
+var podTextCache = new Map();
+function podHasText(t){ return !!t && !!(t.chapters || t.chaptersUrl || t.transcriptUrl); }
+function podText(t){
+  if (!podTextCache) podTextCache = new Map();
+  if (podTextCache.has(t.videoId)) return podTextCache.get(t.videoId);
+  const get = (q) => fetch(BACKEND + '/podtext?' + new URLSearchParams(q).toString())
+    .then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  const p = Promise.all([
+    t.chapters ? Promise.resolve(t.chapters) : t.chaptersUrl ? get({ kind: 'chapters', url: t.chaptersUrl }).then(d => d.chapters || []) : Promise.resolve([]),
+    t.transcriptUrl ? get({ kind: 'transcript', url: t.transcriptUrl, type: t.transcriptType || 'vtt' }).then(d => d.lines || []) : Promise.resolve([]),
+  ]).then(([chapters, lines]) => ({ chapters, lines }));
+  podTextCache.set(t.videoId, p);
+  return p;
+}
+// Chapter titles interleaved with the caption lines, in time order (a
+// chapter sorts ahead of a caption line starting at the same moment).
+function podTextLines(pt){
+  const out = pt.chapters.map(c => ({ t: c.t, text: c.title, chapter: true }))
+    .concat(pt.lines.map(l => ({ t: l.t, text: l.text })));
+  return out.sort((a, b) => a.t - b.t || (b.chapter ? 1 : 0) - (a.chapter ? 1 : 0));
+}
+
 function renderLyrics(data){
   lyricsState = { videoId: data._videoId, lines: data.lines || [], synced: !!data.synced, activeIdx: -1 };
   lyricsScroller.innerHTML = '';
   if (!lyricsState.lines.length){
-    lyricsScroller.innerHTML = '<div class="lyrics-empty">No lyrics found for this track.</div>';
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">' + (data.emptyText || 'No lyrics found for this track.') + '</div>';
     return;
   }
   lyricsState.lines.forEach(ln => {
     const div = document.createElement('div');
-    div.className = 'lyric-line';
+    div.className = 'lyric-line' + (ln.chapter ? ' is-chapter' : '');
     div.textContent = ln.text;
     if (lyricsState.synced && ln.t != null){
       div.dataset.time = ln.t;
@@ -13242,9 +13283,24 @@ function maybeLoadLyrics(){
   // 'sc:<id>' videoId would just 400 every time, so skip the doomed request
   // and say so plainly instead of leaving the previous track's lyrics on
   // screen or showing a generic "couldn't load" error.
-  if (isNativeVideoId(t.videoId) || t.podcast){
+  if (isPodcastTrack(t)){
+    if (lyricsState.videoId === t.videoId) return;
     lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
-    lyricsScroller.innerHTML = '<div class="lyrics-empty">' + (isAudioVideoId(t.videoId) || t.podcast ? 'Lyrics aren\'t available for podcasts.' : 'Lyrics aren\'t available for SoundCloud tracks yet.') + '</div>';
+    if (!podHasText(t)){
+      lyricsScroller.innerHTML = '<div class="lyrics-empty">This episode has no captions or chapters.</div>';
+      return;
+    }
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">Loading captions…</div>';
+    podText(t).then(pt => {
+      const ct = currentTrack();
+      if (!ct || ct.videoId !== t.videoId) return;
+      renderLyrics({ _videoId: t.videoId, synced: true, lines: podTextLines(pt), emptyText: 'Couldn\'t load captions for this episode.' });
+    });
+    return;
+  }
+  if (isNativeVideoId(t.videoId)){
+    lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">Lyrics aren\'t available for SoundCloud tracks yet.</div>';
     return;
   }
   if (lyricsState.videoId === t.videoId) return;
@@ -15626,7 +15682,31 @@ function guardActiveDeckAd(){
   if (ad.adMutedAt){ ad.adMutedAt = 0; ad.player.unMute(); }
   return false;
 }
+// Podcast chapter gaps on the seek bar (#241). Keyed on track + length so
+// it only touches the DOM when either changes, not every seek-poll tick.
+var chapTicksKey = '';
+function paintChapterTicks(dur){
+  const t = currentTrack();
+  const id = t && isPodcastTrack(t) && podHasText(t) && (t.chapters || t.chaptersUrl) ? t.videoId : '';
+  const key = id && dur ? id + '|' + Math.round(dur) : '';
+  if (key === chapTicksKey) return;
+  chapTicksKey = key;
+  seekTrack.querySelectorAll('.chap-tick').forEach(el => el.remove());
+  if (!key) return;
+  podText(t).then(pt => {
+    if (chapTicksKey !== key) return;
+    const rail = seekTrack.querySelector('.rail');
+    pt.chapters.forEach(c => {
+      if (c.t <= 0 || c.t >= dur) return;
+      const tick = document.createElement('div');
+      tick.className = 'chap-tick';
+      tick.style.left = (c.t / dur * 100) + '%';
+      rail.appendChild(tick);
+    });
+  });
+}
 function paintSeekUI(cur, dur){
+  paintChapterTicks(dur);
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   seekFill.style.width = pct + '%'; seekKnob.style.left = pct + '%';
   flowSeekFill.style.width = pct + '%'; flowSeekKnob.style.left = pct + '%';

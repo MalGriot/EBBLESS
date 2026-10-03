@@ -7644,13 +7644,28 @@ Add entries in this shape:
   **Built (46efa84):** new `addablePlaylists()` used by `openAddToPlaylistPicker` and `openSingleTrackDestinationPicker`; was filtering to `type === "custom"` only. Now lists imported playlists too; excludes CuRRentSSsss, SwiiiRrrLL, albums, podcasts, single tracks. Lists grow to 55vh/50vh. Unverified in browser.
 
 ### podcast-chapters-captions: Podcast chapters and captions
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Show chapter markers (jump between chapters) and
   captions/transcript for podcasts when the source provides them.
 - **Touches:** podcast playback (see `podcasts`, `podcast-skip-15`).
-- **Branch:**
+- **Branch:** agent/podcast-chapters-captions
 - **Notes:** Synced from Geethub issue #241. Title only.
+  **Built:** worker reads each feed item's `<podcast:chapters>` /
+  `<podcast:transcript>` (Podcasting 2.0) and inline `<psc:chapters>`
+  (Podlove) via new `worker/src/pod-text.js`; new `/podtext` endpoint fetches
+  and parses the chapters JSON or VTT/SRT/JSON transcript (hosts send no
+  CORS) and returns only parsed `{chapters}` / `{lines}`. Short caption cues
+  are joined into readable lines with speaker names on change. Podcast cache
+  bumped `pod5` -> `pod6`. App: the lyrics view now shows captions for
+  podcast episodes, with chapter titles as small-caps headings in the list
+  (tap any line or chapter to jump there); chapter boundaries cut gaps into
+  the seek bar. Only feed-audio episodes (not YouTube-fallback shows).
+  Verified: worker tests (7 new, 26 pass); local `wrangler dev` against the
+  Podcasting 2.0 feed (38 chapters, 844 caption lines); app in the preview
+  pointed at the local worker - captions sync and highlight, 37 seek-bar
+  gaps, tapping a chapter jumped to 5:38. **Needs a worker deploy** for
+  `/podtext` before the app side works live.
 
 ### dj-mode: DJ mode - play two songs at once, set markers, and mix
 - **Status:** draft
