@@ -139,6 +139,32 @@ are never reused: if #017 goes Inactive, the next person is #051.
 Emails (signup confirmation, invite) go out from the Gmail account that owns
 the script. The worker needs the `SHEET_URL` and `SHEET_SECRET` secrets.
 
+### When a tester's 7 days are up
+
+The feedback email says the window is open for 7 days, so `/beta/me` (and
+`/beta/claim`) return `windowEndsAt` = `feedback_request_sent` + 7 days, or
+`null` before that email has gone out. The beta lock saves it with the
+tester's first name in `ebbless:betaMe`. Past that time the app still opens
+and plays normally until one full song finishes in that session (heard at
+least 30s and half the track, not skipped or seeked to the end). Then
+playback stops, every control freezes, the app fades out, and a "That's
+your 7 days, <name>" screen takes over: "Give feedback"
+(`beta/feedback.html?t=<token>`) and a Wrapped-style recap of their week.
+
+The recap comes from the on-device PLAY LOG in `index.html`
+(`ebbless:playLog`: per-track plays, completed plays and minutes, playlists,
+albums, podcasts, feature use, active days; bounded), plus Liked Songs and
+the library. It never goes to the Sheet. It rides along with profile sync
+(a `set` key, merged per entry on the way in), so a tester who signs in with
+Google gets it back on a new device or in the next beta.
+
+Owner: `?wrapped=preview` shows the screen now with this browser's own log
+(demo data if empty), `?wrapped=demo` always uses demo data; both have a
+Close button and freeze nothing. `?wrapped=gate` makes this tab session
+act expired (one full song, then the real freeze). A browser with
+`ebblessStats.off()` or `ebblessWrapped.bypass()` never gets the gate.
+Console: `ebblessWrapped()` (preview), `ebblessWrapped.log()`.
+
 ### Beta analytics
 
 Anonymous usage counts per tester, in the Sheet's **Analytics** tab (one row

@@ -268,7 +268,10 @@ function activeTester_(token) {
 function me_(token) {
   const t = activeTester_(token);
   if (!t) return { ok: true, tester: null };
-  return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0] } };
+  // feedback_request_sent (ms epoch, or null if not emailed yet): the worker
+  // derives the tester's 7-day window end from it (the email says so).
+  const sent = t.feedback_request_sent instanceof Date ? t.feedback_request_sent.getTime() : Date.parse(t.feedback_request_sent);
+  return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null } };
 }
 
 function saveShot_(dataUrl, name) {
