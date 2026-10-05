@@ -8082,7 +8082,7 @@ Add entries in this shape:
   SoundCloud tracks. Worker tests 47/47.
 
 ### beta-page-redesign: "Join the beta" page built around one big join button, plus more about the app
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Testers keep asking how to get in. The email link should
   be enough (pasting the link is a last resort; the page already opens on
@@ -8094,7 +8094,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #279.
 
 ### tutorial-hide-admin-shortcuts: Remove Shift+S and Shift+B from the Settings shortcut list
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Shift+S and Shift+B are admin-only. Take them out of the
   shortcut/tutorial list in Settings so regular users don't see them.
@@ -8112,7 +8112,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #280 (tester address is in the issue, kept out of this file). Ops check, not a feature. Closed by MAL GRIOT 2026-10-05.
 
 ### playlist-art-as-track-art: Playlist cover shows as the album art for many tracks
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In some playlists, lots of tracks show the playlist's
   cover instead of their own album art. Repro:
@@ -8122,7 +8122,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #282.
 
 ### beta-testimonials-publish: Owner-picked tester quotes shown on the beta page
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a publish checkbox (plus an editable public quote) to
   Feedback rows in the admin page. A public, cached worker route serves only
@@ -8133,7 +8133,7 @@ Add entries in this shape:
 - **Notes:** Requested by MAL GRIOT 2026-10-05 alongside `beta-page-redesign`. Needs worker deploy + Apps Script new version to go live.
 
 ### tester-week-wrapped: When a tester's 7 days are up: one last song, then fade to a recap + feedback page
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** high
 - **Description:** After a tester's 7-day feedback window ends (7 days from
   the feedback-request email), opening EBBLESS lets them play one full song,
