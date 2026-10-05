@@ -221,6 +221,11 @@ async function handleActivity(request, env, ctx, h) {
 // again. The token is re-checked against the Sheet both ways, so an Inactive
 // tester's link stops working here exactly as it does everywhere else.
 const betaLinkKey = (sub) => 'betalink:' + sub;
+// A device unlocked by a claim gets a lease, not a permanent unlock: the
+// app claims again (silent Google sign-in) when it runs out, so an
+// Inactive tester or removed link locks those devices within this window.
+// Keep in sync with BETA_LEASE_MS in index.html's beta lock script.
+export const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;
 
 async function googleSub(body, env, ctx, h) {
   if (!env.PROFILES || !env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return { error: h.json({ error: 'google sign-in not configured' }, 500) };
@@ -243,7 +248,8 @@ async function handleLink(request, env, ctx, h) {
   return h.json({ ok: true });
 }
 
-// POST { idToken }: the tester token linked to this account, if still Active.
+// POST { idToken }: the tester token linked to this account, if still Active,
+// plus leaseUntil (ms epoch) for the device it unlocks. Older clients ignore it.
 async function handleClaim(request, env, ctx, h) {
   const { body, error } = await readBody(request, h.json, 6_000);
   if (error) return error;
@@ -253,7 +259,7 @@ async function handleClaim(request, env, ctx, h) {
   const token = await env.PROFILES.get(betaLinkKey(g.sub));
   const t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
   if (!t) return h.json({ error: 'This Google account isn\'t linked to a tester yet. Open EBBLESS with your tester link once, sign in with Google there (Settings > Account), then try here again.' }, 404);
-  return h.json({ token, number: t.number, label: t.label, name: t.name });
+  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS });
 }
 
 export async function handleBeta(request, url, env, ctx, h) {

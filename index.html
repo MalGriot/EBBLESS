@@ -2232,6 +2232,14 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   const LS_TOKEN = 'ebbless:betaToken';   // shared with beta/beta.js and the in-app feedback form
   const LS_OK = 'ebbless:betaOk';         // last time /beta/me accepted LS_TOKEN (ms)
   const FRESH_MS = 7 * 24 * 3600 * 1000;  // unlock instantly within this; still re-checked every load
+  // A device unlocked by Google sign-in (/beta/claim) holds a lease, not a
+  // permanent unlock. Device-local, never profile-synced; invite-link
+  // unlocks clear it, so they're unaffected. Once it runs out the app gets
+  // RENEW_WAIT_MS for a silent One Tap claim to renew it, then re-locks.
+  const LS_LEASE = 'ebbless:betaLeaseUntil';
+  const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;  // keep in sync with BETA_LEASE_MS in worker/src/beta.js
+  const RENEW_WAIT_MS = 10000;
+  const REFRESH_MSG = 'Your access on this device needs a quick refresh. Sign in with Google to continue.';
   const ls = {
     get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
     set(k, v){ try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch(e){} },
@@ -2249,7 +2257,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   // ?t=<token> on the app URL itself (e.g. an invite link pointed straight at the app)
   const q = new URLSearchParams(location.search);
   const qt = extract(q.get('t'));
-  if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); }
+  if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); ls.set(LS_LEASE, null); }
   if (qt){ q.delete('t'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
 
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
@@ -2263,12 +2271,23 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
   const token = ls.get(LS_TOKEN);
   const okAt = +ls.get(LS_OK) || 0;
+  const leaseUntil = +ls.get(LS_LEASE) || 0;
+  // 'renewing': lease ran out, waiting on a silent claim. 'expired': that
+  // didn't happen, so the lock stays up until a Google sign-in or a link.
+  let lease = token && leaseUntil && Date.now() > leaseUntil ? 'renewing' : '';
+  function leaseFailed(){
+    if (lease !== 'renewing') return;
+    lease = 'expired'; relock(); msg(REFRESH_MSG);
+    window.dispatchEvent(new Event('ebbless:betarelock'));   // app re-renders the Google button
+  }
+  if (lease) setTimeout(leaseFailed, RENEW_WAIT_MS);
   if (token && TOKEN_RE.test(token) && Date.now() - okAt < FRESH_MS) unlock();
   if (!lock.hidden) relock();
   if (token && TOKEN_RE.test(token)){
     check(token).then((r) => {
+      if (lease === 'expired') return;
       if (r === 'ok'){ ls.set(LS_OK, String(Date.now())); unlock(); }
-      else if (r === 'no'){ ls.set(LS_OK, null); ls.set(LS_TOKEN, null); relock(); msg('That tester link isn\'t active anymore.'); }
+      else if (r === 'no'){ lease = ''; ls.set(LS_OK, null); ls.set(LS_TOKEN, null); ls.set(LS_LEASE, null); relock(); msg('That tester link isn\'t active anymore.'); }
       else if (lock.hidden === false) msg(okAt ? '' : 'Couldn\'t reach EBBLESS to check your link. Check your connection.');
       if (r === 'net' && okAt) unlock();   // verified before, just offline now
     });
@@ -2282,15 +2301,26 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     btn.disabled = true; msg('');
     const r = await check(t);
     btn.disabled = false;
-    if (r === 'ok'){ ls.set(LS_TOKEN, t); ls.set(LS_OK, String(Date.now())); unlock(); }
+    if (r === 'ok'){ lease = ''; ls.set(LS_TOKEN, t); ls.set(LS_OK, String(Date.now())); ls.set(LS_LEASE, null); unlock(); }
     else msg(r === 'no' ? 'That tester link isn\'t active.' : 'Couldn\'t reach EBBLESS. Check your connection and try again.');
   });
 
   // For the app's Google sign-in (PROFILE SYNC): a tester token the worker
-  // handed back for this Google account (/beta/claim) unlocks like a link.
+  // handed back for this Google account (/beta/claim) unlocks like a link,
+  // for the lease it came with (older workers send none: BETA_LEASE_MS).
   window.ebblessBetaGate = {
     locked: () => !lock.hidden,
-    unlockWith(t){ if (!TOKEN_RE.test(String(t || ''))) return; ls.set(LS_TOKEN, t); ls.set(LS_OK, String(Date.now())); msg(''); unlock(); },
+    renewing: () => lease === 'renewing',
+    leaseFailed,
+    unlockWith(t, until){
+      if (!TOKEN_RE.test(String(t || ''))) return;
+      const now = Date.now();
+      until = Number(until);
+      lease = '';
+      ls.set(LS_TOKEN, t); ls.set(LS_OK, String(now));
+      ls.set(LS_LEASE, String(until > now ? until : now + BETA_LEASE_MS));
+      msg(''); unlock();
+    },
     msg,
   };
 })();
@@ -4713,17 +4743,22 @@ function handleGoogleCredential(response){
 // No device cap: the tester link already works on any device, so a cap here
 // would only add friction (an iPhone's Safari and home-screen app count as
 // two), not security. The worker re-checks the token against the Sheet.
+// Instead a claimed device holds a 14-day lease (beta lock script): when
+// it runs out, a One Tap auto sign-in claims again here and renews it;
+// if that can't happen or the claim fails, the lock comes back.
 const LS_BETA_TOKEN = 'ebbless:betaToken';        // owned by the beta lock script
 const LS_BETA_LINKED = 'ebbless:betaLinked';      // "<sub>:<token>" last linked - skips repeat /beta/link calls
 async function betaAccountLink(idToken, sub){
   const gate = window.ebblessBetaGate;
   const post = (path, body) => fetch(BACKEND + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   try{
-    if (gate && gate.locked()){
-      gate.msg('Checking your Google account...');
+    const renewing = !!(gate && gate.renewing && gate.renewing());
+    if (gate && (gate.locked() || renewing)){
+      if (!renewing) gate.msg('Checking your Google account...');
       const res = await post('/beta/claim', { idToken });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.token){ gate.unlockWith(data.token); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
+      if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
+      else if (renewing) gate.leaseFailed();
       else gate.msg(data.error || "Couldn't reach EBBLESS. Check your connection and try again.");
       return;
     }
@@ -4733,7 +4768,8 @@ async function betaAccountLink(idToken, sub){
     const res = await post('/beta/link', { idToken, token });
     if (res.ok) lsSet(LS_BETA_LINKED, sub + ':' + token);
   } catch(e){
-    if (gate && gate.locked()) gate.msg("Couldn't reach EBBLESS. Check your connection and try again.");
+    if (gate && gate.renewing && gate.renewing()) gate.leaseFailed();
+    else if (gate && gate.locked()) gate.msg("Couldn't reach EBBLESS. Check your connection and try again.");
   }
 }
 // Google's own button on the beta lock, once GSI is ready (initGoogleOneTap).
@@ -4746,6 +4782,7 @@ function renderBetaGateSignIn(){
     wrap.hidden = false;
   } catch(e){}
 }
+window.addEventListener('ebbless:betarelock', () => { if (gsiReady) renderBetaGateSignIn(); });
 
 // Local data stays put (it's this device's library too); its change stamps
 // do as well, so anything done while signed out still merges correctly on
@@ -5158,8 +5195,13 @@ function initGoogleOneTap(attempt){
       renderAccountRow();
       renderBetaGateSignIn();
     } catch(e){ return; }
-    if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true) return;
-    if (Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
+    // An expired beta lease (beta lock script) can only renew through a
+    // silent sign-in: when that's off the table, re-lock now rather than
+    // waiting out the renewal window. The dismiss cooldown doesn't apply
+    // then - the alternative is the lock, not a quiet app.
+    const gate = window.ebblessBetaGate, renewing = !!(gate && gate.renewing && gate.renewing());
+    if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ if (renewing) gate.leaseFailed(); return; }
+    if (!renewing && Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
     try{
       google.accounts.id.prompt((notification) => {
         // Only a moment that didn't lead to sign-in (blocked, skipped, or
@@ -5172,6 +5214,7 @@ function initGoogleOneTap(attempt){
             (notification.isDismissedMoment && notification.isDismissedMoment())
           )){
             lsSet(LS_ONETAP_DISMISSED, Date.now());
+            if (gate && gate.renewing && gate.renewing()) gate.leaseFailed();
           }
         } catch(e){}
       });
