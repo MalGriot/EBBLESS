@@ -7799,7 +7799,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #254. Title only.
 
 ### podcast-captions-delay: Podcast captions lag and should preload before the lyrics window opens
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Podcast captions appear late. Caption generation/loading
   should start as soon as the episode starts, before the lyrics window is
@@ -7809,12 +7809,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #255 (delay) and #278 (preload before opening), folded into one entry. Commit 1126d93 (background generation on iPhone) may already cover part of this; verify first.
 
 ### podcast-chapter-button-missing: Podcast chapter button isn't showing
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The chapters button for podcasts does not appear. Find
   why and make it show for episodes that have chapters.
 - **Touches:** podcast chapters UI (merged `podcast-chapters-captions`).
-- **Branch:**
+- **Branch:** agent/podcast-chapter-button-missing
 - **Notes:** Synced from Geethub issue #256. Title only.
 
 ### iphone-screen-off-playback: iPhone stops playing when the screen is turned off
