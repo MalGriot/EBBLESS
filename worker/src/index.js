@@ -174,8 +174,8 @@ async function mapWithConcurrency(items, limit, fn) {
 }
 
 // Only look up per-track art for playlists up to this size — past it, tracks
-// fall back to the playlist's own cover rather than firing hundreds of
-// oembed requests for one resolve.
+// come back with image: null (the client's per-track /spotifyart lookup fills
+// them) rather than firing hundreds of oembed requests for one resolve.
 const PER_TRACK_ART_CAP = 150;
 
 // The track's own Spotify id (from its "spotify:track:<id>" uri), passed
@@ -239,7 +239,11 @@ async function handleEmbed(kind, url, ctx) {
     tracks = entity.trackList.map((t, i) => ({
       title: t.title,
       artist: t.subtitle || '',
-      image: (i < PER_TRACK_ART_CAP ? thumbs[i] : null) || image,
+      // No playlist-cover fallback here: a missed oembed lookup (Spotify
+      // rate-limits the worker's bursts) used to stamp the playlist's own
+      // cover onto that track (Geethub #282). null lets the client's
+      // per-track lookup find the real album art instead.
+      image: (i < PER_TRACK_ART_CAP ? thumbs[i] : null) || null,
       duration: t.duration || 0,
       spotifyId: spotifyTrackIdFromUri(t.uri),
     }));
