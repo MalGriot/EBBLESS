@@ -245,6 +245,19 @@ body.onb-active .paste-guide{display:none}
   .paste-guide{animation:none}
   .import-row.paste-guide-on input{animation:none;box-shadow:0 0 0 3px var(--accent-dim)}
 }
+/* empty-state-play-nudge (#264): first-run "just press play" glow - see
+   refreshPlayNudge(). A slow breathing ring, not a blink; static under
+   reduced motion. */
+.lib-card.play-nudge .art,.ctl-btn.main.play-nudge,#libplPlayBtn.play-nudge,.libpl-art-play.play-nudge span{
+  animation:play-nudge-breathe 2.4s var(--ease-in-out) infinite}
+.libpl-art-play.play-nudge{opacity:1}
+@keyframes play-nudge-breathe{
+  0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 50%,transparent),0 0 0 0 transparent}
+  50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 50%,transparent),0 0 22px 4px color-mix(in srgb,var(--accent) 35%,transparent)}}
+@media (prefers-reduced-motion:reduce){
+  .lib-card.play-nudge .art,.ctl-btn.main.play-nudge,#libplPlayBtn.play-nudge,.libpl-art-play.play-nudge span{
+    animation:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}
+}
 /* paste-placeholder-rotation (#265): the input's placeholder is drawn by an
    overlay so it can fade between hints. The real placeholder goes
    transparent while the overlay is live (hint-live), the overlay hides
@@ -7039,6 +7052,7 @@ function renderLibrary(){
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
+  try{ refreshPlayNudge(); } catch(e){}
 }
 function refreshLibraryMarquees(){
   document.querySelectorAll('.lib-card .art .title-overlay .marquee').forEach(el => {
@@ -7059,6 +7073,7 @@ function closeLibraryPlaylistPanel(){
   openLibraryPanelId = null;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
   syncHistoryBuffer();
+  try{ refreshPlayNudge(); } catch(e){}
 }
 
 // starts playback of a library playlist without leaving the library view
@@ -7162,6 +7177,7 @@ function toggleLibraryPlaylistPanel(id){
   if (deskFsPhase1() && !state.deskFsLibOpen) toggleDesktopFsLib();
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
+  refreshPlayNudge();
   // Same staleness check as playPlaylistNow/beginImport - this is the
   // tracklist view itself, exactly where a listener would notice a track
   // like "Gasp" missing from a stale cached copy of an album. Refreshes
@@ -9401,6 +9417,7 @@ function refreshPasteGuide(){
   const show = shouldShowPasteGuide();
   pasteGuideEl.hidden = !show;
   importForm.classList.toggle('paste-guide-on', show);
+  refreshPlayNudge();
 }
 function dismissPasteGuide(){
   lsSet(LS_PASTE_GUIDE_DISMISSED, true);
@@ -9410,7 +9427,9 @@ function dismissPasteGuide(){
 // timer or via the install invite), then check once. Capped so a splash that
 // somehow never reports hidden can't leave this polling forever.
 function schedulePasteGuide(){
-  if (!pasteGuideEl || lsGet(LS_PASTE_GUIDE_DISMISSED, false)) return;
+  // runs even once the guide is dismissed: refreshPasteGuide() is also what
+  // lands the play nudge below once the splash is out of the way
+  if (!pasteGuideEl) return;
   const startedAt = Date.now();
   const tick = () => {
     const splashEl = $('splash');
@@ -9431,6 +9450,56 @@ if (pasteGuideEl){
   importForm.addEventListener('submit', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
   window.addEventListener('resize', () => { if (!pasteGuideEl.hidden) refreshPasteGuide(); });
 }
+
+/* ---------- empty-state-play-nudge (GitHub #264) ----------
+   Step two of the first-run sequence, after the "Start here" bubble: a
+   listener who has never played anything and hasn't added a playlist of
+   their own gets a soft breathing glow on the first starter card and (with
+   nothing queued) the main play button, which then starts that starter
+   instead of the empty-queue fallback. Opening a starter's panel moves the
+   glow onto its Play pill and cover play button. Waits for the splash, the
+   tutorial and the paste bubble to be gone so only one thing is ever
+   asking for attention; switched off for good the moment anything plays. */
+const LS_PLAY_NUDGE_DONE = 'ebbless:playNudgeDone';
+function playNudgeActive(){
+  if (lsGet(LS_PLAY_NUDGE_DONE, false)) return false;
+  if ((lsGet(LS_PLAY_HISTORY, []) || []).length){ lsSet(LS_PLAY_NUDGE_DONE, true); return false; }
+  const splashEl = $('splash');
+  if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
+  if (document.body.classList.contains('onb-active')) return false;
+  if (pasteGuideEl && !pasteGuideEl.hidden) return false;
+  if (urlInput.value) return false;
+  return !hasOwnPlaylists();
+}
+function playNudgeCard(){
+  const starters = new Set(starterLibraryIds());
+  return Array.from(libraryListWrap.querySelectorAll('.lib-card[data-pl-id]')).find(c => starters.has(c.dataset.plId)) || null;
+}
+// which playlist the nudged play button should start: the glowing card's,
+// else the first starter that has something playable cached
+function playNudgeTargetId(){
+  const card = playNudgeCard();
+  const ids = (card ? [card.dataset.plId] : []).concat(starterLibraryIds());
+  return ids.find(id => { const pl = getCachedPlaylist(id); return pl && (pl.tracks || []).some(t => t.videoId); }) || null;
+}
+function refreshPlayNudge(){
+  const on = playNudgeActive();
+  document.querySelectorAll('.play-nudge').forEach(el => el.classList.remove('play-nudge'));
+  if (!on) return;
+  const card = playNudgeCard();
+  if (card) card.classList.add('play-nudge');
+  if (state.queuePos < 0 && playNudgeTargetId()) playBtn.classList.add('play-nudge');
+  if (openLibraryPanelId && starterLibraryIds().includes(openLibraryPanelId)){
+    libplPlayBtn.classList.add('play-nudge');
+    libplArtPlayBtn.classList.add('play-nudge');
+  }
+}
+function endPlayNudge(){
+  if (lsGet(LS_PLAY_NUDGE_DONE, false)) return;
+  lsSet(LS_PLAY_NUDGE_DONE, true);
+  refreshPlayNudge();
+}
+urlInput.addEventListener('input', refreshPlayNudge);
 
 /* ---------- paste-placeholder-rotation (GitHub #265) ----------
    The paste bar's grey hint cycles through everything the bar takes (links
@@ -15336,6 +15405,7 @@ function loadIndex(pos, autoplay, opts){
   if (!t || !t.videoId) return;
   if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(() => loadIndex(pos, autoplay, opts), 300); return; }
   recordLastPlayed(state.queue[pos].plId);
+  if (autoplay) try{ endPlayNudge(); } catch(e){}
   trackStartAuto = pendingAutoStart;
   pendingAutoStart = false;
 
@@ -15774,7 +15844,12 @@ function playRickrollFallback(){
   state.queue = [{ plId: state.playlist.id, idx: 0 }];
   loadIndex(0, true);
 }
-playBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); else playRickrollFallback(); });
+playBtn.addEventListener('click', () => {
+  if (state.queuePos >= 0){ userTogglePlayback(); return; }
+  // first run (#264): the glowing play button starts the glowing starter
+  const nudgeId = playNudgeActive() ? playNudgeTargetId() : null;
+  if (nudgeId) playLibraryTrackInline(nudgeId, 0); else playRickrollFallback();
+});
 nextBtn.addEventListener('click', () => playNext(false));
 prevBtn.addEventListener('click', playPrev);
 flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); });
