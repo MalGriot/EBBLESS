@@ -7771,7 +7771,7 @@ Add entries in this shape:
   video, then other panels).
 
 ### scrollbar-style: Library/playlist/queue scrollbars should use UI colors and be easy to grab
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Scrollbars in the library, open playlist and queue should
   use the app's accent/UI colors instead of the browser default, and be
@@ -7781,7 +7781,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #252 (colors) and #272 (easier/smoother to grab), folded into one entry. Title only.
 
 ### shortcuts-list-collapsed: Keyboard shortcuts list closed until opened with a button
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The keyboard shortcut list in Settings should start
   collapsed and only expand when the user taps a button.
@@ -7790,7 +7790,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #253. Title only.
 
 ### whats-new-same-day-merge: "What's new" should merge same-day updates into one version
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When several updates ship on the same day, the What's new
   list should show them as one version entry instead of several.
@@ -7799,17 +7799,17 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #254. Title only.
 
 ### podcast-captions-delay: Podcast captions lag and should preload before the lyrics window opens
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Podcast captions appear late. Caption generation/loading
   should start as soon as the episode starts, before the lyrics window is
   opened, so they are ready and in sync when it is.
 - **Touches:** podcast captions (merged `podcast-chapters-captions`).
-- **Branch:**
+- **Branch:** agent/podcast-captions-delay
 - **Notes:** Synced from Geethub issues #255 (delay) and #278 (preload before opening), folded into one entry. Commit 1126d93 (background generation on iPhone) may already cover part of this; verify first.
 
 ### podcast-chapter-button-missing: Podcast chapter button isn't showing
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The chapters button for podcasts does not appear. Find
   why and make it show for episodes that have chapters.
@@ -7818,7 +7818,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #256. Title only.
 
 ### iphone-screen-off-playback: iPhone stops playing when the screen is turned off
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** On iPhone, playback doesn't continue with the screen off.
   Investigate what iOS allows for PWAs/web audio and keep playback going
@@ -7828,7 +7828,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #257. Title only. Likely platform-limited for YouTube embeds.
 
 ### paste-recent-searches: Recent searches in the paste list
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The paste/search box should show the user's recent
   searches as quick picks.
@@ -7837,7 +7837,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #258. Title only.
 
 ### progress-bar-drag-smooth: Dragging the play progress bar isn't smooth
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Scrubbing the progress bar stutters. Make dragging smooth
   (update the visual immediately, seek on release or throttled).
@@ -7846,7 +7846,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #259. Title only.
 
 ### search-artist-profile-suggestion: Artist profile should appear in search suggestions
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When the user searches an artist name, the artist's
   profile (leading to their catalog playlist) should be one of the
@@ -7856,17 +7856,17 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #260. Title only.
 
 ### iphone-ad-buzz: iPhone plays the start of an ad and a rhythmic buzz
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On iPhone, the start of an ad plays, then a rhythmic buzz
   continues. The only way to stop it is opening the video and pressing
   pause then play. Stop the buzz and make sure ad handling works on iOS.
 - **Touches:** ad failsafes / player on iOS (related merged `android-ad-popup`, commits 001893c, 65db55c).
-- **Branch:**
+- **Branch:** agent/iphone-ad-buzz
 - **Notes:** Synced from Geethub issue #261.
 
 ### install-prompt-push: Push users to install the app on every open
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Regular users don't see browser apps as apps. Make
   installing a key feature: prompt every time they open the app (not
@@ -7876,7 +7876,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #262.
 
 ### splash-enter-button-contrast: Splash "Enter" button is hard to read
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Change the color of the Enter button on the splash page so
   its label is clearly readable.
@@ -7885,7 +7885,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #263. Title only.
 
 ### empty-state-play-nudge: New users with no playlists: make the play button pulse
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** On first visit with no playlists loaded, animate (blink/
   pulse) the starter playlist's play button so people intuitively just
@@ -7895,7 +7895,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #264. Title only.
 
 ### paste-placeholder-rotation: Paste box hint text should rotate through examples and suggestions
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The grey placeholder in the paste box should cycle every
   few seconds through everything you can paste (a playlist, a song title,
@@ -7907,7 +7907,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #265.
 
 ### currents-thumbs-down: CuRRentSSsss should learn faster, with a thumbs-down
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** CuRRentSSsss is suggesting genres the listener doesn't
   like. Weight what they return to (replays), not just what they played,
@@ -7928,7 +7928,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #267. Content-dependent.
 
 ### install-button-always-settings: Settings should always show an install button
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Always show the install button in Settings, including on
   iPhone (share-sheet instructions). If already installed, show it greyed
@@ -7938,7 +7938,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #268.
 
 ### miniplayer-idle-fade: Mini-player fades and shrinks when not hovered
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** After a few seconds without hover, the desktop
   mini-player should fade and shrink toward transparent; hovering brings
@@ -7948,7 +7948,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #269. Title only.
 
 ### tester-admin-ui: Admin page to view and edit tester info from the sheet
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** An easy-to-navigate admin page showing testers' info
   from the Google Sheet (names, etc.), with some customization and the
@@ -7958,12 +7958,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #270. Must be admin-only.
 
 ### mobile-horizontal-overflow: Phone screen scrolls left and right
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** On phone the page isn't fit to 100% width and scrolls
   horizontally. Find the overflowing element and fix it.
 - **Touches:** mobile layout CSS.
-- **Branch:**
+- **Branch:** agent/mobile-horizontal-overflow
 - **Notes:** Synced from Geethub issue #271. Title only.
 
 ### ui-simplicity-pass: Make the UI dead simple for anyone
@@ -7977,7 +7977,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #273. Vague; scope with MAL GRIOT before ready.
 
 ### one-login-two-devices: One login should cover two devices
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** A single login (testers and in general) should work on
   two devices at once.
@@ -7986,7 +7986,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #274. Title only.
 
 ### playlist-thumb-hover-open: Playlist thumbnails just open on hover-click; play button moves into the open playlist
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Remove the hover play button and the "open" button from
   2x2/3x3 playlist thumbnails; clicking just opens the playlist. Add a
@@ -7997,7 +7997,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #275.
 
 ### desktop-playlist-close-easier: Desktop: easier to close the playlist panel
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Add a tab on the right edge of the playlist window to
   close it, and make the X bigger.
@@ -8006,7 +8006,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #276.
 
 ### logo-hold-to-splash: Holding the E logo goes back to splash, with a progress indicator
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Press-and-hold on the E logo returns to the splash
   screen, with a filling bar or animation showing the hold progress.
