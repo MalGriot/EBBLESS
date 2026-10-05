@@ -4309,8 +4309,9 @@ function soundCloudVideoId(scId){ return 'sc:' + scId; }
 function soundCloudTrackId(videoId){ return videoId.slice(3); }
 async function resolveTrackArt(sourceKind, title, artist, nativeArt){
   // Already Spotify's or SoundCloud's own art — nothing to resolve, and no
-  // network round-trip needed either.
-  if (sourceKind === 'spotify' || sourceKind === 'soundcloud') return nativeArt || null;
+  // network round-trip needed either. A Spotify playlist track whose art the
+  // worker couldn't fetch arrives with none, so it still gets the lookup.
+  if ((sourceKind === 'spotify' && nativeArt) || sourceKind === 'soundcloud') return nativeArt || null;
   try{
     const params = new URLSearchParams({ title, artist: artist || '' });
     const res = await fetch(BACKEND + '/spotifyart?' + params.toString());
