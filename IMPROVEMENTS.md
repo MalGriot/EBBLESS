@@ -7828,7 +7828,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #257. Title only. Likely platform-limited for YouTube embeds.
 
 ### paste-recent-searches: Recent searches in the paste list
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The paste/search box should show the user's recent
   searches as quick picks.
@@ -7866,7 +7866,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #261.
 
 ### install-prompt-push: Push users to install the app on every open
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Regular users don't see browser apps as apps. Make
   installing a key feature: prompt every time they open the app (not
@@ -7997,7 +7997,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #275.
 
 ### desktop-playlist-close-easier: Desktop: easier to close the playlist panel
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add a tab on the right edge of the playlist window to
   close it, and make the X bigger.
