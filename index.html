@@ -20454,6 +20454,44 @@ function installGateMode(){
   }
   return 'android';
 }
+// Tester invite carry-over: an iPhone home-screen app gets its own storage,
+// so a tester unlocked in Safari would open the installed app locked again.
+// While the gate is up on iOS, the page URL (what pre-16.4 Add to Home
+// Screen saves) and the manifest start_url (what 16.4+ uses) both carry
+// ?t=<token>; the beta lock's existing ?t= path unlocks the first standalone
+// launch and strips it from the URL. The swapped manifest keeps the static
+// manifest's identity (id = its start_url). Android isn't touched: the
+// installed app shares Chrome's storage, and Chrome's installability check
+// doesn't accept a data: manifest. The token never goes in the share-sheet
+// payload (Add to Home Screen acts on the page itself, not that payload).
+function installTesterToken(){
+  let t = '';
+  try { t = localStorage.getItem('ebbless:betaToken') || ''; } catch(e){}
+  return /^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(t) ? t : '';
+}
+function urlWithTesterToken(href, token){
+  const u = new URL(href);
+  if (token) u.searchParams.set('t', token); else u.searchParams.delete('t');
+  return u.href;
+}
+function carryTesterTokenForInstall(){
+  const token = installTesterToken();
+  if (!token) return;
+  try { history.replaceState(history.state, '', urlWithTesterToken(location.href, token)); } catch(e){}
+  const link = document.querySelector('link[rel="manifest"]');
+  if (!link || /^data:/.test(link.href)) return;
+  const base = link.href;
+  fetch(base).then(r => r.json()).then(m => {
+    const abs = (u) => new URL(u, base).href;
+    const start = abs(m.start_url || './');
+    m.id = m.id ? abs(m.id) : start;
+    m.start_url = urlWithTesterToken(start, token);
+    if (m.scope) m.scope = abs(m.scope);
+    if (m.share_target && m.share_target.action) m.share_target.action = abs(m.share_target.action);
+    (m.icons || []).forEach(i => { i.src = abs(i.src); });
+    link.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(m));
+  }).catch(() => {});
+}
 function showInstallGate(){
   const splashEl = $('splash');
   const btn = $('splashInstallBtn'), help = $('splashGateHelp');
@@ -20464,20 +20502,25 @@ function showInstallGate(){
   const flashHelp = () => { help.classList.remove('is-flash'); void help.offsetWidth; help.classList.add('is-flash'); };
   const mode = installGateMode();
   if (mode === 'ios'){
+    carryTesterTokenForInstall();
     setHelp('<ol><li>Tap <b>Install</b> (or the Share button ' + INSTALL_SHARE_ICON + ')</li><li>Choose <b>Add to Home Screen</b></li><li>Open <b>EBBLESS</b> from your home screen</li></ol>');
     btn.addEventListener('click', async () => {
       flashHelp();
       if (navigator.share){
-        try { await navigator.share({ title: 'EBBLESS', url: location.href }); } catch (e) { /* AbortError: sheet closed */ }
+        try { await navigator.share({ title: 'EBBLESS', url: urlWithTesterToken(location.href, '') }); } catch (e) { /* AbortError: sheet closed */ }
       }
     });
   } else if (mode === 'openout'){
     setHelp('Open this page in <b>Safari</b> (or <b>Chrome</b>) to install EBBLESS.');
     btn.textContent = 'Copy link';
+    // The copied link keeps the tester's invite so Safari opens unlocked
+    // (the in-app browser's storage doesn't carry over); it's their own
+    // clipboard, pasted into their own browser.
+    const openUrl = urlWithTesterToken(location.href, installTesterToken());
     btn.addEventListener('click', () => {
       const done = () => { btn.textContent = 'Link copied'; setHelp('Link copied. Paste it into <b>Safari</b> (or <b>Chrome</b>) to install EBBLESS.'); };
-      const fail = () => { setHelp('Open this page in <b>Safari</b> (or <b>Chrome</b>) to install:<br>' + location.href.replace(/[<>&"]/g, '')); flashHelp(); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(done, fail);
+      const fail = () => { setHelp('Open this page in <b>Safari</b> (or <b>Chrome</b>) to install:<br>' + openUrl.replace(/[<>&"]/g, '')); flashHelp(); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(openUrl).then(done, fail);
       else fail();
     });
   } else {
