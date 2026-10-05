@@ -7818,7 +7818,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #256. Title only.
 
 ### iphone-screen-off-playback: iPhone stops playing when the screen is turned off
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On iPhone, playback doesn't continue with the screen off.
   Investigate what iOS allows for PWAs/web audio and keep playback going
@@ -7997,12 +7997,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #275.
 
 ### desktop-playlist-close-easier: Desktop: easier to close the playlist panel
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add a tab on the right edge of the playlist window to
   close it, and make the X bigger.
 - **Touches:** desktop playlist panel.
-- **Branch:**
+- **Branch:** agent/desktop-playlist-close-easier
 - **Notes:** Synced from Geethub issue #276.
 
 ### logo-hold-to-splash: Holding the E logo goes back to splash, with a progress indicator
