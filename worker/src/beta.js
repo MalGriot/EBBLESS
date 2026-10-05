@@ -34,6 +34,7 @@ const FEATURES = ['lyrics', 'cymatics', 'lp', 'cassette', 'youtube_video', 'full
 const ACTIVITY_LIMIT = 20, ACTIVITY_WINDOW_S = 600;
 
 const SIGNUP_LIMIT = 4, SIGNUP_WINDOW_S = 600;
+const LINK_LIMIT = 10, LINK_WINDOW_S = 600;
 const REPORT_LIMIT = 10, REPORT_WINDOW_S = 600;
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, n);
@@ -211,6 +212,56 @@ async function handleActivity(request, env, ctx, h) {
   return h.json({ ok: true });
 }
 
+// ---------- Google account <-> tester access ----------
+// One login for every device: a tester who signs in with Google inside the
+// app (on a device the tester link already unlocked) has their tester token
+// remembered against that Google account (PROFILES KV, `betalink:<sub>`).
+// On another device, signing in with the same Google account on the beta
+// lock hands the token back, so they never have to dig out the invite link
+// again. The token is re-checked against the Sheet both ways, so an Inactive
+// tester's link stops working here exactly as it does everywhere else.
+const betaLinkKey = (sub) => 'betalink:' + sub;
+// A device unlocked by a claim gets a lease, not a permanent unlock: the
+// app claims again (silent Google sign-in) when it runs out, so an
+// Inactive tester or removed link locks those devices within this window.
+// Keep in sync with BETA_LEASE_MS in index.html's beta lock script.
+export const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;
+
+async function googleSub(body, env, ctx, h) {
+  if (!env.PROFILES || !env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return { error: h.json({ error: 'google sign-in not configured' }, 500) };
+  try { return { sub: (await h.verifyGoogleIdToken(String(body.idToken || ''), env.GOOGLE_CLIENT_ID, env, ctx)).sub }; }
+  catch (e) { return { error: h.json({ error: 'Google sign-in didn\'t check out. Try again.' }, 401) }; }
+}
+
+// POST { idToken, token }: remember this (Active) tester token for the account.
+async function handleLink(request, env, ctx, h) {
+  const { body, error } = await readBody(request, h.json, 6_000);
+  if (error) return error;
+  if (!TOKEN_RE.test(String(body.token || ''))) return h.json({ error: 'not a tester' }, 403);
+  const g = await googleSub(body, env, ctx, h);
+  if (g.error) return g.error;
+  if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'slow down' }, 429);
+  if ((await env.PROFILES.get(betaLinkKey(g.sub))) === body.token) return h.json({ ok: true });
+  const t = (await sheet(env, 'me', { token: body.token })).tester;
+  if (!t) return h.json({ error: 'not a tester' }, 403);
+  await env.PROFILES.put(betaLinkKey(g.sub), body.token);
+  return h.json({ ok: true });
+}
+
+// POST { idToken }: the tester token linked to this account, if still Active,
+// plus leaseUntil (ms epoch) for the device it unlocks. Older clients ignore it.
+async function handleClaim(request, env, ctx, h) {
+  const { body, error } = await readBody(request, h.json, 6_000);
+  if (error) return error;
+  const g = await googleSub(body, env, ctx, h);
+  if (g.error) return g.error;
+  if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
+  const token = await env.PROFILES.get(betaLinkKey(g.sub));
+  const t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
+  if (!t) return h.json({ error: 'This Google account isn\'t linked to a tester yet. Open EBBLESS with your tester link once, sign in with Google there (Settings > Account), then try here again.' }, 404);
+  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS });
+}
+
 export async function handleBeta(request, url, env, ctx, h) {
   if (!env.SHEET_URL || !env.SHEET_SECRET) return h.json({ error: 'beta not configured' }, 500);
   const p = url.pathname;
@@ -220,6 +271,8 @@ export async function handleBeta(request, url, env, ctx, h) {
     if (p === '/beta/me') return await handleMe(request, env, ctx, h);
     if (p === '/beta/report') return await handleReport(request, env, ctx, h);
     if (p === '/beta/activity') return await handleActivity(request, env, ctx, h);
+    if (p === '/beta/link') return await handleLink(request, env, ctx, h);
+    if (p === '/beta/claim') return await handleClaim(request, env, ctx, h);
   } catch (e) {
     console.error(e);
     return h.json({ error: 'Something broke on our side. Try again in a minute.' }, 502);
