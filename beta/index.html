@@ -4,29 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>EBBLESS BETA</title>
-<meta name="description" content="50 people. One beta.">
+<meta name="description" content="Music should feel like listening again. Join the EBBLESS beta.">
 <meta name="theme-color" content="#121212">
 <meta property="og:title" content="EBBLESS BETA">
-<meta property="og:description" content="50 people. One beta.">
+<meta property="og:description" content="Music should feel like listening again. Join the EBBLESS beta.">
 <meta property="og:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
 <link rel="apple-touch-icon" href="../brand/assets/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="beta.css">
 </head>
 <body>
-<main class="wrap">
+<main class="wrap landing">
   <div class="top"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"><span class="tag">Beta</span></div>
 
-  <!-- open -->
-  <section id="intro">
-    <h1 class="display">EBBLESS BETA</h1>
+  <!-- open: the two ways in, side by side -->
+  <section id="intro" class="hero">
+    <h1 class="display">EBBLESS</h1>
     <div class="rule"></div>
-    <p class="sub">50 people. One beta.</p>
-    <p class="lede">I'm opening EBBLESS to a small group before anyone else. Use it the way you actually listen to music, then tell me the truth about it. Signing up takes about two minutes.</p>
-    <div id="meter" hidden>
-      <div class="meter"><b class="tnum" id="meterCount">0 / 50</b><span id="meterLeft"></span></div>
-      <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+    <p class="sub">Music should feel like listening again.</p>
+    <p class="lede">Bring your music together. Keep it moving. Discover something unexpected.</p>
+
+    <div class="paths">
+      <div class="path-card is-main">
+        <p class="eyebrow">New here</p>
+        <p class="path-q">Want to try EBBLESS?</p>
+        <button class="btn primary join" id="joinBtn" type="button">JOIN THE BETA</button>
+        <p class="join-hint">Takes about two minutes.</p>
+        <div id="meter" hidden>
+          <div class="meter"><b class="tnum" id="meterCount">0 / 50</b><span id="meterLeft"></span></div>
+          <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+        </div>
+      </div>
+      <div class="path-card">
+        <p class="eyebrow">Already approved</p>
+        <p class="path-q">You're a tester?</p>
+        <p class="path-text">Your personal access link is in your approval email. Tap it and EBBLESS opens.</p>
+        <a class="btn block" href="../">OPEN EBBLESS</a>
+      </div>
     </div>
+    <a class="more" href="#how">How it works</a>
+  </section>
+
+  <!-- request received / you're in (replaces the hero once we know) -->
+  <section id="state" hidden class="hero fade-in">
+    <p class="eyebrow" id="stateEyebrow"></p>
+    <h1 class="display" id="stateTitle"></h1>
+    <div class="rule"></div>
+    <p class="lede" id="stateText"></p>
+    <a class="btn primary join" id="stateOpen" href="../" hidden>OPEN EBBLESS</a>
+    <ol class="journey here" id="stateJourney" aria-label="Where you are"></ol>
+    <a class="more" href="#seven">About your 7 days</a>
   </section>
 
   <!-- full -->
@@ -83,14 +110,113 @@
     <p class="status" id="status" role="status"></p>
   </form>
 
-  <!-- done -->
-  <section id="done" hidden class="fade-in">
-    <h1 class="display" id="doneTitle">GOT IT.</h1>
-    <div class="rule"></div>
-    <p class="lede" id="doneText"></p>
-  </section>
+  <div id="about" class="about">
+    <section class="block" id="how">
+      <h2 class="eyebrow">Two ways in</h2>
+      <div class="journeys">
+        <div class="journey-row">
+          <p class="journey-label">New here</p>
+          <ol class="journey" data-path="new">
+            <li data-step="join">Join the beta</li><li data-step="received">Request received</li><li data-step="wait">Wait for approval</li><li data-step="email">Approval email</li><li data-step="open">Open EBBLESS</li><li data-step="seven">7 days to try + give feedback</li>
+          </ol>
+        </div>
+        <div class="journey-row">
+          <p class="journey-label">Already approved</p>
+          <ol class="journey" data-path="tester">
+            <li data-step="in">You're in</li><li data-step="email">Check your email for your access link</li><li data-step="open">Open EBBLESS</li><li data-step="seven">7 days to try + give feedback</li>
+          </ol>
+        </div>
+      </div>
+    </section>
 
-  <p class="foot">Your answers are only seen by me and are only used to run the EBBLESS beta.</p>
+    <section class="block">
+      <h2 class="eyebrow">What happens next?</h2>
+      <ol class="steps big">
+        <li><span><b>You join</b>Tell us a little about yourself and why you want to try EBBLESS.</span></li>
+        <li><span><b>We review your request</b>Approval isn't instant. It may take a little time.</span></li>
+        <li><span><b>We email you</b>If you're approved, we'll send you a personal EBBLESS access link.</span></li>
+        <li><span><b>You open EBBLESS</b>Click the link in your email to open the app and start listening. Save the link so you can come back later.</span></li>
+      </ol>
+    </section>
+
+    <section class="block seven" id="seven">
+      <h2 class="eyebrow">Your 7 days</h2>
+      <p class="statement">7 days to live with EBBLESS and tell us the truth about it.</p>
+      <ul class="seven-grid">
+        <li><b>When it starts</b><span>About a day after you're approved, we send a second email with your feedback form. Your 7 days start that day.</span></li>
+        <li><b>Use it for real</b><span>Listen the way you normally do. Your playlists, your commute, your late nights. Poke at everything.</span></li>
+        <li><b>Feedback by day 7</b><span>Send your feedback before the 7 days are up. The form is in that email, and you can send notes from inside the app any time.</span></li>
+        <li><b>When the 7 days end</b><span>Open EBBLESS and you get one last song. Then the app winds down and shows you your week, wrapped: your top tracks, artists and go-to features, with the feedback form right there. Your listening history is saved for next time.</span></li>
+      </ul>
+    </section>
+
+    <section class="block" id="see">
+      <h2 class="eyebrow">See EBBLESS</h2>
+      <p class="statement">Look before you leap.</p>
+      <div class="see">
+        <div class="phone">
+          <video id="promo" src="media/ebbless.mp4" poster="media/ebbless-poster.jpg" controls playsinline preload="none"></video>
+        </div>
+        <div class="shots strip">
+          <figure><img src="shots/player.jpg" alt="The EBBLESS player with album art" loading="lazy"><figcaption>Album art</figcaption></figure>
+          <figure><img src="shots/lp.jpg" alt="EBBLESS in LP mode" loading="lazy"><figcaption>LP</figcaption></figure>
+          <figure><img src="shots/cassette.jpg" alt="EBBLESS in cassette mode" loading="lazy"><figcaption>Cassette</figcaption></figure>
+          <figure><img src="shots/cymatics.jpg" alt="Cymatics visualizer reacting to the music" loading="lazy"><figcaption>Cymatics</figcaption></figure>
+          <figure><img src="shots/lyrics.jpg" alt="Synced lyrics" loading="lazy"><figcaption>Lyrics</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="eyebrow">What you can do</h2>
+      <ul class="features">
+        <li><b>Bring any playlist</b><span>Paste a Spotify, YouTube, Apple Music or SoundCloud link. EBBLESS finds the tracks and queues them up.</span></li>
+        <li><b>Or just say the vibe</b><span>Type a mood or a moment instead of a link and get a playlist back for it.</span></li>
+        <li><b>It keeps going</b><span>Tracks flow into each other. When the playlist runs out, Discover keeps going in the same lane.</span></li>
+        <li><b>Something to look at</b><span>Switch between LP, cassette, cymatics, lyrics and the music video. Go fullscreen.</span></li>
+        <li><b>Plays where you are</b><span>Lock screen, car and Bluetooth controls. Cast to Chromecast or Google TV, or AirPlay from an iPhone.</span></li>
+        <li><b>Podcasts too</b><span>Paste a podcast link and it plays the show's own episodes.</span></li>
+      </ul>
+      <p class="note">Each YouTube track starts muted for a moment in case of a pre-roll ad. It's a delay trick, not a guarantee.</p>
+    </section>
+
+    <section class="block" id="newsBlock" hidden>
+      <h2 class="eyebrow">What's new</h2>
+      <p class="statement">Always moving. Here's the latest.</p>
+      <div class="news" id="news"></div>
+      <button class="linkish" id="newsMore" type="button" hidden>Show more updates</button>
+    </section>
+
+    <section class="block" id="quotesBlock" hidden>
+      <h2 class="eyebrow">What testers are saying</h2>
+      <div class="quotes" id="quotes"></div>
+    </section>
+
+    <section class="block">
+      <h2 class="eyebrow">Questions</h2>
+      <div class="faq">
+        <details><summary>What is EBBLESS?</summary><p>A music player for the music you already have. Bring a playlist from Spotify, YouTube, Apple Music or SoundCloud, and EBBLESS plays it straight through, keeps it moving, and gives you something to look at while it plays.</p></details>
+        <details><summary>How do I get access?</summary><p>Tap <b>Join the beta</b> and fill in the short form. We read every request. If you're approved, we email you a personal link that opens EBBLESS.</p></details>
+        <details><summary>What happens after I join?</summary><p>You'll see <b>Request received</b> here and get an email saying we've got it. Then we review your request. There's nothing else you need to do.</p></details>
+        <details><summary>How long does approval take?</summary><p>Every request is reviewed by hand, so it isn't instant and there's no fixed time. If you're approved, you'll hear from us by email.</p></details>
+        <details><summary>What happens after I'm approved?</summary><p>We email you your personal access link right away. Tap it and EBBLESS opens. About a day later, a second email brings your feedback form, and your 7 days start.</p></details>
+        <details><summary>Where will I receive my access link?</summary><p>At the email you signed up with. It comes from <b>EBBLESS BETA</b> with a subject that starts with <b>You're in</b>. If you can't find it, check spam or promotions.</p></details>
+        <details><summary>What is the 7-day test period?</summary><p>Your 7 days to actually use EBBLESS and send your feedback. They start with the feedback email, about a day after you're approved.</p></details>
+        <details><summary>What happens after 7 days?</summary><p>This round of testing wraps up. The next time you open EBBLESS, you get one last song, then a recap of your week: what you played most, your favorite artists, albums and playlists, and the features you used. The feedback form is right there if you haven't sent yours yet. Your listening history stays on your device (and in your account, if you sign in with Google), so if you join a future beta, it's all waiting for you.</p></details>
+        <details><summary>I'm already a tester. How do I get into EBBLESS?</summary><p>Open the <b>You're in</b> email and tap your personal link. That's it. If the link doesn't open the app, open EBBLESS and paste the link where it asks. If you've used EBBLESS on another device and signed in with Google there, you can sign in with the same Google account.</p></details>
+        <details><summary>What devices and browsers work?</summary><p>EBBLESS runs in your web browser on phones, tablets and computers. Nothing to download from an app store. On a phone it asks you to add it to your home screen first, and shows you how.</p></details>
+        <details><summary>How do I give feedback?</summary><p>Use the feedback form in your email, or tap <b>Send feedback</b> inside the app (in Settings). Something broken? Tell us there too. Honest beats nice.</p></details>
+      </div>
+    </section>
+
+    <section class="block cta">
+      <p class="statement">Want to try EBBLESS?</p>
+      <button class="btn primary join" id="joinBtn2" type="button">JOIN THE BETA</button>
+      <p class="fallback">Already approved? <a href="../">Open EBBLESS</a> with the link in your email.</p>
+    </section>
+  </div>
+
+  <p class="foot">Your answers are only seen by us and are only used to run the EBBLESS beta.</p>
 </main>
 
 <script src="beta.js"></script>
@@ -123,14 +249,28 @@
     $('detected').hidden = false;
   });
 
-  let waitlist = false;
+  let waitlist = false, formOpen = false;
+  // open | full | waitlist | received | in | pending. Once a request is in
+  // (or the visitor is already a tester), the join buttons go away so
+  // nobody thinks they have to sign up again.
   function show(state){
+    const joined = state === 'received' || state === 'in' || state === 'pending';
     $('intro').hidden = state !== 'open';
-    $('full').hidden = state !== 'full';
-    form.hidden = !(state === 'open' || state === 'waitlist');
-    $('done').hidden = state !== 'done';
-    if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; }
+    $('full').hidden = !(state === 'full' || state === 'waitlist');
+    form.hidden = !((state === 'open' && formOpen) || state === 'waitlist');
+    $('state').hidden = !joined;
+    document.body.classList.toggle('joined', joined);
+    if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; $('joinBtn2').textContent = 'JOIN THE WAITLIST'; }
   }
+  // The join buttons open the form (it stays closed until asked for) and bring it into view.
+  function join(){
+    formOpen = true;
+    show(waitlist ? 'waitlist' : 'open');
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('name').focus({ preventScroll: true });
+  }
+  $('joinBtn').addEventListener('click', join);
+  $('joinBtn2').addEventListener('click', join);
 
   // Show the form right away; status only fills in the meter and can be slow
   // (sheet read on a cache miss). The worker still enforces the cap on submit.
@@ -142,7 +282,7 @@
     requestAnimationFrame(() => { $('meterFill').style.width = Math.min(100, s.filled / s.cap * 100) + '%'; });
     $('meter').hidden = false;
     // Full: still take the signup (it lands as Pending to approve later), just say so.
-    if (!s.open && $('done').hidden){ waitlist = true; show('waitlist'); }
+    if (!s.open){ waitlist = true; $('joinBtn').textContent = $('joinBtn2').textContent = 'JOIN THE WAITLIST'; }
   }).catch(() => {});
   $('waitlistBtn').addEventListener('click', () => { waitlist = true; show('waitlist'); $('name').focus(); });
 
@@ -190,20 +330,70 @@
     }
   });
 
+  // ---- where this visitor is: request received / you're in ----
+  // Status itself lives in the Sheet (signup's `already`/`status`, /beta/me
+  // for a tester token). REQ only remembers on this device that a request
+  // went in, so coming back shows REQUEST RECEIVED instead of the join form.
+  const REQ = 'ebbless:betaRequested';
+  const JOURNEY = {
+    new: [['join', 'Join the beta'], ['received', 'Request received'], ['wait', 'Wait for approval'], ['email', 'Approval email'], ['open', 'Open EBBLESS'], ['seven', '7 days to try + give feedback']],
+    tester: [['in', 'You\'re in'], ['email', 'Check your email for your access link'], ['open', 'Open EBBLESS'], ['seven', '7 days to try + give feedback']],
+  };
+  function journey(path, current){
+    const ol = $('stateJourney');
+    ol.textContent = '';
+    let past = true;
+    JOURNEY[path].forEach(([k, label]) => {
+      const li = document.createElement('li');
+      li.textContent = label;
+      if (k === current){ li.className = 'now'; past = false; } else if (past) li.className = 'done';
+      ol.append(li);
+    });
+  }
+  function setState(state, eyebrow, title, text){
+    show(state);
+    $('stateEyebrow').textContent = eyebrow;
+    $('stateTitle').textContent = title;
+    $('stateText').textContent = text;
+    $('stateOpen').hidden = state !== 'in';
+  }
+  function received(kind){
+    const wl = kind === 'waitlist';
+    setState('received', 'New here', wl ? 'ON THE WAITLIST' : 'REQUEST RECEIVED',
+      wl ? 'All 50 tester spots are taken right now, so you\'re on the waitlist. If a spot opens up, we\'ll let you know by email.'
+         : 'You\'re on the list. We\'ll review your request and let you know by email when you\'ve been approved.');
+    journey('new', 'wait');
+  }
+  function youreIn(name, here){
+    const first = String(name || '').split(/\s+/)[0];
+    setState('in', 'Already approved', 'YOU\'RE IN',
+      (first ? 'Peace, ' + first + '. ' : '') + (here
+        ? 'You\'re approved, and this device already has your access. Open EBBLESS and start listening.'
+        : 'You\'re already approved. Check your email for your personal EBBLESS access link.'));
+    journey('tester', here ? 'open' : 'email');
+  }
+  function remember(kind){ try { localStorage.setItem(REQ, JSON.stringify({ kind, at: Date.now() })); } catch(e){} }
+
   function finish(r){
     Beta.intro();
-    show('done');
-    if (r.already){
-      $('doneTitle').textContent = 'YOU\'RE ALREADY ON THE LIST.';
-      $('doneText').textContent = 'That email already signed up. Nothing else to do. If you get in, you\'ll hear from me directly.';
-    } else if (r.full || r.status === 'waitlisted'){
-      $('doneTitle').textContent = 'YOU\'RE ON THE WAITLIST.';
-      $('doneText').textContent = 'If a spot opens up, you\'ll hear from me directly.';
-    } else {
-      $('doneTitle').textContent = 'GOT IT.';
-      $('doneText').textContent = 'You\'re on the list. I\'m going through signups by hand, so give me a little time. If you\'re in, you\'ll get your tester link from me directly.';
+    if (r.already && r.status === 'accepted') youreIn('', false);
+    else {
+      const kind = (r.full || r.status === 'waitlisted') ? 'waitlist' : 'pending';
+      remember(kind);
+      received(kind);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // A tester token on this device (from their access link) wins; else a
+  // request this device already sent.
+  function whereAmI(){
+    let req = null;
+    try { req = JSON.parse(localStorage.getItem(REQ)); } catch(e){}
+    const fromReq = () => { if (req && req.kind && !loadPending()) received(req.kind); };
+    const tok = Beta.token();
+    if (!tok) return fromReq();
+    Beta.api('/beta/me', { token: tok }).then(me => youreIn(me.name, true)).catch(fromReq);
   }
 
   // A request that never answers counts as unreachable. Retrying is safe:
@@ -221,9 +411,8 @@
   function savePending(body){ try { localStorage.setItem(PENDING, JSON.stringify(body)); return true; } catch(e){ return false; } }
   function clearPending(){ try { localStorage.removeItem(PENDING); } catch(e){} }
   function showPending(){
-    show('done');
-    $('doneTitle').textContent = 'SAVED. SENDING SOON.';
-    $('doneText').textContent = 'Couldn\'t reach EBBLESS just now, so your signup is saved on this device. It\'ll send by itself once your connection is back. Leaving this page open helps; if you close it, just open this page again later.';
+    setState('pending', 'New here', 'SAVED. SENDING SOON.', 'Couldn\'t reach EBBLESS just now, so your request is saved on this device. It\'ll send by itself once your connection is back. Leaving this page open helps; if you close it, just open this page again later.');
+    journey('new', 'join');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function fillForm(b){
@@ -249,6 +438,7 @@
         // The server answered but said no (bad field, etc.): hand the form back filled in.
         clearPending();
         clearInterval(retryTimer);
+        formOpen = true;
         show('open');
         fillForm(b);
         $('submitBtn').disabled = false;
@@ -259,6 +449,65 @@
   addEventListener('online', retryPending);
   retryTimer = setInterval(retryPending, 30000);
   if (loadPending()){ showPending(); retryPending(); }
+  whereAmI();
+
+  // ---- what's new: the app's own WHATS_NEW list in ../index.html (one
+  // source of truth), fetched only when the section is about to scroll in ----
+  function loadNews(){
+    fetch('../index.html', { cache: 'no-cache' }).then(r => r.text()).then(src => {
+      const a = src.indexOf('const WHATS_NEW = ['), b = a < 0 ? -1 : src.indexOf('\n];', a);
+      if (b < 0) return;
+      const list = new Function('return ' + src.slice(a + 'const WHATS_NEW = '.length, b + 2))();
+      const days = [];   // same-date entries merge into one block, as in the app
+      list.forEach(v => {
+        let d = days.find(x => x.date === v.date);
+        if (!d){ d = { date: v.date, items: [] }; days.push(d); }
+        (v.items || []).forEach(i => { if (!d.items.includes(i)) d.items.push(i); });
+      });
+      if (!days.length) return;
+      const box = $('news');
+      let more = days.length > 2;
+      days.slice(0, 10).forEach((d, n) => {
+        const art = document.createElement('article');
+        art.className = 'news-day';
+        if (n >= 2) art.hidden = true;
+        const when = new Date(d.date + 'T12:00:00');
+        const h = document.createElement('h3');
+        h.textContent = isNaN(when) ? d.date : when.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+        const ul = document.createElement('ul');
+        d.items.forEach((i, k) => { const li = document.createElement('li'); li.textContent = i; if (k >= 5){ li.hidden = true; more = true; } ul.append(li); });
+        art.append(h, ul);
+        box.append(art);
+      });
+      $('newsBlock').hidden = false;
+      if (more){
+        $('newsMore').hidden = false;
+        $('newsMore').addEventListener('click', () => { box.querySelectorAll('[hidden]').forEach(x => { x.hidden = false; }); $('newsMore').hidden = true; });
+      }
+    }).catch(() => {});
+  }
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver((es) => { if (es.some(e => e.isIntersecting)){ io.disconnect(); loadNews(); } }, { rootMargin: '600px' });
+    io.observe($('see'));
+  } else loadNews();
+
+  // ---- what testers are saying: only quotes the owner chose to publish
+  // (admin page), tester number only ----
+  Beta.api('/beta/testimonials').then(d => {
+    const items = (d && d.items) || [];
+    if (!items.length) return;
+    items.forEach(t => {
+      const fig = document.createElement('figure');
+      fig.className = 'quote';
+      const q = document.createElement('blockquote');
+      q.textContent = '\u201C' + t.quote + '\u201D';
+      const c = document.createElement('figcaption');
+      c.textContent = 'Tester #' + String(t.number).padStart(3, '0');
+      fig.append(q, c);
+      $('quotes').append(fig);
+    });
+    $('quotesBlock').hidden = false;
+  }).catch(() => {});
 })();
 </script>
 </body>
