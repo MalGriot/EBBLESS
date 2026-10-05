@@ -7907,7 +7907,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #265.
 
 ### currents-thumbs-down: CuRRentSSsss should learn faster, with a thumbs-down
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** CuRRentSSsss is suggesting genres the listener doesn't
   like. Weight what they return to (replays), not just what they played,
@@ -8006,11 +8006,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #276.
 
 ### logo-hold-to-splash: Holding the E logo goes back to splash, with a progress indicator
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Press-and-hold on the E logo returns to the splash
   screen, with a filling bar or animation showing the hold progress.
   A normal click keeps its current behavior.
 - **Touches:** HUD logo (merged `logo-tap-to-player`).
-- **Branch:**
+- **Branch:** agent/logo-hold-to-splash
 - **Notes:** Synced from Geethub issue #277.
