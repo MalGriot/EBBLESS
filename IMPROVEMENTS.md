@@ -7818,13 +7818,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #256. Title only.
 
 ### iphone-screen-off-playback: iPhone stops playing when the screen is turned off
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On iPhone, playback doesn't continue with the screen off.
   Investigate what iOS allows for PWAs/web audio and keep playback going
   where possible (or explain the limit to the user).
 - **Touches:** playback / background handling on iOS.
-- **Branch:**
+- **Branch:** agent/iphone-screen-off-playback
 - **Notes:** Synced from Geethub issue #257. Title only. Likely platform-limited for YouTube embeds.
 
 ### paste-recent-searches: Recent searches in the paste list
@@ -7866,13 +7866,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #261.
 
 ### install-prompt-push: Push users to install the app on every open
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Regular users don't see browser apps as apps. Make
   installing a key feature: prompt every time they open the app (not
   installed), possibly as a header banner.
 - **Touches:** install prompt / header banner; related `install-button-always-settings`.
-- **Branch:**
+- **Branch:** agent/install-prompt-push
 - **Notes:** Synced from Geethub issue #262.
 
 ### splash-enter-button-contrast: Splash "Enter" button is hard to read
@@ -7885,13 +7885,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #263. Title only.
 
 ### empty-state-play-nudge: New users with no playlists: make the play button pulse
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On first visit with no playlists loaded, animate (blink/
   pulse) the starter playlist's play button so people intuitively just
   press play.
 - **Touches:** library empty/first-run state; merged `first-run-paste-guide`.
-- **Branch:**
+- **Branch:** agent/empty-state-play-nudge
 - **Notes:** Synced from Geethub issue #264. Title only.
 
 ### paste-placeholder-rotation: Paste box hint text should rotate through examples and suggestions
@@ -7948,7 +7948,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #269. Title only.
 
 ### tester-admin-ui: Admin page to view and edit tester info from the sheet
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** An easy-to-navigate admin page showing testers' info
   from the Google Sheet (names, etc.), with some customization and the
@@ -7977,7 +7977,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #273. Vague; scope with MAL GRIOT before ready.
 
 ### one-login-two-devices: One login should cover two devices
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** A single login (testers and in general) should work on
   two devices at once.
