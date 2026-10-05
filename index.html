@@ -13357,12 +13357,15 @@ function getPipe(model){
     dtype: 'q8', device: 'wasm',
     progress_callback: (p) => postMessage({ type: 'progress', model, p }),
   });
+  // a failed load (network) shouldn't stick: the next ask tries again
+  pipes[model].catch(() => { delete pipes[model]; });
   return pipes[model];
 }
 onmessage = async (e) => {
   const { id, model, audio, language } = e.data;
   try {
     const asr = await getPipe(model);
+    if (!audio){ postMessage({ type: 'result', id, chunks: [] }); return; } // load only (capPrefetchModel)
     const opts = { return_timestamps: true, chunk_length_s: 30, stride_length_s: 5 };
     if (language){ opts.language = language; opts.task = 'transcribe'; }
     const out = await asr(audio, opts);
@@ -13407,6 +13410,55 @@ function capRun(model, audio, language){
     capPending.set(id, { resolve, reject });
     capWorker().postMessage({ id, model, audio, language }, [audio.buffer]);
   });
+}
+// One-time background download of the English model on app load (after the
+// splash, once idle), so the first podcast's captions don't wait on ~41 MB
+// mid-play. It loads the model in the worker, so captions later reuse it (or
+// join the load still in flight, progress included); the files themselves
+// sit in transformers-cache, which app updates leave alone. A failure just
+// tries again on a later app load.
+var LS_CAP_EN_READY = 'ebbless_caption_model_en_ready';
+var capPrefetchP = null;
+function capPrefetchModel(){
+  if (capPrefetchP) return capPrefetchP;
+  const id = ++capSeq;
+  capPrefetchP = new Promise((resolve, reject) => {
+    capPending.set(id, { resolve, reject });
+    capWorker().postMessage({ id, model: CAP_MODEL_EN, audio: null });
+  }).then(() => { lsSet(LS_CAP_EN_READY, true); }, (e) => {
+    console.warn('[captions] model prefetch failed', e && e.message);
+  });
+  return capPrefetchP;
+}
+async function capModelCached(model){
+  try {
+    if (!('caches' in window)) return false;
+    const keys = await (await caches.open('transformers-cache')).keys();
+    // encoder + decoder weights both in: the rest is small config
+    return keys.filter(r => r.url.includes('/' + model + '/') && r.url.includes('.onnx')).length >= 2;
+  } catch(e){ return false; }
+}
+function scheduleCapPrefetch(){
+  if (lsGet(LS_CAP_EN_READY, false) === true) return;
+  if (typeof Worker !== 'function' || typeof OfflineAudioContext !== 'function' || !('indexedDB' in window)) return;
+  const startedAt = Date.now();
+  const tick = () => {
+    const splashEl = $('splash');
+    if (splashEl && !splashEl.classList.contains('is-hidden') && Date.now() - startedAt < 20000){
+      setTimeout(tick, 500); return;
+    }
+    // give the first track a head start, then wait for an idle moment
+    setTimeout(() => {
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1));
+      idle(async () => {
+        if (document.body.classList.contains('onb-active')) return; // tutorial: next load
+        if (navigator.connection && navigator.connection.saveData) return;
+        if (await capModelCached(CAP_MODEL_EN)){ lsSet(LS_CAP_EN_READY, true); return; }
+        capPrefetchModel();
+      }, { timeout: 10000 });
+    }, 5000);
+  };
+  tick();
 }
 // this device's caption store (IndexedDB - Cache Storage gets cleared by the
 // service worker on every app update)
@@ -17767,6 +17819,7 @@ function startApp(){
   }
 
   try{ schedulePasteGuide(); } catch(e){}
+  try{ scheduleCapPrefetch(); } catch(e){}
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
 
