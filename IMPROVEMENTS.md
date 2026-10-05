@@ -7846,13 +7846,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #259. Title only.
 
 ### search-artist-profile-suggestion: Artist profile should appear in search suggestions
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When the user searches an artist name, the artist's
   profile (leading to their catalog playlist) should be one of the
   suggestions.
 - **Touches:** paste bar search; merged `artist-link-playlist`.
-- **Branch:**
+- **Branch:** agent/search-artist-profile-suggestion
 - **Notes:** Synced from Geethub issue #260. Title only.
 
 ### iphone-ad-buzz: iPhone plays the start of an ad and a rhythmic buzz
@@ -7986,7 +7986,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #274. Title only.
 
 ### playlist-thumb-hover-open: Playlist thumbnails just open on hover-click; play button moves into the open playlist
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Remove the hover play button and the "open" button from
   2x2/3x3 playlist thumbnails; clicking just opens the playlist. Add a
