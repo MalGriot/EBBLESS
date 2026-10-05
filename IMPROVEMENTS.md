@@ -7781,7 +7781,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #252 (colors) and #272 (easier/smoother to grab), folded into one entry. Title only.
 
 ### shortcuts-list-collapsed: Keyboard shortcuts list closed until opened with a button
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The keyboard shortcut list in Settings should start
   collapsed and only expand when the user taps a button.
@@ -7790,12 +7790,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #253. Title only.
 
 ### whats-new-same-day-merge: "What's new" should merge same-day updates into one version
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** When several updates ship on the same day, the What's new
   list should show them as one version entry instead of several.
 - **Touches:** What's new list (merged `whats-new-list`).
-- **Branch:**
+- **Branch:** agent/whats-new-same-day-merge
 - **Notes:** Synced from Geethub issue #254. Title only.
 
 ### podcast-captions-delay: Podcast captions lag and should preload before the lyrics window opens
