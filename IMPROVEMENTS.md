@@ -7828,12 +7828,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #257. Title only. Likely platform-limited for YouTube embeds.
 
 ### paste-recent-searches: Recent searches in the paste list
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The paste/search box should show the user's recent
   searches as quick picks.
 - **Touches:** paste bar / search results list.
-- **Branch:**
+- **Branch:** agent/paste-recent-searches
 - **Notes:** Synced from Geethub issue #258. Title only.
 
 ### progress-bar-drag-smooth: Dragging the play progress bar isn't smooth
@@ -7885,7 +7885,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #263. Title only.
 
 ### empty-state-play-nudge: New users with no playlists: make the play button pulse
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On first visit with no playlists loaded, animate (blink/
   pulse) the starter playlist's play button so people intuitively just
