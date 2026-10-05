@@ -5732,6 +5732,23 @@ const keepAliveAudio = $('keepAliveAudio');
    a buzz, especially during the muted pre-roll-skip window when nothing else
    is making sound. */
 if (keepAliveAudio) keepAliveAudio.volume = 0.01;
+/* iOS ignores .volume on media elements (always full), so there the 8-bit
+   loop above played at full level: a steady 40 Hz buzz under the music,
+   and the only sound left while an ad is held muted (#261). Swap in a 16-bit
+   loop whose noise sits at about -84 dBFS: still not digital silence, but
+   inaudible at full volume. */
+if (keepAliveAudio && isIOS){
+  try {
+    const n = 8000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round((Math.random() * 2 - 1) * 2), true);
+    keepAliveAudio.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  } catch(e){}
+}
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
 const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = $('flowReportBtn'), playerLikeBtn = $('playerLikeBtn');
@@ -11901,7 +11918,7 @@ function onDeckStateChange(deck, e){
   // mid pause-fade the deck is still audibly playing, but the UI already
   // shows paused (see runPlayFade) - don't let a PLAYING event flip it back
   if (e.data === YT.PlayerState.PLAYING){ if (!isFadingOut(deck)){ setPlayingUI(true); announceTabPlaying(); } }
-  else if (e.data === YT.PlayerState.PAUSED) setPlayingUI(false);
+  else if (e.data === YT.PlayerState.PAUSED){ if (!(deck.unstickAt && Date.now() - deck.unstickAt < 1500)) setPlayingUI(false); }
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
     if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); }
@@ -16136,7 +16153,7 @@ function guardActiveDeckAd(){
   const reason = deckAdReason(ad, false);
   if (reason){
     if (!ad.adMutedAt){ ad.adMutedAt = Date.now(); adLog(ad, 'mute', reason); }
-    if (Date.now() - ad.adMutedAt < AD_MUTE_MAX_MS){ ad.player.mute(); return true; }
+    if (Date.now() - ad.adMutedAt < AD_MUTE_MAX_MS){ ad.player.mute(); ad.adHeld = reason; return true; }
     // Gave up: the signal that held it this long is probably a false alarm
     // for this track (e.g. a bad duration from search). Stop trusting just
     // that one until the next track; the others stay armed, so a later
@@ -16193,6 +16210,45 @@ function returnFromAdDodge(deck){
   adLog(deck, 'dodge-return', '');
   promoteDeckDirect(deck, p, artworkWrap.classList.contains('is-playing'));
   renderQueuePanel();
+}
+// Stuck-deck recovery (#261, iPhone): after an ad the active deck can sit
+// silent while the app still says it's playing - left muted (iOS can refuse
+// a programmatic unMute), or held as a 'frozen' ad when its content clock has
+// simply stalled. Pausing and playing it in the YouTube card fixed it by
+// hand; this does the same automatically once the state has lasted
+// STUCK_NUDGE_MS, a few times per track at most.
+const STUCK_NUDGE_MS = 4000, STUCK_NUDGE_GAP_MS = 15000, STUCK_NUDGE_MAX = 3;
+const stuckDeck = { since: 0, last: 0, count: 0, vid: null };
+function unstickActiveDeck(held){
+  const ad = activeDeck(), p = ad.player, now = Date.now();
+  if (stuckDeck.vid !== ad.videoId){ stuckDeck.vid = ad.videoId; stuckDeck.count = 0; stuckDeck.since = 0; }
+  let bad = '';
+  if (ad.kind === 'yt' && ad.confirmed && p && p.isMuted && p.pauseVideo && !swapInProgress && !routeLocked() && !ytPanelOpen()
+      && !isFadingOut() && artworkWrap.classList.contains('is-playing') && document.visibilityState === 'visible'){
+    try {
+      if (!held) bad = p.isMuted() ? 'muted' : '';
+      else if (ad.adHeld === 'frozen'){
+        // frozen with every other signal clean: a stall, not an ad
+        const ig = ad.adIgnore;
+        ad.adIgnore = Object.assign({}, ig, { frozen: true });
+        bad = deckAdReason(ad, false) ? '' : 'frozen';
+        ad.adIgnore = ig;
+      }
+    } catch(e){}
+  }
+  if (!bad){ stuckDeck.since = 0; return; }
+  if (!stuckDeck.since){ stuckDeck.since = now; return; }
+  if (now - stuckDeck.since < STUCK_NUDGE_MS || now - stuckDeck.last < STUCK_NUDGE_GAP_MS || stuckDeck.count >= STUCK_NUDGE_MAX) return;
+  stuckDeck.since = 0; stuckDeck.last = now; stuckDeck.count++;
+  adLog(ad, 'unstick', bad);
+  // the PAUSED this causes isn't the listener's (see onDeckStateChange)
+  ad.unstickAt = now;
+  p.pauseVideo();
+  setTimeout(() => {
+    if (activeDeck() !== ad || ad.player !== p) return;
+    if (!ad.adMutedAt && p.unMute) p.unMute();
+    if (p.playVideo) p.playVideo();
+  }, 250);
 }
 // Podcast chapter gaps on the seek bar (#241). Keyed on track + length so
 // it only touches the DOM when either changes, not every seek-poll tick.
@@ -16361,7 +16417,9 @@ function updateSeekUI(){
   maybeDodgeAd();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
-  if (guardActiveDeckAd()) return;
+  const held = guardActiveDeckAd();
+  unstickActiveDeck(held);
+  if (held) return;
   // A deck that hasn't confirmed its new track yet is still either on the
   // previous sound (SC/YT report the old position/duration until the load
   // lands) or playing muted through the ad wait, which onDeckConfirmed then
