@@ -7876,12 +7876,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #262.
 
 ### splash-enter-button-contrast: Splash "Enter" button is hard to read
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Change the color of the Enter button on the splash page so
   its label is clearly readable.
 - **Touches:** splash buttons.
-- **Branch:**
+- **Branch:** agent/splash-enter-button-contrast
 - **Notes:** Synced from Geethub issue #263. Title only.
 
 ### empty-state-play-nudge: New users with no playlists: make the play button pulse
@@ -7958,7 +7958,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #270. Must be admin-only.
 
 ### mobile-horizontal-overflow: Phone screen scrolls left and right
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** On phone the page isn't fit to 100% width and scrolls
   horizontally. Find the overflowing element and fix it.
