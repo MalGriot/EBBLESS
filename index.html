@@ -15061,6 +15061,7 @@ const MP_DEFAULT = { w: 380, h: 148, style: 'solid' };
 const MP_MIN_W = 300, MP_MIN_H = 120;
 const MP_QUEUE_H = 260;        // extra height the queue popover grows the window by
 const MP_OVERLAY_MIN_H = 300;  // a window at least this tall shows the queue over the player instead of growing
+const MP_IDLE_MS = 4000;       // pointer away this long -> content fades/shrinks (#269)
 const MP_ICO = {
   shuffle: '<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>',
   prev: '<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>',
@@ -15088,8 +15089,11 @@ const MINI_PLAYER_STYLE = `
   #mpCard{position:relative;flex:none;height:var(--card-h);padding:12px;display:grid;gap:4px 12px;
     grid-template-columns:calc(var(--card-h) - 24px) minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) 16px 36px;
     grid-template-areas:"art head" "art meta" "art seek" "art ctl";
-    transition:background .2s ease}
+    transform-origin:100% 100%;transition:background .2s ease,opacity .25s ease,transform .25s ease}
   body:hover #mpCard{background:rgba(255,255,255,.035)}
+  body.mp-idle #mpCard{opacity:.2;transform:scale(.85);transition:background .2s ease,opacity .9s ease,transform .9s ease}
+  body.style-art.mp-idle #mpBg{opacity:.2}
+  @media (prefers-reduced-motion:reduce){#mpCard,body.mp-idle #mpCard,#mpBg{transition:none}}
   body.shape-card #mpCard{grid-template-columns:minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) auto 16px 36px;
     grid-template-areas:"head" "art" "meta" "seek" "ctl"}
   #mpArtWrap{grid-area:art;position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#282828;min-height:0;
@@ -15302,11 +15306,38 @@ function buildMiniPlayerDOM(win){
     updateMiniPlayerUI();
   });
   win.addEventListener('resize', onMiniPlayerResize);
+  // Idle fade (#269): track whether the pointer is over the window and when
+  // it last left (or a key/click happened); updateMiniPlayerUI's clock does
+  // the actual fading.
+  const root = doc.documentElement;
+  const wake = () => { mpIdle.last = Date.now(); updateMiniPlayerIdle(); };
+  mpIdle = { over: false, down: false, last: Date.now() };
+  root.addEventListener('pointerenter', () => { mpIdle.over = true; wake(); });
+  root.addEventListener('pointermove', () => { if (!mpIdle.over){ mpIdle.over = true; wake(); } });
+  root.addEventListener('pointerleave', () => { mpIdle.over = false; wake(); });
+  doc.addEventListener('pointerdown', () => { mpIdle.down = true; wake(); });
+  win.addEventListener('pointerup', () => { mpIdle.down = false; wake(); });
+  win.addEventListener('pointercancel', () => { mpIdle.down = false; wake(); });
+  doc.addEventListener('keydown', wake, true);
   // The main tab is hidden while this window is up, so its rAF-driven seek
   // updates are paused - the mini player keeps its own (cheap) clock.
   win.setInterval(updateMiniPlayerUI, 500);
   applyMiniPlayerStyle(miniPlayerPrefs().style);
   applyMiniPlayerShape();
+}
+// Idle fade/shrink (#269). A Document PiP window is an OS window: script
+// can't make it transparent, and resizeTo/resizeBy need a user gesture, so
+// the window itself keeps its size and only the content inside fades to
+// ~20% and shrinks toward the bottom-right corner. Never while the pointer
+// is over it or a button is held, the queue popover is open, or the track
+// is still loading (the spinner is the thing to watch then).
+let mpIdle = null;  // { over, down, last } for the open PiP window
+function updateMiniPlayerIdle(){
+  const win = miniPlayerWin;
+  if (!win || win.closed || !mpIdle) return;
+  const idle = !mpIdle.over && !mpIdle.down && !mpQueue && !!currentTrack() &&
+    activeLoadProgress() === null && Date.now() - mpIdle.last >= MP_IDLE_MS;
+  win.document.body.classList.toggle('mp-idle', idle);
 }
 function applyMiniPlayerStyle(style){
   if (miniPlayerWin) miniPlayerWin.document.body.classList.toggle('style-art', style === 'art');
@@ -15491,6 +15522,7 @@ function updateMiniPlayerUI(){
     doc.getElementById('mpDur').textContent = formatTime(dur);
   }
   if (mpQueue && mpQueue.sig !== state.queuePos + ':' + state.queue.length) renderMiniQueue();
+  updateMiniPlayerIdle();
 }
 async function openMiniPlayer(){
   if (!miniPlayerSupported() || !currentTrack()) return;
@@ -15502,7 +15534,7 @@ async function openMiniPlayer(){
     mpQueue = null;
     buildMiniPlayerDOM(win);
     updateMiniPlayerUI();
-    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; } }, { once: true });
+    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpIdle = null; } }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,
