@@ -7977,7 +7977,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #273. Vague; scope with MAL GRIOT before ready.
 
 ### one-login-two-devices: One login should cover two devices
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** A single login (testers and in general) should work on
   two devices at once.
