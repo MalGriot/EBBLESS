@@ -7828,7 +7828,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #257. Title only. Likely platform-limited for YouTube embeds.
 
 ### paste-recent-searches: Recent searches in the paste list
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The paste/search box should show the user's recent
   searches as quick picks.
