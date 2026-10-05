@@ -1010,6 +1010,13 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head .close-btn{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .queue-head .close-btn:hover{background:var(--panel-2);color:var(--text)}
 .queue-head .close-btn svg{width:12px;height:12px}
+.libpl-close-tab{display:none}
+/* Geethub #276: desktop playlist panel X - bigger icon, 40px hit area */
+@media (min-width:860px){
+  #libpl-panel .queue-head .close-btn{width:40px;height:40px;margin:-7px -10px -7px 0;
+    transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  #libpl-panel .queue-head .close-btn svg{width:20px;height:20px}
+}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .queue-body{padding:4px 12px 24px}
 .libpl-art-wrap{padding:4px 20px 14px}
@@ -1606,6 +1613,21 @@ body:has(#danger-scrim.is-open) .tester-banner,body:has(#beta-lock:not([hidden])
     transform:translateX(-100%);
   }
   body.split-desktop #libpl-panel.is-open{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.35)}
+  /* Geethub #276: a slim tab on the panel's right edge (over the player
+     pane's left margin) that slides the panel shut, chevron pointing the
+     way it closes. Outside the panel so it never sits on its scrollbar;
+     only shown while open (closed, the panel's -100% offset would leave it
+     peeking out over the library). */
+  body.split-desktop .libpl-close-tab{
+    display:flex;position:absolute;top:50%;right:-22px;width:22px;height:72px;margin-top:-36px;z-index:1;
+    align-items:center;justify-content:center;padding:0;color:var(--faint);background:var(--panel);
+    border:1px solid var(--border);border-left:0;border-radius:0 12px 12px 0;box-shadow:6px 0 14px rgba(0,0,0,.25);
+    opacity:0;visibility:hidden;cursor:pointer;
+    transition:opacity var(--dur-ui) var(--ease-out),visibility 0s linear var(--dur-ui),color var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out),width var(--dur-ui) var(--ease-out),right var(--dur-ui) var(--ease-out)}
+  body.split-desktop #libpl-panel.is-open .libpl-close-tab{opacity:1;visibility:visible;transition-delay:0s}
+  body.split-desktop .libpl-close-tab:hover,body.split-desktop .libpl-close-tab:focus-visible{color:var(--text);background:var(--panel-2);width:26px;right:-26px;outline:none}
+  body.split-desktop .libpl-close-tab svg{width:18px;height:18px}
+  body.onb-active .libpl-close-tab{display:none!important}
   /* desktop-fs: the library is a fixed 340px drawer (z 46) over the fixed
      player (z 44), so the playlist panel follows it out of the grid and sits
      just above that drawer */
@@ -3369,6 +3391,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <div class="libpl-art-wrap" id="libplArtWrap" hidden><div class="libpl-art-box"><img class="libpl-art" id="libplArt" alt=""><button class="libpl-art-play" id="libplArtPlayBtn" aria-label="Play playlist"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></button></div></div>
       <div class="queue-body" id="libplBody"></div>
     </div>
+    <button class="libpl-close-tab" id="libplCloseTab" aria-label="Close playlist" title="Close playlist">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
+    </button>
   </div>
 
   <!-- ===== PLAYLIST CONTEXT MENU (opened from the 3-dot button on each
@@ -7174,6 +7199,7 @@ function toggleLibraryPlaylistPanel(id){
 libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
 libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
 libplCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
+$('libplCloseTab').addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
 libplScrim.addEventListener('click', closeLibraryPlaylistPanel);
 attachSwipeToDismiss(libplPanel, closeLibraryPlaylistPanel);
 
