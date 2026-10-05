@@ -1098,7 +1098,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .credits-group a:hover,.credits-group a:focus-visible{text-decoration-color:currentColor}
 .credits-group span{font-size:12px;color:var(--faint)}
 /* What's new (Settings > App): reuses the credits card + .credits-group
-   headings; one group per WHATS_NEW entry */
+   headings; one group per WHATS_NEW release day */
 #whatsnew-modal .credits-group li{display:block;font-size:13px;color:var(--text);line-height:1.5}
 .whatsnew-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
   background:var(--accent);vertical-align:middle}
@@ -9742,6 +9742,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // CACHE_VERSION and has user-facing changes, add an entry at the TOP.
 // Plain-English bullets only: no issue numbers, no internal names.
 // Versions with nothing user-facing are simply left out.
+// Entries sharing the same `date` are merged into one block automatically
+// at render time (highest version as the heading, duplicate lines dropped),
+// so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 73, date: '2026-10-05', items: [
     'Podcast episodes you saved before chapters and captions existed now pick them up the first time they play.'
@@ -9821,8 +9824,22 @@ const whatsNewModal = $('whatsnew-modal'), whatsNewBtn = $('whatsNewBtn'), whats
 function whatsNewLatest(){ return WHATS_NEW.length ? WHATS_NEW[0].version : 0; }
 (function initWhatsNew(){
   const fmt = (d) => { try { return new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch(e){ return d; } };
-  $('whatsNewList').innerHTML = WHATS_NEW.map(v =>
-    '<div class="credits-group"><h3>Version ' + v.version + ' &middot; ' + escapeHtml(fmt(v.date)) + '</h3><ul>' +
+  // one block per calendar day: highest version heads it, items merged and
+  // de-duplicated; undated entries stay as their own block
+  const groups = [], byDate = new Map();
+  WHATS_NEW.forEach(v => {
+    const g = v.date && byDate.get(v.date);
+    if (g){
+      g.version = Math.max(g.version, v.version);
+      v.items.forEach(t => { if (!g.items.includes(t)) g.items.push(t); });
+    } else {
+      const ng = { version: v.version, date: v.date, items: [...new Set(v.items)] };
+      groups.push(ng);
+      if (v.date) byDate.set(v.date, ng);
+    }
+  });
+  $('whatsNewList').innerHTML = groups.map(v =>
+    '<div class="credits-group"><h3>Version ' + v.version + (v.date ? ' &middot; ' + escapeHtml(fmt(v.date)) : '') + '</h3><ul>' +
     v.items.map(t => '<li>' + escapeHtml(t) + '</li>').join('') + '</ul></div>').join('');
   // subtle one-time dot on the row until this version's notes are opened
   let seen = 0;
