@@ -8031,6 +8031,28 @@ Add entries in this shape:
   when hidden (iframe throttled to ~1s updates). Verified locally: ~2 min
   of visible playback plus a skip, `ebblessAdLog` empty (no false mutes).
   Not verified against a real mid-roll (none served locally) or on Android.
+  **Zero-ads gate (owner: "ZERO. not even for a millisecond").** Mid-rolls
+  need an 8+ minute video, so a ~3 min song's ad was a pre-roll leaking
+  through. Holes found in code: (1) a pre-roll past the 20s wait cap was
+  "confirmed muted", then the non-strict guard unmuted on the next tick
+  ('no-duration' is strict-only); (2) unmute happened on absence of ad
+  signs, so any unrecognized ad state was audible; (3) a preload confirmed
+  at the cap mid-ad got unmuted on promotion; (4) the guard is off during
+  crossfades. Fix: `gateDeckSound` wraps each YT deck's `unMute`, so every
+  path needs strict `deckAdReason` = '' first, which now also requires
+  proof of content ('not-moving': PLAYING and the clock stepped forward,
+  bounded by wall time, within `adFrozenMs()`). Held decks stay muted and
+  `releaseSoundGates` (seek-poll tick) lets sound through once proven; it
+  also catches ads on non-active / mid-crossfade decks. Give-up after 2 min
+  only for duration/id signals, never for a stalled clock.
+  Cost: each track starts ~0.3s muted (measured 289-425ms skip-to-sound
+  over 5 skips). Verified locally on Today's Top Hits: 5/5 holds released,
+  no stuck tracks, autoplay-blocked load correctly held silent.
+  **Could not reproduce an ad locally:** 17 Top Hits tracks through the app
+  plus 6 top monetized videos (Shape of You, Despacito, See You Again,
+  Uptown Funk, Sugar) in a bare unmuted, user-clicked embed on localhost
+  got zero ads, while youtube.com itself served one in the same browser.
+  Needs a real-device check on the live site.
   Same tester also said audio sounds low-fidelity ("pixelated photograph
   from the 80s"): see `audio-quality-boost`. Re-checked desktop today:
   forcing `tiny` still streams opus itag 251 (best). Android not confirmed,

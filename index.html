@@ -12678,6 +12678,9 @@ function resetDeck(deck){
 // player's own reported duration still looks ad-length — pushes the check
 // out a bit further instead of confirming.
 function scheduleAdCheck(deck){
+  // first clock sample, so the check below already has movement to prove
+  // content with (the strict 'not-moving' rule) instead of waiting a recheck
+  setTimeout(() => { if (deck.player && !deck.confirmed) deckAdReason(deck, false); }, UNMUTE_DELAY_MS - 1000);
   deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_DELAY_MS);
 }
 // Why a YouTube deck looks like it's showing an ad right now, or '' if it
@@ -12690,6 +12693,11 @@ function scheduleAdCheck(deck){
 //    confirmed (strict), where staying muted a bit longer is harmless
 //  - 'duration': length doesn't match the matched video's (AD_DUR_TOLERANCE_S)
 //  - 'short': length unknown and under MIN_CONTENT_DURATION_S
+//  - 'not-moving' (strict only): no proof the real track is playing - the
+//    deck isn't PLAYING, or its clock hasn't stepped forward within
+//    adFrozenMs(). Strict is what every unmute goes through (see
+//    gateDeckSound), so sound needs positive proof of content, not just the
+//    absence of known ad signs (zero-ads rule, tester #20).
 // A visible page gets a clock update from YouTube every ~265ms (measured), so
 // 900ms with no movement is already 3 missed updates - every extra second
 // here is a second of a mid-roll ad at full volume (tester #20: "loud and
@@ -12709,14 +12717,68 @@ function deckAdReason(deck, strict){
   const playing = !!p.getPlayerState && p.getPlayerState() === YT.PlayerState.PLAYING;
   const cur = p.getCurrentTime ? (+p.getCurrentTime() || 0) : 0;
   const now = Date.now();
-  if (!playing || !deck.adClock || Math.abs(cur - deck.adClock.t) > 0.05) deck.adClock = { t: cur, at: now };
-  else if (!skip.frozen && now - deck.adClock.at >= adFrozenMs()) return 'frozen';
+  const c = deck.adClock;
+  // a forward step no bigger than the wall time since the last sample is the
+  // content clock running; a seek (onDeckConfirmed's snap to 0:00, a resume
+  // jump) isn't proof
+  const step = c ? cur - c.t : 0;
+  const movedAt = c && playing && step > 0.05 && step <= (now - c.at) / 1000 * 1.5 + 0.5 ? now : (c ? c.movedAt : 0);
+  if (!playing || !c || Math.abs(cur - c.t) > 0.05) deck.adClock = { t: cur, at: now, movedAt };
+  else if (!skip.frozen && now - c.at >= adFrozenMs()) return 'frozen';
   const dur = p.getDuration() || 0;
-  if (!dur) return strict && playing ? 'no-duration' : '';
+  if (!dur) return strict ? 'no-duration' : '';
   const track = trackAt(deck === activeDeck() ? state.queuePos : deck.pos);
   const expected = track && track.videoId === deck.videoId ? (track.duration || 0) : 0;
-  if (expected) return !skip.duration && Math.abs(dur - expected) > Math.max(AD_DUR_TOLERANCE_S, expected * 0.05) ? 'duration' : '';
-  return !skip.short && dur < MIN_CONTENT_DURATION_S ? 'short' : '';
+  let r = '';
+  if (expected) r = !skip.duration && Math.abs(dur - expected) > Math.max(AD_DUR_TOLERANCE_S, expected * 0.05) ? 'duration' : '';
+  else r = !skip.short && dur < MIN_CONTENT_DURATION_S ? 'short' : '';
+  if (r || !strict) return r;
+  return playing && movedAt && now - movedAt < adFrozenMs() ? '' : 'not-moving';
+}
+// Zero-ads gate. Every unMute() on a YouTube deck - swaps, crossfades, ad
+// guard, resume, unstick - goes through here, so no path can make a deck
+// audible while deckAdReason (strict) has any doubt. Until then the deck
+// stays muted with gateHeld set, and releaseSoundGates (every seek-poll
+// tick) lets the sound through the moment the real track is proven to be
+// playing. A doubt that never clears is given up after AD_MUTE_MAX_MS, as
+// the ad guard does, except 'not-moving'/'frozen': a stalled clock is
+// silent anyway, so holding it costs nothing.
+function gateDeckSound(deck){
+  const p = deck.player;
+  if (!p || p._gated || !p.unMute || !p.mute) return;
+  const rawUnMute = p.unMute.bind(p), rawMute = p.mute.bind(p);
+  p._gated = true;
+  p.rawMute = rawMute;
+  p.unMute = function(){
+    deck.wantSound = true;
+    if (deck.player !== p) return rawUnMute();
+    const reason = deckAdReason(deck, true);
+    if (!reason){ if (deck.gateHeld){ deck.gateHeld = 0; adLog(deck, 'gate-release', ''); } return rawUnMute(); }
+    rawMute();
+    if (!deck.gateHeld){ deck.gateHeld = Date.now(); adLog(deck, 'gate-hold', reason); }
+    deck.gateReason = reason;
+  };
+  p.mute = function(){ deck.wantSound = false; deck.gateHeld = 0; return rawMute(); };
+}
+function releaseSoundGates(){
+  decks.forEach((d) => {
+    if (d.kind !== 'yt' || !d.wantSound || !d.player || !d.player._gated) return;
+    // guardActiveDeckAd covers the active deck, but not mid-crossfade or the
+    // incoming deck - catch an ad starting on an audible deck there
+    if (!d.gateHeld){
+      if (d !== activeDeck() || swapInProgress){
+        const r = deckAdReason(d, false);
+        if (r){ d.player.rawMute(); d.gateHeld = Date.now(); d.gateReason = r; adLog(d, 'gate-hold', r); }
+      }
+      return;
+    }
+    const reason = deckAdReason(d, true);
+    if (reason && reason !== 'not-moving' && reason !== 'frozen' && Date.now() - d.gateHeld >= AD_MUTE_MAX_MS){
+      adLog(d, 'gate-give-up', reason);
+      (d.adIgnore = d.adIgnore || {})[reason] = true;
+    }
+    d.player.unMute();
+  });
 }
 function deckShowsAd(deck, strict){ return !!deckAdReason(deck, strict); }
 // Last few ad decisions, readable from the console as window.ebblessAdLog,
@@ -12843,6 +12905,7 @@ function createDeckPlayer(deck, videoId){
       onReady: function(){
         if (deck.gen !== myGen) return;
         deck.ready = true;
+        gateDeckSound(deck);
         deck.player.setVolume(deck === activeDeck() ? effectiveVolume(deck) : 0);
         forceLowestQuality(deck);
         if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v, suggestedQuality: LOWEST_QUALITY }); }
@@ -17239,9 +17302,9 @@ function maybeDodgeAd(){
   const ta = trackAt(p), tb = trackAt(n);
   if (!ta || !tb || ta.videoId !== ad.videoId) return;
   if (nd.pos !== n || !nd.player || !nd.ready || !nd.confirmed || nd.videoId !== tb.videoId) return;
-  // 'no-duration' alone is just a slow load, not proof of an ad
+  // 'no-duration' / 'not-moving' alone is just a slow load, not proof of an ad
   const reason = deckAdReason(ad, true);
-  if (!reason || reason === 'no-duration') return;
+  if (!reason || reason === 'no-duration' || reason === 'not-moving') return;
   const q = state.queue;
   [q[p], q[n]] = [q[n], q[p]];
   ad.adDodge = trackStartAuto ? 'swap' : 'return';
@@ -17279,7 +17342,9 @@ function unstickActiveDeck(held){
   if (ad.kind === 'yt' && ad.confirmed && p && p.isMuted && p.pauseVideo && !swapInProgress && !routeLocked() && !ytPanelOpen()
       && !isFadingOut() && artworkWrap.classList.contains('is-playing') && document.visibilityState === 'visible'){
     try {
-      if (!held) bad = p.isMuted() ? 'muted' : '';
+      // muted on purpose by the zero-ads gate over an ad sign isn't stuck;
+      // held only for 'not-moving' while PLAYING is a stall, so nudge it
+      if (!held) bad = p.isMuted() && !(ad.gateHeld && ad.gateReason !== 'not-moving') ? 'muted' : '';
       else if (ad.adHeld === 'frozen'){
         // frozen with every other signal clean: a stall, not an ad
         const ig = ad.adIgnore;
@@ -17477,6 +17542,7 @@ function resetSeekUI(t){
   cassetteSetProgress(0, dur);
 }
 function updateSeekUI(){
+  releaseSoundGates();
   updateAdLoadingIcon();
   maybeDodgeAd();
   const ad = activeDeck();
