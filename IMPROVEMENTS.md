@@ -7837,12 +7837,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #258. Title only.
 
 ### progress-bar-drag-smooth: Dragging the play progress bar isn't smooth
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Scrubbing the progress bar stutters. Make dragging smooth
   (update the visual immediately, seek on release or throttled).
 - **Touches:** player progress bar / seek handling.
-- **Branch:**
+- **Branch:** agent/progress-bar-drag-smooth
 - **Notes:** Synced from Geethub issue #259. Title only.
 
 ### search-artist-profile-suggestion: Artist profile should appear in search suggestions
@@ -7856,7 +7856,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #260. Title only.
 
 ### iphone-ad-buzz: iPhone plays the start of an ad and a rhythmic buzz
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** On iPhone, the start of an ad plays, then a rhythmic buzz
   continues. The only way to stop it is opening the video and pressing
