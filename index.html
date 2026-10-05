@@ -91,6 +91,20 @@ svg{display:block}
 }
 .wordmark{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
 .wordmark img{height:22px;width:auto;display:block}
+/* Hold-to-splash (Geethub #277): holding the wordmark ~1s returns to the
+   splash; this ring fills in the accent color while the hold is in progress.
+   A plain click still opens the player (see wordmarkHold in the script). */
+.wordmark{position:relative;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.wordmark img{-webkit-user-drag:none}
+.wm-hold-ring{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;pointer-events:none;opacity:0;transform:rotate(-90deg);transition:opacity var(--dur-ui) var(--ease-out)}
+.wm-hold-ring circle{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100}
+.wordmark.is-holding .wm-hold-ring{opacity:1}
+.wordmark.is-holding .wm-hold-ring circle{stroke-dashoffset:0;transition:stroke-dashoffset var(--wm-hold-ms,1000ms) linear}
+@media (prefers-reduced-motion:reduce){.wm-hold-ring{transition:none}}
+/* Returned to the splash from the wordmark hold: the app is already loaded,
+   so the Tutorial/Enter choice comes up quickly instead of waiting out the
+   cold-start logo reveal. */
+#splash.is-return .splash-choice{transition-delay:250ms}
 #topnav{display:flex;align-items:center;gap:4px}
 .nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
@@ -2404,7 +2418,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
-      <img src="brand/assets/mark.png" alt="EBBLESS">
+      <img src="brand/assets/mark.png" alt="EBBLESS" draggable="false">
+      <svg class="wm-hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" pathLength="100"/></svg>
     </button>
     <div class="tester-banner" id="testerBanner" role="status" hidden>
       <span class="tb-text"><span class="tb-long">Tester version of EBBLESS. How's it treating you?</span><span class="tb-short">Tester version</span></span>
@@ -3436,7 +3451,7 @@ try { if (localStorage.getItem('ebbless_backend') === 'staging') BACKEND = BACKE
 setTimeout(() => {
   try{
     const splashSafetyEl = document.getElementById('splash');
-    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden')){
+    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return')){
       splashSafetyEl.classList.add('is-hidden');
     }
   }catch(e){}
@@ -6091,7 +6106,92 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
   }
   toggleQueuePanel();
 }));
+// Hold-to-splash (Geethub #277): press and hold the wordmark ~1s (mouse or
+// touch) to go back to the splash screen; the .wm-hold-ring fills while held.
+// Releasing early cancels and the normal click (player view) still fires.
+// Playback keeps going - the splash is just a cover, and Enter drops the
+// listener right back where they were. A completed hold swallows the click
+// that would otherwise follow the release.
+(() => {
+  const btn = $('wordmarkBtn');
+  const HOLD_MS = 1000, MOVE_TOLERANCE_PX = 12;
+  let timer = null, startX = 0, startY = 0, swallowClick = false;
+  btn.style.setProperty('--wm-hold-ms', HOLD_MS + 'ms');
+  const cancel = () => {
+    if (timer){ clearTimeout(timer); timer = null; }
+    btn.classList.remove('is-holding');
+  };
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    swallowClick = false;
+    cancel();
+    startX = e.clientX; startY = e.clientY;
+    // reflow so the ring restarts from empty even on a quick re-press
+    void btn.offsetWidth;
+    btn.classList.add('is-holding');
+    timer = setTimeout(() => {
+      timer = null;
+      btn.classList.remove('is-holding');
+      swallowClick = true;
+      // the release that ends this hold may land on the splash instead, in
+      // which case no click reaches the button - don't let the flag linger
+      setTimeout(() => { swallowClick = false; }, 1500);
+      returnToSplash();
+    }, HOLD_MS);
+  });
+  btn.addEventListener('pointermove', (e) => {
+    if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > MOVE_TOLERANCE_PX) cancel();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave', 'dragstart'].forEach(t => btn.addEventListener(t, cancel));
+  btn.addEventListener('click', (e) => {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  });
+})();
 $('wordmarkBtn').addEventListener('click', () => setView('player'));
+
+// Bring the splash back over the already-running app (wordmark hold above).
+// Reuses the first-visit Tutorial/Enter choice: Enter just hides the splash
+// again (no startApp() re-run - the app never went anywhere), Tutorial takes
+// the same replay path as the "?" button. Clicks are intercepted in the
+// capture phase on #splash so any leftover one-shot listeners from the
+// cold-start showSplashChoice()/install invite never fire a second startApp().
+function returnToSplash(){
+  const splashEl = $('splash');
+  if (!splashEl || !splashEl.classList.contains('is-hidden')) return;
+  splashEl.classList.remove('is-install');
+  splashEl.classList.add('is-active', 'is-choice', 'is-return');
+  splashEl.classList.remove('is-hidden');
+  const video = splashEl.querySelector('video.splash-video');
+  if (video && video.paused){ const p = video.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); }
+  const enterBtn = $('splashSkipTutorial');
+  const close = () => {
+    splashEl.removeEventListener('click', onClick, true);
+    document.removeEventListener('keydown', onKey, true);
+    splashEl.classList.remove('is-choice', 'is-return');
+    splashEl.classList.add('is-hidden');
+  };
+  const onClick = (e) => {
+    const t = e.target.closest ? e.target.closest('button') : null;
+    e.stopPropagation();
+    e.preventDefault();
+    if (!t) return;
+    if (t.id === 'splashSkipTutorial'){ close(); return; }
+    if (t.id === 'splashPlayTutorial'){ close(); replayTutorialBtn.click(); }
+  };
+  // Enter/Escape re-enter from the keyboard too (Enter on a focused
+  // Tutorial button still clicks it natively)
+  const onKey = (e) => {
+    if (e.key === 'Escape' || (e.key === 'Enter' && document.activeElement !== $('splashPlayTutorial'))){
+      e.preventDefault(); e.stopPropagation(); close();
+    }
+  };
+  splashEl.addEventListener('click', onClick, true);
+  document.addEventListener('keydown', onKey, true);
+  if (enterBtn) setTimeout(() => { try{ enterBtn.focus({ preventScroll: true }); }catch(e){} }, 300);
+}
 document.querySelectorAll('[data-fs-nav]').forEach(btn => btn.addEventListener('click', (e) => {
   e.stopPropagation();
   const sel = btn.dataset.fsNav === 'queue' ? '[data-action="toggle-queue"]' : `[data-view="${btn.dataset.fsNav}"]`;
