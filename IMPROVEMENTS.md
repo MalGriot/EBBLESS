@@ -8014,3 +8014,24 @@ Add entries in this shape:
 - **Touches:** HUD logo (merged `logo-tap-to-player`).
 - **Branch:** agent/logo-hold-to-splash
 - **Notes:** Synced from Geethub issue #277.
+
+### yt-ad-onset: YouTube ads cut in loud and sudden (tester #20)
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Tester #20 (in-app feedback, v75, Android): "The youtube
+  ads are loud and really jarring and comes in without notification so its
+  like a shock factor."
+- **Touches:** `deckAdReason` / `guardActiveDeckAd` (merged `android-ad-popup`).
+- **Branch:** agent/yt-ad-onset
+- **Notes:** Mid-rolls that keep reporting the content's video id and
+  duration are only caught by the 'frozen' clock signal, which waited 2s,
+  so up to ~2.25s of ad played at full volume. Measured the IFrame API on
+  a visible page: `infoDelivery` currentTime arrives every ~265ms (max gap
+  272ms over 76 samples). Frozen threshold is now 900ms when visible, 2s
+  when hidden (iframe throttled to ~1s updates). Verified locally: ~2 min
+  of visible playback plus a skip, `ebblessAdLog` empty (no false mutes).
+  Not verified against a real mid-roll (none served locally) or on Android.
+  Same tester also said audio sounds low-fidelity ("pixelated photograph
+  from the 80s"): see `audio-quality-boost`. Re-checked desktop today:
+  forcing `tiny` still streams opus itag 251 (best). Android not confirmed,
+  and the report doesn't say which YouTube video was matched.

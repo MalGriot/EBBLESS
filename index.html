@@ -12685,12 +12685,19 @@ function scheduleAdCheck(deck){
 // track's length, during one), so several independent signals are checked:
 //  - 'video-id': the player says it's on a different video than we loaded
 //  - 'frozen': state is PLAYING but the content clock isn't moving (the
-//    content is parked under an ad), held for AD_FROZEN_MS
+//    content is parked under an ad), held for adFrozenMs()
 //  - 'no-duration': nothing measurable yet - only counted before a track is
 //    confirmed (strict), where staying muted a bit longer is harmless
 //  - 'duration': length doesn't match the matched video's (AD_DUR_TOLERANCE_S)
 //  - 'short': length unknown and under MIN_CONTENT_DURATION_S
-const AD_FROZEN_MS = 2000;
+// A visible page gets a clock update from YouTube every ~265ms (measured), so
+// 900ms with no movement is already 3 missed updates - every extra second
+// here is a second of a mid-roll ad at full volume (tester #20: "loud and
+// really jarring"). A hidden page's iframe is throttled to ~1s updates, so it
+// keeps the old, wider margin.
+const AD_FROZEN_MS = 900;
+const AD_FROZEN_HIDDEN_MS = 2000;
+function adFrozenMs(){ return document.hidden ? AD_FROZEN_HIDDEN_MS : AD_FROZEN_MS; }
 // deck.adIgnore holds signals guardActiveDeckAd gave up on for this track.
 function deckAdReason(deck, strict){
   if (deck.kind !== 'yt' || !deck.player || !deck.player.getDuration) return '';
@@ -12703,7 +12710,7 @@ function deckAdReason(deck, strict){
   const cur = p.getCurrentTime ? (+p.getCurrentTime() || 0) : 0;
   const now = Date.now();
   if (!playing || !deck.adClock || Math.abs(cur - deck.adClock.t) > 0.05) deck.adClock = { t: cur, at: now };
-  else if (!skip.frozen && now - deck.adClock.at >= AD_FROZEN_MS) return 'frozen';
+  else if (!skip.frozen && now - deck.adClock.at >= adFrozenMs()) return 'frozen';
   const dur = p.getDuration() || 0;
   if (!dur) return strict && playing ? 'no-duration' : '';
   const track = trackAt(deck === activeDeck() ? state.queuePos : deck.pos);
