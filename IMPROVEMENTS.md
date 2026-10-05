@@ -7977,12 +7977,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #273. Vague; scope with MAL GRIOT before ready.
 
 ### one-login-two-devices: One login should cover two devices
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** A single login (testers and in general) should work on
   two devices at once.
 - **Touches:** accounts / tester sign-in (merged `accounts-profiles`).
-- **Branch:**
+- **Branch:** agent/one-login-two-devices
 - **Notes:** Synced from Geethub issue #274. Title only.
 
 ### playlist-thumb-hover-open: Playlist thumbnails just open on hover-click; play button moves into the open playlist
@@ -8006,7 +8006,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #276.
 
 ### logo-hold-to-splash: Holding the E logo goes back to splash, with a progress indicator
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Press-and-hold on the E logo returns to the splash
   screen, with a filling bar or animation showing the hold progress.
