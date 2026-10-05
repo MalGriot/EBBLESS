@@ -22,6 +22,7 @@ export const ADMIN_EDITABLE = {
     exclude_from_analytics: { bool: true } } },
   Applicants: { key: 'applicant_id', cols: {
     applicant_status: { options: ['Pending', 'Accepted', 'Waitlisted', 'Rejected'] }, notes: { max: 5000 } } },
+  Feedback: { key: 'feedback_id', cols: { publish: { bool: true }, public_quote: { max: 400 } } },
 };
 
 const ORIGINS = ['https://malgriot.github.io'];
