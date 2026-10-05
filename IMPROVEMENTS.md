@@ -7781,12 +7781,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #252 (colors) and #272 (easier/smoother to grab), folded into one entry. Title only.
 
 ### shortcuts-list-collapsed: Keyboard shortcuts list closed until opened with a button
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The keyboard shortcut list in Settings should start
   collapsed and only expand when the user taps a button.
 - **Touches:** Settings shortcut section (merged `keyboard-shortcuts-settings-page`).
-- **Branch:**
+- **Branch:** agent/shortcuts-list-collapsed
 - **Notes:** Synced from Geethub issue #253. Title only.
 
 ### whats-new-same-day-merge: "What's new" should merge same-day updates into one version
@@ -7938,7 +7938,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #268.
 
 ### miniplayer-idle-fade: Mini-player fades and shrinks when not hovered
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** After a few seconds without hover, the desktop
   mini-player should fade and shrink toward transparent; hovering brings
