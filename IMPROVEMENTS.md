@@ -7846,7 +7846,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #259. Title only.
 
 ### search-artist-profile-suggestion: Artist profile should appear in search suggestions
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** When the user searches an artist name, the artist's
   profile (leading to their catalog playlist) should be one of the
@@ -7938,13 +7938,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #268.
 
 ### miniplayer-idle-fade: Mini-player fades and shrinks when not hovered
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** After a few seconds without hover, the desktop
   mini-player should fade and shrink toward transparent; hovering brings
   it back.
 - **Touches:** desktop mini-player (merged `mini-player-polish`).
-- **Branch:**
+- **Branch:** agent/miniplayer-idle-fade
 - **Notes:** Synced from Geethub issue #269. Title only.
 
 ### tester-admin-ui: Admin page to view and edit tester info from the sheet
