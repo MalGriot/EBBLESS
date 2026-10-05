@@ -1448,6 +1448,31 @@ body.queue-over-fs #queue-scrim{bottom:0}
 body.onb-active .tester-banner,body.desktop-fs .tester-banner,body:has(#splash:not(.is-hidden)) .tester-banner,
 body:has(#flow-layer.is-open) .tester-banner,body:has(#lyricsFsLayer.is-open) .tester-banner,
 body:has(#danger-scrim.is-open) .tester-banner,body:has(#beta-lock:not([hidden])) .tester-banner{display:none}
+/* install banner (#262): a slim strip along the bottom of the topbar, shown
+   on every open in a browser tab (never installed/standalone). While it's up
+   the topbar grows by --ib-h via --topbar-h, so every view, panel and the
+   split-desktop grid row shift down with it instead of being covered (the
+   paste bar and player stay fully visible). Not during the tutorial or
+   desktop fullscreen. */
+.install-banner{position:absolute;left:0;right:0;bottom:0;height:var(--ib-h);display:flex;align-items:center;gap:8px;
+  padding:0 8px 0 18px;background:var(--panel-2);border-top:1px solid var(--border);color:var(--text);font-size:12.5px;line-height:1.3;min-width:0}
+.install-banner[hidden]{display:none}
+.install-banner .ib-text{flex:1 1 auto;min-width:0;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.install-banner .ib-short{display:none}
+@media (max-width:700px){.install-banner .ib-long{display:none}.install-banner .ib-short{display:inline}}
+.install-banner .ib-share{display:inline-block;width:15px;height:15px;vertical-align:-3px;margin:0 2px;color:var(--accent)}
+.install-banner .ib-install{flex:none;background:var(--accent);color:#1a1a1a;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:600}
+.install-banner .ib-install[hidden]{display:none}
+.install-banner .ib-close{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.install-banner .ib-close:hover{background:var(--panel-3);color:var(--text)}
+.install-banner .ib-close svg{width:14px;height:14px}
+body{--ib-h:44px}
+body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + var(--ib-h))}
+body.install-banner-on.split-desktop:not(.onb-active):not(.desktop-fs){--topbar-h:calc(52px + var(--ib-h))}
+body.install-banner-on:not(.onb-active):not(.desktop-fs) #topbar{padding-bottom:var(--ib-h)}
+body.onb-active .install-banner,body.desktop-fs .install-banner{display:none}
+@media (min-width:860px){.install-banner{padding-left:22px}}
+body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 /* like streak: a single soft pulse on the heart when the streak grows */
 @keyframes like-streak-pulse{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
 .player-like-btn.streak-pulse svg{animation:like-streak-pulse 520ms var(--ease-out)}
@@ -2504,6 +2529,11 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <button class="nav-btn" id="mobileSettingsBtn" data-view="settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
     </button>
+    <div class="install-banner" id="installBanner" role="region" aria-label="Install EBBLESS" hidden>
+      <span class="ib-text" id="installBannerText"><span class="ib-long">EBBLESS works best as an app: full screen, lock-screen controls, plays like a real player.</span><span class="ib-short">EBBLESS plays best as an app. Full screen, lock-screen controls.</span></span>
+      <button type="button" class="ib-install" id="installBannerBtn">Install</button>
+      <button type="button" class="ib-close" id="installBannerClose" aria-label="Hide for now"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
+    </div>
   </header>
 
   <!-- ===== LIBRARY ===== -->
@@ -3576,6 +3606,10 @@ async function runInstallPrompt(){
   const choice = await prompt.userChoice;
   return choice.outcome === 'accepted';
 }
+// Manual-install instructions for browsers with no programmatic prompt
+// (always iOS Safari) - shared by the Settings install row and the banner.
+const INSTALL_HINT_IOS = 'Tap Share, then Add to Home Screen.';
+const INSTALL_HINT_MENU = 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
 // Daily nudges: the splash install invite and the Tutorial/Enter choice each
 // run on the first load of a local calendar day only, and keep doing so daily
 // until the visitor installs (installed launches are standalone, so
@@ -17133,14 +17167,84 @@ if (screen.orientation && screen.orientation.lock){
       } else if (installDesc){
         // No programmatic install API here (always the case on iOS Safari) -
         // point at the manual flow instead.
-        installDesc.textContent = isIOS
-          ? 'Tap Share, then Add to Home Screen.'
-          : 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
+        installDesc.textContent = isIOS ? INSTALL_HINT_IOS : INSTALL_HINT_MENU;
       }
     });
     window.addEventListener('appinstalled', () => setInstalled(true));
     document.addEventListener('ebbless:install-available', () => setInstalled(false));
   }
+}
+
+/* ---- install banner (issue #262) ----
+   Slim strip under the topbar on every open in a browser tab, never when
+   installed (standalone) or after appinstalled. Waits for the splash, the
+   tutorial and the first-run "Start here" guide to be out of the way (must
+   stay clear for a beat, so the guide gets its turn first). Install uses the
+   native prompt when there is one, else swaps the pitch for the same manual
+   steps as the Settings install row. The x hides it for this session only
+   (sessionStorage), so it's back on the next open. */
+const INSTALL_BANNER_CLOSED_KEY = 'ebbless:installBannerClosed';
+const installBanner = $('installBanner');
+const installBannerText = $('installBannerText');
+const installBannerBtn = $('installBannerBtn');
+const INSTALL_BANNER_PITCH = installBannerText ? installBannerText.innerHTML : '';
+let installBannerDone = false;
+function setInstallBanner(show){
+  if (!installBanner) return;
+  installBanner.hidden = !show;
+  document.body.classList.toggle('install-banner-on', show);
+}
+function installBannerBlocked(){
+  const splashEl = $('splash');
+  if (splashEl && !splashEl.classList.contains('is-hidden')) return true;
+  if (document.body.classList.contains('onb-active')) return true;
+  return !!(pasteGuideEl && !pasteGuideEl.hidden);
+}
+function scheduleInstallBanner(){
+  if (!installBanner || isStandaloneDisplay()) return;
+  try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
+  let clearSince = 0;
+  const tick = () => {
+    if (installBannerDone || isStandaloneDisplay()) return;
+    if (installBannerBlocked()){ clearSince = 0; setTimeout(tick, 1000); return; }
+    if (!clearSince) clearSince = Date.now();
+    if (Date.now() - clearSince < 1500){ setTimeout(tick, 500); return; }
+    setInstallBanner(true);
+  };
+  tick();
+}
+if (installBanner){
+  installBannerBtn.addEventListener('click', async () => {
+    if (deferredInstallPrompt){ await runInstallPrompt(); return; } // appinstalled hides it
+    installBannerBtn.hidden = true;
+    installBannerText.textContent = '';
+    if (isIOS){
+      const [pre, post] = INSTALL_HINT_IOS.split('Share');
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.setAttribute('class', 'ib-share');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.innerHTML = '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M7 10H5v11h14V10h-2"/>';
+      const line = document.createElement('span'); // keeps the icon inline inside the -webkit-box clamp
+      line.append(pre, icon, 'Share' + post);
+      installBannerText.append(line);
+    } else {
+      installBannerText.textContent = isMobileUA
+        ? 'Open your browser menu, then Install app or Add to Home Screen.'
+        : INSTALL_HINT_MENU;
+    }
+  });
+  $('installBannerClose').addEventListener('click', () => {
+    installBannerDone = true;
+    try { sessionStorage.setItem(INSTALL_BANNER_CLOSED_KEY, '1'); } catch(e){}
+    setInstallBanner(false);
+  });
+  window.addEventListener('appinstalled', () => { installBannerDone = true; setInstallBanner(false); });
+  // a native prompt turned up after the manual steps were shown: offer it
+  document.addEventListener('ebbless:install-available', () => {
+    installBannerBtn.hidden = false;
+    installBannerText.innerHTML = INSTALL_BANNER_PITCH;
+  });
 }
 
 /* ---- seek / progress ---- */
@@ -18868,6 +18972,7 @@ function startApp(){
   try{ scheduleCapPrefetch(); } catch(e){}
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
+  try{ scheduleInstallBanner(); } catch(e){}
 
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
