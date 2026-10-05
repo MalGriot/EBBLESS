@@ -5542,6 +5542,8 @@ function reResolveStaleInBackground(id, type){
   resolvePlaylist(id, type, () => {}).then(pl => {
     if (state.playlist && state.playlist.id === id) state.playlist = pl;
     renderLibrary();
+    // a refreshed show can bring the playing episode its chapters (#256)
+    syncChapterList(currentTrack());
   }).catch(() => {});
 }
 
@@ -16481,6 +16483,10 @@ function tryResume(){
   updatePlayerAccentColor(track);
   attachArtworkFallback(miniArt, track);
   cassetteUpdateTrack(track, state.queuePos);
+  // a podcast episode reopened paused still gets its chapter button (#256)
+  // - reflectCurrentTrackUI, which normally does this, only runs on play
+  syncChapterList(track);
+  podHydrate(track, state.queue[state.queuePos].plId);
 }
 
 /* =========================================================================
