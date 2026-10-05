@@ -7771,13 +7771,13 @@ Add entries in this shape:
   video, then other panels).
 
 ### scrollbar-style: Library/playlist/queue scrollbars should use UI colors and be easy to grab
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Scrollbars in the library, open playlist and queue should
   use the app's accent/UI colors instead of the browser default, and be
   wider/easier to grab and drag smoothly.
 - **Touches:** scrollbar CSS for library, playlist panel, queue panel.
-- **Branch:**
+- **Branch:** agent/scrollbar-style
 - **Notes:** Synced from Geethub issues #252 (colors) and #272 (easier/smoother to grab), folded into one entry. Title only.
 
 ### shortcuts-list-collapsed: Keyboard shortcuts list closed until opened with a button
@@ -7809,7 +7809,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #255 (delay) and #278 (preload before opening), folded into one entry. Commit 1126d93 (background generation on iPhone) may already cover part of this; verify first.
 
 ### podcast-chapter-button-missing: Podcast chapter button isn't showing
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The chapters button for podcasts does not appear. Find
   why and make it show for episodes that have chapters.
