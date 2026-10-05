@@ -7866,7 +7866,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #261.
 
 ### install-prompt-push: Push users to install the app on every open
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Regular users don't see browser apps as apps. Make
   installing a key feature: prompt every time they open the app (not
