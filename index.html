@@ -13449,6 +13449,38 @@ async function capFetch(url, start, end){
   if (!res.ok) throw new Error('audio ' + res.status);
   return { buf: await res.arrayBuffer(), total: Number(res.headers.get('X-Total-Length')) || 0 };
 }
+// Where the audio starts: most podcast mp3s open with an ID3 tag (often
+// carrying the cover art, easily 1 MB+). Mapping a slice's byte position to
+// time without skipping it put every slice's captions late - up to a minute
+// on a long episode - so the tag's size is read from the first 10 bytes.
+function capAudioStart(buf){
+  const b = new Uint8Array(buf);
+  if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return 0;
+  return 10 + ((b[6] & 0x7f) << 21 | (b[7] & 0x7f) << 14 | (b[8] & 0x7f) << 7 | (b[9] & 0x7f)) + (b[5] & 0x10 ? 10 : 0);
+}
+// episode seconds at a byte position (constant bitrate past the tag)
+function capOffset(rec, byte, dur){
+  const a0 = rec.a0 || 0;
+  return Math.max(0, (byte - a0) / (rec.total - a0) * dur);
+}
+// slices timed without the tag (saved before it was measured, or made by the
+// worker's background captioner, which still does) need moving this much
+function capLegacyShift(rec, i){
+  if (!rec.a0 || !rec.total || !rec.dur) return 0;
+  const s = i * CAP_CHUNK_BYTES;
+  return capOffset(rec, s, rec.dur) - s / rec.total * rec.dur;
+}
+function capShiftCues(cues, d){
+  return d ? cues.map(c => [Math.round((c[0] + d) * 100) / 100, Math.round((c[1] + d) * 100) / 100, c[2]]) : cues;
+}
+async function capReadHead(rec, url){
+  const h = await capFetch(url, 0, 9);
+  if (!rec.total) rec.total = h.total;
+  if (!rec.total) return;
+  const a0 = capAudioStart(h.buf);
+  rec.a0 = a0 < rec.total ? a0 : 0;
+  Object.keys(rec.parts).forEach(i => { rec.parts[i] = capShiftCues(rec.parts[i], capLegacyShift(rec, +i)); });
+}
 // any slice of an mp3 decodes on its own; resampled to Whisper's 16 kHz mono
 async function capDecode(buf){
   const ctx = new OfflineAudioContext(1, 16000, 16000);
@@ -13476,7 +13508,13 @@ function capLines(rec){
 // onUpdate(lines, state): state is 'working' | 'done' | 'need-multi' | 'failed'
 async function generateCaptions(t, onUpdate){
   const id = t.videoId, url = audioUrlOf(id);
-  if (capJob && capJob.id === id && !capJob.cancelled){ capJob.onUpdate = onUpdate; return; }
+  if (capJob && capJob.id === id && !capJob.cancelled){
+    // already running (started on play, see capPreload): show what's done now
+    capJob.onUpdate = onUpdate;
+    if (capJob.rec && capJob.model) onUpdate(capLines(capJob.rec), 'working', capModelPct(capJob.model));
+    capSyncWakeLock();
+    return;
+  }
   if (capJob) capJob.cancelled = true;
   const job = capJob = { id, t, cancelled: false, onUpdate, onProgress: null, lastActivity: Date.now(), rec: null, dur: 0, next: null };
   capSyncWakeLock();
@@ -13485,14 +13523,18 @@ async function generateCaptions(t, onUpdate){
   const rec = (await capGet(id)) || { ts: Date.now(), total: 0, parts: {}, done: false };
   job.rec = rec; job.lang = lang;
   if (job.cancelled) return;
+  if (rec.a0 == null){
+    try { await capReadHead(rec, url); if (rec.a0 != null) await capPut(id, rec); } catch(e){}
+    if (job.cancelled) return;
+  }
   if (rec.done){ job.onUpdate(capLines(rec), 'done'); return; }
   if (!english && !capMultiInstalled()){ job.onUpdate(capLines(rec), 'need-multi'); return; }
-  const model = english ? CAP_MODEL_EN : CAP_MODEL_MULTI;
+  const model = job.model = english ? CAP_MODEL_EN : CAP_MODEL_MULTI;
   job.onProgress = () => { job.lastActivity = Date.now(); if (!job.cancelled) job.onUpdate(capLines(rec), 'working', capModelPct(model)); };
   job.onUpdate(capLines(rec), 'working');
   try {
     if (!rec.total){
-      rec.total = (await capFetch(url, 0, 1)).total;
+      await capReadHead(rec, url);
       if (!rec.total) throw new Error('no length');
     }
     const ad = activeDeck();
@@ -13505,7 +13547,8 @@ async function generateCaptions(t, onUpdate){
     const next = () => {
       const p = activeDeck().player;
       const at = (p && p.getCurrentTime && p.getCurrentTime()) || 0;
-      const here = Math.min(n - 1, Math.max(0, Math.floor(at / dur * n)));
+      const a0 = rec.a0 || 0;
+      const here = Math.min(n - 1, Math.max(0, Math.floor((a0 + at / dur * (rec.total - a0)) / CAP_CHUNK_BYTES)));
       for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i]) return i; }
       return -1;
     };
@@ -13520,7 +13563,7 @@ async function generateCaptions(t, onUpdate){
       catch(e){ if (!decoded && first) throw e; rec.parts[i] = []; continue; }
       finally { first = false; }
       const chunks = await capRun(model, audio, english ? null : lang);
-      const offset = start / rec.total * dur;
+      const offset = capOffset(rec, start, dur);
       rec.parts[i] = chunks
         .map(c => [offset + ((c.timestamp && c.timestamp[0]) || 0), offset + ((c.timestamp && (c.timestamp[1] != null ? c.timestamp[1] : c.timestamp[0])) || 0), String(c.text || '').trim()])
         // drop Whisper's sound tags ("[Music]", "(upbeat)") - not words
@@ -13540,6 +13583,31 @@ async function generateCaptions(t, onUpdate){
     if (capJob === job) capJob = null;
     capSyncWakeLock();
   }
+}
+
+// Start an episode's captions as soon as it plays (#278), so they're ready
+// when the captions view opens: the feed's own transcript is fetched, or
+// on-device generation begins at the playhead. The view takes the job over.
+function capQuiet(){}
+function capCanGen(t){
+  return isAudioVideoId(t.videoId) && typeof Worker === 'function' && typeof OfflineAudioContext === 'function' && 'indexedDB' in window;
+}
+// Called from the seek poll (so only while playing), once per episode play.
+var capPreloadedId = null;
+function capPreload(){
+  if (visualMode === 'lyrics') return; // the view loads its own
+  const t = currentTrack();
+  if (!t || capPreloadedId === t.videoId || !isPodcastTrack(t)) return;
+  capPreloadedId = t.videoId;
+  if (capJob && capJob.id === t.videoId && !capJob.cancelled) return;
+  const canGen = capCanGen(t);
+  if (!podHasText(t) && !canGen) return;
+  podText(t).then(pt => {
+    const ct = currentTrack();
+    if (pt.lines.length || !canGen || !ct || ct.videoId !== t.videoId || visualMode === 'lyrics') return;
+    if (capJob && capJob.id === t.videoId && !capJob.cancelled) return;
+    generateCaptions(t, capQuiet);
+  });
 }
 
 // Keep the screen on while captions are being made and the captions view
@@ -13585,7 +13653,7 @@ async function capCollect(h){
   const parts = (got && got.parts) || {};
   const merge = (rec) => {
     let added = 0;
-    Object.entries(parts).forEach(([i, cues]) => { if (!rec.parts[i] || !rec.parts[i].length){ rec.parts[i] = cues; added++; } });
+    Object.entries(parts).forEach(([i, cues]) => { if (!rec.parts[i] || !rec.parts[i].length){ rec.parts[i] = capShiftCues(cues, capLegacyShift(rec, +i)); added++; } });
     return added;
   };
   const j = capJob;
@@ -13603,7 +13671,9 @@ async function capCollect(h){
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){
     const j = capJob;
-    if (isIOS && j && !j.cancelled && j.rec && j.rec.total && j.dur && j.next && navigator.sendBeacon){
+    // (only for captions someone has opened - a play-time preload doesn't
+    // spend the shared background budget)
+    if (isIOS && j && !j.cancelled && j.onUpdate !== capQuiet && j.rec && j.rec.total && j.dur && j.next && navigator.sendBeacon){
       const from = j.next();
       if (from < 0) return;
       const body = JSON.stringify({ url: audioUrlOf(j.id), total: j.rec.total, dur: j.dur, lang: j.lang, from, done: Object.keys(j.rec.parts).map(Number) });
@@ -13676,7 +13746,7 @@ function maybeLoadLyrics(){
     lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
     // feed audio can be captioned on this device; a YouTube-matched
     // episode can't (no audio bytes to read)
-    const canGen = isAudioVideoId(t.videoId) && typeof Worker === 'function' && typeof OfflineAudioContext === 'function' && 'indexedDB' in window;
+    const canGen = capCanGen(t);
     if (!podHasText(t) && !canGen){
       lyricsScroller.innerHTML = '<div class="lyrics-empty">This episode has no captions or chapters.</div>';
       return;
@@ -13744,9 +13814,13 @@ function maybeLoadLyrics(){
 function updateLyricsHighlight(cur){
   if (visualMode !== 'lyrics' || !lyricsState.synced || !lyricsState.lines.length) return;
   const lines = lyricsState.lines;
+  // podcast captions light up a touch early: the position is polled every
+  // 250 ms and the scroll to the line takes a moment, so on the dot reads late
+  const ct = currentTrack();
+  const lead = ct && isPodcastTrack(ct) ? 0.4 : 0;
   let idx = -1;
   for (let i = 0; i < lines.length; i++){
-    if (lines[i].t != null && lines[i].t <= cur) idx = i; else break;
+    if (lines[i].t != null && lines[i].t <= cur + lead) idx = i; else break;
   }
   if (idx === lyricsState.activeIdx) return;
   const prevEl = lyricsState.activeIdx >= 0 ? lyricsScroller.children[lyricsState.activeIdx] : null;
@@ -16377,6 +16451,7 @@ function updateSeekUI(){
   const dur = ad.player.getDuration() || 0;
   paintSeekUI(cur, dur);
   updateLyricsHighlight(cur);
+  capPreload();
   syncMediaPositionState(false);
   maybeStartCrossfade(cur, dur);
   cassetteSetProgress(cur, dur);
