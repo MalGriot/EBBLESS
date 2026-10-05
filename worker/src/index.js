@@ -1243,6 +1243,47 @@ async function handlePodText(url, ctx) {
   return response;
 }
 
+// ---------- GET /podepisode?feed=<rss>|show=<name>&title=<episode>[&audio=<url>] ----------
+// Chapter/caption info for one episode the app saved before that info
+// existed (a show cached earlier, or a queue saved as a playlist - those
+// keep the episode as it was). Finds the feed (given, or by show name),
+// then the episode (by audio file, else title) and returns its
+// chapters / chaptersUrl / transcriptUrl / transcriptType plus language.
+async function handlePodEpisode(url, ctx) {
+  const feedParam = url.searchParams.get('feed') || '';
+  const show = (url.searchParams.get('show') || '').trim();
+  const title = (url.searchParams.get('title') || '').trim();
+  const audio = url.searchParams.get('audio') || '';
+  if ((!/^https?:\/\//i.test(feedParam) && !show) || !title || title.length > 500 || show.length > 300) return json({ error: 'missing or invalid podepisode request' }, 400);
+  const cache = envCache;
+  const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podepisode/' + encodeURIComponent(feedParam || show) + '/' + encodeURIComponent(title));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+  const dbg = [];
+  const feedUrl = /^https?:\/\//i.test(feedParam) ? feedParam : await findPodcastFeed(show, '', dbg);
+  if (!feedUrl) return json({ error: 'no public feed found', debug: dbg }, 404);
+  let feed;
+  try {
+    const res = await fetch(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
+    if (!res.ok) return json({ error: 'podcast feed returned ' + res.status }, 502);
+    feed = parsePodcastFeed(await res.text());
+  } catch (e) {
+    return json({ error: "couldn't read the podcast feed" }, 502);
+  }
+  const a = audio.replace(/^http:\/\//i, 'https://').split('?')[0];
+  let i = a ? feed.episodes.findIndex(e => e.audio.split('?')[0] === a) : -1;
+  if (i === -1) i = matchEpisode(feed.episodes, title);
+  const e = i >= 0 ? feed.episodes[i] : null;
+  const payload = { found: !!e, feedUrl, language: feed.language || '' };
+  if (e) ['chapters', 'chaptersUrl', 'transcriptUrl', 'transcriptType'].forEach(k => { if (e[k]) payload[k] = e[k]; });
+  const response = json(payload);
+  const toCache = response.clone();
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 // ---------- GET /podaudio?url=<episode audio>&start=<byte>&end=<byte> ----------
 // On-device podcast captions (#241): the app transcribes an episode in the
 // listener's own browser, a slice at a time, and needs the raw audio bytes -
@@ -4357,6 +4398,7 @@ export default {
       if (url.pathname === '/podcastmatch') return await handlePodcastMatch(url, ctx);
       if (url.pathname === '/podtext') return await handlePodText(url, ctx);
       if (url.pathname === '/podaudio') return await handlePodAudio(url);
+      if (url.pathname === '/podepisode') return await handlePodEpisode(url, ctx);
       if (url.pathname === '/podcaption/start' || url.pathname === '/podcaption/collect') return await handlePodCaption(request, url, env);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
@@ -4381,7 +4423,7 @@ export default {
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/beta/status', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

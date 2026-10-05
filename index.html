@@ -5292,6 +5292,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
         else if (e.chaptersUrl) tr.chaptersUrl = e.chaptersUrl;
         if (e.transcriptUrl){ tr.transcriptUrl = e.transcriptUrl; tr.transcriptType = e.transcriptType; }
         if (pod.language) tr.lang = pod.language;
+        // stamped: this episode's chapter/caption info is current (see podHydrate)
+        if (pod.feedUrl) tr.feed = pod.feedUrl;
+        tr.podMeta = 1;
       }
       return tr;
     });
@@ -9283,6 +9286,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // Plain-English bullets only: no issue numbers, no internal names.
 // Versions with nothing user-facing are simply left out.
 const WHATS_NEW = [
+  { version: 73, date: '2026-10-05', items: [
+    'Podcast episodes you saved before chapters and captions existed now pick them up the first time they play.'
+  ]},
   { version: 72, date: '2026-10-03', items: [
     'Your screen stays on while podcast captions are being made, so they keep going.',
     'iPhone: when you leave the app mid-episode, captions keep being made in the background and are waiting when you come back.',
@@ -14084,6 +14090,7 @@ function reflectCurrentTrackUI(pos, opts){
   resetSeekUI(t);
   syncChapterList(t);
   if (capJob && capJob.id !== t.videoId) capJob.cancelled = true;
+  podHydrate(t, entry && entry.plId);
   // a podcast episode is the show's own file - there's no match to flag
   const isPod = isPodcastTrack(t);
   document.body.classList.toggle('pod-playing', isPod);
@@ -16227,6 +16234,40 @@ function setChapterPanel(open){
   renderChapterList(currentTrack());
   const ad = activeDeck();
   markCurrentChapter(ad.player && ad.player.getCurrentTime ? ad.player.getCurrentTime() || 0 : 0, true);
+}
+// An episode saved before chapters/captions existed (a show cached earlier,
+// or a queue saved as a playlist - those keep the episode as it was) has
+// none of that info. The first time one plays, ask the worker for it
+// (/podepisode), copy it onto the saved episode and stamp it, so the
+// chapter button, seek-bar gaps and real captions all appear.
+var podHydrateTried = new Set();
+function podHydrate(t, plId){
+  if (!t || !t.podcast || !isAudioVideoId(t.videoId) || t.podMeta) return;
+  if (podHydrateTried.has(t.videoId)) return;
+  podHydrateTried.add(t.videoId);
+  const q = { title: t.title || '', audio: audioUrlOf(t.videoId) };
+  if (t.feed) q.feed = t.feed; else if (t.channel) q.show = t.channel; else return;
+  fetch(BACKEND + '/podepisode?' + new URLSearchParams(q).toString())
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d || !d.feedUrl) return; // not reachable now - try again next session
+      ['chapters', 'chaptersUrl', 'transcriptUrl', 'transcriptType'].forEach(k => { if (d[k]) t[k] = d[k]; });
+      if (d.language) t.lang = d.language;
+      t.feed = d.feedUrl;
+      t.podMeta = 1;
+      const pl = plId && playlistById(plId);
+      if (pl && pl.tracks && pl.tracks.includes(t)) persistPlaylistObj(pl);
+      if (!podHasText(t)) return;
+      // show what was found on the episode playing now
+      if (podTextCache) podTextCache.delete(t.videoId);
+      const ct = currentTrack();
+      if (!ct || ct.videoId !== t.videoId) return;
+      if (t.transcriptUrl && capJob && capJob.id === t.videoId) capJob.cancelled = true;
+      chapTicksKey = '';
+      syncChapterList(t);
+      if (visualMode === 'lyrics'){ lyricsState.videoId = null; maybeLoadLyrics(); }
+    })
+    .catch(() => {});
 }
 function syncChapterList(t){
   const btn = chapBtnEl();
