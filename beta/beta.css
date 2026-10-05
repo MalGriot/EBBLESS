@@ -183,6 +183,7 @@ form{margin-top:36px}
 @media (min-width:600px){.shots{grid-template-columns:repeat(4,1fr)}}
 .shots figure{margin:0;min-width:0}
 .shots img,.shot-slot{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:var(--r-md);border:1px solid var(--border-2);background:var(--panel)}
+.shots img{cursor:zoom-in}
 .shot-slot{display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-size:12px;color:var(--faint-2);
   border-style:dashed}
 .shots figcaption{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);margin-top:8px;text-align:center}
@@ -269,3 +270,9 @@ form{margin-top:36px}
 
 .about .cta .fallback a{color:var(--text)}
 body.joined .about .cta{display:none}
+
+/* screenshot zoom modal */
+#shot-zoom{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity var(--dur-ui) ease}
+#shot-zoom.show{opacity:1;pointer-events:auto}
+#shot-zoom img{max-width:90%;max-height:90%;border-radius:var(--r-md);cursor:zoom-out}
+#shot-zoom::before{content:'';position:absolute;inset:0}
