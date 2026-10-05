@@ -18,7 +18,9 @@
 // Active testers only; tester numbers are never reused.
 //
 // The worker (worker/src/beta.js) calls this as a web app with a shared
-// secret: signup, status, me (token check), report and activity. Columns are found by
+// secret: signup, status, me (token check), report and activity, plus
+// admin_list / admin_update for the owner-only admin page (beta/admin.html,
+// worker/src/admin.js). Columns are found by
 // header name, so you can add your own columns or reorder them freely
 // (re-run setup afterwards so the Dashboard formulas follow).
 //
@@ -121,7 +123,8 @@ function withLock_(fn) {
   lock.waitLock(20000);
   try { return fn(); } finally { lock.releaseLock(); }
 }
-function toast_(msg) { ss_().toast(msg, 'EBBLESS Beta', 10); }
+// No-op when there's no Sheet UI (web app calls from the admin page).
+function toast_(msg) { try { ss_().toast(msg, 'EBBLESS Beta', 10); } catch (err) {} }
 
 // ---------- email ----------
 
@@ -211,6 +214,8 @@ function doPost(e) {
     if (b.action === 'me') return out_(me_(b.token));
     if (b.action === 'report') return out_(report_(b));
     if (b.action === 'activity') return out_(activity_(b));
+    if (b.action === 'admin_list') return out_(adminList_());
+    if (b.action === 'admin_update') return out_(adminUpdate_(b));
     return out_({ ok: false, error: 'unknown action' });
   } catch (err) {
     return out_({ ok: false, error: String(err) });
@@ -302,6 +307,72 @@ function report_(b) {
   return { ok: true, id: id, tester: { id: t.tester_id, number: numFrom_(t.tester_number) } };
 }
 
+// ---------- admin page (worker/src/admin.js, behind ADMIN_TOKEN) ----------
+
+// What the admin page may change, by tab. Everything else is read-only there.
+// Keep in sync with ADMIN_EDITABLE in worker/src/admin.js.
+const ADMIN_EDITABLE = {};
+ADMIN_EDITABLE[TESTERS] = { key: 'tester_id', cols: {
+  tester_status: { options: TESTER_STATUSES }, notes: { max: 5000 }, name: { max: 80 }, email: { email: true },
+  exclude_from_analytics: { bool: true } } };
+ADMIN_EDITABLE[APPLICANTS] = { key: 'applicant_id', cols: {
+  applicant_status: { options: APPLICANT_STATUSES }, notes: { max: 5000 } } };
+// Never sent to the admin page: tester link tokens (and the links that carry them).
+const ADMIN_HIDDEN = { access_token: true, access_link: true };
+const ADMIN_TABS = [TESTERS, APPLICANTS, ANALYTICS, FEEDBACK, BUGS];
+
+function plain_(v) { return v instanceof Date ? v.toISOString() : v; }
+function adminRecord_(r) {
+  const o = {};
+  Object.keys(r).forEach(function (k) { if (k !== '_row' && !ADMIN_HIDDEN[k]) o[k] = plain_(r[k]); });
+  return o;
+}
+
+// Every admin tab as { headers (sheet order), rows }.
+function adminList_() {
+  const tabs = {};
+  ADMIN_TABS.forEach(function (name) {
+    const sh = sheet_(name);
+    if (!sh) { tabs[name] = { headers: [], rows: [] }; return; }
+    const c = cols_(sh);
+    const headers = Object.keys(c).filter(function (h) { return !ADMIN_HIDDEN[h]; }).sort(function (a, b) { return c[a] - c[b]; });
+    tabs[name] = { headers: headers, rows: records_(sh).filter(function (r) { return r[headers[0]] !== ''; }).map(adminRecord_) };
+  });
+  return { ok: true, tabs: tabs, cap: CAP };
+}
+
+// One cell, found by the row's id (not row number, rows can move). `prev` is
+// the value the admin page last saw; if the Sheet has changed since, nothing
+// is written. Setting an applicant to Accepted or a tester back to Active runs
+// the same flow as editing the Sheet by hand (script edits don't fire
+// onBetaEdit).
+function adminUpdate_(b) {
+  const spec = ADMIN_EDITABLE[b.tab];
+  const col = spec && spec.cols[b.column];
+  if (!col) return { ok: true, updated: false, reason: 'not_editable' };
+  let value = b.value;
+  if (col.options && col.options.indexOf(value) < 0) return { ok: true, updated: false, reason: 'bad_value' };
+  if (col.bool) { if (typeof value !== 'boolean') return { ok: true, updated: false, reason: 'bad_value' }; }
+  else if (!col.options) {
+    value = String(value == null ? '' : value).slice(0, col.max || 200);
+    if (col.email && value && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) return { ok: true, updated: false, reason: 'bad_value' };
+  }
+  const sh = sheet_(b.tab);
+  const res = withLock_(function () {
+    const r = records_(sh).filter(function (x) { return String(x[spec.key]) === String(b.id) && String(b.id) !== ''; })[0];
+    if (!r) return { reason: 'not_found' };
+    if ('prev' in b && String(plain_(r[b.column])) !== String(b.prev == null ? '' : b.prev)) return { reason: 'conflict', current: plain_(r[b.column]) };
+    setCell_(sh, r._row, b.column, safe_(value));
+    return { row: r._row, previous: String(r[b.column]) };
+  });
+  if (res.reason) return { ok: true, updated: false, reason: res.reason, current: res.current };
+  let message = '';
+  if (b.tab === APPLICANTS && b.column === 'applicant_status' && value === 'Accepted' && res.previous !== 'Accepted') message = acceptRow_(res.row, res.previous) || '';
+  if (b.tab === TESTERS && b.column === 'tester_status' && value === 'Active' && res.previous !== 'Active') message = reactivateRow_(res.row, res.previous) || '';
+  const rec = records_(sh).filter(function (x) { return x._row === res.row; })[0];
+  return { ok: true, updated: true, record: rec ? adminRecord_(rec) : null, message: message };
+}
+
 // ---------- analytics ----------
 
 function day_(d) { return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
@@ -376,25 +447,30 @@ function acceptRow_(rowNum, previous) {
     append_(tsh, t);
     return { tester: t, row: tsh.getLastRow() };
   });
-  if (!result.tester) { toast_(result.msg); return; }
+  if (!result.tester) { toast_(result.msg); return result.msg; }
   const t = result.tester;
   const err = sendMail_(t.email, 'You\'re in: ' + t.tester_number, inviteText_(t));
   setCell_(tsh, result.row, 'notes', err ? 'Invite NOT emailed: ' + err : 'Invite emailed ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
-  toast_(t.name + ' is ' + t.tester_number + (err ? '. Invite email failed, see notes.' : '. Invite emailed.'));
+  const msg = t.name + ' is ' + t.tester_number + (err ? '. Invite email failed, see notes.' : '. Invite emailed.');
+  toast_(msg);
+  return msg;
 }
 
 // Inactive -> Active again: only if it fits under the cap.
 function reactivateRow_(rowNum, previous) {
   const tsh = sheet_(TESTERS);
-  withLock_(function () {
+  return withLock_(function () {
     const testers = records_(tsh);
     const t = testers.filter(function (r) { return r._row === rowNum; })[0];
-    if (!t || !t.tester_id) return;
+    if (!t || !t.tester_id) return '';
     const active = testers.filter(function (r) { return r.tester_status === 'Active'; }).length;
     if (active > CAP) {
       setCell_(tsh, rowNum, 'tester_status', previous && previous !== 'Active' ? previous : 'Inactive');
-      toast_('All ' + CAP + ' spots are taken. ' + t.tester_number + ' stays Inactive.');
+      const msg = 'All ' + CAP + ' spots are taken. ' + t.tester_number + ' stays Inactive.';
+      toast_(msg);
+      return msg;
     }
+    return '';
   });
 }
 

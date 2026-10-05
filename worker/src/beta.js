@@ -47,7 +47,7 @@ const TOKEN_RE = /^t[0-9a-f]{12}-[0-9a-f]{32}$/;
 const STATUS_CACHE_S = 60;
 
 // One call to the Sheet's Apps Script web app. Throws on anything but ok.
-async function sheet(env, action, payload) {
+export async function sheet(env, action, payload) {
   const res = await fetch(env.SHEET_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

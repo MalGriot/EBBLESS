@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://spotify-youtube-search.malgriot.workers.dev https://spotify-youtube-search-staging.malgriot.workers.dev http://localhost:8787; base-uri 'none'; form-action 'none'">
+<title>EBBLESS ADMIN</title>
+<meta name="theme-color" content="#121212">
+<link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
+<link rel="stylesheet" href="beta.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<main class="wrap wide">
+  <div class="top adm-top">
+    <img src="../brand/assets/wordmark-white.png" alt="EBBLESS">
+    <div class="adm-top-right">
+      <span class="tag" id="backendTag">Admin</span>
+      <button class="btn sm" id="refreshBtn" type="button" hidden>Refresh</button>
+      <button class="btn sm" id="lockBtn" type="button" hidden>Lock</button>
+    </div>
+  </div>
+
+  <!-- sign in -->
+  <section id="login" hidden>
+    <h1 class="display">TESTERS.</h1>
+    <div class="rule"></div>
+    <p class="lede">Admin only. Paste the admin token (the worker's ADMIN_TOKEN secret).</p>
+    <div class="field adm-login">
+      <label for="tokenInput">Admin token</label>
+      <input type="password" id="tokenInput" autocomplete="off" spellcheck="false">
+    </div>
+    <label class="check"><input type="checkbox" id="rememberInput"> Remember on this device</label>
+    <div class="actions"><button class="btn primary" id="loginBtn" type="button">Open</button></div>
+    <p class="status" id="loginStatus"></p>
+  </section>
+
+  <!-- main view -->
+  <section id="app" hidden>
+    <div class="adm-stats tnum" id="stats"></div>
+
+    <div class="adm-tabs" role="tablist" id="tabs"></div>
+
+    <div class="adm-toolbar">
+      <input type="search" id="search" placeholder="Search name, email, notes..." aria-label="Search">
+      <select id="filter" aria-label="Filter by status"></select>
+      <select id="sortCol" aria-label="Sort by"></select>
+      <button class="btn sm" id="sortDir" type="button" aria-label="Sort direction">Asc</button>
+      <button class="btn sm" id="colsBtn" type="button" aria-expanded="false">Columns</button>
+    </div>
+
+    <div class="adm-cols" id="colsPanel" hidden>
+      <div class="adm-cols-head">
+        <span>Show, hide and reorder columns. Saved in this browser.</span>
+        <button class="linkish" id="colsReset" type="button">Reset</button>
+      </div>
+      <ul id="colsList"></ul>
+    </div>
+
+    <p class="adm-count" id="count"></p>
+    <div class="adm-table-wrap"><table class="adm-table" id="table"><thead></thead><tbody></tbody></table></div>
+    <p class="lede" id="empty" hidden>Nothing matches.</p>
+  </section>
+
+  <p class="status" id="mainStatus"></p>
+</main>
+
+<!-- detail panel -->
+<div class="adm-scrim" id="scrim" hidden></div>
+<aside class="adm-detail" id="detail" hidden aria-modal="true" role="dialog" aria-labelledby="detailTitle">
+  <div class="adm-detail-head">
+    <div>
+      <p class="tester-label" id="detailLabel"></p>
+      <h2 id="detailTitle"></h2>
+    </div>
+    <button class="btn sm" id="detailClose" type="button">Close</button>
+  </div>
+  <p class="status" id="detailStatus"></p>
+  <div id="detailBody"></div>
+</aside>
+
+<script src="admin.js"></script>
+</body>
+</html>
