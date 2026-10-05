@@ -7837,7 +7837,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #258. Title only.
 
 ### progress-bar-drag-smooth: Dragging the play progress bar isn't smooth
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Scrubbing the progress bar stutters. Make dragging smooth
   (update the visual immediately, seek on release or throttled).
@@ -7928,13 +7928,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #267. Content-dependent.
 
 ### install-button-always-settings: Settings should always show an install button
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Always show the install button in Settings, including on
   iPhone (share-sheet instructions). If already installed, show it greyed
   out, and re-enable it if the app gets uninstalled.
 - **Touches:** Settings install button (merged `settings-install-button`).
-- **Branch:**
+- **Branch:** agent/install-button-always-settings
 - **Notes:** Synced from Geethub issue #268.
 
 ### miniplayer-idle-fade: Mini-player fades and shrinks when not hovered
