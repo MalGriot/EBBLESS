@@ -1372,6 +1372,16 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .kbd-list li>span{flex:none;width:118px;color:var(--faint-2);font-size:11px}
 .kbd-list kbd{font-family:inherit;font-size:11px;font-weight:600;line-height:1;color:var(--text);padding:3px 6px;border:1px solid var(--border-2);border-radius:5px}
 @media (hover: none) and (pointer: coarse){ #settingsKeysBlock{display:none} }
+.kbd-toggle{display:inline-flex;align-items:center;gap:6px}
+.kbd-toggle svg{transition:transform var(--dur-ui) var(--ease-out)}
+.kbd-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+/* 0fr -> 1fr grid row animates to the list's natural height; visibility keeps
+   the collapsed list out of the accessibility tree once the slide finishes */
+.kbd-list-wrap{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .3s var(--ease-out),visibility 0s .3s}
+.kbd-list-wrap.is-open{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .3s var(--ease-out)}
+.kbd-list-wrap>div{overflow:hidden;min-height:0}
+.kbd-list-wrap .kbd-list{padding-top:8px}
+@media (prefers-reduced-motion:reduce){ .kbd-list-wrap,.kbd-list-wrap.is-open,.kbd-toggle svg{transition:none} }
 
 .settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
 .slider-val{color:var(--faint);font-weight:400;margin-left:6px}
@@ -3051,6 +3061,15 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
            Hidden on touch-only devices, where there's no keyboard to use. -->
       <div class="settings-block" id="settingsKeysBlock">
         <h2>Keyboard shortcuts</h2>
+        <!-- Collapsed by default (Geethub #253); open state lasts the session only -->
+        <div class="settings-row">
+          <div>
+            <div class="label">Shortcut list</div>
+            <div class="desc">Every key EBBLESS listens for, from play / pause to visuals.</div>
+          </div>
+          <button class="btn-ghost kbd-toggle" id="kbdListBtn" aria-expanded="false" aria-controls="kbdListWrap"><span class="kbd-toggle-text">Show</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        </div>
+        <div class="kbd-list-wrap" id="kbdListWrap"><div>
         <ul class="kbd-list">
           <li><span><kbd>Space</kbd></span>Play / pause</li>
           <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Previous / next track (podcasts: back / forward 15s)</li>
@@ -3072,6 +3091,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
           <li><span><kbd>Shift</kbd>+<kbd>S</kbd></span>Suggest an improvement</li>
           <li><span><kbd>Shift</kbd>+<kbd>B</kbd></span>Report a bug</li>
         </ul>
+        </div></div>
       </div>
       <div class="settings-block" id="settingsAboutBlock">
         <h2>About</h2>
@@ -9823,6 +9843,14 @@ function closeWhatsNewModal(){
   whatsNewBtn.focus();
 }
 whatsNewBtn.addEventListener('click', openWhatsNewModal);
+// Keyboard shortcuts list in Settings (#253): collapsed until asked for;
+// the open state isn't persisted, so a reload starts it closed again.
+const kbdListBtn = $('kbdListBtn'), kbdListWrap = $('kbdListWrap');
+kbdListBtn.addEventListener('click', () => {
+  const open = kbdListWrap.classList.toggle('is-open');
+  kbdListBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  kbdListBtn.querySelector('.kbd-toggle-text').textContent = open ? 'Hide' : 'Show';
+});
 $('whatsNewCloseBtn').addEventListener('click', closeWhatsNewModal);
 dangerScrim.addEventListener('click', closeWhatsNewModal);
 whatsNewModal.addEventListener('keydown', (e) => {
