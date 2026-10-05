@@ -437,6 +437,7 @@ body.onb-active .paste-guide{display:none}
 .search-results{width:100%;max-height:340px;overflow-y:auto;margin-bottom:12px}
 .search-pick{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:8px;margin-bottom:6px}
 .search-pick img{width:44px;height:44px;border-radius:6px;object-fit:cover;background:var(--panel-2);flex:none}
+.search-pick.artist img{border-radius:50%}
 .search-pick .info{min-width:0;flex:1}
 .search-pick .n{display:block;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search-pick .s{display:block;font-size:12px;color:var(--faint-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
@@ -3645,6 +3646,55 @@ async function searchPlaylistsByVibe(query){
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
   return data.results || [];
+}
+
+// GitHub #260: a search that names an artist gets that artist's profile as
+// the top suggestion. Looked up straight from the browser via iTunes'
+// keyless search API (CORS-open; the worker can't use it - Cloudflare's
+// egress IPs get 429'd, see the worker's /art notes), so no worker change.
+// The pick is an Apple Music artist ({source:'applemusic', type:'artist'}),
+// the same shape a pasted music.apple.com/.../artist/... link parses to, so
+// it imports through the existing artist-link-playlist path (worker /artist).
+// Confidence takes two checks, since iTunes lists plenty of filler "artists"
+// literally named "Chill" or "Sunday Morning Jazz": the artist's name must
+// match the query exactly (case, accents, punctuation and a leading "the"
+// ignored), and that artist must be credited on at least 3 of the top 10
+// songs for the same query (collabs like "A & B" count for both). That keeps
+// vibe words out while still catching small artists. iTunes has no artist
+// photos, so the top credited song's cover stands in.
+// Resolves null on any miss or failure - never blocks the playlist results.
+function normalizeArtistQuery(s){
+  return String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/&/g, ' and ').replace(/^\s*the\s+/, '').replace(/[^a-z0-9]+/g, '');
+}
+function songCreditsArtist(artistName, want){
+  return String(artistName || '').split(/\s*(?:&|,|\bx\b|\bfeat\.?|\bft\.?|\bwith\b)\s*/i)
+    .some(part => normalizeArtistQuery(part) === want);
+}
+async function searchArtistProfile(query){
+  const want = normalizeArtistQuery(query);
+  if (want.length < 2) return null;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 5000);
+  const itunes = params => fetch('https://itunes.apple.com/search?' + new URLSearchParams(params), { signal: ctl.signal })
+    .then(r => r.ok ? r.json() : null).then(d => (d && d.results) || []);
+  try{
+    const [artists, songs] = await Promise.all([
+      itunes({ term: query, entity: 'musicArtist', limit: '5' }),
+      itunes({ term: query, entity: 'song', limit: '10' }),
+    ]);
+    const hit = artists.find(a => a && a.artistId && normalizeArtistQuery(a.artistName) === want);
+    if (!hit) return null;
+    const credited = songs.filter(t => t && songCreditsArtist(t.artistName, want));
+    if (credited.length < 3) return null;
+    const art = (credited.find(t => t.artworkUrl100) || {}).artworkUrl100;
+    const image = art ? art.replace(/\/\d+x\d+bb\./, '/300x300bb.') : null;
+    return { source: 'applemusic', type: 'artist', id: String(hit.artistId), storefront: 'us', name: hit.artistName, image, isArtist: true };
+  } catch(e){
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // A failed match here (YouTube's scrape occasionally 502s with a consent/
@@ -8215,22 +8265,27 @@ function searchResultMeta(r){
   }
   return parts.join(' · ');
 }
-function stageSearchResults(results, query){
+// seq (optional): tags the rendered stage so beginVibeSearch can tell
+// whether it is still showing this search when a late artist match lands.
+function stageSearchResults(results, query, seq){
+  const seqAttr = seq ? ' data-search-seq="' + seq + '"' : '';
   if (!results.length){
     importStage.innerHTML =
-      '<div class="step">No playlists found for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
+      '<div class="step"' + seqAttr + '>No playlists found for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
       '<div class="msg" style="color:var(--faint-2);font-size:13px;margin:0 0 18px">Try a different word, or paste a direct link instead.</div>' +
       '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Back</button>';
     $('searchBackBtn').addEventListener('click', closeImportOverlay);
     return;
   }
   const rows = results.map((r, i) => {
+    // Artist profile row (searchArtistProfile): round photo, "Artist" label.
+    if (r.isArtist) return searchPickRowHtml(i, r.image, r.name, 'Artist', 'artist');
     const label = SEARCH_SOURCE_LABEL[r.source] || r.source;
     const sub = [r.subtitle, label].filter(Boolean).join(' · ');
     return searchPickRowHtml(i, r.image, r.name, escapeHtml(sub), '', searchResultMeta(r));
   }).join('');
   importStage.innerHTML =
-    '<div class="step">Results for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
+    '<div class="step"' + seqAttr + '>Results for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
     '<div class="search-results">' + rows + '</div>' +
     '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Cancel</button>';
   importStage.querySelectorAll('.search-pick').forEach(btn => {
@@ -8257,14 +8312,28 @@ function looksLikeUrl(input){
   return /^[a-z][a-z0-9+.-]*:\/\//i.test(input) || /^(www\.)?[a-z0-9-]+\.[a-z]{2,}(\/|$)/i.test(input.trim());
 }
 
+// The artist lookup runs alongside the playlist search, never ahead of it:
+// whichever lands second slots in. A late artist match re-renders the list
+// with the artist on top, but only if the overlay is still on this search.
+let vibeSearchSeq = 0;
 async function beginVibeSearch(query){
   statsFeature('vibe_search');
   openImportOverlay();
   stageSearching(query);
+  const seq = ++vibeSearchSeq;
+  let artist = null, shown = null;
+  const artistP = searchArtistProfile(query).then(a => {
+    artist = a;
+    if (a && shown && importStage.querySelector('[data-search-seq="' + seq + '"]')) stageSearchResults([a].concat(shown), query, seq);
+    return a;
+  });
   try{
     const results = await searchPlaylistsByVibe(query);
-    stageSearchResults(results, query);
+    shown = results;
+    stageSearchResults(artist ? [artist].concat(results) : results, query, seq);
   } catch(e){
+    const a = await artistP;
+    if (a && seq === vibeSearchSeq){ shown = []; stageSearchResults([a], query, seq); return; }
     stageError(e.message || "Couldn't search for that.", () => beginVibeSearch(query), "Couldn’t search for that.");
   }
 }
