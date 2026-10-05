@@ -15272,6 +15272,9 @@ function maybeStartCrossfade(cur, dur){
   // Let the old track finish instead - FINISH then promotes the preloaded
   // standby deck straight away (bld-playback-glitch).
   if (activeDeck().kind === 'sc' && nd.kind === 'sc') return;
+  // Locked iPhone (#257): starting a second player without a tap is the
+  // part iOS refuses, so let the track end and advance in place instead.
+  if (iosLocked()) return;
   crossfadeTriggered = true;
   trackStartAuto = true;
   notePlayedThrough(state.queuePos);
@@ -15428,7 +15431,11 @@ function loadIndex(pos, autoplay, opts){
   // (wrong-song-kaytranada-glowed-up). Only promote when the deck actually
   // holds this track's video.
   const nd = standbyDeck();
-  if (nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
+  // Locked iPhone (#257): a podcast following a podcast loads into the
+  // active deck's <audio> element, which iOS already lets play in the
+  // background, rather than starting the standby deck's element cold.
+  const reuseLockedAudio = iosLocked() && activeDeck().kind === 'au' && isAudioVideoId(t.videoId);
+  if (!reuseLockedAudio && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
     promoteDeckDirect(nd, pos, autoplay !== false);
     maybeExtendDiscoverQueue();
     return;
@@ -15516,6 +15523,10 @@ function runPlayFade(deck, dir){
         // volume parked at 0 or the UI claiming it's playing
         playFade = null;
         setVol(1);
+        // Hidden (#257): iOS won't start a YouTube/SoundCloud iframe from the
+        // lock screen. Rebuilding the player there can't help either - show
+        // paused honestly and finish the play when the app is back in view.
+        if (document.visibilityState === 'hidden'){ noteHiddenPlayIntent(true); setPlayingUI(false); return; }
         // Issue #228 (unplaying-next-track): a play that never takes on a
         // deck that isn't even buffering means that deck's player is dead,
         // not merely slow - rebuild it for this track rather than flipping
@@ -16060,11 +16071,13 @@ repeatBtn.addEventListener('click', cycleRepeat);
 
 if ('mediaSession' in navigator){
   navigator.mediaSession.setActionHandler('play', () => {
+    noteHiddenPlayIntent(true);
     const ad = activeDeck();
     if (state.queuePos >= 0 && (!ad.player || !ad.player.getPlayerState || ad.player.getPlayerState() !== 1 || isFadingOut(ad))) playLpNeedle('drop');
     resumePlayback();
   });
   navigator.mediaSession.setActionHandler('pause', () => {
+    noteHiddenPlayIntent(false);
     const ad = activeDeck();
     if (ad.player && ad.player.pauseVideo && !isFadingOut(ad)) playLpNeedle('lift');
     pausePlayback();
@@ -16074,7 +16087,7 @@ if ('mediaSession' in navigator){
   // Each of these may be unsupported (setActionHandler throws on an unknown
   // action in some browsers), so they're registered one by one.
   const msSet = (action, fn) => { try { navigator.mediaSession.setActionHandler(action, fn); } catch(e){} };
-  msSet('stop', pausePlayback);
+  msSet('stop', () => { noteHiddenPlayIntent(false); pausePlayback(); });
   // Scrubbing from the lock screen / notification / car display. Same
   // clamping as the in-app seek bar; the explicit position goes straight to
   // setPositionState since getCurrentTime() lags a fresh seekTo().
@@ -17236,7 +17249,42 @@ window.addEventListener('beforeunload', persistResume);
 // screen still shows a "playing" transport — but the underlying track stays
 // paused until something resumes it. Remember whether it was actually
 // playing going into the background and resume it coming back.
-let wasPlayingBeforeHide = false;
+var wasPlayingBeforeHide = false; // var: lock-screen handlers defined above write it
+function iosLocked(){ return isIOS && document.visibilityState === 'hidden'; }
+// A play/pause pressed on the lock screen (or headset) while hidden is what
+// coming back should honour: a pause there must not be undone by the
+// return-to-app resume below, and a play iOS refused gets finished there.
+function noteHiddenPlayIntent(play){
+  if (document.visibilityState !== 'hidden') return;
+  if (miniPlayerWin && !miniPlayerWin.closed) return;
+  wasPlayingBeforeHide = play;
+  lsSet(LS_WAS_PLAYING, play);
+}
+// Locked iPhone (#257): an auto-advance or lock-screen skip onto a track iOS
+// won't start in the background (a YouTube/SoundCloud iframe) would leave the
+// lock screen saying "playing" over silence. After a while not actually
+// playing, show paused there and let the return-to-app resume start it.
+const LOCKED_STALL_MS = 10000;
+let lockedStallSince = 0;
+function iosLockedStallCheck(){
+  const ad = activeDeck();
+  if (!iosLocked() || !ad.player || !ad.player.getPlayerState || ad.kind === 'cast' || swapInProgress || playFade
+      || !artworkWrap.classList.contains('is-playing') || ad.player.getPlayerState() === 1){ lockedStallSince = 0; return; }
+  const now = Date.now();
+  if (!lockedStallSince){ lockedStallSince = now; return; }
+  if (now - lockedStallSince < LOCKED_STALL_MS) return;
+  lockedStallSince = 0;
+  noteHiddenPlayIntent(true);
+  setPlayingUI(false);
+}
+// One-time heads-up the first time iOS actually held a YouTube song while
+// the app was away, so the pause doesn't read as a bug.
+const LS_IOS_LOCK_TIP = 'ebbless:iosLockTipShown';
+function maybeShowIosLockTip(){
+  if (lsGet(LS_IOS_LOCK_TIP, false)) return;
+  lsSet(LS_IOS_LOCK_TIP, true);
+  setTimeout(() => showToast('iPhone pauses YouTube songs when the screen locks or you switch apps. Podcasts keep going, and EBBLESS picks up where you left off when you come back.', { label: 'Got it', run(){} }), 1200);
+}
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){
     wasPlayingBeforeHide = artworkWrap.classList.contains('is-playing');
@@ -17257,7 +17305,12 @@ document.addEventListener('visibilitychange', () => {
     // never a reload/restart.
     lsDel(LS_BACKGROUNDED_AT);
     lsDel(LS_WAS_PLAYING);
-    if (wasPlayingBeforeHide) resumePlayback();
+    if (wasPlayingBeforeHide){
+      const ad = activeDeck();
+      const ytHeld = isIOS && ad.kind === 'yt' && ad.player && ad.player.getPlayerState && ad.player.getPlayerState() !== 1;
+      resumePlayback();
+      if (ytHeld) maybeShowIosLockTip();
+    }
   }
 });
 // Runs every seek-poll tick: mutes the active deck while YouTube plays an ad
@@ -17548,6 +17601,7 @@ function updateSeekUI(){
   releaseSoundGates();
   updateAdLoadingIcon();
   maybeDodgeAd();
+  iosLockedStallCheck();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
   const held = guardActiveDeckAd();
