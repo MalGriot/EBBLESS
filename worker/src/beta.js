@@ -137,12 +137,21 @@ async function handleSignup(request, env, ctx, h) {
   return h.json({ ok: true, already: !!r.already, status: String(r.status || 'Pending').toLowerCase(), full: !!r.full });
 }
 
+// The feedback email says "the feedback window is open for 7 days from
+// today", so a tester's window ends 7 days after feedback_request_sent.
+// null until that email has gone out (no expiry yet). Older clients ignore it.
+export const BETA_WINDOW_MS = 7 * 24 * 3600 * 1000;
+export function windowEndsAt(t) {
+  const sent = Number(t && t.feedback_request_sent);
+  return sent > 0 ? sent + BETA_WINDOW_MS : null;
+}
+
 async function handleMe(request, env, ctx, h) {
   const { body, error } = await readBody(request, h.json, 2_000);
   if (error) return error;
   const t = TOKEN_RE.test(String(body.token || '')) ? (await sheet(env, 'me', { token: body.token })).tester : null;
   if (!t) return h.json({ error: 'This tester link isn\'t active.' }, 404);
-  return h.json({ number: t.number, label: t.label, name: t.name });
+  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t) });
 }
 
 async function handleReport(request, env, ctx, h) {
@@ -259,7 +268,7 @@ async function handleClaim(request, env, ctx, h) {
   const token = await env.PROFILES.get(betaLinkKey(g.sub));
   const t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
   if (!t) return h.json({ error: 'This Google account isn\'t linked to a tester yet. Open EBBLESS with your tester link once, sign in with Google there (Settings > Account), then try here again.' }, 404);
-  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS });
+  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t) });
 }
 
 export async function handleBeta(request, url, env, ctx, h) {

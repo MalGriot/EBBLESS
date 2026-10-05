@@ -2366,6 +2366,85 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   body.onb-active #view-library,body.onb-active #view-player,#onbDiscovery,#onbWord,#onbCaption,#onbCaptionMain{
     transition-property:opacity!important;transform:none!important;filter:none!important}
 }
+/* ---- tester week up + recap (TESTER WEEK UP in the script) ----
+   The app fades and blurs out under body.week-up-fading, then #weekUp fades
+   in on top of everything (above the beta lock), in the lock's language:
+   grayscale cymatics poster tinted with the accent, uppercase headline,
+   accent hairline. */
+body.week-up-fading > :not(#weekUp){transition:opacity 2.4s var(--ease-in-out),filter 2.4s var(--ease-in-out);opacity:0;filter:blur(8px) grayscale(1);pointer-events:none}
+body.week-up-on{overflow:hidden}
+#weekUp{position:fixed;inset:0;z-index:30000;background:#121212;color:var(--text);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  isolation:isolate;opacity:0;transition:opacity 1.2s var(--ease-out);font-size:15px;line-height:1.5}
+#weekUp.is-in{opacity:1}
+#weekUp .wu-bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
+#weekUp .wu-bg > *{position:absolute;inset:0}
+#weekUp .wu-poster{background:url(brand/assets/splash-cymatics-poster.jpg) center top/cover no-repeat;filter:grayscale(1) contrast(1.15) brightness(.9)}
+#weekUp .wu-tint{background:var(--accent);mix-blend-mode:color}
+#weekUp .wu-fade{background:linear-gradient(rgba(18,18,18,.35) 0%,rgba(18,18,18,.8) 30%,#121212 62%)}
+#weekUp .wu-wrap{max-width:560px;margin:0 auto;padding:calc(28px + var(--safe-t)) 16px calc(64px + var(--safe-b))}
+#weekUp .wu-preview{display:flex;align-items:center;gap:12px;justify-content:space-between;font-size:12px;color:var(--faint);background:rgba(24,24,24,.9);
+  border:1px dashed var(--border-2);border-radius:var(--r-md);padding:8px 8px 8px 12px;margin-bottom:20px}
+#weekUp .wu-close{flex:none;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border-2);border-radius:var(--r-sm);padding:6px 10px;color:var(--text)}
+#weekUp .wu-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:56px}
+#weekUp .wu-top img{height:20px;width:auto;display:block}
+#weekUp .wu-tag{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
+#weekUp h1{font-size:clamp(34px,10vw,52px);font-weight:700;letter-spacing:-.01em;line-height:1.02;margin:0;text-transform:uppercase;overflow-wrap:anywhere}
+#weekUp .wu-rule{height:1px;background:var(--accent);margin:18px 0;transform-origin:left}
+#weekUp .wu-lead{color:#c9c9c9;margin:0 0 10px;max-width:48ch}
+#weekUp .wu-btn{display:block;width:100%;text-align:center;font-weight:600;letter-spacing:1.2px;font-size:13px;text-decoration:none;color:var(--text);
+  border:1px solid var(--border-2);border-radius:var(--r-md);padding:15px 16px;margin:22px 0 0;transition:transform var(--dur-ui) var(--ease-out),filter var(--dur-ui)}
+#weekUp .wu-btn.primary{background:var(--accent);border-color:var(--accent);color:#121212;box-shadow:0 10px 30px -12px var(--accent)}
+#weekUp .wu-btn:hover{filter:brightness(1.06)}
+#weekUp .wu-btn:active{transform:scale(.98)}
+#weekUp .wu-btn:focus-visible,#weekUp .wu-close:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+#weekUp .wu-h2{font-size:clamp(24px,7vw,32px);font-weight:700;letter-spacing:-.01em;line-height:1.05;margin:64px 0 18px;text-transform:uppercase}
+#weekUp .wu-h2::after{content:"";display:block;width:56px;height:1px;background:var(--accent);margin-top:14px}
+#weekUp .wu-eyebrow{display:block;font-size:11px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin:0 0 12px}
+#weekUp .wu-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#weekUp .wu-stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 12px;min-width:0}
+#weekUp .wu-num{display:block;font-size:clamp(26px,8vw,38px);font-weight:700;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+#weekUp .wu-stat-l{display:block;font-size:12px;color:var(--faint);margin-top:8px;line-height:1.3}
+#weekUp .wu-card,#weekUp .wu-hero{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 16px;margin-bottom:12px}
+#weekUp .wu-hero{display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,var(--accent-dim),var(--panel) 70%);border-color:var(--border-2)}
+#weekUp .wu-hero-art .wu-art{width:112px;height:112px;border-radius:var(--r-md);box-shadow:0 14px 34px -14px rgba(0,0,0,.8)}
+#weekUp .wu-hero-art .wu-ini{font-size:40px}
+#weekUp .wu-hero-text{display:flex;flex-direction:column;min-width:0}
+#weekUp .wu-hero-text .wu-eyebrow{margin-bottom:8px}
+#weekUp .wu-hero-title{font-size:22px;font-weight:700;line-height:1.15;overflow-wrap:anywhere}
+#weekUp .wu-hero-sub{color:#c9c9c9;margin-top:2px;overflow-wrap:anywhere}
+#weekUp .wu-hero-stat{font-size:12px;color:var(--faint);margin-top:10px;letter-spacing:.4px}
+#weekUp .wu-art{position:relative;flex:none;width:44px;height:44px;border-radius:var(--r-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--panel-3),var(--accent-dim))}
+#weekUp .wu-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#weekUp .wu-ini{font-size:17px;font-weight:700;color:var(--accent)}
+#weekUp .wu-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+#weekUp .wu-list li{display:flex;align-items:center;gap:12px;min-width:0}
+#weekUp .wu-rank{flex:none;width:18px;text-align:right;font-size:13px;font-weight:700;color:var(--faint-2);font-variant-numeric:tabular-nums}
+#weekUp .wu-li-text{display:flex;flex-direction:column;min-width:0;flex:1}
+#weekUp .wu-li-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#weekUp .wu-li-sub{font-size:13px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#weekUp .wu-li-stat{flex:none;font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+#weekUp .wu-big-line{font-size:18px;margin:0 0 14px}
+#weekUp .wu-accent{color:var(--accent);font-weight:700}
+#weekUp .wu-chips{display:flex;flex-wrap:wrap;gap:8px}
+#weekUp .wu-chip{display:inline-flex;align-items:baseline;gap:8px;border:1px solid var(--border-2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
+#weekUp .wu-chip span{font-weight:400;font-size:12px;color:var(--faint)}
+#weekUp .wu-chip.is-top{background:var(--accent);border-color:var(--accent);color:#121212}
+#weekUp .wu-chip.is-top span{color:rgba(18,18,18,.7)}
+#weekUp .wu-saved p{margin:0 0 8px;color:#c9c9c9}
+#weekUp .wu-faint,#weekUp .wu-saved .wu-faint{color:var(--faint);font-size:13px;margin:0}
+#weekUp .wu-quiet{margin:0;color:#c9c9c9}
+#weekUp .wu-signoff{text-align:center;color:var(--faint);font-size:13px;margin:28px 0 0}
+#weekUp .wu-reveal{opacity:0;transform:translateY(14px);transition:opacity .7s var(--ease-out),transform .7s var(--ease-out)}
+#weekUp.is-in .wu-reveal{opacity:1;transform:none}
+#weekUp.is-in .wu-reveal:nth-child(2){transition-delay:.05s}#weekUp.is-in .wu-reveal:nth-child(3){transition-delay:.15s}
+#weekUp.is-in .wu-reveal:nth-child(4){transition-delay:.25s}#weekUp.is-in .wu-reveal:nth-child(5){transition-delay:.35s}
+#weekUp.is-in .wu-reveal:nth-child(6){transition-delay:.45s}#weekUp.is-in .wu-reveal:nth-child(7){transition-delay:.55s}
+#weekUp.is-in .wu-reveal:nth-child(n+8){transition-delay:.65s}
+@media (prefers-reduced-motion:reduce){
+  body.week-up-fading > :not(#weekUp){transition:opacity .4s linear;filter:none}
+  #weekUp,#weekUp .wu-reveal{transition:opacity .4s linear;transform:none}
+}
 </style>
 </head>
 <body>
@@ -2447,6 +2526,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   const LS_LEASE = 'ebbless:betaLeaseUntil';
   const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;  // keep in sync with BETA_LEASE_MS in worker/src/beta.js
   const RENEW_WAIT_MS = 10000;
+  // What /beta/me (or /beta/claim) said about this tester: first name, label
+  // and when their 7-day window ends (ms, absent until the feedback email
+  // goes out). Read by the app's TESTER WEEK UP block; cleared with the token.
+  const LS_ME = 'ebbless:betaMe';
   const REFRESH_MSG = 'Your access on this device needs a quick refresh. Sign in with Google to continue.';
   const ls = {
     get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
@@ -2465,14 +2548,18 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   // ?t=<token> on the app URL itself (e.g. an invite link pointed straight at the app)
   const q = new URLSearchParams(location.search);
   const qt = extract(q.get('t'));
-  if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); ls.set(LS_LEASE, null); }
+  if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); ls.set(LS_LEASE, null); ls.set(LS_ME, null); }
   if (qt){ q.delete('t'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
 
+  function saveMe(d){
+    if (!d || typeof d !== 'object') return;
+    ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null }));
+  }
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
     try {
       const res = await fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
-      if (res.ok) return 'ok';
+      if (res.ok){ saveMe(await res.json().catch(() => null)); return 'ok'; }
       return res.status === 404 ? 'no' : 'net';
     } catch(e){ return 'net'; }
   }
@@ -2495,7 +2582,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     check(token).then((r) => {
       if (lease === 'expired') return;
       if (r === 'ok'){ ls.set(LS_OK, String(Date.now())); unlock(); }
-      else if (r === 'no'){ lease = ''; ls.set(LS_OK, null); ls.set(LS_TOKEN, null); ls.set(LS_LEASE, null); relock(); msg('That tester link isn\'t active anymore.'); }
+      else if (r === 'no'){ lease = ''; ls.set(LS_OK, null); ls.set(LS_TOKEN, null); ls.set(LS_LEASE, null); ls.set(LS_ME, null); relock(); msg('That tester link isn\'t active anymore.'); }
       else if (lock.hidden === false) msg(okAt ? '' : 'Couldn\'t reach EBBLESS to check your link. Check your connection.');
       if (r === 'net' && okAt) unlock();   // verified before, just offline now
     });
@@ -2520,8 +2607,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     locked: () => !lock.hidden,
     renewing: () => lease === 'renewing',
     leaseFailed,
-    unlockWith(t, until){
+    unlockWith(t, until, me){
       if (!TOKEN_RE.test(String(t || ''))) return;
+      saveMe(me);
       const now = Date.now();
       until = Number(until);
       lease = '';
@@ -4457,7 +4545,10 @@ function lsDel(key){
    Synced: the library list and order, pins, the saved playlists' data
    (Liked Songs and user-built playlists merge per track), the per-playlist
    Discover flag, the like streak, and the durable preferences in
-   PROFILE_SETTING_KEYS. Separately, each device publishes a small
+   PROFILE_SETTING_KEYS, plus the listening log behind the tester recap
+   (ebbless:playLog, see PLAY LOG: written straight to localStorage, stamped
+   for a push at most every PLAY_LOG_STAMP_MS, merged per entry on the way
+   in instead of last-writer-wins, so two devices' listening adds up). Separately, each device publishes a small
    now-playing session (queue, index, position, playing) so another device
    can offer to continue it - see NOW PLAYING HANDOFF below.
    Deliberately not synced: anything device-local or cheap to rebuild -
@@ -4476,7 +4567,8 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined'];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog'];
+const LS_PLAY_LOG = 'ebbless:playLog';   // see PLAY LOG
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
 // Coming back to the tab (or window) after this long pulls other devices'
@@ -4885,6 +4977,7 @@ function applyMergedProfile(M){
     Object.entries(M.set).forEach(([key, e]) => {
       if (!isProfileSettingKey(key)) return;
       meta.k[key] = e.at;
+      if (key === LS_PLAY_LOG){ if (!e.del) playLogAdoptRemote(e.val); return; }
       let raw = null;
       try { raw = localStorage.getItem(key); } catch(e){}
       if (e.del){
@@ -4896,6 +4989,7 @@ function applyMergedProfile(M){
     saveProfileMeta();
     if (setChanged) refreshSyncedSettings();
   } finally { applyingRemoteProfile = false; }
+  playLogStampIfMerged();
   changedPl.forEach(id => {
     if (state.queue.some(q => q.plId === id)) remapQueueForPlaylist(id, oldPls[id], getCachedPlaylist(id));
     if (state.playlist && state.playlist.id === id){
@@ -5063,7 +5157,7 @@ async function betaAccountLink(idToken, sub){
       if (!renewing) gate.msg('Checking your Google account...');
       const res = await post('/beta/claim', { idToken });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
+      if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil, data); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
       else if (renewing) gate.leaseFailed();
       else gate.msg(data.error || "Couldn't reach EBBLESS. Check your connection and try again.");
       return;
@@ -10580,6 +10674,7 @@ function statsTouch(){
 }
 // Once per session per feature.
 function statsFeature(name){
+  playLogFeature(name);
   if (!statsEnabled()) return;
   statsTouch();
   if (!stats.seen.includes(name)){
@@ -10605,6 +10700,13 @@ function statsTick(){
   const key = t ? state.queuePos + ':' + t.videoId : '';
   if (key && key !== stats.playKey){ stats.playKey = key; stats.pend.songs++; }
   if (q && q.plId && q.plId !== stats.plId){ stats.plId = q.plId; stats.pend.playlists++; }
+  statsUsedNow().forEach(f => { if (!stats.seen.includes(f)){ stats.seen.push(f); stats.pend.features[f] = (stats.pend.features[f] || 0) + 1; } });
+  statsSave();
+}
+// Features in use right now, while something plays (statsTick, and the
+// tester recap's play log via playLogTick).
+function statsUsedNow(){
+  const q = state.queue[state.queuePos], t = currentTrack();
   const used = [];
   if (visualMode === 'lyrics') used.push('lyrics');
   else if (visualMode === 'viz') used.push('cymatics');
@@ -10616,8 +10718,7 @@ function statsTick(){
   if (q && isPodcastPlaylistId(q.plId)) used.push('podcast');
   if (t && isSoundCloudVideoId(t.videoId)) used.push('soundcloud');
   if (castActive()) used.push('cast');
-  used.forEach(f => { if (!stats.seen.includes(f)){ stats.seen.push(f); stats.pend.features[f] = (stats.pend.features[f] || 0) + 1; } });
-  statsSave();
+  return used;
 }
 function statsFlush(onHide){
   if (!statsEnabled()) return;
@@ -10652,6 +10753,428 @@ if (statsHostOk){
 window.ebblessStats = function(){ return JSON.parse(JSON.stringify(stats)); };
 window.ebblessStats.off = function(){ try { localStorage.setItem(STATS_OFF_KEY, '1'); localStorage.removeItem(STATS_KEY); } catch(e){} stats.pend = statsEmpty(); };
 window.ebblessStats.on = function(){ try { localStorage.removeItem(STATS_OFF_KEY); } catch(e){} };
+
+/* ---------- PLAY LOG ----------
+   What this listener actually played, for the tester recap (TESTER WEEK UP
+   below): per track (title, artist, album, art, source playlist, ms
+   listened, plays, completed plays), per playlist/album, per podcast show,
+   feature use (sessions per feature, from the same points BETA ANALYTICS
+   counts: statsFeature and statsUsedNow), and which days had listening.
+   Unlike BETA ANALYTICS this never leaves the browser except through the
+   listener's own profile sync (Google sign-in): it's their history, kept so
+   a later beta (or a new device) loads it back. Stored in LS_PLAY_LOG,
+   written straight to localStorage every tick and stamped for a profile
+   push at most every PLAY_LOG_STAMP_MS (KV's free tier caps daily writes);
+   on the way in, a remote copy is merged per entry (playLogMerge) rather
+   than replacing this device's. Bounded: oldest/least-played entries go
+   past the caps below. Console: ebblessWrapped.log(). */
+const PLAY_LOG_MAX_TRACKS = 400, PLAY_LOG_MAX_PLS = 80, PLAY_LOG_MAX_PODS = 40, PLAY_LOG_MAX_DAYS = 400;
+const PLAY_LOG_STAMP_MS = 15 * 60 * 1000;
+const PLAY_LOG_TICK_MS = 10 * 1000;
+function playLogEmpty(){ return { v: 1, since: Date.now(), ms: 0, n: 0, c: 0, tr: {}, pl: {}, pod: {}, feat: {}, days: [] }; }
+function playLogNorm(x){
+  const o = playLogEmpty();
+  if (!x || typeof x !== 'object') return o;
+  const map = (m) => (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  o.since = +x.since || o.since;
+  o.ms = +x.ms || 0; o.n = +x.n || 0; o.c = +x.c || 0;
+  o.tr = map(x.tr); o.pl = map(x.pl); o.pod = map(x.pod); o.feat = map(x.feat);
+  o.days = Array.isArray(x.days) ? x.days.filter(d => typeof d === 'string') : [];
+  return o;
+}
+let playLog = playLogNorm(lsGet(LS_PLAY_LOG, null));
+let playLogStampedAt = 0, playLogNeedsStamp = false;
+let playLogKey = '', playLogCurMs = 0, playLogLastTick = 0;
+const playLogSeen = new Set();   // features already counted this page session
+function playLogSave(){ try { localStorage.setItem(LS_PLAY_LOG, JSON.stringify(playLog)); } catch(e){} }
+// Marks the log as changed for profile sync (throttled unless forced).
+function playLogStamp(force){
+  const now = Date.now();
+  if (!playLogStampedAt) playLogStampedAt = +profileMeta().k[LS_PLAY_LOG] || 0;
+  if (!force && now - playLogStampedAt < PLAY_LOG_STAMP_MS) return;
+  if (applyingRemoteProfile) return;
+  playLogStampedAt = now;
+  profileMeta().k[LS_PLAY_LOG] = now;
+  saveProfileMeta();
+  scheduleProfileSync();
+}
+function playLogTrackKey(t){ return t.videoId || ((t.title || '') + '|' + (t.artist || '')).toLowerCase(); }
+function playLogToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function playLogScore(e){ return (+e.n || 0) * 60000 + (+e.ms || +e.eps * 60000 || 0); }
+function playLogPrune(log){
+  const cap = (m, max) => {
+    const keys = Object.keys(m);
+    if (keys.length <= max) return m;
+    const keep = keys.sort((a, b) => playLogScore(m[b]) - playLogScore(m[a]) || (+m[b].last || 0) - (+m[a].last || 0)).slice(0, max);
+    const out = {}; keep.forEach(k => { out[k] = m[k]; }); return out;
+  };
+  log.tr = cap(log.tr, PLAY_LOG_MAX_TRACKS);
+  log.pl = cap(log.pl, PLAY_LOG_MAX_PLS);
+  log.pod = cap(log.pod, PLAY_LOG_MAX_PODS);
+  log.days = Array.from(new Set(log.days)).sort().slice(-PLAY_LOG_MAX_DAYS);
+  return log;
+}
+function playLogFeature(name){
+  if (!name || playLogSeen.has(name)) return;
+  playLogSeen.add(name);
+  playLog.feat[name] = (+playLog.feat[name] || 0) + 1;
+  playLogSave();
+}
+function playLogTick(){
+  const now = Date.now(), prev = playLogLastTick;
+  playLogLastTick = 0;
+  if (weekUp.frozen || document.body.classList.contains('onb-active')) return;
+  if (!artworkWrap.classList.contains('is-playing')) return;
+  const q = state.queue[state.queuePos], t = currentTrack();
+  if (!q || !t) return;
+  playLogLastTick = now;
+  // Background tabs can tick once a minute; cap so a suspended tab waking
+  // up doesn't count the whole gap (same idea as statsTick).
+  const dt = prev ? Math.min(now - prev, 70 * 1000) : 0;
+  const key = state.queuePos + ':' + playLogTrackKey(t);
+  const isNew = key !== playLogKey;
+  if (isNew){ playLogKey = key; playLogCurMs = 0; }
+  playLogCurMs += dt;
+  playLog.ms += dt;
+  const today = playLogToday();
+  if (!playLog.days.includes(today)) playLog.days.push(today);
+  const pl = playlistById(q.plId);
+  if (isPodcastPlaylistId(q.plId)){
+    const e = playLog.pod[q.plId] = playLog.pod[q.plId] || { name: '', art: '', ms: 0, eps: 0 };
+    e.name = (pl && pl.name) || t.channel || e.name || 'Podcast';
+    e.art = (pl && pl.image) || t.art || e.art || '';
+    e.ms += dt; e.last = now;
+    if (isNew) e.eps = (+e.eps || 0) + 1;
+  } else {
+    const isAlbum = !!(pl && isAlbumEntry(pl));
+    const e = playLog.tr[playLogTrackKey(t)] = playLog.tr[playLogTrackKey(t)] || { t: '', a: '', ms: 0, n: 0, c: 0 };
+    e.t = t.title || e.t; e.a = t.artist || e.a;
+    e.al = t.album || (isAlbum ? pl.name : '') || e.al || '';
+    e.art = t.art || (isAlbum ? pl.image : '') || e.art || '';
+    if (t.videoId && !isSoundCloudVideoId(t.videoId)) e.v = t.videoId;
+    if (pl){ e.pl = q.plId; e.pn = pl.name || ''; }
+    e.ms += dt; e.last = now;
+    if (isNew){ e.n = (+e.n || 0) + 1; playLog.n++; }
+    if (pl){
+      const p = playLog.pl[q.plId] = playLog.pl[q.plId] || { name: '', art: '', ms: 0, n: 0 };
+      p.name = pl.name || p.name; p.art = pl.image || p.art || ''; p.al = isAlbum ? 1 : 0;
+      p.ms += dt; p.last = now;
+      if (isNew) p.n = (+p.n || 0) + 1;
+    }
+  }
+  statsUsedNow().forEach(playLogFeature);
+  if (Object.keys(playLog.tr).length > PLAY_LOG_MAX_TRACKS + 20 || Object.keys(playLog.pl).length > PLAY_LOG_MAX_PLS + 10 || playLog.days.length > PLAY_LOG_MAX_DAYS) playLogPrune(playLog);
+  playLogSave();
+  playLogStamp(false);
+}
+// A track reached its natural end (from notePlayedThrough: ENDED or the
+// end-of-track crossfade). Counts a completed play, and is the moment the
+// tester week-up gate waits for.
+function playLogCompleted(pos){
+  const t = trackAt(pos), q = state.queue[pos];
+  if (!t || !q || isPodcastPlaylistId(q.plId)) return;
+  const e = playLog.tr[playLogTrackKey(t)];
+  if (e) e.c = (+e.c || 0) + 1;
+  playLog.c++;
+  playLogSave();
+  // A real listen, not a seek to the end: heard at least 30s and half the track.
+  const heard = playLogKey === pos + ':' + playLogTrackKey(t) ? playLogCurMs : 0;
+  const dur = (+t.duration || 0) * 1000;
+  if (heard >= 30000 && (!dur || heard >= dur * 0.5)) weekUpSongDone();
+}
+// Two copies of the log (this device's and the profile's): every entry and
+// counter takes the larger value, so neither device's listening is lost.
+function playLogMerge(a, b){
+  a = playLogNorm(a); b = playLogNorm(b);
+  const mergeEntry = (x, y) => {
+    if (!x) return Object.assign({}, y);
+    if (!y) return Object.assign({}, x);
+    const newer = (+y.last || 0) > (+x.last || 0) ? y : x, older = newer === x ? y : x;
+    const out = Object.assign({}, older, newer);
+    ['ms', 'n', 'c', 'eps'].forEach(k => { if (k in x || k in y) out[k] = Math.max(+x[k] || 0, +y[k] || 0); });
+    Object.keys(older).forEach(k => { if (typeof older[k] === 'string' && !out[k]) out[k] = older[k]; });
+    return out;
+  };
+  const mergeMap = (x, y) => {
+    const out = {};
+    new Set([...Object.keys(x), ...Object.keys(y)]).forEach(k => {
+      const ex = x[k] && typeof x[k] === 'object' ? x[k] : null, ey = y[k] && typeof y[k] === 'object' ? y[k] : null;
+      if (ex || ey) out[k] = mergeEntry(ex, ey);
+    });
+    return out;
+  };
+  const out = playLogEmpty();
+  out.since = Math.min(a.since, b.since);
+  out.tr = mergeMap(a.tr, b.tr); out.pl = mergeMap(a.pl, b.pl); out.pod = mergeMap(a.pod, b.pod);
+  new Set([...Object.keys(a.feat), ...Object.keys(b.feat)]).forEach(k => { out.feat[k] = Math.max(+a.feat[k] || 0, +b.feat[k] || 0); });
+  out.days = a.days.concat(b.days);
+  const sum = (m, k) => Object.values(m).reduce((s, e) => s + (+e[k] || 0), 0);
+  out.ms = Math.max(a.ms, b.ms, sum(out.tr, 'ms') + sum(out.pod, 'ms'));
+  out.n = Math.max(a.n, b.n, sum(out.tr, 'n'));
+  out.c = Math.max(a.c, b.c, sum(out.tr, 'c'));
+  return playLogPrune(out);
+}
+// From applyMergedProfile (with applyingRemoteProfile set): the profile's
+// copy of the log arrived. Merge it into this device's; if this device
+// added anything the profile lacked, push that once the apply is done.
+function playLogAdoptRemote(val){
+  const remote = playLogNorm(val);
+  const merged = playLogMerge(playLog, remote);
+  if (profStable(merged) !== profStable(remote)) playLogNeedsStamp = true;
+  playLog = merged;
+  playLogSave();
+}
+function playLogStampIfMerged(){ if (playLogNeedsStamp){ playLogNeedsStamp = false; playLogStamp(true); } }
+setInterval(playLogTick, PLAY_LOG_TICK_MS);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden'){ playLogTick(); playLogStamp(false); } });
+
+/* ---------- TESTER WEEK UP ----------
+   A beta tester's window is 7 days from their feedback email (the worker's
+   /beta/me windowEndsAt, saved by the beta lock in ebbless:betaMe). Once it
+   has passed, the app still opens and works until one full song finishes
+   in that page session (playLogCompleted). Then every control freezes, the
+   app fades out, and this screen takes over: their first name, "Give
+   feedback" (beta/feedback.html?t=<token>), and a recap of their listening
+   from the PLAY LOG plus Liked Songs and the library. Nothing is deleted;
+   the log rides along with profile sync for the next beta.
+   Owner: ?wrapped=preview shows the screen now with this browser's own log
+   (demo data if it's empty), ?wrapped=demo always with demo data, both
+   closeable and nothing frozen. ?wrapped=gate acts like an expired window
+   for this tab session (one full song, then the real freeze and fade).
+   A browser opted out of analytics (ebblessStats.off()) or with
+   ebblessWrapped.bypass() never gets the gate. Console: ebblessWrapped()
+   opens the preview. */
+const WEEK_UP_ME_KEY = 'ebbless:betaMe', WEEK_UP_BYPASS_KEY = 'ebbless:wrappedBypass';
+const WEEK_UP_FADE_MS = 2400;
+const weekUp = { shown: false, frozen: false, el: null, guard: 0, at: 0 };
+const weekUpParam = (() => { try { return new URLSearchParams(location.search).get('wrapped') || ''; } catch(e){ return ''; } })();
+const weekUpSim = (() => {
+  try {
+    if (weekUpParam === 'gate') sessionStorage.setItem('ebbless:wrappedSim', '1');
+    return sessionStorage.getItem('ebbless:wrappedSim') === '1';
+  } catch(e){ return weekUpParam === 'gate'; }
+})();
+const WEEK_UP_FEATURES = { lyrics: 'Lyrics', cymatics: 'Cymatics', lp: 'LP mode', cassette: 'Cassette', youtube_video: 'YouTube video',
+  fullscreen: 'Fullscreen', discover: 'Discover', podcast: 'Podcasts', soundcloud: 'SoundCloud', cast: 'Cast', vibe_search: 'Vibe search', share: 'Share' };
+function weekUpMe(){ try { return JSON.parse(localStorage.getItem(WEEK_UP_ME_KEY)) || {}; } catch(e){ return {}; } }
+function weekUpBypassed(){ try { return !!(localStorage.getItem(WEEK_UP_BYPASS_KEY) || localStorage.getItem(STATS_OFF_KEY)); } catch(e){ return false; } }
+function weekUpExpired(){
+  if (weekUpSim) return true;
+  if (weekUpBypassed() || !statsToken()) return false;
+  const end = Number(weekUpMe().windowEndsAt);
+  return end > 0 && Date.now() >= end;
+}
+function weekUpSongDone(){ if (!weekUp.shown && weekUpExpired()) showWeekUp({}); }
+
+function weekUpArtist(a){ return String(a || '').split(/\s*(?:,|\bfeat\.?\s|\bft\.?\s)\s*/i)[0].trim(); }
+function weekUpRecap(log){
+  const tr = Object.values(log.tr).filter(e => e && e.t);
+  const byPlays = (a, b) => (+b.n || 0) - (+a.n || 0) || (+b.ms || 0) - (+a.ms || 0);
+  const byMs = (a, b) => (+b.ms || 0) - (+a.ms || 0);
+  const agg = (keyOf, init) => {
+    const m = new Map();
+    tr.forEach(e => {
+      const k = keyOf(e); if (!k) return;
+      const g = m.get(k.toLowerCase()) || Object.assign({ ms: 0, n: 0, art: '' }, init(e));
+      g.ms += +e.ms || 0; g.n += +e.n || 0; if (!g.art) g.art = e.art || (e.v ? 'https://i.ytimg.com/vi/' + e.v + '/hqdefault.jpg' : '');
+      m.set(k.toLowerCase(), g);
+    });
+    return [...m.values()];
+  };
+  const artists = agg(e => weekUpArtist(e.a), e => ({ name: weekUpArtist(e.a) })).sort(byMs).slice(0, 5);
+  const albums = agg(e => e.al ? e.al + '|' + weekUpArtist(e.a) : '', e => ({ name: e.al, sub: weekUpArtist(e.a) })).sort(byMs).slice(0, 3);
+  const pls = Object.entries(log.pl).filter(([id, p]) => p && p.name && !p.al).map(([id, p]) => p).sort(byMs).slice(0, 3);
+  const pods = Object.values(log.pod).filter(p => p && p.name).sort(byMs).slice(0, 3);
+  const liked = (() => { try { const pl = getCachedPlaylist(LIKED_ID); return (pl && pl.tracks) || []; } catch(e){ return []; } })();
+  const favs = liked.map(t => Object.assign({ track: t }, log.tr[playLogTrackKey(t)] || {})).filter(e => +e.n > 0).sort(byPlays).slice(0, 3);
+  const feats = Object.entries(log.feat).filter(([k, n]) => WEEK_UP_FEATURES[k] && n > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  let libCount = 0;
+  try { libCount = getLibrary().filter(id => id !== LIKED_ID && id !== SWELL_ID).length; } catch(e){}
+  return {
+    minutes: Math.round((+log.ms || 0) / 60000), songs: +log.n || 0, days: log.days.length, distinct: tr.length,
+    top: tr.sort(byPlays).slice(0, 5), artists, albums, pls, pods,
+    likedCount: liked.length, favs, feats, libCount,
+  };
+}
+// Demo data for the owner's preview (?wrapped=demo, or an empty log).
+function weekUpDemoLog(){
+  const log = playLogEmpty();
+  const rows = [
+    ['Sunday Static', 'The Placeholders', 'Night Shift Radio', 14, 52], ['Low Tide Lullaby', 'Mira Vale', 'Harbor Lights', 11, 41],
+    ['Brownstone Boogie', 'Queens Kitchen Band', '', 9, 37], ['Velvet Circuit', 'The Placeholders', 'Night Shift Radio', 8, 30],
+    ['Seven Mile Groove', 'Kofi & The Echo', 'Afterglow Sessions', 7, 29], ['Paper Planes at Noon', 'Mira Vale', 'Harbor Lights', 6, 22],
+    ['Copper Sky', 'Dune Theory', '', 4, 15],
+  ];
+  rows.forEach((r, i) => { log.tr['demo' + i] = { t: r[0], a: r[1], al: r[2], ms: r[4] * 60000, n: r[3], c: r[3] - 1, pn: 'Demo playlist', last: Date.now() - i }; });
+  log.pl.demoA = { name: 'Late Night Drive', ms: 96 * 60000, n: 31 };
+  log.pl.demoB = { name: 'CuRRentSSsss', ms: 54 * 60000, n: 18 };
+  log.pl.demoC = { name: 'Sunday Cleaning', ms: 27 * 60000, n: 9 };
+  log.pod['pod:demo'] = { name: 'The Long Listen', ms: 88 * 60000, eps: 3 };
+  log.feat = { lyrics: 9, cymatics: 6, discover: 5, lp: 3, vibe_search: 2 };
+  log.ms = 314 * 60000; log.n = 67; log.c = 58;
+  log.days = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-02', '2026-10-03', '2026-10-04'];
+  return log;
+}
+
+function weekUpArt(src, label){
+  const ini = escapeHtml((String(label || '').trim().charAt(0) || '?').toUpperCase());
+  return '<span class="wu-art" aria-hidden="true"><span class="wu-ini">' + ini + '</span>' +
+    (src ? '<img src="' + escapeHtml(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+}
+function weekUpMin(ms){ const m = Math.round((+ms || 0) / 60000); return m + (m === 1 ? ' min' : ' mins'); }
+function weekUpPlays(n){ n = +n || 0; return n + (n === 1 ? ' play' : ' plays'); }
+function weekUpList(title, items, start){
+  if (!items.length) return '';
+  return '<section class="wu-card wu-reveal"><h3 class="wu-eyebrow">' + title + '</h3><ol class="wu-list">' + items.map((it, i) =>
+    '<li><span class="wu-rank">' + (i + (start || 1)) + '</span>' + weekUpArt(it.art, it.name) +
+    '<span class="wu-li-text"><span class="wu-li-name">' + escapeHtml(it.name) + '</span>' +
+    (it.sub ? '<span class="wu-li-sub">' + escapeHtml(it.sub) + '</span>' : '') + '</span>' +
+    '<span class="wu-li-stat">' + escapeHtml(it.stat) + '</span></li>').join('') + '</ol></section>';
+}
+function weekUpHtml(r, opts){
+  const me = weekUpMe();
+  const first = String(me.name || '').trim().split(/\s+/)[0] || '';
+  const token = statsToken();
+  const fbHref = 'beta/feedback.html' + (token ? '?t=' + encodeURIComponent(token) : '');
+  const synced = !!profileIdToken;
+  const top = r.top[0];
+  const art = (e) => e.art || (e.v ? 'https://i.ytimg.com/vi/' + e.v + '/hqdefault.jpg' : '');
+  const stat = (n, label) => '<div class="wu-stat"><span class="wu-num" data-n="' + n + '">' + (opts.instant ? n.toLocaleString() : '0') + '</span><span class="wu-stat-l">' + label + '</span></div>';
+  let html = '<div class="wu-bg" aria-hidden="true"><div class="wu-poster"></div><div class="wu-tint"></div><div class="wu-fade"></div></div>' +
+    '<div class="wu-wrap">' +
+    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this after one full song once their 7 days are up.<button type="button" class="wu-close" id="wuClose">Close</button></div>' : '') +
+    '<div class="wu-top wu-reveal"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="wu-tag">' + escapeHtml(me.label || 'Beta tester') + '</span></div>' +
+    '<h1 class="wu-reveal" id="wuTitle">THAT\'S YOUR 7 DAYS' + (first ? ', ' + escapeHtml(first.toUpperCase()) : '') + '.</h1>' +
+    '<div class="wu-rule wu-reveal"></div>' +
+    '<p class="wu-lead wu-reveal">' + (first ? escapeHtml(first) + ', your' : 'Your') + ' week in the EBBLESS beta is a wrap. Thank you for pressing play, poking around, and finding the rough edges.</p>' +
+    '<p class="wu-lead wu-reveal">One last thing before the music stops: tell us how it really felt. The good, the bad, the weird. All of it helps.</p>' +
+    '<a class="wu-btn primary wu-reveal" id="wuFeedback" href="' + escapeHtml(fbHref) + '"' + (opts.preview ? ' target="_blank" rel="noopener"' : '') + '>GIVE FEEDBACK</a>' +
+    '<h2 class="wu-h2 wu-reveal">YOUR WEEK, WRAPPED.</h2>';
+  if (!r.songs && !r.minutes && !r.pods.length){
+    html += '<section class="wu-card wu-reveal"><p class="wu-quiet">A quiet week on the meter. Whatever you did play is still saved, and next time the recap fills in as you go.</p></section>';
+  } else {
+    html += '<div class="wu-stats wu-reveal">' + stat(r.minutes, 'minutes listened') + stat(r.songs, 'songs played') + stat(r.days, r.days === 1 ? 'day you tuned in' : 'days you tuned in') + '</div>';
+    if (top){
+      html += '<section class="wu-hero wu-reveal"><div class="wu-hero-art">' + weekUpArt(art(top), top.t) + '</div><div class="wu-hero-text">' +
+        '<span class="wu-eyebrow">Your #1 on repeat</span><span class="wu-hero-title">' + escapeHtml(top.t) + '</span>' +
+        '<span class="wu-hero-sub">' + escapeHtml(top.a || '') + '</span><span class="wu-hero-stat">' + weekUpPlays(top.n) + ' · ' + weekUpMin(top.ms) + '</span></div></section>';
+    }
+    html += weekUpList('Top tracks', r.top.slice(1).map(e => ({ name: e.t, sub: e.a, art: art(e), stat: weekUpPlays(e.n) })), 2);
+    html += weekUpList('Top artists', r.artists.map(a => ({ name: a.name, art: a.art, stat: weekUpMin(a.ms) })));
+    html += weekUpList('Top albums', r.albums.map(a => ({ name: a.name, sub: a.sub, art: a.art, stat: weekUpMin(a.ms) })));
+    html += weekUpList('Playlists in rotation', r.pls.map(p => ({ name: p.name, art: p.art, stat: weekUpMin(p.ms) })));
+    html += weekUpList('Podcasts', r.pods.map(p => ({ name: p.name, art: p.art, sub: (+p.eps || 0) + ((+p.eps || 0) === 1 ? ' episode' : ' episodes'), stat: weekUpMin(p.ms) })));
+  }
+  if (r.likedCount){
+    html += '<section class="wu-card wu-reveal"><h3 class="wu-eyebrow">Liked songs</h3><p class="wu-big-line"><span class="wu-accent">' + r.likedCount.toLocaleString() + '</span> ' +
+      (r.likedCount === 1 ? 'song got' : 'songs got') + ' your heart.</p>' +
+      (r.favs.length ? '<ol class="wu-list">' + r.favs.map((e, i) => '<li><span class="wu-rank">' + (i + 1) + '</span>' + weekUpArt(e.track.art || (e.track.videoId && !isSoundCloudVideoId(e.track.videoId) ? 'https://i.ytimg.com/vi/' + e.track.videoId + '/hqdefault.jpg' : ''), e.track.title) +
+        '<span class="wu-li-text"><span class="wu-li-name">' + escapeHtml(e.track.title || '') + '</span><span class="wu-li-sub">' + escapeHtml(e.track.artist || '') + '</span></span><span class="wu-li-stat">' + weekUpPlays(e.n) + '</span></li>').join('') + '</ol>' : '') +
+      '</section>';
+  }
+  if (r.feats.length){
+    html += '<section class="wu-card wu-reveal"><h3 class="wu-eyebrow">Your go-to features</h3><div class="wu-chips">' + r.feats.map(([k, n], i) =>
+      '<span class="wu-chip' + (i === 0 ? ' is-top' : '') + '">' + escapeHtml(WEEK_UP_FEATURES[k]) + '<span>' + n + (n === 1 ? ' session' : ' sessions') + '</span></span>').join('') + '</div></section>';
+  }
+  html += '<section class="wu-card wu-saved wu-reveal"><h3 class="wu-eyebrow">Your history is saved</h3><p>Your library, liked songs and everything in this recap stay put. Join the next beta and it all loads back in, right where you left off.</p>' +
+    '<p class="wu-faint">' + (synced ? 'It\'s synced to your Google account, so any device you sign in on picks it up.' : 'It\'s saved on this device. Sign in with Google in the next beta to carry it anywhere.') + '</p></section>' +
+    '<a class="wu-btn primary wu-reveal" href="' + escapeHtml(fbHref) + '"' + (opts.preview ? ' target="_blank" rel="noopener"' : '') + '>GIVE FEEDBACK</a>' +
+    '<p class="wu-signoff wu-reveal">That\'s a wrap on this chapter. Peace, and thank you for listening.</p>' +
+    '</div>';
+  return html;
+}
+function weekUpCountUp(el){
+  const nums = el.querySelectorAll('.wu-num');
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  nums.forEach(n => {
+    const target = +n.dataset.n || 0;
+    if (reduce || !target){ n.textContent = target.toLocaleString(); return; }
+    const t0 = performance.now(), dur = 1400;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur), eased = 1 - Math.pow(1 - p, 3);
+      n.textContent = Math.round(target * eased).toLocaleString();
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+function weekUpKeyGuard(e){
+  // The app's own shortcuts listen on document/body; nothing reaches them.
+  // Defaults (Tab, Enter on a link) still work inside the screen.
+  e.stopPropagation();
+  if (!(e.target && e.target.closest && e.target.closest('#weekUp'))) e.preventDefault();
+}
+// Stops everything that could still be sounding: the active deck fades out
+// (pausePlayback), and a crossfade's incoming deck (or anything else left
+// playing) is cut. The UI is set to paused too, so no stall watchdog
+// "rescues" a deck that sits ended. Past the fade, anything playing is cut.
+function weekUpHalt(){
+  const hard = Date.now() - weekUp.at > 2500;
+  try { cancelCrossfade(); } catch(e){}
+  try {
+    const ad = activeDeck();
+    if (ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() === 1 : artworkWrap.classList.contains('is-playing')) pausePlayback();
+  } catch(e){}
+  decks.forEach(d => {
+    try {
+      if (!hard && d === activeDeck() && isFadingOut(d)) return;
+      if (d.player && d.player.getPlayerState && d.player.getPlayerState() === 1 && d.player.pauseVideo) d.player.pauseVideo();
+    } catch(e){}
+  });
+}
+function weekUpFreeze(){
+  weekUp.frozen = true;
+  weekUp.at = Date.now();
+  weekUpHalt();
+  try { setPlayingUI(false); } catch(e){}
+  Array.from(document.body.children).forEach(c => { if (c.id !== 'weekUp' && c.tagName !== 'SCRIPT') c.inert = true; });
+  ['keydown', 'keyup', 'keypress'].forEach(ev => window.addEventListener(ev, weekUpKeyGuard, true));
+  if ('mediaSession' in navigator){
+    ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward', 'stop'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, null); } catch(e){} });
+  }
+  // The track that just ended may already be handing off to the next one
+  // (crossfade, or an auto-advance in flight): keep it stopped.
+  weekUp.guard = setInterval(weekUpHalt, 800);
+}
+function showWeekUp(opts){
+  if (weekUp.shown) return;
+  weekUp.shown = true;
+  const preview = !!opts.preview;
+  const log = opts.demo ? weekUpDemoLog() : playLog;
+  const el = document.createElement('div');
+  el.id = 'weekUp';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-labelledby', 'wuTitle');
+  el.innerHTML = weekUpHtml(weekUpRecap(log), { preview, demo: !!opts.demo });
+  weekUp.el = el;
+  if (!preview) weekUpFreeze();
+  document.body.classList.add('week-up-fading');
+  const reveal = () => {
+    document.body.appendChild(el);
+    document.body.classList.add('week-up-on');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.add('is-in');
+      weekUpCountUp(el);
+      const fb = el.querySelector('#wuFeedback');
+      if (fb) try { fb.focus({ preventScroll: true }); } catch(e){}
+    }));
+    const close = el.querySelector('#wuClose');
+    if (close) close.addEventListener('click', hideWeekUpPreview);
+  };
+  setTimeout(reveal, opts.instant ? 0 : WEEK_UP_FADE_MS - 600);
+}
+function hideWeekUpPreview(){
+  if (weekUp.frozen || !weekUp.el) return;
+  weekUp.el.remove(); weekUp.el = null; weekUp.shown = false;
+  document.body.classList.remove('week-up-fading', 'week-up-on');
+}
+window.ebblessWrapped = function(demo){ hideWeekUpPreview(); showWeekUp({ preview: true, demo: !!demo || !playLog.n }); };
+window.ebblessWrapped.log = function(){ return JSON.parse(JSON.stringify(playLog)); };
+window.ebblessWrapped.bypass = function(on){ try { on === false ? localStorage.removeItem(WEEK_UP_BYPASS_KEY) : localStorage.setItem(WEEK_UP_BYPASS_KEY, '1'); } catch(e){} return weekUpBypassed(); };
+if (weekUpParam === 'preview' || weekUpParam === 'demo'){
+  setTimeout(() => showWeekUp({ preview: true, demo: weekUpParam === 'demo' || !playLog.n }), 600);
+}
 
 /* ---- tester-version banner (issue #236) ----
    Beta testers only (a tester token stored by the beta lock / tester link).
@@ -16022,6 +16545,7 @@ function fadeOutAndPause(deck){
   runPlayFade(deck, 'out');
 }
 function fadeInAndPlay(deck){
+  if (weekUp.frozen) return;   // TESTER WEEK UP: nothing plays again (tab refocus, media keys, ...)
   if (deck === activeDeck() && deckLooksDead(deck) && rebuildActiveDeck()) return;
   const wasFadingOut = isFadingOut(deck);
   if (!wasFadingOut && deck.player.setVolume) deck.player.setVolume(0);
@@ -16031,6 +16555,7 @@ function fadeInAndPlay(deck){
 }
 
 function resumePlayback(){
+  if (weekUp.frozen) return;
   const ad = activeDeck();
   if (!ad.player){ if (state.queuePos >= 0) loadIndex(state.queuePos, true); return; }
   const s = ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
@@ -16227,6 +16752,7 @@ function finishQueueAtEnd(opts){
 // decides whether one actually applies; auto-advance never does (the
 // track-end crossfade is maybeStartCrossfade's job).
 function playNext(auto){
+  if (weekUp.frozen) return;   // TESTER WEEK UP: the song that ended was the last one
   pendingAutoStart = !!auto;
   if (!auto) recordSkipIfEarly();
   if (auto && state.repeat === 'one'){ loadIndex(state.queuePos, true); return; }
@@ -18929,6 +19455,7 @@ function likeNudgeState(){
 // A track reached its natural end (ENDED, or the track-end crossfade kicked
 // in). Counts toward the gap and maybe offers the chip for that track.
 function notePlayedThrough(pos){
+  try { playLogCompleted(pos); } catch(e){}
   try {
     const t = trackAt(pos);
     const entry = state.queue[pos];
