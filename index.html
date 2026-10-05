@@ -835,14 +835,14 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
-.seek-track{flex:1;height:14px;display:flex;align-items:center;cursor:pointer;position:relative}
+.seek-track{flex:1;height:14px;display:flex;align-items:center;cursor:pointer;position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
 .seek-track .rail{width:100%;height:3px;border-radius:2px;background:var(--border);position:relative;overflow:hidden}
 .seek-track .fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--player-accent);border-radius:2px}
 /* podcast chapter boundaries (#241): small gaps cut into the rail */
 .seek-track .chap-tick{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--bg);z-index:1;pointer-events:none}
 .seek-track .knob{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--player-accent);
   transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
-.seek-track:hover .knob{opacity:1}
+.seek-track:hover .knob,.seek-track.dragging .knob{opacity:1}
 
 .controls-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:clamp(8px,3dvh,18px)}
 .ctl-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);
@@ -16530,7 +16530,17 @@ document.addEventListener('click', (e) => {
   if (e.target.closest && e.target.closest('#chapPanel, #chapBtn')) return;
   setChapterPanel(false);
 }, true);
+// Seek-bar drag (#259): while a finger/mouse is down on either seek bar the
+// bars follow the pointer (seekDrag.pct) instead of the deck's clock, and
+// after release they hold the dropped spot (seekHold) until the deck reports
+// a time near it, so the 250ms poll can't snap them back to the old position.
+let seekDrag = null, seekHold = null;
 function paintSeekUI(cur, dur){
+  if (seekDrag) cur = seekDrag.pct * dur;
+  else if (seekHold){
+    if (Math.abs(cur - seekHold.t) < 1.5 || performance.now() > seekHold.until) seekHold = null;
+    else cur = seekHold.t;
+  }
   paintChapterTicks(dur);
   markCurrentChapter(cur);
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
@@ -16543,6 +16553,7 @@ function paintSeekUI(cur, dur){
 // Back to 0:00 for a track change (reflectCurrentTrackUI), showing the new
 // track's known length until its deck reports its own.
 function resetSeekUI(t){
+  seekHold = null;
   const dur = (t && t.duration) || 0;
   paintSeekUI(0, dur);
   cassetteSetProgress(0, dur);
@@ -16575,18 +16586,69 @@ function updateSeekUI(){
   maybeStartCrossfade(cur, dur);
   cassetteSetProgress(cur, dur);
 }
+function seekPctAt(trackEl, clientX){
+  const rect = trackEl.getBoundingClientRect();
+  return rect.width ? Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) : 0;
+}
+function seekDeckDuration(){
+  const ad = activeDeck();
+  return ad.player && ad.player.getDuration ? (ad.player.getDuration() || 0) : 0;
+}
+let seekDragRaf = 0;
+function paintSeekDrag(){
+  seekDragRaf = 0;
+  if (!seekDrag) return;
+  const dur = seekDeckDuration();
+  paintSeekUI(0, dur);
+}
+// Tap-to-seek for the picture-in-picture mini player's bar.
 function seekFromClientX(trackEl, clientX){
   const ad = activeDeck();
   if (!ad.player || !ad.player.getDuration) return;
-  const rect = trackEl.getBoundingClientRect();
-  const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-  const dur = ad.player.getDuration() || 0;
-  ad.player.seekTo(dur * pct, true);
+  const t = seekDeckDuration() * seekPctAt(trackEl, clientX);
+  ad.player.seekTo(t, true);
+  seekHold = {t, until: performance.now() + 2000};
   cassetteSeekPulse();
   updateSeekUI();
 }
+// Tap = a drag with no movement: pointerdown jumps the bars to the touch
+// point, moves follow it every frame, and the deck only seeks on release.
+function endSeekDrag(e, commit){
+  if (!seekDrag || seekDrag.id !== e.pointerId) return;
+  const {el, pct} = seekDrag;
+  seekDrag = null;
+  el.classList.remove('dragging');
+  if (seekDragRaf){ cancelAnimationFrame(seekDragRaf); seekDragRaf = 0; }
+  const ad = activeDeck();
+  if (commit && ad.player && ad.player.seekTo){
+    const t = seekDeckDuration() * pct;
+    ad.player.seekTo(t, true);
+    seekHold = {t, until: performance.now() + 2000};
+    cassetteSeekPulse();
+  }
+  updateSeekUI();
+}
 [seekTrack, flowSeekTrack].forEach(el => {
-  el.addEventListener('click', (e) => seekFromClientX(el, e.clientX));
+  el.addEventListener('pointerdown', (e) => {
+    // a touch that only reveals idled-out fullscreen chrome isn't a seek
+    if (e.button !== 0 || fsSwallowClick || seekDrag) return;
+    const ad = activeDeck();
+    if (!ad.player || !ad.player.getDuration) return;
+    e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (_){}
+    seekHold = null;
+    seekDrag = {el, id: e.pointerId, pct: seekPctAt(el, e.clientX)};
+    el.classList.add('dragging');
+    paintSeekDrag();
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!seekDrag || seekDrag.id !== e.pointerId) return;
+    seekDrag.pct = seekPctAt(el, e.clientX);
+    if (!seekDragRaf) seekDragRaf = requestAnimationFrame(paintSeekDrag);
+  });
+  el.addEventListener('pointerup', (e) => endSeekDrag(e, true));
+  el.addEventListener('pointercancel', (e) => endSeekDrag(e, false));
+  el.addEventListener('lostpointercapture', (e) => endSeekDrag(e, false));
 });
 
 /* Load the IFrame API once, lazily. */
@@ -17638,7 +17700,8 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
   let sx = null, sy = null;
   function start(e){
     // lyrics in flow mode scroll vertically - don't read that as swipe-to-exit
-    if (e.target.closest && e.target.closest('#flowLyricsWrap')){ sx = null; return; }
+    // nor a horizontal drag on the seek bar as a prev/next swipe (#259)
+    if (e.target.closest && e.target.closest('#flowLyricsWrap, .seek-track')){ sx = null; return; }
     const p = e.touches ? e.touches[0] : e; sx = p.clientX; sy = p.clientY;
   }
   function end(e){
