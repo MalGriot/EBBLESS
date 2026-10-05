@@ -51,7 +51,15 @@
       defaults: ['name', 'applicant_id', 'email', 'applicant_status', 'signup_timestamp', 'device', 'music_platform', 'tester_number', 'notes'],
       title: r => r.name || r.applicant_id, label: r => r.applicant_id || '',
     },
+    // publish + public_quote feed the public "What testers are saying" list (GET /beta/testimonials).
+    Feedback: {
+      key: 'feedback_id', statusCol: 'publish', noun: 'feedback',
+      defaults: ['submitted_timestamp', 'tester_number', 'name', 'category', 'first_impression', 'enjoyed_most', 'publish', 'public_quote'],
+      title: r => r.feedback_id, label: r => r.tester_number || '',
+    },
   };
+  // Tester text offered as a starting point for public_quote, first non-empty wins.
+  const QUOTE_SOURCES = ['enjoyed_most', 'first_impression', 'would_bring_them_back', 'anything_else', 'what_happened'];
   const NICE = { feedback_count: 'feedback', bug_count: 'bugs', exclude_from_analytics: 'exclude from analytics' };
   const nice = (k) => NICE[k] || k.replace(/_/g, ' ');
 
@@ -88,6 +96,16 @@
         r.feedback_count = fb.get(String(t.tester_id)) || 0;
         r.bug_count = bugs.get(String(t.tester_id)) || 0;
         r._base = t;
+        return r;
+      });
+    } else if (name === 'Feedback') {
+      const testers = index(tabRows('Testers'), 'tester_id');
+      add('name', 'Testers');
+      rows = tabRows('Feedback').map(f => {
+        const t = testers.get(String(f.tester_id)) || {};
+        const r = {};
+        cols.forEach(c => { r[c.key] = c.src === 'Testers' ? t[c.key] : f[c.key]; });
+        r._base = f;
         return r;
       });
     } else {
@@ -314,7 +332,15 @@
     $('detailTitle').textContent = t.title(base);
     body.textContent = '';
     const editable = state.editable[state.tab];
-    body.appendChild(section(state.tab === 'Testers' ? 'Tester' : 'Application', kvList(tabHeaders(state.tab).map(h => [h, base[h]]), editable)));
+    if (state.tab === 'Feedback') {
+      const tester = tabRows('Testers').find(x => String(x.tester_id) === String(base.tester_id));
+      const pub = ['publish', 'public_quote'];
+      body.appendChild(section('Publish', kvList(pub.map(h => [h, base[h]]), editable)));
+      body.appendChild(section('Feedback', kvList(tabHeaders('Feedback').filter(h => !pub.includes(h) && base[h] !== '' && base[h] != null).map(h => [h, base[h]]))));
+      if (tester) body.appendChild(section('Tester', kvList(['name', 'tester_number', 'tester_status'].map(h => [h, tester[h]]))));
+    } else {
+      body.appendChild(section(state.tab === 'Testers' ? 'Tester' : 'Application', kvList(tabHeaders(state.tab).map(h => [h, base[h]]), editable)));
+    }
     if (state.tab === 'Testers') {
       const app = tabRows('Applicants').find(a => String(a.applicant_id) === String(base.applicant_id));
       if (app) body.appendChild(section('Application', kvList(tabHeaders('Applicants').filter(h => !['name', 'email', 'applicant_id'].includes(h)).map(h => [h, app[h]]))));
@@ -322,7 +348,7 @@
       body.appendChild(section('Usage', ana ? kvList(tabHeaders('Analytics').filter(h => !['tester_id', 'tester_number', 'active_days'].includes(h)).map(h => [h, ana[h]])) : el('p', 'adm-none', 'Hasn\'t opened the app yet (or excluded from analytics).')));
       body.appendChild(reports('Feedback', 'feedback_id', base.tester_id, ['category', 'first_impression', 'what_happened']));
       body.appendChild(reports('Bug Reports', 'bug_id', base.tester_id, ['area', 'what_went_wrong']));
-    } else {
+    } else if (state.tab === 'Applicants') {
       const tester = tabRows('Testers').find(x => String(x.applicant_id) === String(base.applicant_id));
       if (tester) body.appendChild(section('Tester', kvList(['tester_number', 'tester_status', 'accepted_timestamp'].map(h => [h, tester[h]]))));
     }
@@ -363,6 +389,11 @@
     if (col === 'applicant_status' && value === 'Accepted') return 'Accepting creates their tester record and emails them the invite.';
     if (col === 'tester_status' && value === 'Inactive') return 'Their tester link stops working.';
     if (col === 'tester_status' && value === 'Active') return 'Their link works again (only if there\'s room under ' + state.cap + ').';
+    if (col === 'publish' && value === true) {
+      const r = findRow(state.detailId);
+      return 'Shows the public quote on the beta page as tester #' + ((r && parseInt(String(r._base.tester_number || '').replace(/^\D+/, ''), 10)) || '?') + ' (no name).' + (r && !String(r._base.public_quote || '').trim() ? ' Nothing shows until you write a public quote.' : '');
+    }
+    if (col === 'public_quote') return 'Public if publish is ticked. Only this text and the tester number are shown.';
     return '';
   }
 
@@ -395,13 +426,23 @@
         form.appendChild(lab);
         read = () => input.checked;
       } else {
-        input = col === 'notes' ? el('textarea') : el('input');
-        if (col !== 'notes') input.type = spec.email ? 'email' : 'text';
+        const area = col === 'notes' || col === 'public_quote';
+        input = area ? el('textarea') : el('input');
+        if (!area) input.type = spec.email ? 'email' : 'text';
         input.value = value == null ? '' : String(value);
         if (spec.max) input.maxLength = spec.max;
         read = () => input.value.trim();
       }
       if (!spec.bool) form.appendChild(input);
+      if (col === 'public_quote') {
+        const base = findRow(state.detailId)._base;
+        const src = QUOTE_SOURCES.find(k => String(base[k] || '').trim());
+        if (src) {
+          const copy = el('button', 'btn sm', 'Use their ' + nice(src)); copy.type = 'button';
+          copy.addEventListener('click', () => { input.value = String(base[src]).trim().slice(0, spec.max || 200); input.focus(); });
+          form.appendChild(copy);
+        }
+      }
       const warn = el('p', 'adm-warn');
       const upd = () => { warn.textContent = warning(col, read()); };
       input.addEventListener('change', upd); upd();

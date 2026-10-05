@@ -6,7 +6,8 @@
 // them through to that script's web app (SHEET_URL + SHEET_SECRET worker
 // secrets).
 //
-// Public routes take no auth: signup, status (counts only), and the tester
+// Public routes take no auth: signup, status (counts only), testimonials
+// (only quotes the owner chose to publish, with the tester number), and the tester
 // routes, which require the tester's own secret link token. Only testers
 // whose Testers row is Active get through. Nothing public ever returns
 // applicant data.
@@ -46,6 +47,7 @@ function pickMany(v, list, other) {
 }
 const TOKEN_RE = /^t[0-9a-f]{12}-[0-9a-f]{32}$/;
 const STATUS_CACHE_S = 60;
+const TESTIMONIALS_CACHE_S = 300, TESTIMONIAL_MAX = 400, TESTIMONIALS_MAX = 30;
 
 // One call to the Sheet's Apps Script web app. Throws on anything but ok.
 export async function sheet(env, action, payload) {
@@ -101,6 +103,26 @@ async function handleStatus(env, h) {
   const s = await sheet(env, 'status', {});
   const out = { filled: s.active, cap: s.cap, open: s.active < s.cap };
   await h.envCache.put(key, new Response(JSON.stringify(out), { headers: { 'Cache-Control': 'max-age=' + STATUS_CACHE_S } }));
+  return h.json(out);
+}
+
+// Only { quote, number } survives, whatever the Sheet sends back.
+export function cleanTestimonials(items) {
+  return (Array.isArray(items) ? items : []).map(t => {
+    let quote = str(t && t.quote, TESTIMONIAL_MAX + 1).replace(/\s+/g, ' ');
+    if (quote.length > TESTIMONIAL_MAX) quote = quote.slice(0, TESTIMONIAL_MAX - 3).trimEnd() + '...';
+    const number = parseInt(t && t.number, 10);
+    return { quote, number: number > 0 ? number : 0 };
+  }).filter(t => t.quote && t.number).slice(0, TESTIMONIALS_MAX);
+}
+
+async function handleTestimonials(env, h) {
+  const key = new Request('https://beta.internal/testimonials');
+  const hit = await h.envCache.match(key);
+  if (hit) return h.json(await hit.json());
+  const s = await sheet(env, 'testimonials', {});
+  const out = { items: cleanTestimonials(s.items) };
+  await h.envCache.put(key, new Response(JSON.stringify(out), { headers: { 'Cache-Control': 'max-age=' + TESTIMONIALS_CACHE_S } }));
   return h.json(out);
 }
 
@@ -267,6 +289,7 @@ export async function handleBeta(request, url, env, ctx, h) {
   const p = url.pathname;
   try {
     if (p === '/beta/status') return await handleStatus(env, h);
+    if (p === '/beta/testimonials') return await handleTestimonials(env, h);
     if (p === '/beta/signup') return await handleSignup(request, env, ctx, h);
     if (p === '/beta/me') return await handleMe(request, env, ctx, h);
     if (p === '/beta/report') return await handleReport(request, env, ctx, h);

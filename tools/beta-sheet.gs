@@ -59,7 +59,9 @@ HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_tim
   'device', 'operating_system', 'browser', 'viewport', 'user_agent',
   // feedback survey (beta/feedback.html); keep_using / feeling above are shared
   'first_impression', 'what_they_tried', 'enjoyed_most', 'could_be_better', 'favorite_visual_mode',
-  'changes_music_experience', 'would_bring_them_back', 'bug_report', 'one_change'];
+  'changes_music_experience', 'would_bring_them_back', 'bug_report', 'one_change',
+  // owner-curated testimonials (admin page): only ticked rows with a quote go public
+  'publish', 'public_quote'];
 HEADERS[BUGS] = ['bug_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'area', 'what_went_wrong',
   'expected', 'actual', 'steps', 'screenshot', 'device', 'operating_system', 'browser', 'viewport', 'user_agent'];
 // Feature names the app reports (worker/src/beta.js FEATURES). uses_<name>
@@ -217,6 +219,7 @@ function doPost(e) {
     if (b.action === 'activity') return out_(activity_(b));
     if (b.action === 'admin_list') return out_(adminList_());
     if (b.action === 'admin_update') return out_(adminUpdate_(b));
+    if (b.action === 'testimonials') return out_(testimonials_());
     return out_({ ok: false, error: 'unknown action' });
   } catch (err) {
     return out_({ ok: false, error: String(err) });
@@ -318,6 +321,8 @@ ADMIN_EDITABLE[TESTERS] = { key: 'tester_id', cols: {
   exclude_from_analytics: { bool: true } } };
 ADMIN_EDITABLE[APPLICANTS] = { key: 'applicant_id', cols: {
   applicant_status: { options: APPLICANT_STATUSES }, notes: { max: 5000 } } };
+ADMIN_EDITABLE[FEEDBACK] = { key: 'feedback_id', cols: {
+  publish: { bool: true }, public_quote: { max: 400 } } };
 // Never sent to the admin page: tester link tokens (and the links that carry them).
 const ADMIN_HIDDEN = { access_token: true, access_link: true };
 const ADMIN_TABS = [TESTERS, APPLICANTS, ANALYTICS, FEEDBACK, BUGS];
@@ -372,6 +377,22 @@ function adminUpdate_(b) {
   if (b.tab === TESTERS && b.column === 'tester_status' && value === 'Active' && res.previous !== 'Active') message = reactivateRow_(res.row, res.previous) || '';
   const rec = records_(sh).filter(function (x) { return x._row === res.row; })[0];
   return { ok: true, updated: true, record: rec ? adminRecord_(rec) : null, message: message };
+}
+
+// ---------- testimonials (public, GET /beta/testimonials) ----------
+
+// Feedback the owner ticked `publish` on and wrote a `public_quote` for,
+// newest first. Only the quote and the tester's number ever leave the Sheet.
+function testimonials_() {
+  const sh = sheet_(FEEDBACK);
+  if (!sh) return { ok: true, items: [] };
+  const time = function (v) { const t = v instanceof Date ? v.getTime() : Date.parse(v); return isNaN(t) ? 0 : t; };
+  const items = records_(sh)
+    .filter(function (r) { return (r.publish === true || String(r.publish).toUpperCase() === 'TRUE') && String(r.public_quote || '').trim(); })
+    .sort(function (a, b) { return time(b.submitted_timestamp) - time(a.submitted_timestamp); })
+    .slice(0, 30)
+    .map(function (r) { return { quote: String(r.public_quote).trim().slice(0, 400), number: numFrom_(r.tester_number) }; });
+  return { ok: true, items: items };
 }
 
 // ---------- analytics ----------
@@ -550,6 +571,9 @@ function setup() {
   ash.getRange(2, cols_(ash).applicant_status + 1, ash.getMaxRows() - 1, 1).setDataValidation(dv(APPLICANT_STATUSES));
   tsh.getRange(2, cols_(tsh).tester_status + 1, tsh.getMaxRows() - 1, 1).setDataValidation(dv(TESTER_STATUSES));
   tsh.getRange(2, cols_(tsh).exclude_from_analytics + 1, tsh.getMaxRows() - 1, 1).insertCheckboxes();
+  // Existing rows only: blank checkboxes count as content, and new feedback is appended after the last row.
+  const fsh = ss.getSheetByName(FEEDBACK);
+  if (fsh.getLastRow() > 1) fsh.getRange(2, cols_(fsh).publish + 1, fsh.getLastRow() - 1, 1).insertCheckboxes();
 
   const dash = ss.getSheetByName(DASHBOARD) || ss.insertSheet(DASHBOARD);
   const aS = colLetter_(cols_(ash).applicant_status), tS = colLetter_(cols_(tsh).tester_status);
