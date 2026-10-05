@@ -910,6 +910,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .report-match-btn:active{transform:scale(.88)}
 .report-match-btn[hidden]{display:none}
 .report-match-btn.is-sent{color:var(--player-accent, var(--accent))}
+.ads-report-btn{display:block;margin:10px auto 0;padding:5px 12px;border-radius:999px;border:1px solid var(--panel-3);
+  background:transparent;color:var(--faint);font:inherit;font-size:12px;cursor:pointer;
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.ads-report-btn:hover{background:var(--panel-3);color:var(--text)}
+.ads-report-btn:disabled{opacity:.5;cursor:default}
+.ads-report-btn[hidden]{display:none}
 .player-like-btn{flex:none;width:22px;height:22px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint-2);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
@@ -3112,6 +3118,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <span class="one" id="repeatOneBadge" hidden>1</span>
             </button>
           </div>
+          <!-- sends window.ebblessAdLog to /tester-report; YouTube tracks only (ytPanelBtnSync) -->
+          <button type="button" class="ads-report-btn" id="adsReportBtn" title="Hearing an ad? Tap to send us what the player saw" hidden>Ads playing?</button>
         </div>
       </div>
     </div>
@@ -10115,6 +10123,8 @@ function ytPanelAvailable(){
 function ytPanelBtnSync(){
   let ok = false;
   try { ok = ytPanelAvailable(); } catch(e){ /* called before the deck code has initialized */ }
+  const adsBtn = $('adsReportBtn');
+  if (adsBtn) adsBtn.hidden = !ok;
   const btn = $('ytPanelBtn');
   if (!btn) return ok;
   btn.disabled = !ok;
@@ -10399,6 +10409,39 @@ feedbackModal.addEventListener('submit', async (e) => {
     fbSending = false;
     fbSendBtn.disabled = false;
     fbSendBtn.textContent = 'Send';
+  }
+});
+
+// "Ads playing?" on the player: one tap sends the recent ad-detection log
+// (window.ebblessAdLog) plus the matched YouTube video to /tester-report
+// (source 'ads-button'), so a heard ad can be traced to the signal that
+// missed it. A 'user-report' row is logged first to mark the moment.
+const adsReportBtn = $('adsReportBtn');
+adsReportBtn.addEventListener('click', async () => {
+  const deck = activeDeck(), t = currentTrack();
+  try { adLog(deck, 'user-report', ''); } catch(e){}
+  let appVersion = '';
+  try { appVersion = ((await caches.keys()).find(k => k.startsWith('ebbless-shell-')) || ''); } catch(err){}
+  const payload = {
+    category: 'bug', source: 'ads-button',
+    message: '[Ads playing?] Listener tapped the ads button.',
+    appVersion, userAgent: navigator.userAgent,
+    viewport: window.innerWidth + 'x' + window.innerHeight,
+    view: state.currentView || '',
+    track: t ? { title: t.title || '', artist: t.artist || '' } : null,
+    videoId: (deck && deck.videoId) || (t && t.videoId) || '',
+    adLog: (window.ebblessAdLog || []).slice(-40),
+    betaToken: (() => { try { return localStorage.getItem('ebbless:betaToken') || undefined; } catch(e){ return undefined; } })(),
+  };
+  adsReportBtn.disabled = true;
+  try {
+    const res = await fetch(BACKEND + '/tester-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error(res.status === 429 ? 'Sent a few already. Try again in a few minutes.' : 'HTTP ' + res.status);
+    showToast('Thanks. Ad report sent, we\'re on it.');
+    setTimeout(() => { adsReportBtn.disabled = false; }, 30000);
+  } catch(err){
+    showToast('Couldn\'t send the ad report. ' + (err && err.message && !/fetch/i.test(err.message) ? err.message : 'Check your connection.'));
+    adsReportBtn.disabled = false;
   }
 });
 

@@ -8062,3 +8062,21 @@ Add entries in this shape:
   from the 80s"): see `audio-quality-boost`. Re-checked desktop today:
   forcing `tiny` still streams opus itag 251 (best). Android not confirmed,
   and the report doesn't say which YouTube video was matched.
+
+### ads-button-extended-mix: "Ads playing?" report button + matcher avoids extended mixes
+- **Status:** merged
+- **Priority:** high
+- **Description:** Owner: a player button that sends `ebblessAdLog`, and
+  stop matching extended mixes (tester #20's "Slow Motion" resolved to the
+  `[Extended Mix]`).
+- **Touches:** player transport (`#adsReportBtn`, shown only while
+  `ytPanelAvailable()`), worker `/tester-report` (new `ads-button` source,
+  whitelisted `videoId` + `adLog` rows), worker `EXCLUDE_GROUPS`.
+- **Branch:** agent/ads-button-extended-mix
+- **Notes:** Tap logs a `user-report` row, then POSTs the last 40 ad-log
+  rows + matched videoId; 30s cooldown. Read with
+  `wrangler kv key list --binding=MATCH_REPORTS --prefix=tester:` (look
+  for `"source":"ads-button"`). Extended group: excluded unless the source
+  title says "extended"; filter-with-fallback. `SEARCH_CACHE_VERSION` v9.
+  Verified locally with fetch stubbed: payload correct, toast, hidden on
+  SoundCloud tracks. Worker tests 47/47.

@@ -65,7 +65,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v8';
+const SEARCH_CACHE_VERSION = 'v9';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -284,6 +284,8 @@ const EXCLUDE_GROUPS = [
   { keyword: 'cover', hints: ['cover)', 'cover]', '- cover'] },
   { keyword: 'karaoke', hints: ['karaoke'] },
   { keyword: 'instrumental', hints: ['instrumental', '(instrumental)', '[instrumental]', '- instrumental'] },
+  // "Slow Motion" (Lynnic) resolved to its [Extended Mix] for tester #20
+  { keyword: 'extended', hints: ['extended mix', 'extended version', 'extended edit', 'extended club', '(extended)', '[extended]', '- extended'] },
 ];
 
 // "1,062,839,758 views" -> 1062839758, "1.2M views" -> 1200000
@@ -3952,7 +3954,8 @@ async function handleReport(request, env, ctx) {
 const TESTER_REPORT_LIMIT = 5;          // reports per IP...
 const TESTER_REPORT_WINDOW_S = 600;     // ...per 10 minutes
 const TESTER_CATEGORIES = ['bug', 'idea', 'other'];
-const TESTER_SOURCES = ['feedback-form', 'vibe-check'];
+const TESTER_SOURCES = ['feedback-form', 'vibe-check', 'ads-button'];
+const AD_LOG_FIELDS = ['at', 'deck', 'what', 'reason', 'videoId', 'playerVideoId', 'dur', 'expected', 'cur'];
 async function handleTesterReport(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
@@ -3993,6 +3996,17 @@ async function handleTesterReport(request, env, ctx) {
   // clients just omit these; the thumbs value is also in `message` text.
   if (TESTER_SOURCES.includes(body.source)) report.source = body.source;
   if (body.sentiment === 'up' || body.sentiment === 'down') report.sentiment = body.sentiment;
+  // "Ads playing?" button on the player: the matched YouTube video and the
+  // client's recent ad-detection decisions (window.ebblessAdLog), so a heard
+  // ad can be traced to the signal that missed it.
+  if (body.videoId) report.videoId = str(body.videoId, 64);
+  if (Array.isArray(body.adLog)) {
+    report.adLog = body.adLog.slice(-40).map((r) => {
+      const o = {};
+      if (r && typeof r === 'object') AD_LOG_FIELDS.forEach((k) => { if (r[k] != null) o[k] = typeof r[k] === 'number' ? r[k] : str(r[k], 64); });
+      return o;
+    });
+  }
   // Beta testers' in-app reports carry their tester link token (saved by
   // beta/tester.html), so they show up against the right tester number and
   // also land in the beta Sheet's Feedback tab.
