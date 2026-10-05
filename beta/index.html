@@ -14,19 +14,23 @@
 <link rel="stylesheet" href="beta.css">
 </head>
 <body>
-<main class="wrap">
+<main class="wrap landing">
   <div class="top"><img src="../brand/assets/wordmark-white.png" alt="EBBLESS"><span class="tag">Beta</span></div>
 
   <!-- open -->
-  <section id="intro">
+  <section id="intro" class="hero">
     <h1 class="display">EBBLESS BETA</h1>
     <div class="rule"></div>
     <p class="sub">50 people. One beta.</p>
-    <p class="lede">I'm opening EBBLESS to a small group before anyone else. Use it the way you actually listen to music, then tell me the truth about it. Signing up takes about two minutes.</p>
+    <p class="lede">I'm opening EBBLESS to a small group before anyone else. Use it the way you actually listen to music, then tell me the truth about it.</p>
+    <button class="btn primary join" id="joinBtn" type="button">JOIN THE BETA</button>
+    <p class="join-hint">About two minutes. No password, no app store.</p>
     <div id="meter" hidden>
       <div class="meter"><b class="tnum" id="meterCount">0 / 50</b><span id="meterLeft"></span></div>
       <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
     </div>
+    <p class="fallback">Already got your invite? Tap the link in the email. It opens EBBLESS and lets you in.</p>
+    <a class="more" href="#about">What is EBBLESS?</a>
   </section>
 
   <!-- full -->
@@ -90,6 +94,57 @@
     <p class="lede" id="doneText"></p>
   </section>
 
+  <!-- about: what the app is, what you can do, screenshots, how it works -->
+  <div id="about" class="about">
+    <section class="block">
+      <h2 class="eyebrow">What it is</h2>
+      <p class="statement">EBBLESS plays your playlist straight through, without the gaps.</p>
+      <p class="lede">Bring the music you already have, from wherever you already listen. EBBLESS finds every track, keeps it moving, and gives you something to look at while it plays. Simple on top, more underneath when you go looking.</p>
+    </section>
+
+    <section class="block">
+      <h2 class="eyebrow">What you can do</h2>
+      <ul class="features">
+        <li><b>Bring any playlist</b><span>Paste a Spotify, YouTube, Apple Music or SoundCloud link. EBBLESS matches the tracks and queues them up.</span></li>
+        <li><b>Or just say the vibe</b><span>Type a mood or a moment instead of a link and get a playlist back for it.</span></li>
+        <li><b>It keeps going</b><span>Tracks flow into each other. When the playlist runs out, Discover keeps going with music in the same lane.</span></li>
+        <li><b>Something to look at</b><span>Switch between LP, cassette, cymatics, lyrics and the music video. Go fullscreen.</span></li>
+        <li><b>Plays where you are</b><span>Lock screen, car and Bluetooth controls. Cast to Chromecast or Google TV, or AirPlay from an iPhone.</span></li>
+        <li><b>Podcasts too</b><span>Paste a podcast link and it plays the show's own episodes.</span></li>
+      </ul>
+      <p class="note">Each YouTube track starts muted for a moment in case of a pre-roll ad. It's a delay trick, not a guarantee.</p>
+    </section>
+
+    <section class="block">
+      <h2 class="eyebrow">See it</h2>
+      <!-- Screenshot slots: replace each .shot-slot div with
+           <img src="shots/lp.jpg" alt="EBBLESS in LP mode" loading="lazy"> (portrait phone screenshots, 9:16). -->
+      <div class="shots">
+        <figure><div class="shot-slot">Screenshot coming</div><figcaption>LP</figcaption></figure>
+        <figure><div class="shot-slot">Screenshot coming</div><figcaption>Cassette</figcaption></figure>
+        <figure><div class="shot-slot">Screenshot coming</div><figcaption>Cymatics</figcaption></figure>
+        <figure><div class="shot-slot">Screenshot coming</div><figcaption>Lyrics</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="eyebrow">How it works</h2>
+      <ol class="steps">
+        <li><span>Hit <b>Join the beta</b> and fill in the short form.</span></li>
+        <li><span>I go through every signup by hand. If you're in, your tester link comes to your email.</span></li>
+        <li><span>Tap the link. EBBLESS opens and lets you in. Nothing to copy, nothing to paste.</span></li>
+        <li><span>On a phone, add EBBLESS to your home screen when it asks, then open it from there. Your invite carries over.</span></li>
+        <li><span>Load a playlist, try the visual modes, and tell me what works and what doesn't. Feedback and bug forms are one tap away.</span></li>
+      </ol>
+      <p class="fallback left">Link didn't open EBBLESS? Copy it from the email and paste it into the box on the EBBLESS lock screen. That's the backup, not the plan.</p>
+    </section>
+
+    <section class="block cta">
+      <p class="statement">Want in?</p>
+      <button class="btn primary join" id="joinBtn2" type="button">JOIN THE BETA</button>
+    </section>
+  </div>
+
   <p class="foot">Your answers are only seen by me and are only used to run the EBBLESS beta.</p>
 </main>
 
@@ -123,14 +178,24 @@
     $('detected').hidden = false;
   });
 
-  let waitlist = false;
+  let waitlist = false, formOpen = false;
   function show(state){
     $('intro').hidden = state !== 'open';
     $('full').hidden = state !== 'full';
-    form.hidden = !(state === 'open' || state === 'waitlist');
+    form.hidden = !((state === 'open' && formOpen) || state === 'waitlist');
     $('done').hidden = state !== 'done';
-    if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; }
+    $('about').hidden = state === 'done';
+    if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; $('joinBtn2').textContent = 'JOIN THE WAITLIST'; }
   }
+  // The join buttons open the form (it stays closed until asked for) and bring it into view.
+  function join(){
+    formOpen = true;
+    show(waitlist ? 'waitlist' : 'open');
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('name').focus({ preventScroll: true });
+  }
+  $('joinBtn').addEventListener('click', join);
+  $('joinBtn2').addEventListener('click', join);
 
   // Show the form right away; status only fills in the meter and can be slow
   // (sheet read on a cache miss). The worker still enforces the cap on submit.
@@ -249,6 +314,7 @@
         // The server answered but said no (bad field, etc.): hand the form back filled in.
         clearPending();
         clearInterval(retryTimer);
+        formOpen = true;
         show('open');
         fillForm(b);
         $('submitBtn').disabled = false;

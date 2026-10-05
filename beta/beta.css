@@ -143,3 +143,52 @@ form{margin-top:36px}
   background:linear-gradient(var(--bg),var(--bg)) top/100% env(safe-area-inset-top,0px) no-repeat}
 .progress-fill{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--accent);transition:width 400ms var(--ease-out)}
 @media (max-width:440px){.survey .pills span{padding:10px 14px}}
+
+/* signup landing (index.html): hero built around the join button, then
+   what the app is, what you can do, screenshots, how it works */
+.wrap.landing{max-width:720px}
+.wrap.landing > section,.wrap.landing > form,.wrap.landing > .foot{max-width:560px;margin-left:auto;margin-right:auto}
+.wrap.landing .top{max-width:560px;margin-left:auto;margin-right:auto}
+.wrap.landing form{scroll-margin-top:12px}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;
+  min-height:calc(100svh - 150px);justify-content:center;padding-bottom:24px}
+.hero .lede{margin-left:auto;margin-right:auto}
+.hero #meter{width:100%;max-width:360px;text-align:left}
+.hero .meter{margin-top:22px}
+.btn.join{width:100%;max-width:360px;margin-top:28px;padding:18px 24px;font-size:16px;font-weight:700;letter-spacing:1.6px}
+.btn.join:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.join-hint{font-size:12.5px;color:var(--faint-2);margin:10px 0 0}
+.fallback{font-size:13px;color:var(--faint);margin:26px auto 0;max-width:40ch}
+.fallback.left{margin:18px 0 0;max-width:none;color:var(--faint-2)}
+.more{margin-top:22px;font-size:13px;color:var(--faint);text-decoration:none;border-bottom:1px solid var(--border-2);padding-bottom:2px}
+.more:hover{color:var(--text)}
+.more::after{content:' \2193'}
+
+.about{margin-top:40px}
+.about .block{padding:44px 0 0;margin-top:44px;border-top:1px solid var(--border)}
+.about .block:first-child{border-top:0;margin-top:0}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+.statement{font-size:clamp(22px,6vw,30px);font-weight:700;line-height:1.15;letter-spacing:-.01em;margin:0 0 14px;max-width:22ch}
+.about .lede{max-width:56ch}
+
+.features{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr;gap:10px}
+.features li{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:16px 16px 15px;
+  display:flex;flex-direction:column;gap:5px;transition:background var(--dur-ui) var(--ease-out)}
+.features li:hover{background:var(--panel-2)}
+.features b{font-size:15px;font-weight:600}
+.features span{font-size:14px;color:var(--faint);line-height:1.45}
+@media (min-width:600px){.features{grid-template-columns:1fr 1fr}}
+
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (min-width:600px){.shots{grid-template-columns:repeat(4,1fr)}}
+.shots figure{margin:0;min-width:0}
+.shots img,.shot-slot{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:var(--r-md);border:1px solid var(--border-2);background:var(--panel)}
+.shot-slot{display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-size:12px;color:var(--faint-2);
+  border-style:dashed}
+.shots figcaption{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);margin-top:8px;text-align:center}
+
+.about .steps li > span b{color:var(--text);font-weight:600}
+.about .steps li{color:var(--faint)}
+.about .cta{text-align:center;display:flex;flex-direction:column;align-items:center}
+.about .cta .statement{margin-left:auto;margin-right:auto}
+.about .cta .btn.join{margin-top:10px}
