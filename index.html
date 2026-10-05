@@ -231,6 +231,26 @@ body.onb-active .paste-guide{display:none}
   .paste-guide{animation:none}
   .import-row.paste-guide-on input{animation:none;box-shadow:0 0 0 3px var(--accent-dim)}
 }
+/* paste-placeholder-rotation (#265): the input's placeholder is drawn by an
+   overlay so it can fade between hints. The real placeholder goes
+   transparent while the overlay is live (hint-live), the overlay hides
+   itself once there's text, and the mic's "Listening..." placeholder wins
+   while it's recording. The "tab" key chip fills a personalized hint in. */
+.paste-hint{position:absolute;left:17px;right:17px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
+  pointer-events:none;color:var(--faint-2);font-size:14.5px;white-space:nowrap;transition:opacity 260ms var(--ease-out)}
+.paste-hint[hidden]{display:none}
+.paste-hint.is-swapping{opacity:0}
+.import-field:has(.mic-btn:not([hidden])) .paste-hint{right:50px}
+.paste-hint-text{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.import-row .paste-hint-try{flex:none;pointer-events:auto;background:transparent;color:var(--faint);padding:3px 6px;
+  border:1px solid var(--border-2);border-radius:5px;font-size:11px;font-weight:600;line-height:1;letter-spacing:.04em}
+.import-row .paste-hint-try[hidden]{display:none}
+.import-row .paste-hint-try:hover{color:var(--text);border-color:var(--faint)}
+.import-field.hint-live input::placeholder{color:transparent}
+.import-field.hint-live input:not(:placeholder-shown) ~ .paste-hint,
+.import-field:has(.mic-btn.is-listening) .paste-hint{display:none}
+.import-field:has(.mic-btn.is-listening) input::placeholder{color:var(--faint-2)}
+@media (prefers-reduced-motion:reduce){.paste-hint{transition:none}}
 
 .section-label{font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--faint-2);text-transform:uppercase;margin:28px 0 12px}
 .section-label:first-of-type{margin-top:8px}
@@ -2427,7 +2447,8 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="view-scroll">
       <form class="import-row" id="importForm">
         <span class="import-field">
-        <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+        <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+        <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
         <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
         </button>
@@ -9185,6 +9206,183 @@ if (pasteGuideEl){
   urlInput.addEventListener('input', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
   importForm.addEventListener('submit', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
   window.addEventListener('resize', () => { if (!pasteGuideEl.hidden) refreshPasteGuide(); });
+}
+
+/* ---------- paste-placeholder-rotation (GitHub #265) ----------
+   The paste bar's grey hint cycles through everything the bar takes (links
+   from each source, song/artist/genre searches, a described vibe, podcasts)
+   so the range is discoverable without the first-run guide. Drawn by the
+   #pasteHint overlay so it can fade (a real placeholder can't); the input
+   keeps its own placeholder + aria-label for assistive tech, the overlay is
+   aria-hidden. Holds still while the bar is focused or has text, while the
+   tab is hidden, under the splash/tutorial/first-run guide, and for
+   prefers-reduced-motion (static default hint).
+
+   Listeners with some play history also get a few hints built only from
+   what the app already keeps locally: the clock (getTimeContext) plus a
+   coarse city from the device time zone (no location prompt, no weather),
+   their most played tags (LS_TAG_CACHE) and artists (LS_PLAY_HISTORY), and
+   an artist from CuRRentSSsss they haven't played or saved yet. Those carry
+   a `fill`: Tab / Right arrow on the empty bar, or the small chip, drops it
+   in so it can be searched as-is. */
+const PASTE_HINT_MS = 3800;
+const PASTE_HINT_FADE_MS = 260;
+const PASTE_HINT_DEFAULT = { text: urlInput.placeholder };
+const PASTE_HINTS = [
+  'Paste a Spotify playlist',
+  'Search a song title',
+  'Paste an Apple Music album',
+  'Search an artist',
+  'Paste a YouTube or YouTube Music link',
+  'Describe a vibe: rainy Sunday, warm and slow',
+  'Paste a SoundCloud track or set',
+  'Paste a link to an artist page',
+  'Search a genre: afro-house, neo-soul, jazz',
+  'Paste a podcast show, episode, or RSS feed',
+  'Paste a link to a single song',
+];
+const PASTE_HINT_WHEN = { morning: 'morning', workday: 'midday', afternoon: 'afternoon', evening: 'evening', late: 'late night' };
+const PASTE_HINT_MOOD = {
+  morning: 'something warm and unhurried', workday: 'something steady to focus to',
+  afternoon: 'something loose and bright', evening: 'more groove, more lift', late: 'something slower and closer',
+};
+const PASTE_HINT_SKIP_TAGS = /^(seen live|favou?rites?|love|loved|awesome|beautiful|albums i own|spotify|youtube|under \d+ listeners|(fe)?male vocalists?|british|american|usa|uk|\d0s|\d{4}s?)$/;
+const pasteHintEl = $('pasteHint'), pasteHintTextEl = $('pasteHintText'), pasteHintTryEl = $('pasteHintTry');
+let pasteHintCur = null, pasteHintQueue = [], pasteHintTimer = 0, pasteHintSwapTimer = 0;
+const pasteHintMq = (q) => { try { return window.matchMedia(q); } catch(e){ return null; } };
+const pasteHintReduced = pasteHintMq('(prefers-reduced-motion: reduce)');
+const pasteHintCap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const pasteHintPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+function pasteHintCity(){
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (!tz.includes('/') || /^(Etc|UTC|GMT)/i.test(tz)) return '';
+    const city = tz.split('/').pop();
+    const legacy = { Calcutta: 'Kolkata', Saigon: 'Ho Chi Minh', Kiev: 'Kyiv', Rangoon: 'Yangon', Katmandu: 'Kathmandu' };
+    return (legacy[city] || city).replace(/_/g, ' ');
+  } catch(e){ return ''; }
+}
+function personalPasteHints(){
+  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.t && h.a);
+  if (hist.length < 5) return [];
+  const out = [];
+  const add = (text, fill) => out.push({ text, fill: fill || text });
+  const ctx = getTimeContext();
+  const when = PASTE_HINT_WHEN[ctx.block] || 'tonight';
+  const mood = ctx.block === 'late' && ctx.weekendNight ? 'deep after-hours groove' : PASTE_HINT_MOOD[ctx.block];
+  const city = pasteHintCity();
+  if (mood) add(pasteHintCap(when) + (city ? ' in ' + city : '') + ', ' + mood);
+  // Most played tags and artists across recent plays.
+  const recent = hist.slice(0, 120);
+  const tagCache = lsGet(LS_TAG_CACHE, {}) || {};
+  const tagN = new Map(), artistN = new Map(), artistName = new Map();
+  recent.forEach(h => {
+    ((tagCache[tagCacheKey({ title: h.t, artist: h.a })] || []).slice(0, 3)).forEach(t => {
+      t = String(t).toLowerCase().trim();
+      if (t && !PASTE_HINT_SKIP_TAGS.test(t)) tagN.set(t, (tagN.get(t) || 0) + 1);
+    });
+    const k = primaryArtistKey(h.a);
+    if (k){ artistN.set(k, (artistN.get(k) || 0) + 1); if (!artistName.has(k)) artistName.set(k, String(h.a).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim()); }
+  });
+  const top = (m, min) => Array.from(m.entries()).filter(e => e[1] >= min).sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
+  const tags = top(tagN, 2);
+  if (tags.length) add(pasteHintCap(pasteHintPick(tags)) + ', made for the ' + when);
+  const artists = top(artistN, 2);
+  if (artists.length) add('Something in the spirit of ' + artistName.get(pasteHintPick(artists)));
+  // An artist CuRRentSSsss surfaced that they haven't played or saved.
+  const swell = getCachedPlaylist(SWELL_ID);
+  if (swell && Array.isArray(swell.tracks) && swell.tracks.length){
+    const known = new Set(artistN.keys());
+    const liked = getCachedPlaylist(LIKED_ID);
+    (liked ? liked.tracks : []).forEach(t => known.add(primaryArtistKey(t && t.artist)));
+    getLibrary().forEach(id => {
+      if (id === SWELL_ID || id === BLEND_ID || id === LIKED_ID) return;
+      const pl = getCachedPlaylist(id);
+      (pl && Array.isArray(pl.tracks) ? pl.tracks : []).forEach(t => known.add(primaryArtistKey(t && t.artist)));
+    });
+    const fresh = swell.tracks.filter(t => t && t.artist && !known.has(primaryArtistKey(t.artist)));
+    if (fresh.length){
+      const name = String(pasteHintPick(fresh).artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim();
+      if (name) add('You might love ' + name, name);
+    }
+  }
+  return out;
+}
+// One full cycle: default first, then the generic hints with a personal one
+// after every second generic hint. Rebuilt each cycle so the clock and
+// history stay current.
+function nextPasteHintQueue(){
+  let personal = [];
+  try { personal = personalPasteHints().sort(() => Math.random() - 0.5); } catch(e){}
+  const q = [];
+  PASTE_HINTS.forEach((text, i) => {
+    q.push({ text });
+    if (i % 2 === 1 && personal.length) q.push(personal.shift());
+  });
+  q.push(PASTE_HINT_DEFAULT);
+  return q;
+}
+function showPasteHint(h){
+  pasteHintCur = h;
+  pasteHintTextEl.textContent = h.text;
+  pasteHintTryEl.hidden = !h.fill;
+}
+function pasteHintPaused(){
+  const splashEl = $('splash');
+  return document.hidden || document.activeElement === urlInput || !!urlInput.value
+    || importForm.classList.contains('paste-guide-on') || document.body.classList.contains('onb-active')
+    || (splashEl && !splashEl.classList.contains('is-hidden')) || !pasteBarVisible();
+}
+function rotatePasteHint(){
+  if (pasteHintPaused()) return;
+  if (!pasteHintQueue.length) pasteHintQueue = nextPasteHintQueue();
+  const h = pasteHintQueue.shift();
+  pasteHintEl.classList.add('is-swapping');
+  clearTimeout(pasteHintSwapTimer);
+  pasteHintSwapTimer = setTimeout(() => {
+    showPasteHint(h);
+    pasteHintEl.classList.remove('is-swapping');
+  }, PASTE_HINT_FADE_MS);
+}
+function syncPasteHintTimer(){
+  const reduced = !!(pasteHintReduced && pasteHintReduced.matches);
+  const run = !document.hidden && !reduced;
+  if (run && !pasteHintTimer) pasteHintTimer = setInterval(rotatePasteHint, PASTE_HINT_MS);
+  else if (!run && pasteHintTimer){ clearInterval(pasteHintTimer); pasteHintTimer = 0; }
+  if (reduced && pasteHintCur !== PASTE_HINT_DEFAULT){
+    clearTimeout(pasteHintSwapTimer);
+    pasteHintEl.classList.remove('is-swapping');
+    showPasteHint(PASTE_HINT_DEFAULT);
+  }
+}
+function fillPasteHint(){
+  if (!pasteHintCur || !pasteHintCur.fill || urlInput.value || pasteHintEl.classList.contains('is-swapping')) return false;
+  urlInput.value = pasteHintCur.fill;
+  urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+  urlInput.focus();
+  try { urlInput.setSelectionRange(urlInput.value.length, urlInput.value.length); } catch(e){}
+  return true;
+}
+if (pasteHintEl && pasteHintTextEl && pasteHintTryEl){
+  try { pasteHintEl.style.fontFamily = getComputedStyle(urlInput).fontFamily; } catch(e){}
+  const coarse = pasteHintMq('(pointer: coarse)');
+  pasteHintTryEl.textContent = coarse && coarse.matches ? 'try' : 'tab';
+  pasteHintTryEl.title = 'Search this (Tab)';
+  showPasteHint(PASTE_HINT_DEFAULT);
+  pasteHintEl.hidden = false;
+  urlInput.parentElement.classList.add('hint-live');
+  urlInput.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return;
+    if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'ArrowRight'){ if (fillPasteHint()) e.preventDefault(); }
+  });
+  pasteHintTryEl.addEventListener('mousedown', (e) => e.preventDefault());   // keep the bar's focus/caret
+  pasteHintTryEl.addEventListener('click', (e) => { e.preventDefault(); fillPasteHint(); });
+  document.addEventListener('visibilitychange', syncPasteHintTimer);
+  if (pasteHintReduced){
+    if (pasteHintReduced.addEventListener) pasteHintReduced.addEventListener('change', syncPasteHintTimer);
+    else if (pasteHintReduced.addListener) pasteHintReduced.addListener(syncPasteHintTimer);
+  }
+  syncPasteHintTimer();
 }
 
 const dangerScrim = $('danger-scrim');
