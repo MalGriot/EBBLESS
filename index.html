@@ -2696,6 +2696,8 @@ body.week-up-on{overflow:hidden}
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
   <div id="splashGate" class="splash-gate">
+    <button id="splashGateTutorial" type="button" class="splash-choice-btn splash-choice-btn-primary">Tutorial</button>
+    <button id="splashGateEnter" type="button" class="splash-choice-btn">Enter</button>
     <button id="splashInstallBtn" type="button" class="splash-choice-btn splash-choice-btn-primary">Install</button>
     <div id="splashGateHelp" class="splash-gate-help" aria-live="polite" hidden></div>
   </div>
@@ -3804,6 +3806,8 @@ const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 // touch-only, unlike a real Mac.
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// iPhone-only detection (excluding iPad) for install gate bypass
+const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
 if (!isStandaloneDisplay()){
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -21583,6 +21587,18 @@ function showInstallGate(){
       setHelp('<b>Installed!</b> Open EBBLESS from your home screen.');
     });
   }
+  // Add event listeners for Tutorial/Enter buttons in the gate
+  const tutorialBtn = $('splashGateTutorial'), enterBtn = $('splashGateEnter');
+  const gateDismiss = () => splashEl.classList.add('is-hidden');
+  if (tutorialBtn) tutorialBtn.addEventListener('click', () => {
+    gateDismiss();
+    runIntro(false);
+  }, { once: true });
+  if (enterBtn) enterBtn.addEventListener('click', () => {
+    try{ localStorage.setItem(ONB_KEY, 'true'); }catch(e){}
+    gateDismiss();
+    startApp();
+  }, { once: true });
   // brand beat, then the splash reveal - same lead-in as showSplashChoice()
   setTimeout(() => {
     discardIntroChrome();
@@ -21966,7 +21982,7 @@ if (introBeatCapture){
   // the forced gold set earlier with the real time-of-day color again
   document.documentElement.style.setProperty('--clock-accent', '#e0b26a');
 } else if (forceIntroPreview) runIntro(true);
-else if (mobileInstallGate) showInstallGate();
+else if (mobileInstallGate && !isIPhone) showInstallGate();
 else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVITE_DAY_KEY)){
   // Took "Enter" without ever watching - offer the choice again, once a day.
   markInviteShown(TUTORIAL_INVITE_DAY_KEY);
