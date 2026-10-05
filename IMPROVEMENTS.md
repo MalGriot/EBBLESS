@@ -8080,3 +8080,43 @@ Add entries in this shape:
   title says "extended"; filter-with-fallback. `SEARCH_CACHE_VERSION` v9.
   Verified locally with fetch stubbed: payload correct, toast, hidden on
   SoundCloud tracks. Worker tests 47/47.
+
+### beta-page-redesign: "Join the beta" page built around one big join button, plus more about the app
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Testers keep asking how to get in. The email link should
+  be enough (pasting the link is a last resort; the page already opens on
+  click). Center the beta signup page on the "join the beta" button and add
+  more on the page: what the app is, what you can do, screenshots, a
+  tutorial. Make it look good.
+- **Touches:** beta signup page (`beta/`), invite email copy.
+- **Branch:** agent/beta-page-redesign
+- **Notes:** Synced from Geethub issue #279.
+
+### tutorial-hide-admin-shortcuts: Remove Shift+S and Shift+B from the Settings shortcut list
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Shift+S and Shift+B are admin-only. Take them out of the
+  shortcut/tutorial list in Settings so regular users don't see them.
+- **Touches:** Settings keyboard shortcuts list (merged `keyboard-shortcuts-settings-page`).
+- **Branch:** agent/tutorial-hide-admin-shortcuts
+- **Notes:** Synced from Geethub issue #281. Title only.
+
+### beta-acceptance-email-check: Confirm one tester actually got their acceptance email
+- **Status:** dropped
+- **Priority:** medium
+- **Description:** Check whether the tester named in the issue received
+  their beta acceptance email; if not, find out why and resend.
+- **Touches:** beta signup worker / email sending logs.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #280 (tester address is in the issue, kept out of this file). Ops check, not a feature. Closed by MAL GRIOT 2026-10-05.
+
+### playlist-art-as-track-art: Playlist cover shows as the album art for many tracks
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** In some playlists, lots of tracks show the playlist's
+  cover instead of their own album art. Repro:
+  https://open.spotify.com/playlist/7mQ2rBHpFQGr06cfL0u2nI
+- **Touches:** album art lookup (related: merged `album-art-consistent-per-album`).
+- **Branch:** agent/playlist-art-as-track-art
+- **Notes:** Synced from Geethub issue #282.
