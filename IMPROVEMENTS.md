@@ -7948,7 +7948,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #269. Title only.
 
 ### tester-admin-ui: Admin page to view and edit tester info from the sheet
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** An easy-to-navigate admin page showing testers' info
   from the Google Sheet (names, etc.), with some customization and the
