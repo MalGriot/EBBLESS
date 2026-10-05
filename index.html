@@ -840,6 +840,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .player-like-btn svg{width:14px;height:14px}
 .player-like-btn:hover{background:var(--panel-3);color:var(--text)}
 .player-like-btn.is-liked{color:var(--player-accent)}
+.player-decline-btn[hidden]{display:none}
 .track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
@@ -1356,6 +1357,10 @@ body.queue-over-fs #queue-scrim{bottom:0}
   background:var(--panel-3);color:var(--text);font-size:12.5px;padding:10px 16px;border-radius:20px;
   box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .toast.is-open{opacity:1;transform:translate(-50%,0)}
+.toast.has-action{display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px}
+.toast.has-action.is-open{pointer-events:auto}
+.toast-action{background:var(--accent);color:#1a1a1a;border:0;border-radius:14px;padding:6px 14px;
+  font-size:12px;font-weight:600;cursor:pointer}
 .sw-update-toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translate(-50%,10px);z-index:81;
   display:flex;align-items:center;gap:12px;background:var(--panel-3);color:var(--text);font-size:12.5px;
   padding:10px 10px 10px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
@@ -2854,6 +2859,10 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
             </button>
             <div class="title marquee" id="trackTitle"><span>—</span></div>
+            <!-- currents-thumbs-down (#266): only while the track came from CuRRentSSsss -->
+            <button class="player-like-btn player-decline-btn" id="playerDeclineBtn" title="Not for me: drop from CuRRentSSsss" aria-label="Not for me: drop from CuRRentSSsss" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+            </button>
             <button class="player-like-btn" id="playerLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
             </button>
@@ -4218,7 +4227,7 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak'];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined'];
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
 // Coming back to the tab (or window) after this long pulls other devices'
@@ -5845,7 +5854,7 @@ if (keepAliveAudio && isIOS){
 }
 const playBtn = $('playBtn'), playIco = $('playIco'), prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
 const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge = $('repeatOneBadge');
-const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = $('flowReportBtn'), playerLikeBtn = $('playerLikeBtn');
+const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = $('flowReportBtn'), playerLikeBtn = $('playerLikeBtn'), playerDeclineBtn = $('playerDeclineBtn');
 const desktopFsExitBtn = $('desktopFsExitBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
 const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
@@ -5879,11 +5888,20 @@ const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlid
    TOAST
    ========================================================================= */
 let toastTimer = null;
-function showToast(msg){
+// action (optional): { label, run } adds a button (e.g. Undo) and keeps the
+// toast up a little longer so there's time to reach it.
+function showToast(msg, action){
   toastEl.textContent = msg;
+  toastEl.classList.toggle('has-action', !!action);
+  if (action){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
+    b.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(toastTimer); toastEl.classList.remove('is-open'); action.run(); });
+    toastEl.appendChild(b);
+  }
   toastEl.classList.add('is-open');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), 2200);
+  toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), action ? 6000 : 2200);
 }
 
 /* =========================================================================
@@ -6928,6 +6946,7 @@ const CTX_ICON_PIN = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 
 const CTX_ICON_LINK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12a5 5 0 015-5h3v2h-3a3 3 0 000 6h3v2h-3a5 5 0 01-5-5zm6-1h4v2h-4v-2zm5-4h3a5 5 0 010 10h-3v-2h3a3 3 0 000-6h-3V7z"/></svg>';
 const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h6V4l-2.35 2.35z"/></svg>';
 const CTX_ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V2L7 7l5 5V8c3.31 0 6 2.69 6 6a6 6 0 01-6 6 6 6 0 01-6-6H4a8 8 0 008 8 8 8 0 008-8c0-4.42-3.58-8-8-8z"/></svg>';
+const CTX_ICON_DECLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
 const CTX_ICON_ADD_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/></svg>';
 const CTX_ICON_ALBUM = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 14.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm0-5.5a1 1 0 100 2 1 1 0 000-2z"/></svg>';
@@ -7164,6 +7183,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     // playlist/album's link plus this track's position within it, so only
     // offer it when the parent actually came from a real link.
     if (canonicalLinkForPlaylist(pl)) items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
+    if (plId === SWELL_ID) items.push({ action: 'decline', label: 'Not for me', icon: CTX_ICON_DECLINE });
     items.push({ sep: true });
   }
   items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
@@ -7208,6 +7228,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'addqueue'){ queueAddToEnd(trackIdx, plId); showToast('Added to queue'); }
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
+  else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
   else if (action === 'art'){ if (t) openTrackArtFlow(plId, trackIdx); }
   else if (action === 'remove'){
@@ -10528,11 +10549,13 @@ function timeTrackFit(t, ctx, tagCache){
 // Weighted shuffle (exponential race): a track that fits the moment is up
 // to ~2x as likely to come early, one that clashes about half - never
 // excluded. CuRRentSSsss uses it to lean which seeds it picks.
-function timeWeightedShuffle(tracks, ctx, strength){
+// lean (optional): t -> extra log-weight, CuRRentSSsss' taste lean
+// (currentsTasteLean) so seeds favor what the listener keeps coming back to.
+function timeWeightedShuffle(tracks, ctx, strength, lean){
   const tagCache = lsGet(LS_TAG_CACHE, {}) || {};
   const k = strength || 0.7;
   return tracks
-    .map(t => ({ t, r: -Math.log(1 - Math.random()) / Math.exp(k * timeTrackFit(t, ctx, tagCache)) }))
+    .map(t => ({ t, r: -Math.log(1 - Math.random()) / Math.exp(k * timeTrackFit(t, ctx, tagCache) + (lean ? lean(t) : 0)) }))
     .sort((a, b) => a.r - b.r)
     .map(x => x.t);
 }
@@ -10784,6 +10807,9 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   // opts.timeCtx: CuRRentSSsss passes the mood of the period it's filling.
   ranked = applyTimePreference(ranked, mood && mood.candMetrics, (opts && opts.timeCtx) || getTimeContext(), timeScale);
   if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
+  // Thumbs-downs and what the listener returns to (applyTastePreference).
+  ranked = applyTastePreference(ranked);
+  const declinedV = tasteProfile().declined.v;
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
   // unaffected by where the draw happened to place a candidate.
@@ -10801,7 +10827,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
     if (skipArtists && skipArtists.has(primaryArtistKey(c.artist))) continue;
     const tagNames = (c.tags || []).map(t => t.name);
     if (c.videoId){
-      if (excludeVideoIds.has(c.videoId)) continue;
+      if (excludeVideoIds.has(c.videoId) || declinedV[c.videoId]) continue;
       if (!discoverLongTrackOk(c.duration || 0, rank, allowLong)) continue;
       // videoId is only for playback - the displayed title/artist/art come
       // from the Spotify/Apple Music second matching pass, not from
@@ -10813,7 +10839,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
     }
     try{
       const match = await searchYouTube(c.title, c.artist);
-      if (!match.videoId || excludeVideoIds.has(match.videoId)) continue;
+      if (!match.videoId || excludeVideoIds.has(match.videoId) || declinedV[match.videoId]) continue;
       if (!discoverLongTrackOk(match.duration || 0, rank, allowLong)) continue;
       const meta = await resolveDiscoverMetadata(c.title, c.artist);
       resolved.push({ title: meta.title, artist: meta.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: meta.art, duration: match.duration || 0, tags: tagNames });
@@ -10871,6 +10897,257 @@ function recordListenSignal(track, weight){
   // daily write cap was already hit once. The local graph still gets all 8.
   lookupTrackTags(track).then(tags => applyListenSignal(tags, weight, 4)).catch(() => {});
 }
+
+/* ---------- taste: what the listener comes back to (GitHub #266) ---------- */
+// The tag graph above learns genres; this learns tracks and artists, and
+// weighs them by return rather than by plays: playing something again on
+// another day, playing it through, liking it, or saving it to more than one
+// playlist count for a lot; a skip in the first 30s counts against it; a
+// one-off play fades out over a month or so. CuRRentSSsss leans its seeds on
+// it (currentsTasteLean) and Discover/CuRRentSSsss rank candidates with it
+// (applyTastePreference). LS_TASTE stays on this device (it changes on
+// every listen, not worth a sync push); the thumbs-down set LS_DECLINED is
+// profile-synced (see PROFILE_SETTING_KEYS).
+const LS_TASTE = 'ebbless:taste';        // { videoId: { t, a, d: days played, day: last day played, f: finishes, k: early skips, ts } }
+const LS_DECLINED = 'ebbless:declined';  // thumbs-down: { v: { videoId: { t, a, k: title|artist, g: [tags], ts } }, a: { artistKey: n }, g: { tag: n } }
+const TASTE_MAX = 1500;
+const TASTE_DECAY_DAYS = 30;            // a one-off play's weight halves every 30 days
+const DECLINED_MAX = 600;
+let tasteMemo = null;
+
+// kind: 'play' (once per local day counts toward returns) | 'finish' | 'skip'
+function noteTaste(t, kind){
+  if (!t || !t.videoId) return;
+  try {
+    const all = lsGet(LS_TASTE, {}) || {};
+    const e = all[t.videoId] || { t: t.title || '', a: t.artist || '', d: 0, f: 0, k: 0 };
+    delete all[t.videoId];  // re-insert so key order tracks recency for trimming
+    const now = Date.now(), day = localDayKey(now);
+    if (kind === 'play'){ if (e.day !== day){ e.d = (e.d || 0) + 1; e.day = day; } }
+    else if (kind === 'finish') e.f = Math.min(20, (e.f || 0) + 1);
+    else if (kind === 'skip') e.k = Math.min(10, (e.k || 0) + 1);
+    e.ts = now;
+    all[t.videoId] = e;
+    const keys = Object.keys(all);
+    if (keys.length > TASTE_MAX) keys.slice(0, keys.length - TASTE_MAX).forEach(k => delete all[k]);
+    lsSet(LS_TASTE, all);
+    tasteMemo = null;
+  } catch(err){}
+}
+function tasteTrackScore(e, now){
+  if (!e) return 0;
+  const returns = Math.min(10, Math.max(0, (e.d || 1) - 1));
+  const raw = Math.min(8, e.f || 0) + 2 * returns - 2.5 * (e.k || 0);
+  if (returns) return raw;
+  return raw * Math.pow(0.5, (now - (e.ts || now)) / 86400000 / TASTE_DECAY_DAYS);
+}
+function tagNameList(tags){
+  return (tags || []).map(x => String(x && x.name ? x.name : (x || '')).toLowerCase()).filter(Boolean);
+}
+function declinedStore(){
+  const d = lsGet(LS_DECLINED, null) || {};
+  const obj = (o) => (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+  return { v: obj(d.v), a: obj(d.a), g: obj(d.g) };
+}
+// Everything ranking needs, rebuilt at most every few seconds (a CuRRentSSsss
+// fill calls Discover once per slot).
+function tasteProfile(){
+  const now = Date.now();
+  if (tasteMemo && now - tasteMemo.at < 5000) return tasteMemo;
+  const tracks = new Map(), artists = new Map(), likedTags = new Map();
+  const add = (v, artist, w) => {
+    if (!w) return;
+    if (v) tracks.set(v, (tracks.get(v) || 0) + w);
+    const a = primaryArtistKey(artist);
+    if (a) artists.set(a, (artists.get(a) || 0) + w);
+  };
+  const taste = lsGet(LS_TASTE, {}) || {};
+  Object.keys(taste).forEach(v => { const e = taste[v]; if (e) add(v, e.a, tasteTrackScore(e, now)); });
+  const tagCache = lsGet(LS_TAG_CACHE, {}) || {};
+  const liked = getCachedPlaylist(LIKED_ID);
+  if (liked) liked.tracks.forEach(t => {
+    if (!t || !t.videoId) return;
+    add(t.videoId, t.artist, 3);
+    tagNameList((t.tags && t.tags.length) ? t.tags : tagCache[tagCacheKey(t)]).forEach(g => likedTags.set(g, (likedTags.get(g) || 0) + 1));
+  });
+  // The same track saved to more than one playlist was chosen again.
+  const saved = new Map();
+  getLibrary().forEach(id => {
+    if (id === LIKED_ID || id === SWELL_ID || id === BLEND_ID || id.startsWith('discover-ext:') || isPodcastPlaylistId(id)) return;
+    const pl = getCachedPlaylist(id);
+    const seen = new Set();
+    if (pl) pl.tracks.forEach(t => {
+      if (!t || !t.videoId || seen.has(t.videoId)) return;
+      seen.add(t.videoId);
+      const x = saved.get(t.videoId);
+      if (x) x.n++; else saved.set(t.videoId, { n: 1, a: t.artist });
+    });
+  });
+  saved.forEach((x, v) => { if (x.n > 1) add(v, x.a, 1.5 * (x.n - 1)); });
+  const declined = declinedStore();
+  declined.keys = new Set(Object.keys(declined.v).map(v => declined.v[v] && declined.v[v].k).filter(Boolean));
+  tasteMemo = { at: now, tracks, artists, likedTags, declined };
+  return tasteMemo;
+}
+// Seed lean for CuRRentSSsss, in log-weight units (+1.5 ~ 4.5x as likely).
+function currentsTasteLean(t, prof){
+  if (!t) return 0;
+  if (prof.declined.v[t.videoId]) return -4;
+  const a = primaryArtistKey(t.artist);
+  const s = (prof.tracks.get(t.videoId) || 0) + 0.3 * (prof.artists.get(a) || 0) - 2 * (prof.declined.a[a] || 0);
+  return Math.max(-3, Math.min(1.5, s / 4));
+}
+// Genres (tags) the listener has turned down, net of how often the same tag
+// shows up across their liked songs - two declines of a genre they rarely
+// like is a strong "avoid", a stray decline of one they love barely counts.
+function declinedTagPenalty(tagNames, prof){
+  const g = prof.declined.g;
+  let pen = 0;
+  tagNames.slice(0, 6).forEach(tag => {
+    const n = (g[tag] || 0) - (prof.likedTags.get(tag) || 0) / 3;
+    if (n >= 2) pen += 0.3; else if (n >= 1) pen += 0.1;
+  });
+  return Math.min(0.5, pen);
+}
+// Same shape as applyTimePreference. Drops declined tracks and artists with
+// two or more thumbs-downs outright; nudges the rest by declines, by artists
+// whose tracks keep getting skipped early, and (gently) toward artists the
+// listener returns to.
+function applyTastePreference(ranked){
+  if (!ranked.length) return ranked;
+  const prof = tasteProfile();
+  const dv = prof.declined;
+  let touched = false;
+  const out = [];
+  ranked.forEach(x => {
+    const a = primaryArtistKey(x.c.artist);
+    const aDecl = dv.a[a] || 0;
+    if (aDecl >= 2 || (x.c.videoId && dv.v[x.c.videoId]) || dv.keys.has(tagCacheKey(x.c))){ touched = true; return; }
+    let adj = -0.25 * aDecl;
+    const aff = prof.artists.get(a) || 0;
+    if (aff < 0) adj += Math.max(-0.3, aff / 10);
+    else if (aff > 0) adj += Math.min(0.1, aff / 40);
+    adj -= declinedTagPenalty(tagNameList(x.c.tags), prof);
+    if (adj){ x.score += adj; touched = true; }
+    out.push(x);
+  });
+  if (!touched) return ranked;
+  return out.sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+
+/* ---------- thumbs-down on CuRRentSSsss (GitHub #266) ---------- */
+function addDecline(t, tags){
+  const d = declinedStore();
+  if (d.v[t.videoId]) return;
+  const a = primaryArtistKey(t.artist);
+  const g = Array.from(new Set(tagNameList(tags).filter(x => !DISCOVER_TAG_BLACKLIST.has(x)))).slice(0, 4);
+  d.v[t.videoId] = { t: t.title || '', a: t.artist || '', k: tagCacheKey(t), g, ts: Date.now() };
+  if (a) d.a[a] = (d.a[a] || 0) + 1;
+  g.forEach(x => { d.g[x] = (d.g[x] || 0) + 1; });
+  const ids = Object.keys(d.v);
+  if (ids.length > DECLINED_MAX) ids.slice(0, ids.length - DECLINED_MAX).forEach(v => delete d.v[v]);
+  lsSet(LS_DECLINED, d);
+  tasteMemo = null;
+}
+// Tags arrive late for a track that had none cached (lookupTrackTags).
+function addDeclineTags(videoId, tags){
+  const d = declinedStore();
+  const e = d.v[videoId];
+  if (!e || (e.g && e.g.length)) return;
+  e.g = Array.from(new Set(tagNameList(tags).filter(x => !DISCOVER_TAG_BLACKLIST.has(x)))).slice(0, 4);
+  e.g.forEach(x => { d.g[x] = (d.g[x] || 0) + 1; });
+  lsSet(LS_DECLINED, d);
+  tasteMemo = null;
+}
+function removeDecline(videoId){
+  const d = declinedStore();
+  const e = d.v[videoId];
+  if (!e) return;
+  const dec = (map, k) => { if (map[k] > 1) map[k]--; else delete map[k]; };
+  const a = primaryArtistKey(e.a);
+  if (a) dec(d.a, a);
+  (e.g || []).forEach(x => dec(d.g, x));
+  delete d.v[videoId];
+  lsSet(LS_DECLINED, d);
+  tasteMemo = null;
+}
+// Take track idx out of CuRRentSSsss, rewriting queue entries that point
+// past it (same approach as removeDiscoverFromQueue: the entry playing now
+// keeps playing, wherever it lands).
+function dropCurrentsTrackAt(idx){
+  const pl = playlistById(SWELL_ID);
+  if (!pl || idx < 0 || idx >= pl.tracks.length) return null;
+  const removed = pl.tracks.splice(idx, 1)[0];
+  lsSet(LS_PL(SWELL_ID), pl);
+  if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
+  if (state.queue.length){
+    const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+    const q = [];
+    let pos = -1;
+    state.queue.forEach(e => {
+      const mine = e.plId === SWELL_ID;
+      if (mine && e.idx === idx){ if (e === cur) pos = q.length - 1; return; }
+      if (e === cur) pos = q.length;
+      q.push(mine && e.idx > idx ? Object.assign({}, e, { idx: e.idx - 1 }) : e);
+    });
+    state.queue = q;
+    if (state.queuePos >= 0) state.queuePos = q.length ? Math.max(0, Math.min(pos, q.length - 1)) : -1;
+    renderQueuePanel();
+    if (state.queuePos >= 0) schedulePreload(state.queuePos);
+    persistResume();
+  }
+  return removed;
+}
+// Thumbs-down: out of CuRRentSSsss now (skipped first if it's playing),
+// never suggested again, and its artist/genres count against future picks.
+function declineCurrentsTrack(idx){
+  const pl = playlistById(SWELL_ID);
+  const t = pl && pl.tracks[idx];
+  if (!t || !t.videoId) return;
+  const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  let stopped = false;
+  if (cur && cur.plId === SWELL_ID && cur.idx === idx){
+    if (state.queuePos < state.queue.length - 1) playNext();
+    else { pausePlayback(); stopped = true; }
+  }
+  const cached = (lsGet(LS_TAG_CACHE, {}) || {})[tagCacheKey(t)];
+  const tags = (t.tags && t.tags.length) ? t.tags : (cached || []);
+  addDecline(t, tags);
+  if (!tags.length) lookupTrackTags(t).then(g => addDeclineTags(t.videoId, g)).catch(() => {});
+  recordListenSignal(t, -3);
+  dropCurrentsTrackAt(idx);
+  // it was the last thing queued: park on the track before it, paused
+  if (stopped && state.queuePos >= 0) loadIndex(state.queuePos, false);
+  rerenderLibraryKeepPanel();
+  syncDeclineBtn();
+  showToast('Got it, less like this', { label: 'Undo', run: () => undoDeclineCurrents(t, idx) });
+}
+function undoDeclineCurrents(t, idx){
+  removeDecline(t.videoId);
+  recordListenSignal(t, 3);
+  const pl = playlistById(SWELL_ID);
+  if (pl && !pl.tracks.some(x => x && x.videoId === t.videoId)){
+    const at = Math.max(0, Math.min(idx, pl.tracks.length));
+    pl.tracks.splice(at, 0, t);
+    lsSet(LS_PL(SWELL_ID), pl);
+    if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
+    state.queue = state.queue.map(e => (e.plId === SWELL_ID && e.idx >= at) ? Object.assign({}, e, { idx: e.idx + 1 }) : e);
+    renderQueuePanel();
+    persistResume();
+    rerenderLibraryKeepPanel();
+  }
+  showToast('Back in CuRRentSSsss');
+}
+function syncDeclineBtn(){
+  if (!playerDeclineBtn) return;
+  const e = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  playerDeclineBtn.hidden = !(e && e.plId === SWELL_ID && trackAt(state.queuePos));
+}
+playerDeclineBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  if (cur && cur.plId === SWELL_ID) declineCurrentsTrack(cur.idx);
+});
 
 /* ---------- queue-toggle: endless continuation ---------- */
 // Discovered tracks live in a synthetic per-origin playlist (never saved to
@@ -11033,7 +11310,11 @@ function swellHasUnseenDrop(){
    "Add more" runs a smaller round for the current period and appends;
    "Reset" re-rolls today's drops from scratch (resetCurrentsDay).
    Reset asks first (like or save anything worth keeping) and is capped at
-   CURRENTS_REROLLS_PER_DAY a day; a reload never changes the list. */
+   CURRENTS_REROLLS_PER_DAY a day; a reload never changes the list.
+   Taste (GitHub #266): seeds lean on what the listener returns to and
+   candidates are ranked against thumbs-downs (tasteProfile,
+   applyTastePreference); a thumbs-down (declineCurrentsTrack) drops the
+   track now and keeps it, and an artist declined twice, out for good. */
 const CURRENTS_BLOCK_TRACKS = 7;     // per daily period: 7 at midnight, 49 by the end of the day
 const CURRENTS_BLOCK_PLAYLISTS = 3;  // saved-playlist slots per drop, rotating through the library
 const CURRENTS_MORE_TRACKS = 8;      // "Add more" stays a smaller round
@@ -11100,10 +11381,23 @@ function latestPlayedTrack(){
   const t = pl && pl.tracks[r.trackIndex];
   return t && t.videoId ? t : null;
 }
-// Up to n seeds from a track list, each by a different artist.
-function currentsDistinctSeeds(tracks, n, timeCtx){
+// The "latest" seed (GitHub #266): the most recent play the listener didn't
+// bail on - skipping back past early skips, thumbs-downs and artists they
+// keep skipping, so one wrong-genre play doesn't steer the next drop.
+function currentsLatestSeed(prof){
+  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).slice(0, 15);
+  for (const h of hist){
+    if (!h || !h.v) continue;
+    const t = { title: h.t, artist: h.a, videoId: h.v };
+    if (currentsTasteLean(t, prof) >= 0) return t;
+  }
+  return latestPlayedTrack();
+}
+// Up to n seeds from a track list, each by a different artist. lean: see
+// timeWeightedShuffle.
+function currentsDistinctSeeds(tracks, n, timeCtx, lean){
   const out = [], artists = new Set();
-  for (const t of (timeCtx ? timeWeightedShuffle(tracks, timeCtx) : currentsShuffled(tracks))){
+  for (const t of (timeCtx ? timeWeightedShuffle(tracks, timeCtx, 0, lean) : currentsShuffled(tracks))){
     const a = primaryArtistKey(t.artist);
     if (artists.has(a)) continue;
     artists.add(a); out.push(t);
@@ -11114,11 +11408,11 @@ function currentsDistinctSeeds(tracks, n, timeCtx){
 // A playlist's seed leans on tracks the listener has actually played from
 // it; the other tracks ride along as context so Discover steers away from
 // that playlist's own artists (its recentArtists penalty).
-function currentsPlaylistSlot(pl, timeCtx){
+function currentsPlaylistSlot(pl, timeCtx, lean){
   const playable = currentsPlayable(pl);
   if (!playable.length) return null;
   const played = playable.filter(t => t.plays > 0);
-  const seed = timeWeightedShuffle(played.length ? played : playable, timeCtx)[0];
+  const seed = timeWeightedShuffle(played.length ? played : playable, timeCtx, 0, lean)[0];
   const context = currentsShuffled(playable.filter(t => t !== seed)).slice(0, 4);
   return { kind: 'playlist', seeds: [seed].concat(context) };
 }
@@ -11126,12 +11420,23 @@ function currentsSlots(mode, timeCtx, block){
   const more = mode === 'more';
   const slots = [];
   // Seeds lean toward tracks that fit the period's mood (see
-  // timeWeightedShuffle) - a weighted draw, not a filter.
-  const latest = latestPlayedTrack();
+  // timeWeightedShuffle) - a weighted draw, not a filter - and toward what
+  // the listener keeps coming back to (currentsTasteLean).
+  const prof = tasteProfile();
+  const lean = t => currentsTasteLean(t, prof);
+  const latest = currentsLatestSeed(prof);
   if (latest) slots.push({ kind: 'latest', seeds: [latest] });
 
-  const likedRecent = currentsPlayable(getCachedPlaylist(LIKED_ID)).slice(-30);
-  const likedSlots = currentsDistinctSeeds(likedRecent, more ? 2 : 3, timeCtx)
+  // The 30 newest likes plus the 10 liked songs they return to most.
+  const likedAll = currentsPlayable(getCachedPlaylist(LIKED_ID));
+  const likedRecent = likedAll.slice(-30);
+  likedAll.slice(0, -30)
+    .map(t => ({ t, s: prof.tracks.get(t.videoId) || 0 }))
+    .filter(x => x.s > 3)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 10)
+    .forEach(x => likedRecent.push(x.t));
+  const likedSlots = currentsDistinctSeeds(likedRecent, more ? 2 : 3, timeCtx, lean)
     .map(seed => ({ kind: 'liked', seeds: [seed].concat(currentsShuffled(likedRecent.filter(t => t !== seed)).slice(0, 4)) }));
 
   let plIds = getLibrary()
@@ -11146,7 +11451,7 @@ function currentsSlots(mode, timeCtx, block){
     const n = Math.min(CURRENTS_BLOCK_PLAYLISTS, plIds.length);
     plIds = Array.from({ length: n }, (_, j) => plIds[((block || 0) * CURRENTS_BLOCK_PLAYLISTS + j) % plIds.length]);
   }
-  const plSlots = plIds.map(id => currentsPlaylistSlot(getCachedPlaylist(id), timeCtx)).filter(Boolean);
+  const plSlots = plIds.map(id => currentsPlaylistSlot(getCachedPlaylist(id), timeCtx, lean)).filter(Boolean);
 
   // Interleave liked and playlist picks so the list doesn't play in blocks.
   for (let i = 0; i < Math.max(likedSlots.length, plSlots.length); i++){
@@ -11190,6 +11495,8 @@ async function buildCurrentsPicks(mode, timeCtx, block, avoid){
   const exclude = libraryVideoIdSet();
   if (avoid) avoid.forEach(v => exclude.add(v));
   (lsGet(LS_PLAY_HISTORY, []) || []).forEach(h => { if (h && h.v) exclude.add(h.v); });
+  const declined = declinedStore();
+  Object.keys(declined.v).forEach(v => exclude.add(v));
   const current = playlistById(SWELL_ID);
   const soft = new Set();
   if (current) current.tracks.forEach(t => { if (t.videoId) exclude.add(t.videoId); if (mode !== 'reset') soft.add(primaryArtistKey(t.artist)); });
@@ -11217,7 +11524,8 @@ async function buildCurrentsPicks(mode, timeCtx, block, avoid){
     // played. Only the first credited artist per seed: a multi-artist
     // string like "DJ Tunez, Wizkid" won't literally appear in another
     // upload's title or channel name.
-    const artists = Array.from(new Set(slots.map(s => (s.seeds[0].artist || '').split(',')[0].trim()).filter(Boolean)));
+    const artists = Array.from(new Set(slots.map(s => (s.seeds[0].artist || '').split(',')[0].trim()).filter(Boolean)))
+      .filter(a => (declined.a[primaryArtistKey(a)] || 0) < 2);
     for (const artist of artists){
       if (picks.length >= target) break;
       const found = await fetchArtistSearch(artist);
@@ -14182,6 +14490,7 @@ function updatePlayerLikeBtn(t){
     btn.setAttribute('aria-label', title);
     btn.querySelector('svg').setAttribute('fill', liked ? 'currentColor' : 'none');
   });
+  syncDeclineBtn();
 }
 
 function updateMediaSessionMeta(t){
@@ -14304,6 +14613,7 @@ function bumpPlayCount(entry){
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordPlayHistory(t);
+  if (!isPodcastPlaylistId(entry.plId)) noteTaste(t, 'play');
 }
 // Newest-first rolling log of what actually played, whatever playlist (or
 // Discover overflow) it came from. CuRRentSSsss reads it for its "based on
@@ -14924,17 +15234,22 @@ function userTogglePlayback(){
   playIndex(state.queuePos);
 }
 
-// A manual skip within the first 15s (or first quarter of a known-duration
+// A manual skip within the first 30s (or first quarter of a known-duration
 // track) reads as "this wasn't the vibe" - the same implicit signal an
 // early completion doesn't send. Auto-advance (the track actually ending)
-// never counts as a skip.
+// never counts as a skip. It also marks the track (and so its artist) down
+// in the taste table CuRRentSSsss seeds and ranks from (noteTaste).
 function recordSkipIfEarly(){
   if (state.queuePos < 0) return;
   const t = trackAt(state.queuePos);
   if (!t) return;
   const elapsed = Date.now() - (lastTrackStartTs || Date.now());
   const durMs = (t.duration || 0) * 1000;
-  if (elapsed < 15000 && (!durMs || elapsed < durMs * 0.25)) recordListenSignal(t, -1);
+  if (elapsed < 30000 && (!durMs || elapsed < durMs * 0.25)){
+    recordListenSignal(t, -1);
+    const entry = state.queue[state.queuePos];
+    if (!(entry && isPodcastPlaylistId(entry.plId))) noteTaste(t, 'skip');
+  }
 }
 
 function finishQueueAtEnd(opts){
@@ -17503,6 +17818,7 @@ function notePlayedThrough(pos){
     const t = trackAt(pos);
     const entry = state.queue[pos];
     if (!t || !t.videoId || (entry && isPodcastPlaylistId(entry.plId))) return;
+    noteTaste(t, 'finish');
     const s = likeNudgeState();
     s.since++;
     const now = Date.now();
