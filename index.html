@@ -238,6 +238,24 @@ video.lib-bg-video.is-playing{opacity:1}
 .import-row .paste-guide-x:hover,.import-row .paste-guide-x:focus-visible{color:var(--text)}
 .import-row .paste-guide-ok{display:block;margin:12px 0 0 auto;padding:7px 16px;font-size:12.5px}
 .import-row.paste-guide-on input{border-color:var(--accent);animation:paste-guide-ring 2.2s var(--ease-in-out) infinite}
+/* paste-recent-searches: recent searches/pastes under the empty, focused bar */
+.paste-recents{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:21;
+  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:0 14px 40px rgba(0,0,0,.5);padding:4px 0;max-height:min(372px,45vh);overflow-y:auto;overscroll-behavior:contain}
+.paste-recents[hidden]{display:none}
+.paste-recents-head{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 2px 14px;
+  font-size:11.5px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase}
+.import-row .paste-recents button{background:none;color:var(--faint);padding:0;font-weight:500;border-radius:var(--r-sm)}
+.import-row .paste-recents .paste-recents-clear{font-size:12px;padding:6px 8px;text-transform:none;letter-spacing:0}
+.import-row .paste-recents .paste-recents-clear:hover,.import-row .paste-recents .paste-recents-clear:focus-visible{color:var(--text)}
+.paste-recent{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 4px 0 14px;cursor:pointer;color:var(--text)}
+.paste-recent.is-active,.paste-recent:hover{background:var(--panel-3)}
+.paste-recent-ico{flex:none;width:16px;height:16px;color:var(--faint)}
+.paste-recent-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.paste-recent-n{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paste-recent-s{font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.import-row .paste-recents .paste-recent-x{flex:none;width:36px;height:36px;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center}
+.import-row .paste-recents .paste-recent-x:hover{color:var(--text)}
 body.onb-active .paste-guide{display:none}
 @keyframes paste-guide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes paste-guide-ring{0%,100%{box-shadow:0 0 0 0 var(--accent-dim)}50%{box-shadow:0 0 0 6px var(--accent-dim)}}
@@ -2517,6 +2535,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       <form class="import-row" id="importForm">
         <span class="import-field">
         <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+        <div class="paste-recents" id="pasteRecents" hidden></div>
         <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
         <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
@@ -8852,6 +8871,7 @@ importForm.addEventListener('submit', (e) => {
   if (parsed){
     importErr.textContent = '';
     urlInput.value = '';
+    rememberPasteRecent(raw, parsed);
     beginImportFromParsedLink(parsed);
     return;
   }
@@ -8871,6 +8891,7 @@ importForm.addEventListener('submit', (e) => {
   }
   importErr.textContent = '';
   urlInput.value = '';
+  rememberPasteRecent(val);
   // conversational-vibe-search: a sentence ("rainy sunday morning, want
   // something warm and slow") goes to the interpreter and comes back as a
   // playlist of songs; a short keyword query keeps the playlist picker.
@@ -9310,6 +9331,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
       const said = (finalText || urlInput.value).trim();
       if (said && !looksLikeUrl(said)){
         urlInput.value = '';
+        rememberPasteRecent(said);
         beginConversationalVibe(said);
       }
     };
@@ -9607,6 +9629,140 @@ if (pasteHintEl && pasteHintTextEl && pasteHintTryEl){
     else if (pasteHintReduced.addListener) pasteHintReduced.addListener(syncPasteHintTimer);
   }
   syncPasteHintTimer();
+}
+
+/* ---------- paste-recent-searches ----------
+   Focusing the empty paste bar drops down the last few things searched or
+   pasted there (newest first, de-duplicated case-insensitively). Device
+   local on purpose: LS_PASTE_RECENTS isn't a profile-synced key. Links keep
+   the library id they resolve to, so the row can show the playlist/album/
+   track name once it's been imported (else a shortened URL). Picking a row
+   puts the text back in the bar and submits it, so it runs exactly as if it
+   had been typed or pasted. Typing, blur, or Esc closes it; the hint overlay
+   and its Tab-to-fill are untouched (Tab is theirs, Enter on a highlighted
+   row is ours). */
+const LS_PASTE_RECENTS = 'ebbless:pasteRecents';  // [{ q, ts, id?, src? }], newest first
+const PASTE_RECENTS_MAX = 8;
+const PASTE_RECENT_SOURCE = { spotify: 'Spotify', youtube: 'YouTube', soundcloud: 'SoundCloud', applemusic: 'Apple Music', podcast: 'Podcast' };
+const pasteRecentsEl = $('pasteRecents');
+let pasteRecentsActive = -1;
+function getPasteRecents(){
+  const list = lsGet(LS_PASTE_RECENTS, []);
+  return Array.isArray(list) ? list.filter(r => r && typeof r.q === 'string' && r.q) : [];
+}
+function rememberPasteRecent(raw, parsed){
+  const q = String(raw || '').trim();
+  if (!q) return;
+  const entry = { q, ts: Date.now() };
+  if (parsed){
+    try { entry.id = libraryEntryForParsedLink(parsed).id; } catch(e){}
+    entry.src = parsed.source;
+  }
+  const key = q.toLowerCase();
+  const list = getPasteRecents().filter(r => r.q.toLowerCase() !== key);
+  list.unshift(entry);
+  lsSet(LS_PASTE_RECENTS, list.slice(0, PASTE_RECENTS_MAX));
+}
+function shortPasteUrl(q){
+  const s = q.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/^www\./i, '').replace(/[?#].*$/, '').replace(/\/$/, '');
+  return s.length > 42 ? s.slice(0, 40) + '\u2026' : s;
+}
+function pasteRecentLabel(r){
+  if (!r.src) return { name: r.q, sub: '' };
+  const pl = r.id ? lsGet(LS_PL(r.id), null) : null;
+  const title = pl && typeof pl.name === 'string' && pl.name.trim() ? pl.name.trim() : '';
+  const src = PASTE_RECENT_SOURCE[r.src] || '';
+  return title ? { name: title, sub: src } : { name: shortPasteUrl(r.q), sub: src };
+}
+const PASTE_RECENT_ICO_SEARCH = '<svg class="paste-recent-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 16a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm1-11h-2v5.4l4.3 2.6 1-1.7-3.3-2z"/></svg>';
+const PASTE_RECENT_ICO_LINK = '<svg class="paste-recent-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a1 1 0 1 1 1.4 1.4L12 13.4a1 1 0 0 1-1.4 0zM8.5 19.1a4 4 0 0 1-2.8-6.8l2.1-2.1 1.4 1.4-2.1 2.1a2 2 0 1 0 2.8 2.8l2.1-2.1 1.4 1.4-2.1 2.1a4 4 0 0 1-2.8 1.2zm8.1-5.3-1.4-1.4 2.1-2.1a2 2 0 1 0-2.8-2.8l-2.1 2.1-1.4-1.4 2.1-2.1a4 4 0 1 1 5.7 5.7z"/></svg>';
+function pasteRecentsBlocked(){
+  return !!urlInput.value || document.activeElement !== urlInput || urlInput.readOnly
+    || importForm.classList.contains('paste-guide-on') || document.body.classList.contains('onb-active')
+    || importOverlay.classList.contains('is-open');
+}
+function closePasteRecents(){
+  if (!pasteRecentsEl || pasteRecentsEl.hidden) return;
+  pasteRecentsEl.hidden = true;
+  pasteRecentsActive = -1;
+  urlInput.removeAttribute('aria-activedescendant');
+  urlInput.setAttribute('aria-expanded', 'false');
+}
+function setPasteRecentActive(i){
+  const rows = pasteRecentsEl.querySelectorAll('.paste-recent');
+  pasteRecentsActive = rows.length ? Math.max(-1, Math.min(i, rows.length - 1)) : -1;
+  rows.forEach((el, j) => {
+    const on = j === pasteRecentsActive;
+    el.classList.toggle('is-active', on);
+    el.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (on) el.scrollIntoView({ block: 'nearest' });
+  });
+  if (pasteRecentsActive >= 0) urlInput.setAttribute('aria-activedescendant', 'pasteRecent' + pasteRecentsActive);
+  else urlInput.removeAttribute('aria-activedescendant');
+}
+function openPasteRecents(){
+  if (!pasteRecentsEl) return;
+  const list = getPasteRecents();
+  if (!list.length || pasteRecentsBlocked()){ closePasteRecents(); return; }
+  pasteRecentsEl.innerHTML =
+    '<div class="paste-recents-head"><span>Recent</span><button type="button" class="paste-recents-clear" tabindex="-1">Clear</button></div>' +
+    '<div role="listbox" aria-label="Recent searches and links">' +
+    list.map((r, i) => {
+      const l = pasteRecentLabel(r);
+      return '<div class="paste-recent" role="option" aria-selected="false" id="pasteRecent' + i + '" data-i="' + i + '" title="' + escapeHtml(r.q) + '">' +
+        (r.src ? PASTE_RECENT_ICO_LINK : PASTE_RECENT_ICO_SEARCH) +
+        '<span class="paste-recent-txt"><span class="paste-recent-n">' + escapeHtml(l.name) + '</span>' +
+        (l.sub ? '<span class="paste-recent-s">' + escapeHtml(l.sub) + '</span>' : '') + '</span>' +
+        '<button type="button" class="paste-recent-x" tabindex="-1" aria-label="Remove from recents" data-x="' + i + '">&times;</button>' +
+      '</div>';
+    }).join('') + '</div>';
+  pasteRecentsEl.hidden = false;
+  pasteRecentsActive = -1;
+  urlInput.setAttribute('aria-expanded', 'true');
+}
+function pickPasteRecent(i){
+  const r = getPasteRecents()[i];
+  closePasteRecents();
+  if (!r) return;
+  urlInput.value = r.q;
+  urlInput.blur();
+  try { importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
+}
+if (pasteRecentsEl){
+  urlInput.setAttribute('aria-controls', 'pasteRecents');
+  urlInput.setAttribute('aria-expanded', 'false');
+  urlInput.addEventListener('focus', openPasteRecents);
+  urlInput.addEventListener('click', () => { if (pasteRecentsEl.hidden) openPasteRecents(); });
+  urlInput.addEventListener('input', () => { if (urlInput.value) closePasteRecents(); else openPasteRecents(); });
+  urlInput.addEventListener('blur', closePasteRecents);
+  urlInput.addEventListener('keydown', (e) => {
+    if (pasteRecentsEl.hidden || e.isComposing) return;
+    const n = pasteRecentsEl.querySelectorAll('.paste-recent').length;
+    if (e.key === 'ArrowDown'){ e.preventDefault(); setPasteRecentActive(pasteRecentsActive + 1 >= n ? 0 : pasteRecentsActive + 1); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); setPasteRecentActive(pasteRecentsActive <= 0 ? n - 1 : pasteRecentsActive - 1); }
+    else if (e.key === 'Enter' && pasteRecentsActive >= 0){ e.preventDefault(); pickPasteRecent(pasteRecentsActive); }
+    else if (e.key === 'Escape'){ e.preventDefault(); closePasteRecents(); }
+  });
+  // Keep the bar's focus (and the phone keyboard) while tapping inside.
+  pasteRecentsEl.addEventListener('mousedown', (e) => e.preventDefault());
+  pasteRecentsEl.addEventListener('click', (e) => {
+    if (e.target.closest('.paste-recents-clear')){
+      lsSet(LS_PASTE_RECENTS, []);
+      closePasteRecents();
+      return;
+    }
+    const x = e.target.closest('[data-x]');
+    if (x){
+      const i = +x.dataset.x;
+      lsSet(LS_PASTE_RECENTS, getPasteRecents().filter((_, j) => j !== i));
+      const keep = pasteRecentsActive;
+      openPasteRecents();
+      if (!pasteRecentsEl.hidden && keep >= 0) setPasteRecentActive(keep > i ? keep - 1 : keep);
+      return;
+    }
+    const row = e.target.closest('.paste-recent');
+    if (row) pickPasteRecent(+row.dataset.i);
+  });
 }
 
 const dangerScrim = $('danger-scrim');
