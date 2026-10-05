@@ -18,6 +18,8 @@ id = "7ba1ba2734224136b5e998365a37ea67"
 # Sheet is the source of truth, reached through its Apps Script web app
 # (tools/beta-sheet.gs). Needs the SHEET_URL and SHEET_SECRET secrets:
 # `npx wrangler secret put SHEET_URL` / `npx wrangler secret put SHEET_SECRET`.
+# The owner-only admin routes (src/admin.js, /admin/*) also need ADMIN_TOKEN
+# (32+ chars): `npx wrangler secret put ADMIN_TOKEN`. Unset = routes answer 503.
 
 # Workers AI (free tier) - /vibe-interpret's sentence -> tags/seeds
 # interpreter (conversational-vibe-search). Optional at runtime: without it

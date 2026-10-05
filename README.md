@@ -165,6 +165,27 @@ minutes while open and when the tab hides; never on localhost. In the
 console, `ebblessStats()` shows the pending batch and `ebblessStats.off()`
 opts a browser out (use it on your own devices).
 
+### Admin page
+
+`beta/admin.html` (not linked anywhere) is an owner-only view of the Sheet:
+Testers and Applicants with search, status filter, sort, a per-person
+detail panel (application answers, usage, their feedback and bug reports),
+and a column picker (show / hide / reorder, saved per browser). It can edit
+a few cells: tester `name`, `email`, `tester_status`, `notes`,
+`exclude_from_analytics`, and applicant `applicant_status`, `notes`. Each
+save asks for confirmation and refuses to overwrite a cell that changed in
+the Sheet since the page loaded. Setting an applicant to Accepted runs the
+normal acceptance (tester row + invite email). Nothing can be deleted, and
+tester link tokens are never sent to the page.
+
+It talks to the worker's `/admin/testers` (GET) and `/admin/update` (POST)
+(`worker/src/admin.js`), which need `Authorization: Bearer <ADMIN_TOKEN>`.
+Set the secret once (32+ characters, e.g. `openssl rand -hex 32`):
+`cd worker && npx wrangler secret put ADMIN_TOKEN`. Paste the same value into
+the page when it asks; it stays in sessionStorage (localStorage only with
+"Remember on this device"). Without the secret the routes answer 503.
+`?backend=staging` / `?backend=local` work as on the other beta pages.
+
 After updating `tools/beta-sheet.gs`: paste it into Apps Script, run "Set up
 / repair sheet" (adds the tab and Dashboard rows), then Deploy > Manage
 deployments > New version. Then `npx wrangler deploy` for the worker route.

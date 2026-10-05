@@ -15,6 +15,7 @@ import {
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
+import { handleAdmin } from './admin.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos } from './yt-page.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
@@ -4386,6 +4387,8 @@ export default {
   async fetch(request, env, ctx) {
     CACHE_NAMESPACE = env.CACHE_NAMESPACE || '';
     const url = new URL(request.url);
+    // Owner-only, own CORS (app origins only) and auth: before the public OPTIONS.
+    if (url.pathname.startsWith('/admin/')) return await handleAdmin(request, url, env, ctx, { envCache });
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
     try {
       if (url.pathname === '/playlist') return await handleEmbed('playlist', url, ctx);
