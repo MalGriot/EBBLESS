@@ -264,6 +264,13 @@ body.onb-active .paste-guide{display:none}
 #libSearchTracks .track-row .pl-name{color:var(--faint-2)}
 /* iOS zooms the page on focus for inputs under 16px */
 @media (max-width:859.98px){ .lib-search input{font-size:16px} }
+/* Same for every other text field (#urlInput, rename/link modals, feedback,
+   tester gate): once iOS zooms in on focus it stays zoomed, so the app no
+   longer fits the screen and pans sideways (#271). !important beats the
+   inline font-size on the JS-built modal inputs. */
+@media (max-width:859.98px){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select{font-size:16px!important}
+}
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
 .lib-grid.is-compact{grid-template-columns:repeat(3,1fr);gap:14px 12px}
 .lib-card{position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
