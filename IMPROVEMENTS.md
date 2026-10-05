@@ -8082,7 +8082,7 @@ Add entries in this shape:
   SoundCloud tracks. Worker tests 47/47.
 
 ### beta-page-redesign: "Join the beta" page built around one big join button, plus more about the app
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Testers keep asking how to get in. The email link should
   be enough (pasting the link is a last resort; the page already opens on
@@ -8094,7 +8094,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #279.
 
 ### tutorial-hide-admin-shortcuts: Remove Shift+S and Shift+B from the Settings shortcut list
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Shift+S and Shift+B are admin-only. Take them out of the
   shortcut/tutorial list in Settings so regular users don't see them.
@@ -8112,7 +8112,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #280 (tester address is in the issue, kept out of this file). Ops check, not a feature. Closed by MAL GRIOT 2026-10-05.
 
 ### playlist-art-as-track-art: Playlist cover shows as the album art for many tracks
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** In some playlists, lots of tracks show the playlist's
   cover instead of their own album art. Repro:
