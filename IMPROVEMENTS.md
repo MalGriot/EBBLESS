@@ -8120,3 +8120,29 @@ Add entries in this shape:
 - **Touches:** album art lookup (related: merged `album-art-consistent-per-album`).
 - **Branch:** agent/playlist-art-as-track-art
 - **Notes:** Synced from Geethub issue #282.
+
+### beta-testimonials-publish: Owner-picked tester quotes shown on the beta page
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Add a publish checkbox (plus an editable public quote) to
+  Feedback rows in the admin page. A public, cached worker route serves only
+  the published quotes, identified by tester number only (never name/email).
+  The beta landing page shows them as "What testers are saying".
+- **Touches:** tools/beta-sheet.gs (Feedback columns + public action), worker/src/beta.js (new GET route), beta/admin.js.
+- **Branch:** agent/beta-testimonials-publish
+- **Notes:** Requested by MAL GRIOT 2026-10-05 alongside `beta-page-redesign`. Needs worker deploy + Apps Script new version to go live.
+
+### tester-week-wrapped: When a tester's 7 days are up: one last song, then fade to a recap + feedback page
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** After a tester's 7-day feedback window ends (7 days from
+  the feedback-request email), opening EBBLESS lets them play one full song,
+  then freezes the controls and fades the app out to a page that tells them,
+  by name, that their 7 days are up, with the feedback button front and
+  center. The page shows a Spotify Wrapped-style recap: most-played tracks,
+  favorite songs/albums/playlists/podcasts, how much they listened, most
+  used features. Their listening history is kept so if they join a later
+  beta it all loads back in automatically.
+- **Touches:** index.html (play log, expiry gate, recap screen), worker/src/beta.js (/beta/me returns window end), tools/beta-sheet.gs (me_ returns feedback_request_sent), profile sync.
+- **Branch:** agent/tester-week-wrapped
+- **Notes:** Requested by MAL GRIOT 2026-10-05. Time-sensitive: testing began 2026-10-02, so the first windows end around 2026-10-10. Track names stay out of the Sheet Analytics tab (it's counts only by design).
