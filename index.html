@@ -1282,7 +1282,7 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-top:1px solid var(--border)}
 .settings-row:first-of-type{border-top:none}
 .settings-row[hidden]{display:none}
-/* a hidden first row (e.g. #installBlock off mobile) shouldn't leave the next row with a stray top border */
+/* a hidden first row shouldn't leave the next row with a stray top border */
 .settings-row[hidden]:first-of-type+.settings-row{border-top:none}
 .settings-row .label{font-size:14px}
 .settings-row .desc{font-size:12px;color:var(--faint);margin-top:2px;max-width:420px;line-height:1.5}
@@ -2929,7 +2929,7 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
       </div>
       <div class="settings-block" id="settingsAppBlock">
         <h2>App</h2>
-        <div class="settings-row" id="installBlock" hidden>
+        <div class="settings-row" id="installBlock">
           <div>
             <div class="label">Install EBBLESS</div>
             <div class="desc">Adds EBBLESS to your home screen as its own app, no browser tabs or address bar.</div>
@@ -16045,38 +16045,41 @@ if (screen.orientation && screen.orientation.lock){
 }
 
 /* ---- install prompt (Settings fallback for anyone who dismissed the splash) ----
-   Used to only reveal itself on the Chromium-only 'ebbless:install-available'
-   event, which meant it never showed on iOS Safari (no beforeinstallprompt
-   there, ever - see the splash install button's own comment above). Gated on
-   real install state now, same as the splash button, with the same iOS
-   Share-sheet fallback since there's no programmatic install API to fall
-   back on there. */
+   Always shown, on every platform (issue #268). Three states:
+   - available: native prompt if beforeinstallprompt fired, else manual
+     instructions (iOS Share sheet, or the browser menu elsewhere).
+   - installed: running standalone, or appinstalled fired this session -
+     greyed out. No localStorage flag: install state is re-derived each load.
+   - re-enabled: a fresh beforeinstallprompt in a browser tab means the app
+     was uninstalled, so it goes back to available. */
 {
   const installBlock = $('installBlock');
   const installBtn = $('installBtn');
   const installDesc = installBlock ? installBlock.querySelector('.desc') : null;
-  if (installBlock && installBtn && isMobileUA && !isStandaloneDisplay()){
-    installBlock.hidden = false;
-    let iosTapped = false;
+  if (installBlock && installBtn){
+    const DEFAULT_DESC = installDesc ? installDesc.textContent : '';
+    const setInstalled = (installed) => {
+      installBtn.disabled = installed;
+      installBtn.textContent = installed ? 'Installed' : 'Install';
+      if (installDesc) installDesc.textContent = installed ? 'EBBLESS is installed on this device.' : DEFAULT_DESC;
+    };
+    setInstalled(isStandaloneDisplay());
     installBtn.addEventListener('click', async () => {
       if (deferredInstallPrompt){
         installBtn.disabled = true;
-        await runInstallPrompt();
-        installBlock.hidden = true;
-        installBtn.disabled = false;
-      } else if (isIOS){
-        // No native install prompt on iOS Safari - point at the manual flow,
-        // then let a second tap dismiss the block.
-        if (!iosTapped){
-          iosTapped = true;
-          if (installDesc) installDesc.textContent = 'Tap Share, then Add to Home Screen.';
-          installBtn.textContent = 'Got it';
-        } else {
-          installBlock.hidden = true;
-        }
+        const accepted = await runInstallPrompt();
+        // appinstalled flips it to Installed; a dismissal leaves it usable.
+        if (!accepted) installBtn.disabled = false;
+      } else if (installDesc){
+        // No programmatic install API here (always the case on iOS Safari) -
+        // point at the manual flow instead.
+        installDesc.textContent = isIOS
+          ? 'Tap Share, then Add to Home Screen.'
+          : 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
       }
     });
-    window.addEventListener('appinstalled', () => { installBlock.hidden = true; });
+    window.addEventListener('appinstalled', () => setInstalled(true));
+    document.addEventListener('ebbless:install-available', () => setInstalled(false));
   }
 }
 
