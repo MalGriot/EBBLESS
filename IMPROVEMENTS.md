@@ -7790,7 +7790,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #253. Title only.
 
 ### whats-new-same-day-merge: "What's new" should merge same-day updates into one version
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** When several updates ship on the same day, the What's new
   list should show them as one version entry instead of several.
