@@ -132,23 +132,24 @@ svg{display:block}
    (the clock --accent, or the album-art --player-accent in the queue).
    scrollbar-color is applied only where ::-webkit-scrollbar is unsupported
    (Firefox), because Chrome 121+ drops the webkit styling once it is set. */
-.view,.queue-scroll{--sb-accent:var(--accent)}
+.view,.queue-scroll,.paste-recents-list{--sb-accent:var(--accent)}
 #queue-panel .queue-scroll{--sb-accent:var(--player-accent)}
 @media (hover:hover) and (pointer:fine){
-  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar{width:12px;height:12px}
+  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar,.paste-recents-list::-webkit-scrollbar{width:12px;height:12px}
   .view::-webkit-scrollbar-track,.queue-scroll::-webkit-scrollbar-track,
-  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner{background:transparent}
-  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb{
+  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner,
+  .paste-recents-list::-webkit-scrollbar-track,.paste-recents-list::-webkit-scrollbar-corner{background:transparent}
+  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb,.paste-recents-list::-webkit-scrollbar-thumb{
     min-height:48px;border-radius:12px;border:3px solid transparent;background-clip:padding-box;
     background-color:rgba(255,255,255,.18);background-color:color-mix(in srgb,var(--sb-accent) 38%,transparent)}
-  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb{
+  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb,.paste-recents-list:hover::-webkit-scrollbar-thumb{
     background-color:rgba(255,255,255,.26);background-color:color-mix(in srgb,var(--sb-accent) 55%,transparent)}
-  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover{
+  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover,.paste-recents-list::-webkit-scrollbar-thumb:hover{
     border-width:2px;background-color:rgba(255,255,255,.4);background-color:color-mix(in srgb,var(--sb-accent) 80%,transparent)}
-  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active{
+  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active,.paste-recents-list::-webkit-scrollbar-thumb:active{
     border-width:2px;background-color:var(--sb-accent)}
   @supports not selector(::-webkit-scrollbar){
-    .view,.queue-scroll{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
+    .view,.queue-scroll,.paste-recents-list{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
   }
 }
 
@@ -241,14 +242,24 @@ video.lib-bg-video.is-playing{opacity:1}
 /* paste-recent-searches: recent searches/pastes under the empty, focused bar */
 .paste-recents{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:21;
   background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-lg);
-  box-shadow:0 14px 40px rgba(0,0,0,.5);padding:4px 0;max-height:min(372px,45vh);overflow-y:auto;overscroll-behavior:contain}
+  box-shadow:0 14px 40px rgba(0,0,0,.5);padding:4px 0;max-height:min(372px,45vh);overflow:hidden;
+  display:flex;flex-direction:column;--pr-row:46px}
 .paste-recents[hidden]{display:none}
-.paste-recents-head{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 2px 14px;
+/* Exactly 7 rows in view; the rest scroll. On a short screen the 45vh cap
+   above wins and the list just shrinks. Bottom fade = "more below". */
+.paste-recents-list{position:relative;flex:0 1 auto;min-height:0;max-height:calc(var(--pr-row) * 7);overflow-y:auto;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.paste-recents-list.has-more{-webkit-mask-image:linear-gradient(#000 calc(100% - 22px),transparent);mask-image:linear-gradient(#000 calc(100% - 22px),transparent)}
+@media (pointer:coarse){
+  .paste-recents-list::-webkit-scrollbar{width:4px}
+  .paste-recents-list::-webkit-scrollbar-thumb{border-radius:4px;background:color-mix(in srgb,var(--accent) 55%,transparent)}
+}
+.paste-recents-head{flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 8px 2px 14px;
   font-size:11.5px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase}
 .import-row .paste-recents button{background:none;color:var(--faint);padding:0;font-weight:500;border-radius:var(--r-sm)}
 .import-row .paste-recents .paste-recents-clear{font-size:12px;padding:6px 8px;text-transform:none;letter-spacing:0}
 .import-row .paste-recents .paste-recents-clear:hover,.import-row .paste-recents .paste-recents-clear:focus-visible{color:var(--text)}
-.paste-recent{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 4px 0 14px;cursor:pointer;color:var(--text)}
+.paste-recent{display:flex;align-items:center;gap:10px;height:var(--pr-row);box-sizing:border-box;padding:0 4px 0 14px;cursor:pointer;color:var(--text)}
 .paste-recent.is-active,.paste-recent:hover{background:var(--panel-3)}
 .paste-recent-ico{flex:none;width:16px;height:16px;color:var(--faint)}
 .paste-recent-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
@@ -9642,7 +9653,7 @@ if (pasteHintEl && pasteHintTextEl && pasteHintTryEl){
    and its Tab-to-fill are untouched (Tab is theirs, Enter on a highlighted
    row is ours). */
 const LS_PASTE_RECENTS = 'ebbless:pasteRecents';  // [{ q, ts, id?, src? }], newest first
-const PASTE_RECENTS_MAX = 8;
+const PASTE_RECENTS_MAX = 500;   // full history; cap only protects localStorage (oldest dropped)
 const PASTE_RECENT_SOURCE = { spotify: 'Spotify', youtube: 'YouTube', soundcloud: 'SoundCloud', applemusic: 'Apple Music', podcast: 'Podcast' };
 const pasteRecentsEl = $('pasteRecents');
 let pasteRecentsActive = -1;
@@ -9667,10 +9678,14 @@ function shortPasteUrl(q){
   const s = q.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/^www\./i, '').replace(/[?#].*$/, '').replace(/\/$/, '');
   return s.length > 42 ? s.slice(0, 40) + '\u2026' : s;
 }
-function pasteRecentLabel(r){
+function pasteRecentLabel(r, titles){
   if (!r.src) return { name: r.q, sub: '' };
-  const pl = r.id ? lsGet(LS_PL(r.id), null) : null;
-  const title = pl && typeof pl.name === 'string' && pl.name.trim() ? pl.name.trim() : '';
+  let title = r.id && titles ? titles.get(r.id) : undefined;
+  if (title === undefined){
+    const pl = r.id ? lsGet(LS_PL(r.id), null) : null;
+    title = pl && typeof pl.name === 'string' && pl.name.trim() ? pl.name.trim() : '';
+    if (r.id && titles) titles.set(r.id, title);
+  }
   const src = PASTE_RECENT_SOURCE[r.src] || '';
   return title ? { name: title, sub: src } : { name: shortPasteUrl(r.q), sub: src };
 }
@@ -9695,7 +9710,11 @@ function setPasteRecentActive(i){
     const on = j === pasteRecentsActive;
     el.classList.toggle('is-active', on);
     el.setAttribute('aria-selected', on ? 'true' : 'false');
-    if (on) el.scrollIntoView({ block: 'nearest' });
+    if (on){   // keep the highlighted row in the list's own scroll view (not the page's)
+      const box = el.parentElement;
+      if (el.offsetTop < box.scrollTop) box.scrollTop = el.offsetTop;
+      else if (el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTop = el.offsetTop + el.offsetHeight - box.clientHeight;
+    }
   });
   if (pasteRecentsActive >= 0) urlInput.setAttribute('aria-activedescendant', 'pasteRecent' + pasteRecentsActive);
   else urlInput.removeAttribute('aria-activedescendant');
@@ -9704,11 +9723,12 @@ function openPasteRecents(){
   if (!pasteRecentsEl) return;
   const list = getPasteRecents();
   if (!list.length || pasteRecentsBlocked()){ closePasteRecents(); return; }
+  const titles = new Map();   // one playlist-cache read per id, even across hundreds of rows
   pasteRecentsEl.innerHTML =
     '<div class="paste-recents-head"><span>Recent</span><button type="button" class="paste-recents-clear" tabindex="-1">Clear</button></div>' +
-    '<div role="listbox" aria-label="Recent searches and links">' +
+    '<div class="paste-recents-list" role="listbox" aria-label="Recent searches and links">' +
     list.map((r, i) => {
-      const l = pasteRecentLabel(r);
+      const l = pasteRecentLabel(r, titles);
       return '<div class="paste-recent" role="option" aria-selected="false" id="pasteRecent' + i + '" data-i="' + i + '" title="' + escapeHtml(r.q) + '">' +
         (r.src ? PASTE_RECENT_ICO_LINK : PASTE_RECENT_ICO_SEARCH) +
         '<span class="paste-recent-txt"><span class="paste-recent-n">' + escapeHtml(l.name) + '</span>' +
@@ -9719,6 +9739,10 @@ function openPasteRecents(){
   pasteRecentsEl.hidden = false;
   pasteRecentsActive = -1;
   urlInput.setAttribute('aria-expanded', 'true');
+  const listEl = pasteRecentsEl.querySelector('.paste-recents-list');
+  const syncMore = () => listEl.classList.toggle('has-more', listEl.scrollTop + listEl.clientHeight < listEl.scrollHeight - 2);
+  listEl.addEventListener('scroll', syncMore, { passive: true });
+  syncMore();
 }
 function pickPasteRecent(i){
   const r = getPasteRecents()[i];
@@ -9756,7 +9780,11 @@ if (pasteRecentsEl){
       const i = +x.dataset.x;
       lsSet(LS_PASTE_RECENTS, getPasteRecents().filter((_, j) => j !== i));
       const keep = pasteRecentsActive;
+      const oldList = pasteRecentsEl.querySelector('.paste-recents-list');
+      const top = oldList ? oldList.scrollTop : 0;
       openPasteRecents();
+      const newList = pasteRecentsEl.querySelector('.paste-recents-list');
+      if (newList){ newList.scrollTop = top; newList.dispatchEvent(new Event('scroll')); }
       if (!pasteRecentsEl.hidden && keep >= 0) setPasteRecentActive(keep > i ? keep - 1 : keep);
       return;
     }
