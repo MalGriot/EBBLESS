@@ -187,28 +187,41 @@
     }
     $('submitBtn').disabled = true;
     Beta.status(st, 'Sending...');
-    try {
-      if (hitBug === 'Yes'){
-        const key = JSON.stringify([bug.wrong, bug.steps, bug.area, !!shot]);
-        if (!bugId || bugSentFor !== key){ bugId = (await Beta.api('/beta/report', bug)).id; bugSentFor = key; }
-      }
-      const r = await Beta.api('/beta/report', {
-        token, kind: 'feedback', form: 'survey',
-        firstImpression: $('firstImpression').value.trim(),
-        tried: Beta.checked(form, 'tried'), triedOther: $('triedOther').value.trim(),
-        feeling: Beta.radio(form, 'feeling'),
-        enjoyed: $('enjoyed').value.trim(), better: $('better').value.trim(),
-        favoriteMode: Beta.radio(form, 'favoriteMode'), changesMusic: Beta.radio(form, 'changesMusic'),
-        keepUsing: Beta.radio(form, 'keepUsing'), bringBack: $('bringBack').value.trim(),
-        hitBug, bugId: hitBug === 'Yes' ? bugId : '',
-        oneChange: $('oneChange').value.trim(),
-        ...tech,
-      });
-      $('doneId').textContent = 'Reference: ' + r.id + (hitBug === 'Yes' ? ' · Bug: ' + bugId : '');
+    const fb = {
+      token, kind: 'feedback', form: 'survey',
+      firstImpression: $('firstImpression').value.trim(),
+      tried: Beta.checked(form, 'tried'), triedOther: $('triedOther').value.trim(),
+      feeling: Beta.radio(form, 'feeling'),
+      enjoyed: $('enjoyed').value.trim(), better: $('better').value.trim(),
+      favoriteMode: Beta.radio(form, 'favoriteMode'), changesMusic: Beta.radio(form, 'changesMusic'),
+      keepUsing: Beta.radio(form, 'keepUsing'), bringBack: $('bringBack').value.trim(),
+      hitBug, bugId: hitBug === 'Yes' ? bugId : '',
+      oneChange: $('oneChange').value.trim(),
+      ...tech,
+    };
+    const done = (text) => {
+      $('doneId').textContent = text;
       clearDraft(); bugId = ''; bugSentFor = '';
       Beta.intro(); form.hidden = true; $('progress').hidden = true; $('done').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
       Beta.status(st, '');
-    } catch(err){ Beta.status(st, err.message + ' Your answers are still here.', 'err'); }
+    };
+    const key = JSON.stringify([bug.wrong, bug.steps, bug.area, !!shot]);
+    const bugPending = hitBug === 'Yes' && (!bugId || bugSentFor !== key);
+    try {
+      if (bugPending){ bugId = (await Beta.send('/beta/report', bug)).id; bugSentFor = key; }
+      fb.bugId = hitBug === 'Yes' ? bugId : '';
+      const r = await Beta.send('/beta/report', fb);
+      done('Reference: ' + r.id + (hitBug === 'Yes' ? ' · Bug: ' + bugId : ''));
+    } catch(err){
+      // Can't reach EBBLESS: keep it on this device and send it once the connection is back.
+      const stillBug = hitBug === 'Yes' && (!bugId || bugSentFor !== key);
+      if (!stillBug) fb.bugId = hitBug === 'Yes' ? bugId : '';
+      const saved = Beta.retryable(err) && Beta.queue(stillBug
+        ? { path: '/beta/report', body: fb, pre: { path: '/beta/report', body: bug, field: 'bugId' } }
+        : { path: '/beta/report', body: fb });
+      if (saved) done('Saved on this device. No connection right now, so it\'ll send by itself once you\'re back online.' + (saved === 'saved-no-shot' ? ' The screenshot was too big to keep, so it won\'t be included.' : ''));
+      else Beta.status(st, err.message + ' Your answers are still here.', 'err');
+    }
     $('submitBtn').disabled = false;
   });
 })();

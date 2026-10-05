@@ -7818,7 +7818,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #256. Title only.
 
 ### iphone-screen-off-playback: iPhone stops playing when the screen is turned off
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On iPhone, playback doesn't continue with the screen off.
   Investigate what iOS allows for PWAs/web audio and keep playback going
@@ -7828,7 +7828,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #257. Title only. Likely platform-limited for YouTube embeds.
 
 ### paste-recent-searches: Recent searches in the paste list
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The paste/search box should show the user's recent
   searches as quick picks.
@@ -7866,7 +7866,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #261.
 
 ### install-prompt-push: Push users to install the app on every open
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Regular users don't see browser apps as apps. Make
   installing a key feature: prompt every time they open the app (not
@@ -7885,7 +7885,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #263. Title only.
 
 ### empty-state-play-nudge: New users with no playlists: make the play button pulse
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On first visit with no playlists loaded, animate (blink/
   pulse) the starter playlist's play button so people intuitively just
@@ -7997,7 +7997,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #275.
 
 ### desktop-playlist-close-easier: Desktop: easier to close the playlist panel
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a tab on the right edge of the playlist window to
   close it, and make the X bigger.

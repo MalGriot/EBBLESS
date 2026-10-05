@@ -15,7 +15,8 @@
 // tester_status to Inactive and their link stops working. 24 hours after
 // acceptance, each Active tester is emailed the feedback form once
 // (feedback_request_sent records when). The 50 cap counts
-// Active testers only; tester numbers are never reused.
+// Active testers only and closes public signups (they still land as Pending);
+// you can accept past it by hand. Tester numbers are never reused.
 //
 // The worker (worker/src/beta.js) calls this as a web app with a shared
 // secret: signup, status, me (token check), report and activity, plus
@@ -422,7 +423,7 @@ function activity_(b) {
 // ---------- accepting applicants ----------
 
 // Applicant row -> Tester row. Called when applicant_status becomes Accepted.
-// previous: the status to put back if the beta is full.
+// The cap only closes public signups; accepting by hand can go over it.
 function acceptRow_(rowNum, previous) {
   const ash = sheet_(APPLICANTS), tsh = sheet_(TESTERS);
   const result = withLock_(function () {
@@ -432,10 +433,6 @@ function acceptRow_(rowNum, previous) {
     const existing = testers.filter(function (t) { return t.applicant_id === a.applicant_id; })[0];
     if (existing) return { msg: a.name + ' is already ' + existing.tester_number + ' (' + existing.tester_status + ').' };
     const active = testers.filter(function (t) { return t.tester_status === 'Active'; }).length;
-    if (active >= CAP) {
-      setCell_(ash, rowNum, 'applicant_status', previous && previous !== 'Accepted' ? previous : 'Pending');
-      return { msg: 'All ' + CAP + ' spots are taken. Set a tester to Inactive first. ' + a.name + ' was not accepted.' };
-    }
     // Numbers are never reused: next after the highest ever handed out.
     const n = testers.reduce(function (m, t) { return Math.max(m, numFrom_(t.tester_number)); }, 0) + 1;
     const id = 't' + hex_(12);
@@ -445,18 +442,20 @@ function acceptRow_(rowNum, previous) {
     };
     t.access_link = accessLink_(t.access_token);
     append_(tsh, t);
-    return { tester: t, row: tsh.getLastRow() };
+    return { tester: t, row: tsh.getLastRow(), over: active >= CAP ? active + 1 : 0 };
   });
   if (!result.tester) { toast_(result.msg); return result.msg; }
   const t = result.tester;
   const err = sendMail_(t.email, 'You\'re in: ' + t.tester_number, inviteText_(t));
   setCell_(tsh, result.row, 'notes', err ? 'Invite NOT emailed: ' + err : 'Invite emailed ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
-  const msg = t.name + ' is ' + t.tester_number + (err ? '. Invite email failed, see notes.' : '. Invite emailed.');
+  const msg = t.name + ' is ' + t.tester_number + (err ? '. Invite email failed, see notes.' : '. Invite emailed.')
+    + (result.over ? ' That makes ' + result.over + ' active, over the ' + CAP + ' cap.' : '');
   toast_(msg);
   return msg;
 }
 
-// Inactive -> Active again: only if it fits under the cap.
+// Inactive -> Active again. Allowed over the cap (it only closes public
+// signups); just say so.
 function reactivateRow_(rowNum, previous) {
   const tsh = sheet_(TESTERS);
   return withLock_(function () {
@@ -465,8 +464,7 @@ function reactivateRow_(rowNum, previous) {
     if (!t || !t.tester_id) return '';
     const active = testers.filter(function (r) { return r.tester_status === 'Active'; }).length;
     if (active > CAP) {
-      setCell_(tsh, rowNum, 'tester_status', previous && previous !== 'Active' ? previous : 'Inactive');
-      const msg = 'All ' + CAP + ' spots are taken. ' + t.tester_number + ' stays Inactive.';
+      const msg = t.tester_number + ' is Active again. That makes ' + active + ' active, over the ' + CAP + ' cap.';
       toast_(msg);
       return msg;
     }
