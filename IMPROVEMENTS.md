@@ -7771,7 +7771,7 @@ Add entries in this shape:
   video, then other panels).
 
 ### scrollbar-style: Library/playlist/queue scrollbars should use UI colors and be easy to grab
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Scrollbars in the library, open playlist and queue should
   use the app's accent/UI colors instead of the browser default, and be
@@ -7895,7 +7895,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #264. Title only.
 
 ### paste-placeholder-rotation: Paste box hint text should rotate through examples and suggestions
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** The grey placeholder in the paste box should cycle every
   few seconds through everything you can paste (a playlist, a song title,
@@ -7903,7 +7903,7 @@ Add entries in this shape:
   "roaming [location] at [time of day] + [weather]" or a song/artist they
   haven't added but would love.
 - **Touches:** paste bar placeholder.
-- **Branch:**
+- **Branch:** agent/paste-placeholder-rotation
 - **Notes:** Synced from Geethub issue #265.
 
 ### currents-thumbs-down: CuRRentSSsss should learn faster, with a thumbs-down
