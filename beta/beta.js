@@ -218,5 +218,55 @@
     });
   }
 
-  window.Beta = { BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN, intro, introOnArrival };
+  // ---- outbox: reports that couldn't reach the worker, sent later ----
+  // Item: { id, path, body, pre? }. pre = { path, body, field }: a report to
+  // send first whose returned id goes into body[field] (the bug a feedback
+  // survey links to). Kept in this browser only; flushed on any beta page.
+  const OUTBOX = 'ebbless:betaOutbox';
+  function outboxLoad(){ try { return JSON.parse(localStorage.getItem(OUTBOX)) || []; } catch(e){ return []; } }
+  function outboxSave(items){ try { items.length ? localStorage.setItem(OUTBOX, JSON.stringify(items)) : localStorage.removeItem(OUTBOX); return true; } catch(e){ return false; } }
+  // No connection, no answer, or the worker/sheet hiccuped: worth trying again later.
+  function retryable(e){ return !e.status || e.status === 429 || e.status >= 500; }
+  // api() that gives up on a request that never answers.
+  function send(path, body, ms){
+    return Promise.race([api(path, body), new Promise((_, rej) => setTimeout(() => rej(new Error('Couldn\'t reach EBBLESS. Check your connection and try again.')), ms || 45000))]);
+  }
+  // Returns 'saved', 'saved-no-shot' (screenshot too big to keep), or '' if nothing could be stored.
+  function queue(item){
+    item = JSON.parse(JSON.stringify(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) }, item)));
+    const items = outboxLoad();
+    let res = outboxSave(items.concat([item])) ? 'saved' : '';
+    if (!res){
+      [item, item.pre].forEach(x => { if (x) delete x.body.screenshot; });
+      res = outboxSave(items.concat([item])) ? 'saved-no-shot' : '';
+    }
+    if (res) flush();
+    return res;
+  }
+  let flushing = false;
+  async function flush(){
+    if (flushing) return;
+    flushing = true;
+    try {
+      for (let it; (it = outboxLoad()[0]); ){
+        try {
+          if (it.pre){
+            it.body[it.pre.field] = (await send(it.pre.path, it.pre.body)).id;
+            delete it.pre;
+            outboxSave(outboxLoad().map(x => x.id === it.id ? it : x));
+          }
+          await send(it.path, it.body);
+        } catch(e){
+          if (retryable(e)) break;   // try again later
+          // otherwise the worker refused it (bad token etc.); retrying won't help
+        }
+        outboxSave(outboxLoad().filter(x => x.id !== it.id));
+      }
+    } finally { flushing = false; }
+  }
+  if (outboxLoad().length) flush();
+  addEventListener('online', flush);
+  setInterval(() => { if (outboxLoad().length) flush(); }, 30000);
+
+  window.Beta = { BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN, intro, introOnArrival, send, queue, retryable };
 })();

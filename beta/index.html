@@ -135,15 +135,14 @@
   // Show the form right away; status only fills in the meter and can be slow
   // (sheet read on a cache miss). The worker still enforces the cap on submit.
   show('open');
-  let touched = false;
-  form.addEventListener('input', () => { touched = true; }, { once: true });
   Beta.api('/beta/status').then(s => {
     const left = Math.max(0, s.cap - s.filled);
     $('meterCount').textContent = s.filled + ' / ' + s.cap + ' testers';
     $('meterLeft').textContent = left ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full';
     requestAnimationFrame(() => { $('meterFill').style.width = Math.min(100, s.filled / s.cap * 100) + '%'; });
     $('meter').hidden = false;
-    if (!s.open && !touched && !waitlist && $('done').hidden) show('full');
+    // Full: still take the signup (it lands as Pending to approve later), just say so.
+    if (!s.open && $('done').hidden){ waitlist = true; show('waitlist'); }
   }).catch(() => {});
   $('waitlistBtn').addEventListener('click', () => { waitlist = true; show('waitlist'); $('name').focus(); });
 

@@ -103,12 +103,19 @@
     if (!body.wrong){ Beta.status(st, 'Say what went wrong.', 'err'); $('wrong').focus(); return; }
     $('submitBtn').disabled = true;
     Beta.status(st, 'Sending...');
-    try {
-      const r = await Beta.api('/beta/report', body);
-      $('doneId').textContent = r.id;
+    const done = (text) => {
+      $('doneId').textContent = text;
       Beta.intro(); form.hidden = true; $('done').hidden = false; window.scrollTo({ top: 0, behavior: 'smooth' });
       form.reset(); fillEnv(); $('shotClear').click(); Beta.status(st, '');
-    } catch(err){ Beta.status(st, err.message + ' Your report is still here.', 'err'); }
+    };
+    try {
+      done((await Beta.send('/beta/report', body)).id);
+    } catch(err){
+      // Can't reach EBBLESS: keep it on this device and send it once the connection is back.
+      const saved = Beta.retryable(err) && Beta.queue({ path: '/beta/report', body });
+      if (saved) done('Saved on this device. No connection right now, so it\'ll send by itself once you\'re back online.' + (saved === 'saved-no-shot' ? ' The screenshot was too big to keep, so it won\'t be included.' : ''));
+      else Beta.status(st, err.message + ' Your report is still here.', 'err');
+    }
     $('submitBtn').disabled = false;
   });
   $('againBtn').onclick = () => { $('done').hidden = true; form.hidden = false; window.scrollTo({ top: 0 }); };
