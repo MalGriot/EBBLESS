@@ -7997,7 +7997,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #275.
 
 ### desktop-playlist-close-easier: Desktop: easier to close the playlist panel
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add a tab on the right edge of the playlist window to
   close it, and make the X bigger.
