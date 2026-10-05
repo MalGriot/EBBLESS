@@ -132,17 +132,19 @@
     if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; }
   }
 
-  try {
-    const s = await Beta.api('/beta/status');
+  // Show the form right away; status only fills in the meter and can be slow
+  // (sheet read on a cache miss). The worker still enforces the cap on submit.
+  show('open');
+  let touched = false;
+  form.addEventListener('input', () => { touched = true; }, { once: true });
+  Beta.api('/beta/status').then(s => {
     const left = Math.max(0, s.cap - s.filled);
     $('meterCount').textContent = s.filled + ' / ' + s.cap + ' testers';
     $('meterLeft').textContent = left ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full';
     requestAnimationFrame(() => { $('meterFill').style.width = Math.min(100, s.filled / s.cap * 100) + '%'; });
     $('meter').hidden = false;
-    show(s.open ? 'open' : 'full');
-  } catch(e){
-    show('open');   // the worker still enforces the cap on submit
-  }
+    if (!s.open && !touched && !waitlist && $('done').hidden) show('full');
+  }).catch(() => {});
   $('waitlistBtn').addEventListener('click', () => { waitlist = true; show('waitlist'); $('name').focus(); });
 
   form.addEventListener('submit', async (e) => {
@@ -176,24 +178,88 @@
     $('submitBtn').disabled = true;
     Beta.status(st, 'Sending...');
     try {
-      const r = await Beta.api('/beta/signup', body);
-      Beta.intro();
-      show('done');
-      if (r.already){
-        $('doneTitle').textContent = 'YOU\'RE ALREADY ON THE LIST.';
-        $('doneText').textContent = 'That email already signed up. Nothing else to do. If you get in, you\'ll hear from me directly.';
-      } else if (r.full || r.status === 'waitlisted'){
-        $('doneTitle').textContent = 'YOU\'RE ON THE WAITLIST.';
-        $('doneText').textContent = 'If a spot opens up, you\'ll hear from me directly.';
-      } else {
-        $('doneText').textContent = 'You\'re on the list. I\'m going through signups by hand, so give me a little time. If you\'re in, you\'ll get your tester link from me directly.';
-      }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      finish(await send(body));
     } catch(err){
+      // No connection (or no answer): keep the signup on this device and send it later.
+      if (!err.status && savePending(body)){
+        showPending();
+        retryPending();
+        return;
+      }
       Beta.status(st, err.message, 'err');
       $('submitBtn').disabled = false;
     }
   });
+
+  function finish(r){
+    Beta.intro();
+    show('done');
+    if (r.already){
+      $('doneTitle').textContent = 'YOU\'RE ALREADY ON THE LIST.';
+      $('doneText').textContent = 'That email already signed up. Nothing else to do. If you get in, you\'ll hear from me directly.';
+    } else if (r.full || r.status === 'waitlisted'){
+      $('doneTitle').textContent = 'YOU\'RE ON THE WAITLIST.';
+      $('doneText').textContent = 'If a spot opens up, you\'ll hear from me directly.';
+    } else {
+      $('doneTitle').textContent = 'GOT IT.';
+      $('doneText').textContent = 'You\'re on the list. I\'m going through signups by hand, so give me a little time. If you\'re in, you\'ll get your tester link from me directly.';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // A request that never answers counts as unreachable. Retrying is safe:
+  // the worker treats a repeat email as "already signed up".
+  function send(body){
+    return Promise.race([
+      Beta.api('/beta/signup', body),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Couldn\'t reach EBBLESS.')), 20000)),
+    ]);
+  }
+
+  // ---- signups that couldn't be sent yet, kept on this device ----
+  const PENDING = 'ebbless:betaPendingSignup';
+  function loadPending(){ try { return JSON.parse(localStorage.getItem(PENDING)); } catch(e){ return null; } }
+  function savePending(body){ try { localStorage.setItem(PENDING, JSON.stringify(body)); return true; } catch(e){ return false; } }
+  function clearPending(){ try { localStorage.removeItem(PENDING); } catch(e){} }
+  function showPending(){
+    show('done');
+    $('doneTitle').textContent = 'SAVED. SENDING SOON.';
+    $('doneText').textContent = 'Couldn\'t reach EBBLESS just now, so your signup is saved on this device. It\'ll send by itself once your connection is back. Leaving this page open helps; if you close it, just open this page again later.';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function fillForm(b){
+    ['name', 'email', 'social', 'deviceOther', 'deviceModel', 'os', 'browserOther', 'platformOther', 'music', 'playlist', 'motivation', 'wants']
+      .forEach(k => { if (b[k]) $(k).value = b[k]; });
+    [['device', b.devices], ['browser', b.browsers], ['platform', b.platforms], ['comfort', [b.comfort]]]
+      .forEach(([name, vals]) => (vals || []).forEach(v => v && Beta.setRadio(form, name, v)));
+    ['device', 'browser', 'platform'].forEach(name => { $(name + 'OtherField').hidden = !Beta.checked(form, name).includes('Other'); });
+    $('agree').checked = !!b.agree; $('contactOk').checked = !!b.contactOk;
+  }
+  let retrying = false, retryTimer = 0;
+  async function retryPending(){
+    const b = loadPending();
+    if (!b || retrying) return;
+    retrying = true;
+    try {
+      const r = await send(b);
+      clearPending();
+      clearInterval(retryTimer);
+      finish(r);
+    } catch(err){
+      if (err.status){
+        // The server answered but said no (bad field, etc.): hand the form back filled in.
+        clearPending();
+        clearInterval(retryTimer);
+        show('open');
+        fillForm(b);
+        $('submitBtn').disabled = false;
+        Beta.status($('status'), err.message, 'err');
+      }
+    } finally { retrying = false; }
+  }
+  addEventListener('online', retryPending);
+  retryTimer = setInterval(retryPending, 30000);
+  if (loadPending()){ showPending(); retryPending(); }
 })();
 </script>
 </body>
