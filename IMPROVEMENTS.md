@@ -8053,6 +8053,11 @@ Add entries in this shape:
   Uptown Funk, Sugar) in a bare unmuted, user-clicked embed on localhost
   got zero ads, while youtube.com itself served one in the same browser.
   Needs a real-device check on the live site.
+  **No-midroll matcher (owner request).** Worker `/search` now keeps only
+  YouTube uploads under 8 min (`MIDROLL_MIN_SECONDS`, YouTube's mid-roll
+  minimum) unless the source song itself is 8+ min; filter-with-fallback,
+  so a song with no short upload still resolves. `SEARCH_CACHE_VERSION`
+  v8. Already-saved tracks keep their old match until "Refresh links".
   Same tester also said audio sounds low-fidelity ("pixelated photograph
   from the 80s"): see `audio-quality-boost`. Re-checked desktop today:
   forcing `tiny` still streams opus itag 251 (best). Android not confirmed,

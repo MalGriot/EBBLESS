@@ -65,7 +65,10 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v7';
+const SEARCH_CACHE_VERSION = 'v8';
+// YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
+// handleSearch)
+const MIDROLL_MIN_SECONDS = 480;
 // /search `candidates` count: the default every caller gets, and the most
 // the refresh-link picker may ask for via ?alts= (see handleSearch).
 const SEARCH_DEFAULT_ALTS = 5;
@@ -638,6 +641,16 @@ async function handleSearch(url, ctx) {
     const threshold = durationHardDiffThreshold(sourceDurationSeconds);
     const durationMatched = pool.filter(c => !c.duration || Math.abs(c.duration - sourceDurationSeconds) <= threshold);
     pool = durationMatched.length ? durationMatched : pool;
+  }
+
+  // Zero-ads rule: YouTube only puts mid-roll ads in videos 8+ minutes long,
+  // and a mid-roll can only be muted after it starts (the client's ad gate
+  // can't see it coming). So unless the song itself runs 8+ minutes, keep
+  // only uploads with a known length under that - same filter-with-fallback
+  // pattern, so a song with no short upload still resolves.
+  if (!sourceDurationSeconds || sourceDurationSeconds < MIDROLL_MIN_SECONDS) {
+    const noMidroll = pool.filter(c => c.duration && c.duration < MIDROLL_MIN_SECONDS);
+    pool = noMidroll.length ? noMidroll : pool;
   }
 
   // Album mode: the artist's own Topic upload is the album cut - prefer it
