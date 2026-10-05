@@ -7928,7 +7928,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #267. Content-dependent.
 
 ### install-button-always-settings: Settings should always show an install button
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Always show the install button in Settings, including on
   iPhone (share-sheet instructions). If already installed, show it greyed
@@ -7986,14 +7986,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #274. Title only.
 
 ### playlist-thumb-hover-open: Playlist thumbnails just open on hover-click; play button moves into the open playlist
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Remove the hover play button and the "open" button from
   2x2/3x3 playlist thumbnails; clicking just opens the playlist. Add a
   hover play button on the art at the top of the open playlist, and make
   the "play" text button more obvious.
 - **Touches:** library thumbnails (merged `desktop-playlist-hover-buttons`), playlist panel header.
-- **Branch:**
+- **Branch:** agent/playlist-thumb-hover-open
 - **Notes:** Synced from Geethub issue #275.
 
 ### desktop-playlist-close-easier: Desktop: easier to close the playlist panel
