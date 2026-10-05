@@ -2409,6 +2409,13 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 #beta-lock .bl-google[hidden]{display:none}
 #beta-lock .bl-gbtn{min-height:40px;display:flex;justify-content:center}
 #beta-lock .bl-join{margin:28px 0 0;padding:17px 24px;font-size:15px;letter-spacing:1.6px}
+#beta-lock .bl-lede{color:#f2f2f2;font-size:18px;margin:0 0 8px}
+#beta-lock .bl-flow{display:flex;flex-wrap:wrap;gap:6px 0;list-style:none;margin:18px 0 0;padding:0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#cfcfcf}
+#beta-lock .bl-flow li+li::before{content:"\2192";color:var(--accent);margin:0 10px}
+#beta-lock .bl-tester:not(.open){height:0;overflow:hidden;visibility:hidden}
+#beta-lock .bl-tester.open{margin:14px 0 0}
+#beta-lock .bl-rule-soft{background:rgba(255,255,255,.12);margin:36px 0 20px}
+#beta-lock .bl-sub{color:#f2f2f2;font-weight:600;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;margin:0 0 4px}
 #beta-lock .bl-paste{margin:28px 0 0}
 #beta-lock .bl-paste summary{cursor:pointer;font-size:13px;color:#6c6c6c;text-decoration:underline;text-underline-offset:3px;list-style:none}
 #beta-lock .bl-paste summary::-webkit-details-marker{display:none}
@@ -2420,21 +2427,30 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
     <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
     <h1 id="bl-title">EBBLESS IS IN PRIVATE BETA.</h1>
     <div class="bl-rule"></div>
-    <p>A small group gets in first. Sign up, and if you're in, your invite comes by email.</p>
+    <p class="bl-lede">Be one of the first to experience EBBLESS.</p>
+    <p>Join the beta and, once approved, we'll email you your personal link to get in.</p>
+    <ol class="bl-flow" aria-label="How you get in">
+      <li>Join</li><li>Approval</li><li>Email</li><li>You're in</li>
+    </ol>
     <a class="bl-btn primary bl-join" href="beta/">JOIN THE BETA</a>
-    <p class="bl-or">Already a tester? Tap the link in your invite email. It opens EBBLESS and lets you in.</p>
+    <div class="bl-rule bl-rule-soft"></div>
+    <p class="bl-sub">Already a tester?</p>
+    <button class="bl-btn" type="button" id="bl-open" aria-expanded="false" aria-controls="bl-tester">OPEN EBBLESS</button>
     <p class="bl-msg" id="bl-msg" role="status"></p>
-    <div class="bl-google" id="bl-google" hidden>
-      <p class="bl-or">Already in on another device? Sign in with the Google account you use in EBBLESS there.</p>
-      <div class="bl-gbtn" id="bl-gbtn"></div>
+    <div class="bl-tester" id="bl-tester">
+      <p>Tap the personal link in your invite email. It opens EBBLESS and lets you in.</p>
+      <div class="bl-google" id="bl-google" hidden>
+        <p class="bl-or">On another device already? Sign in with the Google account you use there.</p>
+        <div class="bl-gbtn" id="bl-gbtn"></div>
+      </div>
+      <details class="bl-paste">
+        <summary>Link didn't open the app? Paste it here</summary>
+        <form id="bl-form" autocomplete="off">
+          <input id="bl-input" type="text" inputmode="url" spellcheck="false" placeholder="Paste your tester link" aria-label="Tester link">
+          <button class="bl-btn" type="submit" id="bl-go">UNLOCK</button>
+        </form>
+      </details>
     </div>
-    <details class="bl-paste">
-      <summary>Link didn't let you in? Paste it here</summary>
-      <form id="bl-form" autocomplete="off">
-        <input id="bl-input" type="text" inputmode="url" spellcheck="false" placeholder="Paste your tester link" aria-label="Tester link">
-        <button class="bl-btn" type="submit" id="bl-go">UNLOCK</button>
-      </form>
-    </details>
   </div>
 </div>
 <script>
@@ -2468,7 +2484,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
   const relock = () => { lock.hidden = false; const p = video.play(); if (p && p.catch) p.catch(() => {}); };
-  const msg = (t) => { document.getElementById('bl-msg').textContent = t || ''; };
+  const msg = (t) => { document.getElementById('bl-msg').textContent = t || ''; if (t) openTester(); };
+  const openTester = () => { document.getElementById('bl-tester').classList.add('open'); document.getElementById('bl-open').setAttribute('aria-expanded', 'true'); };
+  document.getElementById('bl-open').addEventListener('click', openTester);
 
   // ?t=<token> on the app URL itself (e.g. an invite link pointed straight at the app)
   const q = new URLSearchParams(location.search);
