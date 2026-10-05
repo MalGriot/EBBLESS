@@ -7876,7 +7876,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #262.
 
 ### splash-enter-button-contrast: Splash "Enter" button is hard to read
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Change the color of the Enter button on the splash page so
   its label is clearly readable.
@@ -7907,13 +7907,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #265.
 
 ### currents-thumbs-down: CuRRentSSsss should learn faster, with a thumbs-down
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** CuRRentSSsss is suggesting genres the listener doesn't
   like. Weight what they return to (replays), not just what they played,
   and add a thumbs-down button to decline a song quickly.
 - **Touches:** Currents selection logic; related draft `algorithm-sliders`.
-- **Branch:**
+- **Branch:** agent/currents-thumbs-down
 - **Notes:** Synced from Geethub issue #266.
 
 ### intro-philosophy-video: Intro video explaining what EBBLESS is about
