@@ -111,6 +111,33 @@ svg{display:block}
 .view[hidden]{display:none}
 .view-scroll{max-width:920px;margin:0 auto;padding:8px 24px calc(140px + var(--safe-b))}
 
+/* ---------- scrollbars (library, queue, open playlist) ----------
+   Desktop only; touch/overlay scrollbars stay native. The webkit thumb is
+   12px wide for an easy grab but a transparent border + padding-box clip
+   keeps it visually slim until hovered. Thumb color follows --sb-accent
+   (the clock --accent, or the album-art --player-accent in the queue).
+   scrollbar-color is applied only where ::-webkit-scrollbar is unsupported
+   (Firefox), because Chrome 121+ drops the webkit styling once it is set. */
+.view,.queue-scroll{--sb-accent:var(--accent)}
+#queue-panel .queue-scroll{--sb-accent:var(--player-accent)}
+@media (hover:hover) and (pointer:fine){
+  .view::-webkit-scrollbar,.queue-scroll::-webkit-scrollbar{width:12px;height:12px}
+  .view::-webkit-scrollbar-track,.queue-scroll::-webkit-scrollbar-track,
+  .view::-webkit-scrollbar-corner,.queue-scroll::-webkit-scrollbar-corner{background:transparent}
+  .view::-webkit-scrollbar-thumb,.queue-scroll::-webkit-scrollbar-thumb{
+    min-height:48px;border-radius:12px;border:3px solid transparent;background-clip:padding-box;
+    background-color:rgba(255,255,255,.18);background-color:color-mix(in srgb,var(--sb-accent) 38%,transparent)}
+  .view:hover::-webkit-scrollbar-thumb,.queue-scroll:hover::-webkit-scrollbar-thumb{
+    background-color:rgba(255,255,255,.26);background-color:color-mix(in srgb,var(--sb-accent) 55%,transparent)}
+  .view::-webkit-scrollbar-thumb:hover,.queue-scroll::-webkit-scrollbar-thumb:hover{
+    border-width:2px;background-color:rgba(255,255,255,.4);background-color:color-mix(in srgb,var(--sb-accent) 80%,transparent)}
+  .view::-webkit-scrollbar-thumb:active,.queue-scroll::-webkit-scrollbar-thumb:active{
+    border-width:2px;background-color:var(--sb-accent)}
+  @supports not selector(::-webkit-scrollbar){
+    .view,.queue-scroll{scrollbar-color:color-mix(in srgb,var(--sb-accent) 55%,transparent) transparent}
+  }
+}
+
 /* ---------- library ----------
    --accent is already the Rosicrucian daily-period color clock (see
    vizRosicrucianColor() / updateLibraryClockColor() in the script), so the
