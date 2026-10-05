@@ -8016,7 +8016,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #277.
 
 ### yt-ad-onset: YouTube ads cut in loud and sudden (tester #20)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** high
 - **Description:** Tester #20 (in-app feedback, v75, Android): "The youtube
   ads are loud and really jarring and comes in without notification so its
