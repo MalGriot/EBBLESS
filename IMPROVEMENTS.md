@@ -7895,7 +7895,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #264. Title only.
 
 ### paste-placeholder-rotation: Paste box hint text should rotate through examples and suggestions
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** The grey placeholder in the paste box should cycle every
   few seconds through everything you can paste (a playlist, a song title,
@@ -7948,13 +7948,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #269. Title only.
 
 ### tester-admin-ui: Admin page to view and edit tester info from the sheet
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** An easy-to-navigate admin page showing testers' info
   from the Google Sheet (names, etc.), with some customization and the
   ability to make at least minimal edits to the sheet.
 - **Touches:** admin-only page; tester sheet backend (worker).
-- **Branch:**
+- **Branch:** agent/tester-admin-ui
 - **Notes:** Synced from Geethub issue #270. Must be admin-only.
 
 ### mobile-horizontal-overflow: Phone screen scrolls left and right
