@@ -323,32 +323,42 @@ body.onb-active .paste-guide{display:none}
 .lib-sort-btn{width:30px;height:30px;border-radius:8px;background:var(--panel-2)}
 .lib-sort-btn svg{width:15px;height:15px}
 .lib-sort-btn.is-active{color:var(--text)}
-.lib-sort-menu{left:auto;right:0;transform:translateY(-6px)}
-.lib-sort-menu.is-open{transform:translateY(0)}
+/* doubled class so the generic .art-style-menu.is-open centering
+   (declared later) can't shift this right-anchored menu off-screen */
+.art-style-menu.lib-sort-menu{left:auto;right:0;transform:translateY(-6px)}
+.art-style-menu.lib-sort-menu.is-open{transform:translateY(0)}
 .view-toggle{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
 .view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .view-toggle-btn svg{width:14px;height:14px}
 .view-toggle-btn:hover{color:var(--faint)}
 .view-toggle-btn.is-active{background:var(--panel-3);color:var(--text)}
-.lib-filter{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
-.lib-filter-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
-.lib-filter-btn:hover{color:var(--faint)}
-.lib-filter-btn.is-active{background:var(--panel-3);color:var(--text)}
-.lib-filter-cycle{display:none;padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text);background:var(--panel-2);flex:none}
-/* mobile: the 3 separate filter buttons don't fit next to the head actions,
-   so collapse them into one button that cycles all -> playlists -> albums */
+/* library filter chips (All / Playlists / Albums / Artists / Podcasts):
+   their own row under the toolbar on every width, one tap each (replaced
+   the phone-only button that silently cycled filters). Chips for kinds the
+   library doesn't hold are hidden by renderLibrary. */
+.lib-filter{display:flex;align-items:center;gap:8px;margin-top:12px;padding:4px 0;overflow-x:auto;scrollbar-width:none}
+.lib-filter::-webkit-scrollbar{display:none}
+.lib-filter-btn{position:relative;flex:none;height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--border-2);
+  font-size:12.5px;font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.lib-filter-btn:hover{color:var(--text)}
+.lib-filter-btn.is-active{background:var(--text);border-color:var(--text);color:var(--bg)}
+.lib-head-actions{flex:1;min-width:0}
+.lib-head-actions #libSearchToggle{margin-left:auto}
+.lib-view-btn{display:inline-flex;align-items:center;gap:2px}
+.lib-view-btn svg{width:16px;height:16px;margin-right:-4px}
+.lib-menu-head{padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--faint-2);letter-spacing:.02em}
+.lib-menu-head ~ .lib-menu-head{margin-top:4px;border-top:1px solid var(--border);padding-top:10px}
+.lib-view-ico{width:15px;height:15px;flex:none}
+/* phones: every toolbar control and chip is a 44px tap target (chips stay
+   36px to look like chips; ::after pads the hit area to 44px) */
 @media (max-width:859.98px){
-  .lib-filter{display:none}
-  .lib-filter-cycle{display:inline-flex;align-items:center}
-}
-/* the filter cycle sits in .lib-head-actions right after "+ New playlist"
-   (#214); on the narrowest phones that row can't fit the longest cycle
-   label ("Podcasts") plus the search toggle (#218), so shorten the button
-   to "+ New" there, and let the row wrap rather than overflow on the
-   very smallest screens */
-@media (max-width:401.98px){
-  .lib-new-word{display:none}
-  .lib-head-actions{flex-wrap:wrap;row-gap:8px;flex-shrink:1;min-width:0}
+  .lib-tb-btn{min-height:44px}
+  #libSearchToggle{width:44px;height:44px;border-radius:12px}
+  #libSearchToggle svg{width:18px;height:18px}
+  .lib-filter-btn{height:36px;font-size:13px}
+  .lib-filter-btn::after{content:"";position:absolute;inset:-5px 0}
+  .lib-filter{padding:5px 0}
+  .lib-sort-menu .art-style-opt{min-height:44px}
 }
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
@@ -609,9 +619,12 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .player-layout{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
 .player-stage{display:flex;flex-direction:column;align-items:center;padding-top:clamp(4px,2dvh,10px);min-height:0}
 .visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:clamp(6px,2dvh,14px)}
-.visual-tabs .v-tab{width:34px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+/* each tab carries a one-word label under its icon (Art / Visualizer /
+   Lyrics / Video) - icon-only tabs left people guessing */
+.visual-tabs .v-tab{min-width:52px;height:40px;padding:0 8px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .visual-tabs .v-tab svg{width:16px;height:16px}
+.v-tab-label{font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .visual-tabs .v-tab:hover{color:var(--text)}
 .visual-tabs .v-tab.is-active{background:var(--player-accent);color:#151107}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
@@ -1768,12 +1781,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      it keeps this rule unconditionally. */
   body.split-desktop:not(.desktop-fs):not(.settings-solo) .view-scroll,
   body.split-desktop #topbar{margin-right:0!important}
-  /* the library column is only 240-300px here - as narrow as the mobile
-     layout the filter/cycle split already handles, so reuse it, and shorten
-     "+ New playlist" to "+ New" so the cycle fits on the same row (#214) -
-     the row may still wrap rather than clip as a last resort */
-  body.split-desktop .lib-filter{display:none}
-  body.split-desktop .lib-filter-cycle{display:inline-flex;align-items:center}
+  /* the library column is only 240-300px here, so shorten "+ New playlist"
+     to "+ New" to keep search and View on the same row (#214) - the row
+     may still wrap rather than clip as a last resort; the filter chips
+     below scroll sideways if they don't fit */
   body.split-desktop .lib-new-word{display:none}
   body.split-desktop .section-label-row{flex-wrap:wrap;row-gap:8px}
   /* #248: library section headings (Albums / Podcasts / Songs) match the
@@ -2853,23 +2864,16 @@ body.week-up-on{overflow:hidden}
       <div id="libraryListWrap" class="hidden">
         <div class="section-label-row">
           <div class="lib-head-actions">
-            <button class="btn-ghost" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
-            <div class="lib-filter" id="libFilter" role="group" aria-label="Filter library">
-              <button type="button" class="lib-filter-btn" data-filter="all">All</button>
-              <button type="button" class="lib-filter-btn" data-filter="playlists">Playlists</button>
-              <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
-              <button type="button" class="lib-filter-btn" data-filter="albums">Albums</button>
-              <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
-            </div>
-            <button type="button" class="lib-filter-cycle" id="libFilterCycle" aria-label="Filter library"></button>
-            <button type="button" class="view-toggle-btn lib-sort-btn" id="libSearchToggle" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
+            <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             </button>
+            <!-- one "View" menu holds sort order and layout (was a sort icon
+                 plus three tiny layout icons) -->
             <div class="lib-sort">
-              <button type="button" class="view-toggle-btn lib-sort-btn" id="libSortBtn" aria-label="Sort library" aria-haspopup="true" aria-expanded="false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
-              </button>
+              <button type="button" class="btn-ghost lib-tb-btn lib-view-btn" id="libSortBtn" aria-label="View: sort and layout" aria-haspopup="true" aria-expanded="false" style="padding:5px 12px;font-size:12.5px">View<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
               <div class="art-style-menu lib-sort-menu" id="libSortMenu">
+                <div class="lib-menu-head">Sort by</div>
                 <button class="art-style-opt" data-sort="custom">
                   <span class="art-style-label">Manual order</span>
                   <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
@@ -2886,18 +2890,25 @@ body.week-up-on{overflow:hidden}
                   <span class="art-style-label">Most songs</span>
                   <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
                 </button>
+                <div class="lib-menu-head">Layout</div>
+                <div id="libViewToggle" role="group" aria-label="Library layout">
+                  <button type="button" class="art-style-opt" data-mode="grid">
+                    <svg class="lib-view-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                    <span class="art-style-label">Grid</span>
+                    <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                  </button>
+                  <button type="button" class="art-style-opt" data-mode="compact">
+                    <svg class="lib-view-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="2.5" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="16" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="16" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="16" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="16" width="5.5" height="5.5" rx="1"/><rect x="16" y="16" width="5.5" height="5.5" rx="1"/></svg>
+                    <span class="art-style-label">Small grid</span>
+                    <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                  </button>
+                  <button type="button" class="art-style-opt" data-mode="list">
+                    <svg class="lib-view-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="5" height="5" rx="1"/><rect x="3" y="14.5" width="5" height="5" rx="1"/><rect x="10.5" y="6" width="10.5" height="2" rx="1"/><rect x="10.5" y="16" width="10.5" height="2" rx="1"/></svg>
+                    <span class="art-style-label">List</span>
+                    <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                  </button>
+                </div>
               </div>
-            </div>
-            <div class="view-toggle" id="libViewToggle" role="group" aria-label="Library layout">
-              <button type="button" class="view-toggle-btn" data-mode="grid" aria-label="Grid view">
-                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
-              </button>
-              <button type="button" class="view-toggle-btn" data-mode="compact" aria-label="Compact grid view">
-                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.5" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="16" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="16" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="16" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="16" width="5.5" height="5.5" rx="1"/><rect x="16" y="16" width="5.5" height="5.5" rx="1"/></svg>
-              </button>
-              <button type="button" class="view-toggle-btn" data-mode="list" aria-label="List view">
-                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="5" height="5" rx="1"/><rect x="3" y="14.5" width="5" height="5" rx="1"/><rect x="10.5" y="6" width="10.5" height="2" rx="1"/><rect x="10.5" y="16" width="10.5" height="2" rx="1"/></svg>
-              </button>
             </div>
           </div>
         </div>
@@ -2907,6 +2918,13 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
+        </div>
+        <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
+          <button type="button" class="lib-filter-btn" data-filter="all">All</button>
+          <button type="button" class="lib-filter-btn" data-filter="playlists" id="libFilterPlaylists">Playlists</button>
+          <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
         </div>
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
           <div class="section-label">Playlists</div>
@@ -2940,6 +2958,7 @@ body.week-up-on{overflow:hidden}
         <div class="visual-tabs" id="visualTabs">
           <button class="v-tab" data-mode="art" title="Album art" aria-label="Show album art, choose display style">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></svg>
+            <span class="v-tab-label">Art</span>
           </button>
           <button class="v-tab" data-mode="viz" title="Visualizer" aria-label="Show visualizer">
             <svg class="cym-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -2948,12 +2967,15 @@ body.week-up-on{overflow:hidden}
               <g class="cym-ph"><path d="M12 4.6Q12 12 19.4 12Q12 12 12 19.4Q12 12 4.6 12Q12 12 12 4.6z"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></g>
               <g class="cym-ph" fill="currentColor" stroke="none"><circle cx="12" cy="6.4" r="1.3"/><circle cx="16.85" cy="9.2" r="1.3"/><circle cx="16.85" cy="14.8" r="1.3"/><circle cx="12" cy="17.6" r="1.3"/><circle cx="7.15" cy="14.8" r="1.3"/><circle cx="7.15" cy="9.2" r="1.3"/><circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></g>
             </svg>
+            <span class="v-tab-label">Visualizer</span>
           </button>
           <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
+            <span class="v-tab-label">Lyrics</span>
           </button>
-          <button class="v-tab" id="ytPanelBtn" title="YouTube" aria-label="Open the YouTube player for this song" aria-haspopup="dialog" disabled aria-disabled="true">
+          <button class="v-tab" id="ytPanelBtn" title="Watch the video" aria-label="Open the YouTube player for this song" aria-haspopup="dialog" disabled aria-disabled="true">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
+            <span class="v-tab-label">Video</span>
           </button>
           <div class="art-style-menu" id="artStyleMenu">
             <button class="art-style-opt" data-style="default">
@@ -3296,21 +3318,21 @@ body.week-up-on{overflow:hidden}
             <span class="t tnum" id="timeDur">0:00</span>
           </div>
           <div class="controls-row">
-            <button class="ctl-btn small" id="shuffleBtn" title="Shuffle" aria-label="Shuffle">
+            <button class="ctl-btn small" id="shuffleBtn" title="Shuffle" aria-label="Shuffle" aria-pressed="false">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
             </button>
-            <button class="ctl-btn" id="prevBtn" title="Previous" aria-label="Previous">
+            <button class="ctl-btn" id="prevBtn" title="Previous song" aria-label="Previous song">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
             </button>
             <button class="ctl-btn pod-skip" id="skipBackBtn" title="Back 15 seconds" aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
-            <button class="ctl-btn main" id="playBtn" title="Play/Pause" aria-label="Play or pause">
+            <button class="ctl-btn main" id="playBtn" title="Play or pause" aria-label="Play or pause">
               <svg id="playIco" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
             <button class="ctl-btn pod-skip" id="skipFwdBtn" title="Forward 15 seconds" aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="currentColor"><path transform="matrix(-1 0 0 1 24 0)" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text></svg></button>
-            <button class="ctl-btn" id="nextBtn" title="Next" aria-label="Next">
+            <button class="ctl-btn" id="nextBtn" title="Next song" aria-label="Next song">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/></svg>
             </button>
-            <button class="ctl-btn small repeat-badge" id="repeatBtn" title="Repeat" aria-label="Repeat">
+            <button class="ctl-btn small repeat-badge" id="repeatBtn" title="Repeat: off" aria-label="Repeat: off">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
               <span class="one" id="repeatOneBadge" hidden>1</span>
             </button>
@@ -5740,6 +5762,24 @@ function removeFromLibrary(id){
   lsDel(LS_PL(id));
   lsSet(LS_PINNED, getPinnedLibrary().filter(x => x !== id));
 }
+// Undo for a playlist delete: writes the saved data, library slot and pin
+// back through lsSet, so each gets a stamp newer than the delete's
+// tombstone and a synced account restores it everywhere too.
+function restoreToLibrary(id, data, libBefore, pinnedBefore){
+  if (!data) return;
+  lsSet(LS_PL(id), data);
+  const lib = getLibrary();
+  if (!lib.includes(id)){
+    // back in its old place, counted from the entries that were before it
+    const prev = libBefore.slice(0, libBefore.indexOf(id)).filter(x => lib.includes(x));
+    const at = prev.length ? lib.indexOf(prev[prev.length - 1]) + 1 : 0;
+    lib.splice(at, 0, id);
+    lsSet(LS_LIB, lib);
+  }
+  if (pinnedBefore && !isPinned(id)) togglePin(id);
+  renderLibrary();
+  showToast('Restored');
+}
 function isSaved(id){ return getLibrary().includes(id); }
 
 /* pinned playlists float to the top of the library grid, most recently
@@ -6336,7 +6376,7 @@ const libraryFilterEmpty = $('libraryFilterEmpty');
 const libViewToggle = $('libViewToggle');
 const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
 const libFilter = $('libFilter');
-const libFilterCycle = $('libFilterCycle');
+const libFilterPlaylists = $('libFilterPlaylists'), libFilterAlbums = $('libFilterAlbums');
 const libSearch = $('libSearch'), libSearchClear = $('libSearchClear');
 const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
@@ -7023,7 +7063,7 @@ function setLibraryView(mode){
   libraryAlbumsGrid.classList.toggle('is-compact', mode === 'compact');
   libraryPodcastsGrid.classList.toggle('is-list', mode === 'list');
   libraryPodcastsGrid.classList.toggle('is-compact', mode === 'compact');
-  libViewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
+  libViewToggle.querySelectorAll('[data-mode]').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
   refreshLibraryMarquees();
@@ -7068,16 +7108,18 @@ function isPodcastEntry(pl){
 // podcasts (always filed under Podcasts).
 function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isPodcastEntry(pl) && !isArtistEntry(pl); }
 libViewToggle.addEventListener('click', (e) => {
-  const btn = e.target.closest('.view-toggle-btn');
-  if (btn) setLibraryView(btn.dataset.mode);
+  const btn = e.target.closest('[data-mode]');
+  if (!btn) return;
+  e.stopPropagation();
+  setLibraryView(btn.dataset.mode);
+  closeLibSortMenu();
 });
 const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts'];
-const LIB_FILTER_LABEL = { all: 'All', playlists: 'Playlists', artists: 'Artists', albums: 'Albums', podcasts: 'Podcasts' };
-// The Podcasts and Artists filters only exist while the library holds one
-// (kept current by renderLibrary); a saved 'podcasts'/'artists' choice reads
-// as 'all' when there are none.
-let libHasPodcasts = false, libHasArtists = false;
-function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'artists' || libHasArtists)); }
+// A filter chip only shows while the library holds that kind (kept current
+// by renderLibrary); a saved choice for a kind that's gone reads as 'all'.
+// Playlists/Albums default to shown until the first render knows better.
+let libHasPodcasts = false, libHasArtists = false, libHasPlaylists = true, libHasAlbums = true;
+function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'artists' || libHasArtists) && (m !== 'playlists' || libHasPlaylists) && (m !== 'albums' || libHasAlbums)); }
 function getLibraryFilter(){
   const mode = lsGet(LS_LIB_FILTER, 'all');
   return libFilterCycleModes().includes(mode) ? mode : 'all';
@@ -7087,21 +7129,15 @@ function setLibraryFilter(mode){
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.filter === mode);
   });
-  libFilterCycle.textContent = LIB_FILTER_LABEL[mode];
   renderLibrary();
 }
 libFilter.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-filter-btn');
   if (btn) setLibraryFilter(btn.dataset.filter);
 });
-libFilterCycle.addEventListener('click', () => {
-  const modes = libFilterCycleModes();
-  const next = modes[(modes.indexOf(getLibraryFilter()) + 1) % modes.length];
-  setLibraryFilter(next);
-});
 function applyLibSortUI(){
   const mode = getLibrarySort();
-  libSortMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
+  libSortMenu.querySelectorAll('.art-style-opt[data-sort]').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
   libSortBtn.classList.toggle('is-active', mode !== 'custom');
 }
 function openLibSortMenu(){ libSortMenu.classList.add('is-open'); libSortBtn.setAttribute('aria-expanded', 'true'); }
@@ -7111,7 +7147,7 @@ libSortBtn.addEventListener('click', (e) => {
   libSortMenu.classList.toggle('is-open');
   libSortBtn.setAttribute('aria-expanded', libSortMenu.classList.contains('is-open') ? 'true' : 'false');
 });
-libSortMenu.querySelectorAll('.art-style-opt').forEach(btn => {
+libSortMenu.querySelectorAll('.art-style-opt[data-sort]').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     setLibrarySort(btn.dataset.sort);
@@ -7130,7 +7166,6 @@ setLibraryView(getLibraryView());
 libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
   btn.classList.toggle('is-active', btn.dataset.filter === getLibraryFilter());
 });
-libFilterCycle.textContent = LIB_FILTER_LABEL[getLibraryFilter()];
 
 // library-search: case- and accent-insensitive match against the user's own
 // saved library only. The field is a drop-down behind #libSearchToggle (#218):
@@ -7183,9 +7218,14 @@ function renderLibrary(){
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
   libHasArtists = ids.some(id => isArtistEntry(getCachedPlaylist(id)));
   libFilterArtists.classList.toggle('hidden', !libHasArtists);
+  libHasAlbums = ids.some(id => { const p = getCachedPlaylist(id); return !!p && isAlbumEntry(p); });
+  libFilterAlbums.classList.toggle('hidden', !libHasAlbums);
+  libHasPlaylists = ids.some(id => { const p = getCachedPlaylist(id); return !!p && !isPodcastEntry(p) && !isArtistEntry(p) && !isAlbumEntry(p); });
+  libFilterPlaylists.classList.toggle('hidden', !libHasPlaylists);
+  // chips only help when there's more than one kind to pick between
+  libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', btn.dataset.filter === filter));
-  libFilterCycle.textContent = LIB_FILTER_LABEL[filter];
   const showPlaylists = filter === 'all' || filter === 'playlists';
   const showArtists = filter === 'all' || filter === 'artists';
   const showAlbums = filter === 'all' || filter === 'albums';
@@ -7908,7 +7948,11 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'remove'){
     if (!t) return;
     removeTrackFromPlaylistAt(plId, trackIdx);
-    showToast('Removed from playlist');
+    showToast('Removed from playlist', { label: 'Undo', run: () => {
+      const wasOpen = openLibraryPanelId === plId;
+      insertTrackIntoPlaylistAt(plId, trackIdx, t);
+      if (wasOpen) toggleLibraryPlaylistPanel(plId); // renderLibrary closed it
+    } });
     // removeTrackFromPlaylistAt triggers renderLibrary(), which always closes
     // the open library panel (see renderLibrary's closeLibraryPlaylistPanel()
     // call) - reopen it for the same playlist so the row just vanishes
@@ -7943,8 +7987,10 @@ function handleLibCtxAction(action, id){
   else if (action === 'relinkall') manualRelinkPlaylist(id);
   else if (action === 'albumtoggle') toggleAlbumOverride(id, pl);
   else if (action === 'delete'){
-    if (!confirm(`Delete "${pl.name}"? This can't be undone.`)) return;
-    removeFromLibrary(id); renderLibrary(); showToast('Deleted');
+    // delete right away with an Undo in the toast (no confirm box)
+    const libBefore = getLibrary().slice(), pinnedBefore = isPinned(id), data = lsGet(LS_PL(id), null);
+    removeFromLibrary(id); renderLibrary();
+    showToast('Deleted "' + pl.name + '"', { label: 'Undo', run: () => restoreToLibrary(id, data, libBefore, pinnedBefore) });
   }
 }
 
@@ -8550,6 +8596,23 @@ function removeTrackFromPlaylistAt(playlistId, idx){
       .filter(e => !(e.plId === playlistId && e.idx === idx))
       .map(e => (e.plId === playlistId && e.idx > idx) ? { ...e, idx: e.idx - 1 } : e);
     if (state.queuePos >= state.queue.length) state.queuePos = state.queue.length - 1;
+    state.playlist = pl;
+  }
+  renderLibrary();
+}
+
+// Undo for "Remove from playlist": puts the exact track object back where it
+// was. Goes through lsSet, so a synced account gets a fresh per-track stamp
+// that beats the removal's tombstone.
+function insertTrackIntoPlaylistAt(playlistId, idx, track){
+  const pl = getCachedPlaylist(playlistId);
+  if (!pl || !track) return;
+  if (track.videoId && pl.tracks.some(x => x.videoId === track.videoId)) return;
+  idx = Math.max(0, Math.min(idx, pl.tracks.length));
+  pl.tracks.splice(idx, 0, track);
+  lsSet(LS_PL(playlistId), pl);
+  if (state.playlist && state.playlist.id === playlistId){
+    state.queue = state.queue.map(e => (e.plId === playlistId && e.idx >= idx) ? { ...e, idx: e.idx + 1 } : e);
     state.playlist = pl;
   }
   renderLibrary();
@@ -10528,7 +10591,7 @@ function updateCreditsSpotifyLink(entry, t){
   const link = spotifyLinkForEntry(entry, t);
   a.href = link ? link.url : 'https://open.spotify.com';
   if (!link){ desc.textContent = CREDITS_SPOTIFY_DESC; a.removeAttribute('aria-label'); return; }
-  const what = link.kind === 'track' ? '\u201c' + (t.title || 'this track') + '\u201d' : 'this ' + link.kind;
+  const what = link.kind === 'track' ? '\u201c' + (t.title || 'this song') + '\u201d' : 'this ' + link.kind;
   desc.textContent = 'Listen to ' + what + ' on Spotify';
   a.setAttribute('aria-label', 'Spotify: listen to ' + what + ' on Spotify');
 }
@@ -10639,7 +10702,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 80, date: '2026-10-06', items: [
-    'Big playlists: each track shows its own album art instead of the playlist cover.',
+    'Big playlists: each song shows its own album art instead of the playlist cover.',
     'The beta page is rebuilt: how to join, what happens after, your 7 days, screenshots, updates and answers to common questions.',
     'The EBBLESS lock screen leads with Join the beta. Testers just open the link in their email.',
     'Testers: when your 7 days are up, you get one last song, then your week, wrapped.'
@@ -10658,7 +10721,7 @@ const WHATS_NEW = [
     'Tap the empty paste box to see your recent searches and links.'
   ]},
   { version: 76, date: '2026-10-05', items: [
-    'Stronger ad blocking: a song only makes sound once the real track is confirmed playing, so YouTube ads stay silent. Songs pick versions too short for mid-song ads.'
+    'Stronger ad blocking: a song only makes sound once the real song is confirmed playing, so YouTube ads stay silent. Songs pick versions too short for mid-song ads.'
   ]},
   { version: 75, date: '2026-10-05', items: [
     'Testers: already in on another device? Sign in with the same Google account to unlock this one too. No need to find your invite link again.'
@@ -10669,7 +10732,7 @@ const WHATS_NEW = [
     'Podcast captions line up with the words, highlight just before they are spoken, and start loading as soon as an episode plays.',
     'The captions model downloads once in the background after the app loads, so captions are ready when you want them.',
     'The podcast chapters button shows right away when you reopen the app mid-episode.',
-    'Dragging the progress bar is smooth and no longer skips tracks in fullscreen.',
+    'Dragging the progress bar is smooth and no longer skips songs in fullscreen.',
     'The Enter button on the splash screen is easier to read.',
     'Settings always has an install button, and shows "Installed" once you have the app.',
     'Tapping a playlist just opens it. Play from the art or the bigger Play button inside.',
@@ -10707,7 +10770,7 @@ const WHATS_NEW = [
   ]},
   { version: 67, date: '2026-10-03', items: [
     'Press Esc to close the video window.',
-    'Album art in the mini-player now fades smoothly into the next track.'
+    'Album art in the mini-player now fades smoothly into the next song.'
   ]},
   { version: 66, date: '2026-10-03', items: [
     'Record tap game on desktop: the cue line is now a sharp needle point you can see below the top icons.'
@@ -10747,9 +10810,9 @@ const WHATS_NEW = [
     'The video player is cleaner, with no extra heading or caption.'
   ]},
   { version: 55, date: '2026-10-02', items: [
-    'Artist links on the artist page now make a playlist of that artist\'s tracks.',
+    'Artist links on the artist page now make a playlist of that artist\'s songs.',
     'YouTube playlist import reads up to about 100 videos.',
-    'YouTube playlist import loads track art more smoothly.'
+    'YouTube playlist import loads song art more smoothly.'
   ]},
   { version: 53, date: '2026-10-02', items: [
     'Coming back to EBBLESS after a long time in the mini player no longer reloads the page.'
@@ -11397,7 +11460,7 @@ function weekUpHtml(r, opts){
         '<span class="wu-eyebrow">Your #1 on repeat</span><span class="wu-hero-title">' + escapeHtml(top.t) + '</span>' +
         '<span class="wu-hero-sub">' + escapeHtml(top.a || '') + '</span><span class="wu-hero-stat">' + weekUpPlays(top.n) + ' · ' + weekUpMin(top.ms) + '</span></div></section>';
     }
-    html += weekUpList('Top tracks', r.top.slice(1).map(e => ({ name: e.t, sub: e.a, art: art(e), stat: weekUpPlays(e.n) })), 2);
+    html += weekUpList('Top songs', r.top.slice(1).map(e => ({ name: e.t, sub: e.a, art: art(e), stat: weekUpPlays(e.n) })), 2);
     html += weekUpList('Top artists', r.artists.map(a => ({ name: a.name, art: a.art, stat: weekUpMin(a.ms) })));
     html += weekUpList('Top albums', r.albums.map(a => ({ name: a.name, sub: a.sub, art: a.art, stat: weekUpMin(a.ms) })));
     html += weekUpList('Playlists in rotation', r.pls.map(p => ({ name: p.name, art: p.art, stat: weekUpMin(p.ms) })));
@@ -11787,9 +11850,15 @@ function queueJumpTo(pos){
   loadIndex(state.queuePos, true);
 }
 function queueClearUpcoming(){
+  const cleared = state.queue.slice(state.queuePos + 1);
   state.queue = state.queue.slice(0, state.queuePos + 1);
   renderQueuePanel();
-  showToast('Queue cleared');
+  // Undo puts the cleared songs back right after whatever's playing now
+  showToast('Queue cleared', cleared.length ? { label: 'Undo', run: () => {
+    state.queue = state.queue.slice(0, state.queuePos + 1).concat(cleared, state.queue.slice(state.queuePos + 1));
+    renderQueuePanel();
+    schedulePreload(state.queuePos);
+  } } : undefined);
   schedulePreload(state.queuePos);
 }
 function queueReorder(fromPos, toPos){
@@ -11803,6 +11872,7 @@ function queueReorder(fromPos, toPos){
 function toggleShuffle(){
   state.shuffle = !state.shuffle;
   shuffleBtn.classList.toggle('is-active', state.shuffle);
+  shuffleBtn.setAttribute('aria-pressed', state.shuffle ? 'true' : 'false');
   miniShuffleBtn.classList.toggle('is-active', state.shuffle);
   flowShuffleBtn.classList.toggle('is-active', state.shuffle);
   if (!state.playlist || state.queuePos < 0) return;
@@ -11829,6 +11899,9 @@ function cycleRepeat(){
   state.repeat = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
   repeatBtn.classList.toggle('is-active', state.repeat !== 'off');
   repeatOneBadge.hidden = state.repeat !== 'one';
+  // the icon alone doesn't say which of the three repeat modes is on
+  const repeatLabel = state.repeat === 'one' ? 'Repeat: this song' : state.repeat === 'all' ? 'Repeat: on' : 'Repeat: off';
+  repeatBtn.title = repeatLabel; repeatBtn.setAttribute('aria-label', repeatLabel);
   miniRepeatBtn.classList.toggle('is-active', state.repeat !== 'off');
   miniRepeatOneBadge.hidden = state.repeat !== 'one';
   flowRepeatBtn.classList.toggle('is-active', state.repeat !== 'off');
