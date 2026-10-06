@@ -8199,6 +8199,22 @@ Add entries in this shape:
 - **Branch:** agent/library-artists-section
 - **Notes:** Synced from Geethub issue #291 and #293. Folded #293 (artist adds all albums) into this entry since it depends on the Artists section.
 
+
+### artists-albums-resume-backfill: Artist album fill resumes after app close, and covers artists added before
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Follow-up to library-artists-section. (1) If the app closes before an artist's albums finish loading, resume the remaining albums on the next app load. (2) Artists already in a library before the Artists section shipped should also get their albums added (one-time backfill). Keep iTunes as the album source and the 20-album cap (MAL GRIOT 2026-10-06).
+- **Touches:** artist album fill (library-artists-section code), app startup.
+- **Branch:** agent/artists-albums-resume-backfill
+- **Notes:** Decisions from MAL GRIOT 2026-10-06 on the library-artists-section open questions.
+
+### crossfade-start-and-preload: Crossfaded songs always start from the beginning; next song always preloads
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Follow-up to crossfade-next-muted-gap. (1) Skip crossfade (startSkipCrossfade) and automatic crossfade (runCrossfade) should rewind an already-preloaded deck to 0 like promoteDeckDirect does (#213), so songs always start at the beginning. (2) The next song should always get preloaded, including when a skip fade is cancelled (e.g. user pauses mid-fade).
+- **Touches:** startSkipCrossfade, runCrossfade, schedulePreload.
+- **Branch:** agent/crossfade-start-and-preload
+- **Notes:** Found by the crossfade-next-muted-gap lane; approved by MAL GRIOT 2026-10-06.
 ### library-collapsible-sections: Library sections collapse/expand with a +/arrow by the title
 - **Status:** review
 - **Priority:** medium
