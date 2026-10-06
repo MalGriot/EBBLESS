@@ -7976,6 +7976,7 @@ Add entries in this shape:
 - **Touches:** general UX.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #273. Vague; scope with MAL GRIOT before ready.
+  Audit 2026-10-06 (ranked, S/M = effort): 1 phone install gate has 3 equal buttons, make Install primary (S). 2 library card three-dot menu hidden on touch, always show it (S). 3 CuRRentSSsss/SwiiiRrrLL cards need plain subtitles + better "0 tracks" empty state (S). 4 raw error text ("backend returned 500") to plain messages (S). 5 empty player shows dashes, add "Nothing playing yet" + Find music (S). 6 player has many unlabeled icons, label top tabs, tuck visualizer buttons (M). 7 wrong-track flag icon confusing, move to menu with plain copy (S). 8 library toolbar on phone: visible filter chips, one View menu, 44px tap targets (M). 9 playlist menu dev wording (Refresh/Replace link, Mark as album) (S). 10 Settings "Pre-roll ad handling" developer note row (S). 11 Settings crossfade/even volume: real switches, plain names (S). 12 no undo on Clear queue / Remove from playlist, browser confirm on delete (M). 13 inconsistent words: tracks/songs, re-roll/fresh picks, flow mode/fullscreen, cymatics/visualizer (S). 14 library search button "Load" vague (S). 15 beta gate "OPEN EBBLESS"/"UNLOCK" wording (S).
 
 ### one-login-two-devices: One login should cover two devices
 - **Status:** merged
