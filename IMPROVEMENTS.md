@@ -8216,11 +8216,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #289.
 
 ### queue-add-collections: Add whole playlists/albums/podcasts to the queue
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Let users add an entire playlist, album, or podcast to the queue (not just single tracks).
 - **Touches:** library item menus, queue.
-- **Branch:**
+- **Branch:** agent/queue-add-collections
 - **Notes:** Synced from Geethub issue #288. Extends merged library-hold-add-to-queue (tracks only).
 
 ### library-now-playing-highlight: Highlight the playing playlist in the library; blinking speaker by the playing song
