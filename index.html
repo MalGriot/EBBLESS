@@ -16458,6 +16458,9 @@ function finishCrossfade(old, nd, nextPos){
    there's nothing audible to fade from, or for SC-to-SC (can't overlap -
    see maybeStartCrossfade), or while an automatic crossfade is running. */
 let skipFade = null;
+// Shortest fade-in for an incoming deck that confirms late (crossfade-next-
+// muted-gap, #294) - see the inDur note in startSkipCrossfade.
+const SKIP_LATE_FADE_IN_MS = 1000;
 function startSkipCrossfade(pos, t){
   const old = activeDeck(), nd = standbyDeck();
   if (!crossfadePrefs.on || !old.player || !old.confirmed || isFadingOut(old) || routeLocked()) return false;
@@ -16497,7 +16500,7 @@ function startSkipCrossfade(pos, t){
   setPlayingUI(true);
 
   const start = Date.now();
-  let inStart = nd.confirmed ? start : 0;
+  let inStart = nd.confirmed ? start : 0, inDur = durationMs;
   const f = skipFade = { nd, gain: 0, timer: null, oldPaused: false };
   f.timer = nd.fadeTimer = setInterval(() => {
     if (activeDeck() !== nd || nd.fadeTimer !== f.timer){ clearInterval(f.timer); return; }
@@ -16505,11 +16508,20 @@ function startSkipCrossfade(pos, t){
     const outP = Math.min(1, (now - start) / durationMs);
     if (old.player && old.player.setVolume) old.player.setVolume(Math.round(effectiveVolume(old) * fromGain * (1 - outP)));
     if (outP >= 1 && !f.oldPaused){ f.oldPaused = true; if (old.player && old.player.pauseVideo) old.player.pauseVideo(); }
-    if (!inStart && nd.confirmed) inStart = now;
+    if (!inStart && nd.confirmed){
+      inStart = now;
+      // Confirmed late (a cold or still-ad-checking deck - a quick second
+      // skip, or one right after a track started): the outgoing track has
+      // already faded part or all of the way out, so ramp in over whatever
+      // is left of that fade-out rather than the full crossfade length -
+      // otherwise the new track sat near-silent for the ad wait plus a whole
+      // crossfade (#294).
+      inDur = Math.max(SKIP_LATE_FADE_IN_MS, durationMs - (now - start));
+    }
     // incoming never cleared its ad check (dead video etc.) - don't hold
     // swapInProgress forever; onDeckConfirmed unmutes it at full if it ever does
-    if (!inStart && now - start > UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS) inStart = now - durationMs;
-    f.gain = inStart ? Math.min(1, (now - inStart) / durationMs) : 0;
+    if (!inStart && now - start > UNMUTE_MAX_WAIT_MS + UNMUTE_DELAY_MS) inStart = now - inDur;
+    f.gain = inStart ? Math.min(1, (now - inStart) / inDur) : 0;
     if (nd.player && nd.player.setVolume) nd.player.setVolume(Math.round(effectiveVolume(nd) * f.gain));
     if (outP < 1 || f.gain < 1) return;
     clearInterval(f.timer);
