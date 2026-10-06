@@ -2540,6 +2540,12 @@ body.week-up-on{overflow:hidden}
   const lock = document.getElementById('beta-lock');
   const host = location.hostname;
   if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || location.protocol === 'file:'){ lock.hidden = true; return; }
+  // Owner's ?mal link skips the tester lock too (same session flag the mobile
+  // install gate reads), so he can test on any device without an invite.
+  try {
+    if (new URLSearchParams(location.search).has('mal')) sessionStorage.setItem('ebbless:gateSkip', '1');
+    if (sessionStorage.getItem('ebbless:gateSkip') === '1'){ lock.hidden = true; return; }
+  } catch(e){}
 
   const TOKEN_RE = /^t[0-9a-f]{12}-[0-9a-f]{32}$/;
   const LS_TOKEN = 'ebbless:betaToken';   // shared with beta/beta.js and the in-app feedback form
