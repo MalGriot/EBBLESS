@@ -8240,9 +8240,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #285.
 
 ### playlist-add-multiselect: "Add to playlist" should allow picking multiple playlists with checkboxes
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** When adding a loaded song to a playlist, show the playlists with checkboxes so it can go into several at once.
 - **Touches:** add-to-playlist picker (see single-song-paste-prompt).
-- **Branch:**
+- **Branch:** agent/playlist-add-multiselect
 - **Notes:** Synced from Geethub issue #283.
