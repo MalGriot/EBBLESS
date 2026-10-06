@@ -7967,6 +7967,14 @@ Add entries in this shape:
 - **Branch:** agent/mobile-horizontal-overflow
 - **Notes:** Synced from Geethub issue #271. Title only.
 
+### google-email-signup-access: Collect the Google email at signup; that email is their access
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** At beta signup, capture the tester's Google email (fewest taps: a "Sign up with Google" button that fills it automatically, rather than a typed field). Once accepted, that email address is their access: signing in with that Google account on any device or the iPhone home-screen app lets them in, with no link or pasting needed. The invite email link still works as a one-tap shortcut.
+- **Touches:** beta signup page (beta/index.html), worker/src/beta.js (/beta/signup, /beta/claim), tools/beta-sheet.gs (Applicants/Testers google email column, token_by_email).
+- **Branch:** agent/google-email-signup-access
+- **Notes:** MAL GRIOT 2026-10-06, answering the invite-link-one-tap gap (locked iPhone app + non-Google invite email). Motto: least clicks possible.
+
 ### ui-simplicity-pass: Make the UI dead simple for anyone
 - **Status:** merged
 - **Priority:** low
