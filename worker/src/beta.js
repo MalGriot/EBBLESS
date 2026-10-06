@@ -37,6 +37,7 @@ const ACTIVITY_LIMIT = 20, ACTIVITY_WINDOW_S = 600;
 const SIGNUP_LIMIT = 4, SIGNUP_WINDOW_S = 600;
 const LINK_LIMIT = 10, LINK_WINDOW_S = 600;
 const REPORT_LIMIT = 10, REPORT_WINDOW_S = 600;
+const REJOIN_LIMIT = 5, REJOIN_WINDOW_S = 600;
 
 const str = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, n);
 const pick = (v, list) => (list.includes(v) ? v : '');
@@ -81,13 +82,16 @@ async function throttled(request, ctx, envCache, name, limit, windowS) {
 
 // In-app "Send feedback" (worker/src/index.js /tester-report) from a beta
 // tester: also lands in the Feedback tab, against their tester record.
+// Real "Send feedback" (app source 'feedback-form') is tagged 'in-app
+// feedback' and counts toward unlocking the next round; thumbs checks,
+// "Ads playing?" reports and untagged older clients stay 'in-app'.
 // Returns { id, number } for an Active tester, else null.
 export async function betaInAppReport(env, token, report) {
   if (!env.SHEET_URL || !env.SHEET_SECRET || !TOKEN_RE.test(String(token || ''))) return null;
   const out = await sheet(env, 'report', {
     token, kind: 'feedback',
     fields: {
-      source: 'in-app', category: 'In-app: ' + report.category, feeling: report.sentiment || '',
+      source: report.source === 'feedback-form' ? 'in-app feedback' : 'in-app', category: 'In-app: ' + report.category, feeling: report.sentiment || '',
       what_happened: report.message, user_agent: report.userAgent, viewport: report.viewport,
     },
   });
@@ -162,10 +166,36 @@ async function handleSignup(request, env, ctx, h) {
 // The feedback email says "the feedback window is open for 7 days from
 // today", so a tester's window ends 7 days after feedback_request_sent.
 // null until that email has gone out (no expiry yet). Older clients ignore it.
+// A tester whose rejoin was accepted has window_start (the next round's
+// date, or the acceptance): until then they stay expired; from it they get
+// a fresh 7 days, or 7 days from that round's feedback email once it's sent
+// (24h later, like a new tester).
 export const BETA_WINDOW_MS = 7 * 24 * 3600 * 1000;
-export function windowEndsAt(t) {
-  const sent = Number(t && t.feedback_request_sent);
+export function windowEndsAt(t, now = Date.now()) {
+  const sent = Number(t && t.feedback_request_sent) || 0;
+  const start = Number(t && t.window_start) || 0;
+  if (start > 0) {
+    if (start > now) return Math.min(sent > 0 ? sent + BETA_WINDOW_MS : start, start);
+    return Math.max(sent, start) + BETA_WINDOW_MS;
+  }
   return sent > 0 ? sent + BETA_WINDOW_MS : null;
+}
+
+// What the app's 7-days-up recap needs for "Join the next beta", only when
+// set: nextRoundAt / nextRoundLabel ("Oct 20", in the Sheet's time zone)
+// while that date is ahead, rejoin 'requested' (waiting on review) or
+// 'approved' (accepted, round not open yet), round / nextRound numbers, and
+// feedbackGiven (a beta feedback form sent this round; it unlocks rejoining).
+export function rejoinFields(t, now = Date.now()) {
+  const out = {};
+  if (Number(t && t.round) > 0) out.round = Number(t.round);
+  if (Number(t && t.next_round) > 0) out.nextRound = Number(t.next_round);
+  if (t && typeof t.feedback_given === 'boolean') out.feedbackGiven = t.feedback_given;
+  const at = Number(t && t.next_round_start) || 0;
+  if (at > now) { out.nextRoundAt = at; out.nextRoundLabel = str(t.next_round_label, 20); }
+  if (t && t.rejoin_pending) out.rejoin = 'requested';
+  else if (Number(t && t.window_start) > now) out.rejoin = 'approved';
+  return out;
 }
 
 async function handleMe(request, env, ctx, h) {
@@ -173,7 +203,25 @@ async function handleMe(request, env, ctx, h) {
   if (error) return error;
   const t = TOKEN_RE.test(String(body.token || '')) ? (await sheet(env, 'me', { token: body.token })).tester : null;
   if (!t) return h.json({ error: 'This tester link isn\'t active.' }, 404);
-  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t) });
+  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
+}
+
+// "Join the next beta" on the recap: one tap, token only. The Sheet puts the
+// tester's own Applicants row back in the review queue (Pending); a repeat
+// tap while that's open is a no-op there (already: true). Refused (409,
+// needsFeedback) until they've sent a beta feedback form this round.
+async function handleRejoin(request, env, ctx, h) {
+  const { body, error } = await readBody(request, h.json, 2_000);
+  if (error) return error;
+  const inactive = () => h.json({ error: 'This tester link isn\'t active.' }, 403);
+  if (!TOKEN_RE.test(String(body.token || ''))) return inactive();
+  if (await throttled(request, ctx, h.envCache, 'rejoin', REJOIN_LIMIT, REJOIN_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
+  const r = await sheet(env, 'rejoin', { token: body.token });
+  if (!r.tester) return inactive();
+  const round = Number(r.next_round) > 0 ? Number(r.next_round) : 0;
+  // No beta feedback form from them this round: the Sheet refused, say why.
+  if (r.needs_feedback) return h.json({ error: 'Share your feedback for this round first. It unlocks ' + (round ? 'Round ' + round : 'the next round') + '.', needsFeedback: true, feedbackGiven: false, ...(round ? { nextRound: round } : {}) }, 409);
+  return h.json({ ok: true, already: !!r.already, rejoin: 'requested', feedbackGiven: true, ...rejoinFields({ next_round_start: r.next_round_start, next_round_label: r.next_round_label, next_round: r.next_round }) });
 }
 
 async function handleReport(request, env, ctx, h) {
@@ -290,7 +338,7 @@ async function handleClaim(request, env, ctx, h) {
   const token = await env.PROFILES.get(betaLinkKey(g.sub));
   const t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
   if (!t) return h.json({ error: 'This Google account isn\'t linked to a tester yet. Open EBBLESS with your tester link once, sign in with Google there (Settings > Account), then try here again.' }, 404);
-  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t) });
+  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
 }
 
 export async function handleBeta(request, url, env, ctx, h) {
@@ -305,6 +353,7 @@ export async function handleBeta(request, url, env, ctx, h) {
     if (p === '/beta/activity') return await handleActivity(request, env, ctx, h);
     if (p === '/beta/link') return await handleLink(request, env, ctx, h);
     if (p === '/beta/claim') return await handleClaim(request, env, ctx, h);
+    if (p === '/beta/rejoin') return await handleRejoin(request, env, ctx, h);
   } catch (e) {
     console.error(e);
     return h.json({ error: 'Something broke on our side. Try again in a minute.' }, 502);

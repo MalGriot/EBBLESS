@@ -8,18 +8,40 @@
 //   Analytics    anonymous app usage, one row per tester (no names/emails,
 //                no track or playlist names - counts and dates only)
 //   Dashboard    counts, activity and 7-day return
+//   Settings     next_round (number) and next_round_start (the date it opens)
 //
 // Day to day you never touch code: set an applicant's applicant_status to
 // Accepted and this script creates their Tester row (next tester number,
 // private token, access link) and emails the invite. Set a tester's
 // tester_status to Inactive and their link stops working. 24 hours after
 // acceptance, each Active tester is emailed the feedback form once
-// (feedback_request_sent records when). The 50 cap counts
+// (feedback_request_sent records when). Their 7-day window runs from that
+// email (the worker works it out; the app shows a recap when it's over).
+//
+// Rejoining needs feedback first: a Feedback row from that tester with
+// source "feedback survey", "feedback page" or "in-app feedback" (the app's
+// Send feedback), submitted since their current round started (window_start,
+// else accepted_timestamp). Plain "in-app" rows (thumbs checks, the ads
+// button, older rows) don't count. Then "Join the next beta" on that recap puts the tester's own
+// Applicants row back to Pending (rejoin_requested stamped, note added) and
+// stamps rejoin_requested on their Testers row. No new person, no new tester
+// number: accept it like any signup and their Testers row gets window_start
+// = the later of now and Settings next_round_start, round = next_round, and
+// they're emailed. From
+// window_start they get a fresh 7 days (and the feedback email again 24h
+// later, which sets the window like a new tester's). Same token, so their
+// history is untouched.
+//
+// Testers.round is the beta round each tester is in (blank = 1, and setup
+// fills blanks with 1). New acceptances get the current round: next_round
+// once its start date has passed, else the one before it.
+//
+// The 50 cap counts
 // Active testers only and closes public signups (they still land as Pending);
 // you can accept past it by hand. Tester numbers are never reused.
 //
 // The worker (worker/src/beta.js) calls this as a web app with a shared
-// secret: signup, status, me (token check), report and activity, plus
+// secret: signup, status, me (token check), report, activity and rejoin, plus
 // admin_list / admin_update for the owner-only admin page (beta/admin.html,
 // worker/src/admin.js). Columns are found by
 // header name, so you can add your own columns or reorder them freely
@@ -45,15 +67,17 @@ const SITE_URL = 'https://malgriot.github.io/EBBLESS/beta/';
 const SENDER_NAME = 'EBBLESS BETA';
 const SHOTS_FOLDER = 'EBBLESS Beta Screenshots';
 
-const APPLICANTS = 'Applicants', TESTERS = 'Testers', FEEDBACK = 'Feedback', BUGS = 'Bug Reports', DASHBOARD = 'Dashboard', ANALYTICS = 'Analytics';
+const APPLICANTS = 'Applicants', TESTERS = 'Testers', FEEDBACK = 'Feedback', BUGS = 'Bug Reports', DASHBOARD = 'Dashboard', ANALYTICS = 'Analytics', SETTINGS = 'Settings';
 const APPLICANT_STATUSES = ['Pending', 'Accepted', 'Waitlisted', 'Rejected'];
 const TESTER_STATUSES = ['Active', 'Inactive'];
 const HEADERS = {};
 HEADERS[APPLICANTS] = ['applicant_id', 'name', 'email', 'Instagram', 'device', 'device_model', 'operating_system', 'browser',
   'technical_comfort', 'music_platform', 'music_preferences', 'Spotify_playlist', 'why_they_want_to_test',
-  'what_they_want_EBBLESS_to_do', 'signup_timestamp', 'applicant_status', 'notes', 'ok_to_contact_later', 'user_agent'];
+  'what_they_want_EBBLESS_to_do', 'signup_timestamp', 'applicant_status', 'notes', 'ok_to_contact_later', 'user_agent',
+  'rejoin_requested'];
 HEADERS[TESTERS] = ['tester_id', 'tester_number', 'applicant_id', 'name', 'email', 'accepted_timestamp',
-  'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent', 'exclude_from_analytics'];
+  'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent', 'exclude_from_analytics',
+  'rejoin_requested', 'window_start', 'round'];
 HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'source', 'category', 'feeling',
   'what_happened', 'what_they_expected', 'anything_else', 'keep_using', 'screenshot',
   'device', 'operating_system', 'browser', 'viewport', 'user_agent',
@@ -112,6 +136,7 @@ function setCell_(sh, rowNum, header, value) {
   const c = cols_(sh);
   if (header in c) sh.getRange(rowNum, c[header] + 1).setValue(value);
 }
+function ms_(v) { const t = v instanceof Date ? v.getTime() : Date.parse(v); return isNaN(t) ? 0 : t; }
 function numFrom_(v) { const m = /(\d+)\s*$/.exec(String(v || '')); return m ? parseInt(m[1], 10) : 0; }
 function pad_(n, w) { return String(n).padStart(w, '0'); }
 function testerLabel_(n) { return 'EBBLESS TESTER #' + pad_(n, 3); }
@@ -162,6 +187,7 @@ function feedbackRequestText_(first, link) {
     'What did you love? What confused you? What broke? What would make you want to come back?\n\n' +
     'Take a few minutes and tell me here:\n\n' + link + '\n\n' +
     'The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
+    'Your feedback is also what unlocks the next beta round for you.\n\n' +
     'No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F\n\n' +
     'Mal';
 }
@@ -175,6 +201,7 @@ function feedbackRequestHtml_(first, link) {
     p('Take a few minutes and tell me here:') +
     p('<a href="' + esc(link) + '">' + esc(link) + '</a>') +
     p('<b>The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
+    p('Your feedback is also what unlocks the next beta round for you.') +
     p('No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F') +
     p('Mal') + '</div>';
 }
@@ -182,16 +209,19 @@ function feedbackRequestHtml_(first, link) {
 // Hourly time trigger (created by setup): emails each Active tester the
 // feedback form once, 24h after accepted_timestamp, and stamps
 // feedback_request_sent so it never goes out twice. A failed send leaves the
-// cell blank (retried next hour) and notes why.
+// cell blank (retried next hour) and notes why. A rejoined tester gets it
+// once more, 24h after their window_start.
 function sendFeedbackRequests() {
   const sh = sheet_(TESTERS);
   withLock_(function () {
     ensureHeaders_(sh, HEADERS[TESTERS]);
     const now = Date.now();
     records_(sh).forEach(function (t) {
-      if (t.tester_status !== 'Active' || t.feedback_request_sent || !t.access_token || !t.email) return;
-      const accepted = t.accepted_timestamp instanceof Date ? t.accepted_timestamp.getTime() : Date.parse(t.accepted_timestamp);
-      if (!accepted || now - accepted < FEEDBACK_REQUEST_AFTER_MS) return;
+      if (t.tester_status !== 'Active' || !t.access_token || !t.email) return;
+      const start = ms_(t.window_start), sent = ms_(t.feedback_request_sent);
+      if (sent && !(start && sent < start)) return;
+      const from = start || ms_(t.accepted_timestamp);
+      if (!from || now - from < FEEDBACK_REQUEST_AFTER_MS) return;
       const first = String(t.name || '').split(/\s+/)[0] || 'friend';
       const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
       const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link), feedbackRequestHtml_(first, link));
@@ -217,6 +247,7 @@ function doPost(e) {
     if (b.action === 'me') return out_(me_(b.token));
     if (b.action === 'report') return out_(report_(b));
     if (b.action === 'activity') return out_(activity_(b));
+    if (b.action === 'rejoin') return out_(rejoin_(b.token));
     if (b.action === 'admin_list') return out_(adminList_());
     if (b.action === 'admin_update') return out_(adminUpdate_(b));
     if (b.action === 'testimonials') return out_(testimonials_());
@@ -269,9 +300,94 @@ function me_(token) {
   const t = activeTester_(token);
   if (!t) return { ok: true, tester: null };
   // feedback_request_sent (ms epoch, or null if not emailed yet): the worker
-  // derives the tester's 7-day window end from it (the email says so).
+  // derives the tester's 7-day window end from it (the email says so), and
+  // from window_start once they've rejoined for a new round.
   const sent = t.feedback_request_sent instanceof Date ? t.feedback_request_sent.getTime() : Date.parse(t.feedback_request_sent);
-  return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null } };
+  const round = nextRound_();
+  return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null,
+    window_start: ms_(t.window_start) || null, rejoin_pending: rejoinOpen_(t), next_round_start: round.at || null, next_round_label: round.label,
+    round: roundOf_(t), next_round: nextRoundFor_(t, round), feedback_given: feedbackGiven_(t) } };
+}
+
+// ---------- rejoining (the "Join the next beta" button on the recap) ----------
+
+// Settings tab: next_round (number, blank = 2) and next_round_start (the
+// date it opens, blank = no date yet). {number, at, label}.
+function nextRound_() {
+  const sh = sheet_(SETTINGS);
+  const recs = sh ? records_(sh) : [];
+  const val = function (k) { const r = recs.filter(function (x) { return String(x.setting).trim() === k; })[0]; return r ? r.value : ''; };
+  const at = ms_(val('next_round_start'));
+  return { number: parseInt(val('next_round'), 10) || 2, at: at, label: at ? Utilities.formatDate(new Date(at), Session.getScriptTimeZone(), 'MMM d') : '' };
+}
+// Round a newly accepted applicant joins: next_round once it has opened.
+function currentRound_() {
+  const r = nextRound_();
+  return r.at && r.at <= Date.now() ? r.number : Math.max(1, r.number - 1);
+}
+
+function roundOf_(t) { return parseInt(t.round, 10) || 1; }
+// The round a rejoin moves this tester into (same rule as acceptRow_).
+function nextRoundFor_(t, round) { return Math.max((round || nextRound_()).number, roundOf_(t) + 1); }
+
+// Feedback that unlocks the next round: a beta feedback form (survey or
+// feedback page) or the app's Send feedback, sent since this tester's
+// current round started. Not thumbs checks or "Ads playing?" ("in-app").
+const UNLOCK_SOURCES = ['feedback survey', 'feedback page', 'in-app feedback'];
+function feedbackGiven_(t) {
+  const sh = sheet_(FEEDBACK);
+  if (!sh) return false;
+  const since = ms_(t.window_start) || ms_(t.accepted_timestamp);
+  return records_(sh).some(function (f) {
+    return f.tester_id === t.tester_id && UNLOCK_SOURCES.indexOf(String(f.source)) >= 0 && ms_(f.submitted_timestamp) >= since;
+  });
+}
+
+// A rejoin request nobody has accepted yet (accepting sets window_start).
+function rejoinOpen_(t) {
+  const req = ms_(t.rejoin_requested);
+  return !!req && req > ms_(t.window_start);
+}
+
+// One tap from the recap. Reuses the tester's Applicants row: back to
+// Pending, so it sits in the same review queue as new signups. Tapping again
+// (any device) while it's open changes nothing.
+function rejoin_(token) {
+  const t0 = activeTester_(token);
+  if (!t0) return { ok: true, tester: null };
+  const ash = sheet_(APPLICANTS), tsh = sheet_(TESTERS);
+  const res = withLock_(function () {
+    ensureHeaders_(ash, HEADERS[APPLICANTS]);
+    ensureHeaders_(tsh, HEADERS[TESTERS]);
+    const t = records_(tsh).filter(function (x) { return x.tester_id === t0.tester_id; })[0];
+    if (!t) return { gone: true };
+    if (rejoinOpen_(t)) return { already: true, t: t };
+    if (!feedbackGiven_(t)) return { needsFeedback: true, t: t };
+    const now = new Date(), stamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    const note = 'Rejoin request from ' + t.tester_number + ' ' + stamp + ' (accept to give them a fresh 7 days)';
+    const a = records_(ash).filter(function (x) { return x.applicant_id && x.applicant_id === t.applicant_id; })[0];
+    if (a) {
+      setCell_(ash, a._row, 'applicant_status', 'Pending');
+      setCell_(ash, a._row, 'rejoin_requested', now);
+      setCell_(ash, a._row, 'notes', (a.notes ? a.notes + '\n' : '') + note);
+    } else {
+      // No Applicants row to reuse (added by hand): give them one, pointed at this tester.
+      const id = nextId_(ash, 'applicant_id', 'APP-', 4);
+      append_(ash, { applicant_id: id, name: t.name, email: t.email, signup_timestamp: now, applicant_status: 'Pending', rejoin_requested: now, notes: note });
+      setCell_(tsh, t._row, 'applicant_id', id);
+    }
+    setCell_(tsh, t._row, 'rejoin_requested', now);
+    return { t: t };
+  });
+  if (res.gone) return { ok: true, tester: null };
+  const round = nextRound_();
+  if (res.needsFeedback) return { ok: true, needs_feedback: true, tester: { id: res.t.tester_id }, next_round: nextRoundFor_(res.t, round) };
+  if (!res.already) {
+    const first = String(res.t.name || '').split(/\s+/)[0];
+    sendMail_(res.t.email, 'EBBLESS BETA: you\'re on the list for the next round', 'Peace ' + first + ',\n\nThanks for the feedback. Got it, you want in on the next EBBLESS beta round' +
+      (round.at > Date.now() ? ' (it starts ' + round.label + ')' : '') + '. I\'m going through everyone by hand. If you\'re in, you\'ll hear from me here, and your library and history will be waiting.\n\nMAL GRIOT');
+  }
+  return { ok: true, already: !!res.already, tester: { id: res.t.tester_id }, next_round_start: round.at || null, next_round_label: round.label, next_round: nextRoundFor_(res.t, round) };
 }
 
 function saveShot_(dataUrl, name) {
@@ -455,6 +571,17 @@ function acceptRow_(rowNum, previous) {
     if (!a || !a.applicant_id) return { msg: 'Row ' + rowNum + ' has no applicant_id, nothing done.' };
     const testers = records_(tsh);
     const existing = testers.filter(function (t) { return t.applicant_id === a.applicant_id; })[0];
+    if (existing && rejoinOpen_(existing)) {
+      // A rejoin: same tester row, number and token (history stays), fresh 7
+      // days from window_start, never before the next round opens.
+      const round = nextRound_();
+      const start = new Date(Math.max(Date.now(), round.at));
+      setCell_(tsh, existing._row, 'window_start', start);
+      // Never backwards, in case next_round wasn't bumped after a round opened.
+      setCell_(tsh, existing._row, 'round', Math.max(round.number, (parseInt(existing.round, 10) || 1) + 1));
+      if (existing.tester_status !== 'Active') setCell_(tsh, existing._row, 'tester_status', 'Active');
+      return { rejoined: existing, start: start, row: existing._row };
+    }
     if (existing) return { msg: a.name + ' is already ' + existing.tester_number + ' (' + existing.tester_status + ').' };
     const active = testers.filter(function (t) { return t.tester_status === 'Active'; }).length;
     // Numbers are never reused: next after the highest ever handed out.
@@ -462,18 +589,34 @@ function acceptRow_(rowNum, previous) {
     const id = 't' + hex_(12);
     const t = {
       tester_id: id, tester_number: testerLabel_(n), applicant_id: a.applicant_id, name: a.name, email: a.email,
-      accepted_timestamp: new Date(), access_token: id + '-' + hex_(32), tester_status: 'Active',
+      accepted_timestamp: new Date(), access_token: id + '-' + hex_(32), tester_status: 'Active', round: currentRound_(),
     };
     t.access_link = accessLink_(t.access_token);
     append_(tsh, t);
     return { tester: t, row: tsh.getLastRow(), over: active >= CAP ? active + 1 : 0 };
   });
+  if (result.rejoined) return rejoinAccepted_(result);
   if (!result.tester) { toast_(result.msg); return result.msg; }
   const t = result.tester;
   const err = sendMail_(t.email, 'You\'re in: ' + t.tester_number, inviteText_(t));
   setCell_(tsh, result.row, 'notes', err ? 'Invite NOT emailed: ' + err : 'Invite emailed ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
   const msg = t.name + ' is ' + t.tester_number + (err ? '. Invite email failed, see notes.' : '. Invite emailed.')
     + (result.over ? ' That makes ' + result.over + ' active, over the ' + CAP + ' cap.' : '');
+  toast_(msg);
+  return msg;
+}
+
+function rejoinAccepted_(result) {
+  const t = result.rejoined, tsh = sheet_(TESTERS);
+  const later = result.start.getTime() > Date.now() + 60000;
+  const when = Utilities.formatDate(result.start, Session.getScriptTimeZone(), 'MMM d');
+  const first = String(t.name || '').split(/\s+/)[0];
+  const err = sendMail_(t.email, 'You\'re back in: ' + t.tester_number, 'Peace ' + first + ',\n\nYou\'re in for the next EBBLESS beta round. ' +
+    (later ? 'It opens ' + when + ', and your 7 days start then.' : 'Your fresh 7 days start now.') +
+    ' Same link as before, and your library and history are right where you left them:\n' + accessLink_(t.access_token) + '\n\nMAL GRIOT');
+  const note = (err ? 'Rejoin email NOT sent: ' + err : 'Rejoin accepted, emailed') + ' ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') + ', window starts ' + when;
+  setCell_(tsh, result.row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
+  const msg = t.name + ' (' + t.tester_number + ') rejoined for the next round. Fresh 7 days from ' + when + (err ? '. Email failed, see notes.' : '. Emailed.');
   toast_(msg);
   return msg;
 }
@@ -631,6 +774,20 @@ function setup() {
   dash.setColumnWidth(1, 220);
   ss.setActiveSheet(dash);
   ss.moveActiveSheet(1);
+  // Settings: one row per setting. next_round_start is the date the next beta
+  // round opens (blank = no date yet; rejoins still queue up).
+  const set = ss.getSheetByName(SETTINGS) || ss.insertSheet(SETTINGS);
+  ensureHeaders_(set, ['setting', 'value', 'about']);
+  set.setFrozenRows(1);
+  [['next_round', 2, 'Round number accepted rejoins move into (Testers.round). Bump it once that round has opened, before the next one.'],
+   ['next_round_start', '', 'Date that round opens. Accepted rejoins get a fresh 7 days from this date (or from when you accept, if later). Testers see it on the Join the next beta button.']]
+    .forEach(function (d) {
+      if (!records_(set).some(function (r) { return String(r.setting).trim() === d[0]; })) append_(set, { setting: d[0], value: d[1], about: d[2] });
+    });
+  const dateRow = records_(set).filter(function (r) { return String(r.setting).trim() === 'next_round_start'; })[0];
+  if (dateRow) set.getRange(dateRow._row, cols_(set).value + 1).setNumberFormat('yyyy-mm-dd');
+  // Everyone from before rounds existed is round 1.
+  records_(tsh).forEach(function (t) { if (t.tester_id && t.round === '') setCell_(tsh, t._row, 'round', 1); });
   const def = ss.getSheetByName('Sheet1');
   if (def && def.getLastRow() === 0) ss.deleteSheet(def);
 

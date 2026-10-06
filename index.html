@@ -2451,6 +2451,8 @@ body.week-up-on{overflow:hidden}
 #weekUp .wu-chip.is-top span{color:rgba(18,18,18,.7)}
 #weekUp .wu-saved p{margin:0 0 8px;color:#c9c9c9}
 #weekUp .wu-faint,#weekUp .wu-saved .wu-faint{color:var(--faint);font-size:13px;margin:0}
+#weekUp button.wu-btn{background:transparent;font-family:inherit;cursor:pointer;margin:16px 0 10px}
+#weekUp button.wu-btn:disabled{cursor:default;filter:none;transform:none;border-color:var(--accent);color:var(--accent)}
 #weekUp .wu-quiet{margin:0;color:#c9c9c9}
 #weekUp .wu-signoff{text-align:center;color:var(--faint);font-size:13px;margin:28px 0 0}
 #weekUp .wu-reveal{opacity:0;transform:translateY(14px);transition:opacity .7s var(--ease-out),transform .7s var(--ease-out)}
@@ -2603,7 +2605,11 @@ body.week-up-on{overflow:hidden}
 
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
-    ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null }));
+    ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
+      // "Join the next beta" on the 7-days-up recap (absent when not set)
+      rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
+      round: Number(d.round) > 0 ? Number(d.round) : null, nextRound: Number(d.nextRound) > 0 ? Number(d.nextRound) : null,
+      feedbackGiven: typeof d.feedbackGiven === 'boolean' ? d.feedbackGiven : null }));
   }
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
@@ -11327,7 +11333,8 @@ function weekUpHtml(r, opts){
       '<span class="wu-chip' + (i === 0 ? ' is-top' : '') + '">' + escapeHtml(WEEK_UP_FEATURES[k]) + '<span>' + n + (n === 1 ? ' session' : ' sessions') + '</span></span>').join('') + '</div></section>';
   }
   html += '<section class="wu-card wu-saved wu-reveal"><h3 class="wu-eyebrow">Your history is saved</h3><p>Your library, liked songs and everything in this recap stay put. Join the next beta and it all loads back in, right where you left off.</p>' +
-    '<p class="wu-faint">' + (synced ? 'It\'s synced to your Google account, so any device you sign in on picks it up.' : 'It\'s saved on this device. Sign in with Google in the next beta to carry it anywhere.') + '</p></section>' +
+    '<p class="wu-faint">' + (synced ? 'It\'s synced to your Google account, so any device you sign in on picks it up.' : 'It\'s saved on this device. Sign in with Google in the next beta to carry it anywhere.') + '</p>' +
+    '<button type="button" class="wu-btn" id="wuJoin"></button><p class="wu-faint" id="wuJoinNote" aria-live="polite"></p></section>' +
     '<a class="wu-btn primary wu-reveal" href="' + escapeHtml(fbHref) + '"' + (opts.preview ? ' target="_blank" rel="noopener"' : '') + '>GIVE FEEDBACK</a>' +
     '<p class="wu-signoff wu-reveal">That\'s a wrap on this chapter. Peace, and thank you for listening.</p>' +
     '</div>';
@@ -11411,8 +11418,88 @@ function showWeekUp(opts){
     }));
     const close = el.querySelector('#wuClose');
     if (close) close.addEventListener('click', hideWeekUpPreview);
+    weekUpJoinInit(el, preview);
   };
   setTimeout(reveal, opts.instant ? 0 : WEEK_UP_FADE_MS - 600);
+}
+// "Join the next beta": one tap, no form. POST /beta/rejoin with the tester
+// token puts them back in the review queue (their own Applicants row, set
+// to Pending); accepting it gives them a fresh 7 days from the next round's
+// date, same token, history untouched. State comes from /beta/me (saved in
+// ebbless:betaMe), so a repeat tap or another device shows "on the list".
+// Feedback unlocks it: until /beta/me says feedbackGiven (a beta feedback
+// form sent this round), the button opens the feedback form in a new tab,
+// and coming back to this tab re-checks. Preview mode never sends anything.
+function weekUpJoinSet(btn, note, me){
+  const now = Date.now();
+  const date = Number(me.nextRoundAt) > now && me.nextRoundLabel ? String(me.nextRoundLabel) : '';
+  const round = Number(me.nextRound) > 0 ? 'Round ' + me.nextRound : 'the next round';
+  btn.dataset.gate = '';
+  if (me.feedbackGiven === false && !me.rejoin){
+    btn.disabled = false; btn.dataset.gate = '1'; btn.textContent = 'SHARE YOUR FEEDBACK TO UNLOCK ' + round.toUpperCase();
+    note.textContent = 'Feedback for this round unlocks ' + round + '. Send it, come back here, and join in one tap.';
+  } else if (me.rejoin === 'approved'){
+    btn.disabled = true; btn.textContent = 'YOU\'RE IN FOR THE NEXT ROUND';
+    note.textContent = date ? 'It opens ' + date + '. Your fresh 7 days start then.' : 'Your fresh 7 days start when the round opens.';
+  } else if (me.rejoin === 'requested'){
+    btn.disabled = true; btn.textContent = 'YOU\'RE ON THE LIST';
+    note.textContent = (date ? 'Next round starts ' + date + '. ' : '') + 'You\'ll get an email when you\'re in.';
+  } else {
+    btn.disabled = false; btn.textContent = 'JOIN THE NEXT BETA';
+    note.textContent = date ? 'Next round starts ' + date + '. One tap, no form.' : 'One tap, no form.';
+  }
+}
+function weekUpJoinSave(me){ try { localStorage.setItem(WEEK_UP_ME_KEY, JSON.stringify(me)); } catch(e){} return me; }
+// Fresh feedback / rejoin state from /beta/me (e.g. back from the feedback form).
+async function weekUpJoinRefresh(btn, note){
+  const token = statsToken();
+  if (!token) return;
+  try {
+    const res = await fetch(BACKEND + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+    if (!res.ok) return;
+    const d = await res.json();
+    const me = weekUpMe();
+    ['rejoin', 'nextRoundAt', 'nextRoundLabel', 'round', 'nextRound', 'feedbackGiven'].forEach(k => { me[k] = k in d ? d[k] : (k === 'feedbackGiven' ? null : ''); });
+    weekUpJoinSet(btn, note, weekUpJoinSave(me));
+  } catch(e){}
+}
+function weekUpJoinInit(el, preview){
+  const btn = el.querySelector('#wuJoin'), note = el.querySelector('#wuJoinNote');
+  if (!btn || !note) return;
+  weekUpJoinSet(btn, note, weekUpMe());
+  if (!preview){
+    weekUpJoinRefresh(btn, note);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && btn.dataset.gate === '1') weekUpJoinRefresh(btn, note); });
+  }
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    if (btn.dataset.gate === '1'){
+      const fb = el.querySelector('#wuFeedback');
+      if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { feedbackGiven: true })); note.textContent += ' (Preview, feedback assumed.)'; return; }
+      window.open(fb ? fb.href : 'beta/feedback.html', '_blank', 'noopener');
+      return;
+    }
+    if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { rejoin: 'requested' })); note.textContent += ' (Preview, nothing sent.)'; return; }
+    const token = statsToken();
+    if (!token){ note.textContent = 'Open EBBLESS with your tester link first.'; return; }
+    btn.disabled = true; btn.textContent = 'JOINING...'; note.textContent = '';
+    let d = null, ok = false;
+    try {
+      const res = await fetch(BACKEND + '/beta/rejoin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+      d = await res.json().catch(() => null);
+      ok = res.ok && d && d.ok;
+    } catch(e){}
+    if (!ok){
+      const me = weekUpMe();
+      if (d && d.needsFeedback){ me.feedbackGiven = false; if (Number(d.nextRound) > 0) me.nextRound = Number(d.nextRound); weekUpJoinSave(me); }
+      weekUpJoinSet(btn, note, me);
+      note.textContent = (d && d.error) || 'Couldn\'t reach EBBLESS. Check your connection and try again.';
+      return;
+    }
+    const me = Object.assign(weekUpMe(), { rejoin: 'requested', feedbackGiven: true, nextRoundAt: Number(d.nextRoundAt) || null, nextRoundLabel: String(d.nextRoundLabel || '') });
+    if (Number(d.nextRound) > 0) me.nextRound = Number(d.nextRound);
+    weekUpJoinSet(btn, note, weekUpJoinSave(me));
+  });
 }
 function hideWeekUpPreview(){
   if (weekUp.frozen || !weekUp.el) return;
