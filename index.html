@@ -2537,29 +2537,20 @@ body.week-up-on{overflow:hidden}
 #beta-lock h1{font-size:clamp(34px,10vw,48px);font-weight:700;letter-spacing:-.01em;line-height:1.02;margin:0;text-transform:uppercase}
 #beta-lock .bl-rule{height:1px;background:var(--accent);margin:18px 0}
 #beta-lock p{color:#9a9a9a;margin:0 0 8px;max-width:46ch}
-#beta-lock form{display:flex;flex-direction:column;gap:10px;margin:28px 0 0}
-#beta-lock input{width:100%;font:inherit;color:#f2f2f2;background:#181818;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:12px 14px}
-#beta-lock input:focus{outline:none;border-color:var(--accent)}
 #beta-lock .bl-btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;letter-spacing:1.2px;font-size:13px;
   padding:13px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#f2f2f2;text-decoration:none;cursor:pointer}
 #beta-lock .bl-btn.primary{background:var(--accent);border-color:var(--accent);color:#121212}
 #beta-lock .bl-msg{min-height:1.5em;font-size:13px;color:#e0645e;margin:4px 0 0}
-#beta-lock .bl-or{margin:28px 0 10px;font-size:13px}
+#beta-lock .bl-or{margin:20px 0 10px;font-size:13px}
 #beta-lock .bl-google[hidden]{display:none}
 #beta-lock .bl-gbtn{min-height:40px;display:flex;justify-content:center}
 #beta-lock .bl-join{margin:28px 0 0;padding:17px 24px;font-size:15px;letter-spacing:1.6px}
 #beta-lock .bl-lede{color:#f2f2f2;font-size:18px;margin:0 0 8px}
 #beta-lock .bl-flow{display:flex;flex-wrap:wrap;gap:6px 0;list-style:none;margin:18px 0 0;padding:0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#cfcfcf}
 #beta-lock .bl-flow li+li::before{content:"\2192";color:var(--accent);margin:0 10px}
-#beta-lock .bl-tester:not(.open){height:0;overflow:hidden;visibility:hidden}
-#beta-lock .bl-tester.open{margin:14px 0 0}
 #beta-lock .bl-rule-soft{background:rgba(255,255,255,.12);margin:36px 0 20px}
 #beta-lock .bl-sub{color:#f2f2f2;font-weight:600;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;margin:0 0 4px}
-#beta-lock .bl-paste{margin:28px 0 0}
-#beta-lock .bl-paste summary{cursor:pointer;font-size:13px;color:#6c6c6c;text-decoration:underline;text-underline-offset:3px;list-style:none}
-#beta-lock .bl-paste summary::-webkit-details-marker{display:none}
-#beta-lock .bl-paste form{margin:14px 0 0}
-#beta-lock .bl-label{display:block;margin:0 0 8px;font-size:13px;color:inherit}
+#beta-lock .bl-small{font-size:13px;color:#6c6c6c;margin:20px 0 0}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
   <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><div class="bl-tint"></div><div class="bl-fade"></div></div>
@@ -2574,24 +2565,18 @@ body.week-up-on{overflow:hidden}
     </ol>
     <a class="bl-btn primary bl-join" href="beta/">JOIN THE BETA</a>
     <div class="bl-rule bl-rule-soft"></div>
-    <p class="bl-sub">Already a tester?</p>
-    <button class="bl-btn" type="button" id="bl-open" aria-expanded="false" aria-controls="bl-tester">I HAVE AN INVITE</button>
+    <!-- Tester way in: the invite link does it all (?t= below). The Google
+         button (rendered by the app once GSI loads) claims by the invite's
+         email address (/beta/claim), for a home-screen app the link can't
+         reach. The script swaps the copy for an iPhone home-screen app. -->
+    <p class="bl-sub">Got your invite email?</p>
+    <p id="bl-how">Tap the link in it. That's it, you're in.</p>
     <p class="bl-msg" id="bl-msg" role="status"></p>
-    <div class="bl-tester" id="bl-tester">
-      <p>Tap the personal link in your invite email. It opens EBBLESS and lets you in.</p>
-      <div class="bl-google" id="bl-google" hidden>
-        <p class="bl-or">On another device already? Sign in with the Google account you use there.</p>
-        <div class="bl-gbtn" id="bl-gbtn"></div>
-      </div>
-      <details class="bl-paste">
-        <summary>Link didn't open the app? Paste it here</summary>
-        <form id="bl-form" autocomplete="off">
-          <label class="bl-label" for="bl-input">Paste the link from your invite email</label>
-          <input id="bl-input" type="text" inputmode="url" spellcheck="false" placeholder="Paste your tester link">
-          <button class="bl-btn" type="submit" id="bl-go">LET ME IN</button>
-        </form>
-      </details>
+    <div class="bl-google" id="bl-google" hidden>
+      <p class="bl-or" id="bl-gnote">Or sign in with Google using the email your invite went to.</p>
+      <div class="bl-gbtn" id="bl-gbtn"></div>
     </div>
+    <p class="bl-small" id="bl-ios" hidden>Invite not on a Google email? Delete this app, tap the link in your invite email, then add EBBLESS to your Home Screen again from Safari.</p>
   </div>
 </div>
 <script>
@@ -2635,9 +2620,15 @@ body.week-up-on{overflow:hidden}
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
   const relock = () => { lock.hidden = false; const p = video.play(); if (p && p.catch) p.catch(() => {}); };
-  const msg = (t) => { document.getElementById('bl-msg').textContent = t || ''; if (t) openTester(); };
-  const openTester = () => { document.getElementById('bl-tester').classList.add('open'); document.getElementById('bl-open').setAttribute('aria-expanded', 'true'); };
-  document.getElementById('bl-open').addEventListener('click', openTester);
+  const msg = (t) => { document.getElementById('bl-msg').textContent = t || ''; };
+  // iPhone/iPad home-screen app: its storage is apart from Safari's and the
+  // invite link opens Safari, not this app, so Google sign-in is the way in.
+  const iosStandalone = navigator.standalone === true && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+  if (iosStandalone){
+    document.getElementById('bl-how').textContent = 'Sign in with Google using the email your invite went to.';
+    document.getElementById('bl-gnote').hidden = true;
+    document.getElementById('bl-ios').hidden = false;
+  }
 
   // ?t=<token> on the app URL itself (e.g. an invite link pointed straight at the app)
   const q = new URLSearchParams(location.search);
@@ -2686,17 +2677,6 @@ body.week-up-on{overflow:hidden}
     });
   }
 
-  document.getElementById('bl-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const t = extract(document.getElementById('bl-input').value);
-    if (!t){ msg('That doesn\'t look like a tester link. Copy the whole link from your invite.'); return; }
-    const btn = document.getElementById('bl-go');
-    btn.disabled = true; msg('');
-    const r = await check(t);
-    btn.disabled = false;
-    if (r === 'ok'){ lease = ''; ls.set(LS_TOKEN, t); ls.set(LS_OK, String(Date.now())); ls.set(LS_LEASE, null); unlock(); }
-    else msg(r === 'no' ? 'That tester link isn\'t active.' : 'Couldn\'t reach EBBLESS. Check your connection and try again.');
-  });
 
   // For the app's Google sign-in (PROFILE SYNC): a tester token the worker
   // handed back for this Google account (/beta/claim) unlocks like a link,
@@ -22312,6 +22292,11 @@ let forceIntroPreview = false;
 try{ forceIntroPreview = new URLSearchParams(location.search).has('intro'); }catch(e){}
 
 // ---- capture-only debug entry point --------------------------------------
+// iPhone skips the install gate (and its carry-over above), but Add to Home
+// Screen from Safari still makes an app with its own storage: carry the
+// tester token into it the same way, so it opens unlocked.
+if (mobileInstallGate && isIPhone) carryTesterTokenForInstall();
+
 // ?introBeat=<name> jumps straight to one named beat's finished DOM state,
 // with no timers running, so it can be screenshotted cleanly (headless
 // --virtual-time-budget can't reliably land mid-way through a live,

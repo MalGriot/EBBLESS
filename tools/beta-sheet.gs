@@ -64,6 +64,9 @@
 
 const CAP = 50;
 const SITE_URL = 'https://malgriot.github.io/EBBLESS/beta/';
+// The app itself: its beta lock takes ?t=<token>, so the invite link opens
+// EBBLESS already unlocked (no tester page in between).
+const APP_URL = 'https://malgriot.github.io/EBBLESS/';
 const SENDER_NAME = 'EBBLESS BETA';
 const SHOTS_FOLDER = 'EBBLESS Beta Screenshots';
 
@@ -156,12 +159,15 @@ function toast_(msg) { try { ss_().toast(msg, 'EBBLESS Beta', 10); } catch (err)
 
 // ---------- email ----------
 
-function accessLink_(token) { return SITE_URL + 'tester.html?t=' + encodeURIComponent(token); }
+function accessLink_(token) { return APP_URL + '?t=' + encodeURIComponent(token); }
 
 function inviteText_(t) {
   const tok = encodeURIComponent(t.access_token);
   return 'Peace. You\'re one of the 50 people testing EBBLESS. You\'re ' + t.tester_number + '.\n\n' +
-    'Open it:\n' + SITE_URL + 'tester.html?t=' + tok + '\n\n' +
+    'Tap this to get in:\n' + accessLink_(t.access_token) + '\n\n' +
+    'iPhone: once it opens in Safari, tap Share, then Add to Home Screen.\n' +
+    'Android: tap Install.\n' +
+    'If EBBLESS ever asks you to sign in, use Google with this email address.\n\n' +
     'Throw one of your playlists into it (Spotify, YouTube, Apple Music, SoundCloud) and fuck around with it.\n' +
     'Try the different visual modes, lyrics, YouTube, etc.\n\n' +
     'The point of this beta isn\'t to be nice to me. If something is confusing, broken, slow, ugly, unnecessary, or just doesn\'t make sense, tell me.\n\n' +
@@ -245,6 +251,7 @@ function doPost(e) {
     if (b.action === 'status') return out_({ ok: true, active: activeCount_(), cap: CAP });
     if (b.action === 'signup') return out_(signup_(b.applicant || {}));
     if (b.action === 'me') return out_(me_(b.token));
+    if (b.action === 'token_by_email') return out_(tokenByEmail_(b.email));
     if (b.action === 'report') return out_(report_(b));
     if (b.action === 'activity') return out_(activity_(b));
     if (b.action === 'rejoin') return out_(rejoin_(b.token));
@@ -307,6 +314,21 @@ function me_(token) {
   return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null,
     window_start: ms_(t.window_start) || null, rejoin_pending: rejoinOpen_(t), next_round_start: round.at || null, next_round_label: round.label,
     round: roundOf_(t), next_round: nextRoundFor_(t, round), feedback_given: feedbackGiven_(t) } };
+}
+
+// The worker's /beta/claim fallback: a Google account whose verified email
+// is an Active tester's invite address gets that tester's token (the same
+// thing the invite email already gave that inbox). Never called without
+// SHEET_SECRET.
+function tokenByEmail_(email) {
+  email = String(email || '').trim().toLowerCase();
+  const t = email ? records_(sheet_(TESTERS)).filter(function (r) {
+    return r.tester_status === 'Active' && r.access_token && String(r.email).trim().toLowerCase() === email;
+  })[0] : null;
+  if (!t) return { ok: true, tester: null };
+  const out = me_(t.access_token);
+  out.token = String(t.access_token);
+  return out;
 }
 
 // ---------- rejoining (the "Join the next beta" button on the recap) ----------

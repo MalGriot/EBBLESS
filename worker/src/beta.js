@@ -299,6 +299,10 @@ async function handleActivity(request, env, ctx, h) {
 // lock hands the token back, so they never have to dig out the invite link
 // again. The token is re-checked against the Sheet both ways, so an Inactive
 // tester's link stops working here exactly as it does everywhere else.
+// A Google account that was never linked still claims when its verified
+// email is the address the invite went to (Sheet 'token_by_email'): same
+// proof as the emailed link itself, and it means a locked home-screen app
+// (iPhone keeps its storage apart from Safari) opens with one sign-in.
 const betaLinkKey = (sub) => 'betalink:' + sub;
 // A device unlocked by a claim gets a lease, not a permanent unlock: the
 // app claims again (silent Google sign-in) when it runs out, so an
@@ -308,7 +312,11 @@ export const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;
 
 async function googleSub(body, env, ctx, h) {
   if (!env.PROFILES || !env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return { error: h.json({ error: 'google sign-in not configured' }, 500) };
-  try { return { sub: (await h.verifyGoogleIdToken(String(body.idToken || ''), env.GOOGLE_CLIENT_ID, env, ctx)).sub }; }
+  try {
+    const p = await h.verifyGoogleIdToken(String(body.idToken || ''), env.GOOGLE_CLIENT_ID, env, ctx);
+    const verified = p.email_verified === true || p.email_verified === 'true';
+    return { sub: p.sub, email: verified ? str(p.email, 200).toLowerCase() : '' };
+  }
   catch (e) { return { error: h.json({ error: 'Google sign-in didn\'t check out. Try again.' }, 401) }; }
 }
 
@@ -335,9 +343,17 @@ async function handleClaim(request, env, ctx, h) {
   const g = await googleSub(body, env, ctx, h);
   if (g.error) return g.error;
   if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
-  const token = await env.PROFILES.get(betaLinkKey(g.sub));
-  const t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
-  if (!t) return h.json({ error: 'This Google account isn\'t linked to a tester yet. Open EBBLESS with your tester link once, sign in with Google there (Settings > Account), then try here again.' }, 404);
+  let token = await env.PROFILES.get(betaLinkKey(g.sub));
+  let t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
+  if (!t && g.email) {
+    // Older Sheet scripts don't know the action: same as no match.
+    const r = await sheet(env, 'token_by_email', { email: g.email }).catch(() => null);
+    if (r && r.tester && TOKEN_RE.test(String(r.token || ''))) {
+      token = r.token; t = r.tester;
+      await env.PROFILES.put(betaLinkKey(g.sub), token);
+    }
+  }
+  if (!t) return h.json({ error: 'This Google account isn\'t on the tester list. Use the one your invite email went to, or tap the link in that email.' }, 404);
   return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
 }
 
