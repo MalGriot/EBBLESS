@@ -8184,11 +8184,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #290.
 
 ### previous-track-instant: Previous track should load as instantly as next
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Going back to the previous song should be as instant as skipping forward (keep the previous track warm/preloaded).
 - **Touches:** prev/next preload logic.
-- **Branch:**
+- **Branch:** agent/previous-track-instant
 - **Notes:** Synced from Geethub issue #284.
 
 ### library-artists-section: Library: Artists section, and adding an artist adds their albums

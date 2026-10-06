@@ -3717,7 +3717,7 @@ body.week-up-on{overflow:hidden}
        actual <iframe> already pointing at the widget URL to bind to (unlike
        YT.Player, which takes over a plain element itself), so these sit here
        pre-created rather than being swapped in/out of the yt-deck-* slots. -->
-  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe></div>
+  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><div id="yt-deck-c"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe><iframe id="sc-deck-c" allow="autoplay"></iframe></div>
   <!-- near-silent (not truly zero-amplitude — Chromium's audible-source
        heuristic ignores pure digital silence) loop: keeps the tab holding an
        active local media session so mobile OSes grant lock-screen/
@@ -13588,7 +13588,10 @@ const AD_MUTE_MAX_MS = 120000;
 // gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
 // deck's player - see the gen-check comment on those functions for why.
 function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, adMutedAt: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1, resumeSeeked: false }; }
-const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b') ];
+// decks[0]/[1] are the active/standby pair (activeIdx); decks[2] is the "prev"
+// deck, kept warm on the previous track so Previous is as instant as Next
+// (previous-track-instant). Decks are re-slotted by swapping array entries.
+const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b'), makeDeck('yt-deck-c', 'sc-deck-c') ];
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
 const standbyDeck = () => decks[1 - activeIdx];
@@ -14096,7 +14099,7 @@ function createSCDeckPlayer(deck, videoId){
     // bounced (see the PLAY handler above) - that pause came from
     // SoundCloud's one-player-at-a-time rule, not the listener, so resume
     // instead of reflecting it as a real pause.
-    const other = decks[0] === deck ? decks[1] : decks[0];
+    const other = deck === activeDeck() ? standbyDeck() : activeDeck();
     if (deck === activeDeck() && deck._scState === YT.PlayerState.PLAYING && other._scBouncedAt && Date.now() - other._scBouncedAt < 2000){
       other._scBouncedAt = 0;
       widget.play();
@@ -14220,10 +14223,51 @@ function loadIntoDeck(deck, videoId, isActive){
   if (deck === activeDeck()) startLoadIconTicker();
 }
 
+// Queue position "previous" would play from fromPos (matches playPrev), or -1.
+function computePrevPos(fromPos){
+  if (fromPos > 0) return fromPos - 1;
+  return state.repeat === 'all' && state.queue.length > 1 ? state.queue.length - 1 : -1;
+}
+function prevDeck(){ return decks[2]; }
+// Does this deck hold (or is loading) the track at pos?
+function deckHolds(deck, pos){
+  const t = trackAt(pos);
+  return !!(t && deck.pos === pos && deck.videoId === t.videoId && (deck.player || deck.pendingVideoId));
+}
+// Swap two deck slots in the array (decks are objects, so players follow).
+function swapDeckSlots(i, j){ const d = decks[i]; decks[i] = decks[j]; decks[j] = d; }
+// Forward step: the deck that just finished the previous track stays warm,
+// paused, in the prev slot; the stale prev deck drops into its old slot.
+function keepAsPrev(old){
+  const i = decks.indexOf(old);
+  if (i < 0 || i === 2){ resetDeck(old); return; }
+  swapDeckSlots(i, 2);
+  resetDeck(decks[i]);
+}
+// The prev deck loads muted behind the next-track preload, so wait for that
+// one to settle first rather than burning two ad pre-rolls at once.
+let prevWarmTimer = null;
+function schedulePrevWarm(pos){
+  clearTimeout(prevWarmTimer);
+  if (routeLocked()) return;
+  prevWarmTimer = setTimeout(() => {
+    if (state.queuePos !== pos || routeLocked() || swapInProgress) return;
+    const pp = computePrevPos(pos), deck = prevDeck();
+    if (pp < 0 || pp === pos){ if (deck.pos !== -1) resetDeck(deck); return; }
+    const t = trackAt(pp);
+    if (!t || !t.videoId){ resetDeck(deck); return; }
+    if (deckHolds(deck, pp)) return;
+    resetDeck(deck);
+    deck.pos = pp;
+    loadIntoDeck(deck, t.videoId, false);
+  }, 6000);
+}
+
 function schedulePreload(afterPos){
   // The next track will play on the cast/AirPlay target, not this device -
   // a warm local standby deck would only be promoted by mistake.
   if (routeLocked()) return;
+  schedulePrevWarm(afterPos);
   const deck = standbyDeck();
   const pos = computeNextPos(afterPos, true);
   if (pos < 0){ if (deck.pos !== -1) resetDeck(deck); return; }
@@ -16209,6 +16253,7 @@ function cancelCrossfade(){
 function promoteDeckDirect(nd, pos, shouldPlay, keepOld){
   cancelCrossfade();
   const old = activeDeck();
+  const oldPos = state.queuePos;
   activeIdx = 1 - activeIdx;
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
@@ -16237,7 +16282,12 @@ function promoteDeckDirect(nd, pos, shouldPlay, keepOld){
   if (shouldPlay && nd.player.playVideo) nd.player.playVideo();
   else if (!shouldPlay && nd.player.pauseVideo) nd.player.pauseVideo();
 
-  if (old !== nd && !keepOld){ if (old.player && old.player.pauseVideo) old.player.pauseVideo(); resetDeck(old); }
+  if (old !== nd && !keepOld){
+    if (old.player && old.player.pauseVideo) old.player.pauseVideo();
+    // a plain forward step leaves the finished track warm for Previous
+    if (old.confirmed && !old.adDodge && !castActive() && pos === oldPos + 1){ old.pos = oldPos; keepAsPrev(old); }
+    else resetDeck(old);
+  }
   schedulePreload(pos);
 }
 
@@ -16294,6 +16344,7 @@ function finishCrossfade(old, nd, nextPos){
   old.fadeTimer = null;
   if (old.player && old.player.pauseVideo) old.player.pauseVideo();
   if (nd.player && nd.player.setVolume) nd.player.setVolume(effectiveVolume(nd));
+  const prevOldPos = state.queuePos;
   activeIdx = 1 - activeIdx;
   state.queuePos = nextPos;
   lastTrackStartTs = Date.now();
@@ -16303,7 +16354,8 @@ function finishCrossfade(old, nd, nextPos){
   // the incoming deck is already seconds in - repaint straight away rather
   // than leave reflectCurrentTrackUI's 0:00 up until the next poll tick
   updateSeekUI();
-  resetDeck(old);
+  if (old.confirmed && !castActive() && nextPos === prevOldPos + 1){ old.pos = prevOldPos; keepAsPrev(old); }
+  else resetDeck(old);
   schedulePreload(nextPos);
 }
 
@@ -16398,6 +16450,13 @@ function loadIndex(pos, autoplay, opts){
   if (autoplay) try{ endPlayNudge(); } catch(e){}
   trackStartAuto = pendingAutoStart;
   pendingAutoStart = false;
+
+  // Previous (previous-track-instant): the prev deck already holds this
+  // track, warm - slot it in as the standby deck so it promotes like Next.
+  if (!swapInProgress){
+    const pd = prevDeck();
+    if (pd.confirmed && pd.ready && pd.player && deckHolds(pd, pos) && !routeLocked() && !castActive()) swapDeckSlots(1 - activeIdx, 2);
+  }
 
   if (opts && opts.crossfade && autoplay !== false && startSkipCrossfade(pos, t)){
     maybeExtendDiscoverQueue();
