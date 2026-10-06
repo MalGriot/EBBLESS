@@ -916,6 +916,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .ads-report-btn:hover{background:var(--panel-3);color:var(--text)}
 .ads-report-btn:disabled{opacity:.5;cursor:default}
 .ads-report-btn[hidden]{display:none}
+body.split-desktop .ads-report-btn{margin-bottom:20px}
 .player-like-btn{flex:none;width:22px;height:22px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint-2);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
@@ -2763,6 +2764,9 @@ body.week-up-on{overflow:hidden}
       <div class="lib-bg-tint"></div>
     </div>
     <div class="view-scroll">
+      <div class="queue-head">
+        <h2>Library</h2>
+      </div>
       <form class="import-row" id="importForm">
         <span class="import-field">
         <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
@@ -14802,6 +14806,12 @@ function setArtStyle(style){
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
 function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
 function toggleArtStyleMenu(){ artStyleMenu.classList.toggle('is-open'); }
+function cycleArtStyle(){
+  const styles = Array.from(artStyleMenu.querySelectorAll('.art-style-opt'), b => b.dataset.style);
+  const currentIndex = styles.indexOf(artStyle);
+  const nextIndex = (currentIndex + 1) % styles.length;
+  setArtStyle(styles[nextIndex]);
+}
 artStyleMenu.querySelectorAll('.art-style-opt').forEach(btn => {
   btn.addEventListener('click', (e) => { e.stopPropagation(); setArtStyle(btn.dataset.style); });
 });
@@ -15213,7 +15223,7 @@ visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
     // never the art-style menu
     if (recGame.on){ recordGameTap(); return; }
     if (visualMode !== 'art'){ setVisualMode('art'); closeArtStyleMenu(); }
-    else toggleArtStyleMenu();
+    else cycleArtStyle();
     return;
   }
   closeArtStyleMenu();
