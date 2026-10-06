@@ -133,8 +133,23 @@ async function handleTestimonials(env, h) {
 async function handleSignup(request, env, ctx, h) {
   const { body, error } = await readBody(request, h.json, 20_000);
   if (error) return error;
-  const name = str(body.name, 80);
-  const email = str(body.email, 200).toLowerCase();
+  let name = str(body.name, 80);
+  let email = str(body.email, 200).toLowerCase();
+  // Signed up with Google: the verified address is stored as google_email
+  // and is their access later (Sheet 'token_by_email', any device), and it
+  // is also the contact email the invite goes to. Name falls back to the
+  // Google profile, so the form doesn't ask for either.
+  let googleEmail = '';
+  if (body.idToken) {
+    if (!env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return h.json({ error: 'google sign-in not configured' }, 500);
+    let p;
+    try { p = await h.verifyGoogleIdToken(String(body.idToken), env.GOOGLE_CLIENT_ID, env, ctx); }
+    catch (e) { return h.json({ error: 'Google sign-in didn\'t check out. Tap Sign up with Google again.' }, 401); }
+    googleEmail = (p.email_verified === true || p.email_verified === 'true') ? str(p.email, 200).toLowerCase() : '';
+    if (!googleEmail) return h.json({ error: 'That Google account has no verified email. Try another account, or sign up with your email.' }, 400);
+    email = googleEmail;
+    name = name || str(p.name || p.given_name, 80) || googleEmail.split('@')[0];
+  }
   if (!name) return h.json({ error: 'Add your name or a nickname.' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return h.json({ error: 'That email doesn\'t look right.' }, 400);
   const comfort = pick(body.comfort, COMFORT);
@@ -148,7 +163,7 @@ async function handleSignup(request, env, ctx, h) {
 
   // Keys are the Applicants tab's column headers.
   const applicant = {
-    name, email,
+    name, email, google_email: googleEmail,
     Instagram: str(body.social, 100),
     device, device_model: str(body.deviceModel, 100),
     operating_system: str(body.os, 80), browser, technical_comfort: comfort, music_platform: platform,
@@ -300,7 +315,8 @@ async function handleActivity(request, env, ctx, h) {
 // again. The token is re-checked against the Sheet both ways, so an Inactive
 // tester's link stops working here exactly as it does everywhere else.
 // A Google account that was never linked still claims when its verified
-// email is the address the invite went to (Sheet 'token_by_email'): same
+// email is the Google account they signed up with (google_email) or the
+// address the invite went to (Sheet 'token_by_email'): same
 // proof as the emailed link itself, and it means a locked home-screen app
 // (iPhone keeps its storage apart from Safari) opens with one sign-in.
 const betaLinkKey = (sub) => 'betalink:' + sub;
@@ -353,7 +369,7 @@ async function handleClaim(request, env, ctx, h) {
       await env.PROFILES.put(betaLinkKey(g.sub), token);
     }
   }
-  if (!t) return h.json({ error: 'This Google account isn\'t on the tester list. Use the one your invite email went to, or tap the link in that email.' }, 404);
+  if (!t) return h.json({ error: 'This Google account isn\'t on the tester list. Use the one you signed up with, or tap the link in your invite email.' }, 404);
   return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
 }
 
