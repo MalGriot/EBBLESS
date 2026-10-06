@@ -8160,19 +8160,19 @@ Add entries in this shape:
 - **Notes:** Idea from MAL GRIOT 2026-10-06. Needs decisions before ready: does rejoining reactivate instantly or go into the review queue like a new signup; does it start a fresh 7-day window; how is a "next beta" round defined in the Sheet.
 
 ### crossfade-next-muted-gap: With crossfade on, pressing next sometimes plays the new song muted for ~12s
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Bug: with crossfade enabled, hitting next sometimes starts the next track silent for about 12 seconds before audio comes in. Manual skips should fade in promptly (or cut cleanly) every time.
 - **Touches:** crossfade / manual skip path (see merged crossfade-manual-skip).
-- **Branch:**
+- **Branch:** agent/crossfade-next-muted-gap
 - **Notes:** Synced from Geethub issue #294. Likely a regression of crossfade-manual-skip's fade ramp.
 
 ### iphone-autoadvance-stall: iPhone doesn't autoplay the next song
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Bug: on iPhone, when a song finishes the next one doesn't start; the user has to open the video tab and press pause/play to get it going. Next track should start on its own.
 - **Touches:** track-end / auto-advance handling on iOS Safari/PWA.
-- **Branch:**
+- **Branch:** agent/iphone-autoadvance-stall
 - **Notes:** Synced from Geethub issue #286. Related to the background auto-advance work in bld-background-tab-autoadvance but iPhone-specific.
 
 ### ads-label-desktop-position: "Ads playing?" button sits too close to the bottom of the screen on desktop
@@ -8192,11 +8192,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #284.
 
 ### library-artists-section: Library: Artists section, and adding an artist adds their albums
-- **Status:** archived
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add an Artists section to the library alongside albums/playlists/podcasts. When you add an artist, all their albums should also appear in the Albums section.
 - **Touches:** renderLibrary filters/sections, artist add flow.
-- **Branch:**
+- **Branch:** agent/library-artists-section
 - **Notes:** Synced from Geethub issue #291 and #293. Folded #293 (artist adds all albums) into this entry since it depends on the Artists section.
 
 ### library-collapsible-sections: Library sections collapse/expand with a +/arrow by the title
