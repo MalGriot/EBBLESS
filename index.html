@@ -2451,6 +2451,8 @@ body.week-up-on{overflow:hidden}
 #weekUp .wu-chip.is-top span{color:rgba(18,18,18,.7)}
 #weekUp .wu-saved p{margin:0 0 8px;color:#c9c9c9}
 #weekUp .wu-faint,#weekUp .wu-saved .wu-faint{color:var(--faint);font-size:13px;margin:0}
+#weekUp button.wu-btn{background:transparent;font-family:inherit;cursor:pointer;margin:16px 0 10px}
+#weekUp button.wu-btn:disabled{cursor:default;filter:none;transform:none;border-color:var(--accent);color:var(--accent)}
 #weekUp .wu-quiet{margin:0;color:#c9c9c9}
 #weekUp .wu-signoff{text-align:center;color:var(--faint);font-size:13px;margin:28px 0 0}
 #weekUp .wu-reveal{opacity:0;transform:translateY(14px);transition:opacity .7s var(--ease-out),transform .7s var(--ease-out)}
@@ -2603,7 +2605,9 @@ body.week-up-on{overflow:hidden}
 
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
-    ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null }));
+    ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
+      // "Join the next beta" on the 7-days-up recap (absent when not set)
+      rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || '') }));
   }
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
@@ -11327,7 +11331,8 @@ function weekUpHtml(r, opts){
       '<span class="wu-chip' + (i === 0 ? ' is-top' : '') + '">' + escapeHtml(WEEK_UP_FEATURES[k]) + '<span>' + n + (n === 1 ? ' session' : ' sessions') + '</span></span>').join('') + '</div></section>';
   }
   html += '<section class="wu-card wu-saved wu-reveal"><h3 class="wu-eyebrow">Your history is saved</h3><p>Your library, liked songs and everything in this recap stay put. Join the next beta and it all loads back in, right where you left off.</p>' +
-    '<p class="wu-faint">' + (synced ? 'It\'s synced to your Google account, so any device you sign in on picks it up.' : 'It\'s saved on this device. Sign in with Google in the next beta to carry it anywhere.') + '</p></section>' +
+    '<p class="wu-faint">' + (synced ? 'It\'s synced to your Google account, so any device you sign in on picks it up.' : 'It\'s saved on this device. Sign in with Google in the next beta to carry it anywhere.') + '</p>' +
+    '<button type="button" class="wu-btn" id="wuJoin"></button><p class="wu-faint" id="wuJoinNote" aria-live="polite"></p></section>' +
     '<a class="wu-btn primary wu-reveal" href="' + escapeHtml(fbHref) + '"' + (opts.preview ? ' target="_blank" rel="noopener"' : '') + '>GIVE FEEDBACK</a>' +
     '<p class="wu-signoff wu-reveal">That\'s a wrap on this chapter. Peace, and thank you for listening.</p>' +
     '</div>';
@@ -11411,8 +11416,55 @@ function showWeekUp(opts){
     }));
     const close = el.querySelector('#wuClose');
     if (close) close.addEventListener('click', hideWeekUpPreview);
+    weekUpJoinInit(el, preview);
   };
   setTimeout(reveal, opts.instant ? 0 : WEEK_UP_FADE_MS - 600);
+}
+// "Join the next beta": one tap, no form. POST /beta/rejoin with the tester
+// token puts them back in the review queue (their own Applicants row, set
+// to Pending); accepting it gives them a fresh 7 days from the next round's
+// date, same token, history untouched. State comes from /beta/me (saved in
+// ebbless:betaMe), so a repeat tap or another device shows "on the list".
+// Preview mode never sends anything.
+function weekUpJoinSet(btn, note, me){
+  const now = Date.now();
+  const date = Number(me.nextRoundAt) > now && me.nextRoundLabel ? String(me.nextRoundLabel) : '';
+  if (me.rejoin === 'approved'){
+    btn.disabled = true; btn.textContent = 'YOU\'RE IN FOR THE NEXT ROUND';
+    note.textContent = date ? 'It opens ' + date + '. Your fresh 7 days start then.' : 'Your fresh 7 days start when the round opens.';
+  } else if (me.rejoin === 'requested'){
+    btn.disabled = true; btn.textContent = 'YOU\'RE ON THE LIST';
+    note.textContent = (date ? 'Next round starts ' + date + '. ' : '') + 'You\'ll get an email when you\'re in.';
+  } else {
+    btn.disabled = false; btn.textContent = 'JOIN THE NEXT BETA';
+    note.textContent = date ? 'Next round starts ' + date + '. One tap, no form.' : 'One tap, no form.';
+  }
+}
+function weekUpJoinInit(el, preview){
+  const btn = el.querySelector('#wuJoin'), note = el.querySelector('#wuJoinNote');
+  if (!btn || !note) return;
+  weekUpJoinSet(btn, note, weekUpMe());
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { rejoin: 'requested' })); note.textContent += ' (Preview, nothing sent.)'; return; }
+    const token = statsToken();
+    if (!token){ note.textContent = 'Open EBBLESS with your tester link first.'; return; }
+    btn.disabled = true; btn.textContent = 'JOINING...'; note.textContent = '';
+    let d = null, ok = false;
+    try {
+      const res = await fetch(BACKEND + '/beta/rejoin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+      d = await res.json().catch(() => null);
+      ok = res.ok && d && d.ok;
+    } catch(e){}
+    if (!ok){
+      weekUpJoinSet(btn, note, weekUpMe());
+      note.textContent = (d && d.error) || 'Couldn\'t reach EBBLESS. Check your connection and try again.';
+      return;
+    }
+    const me = Object.assign(weekUpMe(), { rejoin: 'requested', nextRoundAt: Number(d.nextRoundAt) || null, nextRoundLabel: String(d.nextRoundLabel || '') });
+    try { localStorage.setItem(WEEK_UP_ME_KEY, JSON.stringify(me)); } catch(e){}
+    weekUpJoinSet(btn, note, me);
+  });
 }
 function hideWeekUpPreview(){
   if (weekUp.frozen || !weekUp.el) return;
