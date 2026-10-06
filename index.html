@@ -5069,7 +5069,7 @@ function applyMergedProfile(M){
 // a feature missing or mid-refactor shouldn't take the rest down with it.
 function refreshSyncedSettings(){
   const steps = [
-    () => { crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {})); if (!crossfadePrefs.on) cancelCrossfade(); renderCrossfadeUI(); },
+    () => { crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {})); if (!crossfadePrefs.on && cancelCrossfade()) schedulePreload(state.queuePos); renderCrossfadeUI(); },
     () => { levelOn = lsGet(LS_LEVEL, true) !== false; renderLevelUI(); reapplyLevel(); },
     () => vizSetHoldMode(lsGet(LS_VIZ_HOLD, false) === true),
     () => { const v = lsGet(LS_VIZ_SPEED, 1); vizSetSpeed(VIZ_SPEEDS.includes(v) ? v : 1); },
@@ -11443,7 +11443,7 @@ function renderCrossfadeUI(){
 }
 crossfadeBtn.addEventListener('click', () => {
   crossfadePrefs.on = !crossfadePrefs.on;
-  if (!crossfadePrefs.on) cancelCrossfade();
+  if (!crossfadePrefs.on && cancelCrossfade()) schedulePreload(state.queuePos);
   lsSet(LS_CROSSFADE, crossfadePrefs);
   renderCrossfadeUI();
 });
@@ -16408,8 +16408,10 @@ function reflectCurrentTrackUI(pos, opts){
   if (visualMode === 'lyrics') maybeLoadLyrics();
 }
 
+// Returns true when it actually stopped a fade, so a caller that isn't about
+// to load a track itself can put the next-track preload back (schedulePreload).
 function cancelCrossfade(){
-  if (!swapInProgress) return;
+  if (!swapInProgress) return false;
   swapInProgress = false;
   const ad = activeDeck(), nd = standbyDeck();
   if (ad.fadeTimer){ clearInterval(ad.fadeTimer); ad.fadeTimer = null; }
@@ -16419,6 +16421,30 @@ function cancelCrossfade(){
     if (nd.player.setVolume) nd.player.setVolume(0);
     if (nd.player.mute) nd.player.mute();
   }
+  return true;
+}
+
+// Issue #213 (auto-advance lands on the next track paused, its progress
+// bar already full): a preloaded standby deck is only *asked* to pause
+// once its ad check confirms it (onDeckConfirmed). Until then - and for
+// good if that pause doesn't take, e.g. in a background tab where the
+// ad-check timer chain gets throttled to about once a minute - it keeps
+// playing muted, and can run all the way to its own end before it's
+// promoted. playVideo() on that ENDED player doesn't reliably restart
+// it, so the deck sat at duration/duration: full bar, paused UI, no
+// audio. A confirmed deck never gets onDeckConfirmed's snap back to 0:00
+// again, so rewind it here unless that position is a deliberate resume
+// (prewarmResumeDeck). An unconfirmed deck gets the snap on confirm.
+// Shared by every promotion of the standby deck - the instant swap and
+// both crossfades (crossfade-start-and-preload) - so a song always starts
+// from the top.
+function rewindPromotedDeck(nd){
+  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
+    const cur = nd.player.getCurrentTime ? (nd.player.getCurrentTime() || 0) : 0;
+    const st = nd.player.getPlayerState ? nd.player.getPlayerState() : -1;
+    if (cur > 1 || st === YT.PlayerState.ENDED) nd.player.seekTo(0, true);
+  }
+  nd.resumeSeeked = false;
 }
 
 // keepOld: leave the outgoing deck playing (muted) where it is instead of
@@ -16434,23 +16460,7 @@ function promoteDeckDirect(nd, pos, shouldPlay, keepOld){
   reflectCurrentTrackUI(pos);
 
   nd.player.setVolume(effectiveVolume(nd));
-  // Issue #213 (auto-advance lands on the next track paused, its progress
-  // bar already full): a preloaded standby deck is only *asked* to pause
-  // once its ad check confirms it (onDeckConfirmed). Until then - and for
-  // good if that pause doesn't take, e.g. in a background tab where the
-  // ad-check timer chain gets throttled to about once a minute - it keeps
-  // playing muted, and can run all the way to its own end before it's
-  // promoted. playVideo() on that ENDED player doesn't reliably restart
-  // it, so the deck sat at duration/duration: full bar, paused UI, no
-  // audio. A confirmed deck never gets onDeckConfirmed's snap back to 0:00
-  // again, so rewind it here unless that position is a deliberate resume
-  // (prewarmResumeDeck). An unconfirmed deck gets the snap on confirm.
-  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
-    const cur = nd.player.getCurrentTime ? (nd.player.getCurrentTime() || 0) : 0;
-    const st = nd.player.getPlayerState ? nd.player.getPlayerState() : -1;
-    if (cur > 1 || st === YT.PlayerState.ENDED) nd.player.seekTo(0, true);
-  }
-  nd.resumeSeeked = false;
+  rewindPromotedDeck(nd);
   if (nd.confirmed && nd.player.unMute) nd.player.unMute();
   if (shouldPlay && nd.player.playVideo) nd.player.playVideo();
   else if (!shouldPlay && nd.player.pauseVideo) nd.player.pauseVideo();
@@ -16493,6 +16503,7 @@ function runCrossfade(nd, nextPos){
   swapInProgress = true;
   const old = activeDeck();
   nd.player.setVolume(0);
+  rewindPromotedDeck(nd);
   if (nd.player.unMute) nd.player.unMute();
   nd.player.playVideo();
   const durationMs = crossfadePrefs.ms;
@@ -16581,6 +16592,7 @@ function startSkipCrossfade(pos, t){
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
   if (nd.player && nd.player.setVolume) nd.player.setVolume(0);
+  if (nd.player) rewindPromotedDeck(nd);
   if (nd.confirmed && nd.player){
     if (nd.player.unMute) nd.player.unMute();
     if (nd.player.playVideo) nd.player.playVideo();
@@ -16844,7 +16856,11 @@ function rebuildActiveDeck(){
 }
 
 function fadeOutAndPause(deck){
-  if (swapInProgress) cancelCrossfade();
+  // Pausing mid-fade (crossfade-start-and-preload): a skip fade's standby
+  // deck still holds the outgoing track, so re-aim the preload at the next
+  // one - otherwise the next Next is a cold load. No-op after an automatic
+  // crossfade, whose standby deck already holds the next track.
+  if (cancelCrossfade()) schedulePreload(state.queuePos);
   setPlayingUI(false);
   runPlayFade(deck, 'out');
 }
