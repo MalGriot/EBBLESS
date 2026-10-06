@@ -8201,7 +8201,7 @@ Add entries in this shape:
 
 
 ### artists-albums-resume-backfill: Artist album fill resumes after app close, and covers artists added before
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to library-artists-section. (1) If the app closes before an artist's albums finish loading, resume the remaining albums on the next app load. (2) Artists already in a library before the Artists section shipped should also get their albums added (one-time backfill). Keep iTunes as the album source and the 20-album cap (MAL GRIOT 2026-10-06).
 - **Touches:** artist album fill (library-artists-section code), app startup.
@@ -8209,7 +8209,7 @@ Add entries in this shape:
 - **Notes:** Decisions from MAL GRIOT 2026-10-06 on the library-artists-section open questions.
 
 ### crossfade-start-and-preload: Crossfaded songs always start from the beginning; next song always preloads
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to crossfade-next-muted-gap. (1) Skip crossfade (startSkipCrossfade) and automatic crossfade (runCrossfade) should rewind an already-preloaded deck to 0 like promoteDeckDirect does (#213), so songs always start at the beginning. (2) The next song should always get preloaded, including when a skip fade is cancelled (e.g. user pauses mid-fade).
 - **Touches:** startSkipCrossfade, runCrossfade, schedulePreload.
