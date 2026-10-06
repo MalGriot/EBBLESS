@@ -8209,7 +8209,7 @@ Add entries in this shape:
 - **Notes:** Decisions from MAL GRIOT 2026-10-06 on the library-artists-section open questions.
 
 ### crossfade-start-and-preload: Crossfaded songs always start from the beginning; next song always preloads
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Follow-up to crossfade-next-muted-gap. (1) Skip crossfade (startSkipCrossfade) and automatic crossfade (runCrossfade) should rewind an already-preloaded deck to 0 like promoteDeckDirect does (#213), so songs always start at the beginning. (2) The next song should always get preloaded, including when a skip fade is cancelled (e.g. user pauses mid-fade).
 - **Touches:** startSkipCrossfade, runCrossfade, schedulePreload.
