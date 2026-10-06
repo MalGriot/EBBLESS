@@ -180,10 +180,14 @@ export function windowEndsAt(t, now = Date.now()) {
 
 // What the app's 7-days-up recap needs for "Join the next beta", only when
 // set: nextRoundAt / nextRoundLabel ("Oct 20", in the Sheet's time zone)
-// while that date is ahead, and rejoin 'requested' (waiting on review) or
-// 'approved' (accepted, round not open yet).
+// while that date is ahead, rejoin 'requested' (waiting on review) or
+// 'approved' (accepted, round not open yet), round / nextRound numbers, and
+// feedbackGiven (a beta feedback form sent this round; it unlocks rejoining).
 export function rejoinFields(t, now = Date.now()) {
   const out = {};
+  if (Number(t && t.round) > 0) out.round = Number(t.round);
+  if (Number(t && t.next_round) > 0) out.nextRound = Number(t.next_round);
+  if (t && typeof t.feedback_given === 'boolean') out.feedbackGiven = t.feedback_given;
   const at = Number(t && t.next_round_start) || 0;
   if (at > now) { out.nextRoundAt = at; out.nextRoundLabel = str(t.next_round_label, 20); }
   if (t && t.rejoin_pending) out.rejoin = 'requested';
@@ -201,7 +205,8 @@ async function handleMe(request, env, ctx, h) {
 
 // "Join the next beta" on the recap: one tap, token only. The Sheet puts the
 // tester's own Applicants row back in the review queue (Pending); a repeat
-// tap while that's open is a no-op there (already: true).
+// tap while that's open is a no-op there (already: true). Refused (409,
+// needsFeedback) until they've sent a beta feedback form this round.
 async function handleRejoin(request, env, ctx, h) {
   const { body, error } = await readBody(request, h.json, 2_000);
   if (error) return error;
@@ -210,7 +215,10 @@ async function handleRejoin(request, env, ctx, h) {
   if (await throttled(request, ctx, h.envCache, 'rejoin', REJOIN_LIMIT, REJOIN_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
   const r = await sheet(env, 'rejoin', { token: body.token });
   if (!r.tester) return inactive();
-  return h.json({ ok: true, already: !!r.already, rejoin: 'requested', ...rejoinFields({ next_round_start: r.next_round_start, next_round_label: r.next_round_label }) });
+  const round = Number(r.next_round) > 0 ? Number(r.next_round) : 0;
+  // No beta feedback form from them this round: the Sheet refused, say why.
+  if (r.needs_feedback) return h.json({ error: 'Share your feedback for this round first. It unlocks ' + (round ? 'Round ' + round : 'the next round') + '.', needsFeedback: true, feedbackGiven: false, ...(round ? { nextRound: round } : {}) }, 409);
+  return h.json({ ok: true, already: !!r.already, rejoin: 'requested', feedbackGiven: true, ...rejoinFields({ next_round_start: r.next_round_start, next_round_label: r.next_round_label, next_round: r.next_round }) });
 }
 
 async function handleReport(request, env, ctx, h) {

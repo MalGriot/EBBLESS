@@ -24,17 +24,28 @@ function call(path, body, sheetReply) {
 
 test('/beta/rejoin passes the token to the Sheet and reports the round date', async () => {
   const at = Date.now() + 10 * DAY;
-  const { res, calls } = call('/beta/rejoin', { token: TOKEN }, { already: false, tester: { id: 'x' }, next_round_start: at, next_round_label: 'Oct 20' });
+  const { res, calls } = call('/beta/rejoin', { token: TOKEN }, { already: false, tester: { id: 'x' }, next_round_start: at, next_round_label: 'Oct 20', next_round: 2 });
   const r = await res;
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { ok: true, already: false, rejoin: 'requested', nextRoundAt: at, nextRoundLabel: 'Oct 20' });
+  assert.deepEqual(await r.json(), { ok: true, already: false, rejoin: 'requested', feedbackGiven: true, nextRound: 2, nextRoundAt: at, nextRoundLabel: 'Oct 20' });
   assert.equal(calls[0].action, 'rejoin');
   assert.equal(calls[0].token, TOKEN);
 });
 
 test('/beta/rejoin: repeat tap is already, no date set means no date fields', async () => {
   const r = await call('/beta/rejoin', { token: TOKEN }, { already: true, tester: { id: 'x' }, next_round_start: null, next_round_label: '' }).res;
-  assert.deepEqual(await r.json(), { ok: true, already: true, rejoin: 'requested' });
+  assert.deepEqual(await r.json(), { ok: true, already: true, rejoin: 'requested', feedbackGiven: true });
+});
+
+test('/beta/rejoin: no feedback this round is refused with a reason (409)', async () => {
+  const r = await call('/beta/rejoin', { token: TOKEN }, { needs_feedback: true, tester: { id: 'x' }, next_round: 3 }).res;
+  assert.equal(r.status, 409);
+  const d = await r.json();
+  assert.equal(d.needsFeedback, true);
+  assert.equal(d.feedbackGiven, false);
+  assert.equal(d.nextRound, 3);
+  assert.match(d.error, /feedback.*Round 3/);
+  assert.ok(!/[\u2013\u2014]/.test(d.error));
 });
 
 test('/beta/rejoin: bad or inactive token is 403, Sheet never called for a bad one', async () => {
@@ -66,11 +77,14 @@ test('rejoinFields', () => {
     { rejoin: 'requested', nextRoundAt: 5000, nextRoundLabel: 'Oct 20' });
   assert.deepEqual(rejoinFields({ window_start: 5000, next_round_start: 500 }, now), { rejoin: 'approved' });
   assert.deepEqual(rejoinFields({ window_start: 500 }, now), {});
+  assert.deepEqual(rejoinFields({ round: 1, next_round: 2, feedback_given: false }, now), { round: 1, nextRound: 2, feedbackGiven: false });
 });
 
 test('/beta/me carries rejoin state', async () => {
-  const r = await call('/beta/me', { token: TOKEN }, { tester: { number: 7, label: 'T7', name: 'Ann', feedback_request_sent: 1, rejoin_pending: true } }).res;
+  const r = await call('/beta/me', { token: TOKEN }, { tester: { number: 7, label: 'T7', name: 'Ann', feedback_request_sent: 1, rejoin_pending: true, round: 1, next_round: 2, feedback_given: true } }).res;
   const d = await r.json();
   assert.equal(d.rejoin, 'requested');
+  assert.equal(d.feedbackGiven, true);
+  assert.equal(d.nextRound, 2);
   assert.equal(d.windowEndsAt, 1 + BETA_WINDOW_MS);
 });

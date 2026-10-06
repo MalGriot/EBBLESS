@@ -18,7 +18,11 @@
 // (feedback_request_sent records when). Their 7-day window runs from that
 // email (the worker works it out; the app shows a recap when it's over).
 //
-// Rejoining: "Join the next beta" on that recap puts the tester's own
+// Rejoining needs feedback first: a Feedback row from that tester through
+// the beta feedback forms (source "feedback survey" or "feedback page"),
+// submitted since their current round started (window_start, else
+// accepted_timestamp). In-app rows don't count: thumbs checks and the ads
+// button land there too. Then "Join the next beta" on that recap puts the tester's own
 // Applicants row back to Pending (rejoin_requested stamped, note added) and
 // stamps rejoin_requested on their Testers row. No new person, no new tester
 // number: accept it like any signup and their Testers row gets window_start
@@ -183,6 +187,7 @@ function feedbackRequestText_(first, link) {
     'What did you love? What confused you? What broke? What would make you want to come back?\n\n' +
     'Take a few minutes and tell me here:\n\n' + link + '\n\n' +
     'The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
+    'Your feedback is also what unlocks the next beta round for you.\n\n' +
     'No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F\n\n' +
     'Mal';
 }
@@ -196,6 +201,7 @@ function feedbackRequestHtml_(first, link) {
     p('Take a few minutes and tell me here:') +
     p('<a href="' + esc(link) + '">' + esc(link) + '</a>') +
     p('<b>The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
+    p('Your feedback is also what unlocks the next beta round for you.') +
     p('No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F') +
     p('Mal') + '</div>';
 }
@@ -299,7 +305,8 @@ function me_(token) {
   const sent = t.feedback_request_sent instanceof Date ? t.feedback_request_sent.getTime() : Date.parse(t.feedback_request_sent);
   const round = nextRound_();
   return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null,
-    window_start: ms_(t.window_start) || null, rejoin_pending: rejoinOpen_(t), next_round_start: round.at || null, next_round_label: round.label } };
+    window_start: ms_(t.window_start) || null, rejoin_pending: rejoinOpen_(t), next_round_start: round.at || null, next_round_label: round.label,
+    round: roundOf_(t), next_round: nextRoundFor_(t, round), feedback_given: feedbackGiven_(t) } };
 }
 
 // ---------- rejoining (the "Join the next beta" button on the recap) ----------
@@ -317,6 +324,22 @@ function nextRound_() {
 function currentRound_() {
   const r = nextRound_();
   return r.at && r.at <= Date.now() ? r.number : Math.max(1, r.number - 1);
+}
+
+function roundOf_(t) { return parseInt(t.round, 10) || 1; }
+// The round a rejoin moves this tester into (same rule as acceptRow_).
+function nextRoundFor_(t, round) { return Math.max((round || nextRound_()).number, roundOf_(t) + 1); }
+
+// Feedback that unlocks the next round: a beta feedback form (survey or
+// feedback page) sent since this tester's current round started.
+const UNLOCK_SOURCES = ['feedback survey', 'feedback page'];
+function feedbackGiven_(t) {
+  const sh = sheet_(FEEDBACK);
+  if (!sh) return false;
+  const since = ms_(t.window_start) || ms_(t.accepted_timestamp);
+  return records_(sh).some(function (f) {
+    return f.tester_id === t.tester_id && UNLOCK_SOURCES.indexOf(String(f.source)) >= 0 && ms_(f.submitted_timestamp) >= since;
+  });
 }
 
 // A rejoin request nobody has accepted yet (accepting sets window_start).
@@ -338,6 +361,7 @@ function rejoin_(token) {
     const t = records_(tsh).filter(function (x) { return x.tester_id === t0.tester_id; })[0];
     if (!t) return { gone: true };
     if (rejoinOpen_(t)) return { already: true, t: t };
+    if (!feedbackGiven_(t)) return { needsFeedback: true, t: t };
     const now = new Date(), stamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
     const note = 'Rejoin request from ' + t.tester_number + ' ' + stamp + ' (accept to give them a fresh 7 days)';
     const a = records_(ash).filter(function (x) { return x.applicant_id && x.applicant_id === t.applicant_id; })[0];
@@ -356,12 +380,13 @@ function rejoin_(token) {
   });
   if (res.gone) return { ok: true, tester: null };
   const round = nextRound_();
+  if (res.needsFeedback) return { ok: true, needs_feedback: true, tester: { id: res.t.tester_id }, next_round: nextRoundFor_(res.t, round) };
   if (!res.already) {
     const first = String(res.t.name || '').split(/\s+/)[0];
-    sendMail_(res.t.email, 'EBBLESS BETA: you\'re on the list for the next round', 'Peace ' + first + ',\n\nGot it, you want in on the next EBBLESS beta round' +
+    sendMail_(res.t.email, 'EBBLESS BETA: you\'re on the list for the next round', 'Peace ' + first + ',\n\nThanks for the feedback. Got it, you want in on the next EBBLESS beta round' +
       (round.at > Date.now() ? ' (it starts ' + round.label + ')' : '') + '. I\'m going through everyone by hand. If you\'re in, you\'ll hear from me here, and your library and history will be waiting.\n\nMAL GRIOT');
   }
-  return { ok: true, already: !!res.already, tester: { id: res.t.tester_id }, next_round_start: round.at || null, next_round_label: round.label };
+  return { ok: true, already: !!res.already, tester: { id: res.t.tester_id }, next_round_start: round.at || null, next_round_label: round.label, next_round: nextRoundFor_(res.t, round) };
 }
 
 function saveShot_(dataUrl, name) {

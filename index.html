@@ -2607,7 +2607,9 @@ body.week-up-on{overflow:hidden}
     if (!d || typeof d !== 'object') return;
     ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
       // "Join the next beta" on the 7-days-up recap (absent when not set)
-      rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || '') }));
+      rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
+      round: Number(d.round) > 0 ? Number(d.round) : null, nextRound: Number(d.nextRound) > 0 ? Number(d.nextRound) : null,
+      feedbackGiven: typeof d.feedbackGiven === 'boolean' ? d.feedbackGiven : null }));
   }
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
@@ -11425,11 +11427,18 @@ function showWeekUp(opts){
 // to Pending); accepting it gives them a fresh 7 days from the next round's
 // date, same token, history untouched. State comes from /beta/me (saved in
 // ebbless:betaMe), so a repeat tap or another device shows "on the list".
-// Preview mode never sends anything.
+// Feedback unlocks it: until /beta/me says feedbackGiven (a beta feedback
+// form sent this round), the button opens the feedback form in a new tab,
+// and coming back to this tab re-checks. Preview mode never sends anything.
 function weekUpJoinSet(btn, note, me){
   const now = Date.now();
   const date = Number(me.nextRoundAt) > now && me.nextRoundLabel ? String(me.nextRoundLabel) : '';
-  if (me.rejoin === 'approved'){
+  const round = Number(me.nextRound) > 0 ? 'Round ' + me.nextRound : 'the next round';
+  btn.dataset.gate = '';
+  if (me.feedbackGiven === false && !me.rejoin){
+    btn.disabled = false; btn.dataset.gate = '1'; btn.textContent = 'SHARE YOUR FEEDBACK TO UNLOCK ' + round.toUpperCase();
+    note.textContent = 'Feedback for this round unlocks ' + round + '. Send it, come back here, and join in one tap.';
+  } else if (me.rejoin === 'approved'){
     btn.disabled = true; btn.textContent = 'YOU\'RE IN FOR THE NEXT ROUND';
     note.textContent = date ? 'It opens ' + date + '. Your fresh 7 days start then.' : 'Your fresh 7 days start when the round opens.';
   } else if (me.rejoin === 'requested'){
@@ -11440,12 +11449,36 @@ function weekUpJoinSet(btn, note, me){
     note.textContent = date ? 'Next round starts ' + date + '. One tap, no form.' : 'One tap, no form.';
   }
 }
+function weekUpJoinSave(me){ try { localStorage.setItem(WEEK_UP_ME_KEY, JSON.stringify(me)); } catch(e){} return me; }
+// Fresh feedback / rejoin state from /beta/me (e.g. back from the feedback form).
+async function weekUpJoinRefresh(btn, note){
+  const token = statsToken();
+  if (!token) return;
+  try {
+    const res = await fetch(BACKEND + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+    if (!res.ok) return;
+    const d = await res.json();
+    const me = weekUpMe();
+    ['rejoin', 'nextRoundAt', 'nextRoundLabel', 'round', 'nextRound', 'feedbackGiven'].forEach(k => { me[k] = k in d ? d[k] : (k === 'feedbackGiven' ? null : ''); });
+    weekUpJoinSet(btn, note, weekUpJoinSave(me));
+  } catch(e){}
+}
 function weekUpJoinInit(el, preview){
   const btn = el.querySelector('#wuJoin'), note = el.querySelector('#wuJoinNote');
   if (!btn || !note) return;
   weekUpJoinSet(btn, note, weekUpMe());
+  if (!preview){
+    weekUpJoinRefresh(btn, note);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && btn.dataset.gate === '1') weekUpJoinRefresh(btn, note); });
+  }
   btn.addEventListener('click', async () => {
     if (btn.disabled) return;
+    if (btn.dataset.gate === '1'){
+      const fb = el.querySelector('#wuFeedback');
+      if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { feedbackGiven: true })); note.textContent += ' (Preview, feedback assumed.)'; return; }
+      window.open(fb ? fb.href : 'beta/feedback.html', '_blank', 'noopener');
+      return;
+    }
     if (preview){ weekUpJoinSet(btn, note, Object.assign({}, weekUpMe(), { rejoin: 'requested' })); note.textContent += ' (Preview, nothing sent.)'; return; }
     const token = statsToken();
     if (!token){ note.textContent = 'Open EBBLESS with your tester link first.'; return; }
@@ -11457,13 +11490,15 @@ function weekUpJoinInit(el, preview){
       ok = res.ok && d && d.ok;
     } catch(e){}
     if (!ok){
-      weekUpJoinSet(btn, note, weekUpMe());
+      const me = weekUpMe();
+      if (d && d.needsFeedback){ me.feedbackGiven = false; if (Number(d.nextRound) > 0) me.nextRound = Number(d.nextRound); weekUpJoinSave(me); }
+      weekUpJoinSet(btn, note, me);
       note.textContent = (d && d.error) || 'Couldn\'t reach EBBLESS. Check your connection and try again.';
       return;
     }
-    const me = Object.assign(weekUpMe(), { rejoin: 'requested', nextRoundAt: Number(d.nextRoundAt) || null, nextRoundLabel: String(d.nextRoundLabel || '') });
-    try { localStorage.setItem(WEEK_UP_ME_KEY, JSON.stringify(me)); } catch(e){}
-    weekUpJoinSet(btn, note, me);
+    const me = Object.assign(weekUpMe(), { rejoin: 'requested', feedbackGiven: true, nextRoundAt: Number(d.nextRoundAt) || null, nextRoundLabel: String(d.nextRoundLabel || '') });
+    if (Number(d.nextRound) > 0) me.nextRound = Number(d.nextRound);
+    weekUpJoinSet(btn, note, weekUpJoinSave(me));
   });
 }
 function hideWeekUpPreview(){
