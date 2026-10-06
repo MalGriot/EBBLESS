@@ -7968,7 +7968,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #271. Title only.
 
 ### ui-simplicity-pass: Make the UI dead simple for anyone
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** low
 - **Description:** Tester suggestion: the UI should be very, very easy for
   non-technical users. Needs a concrete audit of confusing spots before
@@ -7979,6 +7979,7 @@ Add entries in this shape:
   Audit 2026-10-06 (ranked, S/M = effort): 1 phone install gate has 3 equal buttons, make Install primary (S). 2 library card three-dot menu hidden on touch, always show it (S). 3 CuRRentSSsss/SwiiiRrrLL cards need plain subtitles + better "0 tracks" empty state (S). 4 raw error text ("backend returned 500") to plain messages (S). 5 empty player shows dashes, add "Nothing playing yet" + Find music (S). 6 player has many unlabeled icons, label top tabs, tuck visualizer buttons (M). 7 wrong-track flag icon confusing, move to menu with plain copy (S). 8 library toolbar on phone: visible filter chips, one View menu, 44px tap targets (M). 9 playlist menu dev wording (Refresh/Replace link, Mark as album) (S). 10 Settings "Pre-roll ad handling" developer note row (S). 11 Settings crossfade/even volume: real switches, plain names (S). 12 no undo on Clear queue / Remove from playlist, browser confirm on delete (M). 13 inconsistent words: tracks/songs, re-roll/fresh picks, flow mode/fullscreen, cymatics/visualizer (S). 14 library search button "Load" vague (S). 15 beta gate "OPEN EBBLESS"/"UNLOCK" wording (S).
   Decision (MAL GRIOT 2026-10-06): do all 15; small ones first (1-5, 7, 9-11, 13-15), then 6, 8, 12. Drop the names "flow mode" (use Fullscreen) and "cymatics" (use Visualizer).
   Small lane merged 2026-10-06. Follow-ups (MAL GRIOT): beta gate "I HAVE AN INVITE"/"LET ME IN" still confusing; drop the paste field, the email acceptance link must do all the work. Change remaining "track" wording to "songs" 100% (release notes, recap). Motto from now on: least clicks possible to everything; easy to understand, easy to do.
+  Medium lane (6, 8, 12, songs wording) and invite-link-one-tap (no paste field; email link and Google sign-in by invite email) merged 2026-10-06.
 
 ### one-login-two-devices: One login should cover two devices
 - **Status:** merged
