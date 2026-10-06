@@ -8200,11 +8200,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #291 and #293. Folded #293 (artist adds all albums) into this entry since it depends on the Artists section.
 
 ### library-collapsible-sections: Library sections collapse/expand with a +/arrow by the title
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Each library section header (Playlists, Albums, Podcasts, Artists) gets a plus or arrow to fold it open/closed. Only in the "All" view, not when a single-type filter is selected.
 - **Touches:** renderLibrary section headers.
-- **Branch:**
+- **Branch:** agent/library-collapsible-sections
 - **Notes:** Synced from Geethub issue #292.
 
 ### library-window-title: Library window should be titled "Library" like the queue window
