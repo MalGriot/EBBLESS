@@ -8151,7 +8151,7 @@ Add entries in this shape:
 - **Notes:** Requested by MAL GRIOT 2026-10-05. Time-sensitive: testing began 2026-10-02, so the first windows end around 2026-10-10. Track names stay out of the Sheet Analytics tab (it's counts only by design).
 
 ### wrapped-join-next-beta: "Join the next beta" button on the 7-days-up recap that reactivates access
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On the "your 7 days are up" recap screen, add a button
   to sign up for the next beta round in one tap (no form; we already know
