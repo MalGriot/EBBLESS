@@ -8168,7 +8168,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #294. Likely a regression of crossfade-manual-skip's fade ramp.
 
 ### iphone-autoadvance-stall: iPhone doesn't autoplay the next song
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug: on iPhone, when a song finishes the next one doesn't start; the user has to open the video tab and press pause/play to get it going. Next track should start on its own.
 - **Touches:** track-end / auto-advance handling on iOS Safari/PWA.
