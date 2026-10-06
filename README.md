@@ -128,9 +128,19 @@ Sheet tabs, kept as separate records so the history survives:
 
 The app itself (`/`) is locked to Active testers: a full-screen gate at the
 top of `index.html` checks the browser's tester token (saved by the tester
-page, a `?t=` on the app URL, or a link pasted into the gate) against
-`/beta/me`, and re-locks if the tester goes Inactive. localhost is never
-locked. It's client-side, so it keeps the public out, not a determined dev.
+page or a `?t=` on the app URL) against `/beta/me`, and re-locks if the
+tester goes Inactive. localhost is never locked. It's client-side, so it
+keeps the public out, not a determined dev.
+
+Getting in takes no pasting. The invite email links straight to the app
+(`/EBBLESS/?t=<token>`), which unlocks that browser. Installed apps:
+Android's shares Chrome's storage (and in-scope links open it), and on
+iPhone the token rides along into Add to Home Screen (page URL and
+manifest `start_url`). Anything the link can't reach (an iPhone home-screen
+app added before, another device) uses the gate's Google button:
+`/beta/claim` returns the token linked to that Google account, or, if none,
+the Active tester whose invite went to that account's verified email
+(Sheet action `token_by_email`).
 
 The 50 cap counts Active testers only. Accepting a 51st (or reactivating
 someone past the cap) is reverted with a message in the Sheet. Tester numbers
