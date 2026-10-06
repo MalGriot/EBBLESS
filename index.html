@@ -13669,7 +13669,7 @@ const AD_MUTE_MAX_MS = 120000;
 // YT.Player's synchronous ones every other deck consumer assumes.
 // gen: bumped every time createDeckPlayer/createSCDeckPlayer (re)builds this
 // deck's player - see the gen-check comment on those functions for why.
-function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, adMutedAt: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1, resumeSeeked: false }; }
+function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null, ready: false, pendingVideoId: null, videoId: null, confirmed: false, unmuteTimer: null, muteStartTs: 0, loadStartTs: 0, adMutedAt: 0, pos: -1, fadeTimer: null, _scPos: 0, _scDur: 0, _scState: -1, resumeSeeked: false, iosWarm: false }; }
 // decks[0]/[1] are the active/standby pair (activeIdx); decks[2] is the "prev"
 // deck, kept warm on the previous track so Previous is as instant as Next
 // (previous-track-instant). Decks are re-slotted by swapping array entries.
@@ -13950,6 +13950,8 @@ function forceLowestQuality(deck){
 
 function createDeckPlayer(deck, videoId){
   deck.videoId = videoId;
+  // a new player (new element) hasn't been started with sound yet (#286)
+  deck.iosWarm = false;
   ensureLoudness(videoId);
   deck.loadStartTs = Date.now();
   if (deck === activeDeck()) startLoadIconTicker();
@@ -16390,6 +16392,8 @@ function maybeStartCrossfade(cur, dur){
   // Locked iPhone (#257): starting a second player without a tap is the
   // part iOS refuses, so let the track end and advance in place instead.
   if (iosLocked()) return;
+  // iPhone (#286): same for a standby player no tap has started yet
+  if (iosColdDeck(nd)) return;
   crossfadeTriggered = true;
   trackStartAuto = true;
   notePlayedThrough(state.queuePos);
@@ -16572,7 +16576,13 @@ function loadIndex(pos, autoplay, opts){
   // active deck's <audio> element, which iOS already lets play in the
   // background, rather than starting the standby deck's element cold.
   const reuseLockedAudio = iosLocked() && activeDeck().kind === 'au' && isAudioVideoId(t.videoId);
-  if (!reuseLockedAudio && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
+  // iPhone (#286): an auto-advance has no tap behind it, and iOS won't start
+  // a standby player that no tap has ever started (it sat paused until the
+  // listener pressed play in the video tab). Load the next track into the
+  // active deck's already-unlocked player instead, unless the standby deck
+  // has played with sound before.
+  const iosInPlace = trackStartAuto && iosColdDeck(nd) && iosCanAdvanceInPlace(t.videoId);
+  if (!reuseLockedAudio && !iosInPlace && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
     promoteDeckDirect(nd, pos, autoplay !== false);
     maybeExtendDiscoverQueue();
     return;
@@ -18466,6 +18476,18 @@ window.addEventListener('beforeunload', persistResume);
 // playing going into the background and resume it coming back.
 var wasPlayingBeforeHide = false; // var: lock-screen handlers defined above write it
 function iosLocked(){ return isIOS && document.visibilityState === 'hidden'; }
+// iPhone (#286): iOS only lets a deck's player start with sound once a tap
+// has started it (manual Next/Previous count, auto-advance doesn't).
+// iosWarm marks a deck that has actually played with sound since its player
+// was built (updateSeekUI).
+function iosColdDeck(deck){ return isIOS && !deck.iosWarm; }
+// The active deck is warm and loadIntoDeck would reuse its player (same
+// kind) for this track, so advancing in place keeps the unlocked player.
+function iosCanAdvanceInPlace(videoId){
+  const ad = activeDeck();
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : isAudioVideoId(videoId) ? 'au' : 'yt';
+  return !!(ad.iosWarm && ad.player && ad.kind === kind);
+}
 // A play/pause pressed on the lock screen (or headset) while hidden is what
 // coming back should honour: a pause there must not be undone by the
 // return-to-app resume below, and a play iOS refused gets finished there.
@@ -18568,6 +18590,8 @@ function maybeDodgeAd(){
   const ad = activeDeck(), nd = standbyDeck();
   if (ad.kind !== 'yt' || ad.confirmed || !ad.muteStartTs || ad.adDodge) return;
   if (swapInProgress || routeLocked() || state.repeat === 'one' || ytPanelOpen()) return;
+  // iPhone (#286): handing off to a standby player no tap has started stalls
+  if (iosColdDeck(nd)) return;
   if (Date.now() - ad.muteStartTs < AD_DODGE_AFTER_MS) return;
   const p = state.queuePos, n = p + 1;
   const ta = trackAt(p), tb = trackAt(n);
@@ -18833,6 +18857,10 @@ function updateSeekUI(){
     cassetteSetProgress(0, dur);
     return;
   }
+  // iPhone (#286): playing with sound proves iOS has unlocked this deck's
+  // player, so it can be started again later without a tap
+  if (isIOS && !ad.iosWarm && ad.kind !== 'cast' && ad.player.getPlayerState && ad.player.getPlayerState() === 1
+      && !(ad.player.isMuted && ad.player.isMuted())) ad.iosWarm = true;
   const cur = ad.player.getCurrentTime() || 0;
   const dur = ad.player.getDuration() || 0;
   paintSeekUI(cur, dur);
