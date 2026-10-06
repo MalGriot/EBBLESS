@@ -313,6 +313,9 @@ body.onb-active .paste-guide{display:none}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .section-label-row .section-label{margin:28px 0 2px}
 .section-label-row:first-of-type .section-label{margin-top:0}
+.lib-fold{background:none;border:0;color:var(--faint-2);cursor:pointer;padding:6px;margin:28px 0 2px;line-height:0}
+.lib-fold svg{width:14px;height:14px;transition:transform .15s}
+.lib-fold[aria-expanded="false"] svg{transform:rotate(-90deg)}
 .lib-head-actions{display:flex;align-items:center;gap:8px;flex:none}
 .lib-sort{position:relative}
 .lib-sort-btn{width:30px;height:30px;border-radius:8px;background:var(--panel-2)}
@@ -2852,6 +2855,9 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
+        </div>
+        <div class="section-label-row hidden" id="libraryPlaylistsHead">
+          <div class="section-label">Playlists</div>
         </div>
         <div class="lib-grid" id="libraryGrid"></div>
         <div class="section-label-row hidden" id="libraryAlbumsHead">
@@ -6254,6 +6260,7 @@ const $ = (id) => document.getElementById(id);
 const views = { library: $('view-library'), player: $('view-player'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
+const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libraryPodcastsHead = $('libraryPodcastsHead'), libraryPodcastsGrid = $('libraryPodcastsGrid');
 const libFilterPodcasts = $('libFilterPodcasts');
@@ -7077,6 +7084,7 @@ function setLibSearchOpen(open){
 }
 libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
 
+const libFolded = {};
 function renderLibrary(){
   closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
@@ -7318,6 +7326,24 @@ function renderLibrary(){
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
   libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
+  // Fold arrows on the section headers: All view only, so a single-type
+  // filter always shows its list open. State lives for the session.
+  libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
+  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
+    let btn = head.querySelector('.lib-fold');
+    if (!btn){
+      btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'lib-fold';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+      btn.addEventListener('click', () => { libFolded[key] = !libFolded[key]; renderLibrary(); });
+      head.appendChild(btn);
+    }
+    const folded = filter === 'all' && !!libFolded[key];
+    btn.classList.toggle('hidden', filter !== 'all');
+    btn.setAttribute('aria-expanded', String(!folded));
+    btn.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
+    if (folded) grid.classList.add('hidden');
+  });
   const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
