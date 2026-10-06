@@ -5908,8 +5908,14 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   }
   // A listener's manual album/playlist choice (see isAlbumEntry) lives on
   // the cached entry this re-resolve is about to overwrite - carry it over.
+  // So does an artist's albumsAdded stamp (see addArtistAlbumsToLibrary),
+  // read at write time since a fill can stamp it while this resolve runs.
   const albumOverride = albumOverrideOf(getCachedPlaylist(playlistId));
-  const keepAlbumOverride = (p) => { if (albumOverride !== undefined) p.albumOverride = albumOverride; return p; };
+  const keepAlbumOverride = (p) => {
+    if (albumOverride !== undefined) p.albumOverride = albumOverride;
+    if (isArtistType(p.type)){ const cur = getCachedPlaylist(playlistId); if (cur && cur.albumsAdded) p.albumsAdded = true; }
+    return p;
+  };
   // Saved before album playlists were told apart (see youTubeListType) -
   // re-file on this (re-)resolve.
   if (type === 'yt_playlist' && youTubeListType(playlistId.replace(/^yt:/, '')) === 'album') type = 'yt_album';
@@ -9176,13 +9182,15 @@ async function itunesArtistAlbums(pl){
     const want = normalizeArtistQuery(pl.name);
     if (want.length < 2) return [];
     const res = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: pl.name, entity: 'musicArtist', limit: '5' }));
-    const hits = res.ok ? ((await res.json()).results || []) : [];
+    if (!res.ok) throw new Error('iTunes search ' + res.status);
+    const hits = (await res.json()).results || [];
     const hit = hits.find(a => a && a.artistId && normalizeArtistQuery(a.artistName) === want);
     if (!hit) return [];
     artistId = String(hit.artistId);
   }
   const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: artistId, entity: 'album', limit: '200', country: storefront }));
-  const rows = res.ok ? ((await res.json()).results || []) : [];
+  if (!res.ok) throw new Error('iTunes lookup ' + res.status);
+  const rows = (await res.json()).results || [];
   const byName = new Map();
   rows.forEach(r => {
     if (!r || r.wrapperType !== 'collection' || String(r.artistId) !== artistId || !r.collectionId) return;
@@ -9198,30 +9206,76 @@ async function itunesArtistAlbums(pl){
     .slice(0, ARTIST_ALBUMS_MAX).reverse()
     .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName) }));
 }
-async function addArtistAlbumsToLibrary(pl){
+// Each artist's fill runs once: the artist's own entry is stamped
+// albumsAdded (it syncs with the library, so another device won't fill it
+// again) as soon as the album list is in, and the albums still to load are
+// kept in LS_ARTIST_ALBUMS_PENDING (this device only) so a fill cut short by
+// closing the app picks up where it left off on the next launch (see
+// runArtistAlbumsBackfill). `resume` is that saved list.
+const LS_ARTIST_ALBUMS_PENDING = 'ebbless:artistAlbumsPending'; // { artistId: [{id, key}] } albums still to load
+function setArtistAlbumsPending(artistId, list){
+  const all = lsGet(LS_ARTIST_ALBUMS_PENDING, {});
+  if (list && list.length) all[artistId] = list; else delete all[artistId];
+  lsSet(LS_ARTIST_ALBUMS_PENDING, all);
+}
+async function addArtistAlbumsToLibrary(pl, resume){
   if (artistAlbumsInFlight.has(pl.id)) return;
   artistAlbumsInFlight.add(pl.id);
   try{
     const want = normalizeArtistQuery(pl.name);
-    const albums = await itunesArtistAlbums(pl).catch(() => []);
+    let albums = resume;
+    if (!albums){
+      // A failed lookup (offline, rate-limited) leaves the artist unstamped
+      // so the next launch tries again.
+      albums = await itunesArtistAlbums(pl).catch(() => null);
+      if (!albums) return;
+      const cur = getCachedPlaylist(pl.id);
+      if (!cur || !isSaved(pl.id)) return;
+      cur.albumsAdded = true;
+      lsSet(LS_PL(pl.id), cur);
+    }
     const alreadyHave = (a) => getLibrary().some(id => {
       if (id === a.id) return true;
       const p = getCachedPlaylist(id);
       return !!p && isAlbumEntry(p) && normalizeArtistQuery(p.name) === a.key && (p.tracks || []).some(t => songCreditsArtist(t && t.artist, want));
     });
     const todo = albums.filter(a => !alreadyHave(a));
+    setArtistAlbumsPending(pl.id, todo);
     if (!todo.length) return;
     showToast('Adding ' + todo.length + (todo.length === 1 ? ' album' : ' albums') + ' by ' + pl.name);
-    for (const a of todo){
-      if (!isSaved(pl.id)) break;
-      if (alreadyHave(a)) continue;
-      try{
-        await resolvePlaylist(a.id, 'am_album', () => {});
-        saveToLibrary(a.id);
-        rerenderLibraryKeepPanel();
-      } catch(e){ /* best-effort, like seedStarterLibrary - a failed album is just skipped */ }
+    for (let i = 0; i < todo.length; i++){
+      const a = todo[i];
+      if (!isSaved(pl.id)){ setArtistAlbumsPending(pl.id, null); break; }
+      if (!alreadyHave(a)){
+        try{
+          await resolvePlaylist(a.id, 'am_album', () => {});
+          saveToLibrary(a.id);
+          rerenderLibraryKeepPanel();
+        } catch(e){ /* best-effort, like seedStarterLibrary - a failed album is just skipped */ }
+      }
+      setArtistAlbumsPending(pl.id, todo.slice(i + 1));
     }
   } finally { artistAlbumsInFlight.delete(pl.id); }
+}
+// On launch, once startup (and, when signed in, the first profile sync) has
+// settled: finish fills an earlier session left unfinished, then give
+// artists saved before #293 (never stamped albumsAdded) their albums. One
+// artist at a time.
+async function runArtistAlbumsBackfill(){
+  const bootAt = Date.now();
+  // Signed in: wait for the first sync to land so artists another device
+  // already filled come down stamped (gives up after ~30s, e.g. offline).
+  for (let i = 0; i < 30 && lsGet(LS_PROFILE_EMAIL, '') && !lsGet(LS_PROFILE_SIGNED_OUT, false) && lsGet(LS_PROFILE_SYNCED_AT, 0) < bootAt; i++) await sleep(1000);
+  if (profileSyncInFlight) await profileSyncInFlight.catch(() => {});
+  const pending = lsGet(LS_ARTIST_ALBUMS_PENDING, {});
+  Object.keys(pending).forEach(id => { if (!isSaved(id)) setArtistAlbumsPending(id, null); });
+  for (const id of getLibrary()){
+    const pl = getCachedPlaylist(id);
+    if (!pl || !isArtistEntry(pl) || !isSaved(id)) continue;
+    const resume = lsGet(LS_ARTIST_ALBUMS_PENDING, {})[id];
+    if (Array.isArray(resume) && resume.length) await addArtistAlbumsToLibrary(pl, resume);
+    else if (!pl.albumsAdded) await addArtistAlbumsToLibrary(pl);
+  }
 }
 
 // Shared by importForm's submit handler (a manually pasted link) and
@@ -20312,6 +20366,9 @@ function startApp(){
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
     if (!getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID)) seedStarterLibrary();
+    // Artist album fills left unfinished, or never run (#293) - held back
+    // past the boot burst above so it doesn't compete with startup.
+    setTimeout(() => runArtistAlbumsBackfill().catch(e => console.warn('[ebbless] artist albums backfill failed', e)), 8000);
     // A shared song/playlist link (?import=..., see buildShareUrl/
     // applySharedImportFromUrl) takes over from here if present - called
     // last so its own setView('player') isn't immediately clobbered by the
