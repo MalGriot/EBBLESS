@@ -88,3 +88,14 @@ test('/beta/me carries rejoin state', async () => {
   assert.equal(d.nextRound, 2);
   assert.equal(d.windowEndsAt, 1 + BETA_WINDOW_MS);
 });
+
+test('in-app reports: only real Send feedback is tagged "in-app feedback"', async () => {
+  const { betaInAppReport } = await import('../src/beta.js');
+  const env = { SHEET_URL: 'https://sheet.test', SHEET_SECRET: 's' };
+  const sources = {};
+  for (const src of ['feedback-form', 'vibe-check', 'ads-button', undefined]) {
+    globalThis.fetch = async (url, init) => { sources[String(src)] = JSON.parse(init.body).fields.source; return new Response(JSON.stringify({ ok: true, tester: { id: 'x', number: 1 } })); };
+    await betaInAppReport(env, TOKEN, { category: 'other', message: 'hi', source: src });
+  }
+  assert.deepEqual(sources, { 'feedback-form': 'in-app feedback', 'vibe-check': 'in-app', 'ads-button': 'in-app', undefined: 'in-app' });
+});

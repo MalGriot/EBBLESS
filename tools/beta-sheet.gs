@@ -18,11 +18,11 @@
 // (feedback_request_sent records when). Their 7-day window runs from that
 // email (the worker works it out; the app shows a recap when it's over).
 //
-// Rejoining needs feedback first: a Feedback row from that tester through
-// the beta feedback forms (source "feedback survey" or "feedback page"),
-// submitted since their current round started (window_start, else
-// accepted_timestamp). In-app rows don't count: thumbs checks and the ads
-// button land there too. Then "Join the next beta" on that recap puts the tester's own
+// Rejoining needs feedback first: a Feedback row from that tester with
+// source "feedback survey", "feedback page" or "in-app feedback" (the app's
+// Send feedback), submitted since their current round started (window_start,
+// else accepted_timestamp). Plain "in-app" rows (thumbs checks, the ads
+// button, older rows) don't count. Then "Join the next beta" on that recap puts the tester's own
 // Applicants row back to Pending (rejoin_requested stamped, note added) and
 // stamps rejoin_requested on their Testers row. No new person, no new tester
 // number: accept it like any signup and their Testers row gets window_start
@@ -331,8 +331,9 @@ function roundOf_(t) { return parseInt(t.round, 10) || 1; }
 function nextRoundFor_(t, round) { return Math.max((round || nextRound_()).number, roundOf_(t) + 1); }
 
 // Feedback that unlocks the next round: a beta feedback form (survey or
-// feedback page) sent since this tester's current round started.
-const UNLOCK_SOURCES = ['feedback survey', 'feedback page'];
+// feedback page) or the app's Send feedback, sent since this tester's
+// current round started. Not thumbs checks or "Ads playing?" ("in-app").
+const UNLOCK_SOURCES = ['feedback survey', 'feedback page', 'in-app feedback'];
 function feedbackGiven_(t) {
   const sh = sheet_(FEEDBACK);
   if (!sh) return false;

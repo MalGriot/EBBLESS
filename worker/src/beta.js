@@ -82,13 +82,16 @@ async function throttled(request, ctx, envCache, name, limit, windowS) {
 
 // In-app "Send feedback" (worker/src/index.js /tester-report) from a beta
 // tester: also lands in the Feedback tab, against their tester record.
+// Real "Send feedback" (app source 'feedback-form') is tagged 'in-app
+// feedback' and counts toward unlocking the next round; thumbs checks,
+// "Ads playing?" reports and untagged older clients stay 'in-app'.
 // Returns { id, number } for an Active tester, else null.
 export async function betaInAppReport(env, token, report) {
   if (!env.SHEET_URL || !env.SHEET_SECRET || !TOKEN_RE.test(String(token || ''))) return null;
   const out = await sheet(env, 'report', {
     token, kind: 'feedback',
     fields: {
-      source: 'in-app', category: 'In-app: ' + report.category, feeling: report.sentiment || '',
+      source: report.source === 'feedback-form' ? 'in-app feedback' : 'in-app', category: 'In-app: ' + report.category, feeling: report.sentiment || '',
       what_happened: report.message, user_agent: report.userAgent, viewport: report.viewport,
     },
   });
