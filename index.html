@@ -1001,6 +1001,16 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 /* ---------- library playlist panel track rows (see #libpl-panel, styled
    alongside the queue panel further down) ---------- */
 #libplBody .track-row{cursor:pointer}
+/* now-playing marks (markNowPlaying): playing playlist card highlighted,
+   playing song gets a slowly blinking speaker */
+.lib-card.is-now-playing .art{box-shadow:0 0 0 2px var(--accent)}
+.lib-card.is-now-playing .name{color:var(--accent)}
+.track-row.is-now-playing .title::before{content:'';display:inline-block;width:13px;height:13px;margin-right:6px;vertical-align:-2px;
+  background:var(--accent);-webkit-mask:var(--ico-spk) center/contain no-repeat;mask:var(--ico-spk) center/contain no-repeat;
+  animation:np-blink 2.4s ease-in-out infinite}
+@keyframes np-blink{0%,100%{opacity:1}50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.track-row.is-now-playing .title::before{animation:none}}
+:root{--ico-spk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z'/%3E%3C/svg%3E")}
 
 /* ---------- mini bar ---------- */
 #mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:42;display:flex;align-items:center;gap:12px;
@@ -7085,6 +7095,11 @@ function setLibSearchOpen(open){
 libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
 
 const libFolded = {};
+function markNowPlaying(){
+  const e = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  document.querySelectorAll('.lib-card').forEach(c => c.classList.toggle('is-now-playing', !!e && c.dataset.plId === e.plId));
+  document.querySelectorAll('.track-row[data-pl-id]').forEach(r => r.classList.toggle('is-now-playing', !!e && r.dataset.plId === e.plId && +r.dataset.idx === e.idx));
+}
 function renderLibrary(){
   closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
@@ -7122,6 +7137,7 @@ function renderLibrary(){
           searchTrackCount++;
           const row = document.createElement('div');
           row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
+          row.dataset.plId = id; row.dataset.idx = i;
           const img = document.createElement('img');
           if (t.videoId || t.art) attachArtworkFallback(img, t);
           const meta = document.createElement('div'); meta.className = 'meta';
@@ -7348,6 +7364,7 @@ function renderLibrary(){
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
+  markNowPlaying();
   try{ refreshPlayNudge(); } catch(e){}
 }
 function refreshLibraryMarquees(){
@@ -7442,6 +7459,7 @@ function toggleLibraryPlaylistPanel(id){
     pl.tracks.forEach((t, i) => {
       const row = document.createElement('div');
       row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
+      row.dataset.plId = id; row.dataset.idx = i;
       const img = document.createElement('img');
       if (t.videoId || t.art) attachArtworkFallback(img, t);
       const meta = document.createElement('div'); meta.className = 'meta';
@@ -7471,6 +7489,7 @@ function toggleLibraryPlaylistPanel(id){
   // phase-1 fullscreen: the panel sits over the library drawer, so make
   // sure that drawer is in (it closes the panel again when toggled off)
   if (deskFsPhase1() && !state.deskFsLibOpen) toggleDesktopFsLib();
+  markNowPlaying();
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
   refreshPlayNudge();
@@ -13298,6 +13317,7 @@ window.ebblessTimeContext.rank = function(ranked, candMetrics, d, scale){ return
 
 function renderQueuePanel(){
   renderDiscoverToggle();
+  markNowPlaying();
   queueBody.innerHTML = '';
   if (state.queuePos < 0 || !state.queue.length){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
 
@@ -13305,7 +13325,7 @@ function renderQueuePanel(){
   const nowPl = playlistById(nowEntry.plId);
   const now = nowPl && nowPl.tracks[nowEntry.idx];
   if (!now){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; return; }
-  const nowLabel = document.createElement('div'); nowLabel.className = 'q-section-label'; nowLabel.textContent = 'Now';
+  const nowLabel = document.createElement('div'); nowLabel.className = 'q-section-label'; nowLabel.textContent = 'Now' + (nowPl.name ? ' playing from ' + nowPl.name : '');
   const nowRow = document.createElement('div'); nowRow.className = 'q-now';
   const nowImg = document.createElement('img'); attachArtworkFallback(nowImg, now);
   const nowMeta = document.createElement('div'); nowMeta.className = 'meta';

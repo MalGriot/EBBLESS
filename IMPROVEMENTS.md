@@ -8224,11 +8224,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #288. Extends merged library-hold-add-to-queue (tracks only).
 
 ### library-now-playing-highlight: Highlight the playing playlist in the library; blinking speaker by the playing song
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** When a playlist is playing, highlight it in the library. The playing song gets a slowly blinking speaker icon next to it in the library. Also show the playing playlist's name somewhere in the queue window.
 - **Touches:** renderLibrary, queue panel header.
-- **Branch:**
+- **Branch:** agent/library-now-playing-highlight
 - **Notes:** Synced from Geethub issue #287.
 
 ### album-art-mode-tap: Album art style button cycles modes on tap, no dropdown
