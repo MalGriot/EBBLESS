@@ -8523,18 +8523,30 @@ function openAddToPlaylistPicker(track){
   openImportOverlay();
   const customs = addablePlaylists();
   const rowsHtml = customs.map(p =>
-    '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
-      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span>' +
-    '</button>'
+    '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
+      '<input type="checkbox" class="pl-pick-cb" data-id="' + p.id + '" style="flex:none">' +
+      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span></span>' +
+    '</label>'
   ).join('');
   importStage.innerHTML =
     '<div class="step">Add to playlist</div>' +
     '<div style="width:100%;max-height:55vh;overflow-y:auto;overscroll-behavior:contain;margin-bottom:16px">' +
       (rowsHtml || '<div style="color:var(--faint-2);font-size:13px;margin-bottom:12px">No playlists yet.</div>') +
     '</div>' +
+    '<button class="btn-ghost" id="plAddSelectedBtn" style="width:100%;margin-bottom:8px" disabled>Add</button>' +
     '<button class="btn-ghost" id="plNewFromPickerBtn" style="width:100%">+ New playlist</button>';
-  importStage.querySelectorAll('.pl-pick').forEach(btn => {
-    btn.addEventListener('click', () => { addTrackToPlaylist(btn.dataset.id, track); closeImportOverlay(); });
+  const addBtn = $('plAddSelectedBtn');
+  const checked = () => Array.from(importStage.querySelectorAll('.pl-pick-cb:checked'));
+  importStage.querySelectorAll('.pl-pick-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const n = checked().length;
+      addBtn.disabled = !n;
+      addBtn.textContent = n > 1 ? 'Add to ' + n + ' playlists' : 'Add';
+    });
+  });
+  addBtn.addEventListener('click', () => {
+    checked().forEach(cb => addTrackToPlaylist(cb.dataset.id, track));
+    closeImportOverlay();
   });
   $('plNewFromPickerBtn').addEventListener('click', () => openCreatePlaylistFlow(track));
 }
