@@ -8157,3 +8157,91 @@ Add entries in this shape:
 - **Touches:** recap screen (merged `tester-week-wrapped`), worker/src/beta.js + tools/beta-sheet.gs (rejoin action against their existing tester row).
 - **Branch:**
 - **Notes:** Idea from MAL GRIOT 2026-10-06. Needs decisions before ready: does rejoining reactivate instantly or go into the review queue like a new signup; does it start a fresh 7-day window; how is a "next beta" round defined in the Sheet.
+
+### crossfade-next-muted-gap: With crossfade on, pressing next sometimes plays the new song muted for ~12s
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug: with crossfade enabled, hitting next sometimes starts the next track silent for about 12 seconds before audio comes in. Manual skips should fade in promptly (or cut cleanly) every time.
+- **Touches:** crossfade / manual skip path (see merged crossfade-manual-skip).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #294. Likely a regression of crossfade-manual-skip's fade ramp.
+
+### iphone-autoadvance-stall: iPhone doesn't autoplay the next song
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug: on iPhone, when a song finishes the next one doesn't start; the user has to open the video tab and press pause/play to get it going. Next track should start on its own.
+- **Touches:** track-end / auto-advance handling on iOS Safari/PWA.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #286. Related to the background auto-advance work in bld-background-tab-autoadvance but iPhone-specific.
+
+### ads-label-desktop-position: "Ads playing?" button sits too close to the bottom of the screen on desktop
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug: on desktop the "Ads playing?" report button is crowded against the bottom edge. Give it proper spacing.
+- **Touches:** ads report button (merged ads-button-extended-mix), desktop layout.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #290.
+
+### previous-track-instant: Previous track should load as instantly as next
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Going back to the previous song should be as instant as skipping forward (keep the previous track warm/preloaded).
+- **Touches:** prev/next preload logic.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #284.
+
+### library-artists-section: Library: Artists section, and adding an artist adds their albums
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add an Artists section to the library alongside albums/playlists/podcasts. When you add an artist, all their albums should also appear in the Albums section.
+- **Touches:** renderLibrary filters/sections, artist add flow.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #291 and #293. Folded #293 (artist adds all albums) into this entry since it depends on the Artists section.
+
+### library-collapsible-sections: Library sections collapse/expand with a +/arrow by the title
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Each library section header (Playlists, Albums, Podcasts, Artists) gets a plus or arrow to fold it open/closed. Only in the "All" view, not when a single-type filter is selected.
+- **Touches:** renderLibrary section headers.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #292.
+
+### library-window-title: Library window should be titled "Library" like the queue window
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add a "Library" title to the library panel, matching how the queue panel is labeled.
+- **Touches:** library panel header.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #289.
+
+### queue-add-collections: Add whole playlists/albums/podcasts to the queue
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Let users add an entire playlist, album, or podcast to the queue (not just single tracks).
+- **Touches:** library item menus, queue.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #288. Extends merged library-hold-add-to-queue (tracks only).
+
+### library-now-playing-highlight: Highlight the playing playlist in the library; blinking speaker by the playing song
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When a playlist is playing, highlight it in the library. The playing song gets a slowly blinking speaker icon next to it in the library. Also show the playing playlist's name somewhere in the queue window.
+- **Touches:** renderLibrary, queue panel header.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #287.
+
+### album-art-mode-tap: Album art style button cycles modes on tap, no dropdown
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Pressing the album art style button should just switch to the next mode directly instead of opening a menu.
+- **Touches:** album art mode button/menu.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #285.
+
+### playlist-add-multiselect: "Add to playlist" should allow picking multiple playlists with checkboxes
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When adding a loaded song to a playlist, show the playlists with checkboxes so it can go into several at once.
+- **Touches:** add-to-playlist picker (see single-song-paste-prompt).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #283.
