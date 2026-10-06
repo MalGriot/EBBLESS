@@ -8192,7 +8192,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #284.
 
 ### library-artists-section: Library: Artists section, and adding an artist adds their albums
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add an Artists section to the library alongside albums/playlists/podcasts. When you add an artist, all their albums should also appear in the Albums section.
 - **Touches:** renderLibrary filters/sections, artist add flow.
