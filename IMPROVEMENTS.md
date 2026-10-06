@@ -8160,7 +8160,7 @@ Add entries in this shape:
 - **Notes:** Idea from MAL GRIOT 2026-10-06. Needs decisions before ready: does rejoining reactivate instantly or go into the review queue like a new signup; does it start a fresh 7-day window; how is a "next beta" round defined in the Sheet.
 
 ### crossfade-next-muted-gap: With crossfade on, pressing next sometimes plays the new song muted for ~12s
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug: with crossfade enabled, hitting next sometimes starts the next track silent for about 12 seconds before audio comes in. Manual skips should fade in promptly (or cut cleanly) every time.
 - **Touches:** crossfade / manual skip path (see merged crossfade-manual-skip).
