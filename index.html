@@ -1005,11 +1005,13 @@ svg.load-spin{animation:load-spin .9s linear infinite}
    playing song gets a slowly blinking speaker */
 .lib-card.is-now-playing .art{box-shadow:0 0 0 2px var(--accent)}
 .lib-card.is-now-playing .name{color:var(--accent)}
-.track-row.is-now-playing .title::before{content:'';display:inline-block;width:13px;height:13px;margin-right:6px;vertical-align:-2px;
+.track-row.is-now-playing:not(:has(.row-actions)) .title::before,.track-row.is-now-playing .row-actions::before{content:'';display:inline-block;width:13px;height:13px;
   background:var(--accent);-webkit-mask:var(--ico-spk) center/contain no-repeat;mask:var(--ico-spk) center/contain no-repeat;
   animation:np-blink 2.4s ease-in-out infinite}
+.track-row.is-now-playing:not(:has(.row-actions)) .title::before{margin-right:6px;vertical-align:-2px}
+.track-row.is-now-playing .row-actions::before{flex:none;margin-right:4px}
 @keyframes np-blink{0%,100%{opacity:1}50%{opacity:.2}}
-@media (prefers-reduced-motion:reduce){.track-row.is-now-playing .title::before{animation:none}}
+@media (prefers-reduced-motion:reduce){.track-row.is-now-playing:not(:has(.row-actions)) .title::before,.track-row.is-now-playing .row-actions::before{animation:none}}
 :root{--ico-spk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z'/%3E%3C/svg%3E")}
 
 /* ---------- mini bar ---------- */
