@@ -8149,15 +8149,16 @@ Add entries in this shape:
 - **Notes:** Requested by MAL GRIOT 2026-10-05. Time-sensitive: testing began 2026-10-02, so the first windows end around 2026-10-10. Track names stay out of the Sheet Analytics tab (it's counts only by design).
 
 ### wrapped-join-next-beta: "Join the next beta" button on the 7-days-up recap that reactivates access
-- **Status:** archived
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On the "your 7 days are up" recap screen, add a button
   to sign up for the next beta round in one tap (no form; we already know
   who they are). Joining reactivates their access so they can keep
   listening, with their saved history carried over.
 - **Touches:** recap screen (merged `tester-week-wrapped`), worker/src/beta.js + tools/beta-sheet.gs (rejoin action against their existing tester row).
-- **Branch:**
+- **Branch:** agent/wrapped-join-next-beta
 - **Notes:** Idea from MAL GRIOT 2026-10-06. Needs decisions before ready: does rejoining reactivate instantly or go into the review queue like a new signup; does it start a fresh 7-day window; how is a "next beta" round defined in the Sheet.
+  Decisions (MAL GRIOT 2026-10-06): rejoining goes into the review queue like a new signup; approval starts a fresh 7-day window; a "next beta" round is defined by a date in the Sheet.
 
 ### crossfade-next-muted-gap: With crossfade on, pressing next sometimes plays the new song muted for ~12s
 - **Status:** merged
