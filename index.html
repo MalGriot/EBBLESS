@@ -197,6 +197,8 @@ video.lib-bg-video.is-playing{opacity:1}
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
 .import-row button:active{transform:scale(.97)}
+#loadBtn .load-short{display:none}
+@media (max-width:420px){ #loadBtn .load-long{display:none} #loadBtn .load-short{display:inline} }
 .import-err{font-size:12.5px;color:var(--bad);margin:8px 0 0;min-height:0}
 /* conversational-vibe-search: mic in the input bar (hidden where the Web
    Speech API is missing) + the interpreter's stages in the import overlay */
@@ -440,6 +442,7 @@ body.onb-active .paste-guide{display:none}
   font-size:33.34cqh;font-weight:800;line-height:1;color:#fff}
 .lib-card .art .title-overlay .new-dot{position:absolute;top:6%;right:6%;width:14%;height:14%;max-width:10px;max-height:10px}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
+.lib-card .lib-desc{color:var(--text);opacity:.8}
 .lib-card.is-refreshing .count,.currents-status{animation:onb-load-pulse 1.4s ease-in-out infinite}
 .currents-status{padding:10px 14px;font-size:12.5px;color:var(--faint)}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
@@ -473,6 +476,11 @@ body.onb-active .paste-guide{display:none}
 .lib-grid.is-list .lib-card .row-actions button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .lib-grid.is-list .lib-card .row-actions button:hover{background:var(--panel-3);color:var(--text)}
 .lib-grid.is-list .lib-card .row-actions button svg{width:14px;height:14px}
+/* touch screens have no hover: keep the card menu and list-row buttons
+   visible (long-press still opens the menu too) */
+@media (hover: none), (pointer: coarse){
+  .lib-card .menu-btn,.lib-grid.is-list .lib-card .row-actions{opacity:1}
+}
 .lib-grid.is-list .lib-card .row-actions .row-pin.is-active{color:var(--accent,#1db954)}
 /* Desktop (real hover): while the row buttons are hidden, lift them out of
    flow so the title runs to the pane edge; they rejoin the flow (shortening
@@ -558,6 +566,15 @@ body.onb-active .paste-guide{display:none}
 .btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out)}
 .btn-ghost:hover{background:var(--panel-2)}
 .btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+/* on/off switch (Settings > Playback); .is-active + aria-checked = on */
+.switch{position:relative;flex:none;width:46px;height:28px;border-radius:14px;padding:0;background:var(--panel-3);border:1px solid var(--border-2);
+  cursor:pointer;transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out)}
+.switch .switch-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform var(--dur-ui) var(--ease-out)}
+.switch.is-active{background:var(--accent);border-color:var(--accent)}
+.switch.is-active .switch-knob{transform:translateX(18px)}
+.switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.settings-row .switch{margin-left:16px}
 select.btn-ghost{-webkit-appearance:none;appearance:none;background-color:var(--panel-2);color:var(--text)}
 select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .btn-danger{border:1px solid var(--bad);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:600;
@@ -885,6 +902,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .cast-stop-btn[hidden]{display:none}
 .track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
 .track-meta .title-row .title{flex:1;min-width:0}
+/* balances the like + options buttons on the right so the title stays centered */
+.track-meta .title-row::before{content:'';flex:none;width:50px}
 
 .marquee{overflow:hidden;white-space:nowrap;position:relative}
 .marquee>span{display:inline-block;white-space:nowrap}
@@ -911,7 +930,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .report-match-btn svg{width:13px;height:13px}
 .report-match-btn:hover{background:var(--panel-3);color:var(--text)}
 .report-match-btn:active{transform:scale(.88)}
-.report-match-btn[hidden]{display:none}
+.report-match-btn[hidden],.track-meta .title-row .report-match-btn{display:none}
 .report-match-btn.is-sent{color:var(--player-accent, var(--accent))}
 .ads-report-btn{display:block;margin:10px auto 0;padding:5px 12px;border-radius:999px;border:1px solid var(--panel-3);
   background:transparent;color:var(--faint);font:inherit;font-size:12px;cursor:pointer;
@@ -930,6 +949,13 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
+/* empty player: nothing loaded yet - plain message plus a way to the Library */
+.empty-find-btn{display:none;margin:14px auto 0;font:inherit;font-size:14px;font-weight:600;padding:10px 22px;border-radius:999px;
+  background:var(--accent);color:#151107;transition:filter var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.empty-find-btn:hover{filter:brightness(1.1)}
+.empty-find-btn:active{transform:scale(.96)}
+.track-meta.is-empty .empty-find-btn{display:inline-block}
+.track-meta.is-empty .title-row .player-like-btn{visibility:hidden}
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
@@ -2003,6 +2029,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .splash-gate-help{width:100%;font-size:13.5px;line-height:1.5;color:var(--text);text-align:left;background:rgba(18,18,18,.82);
   border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 16px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);overflow-wrap:anywhere}
 .splash-gate-help[hidden]{display:none}
+.splash-gate-links{display:flex;justify-content:center;gap:22px}
+.splash-gate-link{font:inherit;font-size:13.5px;background:none;border:0;padding:6px 2px;color:rgba(255,255,255,.78);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.splash-gate-link:hover,.splash-gate-link:focus-visible{color:#fff}
 .splash-gate-help ol{margin:0;padding-left:20px}
 .splash-gate-help li+li{margin-top:4px}
 .splash-gate-help b{font-weight:600}
@@ -2517,6 +2546,7 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-paste summary{cursor:pointer;font-size:13px;color:#6c6c6c;text-decoration:underline;text-underline-offset:3px;list-style:none}
 #beta-lock .bl-paste summary::-webkit-details-marker{display:none}
 #beta-lock .bl-paste form{margin:14px 0 0}
+#beta-lock .bl-label{display:block;margin:0 0 8px;font-size:13px;color:inherit}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
   <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><div class="bl-tint"></div><div class="bl-fade"></div></div>
@@ -2532,7 +2562,7 @@ body.week-up-on{overflow:hidden}
     <a class="bl-btn primary bl-join" href="beta/">JOIN THE BETA</a>
     <div class="bl-rule bl-rule-soft"></div>
     <p class="bl-sub">Already a tester?</p>
-    <button class="bl-btn" type="button" id="bl-open" aria-expanded="false" aria-controls="bl-tester">OPEN EBBLESS</button>
+    <button class="bl-btn" type="button" id="bl-open" aria-expanded="false" aria-controls="bl-tester">I HAVE AN INVITE</button>
     <p class="bl-msg" id="bl-msg" role="status"></p>
     <div class="bl-tester" id="bl-tester">
       <p>Tap the personal link in your invite email. It opens EBBLESS and lets you in.</p>
@@ -2543,8 +2573,9 @@ body.week-up-on{overflow:hidden}
       <details class="bl-paste">
         <summary>Link didn't open the app? Paste it here</summary>
         <form id="bl-form" autocomplete="off">
-          <input id="bl-input" type="text" inputmode="url" spellcheck="false" placeholder="Paste your tester link" aria-label="Tester link">
-          <button class="bl-btn" type="submit" id="bl-go">UNLOCK</button>
+          <label class="bl-label" for="bl-input">Paste the link from your invite email</label>
+          <input id="bl-input" type="text" inputmode="url" spellcheck="false" placeholder="Paste your tester link">
+          <button class="bl-btn" type="submit" id="bl-go">LET ME IN</button>
         </form>
       </details>
     </div>
@@ -2720,10 +2751,12 @@ body.week-up-on{overflow:hidden}
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
   <div id="splashGate" class="splash-gate">
-    <button id="splashGateTutorial" type="button" class="splash-choice-btn splash-choice-btn-primary">Tutorial</button>
-    <button id="splashGateEnter" type="button" class="splash-choice-btn">Enter</button>
-    <button id="splashInstallBtn" type="button" class="splash-choice-btn splash-choice-btn-primary">Install</button>
+    <button id="splashInstallBtn" type="button" class="splash-choice-btn splash-choice-btn-primary">Install EBBLESS</button>
     <div id="splashGateHelp" class="splash-gate-help" aria-live="polite" hidden></div>
+    <div class="splash-gate-links">
+      <button id="splashGateTutorial" type="button" class="splash-gate-link">Watch a quick tour</button>
+      <button id="splashGateEnter" type="button" class="splash-gate-link">Skip for now</button>
+    </div>
   </div>
 </div>
 
@@ -2791,7 +2824,7 @@ body.week-up-on{overflow:hidden}
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
         </button>
         </span>
-        <button type="submit" id="loadBtn">Load</button>
+        <button type="submit" id="loadBtn"><span class="load-long">Find music</span><span class="load-short">Go</span></button>
         <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
           <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
           <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
@@ -2913,7 +2946,7 @@ body.week-up-on{overflow:hidden}
           <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
           </button>
-          <button class="v-tab" id="ytPanelBtn" title="YouTube" aria-label="Open the YouTube player for this track" aria-haspopup="dialog" disabled aria-disabled="true">
+          <button class="v-tab" id="ytPanelBtn" title="YouTube" aria-label="Open the YouTube player for this song" aria-haspopup="dialog" disabled aria-disabled="true">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
           </button>
           <div class="art-style-menu" id="artStyleMenu">
@@ -3194,18 +3227,18 @@ body.week-up-on{overflow:hidden}
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
-            <button type="button" class="viz-ctl-btn" id="vizNextBtn" title="Next pattern" aria-label="Next cymatics pattern">
+            <button type="button" class="viz-ctl-btn" id="vizNextBtn" title="Next pattern" aria-label="Next visualizer pattern">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>
             </button>
             <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Hold this pattern" aria-label="Toggle holding the current pattern">∞</button>
-            <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Cymatics speed" aria-label="Change cymatics animation speed">1x</button>
+            <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Visualizer speed" aria-label="Change visualizer speed">1x</button>
           </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
           <div class="chap-panel" id="chapPanel" role="region" aria-label="Chapters"><div class="chap-list" id="chapList"></div></div>
           <button class="art-fs-btn art-chap-btn" id="chapBtn" title="Chapters" aria-label="Show chapters" aria-pressed="false" hidden>
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h2v2H3zm4 0h14v2H7zM3 11h2v2H3zm4 0h14v2H7zm-4 6h2v2H3zm4 0h14v2H7z"/></svg>
           </button>
-          <button class="art-fs-btn" id="fsBtn" title="Fullscreen" aria-label="Enter flow mode">
+          <button class="art-fs-btn" id="fsBtn" title="Fullscreen" aria-label="Fullscreen">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
           </button>
           <!-- split-desktop fullscreen (.desktop-fs) only: back to the main
@@ -3220,12 +3253,12 @@ body.week-up-on{overflow:hidden}
             <svg viewBox="0 0 24 24" fill="currentColor" id="castIco"></svg>
           </button>
         </div>
-        <div class="track-meta">
+        <div class="track-meta is-empty" id="trackMeta">
           <div class="title-row">
-            <button class="report-match-btn" id="reportMatchBtn" title="Flag: wrong track playing" aria-label="Flag this as the wrong track playing">
+            <button class="report-match-btn" id="reportMatchBtn" title="This isn't the right song" aria-label="This isn't the right song">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
             </button>
-            <div class="title marquee" id="trackTitle"><span>—</span></div>
+            <div class="title marquee" id="trackTitle"><span>Nothing playing yet</span></div>
             <!-- currents-thumbs-down (#266): only while the track came from CuRRentSSsss -->
             <button class="player-like-btn player-decline-btn" id="playerDeclineBtn" title="Not for me: drop from CuRRentSSsss" aria-label="Not for me: drop from CuRRentSSsss" hidden>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
@@ -3233,8 +3266,15 @@ body.week-up-on{overflow:hidden}
             <button class="player-like-btn" id="playerLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
             </button>
+            <!-- song options (incl. "This isn't the right song", which replaced the
+                 flag icon beside the title; #reportMatchBtn stays as a hidden
+                 target for the mini player's flag and the menu item) -->
+            <button class="player-like-btn player-more-btn" id="playerMoreBtn" title="More options" aria-label="More options for this song" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+            </button>
           </div>
-          <div class="artist marquee" id="trackArtist"><span>—</span></div>
+          <div class="artist marquee" id="trackArtist"><span></span></div>
+          <button type="button" class="empty-find-btn" id="emptyFindBtn">Find music</button>
           <div class="cast-bar" id="castBar" hidden>
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/></svg>
             <span class="cast-bar-label">Playing on <strong id="castBarName"></strong></span>
@@ -3312,8 +3352,8 @@ body.week-up-on{overflow:hidden}
         </div>
         <div class="settings-row beta-hidden">
           <div>
-            <div class="label">Wrong-track log</div>
-            <div class="desc" id="wrongTrackLogDesc">Every time you tap the flag in the player, what was asked for and what actually played is logged here. Copy it into a bug report so the matching can be fixed.</div>
+            <div class="label">Wrong-song reports</div>
+            <div class="desc" id="wrongTrackLogDesc">Every time you choose "This isn't the right song", what was asked for and what actually played is saved here. Copy it into a bug report so the matching can be fixed.</div>
           </div>
           <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
         </div>
@@ -3322,30 +3362,24 @@ body.week-up-on{overflow:hidden}
         <h2>Playback</h2>
         <div class="settings-row">
           <div>
-            <div class="label">Crossfade between tracks</div>
-            <div class="desc">Overlaps the tail of each track with the start of the next instead of a hard cut. Off by default for a clean, instant gapless handoff.</div>
+            <div class="label">Blend songs together</div>
+            <div class="desc">Fades the end of each song into the start of the next. When it's off, songs play back to back with no gap.</div>
           </div>
-          <button class="btn-ghost" id="crossfadeBtn">Off</button>
+          <button type="button" class="switch" id="crossfadeBtn" role="switch" aria-checked="false" aria-label="Blend songs together"><span class="switch-knob"></span></button>
         </div>
         <div class="settings-row settings-row-slider" id="crossfadeDurRow">
           <div>
-            <div class="label">Crossfade length <span id="crossfadeDurVal" class="slider-val">4s</span></div>
-            <div class="desc">How long the overlap lasts.</div>
+            <div class="label">Blend length <span id="crossfadeDurVal" class="slider-val">4s</span></div>
+            <div class="desc">How long the blend lasts.</div>
           </div>
           <input type="range" class="slider" id="crossfadeDurSlider" min="1000" max="10000" step="500" value="4000">
         </div>
         <div class="settings-row">
           <div>
             <div class="label">Even out volume</div>
-            <div class="desc">Keeps loudness steady from track to track, so a quiet upload doesn't dip after a loud one. Plays everything a touch lower overall to leave room for quieter tracks.</div>
+            <div class="desc">Keeps loudness steady from song to song, so a quiet song doesn't dip after a loud one. Plays everything a touch lower overall to leave room for quieter songs.</div>
           </div>
-          <button class="btn-ghost" id="levelBtn">On</button>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="label">Pre-roll ad handling</div>
-            <div class="desc">The next track is preloaded muted in the background while the current one plays, so any pre-roll ad burns off before it's your turn to hear it. There's no signal that tells EBBLESS an ad is showing — this is a delay heuristic, not a guarantee.</div>
-          </div>
+          <button type="button" class="switch is-active" id="levelBtn" role="switch" aria-checked="true" aria-label="Even out volume"><span class="switch-knob"></span></button>
         </div>
       </div>
       <div class="settings-block" id="settingsAppBlock">
@@ -3395,7 +3429,7 @@ body.week-up-on{overflow:hidden}
         <div class="kbd-list-wrap" id="kbdListWrap"><div>
         <ul class="kbd-list">
           <li><span><kbd>Space</kbd></span>Play / pause</li>
-          <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Previous / next track (podcasts: back / forward 15s)</li>
+          <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Previous / next song (podcasts: back / forward 15s)</li>
           <li><span><kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Back / forward 10s (podcasts: previous / next episode)</li>
           <li><span><kbd>H</kbd></span>Home: back to the player</li>
           <li><span><kbd>P</kbd> or <kbd>L</kbd></span>Library</li>
@@ -3405,10 +3439,10 @@ body.week-up-on{overflow:hidden}
           <li><span><kbd>F</kbd></span>Fullscreen</li>
           <li><span><kbd>Esc</kbd></span>Close the video, leave fullscreen, close a playlist</li>
           <li><span><kbd>Z</kbd></span>Art (again to change style)</li>
-          <li><span><kbd>X</kbd></span>Cymatics</li>
+          <li><span><kbd>X</kbd></span>Visualizer</li>
           <li><span><kbd>C</kbd></span>Lyrics</li>
           <li><span><kbd>V</kbd></span>Video</li>
-          <li><span><kbd>I</kbd></span>Cymatics infinity on / off</li>
+          <li><span><kbd>I</kbd></span>Visualizer: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
           <li><span><kbd>O</kbd></span>Repeat</li>
         </ul>
@@ -3417,7 +3451,8 @@ body.week-up-on{overflow:hidden}
       <div class="settings-block" id="settingsAboutBlock">
         <h2>About</h2>
         <p class="about-copy"><strong>EBBLESS exists to make listening feel like listening again.</strong> We bring your music together, keep it moving, and make discovery feel effortless. No ads. No sign-up. Simple but layered. Music, visuals, nostalgia, curiosity, and the freedom to wander. We believe music should be something you flow through, not something trying to own you.</p>
-        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or track link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each track, or paste a YouTube playlist or video link directly. Podcasts work too: paste a Spotify or Apple Podcasts show or episode link, or a podcast's RSS feed. Either way, playback threads through so the listening doesn't stop.</p>
+        <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or song link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each song, or paste a YouTube playlist or video link directly. Podcasts work too: paste a Spotify or Apple Podcasts show or episode link, or a podcast's RSS feed. Either way, playback threads through so the listening doesn't stop.</p>
+        <p class="about-copy">EBBLESS works to skip ads before your song starts.</p>
         <div class="settings-row">
           <div>
             <div class="label">Credits</div>
@@ -3458,10 +3493,10 @@ body.week-up-on{overflow:hidden}
     <div class="credits-group">
       <h3>Music sources</h3>
       <ul>
-        <li><a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a><span>Playback and track matching</span></li>
+        <li><a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a><span>Playback and song matching</span></li>
         <li><a href="https://soundcloud.com" target="_blank" rel="noopener">SoundCloud</a><span>Playback and SoundCloud links</span></li>
-        <li><a href="https://open.spotify.com" target="_blank" rel="noopener" id="creditsSpotifyLink">Spotify</a><span id="creditsSpotifyDesc">Playlist, album and track links, cover art</span></li>
-        <li><a href="https://music.apple.com" target="_blank" rel="noopener">Apple Music</a><span>Playlist, album and track links, cover art</span></li>
+        <li><a href="https://open.spotify.com" target="_blank" rel="noopener" id="creditsSpotifyLink">Spotify</a><span id="creditsSpotifyDesc">Playlist, album and song links, cover art</span></li>
+        <li><a href="https://music.apple.com" target="_blank" rel="noopener">Apple Music</a><span>Playlist, album and song links, cover art</span></li>
       </ul>
     </div>
     <div class="credits-group">
@@ -3470,9 +3505,9 @@ body.week-up-on{overflow:hidden}
         <li><a href="https://getsongbpm.com" target="_blank" rel="noopener">GetSongBPM</a><span>Tempo, key and time signature for Discover</span></li>
         <li><a href="https://reccobeats.com" target="_blank" rel="noopener">ReccoBeats</a><span>Tempo, energy and mood for Discover</span></li>
         <li><a href="https://www.deezer.com" target="_blank" rel="noopener">Deezer</a><span>Tempo data for Discover</span></li>
-        <li><a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a><span>Similar tracks and tags for Discover</span></li>
+        <li><a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a><span>Similar songs and tags for Discover</span></li>
         <li><a href="https://listenbrainz.org" target="_blank" rel="noopener">ListenBrainz</a><span>Similar recordings for Discover</span></li>
-        <li><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a><span>Track and release metadata</span></li>
+        <li><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a><span>Song and release metadata</span></li>
         <li><a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a><span>Album art</span></li>
         <li><a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a><span>Synced lyrics</span></li>
       </ul>
@@ -3492,12 +3527,12 @@ body.week-up-on{overflow:hidden}
 
   <!-- ===== CuRRentSSsss "Reset with fresh picks" confirm (resetCurrentsDay) ===== -->
   <div id="reroll-modal" role="dialog" aria-modal="true" aria-labelledby="rerollModalTitle" tabindex="-1">
-    <h2 id="rerollModalTitle">Re-roll all of today's CuRRentSSsss?</h2>
-    <p>Every song in it gets swapped for new ones. Like the ones you want to keep, or add them to a playlist, before you re-roll.</p>
+    <h2 id="rerollModalTitle">Get new picks for today's CuRRentSSsss?</h2>
+    <p>Every song in it gets swapped for new ones. Like the ones you want to keep, or add them to a playlist, first.</p>
     <p id="rerollModalLeft" hidden></p>
     <div class="danger-modal-actions">
       <button type="button" class="btn-ghost" id="rerollCancelBtn">Cancel</button>
-      <button type="button" class="btn-ghost is-active" id="rerollNowBtn">Re-roll</button>
+      <button type="button" class="btn-ghost is-active" id="rerollNowBtn">New picks</button>
     </div>
   </div>
 
@@ -3670,14 +3705,14 @@ body.week-up-on{overflow:hidden}
         <!-- #visualTabs is moved in here while flow mode is open -->
         <div class="flow-art-style-anchor" id="flowArtStyleAnchor"></div>
         <div class="fs-nav"><button type="button" data-fs-nav="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button></div>
-        <button class="flow-exit" id="flowExitBtn" aria-label="Exit flow mode"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
+        <button class="flow-exit" id="flowExitBtn" aria-label="Exit fullscreen"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
       </div>
       <div class="flow-bottom">
         <div class="flow-meta">
           <div class="title-row">
             <div class="title marquee" id="flowTitle"><span>—</span></div>
             <div class="flow-meta-actions">
-              <button class="report-match-btn" id="flowReportBtn" title="Flag: wrong track playing" aria-label="Flag this as the wrong track playing">
+              <button class="report-match-btn" id="flowReportBtn" title="This isn't the right song" aria-label="This isn't the right song">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
               </button>
               <button class="player-like-btn" id="flowLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
@@ -5477,7 +5512,7 @@ function resolveHandoffQueue(s){
 function continueHandoff(d, s){
   hideHandoffPrompt();
   const r = resolveHandoffQueue(s);
-  if (!r){ showToast("Couldn't find that track on this device yet."); return; }
+  if (!r){ showToast("Couldn't find that song on this device yet."); return; }
   if (r.extra.length){
     // Straight to storage rather than lsSet: it's never in the library, so
     // there's nothing for sync to stamp.
@@ -5797,7 +5832,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     let title, artist, art = null, sourceDuration = 0, scId = null;
     if (type === 'sc_track'){
       const t = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
-      if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single track.");
+      if (t.kind !== 'track') throw new Error("That SoundCloud link isn't a single song.");
       title = t.title; artist = t.artist; art = t.image || null; sourceDuration = t.duration || 0; scId = t.scId || null;
     } else if (type === 'am_track'){
       const idx = playlistId.indexOf(':');
@@ -6130,13 +6165,13 @@ function reResolveStaleInBackground(id, type){
 function manualRelinkPlaylist(id){
   const pl = getCachedPlaylist(id);
   if (!pl || pl.type === 'custom') return;
-  showToast('Refreshing links…');
+  showToast('Fixing songs…');
   resolvePlaylist(id, pl.type, () => {}).then(newPl => {
     if (state.playlist && state.playlist.id === id) state.playlist = newPl;
     renderLibrary();
-    showToast('Links refreshed');
+    showToast('All set. Try playing it again.');
   }).catch(() => {
-    showToast("Couldn't refresh links right now.");
+    showToast("Couldn't fix the songs right now. Try again in a minute.");
   });
 }
 
@@ -6282,6 +6317,8 @@ function formatTotalDuration(totalSec){
 const $ = (id) => document.getElementById(id);
 const views = { library: $('view-library'), player: $('view-player'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
+// whichever label is showing: "Find music", or "Go" on narrow phones
+function loadBtnLabel(){ const sh = loadBtn.querySelector('.load-short'); return sh && sh.offsetParent ? 'Go' : 'Find music'; }
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
@@ -6299,6 +6336,12 @@ const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
+$('emptyFindBtn').addEventListener('click', () => setView('library'));
+$('playerMoreBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const q = state.queue[state.queuePos];
+  if (q) toggleTrackCtxMenu(q.plId, q.idx, e.currentTarget, { inQueue: true, isNow: true });
+});
 const artA = $('artA'), artB = $('artB');
 const recordLabelImg = $('recordLabelImg');
 const artStyleMenu = $('artStyleMenu'), artTabBtn = document.querySelector('#visualTabs .v-tab[data-mode="art"]');
@@ -7320,13 +7363,21 @@ function renderLibrary(){
     const lastPlayedText = formatLastPlayed(getLastPlayed(id));
     const totalDuration = formatTotalDuration(totalPlaylistDuration(pl.tracks));
     const count = document.createElement('div'); count.className = 'count';
-    count.textContent = pl.tracks.length + (isPodcast ? (pl.tracks.length === 1 ? ' episode' : ' episodes') : (pl.tracks.length === 1 ? ' track' : ' tracks')) + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
+    count.textContent = pl.tracks.length + (isPodcast ? (pl.tracks.length === 1 ? ' episode' : ' episodes') : (pl.tracks.length === 1 ? ' song' : ' songs')) + (totalDuration ? ' · ' + totalDuration : '') + (lastPlayedText ? ' · ' + lastPlayedText : '');
+    // the two generated mixes keep their branded names; say plainly what
+    // they are, and what fills them when they're still empty
+    let desc = null;
+    if (id === SWELL_ID || id === BLEND_ID){
+      desc = document.createElement('div'); desc.className = 'count lib-desc';
+      desc.textContent = id === SWELL_ID ? 'Daily picks for you' : 'A mix of your library';
+      if (!pl.tracks.length) count.textContent = id === SWELL_ID ? 'Ready after you play a few songs' : 'Ready after you save a playlist or like a few songs';
+    }
     if (id === SWELL_ID && currentsBusy){
-      count.textContent = currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...';
+      count.textContent = currentsBusy === 'more' ? 'Adding more songs...' : 'Finding new picks...';
       card.classList.add('is-refreshing');
     }
     const info = document.createElement('div'); info.className = 'info';
-    info.appendChild(name); info.appendChild(count);
+    info.appendChild(name); if (desc) info.appendChild(desc); info.appendChild(count);
 
     const rowActions = document.createElement('div');
     rowActions.className = 'row-actions';
@@ -7477,11 +7528,11 @@ function toggleLibraryPlaylistPanel(id){
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
     status.className = 'currents-status';
-    status.textContent = currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...';
+    status.textContent = currentsBusy === 'more' ? 'Adding more songs...' : 'Finding new picks...';
     libplBody.appendChild(status);
   }
   if (!pl.tracks.length){
-    libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No tracks found.</div>');
+    libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
     pl.tracks.forEach((t, i) => {
       const row = document.createElement('div');
@@ -7496,7 +7547,7 @@ function toggleLibraryPlaylistPanel(id){
       row.appendChild(img); row.appendChild(meta);
       const rowActions = document.createElement('div'); rowActions.className = 'row-actions';
       const menuBtn = document.createElement('button');
-      menuBtn.setAttribute('aria-label', 'Track options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
+      menuBtn.setAttribute('aria-label', 'Song options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
       menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(id, i, menuBtn); });
       rowActions.appendChild(menuBtn);
@@ -7550,6 +7601,7 @@ const CTX_ICON_PIN = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 
 const CTX_ICON_LINK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12a5 5 0 015-5h3v2h-3a3 3 0 000 6h3v2h-3a5 5 0 01-5-5zm6-1h4v2h-4v-2zm5-4h3a5 5 0 010 10h-3v-2h3a3 3 0 000-6h-3V7z"/></svg>';
 const CTX_ICON_REPLACE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L14 10h6V4l-2.35 2.35z"/></svg>';
 const CTX_ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6V2L7 7l5 5V8c3.31 0 6 2.69 6 6a6 6 0 01-6 6 6 6 0 01-6-6H4a8 8 0 008 8 8 8 0 008-8c0-4.42-3.58-8-8-8z"/></svg>';
+const CTX_ICON_FLAG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>';
 const CTX_ICON_DECLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
 const CTX_ICON_ADD_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/></svg>';
@@ -7608,10 +7660,10 @@ function openLibCtxMenu(id, btn){
   // actions (rename/art/delete don't apply to a system playlist).
   // SwiiiRrrLL is generated too - its only action is a fresh reblend.
   const items = id === SWELL_ID ? [
-    { action: 'currents-more', label: currentsBusy === 'more' ? 'Pulling in more tracks...' : 'Add more tracks', icon: CTX_ICON_ADD_MORE },
-    { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding fresh tracks...' : currentsRerollsLeft() ? 'Reset with fresh picks' : 'No re-rolls left today', icon: CTX_ICON_REFRESH, off: !currentsRerollsLeft() },
+    { action: 'currents-more', label: currentsBusy === 'more' ? 'Adding more songs...' : 'Add more songs', icon: CTX_ICON_ADD_MORE },
+    { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding new picks...' : currentsRerollsLeft() ? 'New picks' : 'No more new picks today', icon: CTX_ICON_REFRESH, off: !currentsRerollsLeft() },
   ] : id === BLEND_ID ? [
-    { action: 'blend-reshuffle', label: 'Reblend now', icon: CTX_ICON_REFRESH },
+    { action: 'blend-reshuffle', label: 'New picks', icon: CTX_ICON_REFRESH },
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
@@ -7620,19 +7672,22 @@ function openLibCtxMenu(id, btn){
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
   if (id !== SWELL_ID && id !== BLEND_ID && canToggleAlbum(pl)){
-    items.push({ action: 'albumtoggle', label: isAlbumEntry(pl) ? 'Mark as playlist' : 'Mark as album', icon: CTX_ICON_ALBUM });
+    items.push({ action: 'albumtoggle', label: isAlbumEntry(pl) ? 'Show under Playlists' : 'Show under Albums', icon: CTX_ICON_ALBUM });
   }
   if (id !== SWELL_ID && id !== BLEND_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
-    items.push({ action: 'replacelink', label: 'Replace link', icon: CTX_ICON_REPLACE });
   }
   // 'custom' playlists (Liked Songs, CURRENT/Swell, user-made, Discover
   // overflow) aren't backed by resolvePlaylist() and have no source to
   // re-resolve against - only offer this for playlists that came from an
-  // actual link.
+  // actual link. Grouped with "Use a different link": both are the plain
+  // "songs won't play" fixes.
   if (pl.type !== 'custom' && id !== BLEND_ID){
-    items.push({ action: 'relinkall', label: 'Refresh links', icon: CTX_ICON_REFRESH });
+    items.push({ action: 'relinkall', label: 'Fix songs that won\'t play', icon: CTX_ICON_REFRESH });
+  }
+  if (id !== SWELL_ID && id !== BLEND_ID && link){
+    items.push({ action: 'replacelink', label: 'Use a different link', icon: CTX_ICON_REPLACE });
   }
   if (id !== SWELL_ID && id !== BLEND_ID){
     items.push({ sep: true });
@@ -7791,7 +7846,14 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     if (plId === SWELL_ID) items.push({ action: 'decline', label: 'Not for me', icon: CTX_ICON_DECLINE });
     items.push({ sep: true });
   }
-  items.push({ action: 'refresh', label: 'Refresh link', icon: CTX_ICON_REFRESH });
+  // the playing song only: report a wrong match (was the flag icon beside
+  // the player title); once flagged, the same item opens the version picker
+  const nowQ = state.queue[state.queuePos];
+  if (t && nowQ && nowQ.plId === plId && nowQ.idx === trackIdx && !isPodcastTrack(t)){
+    const flagged = flaggedTrackKeys.has(wrongTrackKey(t));
+    items.push({ action: 'wrongsong', label: flagged ? 'Pick the right version' : 'This isn\'t the right song', icon: CTX_ICON_FLAG });
+  }
+  items.push({ action: 'refresh', label: 'Fix this song', icon: CTX_ICON_REFRESH });
   if (t) items.push({ action: 'art', label: 'Change art', icon: CTX_ICON_ART });
   if (t && !(opts && opts.inQueue)){
     items.push({ sep: true });
@@ -7835,6 +7897,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
+  else if (action === 'wrongsong'){ reportMatchBtn.click(); }
   else if (action === 'art'){ if (t) openTrackArtFlow(plId, trackIdx); }
   else if (action === 'remove'){
     if (!t) return;
@@ -7865,7 +7928,7 @@ function handleLibCtxAction(action, id){
   if (!pl) return;
   if (action === 'rename') openRenamePlaylistFlow(id, pl);
   else if (action === 'art') openChangeArtFlow(id, pl);
-  else if (action === 'addqueue'){ const n = queueAddCollection(id); showToast(n ? 'Added ' + n + (n === 1 ? ' track' : ' tracks') + ' to queue' : 'Nothing to add'); }
+  else if (action === 'addqueue'){ const n = queueAddCollection(id); showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to queue' : 'Nothing to add'); }
   else if (action === 'duplicate') duplicateLibraryPlaylist(id, pl);
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
   else if (action === 'share') sharePlaylistItem(pl);
@@ -7888,7 +7951,7 @@ function toggleAlbumOverride(id, pl){
   lsSet(LS_PL(id), pl);
   if (state.playlist && state.playlist.id === id) state.playlist.albumOverride = makeAlbum;
   renderLibrary();
-  showToast(makeAlbum ? 'Marked as album' : 'Marked as playlist');
+  showToast(makeAlbum ? 'Now under Albums' : 'Now under Playlists');
 }
 
 function openRenamePlaylistFlow(id, pl){
@@ -8029,7 +8092,7 @@ function openTrackArtFlow(plId, trackIdx){
   const albumHtml = offerAlbum
     ? '<label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13.5px;color:var(--text);cursor:pointer">' +
         '<input id="trArtAlbumChk" type="checkbox" style="width:18px;height:18px;margin:0;accent-color:var(--accent);flex:none">' +
-        '<span>Apply to all tracks in &ldquo;' + escapeHtml(album.name) + '&rdquo;</span></label>'
+        '<span>Apply to all songs in &ldquo;' + escapeHtml(album.name) + '&rdquo;</span></label>'
     : '';
   function apply(image){
     const chk = $('trArtAlbumChk');
@@ -8057,9 +8120,9 @@ function openTrackArtFlow(plId, trackIdx){
     const cur = qPl && qPl.tracks[q.idx];
     if (cur) repaintNowPlayingArt(cur);
     renderQueuePanel();
-    showToast(whole ? 'Art updated for ' + changed + ' tracks' : 'Track art updated');
+    showToast(whole ? 'Art updated for ' + changed + ' songs' : 'Song art updated');
   }
-  openArtPicker('Change track art', resetLabel, albumHtml, apply, () => apply(undefined));
+  openArtPicker('Change song art', resetLabel, albumHtml, apply, () => apply(undefined));
 }
 
 function duplicateLibraryPlaylist(id, pl){
@@ -8171,7 +8234,7 @@ function swapLibraryPlaylist(oldId, newPl){
 function openReplaceLinkFlow(id, pl){
   openImportOverlay();
   importStage.innerHTML =
-    '<div class="step">Replace link for &ldquo;' + escapeHtml(pl.name) + '&rdquo;</div>' +
+    '<div class="step">Use a different link for &ldquo;' + escapeHtml(pl.name) + '&rdquo;</div>' +
     '<input id="plReplaceInput" type="text" placeholder="Paste a Spotify, YouTube, SoundCloud, or Apple Music link" autocomplete="off" spellcheck="false" ' +
       'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
     '<div class="import-err" id="plReplaceErr"></div>' +
@@ -8193,9 +8256,9 @@ function openReplaceLinkFlow(id, pl){
       swapLibraryPlaylist(id, newPl);
       closeImportOverlay();
       renderLibrary();
-      showToast('Link replaced');
+      showToast('Link updated');
     }).catch(e => {
-      stageError(e.message || 'Something went wrong.', submit);
+      stageError(plainError(e), submit);
     });
   }
   $('plReplaceBtn').addEventListener('click', submit);
@@ -8228,7 +8291,7 @@ function openRefreshLinkPicker(plId, trackIdx){
   const pl = playlistById(plId) || getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
-  if (isAudioVideoId(t.videoId) || t.podcast){ showToast('Podcast episodes can\'t be relinked from here.'); return; }
+  if (isAudioVideoId(t.videoId) || t.podcast){ showToast('Podcast episodes can\'t be fixed from here.'); return; }
   const token = String(++relinkPickerToken);
   openImportOverlay();
   const label = t.title + (t.artist ? ' - ' + t.artist : '');
@@ -8259,7 +8322,7 @@ function openRefreshLinkPicker(plId, trackIdx){
     if (!stillShowing()) return;
     if (sc.status === 'rejected' && yt.status === 'rejected'){
       const e = yt.reason || sc.reason || {};
-      stageError(e.message || 'Search failed.', () => openRefreshLinkPicker(plId, trackIdx), 'Couldn’t search for other links.');
+      stageError(plainError(e), () => openRefreshLinkPicker(plId, trackIdx), 'Couldn’t search for other versions.');
       return;
     }
     const candidates = (sc.status === 'fulfilled' ? sc.value : []).concat(yt.status === 'fulfilled' ? yt.value : []);
@@ -8599,7 +8662,7 @@ function openAddToPlaylistPicker(track){
   const rowsHtml = customs.map(p =>
     '<label class="btn-ghost pl-pick" style="width:100%;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">' +
       '<input type="checkbox" class="pl-pick-cb" data-id="' + p.id + '" style="flex:none">' +
-      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span></span>' +
+      '<span>' + escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span></span>' +
     '</label>'
   ).join('');
   importStage.innerHTML =
@@ -8637,7 +8700,7 @@ function openSingleTrackDestinationPicker(track){
   const customs = addablePlaylists().filter(p => p.id !== LIKED_ID);
   const rowsHtml = customs.map(p =>
     '<button class="btn-ghost pl-pick" data-id="' + p.id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' +
-      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' track' : ' tracks') + ')</span>' +
+      escapeHtml(p.name) + ' <span style="color:var(--faint-2)">(' + p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs') + ')</span>' +
     '</button>'
   ).join('');
   importStage.innerHTML =
@@ -8696,7 +8759,7 @@ async function resolveTracksFromLink(input, onProgress){
       return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
     const { name: listName, tracks } = await fetchSpotifyPlaylist(sp.id, sp.type);
-    if (!tracks.length) throw new Error('That ' + sp.type + ' has no tracks.');
+    if (!tracks.length) throw new Error('That ' + (sp.type === 'track' ? 'song' : sp.type) + ' has no songs.');
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
@@ -8724,7 +8787,7 @@ async function resolveTracksFromLink(input, onProgress){
       if (!match.videoId) throw new Error("Couldn't find that song.");
       return [{ title: data.title, artist: data.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
-    if (!data.tracks.length) throw new Error('That playlist has no tracks.');
+    if (!data.tracks.length) throw new Error('That playlist has no songs.');
     const resolved = [];
     for (let i = 0; i < data.tracks.length; i++){
       const t = data.tracks[i];
@@ -8754,7 +8817,7 @@ async function resolveTracksFromLink(input, onProgress){
       return [{ title, artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 }];
     }
     const { name: listName, tracks } = await fetchAppleMusicList(am.type, am.storefront, am.id);
-    if (!tracks.length) throw new Error('That ' + am.type + ' has no tracks.');
+    if (!tracks.length) throw new Error('That ' + (am.type === 'track' ? 'song' : am.type) + ' has no songs.');
     const resolved = [];
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
@@ -8809,7 +8872,7 @@ function openAddLinksFlow(playlistId){
         showToast(added ? 'Added ' + added + (added === 1 ? ' song' : ' songs') : 'Already in playlist');
         renderStep();
       } catch(e){
-        errEl.textContent = e.message || "Couldn't add that.";
+        errEl.textContent = plainError(e, "Couldn't add that. Try again in a minute.");
         btn.disabled = false; btn.textContent = 'Add';
       }
     }
@@ -8870,7 +8933,7 @@ function stageFinding(){
 
 function stageMatching(name, total){
   importStage.innerHTML =
-    '<div class="step">Matching tracks&hellip;</div>' +
+    '<div class="step">Matching songs&hellip;</div>' +
     '<div class="flow-line"><div class="fill" id="matchFill"></div></div>' +
     '<div class="counter" id="matchCounter">0 / ' + total + '</div>' +
     '<div class="import-preview" id="importPreview"></div>';
@@ -8890,6 +8953,25 @@ function stageMatchingProgress(done, total, track){
     preview.insertBefore(row, preview.firstChild);
     while (preview.children.length > 5) preview.removeChild(preview.lastChild);
   }
+}
+
+// Plain-language version of a load/import/search error for the screen;
+// the raw text (backend status, fetch failure, worker error string) only
+// goes to the console log. Our own client-side messages are already
+// written for people (capitalized sentences) and pass through.
+function plainError(e, fallback){
+  const raw = String((e && e.message) || e || '');
+  if (raw) console.warn('[ebbless] load error:', raw);
+  if (/failed to fetch|networkerror|load failed|network ?error|err_|could not reach|timed? ?out|aborted/i.test(raw))
+    return "We couldn't reach EBBLESS. Check your internet and try again.";
+  if (/private|not found|no (track|artist|video) data|has no (tracks|videos)|deleted/i.test(raw) && /^[a-z]/.test(raw))
+    return 'That playlist or song may be private. Make it public and paste it again.';
+  if (/unsupported|not a supported|invalid (url|id|storefront|apple podcasts)/i.test(raw))
+    return "EBBLESS can't open that link. Try a playlist, album, or song link.";
+  if (/slow down|too many|rate-limit|\b429\b/i.test(raw))
+    return 'EBBLESS is busy right now. Try again in a minute.';
+  if (raw && /^[A-Z]/.test(raw) && !/^(HTTP|iTunes) /.test(raw)) return raw;
+  return fallback || 'Something went wrong on our end. Try again in a minute.';
 }
 
 function stageError(msg, onRetry, title){
@@ -8944,7 +9026,7 @@ function searchPickRowHtml(i, image, name, subHtml, extraClass, metaText){
 function searchResultMeta(r){
   const parts = [];
   const n = Number(r && r.trackCount);
-  if (isFinite(n) && n >= 1) parts.push(Math.round(n) + (Math.round(n) === 1 ? ' track' : ' tracks'));
+  if (isFinite(n) && n >= 1) parts.push(Math.round(n) + (Math.round(n) === 1 ? ' song' : ' songs'));
   const ms = Number(r && r.durationMs);
   if (isFinite(ms) && ms > 0){
     const totalMin = Math.max(1, Math.round(ms / 60000));
@@ -9022,7 +9104,7 @@ async function beginVibeSearch(query){
   } catch(e){
     const a = await artistP;
     if (a && seq === vibeSearchSeq){ shown = []; stageSearchResults([a], query, seq); return; }
-    stageError(e.message || "Couldn't search for that.", () => beginVibeSearch(query), "Couldn’t search for that.");
+    stageError(plainError(e), () => beginVibeSearch(query), "Couldn’t search for that.");
   }
 }
 
@@ -9158,7 +9240,7 @@ async function beginImport(id, force, type, targetIndex){
     }
   } catch(e){
     if (startedEarly) bgResolveProgress.delete(id);
-    stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type, targetIndex));
+    stageError(plainError(e), () => beginImport(id, true, type, targetIndex));
   }
 }
 
@@ -10006,7 +10088,7 @@ const PASTE_HINTS = [
   'Search an artist',
   'Paste a YouTube or YouTube Music link',
   'Describe a vibe: rainy Sunday, warm and slow',
-  'Paste a SoundCloud track or set',
+  'Paste a SoundCloud song or set',
   'Paste a link to an artist page',
   'Search a genre: afro-house, neo-soul, jazz',
   'Paste a podcast show, episode, or RSS feed',
@@ -10427,7 +10509,7 @@ function closeCreditsModal(){
 // track, or, for tracks imported before per-track ids were kept, to the
 // album/playlist it came from. Anything else keeps the generic link.
 // Looked up per call (not cached) so this is safe to run from anywhere.
-const CREDITS_SPOTIFY_DESC = 'Playlist, album and track links, cover art';
+const CREDITS_SPOTIFY_DESC = 'Playlist, album and song links, cover art';
 function spotifyLinkForEntry(entry, t){
   if (t && t.spotifyId) return { url: 'https://open.spotify.com/track/' + t.spotifyId, kind: 'track' };
   const pl = entry && playlistById(entry.plId);
@@ -11204,7 +11286,7 @@ const weekUpSim = (() => {
     return sessionStorage.getItem('ebbless:wrappedSim') === '1';
   } catch(e){ return weekUpParam === 'gate'; }
 })();
-const WEEK_UP_FEATURES = { lyrics: 'Lyrics', cymatics: 'Cymatics', lp: 'LP mode', cassette: 'Cassette', youtube_video: 'YouTube video',
+const WEEK_UP_FEATURES = { lyrics: 'Lyrics', cymatics: 'Visualizer', lp: 'LP mode', cassette: 'Cassette', youtube_video: 'YouTube video',
   fullscreen: 'Fullscreen', discover: 'Discover', podcast: 'Podcasts', soundcloud: 'SoundCloud', cast: 'Cast', vibe_search: 'Vibe search', share: 'Share' };
 function weekUpMe(){ try { return JSON.parse(localStorage.getItem(WEEK_UP_ME_KEY)) || {}; } catch(e){ return {}; } }
 function weekUpBypassed(){ try { return !!(localStorage.getItem(WEEK_UP_BYPASS_KEY) || localStorage.getItem(STATS_OFF_KEY)); } catch(e){ return false; } }
@@ -11488,7 +11570,7 @@ function fmtCrossfadeMs(ms){
   return (s % 1 === 0 ? s.toFixed(0) : s.toFixed(1)) + 's';
 }
 function renderCrossfadeUI(){
-  crossfadeBtn.textContent = crossfadePrefs.on ? 'On' : 'Off';
+  crossfadeBtn.setAttribute('aria-checked', String(!!crossfadePrefs.on));
   crossfadeBtn.classList.toggle('is-active', crossfadePrefs.on);
   crossfadeDurSlider.value = String(crossfadePrefs.ms);
   crossfadeDurSlider.disabled = !crossfadePrefs.on;
@@ -11503,7 +11585,7 @@ crossfadeBtn.addEventListener('click', () => {
 });
 const levelBtn = $('levelBtn');
 function renderLevelUI(){
-  levelBtn.textContent = levelOn ? 'On' : 'Off';
+  levelBtn.setAttribute('aria-checked', String(!!levelOn));
   levelBtn.classList.toggle('is-active', levelOn);
 }
 levelBtn.addEventListener('click', () => {
@@ -13254,7 +13336,7 @@ async function refreshCurrents(mode, opts){
   if (currentsBusy){ if (!silent) showToast('CuRRentSSsss is already updating...'); return 0; }
   currentsBusy = mode;
   if (!silent) rerenderLibraryKeepPanel();
-  if (!silent) showToast(mode === 'more' ? 'Pulling in more tracks...' : 'Finding fresh tracks...');
+  if (!silent) showToast(mode === 'more' ? 'Adding more songs...' : 'Finding new picks...');
   const doneToast = !silent && !(opts && opts.doneToast === false);
   let changed = false, added = 0;
   try {
@@ -13263,7 +13345,7 @@ async function refreshCurrents(mode, opts){
     const block = opts && typeof opts.block === 'number' ? opts.block : period.periodIndex;
     const picks = await buildCurrentsPicks(mode, timeCtx, block, opts && opts.avoid);
     if (!picks.length){
-      if (doneToast) showToast("Couldn't find new tracks right now. Try again in a bit.");
+      if (doneToast) showToast("Couldn't find new songs right now. Try again in a bit.");
       return 0;
     }
     const pl = playlistById(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
@@ -13282,7 +13364,7 @@ async function refreshCurrents(mode, opts){
         renderQueuePanel();
       }
       added = add.length;
-      if (doneToast) showToast(add.length ? 'Added ' + add.length + (add.length === 1 ? ' track' : ' tracks') : 'No new tracks this time');
+      if (doneToast) showToast(add.length ? 'Added ' + add.length + (add.length === 1 ? ' song' : ' songs') : 'No new songs this time');
     } else {
       const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
       const nowTrack = cur && cur.plId === SWELL_ID ? trackAt(state.queuePos) : null;
@@ -13294,7 +13376,7 @@ async function refreshCurrents(mode, opts){
       if (state.playlist && state.playlist.id === SWELL_ID) state.playlist = pl;
       remapQueueAfterCurrentsReset(!!nowTrack, tracks.length);
       added = picks.length;
-      if (doneToast) showToast('CuRRentSSsss refreshed: ' + picks.length + ' new tracks');
+      if (doneToast) showToast('New picks in CuRRentSSsss: ' + picks.length + (picks.length === 1 ? ' song' : ' songs'));
     }
   } finally {
     currentsBusy = null;
@@ -13346,17 +13428,17 @@ async function refreshSwellIfDue(opts){
     sched.n = n;
     lsSet(LS_SWELL_BLOCKS, sched);
   }
-  if (loud) showToast(total ? 'CuRRentSSsss refreshed: ' + total + ' new tracks' : "Couldn't find new tracks right now. Try again in a bit.");
+  if (loud) showToast(total ? 'New picks in CuRRentSSsss: ' + total + (total === 1 ? ' song' : ' songs') : "Couldn't find new songs right now. Try again in a bit.");
 }
 // "Reset with fresh picks": after a confirm, re-roll every drop due so far
 // today. CURRENTS_REROLLS_PER_DAY a day; Cancel costs nothing.
 const rerollModal = $('reroll-modal');
 function resetCurrentsDay(){
   if (currentsBusy){ showToast('CuRRentSSsss is already updating...'); return; }
-  if (!currentsRerollsLeft()){ showToast('No re-rolls left today. CuRRentSSsss starts fresh at midnight.'); return; }
+  if (!currentsRerollsLeft()){ showToast('No more new picks today. CuRRentSSsss starts fresh at midnight.'); return; }
   const last = currentsRerollsLeft() === 1;
   $('rerollModalLeft').hidden = !last;
-  $('rerollModalLeft').textContent = last ? "This is today's last re-roll." : '';
+  $('rerollModalLeft').textContent = last ? "This is today's last set of new picks." : '';
   dangerScrim.classList.add('is-open');
   rerollModal.classList.add('is-open');
   setTimeout(() => $('rerollCancelBtn').focus(), 50);
@@ -13466,7 +13548,7 @@ function refreshBlend(opts){
   if (state.playlist && state.playlist.id === BLEND_ID) state.playlist = pl;
   remapQueueAfterCurrentsReset(!!nowTrack, pl.tracks.length, BLEND_ID);
   rerenderLibraryKeepPanel();
-  if (!silent) showToast(BLEND_NAME + ' reblended: ' + tracks0.length + ' tracks');
+  if (!silent) showToast('New picks in ' + BLEND_NAME + ': ' + tracks0.length + (tracks0.length === 1 ? ' song' : ' songs'));
 }
 function refreshBlendIfStale(){
   const last = lsGet(LS_BLEND_GENERATED, 0);
@@ -13505,7 +13587,7 @@ function renderQueuePanel(){
   nowPlayBtn.innerHTML = '<svg id="queueNowPlayIco" viewBox="0 0 24 24" fill="currentColor">' + (isPlaying ? ICO_PAUSE : ICO_PLAY) + '</svg>';
   nowPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (state.queuePos >= 0) userTogglePlayback(); });
   const nowMenuBtn = document.createElement('button'); nowMenuBtn.className = 'q-menu';
-  nowMenuBtn.setAttribute('aria-label', 'Track options'); nowMenuBtn.setAttribute('aria-haspopup', 'true');
+  nowMenuBtn.setAttribute('aria-label', 'Song options'); nowMenuBtn.setAttribute('aria-haspopup', 'true');
   nowMenuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
   nowMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(nowEntry.plId, nowEntry.idx, nowMenuBtn, { inQueue: true, isNow: true }); });
   nowRow.appendChild(nowImg); nowRow.appendChild(nowMeta); nowRow.appendChild(nowMenuBtn); nowRow.appendChild(nowPlayBtn);
@@ -13556,7 +13638,7 @@ function renderQueuePanel(){
     remove.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 
     const menuBtn = document.createElement('button'); menuBtn.className = 'q-menu';
-    menuBtn.setAttribute('aria-label', 'Track options'); menuBtn.setAttribute('aria-haspopup', 'true');
+    menuBtn.setAttribute('aria-label', 'Song options'); menuBtn.setAttribute('aria-haspopup', 'true');
     menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
 
     img.addEventListener('click', () => queueJumpTo(pos));
@@ -15965,7 +16047,7 @@ function renderLyrics(data){
   lyricsState = { videoId: data._videoId, lines: data.lines || [], synced: !!data.synced, activeIdx: -1 };
   lyricsScroller.innerHTML = '';
   if (!lyricsState.lines.length){
-    lyricsScroller.innerHTML = '<div class="lyrics-empty">' + (data.emptyText || 'No lyrics found for this track.') + '</div>';
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">' + (data.emptyText || 'No lyrics found for this song.') + '</div>';
     return;
   }
   lyricsState.lines.forEach(ln => {
@@ -15987,7 +16069,7 @@ function renderLyrics(data){
     const note = document.createElement('div');
     note.className = 'lyrics-empty';
     note.style.marginTop = '18px';
-    note.textContent = 'Lyrics found, but no synced timing for this track.';
+    note.textContent = 'Lyrics found, but no synced timing for this song.';
     lyricsScroller.appendChild(note);
   }
   lyricsAutoScrollStart();
@@ -16003,7 +16085,7 @@ function loadLyricsForTrack(t){
   }).catch(() => {
     const ct = currentTrack();
     if (!ct || ct.videoId !== t.videoId) return;
-    lyricsScroller.innerHTML = '<div class="lyrics-empty">Couldn\'t load lyrics for this track.</div>';
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">Couldn\'t load lyrics for this song.</div>';
   });
 }
 
@@ -16078,7 +16160,7 @@ function maybeLoadLyrics(){
   }
   if (isNativeVideoId(t.videoId)){
     lyricsState = { videoId: t.videoId, lines: [], synced: false, activeIdx: -1 };
-    lyricsScroller.innerHTML = '<div class="lyrics-empty">Lyrics aren\'t available for SoundCloud tracks yet.</div>';
+    lyricsScroller.innerHTML = '<div class="lyrics-empty">Lyrics aren\'t available for SoundCloud songs yet.</div>';
     return;
   }
   if (lyricsState.videoId === t.videoId) return;
@@ -16259,6 +16341,7 @@ function setMarqueeText(el, text){
 }
 
 function updateTrackMetaUI(t){
+  $('trackMeta').classList.remove('is-empty');
   setMarqueeText(trackTitle, t.title);
   setMarqueeText(trackArtist, t.artist);
   setMarqueeText(flowTitle, t.title);
@@ -17676,7 +17759,7 @@ function buildMiniPlayerDOM(win){
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
         btn('mpStyle', 'mp-tool', 'Switch style', MP_ICO.style) +
         btn('mpReset', 'mp-tool', 'Reset shape', MP_ICO.reset) +
-        btn('mpFlag', 'mp-tool', 'Flag: wrong track playing', MP_ICO.flag) +
+        btn('mpFlag', 'mp-tool', 'This isn\'t the right song', MP_ICO.flag) +
         '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
         btn('mpQueueBtn', 'mp-tool', 'Queue', MP_ICO.queue) +
       '</div>' +
@@ -18103,7 +18186,7 @@ function castStart(){
   const t = trackAt(state.queuePos);
   if (!t || !t.videoId){ showToast('Pick something to play first.'); return; }
   const appId = castAppFor(t.videoId);
-  if (!appId){ showToast("SoundCloud tracks can't be cast yet."); return; }
+  if (!appId){ showToast("SoundCloud songs can't be cast yet."); return; }
   if (typeof YT === 'undefined' || !YT.PlayerState){ showToast('Still loading - try again in a moment.'); return; }
   cast.connecting = true;
   castRenderUI();
@@ -18184,7 +18267,7 @@ function castLoad(videoId, startAt){
   if (appId !== cast.appId){
     const name = castDeviceName();
     castEnd({ stop: true, position: 0, play: true, msg: isSoundCloudVideoId(videoId)
-      ? "SoundCloud tracks can't play on " + name + ' - playing here.'
+      ? "SoundCloud songs can't play on " + name + ' - playing here.'
       : 'This one needs a different cast app - playing here. Tap cast to send it to ' + name + '.' });
     return;
   }
@@ -19956,9 +20039,9 @@ function updateWrongTrackLogDesc(){
   const el = $('wrongTrackLogDesc');
   if (!el) return;
   const n = getWrongTrackLog().length;
-  el.textContent = 'Every time you tap the flag in the player, what was asked for and what actually played is logged here. ' +
-    (n ? n + (n === 1 ? ' flag' : ' flags') + ' logged so far - copy them into a bug report so the matching can be fixed.'
-       : 'Nothing flagged yet.');
+  el.textContent = 'Every time you choose "This isn\'t the right song", what was asked for and what actually played is saved here. ' +
+    (n ? n + (n === 1 ? ' report' : ' reports') + ' so far - copy them into a bug report so the matching can be fixed.'
+       : 'Nothing reported yet.');
 }
 // Key the "already flagged" state off the track itself (not just a class
 // that updateTrackMetaUI clears) so the flag stays lit when coming back to
@@ -19972,7 +20055,7 @@ function syncWrongTrackFlagUI(t){
   [reportMatchBtn, flowReportBtn].forEach(btn => {
     if (!btn) return;
     btn.classList.toggle('is-sent', on);
-    const label = on ? 'Flagged as wrong track - tap to pick the right version' : 'Flag: wrong track playing';
+    const label = on ? 'Reported - tap to pick the right version' : 'This isn\'t the right song';
     btn.title = label;
     btn.setAttribute('aria-label', label);
   });
@@ -20071,7 +20154,7 @@ function flagWrongTrack(){
   saveWrongTrackLog(log);
   flaggedTrackKeys.add(wrongTrackKey(t));
   syncWrongTrackFlagUI(t);
-  showToast(isSC || !t.videoId ? 'Flagged as wrong track - logged' : 'Flagged as wrong track - tap the flag again to pick the right one');
+  showToast('Thanks, we\'ll find a better match.');
 
   if (t.videoId){
     fetch(BACKEND + '/report', {
@@ -20125,10 +20208,10 @@ function recordWrongTrackCorrection(t, candidate){
 }
 function copyWrongTrackLog(){
   const text = JSON.stringify(getWrongTrackLog(), null, 2);
-  const done = () => showToast('Wrong-track log copied');
+  const done = () => showToast('Reports copied');
   if (navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(done).catch(() => { console.log(text); showToast('Could not copy - log printed to the console'); });
-  } else { console.log(text); showToast('Log printed to the console'); }
+    navigator.clipboard.writeText(text).then(done).catch(() => { console.log(text); showToast("Couldn't copy the log. Try again."); });
+  } else { console.log(text); showToast("Couldn't copy the log on this browser."); }
 }
 window.ebblessWrongTrackLog = function(){ return getWrongTrackLog(); };
 window.ebblessWrongTrackLog.copy = copyWrongTrackLog;
@@ -20774,8 +20857,9 @@ function runIntro(preview){
     libplBody.innerHTML = '';
     libraryGrid.innerHTML = '';
     const tSpan = trackTitle.querySelector('span'), aSpan = trackArtist.querySelector('span');
-    if (tSpan) tSpan.textContent = '—';
-    if (aSpan) aSpan.textContent = '—';
+    if (tSpan) tSpan.textContent = 'Nothing playing yet';
+    if (aSpan) aSpan.textContent = '';
+    $('trackMeta').classList.add('is-empty');
     artA.classList.remove('is-active');
     artA.removeAttribute('src');
     recordLabelImg.removeAttribute('src');
@@ -21033,6 +21117,7 @@ function runIntro(preview){
   const DEMO_TRACK = DEMO_TRACKS[0];
   function seedDemoTrack(){
     const t = trackTitle.querySelector('span'), a = trackArtist.querySelector('span');
+    $('trackMeta').classList.remove('is-empty');
     if (t) t.textContent = DEMO_TITLE;
     if (a) a.textContent = DEMO_ARTIST;
     artA.src = DEMO_ART;
@@ -21154,7 +21239,7 @@ function runIntro(preview){
         '<img src="' + DEMO_ART + '" alt="">' +
       '</div>' +
       '<div class="info"><div class="name">' + DEMO_ALBUM + '</div><div class="count">' +
-        DEMO_TRACKS.length + ' tracks</div></div>';
+        DEMO_TRACKS.length + ' songs</div></div>';
     libraryGrid.appendChild(card);
     libraryListWrap.classList.remove('hidden');
     libraryEmpty.classList.add('hidden');
@@ -21269,7 +21354,7 @@ function runIntro(preview){
     clearCaption();
     clearMainCaption();
     if (loadBtn) loadBtn.classList.add('onb-zoom');
-    setCaption(TAP === 'tap' ? 'Tap Load' : 'Click Load', loadBtn);
+    setCaption((TAP === 'tap' ? 'Tap ' : 'Click ') + loadBtnLabel(), loadBtn);
     await wait(1200);
     if (loadBtn) loadBtn.classList.add('onb-press');
     tap(loadBtn, true);
@@ -21282,7 +21367,7 @@ function runIntro(preview){
     if (done) return;
 
     // 3. a beat to show it's actually doing something before tracks appear [7600->11200]
-    setCaption('Loading your tracks...', loadBtn);
+    setCaption('Loading your songs...', loadBtn);
     if (loadBtn) loadBtn.classList.add('onb-loading');
     await wait(2900);
     if (loadBtn) loadBtn.classList.remove('onb-loading');
@@ -21390,7 +21475,7 @@ function runIntro(preview){
     showVisual('lyrics');
     renderDemoLyrics();
     await wait(900);
-    setCaption('Synced to the track', [artworkWrap, tabBtn('lyrics')]);
+    setCaption('Synced to the song', [artworkWrap, tabBtn('lyrics')]);
     await wait(900);
     tap(tabBtn('art'));
     showVisual('art');
@@ -21432,7 +21517,7 @@ function runIntro(preview){
     // desktop gets the play/pause + skip keyboard beats; touch just gets
     // the swipe gesture
     if (isTouchDevice){
-      await beat('Swipe the artwork to skip tracks', 1600, 500, artworkWrap);
+      await beat('Swipe the artwork to skip songs', 1600, 500, artworkWrap);
     } else {
       await beat('Space 𓋰 to play/pause', 1100, 300, playBtn);
       if (done) return;
@@ -21491,10 +21576,10 @@ function runIntro(preview){
     // same unionRect/placeCaptionNear pattern the style-record/viz beats use
     // to light up "the control AND the thing it changes" together) so the
     // slider reads as part of this beat even before it starts sweeping
-    setCaption('Crossfade smoothly', [crossfadeBtn, crossfadeDurRow]);
+    setCaption('Blend songs together', [crossfadeBtn, crossfadeDurRow]);
     await wait(600);
     tap(crossfadeBtn, true);
-    crossfadeBtn.textContent = 'On';
+    crossfadeBtn.setAttribute('aria-checked', 'true');
     crossfadeBtn.classList.add('is-active');
     crossfadeDurRow.style.opacity = '1';
     // demo the crossfade-length slider: sweep 0s -> 10s -> settle on 5s,
@@ -21503,7 +21588,7 @@ function runIntro(preview){
     await animateCrossfadeDurDemo();
     if (done) return;
     await wait(200);
-    // clear and let 'Crossfade smoothly' fully fade out (#onbCaption's
+    // clear and let 'Blend songs together' fully fade out (#onbCaption's
     // opacity transition is 550ms) before 'With no ads ever' fades in -
     // without this gap the two calls landed close enough together that the
     // second caption's text swapped in mid-fade on the first's still-running
@@ -21905,7 +21990,7 @@ function showInstallGate(){
   const mode = installGateMode();
   if (mode === 'ios'){
     carryTesterTokenForInstall();
-    setHelp('<ol><li>Tap <b>Install</b> (or the Share button ' + INSTALL_SHARE_ICON + ')</li><li>Choose <b>Add to Home Screen</b></li><li>Open <b>EBBLESS</b> from your home screen</li></ol>');
+    setHelp('<ol><li>Tap <b>Install EBBLESS</b> (or the Share button ' + INSTALL_SHARE_ICON + ')</li><li>Choose <b>Add to Home Screen</b></li><li>Open <b>EBBLESS</b> from your home screen</li></ol>');
     btn.addEventListener('click', async () => {
       flashHelp();
       if (navigator.share){
@@ -21927,7 +22012,7 @@ function showInstallGate(){
     });
   } else {
     const MENU_HELP = 'Tap <b>&#8942;</b> (your browser menu), then <b>Install app</b> or <b>Add to Home screen</b>.';
-    const setReady = () => { btn.disabled = false; btn.textContent = 'Install'; };
+    const setReady = () => { btn.disabled = false; btn.textContent = 'Install EBBLESS'; };
     if (deferredInstallPrompt) setReady();
     else {
       btn.disabled = true;
@@ -22143,6 +22228,7 @@ if (introBeatCapture){
     capMark.classList.remove('is-idle');
     setView('player');
     const t = trackTitle.querySelector('span'), a = trackArtist.querySelector('span');
+    $('trackMeta').classList.remove('is-empty');
     if (t) t.textContent = CAP_TITLE;
     if (a) a.textContent = CAP_ARTIST;
     artA.src = CAP_ART;
@@ -22187,7 +22273,7 @@ if (introBeatCapture){
       capStage('input');
       urlInput.value = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
       if (loadBtn) loadBtn.classList.add('onb-zoom', 'onb-press', 'onb-tap', 'onb-tap-ring');
-      capCaptionText(TAP_CAP === 'tap' ? 'Tap Load' : 'Click Load', loadBtn);
+      capCaptionText((TAP_CAP === 'tap' ? 'Tap ' : 'Click ') + loadBtnLabel(), loadBtn);
       break;
     case 'loading':
       capMark.classList.remove('is-idle');
@@ -22195,7 +22281,7 @@ if (introBeatCapture){
       capStage('input');
       urlInput.value = 'https://open.spotify.com/playlist/5qMMDwZ1Wo8q0lpDOmsXnZ';
       if (loadBtn) loadBtn.classList.add('onb-loading');
-      capCaptionText('Loading your tracks...', loadBtn);
+      capCaptionText('Loading your songs...', loadBtn);
       break;
     case 'library':
       capMark.classList.remove('is-idle');
@@ -22206,7 +22292,7 @@ if (introBeatCapture){
       capCard.className = 'lib-card';
       capCard.innerHTML = '<div class="art single"><img src="' + CAP_ART + '" alt=""></div>' +
         '<div class="info"><div class="name">' + CAP_TITLE + '</div><div class="count">' +
-        CAP_TRACKS.length + ' tracks</div></div>';
+        CAP_TRACKS.length + ' songs</div></div>';
       libraryGrid.appendChild(capCard);
       libraryListWrap.classList.remove('hidden');
       libraryEmpty.classList.add('hidden');
@@ -22299,10 +22385,10 @@ if (introBeatCapture){
     case 'mentions':
       setView('settings');
       capStage('settings');
-      crossfadeBtn.textContent = 'On';
+      crossfadeBtn.setAttribute('aria-checked', 'true');
       crossfadeBtn.classList.add('is-active');
       crossfadeDurRow.style.opacity = '1';
-      capCaptionText('Crossfade smoothly', crossfadeBtn);
+      capCaptionText('Blend songs together', crossfadeBtn);
       break;
     case 'bug':
       setView('settings');
@@ -22319,7 +22405,7 @@ if (introBeatCapture){
     case 'power-mobile':
       capStage('player');
       capSeedTrack();
-      capCaptionText('Swipe the artwork to skip tracks', artworkWrap);
+      capCaptionText('Swipe the artwork to skip songs', artworkWrap);
       break;
     case 'flow':
       capStage(null);
