@@ -7569,6 +7569,7 @@ function openLibCtxMenu(id, btn){
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
+    { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
@@ -7818,6 +7819,7 @@ function handleLibCtxAction(action, id){
   if (!pl) return;
   if (action === 'rename') openRenamePlaylistFlow(id, pl);
   else if (action === 'art') openChangeArtFlow(id, pl);
+  else if (action === 'addqueue'){ const n = queueAddCollection(id); showToast(n ? 'Added ' + n + (n === 1 ? ' track' : ' tracks') + ' to queue' : 'Nothing to add'); }
   else if (action === 'duplicate') duplicateLibraryPlaylist(id, pl);
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
   else if (action === 'share') sharePlaylistItem(pl);
@@ -11419,6 +11421,26 @@ function queueAddToEnd(trackIndex, plId){
   state.queue.push({ plId, idx: trackIndex });
   renderQueuePanel();
   schedulePreload(state.queuePos);
+}
+// Whole playlist/album/podcast onto the end of the queue, in order (or
+// shuffled when shuffle is on). Returns the number of tracks added.
+function queueAddCollection(plId){
+  const pl = playlistById(plId);
+  if (!pl) return 0;
+  let order = validIndices(pl);
+  if (!order.length) return 0;
+  if (state.shuffle) order = shuffleTail(order, 0);
+  if (state.queuePos < 0){
+    state.queue = order.map(idx => ({ plId, idx }));
+    state.queuePos = 0;
+    renderQueuePanel();
+    loadIndex(state.queuePos, true);
+    return order.length;
+  }
+  order.forEach(idx => state.queue.push({ plId, idx }));
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+  return order.length;
 }
 function queueRemoveAt(pos){
   if (pos <= state.queuePos) return;
