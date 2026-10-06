@@ -47,8 +47,8 @@ Two intake channels, both feed this same backlog:
    just ones labeled `idea` — that label doesn't always get auto-applied)
    and runs the dedup check in step 2 below on anything new. Then, instead
    of silently dispatching anything, it renders the **open backlog** (every
-   entry not yet `merged` or `dropped`) as a plain list. Never list
-   `merged`/`dropped` entries unless explicitly asked (wasted tokens).
+   entry not yet `merged`, `dropped` or `archived`) as a plain list. Never list
+   `merged`/`dropped`/`archived` entries unless explicitly asked (wasted tokens).
    Order: manager's own
    priority order top to bottom, each entry with a short, jargon-free
    description in plain English — something you can read at a glance and
@@ -108,7 +108,8 @@ Two intake channels, both feed this same backlog:
 
 Status values: `draft` (not ready yet) · `ready` (queue it) ·
 `in-progress` · `review` (pushed, awaiting your local check) ·
-`approved` (ok to merge to main) · `merged` · `dropped`.
+`approved` (ok to merge to main) · `merged` · `dropped` ·
+`archived` (parked until after MVP; not listed at "start the queue" unless asked).
 
 ## Backlog
 
@@ -2800,7 +2801,7 @@ Add entries in this shape:
   effect, just the flat 5 dB headroom).
 
 ### clip-editor: Audio clip editor with a "My Clipsss" playlist
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Add an audio editor that lets users clip a track (trim to
   a range) and apply fades. Saved clips go into a new "My Clipsss" playlist
@@ -2941,7 +2942,7 @@ Add entries in this shape:
   endpoint already handles.
 
 ### mobile-ipod-ui: Mobile UI mode styled like the original iPod (click wheel)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add an alternate mobile UI mode that looks and behaves
   like the original iPod - including the click-wheel scrolling interaction
@@ -2953,7 +2954,7 @@ Add entries in this shape:
   entry found - a standalone UI-mode feature.
 
 ### ambient-soundscapes: Background ambient sound layer option
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add a player option to layer a background ambient sound
   under the music - fireplace crackling, soft rain, cafe, forest, beach, car
@@ -2969,7 +2970,7 @@ Add entries in this shape:
   atmosphere" feature.
 
 ### equalizer-presets: Equalizer presets for playback
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add selectable EQ presets for the playing music (e.g.
   bass boost, vocal, flat, treble). No further detail given in the issue.
@@ -2985,7 +2986,7 @@ Add entries in this shape:
   your call before any of these get built.
 
 ### lp-quality-audio: "LP quality" sound option (vinyl warmth EQ/ambience)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add an option/setting that gives playing music an "LP
   quality" sound - reporter flags this needs research into sound
@@ -3778,7 +3779,7 @@ Add entries in this shape:
   backgrounded". Backlog status corrected from `draft` to `merged`.
 
 ### world-radio-addon: World radio - pick a region on a map, hear music from there
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add a mode where the user picks a spot on a world map and
   hears music from that region in a continuous, ad-free radio format. Should
@@ -6429,7 +6430,7 @@ Add entries in this shape:
   Geethub #192 folded in: a button in the CuRRentSSsss menu to reshuffle/reload all tracks with new ones based on the most recent listening.
 
 ### playlist-cap-10: Cap user-added playlists at 10
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Users can add up to 10 new playlists. Auto-added ones
   (Liked, CuRRentSSsss, This Is Mal Griot, Breathe Love Deep) don't count.
@@ -6451,7 +6452,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #150.
 
 ### own-songs-lyrics: Lyrics for every Breathe Love Deep and This Is Mal Griot song
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** All songs on Breathe Love Deep and This Is Mal Griot
   should have lyrics. The user wrote them and will supply the text, so
@@ -6548,7 +6549,7 @@ Add entries in this shape:
   prefers-reduced-motion in a real browser setting.
 
 ### ebbless-deep: EBBLESS DEEP - an optional deeper tier to fund the app
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** A deeper layer of EBBLESS, not a conventional premium
   subscription; free EBBLESS stays complete. Includes unlimited playlists
@@ -6563,7 +6564,7 @@ Add entries in this shape:
   Geethub #188 folded in: candidate EBBLESS DEEP visuals from reactbits.dev/backgrounds - aero-shards, crt-warp, shape-waves, light-tunnel, sliced-waves, acid-squares, liquid-ether, floating-lines, pixel-blast, color-bends, evil-eye, line-waves, radar, particles, gradient-blinds, galaxy, dither, faulty-terminal, ripple-grid, dot-field, dot-grid (full URLs with tuned params in the issue).
 
 ### artist-tipping: Tipping and direct fan subscriptions for independent artists
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Let listeners pay a small monthly amount directly to
   independent creators for bonus tracks, early releases, behind-the-scenes
@@ -6600,7 +6601,7 @@ Add entries in this shape:
   **Built (6923771):** `getTimeContext()` time blocks (weekend nights hotter, small hours = previous night); planetary day + Chaldean hour ruler (06:00/18:00 approximation) as a smaller secondary bias and label ("Hour of Venus · Friday"); soft score bias in `fetchDiscoverCandidates` (full on CuRRentSSsss, half on queue Discover) + time-weighted CuRRentSSsss seeds; library row that plays an on-device 30-track `timemix`. Console helper `ebblessTimeContext()`.
 
 ### algorithm-sliders: Sliders to steer recommendations
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** UI sliders for the recommendation engine: Familiarity vs
   Discovery, Energy, Instrumental vs Vocal.
@@ -7373,7 +7374,7 @@ Add entries in this shape:
   until this and `regional-source-fallbacks` ship. Needs a worker deploy.
 
 ### regional-source-fallbacks: Keep EBBLESS usable where YouTube is blocked
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Act on the research in `docs/REGIONAL-SOURCES.md`
   section 7, in order:
@@ -7592,7 +7593,7 @@ Add entries in this shape:
   **Built (7b2376b):** manifest `share_target` (GET, action ./index.html, params share_title/share_text/share_url). `applyShareTargetFromUrl()` (called from `applySharedImportFromUrl()` in `startApp()`) clears params, extracts first URL, fills `urlInput` and calls `importForm.requestSubmit()` so the paste handler does everything. Tested in local browser (cold start, onboarded, plain text); real Android share sheet, Apple Music/podcast links and offline untested. Installed PWAs need a manifest refresh/reinstall to show in share sheet.
 
 ### lp-game-skins: EBBLESS DEEP skins for the LP game
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Alternate visual skins for the record-tap game (solar
   system, animations, bat and ball, clock), offered as an EBBLESS DEEP perk.
@@ -7682,7 +7683,7 @@ Add entries in this shape:
   no limits. Verified in preview: ~2 min of audio per ~40 s on a laptop.
 
 ### dj-mode: DJ mode - play two songs at once, set markers, and mix
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** A DJ mode with two decks playing at once, play/sample
   cue markers per track, and manual mixing between them.
@@ -7917,7 +7918,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #266.
 
 ### intro-philosophy-video: Intro video explaining what EBBLESS is about
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** An intro video, separate from the tutorial, that
   initiates people into the app's design philosophy: it grows with you,
@@ -7967,7 +7968,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #271. Title only.
 
 ### ui-simplicity-pass: Make the UI dead simple for anyone
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Tester suggestion: the UI should be very, very easy for
   non-technical users. Needs a concrete audit of confusing spots before
@@ -8148,7 +8149,7 @@ Add entries in this shape:
 - **Notes:** Requested by MAL GRIOT 2026-10-05. Time-sensitive: testing began 2026-10-02, so the first windows end around 2026-10-10. Track names stay out of the Sheet Analytics tab (it's counts only by design).
 
 ### wrapped-join-next-beta: "Join the next beta" button on the 7-days-up recap that reactivates access
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** On the "your 7 days are up" recap screen, add a button
   to sign up for the next beta round in one tap (no form; we already know
@@ -8159,7 +8160,7 @@ Add entries in this shape:
 - **Notes:** Idea from MAL GRIOT 2026-10-06. Needs decisions before ready: does rejoining reactivate instantly or go into the review queue like a new signup; does it start a fresh 7-day window; how is a "next beta" round defined in the Sheet.
 
 ### crossfade-next-muted-gap: With crossfade on, pressing next sometimes plays the new song muted for ~12s
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug: with crossfade enabled, hitting next sometimes starts the next track silent for about 12 seconds before audio comes in. Manual skips should fade in promptly (or cut cleanly) every time.
 - **Touches:** crossfade / manual skip path (see merged crossfade-manual-skip).
@@ -8167,7 +8168,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #294. Likely a regression of crossfade-manual-skip's fade ramp.
 
 ### iphone-autoadvance-stall: iPhone doesn't autoplay the next song
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug: on iPhone, when a song finishes the next one doesn't start; the user has to open the video tab and press pause/play to get it going. Next track should start on its own.
 - **Touches:** track-end / auto-advance handling on iOS Safari/PWA.
@@ -8175,7 +8176,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #286. Related to the background auto-advance work in bld-background-tab-autoadvance but iPhone-specific.
 
 ### ads-label-desktop-position: "Ads playing?" button sits too close to the bottom of the screen on desktop
-- **Status:** draft
+- **Status:** shipped
 - **Priority:** medium
 - **Description:** Bug: on desktop the "Ads playing?" report button is crowded against the bottom edge. Give it proper spacing.
 - **Touches:** ads report button (merged ads-button-extended-mix), desktop layout.
@@ -8183,7 +8184,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #290.
 
 ### previous-track-instant: Previous track should load as instantly as next
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Going back to the previous song should be as instant as skipping forward (keep the previous track warm/preloaded).
 - **Touches:** prev/next preload logic.
@@ -8191,7 +8192,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #284.
 
 ### library-artists-section: Library: Artists section, and adding an artist adds their albums
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add an Artists section to the library alongside albums/playlists/podcasts. When you add an artist, all their albums should also appear in the Albums section.
 - **Touches:** renderLibrary filters/sections, artist add flow.
@@ -8199,7 +8200,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #291 and #293. Folded #293 (artist adds all albums) into this entry since it depends on the Artists section.
 
 ### library-collapsible-sections: Library sections collapse/expand with a +/arrow by the title
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Each library section header (Playlists, Albums, Podcasts, Artists) gets a plus or arrow to fold it open/closed. Only in the "All" view, not when a single-type filter is selected.
 - **Touches:** renderLibrary section headers.
@@ -8207,7 +8208,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #292.
 
 ### library-window-title: Library window should be titled "Library" like the queue window
-- **Status:** draft
+- **Status:** shipped
 - **Priority:** medium
 - **Description:** Add a "Library" title to the library panel, matching how the queue panel is labeled.
 - **Touches:** library panel header.
@@ -8215,7 +8216,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #289.
 
 ### queue-add-collections: Add whole playlists/albums/podcasts to the queue
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Let users add an entire playlist, album, or podcast to the queue (not just single tracks).
 - **Touches:** library item menus, queue.
@@ -8223,7 +8224,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #288. Extends merged library-hold-add-to-queue (tracks only).
 
 ### library-now-playing-highlight: Highlight the playing playlist in the library; blinking speaker by the playing song
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When a playlist is playing, highlight it in the library. The playing song gets a slowly blinking speaker icon next to it in the library. Also show the playing playlist's name somewhere in the queue window.
 - **Touches:** renderLibrary, queue panel header.
@@ -8231,7 +8232,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #287.
 
 ### album-art-mode-tap: Album art style button cycles modes on tap, no dropdown
-- **Status:** draft
+- **Status:** shipped
 - **Priority:** medium
 - **Description:** Pressing the album art style button should just switch to the next mode directly instead of opening a menu.
 - **Touches:** album art mode button/menu.
@@ -8239,7 +8240,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #285.
 
 ### playlist-add-multiselect: "Add to playlist" should allow picking multiple playlists with checkboxes
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** When adding a loaded song to a playlist, show the playlists with checkboxes so it can go into several at once.
 - **Touches:** add-to-playlist picker (see single-song-paste-prompt).
