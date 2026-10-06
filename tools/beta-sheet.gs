@@ -77,10 +77,10 @@ const HEADERS = {};
 HEADERS[APPLICANTS] = ['applicant_id', 'name', 'email', 'Instagram', 'device', 'device_model', 'operating_system', 'browser',
   'technical_comfort', 'music_platform', 'music_preferences', 'Spotify_playlist', 'why_they_want_to_test',
   'what_they_want_EBBLESS_to_do', 'signup_timestamp', 'applicant_status', 'notes', 'ok_to_contact_later', 'user_agent',
-  'rejoin_requested'];
+  'rejoin_requested', 'google_email'];
 HEADERS[TESTERS] = ['tester_id', 'tester_number', 'applicant_id', 'name', 'email', 'accepted_timestamp',
   'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent', 'exclude_from_analytics',
-  'rejoin_requested', 'window_start', 'round'];
+  'rejoin_requested', 'window_start', 'round', 'google_email'];
 HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'source', 'category', 'feeling',
   'what_happened', 'what_they_expected', 'anything_else', 'keep_using', 'screenshot',
   'device', 'operating_system', 'browser', 'viewport', 'user_agent',
@@ -167,7 +167,7 @@ function inviteText_(t) {
     'Tap this to get in:\n' + accessLink_(t.access_token) + '\n\n' +
     'iPhone: once it opens in Safari, tap Share, then Add to Home Screen.\n' +
     'Android: tap Install.\n' +
-    'If EBBLESS ever asks you to sign in, use Google with this email address.\n\n' +
+    'Sign in with Google on any device to get back in.\n\n' +
     'Throw one of your playlists into it (Spotify, YouTube, Apple Music, SoundCloud) and fuck around with it.\n' +
     'Try the different visual modes, lyrics, YouTube, etc.\n\n' +
     'The point of this beta isn\'t to be nice to me. If something is confusing, broken, slow, ugly, unnecessary, or just doesn\'t make sense, tell me.\n\n' +
@@ -268,11 +268,18 @@ function out_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// google_email: the verified Google account they signed up with (the worker
+// checks the ID token), blank for an email-only signup. Once accepted it
+// rides onto Testers and is their access (tokenByEmail_).
 function signup_(a) {
   const email = String(a.email || '').toLowerCase();
+  const gmail = String(a.google_email || '').trim().toLowerCase();
   const res = withLock_(function () {
     const sh = sheet_(APPLICANTS);
-    const existing = records_(sh).filter(function (r) { return String(r.email).toLowerCase() === email; })[0];
+    ensureHeaders_(sh, HEADERS[APPLICANTS]);   // google_email lands without re-running setup
+    const existing = records_(sh).filter(function (r) {
+      return String(r.email).toLowerCase() === email || (gmail && String(r.google_email || '').trim().toLowerCase() === gmail);
+    })[0];
     if (existing) return { ok: true, already: true, status: existing.applicant_status === 'Rejected' ? 'Pending' : String(existing.applicant_status || 'Pending') };
     const rec = {};
     HEADERS[APPLICANTS].forEach(function (h) { if (h in a) rec[h] = a[h]; });
@@ -317,13 +324,14 @@ function me_(token) {
 }
 
 // The worker's /beta/claim fallback: a Google account whose verified email
-// is an Active tester's invite address gets that tester's token (the same
-// thing the invite email already gave that inbox). Never called without
-// SHEET_SECRET.
+// is an Active tester's google_email (the account they signed up with) or
+// invite address gets that tester's token (the same thing the invite email
+// already gave that inbox). Never called without SHEET_SECRET.
 function tokenByEmail_(email) {
   email = String(email || '').trim().toLowerCase();
+  const same = function (v) { return String(v || '').trim().toLowerCase() === email; };
   const t = email ? records_(sheet_(TESTERS)).filter(function (r) {
-    return r.tester_status === 'Active' && r.access_token && String(r.email).trim().toLowerCase() === email;
+    return r.tester_status === 'Active' && r.access_token && (same(r.google_email) || same(r.email));
   })[0] : null;
   if (!t) return { ok: true, tester: null };
   const out = me_(t.access_token);
@@ -395,7 +403,7 @@ function rejoin_(token) {
     } else {
       // No Applicants row to reuse (added by hand): give them one, pointed at this tester.
       const id = nextId_(ash, 'applicant_id', 'APP-', 4);
-      append_(ash, { applicant_id: id, name: t.name, email: t.email, signup_timestamp: now, applicant_status: 'Pending', rejoin_requested: now, notes: note });
+      append_(ash, { applicant_id: id, name: t.name, email: t.email, google_email: t.google_email || '', signup_timestamp: now, applicant_status: 'Pending', rejoin_requested: now, notes: note });
       setCell_(tsh, t._row, 'applicant_id', id);
     }
     setCell_(tsh, t._row, 'rejoin_requested', now);
@@ -610,10 +618,11 @@ function acceptRow_(rowNum, previous) {
     const n = testers.reduce(function (m, t) { return Math.max(m, numFrom_(t.tester_number)); }, 0) + 1;
     const id = 't' + hex_(12);
     const t = {
-      tester_id: id, tester_number: testerLabel_(n), applicant_id: a.applicant_id, name: a.name, email: a.email,
+      tester_id: id, tester_number: testerLabel_(n), applicant_id: a.applicant_id, name: a.name, email: a.email, google_email: a.google_email || '',
       accepted_timestamp: new Date(), access_token: id + '-' + hex_(32), tester_status: 'Active', round: currentRound_(),
     };
     t.access_link = accessLink_(t.access_token);
+    ensureHeaders_(tsh, HEADERS[TESTERS]);   // google_email lands without re-running setup
     append_(tsh, t);
     return { tester: t, row: tsh.getLastRow(), over: active >= CAP ? active + 1 : 0 };
   });

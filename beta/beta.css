@@ -95,6 +95,11 @@ form{margin-top:36px}
 .detected{font-size:13px;color:var(--faint);margin:0 0 14px}
 .detected b{color:var(--text);font-weight:500}
 .linkish{background:none;border:0;padding:0;font-size:13px;color:var(--faint);text-decoration:underline;text-underline-offset:3px}
+/* signup: Sign up with Google, email fallback under it */
+.gsignup{display:flex;flex-direction:column;align-items:center;text-align:center;margin:0 0 8px}
+.gsignup .gbtn{min-height:44px;margin:0 0 12px}
+.gsignup .detected{margin:0 0 10px}
+.gsignup .linkish{min-height:44px}
 
 /* buttons: same shapes as the splash Tutorial / Enter pair */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:14px;letter-spacing:.2px;

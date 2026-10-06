@@ -12,6 +12,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
 <link rel="apple-touch-icon" href="../brand/assets/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="beta.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <main class="wrap landing">
@@ -67,13 +68,6 @@
 
   <form id="signup" novalidate hidden>
     <div class="section">
-      <h2>You</h2>
-      <div class="field"><label for="name">Name or nickname</label><input type="text" id="name" maxlength="80" autocomplete="nickname" required></div>
-      <div class="field"><label for="email">Email</label><input type="email" id="email" maxlength="200" autocomplete="email" inputmode="email" required></div>
-      <div class="field"><label for="social">Instagram / social handle <span class="hint">(optional)</span></label><input type="text" id="social" maxlength="100" placeholder="@" autocapitalize="off"></div>
-    </div>
-
-    <div class="section">
       <h2>Your setup</h2>
       <p class="detected" id="detected" hidden></p>
       <div class="field"><span class="q">What will you use EBBLESS on? <span class="hint">(pick any)</span></span><div id="devicePills"></div></div>
@@ -99,6 +93,7 @@
       <h2>Why you</h2>
       <div class="field"><label for="motivation">What made you want to test EBBLESS?</label><textarea id="motivation" maxlength="1500"></textarea></div>
       <div class="field"><label for="wants">Anything you especially want to see EBBLESS do?</label><textarea id="wants" maxlength="1500"></textarea></div>
+      <div class="field"><label for="social">Instagram / social handle <span class="hint">(optional)</span></label><input type="text" id="social" maxlength="100" placeholder="@" autocapitalize="off"></div>
     </div>
 
     <div class="section">
@@ -106,7 +101,20 @@
       <label class="check"><input type="checkbox" id="contactOk"> <span>I'm okay with being contacted if more information is needed about something I report.</span></label>
     </div>
 
-    <button class="btn primary block" id="submitBtn" type="submit">Sign me up</button>
+    <!-- Sign up with Google sends the form in one tap: the verified Google
+         email is their contact email and, once approved, their way in on any
+         device. Email-only signups still work; they rely on the invite link. -->
+    <div class="gsignup" id="gWrap">
+      <div class="gbtn" id="gBtn"></div>
+      <p class="detected">The Google account you sign up with is how you get into EBBLESS on any device.</p>
+      <button class="linkish" id="useEmail" type="button">No Google account? Sign up with your email</button>
+    </div>
+    <p class="detected" id="gAs" hidden></p>
+    <div id="emailWrap" hidden>
+      <div class="field"><label for="name">Name or nickname</label><input type="text" id="name" maxlength="80" autocomplete="nickname"></div>
+      <div class="field"><label for="email">Email</label><input type="email" id="email" maxlength="200" autocomplete="email" inputmode="email"></div>
+    </div>
+    <button class="btn primary block" id="submitBtn" type="submit" hidden>Sign me up</button>
     <p class="status" id="status" role="status"></p>
   </form>
 
@@ -292,6 +300,7 @@
     $('intro').hidden = state !== 'open';
     $('full').hidden = !(state === 'full' || state === 'waitlist');
     form.hidden = !((state === 'open' && formOpen) || state === 'waitlist');
+    if (!form.hidden) renderGoogle();
     $('state').hidden = !joined;
     document.body.classList.toggle('joined', joined);
     if (state === 'waitlist'){ $('full').hidden = false; $('waitlistBtn').hidden = true; $('submitBtn').textContent = 'Join the waitlist'; $('joinBtn2').textContent = 'JOIN THE WAITLIST'; }
@@ -301,7 +310,6 @@
     formOpen = true;
     show(waitlist ? 'waitlist' : 'open');
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    $('name').focus({ preventScroll: true });
   }
   $('joinBtn').addEventListener('click', join);
   $('joinBtn2').addEventListener('click', join);
@@ -318,13 +326,49 @@
     // Full: still take the signup (it lands as Pending to approve later), just say so.
     if (!s.open){ waitlist = true; $('joinBtn').textContent = $('joinBtn2').textContent = 'JOIN THE WAITLIST'; }
   }).catch(() => {});
-  $('waitlistBtn').addEventListener('click', () => { waitlist = true; show('waitlist'); $('name').focus(); });
+  $('waitlistBtn').addEventListener('click', () => { waitlist = true; show('waitlist'); });
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // ---- Sign up with Google (the main way) or with email ----
+  // Google: one tap sends the form; the worker verifies the ID token and
+  // stores the verified email, which is the tester's way in on any device.
+  // Email: name + email fields; that tester relies on the invite link.
+  const GOOGLE_CLIENT_ID = '1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com';   // same as index.html
+  let gCred = '', emailMode = false, gisTries = 0, gisDone = false;
+  // Display only (the worker does the real check).
+  function gEmail(t){
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).email || ''; } catch(e){ return ''; }
+  }
+  function signupMode(){
+    $('gWrap').hidden = !!gCred || emailMode;
+    $('emailWrap').hidden = !emailMode;
+    $('gAs').hidden = !gCred || emailMode;
+    $('submitBtn').hidden = !gCred && !emailMode;
+  }
+  function useEmail(){ gCred = ''; emailMode = true; signupMode(); }
+  function renderGoogle(){
+    if (gisDone) return;
+    const id = window.google && google.accounts && google.accounts.id;
+    if (!id){ if (++gisTries < 40) setTimeout(renderGoogle, 250); else { gisDone = true; useEmail(); } return; }
+    gisDone = true;
+    try {
+      id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: (r) => {
+        if (!r || !r.credential) return;
+        gCred = r.credential; emailMode = false;
+        $('gAs').textContent = '';
+        $('gAs').append('Signing up as ', Object.assign(document.createElement('b'), { textContent: gEmail(gCred) || 'your Google account' }), '.');
+        signupMode();
+        submit();
+      } });
+      id.renderButton($('gBtn'), { type: 'standard', theme: 'filled_black', size: 'large', shape: 'pill', text: 'signup_with', width: Math.min(400, $('gWrap').clientWidth || 300) });
+    } catch(e){ useEmail(); }
+  }
+  $('useEmail').addEventListener('click', () => { useEmail(); $('name').focus(); });
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); submit(); });
+  async function submit(){
     const st = $('status');
     const body = {
-      name: $('name').value.trim(), email: $('email').value.trim(), social: $('social').value.trim(),
+      name: emailMode ? $('name').value.trim() : '', email: emailMode ? $('email').value.trim() : '', social: $('social').value.trim(),
       devices: Beta.checked(form, 'device'), deviceOther: $('deviceOther').value.trim(), deviceModel: $('deviceModel').value.trim(), os: $('os').value.trim(),
       browsers: Beta.checked(form, 'browser'), browserOther: $('browserOther').value.trim(),
       comfort: Beta.radio(form, 'comfort'),
@@ -332,16 +376,18 @@
       motivation: $('motivation').value.trim(), wants: $('wants').value.trim(),
       agree: $('agree').checked, contactOk: $('contactOk').checked,
     };
-    const miss = !body.name ? ['name', 'Add your name or a nickname.']
-      : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email) ? ['email', 'That email doesn\'t look right.']
-      : !body.devices.length ? ['devicePills', 'Pick at least one device.']
+    if (gCred && !emailMode) body.idToken = gCred;
+    const miss = !body.devices.length ? ['devicePills', 'Pick at least one device.']
       : body.devices.includes('Other') && !body.deviceOther ? ['deviceOther', 'Say which other device.']
       : !body.browsers.length ? ['browserPills', 'Pick at least one browser.']
       : body.browsers.includes('Other') && !body.browserOther ? ['browserOther', 'Say which other browser.']
       : !body.comfort ? ['comfortPills', 'Pick how technical you are.']
       : !body.platforms.length ? ['platformPills', 'Pick at least one place you listen.']
       : body.platforms.includes('Other') && !body.platformOther ? ['platformOther', 'Say where else you listen.']
-      : !body.agree ? ['agree', 'Tick the honest-feedback box to sign up.'] : null;
+      : !body.agree ? ['agree', 'Tick the honest-feedback box to sign up.']
+      : !emailMode && !gCred ? ['gWrap', 'Tap Sign up with Google, or sign up with your email.']
+      : emailMode && !body.name ? ['name', 'Add your name or a nickname.']
+      : emailMode && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email) ? ['email', 'That email doesn\'t look right.'] : null;
     if (miss){
       Beta.status(st, miss[1], 'err');
       const el = $(miss[0]); el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -359,10 +405,12 @@
         retryPending();
         return;
       }
+      // Expired or rejected Google sign-in: offer the button again.
+      if (err.status === 401 && gCred){ gCred = ''; signupMode(); }
       Beta.status(st, err.message, 'err');
       $('submitBtn').disabled = false;
     }
-  });
+  }
 
   // ---- where this visitor is: request received / you're in ----
   // Status itself lives in the Sheet (signup's `already`/`status`, /beta/me
@@ -456,6 +504,9 @@
       .forEach(([name, vals]) => (vals || []).forEach(v => v && Beta.setRadio(form, name, v)));
     ['device', 'browser', 'platform'].forEach(name => { $(name + 'OtherField').hidden = !Beta.checked(form, name).includes('Other'); });
     $('agree').checked = !!b.agree; $('contactOk').checked = !!b.contactOk;
+    // A Google sign-in may have expired by now: ask for a fresh one.
+    gCred = ''; emailMode = !b.idToken && !!(b.name || b.email);
+    signupMode();
   }
   let retrying = false, retryTimer = 0;
   async function retryPending(){

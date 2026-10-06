@@ -100,7 +100,10 @@ app ([`tools/beta-sheet.gs`](tools/beta-sheet.gs), setup steps at the top).
 The Sheet is the source of truth and the admin view.
 
 - `beta/` - public signup (shows `17 / 50 testers`, counting Active testers;
-  switches to "THE BETA IS FULL." plus a waitlist option at 50)
+  switches to "THE BETA IS FULL." plus a waitlist option at 50). "Sign up
+  with Google" sends the form in one tap: the worker verifies the ID token
+  and stores the verified address as `google_email` (also the contact
+  email). "No Google account?" falls back to name + email fields.
 - `beta/tester.html?t=<token>` - an Active tester's page ("YOU'RE IN.")
 - `beta/feedback.html`, `beta/bug.html` - feedback (`EBB-FB-0001`) and bug
   reports (`EBB-TEST-0001`), tied to the tester by their link token, optional
@@ -139,8 +142,11 @@ iPhone the token rides along into Add to Home Screen (page URL and
 manifest `start_url`). Anything the link can't reach (an iPhone home-screen
 app added before, another device) uses the gate's Google button:
 `/beta/claim` returns the token linked to that Google account, or, if none,
-the Active tester whose invite went to that account's verified email
-(Sheet action `token_by_email`).
+the Active tester whose `google_email` (the account they signed up with,
+carried from Applicants to Testers on acceptance) or invite email is that
+account's verified email (Sheet action `token_by_email`). So a tester who
+signed up with Google gets in on any device with one sign-in; one who
+signed up with a non-Google email relies on the invite link.
 
 The 50 cap counts Active testers only. Accepting a 51st (or reactivating
 someone past the cap) is reverted with a message in the Sheet. Tester numbers

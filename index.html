@@ -2566,17 +2566,18 @@ body.week-up-on{overflow:hidden}
     <a class="bl-btn primary bl-join" href="beta/">JOIN THE BETA</a>
     <div class="bl-rule bl-rule-soft"></div>
     <!-- Tester way in: the invite link does it all (?t= below). The Google
-         button (rendered by the app once GSI loads) claims by the invite's
-         email address (/beta/claim), for a home-screen app the link can't
+         button (rendered by the app once GSI loads) claims by the Google
+         account they signed up with or the invite's email address
+         (/beta/claim), for a home-screen app the link can't
          reach. The script swaps the copy for an iPhone home-screen app. -->
     <p class="bl-sub">Got your invite email?</p>
     <p id="bl-how">Tap the link in it. That's it, you're in.</p>
     <p class="bl-msg" id="bl-msg" role="status"></p>
     <div class="bl-google" id="bl-google" hidden>
-      <p class="bl-or" id="bl-gnote">Or sign in with Google using the email your invite went to.</p>
+      <p class="bl-or" id="bl-gnote">Or sign in with Google using the account you signed up with.</p>
       <div class="bl-gbtn" id="bl-gbtn"></div>
     </div>
-    <p class="bl-small" id="bl-ios" hidden>Invite not on a Google email? Delete this app, tap the link in your invite email, then add EBBLESS to your Home Screen again from Safari.</p>
+    <p class="bl-small" id="bl-ios" hidden>Signed up without Google? Delete this app, tap the link in your invite email, then add EBBLESS to your Home Screen again from Safari.</p>
   </div>
 </div>
 <script>
@@ -2625,7 +2626,7 @@ body.week-up-on{overflow:hidden}
   // invite link opens Safari, not this app, so Google sign-in is the way in.
   const iosStandalone = navigator.standalone === true && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
   if (iosStandalone){
-    document.getElementById('bl-how').textContent = 'Sign in with Google using the email your invite went to.';
+    document.getElementById('bl-how').textContent = 'Sign in with Google using the account you signed up with.';
     document.getElementById('bl-gnote').hidden = true;
     document.getElementById('bl-ios').hidden = false;
   }
@@ -10681,6 +10682,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 93, date: '2026-10-06', items: [
+    'Join the beta with Sign up with Google. Once you\'re in, that Google account gets you into EBBLESS on any device.'
+  ]},
   { version: 80, date: '2026-10-06', items: [
     'Big playlists: each song shows its own album art instead of the playlist cover.',
     'The beta page is rebuilt: how to join, what happens after, your 7 days, screenshots, updates and answers to common questions.',
