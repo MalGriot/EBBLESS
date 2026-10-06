@@ -2818,6 +2818,7 @@ body.week-up-on{overflow:hidden}
             <div class="lib-filter" id="libFilter" role="group" aria-label="Filter library">
               <button type="button" class="lib-filter-btn" data-filter="all">All</button>
               <button type="button" class="lib-filter-btn" data-filter="playlists">Playlists</button>
+              <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
               <button type="button" class="lib-filter-btn" data-filter="albums">Albums</button>
               <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
             </div>
@@ -2872,6 +2873,10 @@ body.week-up-on{overflow:hidden}
           <div class="section-label">Playlists</div>
         </div>
         <div class="lib-grid" id="libraryGrid"></div>
+        <div class="section-label-row hidden" id="libraryArtistsHead">
+          <div class="section-label">Artists</div>
+        </div>
+        <div class="lib-grid" id="libraryArtistsGrid"></div>
         <div class="section-label-row hidden" id="libraryAlbumsHead">
           <div class="section-label">Albums</div>
         </div>
@@ -4538,7 +4543,7 @@ const LS_VIZ_HOLD = 'ebbless:vizHold';     // true = stay within the current pat
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
-const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'albums' | 'podcasts'
+const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'artists' | 'albums' | 'podcasts'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
@@ -6273,9 +6278,11 @@ const views = { library: $('view-library'), player: $('view-player'), settings: 
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryPlaylistsHead = $('libraryPlaylistsHead');
+const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libraryPodcastsHead = $('libraryPodcastsHead'), libraryPodcastsGrid = $('libraryPodcastsGrid');
 const libFilterPodcasts = $('libFilterPodcasts');
+const libFilterArtists = $('libFilterArtists');
 const libraryFilterEmpty = $('libraryFilterEmpty');
 const libViewToggle = $('libViewToggle');
 const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
@@ -6955,6 +6962,8 @@ function setLibraryView(mode){
   lsSet(LS_LIB_VIEW, mode);
   libraryGrid.classList.toggle('is-list', mode === 'list');
   libraryGrid.classList.toggle('is-compact', mode === 'compact');
+  libraryArtistsGrid.classList.toggle('is-list', mode === 'list');
+  libraryArtistsGrid.classList.toggle('is-compact', mode === 'compact');
   libraryAlbumsGrid.classList.toggle('is-list', mode === 'list');
   libraryAlbumsGrid.classList.toggle('is-compact', mode === 'compact');
   libraryPodcastsGrid.classList.toggle('is-list', mode === 'list');
@@ -6982,9 +6991,12 @@ function isAlbumType(type){ return type === 'album' || type === 'am_album' || ty
 // override across re-resolves.
 function albumOverrideOf(pl){ return pl && typeof pl.albumOverride === 'boolean' ? pl.albumOverride : undefined; }
 function isAlbumEntry(pl){
-  if (isPodcastEntry(pl)) return false;
+  if (isPodcastEntry(pl) || isArtistEntry(pl)) return false;
   const o = albumOverrideOf(pl); return o !== undefined ? o : isAlbumType(pl && pl.type);
 }
+// Artist pages (isArtistType, Geethub #229) get their own library category
+// too (Geethub #291), outside Playlists and Albums.
+function isArtistEntry(pl){ return !!pl && isArtistType(pl.type); }
 // Podcasts get their own library category (Geethub #211), outside both the
 // Playlists and Albums buckets. An imported show is saved as type 'pod_show'
 // under a 'pod:<src>:<id>' id (see resolvePlaylist); the id prefix and the
@@ -6999,18 +7011,18 @@ function isPodcastEntry(pl){
 // Only link-backed lists can be re-filed - not 'custom' (Liked Songs,
 // CuRRentSSsss, user-made, Discover overflow), single tracks/videos, or
 // podcasts (always filed under Podcasts).
-function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isPodcastEntry(pl); }
+function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isPodcastEntry(pl) && !isArtistEntry(pl); }
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('.view-toggle-btn');
   if (btn) setLibraryView(btn.dataset.mode);
 });
-const LIB_FILTER_CYCLE = ['all', 'playlists', 'albums', 'podcasts'];
-const LIB_FILTER_LABEL = { all: 'All', playlists: 'Playlists', albums: 'Albums', podcasts: 'Podcasts' };
-// The Podcasts filter only exists while the library holds a podcast (kept
-// current by renderLibrary); a saved 'podcasts' choice reads as 'all' when
-// there are none.
-let libHasPodcasts = false;
-function libFilterCycleModes(){ return libHasPodcasts ? LIB_FILTER_CYCLE : LIB_FILTER_CYCLE.filter(m => m !== 'podcasts'); }
+const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts'];
+const LIB_FILTER_LABEL = { all: 'All', playlists: 'Playlists', artists: 'Artists', albums: 'Albums', podcasts: 'Podcasts' };
+// The Podcasts and Artists filters only exist while the library holds one
+// (kept current by renderLibrary); a saved 'podcasts'/'artists' choice reads
+// as 'all' when there are none.
+let libHasPodcasts = false, libHasArtists = false;
+function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'artists' || libHasArtists)); }
 function getLibraryFilter(){
   const mode = lsGet(LS_LIB_FILTER, 'all');
   return libFilterCycleModes().includes(mode) ? mode : 'all';
@@ -7109,24 +7121,28 @@ function renderLibrary(){
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
   libraryEmpty.classList.add('hidden'); libraryListWrap.classList.remove('hidden');
   libraryGrid.innerHTML = '';
+  libraryArtistsGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
   libraryPodcastsGrid.innerHTML = '';
   libHasPodcasts = ids.some(id => isPodcastEntry(getCachedPlaylist(id)));
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
+  libHasArtists = ids.some(id => isArtistEntry(getCachedPlaylist(id)));
+  libFilterArtists.classList.toggle('hidden', !libHasArtists);
   const filter = getLibraryFilter();
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', btn.dataset.filter === filter));
   libFilterCycle.textContent = LIB_FILTER_LABEL[filter];
   const showPlaylists = filter === 'all' || filter === 'playlists';
+  const showArtists = filter === 'all' || filter === 'artists';
   const showAlbums = filter === 'all' || filter === 'albums';
   const showPodcasts = filter === 'all' || filter === 'podcasts';
   // which bucket a saved entry is filed under
-  const kindOf = (p) => isPodcastEntry(p) ? 'podcast' : isAlbumEntry(p) ? 'album' : 'playlist';
-  const kindShown = (k) => k === 'podcast' ? showPodcasts : k === 'album' ? showAlbums : showPlaylists;
+  const kindOf = (p) => isPodcastEntry(p) ? 'podcast' : isArtistEntry(p) ? 'artist' : isAlbumEntry(p) ? 'album' : 'playlist';
+  const kindShown = (k) => k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
   libraryGrid.classList.toggle('hidden', !showPlaylists);
   const searchQ = normLibSearch(libSearch.value);
   libSearchTracksList.innerHTML = '';
   let searchTrackCount = 0;
-  let albumCount = 0, podcastCount = 0;
+  let artistCount = 0, albumCount = 0, podcastCount = 0;
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
@@ -7167,7 +7183,8 @@ function renderLibrary(){
     try{
     const kind = kindOf(pl);
     if (!kindShown(kind)) return;
-    const isAlbum = kind === 'album', isPodcast = kind === 'podcast';
+    const isAlbum = kind === 'album', isPodcast = kind === 'podcast', isArtist = kind === 'artist';
+    if (isArtist) artistCount++;
     if (isAlbum) albumCount++;
     if (isPodcast) podcastCount++;
     const isLiked = id === LIKED_ID;
@@ -7333,12 +7350,14 @@ function renderLibrary(){
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
       });
     }
-    (isPodcast ? libraryPodcastsGrid : isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
+    (isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
     } catch(e){
       console.warn('[ebbless] dropping corrupted library entry', id, e);
       lsDel(LS_PL(id));
     }
   });
+  libraryArtistsHead.classList.toggle('hidden', artistCount === 0);
+  libraryArtistsGrid.classList.toggle('hidden', artistCount === 0);
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
@@ -7347,7 +7366,7 @@ function renderLibrary(){
   // Fold arrows on the section headers: All view only, so a single-type
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
-  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
+  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
     let btn = head.querySelector('.lib-fold');
     if (!btn){
       btn = document.createElement('button');
@@ -7362,8 +7381,8 @@ function renderLibrary(){
     btn.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
   });
-  const nothingShown = !libraryGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
-  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
+  const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
+  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
   markNowPlaying();
@@ -8560,12 +8579,12 @@ $('newPlaylistBtnEmpty').addEventListener('click', () => openCreatePlaylistFlow(
 // them and withManualTracks carries hand-added songs across re-resolves.
 // Still left out: SwiiiRrrLL and CuRRentSSsss (PROFILE_REGENERATED_IDS -
 // rebuilt wholesale, so an added song would vanish on the next rebuild),
-// albums and podcasts (filed outside the Playlists bucket, not lists you
+// artists, albums and podcasts (filed outside the Playlists bucket, not lists you
 // curate), and single-track/video entries (one song, not a playlist).
 function addablePlaylists(){
   return getLibrary().map(id => getCachedPlaylist(id)).filter(p =>
     p && Array.isArray(p.tracks) && !PROFILE_REGENERATED_IDS.includes(p.id) &&
-    !isSingleTrackType(p.type) && !isPodcastEntry(p) && !isAlbumEntry(p));
+    !isSingleTrackType(p.type) && !isPodcastEntry(p) && !isArtistEntry(p) && !isAlbumEntry(p));
 }
 
 function openAddToPlaylistPicker(track){
@@ -9010,6 +9029,7 @@ function isSingleTrackType(type){
 
 async function beginImport(id, force, type, targetIndex){
   importErr.textContent = '';
+  const wasSaved = isSaved(id);
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
@@ -9110,6 +9130,7 @@ async function beginImport(id, force, type, targetIndex){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
+    if (!wasSaved && isArtistEntry(pl)) addArtistAlbumsToLibrary(pl);
     if (startedEarly){
       bgResolveProgress.delete(id);
       // The listener may have navigated elsewhere while this resolved in
@@ -9133,6 +9154,74 @@ async function beginImport(id, force, type, targetIndex){
     if (startedEarly) bgResolveProgress.delete(id);
     stageError(e.message || 'Something went wrong.', () => beginImport(id, true, type, targetIndex));
   }
+}
+
+// Geethub #293: adding an artist also files their albums under Albums. The
+// discography comes from iTunes' keyless lookup API, straight from the
+// browser like searchArtistProfile (#260): an Apple Music artist by its own
+// id, any other source by an exact-name artist match. Each album is saved as
+// an am_album (the same entry a pasted Apple Music album link makes) and
+// resolved one at a time in the background, like seedStarterLibrary.
+// Singles, instrumental editions and clean copies of an explicit release are
+// skipped, as is an album already saved under the same name by this artist.
+// Removing the artist later leaves these albums where they are.
+const ARTIST_ALBUMS_MAX = 20;
+const artistAlbumsInFlight = new Set();
+async function itunesArtistAlbums(pl){
+  let artistId, storefront = 'us';
+  if (pl.type === 'am_artist'){
+    const idx = pl.id.indexOf(':');
+    storefront = pl.id.slice(0, idx); artistId = pl.id.slice(idx + 1);
+  } else {
+    const want = normalizeArtistQuery(pl.name);
+    if (want.length < 2) return [];
+    const res = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: pl.name, entity: 'musicArtist', limit: '5' }));
+    const hits = res.ok ? ((await res.json()).results || []) : [];
+    const hit = hits.find(a => a && a.artistId && normalizeArtistQuery(a.artistName) === want);
+    if (!hit) return [];
+    artistId = String(hit.artistId);
+  }
+  const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: artistId, entity: 'album', limit: '200', country: storefront }));
+  const rows = res.ok ? ((await res.json()).results || []) : [];
+  const byName = new Map();
+  rows.forEach(r => {
+    if (!r || r.wrapperType !== 'collection' || String(r.artistId) !== artistId || !r.collectionId) return;
+    const name = String(r.collectionName || '');
+    if (/ - Single$/i.test(name) || /\binstrumentals?\b/i.test(name) || (r.trackCount || 0) < 4) return;
+    const key = normalizeArtistQuery(name);
+    const prev = byName.get(key);
+    if (!prev || (prev.collectionExplicitness === 'cleaned' && r.collectionExplicitness !== 'cleaned')) byName.set(key, r);
+  });
+  // Newest first, then saved oldest-first so the newest lands on top.
+  return [...byName.values()]
+    .sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
+    .slice(0, ARTIST_ALBUMS_MAX).reverse()
+    .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName) }));
+}
+async function addArtistAlbumsToLibrary(pl){
+  if (artistAlbumsInFlight.has(pl.id)) return;
+  artistAlbumsInFlight.add(pl.id);
+  try{
+    const want = normalizeArtistQuery(pl.name);
+    const albums = await itunesArtistAlbums(pl).catch(() => []);
+    const alreadyHave = (a) => getLibrary().some(id => {
+      if (id === a.id) return true;
+      const p = getCachedPlaylist(id);
+      return !!p && isAlbumEntry(p) && normalizeArtistQuery(p.name) === a.key && (p.tracks || []).some(t => songCreditsArtist(t && t.artist, want));
+    });
+    const todo = albums.filter(a => !alreadyHave(a));
+    if (!todo.length) return;
+    showToast('Adding ' + todo.length + (todo.length === 1 ? ' album' : ' albums') + ' by ' + pl.name);
+    for (const a of todo){
+      if (!isSaved(pl.id)) break;
+      if (alreadyHave(a)) continue;
+      try{
+        await resolvePlaylist(a.id, 'am_album', () => {});
+        saveToLibrary(a.id);
+        rerenderLibraryKeepPanel();
+      } catch(e){ /* best-effort, like seedStarterLibrary - a failed album is just skipped */ }
+    }
+  } finally { artistAlbumsInFlight.delete(pl.id); }
 }
 
 // Shared by importForm's submit handler (a manually pasted link) and
