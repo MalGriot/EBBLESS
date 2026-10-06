@@ -8201,7 +8201,7 @@ Add entries in this shape:
 
 
 ### artists-albums-resume-backfill: Artist album fill resumes after app close, and covers artists added before
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Follow-up to library-artists-section. (1) If the app closes before an artist's albums finish loading, resume the remaining albums on the next app load. (2) Artists already in a library before the Artists section shipped should also get their albums added (one-time backfill). Keep iTunes as the album source and the 20-album cap (MAL GRIOT 2026-10-06).
 - **Touches:** artist album fill (library-artists-section code), app startup.
