@@ -3831,12 +3831,11 @@ const INSTALL_HINT_IOS = 'Tap Share, then Add to Home Screen.';
 // Phones/tablets in a browser tab never get past the splash: they get the
 // install gate instead (showInstallGate). Coarse pointer + small screen
 // catches tablets/phones whose UA doesn't say so.
-// Owner's skip: .../EBBLESS/??? opens the app in a mobile browser tab, but only
-// once week 1 of testing (started Oct 2 2026) is over. Lasts for the tab session.
-const INSTALL_GATE_SKIP_FROM = new Date(2026, 9, 9);
+// Owner's skip: .../EBBLESS/??? opens the app in a mobile browser tab, for
+// testing on other devices. Lasts for the tab session.
 const installGateSkip = (() => {
   try {
-    if (location.search === '???' && new Date() >= INSTALL_GATE_SKIP_FROM) sessionStorage.setItem('ebbless:gateSkip', '1');
+    if (location.search === '???') sessionStorage.setItem('ebbless:gateSkip', '1');
     return sessionStorage.getItem('ebbless:gateSkip') === '1';
   } catch(e){ return false; }
 })();
