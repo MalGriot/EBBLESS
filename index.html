@@ -15642,14 +15642,8 @@ let vizParamsB = vizRandomParams();
 const vizGx = new Float32Array(VIZ_GRAINS_MAX);
 const vizGy = new Float32Array(VIZ_GRAINS_MAX);
 for (let i = 0; i < VIZ_GRAINS_MAX; i++){
-  let x, y, dist;
-  do {
-    x = Math.random() * 2 - 1;
-    y = Math.random() * 2 - 1;
-    dist = Math.sqrt(x * x + y * y);
-  } while (dist > 1);
-  vizGx[i] = x;
-  vizGy[i] = y;
+  vizGx[i] = Math.random() * 2 - 1;
+  vizGy[i] = Math.random() * 2 - 1;
 }
 
 function vizStartTransition(familyIdx, params){
@@ -15725,7 +15719,7 @@ function vizDraw(t){
   const grain = mix > 0 ? lerp(vizParamsA.grain, vizParamsB.grain) : vizParamsA.grain;
 
   const cx = w / 2, cy = h / 2;
-  const radius = Math.max(w, h) / 2 * 0.94;
+  const radius = Math.max(w, h) / 2;
   const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul;
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
   const color = vizRosicrucianColor();
