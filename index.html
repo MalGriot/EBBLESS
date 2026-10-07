@@ -618,7 +618,9 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   display:flex;flex-direction:column;justify-content:safe center}
 .player-layout{display:grid;grid-template-columns:1fr;gap:0;align-items:start}
 .player-stage{display:flex;flex-direction:column;align-items:center;padding-top:clamp(4px,2dvh,10px);min-height:0}
-.visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:clamp(6px,2dvh,14px)}
+.visual-tabs{position:relative;display:flex;align-items:center;gap:4px;padding:3px;border-radius:20px;background:var(--panel-2);margin-bottom:clamp(6px,2dvh,14px);
+  transition:opacity var(--dur-ui) var(--ease-out)}
+.visual-tabs.rec-game-active{opacity:.2;pointer-events:none}
 /* each tab carries a one-word label under its icon (Art / Visualizer /
    Lyrics / Video) - icon-only tabs left people guessing */
 .visual-tabs .v-tab{min-width:52px;height:40px;padding:0 8px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -15401,6 +15403,8 @@ function recordGameCancel(){
   clearTimeout(recGame.overT);
   recGameEl.classList.remove('is-game');
   recGameDot.style.top = '';
+  // fade back in the visual tabs (issue #296)
+  document.getElementById('visualTabs')?.classList.remove('rec-game-active');
   recGameHud.dataset.phase = '';
   recGameHud.classList.remove('is-new');
 }
@@ -15424,6 +15428,8 @@ function recordGameStart(){
   recGameHud.classList.remove('is-new');
   recGameEl.classList.add('is-game');
   closeArtStyleMenu(); // issue #235: no art-style menu over a run
+  // fade out the visual tabs (art style selector) while game is playing (issue #296)
+  document.getElementById('visualTabs')?.classList.add('rec-game-active');
   recGameHud.dataset.phase = 'run';
   recordGameRender();
 }
@@ -15431,6 +15437,8 @@ function recordGameEnd(){
   recGame.on = false;
   recGameEl.classList.remove('is-game');
   recGameDot.style.top = '';
+  // fade back in the visual tabs (issue #296)
+  document.getElementById('visualTabs')?.classList.remove('rec-game-active');
   recGameHud.dataset.phase = 'over';
   clearTimeout(recGame.overT);
   recGame.overT = setTimeout(() => { recGameHud.dataset.phase = ''; }, 2200);
