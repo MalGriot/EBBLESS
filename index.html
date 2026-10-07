@@ -15719,7 +15719,7 @@ function vizDraw(t){
   const grain = mix > 0 ? lerp(vizParamsA.grain, vizParamsB.grain) : vizParamsA.grain;
 
   const cx = w / 2, cy = h / 2;
-  const radius = Math.max(w, h) / 2;
+  const radius = Math.hypot(w / 2, h / 2) / Math.SQRT2;
   const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul;
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
   const color = vizRosicrucianColor();
