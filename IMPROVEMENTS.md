@@ -8277,7 +8277,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #283.
 
 ### playback-pauses-when-unfocused: Music pauses in the mini-player and when switching apps
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug: playback stops whenever EBBLESS loses focus. Desktop: the mini-player pauses for every song (e.g. "ninety-three 'til infinity and beyond (mixed)" by Andre 3000 plays in the app tab, pauses in the mini-player and won't resume). Also pauses when switching to another app, not just another tab. Music should keep playing in the background and in the mini-player.
 - **Touches:** visibility/blur handling, mini-player (merged desktop-mini-player, mobile-resume-pause-regression).
