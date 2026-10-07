@@ -312,10 +312,10 @@ body.onb-active .paste-guide{display:none}
 
 .section-label{font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--faint-2);text-transform:uppercase;margin:28px 0 12px}
 .section-label:first-of-type{margin-top:8px}
-.section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .section-label-row .section-label{margin:28px 0 2px}
 .section-label-row:first-of-type .section-label{margin-top:0}
-.lib-fold{background:none;border:0;color:var(--faint-2);cursor:pointer;padding:6px;margin:28px 0 2px;line-height:0}
+.lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
 .lib-fold[aria-expanded="false"] svg{transform:rotate(-90deg)}
 .lib-head-actions{display:flex;align-items:center;gap:8px;flex:none}
@@ -1786,12 +1786,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      may still wrap rather than clip as a last resort; the filter chips
      below scroll sideways if they don't fit */
   body.split-desktop .lib-new-word{display:none}
-  body.split-desktop .section-label-row{flex-wrap:wrap;row-gap:8px}
-  /* #248: library section headings (Albums / Podcasts / Songs) match the
-     2-column grid tile titles, which are 33.34cqh of a square tile = 1/3 of
-     the tile width. #view-library is the size container here, so tile width
-     = (pane content width - 2x24px .view-scroll padding - 16px gap) / 2. */
-  body.split-desktop #libraryListWrap .section-label{font-size:calc((100cqw - 64px) / 6)}
+  /* Removed flex-wrap to prevent section header from wrapping to multiple lines */
+  /* #248: library section headings now use consistent mobile sizing (11px) */
+  /* across all widths for better visual hierarchy and full-width clickability. */
 
   /* ---- desktop "fullscreen" mode: player expands to the full split-view
      width, library slides off left and queue slides off right. Both panes
@@ -7450,19 +7447,17 @@ function renderLibrary(){
   // Fold arrows on the section headers: All view only, so a single-type
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
+  // Section header fold/unfold: click entire header to toggle, All view only
   [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
-    let btn = head.querySelector('.lib-fold');
-    if (!btn){
-      btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'lib-fold';
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-      btn.addEventListener('click', () => { libFolded[key] = !libFolded[key]; renderLibrary(); });
-      head.appendChild(btn);
+    // Attach click handler to the entire section-label-row if not already set
+    if (!head.dataset.foldHandlerAttached) {
+      head.addEventListener('click', () => { libFolded[key] = !libFolded[key]; renderLibrary(); });
+      head.dataset.foldHandlerAttached = 'true';
     }
     const folded = filter === 'all' && !!libFolded[key];
-    btn.classList.toggle('hidden', filter !== 'all');
-    btn.setAttribute('aria-expanded', String(!folded));
-    btn.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
+    head.classList.toggle('hidden', filter !== 'all');
+    head.setAttribute('aria-expanded', String(!folded));
+    head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
   });
   const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
