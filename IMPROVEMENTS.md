@@ -8197,7 +8197,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #290.
 
 ### previous-track-instant: Previous track should load as instantly as next
-- **Status:** review
+- **Status:** approved
 - **Priority:** medium
 - **Description:** Going back to the previous song should be as instant as skipping forward (keep the previous track warm/preloaded).
 - **Touches:** prev/next preload logic.
@@ -8229,7 +8229,7 @@ Add entries in this shape:
 - **Branch:** agent/crossfade-start-and-preload
 - **Notes:** Found by the crossfade-next-muted-gap lane; approved by MAL GRIOT 2026-10-06.
 ### library-collapsible-sections: Library sections collapse/expand with a +/arrow by the title
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Each library section header (Playlists, Albums, Podcasts, Artists) gets a plus or arrow to fold it open/closed. Only in the "All" view, not when a single-type filter is selected.
 - **Touches:** renderLibrary section headers.
@@ -8245,7 +8245,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #289.
 
 ### queue-add-collections: Add whole playlists/albums/podcasts to the queue
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Let users add an entire playlist, album, or podcast to the queue (not just single tracks).
 - **Touches:** library item menus, queue.
@@ -8253,7 +8253,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #288. Extends merged library-hold-add-to-queue (tracks only).
 
 ### library-now-playing-highlight: Highlight the playing playlist in the library; blinking speaker by the playing song
-- **Status:** review
+- **Status:** approved
 - **Priority:** medium
 - **Description:** When a playlist is playing, highlight it in the library. The playing song gets a slowly blinking speaker icon next to it in the library. Also show the playing playlist's name somewhere in the queue window.
 - **Touches:** renderLibrary, queue panel header.
@@ -8269,9 +8269,107 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #285.
 
 ### playlist-add-multiselect: "Add to playlist" should allow picking multiple playlists with checkboxes
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When adding a loaded song to a playlist, show the playlists with checkboxes so it can go into several at once.
 - **Touches:** add-to-playlist picker (see single-song-paste-prompt).
 - **Branch:** agent/playlist-add-multiselect
 - **Notes:** Synced from Geethub issue #283.
+
+### playback-pauses-when-unfocused: Music pauses in the mini-player and when switching apps
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug: playback stops whenever EBBLESS loses focus. Desktop: the mini-player pauses for every song (e.g. "ninety-three 'til infinity and beyond (mixed)" by Andre 3000 plays in the app tab, pauses in the mini-player and won't resume). Also pauses when switching to another app, not just another tab. Music should keep playing in the background and in the mini-player.
+- **Touches:** visibility/blur handling, mini-player (merged desktop-mini-player, mobile-resume-pause-regression).
+- **Branch:**
+- **Notes:** Synced from Geethub issues #304, #307 and #308 (folded together: same symptom, likely one regression). Device for #308 not stated.
+
+### miniplayer-window-fixes: Mini-player window sizing, slower fade, bottom snap, no border
+- **Status:** in-progress
+- **Branch:** agent/miniplayer-fixes
+- **Priority:** medium
+- **Description:** Mini-player fixes: (1) when it shrinks, the window itself should shrink, not just the player inside it; (2) it fades too soon, wait about a minute of inactivity; (3) resetting the size should anchor to the bottom edge, not snap to the top; (4) remove the window border entirely if the platform allows.
+- **Touches:** mini-player (merged miniplayer-idle-fade, mini-player-polish).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #305.
+
+### silence-restart-at-zero: After sitting silent, the song doesn't restart from the beginning
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug: when music has sat paused/silent for a while, it's supposed to restart the track at 0:00 on resume, but it doesn't.
+- **Touches:** resume-after-idle logic.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #295. Title only.
+
+### fullscreen-controls-collide-title: Desktop fullscreen: player controls overlap the title and artist
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug: in desktop fullscreen the player controls get pushed up and collide with the song title and artist. Keep them clearly separated.
+- **Touches:** desktop fullscreen layout (merged fullscreen-player-controls).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #297.
+
+### lp-game-hide-art-selector: Desktop LP game: album art selector should fade away while playing
+- **Status:** in-progress
+- **Branch:** agent/lp-selector-fade
+- **Priority:** medium
+- **Description:** Bug: on desktop, the album art style selector stays visible during the LP game. It should fade out while the game is active.
+- **Touches:** LP game (merged lp-game-desktop-fullscreen-layout).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #296.
+
+### library-section-header-clickable: Library section titles: whole word toggles, no arrows
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Bug: on desktop the dropdown arrow wraps to a different line than the library section title. Make the whole title clickable to fold/unfold the section and remove the arrows. Restore section titles to the same size as mobile.
+- **Touches:** library section headers (library-collapsible-sections).
+- **Branch:** agent/lib-section-headers
+- **Notes:** Synced from Geethub issue #300. Follow-up to library-collapsible-sections. Desktop section titles are currently oversized; restore them to mobile proportions.
+
+### artist-bio-panel: Tap an artist's name to see their bio in the library
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Clicking an artist's name on the player opens their artist page in the library window: bio, fun facts/trivia, tour dates, website and social links (links open in the player section), pulled from verified sources.
+- **Touches:** player artist name, library artist view.
+- **Branch:**
+- **Notes:** Synced from Geethub issues #299 and #298 (bio half of #298 folded here).
+
+### artist-singles-features-albums: Artist albums should include singles and features
+- **Status:** draft
+- **Priority:** medium
+- **Description:** When an artist is loaded, besides their albums, add an album collecting their singles and one collecting songs where they're the featured artist.
+- **Touches:** artist album fill (merged library-artists-section).
+- **Branch:**
+- **Notes:** Synced from Geethub issue #298 (albums half; base "add all albums" already merged).
+
+### cassette-animation-vibrance: Cassette animation: brightest tapes first, as vibrant as the art
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In the third desktop cassette animation the tapes go from most vibrant to dullest; keep the animation but reverse it (most vibrant first, least vibrant last). Make the tapes as vibrant as the album art. On mobile, the third animation should be the other two animations combined.
+- **Touches:** cassette fullscreen animations.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #306.
+
+### cymatics-more-patterns: More cymatics patterns (49, including a spiral)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Expand the cymatics visualizer to 49 patterns, including at least one spiral.
+- **Touches:** cymatics visualizer.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #303.
+
+### visualizer-rotate-button: Button that makes the visualizer rotate
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Add a button that sets the visualizer slowly rotating.
+- **Touches:** visualizer controls.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #302. Title only.
+
+### audiosurf-game: Audiosurf-style game in EBBLESS (future)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Longer-term idea: bring an Audiosurf-style ride-the-song game into EBBLESS, playable with the user's own tracks.
+- **Touches:** new feature.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #301. Big scope; candidate for archived until after MVP.
