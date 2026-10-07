@@ -15642,8 +15642,14 @@ let vizParamsB = vizRandomParams();
 const vizGx = new Float32Array(VIZ_GRAINS_MAX);
 const vizGy = new Float32Array(VIZ_GRAINS_MAX);
 for (let i = 0; i < VIZ_GRAINS_MAX; i++){
-  vizGx[i] = Math.random() * 2 - 1;
-  vizGy[i] = Math.random() * 2 - 1;
+  let x, y, dist;
+  do {
+    x = Math.random() * 2 - 1;
+    y = Math.random() * 2 - 1;
+    dist = Math.sqrt(x * x + y * y);
+  } while (dist > 1);
+  vizGx[i] = x;
+  vizGy[i] = y;
 }
 
 function vizStartTransition(familyIdx, params){
