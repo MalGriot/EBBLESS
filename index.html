@@ -17145,11 +17145,22 @@ function fadeOutAndPause(deck){
   // one - otherwise the next Next is a cold load. No-op after an automatic
   // crossfade, whose standby deck already holds the next track.
   if (cancelCrossfade()) schedulePreload(state.queuePos);
+  if (deck === activeDeck()) pausedAtInfo = { pos: state.queuePos, ts: Date.now() };
   setPlayingUI(false);
   runPlayFade(deck, 'out');
 }
+// When the active track was last paused. A track that sat paused this long
+// restarts at 0:00 on resume instead of picking up mid-song.
+const IDLE_RESTART_MS = 30 * 60 * 1000;
+let pausedAtInfo = null;
 function fadeInAndPlay(deck){
   if (weekUp.frozen) return;   // TESTER WEEK UP: nothing plays again (tab refocus, media keys, ...)
+  const pi = pausedAtInfo;
+  pausedAtInfo = null;
+  if (pi && deck === activeDeck() && pi.pos === state.queuePos && Date.now() - pi.ts >= IDLE_RESTART_MS){
+    pendingResume = null;   // a rebuilt dead deck must not seek back to the old spot
+    try { if (deck.player && deck.player.seekTo) deck.player.seekTo(0, true); } catch(e){}
+  }
   if (deck === activeDeck() && deckLooksDead(deck) && rebuildActiveDeck()) return;
   const wasFadingOut = isFadingOut(deck);
   if (!wasFadingOut && deck.player.setVolume) deck.player.setVolume(0);
