@@ -8277,11 +8277,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #283.
 
 ### playback-pauses-when-unfocused: Music pauses in the mini-player and when switching apps
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Bug: playback stops whenever EBBLESS loses focus. Desktop: the mini-player pauses for every song (e.g. "ninety-three 'til infinity and beyond (mixed)" by Andre 3000 plays in the app tab, pauses in the mini-player and won't resume). Also pauses when switching to another app, not just another tab. Music should keep playing in the background and in the mini-player.
 - **Touches:** visibility/blur handling, mini-player (merged desktop-mini-player, mobile-resume-pause-regression).
-- **Branch:**
+- **Branch:** agent/playback-pauses-when-unfocused
 - **Notes:** Synced from Geethub issues #304, #307 and #308 (folded together: same symptom, likely one regression). Device for #308 not stated.
 
 ### miniplayer-window-fixes: Mini-player window sizing, slower fade, bottom snap, no border
@@ -8327,11 +8327,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #300. Follow-up to library-collapsible-sections. Desktop section titles are currently oversized; restore them to mobile proportions.
 
 ### artist-bio-panel: Tap an artist's name to see their bio in the library
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Clicking an artist's name on the player opens their artist page in the library window: bio, fun facts/trivia, tour dates, website and social links (links open in the player section), pulled from verified sources.
 - **Touches:** player artist name, library artist view.
-- **Branch:**
+- **Branch:** agent/artist-bio-panel
 - **Notes:** Synced from Geethub issues #299 and #298 (bio half of #298 folded here).
 
 ### artist-singles-features-albums: Artist albums should include singles and features
