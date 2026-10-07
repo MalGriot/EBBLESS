@@ -8380,4 +8380,4 @@ Add entries in this shape:
 - **Description:** Bug: when the cymatics visualizer rotates, the patterns don't fill the entire screen area. They should maintain full coverage while rotating.
 - **Touches:** cymatics visualizer rotation.
 - **Branch:** agent/cymatics-rotation
-- **Notes:** Synced from Geethub issue #309. Root cause: (1) grains initialized in constrained circle left corners/edges empty in rectangular canvases, (2) 0.94 radius shrink factor prevented grains from reaching screen edges. Fixed by: using full square [-1,1]×[-1,1] grain distribution + removing 0.94 factor. Verified: full edge-to-edge coverage maintained at all rotation angles, including non-fullscreen mode.
+- **Notes:** Synced from Geethub issue #309. Three fixes applied: (1) grains use full square [-1,1]×[-1,1] distribution for rectangular canvases; (2) removed 0.94 radius shrink to reach edges; (3) updated radius formula to hypot(w/2, h/2) / sqrt(2) so grain corners reach canvas corners at all rotation angles, including 45° diagonals. Verified: full edge-to-edge coverage at 0°, 45°, and intermediate angles in non-fullscreen mode.
