@@ -3005,7 +3005,7 @@ body.week-up-on{overflow:hidden}
               <linearGradient id="csGhostShade" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stop-color="#fff" stop-opacity=".1"/>
                 <stop offset="18%" stop-color="#fff" stop-opacity=".02"/>
-                <stop offset="100%" stop-color="#000" stop-opacity=".42"/>
+                <stop offset="100%" stop-color="#000" stop-opacity=".2"/>
               </linearGradient>
               <symbol id="csGhostSym" viewBox="0 0 400 256" overflow="visible">
                 <!-- thickness: seen from slightly above, the shell's bottom
@@ -3014,7 +3014,7 @@ body.week-up-on{overflow:hidden}
                      units below the main cassette's outline, so csGhostPlace
                      shrinks/lifts a copy to fit inside it while tucked -->
                 <rect x="8" y="226" width="384" height="34" rx="9" fill="currentColor"/>
-                <rect x="8" y="226" width="384" height="34" rx="9" fill="rgba(0,0,0,.5)"/>
+                <rect x="8" y="226" width="384" height="34" rx="9" fill="rgba(0,0,0,.3)"/>
                 <path d="M16,254.5 H384" stroke="rgba(0,0,0,.45)" stroke-width="2.8"/>
                 <path d="M17,249.5 H383" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
                 <rect x="8" y="8" width="384" height="240" rx="9" fill="currentColor"/>
@@ -19935,22 +19935,26 @@ function csStackBuild(){
   csStack.geo = {n, step, stepDown, shrink, H, rs, rx:Math.max(rx, W * .3), ry:Math.max(ry, H * .5), baseOp:[]};
   csStack.wrap.textContent = '';
   csStack.ghosts = [];
-  // farthest copy first in DOM so each nearer copy paints over it
-  for (let i = n - 1; i >= 0; i--){
+  // farthest copy first in DOM so each nearer copy paints over it. Mobile
+  // also builds n "down twins" (index n + i) for the third, combined pass
+  csStack.geo.nUp = n;
+  const total = desk ? n : n * 2;
+  for (let idx = total - 1; idx >= 0; idx--){
+    const i = idx % n;
     const g = document.createElement('div');
     g.className = 'cs-ghost';
     g.style.width = svgW + 'px'; g.style.height = svgH + 'px';
     g.style.marginLeft = (-svgW / 2) + 'px'; g.style.marginTop = (-svgH / 2) + 'px';
-    // graduated shades by stack order: the first copy is the lightest
-    // tint of the album tone, each later one darker; all fully opaque
+    // graduated shades by stack order: the first copy is the pure album tone
+    // (as vibrant as the art), each later one a bit duller; all fully opaque
     const f = n > 1 ? i / (n - 1) : 0;
-    const p = Math.round(74 - 50 * f), q = Math.round(100 - 100 * f);
+    const p = Math.round(100 - 40 * f), q = Math.round(100 - 100 * f);
     g.style.color = '#2c2e33';
     g.style.color = `color-mix(in srgb, var(--player-accent) ${p}%, color-mix(in srgb, #3a3c42 ${q}%, #0b0c0e))`;
-    csStack.geo.baseOp[i] = 1;
+    csStack.geo.baseOp[idx] = 1;
     g.innerHTML = '<div class="cs-ghost-sh"></div><svg viewBox="0 0 400 256"><use href="#csGhostSym"/></svg>';
     csStack.wrap.appendChild(g);
-    csStack.ghosts[i] = g;
+    csStack.ghosts[idx] = g;
   }
   // the real shell is smoky/translucent: a dark plate right under it keeps
   // the tinted copies from showing through, so the main cassette reads
@@ -19992,11 +19996,16 @@ function csStackTimes(n){
   // first (upward) pass slides back behind - collapse is staggered .06s per copy
   const back = csStack.desk ? CS_T.gather : CS_T.collapse + .06 * (n - 1);
   const downStart = upHoldEnd + back + CS_T.pause, holdEnd = downStart + stackEnd + CS_T.hold;
-  if (!csStack.desk) return {upHoldEnd, downStart, holdEnd, total: holdEnd + CS_T.collapse + CS_T.rest};
+  // mobile third pass: the up and down passes together, then rest
+  if (!csStack.desk){
+    const thirdStart = holdEnd + CS_T.collapse + .06 * (n - 1) + CS_T.pause;
+    return {upHoldEnd, downStart, holdEnd, thirdStart, thirdHoldEnd: thirdStart + upHoldEnd,
+      total: thirdStart + upHoldEnd + CS_T.collapse + .06 * (n - 1) + CS_T.rest};
+  }
   const spreadStart = holdEnd + CS_T.gather + CS_T.pause, spinStart = spreadStart + CS_T.spread;
   const rampDeg = CS_T.omega * CS_T.ramp / 2, exits = [];
   for (let i = 0; i < n; i++){
-    const target = 360 - (i + .5) * 360 / n; // degrees until this copy reaches the top
+    const target = (i + .5) * 360 / n; // degrees until this copy reaches the top
     exits[i] = target <= rampDeg ? Math.sqrt(2 * CS_T.ramp * target / CS_T.omega) : target / CS_T.omega + CS_T.ramp / 2;
   }
   return {upHoldEnd, downStart, holdEnd, spreadStart, spinStart, exits, total: spinStart + Math.max(...exits) + CS_T.lift + CS_T.slide + CS_T.rest};
@@ -20018,11 +20027,18 @@ function csStackFrame(now){
   }
   const G = csStack.geo, T = G.times;
   // second pass: same rise/hold/back-behind, mirrored downward
-  const down = t >= T.downStart, tt = down ? t - T.downStart : t;
-  const dy = down ? G.stepDown : -G.step, hEnd = down ? T.holdEnd : T.upHoldEnd;
+  // mobile third pass: both directions at once (twins n..2n-1 go down)
+  const third = !csStack.desk && t >= T.thirdStart;
+  const down = t >= T.downStart && !third, tt = third ? t - T.thirdStart : down ? t - T.downStart : t;
+  let hEnd = third ? T.thirdHoldEnd : down ? T.holdEnd : T.upHoldEnd;
   let maxOp = 0;
-  for (let i = 0; i < G.n; i++){
-    const slot = i + 1, bo = G.baseOp[i];
+  for (let idx = 0; idx < csStack.ghosts.length; idx++){
+    const i = idx % G.n, twin = idx >= G.n;
+    if (twin && !third){
+      csStack.ghosts[idx].style.opacity = '0'; csStack.last[idx] = [0, 0, 0, .97, 0]; continue;
+    }
+    const dy = (down || twin) ? G.stepDown : -G.step;
+    const slot = i + 1, bo = G.baseOp[idx];
     // this copy's stacked slot, and the slot it rises out from behind
     const yS = dy * slot, sS = 1 - G.shrink * slot;
     const yP = dy * i, sP = 1 - G.shrink * i;
@@ -20038,7 +20054,7 @@ function csStackFrame(now){
         y = yS * (1 - g); s = sS + (.98 - sS) * g;
         if (t > T.spreadStart){
           const ex = T.spinStart + T.exits[i];
-          const ang = t < ex ? (i + .5) * 360 / G.n + csSpinDeg(t - T.spinStart) : 360;
+          const ang = t < ex ? (G.n - i - .5) * 360 / G.n + csSpinDeg(t - T.spinStart) : 360;
           const rad = ang * Math.PI / 180, sn = Math.sin(rad), cs = Math.cos(rad);
           // rotated so the copy's bottom edge faces the center
           const rr = Math.atan2(G.rx * sn, G.ry * cs) * 180 / Math.PI;
@@ -20057,10 +20073,10 @@ function csStackFrame(now){
         }
       }
     }
-    const el = csStack.ghosts[i];
+    const el = csStack.ghosts[idx];
     csGhostPlace(el, x, y, rot, s);
     el.style.opacity = op.toFixed(3);
-    csStack.last[i] = [x, y, rot, s, op];
+    csStack.last[idx] = [x, y, rot, s, op];
     if (op > maxOp) maxOp = op;
   }
   // plate is only there while copies are, so at rest the cassette is untouched
