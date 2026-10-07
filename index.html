@@ -1594,6 +1594,25 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .like-streak-line{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
 .like-streak-line b{color:var(--accent);font-weight:600}
 .currents-hint{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
+/* artist page (#299): tap the player's artist name -> bio, facts and links
+   at the top of the library panel (see openArtistPage) */
+#trackArtist{cursor:pointer}
+#trackArtist:hover span{text-decoration:underline;text-underline-offset:3px}
+#libpl-panel.is-artist-info .libpl-play,#libpl-panel.is-artist-info .libpl-art-play{display:none}
+.artist-info{padding:6px 14px 14px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.artist-info .ai-bio{margin:0;font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-line;
+  display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.artist-info .ai-bio.is-open{display:block}
+.artist-info .ai-more{margin-top:4px;padding:4px 0;font-size:12.5px;font-weight:600;color:var(--accent)}
+.artist-info .ai-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 0;font-size:12.5px}
+.artist-info .ai-facts dt{color:var(--faint)}
+.artist-info .ai-facts dd{margin:0;color:var(--text);min-width:0;overflow-wrap:anywhere}
+.artist-info .ai-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.artist-info .ai-links a{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--border-2);
+  font-size:12.5px;font-weight:600;color:var(--text);text-decoration:none;transition:border-color var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.artist-info .ai-links a:hover{border-color:var(--accent);color:var(--accent)}
+.artist-info .ai-source{margin-top:12px;font-size:11.5px;color:var(--faint-2)}
+.artist-info .ai-source a{color:inherit}
 @media (prefers-reduced-motion:reduce){
   .like-nudge{transition:opacity var(--dur-ui) linear;transform:translate(-50%,0)}
   .player-like-btn.streak-pulse svg{animation:none}
@@ -3528,7 +3547,9 @@ body.week-up-on{overflow:hidden}
         <li><a href="https://www.deezer.com" target="_blank" rel="noopener">Deezer</a><span>Tempo data for Discover</span></li>
         <li><a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a><span>Similar songs and tags for Discover</span></li>
         <li><a href="https://listenbrainz.org" target="_blank" rel="noopener">ListenBrainz</a><span>Similar recordings for Discover</span></li>
-        <li><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a><span>Song and release metadata</span></li>
+        <li><a href="https://musicbrainz.org" target="_blank" rel="noopener">MusicBrainz</a><span>Song and release metadata, artist links</span></li>
+        <li><a href="https://www.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a><span>Artist bios and photos</span></li>
+        <li><a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a><span>Artist labels and awards</span></li>
         <li><a href="https://coverartarchive.org" target="_blank" rel="noopener">Cover Art Archive</a><span>Album art</span></li>
         <li><a href="https://lrclib.net" target="_blank" rel="noopener">LRCLIB</a><span>Synced lyrics</span></li>
       </ul>
@@ -7200,7 +7221,9 @@ function markNowPlaying(){
   document.querySelectorAll('.track-row[data-pl-id]').forEach(r => r.classList.toggle('is-now-playing', !!e && r.dataset.plId === e.plId && +r.dataset.idx === e.idx));
 }
 function renderLibrary(){
-  closeLibraryPlaylistPanel();
+  // an artist page opened from the player (openArtistPage) shows nothing
+  // from the library, so a re-render underneath it leaves it open
+  if (!String(openLibraryPanelId || '').startsWith('artistinfo:')) closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
   const ids = orderedLibraryIds();
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
@@ -7532,6 +7555,7 @@ function toggleLibraryPlaylistPanel(id){
   if (state.queueOpen) closeQueuePanel();
 
   openLibraryPanelId = id;
+  libplPanel.classList.remove('is-artist-info');
   libplTitle.textContent = pl.name;
   // cover art at the top of the panel: prefer the playlist's own source
   // cover (Spotify/SoundCloud/Apple), falling back to the first track that
@@ -7602,6 +7626,8 @@ function toggleLibraryPlaylistPanel(id){
       libplBody.appendChild(row);
     });
   }
+  // an artist's own page also gets their bio, facts and links on top (#298)
+  if (isArtistEntry(pl)) loadArtistInfoInto(id, pl.name, (pl.tracks.find(t => t.title) || {}).title, false);
 
   // phase-1 fullscreen: the panel sits over the library drawer, so make
   // sure that drawer is in (it closes the panel again when toggled off)
@@ -7625,6 +7651,247 @@ libplCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibra
 $('libplCloseTab').addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
 libplScrim.addEventListener('click', closeLibraryPlaylistPanel);
 attachSwipeToDismiss(libplPanel, closeLibraryPlaylistPanel);
+
+/* =========================================================================
+   ARTIST PAGE (Geethub #299, bio half of #298): tap the player's artist name
+   to open that artist in the library panel - their saved artist entry if
+   they're in the library, otherwise a page of its own. Bio, facts and links
+   come only from verified, keyless, CORS-open sources: MusicBrainz picks
+   the artist (matched through the playing song when there is one, so a
+   same-name artist can't win) and supplies dates, genres and official
+   links; Wikidata (linked from MusicBrainz) adds labels and awards and
+   points at the right Wikipedia article for the bio and photo. Any section
+   with no data is left out - nothing is guessed. Tour dates: no keyless
+   source lists them, so the artist's own Songkick/Bandsintown page (when
+   MusicBrainz has it) shows as a "Tour dates" link instead.
+   ========================================================================= */
+const ARTIST_INFO_PREFIX = 'artistinfo:';
+const MB_API = 'https://musicbrainz.org/ws/2/';
+const artistInfoCache = new Map();
+function artistNameKey(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+async function artistInfoJson(url){
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('artist info ' + res.status);
+  return res.json();
+}
+function mbQuoted(s){ return '"' + String(s).replace(/[\\"]/g, '\\$&') + '"'; }
+async function findMbArtistId(name, title){
+  const key = artistNameKey(name);
+  if (!key) return null;
+  const matches = (n) => artistNameKey(n) === key;
+  if (title){
+    try{
+      const d = await artistInfoJson(MB_API + 'recording/?fmt=json&limit=10&query=' + encodeURIComponent('recording:' + mbQuoted(title) + ' AND artist:' + mbQuoted(name)));
+      for (const r of (d.recordings || [])){
+        const c = (r['artist-credit'] || []).find(c => c.artist && (matches(c.name) || matches(c.artist.name)));
+        if (c) return c.artist.id;
+      }
+    } catch(e){}
+  }
+  const d = await artistInfoJson(MB_API + 'artist/?fmt=json&limit=10&query=' + encodeURIComponent('artist:' + mbQuoted(name)));
+  const hit = (d.artists || []).find(a => matches(a.name) || (a.aliases || []).some(x => matches(x.name)));
+  return hit ? hit.id : null;
+}
+function artistInfoDate(s){
+  const m = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/.exec(s || '');
+  if (!m) return '';
+  if (!m[2]) return m[1];
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, m[3] ? +m[3] : 1));
+  return d.toLocaleDateString(undefined, m[3] ? { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' } : { year: 'numeric', month: 'long', timeZone: 'UTC' });
+}
+// MusicBrainz url relation -> { label, url } for the links row, or null
+function artistInfoLink(rel){
+  const url = rel.url && rel.url.resource;
+  if (!url || rel.ended) return null;
+  let host = '';
+  try{ host = new URL(url).hostname.replace(/^www\.|^m\./, ''); } catch(e){ return null; }
+  const t = rel.type;
+  if (t === 'official homepage') return { label: 'Website', url };
+  if (t === 'youtube' && host === 'youtube.com') return { label: 'YouTube', url };
+  if (t === 'soundcloud') return { label: 'SoundCloud', url };
+  if (t === 'bandcamp') return { label: 'Bandcamp', url };
+  if (t === 'songkick' || t === 'bandsintown') return { label: 'Tour dates', url };
+  if (/streaming|purchase/.test(t)){
+    if (host === 'open.spotify.com') return { label: 'Spotify', url };
+    if ((host === 'music.apple.com' || host === 'itunes.apple.com') && /\/artist\//.test(url)) return { label: 'Apple Music', url };
+  }
+  if (t === 'social network'){
+    const social = { 'instagram.com': 'Instagram', 'twitter.com': 'X', 'x.com': 'X', 'facebook.com': 'Facebook', 'tiktok.com': 'TikTok', 'threads.net': 'Threads', 'bsky.app': 'Bluesky' }[host];
+    if (social) return { label: social, url };
+  }
+  return null;
+}
+function fetchArtistInfo(name, title){
+  const ck = artistNameKey(name);
+  if (artistInfoCache.has(ck)) return artistInfoCache.get(ck);
+  const p = (async () => {
+    let mbid = await findMbArtistId(name, title);
+    const primary = primaryArtistKey(name);
+    if (!mbid && artistNameKey(primary) !== ck) mbid = await findMbArtistId(primary, title);
+    if (!mbid) return null;
+    const a = await artistInfoJson(MB_API + 'artist/' + mbid + '?fmt=json&inc=url-rels+genres');
+    const info = { name: a.name, mbUrl: 'https://musicbrainz.org/artist/' + mbid, facts: [], links: [], bio: '', wikiUrl: '', image: '', usedWikidata: false };
+    const span = a['life-span'] || {};
+    const person = a.type === 'Person', group = /Group|Orchestra|Choir/.test(a.type || '');
+    const beginArea = a['begin-area'] && a['begin-area'].name, area = a.area && a.area.name;
+    if (span.begin && (person || group)) info.facts.push([person ? 'Born' : 'Formed', artistInfoDate(span.begin) + (beginArea ? ' in ' + beginArea : '')]);
+    if (span.ended && span.end && (person || group)) info.facts.push([person ? 'Died' : 'Ended', artistInfoDate(span.end)]);
+    if (area && area !== beginArea) info.facts.push(['From', area]);
+    const genres = (a.genres || []).slice().sort((x, y) => (y.count || 0) - (x.count || 0)).slice(0, 3).map(g => g.name.charAt(0).toUpperCase() + g.name.slice(1));
+    if (genres.length) info.facts.push(['Genres', genres.join(', ')]);
+    const seen = new Set();
+    let qid = null;
+    (a.relations || []).forEach(rel => {
+      if (rel.type === 'wikidata' && rel.url && !qid){ const m = /\/(Q\d+)$/.exec(rel.url.resource); if (m) qid = m[1]; }
+      const l = artistInfoLink(rel);
+      if (l && !seen.has(l.label)){ seen.add(l.label); info.links.push(l); }
+    });
+    const order = ['Website', 'Instagram', 'X', 'TikTok', 'Facebook', 'Threads', 'Bluesky', 'Spotify', 'Apple Music', 'YouTube', 'SoundCloud', 'Bandcamp', 'Tour dates'];
+    info.links.sort((x, y) => order.indexOf(x.label) - order.indexOf(y.label));
+    if (!qid) return info;
+    try{
+      const wd = (await artistInfoJson('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=claims|sitelinks&sitefilter=enwiki&ids=' + qid)).entities[qid];
+      const claims = wd.claims || {};
+      const ids = (p) => (claims[p] || []).filter(c => c.rank !== 'deprecated').map(c => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value && c.mainsnak.datavalue.value.id).filter(Boolean);
+      const labelIds = ids('P264').slice(0, 3), awardIds = ids('P166'), nominations = ids('P1411').length;
+      const birthName = person && claims.P1477 && claims.P1477[0].mainsnak.datavalue && claims.P1477[0].mainsnak.datavalue.value.text;
+      let labels = {};
+      const want = labelIds.concat(awardIds.slice(0, 3));
+      if (want.length){
+        const ld = await artistInfoJson('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=labels&languages=en&ids=' + want.join('|'));
+        Object.keys(ld.entities || {}).forEach(k => { const l = ld.entities[k].labels && ld.entities[k].labels.en; if (l) labels[k] = l.value; });
+      }
+      if (birthName && artistNameKey(birthName) !== artistNameKey(a.name)) info.facts.unshift(['Real name', birthName]);
+      const labelNames = labelIds.map(k => labels[k]).filter(Boolean);
+      if (labelNames.length) info.facts.push([labelNames.length === 1 ? 'Label' : 'Labels', labelNames.join(', ')]);
+      if (awardIds.length){
+        const named = awardIds.slice(0, 3).map(k => labels[k]).filter(Boolean);
+        info.facts.push(['Awards', named.join('; ') + (awardIds.length > named.length ? (named.length ? ' and ' : '') + (awardIds.length - named.length) + ' more' : '')]);
+      }
+      if (nominations) info.facts.push(['Nominations', String(nominations)]);
+      info.usedWikidata = !!(labelNames.length || awardIds.length || nominations || birthName);
+      const wikiTitle = wd.sitelinks && wd.sitelinks.enwiki && wd.sitelinks.enwiki.title;
+      if (wikiTitle){
+        const wp = await artistInfoJson('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=extracts|pageimages&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=500&titles=' + encodeURIComponent(wikiTitle));
+        const page = Object.values((wp.query && wp.query.pages) || {})[0];
+        if (page && page.extract){
+          info.bio = page.extract.trim().replace(/\n{2,}/g, '\n').replace(/\(\s*[;,]?\s*/g, '(').replace(/\s*\(\)/g, '');
+          info.wikiUrl = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(page.title.replace(/ /g, '_'));
+        }
+        if (page && page.thumbnail) info.image = page.thumbnail.source;
+      }
+    } catch(e){ /* MusicBrainz facts and links still show on their own */ }
+    return info;
+  })();
+  artistInfoCache.set(ck, p);
+  p.catch(() => artistInfoCache.delete(ck));
+  return p;
+}
+function buildArtistInfoEl(info){
+  const box = document.createElement('div');
+  box.className = 'artist-info';
+  if (info.bio){
+    const bio = document.createElement('p'); bio.className = 'ai-bio'; bio.textContent = info.bio;
+    const more = document.createElement('button'); more.type = 'button'; more.className = 'ai-more'; more.textContent = 'More';
+    const toggle = () => { const open = bio.classList.toggle('is-open'); more.textContent = open ? 'Less' : 'More'; };
+    bio.addEventListener('click', toggle); more.addEventListener('click', toggle);
+    box.appendChild(bio); box.appendChild(more);
+    // short bios that already fit don't need the button
+    requestAnimationFrame(() => { if (bio.scrollHeight <= bio.clientHeight + 1) more.remove(); });
+  }
+  if (info.facts.length){
+    const dl = document.createElement('dl'); dl.className = 'ai-facts';
+    info.facts.forEach(([k, v]) => {
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      dl.appendChild(dt); dl.appendChild(dd);
+    });
+    box.appendChild(dl);
+  }
+  if (info.links.length){
+    const row = document.createElement('div'); row.className = 'ai-links';
+    info.links.forEach(l => {
+      const a = document.createElement('a');
+      a.href = l.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = l.label;
+      // links EBBLESS can play (Spotify/Apple Music/YouTube/SoundCloud artist
+      // pages) open right here in the player, like pasting them would;
+      // everything else opens in a new tab so the music keeps going
+      const parsed = parseImportLink(l.url);
+      if (parsed){
+        a.addEventListener('click', (e) => { e.preventDefault(); closeLibraryPlaylistPanel(); beginImportFromParsedLink(parsed); });
+      }
+      row.appendChild(a);
+    });
+    box.appendChild(row);
+  }
+  const src = document.createElement('div'); src.className = 'ai-source';
+  src.append('From ');
+  const srcLink = (label, url) => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = label; return a; };
+  const parts = [srcLink('MusicBrainz', info.mbUrl)];
+  if (info.usedWikidata) parts.push(document.createTextNode('Wikidata'));
+  if (info.wikiUrl) parts.push(srcLink('Wikipedia', info.wikiUrl));
+  parts.forEach((n, i) => { if (i) src.append(i === parts.length - 1 ? ' and ' : ', '); src.append(n); });
+  box.appendChild(src);
+  return box;
+}
+// fills the open panel's top with the artist's info; `standalone` is the
+// page opened for an artist who isn't in the library (no song list below)
+function loadArtistInfoInto(panelId, name, title, standalone){
+  const status = document.createElement('div');
+  status.className = 'currents-status';
+  status.textContent = 'Finding artist info...';
+  libplBody.prepend(status);
+  const done = (info) => {
+    if (openLibraryPanelId !== panelId || !status.isConnected) return;
+    status.remove();
+    const has = info && (info.bio || info.facts.length || info.links.length);
+    if (has) libplBody.prepend(buildArtistInfoEl(info));
+    if (standalone){
+      if (!has) libplBody.innerHTML = '<div class="empty-lib">No verified info found for this artist yet.</div>';
+      if (info && info.name) libplTitle.textContent = info.name;
+      if (info && info.image){ attachArtworkFallback(libplArt, { art: info.image }); libplArtWrap.hidden = false; }
+    }
+  };
+  fetchArtistInfo(name, title).then(done, () => done(null));
+}
+function openArtistPage(rawName, title){
+  const name = stripTopicSuffix(rawName).trim();
+  if (!name) return;
+  const key = artistNameKey(name), pkey = artistNameKey(primaryArtistKey(name));
+  const entryId = orderedLibraryIds().find(id => {
+    const p = getCachedPlaylist(id);
+    return isArtistEntry(p) && [key, pkey].includes(artistNameKey(stripTopicSuffix(p.name)));
+  });
+  const split = document.body.classList.contains('split-desktop');
+  if (!split && state.currentView !== 'library') setView('library');
+  if (split && state.currentView === 'settings') setView(state.preSettingsView);
+  const scroller = libplPanel.querySelector('.queue-scroll');
+  if (entryId){
+    if (openLibraryPanelId !== entryId){ toggleLibraryPlaylistPanel(entryId); if (scroller) scroller.scrollTop = 0; }
+    return;
+  }
+  const id = ARTIST_INFO_PREFIX + key;
+  if (openLibraryPanelId === id) return;
+  if (state.queueOpen) closeQueuePanel();
+  openLibraryPanelId = id;
+  libplPanel.classList.add('is-artist-info');
+  // a multi-artist credit opens on the first-named artist
+  libplTitle.textContent = name.split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim() || name;
+  libplArt.removeAttribute('src');
+  libplArtWrap.hidden = true;
+  libplBody.innerHTML = '';
+  if (scroller) scroller.scrollTop = 0;
+  loadArtistInfoInto(id, name, title, true);
+  if (deskFsPhase1() && !state.deskFsLibOpen) toggleDesktopFsLib();
+  libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  syncHistoryBuffer();
+}
+trackArtist.addEventListener('click', (e) => {
+  const t = currentTrack();
+  if (!t || !t.artist) return;
+  e.stopPropagation();
+  openArtistPage(t.artist, t.title);
+});
 
 /* =========================================================================
    PLAYLIST CONTEXT MENU (the 3-dot menu on each library card) — one shared
