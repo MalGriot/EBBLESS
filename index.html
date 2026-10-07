@@ -14272,22 +14272,38 @@ function deckAdReason(deck, strict){
 // playing. A doubt that never clears is given up after AD_MUTE_MAX_MS, as
 // the ad guard does, except 'not-moving'/'frozen': a stalled clock is
 // silent anyway, so holding it costs nothing.
+// Hidden page (#304/#307/#308): Chrome pauses a YouTube player that starts
+// playing muted while the page is hidden (another tab, another app, the
+// mini player), so a muted deck there never moves, the gate never releases
+// and every song in the background stops. While hidden, silence is volume 0
+// on an unmuted player instead (setVolume holds 0 until the sound is let
+// through). Not on iOS, which ignores setVolume.
 function gateDeckSound(deck){
   const p = deck.player;
   if (!p || p._gated || !p.unMute || !p.mute) return;
   const rawUnMute = p.unMute.bind(p), rawMute = p.mute.bind(p);
+  const rawSetVolume = p.setVolume ? p.setVolume.bind(p) : null;
+  const silence = () => {
+    if (rawSetVolume && document.hidden && !isIOS){ p._quiet = true; rawSetVolume(0); return rawUnMute(); }
+    return rawMute();
+  };
+  const sound = () => {
+    if (p._quiet){ p._quiet = false; rawSetVolume(p._wantVol != null ? p._wantVol : effectiveVolume(deck)); }
+    return rawUnMute();
+  };
   p._gated = true;
-  p.rawMute = rawMute;
+  p.rawMute = silence;
+  if (rawSetVolume) p.setVolume = function(v){ p._wantVol = v; return rawSetVolume(p._quiet ? 0 : v); };
   p.unMute = function(){
     deck.wantSound = true;
     if (deck.player !== p) return rawUnMute();
     const reason = deckAdReason(deck, true);
-    if (!reason){ if (deck.gateHeld){ deck.gateHeld = 0; adLog(deck, 'gate-release', ''); } return rawUnMute(); }
-    rawMute();
+    if (!reason){ if (deck.gateHeld){ deck.gateHeld = 0; adLog(deck, 'gate-release', ''); } return sound(); }
+    silence();
     if (!deck.gateHeld){ deck.gateHeld = Date.now(); adLog(deck, 'gate-hold', reason); }
     deck.gateReason = reason;
   };
-  p.mute = function(){ deck.wantSound = false; deck.gateHeld = 0; return rawMute(); };
+  p.mute = function(){ deck.wantSound = false; deck.gateHeld = 0; return silence(); };
 }
 function releaseSoundGates(){
   decks.forEach((d) => {
@@ -14437,6 +14453,8 @@ function createDeckPlayer(deck, videoId){
         if (deck.gen !== myGen) return;
         deck.ready = true;
         gateDeckSound(deck);
+        // built while hidden: start in gateDeckSound's volume-0 hold, not muted
+        deck.player.mute();
         deck.player.setVolume(deck === activeDeck() ? effectiveVolume(deck) : 0);
         forceLowestQuality(deck);
         if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; deck.player.loadVideoById({ videoId: v, suggestedQuality: LOWEST_QUALITY }); }
@@ -17312,7 +17330,7 @@ function runPlayFade(deck, dir){
         // Hidden (#257): iOS won't start a YouTube/SoundCloud iframe from the
         // lock screen. Rebuilding the player there can't help either - show
         // paused honestly and finish the play when the app is back in view.
-        if (document.visibilityState === 'hidden'){ noteHiddenPlayIntent(true); setPlayingUI(false); return; }
+        if (iosLocked()){ noteHiddenPlayIntent(true); setPlayingUI(false); return; }
         // Issue #228 (unplaying-next-track): a play that never takes on a
         // deck that isn't even buffering means that deck's player is dead,
         // not merely slow - rebuild it for this track rather than flipping
