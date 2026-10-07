@@ -8327,7 +8327,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #300. Follow-up to library-collapsible-sections. Desktop section titles are currently oversized; restore them to mobile proportions.
 
 ### artist-bio-panel: Tap an artist's name to see their bio in the library
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Clicking an artist's name on the player opens their artist page in the library window: bio, fun facts/trivia, tour dates, website and social links (links open in the player section), pulled from verified sources.
 - **Touches:** player artist name, library artist view.
