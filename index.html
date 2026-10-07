@@ -1882,7 +1882,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     position:absolute;top:calc(var(--topbar-h) / 2);left:50%;transform:translate(-50%,-50%);z-index:2;
   }
   body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta{
-    position:absolute;left:50%;bottom:108px;transform:translateX(-50%);z-index:2;
+    position:absolute;left:50%;bottom:156px;transform:translateX(-50%);z-index:2;
     width:min(420px,80%);
   }
   body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta .title,
@@ -1890,8 +1890,15 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.3); /* issue #153, see #flow-layer .flow-meta */
   }
   body.split-desktop.desktop-fs:not(.view-settings-active) .transport-full{
-    position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:2;
+    position:absolute;left:50%;bottom:40px;transform:translateX(-50%);z-index:2;
     width:min(480px,90%);
+  }
+  /* "Ads playing?" hangs below the controls instead of adding to the stack:
+     in flow it grew the block upward and pushed the controls into the
+     title/artist (issue: fullscreen-controls-collide-title). The title's
+     bottom:156px = this 40px + the ~84px seek/controls + a 32px gap. */
+  body.split-desktop.desktop-fs:not(.view-settings-active) .transport-full .ads-report-btn{
+    position:absolute;left:50%;top:100%;transform:translateX(-50%);margin:4px 0 0;white-space:nowrap;
   }
   /* exit X (issues #133/#148/#157): an .art-fs-btn twin parked beside
      #fsBtn in the art's corner - fsBtn goes on to the immersive third
