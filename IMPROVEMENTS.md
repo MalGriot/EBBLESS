@@ -8375,9 +8375,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #301. Big scope; candidate for archived until after MVP.
 
 ### cymatics-rotation-coverage: Cymatics don't cover the whole area when they rotate
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug: when the cymatics visualizer rotates, the patterns don't fill the entire screen area. They should maintain full coverage while rotating.
 - **Touches:** cymatics visualizer rotation.
-- **Branch:**
-- **Notes:** Synced from Geethub issue #309.
+- **Branch:** agent/cymatics-rotation
+- **Notes:** Synced from Geethub issue #309. Root cause: grains initialized in a square [-1,1]×[-1,1] leave gaps when rotated (corners extend beyond circular display). Fixed by constraining initialization to a circle (distance ≤ 1). Verified: visualizer maintains full coverage at all rotation angles.
