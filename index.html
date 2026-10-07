@@ -15029,7 +15029,7 @@ updateLibraryClockColor();
 setTimeout(() => document.documentElement.classList.remove('clock-color-init'), 50);
 setInterval(updateLibraryClockColor, 10000);
 
-/* Six genuinely different nodal-field families the grains can settle into.
+/* 49 genuinely different nodal-field families the grains can settle into.
    Each supplies its own field(x,y,params,t) -> scalar, plus a short list of
    parameter variants it drifts between while it's the active pattern.
    Mixing two families is just a pointwise lerp of their scalar outputs, so
@@ -15135,6 +15135,146 @@ const VIZ_PATTERNS = [
       Math.cos(m * Math.PI * (Math.abs(x) - Math.abs(y))),
     modes: [[3,5],[4,5],[5,6],[2,7],[6,7],[3,7]],
   },
+  /* ---- 37 more families (49 total). Same contract as above: field(x,y,params,t)
+     -> scalar in roughly [-1,1], grains settle on its zero set. Spirals first. ---- */
+  { id: 'spiral', name: 'Spiral',
+    field: (x, y, [arms, a]) => Math.cos(arms * Math.atan2(y, x) - a * Math.PI * Math.sqrt(x*x + y*y)),
+    modes: [[1,3],[2,3],[3,4],[2,5],[4,4],[5,3]] },
+  { id: 'logspiral', name: 'Log spiral',
+    field: (x, y, [arms, a]) => Math.cos(arms * Math.atan2(y, x) - a * Math.log(Math.sqrt(x*x + y*y) + 0.08)),
+    modes: [[2,4],[3,5],[2,7],[4,6],[1,4],[5,8]] },
+  { id: 'vortex', name: 'Vortex',
+    field: (x, y, [k, a]) => Math.sin(k * Math.atan2(y, x) + a * Math.PI * (x*x + y*y)),
+    modes: [[2,2],[3,3],[4,2],[3,4],[5,3]] },
+  { id: 'helix', name: 'Helix',
+    field: (x, y, [arms, a, b]) => {
+      const r = Math.sqrt(x*x + y*y);
+      return Math.cos(arms * Math.atan2(y, x) - a * Math.PI * r) * Math.cos(b * Math.PI * r);
+    },
+    modes: [[2,3,2],[3,4,3],[2,5,3],[4,3,2]] },
+  { id: 'sqspiral', name: 'Square spiral',
+    field: (x, y, [arms, a]) => Math.cos(arms * Math.atan2(y, x) - a * Math.PI * Math.max(Math.abs(x), Math.abs(y))),
+    modes: [[1,3],[2,3],[3,4],[2,5],[4,4]] },
+  { id: 'twist', name: 'Twist',
+    field: (x, y, [n, m, w]) => {
+      const r = Math.sqrt(x*x + y*y), c = Math.cos(w * r), s = Math.sin(w * r);
+      return Math.cos(n * Math.PI * (x*c - y*s)) * Math.cos(m * Math.PI * (x*s + y*c));
+    },
+    modes: [[2,3,1.5],[3,4,2],[2,5,1],[3,3,2.5],[4,5,1.5]] },
+  { id: 'rose', name: 'Rose',
+    field: (x, y, [k, c]) => Math.sqrt(x*x + y*y) - c * Math.abs(Math.cos(k * Math.atan2(y, x) / 2)),
+    modes: [[3,0.9],[4,0.9],[5,0.85],[6,0.8],[7,0.9]] },
+  { id: 'bloom', name: 'Bloom',
+    field: (x, y, [a, k, d]) => Math.cos(a * Math.PI * Math.sqrt(x*x + y*y) * (1 + d * Math.cos(k * Math.atan2(y, x)))),
+    modes: [[3,5,0.3],[4,6,0.25],[3,8,0.2],[5,7,0.2],[4,4,0.35]] },
+  { id: 'wobble', name: 'Wobble',
+    field: (x, y, [k, a, d]) => Math.cos(k * Math.atan2(y, x) + d * Math.sin(a * Math.PI * Math.sqrt(x*x + y*y))),
+    modes: [[4,3,2],[5,4,2.5],[6,3,1.5],[3,5,3],[8,2,2]] },
+  { id: 'web', name: 'Web',
+    field: (x, y, [a, k]) => Math.cos(a * Math.PI * Math.sqrt(x*x + y*y)) - Math.cos(k * Math.atan2(y, x)),
+    modes: [[3,6],[4,8],[3,10],[5,7],[4,12]] },
+  { id: 'spokes', name: 'Spokes',
+    field: (x, y, [k]) => Math.cos(k * Math.atan2(y, x)),
+    modes: [[4],[6],[8],[10],[12],[16]] },
+  { id: 'wheel', name: 'Wheel',
+    field: (x, y, [k, a]) => (Math.cos(k * Math.atan2(y, x)) + Math.cos(a * Math.PI * Math.sqrt(x*x + y*y))) / 2,
+    modes: [[6,2],[8,3],[5,2.5],[10,3],[7,4]] },
+  { id: 'membrane', name: 'Membrane',
+    field: (x, y, [m, a]) => {
+      const r = Math.sqrt(x*x + y*y);
+      return Math.cos(m * Math.atan2(y, x)) * Math.sin(a * Math.PI * r) / (r + 0.25);
+    },
+    modes: [[1,3],[2,3],[3,4],[4,4],[2,5]] },
+  { id: 'drum', name: 'Drum',
+    field: (x, y, [a]) => {
+      const r = Math.sqrt(x*x + y*y);
+      return Math.cos(a * Math.PI * r - Math.PI / 4) / Math.sqrt(r + 0.2);
+    },
+    modes: [[2],[3],[4],[5]] },
+  { id: 'squares', name: 'Squares',
+    field: (x, y, [a]) => Math.cos(a * Math.PI * Math.max(Math.abs(x), Math.abs(y))),
+    modes: [[2],[3],[4],[5]] },
+  { id: 'rounded', name: 'Rounded',
+    field: (x, y, [a]) => Math.cos(a * Math.PI * Math.pow(x*x*x*x + y*y*y*y, 0.25)),
+    modes: [[2],[3],[4],[5]] },
+  { id: 'lens', name: 'Lens',
+    field: (x, y, [a]) => Math.cos(a * Math.PI * (x*x + y*y)),
+    modes: [[1.5],[2.5],[3.5],[5]] },
+  { id: 'saddle', name: 'Saddle',
+    field: (x, y, [a]) => Math.cos(a * Math.PI * (x*x - y*y)),
+    modes: [[1.5],[2.5],[3.5],[5]] },
+  { id: 'hyperbola', name: 'Hyperbola',
+    field: (x, y, [a]) => Math.cos(a * Math.PI * x * y),
+    modes: [[2],[3],[4],[6]] },
+  { id: 'cross', name: 'Cross',
+    field: (x, y, [a, b]) => (Math.cos(a * Math.PI * x) - Math.cos(b * Math.PI * y)) / 2,
+    modes: [[2,3],[3,5],[4,4],[2,5],[3,7]] },
+  { id: 'bricks', name: 'Bricks',
+    field: (x, y, [a, b]) => Math.cos(a * Math.PI * (x + y)) * Math.cos(b * Math.PI * (x - y)),
+    modes: [[1,2],[2,3],[2,2],[3,4],[1,4]] },
+  { id: 'bias', name: 'Bias',
+    field: (x, y, [a, b]) => (Math.cos(a * Math.PI * (x + y)) + Math.cos(b * Math.PI * (x - y))) / 2,
+    modes: [[2,3],[3,4],[3,3],[2,5],[4,5]] },
+  { id: 'plaid', name: 'Plaid',
+    field: (x, y, [a, b, c]) => Math.sin(a * Math.PI * x) * Math.sin(b * Math.PI * y) * Math.sin(c * Math.PI * (x + y)),
+    modes: [[2,3,1],[3,3,2],[2,4,2],[3,5,1],[4,4,1]] },
+  { id: 'triad', name: 'Triad',
+    field: (x, y, [a]) =>
+      Math.cos(a * Math.PI * x) * Math.cos(a * Math.PI * (x / 2 + 0.866 * y)) * Math.cos(a * Math.PI * (x / 2 - 0.866 * y)),
+    modes: [[2],[3],[4],[5]] },
+  { id: 'moire', name: 'Moire',
+    field: (x, y, [a, phi]) =>
+      Math.cos(a * Math.PI * x) * Math.cos(a * Math.PI * (x * Math.cos(phi) + y * Math.sin(phi))),
+    modes: [[6,0.12],[8,0.1],[7,0.18],[10,0.08],[9,0.15]] },
+  { id: 'beats', name: 'Beats',
+    field: (x, y, [a, d]) =>
+      (Math.cos(a * Math.PI * x) + Math.cos((a + d) * Math.PI * x)) *
+      (Math.cos(a * Math.PI * y) + Math.cos((a + d) * Math.PI * y)) / 4,
+    modes: [[5,0.5],[6,0.7],[4,0.4],[7,0.6],[5,1]] },
+  { id: 'tide', name: 'Tide',
+    field: (x, y, [a, b, d]) => Math.cos(a * Math.PI * x + d * Math.sin(b * Math.PI * y)),
+    modes: [[3,2,1.5],[4,3,2],[3,4,1],[5,2,2.5],[4,4,1.5]] },
+  { id: 'waves', name: 'Waves',
+    field: (x, y, [a, b, d]) => Math.sin(a * Math.PI * (y + d * Math.sin(b * Math.PI * x))),
+    modes: [[3,2,0.25],[4,3,0.2],[3,4,0.15],[5,2,0.2],[4,2,0.3]] },
+  { id: 'zigzag', name: 'Zigzag',
+    field: (x, y, [a, d]) => Math.cos(a * Math.PI * (y + d * Math.abs(x))),
+    modes: [[3,0.5],[4,0.6],[5,0.4],[3,1],[6,0.3]] },
+  { id: 'braid', name: 'Braid',
+    field: (x, y, [a, b, d, c]) => Math.cos(a * Math.PI * x) * Math.cos(b * Math.PI * y + d * Math.cos(c * Math.PI * x)),
+    modes: [[2,3,1.5,2],[3,4,2,2],[2,5,1,3],[3,3,2.5,1]] },
+  { id: 'barrings', name: 'Bar rings',
+    field: (x, y, [a, b]) => Math.cos(a * Math.PI * Math.sqrt(x*x + y*y)) * Math.cos(b * Math.PI * x),
+    modes: [[3,2],[4,3],[3,4],[5,2],[4,5]] },
+  { id: 'quad', name: 'Quad',
+    field: (x, y, [a, s]) =>
+      (Math.cos(a * Math.PI * Math.hypot(x - s, y - s)) + Math.cos(a * Math.PI * Math.hypot(x + s, y - s)) +
+       Math.cos(a * Math.PI * Math.hypot(x - s, y + s)) + Math.cos(a * Math.PI * Math.hypot(x + s, y + s))) / 4,
+    modes: [[3,0.6],[4,0.5],[5,0.7],[4,0.8],[6,0.5]] },
+  { id: 'trinity', name: 'Trinity',
+    field: (x, y, [a, s]) => {
+      let sum = 0;
+      for (let i = 0; i < 3; i++){
+        const ang = i * Math.PI * 2 / 3 + Math.PI / 2;
+        sum += Math.cos(a * Math.PI * Math.hypot(x - s * Math.cos(ang), y - s * Math.sin(ang)));
+      }
+      return sum / 3;
+    },
+    modes: [[3,0.5],[4,0.45],[5,0.55],[4,0.65],[6,0.5]] },
+  { id: 'chevron', name: 'Chevron',
+    field: (x, y, [a, d]) => Math.cos(a * Math.PI * (Math.abs(x) + d * y)),
+    modes: [[3,0.5],[4,0.7],[5,0.4],[3,1],[6,0.6]] },
+  { id: 'cell', name: 'Cell',
+    field: (x, y, [a, b]) => Math.sin(a * Math.PI * x) * Math.sin(a * Math.PI * y) + b * Math.cos(a * Math.PI * (x + y) / 2),
+    modes: [[3,0.3],[4,0.4],[5,0.25],[4,0.6],[6,0.3]] },  { id: 'spiralweb', name: 'Spiral web',
+    field: (x, y, [arms, a]) => {
+      const th = Math.atan2(y, x), r = Math.sqrt(x*x + y*y);
+      return (Math.cos(arms * th - a * Math.PI * r) + Math.cos(arms * th + a * Math.PI * r)) / 2;
+    },
+    modes: [[2,3],[3,3],[4,4],[3,5],[5,3]] },
+  { id: 'fan', name: 'Fan',
+    field: (x, y, [k, a]) => Math.cos(k * Math.atan2(y, x)) * Math.cos(a * Math.PI * (x*x + y*y)),
+    modes: [[3,2],[4,2.5],[5,2],[6,3],[4,1.5]] },
 ];
 
 let vizFamilyIdx = 0;                          // current pattern family
