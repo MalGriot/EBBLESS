@@ -8285,7 +8285,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #304, #307 and #308 (folded together: same symptom, likely one regression). Device for #308 not stated.
 
 ### miniplayer-window-fixes: Mini-player window sizing, slower fade, bottom snap, no border
-- **Status:** review
+- **Status:** merged
 - **Branch:** agent/miniplayer-fixes
 - **Priority:** medium
 - **Description:** Mini-player fixes: (1) when it shrinks, the window itself should shrink, not just the player inside it; (2) it fades too soon, wait about a minute of inactivity; (3) resetting the size should anchor to the bottom edge, not snap to the top; (4) remove the window border entirely if the platform allows.
@@ -8310,7 +8310,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #297.
 
 ### lp-game-hide-art-selector: Desktop LP game: album art selector should fade away while playing
-- **Status:** review
+- **Status:** merged
 - **Branch:** agent/lp-selector-fade
 - **Priority:** medium
 - **Description:** Bug: on desktop, the album art style selector stays visible during the LP game. It should fade out while the game is active.
@@ -8319,7 +8319,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #296.
 
 ### library-section-header-clickable: Library section titles: whole word toggles, no arrows
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug: on desktop the dropdown arrow wraps to a different line than the library section title. Make the whole title clickable to fold/unfold the section and remove the arrows. Restore section titles to the same size as mobile.
 - **Touches:** library section headers (library-collapsible-sections).
