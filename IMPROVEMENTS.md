@@ -8189,7 +8189,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #286. Related to the background auto-advance work in bld-background-tab-autoadvance but iPhone-specific.
 
 ### ads-label-desktop-position: "Ads playing?" button sits too close to the bottom of the screen on desktop
-- **Status:** shipped
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug: on desktop the "Ads playing?" report button is crowded against the bottom edge. Give it proper spacing.
 - **Touches:** ads report button (merged ads-button-extended-mix), desktop layout.
@@ -8197,7 +8197,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #290.
 
 ### previous-track-instant: Previous track should load as instantly as next
-- **Status:** approved
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Going back to the previous song should be as instant as skipping forward (keep the previous track warm/preloaded).
 - **Touches:** prev/next preload logic.
@@ -8237,7 +8237,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #292.
 
 ### library-window-title: Library window should be titled "Library" like the queue window
-- **Status:** shipped
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a "Library" title to the library panel, matching how the queue panel is labeled.
 - **Touches:** library panel header.
@@ -8253,7 +8253,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #288. Extends merged library-hold-add-to-queue (tracks only).
 
 ### library-now-playing-highlight: Highlight the playing playlist in the library; blinking speaker by the playing song
-- **Status:** approved
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When a playlist is playing, highlight it in the library. The playing song gets a slowly blinking speaker icon next to it in the library. Also show the playing playlist's name somewhere in the queue window.
 - **Touches:** renderLibrary, queue panel header.
@@ -8261,7 +8261,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #287.
 
 ### album-art-mode-tap: Album art style button cycles modes on tap, no dropdown
-- **Status:** shipped
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Pressing the album art style button should just switch to the next mode directly instead of opening a menu.
 - **Touches:** album art mode button/menu.
@@ -8294,7 +8294,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #305.
 
 ### silence-restart-at-zero: After sitting silent, the song doesn't restart from the beginning
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug: when music has sat paused/silent for a while, it's supposed to restart the track at 0:00 on resume, but it doesn't.
 - **Touches:** resume-after-idle logic.
@@ -8302,7 +8302,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #295. Title only.
 
 ### fullscreen-controls-collide-title: Desktop fullscreen: player controls overlap the title and artist
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug: in desktop fullscreen the player controls get pushed up and collide with the song title and artist. Keep them clearly separated.
 - **Touches:** desktop fullscreen layout (merged fullscreen-player-controls).
@@ -8335,7 +8335,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issues #299 and #298 (bio half of #298 folded here).
 
 ### artist-singles-features-albums: Artist albums should include singles and features
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** When an artist is loaded, besides their albums, add an album collecting their singles and one collecting songs where they're the featured artist.
 - **Touches:** artist album fill (merged library-artists-section).
@@ -8343,7 +8343,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #298 (albums half; base "add all albums" already merged).
 
 ### cassette-animation-vibrance: Cassette animation: brightest tapes first, as vibrant as the art
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the third desktop cassette animation the tapes go from most vibrant to dullest; keep the animation but reverse it (most vibrant first, least vibrant last). Make the tapes as vibrant as the album art. On mobile, the third animation should be the other two animations combined.
 - **Touches:** cassette fullscreen animations.
@@ -8351,7 +8351,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #306.
 
 ### cymatics-more-patterns: More cymatics patterns (49, including a spiral)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Expand the cymatics visualizer to 49 patterns, including at least one spiral.
 - **Touches:** cymatics visualizer.
@@ -8359,7 +8359,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #303.
 
 ### visualizer-rotate-button: Button that makes the visualizer rotate
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add a button that sets the visualizer slowly rotating.
 - **Touches:** visualizer controls.
@@ -8373,3 +8373,11 @@ Add entries in this shape:
 - **Touches:** new feature.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #301. Big scope; candidate for archived until after MVP.
+
+### cymatics-rotation-coverage: Cymatics don't cover the whole area when they rotate
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug: when the cymatics visualizer rotates, the patterns don't fill the entire screen area. They should maintain full coverage while rotating.
+- **Touches:** cymatics visualizer rotation.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #309.
