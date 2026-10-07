@@ -1395,7 +1395,10 @@ body.queue-over-fs #queue-scrim{bottom:0}
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
 #flow-layer .flow-viz #vizSpeedBtn{position:absolute;right:58px;bottom:calc(16px + var(--safe-b));z-index:6;
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
+#flow-layer .flow-viz #vizRotateBtn{position:absolute;right:112px;bottom:calc(16px + var(--safe-b));z-index:6;
+  opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
 #flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
+#flow-layer.chrome-hidden .flow-viz #vizRotateBtn,
 #flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
 #flow-layer .flow-meta{text-align:center;position:relative;z-index:5;pointer-events:none;width:min(420px,80vw);margin-left:auto;margin-right:auto}
 #flow-layer .flow-meta .title-row{display:flex;flex-direction:column-reverse;align-items:center;justify-content:center;gap:6px}
@@ -3240,6 +3243,9 @@ body.week-up-on{overflow:hidden}
             </button>
             <button type="button" class="viz-ctl-btn viz-auto-btn" id="vizAutoBtn" title="Hold this pattern" aria-label="Toggle holding the current pattern">∞</button>
             <button type="button" class="viz-ctl-btn viz-speed-btn" id="vizSpeedBtn" title="Visualizer speed" aria-label="Change visualizer speed">1x</button>
+            <button type="button" class="viz-ctl-btn" id="vizRotateBtn" title="Slowly rotate" aria-label="Toggle slow visualizer rotation" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></svg>
+            </button>
           </div>
           <div class="lyrics-wrap" id="lyricsWrap"><div class="lyrics-scroller" id="lyricsScroller"></div></div>
           <div class="chap-panel" id="chapPanel" role="region" aria-label="Chapters"><div class="chap-list" id="chapList"></div></div>
@@ -4584,6 +4590,7 @@ const LS_CROSSFADE = 'ebbless:crossfade';
 const LS_VIZ = 'ebbless:visualizer';
 const LS_VIZ_HOLD = 'ebbless:vizHold';     // true = stay within the current pattern family
 const LS_VIZ_SPEED = 'ebbless:vizSpeed';
+const LS_VIZ_ROTATE = 'ebbless:vizRotate'; // true = slowly rotate the visualizer
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
 const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'artists' | 'albums' | 'podcasts'
@@ -4673,7 +4680,7 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog'];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog'];
 const LS_PLAY_LOG = 'ebbless:playLog';   // see PLAY LOG
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
@@ -5115,6 +5122,7 @@ function refreshSyncedSettings(){
     () => { crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {})); if (!crossfadePrefs.on && cancelCrossfade()) schedulePreload(state.queuePos); renderCrossfadeUI(); },
     () => { levelOn = lsGet(LS_LEVEL, true) !== false; renderLevelUI(); reapplyLevel(); },
     () => vizSetHoldMode(lsGet(LS_VIZ_HOLD, false) === true),
+    () => vizSetRotate(lsGet(LS_VIZ_ROTATE, false) === true),
     () => { const v = lsGet(LS_VIZ_SPEED, 1); vizSetSpeed(VIZ_SPEEDS.includes(v) ? v : 1); },
     () => { const m = lsGet(LS_VIZ, 'art'); if (['art', 'viz', 'lyrics'].includes(m)) setVisualMode(m); },
     () => { const s = lsGet('ebbless:artstyle', 'default'); if (['default', 'record', 'cassette'].includes(s)) setArtStyle(s); },
@@ -6401,7 +6409,7 @@ const shuffleBtn = $('shuffleBtn'), repeatBtn = $('repeatBtn'), repeatOneBadge =
 const fsBtn = $('fsBtn'), reportMatchBtn = $('reportMatchBtn'), flowReportBtn = $('flowReportBtn'), playerLikeBtn = $('playerLikeBtn'), playerDeclineBtn = $('playerDeclineBtn');
 const desktopFsExitBtn = $('desktopFsExitBtn');
 const vizCanvas = $('vizCanvas'), artworkWrap = $('artworkWrap');
-const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn');
+const vizNextBtn = $('vizNextBtn'), vizAutoBtn = $('vizAutoBtn'), vizSpeedBtn = $('vizSpeedBtn'), vizRotateBtn = $('vizRotateBtn');
 const visualTabs = document.querySelectorAll('#visualTabs .v-tab[data-mode]');
 const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'), miniArtist = $('miniArtist'),
@@ -15311,6 +15319,19 @@ function vizSetSpeed(v){
 }
 vizSetSpeed(vizSpeed);
 
+/* ---------- slow rotation toggle: spins the grain field around the center,
+   one full turn per ~3 min at 1x (scales with the speed control). ---------- */
+const VIZ_ROTATE_MS_PER_TURN = 180000;
+let vizRotateOn = lsGet(LS_VIZ_ROTATE, false) === true;
+let vizAngle = 0;
+function vizSetRotate(on){
+  vizRotateOn = !!on;
+  lsSet(LS_VIZ_ROTATE, vizRotateOn);
+  vizRotateBtn.classList.toggle('is-active', vizRotateOn);
+  vizRotateBtn.setAttribute('aria-pressed', vizRotateOn ? 'true' : 'false');
+}
+vizSetRotate(vizRotateOn);
+
 // Every transition also rolls a fresh set of cosmetic params - jitter/step
 // scale, hold duration, grain size - so the motion (not just the plate
 // pattern) drifts cycle to cycle. Color stays on brand (--accent). A/B are
@@ -15375,6 +15396,8 @@ function vizDraw(t){
   const h = vizCanvas.height / (window.devicePixelRatio || 1);
   vizCtx2d.clearRect(0, 0, w, h);
 
+  if (vizRotateOn) vizAngle = (vizAngle + dt / VIZ_ROTATE_MS_PER_TURN * Math.PI * 2) % (Math.PI * 2);
+  const rotCos = Math.cos(vizAngle), rotSin = Math.sin(vizAngle);
   vizElapsed += dt;
   const tSec = vizElapsed / 1000;
   const holdMs = vizPlaying ? vizParamsA.holdMs : vizParamsA.holdMs * 3;
@@ -15430,8 +15453,8 @@ function vizDraw(t){
     vizGx[i] = x; vizGy[i] = y;
 
     const settle = 1 - amp;
-    const px = cx + x * radius;
-    const py = cy + y * radius;
+    const px = cx + (x * rotCos - y * rotSin) * radius;
+    const py = cy + (x * rotSin + y * rotCos) * radius;
     vizCtx2d.globalAlpha = 0.12 + 0.75 * (settle * settle);
     vizCtx2d.beginPath();
     vizCtx2d.arc(px, py, r * (0.65 + 0.85 * settle), 0, Math.PI * 2);
@@ -15457,6 +15480,7 @@ function vizSetPlaying(isPlaying){
 vizNextBtn.addEventListener('click', (e) => { e.stopPropagation(); vizAdvancePattern(); });
 vizAutoBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetHoldMode(!vizHoldMode); });
 vizAutoBtn.classList.toggle('is-active', vizHoldMode);
+vizRotateBtn.addEventListener('click', (e) => { e.stopPropagation(); vizSetRotate(!vizRotateOn); });
 vizSpeedBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   const idx = VIZ_SPEEDS.indexOf(vizSpeed);
@@ -19658,6 +19682,7 @@ const flowVizWrap = $('flowVizWrap');
 const vizCanvasHome = vizCanvas.parentElement, vizCanvasAnchor = vizCanvas.nextElementSibling;
 const vizAutoBtnHome = vizAutoBtn.parentElement, vizAutoBtnAnchor = vizAutoBtn.nextElementSibling;
 const vizSpeedBtnHome = vizSpeedBtn.parentElement, vizSpeedBtnAnchor = vizSpeedBtn.nextElementSibling;
+const vizRotateBtnHome = vizRotateBtn.parentElement, vizRotateBtnAnchor = vizRotateBtn.nextElementSibling;
 /* the real #artRecord / #artCassette elements (not copies) get moved into
    flowArtWrap while flow mode is open on that art style, mirroring how the
    viz canvas above is relocated - so the same spinning-disc / cassette-reel
@@ -19697,7 +19722,7 @@ function syncFlowArtStyle(){
 /* mount/unmount the current visual (art / cymatics / lyrics) in #flow-layer */
 function flowMountVisual(){
   const showViz = visualMode === 'viz', showLyrics = visualMode === 'lyrics';
-  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); flowVizWrap.appendChild(vizSpeedBtn); }
+  if (showViz){ flowVizWrap.appendChild(vizCanvas); flowVizWrap.appendChild(vizAutoBtn); flowVizWrap.appendChild(vizSpeedBtn); flowVizWrap.appendChild(vizRotateBtn); }
   if (showLyrics) flowLyricsWrap.appendChild(lyricsWrap);
   flowArtWrap.hidden = showViz || showLyrics;
   flowVizWrap.hidden = !showViz;
@@ -19713,6 +19738,7 @@ function flowUnmountVisual(){
     // (its next sibling) IS vizSpeedBtn, which was also moved out to the
     // flow layer - restoring in the original order throws a NotFoundError
     // because the anchor isn't back in the home container yet.
+    vizRotateBtnHome.insertBefore(vizRotateBtn, vizRotateBtnAnchor);
     vizSpeedBtnHome.insertBefore(vizSpeedBtn, vizSpeedBtnAnchor);
     vizAutoBtnHome.insertBefore(vizAutoBtn, vizAutoBtnAnchor);
     vizResize();
