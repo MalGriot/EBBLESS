@@ -9347,7 +9347,7 @@ function setArtistAlbumsPending(artistId, list){
   if (list && list.length) all[artistId] = list; else delete all[artistId];
   lsSet(LS_ARTIST_ALBUMS_PENDING, all);
 }
-async function addArtistAlbumsToLibrary(pl, resume){
+async function addArtistAlbumsOnly(pl, resume){
   if (artistAlbumsInFlight.has(pl.id)) return;
   artistAlbumsInFlight.add(pl.id);
   try{
@@ -9386,6 +9386,88 @@ async function addArtistAlbumsToLibrary(pl, resume){
     }
   } finally { artistAlbumsInFlight.delete(pl.id); }
 }
+// Geethub #298: besides their albums, an artist also gets one album of their
+// singles and one of the songs they're featured on (credited on, but not the
+// main artist). Both are built from iTunes' keyless lookup/search as 'custom'
+// entries marked as albums, with unmatched rows linked in the background
+// (rematchUnmatched). Stamped extrasAdded on the artist's entry so it runs
+// once, and skipped when the library already holds that set for the artist.
+const ARTIST_EXTRAS_MAX = 50;
+async function itunesArtistExtras(pl){
+  const want = normalizeArtistQuery(pl.name);
+  let artistId, storefront = 'us';
+  if (pl.type === 'am_artist'){
+    const idx = pl.id.indexOf(':');
+    storefront = pl.id.slice(0, idx); artistId = pl.id.slice(idx + 1);
+  } else {
+    if (want.length < 2) return { singles: [], features: [] };
+    const res = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: pl.name, entity: 'musicArtist', limit: '5' }));
+    if (!res.ok) throw new Error('iTunes search ' + res.status);
+    const hit = ((await res.json()).results || []).find(a => a && a.artistId && normalizeArtistQuery(a.artistName) === want);
+    if (!hit) return { singles: [], features: [] };
+    artistId = String(hit.artistId);
+  }
+  const get = async (path, params) => {
+    const r = await fetch('https://itunes.apple.com/' + path + '?' + new URLSearchParams(Object.assign({ country: storefront }, params)));
+    if (!r.ok) throw new Error('iTunes ' + path + ' ' + r.status);
+    return (await r.json()).results || [];
+  };
+  const row = (r) => ({
+    title: String(r.trackName || ''), artist: String(r.artistName || ''), videoId: null, matchedTitle: '', channel: '', plays: 0, duration: 0,
+    art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : null,
+    srcDuration: Math.round((r.trackTimeMillis || 0) / 1000) || null,
+  });
+  const collect = (rows, keep) => {
+    const seen = new Set(), out = [];
+    rows.forEach(r => {
+      if (!r || r.wrapperType !== 'track' || r.kind !== 'song' || !r.trackName || !keep(r)) return;
+      const key = normalizeArtistQuery(r.trackName);
+      if (!key || seen.has(key)) return;
+      seen.add(key); out.push(r);
+    });
+    out.sort((x, y) => String(y.releaseDate || '').localeCompare(String(x.releaseDate || '')));
+    return out.slice(0, ARTIST_EXTRAS_MAX).map(row);
+  };
+  const albums = await get('lookup', { id: artistId, entity: 'album', limit: '200' });
+  const singleIds = albums.filter(r => r && r.wrapperType === 'collection' && String(r.artistId) === artistId && r.collectionId
+    && / - Single$/i.test(String(r.collectionName || '')) && !/\binstrumentals?\b/i.test(String(r.collectionName || '')))
+    .slice(0, 100).map(r => r.collectionId);
+  const singleRows = singleIds.length ? await get('lookup', { id: singleIds.join(','), entity: 'song', limit: '200' }) : [];
+  const singles = collect(singleRows, r => String(r.artistId) === artistId);
+  const featRows = await get('search', { term: pl.name, entity: 'song', limit: '200' });
+  const features = collect(featRows, r => String(r.artistId) !== artistId && songCreditsArtist(r.artistName, want));
+  return { singles, features };
+}
+async function addArtistExtras(pl){
+  const cur = getCachedPlaylist(pl.id);
+  // Albums first: an artist whose album lookup failed isn't stamped yet.
+  if (!cur || !isSaved(pl.id) || !cur.albumsAdded || cur.extrasAdded || artistAlbumsInFlight.has(pl.id)) return;
+  artistAlbumsInFlight.add(pl.id);
+  try{
+    const extras = await itunesArtistExtras(pl).catch(() => null);
+    const fresh = getCachedPlaylist(pl.id);
+    if (!extras || !fresh || !isSaved(pl.id)) return;
+    fresh.extrasAdded = true;
+    lsSet(LS_PL(pl.id), fresh);
+    const made = [];
+    [['singles', 'Singles by ' + pl.name, extras.singles], ['features', 'Featuring ' + pl.name, extras.features]].forEach(([kind, name, tracks]) => {
+      if (!tracks.length) return;
+      const have = getLibrary().some(id => { const p = getCachedPlaylist(id); return !!p && p.artistSet && p.artistSet.of === pl.id && p.artistSet.kind === kind; });
+      if (have) return;
+      const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const set = { id, type: 'custom', name, image: tracks.find(t => t.art) ? tracks.find(t => t.art).art : null, tracks, ts: Date.now(), rematchUnmatched: true, albumOverride: true, artistSet: { of: pl.id, kind } };
+      persistPlaylistObj(set);
+      saveToLibrary(id);
+      made.push(id);
+    });
+    if (made.length) rerenderLibraryKeepPanel();
+    for (const id of made) await rematchUnmatchedInBackground(id);
+  } finally { artistAlbumsInFlight.delete(pl.id); }
+}
+async function addArtistAlbumsToLibrary(pl, resume){
+  await addArtistAlbumsOnly(pl, resume);
+  await addArtistExtras(pl);
+}
 // On launch, once startup (and, when signed in, the first profile sync) has
 // settled: finish fills an earlier session left unfinished, then give
 // artists saved before #293 (never stamped albumsAdded) their albums. One
@@ -9404,6 +9486,7 @@ async function runArtistAlbumsBackfill(){
     const resume = lsGet(LS_ARTIST_ALBUMS_PENDING, {})[id];
     if (Array.isArray(resume) && resume.length) await addArtistAlbumsToLibrary(pl, resume);
     else if (!pl.albumsAdded) await addArtistAlbumsToLibrary(pl);
+    else if (!pl.extrasAdded) await addArtistExtras(pl);
   }
 }
 
