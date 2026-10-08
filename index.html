@@ -8923,6 +8923,46 @@ function applyRelinkChoice(plId, trackIdx, candidate){
     syncWrongTrackFlagUI(t);
   }
   if (!keepsNativeArt) refreshRelinkedTrackArt(plId, trackIdx, t);
+  relinkAlbumSiblings(plId, trackIdx, candidate);
+}
+
+// Geethub #316: fixing one song in an album points the album's other
+// unplayable songs (no videoId) at the same source (same channel/uploader),
+// automatically. Only tracks with no working link are touched; a song with
+// a source already is never overridden, and a song the source doesn't have
+// stays unplayable. Best-effort and silent per song.
+async function relinkAlbumSiblings(plId, trackIdx, candidate){
+  const pl0 = getCachedPlaylist(plId);
+  const channel = candidate && candidate.channel;
+  if (!pl0 || !channel || !isAlbumEntry(pl0)) return;
+  const sc = isSoundCloudVideoId(candidate.videoId);
+  const todo = [];
+  pl0.tracks.forEach((x, i) => { if (i !== trackIdx && x && !x.videoId && !x.podcast) todo.push(i); });
+  let fixed = 0;
+  for (const i of todo){
+    const x = pl0.tracks[i];
+    let cands = [];
+    try {
+      if (sc) cands = await searchSoundCloudTracks([x.title, x.artist].filter(Boolean).join(' '), RELINK_SC_CANDIDATE_COUNT);
+      else {
+        const d = await searchYouTube(x.title, x.artist, x.srcDuration ? x.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT);
+        cands = (d.candidates && d.candidates.length) ? d.candidates : (d.videoId ? [d] : []);
+      }
+    } catch(e){ continue; }
+    const hit = cands.find(c => c && c.videoId && c.channel === channel);
+    if (!hit) continue;
+    // Re-read so edits made while searching aren't clobbered.
+    const pl = playlistById(plId);
+    const t = pl && pl.tracks[i];
+    if (!t || t.videoId || t.title !== x.title || t.artist !== x.artist) continue;
+    t.videoId = hit.videoId; t.matchedTitle = hit.title || ''; t.channel = hit.channel || ''; t.duration = hit.duration || 0;
+    persistPlaylistObj(pl);
+    if (state.playlist && state.playlist.id === plId) state.playlist = pl;
+    fixed++;
+  }
+  if (!fixed) return;
+  renderLibrary();
+  showToast(fixed === 1 ? 'Fixed 1 more song from the same source' : 'Fixed ' + fixed + ' more songs from the same source');
 }
 
 // renderLibrary() doesn't touch the open tracklist panel (it's built once
