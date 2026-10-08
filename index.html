@@ -391,6 +391,13 @@ body.onb-active .paste-guide{display:none}
 }
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
 .lib-grid.is-compact{grid-template-columns:repeat(3,1fr);gap:14px 12px}
+.lib-artist-divider{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;margin-top:6px;background:none;border:0;border-bottom:1px solid var(--line, rgba(255,255,255,.1));color:var(--text);font:inherit;font-weight:600;text-align:left;cursor:pointer}
+.lib-artist-divider:first-child{margin-top:0}
+.lib-artist-divider .chev{flex:none;width:14px;height:14px;transition:transform .15s}
+.lib-artist-divider[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.lib-artist-divider .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-artist-divider .ct{flex:none;font-weight:400;opacity:.6;font-size:.85em}
+.lib-grid.is-list .lib-artist-divider{margin-top:8px}
 .lib-card{position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
 .lib-card .art{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);
@@ -7272,6 +7279,21 @@ function markNowPlaying(){
   document.querySelectorAll('.lib-card').forEach(c => c.classList.toggle('is-now-playing', !!e && c.dataset.plId === e.plId));
   document.querySelectorAll('.track-row[data-pl-id]').forEach(r => r.classList.toggle('is-now-playing', !!e && r.dataset.plId === e.plId && +r.dataset.idx === e.idx));
 }
+// #311: albums are grouped in the library by the artist they were imported
+// under. Albums an artist's page filled in carry importedUnder; an artist's
+// singles/features sets point at their artist; anything else falls back to
+// the first-named artist on its first song.
+const LS_ALBUM_ARTIST_FOLDED = 'ebbless:albumArtistFolded'; // { artistKey: true }
+function albumArtistName(pl){
+  if (!pl) return '';
+  if (pl.importedUnder) return pl.importedUnder;
+  if (pl.artistSet){
+    const owner = getCachedPlaylist(pl.artistSet.of);
+    if (owner && owner.name) return owner.name;
+  }
+  const t = (pl.tracks || []).find(x => x && x.artist);
+  return t ? stripTopicSuffix(t.artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim() : '';
+}
 function renderLibrary(){
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
@@ -7308,6 +7330,7 @@ function renderLibrary(){
   libSearchTracksList.innerHTML = '';
   let searchTrackCount = 0;
   let artistCount = 0, albumCount = 0, podcastCount = 0;
+  const albumGroups = new Map(); // artistKey -> { name, cards }
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
@@ -7493,7 +7516,13 @@ function renderLibrary(){
       card.classList.add('is-refreshing');
     }
     const info = document.createElement('div'); info.className = 'info';
-    info.appendChild(name); if (desc) info.appendChild(desc); info.appendChild(count);
+    info.appendChild(name); if (desc) info.appendChild(desc);
+    const albumArtist = isAlbum ? albumArtistName(pl) : '';
+    if (albumArtist){
+      const by = document.createElement('div'); by.className = 'count lib-album-artist'; by.textContent = albumArtist;
+      info.appendChild(by);
+    }
+    info.appendChild(count);
 
     const rowActions = document.createElement('div');
     rowActions.className = 'row-actions';
@@ -7523,12 +7552,39 @@ function renderLibrary(){
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
       });
     }
-    (isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : isAlbum ? libraryAlbumsGrid : libraryGrid).appendChild(card);
+    if (isAlbum){
+      const gk = artistNameKey(albumArtist) || '_';
+      if (!albumGroups.has(gk)) albumGroups.set(gk, { name: albumArtist || 'Other', cards: [] });
+      albumGroups.get(gk).cards.push(card);
+    } else {
+      (isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
+    }
     } catch(e){
       console.warn('[ebbless] dropping corrupted library entry', id, e);
       lsDel(LS_PL(id));
     }
   });
+  if (albumGroups.size){
+    const folded = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+    [...albumGroups.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
+      // while searching, matching albums always show
+      const open = !!searchQ || !folded[gk];
+      const div = document.createElement('button');
+      div.type = 'button'; div.className = 'lib-artist-divider';
+      div.setAttribute('aria-expanded', String(open));
+      div.innerHTML = '<svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg><span class="nm"></span><span class="ct"></span>';
+      div.querySelector('.nm').textContent = g.name;
+      div.querySelector('.ct').textContent = g.cards.length;
+      div.addEventListener('click', () => {
+        const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+        if (f[gk]) delete f[gk]; else f[gk] = true;
+        lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+        rerenderLibraryKeepPanel();
+      });
+      libraryAlbumsGrid.appendChild(div);
+      if (open) g.cards.forEach(c => libraryAlbumsGrid.appendChild(c));
+    });
+  }
   libraryArtistsHead.classList.toggle('hidden', artistCount === 0);
   libraryArtistsGrid.classList.toggle('hidden', artistCount === 0);
   libraryAlbumsHead.classList.toggle('hidden', albumCount === 0);
@@ -7679,7 +7735,30 @@ function toggleLibraryPlaylistPanel(id){
     });
   }
   // an artist's own page also gets their bio, facts and links on top (#298)
-  if (isArtistEntry(pl)) loadArtistInfoInto(id, pl.name, (pl.tracks.find(t => t.title) || {}).title, false);
+  if (isArtistEntry(pl)){
+    const mine = orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); });
+    if (mine.length){
+      const box = document.createElement('div');
+      const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Albums';
+      box.appendChild(lbl);
+      mine.forEach(aid => {
+        const a = getCachedPlaylist(aid);
+        const row = document.createElement('div'); row.className = 'track-row';
+        const img = document.createElement('img');
+        const first = (a.tracks || []).find(t => t && t.art);
+        if (a.image) attachArtworkFallback(img, { art: a.image }); else if (first) attachArtworkFallback(img, first);
+        const meta = document.createElement('div'); meta.className = 'meta';
+        const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = a.name;
+        const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = (a.tracks || []).length + ((a.tracks || []).length === 1 ? ' song' : ' songs');
+        meta.appendChild(ttl); meta.appendChild(sub);
+        row.appendChild(img); row.appendChild(meta);
+        row.addEventListener('click', () => toggleLibraryPlaylistPanel(aid));
+        box.appendChild(row);
+      });
+      libplBody.prepend(box);
+    }
+    loadArtistInfoInto(id, pl.name, (pl.tracks.find(t => t.title) || {}).title, false);
+  }
 
   // phase-1 fullscreen: the panel sits over the library drawer, so make
   // sure that drawer is in (it closes the panel again when toggled off)
@@ -9751,6 +9830,8 @@ async function addArtistAlbumsOnly(pl, resume){
       if (!alreadyHave(a)){
         try{
           await resolvePlaylist(a.id, 'am_album', () => {});
+          const added = getCachedPlaylist(a.id);
+          if (added){ added.importedUnder = pl.name; lsSet(LS_PL(a.id), added); }
           saveToLibrary(a.id);
           rerenderLibraryKeepPanel();
         } catch(e){ /* best-effort, like seedStarterLibrary - a failed album is just skipped */ }
