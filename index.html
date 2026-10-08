@@ -17747,7 +17747,11 @@ function loadIndex(pos, autoplay, opts){
 const PAUSE_FADE_OUT_MS = 600;
 // No fade while casting - the receiver has its own volume, so a fade would
 // only delay the pause.
-function pauseFadeOutMs(){ return castActive() ? 1 : PAUSE_FADE_OUT_MS; }
+// iPhone (#313): iOS ignores setVolume, so the fade is inaudible there - and
+// the YouTube player turns a setVolume(0) into a muted <video> that iOS won't
+// unmute outside a tap, so after pause > play the clock ran in silence. No
+// volume fade on iOS: pause is immediate and play never drops the volume to 0.
+function pauseFadeOutMs(){ return castActive() || isIOS ? 1 : PAUSE_FADE_OUT_MS; }
 const PAUSE_FADE_IN_MS = 320;
 const PAUSE_FADE_TICK_MS = 16;
 // how long a fade-in holds at silence waiting for the player to report it's
@@ -17771,7 +17775,7 @@ function runPlayFade(deck, dir){
     if (left > 0) dur = Math.max(1, Math.min(dur, left - 250));
   }
   const f = playFade = { deck, dir, gain: from, qpos: state.queuePos, gen: deck.gen, start: Date.now(), waitStart: Date.now(), timer: null };
-  const setVol = (g) => { if (deck.player && deck.player.setVolume) deck.player.setVolume(Math.round(effectiveVolume(deck) * g)); };
+  const setVol = (g) => { if (!isIOS && deck.player && deck.player.setVolume) deck.player.setVolume(Math.round(effectiveVolume(deck) * g)); };
   const tick = () => {
     if (playFade !== f) return;
     // The track changed underneath (next/prev/queue click) or a crossfade
@@ -17898,7 +17902,7 @@ function fadeInAndPlay(deck){
   }
   if (deck === activeDeck() && deckLooksDead(deck) && rebuildActiveDeck()) return;
   const wasFadingOut = isFadingOut(deck);
-  if (!wasFadingOut && deck.player.setVolume) deck.player.setVolume(0);
+  if (!wasFadingOut && !isIOS && deck.player.setVolume) deck.player.setVolume(0);
   if (deck.player.playVideo) deck.player.playVideo();
   setPlayingUI(true);
   runPlayFade(deck, 'in');
