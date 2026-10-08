@@ -7773,9 +7773,44 @@ function artistInfoLink(rel){
   }
   return null;
 }
+// Artist info comes from the worker's shared cache (/artistinfo), is kept on
+// this device for a month, and only falls back to asking MusicBrainz and
+// friends directly if the worker can't be reached.
+const LS_ARTIST_INFO = 'ebbless:artistInfo'; // { nameKey: { ts, info } }
+const ARTIST_INFO_TTL_MS = 30 * 86400 * 1000, ARTIST_INFO_LS_MAX = 150;
 function fetchArtistInfo(name, title){
   const ck = artistNameKey(name);
   if (artistInfoCache.has(ck)) return artistInfoCache.get(ck);
+  const stored = lsGet(LS_ARTIST_INFO, {})[ck];
+  if (stored && stored.info && Date.now() - stored.ts < ARTIST_INFO_TTL_MS){
+    const hit = Promise.resolve(stored.info);
+    artistInfoCache.set(ck, hit);
+    return hit;
+  }
+  const p = (async () => {
+    let info;
+    try{
+      const res = await fetch(BACKEND + '/artistinfo?' + new URLSearchParams({ name, title: title || '' }));
+      if (!res.ok) throw new Error('artistinfo ' + res.status);
+      info = (await res.json()).info || null;
+    } catch(e){
+      return fetchArtistInfoDirect(name, title);
+    }
+    if (info){
+      const all = lsGet(LS_ARTIST_INFO, {});
+      all[ck] = { ts: Date.now(), info };
+      const keys = Object.keys(all);
+      if (keys.length > ARTIST_INFO_LS_MAX) keys.sort((a, b) => all[a].ts - all[b].ts).slice(0, keys.length - ARTIST_INFO_LS_MAX).forEach(k => delete all[k]);
+      lsSet(LS_ARTIST_INFO, all);
+    }
+    return info;
+  })();
+  artistInfoCache.set(ck, p);
+  p.catch(() => artistInfoCache.delete(ck));
+  return p;
+}
+function fetchArtistInfoDirect(name, title){
+  const ck = artistNameKey(name);
   const p = (async () => {
     let mbid = await findMbArtistId(name, title);
     const primary = primaryArtistKey(name);
