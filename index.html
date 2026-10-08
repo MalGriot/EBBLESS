@@ -6577,7 +6577,12 @@ function setView(name){
 let historyBuffered = false;
 let inPopStateNav = false;
 function isAwayFromRest(){
-  return state.currentView !== 'player' || state.queueOpen || !!openLibraryPanelId;
+  return state.currentView !== 'player' || state.queueOpen || !!openLibraryPanelId || isFullscreenOpen();
+}
+// Any fullscreen visual layer (flow overlay, lyrics fullscreen, split-desktop
+// panel-slide fullscreen). lyricsFsLayer is declared later; only called after load.
+function isFullscreenOpen(){
+  return state.flowOpen || state.deskFsOpen || lyricsFsLayer.classList.contains('is-open');
 }
 function syncHistoryBuffer(){
   if (inPopStateNav) return;
@@ -6594,13 +6599,26 @@ window.addEventListener('popstate', () => {
   if (!isAwayFromRest()) return; // already at rest: let the default back navigation proceed
   inPopStateNav = true;
   try {
-    if (state.queueOpen) closeQueuePanel(false);
-    if (openLibraryPanelId) closeLibraryPlaylistPanel();
-    if (state.currentView !== 'player') setView('player');
+    if (state.queueOpen){
+      closeQueuePanel(false);
+      if (openLibraryPanelId) closeLibraryPlaylistPanel();
+      if (state.currentView !== 'player') setView('player');
+    } else if (openLibraryPanelId){
+      // open playlist: back returns to the library list, not the player
+      closeLibraryPlaylistPanel();
+    } else if (isFullscreenOpen()){
+      // fullscreen visual: back exits fullscreen first (one layer at a time)
+      leaveFullscreen(false);
+    } else if (state.currentView !== 'player'){
+      setView('player');
+    }
   } finally {
     inPopStateNav = false;
     historyBuffered = false; // the buffered entry was just consumed by this back navigation
   }
+  // Still away from rest (library list, or another fullscreen layer): buffer a
+  // fresh entry so the next back press steps further toward the player.
+  syncHistoryBuffer();
 });
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
@@ -6782,7 +6800,7 @@ function closeDesktopFs(){
     .forEach(b => b.classList.remove('is-active'));
   // Skip when nothing was open: updateSplitDesktop() calls this at startup on
   // narrow screens, before fsIdleTimer is declared (TDZ crash).
-  if (wasOpen){ armFsIdleTimer(); csStackSync(); }
+  if (wasOpen){ armFsIdleTimer(); csStackSync(); syncHistoryBuffer(); }
 }
 function toggleDesktopFs(){
   if (state.deskFsOpen){ closeDesktopFs(); return; }
@@ -6799,6 +6817,7 @@ function toggleDesktopFs(){
   closeLibraryPlaylistPanel();
   armFsIdleTimer();
   csStackSync();
+  syncHistoryBuffer();
 }
 // Phase 1 = the panel-slide fullscreen alone, with nothing (the immersive
 // flow overlay, lyrics fullscreen, Settings) on top of it. Only here do the
@@ -20102,6 +20121,7 @@ function openFlow(immersive = document.body.classList.contains('split-desktop'))
   if (immersive) requestDocFs();
   armFsIdleTimer();
   csStackSync();
+  syncHistoryBuffer();
 }
 function closeFlow(){
   state.flowOpen = false;
@@ -20116,6 +20136,7 @@ function closeFlow(){
     closeArtStyleMenu();
   }
   csStackSync();
+  syncHistoryBuffer();
 }
 // flow-mode X: one click all the way back to the main screen, even from the
 // immersive phase that was entered from split-desktop fullscreen (#157)
@@ -20564,10 +20585,12 @@ const lyricsWrapHome = lyricsWrap.parentElement, lyricsWrapAnchor = lyricsWrap.n
 function openLyricsFs(){
   lyricsFsBody.appendChild(lyricsWrap);
   lyricsFsLayer.classList.add('is-open');
+  syncHistoryBuffer();
 }
 function closeLyricsFs(){
   lyricsFsLayer.classList.remove('is-open');
   lyricsWrapHome.insertBefore(lyricsWrap, lyricsWrapAnchor);
+  syncHistoryBuffer();
 }
 lyricsFsExitBtn.addEventListener('click', closeLyricsFs);
 function handleLikeBtnClick(e){
