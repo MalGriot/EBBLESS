@@ -2211,6 +2211,147 @@ async function getLrclibMatch(title, artist, duration) {
   return best;
 }
 
+// ---- /artistinfo: artist bio, facts and links ----
+// Same MusicBrainz -> Wikidata -> Wikipedia chain the app used to run in
+// each browser, now run once here and shared: every listener gets the same
+// cached answer, and MusicBrainz gets a proper User-Agent (browsers can't
+// set one). Hits cache for a month, misses for a day.
+const MB_API = 'https://musicbrainz.org/ws/2/';
+const ARTIST_INFO_CACHE_VERSION = 'v1';
+const ARTIST_INFO_HIT_TTL = 30 * 86400;
+const ARTIST_INFO_MISS_TTL = 86400;
+function aiNameKey(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+function aiPrimaryName(s) { return String(s || '').split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim(); }
+function aiQuoted(s) { return '"' + String(s).replace(/[\\"]/g, '\\$&') + '"'; }
+async function aiJson(u) {
+  const res = await fetch(u, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('artist info ' + res.status);
+  return res.json();
+}
+function aiDate(s) {
+  const m = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/.exec(s || '');
+  if (!m) return '';
+  if (!m[2]) return m[1];
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, m[3] ? +m[3] : 1));
+  return d.toLocaleDateString('en-US', m[3] ? { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' } : { year: 'numeric', month: 'long', timeZone: 'UTC' });
+}
+async function aiFindMbId(name, title) {
+  const key = aiNameKey(name);
+  if (!key) return null;
+  const matches = (n) => aiNameKey(n) === key;
+  if (title) {
+    try {
+      const d = await aiJson(MB_API + 'recording/?fmt=json&limit=10&query=' + encodeURIComponent('recording:' + aiQuoted(title) + ' AND artist:' + aiQuoted(name)));
+      for (const r of (d.recordings || [])) {
+        const c = (r['artist-credit'] || []).find(c => c.artist && (matches(c.name) || matches(c.artist.name)));
+        if (c) return c.artist.id;
+      }
+    } catch (e) { /* fall through to the plain artist search */ }
+  }
+  const d = await aiJson(MB_API + 'artist/?fmt=json&limit=10&query=' + encodeURIComponent('artist:' + aiQuoted(name)));
+  const hit = (d.artists || []).find(a => matches(a.name) || (a.aliases || []).some(x => matches(x.name)));
+  return hit ? hit.id : null;
+}
+function aiLink(rel) {
+  const url = rel.url && rel.url.resource;
+  if (!url || rel.ended) return null;
+  let host = '';
+  try { host = new URL(url).hostname.replace(/^www\.|^m\./, ''); } catch (e) { return null; }
+  const t = rel.type;
+  if (t === 'official homepage') return { label: 'Website', url };
+  if (t === 'youtube' && host === 'youtube.com') return { label: 'YouTube', url };
+  if (t === 'soundcloud') return { label: 'SoundCloud', url };
+  if (t === 'bandcamp') return { label: 'Bandcamp', url };
+  if (t === 'songkick' || t === 'bandsintown') return { label: 'Tour dates', url };
+  if (/streaming|purchase/.test(t)) {
+    if (host === 'open.spotify.com') return { label: 'Spotify', url };
+    if ((host === 'music.apple.com' || host === 'itunes.apple.com') && /\/artist\//.test(url)) return { label: 'Apple Music', url };
+  }
+  if (t === 'social network') {
+    const social = { 'instagram.com': 'Instagram', 'twitter.com': 'X', 'x.com': 'X', 'facebook.com': 'Facebook', 'tiktok.com': 'TikTok', 'threads.net': 'Threads', 'bsky.app': 'Bluesky' }[host];
+    if (social) return { label: social, url };
+  }
+  return null;
+}
+const AI_LINK_ORDER = ['Website', 'Instagram', 'X', 'TikTok', 'Facebook', 'Threads', 'Bluesky', 'Spotify', 'Apple Music', 'YouTube', 'SoundCloud', 'Bandcamp', 'Tour dates'];
+async function buildArtistInfo(name, title) {
+  const ck = aiNameKey(name);
+  let mbid = await aiFindMbId(name, title);
+  const primary = aiPrimaryName(name);
+  if (!mbid && aiNameKey(primary) !== ck) mbid = await aiFindMbId(primary, title);
+  if (!mbid) return null;
+  const a = await aiJson(MB_API + 'artist/' + mbid + '?fmt=json&inc=url-rels+genres');
+  const info = { name: a.name, mbUrl: 'https://musicbrainz.org/artist/' + mbid, facts: [], links: [], bio: '', wikiUrl: '', image: '', usedWikidata: false };
+  const span = a['life-span'] || {};
+  const person = a.type === 'Person', group = /Group|Orchestra|Choir/.test(a.type || '');
+  const beginArea = a['begin-area'] && a['begin-area'].name, area = a.area && a.area.name;
+  if (span.begin && (person || group)) info.facts.push([person ? 'Born' : 'Formed', aiDate(span.begin) + (beginArea ? ' in ' + beginArea : '')]);
+  if (span.ended && span.end && (person || group)) info.facts.push([person ? 'Died' : 'Ended', aiDate(span.end)]);
+  if (area && area !== beginArea) info.facts.push(['From', area]);
+  const genres = (a.genres || []).slice().sort((x, y) => (y.count || 0) - (x.count || 0)).slice(0, 3).map(g => g.name.charAt(0).toUpperCase() + g.name.slice(1));
+  if (genres.length) info.facts.push(['Genres', genres.join(', ')]);
+  const seen = new Set();
+  let qid = null;
+  (a.relations || []).forEach(rel => {
+    if (rel.type === 'wikidata' && rel.url && !qid) { const m = /\/(Q\d+)$/.exec(rel.url.resource); if (m) qid = m[1]; }
+    const l = aiLink(rel);
+    if (l && !seen.has(l.label)) { seen.add(l.label); info.links.push(l); }
+  });
+  info.links.sort((x, y) => AI_LINK_ORDER.indexOf(x.label) - AI_LINK_ORDER.indexOf(y.label));
+  if (!qid) return info;
+  try {
+    const wd = (await aiJson('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=claims|sitelinks&sitefilter=enwiki&ids=' + qid)).entities[qid];
+    const claims = wd.claims || {};
+    const ids = (p) => (claims[p] || []).filter(c => c.rank !== 'deprecated').map(c => c.mainsnak && c.mainsnak.datavalue && c.mainsnak.datavalue.value && c.mainsnak.datavalue.value.id).filter(Boolean);
+    const labelIds = ids('P264').slice(0, 3), awardIds = ids('P166'), nominations = ids('P1411').length;
+    const birthName = person && claims.P1477 && claims.P1477[0].mainsnak.datavalue && claims.P1477[0].mainsnak.datavalue.value.text;
+    const labels = {};
+    const want = labelIds.concat(awardIds.slice(0, 3));
+    if (want.length) {
+      const ld = await aiJson('https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=labels&languages=en&ids=' + want.join('|'));
+      Object.keys(ld.entities || {}).forEach(k => { const l = ld.entities[k].labels && ld.entities[k].labels.en; if (l) labels[k] = l.value; });
+    }
+    if (birthName && aiNameKey(birthName) !== aiNameKey(a.name)) info.facts.unshift(['Real name', birthName]);
+    const labelNames = labelIds.map(k => labels[k]).filter(Boolean);
+    if (labelNames.length) info.facts.push([labelNames.length === 1 ? 'Label' : 'Labels', labelNames.join(', ')]);
+    if (awardIds.length) {
+      const named = awardIds.slice(0, 3).map(k => labels[k]).filter(Boolean);
+      info.facts.push(['Awards', named.join('; ') + (awardIds.length > named.length ? (named.length ? ' and ' : '') + (awardIds.length - named.length) + ' more' : '')]);
+    }
+    if (nominations) info.facts.push(['Nominations', String(nominations)]);
+    info.usedWikidata = !!(labelNames.length || awardIds.length || nominations || birthName);
+    const wikiTitle = wd.sitelinks && wd.sitelinks.enwiki && wd.sitelinks.enwiki.title;
+    if (wikiTitle) {
+      const wp = await aiJson('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=extracts|pageimages&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=500&titles=' + encodeURIComponent(wikiTitle));
+      const page = Object.values((wp.query && wp.query.pages) || {})[0];
+      if (page && page.extract) {
+        info.bio = page.extract.trim().replace(/\n{2,}/g, '\n').replace(/\(\s*[;,]?\s*/g, '(').replace(/\s*\(\)/g, '');
+        info.wikiUrl = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(page.title.replace(/ /g, '_'));
+      }
+      if (page && page.thumbnail) info.image = page.thumbnail.source;
+    }
+  } catch (e) { /* MusicBrainz facts and links still show on their own */ }
+  return info;
+}
+async function handleArtistInfo(url, ctx) {
+  const name = (url.searchParams.get('name') || '').trim().slice(0, 200);
+  const title = (url.searchParams.get('title') || '').trim().slice(0, 200);
+  if (!aiNameKey(name)) return json({ error: 'missing name' }, 400);
+  const cache = envCache;
+  // keyed by artist only: the song title just helps pick the right artist
+  const cacheKey = new Request('https://cache.internal/artistinfo/' + ARTIST_INFO_CACHE_VERSION + '/' + aiNameKey(name));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+  let info;
+  try { info = await buildArtistInfo(name, title); }
+  catch (e) { return json({ error: 'artist info unavailable' }, 502); } // upstream hiccup: don't cache
+  const response = json({ info });
+  ctx.waitUntil(cache.put(cacheKey, new Response(response.clone().body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=' + (info ? ARTIST_INFO_HIT_TTL : ARTIST_INFO_MISS_TTL) },
+  })));
+  return response;
+}
+
 async function handleLyrics(url, ctx) {
   const videoId = url.searchParams.get('videoId');
   const title = url.searchParams.get('title') || '';
@@ -4435,6 +4576,7 @@ export default {
       if (url.pathname === '/podepisode') return await handlePodEpisode(url, ctx);
       if (url.pathname === '/podcaption/start' || url.pathname === '/podcaption/collect') return await handlePodCaption(request, url, env);
       if (url.pathname === '/lyrics') return await handleLyrics(url, ctx);
+      if (url.pathname === '/artistinfo') return await handleArtistInfo(url, ctx);
       if (url.pathname === '/amlist') return await handleAppleMusicList(url, ctx);
       if (url.pathname === '/amtrack') return await handleAppleMusicTrack(url, ctx);
       if (url.pathname === '/soundcloud') return await handleSoundCloud(url, ctx);
