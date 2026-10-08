@@ -9599,7 +9599,11 @@ async function beginImport(id, force, type, targetIndex){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
-    if (!wasSaved && isArtistEntry(pl)) addArtistAlbumsToLibrary(pl);
+    if (!wasSaved && isArtistEntry(pl)){
+      addArtistAlbumsToLibrary(pl);
+      // warm the artist-info cache now so the bio is ready when the panel opens
+      fetchArtistInfo(pl.name, (pl.tracks.find(t => t.title) || {}).title).catch(() => {});
+    }
     if (startedEarly){
       bgResolveProgress.delete(id);
       // The listener may have navigated elsewhere while this resolved in
