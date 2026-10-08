@@ -1603,6 +1603,18 @@ body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + 
 body.install-banner-on.split-desktop:not(.onb-active):not(.desktop-fs){--topbar-h:calc(52px + var(--ib-h))}
 body.install-banner-on:not(.onb-active):not(.desktop-fs) #topbar{padding-bottom:var(--ib-h)}
 body.onb-active .install-banner,body.desktop-fs .install-banner{display:none}
+/* iPhone/iPad install steps sheet (#314): shown by every install button on iOS */
+.ios-install{position:fixed;inset:0;z-index:30000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6)}
+.ios-install[hidden]{display:none}
+.ios-install .ii-card{width:100%;max-width:440px;max-height:88vh;overflow-y:auto;background:var(--panel);color:var(--text);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));font-size:15px;line-height:1.45}
+.ios-install h3{margin:0 0 12px;font-size:18px}
+.ios-install ol{margin:0 0 14px;padding-left:22px}
+.ios-install li{margin-bottom:8px}
+.ios-install .ii-share{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--accent)}
+.ios-install details{margin:0 0 14px;color:var(--faint);font-size:14px}
+.ios-install summary{cursor:pointer;color:var(--text);font-weight:600;margin-bottom:6px}
+.ios-install .ii-btn{display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;background:var(--accent);color:#1a1a1a;font-size:15px;font-weight:600;text-align:center}
+.ios-install .ii-btn.ii-alt{background:var(--panel-3);color:var(--text)}
 @media (min-width:860px){.install-banner{padding-left:22px}}
 body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 /* like streak: a single soft pulse on the heart when the streak grows */
@@ -3969,6 +3981,46 @@ const installGateSkip = (() => {
 const mobileInstallGate = !installGateSkip && !isStandaloneDisplay() && (isMobileUA || isIOS ||
   (!!window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820));
 const INSTALL_HINT_MENU = 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
+// iPhone/iPad install steps (#314). iOS has no install API and not every
+// share list shows Add to Home Screen, so every install button on iOS opens
+// this sheet: plain steps, the Edit Actions fix, and the open-in-Safari path
+// for in-app browsers.
+let iosInstallSheet = null;
+function showIOSInstallSheet(){
+  if (!iosInstallSheet){
+    const icon = '<svg class="ii-share" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M7 10H5v11h14V10h-2"/></svg>';
+    const el = document.createElement('div');
+    el.className = 'ios-install';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Install EBBLESS');
+    el.innerHTML = '<div class="ii-card"><h3>Install EBBLESS</h3>'
+      + '<div class="ii-inapp"><p>You are inside another app\'s browser, which can\'t install EBBLESS. Open this page in <b>Safari</b> first:</p>'
+      + '<ol><li>Tap <b>&hellip;</b>, the Safari compass, or the Share button ' + icon + ' in this screen</li><li>Choose <b>Open in Safari</b></li></ol>'
+      + '<button type="button" class="ii-btn ii-copy">Copy link</button><p style="margin-top:14px">Then, in Safari:</p></div>'
+      + '<ol><li>Tap the Share button ' + icon + ' (bottom of the screen, or top right on iPad). Tap <b>More</b> if the list is short.</li>'
+      + '<li>Scroll down and tap <b>Add to Home Screen</b></li>'
+      + '<li>Tap <b>Add</b>, then open <b>EBBLESS</b> from your home screen</li></ol>'
+      + '<details><summary>Don\'t see Add to Home Screen?</summary>'
+      + 'Scroll to the bottom of the share list and tap <b>Edit Actions</b>, then tap the green <b>+</b> next to <b>Add to Home Screen</b>.<br>'
+      + 'Still missing? Open this page in <b>Safari</b> (not Chrome or an in-app browser) and try again.</details>'
+      + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
+    const close = () => { el.hidden = true; };
+    el.addEventListener('click', (e) => { if (e.target === el) close(); });
+    el.querySelector('.ii-close').addEventListener('click', close);
+    el.querySelector('.ii-copy').addEventListener('click', (e) => {
+      const b = e.currentTarget;
+      const url = urlWithTesterToken(location.href, installTesterToken());
+      const done = () => { b.textContent = 'Link copied. Paste it into Safari'; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => { b.textContent = url.replace(/[<>&"]/g, ''); });
+      else b.textContent = url.replace(/[<>&"]/g, '');
+    });
+    document.body.appendChild(el);
+    iosInstallSheet = el;
+  }
+  // in-app browsers (and pre-16.4 non-Safari) get the open-in-Safari block first
+  iosInstallSheet.querySelector('.ii-inapp').style.display = installGateMode() === 'openout' ? '' : 'none';
+  iosInstallSheet.hidden = false;
+}
 // Daily nudges: the splash install invite and the Tutorial/Enter choice each
 // run on the first load of a local calendar day only, and keep doing so daily
 // until the visitor installs (installed launches are standalone, so
@@ -19530,10 +19582,11 @@ if (screen.orientation && screen.orientation.lock){
         const accepted = await runInstallPrompt();
         // appinstalled flips it to Installed; a dismissal leaves it usable.
         if (!accepted) installBtn.disabled = false;
-      } else if (installDesc){
+      } else if (isIOS || installDesc){
         // No programmatic install API here (always the case on iOS Safari) -
         // point at the manual flow instead.
-        installDesc.textContent = isIOS ? INSTALL_HINT_IOS : INSTALL_HINT_MENU;
+        if (isIOS) showIOSInstallSheet();
+        else installDesc.textContent = INSTALL_HINT_MENU;
       }
     });
     window.addEventListener('appinstalled', () => setInstalled(true));
@@ -19582,6 +19635,7 @@ function scheduleInstallBanner(){
 if (installBanner){
   installBannerBtn.addEventListener('click', async () => {
     if (deferredInstallPrompt){ await runInstallPrompt(); return; } // appinstalled hides it
+    if (isIOS){ showIOSInstallSheet(); return; }
     installBannerBtn.hidden = true;
     installBannerText.textContent = '';
     if (isIOS){
@@ -21508,16 +21562,8 @@ function startApp(){
             await runInstallPrompt();
             hideSplash();
           } else if (isIOS){
-            // No programmatic install API on iOS Safari - point the visitor
-            // at the manual Share -> Add to Home Screen flow instead of
-            // silently doing nothing, then give them a moment to read it
-            // before the splash moves on.
-            if (!tapped){
-              tapped = true;
-              const label = splashEl.querySelector('.splash-install-label');
-              if (label) label.textContent = 'Tap Share, then Add to Home Screen';
-              setTimeout(hideSplash, 4000);
-            }
+            // No install API on iOS: open the step-by-step sheet (#314).
+            showIOSInstallSheet();
           } else {
             // Some other mobile browser that hasn't offered a native prompt
             // (and may never) - don't strand the visitor on the splash.
