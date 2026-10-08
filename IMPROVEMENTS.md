@@ -8367,17 +8367,52 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #302. Title only.
 
 ### audiosurf-game: Audiosurf-style game in EBBLESS (future)
-- **Status:** draft
+- **Status:** brainstorming
 - **Priority:** low
 - **Description:** Longer-term idea: bring an Audiosurf-style ride-the-song game into EBBLESS, playable with the user's own tracks.
 - **Touches:** new feature.
 - **Branch:**
 - **Notes:** Synced from Geethub issue #301. Big scope; candidate for archived until after MVP.
+  Future feature: needs research and planning before any build. Brainstorm with the user first.
 
 ### cymatics-rotation-coverage: Cymatics don't cover the whole area when they rotate
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug: when the cymatics visualizer rotates, the patterns don't fill the entire screen area. They should maintain full coverage while rotating.
 - **Touches:** cymatics visualizer rotation.
 - **Branch:** agent/cymatics-rotation
 - **Notes:** Synced from Geethub issue #309. Three fixes applied: (1) grains use full square [-1,1]×[-1,1] distribution for rectangular canvases; (2) removed 0.94 radius shrink to reach edges; (3) updated radius formula to hypot(w/2, h/2) / sqrt(2) so grain corners reach canvas corners at all rotation angles, including 45° diagonals. Verified: full edge-to-edge coverage at 0°, 45°, and intermediate angles in non-fullscreen mode.
+  Merged to main and pushed live 2026-10-08.
+
+### mandelbrot-visualizer: Mandelbrot fractal visualizer
+- **Status:** brainstorming
+- **Priority:** medium
+- **Description:** Add a Mandelbrot fractal as a new visualizer mode that reacts to the music.
+- **Touches:** visualizer modes.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #310. Title only.
+  Future feature: needs research and planning before any build. Brainstorm with the user first.
+
+### back-button-playlist-to-library: Mobile back button from an open playlist should return to the library
+- **Status:** ready
+- **Priority:** high
+- **Description:** Bug (tester feedback): on mobile, with a playlist open, the device back button should go back to the library view instead of leaving or doing something else.
+- **Touches:** mobile navigation / history handling. Related to `back-button-to-player`; check it for overlap.
+- **Branch:**
+- **Notes:** From beta tester feedback 2026-10-08.
+
+### back-button-exit-fullscreen: Mobile back button in fullscreen should exit fullscreen
+- **Status:** ready
+- **Priority:** high
+- **Description:** Bug (tester feedback): on mobile, when the visual is in fullscreen, the device back button should exit fullscreen first.
+- **Touches:** fullscreen + mobile history handling. Same area as the playlist back-button entry; coordinate.
+- **Branch:**
+- **Notes:** From beta tester feedback 2026-10-08.
+
+### visualizer-controls-under-art-tab: Mobile visualizer controls should appear under the art selection tab
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug (tester feedback): on mobile, tapping the visualizer button should reveal the visualizer controls beneath the art selection tab.
+- **Touches:** mobile visualizer controls layout.
+- **Branch:**
+- **Notes:** From beta tester feedback 2026-10-07.
