@@ -80,7 +80,7 @@ HEADERS[APPLICANTS] = ['applicant_id', 'name', 'email', 'Instagram', 'device', '
   'rejoin_requested', 'google_email'];
 HEADERS[TESTERS] = ['tester_id', 'tester_number', 'applicant_id', 'name', 'email', 'accepted_timestamp',
   'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent', 'exclude_from_analytics',
-  'rejoin_requested', 'window_start', 'round', 'google_email'];
+  'rejoin_requested', 'window_start', 'round', 'google_email', 'reminder_sent'];
 HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'source', 'category', 'feeling',
   'what_happened', 'what_they_expected', 'anything_else', 'keep_using', 'screenshot',
   'device', 'operating_system', 'browser', 'viewport', 'user_agent',
@@ -127,7 +127,16 @@ function append_(sh, obj) {
   const c = cols_(sh);
   const row = new Array(sh.getLastColumn()).fill('');
   Object.keys(obj).forEach(function (k) { if (k in c) row[c[k]] = safe_(obj[k]); });
-  sh.appendRow(row);
+  // Not appendRow: the Testers checkbox column (exclude_from_analytics) is
+  // filled down to the sheet's last row, so appendRow thinks the tab is full
+  // and lands new testers a thousand rows down, out of sight. Write to the
+  // first row below the last one that has a value in column A instead.
+  const colA = sh.getRange(1, 1, sh.getMaxRows(), 1).getValues();
+  let last = 1;
+  for (let i = colA.length - 1; i >= 1; i--) { if (colA[i][0] !== '') { last = i + 1; break; } }
+  if (last + 1 > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 1);
+  sh.getRange(last + 1, 1, 1, row.length).setValues([row]);
+  return last + 1;
 }
 // Adds any of `headers` the tab is missing, after its last column.
 function ensureHeaders_(sh, headers) {
@@ -236,6 +245,53 @@ function sendFeedbackRequests() {
         if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
       }
       else setCell_(sh, t._row, 'feedback_request_sent', new Date());
+    });
+  });
+  sendInactivityReminders_();
+}
+
+// ---------- inactivity reminder (48h without opening the app) ----------
+
+const INACTIVE_AFTER_MS = 48 * 3600 * 1000;
+const WINDOW_MS = 7 * 24 * 3600 * 1000;
+
+function reminderText_(first, link) {
+  return 'Peace, ' + first + '.\n\n' +
+    'Haven\u2019t seen you in EBBLESS for a couple of days. Your tester spot is still open and your library is right where you left it.\n\n' +
+    'Pop back in, throw on a playlist, and see what you think:\n\n' + link + '\n\n' +
+    'If something kept you away (confusing, broken, boring), that\u2019s exactly what I want to hear. Just reply to this email.\n\n' +
+    'Mal';
+}
+
+// Called at the end of the hourly trigger. Emails each Active tester once per
+// quiet stretch: 48h+ since last_active (Analytics tab), or since access if
+// they've never opened it. reminder_sent is stamped so it doesn't repeat until
+// they've been active again and gone quiet again. Skips testers excluded from
+// analytics (no activity data) and anyone whose 7-day window has ended.
+function sendInactivityReminders_() {
+  const sh = sheet_(TESTERS), ash = sheet_(ANALYTICS);
+  withLock_(function () {
+    ensureHeaders_(sh, HEADERS[TESTERS]);
+    const last = {};
+    if (ash) records_(ash).forEach(function (r) { if (r.tester_id) last[r.tester_id] = ms_(r.last_active); });
+    const now = Date.now();
+    records_(sh).forEach(function (t) {
+      if (t.tester_status !== 'Active' || !t.access_token || !t.email || t.exclude_from_analytics === true) return;
+      const base = ms_(t.window_start) || ms_(t.accepted_timestamp);
+      if (!base) return;
+      const ref = Math.max(base, last[t.tester_id] || 0);
+      if (now - ref < INACTIVE_AFTER_MS) return;
+      const sent = ms_(t.reminder_sent);
+      if (sent && sent >= ref) return;
+      const fb = ms_(t.feedback_request_sent);
+      if (now > (fb && fb >= base ? fb : base + FEEDBACK_REQUEST_AFTER_MS) + WINDOW_MS) return;
+      const first = String(t.name || '').split(/\s+/)[0] || 'friend';
+      const err = sendMail_(t.email, 'EBBLESS BETA: still around?', reminderText_(first, accessLink_(t.access_token)));
+      if (err) {
+        const note = 'Inactivity reminder NOT emailed: ' + err;
+        if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
+      }
+      else setCell_(sh, t._row, 'reminder_sent', new Date());
     });
   });
 }
@@ -623,8 +679,8 @@ function acceptRow_(rowNum, previous) {
     };
     t.access_link = accessLink_(t.access_token);
     ensureHeaders_(tsh, HEADERS[TESTERS]);   // google_email lands without re-running setup
-    append_(tsh, t);
-    return { tester: t, row: tsh.getLastRow(), over: active >= CAP ? active + 1 : 0 };
+    const newRow = append_(tsh, t);
+    return { tester: t, row: newRow, over: active >= CAP ? active + 1 : 0 };
   });
   if (result.rejoined) return rejoinAccepted_(result);
   if (!result.tester) { toast_(result.msg); return result.msg; }
