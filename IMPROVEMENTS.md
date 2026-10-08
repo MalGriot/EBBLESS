@@ -8416,3 +8416,11 @@ Add entries in this shape:
 - **Touches:** mobile visualizer controls layout.
 - **Branch:** agent/viz-controls-under-art
 - **Notes:** From beta tester feedback 2026-10-07. On screens under 860px wide, #vizControls is moved into #visualTabs (matchMedia, vizControlsPlace) and drops in directly beneath the tab bar, shown only while the Visualizer tab is active. Wider screens keep the overlay on the art. Flow/fullscreen unchanged (buttons still relocate individually). Verified at 390px: controls under tabs in viz mode, hidden in art mode, speed button works.
+
+### sync-clarity: Make account sync obviously automatic and connect testers on first run
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Tester feedback: "I'm confused about exactly what syncing does. And how do we make it automatic?" Sync already runs automatically when signed in with Google (`scheduleProfileSync`, `syncProfileNow`), so fix the clarity. (1) Copy: the account row says "Back up and carry your library to any device"; signed in shows "Syncs automatically", signed out shows "Sign in once and it just works". (2) Demote "Sync now" to a small text link so it doesn't read as a required step. (3) Status messages say what happens next, e.g. "Offline, will retry on its own", replacing "Not connected on this visit" and "Couldn't sync just now". (4) Show the Google sign-in prompt on first run so testers are connected without finding the Settings row (least-clicks).
+- **Touches:** `renderAccountRow` / `ensureAccountBlock` in index.html, first-run sign-in prompt.
+- **Branch:**
+- **Notes:** From beta tester feedback 2026-10-08. No en dashes in copy. Don't change sync behavior itself, only copy, button prominence, and the first-run prompt.
