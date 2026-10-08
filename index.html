@@ -7702,10 +7702,22 @@ function toggleLibraryPlaylistPanel(id){
     status.textContent = currentsBusy === 'more' ? 'Adding more songs...' : 'Finding new picks...';
     libplBody.appendChild(status);
   }
+  // an artist's page lists their albums up top, then only the songs that
+  // aren't on one of those albums (singles); the albums hold the rest
+  const artistAlbumIds = isArtistEntry(pl) ? orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); }) : [];
+  const onAlbum = new Set();
+  artistAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => onAlbum.add(normalizeArtistQuery(t.title))); });
+  let singlesLabelShown = false;
   if (!pl.tracks.length){
     libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
     pl.tracks.forEach((t, i) => {
+      if (onAlbum.size && onAlbum.has(normalizeArtistQuery(t.title))) return;
+      if (artistAlbumIds.length && !singlesLabelShown){
+        singlesLabelShown = true;
+        const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Singles';
+        libplBody.appendChild(lbl);
+      }
       const row = document.createElement('div');
       row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
       row.dataset.plId = id; row.dataset.idx = i;
@@ -7736,7 +7748,7 @@ function toggleLibraryPlaylistPanel(id){
   }
   // an artist's own page also gets their bio, facts and links on top (#298)
   if (isArtistEntry(pl)){
-    const mine = orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); });
+    const mine = artistAlbumIds.slice();
     if (mine.length){
       // one artist here, so no divider: just their albums, sorted by album name
       mine.sort((x, y) => getCachedPlaylist(x).name.localeCompare(getCachedPlaylist(y).name, undefined, { sensitivity: 'base', numeric: true }));
