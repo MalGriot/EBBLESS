@@ -8410,7 +8410,7 @@ Add entries in this shape:
 - **Notes:** From beta tester feedback 2026-10-08.
 
 ### visualizer-controls-under-art-tab: Mobile visualizer controls should appear under the art selection tab
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug (tester feedback): on mobile, tapping the visualizer button should reveal the visualizer controls beneath the art selection tab.
 - **Touches:** mobile visualizer controls layout.
