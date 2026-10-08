@@ -7738,9 +7738,24 @@ function toggleLibraryPlaylistPanel(id){
   if (isArtistEntry(pl)){
     const mine = orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); });
     if (mine.length){
+      // same organization as the library: an artist divider that folds the
+      // album list (shared fold state), artist name under each album
+      const gk = artistNameKey(pl.name) || '_';
       const box = document.createElement('div');
-      const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Albums';
-      box.appendChild(lbl);
+      const div = document.createElement('button');
+      div.type = 'button'; div.className = 'lib-artist-divider';
+      div.innerHTML = '<svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg><span class="nm"></span><span class="ct"></span>';
+      div.querySelector('.nm').textContent = pl.name;
+      div.querySelector('.ct').textContent = mine.length;
+      const list = document.createElement('div');
+      const applyFold = () => { const f = !!lsGet(LS_ALBUM_ARTIST_FOLDED, {})[gk]; div.setAttribute('aria-expanded', String(!f)); list.classList.toggle('hidden', f); };
+      div.addEventListener('click', () => {
+        const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+        if (f[gk]) delete f[gk]; else f[gk] = true;
+        lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+        applyFold();
+      });
+      box.appendChild(div); box.appendChild(list);
       mine.forEach(aid => {
         const a = getCachedPlaylist(aid);
         const row = document.createElement('div'); row.className = 'track-row';
@@ -7749,12 +7764,13 @@ function toggleLibraryPlaylistPanel(id){
         if (a.image) attachArtworkFallback(img, { art: a.image }); else if (first) attachArtworkFallback(img, first);
         const meta = document.createElement('div'); meta.className = 'meta';
         const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = a.name;
-        const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = (a.tracks || []).length + ((a.tracks || []).length === 1 ? ' song' : ' songs');
+        const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = albumArtistName(a);
         meta.appendChild(ttl); meta.appendChild(sub);
         row.appendChild(img); row.appendChild(meta);
         row.addEventListener('click', () => toggleLibraryPlaylistPanel(aid));
-        box.appendChild(row);
+        list.appendChild(row);
       });
+      applyFold();
       libplBody.prepend(box);
     }
     loadArtistInfoInto(id, pl.name, (pl.tracks.find(t => t.title) || {}).title, false);
