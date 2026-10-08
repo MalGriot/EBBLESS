@@ -575,6 +575,12 @@ body.onb-active .paste-guide{display:none}
 .import-error .msg{font-size:14.5px;color:var(--text);max-width:320px;line-height:1.5}
 .btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out)}
 .btn-ghost:hover{background:var(--panel-2)}
+.link-btn{font-size:12px;color:var(--text-dim,var(--text));text-decoration:underline;padding:4px 6px;opacity:.8}
+.link-btn:hover:not(:disabled){opacity:1}
+.link-btn:disabled{opacity:.4}
+.signin-nudge{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translateX(-50%);z-index:79;width:min(340px,calc(100vw - 32px));
+  background:var(--panel-3);color:var(--text);font-size:12.5px;padding:14px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
 /* on/off switch (Settings > Playback); .is-active + aria-checked = on */
 .switch{position:relative;flex:none;width:46px;height:28px;border-radius:14px;padding:0;background:var(--panel-3);border:1px solid var(--border-2);
@@ -5266,6 +5272,7 @@ async function legacyProfileSync(){
 function handleGoogleCredential(response){
   profileIdToken = response.credential;
   profileTokenExp = 0;
+  const nudge = document.getElementById('signinNudge'); if (nudge) nudge.remove();
   let sub = '';
   try{
     const payloadB64 = response.credential.split('.')[1];
@@ -5327,6 +5334,27 @@ function renderBetaGateSignIn(){
     holder.addEventListener('click', () => lsDel(LS_PROFILE_SIGNED_OUT), true);
     wrap.hidden = false;
   } catch(e){}
+}
+// First-run nudge (least clicks): where One Tap can't show (Safari, blocked
+// third-party sign-in) put Google's own button in front once, so testers get
+// connected without finding the Settings row. Once per device, never when
+// signed in, signed out on purpose, or while the beta lock is up.
+const LS_SIGNIN_NUDGED = 'ebbless:signinNudged';
+function showSignInNudge(){
+  const gate = window.ebblessBetaGate;
+  if (profileIdToken || document.getElementById('signinNudge') || lsGet(LS_SIGNIN_NUDGED, false)) return;
+  if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true || (gate && gate.locked())) return;
+  lsSet(LS_SIGNIN_NUDGED, true);
+  const card = document.createElement('div');
+  card.className = 'signin-nudge'; card.id = 'signinNudge';
+  card.innerHTML = '<div>Sign in once and your library syncs automatically on every device.</div><div id="signinNudgeBtn"></div><button type="button" class="link-btn">Not now</button>';
+  try{
+    const holder = card.querySelector('#signinNudgeBtn');
+    google.accounts.id.renderButton(holder, { type: 'standard', theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin_with' });
+    holder.addEventListener('click', () => lsDel(LS_PROFILE_SIGNED_OUT), true);
+  } catch(e){ return; }
+  card.querySelector('.link-btn').addEventListener('click', () => card.remove());
+  document.body.appendChild(card);
 }
 window.addEventListener('ebbless:betarelock', () => { if (gsiReady) renderBetaGateSignIn(); });
 
@@ -5682,18 +5710,18 @@ function renderAccountRow(){
   label.textContent = email || 'Sync across devices';
   if (signedIn && profileSyncStatus !== 'expired'){
     desc.textContent = profileSyncStatus === 'syncing' ? 'Syncing…'
-      : profileSyncStatus === 'error' ? "Couldn't sync just now. " + syncedAt + '.'
-      : syncedAt + '. Your library, liked songs and settings follow you to any device you sign in on.';
+      : profileSyncStatus === 'error' ? "Offline, will retry on its own. " + syncedAt + '.'
+      : 'Syncs automatically. ' + syncedAt + '.';
     const key = 'in:' + (profileSyncStatus === 'syncing');
     if (actions.dataset.state !== key){
       actions.dataset.state = key;
-      actions.innerHTML = '<button class="btn-ghost" data-act="sync"' + (profileSyncStatus === 'syncing' ? ' disabled' : '') + '>Sync now</button><button class="btn-ghost" data-act="signout">Sign out</button>';
+      actions.innerHTML = '<button class="link-btn" data-act="sync"' + (profileSyncStatus === 'syncing' ? ' disabled' : '') + '>Sync now</button><button class="btn-ghost" data-act="signout">Sign out</button>';
     }
     return;
   }
   desc.textContent = email
-    ? (profileSyncStatus === 'expired' ? 'Session expired. Sign in again to keep syncing. ' : 'Not connected on this visit. ') + syncedAt + '.'
-    : 'Sign in with Google to keep your library, liked songs and settings the same on every device.';
+    ? (profileSyncStatus === 'expired' ? 'Session expired. Sign in again to keep syncing. ' : 'Sign in once and it just works. ') + syncedAt + '.'
+    : 'Sign in once and it just works. Back up and carry your library to any device.';
   const key = 'out:' + gsiReady;
   if (actions.dataset.state === key) return;
   actions.dataset.state = key;
@@ -5760,6 +5788,7 @@ function initGoogleOneTap(attempt){
             (notification.isDismissedMoment && notification.isDismissedMoment())
           )){
             lsSet(LS_ONETAP_DISMISSED, Date.now());
+            if (!(notification.isDismissedMoment && notification.isDismissedMoment())) showSignInNudge();
             if (gate && gate.renewing && gate.renewing()) gate.leaseFailed();
           }
         } catch(e){}
