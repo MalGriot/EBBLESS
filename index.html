@@ -2671,6 +2671,8 @@ body.week-up-on{overflow:hidden}
   // invite link opens Safari, not this app, so Google sign-in is the way in.
   const iosStandalone = navigator.standalone === true && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
   if (iosStandalone){
+    // Already signed up (that's how they got the app): no Join button here.
+    document.querySelector('#beta-lock .bl-join').hidden = true;
     document.getElementById('bl-how').textContent = 'Sign in with Google using the account you signed up with.';
     document.getElementById('bl-gnote').hidden = true;
     document.getElementById('bl-ios').hidden = false;
@@ -2680,7 +2682,10 @@ body.week-up-on{overflow:hidden}
   const q = new URLSearchParams(location.search);
   const qt = extract(q.get('t'));
   if (qt && qt !== ls.get(LS_TOKEN)){ ls.set(LS_TOKEN, qt); ls.set(LS_OK, null); ls.set(LS_LEASE, null); ls.set(LS_ME, null); }
-  if (qt){ q.delete('t'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
+  // Google redirect sign-in (worker /beta/google) came back with a message
+  const be = q.get('bl_err');
+  if (be){ q.delete('bl_err'); msg(be.slice(0, 200)); }
+  if (qt || be){ q.delete('t'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
 
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
@@ -5771,10 +5776,17 @@ function initGoogleOneTap(attempt){
   if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
   if (window.google && window.google.accounts && window.google.accounts.id){
     try{
-      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
+      // iPhone home-screen app: Google's popup can't hand the credential back
+      // there (the button just stalls), so sign in by redirect instead. The
+      // worker checks the account and returns here with ?t=<token> (beta lock).
+      const iosApp = navigator.standalone === true && /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent);
+      google.accounts.id.initialize(iosApp && BACKEND
+        ? { client_id: GOOGLE_CLIENT_ID, ux_mode: 'redirect', login_uri: BACKEND + '/beta/google?r=' + encodeURIComponent(location.origin + location.pathname) }
+        : { client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
       gsiReady = true;
       renderAccountRow();
       renderBetaGateSignIn();
+      if (iosApp) return;   // no One Tap/auto sign-in in redirect mode
     } catch(e){ return; }
     // An expired beta lease (beta lock script) can only renew through a
     // silent sign-in: when that's off the table, re-lock now rather than
