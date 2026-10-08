@@ -8394,7 +8394,7 @@ Add entries in this shape:
   Future feature: needs research and planning before any build. Brainstorm with the user first.
 
 ### back-button-playlist-to-library: Mobile back button from an open playlist should return to the library
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug (tester feedback): on mobile, with a playlist open, the device back button should go back to the library view instead of leaving or doing something else.
 - **Touches:** mobile navigation / history handling. Related to `back-button-to-player`; check it for overlap.
@@ -8402,7 +8402,7 @@ Add entries in this shape:
 - **Notes:** From beta tester feedback 2026-10-08. Fixed in the popstate handler (BACK BUTTON section): with a playlist panel open, back now closes only the panel and stays in the library, then re-buffers a history entry so the next back goes to the player. Verified at 390px: back from playlist lands on library, second back lands on player. Shipped together with `back-button-exit-fullscreen`.
 
 ### back-button-exit-fullscreen: Mobile back button in fullscreen should exit fullscreen
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug (tester feedback): on mobile, when the visual is in fullscreen, the device back button should exit fullscreen first.
 - **Touches:** fullscreen + mobile history handling. Same area as the playlist back-button entry; coordinate.
