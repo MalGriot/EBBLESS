@@ -8426,7 +8426,7 @@ Add entries in this shape:
 - **Notes:** Built: new account copy, Sync now demoted to .link-btn, status text says what happens next, first-run Google button card (showSignInNudge) shown once per device (LS_SIGNIN_NUDGED) only when One Tap is not displayed/skipped, never when signed in, signed out on purpose, or beta lock up. Verified in browser with simulated state (real Google sign-in untested). From beta tester feedback 2026-10-08. No en dashes in copy. Don't change sync behavior itself, only copy, button prominence, and the first-run prompt.
 
 ### albums-by-artist: Group albums in the library by the artist they were imported under
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #311. In the library, albums should be grouped under a small section divider title for each artist. Tapping the divider retracts/expands that artist's album list. Each album card shows the artist's name under it. The artist bio view shows the same per-artist organization.
 - **Touches:** library album list rendering in index.html, artist bio view. Needs the imported-under artist stored on each album (check whether saved sets already carry it).
@@ -8434,7 +8434,7 @@ Add entries in this shape:
 - **Notes:** From GitHub issue #311 (idea). Queued by the user directly, so `ready`. Least-clicks: dividers default expanded, collapse state remembered per device.
 
 ### artist-info-on-add: Load artist info as soon as an artist is added
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #312. When someone adds an artist, their info (bio, image, albums) should load right away, not only when they open the artist view and look it up.
 - **Touches:** artist add flow and artist info fetch/cache in index.html.
