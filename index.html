@@ -866,6 +866,10 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .viz-controls{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;z-index:6;
   opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out)}
 .artwork-wrap.mode-viz .viz-controls{opacity:1;pointer-events:auto}
+/* mobile: the controls row drops in directly beneath the tab bar (moved there
+   by vizControlsPlace) instead of sitting over the art's bottom corner */
+.visual-tabs > .viz-controls{right:auto;bottom:auto;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:5}
+.visual-tabs:has(.v-tab[data-mode="viz"].is-active) > .viz-controls{opacity:1;pointer-events:auto}
 .viz-ctl-btn{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:rgba(10,10,10,.45);color:var(--faint);backdrop-filter:blur(6px);flex:none;
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
@@ -16269,6 +16273,15 @@ visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   setVisualMode(btn.dataset.mode);
 }));
 window.addEventListener('resize', () => { if (visualMode === 'viz') vizResize(); });
+// phones/narrow screens: viz controls sit under the tab bar, wider: over the art
+const vizControlsEl = $('vizControls'), vizControlsHome = vizControlsEl.parentElement, vizControlsAnchor = vizControlsEl.nextElementSibling;
+const vizControlsMQ = window.matchMedia('(max-width:859px)');
+function vizControlsPlace(){
+  if (vizControlsMQ.matches) $('visualTabs').appendChild(vizControlsEl);
+  else vizControlsHome.insertBefore(vizControlsEl, vizControlsAnchor);
+}
+vizControlsMQ.addEventListener('change', vizControlsPlace);
+vizControlsPlace();
 applyVisualMode();
 
 /* =========================================================================

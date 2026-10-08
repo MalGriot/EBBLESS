@@ -8410,9 +8410,9 @@ Add entries in this shape:
 - **Notes:** From beta tester feedback 2026-10-08.
 
 ### visualizer-controls-under-art-tab: Mobile visualizer controls should appear under the art selection tab
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug (tester feedback): on mobile, tapping the visualizer button should reveal the visualizer controls beneath the art selection tab.
 - **Touches:** mobile visualizer controls layout.
-- **Branch:**
-- **Notes:** From beta tester feedback 2026-10-07.
+- **Branch:** agent/viz-controls-under-art
+- **Notes:** From beta tester feedback 2026-10-07. On screens under 860px wide, #vizControls is moved into #visualTabs (matchMedia, vizControlsPlace) and drops in directly beneath the tab bar, shown only while the Visualizer tab is active. Wider screens keep the overlay on the art. Flow/fullscreen unchanged (buttons still relocate individually). Verified at 390px: controls under tabs in viz mode, hidden in art mode, speed button works.
