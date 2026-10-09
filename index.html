@@ -111,8 +111,8 @@ svg{display:block}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
-/* subtle tutorial replay; the top-bar search (auto margins) packs it with the nav
-   on the right */
+/* subtle tutorial replay; margin-left:auto keeps it packed with the nav on
+   the right unless the tester banner (also margin-left:auto) is ahead of it */
 #helpBtn{padding:8px;border-radius:50%;margin-left:12px;opacity:.7}
 #helpBtn:hover{opacity:1}
 #helpBtn svg{width:18px;height:18px}
@@ -185,22 +185,24 @@ video.lib-bg-video.is-playing{opacity:1}
 .lib-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;
   opacity:.55;transition:background 4s linear}
 .lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
-.import-row{display:flex;gap:8px;margin:18px 0 14px;position:relative;min-width:0}
+.import-row{display:flex;gap:8px;margin:0 auto;position:relative;min-width:0;flex:1 1 0;max-width:480px}
 .import-row input{
   flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
-  padding:14px 16px;color:var(--text);font-size:14.5px;transition:border-color var(--dur-ui) var(--ease-out);
+  padding:9px 14px;color:var(--text);font-size:14px;transition:border-color var(--dur-ui) var(--ease-out);
 }
 .import-row input::placeholder{color:var(--faint-2)}
 .import-row input:focus{outline:none;border-color:var(--accent)}
 .import-row button{
-  flex:none;background:var(--accent);color:#151107;border-radius:var(--r-md);padding:0 22px;font-weight:600;
+  flex:none;background:var(--accent);color:#151107;border-radius:var(--r-md);padding:0 16px;font-weight:600;
   font-size:14px;white-space:nowrap;
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
 .import-row button:active{transform:scale(.97)}
 #loadBtn .load-short{display:none}
 @media (max-width:420px){ #loadBtn .load-long{display:none} #loadBtn .load-short{display:inline} }
-.import-err{font-size:12.5px;color:var(--bad);margin:8px 0 0;min-height:0}
+.import-err{font-size:12.5px;color:var(--bad);margin:0;min-height:0}
+/* the form lives in the top bar (#319): errors hang below it */
+.import-row .import-err:not(:empty){position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:22;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 12px}
 /* conversational-vibe-search: mic in the input bar (hidden where the Web
    Speech API is missing) + the interpreter's stages in the import overlay */
 .import-field{flex:1;min-width:0;display:flex;position:relative}
@@ -344,6 +346,7 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-btn:hover{color:var(--text)}
 .lib-filter-btn.is-active{background:var(--text);border-color:var(--text);color:var(--bg)}
 .lib-head-actions{flex:1;min-width:0}
+.lib-head-actions #libSearchToggle{margin-left:auto}
 .lib-view-btn{display:inline-flex;align-items:center;gap:2px}
 .lib-view-btn svg{width:16px;height:16px;margin-right:-4px}
 .lib-menu-head{padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--faint-2);letter-spacing:.02em}
@@ -353,6 +356,8 @@ body.onb-active .paste-guide{display:none}
    36px to look like chips; ::after pads the hit area to 44px) */
 @media (max-width:859.98px){
   .lib-tb-btn{min-height:44px}
+  #libSearchToggle{width:44px;height:44px;border-radius:12px}
+  #libSearchToggle svg{width:18px;height:18px}
   .lib-filter-btn{height:36px;font-size:13px}
   .lib-filter-btn::after{content:"";position:absolute;inset:-5px 0}
   .lib-filter{padding:5px 0}
@@ -365,8 +370,8 @@ body.onb-active .paste-guide{display:none}
 #libraryGrid{margin-top:14px}
 /* library-search: live filter over the user's own saved playlists/albums
    and their tracks (see renderLibrary()). Styled like .import-row's input.
-   Lives in the top bar between the logo and Settings (#319), always visible. */
-.lib-search{position:relative;flex:1 1 0;min-width:0;max-width:420px;margin:0 auto}
+   Hidden until the magnifying-glass button in .lib-head-actions opens it (#218). */
+.lib-search{position:relative;margin-top:14px}
 .lib-search-icon{position:absolute;left:12px;top:50%;width:15px;height:15px;transform:translateY(-50%);color:var(--faint-2);pointer-events:none}
 .lib-search input{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
   padding:10px 38px 10px 36px;color:var(--text);font-size:13.5px;transition:border-color var(--dur-ui) var(--ease-out)}
@@ -1564,10 +1569,11 @@ body.queue-over-fs #queue-scrim{bottom:0}
    to the nav (margin-left:auto), so it never covers anything. Beta testers
    only, from day 3. Short label on phones. Hidden while the splash,
    tutorial, a fullscreen mode, the beta lock or a dialog is up. */
-.tester-banner{display:flex;align-items:center;gap:8px;margin:0 10px 0 auto;min-width:0;background:var(--panel-3);color:var(--text);
+.tester-banner{display:flex;align-items:center;gap:8px;margin:0 10px 0 0;min-width:0;background:var(--panel-3);color:var(--text);
   font-size:12px;line-height:1.3;padding:4px 4px 4px 12px;border-radius:20px;white-space:nowrap}
 #topbar:has(#testerBanner:not([hidden])){gap:8px}
 .tester-banner .tb-short{display:none}
+@media (max-width:1149.98px){.tester-banner{position:absolute;top:100%;right:8px;margin:4px 0 0;z-index:6}}
 @media (max-width:700px){.tester-banner .tb-long{display:none}.tester-banner .tb-short{display:inline}}
 .tester-banner[hidden]{display:none}
 .tester-banner .tb-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -2389,8 +2395,11 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
-body.onb-stage-input:not(.split-desktop) #view-library .view-scroll>*:not(.import-row){display:none}
-body.onb-stage-input:not(.split-desktop) #importForm{width:min(520px,86vw);margin:0;transform:scale(1.15)}
+body.onb-stage-input:not(.split-desktop) #view-library .view-scroll>*{display:none}
+body.onb-active.onb-stage-input:not(.split-desktop) #topbar{display:flex!important;position:fixed;inset:0;height:auto;padding:0;z-index:10002;align-items:center;justify-content:center;pointer-events:none;border:0}
+body.onb-active.onb-stage-input:not(.split-desktop) #topbar>:not(#importForm){display:none!important}
+body.onb-active.onb-stage-input:not(.split-desktop) #importForm{pointer-events:auto}
+body.onb-stage-input:not(.split-desktop) #importForm{flex:none;width:min(520px,86vw);max-width:none;margin:0;transform:scale(1.15)}
 /* desktop tri-section layout (library | player | queue, see the
    min-width:1150px "split-desktop" block above): the intro narrates over
    the real always-visible 3-pane app instead of isolating one view at a
@@ -2829,13 +2838,29 @@ body.week-up-on{overflow:hidden}
       <img src="brand/assets/mark.png" alt="EBBLESS" draggable="false">
       <svg class="wm-hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" pathLength="100"/></svg>
     </button>
-    <div class="lib-search" id="libSearchBox" role="search">
-      <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-      <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-      <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    <form class="import-row" id="importForm">
+      <span class="import-field">
+      <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+      <div class="paste-recents" id="pasteRecents" hidden></div>
+      <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
+      <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
       </button>
-    </div>
+      </span>
+      <button type="submit" id="loadBtn"><span class="load-long">Find music</span><span class="load-short">Go</span></button>
+      <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
+        <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
+        <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
+        <ul class="paste-guide-list">
+          <li><b>A link</b> to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud</li>
+          <li><b>A podcast</b>: a show, an episode, or an RSS feed</li>
+          <li><b>A vibe</b>: search an artist or genre, or describe a mood, like &ldquo;rainy Sunday, something warm and slow&rdquo;</li>
+        </ul>
+        <p>Then hit Load.</p>
+        <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
+      </div>
+      <div class="import-err" id="importErr"></div>
+    </form>
     <div class="tester-banner" id="testerBanner" role="status" hidden>
       <span class="tb-text"><span class="tb-long">Tester version of EBBLESS. How's it treating you?</span><span class="tb-short">Tester version</span></span>
       <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
@@ -2883,29 +2908,6 @@ body.week-up-on{overflow:hidden}
       <div class="queue-head">
         <h2>Library</h2>
       </div>
-      <form class="import-row" id="importForm">
-        <span class="import-field">
-        <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
-        <div class="paste-recents" id="pasteRecents" hidden></div>
-        <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
-        <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
-        </button>
-        </span>
-        <button type="submit" id="loadBtn"><span class="load-long">Find music</span><span class="load-short">Go</span></button>
-        <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
-          <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
-          <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
-          <ul class="paste-guide-list">
-            <li><b>A link</b> to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud</li>
-            <li><b>A podcast</b>: a show, an episode, or an RSS feed</li>
-            <li><b>A vibe</b>: search an artist or genre, or describe a mood, like &ldquo;rainy Sunday, something warm and slow&rdquo;</li>
-          </ul>
-          <p>Then hit Load.</p>
-          <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
-        </div>
-      </form>
-      <div class="import-err" id="importErr"></div>
 
       <div id="libraryEmpty" class="empty-lib hidden">
         Paste a playlist, album, song, or podcast link to begin.
@@ -2916,6 +2918,9 @@ body.week-up-on{overflow:hidden}
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+            </button>
             <!-- one "View" menu holds sort order and layout (was a sort icon
                  plus three tiny layout icons) -->
             <div class="lib-sort">
@@ -2959,6 +2964,13 @@ body.week-up-on{overflow:hidden}
               </div>
             </div>
           </div>
+        </div>
+        <div class="lib-search hidden" id="libSearchBox" role="search">
+          <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+          <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
         </div>
         <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
           <button type="button" class="lib-filter-btn" data-filter="all">All</button>
@@ -6511,11 +6523,11 @@ const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
 const libFilter = $('libFilter');
 const libFilterPlaylists = $('libFilterPlaylists'), libFilterAlbums = $('libFilterAlbums');
 const libSearch = $('libSearch'), libSearchClear = $('libSearchClear');
-const libSearchBox = $('libSearchBox');
+const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-$('emptyFindBtn').addEventListener('click', () => setView('library'));
+$('emptyFindBtn').addEventListener('click', () => { urlInput.focus(); });
 $('playerMoreBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const q = state.queue[state.queuePos];
@@ -7320,19 +7332,19 @@ libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
 });
 
 // library-search: case- and accent-insensitive match against the user's own
-// saved library only. The field sits in the top bar (#319); typing from any view jumps to the library.
+// saved library only. The field is a drop-down behind #libSearchToggle (#218):
+// opening focuses it, closing clears the query so the library returns to normal.
 function normLibSearch(s){
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 const LIB_SEARCH_TRACK_LIMIT = 100;
 libSearch.addEventListener('input', () => {
-  if (libSearch.value && state.currentView !== 'library') setView('library');
   libSearchClear.classList.toggle('hidden', !libSearch.value);
   renderLibrary();
 });
 libSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && libSearch.value){ e.preventDefault(); libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
-  else if (e.key === 'Escape'){ e.preventDefault(); libSearch.blur(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); setLibSearchOpen(false); libSearchToggle.focus(); }
   else if (e.key === 'Enter'){ e.preventDefault(); libSearch.blur(); }
 });
 libSearchClear.addEventListener('click', () => {
@@ -7340,6 +7352,15 @@ libSearchClear.addEventListener('click', () => {
   libSearchClear.classList.add('hidden');
   renderLibrary();
 });
+function setLibSearchOpen(open){
+  libSearchBox.classList.toggle('hidden', !open);
+  libSearchToggle.classList.toggle('is-active', open);
+  libSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open){ libSearch.focus(); return; }
+  libSearch.blur();
+  if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
+}
+libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
 
 const libFolded = {};
 function markNowPlaying(){
