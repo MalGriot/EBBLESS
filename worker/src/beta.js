@@ -353,12 +353,10 @@ async function handleLink(request, env, ctx, h) {
 
 // POST { idToken }: the tester token linked to this account, if still Active,
 // plus leaseUntil (ms epoch) for the device it unlocks. Older clients ignore it.
-async function handleClaim(request, env, ctx, h) {
-  const { body, error } = await readBody(request, h.json, 6_000);
-  if (error) return error;
-  const g = await googleSub(body, env, ctx, h);
-  if (g.error) return g.error;
-  if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
+// Shared by /beta/claim and the redirect sign-in below: a verified Google
+// account -> its tester token (linked earlier, or found by the email it
+// signed up with), or null.
+async function claimForGoogle(g, env) {
   let token = await env.PROFILES.get(betaLinkKey(g.sub));
   let t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
   if (!t && g.email) {
@@ -369,8 +367,44 @@ async function handleClaim(request, env, ctx, h) {
       await env.PROFILES.put(betaLinkKey(g.sub), token);
     }
   }
-  if (!t) return h.json({ error: 'This Google account isn\'t on the tester list. Use the one you signed up with, or tap the link in your invite email.' }, 404);
+  return t ? { token, t } : null;
+}
+const NOT_ON_LIST = 'This Google account isn\'t on the tester list. Use the one you signed up with, or tap the link in your invite email.';
+
+async function handleClaim(request, env, ctx, h) {
+  const { body, error } = await readBody(request, h.json, 6_000);
+  if (error) return error;
+  const g = await googleSub(body, env, ctx, h);
+  if (g.error) return g.error;
+  if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
+  const c = await claimForGoogle(g, env);
+  if (!c) return h.json({ error: NOT_ON_LIST }, 404);
+  const { token, t } = c;
   return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
+}
+
+// Google sign-in by redirect (GSI ux_mode 'redirect', login_uri =
+// /beta/google?r=<app url>). The iPhone home-screen app can't use Google's
+// popup button (the popup can't hand the credential back), so the whole
+// round trip is page navigations: Google POSTs the credential here as a
+// form, we check it and send the browser back to the app. A tester goes back
+// with ?t=<token> (the beta lock already unlocks on that and strips it); a
+// failure goes back with ?bl_err=<message> for the lock to show.
+const APP_RETURN_RE = /^https:\/\/malgriot\.github\.io\/EBBLESS\/(?:[A-Za-z0-9._~\/-]*)?$/;
+async function handleGoogleRedirect(request, url, env, ctx, h) {
+  const r = String(url.searchParams.get('r') || '').split(/[?#]/)[0];
+  if (request.method !== 'POST' || !APP_RETURN_RE.test(r)) return h.json({ error: 'not found' }, 404);
+  const back = (k, v) => new Response(null, { status: 302, headers: { Location: r + '?' + k + '=' + encodeURIComponent(v), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+  let form;
+  try { form = await request.formData(); } catch (e) { return back('bl_err', 'Google sign-in didn\'t check out. Try again.'); }
+  // Google's double-submit check: the g_csrf_token cookie must match the body field.
+  const cookie = (/(?:^|;\s*)g_csrf_token=([^;]+)/.exec(request.headers.get('Cookie') || '') || [])[1];
+  if (!cookie || cookie !== form.get('g_csrf_token')) return back('bl_err', 'Google sign-in didn\'t check out. Try again.');
+  const g = await googleSub({ idToken: form.get('credential') }, env, ctx, h);
+  if (g.error) return back('bl_err', 'Google sign-in didn\'t check out. Try again.');
+  if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return back('bl_err', 'Too many tries. Give it a few minutes.');
+  const c = await claimForGoogle(g, env);
+  return c ? back('t', c.token) : back('bl_err', NOT_ON_LIST);
 }
 
 export async function handleBeta(request, url, env, ctx, h) {
@@ -385,6 +419,7 @@ export async function handleBeta(request, url, env, ctx, h) {
     if (p === '/beta/activity') return await handleActivity(request, env, ctx, h);
     if (p === '/beta/link') return await handleLink(request, env, ctx, h);
     if (p === '/beta/claim') return await handleClaim(request, env, ctx, h);
+    if (p === '/beta/google') return await handleGoogleRedirect(request, url, env, ctx, h);
     if (p === '/beta/rejoin') return await handleRejoin(request, env, ctx, h);
   } catch (e) {
     console.error(e);
