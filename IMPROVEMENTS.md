@@ -8506,7 +8506,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #319 (idea). Title only.
 
 ### queue-multi-source-loads: Queue the loads when adding links from several sources at once
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #326. When several links (e.g. a playlist, an album and an artist from different sources) are added at once, load them one after another in a queue instead of all at once, and try to prevent dead links.
 - **Touches:** link import / loader.
