@@ -91,6 +91,7 @@ svg{display:block}
 }
 .wordmark{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
 .wordmark img{height:22px;width:auto;display:block}
+#topbar .wordmark{margin-right:12px}
 /* Hold-to-splash (Geethub #277): holding the wordmark ~1s returns to the
    splash; this ring fills in the accent color while the hold is in progress.
    A plain click still opens the player (see wordmarkHold in the script). */
@@ -115,7 +116,6 @@ svg{display:block}
 #helpBtn{padding:8px;border-radius:50%;margin-left:auto;opacity:.7}
 #helpBtn:hover{opacity:1}
 #helpBtn svg{width:18px;height:18px}
-.tester-banner:not([hidden]) ~ #helpBtn{margin-left:0}
 #mobileSettingsBtn{display:none;padding:8px;border-radius:50%}
 #mobileSettingsBtn svg{width:20px;height:20px}
 
@@ -184,22 +184,41 @@ video.lib-bg-video.is-playing{opacity:1}
 .lib-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;
   opacity:.55;transition:background 4s linear}
 .lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
-.import-row{display:flex;gap:8px;margin:18px 0 14px;position:relative;min-width:0}
+/* In the top bar (#319) the form is centered on the bar, which is the player's
+   center too (the player is the middle pane in split-desktop). --tb-l / --tb-r
+   reserve room for the logo and the help/Settings cluster; when the symmetric
+   space is too small the field slides toward the logo instead of overlapping. */
+#topbar{--tb-l:60px;--tb-r:104px;--tb-min:150px;--tb-w:clamp(var(--tb-min),calc(100% - 2*var(--tb-r)),480px)}
+#importForm.import-row{display:flex;gap:8px;margin:auto 0;position:absolute;top:var(--safe-t);bottom:0;height:38px;min-width:0;
+  width:var(--tb-w);left:clamp(var(--tb-l),calc(50% - var(--tb-w) / 2),calc(100% - var(--tb-r) - var(--tb-w)))}
+@media (min-width:860px){#topbar{--tb-l:68px;--tb-r:460px;--tb-min:260px}}
+/* 860-1149px, no split layout: the nav goes icons-only (labels stay for screen
+   readers) so the search field has room to sit on the page center */
+@media (min-width:860px) and (max-width:1149.98px){
+  #topbar{--tb-r:260px}
+  #topnav .nav-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
+body.split-desktop #topbar{--tb-r:172px}
 .import-row input{
   flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
-  padding:14px 16px;color:var(--text);font-size:14.5px;transition:border-color var(--dur-ui) var(--ease-out);
+  padding:9px 14px;color:var(--text);font-size:14px;transition:border-color var(--dur-ui) var(--ease-out);
 }
 .import-row input::placeholder{color:var(--faint-2)}
 .import-row input:focus{outline:none;border-color:var(--accent)}
 .import-row button{
-  flex:none;background:var(--accent);color:#151107;border-radius:var(--r-md);padding:0 22px;font-weight:600;
+  flex:none;background:var(--accent);color:#151107;border-radius:var(--r-md);padding:0 16px;font-weight:600;
   font-size:14px;white-space:nowrap;
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
 .import-row button:active{transform:scale(.97)}
-#loadBtn .load-short{display:none}
-@media (max-width:420px){ #loadBtn .load-long{display:none} #loadBtn .load-short{display:inline} }
-.import-err{font-size:12.5px;color:var(--bad);margin:8px 0 0;min-height:0}
+/* #loadBtn is the magnifier inside the field (left), the form's submit button */
+.import-row #loadBtn{position:absolute;left:5px;top:0;bottom:0;margin:auto 0;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--faint);border-radius:50%}
+.import-row #loadBtn:hover,.import-row #loadBtn:focus-visible{color:var(--text)}
+.import-row #loadBtn svg{width:18px;height:18px}
+.import-field input{padding-left:42px}
+.import-err{font-size:12.5px;color:var(--bad);margin:0;min-height:0}
+/* the form lives in the top bar (#319): errors hang below it */
+.import-row .import-err:not(:empty){position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:22;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 12px}
 /* conversational-vibe-search: mic in the input bar (hidden where the Web
    Speech API is missing) + the interpreter's stages in the import overlay */
 .import-field{flex:1;min-width:0;display:flex;position:relative}
@@ -294,7 +313,7 @@ body.onb-active .paste-guide{display:none}
    transparent while the overlay is live (hint-live), the overlay hides
    itself once there's text, and the mic's "Listening..." placeholder wins
    while it's recording. The "tab" key chip fills a personalized hint in. */
-.paste-hint{position:absolute;left:17px;right:17px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
+.paste-hint{position:absolute;left:46px;right:17px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
   pointer-events:none;color:var(--faint-2);font-size:14.5px;white-space:nowrap;transition:opacity 260ms var(--ease-out)}
 .paste-hint[hidden]{display:none}
 .paste-hint.is-swapping{opacity:0}
@@ -1566,10 +1585,12 @@ body.queue-over-fs #queue-scrim{bottom:0}
    to the nav (margin-left:auto), so it never covers anything. Beta testers
    only, from day 3. Short label on phones. Hidden while the splash,
    tutorial, a fullscreen mode, the beta lock or a dialog is up. */
-.tester-banner{display:flex;align-items:center;gap:8px;margin:0 10px 0 auto;min-width:0;background:var(--panel-3);color:var(--text);
+.tester-banner{display:flex;align-items:center;gap:8px;margin:0 10px 0 0;min-width:0;background:var(--panel-3);color:var(--text);
   font-size:12px;line-height:1.3;padding:4px 4px 4px 12px;border-radius:20px;white-space:nowrap}
 #topbar:has(#testerBanner:not([hidden])){gap:8px}
 .tester-banner .tb-short{display:none}
+/* hangs under the bar so the search field stays centered between logo and buttons */
+.tester-banner{position:absolute;top:100%;right:8px;margin:4px 0 0;z-index:6}
 @media (max-width:700px){.tester-banner .tb-long{display:none}.tester-banner .tb-short{display:inline}}
 .tester-banner[hidden]{display:none}
 .tester-banner .tb-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -1752,7 +1773,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      library pane's 24px content gutter and the right padding leaves the last
      nav label at the same 24px inset (12px here + the pill's own 12px). */
   body.split-desktop{--topbar-h:52px}
-  body.split-desktop #topbar{padding:0 12px 0 24px;border-bottom:1px solid var(--border)}
+  body.split-desktop #topbar{padding:0 12px 0 24px}
   body.split-desktop #view-library,
   body.split-desktop #view-player,
   body.split-desktop #view-settings{
@@ -2391,8 +2412,11 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-input:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
-body.onb-stage-input:not(.split-desktop) #view-library .view-scroll>*:not(.import-row){display:none}
-body.onb-stage-input:not(.split-desktop) #importForm{width:min(520px,86vw);margin:0;transform:scale(1.15)}
+body.onb-stage-input:not(.split-desktop) #view-library .view-scroll>*{display:none}
+body.onb-active.onb-stage-input:not(.split-desktop) #topbar{display:flex!important;position:fixed;inset:0;height:auto;padding:0;z-index:10002;align-items:center;justify-content:center;pointer-events:none;border:0}
+body.onb-active.onb-stage-input:not(.split-desktop) #topbar>:not(#importForm){display:none!important}
+body.onb-active.onb-stage-input:not(.split-desktop) #importForm{pointer-events:auto;position:relative;top:auto;bottom:auto;left:auto;height:auto}
+body.onb-stage-input:not(.split-desktop) #importForm{flex:none;width:min(520px,86vw);max-width:none;margin:0;transform:scale(1.15)}
 /* desktop tri-section layout (library | player | queue, see the
    min-width:1150px "split-desktop" block above): the intro narrates over
    the real always-visible 3-pane app instead of isolating one view at a
@@ -2414,7 +2438,7 @@ body.onb-stage-settings.split-desktop #onbBackdrop{opacity:0;pointer-events:none
 /* Load button gets a brief camera-push-in + a visible tap before the intro
    moves on, so the one action that actually starts EBBLESS reads clearly */
 #loadBtn{transition:transform 380ms var(--ease-out),box-shadow 380ms var(--ease-out)}
-#loadBtn.onb-zoom{transform:scale(1.45);box-shadow:0 0 0 6px rgba(224,178,106,.18);position:relative;z-index:1}
+#loadBtn.onb-zoom{transform:scale(1.45);box-shadow:0 0 0 6px rgba(224,178,106,.18);z-index:1}
 #loadBtn.onb-zoom.onb-press{transform:scale(1.24)}
 #loadBtn.onb-loading{animation:onb-load-pulse 850ms var(--ease-in-out) infinite}
 @keyframes onb-load-pulse{0%,100%{opacity:1}50%{opacity:.45}}
@@ -2831,6 +2855,29 @@ body.week-up-on{overflow:hidden}
       <img src="brand/assets/mark.png" alt="EBBLESS" draggable="false">
       <svg class="wm-hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" pathLength="100"/></svg>
     </button>
+    <form class="import-row" id="importForm">
+      <span class="import-field">
+      <button type="submit" id="loadBtn" aria-label="Search" title="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
+      <input id="urlInput" type="text" maxlength="250" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+      <div class="paste-recents" id="pasteRecents" hidden></div>
+      <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
+      <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
+      </button>
+      </span>
+      <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
+        <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
+        <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
+        <ul class="paste-guide-list">
+          <li><b>A link</b> to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud</li>
+          <li><b>A podcast</b>: a show, an episode, or an RSS feed</li>
+          <li><b>A vibe</b>: search an artist or genre, or describe a mood, like &ldquo;rainy Sunday, something warm and slow&rdquo;</li>
+        </ul>
+        <p>Then hit Load.</p>
+        <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
+      </div>
+      <div class="import-err" id="importErr"></div>
+    </form>
     <div class="tester-banner" id="testerBanner" role="status" hidden>
       <span class="tb-text"><span class="tb-long">Tester version of EBBLESS. How's it treating you?</span><span class="tb-short">Tester version</span></span>
       <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
@@ -2878,29 +2925,6 @@ body.week-up-on{overflow:hidden}
       <div class="queue-head">
         <h2>Library</h2>
       </div>
-      <form class="import-row" id="importForm">
-        <span class="import-field">
-        <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
-        <div class="paste-recents" id="pasteRecents" hidden></div>
-        <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
-        <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
-        </button>
-        </span>
-        <button type="submit" id="loadBtn"><span class="load-long">Find music</span><span class="load-short">Go</span></button>
-        <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
-          <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
-          <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
-          <ul class="paste-guide-list">
-            <li><b>A link</b> to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud</li>
-            <li><b>A podcast</b>: a show, an episode, or an RSS feed</li>
-            <li><b>A vibe</b>: search an artist or genre, or describe a mood, like &ldquo;rainy Sunday, something warm and slow&rdquo;</li>
-          </ul>
-          <p>Then hit Load.</p>
-          <button type="button" class="paste-guide-ok" data-paste-guide-dismiss>Got it</button>
-        </div>
-      </form>
-      <div class="import-err" id="importErr"></div>
 
       <div id="libraryEmpty" class="empty-lib hidden">
         Paste a playlist, album, song, or podcast link to begin.
@@ -6502,7 +6526,7 @@ const $ = (id) => document.getElementById(id);
 const views = { library: $('view-library'), player: $('view-player'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 // whichever label is showing: "Find music", or "Go" on narrow phones
-function loadBtnLabel(){ const sh = loadBtn.querySelector('.load-short'); return sh && sh.offsetParent ? 'Go' : 'Find music'; }
+function loadBtnLabel(){ return 'the magnifier'; }
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
@@ -6520,7 +6544,7 @@ const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
-$('emptyFindBtn').addEventListener('click', () => setView('library'));
+$('emptyFindBtn').addEventListener('click', () => { urlInput.focus(); });
 $('playerMoreBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const q = state.queue[state.queuePos];
@@ -10151,7 +10175,7 @@ function applyShareTargetFromUrl(){
   const m = (url + ' ' + text).match(/https?:\/\/\S+/i);
   const candidate = (m ? m[0] : (text || title)).trim();
   if (!candidate) return;
-  urlInput.value = candidate;
+  urlInput.value = candidate.slice(0, 250);
   try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
 }
 
@@ -10608,7 +10632,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
         const r = e.results[i];
         if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript;
       }
-      urlInput.value = (finalText + interim).trim();
+      urlInput.value = (finalText + interim).trim().slice(0, 250);
     };
     rec.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') importErr.textContent = 'Microphone access is blocked - allow it in your browser to speak a vibe.';
@@ -10619,7 +10643,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
       btn.classList.remove('is-listening');
       btn.setAttribute('aria-pressed', 'false');
       urlInput.placeholder = placeholder;
-      const said = (finalText || urlInput.value).trim();
+      const said = (finalText || urlInput.value).trim().slice(0, 250);
       if (said && !looksLikeUrl(said)){
         urlInput.value = '';
         rememberPasteRecent(said);

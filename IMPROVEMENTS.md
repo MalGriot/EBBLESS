@@ -8498,9 +8498,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #318 (bug). Title only.
 
 ### search-bar-top-center: Move the search bar to the top center, between the logo and Settings
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
-- **Description:** Geethub issue #319. Search should sit in the top bar, centered between the logo and Settings, instead of inside the library.
-- **Touches:** header layout, library search UI.
-- **Branch:**
+- **Description:** Geethub issue #319. The main "Find music" bar (#importForm: paste/search/vibe input with a magnifier submit icon on the left and the mic on the right, max 250 chars, no Find music/Go button) moves from the Library view into the top bar, centered on the page (aligned over the player), shrinking before it would touch the logo or help/Settings, so it is reachable from Library, Player and Queue. The library-only search (#libSearch) stays in the library toolbar. The tester banner hangs under the bar so the field stays centered, and the header/content divider is gone.
+- **Touches:** header layout, #importForm and its paste recents/hint/guide, tutorial input stage, #emptyFindBtn.
+- **Branch:** agent/search-bar-top-center
 - **Notes:** Synced from Geethub issue #319 (idea). Title only.
