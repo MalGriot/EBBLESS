@@ -8440,3 +8440,43 @@ Add entries in this shape:
 - **Touches:** artist add flow and artist info fetch/cache in index.html.
 - **Branch:** agent/artist-info-on-add
 - **Notes:** From GitHub issue #312 (bug). Queued by the user directly, so `ready`. Issue body is empty beyond the title.
+
+### iphone-pause-play-no-sound: iPhone: after pause then play, time runs but no sound
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #313. On iPhone, pausing then pressing play moves the clock but no audio comes out.
+- **Touches:** playback resume path on iOS. Check overlap with `mobile-resume-pause-regression`, `unplaying-next-track`, `playback-pauses-when-unfocused`.
+- **Branch:** agent/iphone-pause-play
+- **Notes:** Synced from Geethub issue #313 (bug). Labeled area:playback, platform:ios. Title only.
+
+### iphone-install-button-dead: iPhone: install button does nothing, and not every iPhone has "Add to Home Screen"
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #314. The install button does nothing on iPhone. Some iPhones lack "Add to Home Screen" in the share list, so a second install path is needed.
+- **Touches:** install button handling on iOS (splash + Settings). Related: `mobile-install-button`, `settings-install-button`, `install-prompt-push`.
+- **Branch:** agent/iphone-install-button
+- **Notes:** Synced from Geethub issue #314 (bug).
+
+### albums-missing-tracks: Albums don't load all their tracks
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #315. Some albums come up missing tracks, including famous singles with videos that clearly exist. EBBLESS needs better album-title matching or a better search.
+- **Touches:** album track lookup / search matching. Related: `artists-albums-resume-backfill`, recent artist-page album work (#311).
+- **Branch:** agent/albums-missing-tracks
+- **Notes:** Synced from Geethub issue #315 (bug).
+
+### fix-album-source-for-all: Fixing one unplayable song's source should fix the rest of the album
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Geethub issue #316. When one song in an album gets fixed to a working source, the album's other unplayable songs should automatically look at that same source.
+- **Touches:** source-fix flow, album grouping. Related: `breathe-love-deep-album`, `change-art-apply-album` (same "apply to whole album" pattern).
+- **Branch:** agent/fix-album-source
+- **Notes:** Synced from Geethub issue #316 (idea). Title only.
+
+### beta-signup-install-login-loop: Beta signup on website, then installed app loops back to signup and Google login stalls
+- **Status:** review
+- **Priority:** high
+- **Description:** Bug, Geethub issue #317. After signing up on the website the user is signed in, but once they install, the app sends them back to the beta signup page and Google login just stalls, so people stay in the browser. Seen on iPhone (APP-0013).
+- **Touches:** beta signup page, PWA install storage handoff (iOS standalone has separate storage from Safari), Google sign-in in standalone mode. Related: `google-email-signup-access`, `beta-page-redesign`.
+- **Branch:** agent/beta-install-login
+- **Notes:** Synced from Geethub issue #317 (bug). Likely the iOS Safari-to-installed-app storage split.
