@@ -8504,3 +8504,51 @@ Add entries in this shape:
 - **Touches:** header layout, #importForm and its paste recents/hint/guide, tutorial input stage, #emptyFindBtn.
 - **Branch:** agent/search-bar-top-center
 - **Notes:** Synced from Geethub issue #319 (idea). Title only.
+
+### queue-multi-source-loads: Queue the loads when adding links from several sources at once
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #326. When several links (e.g. a playlist, an album and an artist from different sources) are added at once, load them one after another in a queue instead of all at once, and try to prevent dead links.
+- **Touches:** link import / loader.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #326 (bug). Related: playlist-full-loading.
+
+### auto-sign-in: Stop prompting to sign in every time - sign-in should be automatic
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #325. The app keeps asking users to sign in each visit. A signed-in user should stay signed in automatically with no repeated prompt.
+- **Touches:** sign-in / session persistence.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #325 (bug). Related: beta-install-login (#317). Title only; reproduce to find which platform.
+
+### load-podcast-for-all: Pre-load a podcast episode for all users
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #324. For all users, load this Spotify podcast episode: https://open.spotify.com/episode/5tVNpRmJm0OrSzmsptOX3I
+- **Touches:** default content for new users.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #324 (idea). Needs clarification: where it should appear (default library, Discover, featured shelf?).
+
+### load-mal-griot-artist-page: Pre-load the MAL GRIOT artist page for all users
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #323. For all users, load this Spotify artist page: https://open.spotify.com/artist/61bgVlMQw2S0t6d8mVPVIS
+- **Touches:** default content for new users.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #323 (idea). Needs clarification: where it should appear. Artist name is the professional name MAL GRIOT.
+
+### album-art-picker-header-cutoff: Desktop album art picker tab is cut off by the header
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #322. On desktop the album art picker tab is clipped by the header, and when it is not showing, the "ads playing?" button is pushed below the bottom footer and cut off.
+- **Touches:** desktop layout: album art picker, header, footer, ads button.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #322 (bug). Possibly tied to the recent header search bar move (#319).
+
+### relink-while-loading: Refreshing a track link should work while the rest of the songs are still loading
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #321. When adding an artist, album or playlist, the user currently has to wait for all tracks to load before refreshing a link. Per-track refresh should work immediately.
+- **Touches:** track relink menu, playlist/album loader.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #321 (bug). Related: track-relink-menu, playlist-full-loading.
