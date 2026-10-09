@@ -6311,6 +6311,22 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   return payload;
 }
 
+// Background loads (default/starter seeding, an artist's albums) share ONE
+// queue so links from several sources never resolve at the same time (#326):
+// each waits for the previous to settle. Resolves to the playlist, or null
+// (dead link: threw, or no playable songs), so callers skip saving it.
+let bgLoadChain = Promise.resolve();
+function queueBackgroundLoad(id, type){
+  const run = async () => {
+    try{
+      const pl = await resolvePlaylist(id, type, () => {});
+      return pl && (pl.tracks || []).some(t => t && t.videoId) ? pl : null;
+    } catch(e){ return null; }
+  };
+  const p = bgLoadChain.then(run, run);
+  bgLoadChain = p;
+  return p;
+}
 const resolvingTracks = new Map(); // playlistId -> resolved[] of a resolvePlaylist loop still running
 // Strips " - Topic" from tracks saved before #240 too.
 function getCachedPlaylist(id){
@@ -10040,13 +10056,13 @@ async function addArtistAlbumsOnly(pl, resume){
       const a = todo[i];
       if (!isSaved(pl.id)){ setArtistAlbumsPending(pl.id, null); break; }
       if (!alreadyHave(a)){
-        try{
-          await resolvePlaylist(a.id, 'am_album', () => {});
+        // best-effort, like seedStarterLibrary - a failed or dead album is just skipped
+        if (await queueBackgroundLoad(a.id, 'am_album')){
           const added = getCachedPlaylist(a.id);
           if (added){ added.importedUnder = pl.name; lsSet(LS_PL(a.id), added); }
           saveToLibrary(a.id);
           rerenderLibraryKeepPanel();
-        } catch(e){ /* best-effort, like seedStarterLibrary - a failed album is just skipped */ }
+        }
       }
       setArtistAlbumsPending(pl.id, todo.slice(i + 1));
     }
@@ -10745,10 +10761,8 @@ async function seedStarterLibrary(){
     // since seeding only ever runs once for a first-time/empty library.
     const cached = getCachedPlaylist(id);
     if (cached && !isResolveStale(cached)){ saveToLibrary(id); continue; }
-    try{
-      await resolvePlaylist(id, type, () => {});
-      saveToLibrary(id);
-    } catch(e){ /* best-effort seed - a failed fetch just leaves the library short one entry */ }
+    // best-effort seed - a failed or dead link just leaves the library short one entry
+    if (await queueBackgroundLoad(id, type)) saveToLibrary(id);
   }
   renderLibrary();
 }
@@ -10761,12 +10775,11 @@ async function seedDefaultSpotifyContent(){
     if (seeded.includes(entry.id)) continue;
     // already in the library (e.g. the listener pasted it) - nothing to add
     if (getLibrary().includes(entry.id)){ lsSet(LS_DEFAULT_SEEDED, seeded.concat(entry.id)); continue; }
-    try{
-      await resolvePlaylist(entry.id, entry.type, () => {});
-      // appended, not unshifted: default content sits below the listener's own items
-      if (!getLibrary().includes(entry.id)) lsSet(LS_LIB, getLibrary().concat(entry.id));
-      lsSet(LS_DEFAULT_SEEDED, lsGet(LS_DEFAULT_SEEDED, []).concat(entry.id));
-    } catch(e){ /* not marked seeded: tries again next launch */ }
+    // a failed or dead link is not marked seeded: tries again next launch
+    if (!(await queueBackgroundLoad(entry.id, entry.type))) continue;
+    // appended, not unshifted: default content sits below the listener's own items
+    if (!getLibrary().includes(entry.id)) lsSet(LS_LIB, getLibrary().concat(entry.id));
+    lsSet(LS_DEFAULT_SEEDED, lsGet(LS_DEFAULT_SEEDED, []).concat(entry.id));
   }
   renderLibrary();
 }

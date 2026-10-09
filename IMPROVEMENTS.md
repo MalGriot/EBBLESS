@@ -8506,12 +8506,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #319 (idea). Title only.
 
 ### queue-multi-source-loads: Queue the loads when adding links from several sources at once
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #326. When several links (e.g. a playlist, an album and an artist from different sources) are added at once, load them one after another in a queue instead of all at once, and try to prevent dead links.
 - **Touches:** link import / loader.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #326 (bug). Related: playlist-full-loading.
+- **Branch:** agent/queue-multi-source-loads
+- **Notes:** Synced from Geethub issue #326 (bug). Related: playlist-full-loading. Review: added queueBackgroundLoad in index.html, one shared serial queue for background loads (starter seeding, default Spotify seeding, an artist's albums), so they no longer resolve at the same time; a link that errors or yields no playable songs is skipped (not saved, not marked seeded). User pastes still load immediately via beginImport. Syntax-checked only, not run in a browser.
 
 ### auto-sign-in: Stop prompting to sign in every time - sign-in should be automatic
 - **Status:** merged
