@@ -91,6 +91,7 @@ svg{display:block}
 }
 .wordmark{display:flex;align-items:center;background:none;border:none;padding:0;cursor:pointer}
 .wordmark img{height:22px;width:auto;display:block}
+#topbar .wordmark{margin-right:12px}
 /* Hold-to-splash (Geethub #277): holding the wordmark ~1s returns to the
    splash; this ring fills in the accent color while the hold is in progress.
    A plain click still opens the player (see wordmarkHold in the script). */
@@ -110,9 +111,9 @@ svg{display:block}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
-/* subtle tutorial replay; margin-left:auto keeps it packed with the nav on
-   the right unless the tester banner (also margin-left:auto) is ahead of it */
-#helpBtn{padding:8px;border-radius:50%;margin-left:auto;opacity:.7}
+/* subtle tutorial replay; the top-bar search (auto margins) packs it with the nav
+   on the right */
+#helpBtn{padding:8px;border-radius:50%;margin-left:12px;opacity:.7}
 #helpBtn:hover{opacity:1}
 #helpBtn svg{width:18px;height:18px}
 .tester-banner:not([hidden]) ~ #helpBtn{margin-left:0}
@@ -343,7 +344,6 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-btn:hover{color:var(--text)}
 .lib-filter-btn.is-active{background:var(--text);border-color:var(--text);color:var(--bg)}
 .lib-head-actions{flex:1;min-width:0}
-.lib-head-actions #libSearchToggle{margin-left:auto}
 .lib-view-btn{display:inline-flex;align-items:center;gap:2px}
 .lib-view-btn svg{width:16px;height:16px;margin-right:-4px}
 .lib-menu-head{padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--faint-2);letter-spacing:.02em}
@@ -353,8 +353,6 @@ body.onb-active .paste-guide{display:none}
    36px to look like chips; ::after pads the hit area to 44px) */
 @media (max-width:859.98px){
   .lib-tb-btn{min-height:44px}
-  #libSearchToggle{width:44px;height:44px;border-radius:12px}
-  #libSearchToggle svg{width:18px;height:18px}
   .lib-filter-btn{height:36px;font-size:13px}
   .lib-filter-btn::after{content:"";position:absolute;inset:-5px 0}
   .lib-filter{padding:5px 0}
@@ -367,8 +365,8 @@ body.onb-active .paste-guide{display:none}
 #libraryGrid{margin-top:14px}
 /* library-search: live filter over the user's own saved playlists/albums
    and their tracks (see renderLibrary()). Styled like .import-row's input.
-   Hidden until the magnifying-glass button in .lib-head-actions opens it (#218). */
-.lib-search{position:relative;margin-top:14px}
+   Lives in the top bar between the logo and Settings (#319), always visible. */
+.lib-search{position:relative;flex:1 1 0;min-width:0;max-width:420px;margin:0 auto}
 .lib-search-icon{position:absolute;left:12px;top:50%;width:15px;height:15px;transform:translateY(-50%);color:var(--faint-2);pointer-events:none}
 .lib-search input{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
   padding:10px 38px 10px 36px;color:var(--text);font-size:13.5px;transition:border-color var(--dur-ui) var(--ease-out)}
@@ -2831,6 +2829,13 @@ body.week-up-on{overflow:hidden}
       <img src="brand/assets/mark.png" alt="EBBLESS" draggable="false">
       <svg class="wm-hold-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" pathLength="100"/></svg>
     </button>
+    <div class="lib-search" id="libSearchBox" role="search">
+      <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
     <div class="tester-banner" id="testerBanner" role="status" hidden>
       <span class="tb-text"><span class="tb-long">Tester version of EBBLESS. How's it treating you?</span><span class="tb-short">Tester version</span></span>
       <button type="button" class="tb-send" id="testerBannerSend">Send feedback</button>
@@ -2911,9 +2916,6 @@ body.week-up-on{overflow:hidden}
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
-            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-            </button>
             <!-- one "View" menu holds sort order and layout (was a sort icon
                  plus three tiny layout icons) -->
             <div class="lib-sort">
@@ -2957,13 +2959,6 @@ body.week-up-on{overflow:hidden}
               </div>
             </div>
           </div>
-        </div>
-        <div class="lib-search hidden" id="libSearchBox" role="search">
-          <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-          <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-          <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-          </button>
         </div>
         <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
           <button type="button" class="lib-filter-btn" data-filter="all">All</button>
@@ -6516,7 +6511,7 @@ const libSortBtn = $('libSortBtn'), libSortMenu = $('libSortMenu');
 const libFilter = $('libFilter');
 const libFilterPlaylists = $('libFilterPlaylists'), libFilterAlbums = $('libFilterAlbums');
 const libSearch = $('libSearch'), libSearchClear = $('libSearchClear');
-const libSearchBox = $('libSearchBox'), libSearchToggle = $('libSearchToggle');
+const libSearchBox = $('libSearchBox');
 const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearchTracksList');
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
@@ -7325,19 +7320,19 @@ libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
 });
 
 // library-search: case- and accent-insensitive match against the user's own
-// saved library only. The field is a drop-down behind #libSearchToggle (#218):
-// opening focuses it, closing clears the query so the library returns to normal.
+// saved library only. The field sits in the top bar (#319); typing from any view jumps to the library.
 function normLibSearch(s){
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 const LIB_SEARCH_TRACK_LIMIT = 100;
 libSearch.addEventListener('input', () => {
+  if (libSearch.value && state.currentView !== 'library') setView('library');
   libSearchClear.classList.toggle('hidden', !libSearch.value);
   renderLibrary();
 });
 libSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && libSearch.value){ e.preventDefault(); libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
-  else if (e.key === 'Escape'){ e.preventDefault(); setLibSearchOpen(false); libSearchToggle.focus(); }
+  else if (e.key === 'Escape'){ e.preventDefault(); libSearch.blur(); }
   else if (e.key === 'Enter'){ e.preventDefault(); libSearch.blur(); }
 });
 libSearchClear.addEventListener('click', () => {
@@ -7345,15 +7340,6 @@ libSearchClear.addEventListener('click', () => {
   libSearchClear.classList.add('hidden');
   renderLibrary();
 });
-function setLibSearchOpen(open){
-  libSearchBox.classList.toggle('hidden', !open);
-  libSearchToggle.classList.toggle('is-active', open);
-  libSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open){ libSearch.focus(); return; }
-  libSearch.blur();
-  if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
-}
-libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
 
 const libFolded = {};
 function markNowPlaying(){

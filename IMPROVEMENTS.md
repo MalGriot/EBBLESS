@@ -8498,9 +8498,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #318 (bug). Title only.
 
 ### search-bar-top-center: Move the search bar to the top center, between the logo and Settings
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Geethub issue #319. Search should sit in the top bar, centered between the logo and Settings, instead of inside the library.
 - **Touches:** header layout, library search UI.
-- **Branch:**
+- **Branch:** agent/search-bar-top-center
 - **Notes:** Synced from Geethub issue #319 (idea). Title only.
