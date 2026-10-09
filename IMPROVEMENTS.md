@@ -8546,9 +8546,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #322 (bug). Possibly tied to the recent header search bar move (#319).
 
 ### relink-while-loading: Refreshing a track link should work while the rest of the songs are still loading
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #321. When adding an artist, album or playlist, the user currently has to wait for all tracks to load before refreshing a link. Per-track refresh should work immediately.
 - **Touches:** track relink menu, playlist/album loader.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #321 (bug). Related: track-relink-menu, playlist-full-loading.
+- **Branch:** agent/relink-while-loading
+- **Notes:** Synced from Geethub issue #321 (bug). Related: track-relink-menu, playlist-full-loading. Fix: the picker already opened on loaded rows, but resolvePlaylist kept rewriting storage from its own in-flight list, silently undoing a pick made mid-load. applyRelinkChoice now also updates that list (resolvingTracks map). Syntax-checked only; not exercised in a browser.
