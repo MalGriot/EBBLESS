@@ -8474,7 +8474,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #316 (idea). Title only.
 
 ### beta-signup-install-login-loop: Beta signup on website, then installed app loops back to signup and Google login stalls
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #317. After signing up on the website the user is signed in, but once they install, the app sends them back to the beta signup page and Google login just stalls, so people stay in the browser. Seen on iPhone (APP-0013).
 - **Touches:** beta signup page, PWA install storage handoff (iOS standalone has separate storage from Safari), Google sign-in in standalone mode. Related: `google-email-signup-access`, `beta-page-redesign`.
