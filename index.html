@@ -7705,14 +7705,25 @@ function toggleLibraryPlaylistPanel(id){
   // an artist's page lists their albums up top, then only the songs that
   // aren't on one of those albums (singles); the albums hold the rest
   const artistAlbumIds = isArtistEntry(pl) ? orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); }) : [];
-  const onAlbum = new Set();
-  artistAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => { if (t && t.videoId) onAlbum.add(normalizeArtistQuery(t.title)); }); });
+  // compare titles ignoring case/punctuation and edition tags (Remastered ####, Single Version, feat. ...)
+  const songKey = (title) => normalizeArtistQuery(String(title || '').replace(/\s*[\(\[][^\)\]]*\b(remaster(ed)?|single version|radio edit|feat\.?|ft\.?|featuring|with|version|mono|stereo|deluxe)\b[^\)\]]*[\)\]]/gi, '').replace(/\s+-\s+(\d{4}\s+)?(remaster(ed)?|single version|radio edit|mono|stereo)\b.*$/i, '')) || normalizeArtistQuery(title);
+  const onAlbum = new Map(); // song key -> { pl: album, t: its track }
+  artistAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => { if (!t) return; const k = songKey(t.title), prev = onAlbum.get(k); if (!prev || (!prev.t.videoId && t.videoId)) onAlbum.set(k, { pl: a, t }); }); });
+  const adoptedInto = new Set();
   let singlesLabelShown = false;
   if (!pl.tracks.length){
     libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
     pl.tracks.forEach((t, i) => {
-      if (onAlbum.size && onAlbum.has(normalizeArtistQuery(t.title))) return;
+      const dup = onAlbum.get(songKey(t.title));
+      if (dup){
+        // the album owns this song; if its copy has no video yet, adopt the single's so nothing is lost
+        if (!dup.t.videoId && t.videoId){
+          dup.t.videoId = t.videoId; dup.t.matchedTitle = t.matchedTitle || ''; dup.t.channel = t.channel || ''; dup.t.duration = t.duration || 0;
+          delete dup.t.rematchTried; adoptedInto.add(dup.pl);
+        }
+        return;
+      }
       if (artistAlbumIds.length && !singlesLabelShown){
         singlesLabelShown = true;
         const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Singles';
@@ -7746,6 +7757,7 @@ function toggleLibraryPlaylistPanel(id){
       libplBody.appendChild(row);
     });
   }
+  adoptedInto.forEach(persistPlaylistObj);
   // an artist's own page also gets their bio, facts and links on top (#298)
   if (isArtistEntry(pl)){
     const mine = artistAlbumIds.slice();
