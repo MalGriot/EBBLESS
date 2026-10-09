@@ -2697,7 +2697,10 @@ body.week-up-on{overflow:hidden}
   // Google redirect sign-in (worker /beta/google) came back with a message
   const be = q.get('bl_err');
   if (be){ q.delete('bl_err'); msg(be.slice(0, 200)); }
-  if (qt || be){ q.delete('t'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
+  // ...and a one-time code for the profile sync session (consumed by the main script)
+  const bc = q.get('c');
+  if (/^[0-9a-f]{32}$/.test(bc || '')){ window.ebblessGoogleCode = bc; }
+  if (qt || be || bc){ q.delete('t'); q.delete('c'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
 
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
@@ -5352,6 +5355,19 @@ function handleGoogleCredential(response){
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
 }
+
+// Redirect sign-in (installed iOS app, worker /beta/google): the beta lock
+// stashed a one-time code from the return URL; trade it for the Google ID
+// token and sign in for profile sync like the Settings button does.
+(async function(){
+  const code = window.ebblessGoogleCode; window.ebblessGoogleCode = null;
+  if (!code) return;
+  try{
+    const res = await fetch(BACKEND + '/beta/google/exchange', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    const d = res.ok ? await res.json().catch(() => null) : null;
+    if (d && d.idToken) handleGoogleCredential({ credential: d.idToken });
+  } catch(e){}
+})();
 
 // One login, every device (#274): the beta lock (top of <body>) and Google
 // sign-in used to be two separate logins, so a tester's second device sat

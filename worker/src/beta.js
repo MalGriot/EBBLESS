@@ -404,7 +404,31 @@ async function handleGoogleRedirect(request, url, env, ctx, h) {
   if (g.error) return back('bl_err', 'Google sign-in didn\'t check out. Try again.');
   if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return back('bl_err', 'Too many tries. Give it a few minutes.');
   const c = await claimForGoogle(g, env);
-  return c ? back('t', c.token) : back('bl_err', NOT_ON_LIST);
+  if (!c) return back('bl_err', NOT_ON_LIST);
+  // Also hand the app a one-time code for the Google ID token, so it can start
+  // the profile sync session without a second sign-in. The token itself never
+  // goes in the URL; the code lives 60s and is consumed by /beta/google/exchange.
+  let code = '';
+  try {
+    code = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+    await env.PROFILES.put(CODE_PREFIX + code, String(form.get('credential')), { expirationTtl: 60 });
+  } catch (e) { code = ''; }
+  return new Response(null, { status: 302, headers: { Location: r + '?t=' + encodeURIComponent(c.token) + (code ? '&c=' + code : ''), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+}
+
+// POST { code }: trade the one-time code from the redirect for the Google ID
+// token it stands for (single use; the profile endpoints verify the token).
+const CODE_PREFIX = 'bgcode:', CODE_RE = /^[0-9a-f]{32}$/;
+async function handleGoogleExchange(request, env, ctx, h) {
+  const { body, error } = await readBody(request, h.json, 1_000);
+  if (error) return error;
+  const code = String(body.code || '');
+  if (!CODE_RE.test(code) || !env.PROFILES) return h.json({ error: 'invalid code' }, 400);
+  if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'slow down' }, 429);
+  const idToken = await env.PROFILES.get(CODE_PREFIX + code);
+  if (!idToken) return h.json({ error: 'invalid code' }, 404);
+  await env.PROFILES.delete(CODE_PREFIX + code);
+  return h.json({ idToken }, 200);
 }
 
 export async function handleBeta(request, url, env, ctx, h) {
@@ -419,6 +443,7 @@ export async function handleBeta(request, url, env, ctx, h) {
     if (p === '/beta/activity') return await handleActivity(request, env, ctx, h);
     if (p === '/beta/link') return await handleLink(request, env, ctx, h);
     if (p === '/beta/claim') return await handleClaim(request, env, ctx, h);
+    if (p === '/beta/google/exchange') return await handleGoogleExchange(request, env, ctx, h);
     if (p === '/beta/google') return await handleGoogleRedirect(request, url, env, ctx, h);
     if (p === '/beta/rejoin') return await handleRejoin(request, env, ctx, h);
   } catch (e) {
