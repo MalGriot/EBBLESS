@@ -116,7 +116,6 @@ svg{display:block}
 #helpBtn{padding:8px;border-radius:50%;margin-left:12px;opacity:.7}
 #helpBtn:hover{opacity:1}
 #helpBtn svg{width:18px;height:18px}
-.tester-banner:not([hidden]) ~ #helpBtn{margin-left:0}
 #mobileSettingsBtn{display:none;padding:8px;border-radius:50%}
 #mobileSettingsBtn svg{width:20px;height:20px}
 
@@ -198,8 +197,11 @@ video.lib-bg-video.is-playing{opacity:1}
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
 .import-row button:active{transform:scale(.97)}
-#loadBtn .load-short{display:none}
-@media (max-width:420px){ #loadBtn .load-long{display:none} #loadBtn .load-short{display:inline} }
+/* #loadBtn is the magnifier inside the field (left), the form's submit button */
+.import-row #loadBtn{position:absolute;left:5px;top:0;bottom:0;margin:auto 0;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--faint);border-radius:50%}
+.import-row #loadBtn:hover,.import-row #loadBtn:focus-visible{color:var(--text)}
+.import-row #loadBtn svg{width:18px;height:18px}
+.import-field input{padding-left:42px}
 .import-err{font-size:12.5px;color:var(--bad);margin:0;min-height:0}
 /* the form lives in the top bar (#319): errors hang below it */
 .import-row .import-err:not(:empty){position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:22;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 12px}
@@ -297,7 +299,7 @@ body.onb-active .paste-guide{display:none}
    transparent while the overlay is live (hint-live), the overlay hides
    itself once there's text, and the mic's "Listening..." placeholder wins
    while it's recording. The "tab" key chip fills a personalized hint in. */
-.paste-hint{position:absolute;left:17px;right:17px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
+.paste-hint{position:absolute;left:46px;right:17px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
   pointer-events:none;color:var(--faint-2);font-size:14.5px;white-space:nowrap;transition:opacity 260ms var(--ease-out)}
 .paste-hint[hidden]{display:none}
 .paste-hint.is-swapping{opacity:0}
@@ -1573,7 +1575,8 @@ body.queue-over-fs #queue-scrim{bottom:0}
   font-size:12px;line-height:1.3;padding:4px 4px 4px 12px;border-radius:20px;white-space:nowrap}
 #topbar:has(#testerBanner:not([hidden])){gap:8px}
 .tester-banner .tb-short{display:none}
-@media (max-width:1149.98px){.tester-banner{position:absolute;top:100%;right:8px;margin:4px 0 0;z-index:6}}
+/* hangs under the bar so the search field stays centered between logo and buttons */
+.tester-banner{position:absolute;top:100%;right:8px;margin:4px 0 0;z-index:6}
 @media (max-width:700px){.tester-banner .tb-long{display:none}.tester-banner .tb-short{display:inline}}
 .tester-banner[hidden]{display:none}
 .tester-banner .tb-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -1756,7 +1759,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      library pane's 24px content gutter and the right padding leaves the last
      nav label at the same 24px inset (12px here + the pill's own 12px). */
   body.split-desktop{--topbar-h:52px}
-  body.split-desktop #topbar{padding:0 12px 0 24px;border-bottom:1px solid var(--border)}
+  body.split-desktop #topbar{padding:0 12px 0 24px}
   body.split-desktop #view-library,
   body.split-desktop #view-player,
   body.split-desktop #view-settings{
@@ -2421,7 +2424,7 @@ body.onb-stage-settings.split-desktop #onbBackdrop{opacity:0;pointer-events:none
 /* Load button gets a brief camera-push-in + a visible tap before the intro
    moves on, so the one action that actually starts EBBLESS reads clearly */
 #loadBtn{transition:transform 380ms var(--ease-out),box-shadow 380ms var(--ease-out)}
-#loadBtn.onb-zoom{transform:scale(1.45);box-shadow:0 0 0 6px rgba(224,178,106,.18);position:relative;z-index:1}
+#loadBtn.onb-zoom{transform:scale(1.45);box-shadow:0 0 0 6px rgba(224,178,106,.18);z-index:1}
 #loadBtn.onb-zoom.onb-press{transform:scale(1.24)}
 #loadBtn.onb-loading{animation:onb-load-pulse 850ms var(--ease-in-out) infinite}
 @keyframes onb-load-pulse{0%,100%{opacity:1}50%{opacity:.45}}
@@ -2840,14 +2843,14 @@ body.week-up-on{overflow:hidden}
     </button>
     <form class="import-row" id="importForm">
       <span class="import-field">
-      <input id="urlInput" type="text" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
+      <button type="submit" id="loadBtn" aria-label="Search" title="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
+      <input id="urlInput" type="text" maxlength="250" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
       <div class="paste-recents" id="pasteRecents" hidden></div>
       <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
       <button type="button" id="micBtn" class="mic-btn" aria-label="Speak your vibe" aria-pressed="false" title="Speak your vibe" hidden>
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></svg>
       </button>
       </span>
-      <button type="submit" id="loadBtn"><span class="load-long">Find music</span><span class="load-short">Go</span></button>
       <div id="pasteGuide" class="paste-guide" role="dialog" aria-labelledby="pasteGuideTitle" hidden>
         <button type="button" class="paste-guide-x" data-paste-guide-dismiss aria-label="Dismiss">&times;</button>
         <div class="paste-guide-title" id="pasteGuideTitle">Start here</div>
@@ -6509,7 +6512,7 @@ const $ = (id) => document.getElementById(id);
 const views = { library: $('view-library'), player: $('view-player'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 // whichever label is showing: "Find music", or "Go" on narrow phones
-function loadBtnLabel(){ const sh = loadBtn.querySelector('.load-short'); return sh && sh.offsetParent ? 'Go' : 'Find music'; }
+function loadBtnLabel(){ return 'the magnifier'; }
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
 const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
@@ -10158,7 +10161,7 @@ function applyShareTargetFromUrl(){
   const m = (url + ' ' + text).match(/https?:\/\/\S+/i);
   const candidate = (m ? m[0] : (text || title)).trim();
   if (!candidate) return;
-  urlInput.value = candidate;
+  urlInput.value = candidate.slice(0, 250);
   try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
 }
 
@@ -10615,7 +10618,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
         const r = e.results[i];
         if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript;
       }
-      urlInput.value = (finalText + interim).trim();
+      urlInput.value = (finalText + interim).trim().slice(0, 250);
     };
     rec.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') importErr.textContent = 'Microphone access is blocked - allow it in your browser to speak a vibe.';
@@ -10626,7 +10629,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
       btn.classList.remove('is-listening');
       btn.setAttribute('aria-pressed', 'false');
       urlInput.placeholder = placeholder;
-      const said = (finalText || urlInput.value).trim();
+      const said = (finalText || urlInput.value).trim().slice(0, 250);
       if (said && !looksLikeUrl(said)){
         urlInput.value = '';
         rememberPasteRecent(said);
