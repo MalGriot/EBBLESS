@@ -6248,6 +6248,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   // artist's Topic upload of the album cut, checked against the album cover.
   const albumOpts = isAlbumEntry({ type, albumOverride }) ? { album: name, albumArt: image || null } : null;
   const resolved = [];
+  // relink-while-loading: expose the in-flight list so a "Fix this song"
+  // pick on an already-resolved row lands in it too (see applyRelinkChoice);
+  // otherwise the next snapshot write below would overwrite the pick.
+  resolvingTracks.set(playlistId, resolved);
   let firstTrackFired = false;
   for (let i = 0; i < tracks.length; i++){
     const t = tracks[i];
@@ -6298,11 +6302,13 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // never calls it, so there's nothing to pace here.
     if (i < tracks.length - 1 && !isNativeSC && !isNativeYT) await sleep(350);
   }
+  resolvingTracks.delete(playlistId);
   const payload = keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
   lsSet(LS_PL(playlistId), payload);
   return payload;
 }
 
+const resolvingTracks = new Map(); // playlistId -> resolved[] of a resolvePlaylist loop still running
 // Strips " - Topic" from tracks saved before #240 too.
 function getCachedPlaylist(id){
   const pl = lsGet(LS_PL(id), null);
@@ -9037,6 +9043,14 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   // A SoundCloud track with no art of its own yet borrows the chosen
   // upload's (its native art is otherwise kept - see keepsNativeArt).
   if (isSoundCloudVideoId(candidate.videoId) && !t.art && candidate.image) t.art = candidate.image;
+  // Still loading: the resolver keeps rewriting storage from its own list,
+  // so put the pick there as well or the next write would undo it.
+  const live = resolvingTracks.get(plId);
+  const lt = live && live[trackIdx];
+  if (lt && lt.title === t.title){
+    ['videoId', 'matchedTitle', 'channel', 'duration'].forEach(k => { lt[k] = t[k]; });
+    if (t.art) lt.art = t.art;
+  }
   lsSet(LS_PL(plId), pl);
   if (state.playlist && state.playlist.id === plId) state.playlist = pl;
   // Also overwrite the cross-playlist title/artist match cache, otherwise
