@@ -18263,15 +18263,18 @@ function playNext(auto){
 }
 function playPrev(){
   const ad = activeDeck();
-  if (ad.player && ad.player.getCurrentTime && ad.player.getCurrentTime() > 3){
+  const restart = () => {
     playLpNeedle('rewind');
     ad.player.seekTo(0, true);
-    return;
-  }
+    syncMediaPositionState(true, 0);
+  };
+  const canSeek = !!(ad.player && ad.player.getCurrentTime && ad.player.seekTo);
+  if (canSeek && ad.player.getCurrentTime() > 3){ restart(); return; }
   let pos = state.queuePos - 1;
-  if (pos < 0){ if (state.repeat === 'all') pos = state.queue.length - 1; else return; }
+  if (pos < 0){ if (state.repeat === 'all') pos = state.queue.length - 1; else { if (canSeek && state.queuePos >= 0) restart(); return; } }
   // a one-track queue on repeat-all wraps back onto the same song: a restart
-  if (pos === state.queuePos) playLpNeedle('rewind');
+  // (playIndex on the current position would only toggle play/pause)
+  if (pos === state.queuePos){ if (canSeek) restart(); return; }
   playIndex(pos, { crossfade: true });
 }
 

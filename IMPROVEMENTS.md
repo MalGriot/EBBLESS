@@ -8490,11 +8490,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #320 (bug). Title only.
 
 ### previous-resets-to-zero: Previous track / left arrow should reset the song to 0:00
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #318. Pressing left arrow or the previous-track button doesn't reset playback to 0:00, and it should.
 - **Touches:** previous-track handler, keyboard left-arrow handling.
-- **Branch:**
+- **Branch:** agent/previous-resets-to-zero
 - **Notes:** Synced from Geethub issue #318 (bug). Title only.
 
 ### search-bar-top-center: Move the search bar to the top center, between the logo and Settings
