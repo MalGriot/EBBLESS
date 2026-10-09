@@ -539,7 +539,7 @@ Add entries in this shape:
   (from an earlier, unrelated intro-sequence change), but the button
   itself — the actual clickable `<a class="btn-ghost" href="mailto:...">`
   — still said "Email". Changed its text to "Report a bug"; the
-  `mailto:sumtinels@gmail.com?subject=EBBLESS%20bug%20report` href and
+  the `mailto:` (owner address) href and
   behavior are untouched. Verified via a local `python3 -m http.server`
   served directly from this worktree (confirmed via `location.href` in
   the page, not the shared preview launcher), opened Settings, and
@@ -3619,7 +3619,7 @@ Add entries in this shape:
   (including the mobile `display:none!important` override). Commit
   `3216abb`. Verified by serving this worktree's own `index.html` directly
   via `python3 -m http.server 8935` run from
-  `/Users/malcolm/Documents/CLAUDE-CODE/ebbless-worktrees/player-hud-remove-playlist-label`
+  `<workspace>/ebbless-worktrees/player-hud-remove-playlist-label`
   (not the shared/main-checkout dev server, which a `preview_start` by name
   turned out to launch from the main `EBBLESS` checkout instead of this
   worktree - caught via `preview_list`'s reported `cwd` and stopped before
@@ -5163,8 +5163,8 @@ Add entries in this shape:
   in the Browser pane against a plain `python3 -m http.server` pointed at
   *this worktree* (the project's own `.claude/launch.json` "ebbless"
   config was, for the current multi-session setup, actually serving the
-  main checkout's `index.html` at cwd `/Users/malcolm/Documents/CLAUDE-
-  CODE/EBBLESS` rather than this worktree - confirmed via `lsof`'s `cwd`
+  main checkout's `index.html` at cwd `<workspace>/
+  EBBLESS` rather than this worktree - confirmed via `lsof`'s `cwd`
   on the listening process - so verification used a second, throwaway
   server rooted in this worktree instead; nothing about the main checkout
   was touched). Used the existing `?introBeat=shuffle` / `?introBeat=

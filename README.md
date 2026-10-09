@@ -52,7 +52,7 @@ cd worker
 npx wrangler deploy
 ```
 
-Requires the `sumtinels@gmail.com` Cloudflare account to be authenticated via
+Requires the project owner's Cloudflare account to be authenticated via
 `wrangler login` (already set up in this environment).
 
 ## Testing against staging, not production
