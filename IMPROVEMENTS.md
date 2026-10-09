@@ -8367,7 +8367,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #302. Title only.
 
 ### audiosurf-game: Audiosurf-style game in EBBLESS (future)
-- **Status:** brainstorming
+- **Status:** archived
 - **Priority:** low
 - **Description:** Longer-term idea: bring an Audiosurf-style ride-the-song game into EBBLESS, playable with the user's own tracks.
 - **Touches:** new feature.
@@ -8385,7 +8385,7 @@ Add entries in this shape:
   Merged to main and pushed live 2026-10-08.
 
 ### mandelbrot-visualizer: Mandelbrot fractal visualizer
-- **Status:** brainstorming
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Add a Mandelbrot fractal as a new visualizer mode that reacts to the music.
 - **Touches:** visualizer modes.
