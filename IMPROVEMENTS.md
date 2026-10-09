@@ -8482,11 +8482,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #317 (bug). Likely the iOS Safari-to-installed-app storage split.
 
 ### discover-preload-next: Preload the next Discover track so it starts instantly
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #320. Discover should load the next track in the background so the next song plays immediately when the current one ends or is skipped.
 - **Touches:** Discover queue / next-track preloading.
-- **Branch:**
+- **Branch:** agent/discover-preload-next
 - **Notes:** Synced from Geethub issue #320 (bug). Title only.
 
 ### previous-resets-to-zero: Previous track / left arrow should reset the song to 0:00

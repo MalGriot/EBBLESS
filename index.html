@@ -13758,6 +13758,11 @@ function getOrCreateDiscoverExt(originPlId){
 // concluding Discover found nothing and stopping playback out from under an
 // extension that was seconds from landing.
 let discoverExtendPromise = null;
+// A lookahead that found nothing (or failed) is retried once the cooldown
+// passes, so the next song is queued - and preloaded by schedulePreload -
+// well before the current one ends, not only when Next is finally pressed.
+let discoverEmptyTs = 0, discoverRetryTimer = null;
+const DISCOVER_RETRY_MS = 20000;
 function extendQueueWithDiscover(originPlId){
   if (discoverExtendPromise) return discoverExtendPromise;
   discoverExtendPromise = (async () => {
@@ -13772,7 +13777,11 @@ function extendQueueWithDiscover(originPlId){
       const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong);
       // Discover may have been switched off (or the queue replaced) while
       // the fetch was in flight - don't append a batch nobody asked for.
-      if (!found.length || !isDiscoverOn(originPlId) || discoverOriginId() !== originPlId) return;
+      if (!found.length || !isDiscoverOn(originPlId) || discoverOriginId() !== originPlId){
+        if (!found.length) noteDiscoverEmpty();
+        return;
+      }
+      discoverEmptyTs = 0;
       discoverQueuedThisSession += found.length;
       const extId = discoverExtId(originPlId);
       const ext = getOrCreateDiscoverExt(originPlId);
@@ -13796,9 +13805,17 @@ function extendQueueWithDiscover(originPlId){
       }
       renderQueuePanel();
       schedulePreload(state.queuePos);
+    } catch(e){
+      noteDiscoverEmpty();
     } finally { discoverExtendPromise = null; }
   })();
   return discoverExtendPromise;
+}
+
+function noteDiscoverEmpty(){
+  discoverEmptyTs = Date.now();
+  clearTimeout(discoverRetryTimer);
+  discoverRetryTimer = setTimeout(maybeExtendDiscoverQueue, DISCOVER_RETRY_MS + 100);
 }
 
 // The playlist a Discover-continued queue is "about" - queue[0] keeps
@@ -13814,7 +13831,9 @@ function maybeExtendDiscoverQueue(){
   const originPlId = discoverOriginId();
   if (!originPlId || !isDiscoverOn(originPlId)) return;
   const remaining = state.queue.length - 1 - state.queuePos;
-  if (remaining <= DISCOVER_LOOKAHEAD) extendQueueWithDiscover(originPlId);
+  if (remaining > DISCOVER_LOOKAHEAD) return;
+  if (discoverEmptyTs && Date.now() - discoverEmptyTs < DISCOVER_RETRY_MS) return;
+  extendQueueWithDiscover(originPlId);
 }
 
 function renderDiscoverToggle(){
@@ -15428,7 +15447,13 @@ function schedulePreload(afterPos){
   schedulePrevWarm(afterPos);
   const deck = standbyDeck();
   const pos = computeNextPos(afterPos, true);
-  if (pos < 0){ if (deck.pos !== -1) resetDeck(deck); return; }
+  if (pos < 0){
+    if (deck.pos !== -1) resetDeck(deck);
+    // nothing queued after this: a Discover lookahead will fill it, and its
+    // landing re-runs this preload (also covers queue edits that shrink the tail)
+    maybeExtendDiscoverQueue();
+    return;
+  }
   const t = trackAt(pos);
   if (deck.pos === pos && t && deck.videoId === t.videoId && (deck.player || deck.pendingVideoId)) return;
   if (!t || !t.videoId){ resetDeck(deck); return; }
