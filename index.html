@@ -4002,11 +4002,13 @@ function showIOSInstallSheet(){
       + '<li>Tap <b>Add</b>, then open <b>EBBLESS</b> from your home screen</li></ol>'
       + '<details><summary>Don\'t see Add to Home Screen?</summary>'
       + 'Scroll to the bottom of the share list and tap <b>Edit Actions</b>, then tap the green <b>+</b> next to <b>Add to Home Screen</b>.<br>'
-      + 'Still missing? Open this page in <b>Safari</b> (not Chrome or an in-app browser) and try again.</details>'
+      + 'Still missing? Open this page in <b>Safari</b> (not Chrome or an in-app browser) and try again.<br><button type="button" class="ii-skip" style="margin-top:10px;font-size:13px;text-decoration:underline;color:var(--faint)">Can\'t install? Continue in browser</button></details>'
       + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
     const close = () => { el.hidden = true; };
     el.addEventListener('click', (e) => { if (e.target === el) close(); });
     el.querySelector('.ii-close').addEventListener('click', close);
+    // last resort, tucked inside the help fold-out: close the sheet and drop the splash
+    el.querySelector('.ii-skip').addEventListener('click', () => { close(); const sp = $('splash'); if (sp) sp.classList.add('is-hidden'); });
     el.querySelector('.ii-copy').addEventListener('click', (e) => {
       const b = e.currentTarget;
       const url = urlWithTesterToken(location.href, installTesterToken());
