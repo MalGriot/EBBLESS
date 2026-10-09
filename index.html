@@ -10705,6 +10705,16 @@ const STARTER_LIBRARY_URLS = [
 // Library id/type a starter URL is saved under - shared by the seed below
 // and the first-run paste guide (which needs to tell starter items apart
 // from anything the listener added themselves).
+// Default Spotify content for everyone (#323, #324): the MAL GRIOT artist page
+// and a podcast episode. Goes through the same link-import path as a pasted
+// link (parseImportLink -> libraryEntryForParsedLink -> resolvePlaylist).
+// Each is added once per device and recorded in LS_DEFAULT_SEEDED, so
+// existing users get them too but one the listener removed never comes back.
+const DEFAULT_SPOTIFY_URLS = [
+  'https://open.spotify.com/artist/61bgVlMQw2S0t6d8mVPVIS',
+  'https://open.spotify.com/episode/5tVNpRmJm0OrSzmsptOX3I'
+];
+const LS_DEFAULT_SEEDED = 'ebbless:defaultSpotifySeeded';
 function starterLibraryEntry(url){
   const parsed = parseImportLink(url);
   if (!parsed) return null;
@@ -10720,7 +10730,7 @@ function starterLibraryEntry(url){
   return entry;
 }
 function starterLibraryIds(){
-  return STARTER_LIBRARY_URLS.map(starterLibraryEntry).filter(Boolean).map(e => e.id);
+  return STARTER_LIBRARY_URLS.concat(DEFAULT_SPOTIFY_URLS).map(starterLibraryEntry).filter(Boolean).map(e => e.id);
 }
 async function seedStarterLibrary(){
   for (const url of STARTER_LIBRARY_URLS){
@@ -10739,6 +10749,24 @@ async function seedStarterLibrary(){
       await resolvePlaylist(id, type, () => {});
       saveToLibrary(id);
     } catch(e){ /* best-effort seed - a failed fetch just leaves the library short one entry */ }
+  }
+  renderLibrary();
+}
+
+async function seedDefaultSpotifyContent(){
+  for (const url of DEFAULT_SPOTIFY_URLS){
+    const entry = starterLibraryEntry(url);
+    if (!entry) continue;
+    const seeded = lsGet(LS_DEFAULT_SEEDED, []);
+    if (seeded.includes(entry.id)) continue;
+    // already in the library (e.g. the listener pasted it) - nothing to add
+    if (getLibrary().includes(entry.id)){ lsSet(LS_DEFAULT_SEEDED, seeded.concat(entry.id)); continue; }
+    try{
+      await resolvePlaylist(entry.id, entry.type, () => {});
+      // appended, not unshifted: default content sits below the listener's own items
+      if (!getLibrary().includes(entry.id)) lsSet(LS_LIB, getLibrary().concat(entry.id));
+      lsSet(LS_DEFAULT_SEEDED, lsGet(LS_DEFAULT_SEEDED, []).concat(entry.id));
+    } catch(e){ /* not marked seeded: tries again next launch */ }
   }
   renderLibrary();
 }
@@ -21634,7 +21662,8 @@ function startApp(){
     /* First-time visitors (nothing saved yet, ignoring the always-present
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
-    if (!getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID)) seedStarterLibrary();
+    const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+    (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).catch(e => console.warn('[ebbless] default content seed failed', e));
     // Artist album fills left unfinished, or never run (#293) - held back
     // past the boot burst above so it doesn't compete with startup.
     setTimeout(() => runArtistAlbumsBackfill().catch(e => console.warn('[ebbless] artist albums backfill failed', e)), 8000);

@@ -8522,20 +8522,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #325 (bug). Related: beta-install-login (#317). Cause: the Google ID token lives ~1h in memory only, and the 24h One Tap dismiss cooldown suppressed the silent re-sign-in, so returning users saw Sign in again. Fix (index.html): returning signed-in users (email remembered, not signed out) skip the cooldown, and an expired token triggers a throttled silent One Tap re-auth. Not fixed: iPhone home-screen app uses redirect sign-in with no silent path. Untested in a live Google session.
 
 ### load-podcast-for-all: Pre-load a podcast episode for all users
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #324. For all users, load this Spotify podcast episode: https://open.spotify.com/episode/5tVNpRmJm0OrSzmsptOX3I
 - **Touches:** default content for new users.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #324 (idea). Placement decided by user: the default library.
+- **Branch:** agent/load-default-spotify-content
+- **Notes:** Synced from Geethub issue #324 (idea). Placement decided by user: the default library. Review: added to DEFAULT_SPOTIFY_URLS in index.html (shared with #324/#323); seeded via the normal link-import path (resolvePlaylist), appended to the library for new and existing users, once per device (ebbless:defaultSpotifySeeded) so a removed episode is not re-added.
 
 ### load-mal-griot-artist-page: Pre-load the MAL GRIOT artist page for all users
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #323. For all users, load this Spotify artist page: https://open.spotify.com/artist/61bgVlMQw2S0t6d8mVPVIS
 - **Touches:** default content for new users.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #323 (idea). Placement decided by user: the default library. Artist name is the professional name MAL GRIOT.
+- **Branch:** agent/load-default-spotify-content
+- **Notes:** Synced from Geethub issue #323 (idea). Placement decided by user: the default library. Artist name is the professional name MAL GRIOT. Review: added to DEFAULT_SPOTIFY_URLS in index.html (shared with #323/#324); seeded via the normal link-import path (resolvePlaylist), appended to the library for new and existing users, once per device (ebbless:defaultSpotifySeeded) so a removed artist page is not re-added.
 
 ### album-art-picker-header-cutoff: Desktop album art picker tab is cut off by the header
 - **Status:** review
