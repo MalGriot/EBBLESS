@@ -391,15 +391,19 @@ async function handleClaim(request, env, ctx, h) {
 // with ?t=<token> (the beta lock already unlocks on that and strips it); a
 // failure goes back with ?bl_err=<message> for the lock to show.
 const APP_RETURN_RE = /^https:\/\/malgriot\.github\.io\/EBBLESS\/(?:[A-Za-z0-9._~\/-]*)?$/;
+const APP_HOME = 'https://malgriot.github.io/EBBLESS/';
 async function handleGoogleRedirect(request, url, env, ctx, h) {
-  const r = String(url.searchParams.get('r') || '').split(/[?#]/)[0];
+  const r = String(url.searchParams.get('r') || APP_HOME).split(/[?#]/)[0];
   if (request.method !== 'POST' || !APP_RETURN_RE.test(r)) return h.json({ error: 'not found' }, 404);
   const back = (k, v) => new Response(null, { status: 302, headers: { Location: r + '?' + k + '=' + encodeURIComponent(v), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
   let form;
   try { form = await request.formData(); } catch (e) { return back('bl_err', 'Google sign-in didn\'t check out. Try again.'); }
   // Google's double-submit check: the g_csrf_token cookie must match the body field.
   const cookie = (/(?:^|;\s*)g_csrf_token=([^;]+)/.exec(request.headers.get('Cookie') || '') || [])[1];
-  if (!cookie || cookie !== form.get('g_csrf_token')) return back('bl_err', 'Google sign-in didn\'t check out. Try again.');
+  // The cookie belongs to the app's origin, so this cross-site POST often
+  // can't carry it (Safari); when it's absent the Google-signed credential's
+  // audience check is what vouches for the request.
+  if (cookie ? cookie !== form.get('g_csrf_token') : !form.get('g_csrf_token')) return back('bl_err', 'Google sign-in didn\'t check out. Try again.');
   const g = await googleSub({ idToken: form.get('credential') }, env, ctx, h);
   if (g.error) return back('bl_err', 'Google sign-in didn\'t check out. Try again.');
   if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return back('bl_err', 'Too many tries. Give it a few minutes.');

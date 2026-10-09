@@ -5873,9 +5873,11 @@ function initGoogleOneTap(attempt){
       // iPhone home-screen app: Google's popup can't hand the credential back
       // there (the button just stalls), so sign in by redirect instead. The
       // worker checks the account and returns here with ?t=<token> (beta lock).
+      // login_uri must be exactly the URI registered under the OAuth client's
+      // Authorized redirect URIs, so no query string; the worker knows the app URL.
       const iosApp = navigator.standalone === true && /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent);
       google.accounts.id.initialize(iosApp && BACKEND
-        ? { client_id: GOOGLE_CLIENT_ID, ux_mode: 'redirect', login_uri: BACKEND + '/beta/google?r=' + encodeURIComponent(location.origin + location.pathname) }
+        ? { client_id: GOOGLE_CLIENT_ID, ux_mode: 'redirect', login_uri: BACKEND + '/beta/google' }
         : { client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential, auto_select: true, cancel_on_tap_outside: false });
       gsiReady = true;
       renderAccountRow();
