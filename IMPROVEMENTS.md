@@ -8480,3 +8480,27 @@ Add entries in this shape:
 - **Touches:** beta signup page, PWA install storage handoff (iOS standalone has separate storage from Safari), Google sign-in in standalone mode. Related: `google-email-signup-access`, `beta-page-redesign`.
 - **Branch:** agent/beta-install-login
 - **Notes:** Synced from Geethub issue #317 (bug). Likely the iOS Safari-to-installed-app storage split.
+
+### discover-preload-next: Preload the next Discover track so it starts instantly
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #320. Discover should load the next track in the background so the next song plays immediately when the current one ends or is skipped.
+- **Touches:** Discover queue / next-track preloading.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #320 (bug). Title only.
+
+### previous-resets-to-zero: Previous track / left arrow should reset the song to 0:00
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #318. Pressing left arrow or the previous-track button doesn't reset playback to 0:00, and it should.
+- **Touches:** previous-track handler, keyboard left-arrow handling.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #318 (bug). Title only.
+
+### search-bar-top-center: Move the search bar to the top center, between the logo and Settings
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Geethub issue #319. Search should sit in the top bar, centered between the logo and Settings, instead of inside the library.
+- **Touches:** header layout, library search UI.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #319 (idea). Title only.
