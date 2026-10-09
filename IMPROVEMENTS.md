@@ -8514,12 +8514,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #326 (bug). Related: playlist-full-loading.
 
 ### auto-sign-in: Stop prompting to sign in every time - sign-in should be automatic
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #325. The app keeps asking users to sign in each visit. A signed-in user should stay signed in automatically with no repeated prompt.
 - **Touches:** sign-in / session persistence.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #325 (bug). Related: beta-install-login (#317). Title only; reproduce to find which platform.
+- **Branch:** agent/auto-sign-in
+- **Notes:** Synced from Geethub issue #325 (bug). Related: beta-install-login (#317). Cause: the Google ID token lives ~1h in memory only, and the 24h One Tap dismiss cooldown suppressed the silent re-sign-in, so returning users saw Sign in again. Fix (index.html): returning signed-in users (email remembered, not signed out) skip the cooldown, and an expired token triggers a throttled silent One Tap re-auth. Not fixed: iPhone home-screen app uses redirect sign-in with no silent path. Untested in a live Google session.
 
 ### load-podcast-for-all: Pre-load a podcast episode for all users
 - **Status:** ready

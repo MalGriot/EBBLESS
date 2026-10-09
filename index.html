@@ -5290,7 +5290,7 @@ function profileTokenUsable(){ return !!profileIdToken && (!profileTokenExp || D
 async function syncProfileNow(opts){
   const force = !!(opts && opts.force);
   if (!profileIdToken) return;
-  if (!profileTokenUsable()){ profileSyncStatus = 'expired'; renderAccountRow(); return; }
+  if (!profileTokenUsable()){ profileSyncStatus = 'expired'; renderAccountRow(); silentReSignIn(); return; }
   if (profileSyncInFlight){ if (force) scheduleProfileSync(); return profileSyncInFlight; }
   const local = localProfileForSync();
   if (!force && profileHash(local) === lsGet(LS_PROFILE_SYNCED_HASH, '')) return;
@@ -5360,6 +5360,19 @@ async function legacyProfileSync(){
   const lib = getLibrary(), playlists = {};
   lib.forEach(id => { const pl = getCachedPlaylist(id); if (pl) playlists[id] = pl; });
   await post('/profile/sync', { library: { lib, pinned: getPinnedLibrary(), playlists } });
+}
+
+// The Google ID token only lasts about an hour, and One Tap is the only way
+// to get a new one. A signed-in user whose token ran out (or whose One Tap
+// got skipped on load) re-asks silently here instead of waiting for them to
+// tap Sign in again: auto_select returns a fresh credential with no UI when
+// Google still has their session. Throttled so it can't nag.
+let lastSilentReSignIn = 0;
+function silentReSignIn(){
+  if (!gsiReady || lsGet(LS_PROFILE_SIGNED_OUT, false) === true || !lsGet(LS_PROFILE_EMAIL, '')) return;
+  if (Date.now() - lastSilentReSignIn < 5 * 60 * 1000) return;
+  lastSilentReSignIn = Date.now();
+  try { google.accounts.id.prompt(); } catch(e){}
 }
 
 function handleGoogleCredential(response){
@@ -5890,7 +5903,10 @@ function initGoogleOneTap(attempt){
     // then - the alternative is the lock, not a quiet app.
     const gate = window.ebblessBetaGate, renewing = !!(gate && gate.renewing && gate.renewing());
     if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ if (renewing) gate.leaseFailed(); return; }
-    if (!renewing && Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
+    // A returning signed-in user (email remembered, never signed out) skips the
+    // cooldown: their One Tap is the silent auto sign-in, not a prompt to nag.
+    const returning = !!lsGet(LS_PROFILE_EMAIL, '');
+    if (!renewing && !returning && Date.now() - lsGet(LS_ONETAP_DISMISSED, 0) < ONETAP_DISMISS_COOLDOWN_MS) return;
     try{
       google.accounts.id.prompt((notification) => {
         // Only a moment that didn't lead to sign-in (blocked, skipped, or
