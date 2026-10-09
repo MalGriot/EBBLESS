@@ -1713,7 +1713,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #bottom-nav{display:none}
   .view{bottom:0}
   .player-stage{padding-top:clamp(10px,3dvh,30px)}
-  .artwork-wrap{width:min(440px,34vw,max(72px,calc(100dvh - var(--topbar-h) - 300px)))}
+  /* 430 = the rest of the stack (tabs, title/artist, controls, "Ads playing?"
+     + margins, bottom clearance); 300 overflowed the pane and clipped the
+     tabs/ads button (Geethub #322) */
+  .artwork-wrap{width:min(440px,34vw,max(72px,calc(100dvh - var(--topbar-h) - 430px)))}
   .track-meta{width:min(440px,34vw)}
   .track-meta .title{font-size:26px}
   body.queue-open .view-scroll,body.queue-open #topbar{margin-right:380px;transition:margin var(--dur-surface) var(--ease-in-out)}

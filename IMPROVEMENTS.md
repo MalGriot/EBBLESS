@@ -8538,12 +8538,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #323 (idea). Placement decided by user: the default library. Artist name is the professional name MAL GRIOT.
 
 ### album-art-picker-header-cutoff: Desktop album art picker tab is cut off by the header
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #322. On desktop the album art picker tab is clipped by the header, and when it is not showing, the "ads playing?" button is pushed below the bottom footer and cut off.
 - **Touches:** desktop layout: album art picker, header, footer, ads button.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #322 (bug). Possibly tied to the recent header search bar move (#319).
+- **Branch:** agent/album-art-picker-header-cutoff
+- **Notes:** Synced from Geethub issue #322 (bug). Possibly tied to the recent header search bar move (#319). Fix: desktop art width reserved only 300px for the rest of the player stack, which is really ~430px (tabs, title, controls, "Ads playing?" + margins, bottom clearance), so it overflowed the pane and clipped. Changed to 430px in the min-width:860px .artwork-wrap rule. Checked at 1280x640: tabs and ads button now fully inside the pane.
 
 ### relink-while-loading: Refreshing a track link should work while the rest of the songs are still loading
 - **Status:** review
