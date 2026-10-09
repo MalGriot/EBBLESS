@@ -8514,7 +8514,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #326 (bug). Related: playlist-full-loading.
 
 ### auto-sign-in: Stop prompting to sign in every time - sign-in should be automatic
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #325. The app keeps asking users to sign in each visit. A signed-in user should stay signed in automatically with no repeated prompt.
 - **Touches:** sign-in / session persistence.
@@ -8522,7 +8522,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #325 (bug). Related: beta-install-login (#317). Cause: the Google ID token lives ~1h in memory only, and the 24h One Tap dismiss cooldown suppressed the silent re-sign-in, so returning users saw Sign in again. Fix (index.html): returning signed-in users (email remembered, not signed out) skip the cooldown, and an expired token triggers a throttled silent One Tap re-auth. Not fixed: iPhone home-screen app uses redirect sign-in with no silent path. Untested in a live Google session.
 
 ### load-podcast-for-all: Pre-load a podcast episode for all users
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #324. For all users, load this Spotify podcast episode: https://open.spotify.com/episode/5tVNpRmJm0OrSzmsptOX3I
 - **Touches:** default content for new users.
@@ -8530,7 +8530,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #324 (idea). Placement decided by user: the default library. Review: added to DEFAULT_SPOTIFY_URLS in index.html (shared with #324/#323); seeded via the normal link-import path (resolvePlaylist), appended to the library for new and existing users, once per device (ebbless:defaultSpotifySeeded) so a removed episode is not re-added.
 
 ### load-mal-griot-artist-page: Pre-load the MAL GRIOT artist page for all users
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #323. For all users, load this Spotify artist page: https://open.spotify.com/artist/61bgVlMQw2S0t6d8mVPVIS
 - **Touches:** default content for new users.
@@ -8538,7 +8538,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #323 (idea). Placement decided by user: the default library. Artist name is the professional name MAL GRIOT. Review: added to DEFAULT_SPOTIFY_URLS in index.html (shared with #323/#324); seeded via the normal link-import path (resolvePlaylist), appended to the library for new and existing users, once per device (ebbless:defaultSpotifySeeded) so a removed artist page is not re-added.
 
 ### album-art-picker-header-cutoff: Desktop album art picker tab is cut off by the header
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #322. On desktop the album art picker tab is clipped by the header, and when it is not showing, the "ads playing?" button is pushed below the bottom footer and cut off.
 - **Touches:** desktop layout: album art picker, header, footer, ads button.
@@ -8546,7 +8546,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #322 (bug). Possibly tied to the recent header search bar move (#319). Fix: desktop art width reserved only 300px for the rest of the player stack, which is really ~430px (tabs, title, controls, "Ads playing?" + margins, bottom clearance), so it overflowed the pane and clipped. Changed to 430px in the min-width:860px .artwork-wrap rule. Checked at 1280x640: tabs and ads button now fully inside the pane.
 
 ### relink-while-loading: Refreshing a track link should work while the rest of the songs are still loading
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #321. When adding an artist, album or playlist, the user currently has to wait for all tracks to load before refreshing a link. Per-track refresh should work immediately.
 - **Touches:** track relink menu, playlist/album loader.
