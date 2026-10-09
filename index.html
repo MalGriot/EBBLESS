@@ -7759,14 +7759,25 @@ function toggleLibraryPlaylistPanel(id){
   // an artist's page lists their albums up top, then only the songs that
   // aren't on one of those albums (singles); the albums hold the rest
   const artistAlbumIds = isArtistEntry(pl) ? orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); }) : [];
-  const onAlbum = new Set();
-  artistAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => onAlbum.add(normalizeArtistQuery(t.title))); });
+  // compare titles ignoring case/punctuation and edition tags (Remastered ####, Single Version, feat. ...)
+  const songKey = (title) => normalizeArtistQuery(String(title || '').replace(/\s*[\(\[][^\)\]]*\b(remaster(ed)?|single version|radio edit|feat\.?|ft\.?|featuring|with|version|mono|stereo|deluxe)\b[^\)\]]*[\)\]]/gi, '').replace(/\s+-\s+(\d{4}\s+)?(remaster(ed)?|single version|radio edit|mono|stereo)\b.*$/i, '')) || normalizeArtistQuery(title);
+  const onAlbum = new Map(); // song key -> { pl: album, t: its track }
+  artistAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => { if (!t) return; const k = songKey(t.title), prev = onAlbum.get(k); if (!prev || (!prev.t.videoId && t.videoId)) onAlbum.set(k, { pl: a, t }); }); });
+  const adoptedInto = new Set();
   let singlesLabelShown = false;
   if (!pl.tracks.length){
     libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
     pl.tracks.forEach((t, i) => {
-      if (onAlbum.size && onAlbum.has(normalizeArtistQuery(t.title))) return;
+      const dup = onAlbum.get(songKey(t.title));
+      if (dup){
+        // the album owns this song; if its copy has no video yet, adopt the single's so nothing is lost
+        if (!dup.t.videoId && t.videoId){
+          dup.t.videoId = t.videoId; dup.t.matchedTitle = t.matchedTitle || ''; dup.t.channel = t.channel || ''; dup.t.duration = t.duration || 0;
+          delete dup.t.rematchTried; adoptedInto.add(dup.pl);
+        }
+        return;
+      }
       if (artistAlbumIds.length && !singlesLabelShown){
         singlesLabelShown = true;
         const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Singles';
@@ -7800,6 +7811,7 @@ function toggleLibraryPlaylistPanel(id){
       libplBody.appendChild(row);
     });
   }
+  adoptedInto.forEach(persistPlaylistObj);
   // an artist's own page also gets their bio, facts and links on top (#298)
   if (isArtistEntry(pl)){
     const mine = artistAlbumIds.slice();
@@ -9821,7 +9833,10 @@ async function beginImport(id, force, type, targetIndex){
 // Singles, instrumental editions and clean copies of an explicit release are
 // skipped, as is an album already saved under the same name by this artist.
 // Removing the artist later leaves these albums where they are.
-const ARTIST_ALBUMS_MAX = 20;
+const ARTIST_ALBUMS_MAX = 50;
+// Greatest-hits style sets: when an artist has more albums than the cap, these
+// go last so the real studio albums (and their famous singles) aren't cut.
+const COMPILATION_RE = /\b(essential|best of|greatest|hits|collection|anthology|gold|ultimate|definitive|indispensable|remix(es)?|mixes|complete|number ones|this is it|love songs)\b/i;
 const artistAlbumsInFlight = new Set();
 async function itunesArtistAlbums(pl){
   let artistId, storefront = 'us';
@@ -9845,15 +9860,16 @@ async function itunesArtistAlbums(pl){
   rows.forEach(r => {
     if (!r || r.wrapperType !== 'collection' || String(r.artistId) !== artistId || !r.collectionId) return;
     const name = String(r.collectionName || '');
-    if (/ - Single$/i.test(name) || /\binstrumentals?\b/i.test(name) || (r.trackCount || 0) < 4) return;
+    if (/ - Single$/i.test(name) || /\binstrumentals?\b/i.test(name) || (r.trackCount || 0) < 3) return;
     const key = normalizeArtistQuery(name);
     const prev = byName.get(key);
     if (!prev || (prev.collectionExplicitness === 'cleaned' && r.collectionExplicitness !== 'cleaned')) byName.set(key, r);
   });
   // Newest first, then saved oldest-first so the newest lands on top.
   return [...byName.values()]
-    .sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
-    .slice(0, ARTIST_ALBUMS_MAX).reverse()
+    .sort((a, b) => (COMPILATION_RE.test(String(a.collectionName)) - COMPILATION_RE.test(String(b.collectionName))) || String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
+    .slice(0, ARTIST_ALBUMS_MAX)
+    .sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || ''))).reverse()
     .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName) }));
 }
 // Each artist's fill runs once: the artist's own entry is stamped
