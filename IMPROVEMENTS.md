@@ -8482,7 +8482,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #317 (bug). Likely the iOS Safari-to-installed-app storage split.
 
 ### discover-preload-next: Preload the next Discover track so it starts instantly
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #320. Discover should load the next track in the background so the next song plays immediately when the current one ends or is skipped.
 - **Touches:** Discover queue / next-track preloading.
@@ -8490,7 +8490,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #320 (bug). Title only.
 
 ### previous-resets-to-zero: Previous track / left arrow should reset the song to 0:00
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #318. Pressing left arrow or the previous-track button doesn't reset playback to 0:00, and it should.
 - **Touches:** previous-track handler, keyboard left-arrow handling.
@@ -8498,7 +8498,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #318 (bug). Title only.
 
 ### search-bar-top-center: Move the search bar to the top center, between the logo and Settings
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Geethub issue #319. The main "Find music" bar (#importForm: paste/search/vibe input with a magnifier submit icon on the left and the mic on the right, max 250 chars, no Find music/Go button) moves from the Library view into the top bar, centered on the page (aligned over the player), shrinking before it would touch the logo or help/Settings, so it is reachable from Library, Player and Queue. The library-only search (#libSearch) stays in the library toolbar. The tester banner hangs under the bar so the field stays centered, and the header/content divider is gone.
 - **Touches:** header layout, #importForm and its paste recents/hint/guide, tutorial input stage, #emptyFindBtn.
