@@ -8623,12 +8623,13 @@ Add entries in this shape:
   Verified: JS syntax check; code trace of every unmute path (confirm, promoteDeckDirect, crossfades). Not verified: actual audio in a browser (needs the live worker and a podcast feed, and the sandbox cannot play audio); please test playing a song then switching to a podcast, on desktop and iPhone.
 
 ### settings-back-button: Back button in Settings
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #338. Add a back button inside the Settings screen. Title only; no detail given.
 - **Touches:** Settings screen header/navigation.
-- **Branch:** 
+- **Branch:** agent/settings-back
 - **Notes:** Synced from Geethub issue #338 (idea). Not a duplicate of back-button-to-player (that one is about the OS/browser back gesture).
+  Change: a "Back" button at the top of the Settings scroll area (`#settingsBackBtn`, `.settings-back`) calls `setView(state.preSettingsView || 'library')`, the same path the gear toggle uses, so settings-solo from desktop fullscreen restores fullscreen via setView. Not verified: no browser pass (mobile, split desktop, settings-solo); only node --check on inline scripts. Shell cache version not bumped.
 
 ### miniplayer-art-lp-cassette: Mini-player LP does not rotate and cassette needs more detail
 - **Status:** merged

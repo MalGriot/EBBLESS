@@ -1516,6 +1516,8 @@ body.queue-over-fs #queue-scrim{bottom:0}
 
 
 /* ---------- settings ---------- */
+.settings-back{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--faint-2);font:inherit;font-size:14px;font-weight:600;padding:10px 8px 10px 0;margin:4px 0 -8px;cursor:pointer}
+.settings-back:hover{color:inherit}
 .settings-block{margin:20px 0 34px}
 .settings-block h2{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 12px}
 .settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-top:1px solid var(--border)}
@@ -3441,6 +3443,7 @@ body.week-up-on{overflow:hidden}
   <!-- ===== SETTINGS ===== -->
   <main class="view" id="view-settings" hidden>
     <div class="view-scroll">
+      <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
       <!-- Settings layout (issue #212): most-used first. Feedback & support
            leads so Send feedback is the top row (#239) and groups every way
            to report something; Playback controls next; App actions
@@ -6699,6 +6702,7 @@ function showToast(msg, action){
 /* =========================================================================
    VIEW ROUTING
    ========================================================================= */
+document.getElementById('settingsBackBtn')?.addEventListener('click', () => setView(state.preSettingsView || 'library'));
 function setView(name){
   const prevView = state.currentView;
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
