@@ -10348,7 +10348,7 @@ async function addArtistAlbumsOnly(pl, resume){
       const p = getCachedPlaylist(id);
       return !!p && isAlbumEntry(p) && normalizeArtistQuery(p.name) === a.key && (p.tracks || []).some(t => songCreditsArtist(t && t.artist, want));
     });
-    const todo = albums.filter(a => !alreadyHave(a));
+    const todo = albums.filter(a => !alreadyHave(a) && !PERIODYSSIUS_RE.test(a.key)); // Periodyssius is a YouTube playlist now (#336)
     setArtistAlbumsPending(pl.id, todo);
     if (!todo.length) return;
     showToast('Adding ' + todo.length + (todo.length === 1 ? ' album' : ' albums') + ' by ' + pl.name);
@@ -11081,6 +11081,39 @@ async function seedDefaultSpotifyContent(){
     if (!getLibrary().includes(entry.id)) lsSet(LS_LIB, getLibrary().concat(entry.id));
     lsSet(LS_DEFAULT_SEEDED, lsGet(LS_DEFAULT_SEEDED, []).concat(entry.id));
   }
+  renderLibrary();
+}
+
+// Periodyssius (#336): the album is now this YouTube playlist, for everyone.
+// It was never a built-in: it reached libraries as an Apple Music album via
+// the MAL GRIOT artist page's album fill. One-time per device (LS flag, syncs
+// with the account): the old album, wherever it sits, is replaced in place by
+// the playlist (filed as an album via albumOverride); a library that never had
+// it gets the playlist appended. The artist fill skips it from now on.
+const PERIODYSSIUS_URL = 'https://youtube.com/playlist?list=PLr_svG2XXWi65vG3mg_tpZ2QoDRtBs5cd';
+const PERIODYSSIUS_RE = /periodyssius/i;
+const LS_PERIODYSSIUS_SWAPPED = 'ebbless:periodyssiusSwapped';
+async function swapPeriodyssiusAlbum(){
+  if (lsGet(LS_PERIODYSSIUS_SWAPPED, false)) return;
+  const entry = starterLibraryEntry(PERIODYSSIUS_URL);
+  if (!entry) return;
+  const isOld = (id) => { const p = id !== entry.id && getCachedPlaylist(id); return !!p && PERIODYSSIUS_RE.test(p.name || '') && p.type !== 'yt_playlist' && p.type !== 'yt_album'; };
+  // load first: a failed load leaves everything alone and retries next launch
+  const pl = getCachedPlaylist(entry.id) || await queueBackgroundLoad(entry.id, entry.type);
+  if (!pl) return;
+  const fresh = getCachedPlaylist(entry.id) || pl;
+  if (fresh.albumOverride !== true){ fresh.albumOverride = true; lsSet(LS_PL(entry.id), fresh); }
+  const lib = getLibrary();
+  const old = lib.filter(isOld);
+  const pinned = old.some(id => getPinnedLibrary().includes(id));
+  let at = lib.findIndex(isOld);
+  old.forEach(removeFromLibrary);
+  const cur = getLibrary().filter(id => id !== entry.id);
+  if (at < 0 || at > cur.length) at = cur.length;
+  cur.splice(at, 0, entry.id);
+  lsSet(LS_LIB, cur);
+  if (pinned && !isPinned(entry.id)) togglePin(entry.id);
+  lsSet(LS_PERIODYSSIUS_SWAPPED, true);
   renderLibrary();
 }
 
@@ -22056,7 +22089,7 @@ function startApp(){
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
     const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
-    (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).catch(e => console.warn('[ebbless] default content seed failed', e));
+    (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).then(swapPeriodyssiusAlbum).catch(e => console.warn('[ebbless] default content seed failed', e));
     // Artist album fills left unfinished, or never run (#293) - held back
     // past the boot burst above so it doesn't compete with startup.
     setTimeout(() => runArtistAlbumsBackfill().catch(e => console.warn('[ebbless] artist albums backfill failed', e)), 8000);

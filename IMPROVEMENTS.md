@@ -8636,12 +8636,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #337 (bug). Follows the merged miniplayer art style work (#330, #331).
 
 ### periodyssius-to-youtube-playlist: Replace Periodyssius album with its YouTube playlist, for everyone
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #336. Replace the Periodyssius album with the YouTube playlist https://youtube.com/playlist?list=PLr_svG2XXWi65vG3mg_tpZ2QoDRtBs5cd (still classified as an album), and make the change apply for every user.
 - **Touches:** built-in/shared album content, global (all users) content delivery.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #336 (bug). Needs a decision on how "for everyone" is delivered (same mechanism as the all-users artist page/podcast loads, #323/#324).
+- **Branch:** agent/periodyssius-playlist
+- **Notes:** Synced from Geethub issue #336 (bug). Periodyssius is not a built-in (no mention in index.html or worker/); it reaches libraries as an Apple Music album added by the MAL GRIOT artist page album fill (#293). Change in index.html: `swapPeriodyssiusAlbum()` (runs after `seedDefaultSpotifyContent` on every launch, once per account via `ebbless:periodyssiusSwapped`). It loads the YouTube playlist first (a failed load retries next launch), sets `albumOverride: true` so it files under Albums (the list id is PLr_..., not OLAK5uy_..., so it would otherwise be a playlist), then replaces any library entry whose cached name matches /periodyssius/i in the same slot (keeps pin), or appends the playlist if the library never had the album. New users get it via the same path. The artist album fill (`addArtistAlbumsOnly`) now skips any album matching Periodyssius so it is not re-added. Verified: script syntax check only; not exercised in a browser (needs live YouTube playlist fetch via the worker). Decisions for the user: (1) Users who never had the album also get the playlist appended; say if it should only replace existing copies. (2) A listener who deletes the playlist will not get it back (one-time flag). (3) Name-matching /periodyssius/i also catches a copy a listener imported themselves (any non-YouTube entry named Periodyssius). (4) Other artists' Periodyssius-named albums would be skipped by the artist fill (unlikely).
 
 ### remove-mal-griot-vo-podcast: Remove the MAL GRIOT VO podcast from everyone's feed
 - **Status:** ready
