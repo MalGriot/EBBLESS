@@ -199,6 +199,8 @@ video.lib-bg-video.is-playing{opacity:1}
   #topnav .nav-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 }
 body.split-desktop #topbar{--tb-r:172px}
+/* tester-banner-behind-queue: the banner hangs below the bar over the queue pane (z 41); lift the bar's stacking above it */
+body.split-desktop #topbar{z-index:42}
 .import-row input{
   flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
   padding:9px 14px;color:var(--text);font-size:14px;transition:border-color var(--dur-ui) var(--ease-out);

@@ -8821,11 +8821,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #342 (bug). Title only.
 
 ### tester-banner-behind-queue: Tester version bar is hidden behind the queue on desktop
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #341. The "tester version of EBBLESS" bar is covered by the queue window on desktop. Fix stacking/position so it stays visible.
 - **Touches:** tester banner (see tester-version-banner), queue window z-index.
-- **Branch:** 
+- **Branch:** agent/desktop-ui-bugs
 - **Notes:** Synced from Geethub issue #341 (bug). Title only.
 
 ### artist-name-popup: Clicking an artist name opens an artist window, with a mix button
