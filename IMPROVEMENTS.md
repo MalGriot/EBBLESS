@@ -8803,3 +8803,35 @@ Add entries in this shape:
 - **Touches:** library cards, artist/podcast/album play handlers.
 - **Branch:** agent/play-collection-followup
 - **Notes:** Audited every play control; no code change was needed. Collection play buttons (all go through playPlaylistNow, which calls setView('player'); NP live goes via npTuneIn, which also does): library card hover play (.row-play) in the playlist, album, artist and podcast grids; library panel Play button (#libplPlayBtn); panel art play (#libplArtPlayBtn). Artist info page hides its play buttons (CSS), so nothing to wire. Single-track plays stay in the current window by design: search result track rows and panel track rows (playLibraryTrackInline), play-nudge starter, queue rows. Context-menu "Add to queue" and "Play next" are queue actions, not play buttons.
+
+### fullscreen-btn-on-link-select: Fullscreen button still visible when player flips to link selection
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #344. When the player turns to the link selection (relink) view, the fullscreen button is still visible and should be hidden.
+- **Touches:** player link-selection view, fullscreen button.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #344 (bug). Title only.
+
+### like-popup-covers-play: "Like this song" popup covers the play button on desktop
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #342. On desktop the "like this song" popup sits over the play button. Move it so the play button stays reachable.
+- **Touches:** like nudge popup (see encourage-liking-songs), desktop player.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #342 (bug). Title only.
+
+### tester-banner-behind-queue: Tester version bar is hidden behind the queue on desktop
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #341. The "tester version of EBBLESS" bar is covered by the queue window on desktop. Fix stacking/position so it stays visible.
+- **Touches:** tester banner (see tester-version-banner), queue window z-index.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #341 (bug). Title only.
+
+### artist-name-popup: Clicking an artist name opens an artist window, with a mix button
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #343. If a track has multiple artists, each name is selectable and a pop-up lets you pick one. Artist names on the player get a hover effect. The artist window has a button that auto-creates a mix playlist of their music in the library (needs some intelligence: songs like the one playing).
+- **Touches:** player artist text, artist window, library playlist creation.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #343. The mix-playlist piece is the hard part and could ship after the picker.
