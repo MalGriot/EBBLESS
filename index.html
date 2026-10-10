@@ -6121,13 +6121,11 @@ function orderedLibraryIds(){
   const rest = ids.filter(id => !pinned.includes(id));
   const sortMode = getLibrarySort();
   const ordered = sortLibraryIds(pinned, sortMode).concat(sortLibraryIds(rest, sortMode));
-  // Swell and Liked Songs are system playlists - always pinned ahead of
-  // anything the listener chose to pin themselves, Swell first since it's
-  // the thing most worth surfacing today.
-  // SwiiiRrrLL rides right behind it.
-  const withNp = lib.includes(NP_ID) ? [NP_ID].concat(ordered) : ordered;   // the owner's live feed sits right after Liked Songs
-  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(withNp) : withNp;
-  const withBlend = lib.includes(BLEND_ID) ? [BLEND_ID].concat(withLiked) : withLiked;
+  // System playlists always sit ahead of anything the listener pinned:
+  // Currents (Swell), Swirl (Blend), Off the Air (NP), then Liked Songs.
+  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(ordered) : ordered;
+  const withNp = lib.includes(NP_ID) ? [NP_ID].concat(withLiked) : withLiked;
+  const withBlend = lib.includes(BLEND_ID) ? [BLEND_ID].concat(withNp) : withNp;
   return lib.includes(SWELL_ID) ? [SWELL_ID].concat(withBlend) : withBlend;
 }
 
@@ -20523,9 +20521,8 @@ function castLoadSdk(){
    visibility/focus/interval hooks below make sure a check actually happens
    when someone reopens or keeps EBBLESS open for a while, instead of only
    on a fresh cold launch. When a new worker actually takes over, we don't
-   yank the page out from under someone mid-playback with a forced reload -
-   we surface a small "Update available" toast and let them refresh on
-   their own terms. */
+   cut a song off: we reload automatically as soon as nothing is playing
+   (no prompt, #346). */
 if ('serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
@@ -20536,8 +20533,6 @@ if ('serviceWorker' in navigator){
       window.addEventListener('focus', checkForUpdate);
       setInterval(checkForUpdate, 60 * 60 * 1000); // hourly safety net for long-lived sessions
 
-      const swToast = $('swUpdateToast');
-      const swToastBtn = $('swUpdateBtn');
       let swRefreshing = false;
       let sawControllerBefore = !!navigator.serviceWorker.controller;
 
@@ -20545,14 +20540,20 @@ if ('serviceWorker' in navigator){
         // The very first controllerchange (page had no controller yet, e.g.
         // first-ever install) isn't an update - skip the prompt for that one.
         if (!sawControllerBefore){ sawControllerBefore = true; return; }
-        if (!swToast || !swToastBtn) return;
-        swToast.hidden = false;
-        requestAnimationFrame(() => swToast.classList.add('is-open'));
-        swToastBtn.addEventListener('click', () => {
-          if (swRefreshing) return;
+        if (swRefreshing) return;
+        // Reload on its own, but never cut off a song: if something is
+        // playing, wait until it pauses or ends.
+        const isPlayingNow = () => {
+          try { const ad = activeDeck(); return !!(ad && ad.player && ad.player.getPlayerState && ad.player.getPlayerState() === 1); } catch(err){ return false; }
+        };
+        const tryReload = () => {
+          if (isPlayingNow()) return;
           swRefreshing = true;
+          clearInterval(swWait);
           location.reload();
-        }, { once: true });
+        };
+        const swWait = setInterval(tryReload, 3000);
+        tryReload();
       });
     }).catch(() => {});
   });
