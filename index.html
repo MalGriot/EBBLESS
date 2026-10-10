@@ -565,12 +565,11 @@ body.onb-active .paste-guide{display:none}
 @keyframes flow-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 
 /* ---------- import overlay ---------- */
-#import-overlay{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;
+#import-overlay{position:fixed;left:0;right:0;top:var(--topbar-h);bottom:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;
   align-items:center;justify-content:center;padding:32px;opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
 #import-overlay.is-open{opacity:1;pointer-events:auto}
-.import-stage{width:100%;max-width:420px;max-height:calc(100% - 64px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:24px 20px;box-shadow:0 24px 60px -20px rgba(0,0,0,.7);display:flex;flex-direction:column;align-items:center;text-align:center}
-.import-stage:empty{display:none}
+.import-stage{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .import-stage .step{font-size:15px;color:var(--faint);margin:0 0 20px;transition:color var(--dur-ui) var(--ease-out)}
 .import-stage .flow-line{margin-bottom:14px}
 .import-stage .counter{font-size:12px;color:var(--faint-2)}
@@ -649,7 +648,7 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
   .btn-hold.is-holding .btn-hold-fill{opacity:1;transition:opacity var(--hold-ms) linear}
 }
 #crossfadeDurRow{transition:opacity var(--dur-ui) var(--ease-out)}
-#import-overlay .close{position:absolute;top:calc(20px + var(--safe-t));right:20px;width:34px;height:34px;border-radius:50%;
+#import-overlay .close{position:absolute;top:14px;right:20px;width:34px;height:34px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint)}
 #import-overlay .close:hover{background:var(--panel-2);color:var(--text)}
 #import-overlay .close svg{width:16px;height:16px}
@@ -1698,7 +1697,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #topbar{padding:0 18px}
   #topnav{display:none}
   #mobileSettingsBtn{display:flex}
-  .view{bottom:calc(var(--nav-h) + var(--safe-b))}
+  .view,#import-overlay{bottom:calc(var(--nav-h) + var(--safe-b))}
   .view-scroll{padding:4px 18px calc(120px + var(--safe-b))}
   #bottom-nav{display:flex}
   #mini-bar{bottom:calc(var(--nav-h) + var(--safe-b))}
