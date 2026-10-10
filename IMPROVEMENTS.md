@@ -8571,7 +8571,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap. Done: with the YouTube card open, F browser-fullscreens #yt-host (the live iframe), F again exits; ignored when typing. Syntax-checked only, not browser-tested (needs a live YouTube track).
 
 ### drag-songs-into-playlists: Drag songs into playlists
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #328. You should be able to drag songs into playlists.
 - **Touches:** library/queue track rows, playlist list (desktop drag and drop).
