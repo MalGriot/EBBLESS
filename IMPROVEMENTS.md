@@ -8683,12 +8683,12 @@ Add entries in this shape:
   Verified: script syntax check, and a node mock of `fitMiniPlayerWindow` (snap up/down by width, snap by height, clamp at 240, mp-small on at 300 and below, no-op when already proportional). Not verified: inside a real PiP window. Chrome only honours `resizeTo` in a Document PiP window with transient user activation, so after a pure drag-resize the snap may be silently ignored (the window then stays as dragged, and only the layout class updates). If that is the case in practice, the snap will only land when triggered from a click or key, and a true lock would need a browser-level aspect hint that Document PiP does not currently offer. Also unverified: the Chrome-imposed minimum PiP size vs 240px.
 
 ### on-air-off-air-title: "ON AIR" title becomes grey "OFF AIR" when off air
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #339. When ON AIR is off air, the title should change to "OFF AIR" and be slightly grey. The second line that turns into "live now:..." should disappear when off air, and "live now:..." should take one line only (marquee if too long).
 - **Touches:** ON AIR playlist title/subtitle in the library.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #339 (idea). Follows whats-malcolm-playing (#332).
+- **Branch:** agent/off-air-title
+- **Notes:** Off air: card title (grid overlay and list name) reads OFF AIR in grey (#9a9a9a), the second line is not rendered. On air: "LIVE now: ..." is a single-line marquee (refreshLibraryMarquees covers it). Not visually checked in a browser. Synced from Geethub issue #339 (idea). Follows whats-malcolm-playing (#332).
 
 ### playing-history: Playing history button next to Settings
 - **Status:** draft
