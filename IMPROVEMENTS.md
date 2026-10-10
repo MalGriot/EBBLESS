@@ -8692,7 +8692,7 @@ Add entries in this shape:
 - **Notes:** Off air: card title (grid overlay and list name) reads OFF AIR in grey (#9a9a9a), the second line is not rendered. On air: "LIVE now: ..." is a single-line marquee (refreshLibraryMarquees covers it). Not visually checked in a browser. Synced from Geethub issue #339 (idea). Follows whats-malcolm-playing (#332).
 
 ### playing-history: Playing history button next to Settings
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #340. A button next to Settings that lists every song played for more than 10 seconds. Clicking it opens a window over the queue window, the same way the playlist window opens over the library window.
 - **Touches:** header buttons, queue window overlay, play-time tracking.
@@ -8732,7 +8732,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Fix: #import-overlay (shared by search, relink, import) is now a translucent blurred scrim with the stage as a card, so the main UI shows behind it instead of a solid black screen. CSS only.
 
 ### app-crashes-often: App often crashes on Android
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Mal's feedback (Android, 2026-10-07): 'The app often crashes.' No detail. Needs a repro or crash log before building.
 - **Touches:** unknown.
@@ -8773,7 +8773,7 @@ Add entries in this shape:
 - **Notes:** Link parsing and /artist import for SoundCloud, Apple Music and YouTube Music already existed; added slug-less Apple artist links, and SoundCloud artist albums/EPs (worker /artist now returns `albums`, client files them as sc_album like Spotify artists' albums). Needs worker deploy. Not tested live against SoundCloud/Apple/YTM.
 
 ### music-links-open-in-ebbless: Spotify, Apple Music and YouTube Music links open in EBBLESS
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (Android, 2026-10-02). Device defaults for those links open in EBBLESS, or EBBLESS appears in the share/open menu. Likely needs share target / URL handling in manifest.json.
 - **Touches:** manifest.json share_target, link capture.
