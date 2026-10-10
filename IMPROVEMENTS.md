@@ -8612,12 +8612,15 @@ Add entries in this shape:
   Decisions for you: whether podcasts should ever broadcast (currently the owner goes off air while a podcast plays); where ON AIR sits in the library (right after Liked Songs now).
 
 ### podcasts-muted: Podcasts play muted
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug, Geethub issue #333. Podcasts are muted when played. Reproduce on the podcast source(s) and fix so audio plays at the normal volume.
 - **Touches:** podcast playback / player mute-volume handling.
-- **Branch:** 
+- **Branch:** agent/podcasts-muted
 - **Notes:** Synced from Geethub issue #333 (bug). Title only; platform and podcast source unknown. Possibly related to the YouTube ad-onset / iPhone silent-ad handling, check before assuming.
+  Root cause: createAudioDeckPlayer (the podcast <audio> deck) creates its element with `muted = true` and relies on onDeckConfirmed to unmute it once the file can play. onDeckConfirmed returns early if `deck.confirmed` is already true. The YouTube and SoundCloud player builders reset `deck.confirmed = false`, the audio one did not, so a deck that had last confirmed a song (kind switch song -> podcast through loadIntoDeck/createDeckPlayer) kept confirmed = true, the unmute was skipped, and the episode played at full position but muted. Not related to the YouTube ad-onset / iPhone silent-ad handling (deckAdReason is yt-only) or to volume leveling (effectiveVolume is 100 for podcasts).
+  Fix: one line in createAudioDeckPlayer, `deck.confirmed = false;`, with a comment.
+  Verified: JS syntax check; code trace of every unmute path (confirm, promoteDeckDirect, crossfades). Not verified: actual audio in a browser (needs the live worker and a podcast feed, and the sandbox cannot play audio); please test playing a song then switching to a podcast, on desktop and iPhone.
 
 ### settings-back-button: Back button in Settings
 - **Status:** draft

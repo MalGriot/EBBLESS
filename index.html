@@ -15726,6 +15726,10 @@ function createSCDeckPlayer(deck, videoId){
 function createAudioDeckPlayer(deck, videoId){
   deck.kind = 'au';
   deck.ready = true;
+  // A deck that last confirmed a YouTube/SoundCloud song still says
+  // confirmed; without this reset onDeckConfirmed returns early and the
+  // element created muted below is never unmuted (Geethub #333).
+  deck.confirmed = false;
   const myGen = ++deck.gen;
   if (!deck.audioEl){
     deck.audioEl = new Audio();
