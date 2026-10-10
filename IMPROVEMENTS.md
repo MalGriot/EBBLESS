@@ -8793,3 +8793,11 @@ Add entries in this shape:
 - **Touches:** art styles, mini-player.
 - **Branch:** 
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### play-collection-opens-player-followup: Check every other collection play button opens the player
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Follow-up to play-collection-opens-player. Only the library playlist panel's two play buttons were changed. Find every other play button for an album, artist or podcast (library cards, artist pages, search results, queue) and make sure each brings up the player. Single-track plays stay in the current window.
+- **Touches:** library cards, artist/podcast/album play handlers.
+- **Branch:** 
+- **Notes:** Added after the first lane's report.
