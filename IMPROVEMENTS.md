@@ -8579,20 +8579,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #328 (idea). Related: library-hold-add-to-queue.
 
 ### miniplayer-inherits-art-style: Mini-player should use the current album art style
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #330. When you switch to the mini-player, its art style (album art, visualizer, etc.) should be the one active in the main player.
 - **Touches:** mini-player window, album art style setting.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #330 (idea). Pairs with #331.
+- **Branch:** agent/miniplayer-art-style
+- **Notes:** Synced from Geethub issue #330 (idea). Pairs with #331. Mini-player reads the main player's `artStyle` on build and every UI tick, so it opens in the active style (default/record/cassette) and follows later changes. Light CSS record and cassette (art as label, spin only while playing). Not browser-tested (Document PiP needs a user gesture); syntax checked only.
 
 ### miniplayer-hover-art-style-controls: Hover controls on the mini-player to switch art style
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #331. Hovering over the mini-player's album art/visualizer shows UI controls to switch album art styles.
 - **Touches:** mini-player hover controls, album art style switcher.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #331 (idea). Pairs with #330. Related: miniplayer-idle-fade.
+- **Branch:** agent/miniplayer-art-style
+- **Notes:** Synced from Geethub issue #331 (idea). Pairs with #330. Related: miniplayer-idle-fade. Hovering the mini art shows a small 3-button pill (default/record/cassette) at its bottom; one tap calls the main `setArtStyle` so both players share the setting. Hidden when the mini-player is shrunk; the window-level idle fade is untouched.
 
 ### whats-malcolm-playing: "What's Malcolm Playing?" live playlist for all users
 - **Status:** draft

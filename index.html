@@ -18776,6 +18776,9 @@ const MP_ICO = {
   style: '<path d="M12 3a9 9 0 000 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16a5 5 0 005-5c0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm5 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3 4a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>',
   skipBack: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text>',
   skipFwd: '<path transform="matrix(-1 0 0 1 24 0)" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text>',
+  artDefault: '<path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/>',
+  artRecord: '<path fill-rule="evenodd" d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 6a3 3 0 110 6 3 3 0 010-6z"/>',
+  artCassette: '<path fill-rule="evenodd" d="M3 6h18v12H3zm4 4a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4z"/>',
   reset: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>'
 };
 const MINI_PLAYER_STYLE = `
@@ -18814,6 +18817,39 @@ const MINI_PLAYER_STYLE = `
   body:hover .mp-art-ghost{transform:scale(1.04)}
   #mpArt{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
   #mpArt[src=""],.mpq-row img[src=""]{visibility:hidden}
+  /* art styles (#330/#331): same three looks as the main player, kept light */
+  #mpArtWrap{container-type:size}
+  #mpRecord,#mpTape{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+  #mpArtWrap[data-art-style="record"],#mpArtWrap[data-art-style="cassette"]{background:transparent;box-shadow:none}
+  #mpArtWrap:not([data-art-style="default"]) #mpArt,#mpArtWrap:not([data-art-style="default"]) .mp-art-ghost{display:none}
+  #mpArtWrap[data-art-style="record"] #mpRecord,#mpArtWrap[data-art-style="cassette"] #mpTape{display:block}
+  #mpRecord{width:min(100cqw,100cqh);aspect-ratio:1;border-radius:50%;box-shadow:0 8px 20px -6px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.55);
+    background:repeating-radial-gradient(circle at center,#161616 0 2px,#0c0c0c 2px 4px);animation:mpSpin 3.6s linear infinite paused}
+  body.mp-playing #mpRecord,body.mp-playing .mp-hub{animation-play-state:running}
+  #mpRecord::before{content:"";position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+    background:var(--mp-art) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c}
+  #mpRecord::after{content:"";position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#121212}
+  #mpTape{width:min(100cqw,156cqh);aspect-ratio:1.5625;border-radius:5%;background:linear-gradient(#34353a,#1b1c1f);
+    box-shadow:0 8px 20px -6px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.1)}
+  #mpTape::before{content:"";position:absolute;left:8%;right:8%;top:10%;height:48%;border-radius:4%;background:var(--mp-art) center/cover #282828;
+    box-shadow:0 0 0 2px rgba(0,0,0,.45)}
+  .mp-hub{position:absolute;top:30%;width:15%;aspect-ratio:1;margin-top:-7.5%;border-radius:50%;background:#101010;
+    box-shadow:0 0 0 3px rgba(255,255,255,.25);animation:mpSpin 2.4s linear infinite paused}
+  .mp-hub::after{content:"";position:absolute;inset:30%;border:2px dotted #ddd;border-radius:50%}
+  .mp-hub:first-child{left:22%}
+  .mp-hub:last-child{right:22%}
+  @keyframes mpSpin{to{transform:rotate(360deg)}}
+  #mpTape .mp-hubs{position:absolute;inset:0}
+  #mpArtPick{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:2;display:flex;gap:2px;padding:3px;border-radius:999px;
+    background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s ease}
+  #mpArtWrap:hover #mpArtPick,#mpArtPick:focus-within{opacity:1;pointer-events:auto}
+  #mpArtPick button{width:26px;height:26px;border-radius:50%;border:none;background:transparent;color:rgba(255,255,255,.7);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background .15s ease,color .15s ease}
+  #mpArtPick button:hover{background:rgba(255,255,255,.14);color:#fff}
+  #mpArtPick button.is-active{color:var(--accent);background:rgba(255,255,255,.1)}
+  #mpArtPick svg{width:15px;height:15px}
+  body.mp-small #mpArtPick{display:none}
+  @media (prefers-reduced-motion:reduce){#mpRecord,.mp-hub{animation:none}}
   body:hover #mpArt{transform:scale(1.04)}
   #mpHead{grid-area:head;display:flex;align-items:center;gap:2px;min-width:0}
   #mpLogo{width:18px;height:17px;object-fit:contain;margin-right:auto;opacity:.9}
@@ -18956,7 +18992,11 @@ function buildMiniPlayerDOM(win){
     '<div id="mpBg"></div>' +
     '<div id="mpEdge" title="Shrink" role="button" aria-label="Shrink"></div>' +
     '<div id="mpCard">' +
-      '<div id="mpArtWrap"><img id="mpArt" alt=""></div>' +
+      '<div id="mpArtWrap" data-art-style="default"><img id="mpArt" alt="">' +
+        '<div id="mpRecord"></div><div id="mpTape"><div class="mp-hubs"><span class="mp-hub"></span><span class="mp-hub"></span></div></div>' +
+        '<div id="mpArtPick" role="group" aria-label="Art style">' +
+          btn('mpArtDefault', '', 'Default', MP_ICO.artDefault) + btn('mpArtRecord', '', 'Spinning Record', MP_ICO.artRecord) + btn('mpArtCassette', '', 'Cassette Tape', MP_ICO.artCassette) +
+        '</div></div>' +
       '<div id="mpHead">' +
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
         btn('mpStyle', 'mp-tool', 'Switch style', MP_ICO.style) +
@@ -19000,6 +19040,9 @@ function buildMiniPlayerDOM(win){
     saveMiniPlayerPrefs({ style: next });
   });
   doc.getElementById('mpReset').addEventListener('click', resetMiniPlayerShape);
+  // One tap sets the style for both players (shared setting), like the main picker
+  [['mpArtDefault', 'default'], ['mpArtRecord', 'record'], ['mpArtCassette', 'cassette']].forEach(([id, st]) =>
+    doc.getElementById(id).addEventListener('click', () => { setArtStyle(st); updateMiniPlayerUI(); }));
   // Shortcuts keep working with the mini player focused: replay the key on
   // the main document, where the app's one keydown handler lives, rather
   // than keeping a second copy of the keymap here. Q is the exception - it
@@ -19213,6 +19256,7 @@ function updateMiniPlayerUI(){
     const art = lead ? lead.url : (artworkUrls(t)[0] || '');
     if (artEl.getAttribute('src') !== art){
       setMiniPlayerArt(artEl, art, lead ? lead.ms : MP_ART_FADE_MS);
+      doc.getElementById('mpArtWrap').style.setProperty('--mp-art', art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'none');
       doc.getElementById('mpBg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : '';
     } else if (lead){
       // a skip crossfade moves currentTrack() first, so the swap may already
@@ -19225,6 +19269,9 @@ function updateMiniPlayerUI(){
     if (artistEl._marqueeText !== (t.artist || '')) setMarqueeText(artistEl, t.artist || '');
   }
   const isPlaying = artworkWrap.classList.contains('is-playing');
+  doc.body.classList.toggle('mp-playing', isPlaying);
+  doc.getElementById('mpArtWrap').dataset.artStyle = artStyle;
+  ['Default', 'Record', 'Cassette'].forEach(n => doc.getElementById('mpArt' + n).classList.toggle('is-active', n.toLowerCase() === artStyle));
   playIcoEl.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY;
   // Toggle states mirror the main player's own buttons rather than
   // re-deriving them, so they can't disagree.
