@@ -2661,7 +2661,7 @@ async function handleSoundCloud(url, ctx) {
 // Tracks come back in that page order, deduped by title, capped - matched
 // sources (Spotify/Apple Music, one YouTube search per track on the client)
 // lower than ones that are already playable (SoundCloud ids, YouTube ids).
-const ARTIST_CACHE_VERSION = 'a1';
+const ARTIST_CACHE_VERSION = 'a2';
 const ARTIST_MAX_MATCHED_TRACKS = 100;
 const ARTIST_MAX_NATIVE_TRACKS = 200;
 const ARTIST_MAX_RELEASES = 12;
