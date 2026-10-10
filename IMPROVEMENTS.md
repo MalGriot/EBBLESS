@@ -8681,3 +8681,115 @@ Add entries in this shape:
   Follow-up 6: mini-player LP was near-black on a near-black window. Added a light rim ring, lighter grooves and a conic sheen (also makes the spin visible).
   Follow-up 7: the mini-player paint icon now toggles the background between the plain dark one and a solid color taken from the album art (the main player's sampled `--player-accent`, mixed 50% with near-black so white text stays readable), replacing the blurred-art background. Saved style value 'art' is reused, so existing prefs carry over.
   Verified: script syntax check, and a node mock of `fitMiniPlayerWindow` (snap up/down by width, snap by height, clamp at 240, mp-small on at 300 and below, no-op when already proportional). Not verified: inside a real PiP window. Chrome only honours `resizeTo` in a Document PiP window with transient user activation, so after a pure drag-resize the snap may be silently ignored (the window then stays as dragged, and only the layout class updates). If that is the case in practice, the snap will only land when triggered from a click or key, and a true lock would need a browser-level aspect hint that Document PiP does not currently offer. Also unverified: the Chrome-imposed minimum PiP size vs 240px.
+
+### on-air-off-air-title: "ON AIR" title becomes grey "OFF AIR" when off air
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #339. When ON AIR is off air, the title should change to "OFF AIR" and be slightly grey. The second line that turns into "live now:..." should disappear when off air, and "live now:..." should take one line only (marquee if too long).
+- **Touches:** ON AIR playlist title/subtitle in the library.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #339 (idea). Follows whats-malcolm-playing (#332).
+
+### playing-history: Playing history button next to Settings
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #340. A button next to Settings that lists every song played for more than 10 seconds. Clicking it opens a window over the queue window, the same way the playlist window opens over the library window.
+- **Touches:** header buttons, queue window overlay, play-time tracking.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #340 (idea).
+
+### tutorial-controls-block-loadbar: Tutorial: Next button and first captions cover the load bar
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Mal's feedback (desktop, 2026-10-09). Since the load bar moved, the tutorial Next button and the first couple of captions sit on top of it. Move them clear of it.
+- **Touches:** tutorial overlay, caption/Next positioning vs load bar.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### install-bar-covers-playlist-search: Install bar covers the playlist search bar on desktop
+- **Status:** ready
+- **Priority:** high
+- **Description:** Bug, Mal's feedback (desktop, 2026-10-09). The install CTA bar covers the playlist search bar.
+- **Touches:** install CTA bar, playlist search bar layout.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### play-collection-opens-player: Playing a collection opens the player; playing one track stays put
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Mal's feedback (mobile, 2026-10-09). Pressing play on an album, playlist, artist or podcast should bring up the player. Playing an individual track should stay in the current window.
+- **Touches:** library/play-button handlers, view switching.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### no-black-screen-search-relink: Searching and fixing links stay in the main UI, no black screen
+- **Status:** ready
+- **Priority:** high
+- **Description:** Bug, Mal's feedback (desktop, 2026-10-09). Searching new songs/playlists and fixing links should not go to a black screen. They should happen inside the main UI; never leave it.
+- **Touches:** search flow, relink flow, full-screen overlays.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### app-crashes-often: App often crashes on Android
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Mal's feedback (Android, 2026-10-07): 'The app often crashes.' No detail. Needs a repro or crash log before building.
+- **Touches:** unknown.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### empty-playlist-from-scratch: Create an empty playlist and search and drag songs into it
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Mal's feedback (desktop, 2026-10-09). Make an empty playlist from scratch, then search for songs and drag them in. Overlaps drag-songs-into-playlists (waiting on deploy), so build on that.
+- **Touches:** playlist creation, search results drag source.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### shortcut-hover-hints: Hovering a button with a shortcut shows the shortcut
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Mal's feedback (desktop, 2026-10-09). Buttons that have a keyboard shortcut show it on hover.
+- **Touches:** button title/tooltips.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### feedback-prefill-email: Feedback form pre-fills the user's email
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Mal's feedback (mobile, 2026-10-09). When sending feedback, autoload the user's email address.
+- **Touches:** feedback form contact field, stored sign-in email.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### artist-links-all-sources: Add artists from SoundCloud, Apple Music and YouTube Music links, and load SoundCloud discographies
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Mal's feedback (mobile, 2026-10-08 and 10-09). Adding an artist by link should work for SoundCloud, Apple Music and YouTube Music, and loading a SoundCloud artist's discography should work like Spotify's.
+- **Touches:** artist import, worker source resolvers.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### music-links-open-in-ebbless: Spotify, Apple Music and YouTube Music links open in EBBLESS
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Mal's feedback (Android, 2026-10-02). Device defaults for those links open in EBBLESS, or EBBLESS appears in the share/open menu. Likely needs share target / URL handling in manifest.json.
+- **Touches:** manifest.json share_target, link capture.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### shazam-feature: Shazam-style song identification
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Mal's feedback (Android, 2026-10-10): 'Add a Shazam feature.' Needs a decision on service/approach.
+- **Touches:** new feature.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+
+### sunflower-speaker-art: Album art and mini-player style: sunflower with a speaker inside
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Mal's feedback (Android, 2026-10-08). Sunflower with a speaker in the middle, like the ChatGPT image from before BLD. Needs the reference image.
+- **Touches:** art styles, mini-player.
+- **Branch:** 
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
