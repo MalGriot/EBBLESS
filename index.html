@@ -465,6 +465,7 @@ body.onb-active .paste-guide{display:none}
 .np-pill.is-behind{background:var(--accent);color:#000;border-color:var(--accent)}
 .np-pill.is-off{color:var(--faint);opacity:.8}
 .lib-card .lib-desc.np-onair{color:var(--accent);opacity:1;font-weight:600}
+.lib-card .name.np-off,.lib-card .art .title-overlay .marquee.np-off{color:#9a9a9a}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
 .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
 @keyframes current-label-cycle{
@@ -7668,11 +7669,12 @@ function renderLibrary(){
       artDiv.appendChild(pinBtn);
     }
 
-    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = pl.name;
+    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = (id === NP_ID && !npFeed.onAir) ? 'OFF AIR' : pl.name;
+    if (id === NP_ID && !npFeed.onAir) name.classList.add('np-off');
     const titleOverlay = document.createElement('div'); titleOverlay.className = 'title-overlay';
     const marqueeEl = document.createElement('div');
-    marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '');
-    marqueeEl.dataset.text = pl.name;
+    marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '') + (id === NP_ID && !npFeed.onAir ? ' np-off' : '');
+    marqueeEl.dataset.text = (id === NP_ID && !npFeed.onAir) ? 'OFF AIR' : pl.name;
     titleOverlay.appendChild(marqueeEl);
     if (id === SWELL_ID || (id === NP_ID && npFeed.onAir)){
       const dot = document.createElement('span');
@@ -7691,9 +7693,10 @@ function renderLibrary(){
     // they are, and what fills them when they're still empty
     let desc = null;
     if (id === NP_ID){
-      desc = document.createElement('div'); desc.className = 'count lib-desc';
-      desc.textContent = npFeed.onAir ? 'LIVE now: ' + (npFeed.current.t || '') : 'Off air';
-      if (npFeed.onAir) desc.classList.add('np-onair');
+      if (npFeed.onAir){   // off air: no second line; on air: one line, marquee if long
+        desc = document.createElement('div'); desc.className = 'count lib-desc np-onair marquee';
+        desc.dataset.text = 'LIVE now: ' + (npFeed.current.t || '');
+      }
       if (!pl.tracks.length) count.textContent = 'Nothing yet. Check back soon.';
     }
     if (id === SWELL_ID || id === BLEND_ID){
@@ -7806,7 +7809,7 @@ function renderLibrary(){
   try{ refreshPlayNudge(); } catch(e){}
 }
 function refreshLibraryMarquees(){
-  document.querySelectorAll('.lib-card .art .title-overlay .marquee').forEach(el => {
+  document.querySelectorAll('.lib-card .art .title-overlay .marquee, .lib-card .lib-desc.marquee').forEach(el => {
     setMarqueeText(el, el.dataset.text || '');
   });
 }
