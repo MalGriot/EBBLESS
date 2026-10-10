@@ -8601,3 +8601,11 @@ Add entries in this shape:
 - **Touches:** needs a backend feed (worker), a shared playlist for all users.
 - **Branch:** 
 - **Notes:** Synced from Geethub issue #332 (idea). Title is a placeholder; user to pick the on-brand name.
+
+### podcasts-muted: Podcasts play muted
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub issue #333. Podcasts are muted when played. Reproduce on the podcast source(s) and fix so audio plays at the normal volume.
+- **Touches:** podcast playback / player mute-volume handling.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #333 (bug). Title only; platform and podcast source unknown. Possibly related to the YouTube ad-onset / iPhone silent-ad handling, check before assuming.
