@@ -16203,6 +16203,27 @@ function schedulePrevWarm(pos){
   }, 6000);
 }
 
+// Artist bio preload (#347): once a song is next up, fetch its artists' info
+// so the bio is instant when it plays. Only entries added here are dropped
+// again, as soon as they're neither the playing nor the next-up song's.
+const bioPreloaded = new Set();
+function preloadNextArtistBio(curPos, nextTrack){
+  const keep = new Set();
+  const add = (t, fetchIt) => {
+    if (!t || !t.artist) return;
+    splitArtistNames(t.artist).slice(0, 3).forEach(n => {
+      const k = artistNameKey(n);
+      keep.add(k);
+      if (fetchIt && !artistInfoCache.has(k)){
+        bioPreloaded.add(k);
+        fetchArtistInfo(n, t.title).catch(() => {});
+      }
+    });
+  };
+  add(trackAt(curPos), false);
+  add(nextTrack, true);
+  bioPreloaded.forEach(k => { if (!keep.has(k)){ bioPreloaded.delete(k); artistInfoCache.delete(k); } });
+}
 function schedulePreload(afterPos){
   // The next track will play on the cast/AirPlay target, not this device -
   // a warm local standby deck would only be promoted by mistake.
@@ -16210,6 +16231,7 @@ function schedulePreload(afterPos){
   schedulePrevWarm(afterPos);
   const deck = standbyDeck();
   const pos = computeNextPos(afterPos, true);
+  try{ preloadNextArtistBio(afterPos, pos < 0 ? null : trackAt(pos)); } catch(e){}
   if (pos < 0){
     if (deck.pos !== -1) resetDeck(deck);
     // nothing queued after this: a Discover lookahead will fill it, and its
