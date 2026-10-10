@@ -19115,7 +19115,8 @@ const MP_MIN_W = 300, MP_MIN_H = 120;
 const MP_QUEUE_H = 260;        // extra height the queue popover grows the window by
 const MP_OVERLAY_MIN_H = 300;  // a window at least this tall shows the queue over the player instead of growing
 const MP_SHRINK = 0.7;         // clicking the top edge scales the whole window to this (#269)
-const MP_SMALL_MIN_W = 300, MP_SMALL_MIN_H = 117;  // below this the title and controls no longer fit
+const MP_SMALL_MIN_W = 240, MP_SMALL_MIN_H = 96;   // floor for the top-edge shrink (#269) only
+const MP_FIT_MIN_W = MP_DEFAULT.w;               // drag-resize never goes below the default size: full layout, title and controls visible
 const MP_RATIO = MP_DEFAULT.w / MP_DEFAULT.h;  // the window keeps this proportion while the user resizes it
 const MP_ICO = {
   shuffle: '<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>',
@@ -19500,8 +19501,7 @@ function onMiniPlayerResize(){
   // A window grown for the queue popover, or shrunk from the top edge, isn't the user's chosen size
   if (mpQueue || mpShrunk) return;
   // Drag-resize: once the user lets go, snap to the locked proportion and
-  // clamp to the minimum. At the minimum width the existing small layout
-  // (mp-small, same as the top-edge shrink) takes over.
+  // clamp to the minimum (the default size).
   win.clearTimeout(mpFitTimer);
   mpFitTimer = win.setTimeout(() => fitMiniPlayerWindow(win), 120);
   // (the PiP window's own timers - the hidden main tab's are throttled)
@@ -19517,8 +19517,7 @@ function fitMiniPlayerWindow(win){
   // Follow whichever edge the user moved more (in width-equivalent terms)
   if (Math.abs(w - last.w) >= Math.abs(h - last.h) * MP_RATIO) h = Math.round(w / MP_RATIO);
   else w = Math.round(h * MP_RATIO);
-  if (w < MP_SMALL_MIN_W){ w = MP_SMALL_MIN_W; h = Math.round(w / MP_RATIO); }
-  win.document.body.classList.toggle('mp-small', w <= MP_MIN_W);
+  if (w < MP_FIT_MIN_W){ w = MP_FIT_MIN_W; h = Math.round(w / MP_RATIO); }
   applyMiniPlayerShape();
   mpLastSize = { w, h };
   if (Math.abs(w - win.innerWidth) <= 2 && Math.abs(h - win.innerHeight) <= 2) return;
