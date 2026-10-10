@@ -19116,7 +19116,8 @@ const MP_QUEUE_H = 260;        // extra height the queue popover grows the windo
 const MP_OVERLAY_MIN_H = 300;  // a window at least this tall shows the queue over the player instead of growing
 const MP_SHRINK = 0.7;         // clicking the top edge scales the whole window to this (#269)
 const MP_SMALL_MIN_W = 240, MP_SMALL_MIN_H = 96;   // floor for the top-edge shrink (#269) only
-const MP_FIT_MIN_W = MP_DEFAULT.w;               // drag-resize never goes below the default size: full layout, title and controls visible
+const MP_FIT_MIN_W = MP_SMALL_MIN_W;             // drag-resize floor
+const MP_BASIC_W = 320, MP_BASIC_H = 124;        // a window smaller than this in either direction switches to the basic layout (mp-small)
 const MP_RATIO = MP_DEFAULT.w / MP_DEFAULT.h;  // the window keeps this proportion while the user resizes it
 const MP_ICO = {
   shuffle: '<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>',
@@ -19496,12 +19497,14 @@ function onMiniPlayerResize(){
   // the whole window again; when the window was grown, the card keeps its
   // pre-queue height and the popover gets the rest.
   if (mpQueue && !mpQueue.grown) mpQueue.cardH = win.innerHeight;
+  // Basic layout follows the real window size, so it works even when Chrome ignores the snap-back resize
+  if (!mpQueue && !mpShrunk) win.document.body.classList.toggle('mp-small', win.innerWidth < MP_BASIC_W || win.innerHeight < MP_BASIC_H);
   applyMiniPlayerShape();
   win.clearTimeout(mpSaveTimer);
   // A window grown for the queue popover, or shrunk from the top edge, isn't the user's chosen size
   if (mpQueue || mpShrunk) return;
   // Drag-resize: once the user lets go, snap to the locked proportion and
-  // clamp to the minimum (the default size).
+  // clamp to the floor.
   win.clearTimeout(mpFitTimer);
   mpFitTimer = win.setTimeout(() => fitMiniPlayerWindow(win), 120);
   // (the PiP window's own timers - the hidden main tab's are throttled)
