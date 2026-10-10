@@ -1029,6 +1029,13 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .seek-track .knob{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--player-accent);
   transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
 .seek-track:hover .knob,.seek-track.dragging .knob{opacity:1}
+/* loading bar: while a song loads the bar sweeps and can't be seeked */
+.seek-track.is-loading{cursor:default;pointer-events:none}
+.seek-track.is-loading .fill,.seek-track.is-loading .knob{display:none}
+.seek-track.is-loading .rail::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--player-accent),transparent);animation:seekLoadSweep 1.1s ease-in-out infinite}
+@keyframes seekLoadSweep{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+@media (prefers-reduced-motion:reduce){.seek-track.is-loading .rail::after{animation:none;width:100%;opacity:.5}}
 
 .controls-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:clamp(8px,3dvh,18px)}
 .ctl-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);
@@ -16024,6 +16031,7 @@ function setPlayIcons(inner, spin){
 // update for that tick.
 function updateAdLoadingIcon(){
   const p = activeLoadProgress();
+  [seekTrack, flowSeekTrack].forEach(el => el.classList.toggle('is-loading', p !== null));
   if (p === null) return false;
   setPlayIcons(loadingRingIcon(p === 'spin' ? 0.25 : p), p === 'spin');
   return true;
@@ -16046,7 +16054,7 @@ function startLoadIconTicker(){
 function setPlayingUI(isPlaying){
   ytPanelBtnSync();
   if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
-  else { stopLoadIconTicker(); setPlayIcons(isPlaying ? ICO_PAUSE : ICO_PLAY); }
+  else { stopLoadIconTicker(); [seekTrack, flowSeekTrack].forEach(el => el.classList.remove('is-loading')); setPlayIcons(isPlaying ? ICO_PAUSE : ICO_PLAY); }
   artworkWrap.classList.toggle('is-playing', isPlaying);
   flowArtWrap.classList.toggle('is-playing', isPlaying);
   if (isPlaying) startSeekPoll(); else stopSeekPoll();
@@ -20847,7 +20855,7 @@ function paintSeekDrag(){
 // Tap-to-seek for the picture-in-picture mini player's bar.
 function seekFromClientX(trackEl, clientX){
   const ad = activeDeck();
-  if (!ad.player || !ad.player.getDuration) return;
+  if (!ad.player || !ad.player.getDuration || seekTrack.classList.contains('is-loading')) return;
   const t = seekDeckDuration() * seekPctAt(trackEl, clientX);
   ad.player.seekTo(t, true);
   seekHold = {t, until: performance.now() + 2000};
@@ -20874,7 +20882,7 @@ function endSeekDrag(e, commit){
 [seekTrack, flowSeekTrack].forEach(el => {
   el.addEventListener('pointerdown', (e) => {
     // a touch that only reveals idled-out fullscreen chrome isn't a seek
-    if (e.button !== 0 || fsSwallowClick || seekDrag) return;
+    if (e.button !== 0 || fsSwallowClick || seekDrag || el.classList.contains('is-loading')) return;
     const ad = activeDeck();
     if (!ad.player || !ad.player.getDuration) return;
     e.preventDefault();

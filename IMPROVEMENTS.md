@@ -8660,12 +8660,12 @@ Add entries in this shape:
 - **Review notes:** The podcast is the #324 episode (open.spotify.com/episode/5tVNpRm...), seeded via DEFAULT_SPOTIFY_URLS. Change: (1) episode removed from DEFAULT_SPOTIFY_URLS, so new users never get it; (2) new one-time removeVoPodcast() (flag ebbless:voPodcastRemoved, runs after the default seed on launch) removes it from existing libraries, including its cache and pin. The #323 artist page default is untouched. Not re-added: it is no longer in the seed list, and the flag stops reruns. Decisions for you: (a) it is removed even if a listener pasted that same episode link themselves, since it can't be told apart from the seeded one; (b) an old, not-yet-updated device on the same account could still re-seed it until it updates; (c) the stale id stays in ebbless:defaultSpotifySeeded, harmless. Verified: node syntax check only; no browser pass.
 
 ### loading-progress-bar: Song progress bar acts as a loading bar while loading
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #334. While a song is loading, the progress bar should show as a loading bar and not be clickable or draggable.
 - **Touches:** player seek bar, track-load state.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #334 (idea). Related: autoadvance-stall-full-progress (bar held at 0 until ad check passes).
+- **Branch:** agent/loading-bar
+- **Notes:** Reuses `activeLoadProgress()` (the same signal as the play-button loading ring): `updateAdLoadingIcon` toggles `is-loading` on `#seekTrack`/`#flowSeekTrack`, which hides the fill/knob, shows a sweeping accent bar (static under reduced motion) and sets pointer-events none; seek pointerdown and mini-player `seekFromClientX` also bail while loading. Class is cleared when the ticker ends or playback is set. Verified: node --check on both inline scripts. Not verified: in a browser (animation look, real YouTube/SoundCloud load timing, mini-player). Synced from Geethub issue #334 (idea). Related: autoadvance-stall-full-progress (bar held at 0 until ad check passes).
 
 ### miniplayer-proportional-resize: Mini-player resizes freely but always stays proportional, with a minimum small state
 - **Status:** merged
