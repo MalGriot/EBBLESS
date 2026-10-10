@@ -8554,7 +8554,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #321 (bug). Related: track-relink-menu, playlist-full-loading. Fix: the picker already opened on loaded rows, but resolvePlaylist kept rewriting storage from its own in-flight list, silently undoing a pick made mid-load. applyRelinkChoice now also updates that list (resolvingTracks map). Syntax-checked only; not exercised in a browser.
 
 ### queue-drag-above-playing-next: Dragging a queue track above "Playing next" is still not smooth
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #329. Dragging songs up the queue is still not smooth: it gets confused when you drag a track above the "Playing next" track.
 - **Touches:** queue panel drag-to-reorder, boundary at the "Playing next" header.
@@ -8563,7 +8563,7 @@ Add entries in this shape:
   **Root cause:** the "Next"/"Later" `.q-section-label` elements sit in `#queueBody` between the first two `.q-row`s. Swapping a row across that label shifts it by rowH + label height, not rowH, and rowH itself was measured across the label when the neighbor was the other side of it. Earlier fixes assumed uniform row pitch. **Fix:** in `wireQueueRowGestures()`, measure the real layout shift of each `insertBefore` swap (rect before/after) and carry that instead of rowH; rowH is now the smaller neighbor pitch. **Verified:** syntax check; headless Chrome mock with a label between rows 0 and 1, drag row 1 up past row 0: pointer-to-row offset constant at 0, reorder 2->1.
 
 ### video-mode-f-fullscreen: Pressing F in video mode should go fullscreen
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #327. When video mode is active, the F key should switch to fullscreen.
 - **Touches:** keyboard shortcuts, video playback mode.
@@ -8579,7 +8579,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #328 (idea). Related: library-hold-add-to-queue.
 
 ### miniplayer-inherits-art-style: Mini-player should use the current album art style
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #330. When you switch to the mini-player, its art style (album art, visualizer, etc.) should be the one active in the main player.
 - **Touches:** mini-player window, album art style setting.
@@ -8587,7 +8587,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #330 (idea). Pairs with #331. Mini-player reads the main player's `artStyle` on build and every UI tick, so it opens in the active style (default/record/cassette) and follows later changes. Light CSS record and cassette (art as label, spin only while playing). Not browser-tested (Document PiP needs a user gesture); syntax checked only.
 
 ### miniplayer-hover-art-style-controls: Hover controls on the mini-player to switch art style
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #331. Hovering over the mini-player's album art/visualizer shows UI controls to switch album art styles.
 - **Touches:** mini-player hover controls, album art style switcher.
