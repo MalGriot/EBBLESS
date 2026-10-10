@@ -1229,15 +1229,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .danger-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 /* ---------- credits (Settings > About). Same centered card as
    #feedback-modal, over #danger-scrim ---------- */
-#credits-modal,#whatsnew-modal,#yt-modal,#reroll-modal,#np-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
+#credits-modal,#whatsnew-modal,#yt-modal,#reroll-modal{position:fixed;z-index:71;left:50%;top:50%;width:min(440px,calc(100vw - 32px));
   max-height:calc(100dvh - 32px);overflow-y:auto;outline:none;
   background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);
   box-shadow:0 20px 60px rgba(0,0,0,.55);padding:22px 22px 18px;
   opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.94);
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-#credits-modal.is-open,#whatsnew-modal.is-open,#yt-modal.is-open,#reroll-modal.is-open,#np-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-#credits-modal h2,#whatsnew-modal h2,#yt-modal h2,#reroll-modal h2,#np-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
-#credits-modal > p,#whatsnew-modal > p,#yt-modal > p,#reroll-modal > p,#np-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
+#credits-modal.is-open,#whatsnew-modal.is-open,#yt-modal.is-open,#reroll-modal.is-open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+#credits-modal h2,#whatsnew-modal h2,#yt-modal h2,#reroll-modal h2{font-size:16px;font-weight:700;margin:0 0 6px;color:var(--text)}
+#credits-modal > p,#whatsnew-modal > p,#yt-modal > p,#reroll-modal > p{font-size:13px;color:var(--faint);line-height:1.5;margin:0 0 6px}
 .credits-group h3{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:16px 0 6px}
 .credits-group ul{list-style:none;margin:0;padding:0}
 .credits-group li{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-top:1px solid var(--border)}
@@ -1245,11 +1245,6 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .credits-group a{color:var(--text);font-size:14px;font-weight:600;text-decoration:underline;text-decoration-color:var(--border-2);text-underline-offset:3px}
 .credits-group a:hover,.credits-group a:focus-visible{text-decoration-color:currentColor}
 .credits-group span{font-size:12px;color:var(--faint)}
-/* Owner's now-playing feed (Settings > App): reuses the credits card + .credits-group list */
-#np-modal .credits-group li{display:block}
-#np-modal .np-t{display:block;font-size:14px;font-weight:600;color:var(--text)}
-#np-modal .np-s{display:block;font-size:12px;color:var(--faint)}
-#np-modal .np-live{color:var(--accent)}
 /* What's new (Settings > App): reuses the credits card + .credits-group
    headings; one group per WHATS_NEW release day */
 #whatsnew-modal .credits-group li{display:block;font-size:13px;color:var(--text);line-height:1.5}
@@ -3502,13 +3497,6 @@ body.week-up-on{overflow:hidden}
         </div>
         <div class="settings-row">
           <div>
-            <div class="label" id="npRowLabel"></div>
-            <div class="desc">A live, read-only look at the songs MAL GRIOT has been playing.</div>
-          </div>
-          <button class="btn-ghost" id="npBtn">Open</button>
-        </div>
-        <div class="settings-row">
-          <div>
             <div class="label">Share EBBLESS</div>
             <div class="desc">Tell someone else about the app. Opens your device's share sheet, or copies the link if that's not available.</div>
           </div>
@@ -3640,17 +3628,6 @@ body.week-up-on{overflow:hidden}
     </div>
     <div class="danger-modal-actions">
       <button type="button" class="btn-ghost" id="creditsCloseBtn">Close</button>
-    </div>
-  </div>
-
-  <!-- ===== Owner's now-playing feed (see NOW PLAYING FEED in the script) ===== -->
-  <div id="np-modal" role="dialog" aria-modal="true" aria-labelledby="npModalTitle" tabindex="-1">
-    <h2 id="npModalTitle"></h2>
-    <div class="credits-group"><h3 id="npNowHead">Now</h3><ul id="npNow"></ul></div>
-    <div class="credits-group"><h3>Earlier</h3><ul id="npRecent"></ul></div>
-    <div class="danger-modal-actions">
-      <button type="button" class="btn-ghost" id="npOwnerBtn" hidden></button>
-      <button type="button" class="btn-ghost" id="npCloseBtn">Close</button>
     </div>
   </div>
 
@@ -4755,6 +4732,8 @@ const LIKED_ID = 'liked';                    // fixed id for the built-in Liked 
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
 const BLEND_NAME = 'SwiiiRrrLL';
+const NP_ID = 'nowplaying';                  // fixed id for the built-in live "what MAL GRIOT is playing" playlist
+const NOWPLAYING_TITLE = "What's MAL GRIOT Playing?";   // working title: rename here only
 const BLEND_THUMB_SRC = 'brand/assets/swirl-thumb.mp4';  // SwiiiRrrLL's looping library tile
 let blendThumbFailed = false;                // clip missing/unplayable - use the track collage instead
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
@@ -4875,7 +4854,7 @@ let profileMetaMemo = null;
 // and never send it, so it rides along in the same v2 record.
 const PROFILE_SCHEMA = 2;
 const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
-const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+const PROFILE_REGENERATED_IDS = ['swell', 'blend', 'nowplaying']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
 const PROFILE_NOW_TTL_MS = 24 * 60 * 60 * 1000; // a session this much older than the newest one is dropped
 const PROFILE_NOW_MAX_DEVICES = 8;              // newest sessions kept; older devices age out
 const PROFILE_NOW_MAX_QUEUE = 100;              // queue entries per session
@@ -5370,7 +5349,7 @@ async function syncProfileNow(opts){
 // `profile`: fall back to the old behavior (restore only into a wiped
 // library, then back the library up) rather than doing nothing.
 async function legacyProfileSync(){
-  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
   const post = (path, extra) => fetch(BACKEND + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -6018,7 +5997,7 @@ function sortLibraryIds(ids, mode){
 }
 function orderedLibraryIds(){
   const lib = getLibrary();
-  const ids = lib.filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+  const ids = lib.filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
   const pinned = getPinnedLibrary().filter(id => ids.includes(id));
   const rest = ids.filter(id => !pinned.includes(id));
   const sortMode = getLibrarySort();
@@ -6027,7 +6006,8 @@ function orderedLibraryIds(){
   // anything the listener chose to pin themselves, Swell first since it's
   // the thing most worth surfacing today.
   // SwiiiRrrLL rides right behind it.
-  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(ordered) : ordered;
+  const withNp = lib.includes(NP_ID) ? [NP_ID].concat(ordered) : ordered;   // the owner's live feed sits right after Liked Songs
+  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(withNp) : withNp;
   const withBlend = lib.includes(BLEND_ID) ? [BLEND_ID].concat(withLiked) : withLiked;
   return lib.includes(SWELL_ID) ? [SWELL_ID].concat(withBlend) : withBlend;
 }
@@ -7548,7 +7528,7 @@ function renderLibrary(){
     if (isAlbum) albumCount++;
     if (isPodcast) podcastCount++;
     const isLiked = id === LIKED_ID;
-    const isSystemPl = isLiked || id === SWELL_ID || id === BLEND_ID;
+    const isSystemPl = isLiked || id === SWELL_ID || id === BLEND_ID || id === NP_ID;
     const pinned = isPinned(id);
     const withArt = pl.tracks.filter(t => t.videoId).slice(0, 4);
     const card = document.createElement('div');
@@ -7639,7 +7619,7 @@ function renderLibrary(){
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
-    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID){
+    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       const menuBtn = document.createElement('button');
       menuBtn.className = 'menu-btn'; menuBtn.setAttribute('aria-label','Playlist options'); menuBtn.setAttribute('aria-haspopup','true'); menuBtn.setAttribute('aria-expanded','false');
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -7678,6 +7658,11 @@ function renderLibrary(){
     // the two generated mixes keep their branded names; say plainly what
     // they are, and what fills them when they're still empty
     let desc = null;
+    if (id === NP_ID){
+      desc = document.createElement('div'); desc.className = 'count lib-desc';
+      desc.textContent = 'Live from MAL GRIOT';
+      if (!pl.tracks.length) count.textContent = 'Nothing yet. Check back soon.';
+    }
     if (id === SWELL_ID || id === BLEND_ID){
       desc = document.createElement('div'); desc.className = 'count lib-desc';
       desc.textContent = id === SWELL_ID ? 'Daily picks for you' : 'A mix of your library';
@@ -7718,7 +7703,7 @@ function renderLibrary(){
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
     card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
-    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID){
+    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       attachLongPress(card, () => {
         const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
@@ -7826,6 +7811,7 @@ function toggleLibraryPlaylistPanel(id){
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
 
+  if (id === NP_ID) refreshNowPlaying();
   if (id === SWELL_ID){
     recordLastOpened(id);
     const dot = libraryGrid.querySelector('[data-pl-id="' + SWELL_ID + '"] .new-dot');
@@ -8335,17 +8321,20 @@ function openLibCtxMenu(id, btn){
     { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding new picks...' : currentsRerollsLeft() ? 'New picks' : 'No more new picks today', icon: CTX_ICON_REFRESH, off: !currentsRerollsLeft() },
   ] : id === BLEND_ID ? [
     { action: 'blend-reshuffle', label: 'New picks', icon: CTX_ICON_REFRESH },
-  ] : [
+  ] : id === NP_ID ? [
+    { action: 'np-refresh', label: 'Refresh now', icon: CTX_ICON_REFRESH },
+    { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
+  ].concat(installGateSkip || npOwnerKey() ? [{ action: 'np-owner', label: npOwnerKey() ? 'Owner: stop publishing' : 'Owner: set key', icon: CTX_ICON_PIN }] : []) : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
     { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
-  if (id !== SWELL_ID && id !== BLEND_ID && canToggleAlbum(pl)){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && canToggleAlbum(pl)){
     items.push({ action: 'albumtoggle', label: isAlbumEntry(pl) ? 'Show under Playlists' : 'Show under Albums', icon: CTX_ICON_ALBUM });
   }
-  if (id !== SWELL_ID && id !== BLEND_ID && link){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
   }
@@ -8354,13 +8343,13 @@ function openLibCtxMenu(id, btn){
   // re-resolve against - only offer this for playlists that came from an
   // actual link. Grouped with "Use a different link": both are the plain
   // "songs won't play" fixes.
-  if (pl.type !== 'custom' && id !== BLEND_ID){
+  if (pl.type !== 'custom' && id !== BLEND_ID && id !== NP_ID){
     items.push({ action: 'relinkall', label: 'Fix songs that won\'t play', icon: CTX_ICON_REFRESH });
   }
-  if (id !== SWELL_ID && id !== BLEND_ID && link){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'replacelink', label: 'Use a different link', icon: CTX_ICON_REPLACE });
   }
-  if (id !== SWELL_ID && id !== BLEND_ID){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID){
     items.push({ sep: true });
     items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
   }
@@ -8525,8 +8514,8 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     items.push({ action: 'wrongsong', label: flagged ? 'Pick the right version' : 'This isn\'t the right song', icon: CTX_ICON_FLAG });
   }
   items.push({ action: 'refresh', label: 'Fix this song', icon: CTX_ICON_REFRESH });
-  if (t) items.push({ action: 'art', label: 'Change art', icon: CTX_ICON_ART });
-  if (t && !(opts && opts.inQueue)){
+  if (t && plId !== NP_ID) items.push({ action: 'art', label: 'Change art', icon: CTX_ICON_ART });
+  if (t && plId !== NP_ID && !(opts && opts.inQueue)){
     items.push({ sep: true });
     items.push({ action: 'remove', label: 'Remove from playlist', icon: CTX_ICON_DELETE, danger: true });
   }
@@ -8597,6 +8586,8 @@ window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMen
 
 function handleLibCtxAction(action, id){
   if (action === 'blend-reshuffle'){ refreshBlend({ reshuffle: true }); return; }
+  if (action === 'np-refresh'){ refreshNowPlaying(true); return; }
+  if (action === 'np-owner'){ npToggleOwnerKey(); return; }
   if (action === 'currents-more'){ refreshCurrents('more'); return; }
   if (action === 'currents-reset'){ resetCurrentsDay(); return; }
   const pl = getCachedPlaylist(id);
@@ -9248,6 +9239,80 @@ function ensureSwellPlaylist(){
   lsSet(LS_PL(SWELL_ID), pl);
   saveToLibrary(SWELL_ID);
 }
+
+/* =========================================================================
+   NOW PLAYING FEED - the owner's live "what I'm listening to" playlist.
+   A built-in, read-only library playlist (NP_ID, titled NOWPLAYING_TITLE)
+   for every user: re-created if missing, refreshed from BACKEND/nowplaying
+   on open and every NP_POLL_MS while its panel is open. Current song first,
+   then recent. Tracks are ordinary playlist tracks (videoId plays directly).
+   Owner: opening the app with ?mal adds "Owner: set key" to the playlist's
+   menu; the key (worker secret NOWPLAYING_TOKEN) is kept in this browser
+   only, never in this file, and with it set each song that starts here is
+   POSTed. Worker side: worker/src/nowplaying.js.
+   ========================================================================= */
+const LS_NP_KEY = 'ebbless:npKey';   // owner's publish key (localStorage, this device only)
+const NP_POLL_MS = 20000;
+let npLastSent = '', npBusy = false;
+function npOwnerKey(){ try { return localStorage.getItem(LS_NP_KEY) || ''; } catch(e){ return ''; } }
+function npToggleOwnerKey(){
+  try {
+    if (npOwnerKey()){ localStorage.removeItem(LS_NP_KEY); showToast('Publishing stopped on this device.'); }
+    else {
+      const k = (prompt('Publish key (NOWPLAYING_TOKEN):') || '').trim();
+      if (k){ localStorage.setItem(LS_NP_KEY, k); npLastSent = ''; showToast('Publishing on. Your next song goes live.'); }
+    }
+  } catch(e){}
+}
+// called for every song that starts; no key = no-op, so it costs other users nothing
+function npPublish(t){
+  const key = npOwnerKey();
+  if (!key || !t || !t.videoId || isPodcastTrack(t) || npLastSent === t.videoId) return;
+  npLastSent = t.videoId;
+  fetch(BACKEND + '/nowplaying', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    body: JSON.stringify({ v: t.videoId, t: t.title || '', a: t.artist || '' }) })
+    .then(r => { if (r.status === 401) npLastSent = ''; }).catch(() => { npLastSent = ''; });
+}
+function ensureNowPlayingPlaylist(){
+  const existing = getCachedPlaylist(NP_ID);
+  if (existing){
+    if (existing.name !== NOWPLAYING_TITLE){ existing.name = NOWPLAYING_TITLE; lsSet(LS_PL(NP_ID), existing); }
+    if (!getLibrary().includes(NP_ID)) saveToLibrary(NP_ID);
+    return;
+  }
+  lsSet(LS_PL(NP_ID), { id: NP_ID, type: 'custom', name: NOWPLAYING_TITLE, image: null, tracks: [], ts: Date.now() });
+  saveToLibrary(NP_ID);
+}
+// Pull the feed and swap the playlist's tracks (current first). Existing
+// track objects are reused per song; songs still sitting in the play queue
+// are kept (at the end) so queue indexes stay valid when the list reorders.
+async function refreshNowPlaying(manual){
+  if (npBusy) return;
+  npBusy = true;
+  try {
+    const d = await (await fetch(BACKEND + '/nowplaying')).json();
+    const feed = [d && d.current].concat((d && d.recent) || []).filter(x => x && x.v && x.t);
+    ensureNowPlayingPlaylist();
+    const pl = getCachedPlaylist(NP_ID);
+    if (!pl) return;
+    const old = pl.tracks || [];
+    const byId = new Map(old.map(t => [t.videoId, t]));
+    let tracks = feed.map(x => byId.get(x.v) || { title: x.t, artist: x.a || '', videoId: x.v, matchedTitle: x.t, channel: x.a || '', plays: 0, art: null, duration: 0 });
+    const queued = new Set(state.queue.filter(e => e.plId === NP_ID).map(e => old[e.idx] && old[e.idx].videoId));
+    old.forEach(t => { if (queued.has(t.videoId) && !tracks.includes(t)) tracks.push(t); });
+    const same = tracks.length === old.length && tracks.every((t, i) => t.videoId === old[i].videoId);
+    if (same){ if (manual) showToast('Already up to date'); return; }
+    const newIdx = new Map(tracks.map((t, i) => [t.videoId, i]));
+    state.queue = state.queue.map(e => e.plId === NP_ID && old[e.idx] ? Object.assign({}, e, { idx: newIdx.get(old[e.idx].videoId) }) : e);
+    pl.tracks = tracks;
+    lsSet(LS_PL(NP_ID), pl);
+    if (state.playlist && state.playlist.id === NP_ID) state.playlist = pl;
+    if (openLibraryPanelId === NP_ID) rerenderLibraryKeepPanel(); else renderLibrary();
+    if (state.queue.some(e => e.plId === NP_ID)){ renderQueuePanel(); persistResume(); }
+  } catch(e){ if (manual) showToast("Couldn't load right now."); }
+  finally { npBusy = false; }
+}
+setInterval(() => { if (openLibraryPanelId === NP_ID && !document.hidden) refreshNowPlaying(); }, NP_POLL_MS);
 
 // Podcasts never get Discover's similar-songs continuation.
 function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && lsGet(LS_DISCOVER(id), true); }
@@ -10817,7 +10882,7 @@ async function seedDefaultSpotifyContent(){
 const LS_PASTE_GUIDE_DISMISSED = 'ebbless:pasteGuideDismissed';
 const pasteGuideEl = $('pasteGuide');
 function hasOwnPlaylists(){
-  const skip = new Set([LIKED_ID, SWELL_ID, BLEND_ID].concat(starterLibraryIds()));
+  const skip = new Set([LIKED_ID, SWELL_ID, BLEND_ID, NP_ID].concat(starterLibraryIds()));
   return getLibrary().some(id => !skip.has(id));
 }
 function pasteBarVisible(){
@@ -11009,7 +11074,7 @@ function personalPasteHints(){
     const liked = getCachedPlaylist(LIKED_ID);
     (liked ? liked.tracks : []).forEach(t => known.add(primaryArtistKey(t && t.artist)));
     getLibrary().forEach(id => {
-      if (id === SWELL_ID || id === BLEND_ID || id === LIKED_ID) return;
+      if (id === SWELL_ID || id === BLEND_ID || id === LIKED_ID || id === NP_ID) return;
       const pl = getCachedPlaylist(id);
       (pl && Array.isArray(pl.tracks) ? pl.tracks : []).forEach(t => known.add(primaryArtistKey(t && t.artist)));
     });
@@ -11498,89 +11563,6 @@ creditsModal.addEventListener('keydown', (e) => {
 });
 feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.preventDefault(); closeFeedbackModal(); } });
 
-/* =========================================================================
-   NOW PLAYING FEED - the owner's live "what I'm listening to" list.
-   Everyone: Settings > App > row opens a read-only modal that polls
-   BACKEND/nowplaying (current song + recent). Owner: opening the app with
-   ?mal reveals a button to store the publish key (worker secret
-   NOWPLAYING_TOKEN) in this browser only; with a key set, each song that
-   starts here is POSTed. The key is never in this file. Worker side:
-   worker/src/nowplaying.js.
-   ========================================================================= */
-const NOWPLAYING_TITLE = "What's MAL GRIOT Playing?";   // working title: rename here only
-const LS_NP_KEY = 'ebbless:npKey';   // owner's publish key (localStorage, this device only)
-const NP_POLL_MS = 20000;
-let npTimer = 0, npLastSent = '';
-function npOwnerKey(){ try { return localStorage.getItem(LS_NP_KEY) || ''; } catch(e){ return ''; } }
-// called for every song that starts; no key = no-op, so it costs other users nothing
-function npPublish(t){
-  const key = npOwnerKey();
-  if (!key || !t || !t.videoId || isPodcastTrack(t) || npLastSent === t.videoId) return;
-  npLastSent = t.videoId;
-  fetch(BACKEND + '/nowplaying', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-    body: JSON.stringify({ v: t.videoId, t: t.title || '', a: t.artist || '' }) })
-    .then(r => { if (r.status === 401) npLastSent = ''; }).catch(() => { npLastSent = ''; });
-}
-const npModal = $('np-modal');
-$('npRowLabel').textContent = NOWPLAYING_TITLE;
-$('npModalTitle').textContent = NOWPLAYING_TITLE;
-function npAgo(ts){
-  const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
-  if (m < 1) return 'just now';
-  if (m < 60) return m + ' min ago';
-  const h = Math.round(m / 60);
-  return h < 24 ? h + ' hr ago' : Math.round(h / 24) + ' d ago';
-}
-function npRow(x, live){
-  return '<li><span class="np-t">' + escapeHtml(x.t) + '</span><span class="np-s">' + escapeHtml(x.a || '') +
-    (x.a ? ' \u00b7 ' : '') + (live ? '<span class="np-live">' + npAgo(x.ts) + '</span>' : npAgo(x.ts)) + '</span></li>';
-}
-async function npRefresh(){
-  try {
-    const d = await (await fetch(BACKEND + '/nowplaying')).json();
-    $('npNow').innerHTML = d.current ? npRow(d.current, true) : '<li><span class="np-s">Nothing yet. Check back soon.</span></li>';
-    $('npRecent').innerHTML = (d.recent || []).map(x => npRow(x)).join('') || '<li><span class="np-s">No earlier songs yet.</span></li>';
-  } catch(e){
-    $('npNow').innerHTML = '<li><span class="np-s">Couldn\'t load right now.</span></li>';
-  }
-}
-function npSyncOwnerBtn(){
-  const b = $('npOwnerBtn');
-  b.hidden = !installGateSkip && !npOwnerKey();
-  b.textContent = npOwnerKey() ? 'Stop publishing' : 'Owner: set key';
-}
-function openNpModal(){
-  dangerScrim.classList.add('is-open');
-  npModal.classList.add('is-open');
-  npSyncOwnerBtn();
-  npRefresh();
-  npTimer = setInterval(npRefresh, NP_POLL_MS);
-  setTimeout(() => npModal.focus(), 50);
-}
-function closeNpModal(){
-  if (!npModal.classList.contains('is-open')) return;
-  clearInterval(npTimer);
-  npModal.classList.remove('is-open');
-  dangerScrim.classList.remove('is-open');
-  $('npBtn').focus();
-}
-$('npBtn').addEventListener('click', openNpModal);
-$('npCloseBtn').addEventListener('click', closeNpModal);
-dangerScrim.addEventListener('click', closeNpModal);
-$('npOwnerBtn').addEventListener('click', () => {
-  try {
-    if (npOwnerKey()) { localStorage.removeItem(LS_NP_KEY); showToast('Publishing stopped on this device.'); }
-    else {
-      const k = (prompt('Publish key (NOWPLAYING_TOKEN):') || '').trim();
-      if (k) { localStorage.setItem(LS_NP_KEY, k); npLastSent = ''; showToast('Publishing on. Your next song goes live.'); }
-    }
-  } catch(e){}
-  npSyncOwnerBtn();
-});
-npModal.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape'){ e.preventDefault(); closeNpModal(); }
-  e.stopPropagation();
-});
 
 // What's new (Settings > App). `version` matches the number in sw.js
 // CACHE_VERSION ('ebbless-shell-v60' -> 60). When a deploy bumps
@@ -13781,7 +13763,7 @@ function tasteProfile(){
   // The same track saved to more than one playlist was chosen again.
   const saved = new Map();
   getLibrary().forEach(id => {
-    if (id === LIKED_ID || id === SWELL_ID || id === BLEND_ID || id.startsWith('discover-ext:') || isPodcastPlaylistId(id)) return;
+    if (id === LIKED_ID || id === SWELL_ID || id === BLEND_ID || id === NP_ID || id.startsWith('discover-ext:') || isPodcastPlaylistId(id)) return;
     const pl = getCachedPlaylist(id);
     const seen = new Set();
     if (pl) pl.tracks.forEach(t => {
@@ -14267,7 +14249,7 @@ function currentsSlots(mode, timeCtx, block){
     .map(seed => ({ kind: 'liked', seeds: [seed].concat(currentsShuffled(likedRecent.filter(t => t !== seed)).slice(0, 4)) }));
 
   let plIds = getLibrary()
-    .filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
+    .filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
     .map((id, order) => ({ id, order, ts: getLastPlayed(id) || 0 }))
     .sort((a, b) => (b.ts - a.ts) || (a.order - b.order))
     .map(x => x.id);
@@ -14558,7 +14540,7 @@ function ensureBlendPlaylist(){
 }
 function blendSources(){
   return getLibrary()
-    .filter(id => id !== SWELL_ID && id !== BLEND_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
+    .filter(id => id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
     .map(id => getCachedPlaylist(id))
     .filter(pl => pl && pl.tracks && pl.tracks.some(t => t && t.videoId));
 }
@@ -21795,8 +21777,10 @@ function startApp(){
   try{
     ensureSwellPlaylist();
     ensureBlendPlaylist();
+    ensureNowPlayingPlaylist();
     renderLibrary();
     renderQueuePanel();
+    refreshNowPlaying();
     // Resuming reads back whatever was last saved, which can be stale in ways
     // tryResume itself doesn't anticipate - never let a bad resume take the
     // rest of init down with it (the splash screen would hang forever).
@@ -21858,7 +21842,7 @@ function startApp(){
     /* First-time visitors (nothing saved yet, ignoring the always-present
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
-    const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+    const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
     (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).catch(e => console.warn('[ebbless] default content seed failed', e));
     // Artist album fills left unfinished, or never run (#293) - held back
     // past the boot burst above so it doesn't compete with startup.
