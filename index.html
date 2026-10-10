@@ -1627,6 +1627,8 @@ body.queue-over-fs #queue-scrim{bottom:0}
   font-size:12.5px;padding:6px 6px 6px 14px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .like-nudge[hidden]{display:none}
+/* like-popup-covers-play: on split desktop the bottom-center spot is the transport row; park the chip at the top of the player pane instead */
+body.split-desktop .like-nudge{bottom:auto;top:calc(var(--topbar-h) + 12px)}
 .like-nudge.is-open{opacity:1;transform:translate(-50%,0)}
 .like-nudge .ln-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .like-nudge .ln-text b{font-weight:600}

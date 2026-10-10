@@ -8813,11 +8813,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #344 (bug). Title only.
 
 ### like-popup-covers-play: "Like this song" popup covers the play button on desktop
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #342. On desktop the "like this song" popup sits over the play button. Move it so the play button stays reachable.
 - **Touches:** like nudge popup (see encourage-liking-songs), desktop player.
-- **Branch:** 
+- **Branch:** agent/desktop-ui-bugs
 - **Notes:** Synced from Geethub issue #342 (bug). Title only.
 
 ### tester-banner-behind-queue: Tester version bar is hidden behind the queue on desktop
