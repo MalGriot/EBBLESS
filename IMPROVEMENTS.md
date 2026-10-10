@@ -8781,7 +8781,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Audit found the supported piece already shipped: manifest.json share_target (GET, share_title/share_text/share_url) plus applyShareTargetFromUrl() in index.html, which pulls the first http(s) URL and runs it through the paste box, so Spotify, Apple Music and YouTube (Music) links shared from those apps import. EBBLESS appears in the Android Share sheet once installed as a PWA (WebAPK); no code change needed. Cannot be done: Android will not let a PWA claim other sites' https links (Spotify, music.apple.com, music.youtube.com) as default open targets; that needs a native app with verified assetlinks on those domains, and scope_extensions only works for origins you control. Manifest protocol_handlers/launch_handler do not help (custom web+ schemes only). Unverified on a real Android device in this pass; the share-sheet entry may need a PWA reinstall if installed before share_target was added.
 
 ### shazam-feature: Shazam-style song identification
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (Android, 2026-10-10): 'Add a Shazam feature.' Needs a decision on service/approach.
 - **Touches:** new feature.
@@ -8789,7 +8789,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### sunflower-speaker-art: Album art and mini-player style: sunflower with a speaker inside
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (Android, 2026-10-08). Sunflower with a speaker in the middle, like the ChatGPT image from before BLD. Needs the reference image.
 - **Touches:** art styles, mini-player.
