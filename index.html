@@ -19000,6 +19000,40 @@ document.addEventListener('keydown', (e) => {
       break;
   }
 });
+// Hover hints (shortcut-hover-hints): on a mouse-and-keyboard device, hovering
+// a button that has a shortcut appends it to the button's tooltip. Keep the
+// map in sync with the Settings shortcut list. Done on hover (not once at
+// load) because several of these titles are rewritten as state changes.
+if (window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+  const KB_HINTS = [
+    ['#playBtn, #miniPlayBtn, #flowPlayBtn', 'Space'],
+    ['#prevBtn, #miniPrevBtn, #flowPrevBtn', '\u2190'],
+    ['#nextBtn, #miniNextBtn, #flowNextBtn', '\u2192'],
+    ['#shuffleBtn, #miniShuffleBtn, #flowShuffleBtn', 'K'],
+    ['#repeatBtn, #miniRepeatBtn, #flowRepeatBtn', 'O'],
+    ['#fsBtn', 'F'],
+    ['#vizAutoBtn', 'I'],
+    ['#wordmarkBtn', 'H'],
+    ['#topnav [data-view="library"]', 'P or L'],
+    ['#topnav [data-action="toggle-queue"]', 'Q'],
+    ['#topnav [data-view="settings"]', 'S'],
+    ['#visualTabs .v-tab[data-mode="art"]', 'Z'],
+    ['#visualTabs .v-tab[data-mode="viz"]', 'X'],
+    ['#visualTabs .v-tab[data-mode="lyrics"]', 'C'],
+    ['#ytPanelBtn', 'V'],
+    ['#reportBugBtn', 'Shift+B'],
+    ['#suggestIdeaBtn', 'Shift+S']
+  ];
+  document.addEventListener('mouseover', (e) => {
+    const t = e.target.closest && e.target.closest('button, a');
+    if (!t) return;
+    const hit = KB_HINTS.find(([sel]) => t.matches(sel));
+    if (!hit) return;
+    const tip = ' (' + hit[1] + ')';
+    const cur = t.getAttribute('title') || t.getAttribute('aria-label') || t.textContent.trim();
+    if (!cur.endsWith(tip)) t.setAttribute('title', cur + tip);
+  });
+}
 miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); });
 // podcast +/-15s buttons: same clamped seek path as shift+arrows (player
 // adapter, so it follows a Chromecast session too); the mini bar's stop
