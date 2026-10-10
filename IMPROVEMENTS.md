@@ -8699,12 +8699,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #340 (idea).
 
 ### tutorial-controls-block-loadbar: Tutorial: Next button and first captions cover the load bar
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Mal's feedback (desktop, 2026-10-09). Since the load bar moved, the tutorial Next button and the first couple of captions sit on top of it. Move them clear of it.
 - **Touches:** tutorial overlay, caption/Next positioning vs load bar.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/tutorial-loadbar
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Fix: at 860px+ the tutorial pager (Next) moved from top center, where the load bar now sits, to bottom-left beside Skip. Captions already anchor below the load bar. Needs a desktop visual check.
 
 ### install-bar-covers-playlist-search: Install bar covers the playlist search bar on desktop
 - **Status:** ready

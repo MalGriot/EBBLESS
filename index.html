@@ -2368,7 +2368,8 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
    instead, the one strip that's empty across every chapter's screen
    (the topbar's logo and Settings sit at the far left and right) */
 @media (min-width:860px){
-  #onbPager{bottom:auto;top:max(10px,env(safe-area-inset-top))}
+  /* the load bar sits top center now, so the pager goes bottom-left beside Skip instead */
+  #onbPager{left:max(110px,calc(env(safe-area-inset-left) + 110px));bottom:max(18px,env(safe-area-inset-bottom));top:auto;transform:none}
 }
 @keyframes onb-dot-pulse{0%,100%{background:rgba(255,255,255,.28);transform:scale(1)}
   50%{background:var(--onb-gold);transform:scale(1.35)}}
