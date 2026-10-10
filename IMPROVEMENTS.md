@@ -8773,12 +8773,12 @@ Add entries in this shape:
 - **Notes:** Link parsing and /artist import for SoundCloud, Apple Music and YouTube Music already existed; added slug-less Apple artist links, and SoundCloud artist albums/EPs (worker /artist now returns `albums`, client files them as sc_album like Spotify artists' albums). Needs worker deploy. Not tested live against SoundCloud/Apple/YTM.
 
 ### music-links-open-in-ebbless: Spotify, Apple Music and YouTube Music links open in EBBLESS
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (Android, 2026-10-02). Device defaults for those links open in EBBLESS, or EBBLESS appears in the share/open menu. Likely needs share target / URL handling in manifest.json.
 - **Touches:** manifest.json share_target, link capture.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/music-links-open
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Audit found the supported piece already shipped: manifest.json share_target (GET, share_title/share_text/share_url) plus applyShareTargetFromUrl() in index.html, which pulls the first http(s) URL and runs it through the paste box, so Spotify, Apple Music and YouTube (Music) links shared from those apps import. EBBLESS appears in the Android Share sheet once installed as a PWA (WebAPK); no code change needed. Cannot be done: Android will not let a PWA claim other sites' https links (Spotify, music.apple.com, music.youtube.com) as default open targets; that needs a native app with verified assetlinks on those domains, and scope_extensions only works for origins you control. Manifest protocol_handlers/launch_handler do not help (custom web+ schemes only). Unverified on a real Android device in this pass; the share-sheet entry may need a PWA reinstall if installed before share_target was added.
 
 ### shazam-feature: Shazam-style song identification
 - **Status:** draft
