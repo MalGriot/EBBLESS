@@ -8563,12 +8563,12 @@ Add entries in this shape:
   **Root cause:** the "Next"/"Later" `.q-section-label` elements sit in `#queueBody` between the first two `.q-row`s. Swapping a row across that label shifts it by rowH + label height, not rowH, and rowH itself was measured across the label when the neighbor was the other side of it. Earlier fixes assumed uniform row pitch. **Fix:** in `wireQueueRowGestures()`, measure the real layout shift of each `insertBefore` swap (rect before/after) and carry that instead of rowH; rowH is now the smaller neighbor pitch. **Verified:** syntax check; headless Chrome mock with a label between rows 0 and 1, drag row 1 up past row 0: pointer-to-row offset constant at 0, reorder 2->1.
 
 ### video-mode-f-fullscreen: Pressing F in video mode should go fullscreen
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #327. When video mode is active, the F key should switch to fullscreen.
 - **Touches:** keyboard shortcuts, video playback mode.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap.
+- **Branch:** agent/video-mode-f-fullscreen
+- **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap. Done: with the YouTube card open, F browser-fullscreens #yt-host (the live iframe), F again exits; ignored when typing. Syntax-checked only, not browser-tested (needs a live YouTube track).
 
 ### drag-songs-into-playlists: Drag songs into playlists
 - **Status:** draft

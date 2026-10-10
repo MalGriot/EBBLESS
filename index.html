@@ -11436,6 +11436,19 @@ function closeYtPanel(auto){
   ytPanelSync();
   if (auto !== true) ytPanelBtn.focus();
 }
+// F in video mode (Geethub #327): browser-fullscreen #yt-host, which holds the
+// live iframe (never reparented), so the video fills the screen. Esc leaves
+// it via the browser; ytPanelSync (250ms) re-places the card afterwards.
+function toggleYtFullscreen(){
+  if (docFsElement()){
+    const x = document.exitFullscreen || document.webkitExitFullscreen;
+    try { const p = x && x.call(document); if (p && p.catch) p.catch(() => {}); } catch (_){}
+    return;
+  }
+  if (!ytHost.classList.contains('is-shown')) return;
+  const fn = ytHost.requestFullscreen || ytHost.webkitRequestFullscreen;
+  try { const p = fn && fn.call(ytHost, {navigationUI:'hide'}); if (p && p.catch) p.catch(() => {}); } catch (_){}
+}
 ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); openYtPanel(); });
 $('ytCloseBtn').addEventListener('click', () => closeYtPanel());
 dangerScrim.addEventListener('click', () => closeYtPanel());
@@ -11448,6 +11461,8 @@ ytModal.addEventListener('keydown', (e) => {
   // handler, which closes it and switches the visual (kbSetVisual)
   else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[vV]$/.test(e.key)){ e.preventDefault(); if (!e.repeat) closeYtPanel(); }
   else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[zxcZXC]$/.test(e.key)) return;
+  // F: fullscreen the video (Geethub #327); the global handler does it
+  else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[fF]$/.test(e.key) && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   e.stopPropagation();
 });
 creditsBtn.addEventListener('click', openCreditsModal);
@@ -18545,6 +18560,9 @@ document.addEventListener('keydown', (e) => {
       else { e.preventDefault(); kbSkipBy(seekStepS()); }
       break;
     case 'f': case 'F':
+      // video mode (YouTube card open): F fullscreens the video itself
+      // (Geethub #327); pressed again it steps back out
+      if (ytPanelOpen()){ if (!e.repeat) toggleYtFullscreen(); break; }
       if (state.flowOpen) closeFlow();
       else if (currentTrack()) openFlow();
       break;
