@@ -1,7 +1,7 @@
 // ON AIR /nowplaying tests: fake KV, cache, clock and Google verifier. No network.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handleNowPlaying, applyPost, viewOf, NP_MAX, STALE_MS } from '../src/nowplaying.js';
+import { handleNowPlaying, applyPost, viewOf, NP_MAX, END_SLACK_MS, STALE_UNKNOWN_MS } from '../src/nowplaying.js';
 
 const ENV0 = { OWNER_EMAIL: 'Owner@Example.com', GOOGLE_CLIENT_ID: 'cid' };
 // token string -> claims; anything else fails verification
@@ -13,9 +13,9 @@ const TOKENS = {
 const verifyGoogleIdToken = async tok => { if (TOKENS[tok]) return TOKENS[tok]; throw new Error('bad token'); };
 
 function setup(env = {}) {
-  const kv = new Map(), c = new Map();
+  const kv = new Map(), c = new Map(), io = { gets: 0, puts: 0 };
   let clock = 1_000_000;
-  const e = { PROFILES: { get: async k => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } }, ...ENV0, ...env };
+  const e = { PROFILES: { get: async k => { io.gets++; return kv.get(k) ?? null; }, put: async (k, v) => { io.puts++; kv.set(k, v); } }, ...ENV0, ...env };
   const envCache = {
     match: async r => (c.has(r.url) ? c.get(r.url).clone() : undefined),
     put: async (r, res) => { c.set(r.url, res); },
@@ -31,9 +31,9 @@ function setup(env = {}) {
     await Promise.all(ps.splice(0));
     return res;
   };
-  return { call, tick: ms => { clock += ms; }, get now() { return clock; } };
+  return { io, call, tick: ms => { clock += ms; }, get now() { return clock; } };
 }
-const post = (v, pos = 0, playing = true) => ({ v, t: 'T ' + v, a: 'A', pos, playing });
+const post = (v, pos = 0, playing = true, dur = 200) => ({ v, t: 'T ' + v, a: 'A', pos, dur, playing });
 
 test('applyPost: new song pushes the old into history; same song only refreshes', () => {
   let s = applyPost({}, post('a', 0), 1000);
@@ -54,8 +54,12 @@ test('viewOf: live position uses server time; paused holds; stale goes off air',
   const p = applyPost(s, post('a', 20, false), 110000);
   v = viewOf(p, 200000);
   assert.equal(v.onAir, false); assert.equal(v.current.pos, 20); assert.equal(v.current.playing, false);
-  v = viewOf(s, 100000 + STALE_MS + 1);
+  v = viewOf(s, 100000 + (200 - 10) * 1000 + END_SLACK_MS + 1);   // past the song's end + slack
   assert.equal(v.onAir, false); assert.equal(v.current.v, 'a');
+  assert.equal(viewOf(s, 100000 + (200 - 10) * 1000 + END_SLACK_MS - 1).onAir, true);
+  const nodur = applyPost({}, post('n', 0, true, 0), 0);   // unknown duration: capped
+  assert.equal(viewOf(nodur, STALE_UNKNOWN_MS - 1).onAir, true);
+  assert.equal(viewOf(nodur, STALE_UNKNOWN_MS + 1).onAir, false);
   assert.deepEqual(viewOf(null, 5), { serverTime: 5, onAir: false, current: null, recent: [] });
 });
 
@@ -95,7 +99,7 @@ test('owner broadcast: start, listener sees live pos from server clock, pause = 
   await s.call('POST', { token: 'owner', body: post('b', 0) });
   j = await (await s.call('GET')).json();
   assert.equal(j.onAir, true); assert.equal(j.current.v, 'b'); assert.equal(j.recent[0].v, 'a');
-  s.tick(STALE_MS + 1000);   // owner vanished without a pause post
+  s.tick(300_000);   // owner force-quit: no post, the song's own length ends the broadcast
   assert.equal((await (await s.call('GET')).json()).onAir, false);
 });
 
@@ -119,4 +123,44 @@ test('throttles repeated bad tokens', async () => {
   const s = setup();
   for (let i = 0; i < 30; i++) await s.call('POST', { token: 'garbage', body: post('a') });
   assert.equal((await s.call('POST', { token: 'owner', body: post('a') })).status, 429);
+});
+
+test('write budget: one put per event; identical or unchanged re-posts skip the put', async () => {
+  const s = setup();
+  await s.call('POST', { token: 'owner', body: post('a', 0) });
+  assert.equal(s.io.puts, 1);
+  s.tick(30000);
+  // a late duplicate of the same state (position matches the server's prediction) writes nothing
+  const r = await s.call('POST', { token: 'owner', body: post('a', 30) });
+  assert.equal((await r.json()).unchanged, true); assert.equal(s.io.puts, 1);
+  // pause is a change
+  await s.call('POST', { token: 'owner', body: post('a', 30, false) });
+  assert.equal(s.io.puts, 2);
+  await s.call('POST', { token: 'owner', body: post('a', 30, false) });
+  assert.equal(s.io.puts, 2);
+  // seek (position jumps well past prediction) is a change
+  await s.call('POST', { token: 'owner', body: post('a', 120, true) });
+  assert.equal(s.io.puts, 3);
+  // new song: ONE put carries current + history
+  await s.call('POST', { token: 'owner', body: post('b', 0) });
+  assert.equal(s.io.puts, 4);
+  const j = await (await s.call('GET')).json();
+  assert.equal(j.current.v, 'b'); assert.equal(j.recent[0].v, 'a');
+});
+
+test('best-effort off air on close: one post with playing:false ends the broadcast immediately', async () => {
+  const s = setup();
+  await s.call('POST', { token: 'owner', body: post('a', 0) });
+  s.tick(20000);
+  await s.call('POST', { token: 'owner', body: post('a', 20, false) });   // pagehide beacon
+  const j = await (await s.call('GET')).json();
+  assert.equal(j.onAir, false); assert.equal(j.current.pos, 20);
+  assert.equal(s.io.puts, 2);
+});
+
+test('GET cache hit avoids the KV read', async () => {
+  const s = setup();
+  await s.call('GET'); const after1 = s.io.gets;     // miss: one read
+  await s.call('GET'); await s.call('GET');
+  assert.equal(s.io.gets, after1);
 });

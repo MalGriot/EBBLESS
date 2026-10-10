@@ -9269,13 +9269,13 @@ function ensureSwellPlaylist(){
    uses the worker's serverTime plus this page's own elapsed time (never the
    device clock). Listeners publish nothing.
    Owner: the existing Sign in with Google. While signed in, this app posts
-   what it plays to BACKEND/nowplaying with the Google ID token; the worker
+   state changes (not a heartbeat) of what it plays to BACKEND/nowplaying with the Google ID token; the worker
    verifies it and accepts only OWNER_EMAIL (403 for anyone else, after which
    this page stops trying). No secret or email lives in this file.
    Worker side: worker/src/nowplaying.js.
    ========================================================================= */
-const NP_POLL_MS = 15000, NP_POLL_TUNED_MS = 5000, NP_HEARTBEAT_MS = 30000, NP_LIVE_SLACK_S = 6;
-let npBusy = false, npTuned = false, npFollow = false, npRejoinAt = 0, npForbiddenToken = null, npLastBroadcast = null, npPubTimer = 0;
+const NP_POLL_MS = 15000, NP_POLL_TUNED_MS = 5000, NP_LIVE_SLACK_S = 6;
+let npBusy = false, npTuned = false, npFollow = false, npRejoinAt = 0, npForbiddenToken = null, npLastSent = null, npPubTimer = 0;
 let npFeed = { onAir: false, current: null, recent: [], recvAt: 0 };
 function npLivePos(){
   const c = npFeed.current;
@@ -9293,7 +9293,12 @@ function npIsLive(){
   return !!(npTuned && npFeed.onAir && l && l.entry.plId === NP_ID && npFeed.current && l.v === npFeed.current.v && Math.abs(l.pos - npLivePos()) <= NP_LIVE_SLACK_S);
 }
 
-/* ---- owner: publish what this app plays (signed-in owner only) ---- */
+/* ---- owner: publish what this app plays (signed-in owner only) ----
+   Event-only, to keep the worker's KV writes near one per song: song start,
+   pause, resume, stop/podcast, a settled seek (5s after the last jump), and
+   one best-effort "off air" on pagehide. No heartbeat: the worker derives the
+   position from its own clock and expires the broadcast at the song's end
+   (we send the duration). A post identical to the last one is dropped. */
 function npCanPublish(){
   if (!profileTokenUsable() || npForbiddenToken === profileIdToken) return false;
   const e = state.queue[state.queuePos];
@@ -9304,19 +9309,56 @@ function npSchedulePublish(ms){
   clearTimeout(npPubTimer);
   npPubTimer = setTimeout(npPublishNow, ms == null ? 500 : ms);
 }
-function npPublishNow(){
-  if (!npCanPublish()) return;
-  const l = npLocal(), isPlaying = artworkWrap.classList.contains('is-playing');
+// what we'd say right now, or null (nothing to say / nothing was ever broadcast)
+function npSnapshot(forceOff){
+  const l = npLocal(), isPlaying = artworkWrap.classList.contains('is-playing') && !forceOff;
   let t = l && l.t, pos = l ? l.pos : 0, playing = isPlaying;
-  if (!t || !t.videoId || isPodcastTrack(t)){ if (!npLastBroadcast) return; t = npLastBroadcast; pos = 0; playing = false; }   // podcast or nothing: go off air
-  if (!playing && !npLastBroadcast) return;   // never broadcast a paused song nobody has heard from us
-  npLastBroadcast = t;
+  if (!t || !t.videoId || isPodcastTrack(t)){ if (!npLastSent) return null; t = npLastSent.t; pos = npLastSent.pos; playing = false; }   // podcast or nothing: off air
+  if (!playing && !npLastSent) return null;   // never broadcast a paused song nobody has heard from us
+  const ad = activeDeck(), dur = ad && ad.player && ad.player.getDuration ? Math.round(+ad.player.getDuration() || 0) : 0;
+  return { t, v: t.videoId, pos: Math.max(0, Math.round(pos * 10) / 10), dur: l && l.t === t ? dur : (npLastSent ? npLastSent.dur : 0), playing };
+}
+// where the worker believes the song is now, from what we last told it
+function npPredicted(){ return npLastSent.playing ? npLastSent.pos + (performance.now() - npLastSent.at) / 1000 : npLastSent.pos; }
+function npPost(snap, keepalive){
   const tok = profileIdToken;
-  fetch(BACKEND + '/nowplaying', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-    body: JSON.stringify({ v: t.videoId, t: t.title || '', a: t.artist || '', pos: Math.max(0, Math.round(pos * 10) / 10), playing }) })
+  npLastSent = { t: snap.t, v: snap.v, pos: snap.pos, dur: snap.dur, playing: snap.playing, at: performance.now() };
+  fetch(BACKEND + '/nowplaying', { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+    body: JSON.stringify({ v: snap.v, t: snap.t.title || '', a: snap.t.artist || '', pos: snap.pos, dur: snap.dur, playing: snap.playing }) })
     .then(r => { if (r.status === 403) npForbiddenToken = tok; }).catch(() => {});
 }
-setInterval(() => { if (artworkWrap.classList.contains('is-playing')) npPublishNow(); }, NP_HEARTBEAT_MS);
+function npPublishNow(){
+  if (!npCanPublish()) return;
+  const snap = npSnapshot();
+  if (!snap) return;
+  const L = npLastSent;
+  // identical to what the worker already has: say nothing
+  if (L && L.v === snap.v && L.playing === snap.playing && Math.abs(snap.dur - L.dur) <= 1 && Math.abs(snap.pos - npPredicted()) <= 2) return;
+  npSeekSince = 0; npSeekDiff = null;
+  npPost(snap);
+}
+// A seek is a jump of the real position away from where the worker predicts.
+// Poll cheaply while broadcasting; post once the position has stopped jumping
+// for ~5s, and notice a song change the other hooks missed (auto-advance).
+let npSeekSince = 0, npSeekDiff = null, npMismatchSince = 0;
+setInterval(() => {
+  if (!npLastSent || !npLastSent.playing || !npCanPublish() || !artworkWrap.classList.contains('is-playing')) { npSeekSince = 0; npSeekDiff = null; npMismatchSince = 0; return; }
+  const l = npLocal();
+  if (!l) return;
+  if (l.v !== npLastSent.v){ npMismatchSince = npMismatchSince || Date.now(); if (Date.now() - npMismatchSince > 4000){ npMismatchSince = 0; npPublishNow(); } return; }
+  npMismatchSince = 0;
+  const diff = l.pos - npPredicted();
+  if (Math.abs(diff) <= 3){ npSeekSince = 0; npSeekDiff = null; return; }
+  if (npSeekDiff === null || Math.abs(diff - npSeekDiff) > 1.5){ npSeekDiff = diff; npSeekSince = Date.now(); return; }
+  if (Date.now() - npSeekSince >= 5000) npPublishNow();
+}, 1000);
+// closing the app: one best-effort "off air" (keepalive); if it never lands,
+// the worker's duration-based expiry ends the broadcast at the song's end
+window.addEventListener('pagehide', () => {
+  if (!npLastSent || !npLastSent.playing || !npCanPublish()) return;
+  const snap = npSnapshot(true);
+  if (snap) npPost(snap, true);
+});
 
 /* ---- everyone: the playlist + tuning in ---- */
 function ensureNowPlayingPlaylist(){

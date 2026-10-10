@@ -15,17 +15,25 @@
 //     worker var. No client-sent identity is trusted; unset OWNER_EMAIL =
 //     POST answers 503.
 //
-// The owner's app posts on song start, pause/resume, and a 30s heartbeat.
-// onAir = the owner is playing AND the last post is under STALE_MS old, so a
-// closed app or lost connection falls off air by itself. Storage: one key in
-// the PROFILES KV. GET reads are edge-cached for a few seconds; the cached
-// copy is state, not a response, so serverTime/pos are recomputed per request.
+// The owner's app posts only on state changes (song start, pause, resume,
+// stop, a settled seek) and sends the track duration `dur`. Nothing is
+// written to keep the broadcast alive: the position is derived from the
+// server's clock, and onAir expires on READ at the moment the song should
+// have ended (+ slack; STALE_UNKNOWN_MS when the duration is unknown), so a
+// force-quit app stays "on air" only until its song would have finished.
+// A post that changes nothing material skips the KV put. Storage: ONE key in
+// the PROFILES KV holding current + recent history (a song change = one
+// put). GET is served from the edge cache (a few seconds) and only reads KV
+// on a miss; the cached copy is state, so serverTime/pos are recomputed per
+// request.
 
 import { allowedOrigin } from './admin.js';
 
 export const NP_KEY = 'nowplaying:v2';
 export const NP_MAX = 25;
-export const STALE_MS = 90_000;
+export const END_SLACK_MS = 15_000;      // grace past the song's end before it goes off air
+export const STALE_UNKNOWN_MS = 600_000; // no duration known: off air after 10 minutes
+const SAME_POS_S = 2;                    // a re-post this close to the predicted position changes nothing
 const GET_CACHE_S = 5;
 const FAIL_LIMIT = 30, FAIL_WINDOW_S = 900;
 
@@ -38,7 +46,7 @@ export function applyPost(state, post, now) {
   const st = state && typeof state === 'object' ? state : {};
   const prev = st.now || null;
   let items = Array.isArray(st.items) ? st.items : [];
-  const cur = { v: post.v, t: post.t, a: post.a, pos: post.pos, playing: post.playing, at: now, startedAt: now - Math.round(post.pos * 1000) };
+  const cur = { v: post.v, t: post.t, a: post.a, pos: post.pos, dur: post.dur, playing: post.playing, at: now, startedAt: now - Math.round(post.pos * 1000) };
   if (prev && prev.v !== post.v) {
     items = [{ v: prev.v, t: prev.t, a: prev.a, startedAt: prev.startedAt }, ...items.filter(x => x && x.v !== prev.v)];
   }
@@ -46,17 +54,34 @@ export function applyPost(state, post, now) {
   return { now: cur, items };
 }
 
+// Position (seconds) of the current song at server time `t`, ignoring expiry.
+export function posAt(n, t) { return n.playing ? n.pos + Math.max(0, t - n.at) / 1000 : n.pos; }
+// Is the current song still playing at server time `t`? Computed on read.
+export function isLive(n, t) {
+  if (!n || !n.playing) return false;
+  const left = n.dur > 0 ? Math.max(0, n.dur - n.pos) * 1000 + END_SLACK_MS : STALE_UNKNOWN_MS;
+  return t - n.at < left;
+}
+// True when this post would leave the stored state effectively unchanged.
+export function isNoOp(state, post, now) {
+  const n = state && state.now;
+  if (!n || n.v !== post.v || n.playing !== post.playing || n.t !== post.t || n.a !== post.a) return false;
+  if (Math.abs((n.dur || 0) - (post.dur || 0)) > 1) return false;
+  return Math.abs(posAt(n, now) - post.pos) <= SAME_POS_S;
+}
+
 export function viewOf(state, serverTime) {
   const st = state && typeof state === 'object' ? state : {};
   const n = st.now || null;
   const recent = (Array.isArray(st.items) ? st.items : []).map(x => ({ v: x.v, t: x.t, a: x.a, startedAt: x.startedAt }));
   if (!n) return { serverTime, onAir: false, current: null, recent };
-  const fresh = serverTime - n.at < STALE_MS;
-  const pos = n.playing ? n.pos + Math.max(0, serverTime - n.at) / 1000 : n.pos;
+  const live = isLive(n, serverTime);
+  let pos = posAt(n, serverTime);
+  if (n.dur > 0) pos = Math.min(pos, n.dur);
   return {
     serverTime,
-    onAir: !!n.playing && fresh,
-    current: { v: n.v, t: n.t, a: n.a, startedAt: n.startedAt, pos: Math.round(pos * 100) / 100, playing: !!n.playing && fresh },
+    onAir: live,
+    current: { v: n.v, t: n.t, a: n.a, startedAt: n.startedAt, pos: Math.round(pos * 100) / 100, dur: n.dur || 0, playing: live },
     recent,
   };
 }
@@ -113,10 +138,13 @@ export async function handleNowPlaying(request, url, env, ctx, deps) {
     if (text.length > 2000) return reply({ error: 'too large' }, 413, own);
     let body;
     try { body = JSON.parse(text) || {}; } catch (e) { return reply({ error: 'invalid json body' }, 400, own); }
-    const post = { v: clean(body.v, 40), t: clean(body.t, 200), a: clean(body.a, 200), pos: Number(body.pos), playing: body.playing === true };
+    const post = { v: clean(body.v, 40), t: clean(body.t, 200), a: clean(body.a, 200), pos: Number(body.pos), dur: Number(body.dur), playing: body.playing === true };
     if (!post.v || !post.t) return reply({ error: 'Need v (track id) and t (title).' }, 400, own);
     if (!Number.isFinite(post.pos) || post.pos < 0 || post.pos > 86400) post.pos = 0;
-    const next = applyPost(await readState(), post, now);
+    if (!Number.isFinite(post.dur) || post.dur < 0 || post.dur > 86400) post.dur = 0;
+    const cur = await readState();
+    if (isNoOp(cur, post, now)) return reply({ ok: true, unchanged: true }, 200, own);   // no KV write
+    const next = applyPost(cur, post, now);
     await env.PROFILES.put(NP_KEY, JSON.stringify(next));
     ctx.waitUntil(deps.envCache.delete(new Request(url.origin + '/nowplaying-state')));
     return reply({ ok: true }, 200, own);
