@@ -455,6 +455,14 @@ body.onb-active .paste-guide{display:none}
 .lib-card .name .new-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
   background:var(--faint);vertical-align:middle}
 .lib-card .name .new-dot.is-active{background:var(--accent);animation:new-dot-blink 1.4s ease-in-out infinite}
+/* ON AIR: player pill + card line */
+.np-pill{display:block;margin:6px auto 0;border:1px solid var(--border-2);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--text)}
+.np-pill[hidden]{display:none}
+.np-pill.is-live{border-color:var(--accent);color:var(--accent)}
+.np-pill.is-live::before{content:'';display:inline-block;width:6px;height:6px;margin-right:7px;border-radius:50%;background:var(--accent);vertical-align:middle;animation:new-dot-blink 1.4s ease-in-out infinite}
+.np-pill.is-behind{background:var(--accent);color:#000;border-color:var(--accent)}
+.np-pill.is-off{color:var(--faint);opacity:.8}
+.lib-card .lib-desc.np-onair{color:var(--accent);opacity:1;font-weight:600}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
 .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
 @keyframes current-label-cycle{
@@ -3387,6 +3395,7 @@ body.week-up-on{overflow:hidden}
           </div>
         </div>
 
+        <button type="button" class="np-pill" id="npLivePill" hidden></button>
         <div class="transport-full">
           <div class="seek-row">
             <span class="t tnum" id="timeCur">0:00</span>
@@ -4733,7 +4742,7 @@ const SWELL_ID = 'swell';                    // fixed id for the built-in daily-
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
 const BLEND_NAME = 'SwiiiRrrLL';
 const NP_ID = 'nowplaying';                  // fixed id for the built-in live "what MAL GRIOT is playing" playlist
-const NOWPLAYING_TITLE = "What's MAL GRIOT Playing?";   // working title: rename here only
+const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
 const BLEND_THUMB_SRC = 'brand/assets/swirl-thumb.mp4';  // SwiiiRrrLL's looping library tile
 let blendThumbFailed = false;                // clip missing/unplayable - use the track collage instead
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
@@ -7642,10 +7651,10 @@ function renderLibrary(){
     marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '');
     marqueeEl.dataset.text = pl.name;
     titleOverlay.appendChild(marqueeEl);
-    if (id === SWELL_ID){
+    if (id === SWELL_ID || (id === NP_ID && npFeed.onAir)){
       const dot = document.createElement('span');
-      dot.className = 'new-dot' + (swellHasUnseenDrop() ? ' is-active' : '');
-      dot.setAttribute('aria-label', swellHasUnseenDrop() ? 'New music' : '');
+      dot.className = 'new-dot' + (id === NP_ID || swellHasUnseenDrop() ? ' is-active' : '');
+      dot.setAttribute('aria-label', id === NP_ID ? 'On air' : swellHasUnseenDrop() ? 'New music' : '');
       name.appendChild(dot);
       const overlayDot = dot.cloneNode(true);
       titleOverlay.appendChild(overlayDot);
@@ -7660,7 +7669,8 @@ function renderLibrary(){
     let desc = null;
     if (id === NP_ID){
       desc = document.createElement('div'); desc.className = 'count lib-desc';
-      desc.textContent = 'Live from MAL GRIOT';
+      desc.textContent = npFeed.onAir ? 'LIVE now: ' + (npFeed.current.t || '') : 'Off air';
+      if (npFeed.onAir) desc.classList.add('np-onair');
       if (!pl.tracks.length) count.textContent = 'Nothing yet. Check back soon.';
     }
     if (id === SWELL_ID || id === BLEND_ID){
@@ -7702,7 +7712,7 @@ function renderLibrary(){
     }
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
-    card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
+    card.addEventListener('click', () => { if (id === NP_ID && npFeed.onAir && !npTuned) npTuneIn(); else toggleLibraryPlaylistPanel(id); });
     if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       attachLongPress(card, () => {
         const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
@@ -7853,6 +7863,12 @@ function toggleLibraryPlaylistPanel(id){
       line.innerHTML = '<b>' + streak + ' days</b> in a row with a new like';
       libplBody.appendChild(line);
     }
+  }
+  if (id === NP_ID){
+    const bar = document.createElement('div');
+    bar.className = 'currents-hint';
+    bar.textContent = npFeed.onAir ? 'ON AIR now. Tap the first song to tune in, or any song to rewind.' : 'Off air right now. These are the latest songs.';
+    libplBody.appendChild(bar);
   }
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
@@ -8322,9 +8338,10 @@ function openLibCtxMenu(id, btn){
   ] : id === BLEND_ID ? [
     { action: 'blend-reshuffle', label: 'New picks', icon: CTX_ICON_REFRESH },
   ] : id === NP_ID ? [
+    { action: 'np-tune', label: npFeed.onAir ? (npTuned ? 'Back to live' : 'Tune in') : 'Off air', icon: CTX_ICON_REFRESH, off: !npFeed.onAir },
+    { action: 'np-open', label: 'Show songs', icon: CTX_ICON_ADD_QUEUE },
     { action: 'np-refresh', label: 'Refresh now', icon: CTX_ICON_REFRESH },
-    { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
-  ].concat(installGateSkip || npOwnerKey() ? [{ action: 'np-owner', label: npOwnerKey() ? 'Owner: stop publishing' : 'Owner: set key', icon: CTX_ICON_PIN }] : []) : [
+  ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
     { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
@@ -8587,7 +8604,8 @@ window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMen
 function handleLibCtxAction(action, id){
   if (action === 'blend-reshuffle'){ refreshBlend({ reshuffle: true }); return; }
   if (action === 'np-refresh'){ refreshNowPlaying(true); return; }
-  if (action === 'np-owner'){ npToggleOwnerKey(); return; }
+  if (action === 'np-tune'){ npTuneIn(); return; }
+  if (action === 'np-open'){ toggleLibraryPlaylistPanel(NP_ID); return; }
   if (action === 'currents-more'){ refreshCurrents('more'); return; }
   if (action === 'currents-reset'){ resetCurrentsDay(); return; }
   const pl = getCachedPlaylist(id);
@@ -9241,38 +9259,66 @@ function ensureSwellPlaylist(){
 }
 
 /* =========================================================================
-   NOW PLAYING FEED - the owner's live "what I'm listening to" playlist.
-   A built-in, read-only library playlist (NP_ID, titled NOWPLAYING_TITLE)
-   for every user: re-created if missing, refreshed from BACKEND/nowplaying
-   on open and every NP_POLL_MS while its panel is open. Current song first,
-   then recent. Tracks are ordinary playlist tracks (videoId plays directly).
-   Owner: opening the app with ?mal adds "Owner: set key" to the playlist's
-   menu; the key (worker secret NOWPLAYING_TOKEN) is kept in this browser
-   only, never in this file, and with it set each song that starts here is
-   POSTed. Worker side: worker/src/nowplaying.js.
+   ON AIR - the owner's live broadcast, as a built-in library playlist.
+   Every user: a read-only playlist (NP_ID, named NOWPLAYING_TITLE) listing
+   the owner's current song first, then recent ones; re-created if missing.
+   Tune in = one tap on it while it says ON AIR: your player joins the same
+   song at the live position and follows the owner song to song. Rewind by
+   stepping Previous through the recent songs or scrubbing back; the player's
+   pill shows LIVE, or BACK TO LIVE (one tap), or OFF AIR. All time maths
+   uses the worker's serverTime plus this page's own elapsed time (never the
+   device clock). Listeners publish nothing.
+   Owner: the existing Sign in with Google. While signed in, this app posts
+   what it plays to BACKEND/nowplaying with the Google ID token; the worker
+   verifies it and accepts only OWNER_EMAIL (403 for anyone else, after which
+   this page stops trying). No secret or email lives in this file.
+   Worker side: worker/src/nowplaying.js.
    ========================================================================= */
-const LS_NP_KEY = 'ebbless:npKey';   // owner's publish key (localStorage, this device only)
-const NP_POLL_MS = 20000;
-let npLastSent = '', npBusy = false;
-function npOwnerKey(){ try { return localStorage.getItem(LS_NP_KEY) || ''; } catch(e){ return ''; } }
-function npToggleOwnerKey(){
-  try {
-    if (npOwnerKey()){ localStorage.removeItem(LS_NP_KEY); showToast('Publishing stopped on this device.'); }
-    else {
-      const k = (prompt('Publish key (NOWPLAYING_TOKEN):') || '').trim();
-      if (k){ localStorage.setItem(LS_NP_KEY, k); npLastSent = ''; showToast('Publishing on. Your next song goes live.'); }
-    }
-  } catch(e){}
+const NP_POLL_MS = 15000, NP_POLL_TUNED_MS = 5000, NP_HEARTBEAT_MS = 30000, NP_LIVE_SLACK_S = 6;
+let npBusy = false, npTuned = false, npFollow = false, npRejoinAt = 0, npForbiddenToken = null, npLastBroadcast = null, npPubTimer = 0;
+let npFeed = { onAir: false, current: null, recent: [], recvAt: 0 };
+function npLivePos(){
+  const c = npFeed.current;
+  if (!c) return 0;
+  return c.pos + (c.playing ? (performance.now() - npFeed.recvAt) / 1000 : 0);
 }
-// called for every song that starts; no key = no-op, so it costs other users nothing
-function npPublish(t){
-  const key = npOwnerKey();
-  if (!key || !t || !t.videoId || isPodcastTrack(t) || npLastSent === t.videoId) return;
-  npLastSent = t.videoId;
-  fetch(BACKEND + '/nowplaying', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-    body: JSON.stringify({ v: t.videoId, t: t.title || '', a: t.artist || '' }) })
-    .then(r => { if (r.status === 401) npLastSent = ''; }).catch(() => { npLastSent = ''; });
+// what this device is playing right now: { v, pos } or null
+function npLocal(){
+  const entry = state.queue[state.queuePos], t = entry && trackAt(state.queuePos), ad = activeDeck();
+  if (!t || !ad || !ad.player || !ad.player.getCurrentTime) return null;
+  return { v: t.videoId, pos: +ad.player.getCurrentTime() || 0, entry, t };
 }
+function npIsLive(){
+  const l = npLocal();
+  return !!(npTuned && npFeed.onAir && l && l.entry.plId === NP_ID && npFeed.current && l.v === npFeed.current.v && Math.abs(l.pos - npLivePos()) <= NP_LIVE_SLACK_S);
+}
+
+/* ---- owner: publish what this app plays (signed-in owner only) ---- */
+function npCanPublish(){
+  if (!profileTokenUsable() || npForbiddenToken === profileIdToken) return false;
+  const e = state.queue[state.queuePos];
+  return !npTuned && !(e && e.plId === NP_ID);   // a listener never publishes
+}
+function npSchedulePublish(ms){
+  if (!profileIdToken) return;
+  clearTimeout(npPubTimer);
+  npPubTimer = setTimeout(npPublishNow, ms == null ? 500 : ms);
+}
+function npPublishNow(){
+  if (!npCanPublish()) return;
+  const l = npLocal(), isPlaying = artworkWrap.classList.contains('is-playing');
+  let t = l && l.t, pos = l ? l.pos : 0, playing = isPlaying;
+  if (!t || !t.videoId || isPodcastTrack(t)){ if (!npLastBroadcast) return; t = npLastBroadcast; pos = 0; playing = false; }   // podcast or nothing: go off air
+  if (!playing && !npLastBroadcast) return;   // never broadcast a paused song nobody has heard from us
+  npLastBroadcast = t;
+  const tok = profileIdToken;
+  fetch(BACKEND + '/nowplaying', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+    body: JSON.stringify({ v: t.videoId, t: t.title || '', a: t.artist || '', pos: Math.max(0, Math.round(pos * 10) / 10), playing }) })
+    .then(r => { if (r.status === 403) npForbiddenToken = tok; }).catch(() => {});
+}
+setInterval(() => { if (artworkWrap.classList.contains('is-playing')) npPublishNow(); }, NP_HEARTBEAT_MS);
+
+/* ---- everyone: the playlist + tuning in ---- */
 function ensureNowPlayingPlaylist(){
   const existing = getCachedPlaylist(NP_ID);
   if (existing){
@@ -9283,15 +9329,18 @@ function ensureNowPlayingPlaylist(){
   lsSet(LS_PL(NP_ID), { id: NP_ID, type: 'custom', name: NOWPLAYING_TITLE, image: null, tracks: [], ts: Date.now() });
   saveToLibrary(NP_ID);
 }
-// Pull the feed and swap the playlist's tracks (current first). Existing
-// track objects are reused per song; songs still sitting in the play queue
-// are kept (at the end) so queue indexes stay valid when the list reorders.
+// Pull the feed, swap the playlist's tracks (current first, then recent),
+// then run the follow logic. Existing track objects are reused per song;
+// songs still in the play queue are kept so queue indexes survive reordering.
 async function refreshNowPlaying(manual){
   if (npBusy) return;
   npBusy = true;
   try {
     const d = await (await fetch(BACKEND + '/nowplaying')).json();
-    const feed = [d && d.current].concat((d && d.recent) || []).filter(x => x && x.v && x.t);
+    const prev = npFeed;
+    const prevExpected = prev.current ? npLivePos() : 0;
+    npFeed = { onAir: !!(d && d.onAir && d.current), current: d && d.current || null, recent: (d && d.recent) || [], recvAt: performance.now() };
+    const feed = [npFeed.current].concat(npFeed.recent).filter(x => x && x.v && x.t);
     ensureNowPlayingPlaylist();
     const pl = getCachedPlaylist(NP_ID);
     if (!pl) return;
@@ -9301,21 +9350,80 @@ async function refreshNowPlaying(manual){
     const queued = new Set(state.queue.filter(e => e.plId === NP_ID).map(e => old[e.idx] && old[e.idx].videoId));
     old.forEach(t => { if (queued.has(t.videoId) && !tracks.includes(t)) tracks.push(t); });
     const same = tracks.length === old.length && tracks.every((t, i) => t.videoId === old[i].videoId);
-    if (same){ if (manual) showToast('Already up to date'); return; }
-    const newIdx = new Map(tracks.map((t, i) => [t.videoId, i]));
-    state.queue = state.queue.map(e => e.plId === NP_ID && old[e.idx] ? Object.assign({}, e, { idx: newIdx.get(old[e.idx].videoId) }) : e);
-    pl.tracks = tracks;
-    lsSet(LS_PL(NP_ID), pl);
-    if (state.playlist && state.playlist.id === NP_ID) state.playlist = pl;
-    if (openLibraryPanelId === NP_ID) rerenderLibraryKeepPanel(); else renderLibrary();
-    if (state.queue.some(e => e.plId === NP_ID)){ renderQueuePanel(); persistResume(); }
+    if (!same){
+      const newIdx = new Map(tracks.map((t, i) => [t.videoId, i]));
+      state.queue = state.queue.map(e => e.plId === NP_ID && old[e.idx] ? Object.assign({}, e, { idx: newIdx.get(old[e.idx].videoId) }) : e);
+      pl.tracks = tracks;
+      lsSet(LS_PL(NP_ID), pl);
+      if (state.playlist && state.playlist.id === NP_ID) state.playlist = pl;
+      if (state.queue.some(e => e.plId === NP_ID)){ renderQueuePanel(); persistResume(); }
+    } else if (manual) showToast('Already up to date');
+    const cardChanged = !same || prev.onAir !== npFeed.onAir || (prev.current && prev.current.v) !== (npFeed.current && npFeed.current.v);
+    if (cardChanged){ if (openLibraryPanelId === NP_ID) rerenderLibraryKeepPanel(); else renderLibrary(); }
+    npFollowTick(prev, prevExpected);
   } catch(e){ if (manual) showToast("Couldn't load right now."); }
-  finally { npBusy = false; }
+  finally { npBusy = false; npSyncPill(); }
 }
-setInterval(() => { if (openLibraryPanelId === NP_ID && !document.hidden) refreshNowPlaying(); }, NP_POLL_MS);
+// Tuned in: keep following the owner (new song, owner seek/resume) while
+// still live; once the listener deviates (rewind) leave them be and offer
+// BACK TO LIVE. A new live song is appended to a rewound listener's queue.
+function npFollowTick(prev, prevExpected){
+  if (!npTuned){ return; }
+  const c = npFeed.current;
+  if (!npFeed.onAir || !c) return;
+  if (Date.now() - npRejoinAt < 12000) return;
+  const consistent = prev.onAir && prev.current && prev.current.v === c.v && Math.abs(npLivePos() - prevExpected) < 3;
+  if (npFollow && !npIsLive()){
+    if (consistent) npFollow = false;   // the listener moved, not the owner
+    else npRejoin();
+  } else if (!npFollow){
+    const pl = getCachedPlaylist(NP_ID);
+    const inQueue = state.queue.some(e => e.plId === NP_ID && pl && pl.tracks[e.idx] && pl.tracks[e.idx].videoId === c.v);
+    if (!inQueue){ state.queue.push({ plId: NP_ID, idx: 0 }); renderQueuePanel(); }
+  }
+}
+// Build the queue oldest-first so Previous steps back through the recent
+// songs and Next walks forward to live; the live song is last (idx 0).
+function npRejoin(){
+  const pl = getCachedPlaylist(NP_ID);
+  if (!pl || !npFeed.current || !pl.tracks.length) return;
+  npRejoinAt = Date.now();
+  npTuned = true; npFollow = true;
+  loadPlaylistIntoPlayer(pl);
+  const n = pl.tracks.length;
+  state.queue = Array.from({ length: n }, (_, k) => ({ plId: NP_ID, idx: n - 1 - k }));
+  state.queuePos = n - 1;
+  renderQueuePanel();
+  // read at seek time (after the load/ad wait), so the join lands on the live spot
+  pendingResume = { plId: NP_ID, idx: 0, get position(){ return Math.max(0, npLivePos()); } };
+  loadIndex(state.queuePos, true);
+  npSyncPill();
+}
+async function npTuneIn(){
+  await refreshNowPlaying();
+  if (!npFeed.onAir || !npFeed.current){ showToast('Off air right now'); return; }
+  setView('player');
+  npRejoin();
+}
+function npBackToLive(){ if (npFeed.onAir) npRejoin(); else showToast('Off air right now'); }
+const npPill = $('npLivePill');
+function npSyncPill(){
+  const e = state.queue[state.queuePos];
+  if (npTuned && !(e && e.plId === NP_ID)){ npTuned = false; npFollow = false; }
+  if (!npTuned){ npPill.hidden = true; return; }
+  npPill.hidden = false;
+  const live = npIsLive();
+  npPill.className = 'np-pill ' + (live ? 'is-live' : npFeed.onAir ? 'is-behind' : 'is-off');
+  npPill.textContent = live ? 'LIVE' : npFeed.onAir ? 'BACK TO LIVE' : 'OFF AIR';
+  npPill.disabled = live || !npFeed.onAir;
+}
+npPill.addEventListener('click', npBackToLive);
+setInterval(npSyncPill, 1000);
+setInterval(() => { if (!document.hidden) refreshNowPlaying(); }, NP_POLL_MS);
+setInterval(() => { if (!document.hidden && npTuned) refreshNowPlaying(); }, NP_POLL_TUNED_MS);
 
 // Podcasts never get Discover's similar-songs continuation.
-function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && lsGet(LS_DISCOVER(id), true); }
+function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && id !== NP_ID && lsGet(LS_DISCOVER(id), true); }
 function setDiscoverOn(id, on){ lsSet(LS_DISCOVER(id), !!on); }
 
 function isTrackLiked(videoId){
@@ -9692,6 +9800,7 @@ function openAddLinksFlow(playlistId){
    top immediately, unlike openPlaylist which only auto-starts when nothing
    else is queued */
 function playPlaylistNow(id){
+  if (id === NP_ID && npFeed.onAir){ npTuneIn(); return; }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
   if (id === SWELL_ID){
@@ -15769,6 +15878,7 @@ function setPlayingUI(isPlaying){
   cassetteSetPlaying(isPlaying);
   lyricsSetPlaying(isPlaying);
   updateMiniPlayerUI();
+  npSchedulePublish();
 }
 
 /* the real audio plays inside YouTube's cross-origin iframe, which mobile
@@ -17751,7 +17861,7 @@ function bumpPlayCount(entry){
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordPlayHistory(t);
-  npPublish(t);
+  npSchedulePublish(4000);
   if (!isPodcastPlaylistId(entry.plId)) noteTaste(t, 'play');
 }
 // Newest-first rolling log of what actually played, whatever playlist (or
