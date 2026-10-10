@@ -1642,7 +1642,7 @@ body.split-desktop .like-nudge{bottom:auto;top:calc(var(--topbar-h) + 12px)}
 /* tester-version banner (#236, #349): a compact pill inside the title bar,
    pushed right next to the nav (margin-left:auto), never a popup. Beta testers
    only, from day 3. Label-only (no sentence); the x is dropped on phones to
-   save room (tapping Send feedback also snoozes it). Hidden while the splash,
+   save room (sending feedback does not hide the button). Hidden while the splash,
    tutorial, a fullscreen mode, the beta lock or a dialog is up. */
 .tester-banner{display:flex;align-items:center;gap:4px;flex:none;background:var(--panel-3);color:var(--text);
   font-size:12px;line-height:1.3;padding:3px;border-radius:20px;white-space:nowrap;
@@ -13109,7 +13109,7 @@ function dismissTesterBanner(){
   lsSet(TESTER_BANNER_KEY, Date.now());
 }
 $('testerBannerClose').addEventListener('click', dismissTesterBanner);
-$('testerBannerSend').addEventListener('click', () => { dismissTesterBanner(); openFeedbackModal(); });
+$('testerBannerSend').addEventListener('click', () => { openFeedbackModal(); });
 
 replayTutorialBtn.addEventListener('click', () => {
   // stop any real track first - the intro has its own theme music and
