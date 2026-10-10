@@ -8851,7 +8851,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #345 (idea). Title only.
 
 ### feedback-popup-to-titlebar: Move the "send feedback" pop-up into the title bar, out of the way
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #349. The send feedback pop-up should live in the title bar so it is out of the way.
 - **Touches:** feedback button/popup, title bar.
@@ -8859,7 +8859,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #349 (bug). Title only.
 
 ### queue-drag-loses-grip-fast: Dragging songs up the queue too fast loses the grip after ~4 slots
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #348. Dragging a song up the queue quickly drops it, usually after about 4 slots.
 - **Touches:** queue drag reorder in index.html.
@@ -8867,7 +8867,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #348 (bug). Follows #329 (queue drag smoothness, merged, waiting for deployment); likely the same area.
 
 ### preload-artist-bio-next-up: Load the artist bio as soon as a song is next up
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub issue #347. Fetch the artist bio once the song is next up and cache it until the song ends, so the bio is instant.
 - **Touches:** artist bio fetch/cache, queue next-up logic.
