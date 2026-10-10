@@ -7528,7 +7528,8 @@ function renderLibrary(){
           libSearchTracksList.appendChild(row);
         });
       } catch(e){ /* a malformed entry is handled (and purged) by the card pass below */ }
-      if (!normLibSearch(pl.name).includes(searchQ)) return;
+      // custom playlists stay visible while searching so songs found can be dragged into them
+      if (pl.type !== 'custom' && !normLibSearch(pl.name).includes(searchQ)) return;
     }
     // A single malformed/partial cache entry (e.g. a "resolving: true"
     // snapshot left behind by a resolve call that errored out or hit an
@@ -9585,11 +9586,12 @@ function openCreatePlaylistFlow(trackToAdd, opts){
     '<div class="step">Name your playlist</div>' +
     '<input id="plNameInput" type="text" placeholder="Playlist name" autocomplete="off" spellcheck="false" ' +
       'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
-    '<button class="btn-ghost is-active" id="plCreateBtn" style="width:100%">Create</button>';
+    '<button class="btn-ghost is-active" id="plCreateBtn" style="width:100%">Create</button>' +
+    (!trackToAdd && !(opts && opts.onCreate) ? '<button class="btn-ghost" id="plCreateLinksBtn" style="width:100%;margin-top:8px">Create and add by link</button>' : '');
   const input = $('plNameInput');
   if (opts && opts.prefill){ input.value = opts.prefill; input.select(); }
   input.focus();
-  function submit(){
+  function submit(viaLinks){
     const name = input.value.trim();
     if (!name) return;
     if (opts && opts.onCreate){ closeImportOverlay(); opts.onCreate(name); return; }
@@ -9598,11 +9600,17 @@ function openCreatePlaylistFlow(trackToAdd, opts){
       addTrackToPlaylist(pl.id, trackToAdd);
       closeImportOverlay();
       showToast('Playlist created');
-    } else {
+    } else if (viaLinks === true){
       openAddLinksFlow(pl.id);
+    } else {
+      // empty playlist: open library search so songs can be dragged into it
+      closeImportOverlay();
+      setLibSearchOpen(true);
+      showToast('Playlist created. Search for songs and drag them in.');
     }
   }
-  $('plCreateBtn').addEventListener('click', submit);
+  $('plCreateBtn').addEventListener('click', () => submit());
+  if ($('plCreateLinksBtn')) $('plCreateLinksBtn').addEventListener('click', () => submit(true));
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
 }
 $('newPlaylistBtn').addEventListener('click', () => openCreatePlaylistFlow());

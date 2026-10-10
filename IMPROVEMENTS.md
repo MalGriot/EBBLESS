@@ -8739,12 +8739,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### empty-playlist-from-scratch: Create an empty playlist and search and drag songs into it
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Mal's feedback (desktop, 2026-10-09). Make an empty playlist from scratch, then search for songs and drag them in. Overlaps drag-songs-into-playlists (waiting on deploy), so build on that.
 - **Touches:** playlist creation, search results drag source.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/empty-playlist
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Create now makes an empty playlist, closes the overlay and opens library search; custom playlist cards stay visible while searching so found songs drag onto them (reuses drag-songs-into-playlists). Old paste-links path kept as "Create and add by link". Not browser-tested.
 
 ### shortcut-hover-hints: Hovering a button with a shortcut shows the shortcut
 - **Status:** merged
