@@ -8723,12 +8723,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### no-black-screen-search-relink: Searching and fixing links stay in the main UI, no black screen
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug, Mal's feedback (desktop, 2026-10-09). Searching new songs/playlists and fixing links should not go to a black screen. They should happen inside the main UI; never leave it.
 - **Touches:** search flow, relink flow, full-screen overlays.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/no-black-screen
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Fix: #import-overlay (shared by search, relink, import) is now a translucent blurred scrim with the stage as a card, so the main UI shows behind it instead of a solid black screen. CSS only.
 
 ### app-crashes-often: App often crashes on Android
 - **Status:** draft
