@@ -8715,7 +8715,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Cause: the absolutely-positioned #importForm (top search/paste bar) centered in the full topbar box incl. the banner strip. Fix: one CSS rule, bottom:var(--ib-h) while install-banner-on. Verified at 1400x850: bar bottom 45px, banner starts 52px.
 
 ### play-collection-opens-player: Playing a collection opens the player; playing one track stays put
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Mal's feedback (mobile, 2026-10-09). Pressing play on an album, playlist, artist or podcast should bring up the player. Playing an individual track should stay in the current window.
 - **Touches:** library/play-button handlers, view switching.
@@ -8747,7 +8747,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### shortcut-hover-hints: Hovering a button with a shortcut shows the shortcut
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (desktop, 2026-10-09). Buttons that have a keyboard shortcut show it on hover.
 - **Touches:** button title/tooltips.
@@ -8755,7 +8755,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Delegated mouseover handler (desktop only, hover:hover + pointer:fine) appends the key to the button title, e.g. "Shuffle (K)"; map KB_HINTS sits above the mini-player listeners and mirrors the Settings list.
 
 ### feedback-prefill-email: Feedback form pre-fills the user's email
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (mobile, 2026-10-09). When sending feedback, autoload the user's email address.
 - **Touches:** feedback form contact field, stored sign-in email.
