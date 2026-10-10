@@ -11027,9 +11027,20 @@ const STARTER_LIBRARY_URLS = [
 // Each is added once per device and recorded in LS_DEFAULT_SEEDED, so
 // existing users get them too but one the listener removed never comes back.
 const DEFAULT_SPOTIFY_URLS = [
-  'https://open.spotify.com/artist/61bgVlMQw2S0t6d8mVPVIS',
-  'https://open.spotify.com/episode/5tVNpRmJm0OrSzmsptOX3I'
+  'https://open.spotify.com/artist/61bgVlMQw2S0t6d8mVPVIS'
 ];
+// The #324 podcast episode (MAL GRIOT VO) was pulled for everyone (#335): no
+// longer seeded, and removed once per device from libraries that got it.
+const VO_PODCAST_URL = 'https://open.spotify.com/episode/5tVNpRmJm0OrSzmsptOX3I';
+const LS_VO_PODCAST_REMOVED = 'ebbless:voPodcastRemoved';
+function removeVoPodcast(){
+  if (lsGet(LS_VO_PODCAST_REMOVED, false)) return;
+  const entry = starterLibraryEntry(VO_PODCAST_URL);
+  if (!entry) return;
+  if (getLibrary().includes(entry.id)) removeFromLibrary(entry.id);
+  lsSet(LS_VO_PODCAST_REMOVED, true);
+  renderLibrary();
+}
 const LS_DEFAULT_SEEDED = 'ebbless:defaultSpotifySeeded';
 function starterLibraryEntry(url){
   const parsed = parseImportLink(url);
@@ -22124,7 +22135,7 @@ function startApp(){
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
     const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
-    (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).then(swapPeriodyssiusAlbum).catch(e => console.warn('[ebbless] default content seed failed', e));
+    (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).then(swapPeriodyssiusAlbum).then(removeVoPodcast).catch(e => console.warn('[ebbless] default content seed failed', e));
     // Artist album fills left unfinished, or never run (#293) - held back
     // past the boot burst above so it doesn't compete with startup.
     setTimeout(() => runArtistAlbumsBackfill().catch(e => console.warn('[ebbless] artist albums backfill failed', e)), 8000);

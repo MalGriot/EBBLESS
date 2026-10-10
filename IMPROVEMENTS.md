@@ -8612,7 +8612,7 @@ Add entries in this shape:
   Decisions for you: whether podcasts should ever broadcast (currently the owner goes off air while a podcast plays); where ON AIR sits in the library (right after Liked Songs now).
 
 ### podcasts-muted: Podcasts play muted
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub issue #333. Podcasts are muted when played. Reproduce on the podcast source(s) and fix so audio plays at the normal volume.
 - **Touches:** podcast playback / player mute-volume handling.
@@ -8631,7 +8631,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #338 (idea). Not a duplicate of back-button-to-player (that one is about the OS/browser back gesture).
 
 ### miniplayer-art-lp-cassette: Mini-player LP does not rotate and cassette needs more detail
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #337. In the mini-player art styles, the LP is not rotating, it slides down-right on a loop. The cassette needs the same level of detail as the main player's cassette.
 - **Touches:** mini-player art styles (record, cassette), related to the #330/#331 mini-player art work.
@@ -8642,7 +8642,7 @@ Add entries in this shape:
   Verified: syntax check, and a browser pass with the mini DOM built in an iframe (the real Document PiP needs a user gesture): LP rotates about a fixed centre (bounding box centre constant across frames), cassette renders with full detail and spinning hubs. Not verified: inside a real PiP window, reduced-motion, very small mini sizes, the tape sheen and hub speed vs the main cassette's JS physics (mini hubs use fixed CSS speeds).
 
 ### periodyssius-to-youtube-playlist: Replace Periodyssius album with its YouTube playlist, for everyone
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #336. Replace the Periodyssius album with the YouTube playlist https://youtube.com/playlist?list=PLr_svG2XXWi65vG3mg_tpZ2QoDRtBs5cd (still classified as an album), and make the change apply for every user.
 - **Touches:** built-in/shared album content, global (all users) content delivery.
@@ -8650,12 +8650,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #336 (bug). Periodyssius is not a built-in (no mention in index.html or worker/); it reaches libraries as an Apple Music album added by the MAL GRIOT artist page album fill (#293). Change in index.html: `swapPeriodyssiusAlbum()` (runs after `seedDefaultSpotifyContent` on every launch, once per account via `ebbless:periodyssiusSwapped`). It loads the YouTube playlist first (a failed load retries next launch), sets `albumOverride: true` so it files under Albums (the list id is PLr_..., not OLAK5uy_..., so it would otherwise be a playlist), then replaces any library entry whose cached name matches /periodyssius/i in the same slot (keeps pin), or appends the playlist if the library never had the album. New users get it via the same path. The artist album fill (`addArtistAlbumsOnly`) now skips any album matching Periodyssius so it is not re-added. Verified: script syntax check only; not exercised in a browser (needs live YouTube playlist fetch via the worker). Decisions for the user: (1) Users who never had the album also get the playlist appended; say if it should only replace existing copies. (2) A listener who deletes the playlist will not get it back (one-time flag). (3) Name-matching /periodyssius/i also catches a copy a listener imported themselves (any non-YouTube entry named Periodyssius). (4) Other artists' Periodyssius-named albums would be skipped by the artist fill (unlikely).
 
 ### remove-mal-griot-vo-podcast: Remove the MAL GRIOT VO podcast from everyone's feed
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #335. Remove the MAL GRIOT VO podcast from every user's feed. Title only; no detail given.
 - **Touches:** podcast feed / all-users podcast load.
-- **Branch:** 
+- **Branch:** agent/remove-vo-podcast
 - **Notes:** Synced from Geethub issue #335 (bug). Likely reverses part of #324 (load a podcast for all users, merged, waiting for deployment). Confirm which podcast that was before acting.
+- **Review notes:** The podcast is the #324 episode (open.spotify.com/episode/5tVNpRm...), seeded via DEFAULT_SPOTIFY_URLS. Change: (1) episode removed from DEFAULT_SPOTIFY_URLS, so new users never get it; (2) new one-time removeVoPodcast() (flag ebbless:voPodcastRemoved, runs after the default seed on launch) removes it from existing libraries, including its cache and pin. The #323 artist page default is untouched. Not re-added: it is no longer in the seed list, and the flag stops reruns. Decisions for you: (a) it is removed even if a listener pasted that same episode link themselves, since it can't be told apart from the seeded one; (b) an old, not-yet-updated device on the same account could still re-seed it until it updates; (c) the stale id stays in ebbless:defaultSpotifySeeded, harmless. Verified: node syntax check only; no browser pass.
 
 ### loading-progress-bar: Song progress bar acts as a loading bar while loading
 - **Status:** draft
