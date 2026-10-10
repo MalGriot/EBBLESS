@@ -8829,9 +8829,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #341 (bug). Title only.
 
 ### artist-name-popup: Clicking an artist name opens an artist window, with a mix button
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #343. If a track has multiple artists, each name is selectable and a pop-up lets you pick one. Artist names on the player get a hover effect. The artist window has a button that auto-creates a mix playlist of their music in the library (needs some intelligence: songs like the one playing).
 - **Touches:** player artist text, artist window, library playlist creation.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #343. The mix-playlist piece is the hard part and could ship after the picker.
+- **Branch:** agent/artist-name-popup
+- **Notes:** Shipped: multi-artist credits open a small picker (splitArtistNames/openArtistPick), hover underline already existed, artist window has a "Make a mix of songs" button (makeArtistMix). Gap: the mix is the artist's own library songs plus /similar candidates seeded from up to two of them (unmatched ones resolve via rematchUnmatched), not a full "like the song playing" intelligence; needs at least one of the artist's songs in the library or playing. Synced from Geethub issue #343. The mix-playlist piece is the hard part and could ship after the picker.

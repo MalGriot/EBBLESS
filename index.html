@@ -8406,6 +8406,7 @@ function loadArtistInfoInto(panelId, name, title, standalone){
       if (info && info.name) libplTitle.textContent = info.name;
       if (info && info.image){ attachArtworkFallback(libplArt, { art: info.image }); libplArtWrap.hidden = false; }
     }
+    addArtistMixButton(name);
   };
   fetchArtistInfo(name, title).then(done, () => done(null));
 }
@@ -8423,6 +8424,7 @@ function openArtistPage(rawName, title){
   const scroller = libplPanel.querySelector('.queue-scroll');
   if (entryId){
     if (openLibraryPanelId !== entryId){ toggleLibraryPlaylistPanel(entryId); if (scroller) scroller.scrollTop = 0; }
+    addArtistMixButton(name);
     return;
   }
   const id = ARTIST_INFO_PREFIX + key;
@@ -8441,12 +8443,90 @@ function openArtistPage(rawName, title){
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
   syncHistoryBuffer();
 }
+// every artist credited on a track, in order, de-duplicated
+function splitArtistNames(artist){
+  const seen = new Set();
+  return stripTopicSuffix(artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i).map(s => s.trim())
+    .filter(n => { const k = artistNameKey(n); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+}
+let artistPickMenu = null;
+function closeArtistPick(){ if (artistPickMenu){ artistPickMenu.remove(); artistPickMenu = null; } }
+function openArtistPick(names, title, anchor){
+  closeArtistPick();
+  const m = document.createElement('div');
+  m.className = 'lib-ctx-menu is-open';
+  names.forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'lib-ctx-item';
+    b.textContent = n;
+    b.addEventListener('click', (ev) => { ev.stopPropagation(); closeArtistPick(); openArtistPage(n, title); });
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = Math.max(8, r.top - m.offsetHeight - 6) + 'px';
+  artistPickMenu = m;
+}
+document.addEventListener('click', (e) => { if (artistPickMenu && !artistPickMenu.contains(e.target)) closeArtistPick(); });
 trackArtist.addEventListener('click', (e) => {
   const t = currentTrack();
   if (!t || !t.artist) return;
   e.stopPropagation();
-  openArtistPage(t.artist, t.title);
+  const names = splitArtistNames(t.artist);
+  if (names.length > 1) openArtistPick(names, t.title, trackArtist);
+  else openArtistPage(t.artist, t.title);
 });
+
+// "Make a mix" on the artist window: a new library playlist of this artist's
+// songs already in the library plus songs similar to them (the /similar
+// worker). Similar songs have no video yet, so rematchUnmatched resolves them
+// in the background.
+function artistLibrarySongs(name){
+  const key = artistNameKey(name), seen = new Set(), out = [];
+  orderedLibraryIds().concat([LIKED_ID]).forEach(id => {
+    const p = getCachedPlaylist(id);
+    if (!p || isArtistEntry(p)) return;
+    p.tracks.forEach(t => {
+      if (!t || !t.videoId || !t.artist || !splitArtistNames(t.artist).some(n => artistNameKey(n) === key)) return;
+      if (seen.has(t.videoId)) return;
+      seen.add(t.videoId); out.push(t);
+    });
+  });
+  return out;
+}
+async function makeArtistMix(name, btn){
+  const own = currentsShuffled(artistLibrarySongs(name)).slice(0, 15);
+  const cur = currentTrack();
+  const seeds = own.slice(0, 2);
+  if (!seeds.length && cur && splitArtistNames(cur.artist).some(n => artistNameKey(n) === artistNameKey(name))) seeds.push(cur);
+  if (!seeds.length){ showToast('Add some songs by ' + name + ' to your library first'); return; }
+  btn.disabled = true; btn.textContent = 'Making your mix...';
+  const sims = await Promise.all(seeds.map(s => fetchSimilar(s.title, s.artist, 20)));
+  const have = new Set(own.map(t => tagCacheKey(t)));
+  const similar = [];
+  sims.forEach(sm => (sm.candidates || []).forEach(c => {
+    if (c.title && c.artist && !have.has(tagCacheKey(c))){ have.add(tagCacheKey(c)); similar.push({ title: c.title, artist: c.artist, videoId: null }); }
+  }));
+  const rows = own.length ? own.slice() : seeds.slice();
+  similar.slice(0, 20).forEach((t, i) => rows.splice(Math.min(rows.length, (i + 1) * 2 - 1), 0, t));
+  const pl = createCustomPlaylist('Mix: ' + stripTopicSuffix(name));
+  pl.rematchUnmatched = true;
+  lsSet(LS_PL(pl.id), pl);
+  addTracksToPlaylist(pl.id, rows);
+  rematchUnmatchedInBackground(pl.id);
+  btn.disabled = false; btn.textContent = 'Make a mix of songs';
+  showToast('Saved “' + pl.name + '” to your library');
+}
+function addArtistMixButton(name){
+  if (libplBody.querySelector('.artist-mix-btn')) return;
+  const b = document.createElement('button');
+  b.className = 'btn-ghost is-active artist-mix-btn';
+  b.style.cssText = 'width:100%;margin-bottom:12px';
+  b.textContent = 'Make a mix of songs';
+  b.addEventListener('click', () => makeArtistMix(name, b));
+  libplBody.prepend(b);
+}
 
 /* =========================================================================
    PLAYLIST CONTEXT MENU (the 3-dot menu on each library card) — one shared
