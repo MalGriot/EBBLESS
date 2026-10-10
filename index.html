@@ -2956,7 +2956,6 @@ body.week-up-on{overflow:hidden}
     <div class="tester-banner" id="testerBanner" role="status" hidden>
       <span class="tb-text">Tester version</span>
       <button type="button" class="tb-send" id="testerBannerSend" aria-label="Send feedback"><svg class="tb-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg><span class="tb-lbl">Send feedback</span></button>
-      <button type="button" class="tb-close" id="testerBannerClose" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
     </div>
     <button class="nav-btn" id="helpBtn" type="button" aria-label="Play tutorial" title="Play tutorial">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4.1"/><circle cx="12" cy="17.4" r=".4" fill="currentColor"/></svg>
@@ -13088,11 +13087,10 @@ if (weekUpParam === 'preview' || weekUpParam === 'demo'){
    Beta testers only (a tester token stored by the beta lock / tester link).
    Shows once 3 days have passed since the vibe check's first-seen stamp
    (vibeState().first), and never in a session where the vibe check is
-   queued. The x hides it for 7 days; "Send feedback" opens the same form
-   as Settings > Send feedback and counts as a dismissal. CSS keeps it
+   queued. It never hides or snoozes; "Send feedback" opens the same form
+   as Settings > Send feedback. CSS keeps it
    hidden under the splash, tutorial, fullscreen modes and dialogs. */
-const TESTER_BANNER_KEY = 'ebbless:testerBannerDismissedAt';
-const TESTER_BANNER_MIN_MS = 3 * 86400000, TESTER_BANNER_SNOOZE_MS = 7 * 86400000;
+const TESTER_BANNER_MIN_MS = 3 * 86400000;
 const testerBanner = $('testerBanner');
 function initTesterBanner(){
   let token = null;
@@ -13101,14 +13099,8 @@ function initTesterBanner(){
   if (vibeCheckPending) return;
   const now = Date.now();
   if (now - (vibeState().first || now) < TESTER_BANNER_MIN_MS) return;
-  if (now - (+lsGet(TESTER_BANNER_KEY, 0) || 0) < TESTER_BANNER_SNOOZE_MS) return;
   testerBanner.hidden = false;
 }
-function dismissTesterBanner(){
-  testerBanner.hidden = true;
-  lsSet(TESTER_BANNER_KEY, Date.now());
-}
-$('testerBannerClose').addEventListener('click', dismissTesterBanner);
 $('testerBannerSend').addEventListener('click', () => { openFeedbackModal(); });
 
 replayTutorialBtn.addEventListener('click', () => {
