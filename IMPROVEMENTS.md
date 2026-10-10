@@ -8732,12 +8732,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Fix: #import-overlay (shared by search, relink, import) is now a translucent blurred scrim with the stage as a card, so the main UI shows behind it instead of a solid black screen. CSS only.
 
 ### app-crashes-often: App often crashes on Android
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug, Mal's feedback (Android, 2026-10-07): 'The app often crashes.' No detail. Needs a repro or crash log before building.
 - **Touches:** unknown.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/crash-hunt
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Code audit only, no repro. FIXED: (1) the Whisper captions worker (wasm + model, hundreds of MB) was prefetched on every launch; now skipped when navigator.deviceMemory < 4 (captions still load it on demand). (2) cymatics canvas backing store capped at 2x DPR (was up to 3x on Android). (3) lyricsCache capped at 60 entries. (4) added crash breadcrumbs: last 12 JS errors/unhandled rejections plus a 'prev-run-ended-in-foreground' marker (likely OOM kill or renderer crash) in localStorage key ebbless_crashlog; there was no global error handler before. UNFIXED findings: three YouTube iframe decks (yt-deck-a/b/c) plus SC iframes live at once for crossfade, heavy on 2-3 GB phones; cymatics draws 1600 arcs/frame (3200 fullscreen) with no low-end throttle, and saved 'viz' mode starts it on launch; ytPanelSync polls at 250ms and seek UI at 250ms while open; npSyncPill runs every 1s even when hidden; albumArtHashCache, artistInfoCache, podTextCache, metricMemo-style session Maps have no cap (small, low risk); sw.js is fine (no reload loop, controllerchange only toasts). NEED FROM MAL: Android/Chrome version and phone model/RAM, whether it is the installed PWA or a tab, what was happening (which visual mode, podcast/captions, fullscreen, how long open, screen off?), whether the page reloads to splash or Chrome shows 'Aw, Snap', and the output of localStorage.ebbless_crashlog (chrome://inspect or paste in console) after a crash.
 
 ### empty-playlist-from-scratch: Create an empty playlist and search and drag songs into it
 - **Status:** merged
