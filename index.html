@@ -419,6 +419,8 @@ body.onb-active .paste-guide{display:none}
 .lib-grid.is-list .lib-artist-divider{margin-top:8px}
 .lib-card{position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
+.lib-card.is-drop-target{outline:2px solid var(--accent, #fff);outline-offset:3px;transform:scale(1.03)}
+.is-song-drag{opacity:.5}
 .lib-card .art{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;container-type:size}
 .lib-card .art img{width:100%;height:100%;object-fit:cover;display:block;background:var(--panel-2)}
@@ -9374,6 +9376,65 @@ function addablePlaylists(){
     p && Array.isArray(p.tracks) && !PROFILE_REGENERATED_IDS.includes(p.id) &&
     !isSingleTrackType(p.type) && !isPodcastEntry(p) && !isArtistEntry(p) && !isAlbumEntry(p));
 }
+
+/* Desktop drag a song (library row or queue row) onto a playlist card to add it
+   (Geethub #328). Native HTML5 drag, armed only on a mouse pointerdown so touch
+   scrolling and the queue handle's pointer-based reorder are untouched. */
+(function(){
+  let dragTrack = null;
+  const rowOf = (el) => el && el.closest && el.closest('.track-row, .q-row');
+  const cardOf = (el) => el && el.closest && el.closest('.lib-card[data-pl-id]');
+  const okTarget = (card) => !!card && addablePlaylists().some(p => p.id === card.dataset.plId);
+  function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); }
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const row = rowOf(e.target);
+    if (!row || e.target.closest('.handle, button')) return;
+    row.draggable = true;
+  });
+  document.addEventListener('dragstart', (e) => {
+    const row = rowOf(e.target);
+    if (!row || !row.draggable) return;
+    let t = null;
+    if (row.classList.contains('q-row')){
+      const en = state.queue[parseInt(row.dataset.pos, 10)];
+      const pl = en && playlistById(en.plId);
+      t = pl && pl.tracks[en.idx];
+    } else {
+      const pl = getCachedPlaylist(row.dataset.plId);
+      t = pl && pl.tracks[parseInt(row.dataset.idx, 10)];
+    }
+    if (!t || !t.videoId){ e.preventDefault(); return; }
+    dragTrack = t;
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', t.title + ' - ' + t.artist);
+    row.classList.add('is-song-drag');
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!dragTrack) return;
+    const card = cardOf(e.target);
+    clearHi();
+    if (!okTarget(card)) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    card.classList.add('is-drop-target');
+  });
+  document.addEventListener('drop', (e) => {
+    if (!dragTrack) return;
+    const card = cardOf(e.target);
+    clearHi();
+    if (!okTarget(card)) return;
+    e.preventDefault();
+    addTrackToPlaylist(card.dataset.plId, dragTrack);
+  });
+  document.addEventListener('dragend', () => {
+    dragTrack = null; clearHi();
+    document.querySelectorAll('.is-song-drag').forEach(r => r.classList.remove('is-song-drag'));
+    document.querySelectorAll('.track-row[draggable], .q-row[draggable]').forEach(r => r.removeAttribute('draggable'));
+  });
+  document.addEventListener('pointerup', () => {
+    if (!dragTrack) document.querySelectorAll('.track-row[draggable], .q-row[draggable]').forEach(r => r.removeAttribute('draggable'));
+  });
+})();
 
 function openAddToPlaylistPicker(track){
   openImportOverlay();

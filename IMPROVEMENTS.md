@@ -8571,12 +8571,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap. Done: with the YouTube card open, F browser-fullscreens #yt-host (the live iframe), F again exits; ignored when typing. Syntax-checked only, not browser-tested (needs a live YouTube track).
 
 ### drag-songs-into-playlists: Drag songs into playlists
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #328. You should be able to drag songs into playlists.
 - **Touches:** library/queue track rows, playlist list (desktop drag and drop).
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #328 (idea). Related: library-hold-add-to-queue.
+- **Branch:** agent/drag-songs-into-playlists
+- **Notes:** Synced from Geethub issue #328 (idea). Related: library-hold-add-to-queue. Delegated native HTML5 drag: library track rows and queue rows (mouse only, armed on pointerdown, queue handle excluded so reorder is untouched) drop onto any playlist card in addablePlaylists(); card gets an outline highlight, drop calls addTrackToPlaylist ("Added to X" / "Already in playlist"). Unmatched songs are not draggable. Syntax checked only, not browser-tested.
 
 ### miniplayer-inherits-art-style: Mini-player should use the current album art style
 - **Status:** merged
