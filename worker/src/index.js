@@ -2661,7 +2661,7 @@ async function handleSoundCloud(url, ctx) {
 // Tracks come back in that page order, deduped by title, capped - matched
 // sources (Spotify/Apple Music, one YouTube search per track on the client)
 // lower than ones that are already playable (SoundCloud ids, YouTube ids).
-const ARTIST_CACHE_VERSION = 'a1';
+const ARTIST_CACHE_VERSION = 'a2';
 const ARTIST_MAX_MATCHED_TRACKS = 100;
 const ARTIST_MAX_NATIVE_TRACKS = 200;
 const ARTIST_MAX_RELEASES = 12;
@@ -2833,7 +2833,17 @@ async function soundCloudArtistPayload(user, tab, ctx) {
   }
   const tracks = [];
   addArtistTracks(tracks, new Map(), raw.map(scTrackToTitleArtist), ARTIST_MAX_NATIVE_TRACKS, t => t.scId ? 'sc' + t.scId : '');
-  return { name, image, tracks };
+  // The user's albums/EPs (their discography), for the client to file under
+  // Albums like Spotify artists' albums. Best-effort: none on any failure.
+  let albums = [];
+  const ar = await fetch('https://api-v2.soundcloud.com/users/' + u.id + '/albums?limit=50&client_id=' + clientId).catch(() => null);
+  const ad = ar && ar.ok ? await ar.json().catch(() => null) : null;
+  if (ad && Array.isArray(ad.collection)) {
+    albums = ad.collection
+      .filter(a => a && a.permalink_url && /^https:\/\/soundcloud\.com\/[^/]+\/sets\/[^/]+$/i.test(a.permalink_url) && (a.track_count || 0) > 1)
+      .map(a => ({ url: a.permalink_url, title: a.title || '' }));
+  }
+  return { name, image, tracks, albums };
 }
 
 async function youTubeArtistPayload(path) {

@@ -8763,12 +8763,13 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). openFeedbackModal() now fills fbContact from the stored profile email (LS_PROFILE_EMAIL) when the field is empty and the user is not signed out; still editable.
 
 ### artist-links-all-sources: Add artists from SoundCloud, Apple Music and YouTube Music links, and load SoundCloud discographies
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Mal's feedback (mobile, 2026-10-08 and 10-09). Adding an artist by link should work for SoundCloud, Apple Music and YouTube Music, and loading a SoundCloud artist's discography should work like Spotify's.
 - **Touches:** artist import, worker source resolvers.
-- **Branch:** 
+- **Branch:** agent/artist-links-sources
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Notes:** Link parsing and /artist import for SoundCloud, Apple Music and YouTube Music already existed; added slug-less Apple artist links, and SoundCloud artist albums/EPs (worker /artist now returns `albums`, client files them as sc_album like Spotify artists' albums). Needs worker deploy. Not tested live against SoundCloud/Apple/YTM.
 
 ### music-links-open-in-ebbless: Spotify, Apple Music and YouTube Music links open in EBBLESS
 - **Status:** draft
