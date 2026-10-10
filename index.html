@@ -19116,6 +19116,7 @@ const MP_QUEUE_H = 260;        // extra height the queue popover grows the windo
 const MP_OVERLAY_MIN_H = 300;  // a window at least this tall shows the queue over the player instead of growing
 const MP_SHRINK = 0.7;         // clicking the top edge scales the whole window to this (#269)
 const MP_SMALL_MIN_W = 240, MP_SMALL_MIN_H = 96;
+const MP_RATIO = MP_DEFAULT.w / MP_DEFAULT.h;  // the window keeps this proportion while the user resizes it
 const MP_ICO = {
   shuffle: '<path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>',
   prev: '<path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>',
@@ -19495,10 +19496,31 @@ function onMiniPlayerResize(){
   win.clearTimeout(mpSaveTimer);
   // A window grown for the queue popover, or shrunk from the top edge, isn't the user's chosen size
   if (mpQueue || mpShrunk) return;
+  // Drag-resize: once the user lets go, snap to the locked proportion and
+  // clamp to the minimum. At the minimum width the existing small layout
+  // (mp-small, same as the top-edge shrink) takes over.
+  win.clearTimeout(mpFitTimer);
+  mpFitTimer = win.setTimeout(() => fitMiniPlayerWindow(win), 120);
   // (the PiP window's own timers - the hidden main tab's are throttled)
   mpSaveTimer = win.setTimeout(() => {
-    if (miniPlayerWin === win && !mpQueue && !mpShrunk) saveMiniPlayerPrefs({ w: win.innerWidth, h: win.innerHeight });
+    if (miniPlayerWin === win && !mpQueue && !mpShrunk && !win.document.body.classList.contains('mp-small')) saveMiniPlayerPrefs({ w: win.innerWidth, h: win.innerHeight });
   }, 400);
+}
+let mpFitTimer = 0, mpLastSize = null;
+function fitMiniPlayerWindow(win){
+  if (miniPlayerWin !== win || win.closed || mpQueue || mpShrunk) return;
+  const last = mpLastSize || { w: win.innerWidth, h: win.innerHeight };
+  let w = win.innerWidth, h = win.innerHeight;
+  // Follow whichever edge the user moved more (in width-equivalent terms)
+  if (Math.abs(w - last.w) >= Math.abs(h - last.h) * MP_RATIO) h = Math.round(w / MP_RATIO);
+  else w = Math.round(h * MP_RATIO);
+  if (w < MP_SMALL_MIN_W){ w = MP_SMALL_MIN_W; h = Math.round(w / MP_RATIO); }
+  win.document.body.classList.toggle('mp-small', w <= MP_MIN_W);
+  applyMiniPlayerShape();
+  mpLastSize = { w, h };
+  if (Math.abs(w - win.innerWidth) <= 2 && Math.abs(h - win.innerHeight) <= 2) return;
+  // Needs transient user activation in Chrome; without it the call is a no-op
+  try { win.resizeTo(w + (win.outerWidth - win.innerWidth), h + (win.outerHeight - win.innerHeight)); } catch(e){}
 }
 function resetMiniPlayerShape(){
   const win = miniPlayerWin;

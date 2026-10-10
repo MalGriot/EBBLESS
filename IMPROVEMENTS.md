@@ -8665,3 +8665,12 @@ Add entries in this shape:
 - **Touches:** player seek bar, track-load state.
 - **Branch:** 
 - **Notes:** Synced from Geethub issue #334 (idea). Related: autoadvance-stall-full-progress (bar held at 0 until ad check passes).
+
+### miniplayer-proportional-resize: Mini-player resizes freely but always stays proportional, with a minimum small state
+- **Status:** review
+- **Priority:** medium
+- **Description:** Follow-up to Geethub #337. The mini-player must be resizable by the user, the window must always stay proportional (locked aspect ratio while resizing), and it needs a minimum size. At the minimum it becomes the small mini-player with only the minimum functions.
+- **Touches:** mini-player Document PiP window sizing (`onMiniPlayerResize`, new `fitMiniPlayerWindow`, `MP_RATIO`), reuses the existing `mp-small` layout from the top-edge shrink (#269).
+- **Branch:** agent/miniplayer-resize
+- **Notes:** Mechanism: a Document PiP window is an OS window, so script cannot constrain a live drag. The existing `resize` listener now debounces (120ms after the drag settles) and calls `fitMiniPlayerWindow`, which snaps to `MP_RATIO` (the 380x148 default) by following whichever edge the user moved more, clamps to the 240px minimum width (`MP_SMALL_MIN_W`), and toggles the existing `mp-small` class when width is at or below `MP_MIN_W` (300). No new small state was invented. Small-size windows are not saved as the remembered size, so the next open uses the last normal size. Queue popover and top-edge shrink paths are untouched (the fit is skipped while either is active).
+  Verified: script syntax check, and a node mock of `fitMiniPlayerWindow` (snap up/down by width, snap by height, clamp at 240, mp-small on at 300 and below, no-op when already proportional). Not verified: inside a real PiP window. Chrome only honours `resizeTo` in a Document PiP window with transient user activation, so after a pure drag-resize the snap may be silently ignored (the window then stays as dragged, and only the layout class updates). If that is the case in practice, the snap will only land when triggered from a click or key, and a true lock would need a browser-level aspect hint that Document PiP does not currently offer. Also unverified: the Chrome-imposed minimum PiP size vs 240px.
