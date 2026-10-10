@@ -8595,12 +8595,15 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #331 (idea). Pairs with #330. Related: miniplayer-idle-fade. Hovering the mini art shows a small 3-button pill (default/record/cassette) at its bottom; one tap calls the main `setArtStyle` so both players share the setting. Hidden when the mini-player is shrunk; the window-level idle fade is untouched.
 
 ### whats-malcolm-playing: "What's Malcolm Playing?" live playlist for all users
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #332. A playlist that broadcasts to all EBBLESS users what the owner is currently listening to. The issue notes it needs a more on-brand title. Professional name is MAL GRIOT.
 - **Touches:** needs a backend feed (worker), a shared playlist for all users.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #332 (idea). Title is a placeholder; user to pick the on-brand name.
+- **Branch:** agent/whats-malcolm-playing
+- **Notes:** Synced from Geethub issue #332 (idea). Title is a placeholder; user to pick the on-brand name. Working title "What's MAL GRIOT Playing?" lives in one constant, `NOWPLAYING_TITLE` in index.html (section NOW PLAYING FEED); rename it there only.
+  Built: worker `GET /nowplaying` (public, 15s edge cache) returns `{current, recent}` (last 25 distinct songs, one key in the PROFILES KV, `nowplaying:v1`); `POST /nowplaying` is owner-only (Bearer `NOWPLAYING_TOKEN`, constant-time compare, IP fail throttle, app-origin CORS). Worker code in worker/src/nowplaying.js, tests in worker/test/nowplaying.test.mjs. App: Settings > App row opens a read-only modal polling every 20s while open. The existing `?mal` link is only an install-gate skip with no identity, so it cannot be the auth; instead `?mal` reveals an "Owner: set key" button in the modal that stores the key in this device's localStorage (never in index.html). With a key set, each non-podcast song that starts is POSTed.
+  Manual steps (nothing deployed, no secrets set): 1) generate a 32+ char random key, `cd worker && npx wrangler secret put NOWPLAYING_TOKEN` (also with `--env staging` to test). 2) `npx wrangler deploy` the worker. 3) On your device open the app with `?mal`, Settings > App > the new row > "Owner: set key", paste the key. 4) Play a song and reopen the modal to confirm. One KV put per song started (free tier is 1000/day; fine for one owner).
+  Decisions for you: title; entry point (Settings row now, maybe a home-screen card later); whether tapping a song in the feed should play it (not built, needs a way to queue a single song by videoId); whether history should include podcasts (currently excluded).
 
 ### podcasts-muted: Podcasts play muted
 - **Status:** draft
