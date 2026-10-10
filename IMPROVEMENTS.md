@@ -8644,12 +8644,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #336 (bug). Needs a decision on how "for everyone" is delivered (same mechanism as the all-users artist page/podcast loads, #323/#324).
 
 ### remove-mal-griot-vo-podcast: Remove the MAL GRIOT VO podcast from everyone's feed
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #335. Remove the MAL GRIOT VO podcast from every user's feed. Title only; no detail given.
 - **Touches:** podcast feed / all-users podcast load.
-- **Branch:** 
+- **Branch:** agent/remove-vo-podcast
 - **Notes:** Synced from Geethub issue #335 (bug). Likely reverses part of #324 (load a podcast for all users, merged, waiting for deployment). Confirm which podcast that was before acting.
+- **Review notes:** The podcast is the #324 episode (open.spotify.com/episode/5tVNpRm...), seeded via DEFAULT_SPOTIFY_URLS. Change: (1) episode removed from DEFAULT_SPOTIFY_URLS, so new users never get it; (2) new one-time removeVoPodcast() (flag ebbless:voPodcastRemoved, runs after the default seed on launch) removes it from existing libraries, including its cache and pin. The #323 artist page default is untouched. Not re-added: it is no longer in the seed list, and the flag stops reruns. Decisions for you: (a) it is removed even if a listener pasted that same episode link themselves, since it can't be told apart from the seeded one; (b) an old, not-yet-updated device on the same account could still re-seed it until it updates; (c) the stale id stays in ebbless:defaultSpotifySeeded, harmless. Verified: node syntax check only; no browser pass.
 
 ### loading-progress-bar: Song progress bar acts as a loading bar while loading
 - **Status:** draft
