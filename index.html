@@ -14659,8 +14659,12 @@ function wireQueueRowGestures(row, handle){
     // multi-row drag - the same class of bug the carry-over fix below
     // already handles for the larger jump, just missed for the margin.
     // Measure the real row-to-row pitch off an actual neighbor instead.
-    const neighbor = siblings[origIndex + 1] || siblings[origIndex - 1];
-    rowH = neighbor ? Math.abs(neighbor.getBoundingClientRect().top - row.getBoundingClientRect().top) : row.offsetHeight;
+    // Use the smaller of the two neighbor pitches: the "Next"/"Later" section
+    // labels sit between rows 0 and 1, so one neighbor can be a label-height
+    // farther away than a normal row.
+    const myTop = row.getBoundingClientRect().top;
+    const pitches = [siblings[origIndex + 1], siblings[origIndex - 1]].filter(Boolean).map(n => Math.abs(n.getBoundingClientRect().top - myTop));
+    rowH = pitches.length ? Math.min(...pitches) : row.offsetHeight;
     row.classList.add('is-dragging');
     handle.setPointerCapture(e.pointerId);
   });
@@ -14681,14 +14685,20 @@ function wireQueueRowGestures(row, handle){
     let siblings = Array.from(queueBody.querySelectorAll('.q-row'));
     let curIdx = siblings.indexOf(row);
     while (dy > rowH * 0.6 && siblings[curIdx + 1]){
+      const top0 = row.getBoundingClientRect().top;
       queueBody.insertBefore(siblings[curIdx + 1], row);
-      startY += rowH; dy -= rowH;
+      // Measure the real layout shift: crossing the "Later" label makes it
+      // differ from rowH, which made the row jump at the "Playing next" boundary.
+      const shift = (row.getBoundingClientRect().top - top0) || rowH;
+      startY += shift; dy -= shift;
       siblings = Array.from(queueBody.querySelectorAll('.q-row'));
       curIdx = siblings.indexOf(row);
     }
     while (dy < -rowH * 0.6 && siblings[curIdx - 1]){
+      const top0 = row.getBoundingClientRect().top;
       queueBody.insertBefore(row, siblings[curIdx - 1]);
-      startY -= rowH; dy += rowH;
+      const shift = (row.getBoundingClientRect().top - top0) || -rowH;
+      startY += shift; dy -= shift;
       siblings = Array.from(queueBody.querySelectorAll('.q-row'));
       curIdx = siblings.indexOf(row);
     }
