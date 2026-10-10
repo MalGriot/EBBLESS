@@ -8502,18 +8502,21 @@ function artistLibrarySongs(name){
 async function makeArtistMix(name, btn){
   const own = currentsShuffled(artistLibrarySongs(name)).slice(0, 15);
   const cur = currentTrack();
+  // Whatever is playing right now also steers the mix, on top of the artist's own songs.
   const seeds = own.slice(0, 2);
-  if (!seeds.length && cur && splitArtistNames(cur.artist).some(n => artistNameKey(n) === artistNameKey(name))) seeds.push(cur);
-  if (!seeds.length){ showToast('Add some songs by ' + name + ' to your library first'); return; }
+  if (cur && !seeds.some(t => tagCacheKey(t) === tagCacheKey(cur))) seeds.push(cur);
+  if (!seeds.length){ showToast('Play a song or add songs by ' + name + ' first'); return; }
   btn.disabled = true; btn.textContent = 'Making your mix...';
   const sims = await Promise.all(seeds.map(s => fetchSimilar(s.title, s.artist, 20)));
   const have = new Set(own.map(t => tagCacheKey(t)));
+  if (cur) have.add(tagCacheKey(cur));
   const similar = [];
   sims.forEach(sm => (sm.candidates || []).forEach(c => {
     if (c.title && c.artist && !have.has(tagCacheKey(c))){ have.add(tagCacheKey(c)); similar.push({ title: c.title, artist: c.artist, videoId: null }); }
   }));
-  const rows = own.length ? own.slice() : seeds.slice();
+  const rows = own.slice();
   similar.slice(0, 20).forEach((t, i) => rows.splice(Math.min(rows.length, (i + 1) * 2 - 1), 0, t));
+  if (!rows.length){ btn.disabled = false; btn.textContent = 'Make a mix of songs'; showToast('Could not find songs for this mix'); return; }
   const pl = createCustomPlaylist('Mix: ' + stripTopicSuffix(name));
   pl.rematchUnmatched = true;
   lsSet(LS_PL(pl.id), pl);
