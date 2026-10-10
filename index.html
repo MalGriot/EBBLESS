@@ -1633,6 +1633,8 @@ body{--ib-h:44px}
 body.install-banner-on:not(.onb-active):not(.desktop-fs){--topbar-h:calc(60px + var(--ib-h))}
 body.install-banner-on.split-desktop:not(.onb-active):not(.desktop-fs){--topbar-h:calc(52px + var(--ib-h))}
 body.install-banner-on:not(.onb-active):not(.desktop-fs) #topbar{padding-bottom:var(--ib-h)}
+/* the absolutely-positioned paste/search bar centers in the topbar box; keep it above the banner strip */
+body.install-banner-on:not(.onb-active):not(.desktop-fs) #importForm.import-row{bottom:var(--ib-h)}
 body.onb-active .install-banner,body.desktop-fs .install-banner{display:none}
 /* iPhone/iPad install steps sheet (#314): shown by every install button on iOS */
 .ios-install{position:fixed;inset:0;z-index:30000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6)}

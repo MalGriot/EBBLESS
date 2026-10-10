@@ -8707,12 +8707,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### install-bar-covers-playlist-search: Install bar covers the playlist search bar on desktop
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Bug, Mal's feedback (desktop, 2026-10-09). The install CTA bar covers the playlist search bar.
 - **Touches:** install CTA bar, playlist search bar layout.
 - **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Cause: the absolutely-positioned #importForm (top search/paste bar) centered in the full topbar box incl. the banner strip. Fix: one CSS rule, bottom:var(--ib-h) while install-banner-on. Verified at 1400x850: bar bottom 45px, banner starts 52px.
 
 ### play-collection-opens-player: Playing a collection opens the player; playing one track stays put
 - **Status:** ready
