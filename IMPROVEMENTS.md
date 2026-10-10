@@ -8562,12 +8562,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #329 (bug). Third report: see queue-drag-reorder-glitch and queue-drag-reorder-glitch-regression (both merged); check why those fixes miss the "Playing next" boundary case.
 
 ### video-mode-f-fullscreen: Pressing F in video mode should go fullscreen
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #327. When video mode is active, the F key should switch to fullscreen.
 - **Touches:** keyboard shortcuts, video playback mode.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap.
+- **Branch:** agent/video-mode-f-fullscreen
+- **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap. Done: with the YouTube card open, F browser-fullscreens #yt-host (the live iframe), F again exits; ignored when typing. Syntax-checked only, not browser-tested (needs a live YouTube track).
 
 ### drag-songs-into-playlists: Drag songs into playlists
 - **Status:** draft
