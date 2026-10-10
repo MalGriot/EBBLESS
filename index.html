@@ -7986,8 +7986,8 @@ function toggleLibraryPlaylistPanel(id){
   if (isResolveStale(pl)) reResolveStaleInBackground(id, pl.type);
 }
 
-libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
-libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playLibraryTrackInline(openLibraryPanelId, 0); });
+libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
+libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
 libplCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
 $('libplCloseTab').addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
 libplScrim.addEventListener('click', closeLibraryPlaylistPanel);

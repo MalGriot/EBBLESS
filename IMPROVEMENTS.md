@@ -8715,12 +8715,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Cause: the absolutely-positioned #importForm (top search/paste bar) centered in the full topbar box incl. the banner strip. Fix: one CSS rule, bottom:var(--ib-h) while install-banner-on. Verified at 1400x850: bar bottom 45px, banner starts 52px.
 
 ### play-collection-opens-player: Playing a collection opens the player; playing one track stays put
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Mal's feedback (mobile, 2026-10-09). Pressing play on an album, playlist, artist or podcast should bring up the player. Playing an individual track should stay in the current window.
 - **Touches:** library/play-button handlers, view switching.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/play-collection-player
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Fix: the library panel play buttons (libplPlayBtn, libplArtPlayBtn) now call playPlaylistNow, which starts from the top and switches to the player view. Track rows still use playLibraryTrackInline and stay put.
 
 ### no-black-screen-search-relink: Searching and fixing links stay in the main UI, no black screen
 - **Status:** merged
