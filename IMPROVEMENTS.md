@@ -8623,7 +8623,7 @@ Add entries in this shape:
   Verified: JS syntax check; code trace of every unmute path (confirm, promoteDeckDirect, crossfades). Not verified: actual audio in a browser (needs the live worker and a podcast feed, and the sandbox cannot play audio); please test playing a song then switching to a podcast, on desktop and iPhone.
 
 ### settings-back-button: Back button in Settings
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #338. Add a back button inside the Settings screen. Title only; no detail given.
 - **Touches:** Settings screen header/navigation.
@@ -8659,7 +8659,7 @@ Add entries in this shape:
 - **Review notes:** The podcast is the #324 episode (open.spotify.com/episode/5tVNpRm...), seeded via DEFAULT_SPOTIFY_URLS. Change: (1) episode removed from DEFAULT_SPOTIFY_URLS, so new users never get it; (2) new one-time removeVoPodcast() (flag ebbless:voPodcastRemoved, runs after the default seed on launch) removes it from existing libraries, including its cache and pin. The #323 artist page default is untouched. Not re-added: it is no longer in the seed list, and the flag stops reruns. Decisions for you: (a) it is removed even if a listener pasted that same episode link themselves, since it can't be told apart from the seeded one; (b) an old, not-yet-updated device on the same account could still re-seed it until it updates; (c) the stale id stays in ebbless:defaultSpotifySeeded, harmless. Verified: node syntax check only; no browser pass.
 
 ### loading-progress-bar: Song progress bar acts as a loading bar while loading
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #334. While a song is loading, the progress bar should show as a loading bar and not be clickable or draggable.
 - **Touches:** player seek bar, track-load state.
@@ -8683,7 +8683,7 @@ Add entries in this shape:
   Verified: script syntax check, and a node mock of `fitMiniPlayerWindow` (snap up/down by width, snap by height, clamp at 240, mp-small on at 300 and below, no-op when already proportional). Not verified: inside a real PiP window. Chrome only honours `resizeTo` in a Document PiP window with transient user activation, so after a pure drag-resize the snap may be silently ignored (the window then stays as dragged, and only the layout class updates). If that is the case in practice, the snap will only land when triggered from a click or key, and a true lock would need a browser-level aspect hint that Document PiP does not currently offer. Also unverified: the Chrome-imposed minimum PiP size vs 240px.
 
 ### on-air-off-air-title: "ON AIR" title becomes grey "OFF AIR" when off air
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #339. When ON AIR is off air, the title should change to "OFF AIR" and be slightly grey. The second line that turns into "live now:..." should disappear when off air, and "live now:..." should take one line only (marquee if too long).
 - **Touches:** ON AIR playlist title/subtitle in the library.
