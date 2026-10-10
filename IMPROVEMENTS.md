@@ -8552,3 +8552,51 @@ Add entries in this shape:
 - **Touches:** track relink menu, playlist/album loader.
 - **Branch:** agent/relink-while-loading
 - **Notes:** Synced from Geethub issue #321 (bug). Related: track-relink-menu, playlist-full-loading. Fix: the picker already opened on loaded rows, but resolvePlaylist kept rewriting storage from its own in-flight list, silently undoing a pick made mid-load. applyRelinkChoice now also updates that list (resolvingTracks map). Syntax-checked only; not exercised in a browser.
+
+### queue-drag-above-playing-next: Dragging a queue track above "Playing next" is still not smooth
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #329. Dragging songs up the queue is still not smooth: it gets confused when you drag a track above the "Playing next" track.
+- **Touches:** queue panel drag-to-reorder, boundary at the "Playing next" header.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #329 (bug). Third report: see queue-drag-reorder-glitch and queue-drag-reorder-glitch-regression (both merged); check why those fixes miss the "Playing next" boundary case.
+
+### video-mode-f-fullscreen: Pressing F in video mode should go fullscreen
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #327. When video mode is active, the F key should switch to fullscreen.
+- **Touches:** keyboard shortcuts, video playback mode.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap.
+
+### drag-songs-into-playlists: Drag songs into playlists
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #328. You should be able to drag songs into playlists.
+- **Touches:** library/queue track rows, playlist list (desktop drag and drop).
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #328 (idea). Related: library-hold-add-to-queue.
+
+### miniplayer-inherits-art-style: Mini-player should use the current album art style
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #330. When you switch to the mini-player, its art style (album art, visualizer, etc.) should be the one active in the main player.
+- **Touches:** mini-player window, album art style setting.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #330 (idea). Pairs with #331.
+
+### miniplayer-hover-art-style-controls: Hover controls on the mini-player to switch art style
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #331. Hovering over the mini-player's album art/visualizer shows UI controls to switch album art styles.
+- **Touches:** mini-player hover controls, album art style switcher.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #331 (idea). Pairs with #330. Related: miniplayer-idle-fade.
+
+### whats-malcolm-playing: "What's Malcolm Playing?" live playlist for all users
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #332. A playlist that broadcasts to all EBBLESS users what the owner is currently listening to. The issue notes it needs a more on-brand title. Professional name is MAL GRIOT.
+- **Touches:** needs a backend feed (worker), a shared playlist for all users.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #332 (idea). Title is a placeholder; user to pick the on-brand name.
