@@ -3923,6 +3923,33 @@ body.week-up-on{overflow:hidden}
 </div>
 
 <script>
+/* Crash breadcrumbs (app-crashes-often). A browser OOM-kill or renderer crash
+   leaves no trace, so keep the last few JS errors and whether the previous
+   run ended cleanly (hidden/pagehide) or while still in the foreground.
+   Read it on the phone with: localStorage.ebbless_crashlog */
+(function(){
+  var K = 'ebbless_crashlog', LIVE = 'ebbless_live';
+  function load(){ try { var a = JSON.parse(localStorage.getItem(K)); return Array.isArray(a) ? a : []; } catch(e){ return []; } }
+  function add(kind, msg){
+    try {
+      var a = load();
+      a.push({ t: new Date().toISOString(), k: kind, m: String(msg).slice(0, 300), mem: navigator.deviceMemory || 0 });
+      localStorage.setItem(K, JSON.stringify(a.slice(-12)));
+    } catch(e){}
+  }
+  try {
+    var prev = localStorage.getItem(LIVE);
+    if (prev) add('prev-run-ended-in-foreground', prev);
+    var mark = function(){ try { localStorage.setItem(LIVE, document.visibilityState === 'visible' ? new Date().toISOString() : ''); if (document.visibilityState !== 'visible') localStorage.removeItem(LIVE); } catch(e){} };
+    mark();
+    document.addEventListener('visibilitychange', mark);
+    window.addEventListener('pagehide', function(){ try { localStorage.removeItem(LIVE); } catch(e){} });
+  } catch(e){}
+  window.addEventListener('error', function(e){ add('error', (e.message || '') + ' @' + (e.lineno || '?') + ':' + (e.colno || '?')); });
+  window.addEventListener('unhandledrejection', function(e){ var r = e.reason; add('rejection', (r && (r.stack || r.message)) || r); });
+})();
+</script>
+<script>
 (function(){
 'use strict';
 
@@ -16540,7 +16567,7 @@ function vizSetHoldMode(on){
 
 function vizResize(){
   const rect = vizCanvas.parentElement.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(2, window.devicePixelRatio || 1); // capped: 3x canvases cost memory and fill rate on low-end phones
   vizCanvas.width = Math.round(rect.width * dpr);
   vizCanvas.height = Math.round(rect.height * dpr);
   vizCtx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -16549,8 +16576,8 @@ function vizResize(){
 function vizDraw(t){
   const dt = (vizLastT ? Math.min(48, t - vizLastT) : 16) * vizSpeed;
   vizLastT = t;
-  const w = vizCanvas.width / (window.devicePixelRatio || 1);
-  const h = vizCanvas.height / (window.devicePixelRatio || 1);
+  const w = vizCanvas.width / Math.min(2, window.devicePixelRatio || 1);
+  const h = vizCanvas.height / Math.min(2, window.devicePixelRatio || 1);
   vizCtx2d.clearRect(0, 0, w, h);
 
   if (vizRotateOn) vizAngle = (vizAngle + dt / VIZ_ROTATE_MS_PER_TURN * Math.PI * 2) % (Math.PI * 2);
@@ -17164,6 +17191,7 @@ async function fetchLyrics(t){
   if (!res.ok) throw new Error('lyrics fetch failed');
   const data = await res.json();
   lyricsCache.set(t.videoId, data);
+  if (lyricsCache.size > 60) lyricsCache.delete(lyricsCache.keys().next().value);
   return data;
 }
 
@@ -17304,6 +17332,8 @@ async function capModelCached(model){
 }
 function scheduleCapPrefetch(){
   if (lsGet(LS_CAP_EN_READY, false) === true) return;
+  // the Whisper worker (wasm runtime + model) is hundreds of MB resident: not on every launch of a low-memory phone. Captions still load it on demand.
+  if (navigator.deviceMemory && navigator.deviceMemory < 4) return;
   if (typeof Worker !== 'function' || typeof OfflineAudioContext !== 'function' || !('indexedDB' in window)) return;
   const startedAt = Date.now();
   const tick = () => {
