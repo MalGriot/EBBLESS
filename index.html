@@ -19141,8 +19141,8 @@ const MINI_PLAYER_STYLE = `
     display:flex;flex-direction:column;overflow:hidden;position:relative;user-select:none}
   button{font:inherit;color:inherit}
   svg{width:18px;height:18px;fill:currentColor}
-  #mpBg{position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(28px) brightness(.42) saturate(1.3);
-    opacity:0;transition:opacity .4s ease;pointer-events:none}
+  #mpBg{position:absolute;inset:0;background:color-mix(in srgb,var(--mp-tint,#e0b26a) 50%,#0b0b0b);
+    opacity:0;transition:opacity .4s ease,background-color .6s ease;pointer-events:none}
   body.style-art #mpBg{opacity:1}
   #mpCard{position:relative;flex:none;height:var(--card-h);padding:12px;display:grid;gap:4px 12px;
     grid-template-columns:calc(var(--card-h) - 24px) minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) 16px 36px;
@@ -19367,7 +19367,7 @@ function buildMiniPlayerDOM(win){
         '</div></div>' +
       '<div id="mpHead">' +
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
-        btn('mpStyle', 'mp-tool', 'Switch style', MP_ICO.style) +
+        btn('mpStyle', 'mp-tool', 'Album color background', MP_ICO.style) +
         btn('mpReset', 'mp-tool', 'Reset shape', MP_ICO.reset) +
         btn('mpFlag', 'mp-tool', 'This isn\'t the right song', MP_ICO.flag) +
         '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
@@ -19632,7 +19632,6 @@ function updateMiniPlayerUI(){
     if (artEl.getAttribute('src') !== art){
       setMiniPlayerArt(artEl, art, lead ? lead.ms : MP_ART_FADE_MS);
       doc.getElementById('mpArtWrap').style.setProperty('--mp-art', art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'none');
-      doc.getElementById('mpBg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : '';
       const csArt = doc.getElementById('cassetteLabelArt');
       if (csArt){
         if (art){ csArt.setAttribute('href', art); csArt.classList.add('is-loaded'); }
@@ -19645,6 +19644,9 @@ function updateMiniPlayerUI(){
     }
     // Same marquee as the main player; only re-set on change, since this
     // runs on the mini player's twice-a-second clock too.
+    // Background tint = the album-art color the main player already sampled (--player-accent); it resolves async, so re-read each tick
+    const tint = getComputedStyle(document.documentElement).getPropertyValue('--player-accent').trim();
+    if (tint && doc.body.style.getPropertyValue('--mp-tint') !== tint) doc.body.style.setProperty('--mp-tint', tint);
     if (titleEl._marqueeText !== (t.title || '')) setMarqueeText(titleEl, t.title || '');
     if (artistEl._marqueeText !== (t.artist || '')) setMarqueeText(artistEl, t.artist || '');
   }
