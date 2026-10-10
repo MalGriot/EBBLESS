@@ -8747,12 +8747,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### shortcut-hover-hints: Hovering a button with a shortcut shows the shortcut
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (desktop, 2026-10-09). Buttons that have a keyboard shortcut show it on hover.
 - **Touches:** button title/tooltips.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/shortcut-hints
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Delegated mouseover handler (desktop only, hover:hover + pointer:fine) appends the key to the button title, e.g. "Shuffle (K)"; map KB_HINTS sits above the mini-player listeners and mirrors the Settings list.
 
 ### feedback-prefill-email: Feedback form pre-fills the user's email
 - **Status:** ready
