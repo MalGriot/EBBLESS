@@ -15344,7 +15344,10 @@ function wireQueueRowGestures(row, handle){
     }
     while (dy < -rowH * 0.6 && siblings[curIdx - 1]){
       const top0 = row.getBoundingClientRect().top;
-      queueBody.insertBefore(row, siblings[curIdx - 1]);
+      // Move the neighbor below the row instead of moving the row itself:
+      // re-inserting the row (which holds the handle's pointer capture)
+      // drops the capture, so fast upward drags lost their grip (#348).
+      queueBody.insertBefore(siblings[curIdx - 1], row.nextSibling);
       const shift = (row.getBoundingClientRect().top - top0) || -rowH;
       startY += shift; dy -= shift;
       siblings = Array.from(queueBody.querySelectorAll('.q-row'));
