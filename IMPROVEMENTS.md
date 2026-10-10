@@ -8571,7 +8571,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #327 (idea). Related: video-playback-option, album-art-doubletap. Done: with the YouTube card open, F browser-fullscreens #yt-host (the live iframe), F again exits; ignored when typing. Syntax-checked only, not browser-tested (needs a live YouTube track).
 
 ### drag-songs-into-playlists: Drag songs into playlists
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #328. You should be able to drag songs into playlists.
 - **Touches:** library/queue track rows, playlist list (desktop drag and drop).
@@ -8595,7 +8595,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #331 (idea). Pairs with #330. Related: miniplayer-idle-fade. Hovering the mini art shows a small 3-button pill (default/record/cassette) at its bottom; one tap calls the main `setArtStyle` so both players share the setting. Hidden when the mini-player is shrunk; the window-level idle fade is untouched.
 
 ### whats-malcolm-playing: "What's Malcolm Playing?" live playlist for all users
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #332. A playlist that broadcasts to all EBBLESS users what the owner is currently listening to. The issue notes it needs a more on-brand title. Professional name is MAL GRIOT.
 - **Touches:** needs a backend feed (worker), a shared playlist for all users.
