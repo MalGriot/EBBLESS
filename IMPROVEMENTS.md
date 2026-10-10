@@ -8692,12 +8692,12 @@ Add entries in this shape:
 - **Notes:** Off air: card title (grid overlay and list name) reads OFF AIR in grey (#9a9a9a), the second line is not rendered. On air: "LIVE now: ..." is a single-line marquee (refreshLibraryMarquees covers it). Not visually checked in a browser. Synced from Geethub issue #339 (idea). Follows whats-malcolm-playing (#332).
 
 ### playing-history: Playing history button next to Settings
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #340. A button next to Settings that lists every song played for more than 10 seconds. Clicking it opens a window over the queue window, the same way the playlist window opens over the library window.
 - **Touches:** header buttons, queue window overlay, play-time tracking.
-- **Branch:** 
-- **Notes:** Synced from Geethub issue #340 (idea).
+- **Branch:** agent/playing-history
+- **Notes:** Synced from Geethub issue #340 (idea). Built: a button labeled "History" next to Settings (desktop topnav, plus a topbar icon on mobile). Tracks played over 10s are logged to localStorage (ebbless:playhistory, newest first, max 500, consecutive repeats skipped). The panel opens over the queue pane on 3-pane desktop (same grid cell), as a side panel on narrower desktop, and as a bottom sheet on mobile. Tapping a row plays it via its source library playlist; Clear button empties the list. Layout checked at 1400px and 762px with seeded data. Not verified: real 10s logging while playing, tapping a row to play, fullscreen mode.
 
 ### tutorial-controls-block-loadbar: Tutorial: Next button and first captions cover the load bar
 - **Status:** merged

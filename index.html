@@ -1170,6 +1170,38 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head .close-btn{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .queue-head .close-btn:hover{background:var(--panel-2);color:var(--text)}
 .queue-head .close-btn svg{width:12px;height:12px}
+/* playing history panel (Geethub #340): opens over the queue window */
+#hist-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transition:opacity var(--dur-surface) var(--ease-in-out)}
+#hist-scrim.is-open{opacity:1;pointer-events:auto}
+#hist-panel{position:fixed;z-index:42;background:var(--panel);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.5)}
+#histBody .track-row{cursor:pointer}
+.hist-empty{padding:28px 20px;color:var(--faint);font-size:13px;text-align:center}
+#histBtn svg,#mobileHistBtn svg{stroke-width:1.8}
+#mobileHistBtn{display:none;padding:8px;border-radius:50%}
+#mobileHistBtn svg{width:20px;height:20px}
+@media (min-width:860px){
+  #hist-panel{top:var(--topbar-h);right:0;bottom:0;width:380px;border-left:1px solid var(--border);
+    transform:translateX(100%);transition:transform var(--dur-surface) var(--ease-in-out)}
+  #hist-panel.is-open{transform:translateX(0)}
+  #hist-scrim{display:none}
+  #hist-panel .queue-head .close-btn{width:40px;height:40px;margin:-7px -10px -7px 0}
+  #hist-panel .queue-head .close-btn svg{width:20px;height:20px}
+}
+@media (max-width:859.98px){
+  #hist-panel{left:0;right:0;bottom:calc(var(--nav-h) + var(--safe-b));
+    max-height:calc(92vh - var(--nav-h) - var(--safe-b));border-radius:18px 18px 0 0;
+    transform:translateY(calc(100% + var(--nav-h) + var(--safe-b)));transition:transform var(--dur-surface) var(--ease-in-out)}
+  #hist-panel.is-open{transform:translateY(0)}
+  #hist-scrim{bottom:calc(var(--nav-h) + var(--safe-b))}
+  #mobileHistBtn{display:flex}
+}
+@media (min-width:1150px){
+  /* 3-pane desktop: share the queue pane's grid cell and cover it */
+  body.split-desktop:not(.desktop-fs) #hist-panel{position:relative;grid-column:3;grid-row:2;top:auto;right:auto;bottom:auto;
+    width:auto;height:auto;min-height:0;box-shadow:none}
+  body.split-desktop:not(.desktop-fs) #hist-panel.is-open{box-shadow:-8px 0 24px rgba(0,0,0,.35)}
+}
 .libpl-close-tab{display:none}
 /* Geethub #276: desktop playlist panel X - bigger icon, 40px hit area */
 @media (min-width:860px){
@@ -2933,7 +2965,14 @@ body.week-up-on{overflow:hidden}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
         <span>Settings</span>
       </button>
+      <button class="nav-btn" id="histBtn" type="button" aria-label="History" title="History">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <span>History</span>
+      </button>
     </nav>
+    <button class="nav-btn" id="mobileHistBtn" type="button" aria-label="History">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+    </button>
     <button class="nav-btn" id="mobileSettingsBtn" data-view="settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
     </button>
@@ -3797,6 +3836,22 @@ body.week-up-on{overflow:hidden}
     </div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== PLAYING HISTORY PANEL (opens over the queue window) ===== -->
+  <div id="hist-scrim"></div>
+  <div id="hist-panel">
+    <div class="queue-drag-handle"></div>
+    <div class="queue-head">
+      <h2>History</h2>
+      <button class="clear" id="histClearBtn">Clear</button>
+      <button class="close-btn" id="histCloseBtn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
+      </button>
+    </div>
+    <div class="queue-scroll">
+      <div class="queue-body" id="histBody"></div>
     </div>
   </div>
 
@@ -7840,6 +7895,86 @@ function refreshLibraryMarquees(){
     setMarqueeText(el, el.dataset.text || '');
   });
 }
+
+/* =========================================================================
+   PLAYING HISTORY (Geethub #340): every song played for more than 10
+   seconds, newest first, kept in localStorage. Opens over the queue window.
+   ========================================================================= */
+const LS_PLAYHIST = 'ebbless:playhistory';
+const PLAYHIST_MAX = 500, PLAYHIST_MIN_SEC = 10;
+let playHistKey = '', playHistSecs = 0, playHistLogged = false;
+
+function recordPlayHistory(t, plId){
+  if (!t || !t.title) return;
+  const list = lsGet(LS_PLAYHIST, []);
+  const top = list[0];
+  if (top && top.plId === plId && top.videoId === (t.videoId || '') && top.title === t.title) return;  // consecutive repeat
+  list.unshift({ plId: plId || '', videoId: t.videoId || '', title: t.title, artist: t.artist || '', art: t.art || '', ts: Date.now() });
+  if (list.length > PLAYHIST_MAX) list.length = PLAYHIST_MAX;
+  lsSet(LS_PLAYHIST, list);
+  if (playHistOpen) renderPlayHistory();
+}
+setInterval(() => {
+  const t = currentTrack();
+  const e = state.queue[state.queuePos];
+  const key = t && e ? e.plId + '|' + e.idx + '|' + state.queuePos : '';
+  if (key !== playHistKey){ playHistKey = key; playHistSecs = 0; playHistLogged = false; }
+  if (!t || playHistLogged) return;
+  let playing = false;
+  try { const ad = activeDeck(); playing = !!(ad && ad.player && ad.player.getPlayerState && ad.player.getPlayerState() === 1); } catch(err){}
+  if (!playing) return;
+  if (++playHistSecs > PLAYHIST_MIN_SEC){ playHistLogged = true; recordPlayHistory(t, e.plId); }
+}, 1000);
+
+const histPanel = $('hist-panel'), histScrim = $('hist-scrim'), histBody = $('histBody');
+let playHistOpen = false;
+
+function renderPlayHistory(){
+  histBody.textContent = '';
+  const list = lsGet(LS_PLAYHIST, []);
+  if (!list.length){
+    const d = document.createElement('div'); d.className = 'hist-empty';
+    d.textContent = 'Songs you play for more than 10 seconds show up here.';
+    histBody.appendChild(d);
+    return;
+  }
+  list.forEach(h => {
+    const row = document.createElement('div'); row.className = 'track-row';
+    const img = document.createElement('img'); attachArtworkFallback(img, h);
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const title = document.createElement('div'); title.className = 'title'; title.textContent = h.title;
+    const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = h.artist;
+    meta.appendChild(title); meta.appendChild(artist);
+    row.appendChild(img); row.appendChild(meta);
+    row.addEventListener('click', () => playFromHistory(h));
+    histBody.appendChild(row);
+  });
+}
+function playFromHistory(h){
+  const pl = h.plId && getCachedPlaylist(h.plId);
+  const i = pl ? pl.tracks.findIndex(t => t && t.title === h.title && (t.videoId || '') === h.videoId) : -1;
+  if (i < 0){ showToast("That song isn't in your library anymore."); return; }
+  playLibraryTrackInline(h.plId, i);
+}
+function openPlayHistory(){
+  if (playHistOpen) return;
+  if (!document.body.classList.contains('split-desktop')){ if (state.queueOpen) closeQueuePanel(false); closeLibraryPlaylistPanel(); }
+  playHistOpen = true;
+  renderPlayHistory();
+  histPanel.classList.add('is-open'); histScrim.classList.add('is-open');
+  $('histBtn').classList.add('is-active');
+}
+function closePlayHistory(){
+  if (!playHistOpen) return;
+  playHistOpen = false;
+  histPanel.classList.remove('is-open'); histScrim.classList.remove('is-open');
+  $('histBtn').classList.remove('is-active');
+}
+['histBtn', 'mobileHistBtn'].forEach(id => $(id).addEventListener('click', () => playHistOpen ? closePlayHistory() : openPlayHistory()));
+$('histCloseBtn').addEventListener('click', closePlayHistory);
+histScrim.addEventListener('click', closePlayHistory);
+$('histClearBtn').addEventListener('click', () => { lsSet(LS_PLAYHIST, []); renderPlayHistory(); });
+attachSwipeToDismiss(histPanel, closePlayHistory);
 
 /* =========================================================================
    LIBRARY PLAYLIST PANEL (clicking a card opens its tracklist in the same
@@ -15181,6 +15316,7 @@ function wireQueueRowGestures(row, handle){
 function toggleQueuePanel(){ state.queueOpen ? closeQueuePanel() : openQueuePanel(); }
 function openQueuePanel(){
   closeLibraryPlaylistPanel();
+  closePlayHistory();
   state.preQueueView = state.currentView;
   state.queueOpen = true;
   queuePanel.classList.add('is-open'); queueScrim.classList.add('is-open');
