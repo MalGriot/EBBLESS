@@ -8795,9 +8795,9 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### play-collection-opens-player-followup: Check every other collection play button opens the player
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Follow-up to play-collection-opens-player. Only the library playlist panel's two play buttons were changed. Find every other play button for an album, artist or podcast (library cards, artist pages, search results, queue) and make sure each brings up the player. Single-track plays stay in the current window.
 - **Touches:** library cards, artist/podcast/album play handlers.
-- **Branch:** 
-- **Notes:** Added after the first lane's report.
+- **Branch:** agent/play-collection-followup
+- **Notes:** Audited every play control; no code change was needed. Collection play buttons (all go through playPlaylistNow, which calls setView('player'); NP live goes via npTuneIn, which also does): library card hover play (.row-play) in the playlist, album, artist and podcast grids; library panel Play button (#libplPlayBtn); panel art play (#libplArtPlayBtn). Artist info page hides its play buttons (CSS), so nothing to wire. Single-track plays stay in the current window by design: search result track rows and panel track rows (playLibraryTrackInline), play-nudge starter, queue rows. Context-menu "Add to queue" and "Play next" are queue actions, not play buttons.
