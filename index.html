@@ -11649,6 +11649,7 @@ function setFbMode(vibe){
 function openFeedbackModal(){
   setFbMode(null);
   setFbStatus('');
+  if (!fbContact.value.trim() && !lsGet(LS_PROFILE_SIGNED_OUT, false)) fbContact.value = lsGet(LS_PROFILE_EMAIL, '') || '';
   dangerScrim.classList.add('is-open');
   feedbackModal.classList.add('is-open');
   setTimeout(() => fbMessage.focus(), 50);

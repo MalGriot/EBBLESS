@@ -8755,12 +8755,12 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Delegated mouseover handler (desktop only, hover:hover + pointer:fine) appends the key to the button title, e.g. "Shuffle (K)"; map KB_HINTS sits above the mini-player listeners and mirrors the Settings list.
 
 ### feedback-prefill-email: Feedback form pre-fills the user's email
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Mal's feedback (mobile, 2026-10-09). When sending feedback, autoload the user's email address.
 - **Touches:** feedback form contact field, stored sign-in email.
-- **Branch:** 
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
+- **Branch:** agent/feedback-email
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). openFeedbackModal() now fills fbContact from the stored profile email (LS_PROFILE_EMAIL) when the field is empty and the user is not signed out; still editable.
 
 ### artist-links-all-sources: Add artists from SoundCloud, Apple Music and YouTube Music links, and load SoundCloud discographies
 - **Status:** ready
