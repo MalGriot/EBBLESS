@@ -8699,7 +8699,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #340 (idea).
 
 ### tutorial-controls-block-loadbar: Tutorial: Next button and first captions cover the load bar
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Mal's feedback (desktop, 2026-10-09). Since the load bar moved, the tutorial Next button and the first couple of captions sit on top of it. Move them clear of it.
 - **Touches:** tutorial overlay, caption/Next positioning vs load bar.
@@ -8707,7 +8707,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Fix: at 860px+ the tutorial pager (Next) moved from top center, where the load bar now sits, to bottom-left beside Skip. Captions already anchor below the load bar. Needs a desktop visual check.
 
 ### install-bar-covers-playlist-search: Install bar covers the playlist search bar on desktop
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Mal's feedback (desktop, 2026-10-09). The install CTA bar covers the playlist search bar.
 - **Touches:** install CTA bar, playlist search bar layout.
@@ -8723,7 +8723,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### no-black-screen-search-relink: Searching and fixing links stay in the main UI, no black screen
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Mal's feedback (desktop, 2026-10-09). Searching new songs/playlists and fixing links should not go to a black screen. They should happen inside the main UI; never leave it.
 - **Touches:** search flow, relink flow, full-screen overlays.
