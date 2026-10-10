@@ -8612,9 +8612,49 @@ Add entries in this shape:
   Decisions for you: whether podcasts should ever broadcast (currently the owner goes off air while a podcast plays); where ON AIR sits in the library (right after Liked Songs now).
 
 ### podcasts-muted: Podcasts play muted
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub issue #333. Podcasts are muted when played. Reproduce on the podcast source(s) and fix so audio plays at the normal volume.
 - **Touches:** podcast playback / player mute-volume handling.
 - **Branch:** 
 - **Notes:** Synced from Geethub issue #333 (bug). Title only; platform and podcast source unknown. Possibly related to the YouTube ad-onset / iPhone silent-ad handling, check before assuming.
+
+### settings-back-button: Back button in Settings
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #338. Add a back button inside the Settings screen. Title only; no detail given.
+- **Touches:** Settings screen header/navigation.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #338 (idea). Not a duplicate of back-button-to-player (that one is about the OS/browser back gesture).
+
+### miniplayer-art-lp-cassette: Mini-player LP does not rotate and cassette needs more detail
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #337. In the mini-player art styles, the LP is not rotating, it slides down-right on a loop. The cassette needs the same level of detail as the main player's cassette.
+- **Touches:** mini-player art styles (record, cassette), related to the #330/#331 mini-player art work.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #337 (bug). Follows the merged miniplayer art style work (#330, #331).
+
+### periodyssius-to-youtube-playlist: Replace Periodyssius album with its YouTube playlist, for everyone
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #336. Replace the Periodyssius album with the YouTube playlist https://youtube.com/playlist?list=PLr_svG2XXWi65vG3mg_tpZ2QoDRtBs5cd (still classified as an album), and make the change apply for every user.
+- **Touches:** built-in/shared album content, global (all users) content delivery.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #336 (bug). Needs a decision on how "for everyone" is delivered (same mechanism as the all-users artist page/podcast loads, #323/#324).
+
+### remove-mal-griot-vo-podcast: Remove the MAL GRIOT VO podcast from everyone's feed
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #335. Remove the MAL GRIOT VO podcast from every user's feed. Title only; no detail given.
+- **Touches:** podcast feed / all-users podcast load.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #335 (bug). Likely reverses part of #324 (load a podcast for all users, merged, waiting for deployment). Confirm which podcast that was before acting.
+
+### loading-progress-bar: Song progress bar acts as a loading bar while loading
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #334. While a song is loading, the progress bar should show as a loading bar and not be clickable or draggable.
+- **Touches:** player seek bar, track-load state.
+- **Branch:** 
+- **Notes:** Synced from Geethub issue #334 (idea). Related: autoadvance-stall-full-progress (bar held at 0 until ad check passes).
