@@ -654,6 +654,8 @@ select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 #crossfadeDurRow{transition:opacity var(--dur-ui) var(--ease-out)}
 #import-overlay .close{position:absolute;top:14px;right:20px;width:34px;height:34px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint)}
+/* fullscreen-btn-on-link-select: the relink/import view replaces the player, so its fullscreen button goes too */
+body:has(#import-overlay.is-open) #fsBtn{display:none}
 #import-overlay .close:hover{background:var(--panel-2);color:var(--text)}
 #import-overlay .close svg{width:16px;height:16px}
 

@@ -8805,11 +8805,11 @@ Add entries in this shape:
 - **Notes:** Audited every play control; no code change was needed. Collection play buttons (all go through playPlaylistNow, which calls setView('player'); NP live goes via npTuneIn, which also does): library card hover play (.row-play) in the playlist, album, artist and podcast grids; library panel Play button (#libplPlayBtn); panel art play (#libplArtPlayBtn). Artist info page hides its play buttons (CSS), so nothing to wire. Single-track plays stay in the current window by design: search result track rows and panel track rows (playLibraryTrackInline), play-nudge starter, queue rows. Context-menu "Add to queue" and "Play next" are queue actions, not play buttons.
 
 ### fullscreen-btn-on-link-select: Fullscreen button still visible when player flips to link selection
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #344. When the player turns to the link selection (relink) view, the fullscreen button is still visible and should be hidden.
 - **Touches:** player link-selection view, fullscreen button.
-- **Branch:** 
+- **Branch:** agent/desktop-ui-bugs
 - **Notes:** Synced from Geethub issue #344 (bug). Title only.
 
 ### like-popup-covers-play: "Like this song" popup covers the play button on desktop
