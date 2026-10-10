@@ -19179,8 +19179,8 @@ const MINI_PLAYER_STYLE = `
   #mpArtWrap:not([data-art-style="default"]) #mpArt,#mpArtWrap:not([data-art-style="default"]) .mp-art-ghost{display:none}
   #mpArtWrap[data-art-style="record"] #mpRecord,#mpArtWrap[data-art-style="cassette"] #mpTape{display:block}
   /* centred with margins, not translate: the spin keyframe sets transform, which replaced the translate and made the LP slide off-centre (#337) */
-  #mpRecord{width:min(100cqw,100cqh);aspect-ratio:1;border-radius:50%;box-shadow:0 8px 20px -6px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.55);
-    background:repeating-radial-gradient(circle at center,#161616 0 2px,#0c0c0c 2px 4px);margin:calc(min(100cqw,100cqh) / -2) 0 0 calc(min(100cqw,100cqh) / -2);transform:none;animation:mpSpin 3.6s linear infinite paused}
+  #mpRecord{width:min(100cqw,100cqh);aspect-ratio:1;border-radius:50%;box-shadow:0 8px 20px -6px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.32);
+    background:conic-gradient(from 20deg,rgba(255,255,255,.16),rgba(255,255,255,0) 18%,rgba(255,255,255,0) 50%,rgba(255,255,255,.16) 68%,rgba(255,255,255,0) 86%,rgba(255,255,255,.16)),repeating-radial-gradient(circle at center,#2a2a2a 0 2px,#161616 2px 4px);margin:calc(min(100cqw,100cqh) / -2) 0 0 calc(min(100cqw,100cqh) / -2);transform:none;animation:mpSpin 3.6s linear infinite paused}
   body.mp-playing #mpRecord{animation-play-state:running}
   #mpRecord::before{content:"";position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
     background:var(--mp-art) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c}
