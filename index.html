@@ -457,6 +457,14 @@ body.onb-active .paste-guide{display:none}
 .lib-card .name .new-dot{display:inline-block;width:6px;height:6px;margin-left:6px;margin-bottom:1px;border-radius:50%;
   background:var(--faint);vertical-align:middle}
 .lib-card .name .new-dot.is-active{background:var(--accent);animation:new-dot-blink 1.4s ease-in-out infinite}
+/* ON AIR: player pill + card line */
+.np-pill{display:block;margin:6px auto 0;border:1px solid var(--border-2);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--text)}
+.np-pill[hidden]{display:none}
+.np-pill.is-live{border-color:var(--accent);color:var(--accent)}
+.np-pill.is-live::before{content:'';display:inline-block;width:6px;height:6px;margin-right:7px;border-radius:50%;background:var(--accent);vertical-align:middle;animation:new-dot-blink 1.4s ease-in-out infinite}
+.np-pill.is-behind{background:var(--accent);color:#000;border-color:var(--accent)}
+.np-pill.is-off{color:var(--faint);opacity:.8}
+.lib-card .lib-desc.np-onair{color:var(--accent);opacity:1;font-weight:600}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
 .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
 @keyframes current-label-cycle{
@@ -3389,6 +3397,7 @@ body.week-up-on{overflow:hidden}
           </div>
         </div>
 
+        <button type="button" class="np-pill" id="npLivePill" hidden></button>
         <div class="transport-full">
           <div class="seek-row">
             <span class="t tnum" id="timeCur">0:00</span>
@@ -4734,6 +4743,8 @@ const LIKED_ID = 'liked';                    // fixed id for the built-in Liked 
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
 const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiRrrLL daily blend of the library
 const BLEND_NAME = 'SwiiiRrrLL';
+const NP_ID = 'nowplaying';                  // fixed id for the built-in live "what MAL GRIOT is playing" playlist
+const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
 const BLEND_THUMB_SRC = 'brand/assets/swirl-thumb.mp4';  // SwiiiRrrLL's looping library tile
 let blendThumbFailed = false;                // clip missing/unplayable - use the track collage instead
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
@@ -4854,7 +4865,7 @@ let profileMetaMemo = null;
 // and never send it, so it rides along in the same v2 record.
 const PROFILE_SCHEMA = 2;
 const PROFILE_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // a device offline longer than this may resurrect a removal
-const PROFILE_REGENERATED_IDS = ['swell', 'blend']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
+const PROFILE_REGENERATED_IDS = ['swell', 'blend', 'nowplaying']; // rebuilt wholesale on every device - whole-blob LWW, no per-track merge
 const PROFILE_NOW_TTL_MS = 24 * 60 * 60 * 1000; // a session this much older than the newest one is dropped
 const PROFILE_NOW_MAX_DEVICES = 8;              // newest sessions kept; older devices age out
 const PROFILE_NOW_MAX_QUEUE = 100;              // queue entries per session
@@ -5349,7 +5360,7 @@ async function syncProfileNow(opts){
 // `profile`: fall back to the old behavior (restore only into a wiped
 // library, then back the library up) rather than doing nothing.
 async function legacyProfileSync(){
-  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+  const hasRealLibrary = getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
   const post = (path, extra) => fetch(BACKEND + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -5997,7 +6008,7 @@ function sortLibraryIds(ids, mode){
 }
 function orderedLibraryIds(){
   const lib = getLibrary();
-  const ids = lib.filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+  const ids = lib.filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
   const pinned = getPinnedLibrary().filter(id => ids.includes(id));
   const rest = ids.filter(id => !pinned.includes(id));
   const sortMode = getLibrarySort();
@@ -6006,7 +6017,8 @@ function orderedLibraryIds(){
   // anything the listener chose to pin themselves, Swell first since it's
   // the thing most worth surfacing today.
   // SwiiiRrrLL rides right behind it.
-  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(ordered) : ordered;
+  const withNp = lib.includes(NP_ID) ? [NP_ID].concat(ordered) : ordered;   // the owner's live feed sits right after Liked Songs
+  const withLiked = lib.includes(LIKED_ID) ? [LIKED_ID].concat(withNp) : withNp;
   const withBlend = lib.includes(BLEND_ID) ? [BLEND_ID].concat(withLiked) : withLiked;
   return lib.includes(SWELL_ID) ? [SWELL_ID].concat(withBlend) : withBlend;
 }
@@ -7527,7 +7539,7 @@ function renderLibrary(){
     if (isAlbum) albumCount++;
     if (isPodcast) podcastCount++;
     const isLiked = id === LIKED_ID;
-    const isSystemPl = isLiked || id === SWELL_ID || id === BLEND_ID;
+    const isSystemPl = isLiked || id === SWELL_ID || id === BLEND_ID || id === NP_ID;
     const pinned = isPinned(id);
     const withArt = pl.tracks.filter(t => t.videoId).slice(0, 4);
     const card = document.createElement('div');
@@ -7618,7 +7630,7 @@ function renderLibrary(){
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
-    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID){
+    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       const menuBtn = document.createElement('button');
       menuBtn.className = 'menu-btn'; menuBtn.setAttribute('aria-label','Playlist options'); menuBtn.setAttribute('aria-haspopup','true'); menuBtn.setAttribute('aria-expanded','false');
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -7641,10 +7653,10 @@ function renderLibrary(){
     marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '');
     marqueeEl.dataset.text = pl.name;
     titleOverlay.appendChild(marqueeEl);
-    if (id === SWELL_ID){
+    if (id === SWELL_ID || (id === NP_ID && npFeed.onAir)){
       const dot = document.createElement('span');
-      dot.className = 'new-dot' + (swellHasUnseenDrop() ? ' is-active' : '');
-      dot.setAttribute('aria-label', swellHasUnseenDrop() ? 'New music' : '');
+      dot.className = 'new-dot' + (id === NP_ID || swellHasUnseenDrop() ? ' is-active' : '');
+      dot.setAttribute('aria-label', id === NP_ID ? 'On air' : swellHasUnseenDrop() ? 'New music' : '');
       name.appendChild(dot);
       const overlayDot = dot.cloneNode(true);
       titleOverlay.appendChild(overlayDot);
@@ -7657,6 +7669,12 @@ function renderLibrary(){
     // the two generated mixes keep their branded names; say plainly what
     // they are, and what fills them when they're still empty
     let desc = null;
+    if (id === NP_ID){
+      desc = document.createElement('div'); desc.className = 'count lib-desc';
+      desc.textContent = npFeed.onAir ? 'LIVE now: ' + (npFeed.current.t || '') : 'Off air';
+      if (npFeed.onAir) desc.classList.add('np-onair');
+      if (!pl.tracks.length) count.textContent = 'Nothing yet. Check back soon.';
+    }
     if (id === SWELL_ID || id === BLEND_ID){
       desc = document.createElement('div'); desc.className = 'count lib-desc';
       desc.textContent = id === SWELL_ID ? 'Daily picks for you' : 'A mix of your library';
@@ -7696,8 +7714,8 @@ function renderLibrary(){
     }
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
-    card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));
-    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID){
+    card.addEventListener('click', () => { if (id === NP_ID && npFeed.onAir && !npTuned) npTuneIn(); else toggleLibraryPlaylistPanel(id); });
+    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       attachLongPress(card, () => {
         const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
@@ -7805,6 +7823,7 @@ function toggleLibraryPlaylistPanel(id){
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
 
+  if (id === NP_ID) refreshNowPlaying();
   if (id === SWELL_ID){
     recordLastOpened(id);
     const dot = libraryGrid.querySelector('[data-pl-id="' + SWELL_ID + '"] .new-dot');
@@ -7846,6 +7865,12 @@ function toggleLibraryPlaylistPanel(id){
       line.innerHTML = '<b>' + streak + ' days</b> in a row with a new like';
       libplBody.appendChild(line);
     }
+  }
+  if (id === NP_ID){
+    const bar = document.createElement('div');
+    bar.className = 'currents-hint';
+    bar.textContent = npFeed.onAir ? 'ON AIR now. Tap the first song to tune in, or any song to rewind.' : 'Off air right now. These are the latest songs.';
+    libplBody.appendChild(bar);
   }
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
@@ -8314,6 +8339,10 @@ function openLibCtxMenu(id, btn){
     { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding new picks...' : currentsRerollsLeft() ? 'New picks' : 'No more new picks today', icon: CTX_ICON_REFRESH, off: !currentsRerollsLeft() },
   ] : id === BLEND_ID ? [
     { action: 'blend-reshuffle', label: 'New picks', icon: CTX_ICON_REFRESH },
+  ] : id === NP_ID ? [
+    { action: 'np-tune', label: npFeed.onAir ? (npTuned ? 'Back to live' : 'Tune in') : 'Off air', icon: CTX_ICON_REFRESH, off: !npFeed.onAir },
+    { action: 'np-open', label: 'Show songs', icon: CTX_ICON_ADD_QUEUE },
+    { action: 'np-refresh', label: 'Refresh now', icon: CTX_ICON_REFRESH },
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
@@ -8321,10 +8350,10 @@ function openLibCtxMenu(id, btn){
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
-  if (id !== SWELL_ID && id !== BLEND_ID && canToggleAlbum(pl)){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && canToggleAlbum(pl)){
     items.push({ action: 'albumtoggle', label: isAlbumEntry(pl) ? 'Show under Playlists' : 'Show under Albums', icon: CTX_ICON_ALBUM });
   }
-  if (id !== SWELL_ID && id !== BLEND_ID && link){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
     items.push({ action: 'copylink', label: 'Copy link', icon: CTX_ICON_LINK });
   }
@@ -8333,13 +8362,13 @@ function openLibCtxMenu(id, btn){
   // re-resolve against - only offer this for playlists that came from an
   // actual link. Grouped with "Use a different link": both are the plain
   // "songs won't play" fixes.
-  if (pl.type !== 'custom' && id !== BLEND_ID){
+  if (pl.type !== 'custom' && id !== BLEND_ID && id !== NP_ID){
     items.push({ action: 'relinkall', label: 'Fix songs that won\'t play', icon: CTX_ICON_REFRESH });
   }
-  if (id !== SWELL_ID && id !== BLEND_ID && link){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'replacelink', label: 'Use a different link', icon: CTX_ICON_REPLACE });
   }
-  if (id !== SWELL_ID && id !== BLEND_ID){
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID){
     items.push({ sep: true });
     items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
   }
@@ -8504,8 +8533,8 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     items.push({ action: 'wrongsong', label: flagged ? 'Pick the right version' : 'This isn\'t the right song', icon: CTX_ICON_FLAG });
   }
   items.push({ action: 'refresh', label: 'Fix this song', icon: CTX_ICON_REFRESH });
-  if (t) items.push({ action: 'art', label: 'Change art', icon: CTX_ICON_ART });
-  if (t && !(opts && opts.inQueue)){
+  if (t && plId !== NP_ID) items.push({ action: 'art', label: 'Change art', icon: CTX_ICON_ART });
+  if (t && plId !== NP_ID && !(opts && opts.inQueue)){
     items.push({ sep: true });
     items.push({ action: 'remove', label: 'Remove from playlist', icon: CTX_ICON_DELETE, danger: true });
   }
@@ -8576,6 +8605,9 @@ window.addEventListener('scroll', () => { if (openTrackCtxMenu) closeTrackCtxMen
 
 function handleLibCtxAction(action, id){
   if (action === 'blend-reshuffle'){ refreshBlend({ reshuffle: true }); return; }
+  if (action === 'np-refresh'){ refreshNowPlaying(true); return; }
+  if (action === 'np-tune'){ npTuneIn(); return; }
+  if (action === 'np-open'){ toggleLibraryPlaylistPanel(NP_ID); return; }
   if (action === 'currents-more'){ refreshCurrents('more'); return; }
   if (action === 'currents-reset'){ resetCurrentsDay(); return; }
   const pl = getCachedPlaylist(id);
@@ -9228,8 +9260,214 @@ function ensureSwellPlaylist(){
   saveToLibrary(SWELL_ID);
 }
 
+/* =========================================================================
+   ON AIR - the owner's live broadcast, as a built-in library playlist.
+   Every user: a read-only playlist (NP_ID, named NOWPLAYING_TITLE) listing
+   the owner's current song first, then recent ones; re-created if missing.
+   Tune in = one tap on it while it says ON AIR: your player joins the same
+   song at the live position and follows the owner song to song. Rewind by
+   stepping Previous through the recent songs or scrubbing back; the player's
+   pill shows LIVE, or BACK TO LIVE (one tap), or OFF AIR. All time maths
+   uses the worker's serverTime plus this page's own elapsed time (never the
+   device clock). Listeners publish nothing.
+   Owner: the existing Sign in with Google. While signed in, this app posts
+   state changes (not a heartbeat) of what it plays to BACKEND/nowplaying with the Google ID token; the worker
+   verifies it and accepts only OWNER_EMAIL (403 for anyone else, after which
+   this page stops trying). No secret or email lives in this file.
+   Worker side: worker/src/nowplaying.js.
+   ========================================================================= */
+const NP_POLL_MS = 15000, NP_POLL_TUNED_MS = 5000, NP_LIVE_SLACK_S = 6;
+let npBusy = false, npTuned = false, npFollow = false, npRejoinAt = 0, npForbiddenToken = null, npLastSent = null, npPubTimer = 0;
+let npFeed = { onAir: false, current: null, recent: [], recvAt: 0 };
+function npLivePos(){
+  const c = npFeed.current;
+  if (!c) return 0;
+  return c.pos + (c.playing ? (performance.now() - npFeed.recvAt) / 1000 : 0);
+}
+// what this device is playing right now: { v, pos } or null
+function npLocal(){
+  const entry = state.queue[state.queuePos], t = entry && trackAt(state.queuePos), ad = activeDeck();
+  if (!t || !ad || !ad.player || !ad.player.getCurrentTime) return null;
+  return { v: t.videoId, pos: +ad.player.getCurrentTime() || 0, entry, t };
+}
+function npIsLive(){
+  const l = npLocal();
+  return !!(npTuned && npFeed.onAir && l && l.entry.plId === NP_ID && npFeed.current && l.v === npFeed.current.v && Math.abs(l.pos - npLivePos()) <= NP_LIVE_SLACK_S);
+}
+
+/* ---- owner: publish what this app plays (signed-in owner only) ----
+   Event-only, to keep the worker's KV writes near one per song: song start,
+   pause, resume, stop/podcast, a settled seek (5s after the last jump), and
+   one best-effort "off air" on pagehide. No heartbeat: the worker derives the
+   position from its own clock and expires the broadcast at the song's end
+   (we send the duration). A post identical to the last one is dropped. */
+function npCanPublish(){
+  if (!profileTokenUsable() || npForbiddenToken === profileIdToken) return false;
+  const e = state.queue[state.queuePos];
+  return !npTuned && !(e && e.plId === NP_ID);   // a listener never publishes
+}
+function npSchedulePublish(ms){
+  if (!profileIdToken) return;
+  clearTimeout(npPubTimer);
+  npPubTimer = setTimeout(npPublishNow, ms == null ? 500 : ms);
+}
+// what we'd say right now, or null (nothing to say / nothing was ever broadcast)
+function npSnapshot(forceOff){
+  const l = npLocal(), isPlaying = artworkWrap.classList.contains('is-playing') && !forceOff;
+  let t = l && l.t, pos = l ? l.pos : 0, playing = isPlaying;
+  if (!t || !t.videoId || isPodcastTrack(t)){ if (!npLastSent) return null; t = npLastSent.t; pos = npLastSent.pos; playing = false; }   // podcast or nothing: off air
+  if (!playing && !npLastSent) return null;   // never broadcast a paused song nobody has heard from us
+  const ad = activeDeck(), dur = ad && ad.player && ad.player.getDuration ? Math.round(+ad.player.getDuration() || 0) : 0;
+  return { t, v: t.videoId, pos: Math.max(0, Math.round(pos * 10) / 10), dur: l && l.t === t ? dur : (npLastSent ? npLastSent.dur : 0), playing };
+}
+// where the worker believes the song is now, from what we last told it
+function npPredicted(){ return npLastSent.playing ? npLastSent.pos + (performance.now() - npLastSent.at) / 1000 : npLastSent.pos; }
+function npPost(snap, keepalive){
+  const tok = profileIdToken;
+  npLastSent = { t: snap.t, v: snap.v, pos: snap.pos, dur: snap.dur, playing: snap.playing, at: performance.now() };
+  fetch(BACKEND + '/nowplaying', { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+    body: JSON.stringify({ v: snap.v, t: snap.t.title || '', a: snap.t.artist || '', pos: snap.pos, dur: snap.dur, playing: snap.playing }) })
+    .then(r => { if (r.status === 403) npForbiddenToken = tok; }).catch(() => {});
+}
+function npPublishNow(){
+  if (!npCanPublish()) return;
+  const snap = npSnapshot();
+  if (!snap) return;
+  const L = npLastSent;
+  // identical to what the worker already has: say nothing
+  if (L && L.v === snap.v && L.playing === snap.playing && Math.abs(snap.dur - L.dur) <= 1 && Math.abs(snap.pos - npPredicted()) <= 2) return;
+  npSeekSince = 0; npSeekDiff = null;
+  npPost(snap);
+}
+// A seek is a jump of the real position away from where the worker predicts.
+// Poll cheaply while broadcasting; post once the position has stopped jumping
+// for ~5s, and notice a song change the other hooks missed (auto-advance).
+let npSeekSince = 0, npSeekDiff = null, npMismatchSince = 0;
+setInterval(() => {
+  if (!npLastSent || !npLastSent.playing || !npCanPublish() || !artworkWrap.classList.contains('is-playing')) { npSeekSince = 0; npSeekDiff = null; npMismatchSince = 0; return; }
+  const l = npLocal();
+  if (!l) return;
+  if (l.v !== npLastSent.v){ npMismatchSince = npMismatchSince || Date.now(); if (Date.now() - npMismatchSince > 4000){ npMismatchSince = 0; npPublishNow(); } return; }
+  npMismatchSince = 0;
+  const diff = l.pos - npPredicted();
+  if (Math.abs(diff) <= 3){ npSeekSince = 0; npSeekDiff = null; return; }
+  if (npSeekDiff === null || Math.abs(diff - npSeekDiff) > 1.5){ npSeekDiff = diff; npSeekSince = Date.now(); return; }
+  if (Date.now() - npSeekSince >= 5000) npPublishNow();
+}, 1000);
+// closing the app: one best-effort "off air" (keepalive); if it never lands,
+// the worker's duration-based expiry ends the broadcast at the song's end
+window.addEventListener('pagehide', () => {
+  if (!npLastSent || !npLastSent.playing || !npCanPublish()) return;
+  const snap = npSnapshot(true);
+  if (snap) npPost(snap, true);
+});
+
+/* ---- everyone: the playlist + tuning in ---- */
+function ensureNowPlayingPlaylist(){
+  const existing = getCachedPlaylist(NP_ID);
+  if (existing){
+    if (existing.name !== NOWPLAYING_TITLE){ existing.name = NOWPLAYING_TITLE; lsSet(LS_PL(NP_ID), existing); }
+    if (!getLibrary().includes(NP_ID)) saveToLibrary(NP_ID);
+    return;
+  }
+  lsSet(LS_PL(NP_ID), { id: NP_ID, type: 'custom', name: NOWPLAYING_TITLE, image: null, tracks: [], ts: Date.now() });
+  saveToLibrary(NP_ID);
+}
+// Pull the feed, swap the playlist's tracks (current first, then recent),
+// then run the follow logic. Existing track objects are reused per song;
+// songs still in the play queue are kept so queue indexes survive reordering.
+async function refreshNowPlaying(manual){
+  if (npBusy) return;
+  npBusy = true;
+  try {
+    const d = await (await fetch(BACKEND + '/nowplaying')).json();
+    const prev = npFeed;
+    const prevExpected = prev.current ? npLivePos() : 0;
+    npFeed = { onAir: !!(d && d.onAir && d.current), current: d && d.current || null, recent: (d && d.recent) || [], recvAt: performance.now() };
+    const feed = [npFeed.current].concat(npFeed.recent).filter(x => x && x.v && x.t);
+    ensureNowPlayingPlaylist();
+    const pl = getCachedPlaylist(NP_ID);
+    if (!pl) return;
+    const old = pl.tracks || [];
+    const byId = new Map(old.map(t => [t.videoId, t]));
+    let tracks = feed.map(x => byId.get(x.v) || { title: x.t, artist: x.a || '', videoId: x.v, matchedTitle: x.t, channel: x.a || '', plays: 0, art: null, duration: 0 });
+    const queued = new Set(state.queue.filter(e => e.plId === NP_ID).map(e => old[e.idx] && old[e.idx].videoId));
+    old.forEach(t => { if (queued.has(t.videoId) && !tracks.includes(t)) tracks.push(t); });
+    const same = tracks.length === old.length && tracks.every((t, i) => t.videoId === old[i].videoId);
+    if (!same){
+      const newIdx = new Map(tracks.map((t, i) => [t.videoId, i]));
+      state.queue = state.queue.map(e => e.plId === NP_ID && old[e.idx] ? Object.assign({}, e, { idx: newIdx.get(old[e.idx].videoId) }) : e);
+      pl.tracks = tracks;
+      lsSet(LS_PL(NP_ID), pl);
+      if (state.playlist && state.playlist.id === NP_ID) state.playlist = pl;
+      if (state.queue.some(e => e.plId === NP_ID)){ renderQueuePanel(); persistResume(); }
+    } else if (manual) showToast('Already up to date');
+    const cardChanged = !same || prev.onAir !== npFeed.onAir || (prev.current && prev.current.v) !== (npFeed.current && npFeed.current.v);
+    if (cardChanged){ if (openLibraryPanelId === NP_ID) rerenderLibraryKeepPanel(); else renderLibrary(); }
+    npFollowTick(prev, prevExpected);
+  } catch(e){ if (manual) showToast("Couldn't load right now."); }
+  finally { npBusy = false; npSyncPill(); }
+}
+// Tuned in: keep following the owner (new song, owner seek/resume) while
+// still live; once the listener deviates (rewind) leave them be and offer
+// BACK TO LIVE. A new live song is appended to a rewound listener's queue.
+function npFollowTick(prev, prevExpected){
+  if (!npTuned){ return; }
+  const c = npFeed.current;
+  if (!npFeed.onAir || !c) return;
+  if (Date.now() - npRejoinAt < 12000) return;
+  const consistent = prev.onAir && prev.current && prev.current.v === c.v && Math.abs(npLivePos() - prevExpected) < 3;
+  if (npFollow && !npIsLive()){
+    if (consistent) npFollow = false;   // the listener moved, not the owner
+    else npRejoin();
+  } else if (!npFollow){
+    const pl = getCachedPlaylist(NP_ID);
+    const inQueue = state.queue.some(e => e.plId === NP_ID && pl && pl.tracks[e.idx] && pl.tracks[e.idx].videoId === c.v);
+    if (!inQueue){ state.queue.push({ plId: NP_ID, idx: 0 }); renderQueuePanel(); }
+  }
+}
+// Build the queue oldest-first so Previous steps back through the recent
+// songs and Next walks forward to live; the live song is last (idx 0).
+function npRejoin(){
+  const pl = getCachedPlaylist(NP_ID);
+  if (!pl || !npFeed.current || !pl.tracks.length) return;
+  npRejoinAt = Date.now();
+  npTuned = true; npFollow = true;
+  loadPlaylistIntoPlayer(pl);
+  const n = pl.tracks.length;
+  state.queue = Array.from({ length: n }, (_, k) => ({ plId: NP_ID, idx: n - 1 - k }));
+  state.queuePos = n - 1;
+  renderQueuePanel();
+  // read at seek time (after the load/ad wait), so the join lands on the live spot
+  pendingResume = { plId: NP_ID, idx: 0, get position(){ return Math.max(0, npLivePos()); } };
+  loadIndex(state.queuePos, true);
+  npSyncPill();
+}
+async function npTuneIn(){
+  await refreshNowPlaying();
+  if (!npFeed.onAir || !npFeed.current){ showToast('Off air right now'); return; }
+  setView('player');
+  npRejoin();
+}
+function npBackToLive(){ if (npFeed.onAir) npRejoin(); else showToast('Off air right now'); }
+const npPill = $('npLivePill');
+function npSyncPill(){
+  const e = state.queue[state.queuePos];
+  if (npTuned && !(e && e.plId === NP_ID)){ npTuned = false; npFollow = false; }
+  if (!npTuned){ npPill.hidden = true; return; }
+  npPill.hidden = false;
+  const live = npIsLive();
+  npPill.className = 'np-pill ' + (live ? 'is-live' : npFeed.onAir ? 'is-behind' : 'is-off');
+  npPill.textContent = live ? 'LIVE' : npFeed.onAir ? 'BACK TO LIVE' : 'OFF AIR';
+  npPill.disabled = live || !npFeed.onAir;
+}
+npPill.addEventListener('click', npBackToLive);
+setInterval(npSyncPill, 1000);
+setInterval(() => { if (!document.hidden) refreshNowPlaying(); }, NP_POLL_MS);
+setInterval(() => { if (!document.hidden && npTuned) refreshNowPlaying(); }, NP_POLL_TUNED_MS);
+
 // Podcasts never get Discover's similar-songs continuation.
-function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && lsGet(LS_DISCOVER(id), true); }
+function isDiscoverOn(id){ return !isPodcastPlaylistId(id) && id !== NP_ID && lsGet(LS_DISCOVER(id), true); }
 function setDiscoverOn(id, on){ lsSet(LS_DISCOVER(id), !!on); }
 
 function isTrackLiked(videoId){
@@ -9665,6 +9903,7 @@ function openAddLinksFlow(playlistId){
    top immediately, unlike openPlaylist which only auto-starts when nothing
    else is queued */
 function playPlaylistNow(id){
+  if (id === NP_ID && npFeed.onAir){ npTuneIn(); return; }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
   if (id === SWELL_ID){
@@ -10855,7 +11094,7 @@ async function seedDefaultSpotifyContent(){
 const LS_PASTE_GUIDE_DISMISSED = 'ebbless:pasteGuideDismissed';
 const pasteGuideEl = $('pasteGuide');
 function hasOwnPlaylists(){
-  const skip = new Set([LIKED_ID, SWELL_ID, BLEND_ID].concat(starterLibraryIds()));
+  const skip = new Set([LIKED_ID, SWELL_ID, BLEND_ID, NP_ID].concat(starterLibraryIds()));
   return getLibrary().some(id => !skip.has(id));
 }
 function pasteBarVisible(){
@@ -11047,7 +11286,7 @@ function personalPasteHints(){
     const liked = getCachedPlaylist(LIKED_ID);
     (liked ? liked.tracks : []).forEach(t => known.add(primaryArtistKey(t && t.artist)));
     getLibrary().forEach(id => {
-      if (id === SWELL_ID || id === BLEND_ID || id === LIKED_ID) return;
+      if (id === SWELL_ID || id === BLEND_ID || id === LIKED_ID || id === NP_ID) return;
       const pl = getCachedPlaylist(id);
       (pl && Array.isArray(pl.tracks) ? pl.tracks : []).forEach(t => known.add(primaryArtistKey(t && t.artist)));
     });
@@ -11535,6 +11774,7 @@ creditsModal.addEventListener('keydown', (e) => {
   e.stopPropagation();
 });
 feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.preventDefault(); closeFeedbackModal(); } });
+
 
 // What's new (Settings > App). `version` matches the number in sw.js
 // CACHE_VERSION ('ebbless-shell-v60' -> 60). When a deploy bumps
@@ -13735,7 +13975,7 @@ function tasteProfile(){
   // The same track saved to more than one playlist was chosen again.
   const saved = new Map();
   getLibrary().forEach(id => {
-    if (id === LIKED_ID || id === SWELL_ID || id === BLEND_ID || id.startsWith('discover-ext:') || isPodcastPlaylistId(id)) return;
+    if (id === LIKED_ID || id === SWELL_ID || id === BLEND_ID || id === NP_ID || id.startsWith('discover-ext:') || isPodcastPlaylistId(id)) return;
     const pl = getCachedPlaylist(id);
     const seen = new Set();
     if (pl) pl.tracks.forEach(t => {
@@ -14221,7 +14461,7 @@ function currentsSlots(mode, timeCtx, block){
     .map(seed => ({ kind: 'liked', seeds: [seed].concat(currentsShuffled(likedRecent.filter(t => t !== seed)).slice(0, 4)) }));
 
   let plIds = getLibrary()
-    .filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
+    .filter(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
     .map((id, order) => ({ id, order, ts: getLastPlayed(id) || 0 }))
     .sort((a, b) => (b.ts - a.ts) || (a.order - b.order))
     .map(x => x.id);
@@ -14512,7 +14752,7 @@ function ensureBlendPlaylist(){
 }
 function blendSources(){
   return getLibrary()
-    .filter(id => id !== SWELL_ID && id !== BLEND_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
+    .filter(id => id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && !id.startsWith('discover-ext:') && !isPodcastPlaylistId(id))
     .map(id => getCachedPlaylist(id))
     .filter(pl => pl && pl.tracks && pl.tracks.some(t => t && t.videoId));
 }
@@ -15741,6 +15981,7 @@ function setPlayingUI(isPlaying){
   cassetteSetPlaying(isPlaying);
   lyricsSetPlaying(isPlaying);
   updateMiniPlayerUI();
+  npSchedulePublish();
 }
 
 /* the real audio plays inside YouTube's cross-origin iframe, which mobile
@@ -17723,6 +17964,7 @@ function bumpPlayCount(entry){
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordPlayHistory(t);
+  npSchedulePublish(4000);
   if (!isPodcastPlaylistId(entry.plId)) noteTaste(t, 'play');
 }
 // Newest-first rolling log of what actually played, whatever playlist (or
@@ -21748,8 +21990,10 @@ function startApp(){
   try{
     ensureSwellPlaylist();
     ensureBlendPlaylist();
+    ensureNowPlayingPlaylist();
     renderLibrary();
     renderQueuePanel();
+    refreshNowPlaying();
     // Resuming reads back whatever was last saved, which can be stale in ways
     // tryResume itself doesn't anticipate - never let a bad resume take the
     // rest of init down with it (the splash screen would hang forever).
@@ -21811,7 +22055,7 @@ function startApp(){
     /* First-time visitors (nothing saved yet, ignoring the always-present
        Swell/Liked system playlists ensureSwellPlaylist() just created above)
        get a starter library instead of an empty one. */
-    const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID);
+    const firstRun = !getLibrary().some(id => id !== LIKED_ID && id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID);
     (firstRun ? seedStarterLibrary() : Promise.resolve()).then(seedDefaultSpotifyContent).catch(e => console.warn('[ebbless] default content seed failed', e));
     // Artist album fills left unfinished, or never run (#293) - held back
     // past the boot burst above so it doesn't compete with startup.
