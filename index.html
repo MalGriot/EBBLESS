@@ -19085,7 +19085,7 @@ const MP_ICO = {
   reset: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>'
 };
 const MINI_PLAYER_STYLE = `
-  :root{color-scheme:dark;--accent:#e0b26a;--card-h:100vh}
+  :root{color-scheme:dark;--accent:#e0b26a;--player-accent:#e0b26a;--ease-out:cubic-bezier(.16,1,.3,1);--card-h:100vh}
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:#121212;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
@@ -19126,21 +19126,18 @@ const MINI_PLAYER_STYLE = `
   #mpArtWrap[data-art-style="record"],#mpArtWrap[data-art-style="cassette"]{background:transparent;box-shadow:none}
   #mpArtWrap:not([data-art-style="default"]) #mpArt,#mpArtWrap:not([data-art-style="default"]) .mp-art-ghost{display:none}
   #mpArtWrap[data-art-style="record"] #mpRecord,#mpArtWrap[data-art-style="cassette"] #mpTape{display:block}
+  /* centred with margins, not translate: the spin keyframe sets transform, which replaced the translate and made the LP slide off-centre (#337) */
   #mpRecord{width:min(100cqw,100cqh);aspect-ratio:1;border-radius:50%;box-shadow:0 8px 20px -6px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.55);
-    background:repeating-radial-gradient(circle at center,#161616 0 2px,#0c0c0c 2px 4px);animation:mpSpin 3.6s linear infinite paused}
-  body.mp-playing #mpRecord,body.mp-playing .mp-hub{animation-play-state:running}
+    background:repeating-radial-gradient(circle at center,#161616 0 2px,#0c0c0c 2px 4px);margin:calc(min(100cqw,100cqh) / -2) 0 0 calc(min(100cqw,100cqh) / -2);transform:none;animation:mpSpin 3.6s linear infinite paused}
+  body.mp-playing #mpRecord{animation-play-state:running}
   #mpRecord::before{content:"";position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
     background:var(--mp-art) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c}
   #mpRecord::after{content:"";position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#121212}
-  #mpTape{width:min(100cqw,156cqh);aspect-ratio:1.5625;border-radius:5%;background:linear-gradient(#34353a,#1b1c1f);
-    box-shadow:0 8px 20px -6px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.1)}
-  #mpTape::before{content:"";position:absolute;left:8%;right:8%;top:10%;height:48%;border-radius:4%;background:var(--mp-art) center/cover #282828;
-    box-shadow:0 0 0 2px rgba(0,0,0,.45)}
-  .mp-hub{position:absolute;top:30%;width:15%;aspect-ratio:1;margin-top:-7.5%;border-radius:50%;background:#101010;
-    box-shadow:0 0 0 3px rgba(255,255,255,.25);animation:mpSpin 2.4s linear infinite paused}
-  .mp-hub::after{content:"";position:absolute;inset:30%;border:2px dotted #ddd;border-radius:50%}
-  .mp-hub:first-child{left:22%}
-  .mp-hub:last-child{right:22%}
+  #mpTape{width:min(100cqw,156cqh);aspect-ratio:1.5625}
+  #mpTape .cassette-svg{width:100%;height:100%;display:block;overflow:visible;fill:#000}
+  #mpTape .cs-hub{animation:mpSpin 2.4s linear infinite paused}
+  #mpTape #hubR{animation-duration:2s}
+  body.mp-playing #mpTape .cs-hub{animation-play-state:running}
   @keyframes mpSpin{to{transform:rotate(360deg)}}
   #mpTape .mp-hubs{position:absolute;inset:0}
   #mpArtPick{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:2;display:flex;gap:2px;padding:3px;border-radius:999px;
@@ -19152,7 +19149,7 @@ const MINI_PLAYER_STYLE = `
   #mpArtPick button.is-active{color:var(--accent);background:rgba(255,255,255,.1)}
   #mpArtPick svg{width:15px;height:15px}
   body.mp-small #mpArtPick{display:none}
-  @media (prefers-reduced-motion:reduce){#mpRecord,.mp-hub{animation:none}}
+  @media (prefers-reduced-motion:reduce){#mpRecord,#mpTape .cs-hub{animation:none}}
   body:hover #mpArt{transform:scale(1.04)}
   #mpHead{grid-area:head;display:flex;align-items:center;gap:2px;min-width:0}
   #mpLogo{width:18px;height:17px;object-fit:contain;margin-right:auto;opacity:.9}
@@ -19279,6 +19276,22 @@ function setMiniPlayerArt(artEl, art, ms){
   artEl.src = art;
   if (!art) fadeGhosts();
 }
+// #337: the mini cassette is a clone of the main player's cassette SVG, so it has
+// the same detail. The cassette rules (.cs-*, .cassette-svg, .art-cassette[data-state])
+// are copied from the main stylesheet at build time so there is one source of truth.
+function miniCassetteCss(){
+  const want = r => r.selectorText && /\.cs-|\.cassette-svg|\.art-cassette\[|\.art-cassette:not/.test(r.selectorText);
+  const pick = rules => Array.from(rules).map(r => {
+    if (r.type === 4 || r.type === 12){
+      const inner = pick(r.cssRules);
+      return inner ? '@' + (r.type === 4 ? 'media ' + r.conditionText : 'supports ' + r.conditionText) + '{' + inner + '}' : '';
+    }
+    return r.type === 7 && r.name === 'cs-label-pan' ? r.cssText : (want(r) ? r.cssText : '');
+  }).join('');
+  let css = '';
+  try { Array.from(document.styleSheets).forEach(ss => { try { css += pick(ss.cssRules); } catch (e) {} }); } catch (e) {}
+  return css;
+}
 function buildMiniPlayerDOM(win){
   const doc = win.document;
   const brandUrl = (p) => new URL(p, location.href).href;  // PiP doc is about:blank - resolve against the app
@@ -19287,7 +19300,7 @@ function buildMiniPlayerDOM(win){
   icon.rel = 'icon'; icon.href = brandUrl('brand/assets/icons/favicon-32.png');
   doc.head.appendChild(icon);
   const style = doc.createElement('style');
-  style.textContent = MINI_PLAYER_STYLE;
+  style.textContent = MINI_PLAYER_STYLE + miniCassetteCss();
   doc.head.appendChild(style);
   const btn = (id, cls, label, ico) =>
     '<button id="' + id + '" class="' + cls + '" title="' + label + '" aria-label="' + label + '"><svg viewBox="0 0 24 24">' + ico + '</svg></button>';
@@ -19296,7 +19309,7 @@ function buildMiniPlayerDOM(win){
     '<div id="mpEdge" title="Shrink" role="button" aria-label="Shrink"></div>' +
     '<div id="mpCard">' +
       '<div id="mpArtWrap" data-art-style="default"><img id="mpArt" alt="">' +
-        '<div id="mpRecord"></div><div id="mpTape"><div class="mp-hubs"><span class="mp-hub"></span><span class="mp-hub"></span></div></div>' +
+        '<div id="mpRecord"></div><div id="mpTape" class="art-cassette" data-state="idle"></div>' +
         '<div id="mpArtPick" role="group" aria-label="Art style">' +
           btn('mpArtDefault', '', 'Default', MP_ICO.artDefault) + btn('mpArtRecord', '', 'Spinning Record', MP_ICO.artRecord) + btn('mpArtCassette', '', 'Cassette Tape', MP_ICO.artCassette) +
         '</div></div>' +
@@ -19321,6 +19334,11 @@ function buildMiniPlayerDOM(win){
       '</div>' +
     '</div>' +
     '<div id="mpQueue" role="dialog" aria-label="Queue"></div>';
+  const mpTape = doc.getElementById('mpTape'), srcSvg = $('cassetteSvg');
+  if (mpTape && srcSvg){
+    mpTape.appendChild(srcSvg.cloneNode(true));
+    mpTape.querySelectorAll('.cs-mark').forEach(m => { m.setAttribute('href', brandUrl('brand/assets/mark-white.png')); m.removeAttribute('xlink:href'); });
+  }
   // Every control forwards to the main player's own button, so the mini
   // player runs exactly the same handler (and needle sfx, skip signal,
   // like/flag bookkeeping) as a click on the real thing.
@@ -19561,6 +19579,11 @@ function updateMiniPlayerUI(){
       setMiniPlayerArt(artEl, art, lead ? lead.ms : MP_ART_FADE_MS);
       doc.getElementById('mpArtWrap').style.setProperty('--mp-art', art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'none');
       doc.getElementById('mpBg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : '';
+      const csArt = doc.getElementById('cassetteLabelArt');
+      if (csArt){
+        if (art){ csArt.setAttribute('href', art); csArt.classList.add('is-loaded'); }
+        else { csArt.removeAttribute('href'); csArt.classList.remove('is-loaded'); }
+      }
     } else if (lead){
       // a skip crossfade moves currentTrack() first, so the swap may already
       // be waiting on its cover - stretch that pending fade to match
@@ -19574,6 +19597,14 @@ function updateMiniPlayerUI(){
   const isPlaying = artworkWrap.classList.contains('is-playing');
   doc.body.classList.toggle('mp-playing', isPlaying);
   doc.getElementById('mpArtWrap').dataset.artStyle = artStyle;
+  if (artStyle === 'cassette'){
+    // same wound-tape pack radii and tape path as the main cassette (cassetteSetProgress)
+    doc.getElementById('mpTape').dataset.state = isPlaying ? 'playing' : 'paused';
+    [['reelMassL', reelMassL], ['reelLineL', reelLineL], ['reelMassR', reelMassR], ['reelLineR', reelLineR]].forEach(([id, src]) => {
+      const el = doc.getElementById(id); if (el) el.setAttribute('r', src.getAttribute('r'));
+    });
+    const tp = doc.getElementById('csTape'); if (tp) tp.setAttribute('d', csTape.getAttribute('d'));
+  }
   ['Default', 'Record', 'Cassette'].forEach(n => doc.getElementById('mpArt' + n).classList.toggle('is-active', n.toLowerCase() === artStyle));
   playIcoEl.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY;
   // Toggle states mirror the main player's own buttons rather than
