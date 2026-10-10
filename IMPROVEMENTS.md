@@ -8595,7 +8595,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #331 (idea). Pairs with #330. Related: miniplayer-idle-fade. Hovering the mini art shows a small 3-button pill (default/record/cassette) at its bottom; one tap calls the main `setArtStyle` so both players share the setting. Hidden when the mini-player is shrunk; the window-level idle fade is untouched.
 
 ### whats-malcolm-playing: "ON AIR" live playlist for all users
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #332. A playlist that broadcasts to all EBBLESS users what the owner is currently listening to. The issue notes it needs a more on-brand title. Professional name is MAL GRIOT.
 - **Touches:** needs a backend feed (worker), a shared playlist for all users.
