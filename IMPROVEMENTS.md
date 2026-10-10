@@ -8631,12 +8631,15 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #338 (idea). Not a duplicate of back-button-to-player (that one is about the OS/browser back gesture).
 
 ### miniplayer-art-lp-cassette: Mini-player LP does not rotate and cassette needs more detail
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #337. In the mini-player art styles, the LP is not rotating, it slides down-right on a loop. The cassette needs the same level of detail as the main player's cassette.
 - **Touches:** mini-player art styles (record, cassette), related to the #330/#331 mini-player art work.
-- **Branch:** 
+- **Branch:** agent/miniplayer-lp-cassette
 - **Notes:** Synced from Geethub issue #337 (bug). Follows the merged miniplayer art style work (#330, #331).
+  Cause (LP): `#mpRecord` was centred with `transform:translate(-50%,-50%)`, and the `mpSpin` keyframe sets `transform:rotate(360deg)`, which replaced the translate. While spinning the disc sat with its top-left corner at the centre, so it appeared to slide down and right on a loop. Fix: centre with negative margins and `transform:none`, so the keyframe only rotates.
+  Cassette: the mini-player cassette was a plain CSS box with two dotted hubs. It is now a clone of the main player's cassette SVG (grain, label recess with album art, reel housings, tape window, trapezoid panel, screws), with the `.cs-*` rules copied from the main stylesheet at build time (`miniCassetteCss`). Hubs spin by CSS only while playing; wound-tape pack radii and tape path follow the main cassette each UI tick; label art follows the track.
+  Verified: syntax check, and a browser pass with the mini DOM built in an iframe (the real Document PiP needs a user gesture): LP rotates about a fixed centre (bounding box centre constant across frames), cassette renders with full detail and spinning hubs. Not verified: inside a real PiP window, reduced-motion, very small mini sizes, the tape sheen and hub speed vs the main cassette's JS physics (mini hubs use fixed CSS speeds).
 
 ### periodyssius-to-youtube-playlist: Replace Periodyssius album with its YouTube playlist, for everyone
 - **Status:** ready
