@@ -8667,7 +8667,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #334 (idea). Related: autoadvance-stall-full-progress (bar held at 0 until ad check passes).
 
 ### miniplayer-proportional-resize: Mini-player resizes freely but always stays proportional, with a minimum small state
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to Geethub #337. The mini-player must be resizable by the user, the window must always stay proportional (locked aspect ratio while resizing), and it needs a minimum size. At the minimum it becomes the small mini-player with only the minimum functions.
 - **Touches:** mini-player Document PiP window sizing (`onMiniPlayerResize`, new `fitMiniPlayerWindow`, `MP_RATIO`), reuses the existing `mp-small` layout from the top-edge shrink (#269).
