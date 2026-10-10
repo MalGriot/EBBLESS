@@ -8739,7 +8739,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### empty-playlist-from-scratch: Create an empty playlist and search and drag songs into it
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Mal's feedback (desktop, 2026-10-09). Make an empty playlist from scratch, then search for songs and drag them in. Overlaps drag-songs-into-playlists (waiting on deploy), so build on that.
 - **Touches:** playlist creation, search results drag source.
@@ -8763,7 +8763,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS). openFeedbackModal() now fills fbContact from the stored profile email (LS_PROFILE_EMAIL) when the field is empty and the user is not signed out; still editable.
 
 ### artist-links-all-sources: Add artists from SoundCloud, Apple Music and YouTube Music links, and load SoundCloud discographies
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Mal's feedback (mobile, 2026-10-08 and 10-09). Adding an artist by link should work for SoundCloud, Apple Music and YouTube Music, and loading a SoundCloud artist's discography should work like Spotify's.
 - **Touches:** artist import, worker source resolvers.
@@ -8796,7 +8796,7 @@ Add entries in this shape:
 - **Notes:** From Mal's own tester feedback (MATCH_REPORTS).
 
 ### play-collection-opens-player-followup: Check every other collection play button opens the player
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to play-collection-opens-player. Only the library playlist panel's two play buttons were changed. Find every other play button for an album, artist or podcast (library cards, artist pages, search results, queue) and make sure each brings up the player. Single-track plays stay in the current window.
 - **Touches:** library cards, artist/podcast/album play handlers.
