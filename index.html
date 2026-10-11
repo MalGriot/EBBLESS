@@ -505,6 +505,8 @@ body.onb-active .paste-guide{display:none}
    playlist) - the app icon glyph, recolored to the same day's-color-clock
    accent as everything else, instead of an empty tile. */
 .lib-card .art.cycle .face.cover-face{display:block}
+.lib-card .art.cycle .face.cover-face{opacity:1}
+.lib-card .art.cycle .face.grid-face{opacity:0}
 .lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 17s ease-in-out infinite}
 .lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 17s ease-in-out infinite}
 @keyframes thumb-cycle-cover{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}
@@ -8033,7 +8035,7 @@ function renderLibrary(){
       artDiv.classList.add('cycle');
       const coverFace = document.createElement('div');
       coverFace.className = 'face cover-face';
-      const cimg = document.createElement('img'); cimg.loading = 'lazy'; attachArtworkFallback(cimg, { art: pl.image });
+      const cimg = document.createElement('img'); cimg.loading = 'eager'; attachArtworkFallback(cimg, { art: pl.image }); // eager: the tile opens on the custom art, so it must be painted at first frame
       coverFace.appendChild(cimg);
       const gridFace = document.createElement('div');
       gridFace.className = 'face grid-face';
