@@ -8952,3 +8952,259 @@ Add entries in this shape:
 - **Touches:** desktop split-pane player art sizing in index.html.
 - **Branch:** agent/desktop-player-layout (merged)
 - **Notes:** Repeat of Geethub #350 (album art too small on desktop, waiting-for-deployment) and #353 (`desktop-player-visuals-size`, merged). Check whether those fixes are live/regressed before changing sizing. Same layout area as `player-title-centering`, so run both in one lane. Fixed: art width cap 640 -> 820px, vertical reserve 395 -> 380px, title gap 26 -> 16px. 1440x900: 453 -> 468px; 1920x1080: 618 -> 648px; transport stays clear of the bottom 44px.
+
+### artist-hover-animation: Hovering an artist on the main player needs an on:hover animation (Geethub #359)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #359. Add a hover animation to artist names/icons on the main player.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #359 (idea). 
+
+### settings-last-button: Put Settings as the last button on the right (Geethub #360)
+- **Status:** merged
+- **Priority:** low
+- **Description:** Idea, Geethub issue #360. Settings should be the right-most button in the top nav.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/mobile-buttons
+- **Notes:** Synced from Geethub issue #360 (idea). Possible overlap with `playing-history` (History sits next to Settings) and #372.
+
+### mobile-feedback-icon-tiny: On mobile, the feedback button icon is too small (looks like a dot) (Geethub #361)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #361. Enlarge the feedback button icon on mobile so it reads as an icon.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/mobile-buttons
+- **Notes:** Synced from Geethub issue #361 (bug). Related: `feedback-button-install-bar`, #372.
+
+### queue-arrows-dont-switch-song: Changing the queue with the arrows shouldn't change the song immediately (Geethub #362)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #362. Cycling past queues with the header arrows should preview/load that queue without switching the playing song right away.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #362 (idea). Follow-up to `queue-history-arrows` (#352, merged).
+
+### drag-over-playlist-hover: Dragging a song over a playlist gives the playlist a hover animation (Geethub #363)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #363. While dragging a song over a playlist, the playlist tile should animate (highlight/lift) to show it is a drop target.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #363 (idea). Follow-up to `drag-songs-into-playlists` and `queue-drag-to-playlist-art`.
+
+### fullscreen-search-covers-art-tab: Desktop in-browser fullscreen: search bar covers the album art tab (Geethub #364)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #364. In desktop fullscreen (inside the browser window) the search bar overlaps the album art style tab.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/fullscreen-miniplayer-fixes
+- **Notes:** Synced from Geethub issue #364 (bug). Related: `album-art-picker-header-cutoff`, `search-bar-top-center` (both merged). Check for regression.
+
+### panels-open-at-top: Playlists and other windows should always open scrolled to the top (Geethub #365)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #365. Whenever a playlist or any panel opens it should start at the top, not at the previous scroll position.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/library-history-fixes
+- **Notes:** Synced from Geethub issue #365 (bug). 
+
+### library-tabs-scroll-arrows: Library filter row (All/Playlists/Albums/Artists/Podcasts): inline scroll arrows (Geethub #366)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #366. Add a right arrow that scrolls the filter row to reveal Podcasts, and once there a left arrow that scrolls all the way back.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #366 (idea). 
+
+### live-now-marquee-clip: "Live now" marquee text should cut off at the green linking dot (Geethub #367)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #367. The scrolling "live now" text must not run past the green linking dot; clip it there.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/fullscreen-miniplayer-fixes
+- **Notes:** Synced from Geethub issue #367 (bug). 
+
+### swirl-intelligence: Swirl should have some intelligence to it (Geethub #368)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #368. Title only, no detail. Needs a conversation with Mal on what "intelligence" means before building.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #368 (idea). Ambiguous, ask before building. Related: `pin-order-currents-swirl-off-air`, `currents-thumbs-down`.
+
+### artist-album-close-returns-to-artist: Opening an album inside the artist window: X should go back to the artist (Geethub #369)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #369. Closing an album opened from inside the artist window should return to that artist, not to the library.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/library-history-fixes
+- **Notes:** Synced from Geethub issue #369 (bug). Related: `artist-name-popup`, `artist-bio-panel`.
+
+### history-empty: The History button isn't showing any songs (Geethub #370)
+- **Status:** merged
+- **Priority:** low
+- **Description:** Idea, Geethub issue #370. History list is empty. Check that plays over 10s are logged and the panel reads them back.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/library-history-fixes
+- **Notes:** Synced from Geethub issue #370 (idea). Bug against `playing-history` (merged). Treat as a bug; high value since it is a shipped feature.
+
+### history-button-in-queue-header: Put the History button between the arrows and Discovery in the queue window (Geethub #371)
+- **Status:** merged
+- **Priority:** low
+- **Description:** Idea, Geethub issue #371. Move/add the History button in the queue header, between the history arrows and the Discovery button.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/library-history-fixes
+- **Notes:** Synced from Geethub issue #371 (idea). Related: `playing-history`, `queue-history-arrows`. Do together with #370.
+
+### mobile-feedback-tutorial-corner: Mobile: feedback button far right, tutorial button just left of it (Geethub #372)
+- **Status:** merged
+- **Priority:** low
+- **Description:** Idea, Geethub issue #372. Reorder the mobile buttons so feedback is right-most and the tutorial button sits just to its left.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/mobile-buttons
+- **Notes:** Synced from Geethub issue #372 (idea). Related: #361, #360.
+
+### mobile-thumbs-down: Mobile has no thumbs-down button (Geethub #373)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #373. The CuRRentSSsss thumbs-down is missing on mobile; add it.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/mobile-buttons
+- **Notes:** Synced from Geethub issue #373 (bug). Related: `currents-thumbs-down`, `player-title-centering`.
+
+### artist-icons-circles: Artist icons should be circles, same size or a bit larger (Geethub #374)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #374. Make artist icons round, same size or slightly bigger.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #374 (idea). 
+
+### album-cd-hover-spin: Album icons: a CD slides out and spins on hover (Geethub #375)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #375. On hover, a shiny-side-up CD slides out from the album tile and spins.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #375 (idea). Related: #374, `playlist-thumb-hover-open`.
+
+### miniplayer-queue-text-unreadable: Mini-player queue text unreadable when paint button is active (Geethub #376)
+- **Status:** merged
+- **Priority:** low
+- **Description:** Idea, Geethub issue #376. With the paint button on and the background set to the track color, queue song text is the same color as the background. Pick a contrasting text color.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/fullscreen-miniplayer-fixes
+- **Notes:** Synced from Geethub issue #376 (idea). Related: `miniplayer-window-fixes`. Treat as a bug.
+
+### artist-load-cap-500: Raise the 100-song cap when loading artists and shows to 500 (Geethub #377)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #377. Albums are missing from some artists because loads stop at 100 tracks. Raise the limit to 500.
+- **Touches:** index.html, area per description.
+- **Branch:** agent/library-history-fixes
+- **Notes:** Synced from Geethub issue #377 (bug). Related: `artists-albums-resume-backfill`, `artist-singles-features-albums`.
+
+### album-auto-assign-artist: Adding an album assigns it to an existing artist automatically (Geethub #378)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #378. When an album is added and its artist already exists in the library, file it under that artist.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #378 (idea). Related: `albums-by-artist`, `library-artists-section`.
+
+### fix-song-album-source-checkbox: Fix-this-song window: checkbox to pull all other album songs from the same source (Geethub #379)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #379. Add a checkbox in the fix-this-song window so the rest of the album uses the same source.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #379 (idea). Likely overlap with `fix-album-source-for-all` (#316, merged, automatic). Ask Mal whether a checkbox is still wanted or the automatic version covers it.
+
+### list-mode-collapse-artists: Switching to list mode minimizes all artists in the album section (Geethub #380)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #380. When the library switches to list mode, collapse every artist group in the albums section.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #380 (idea). Related: `albums-by-artist`.
+
+### library-show-under-dropdown: Library: "show under" dropdown to place items under playlists, albums or podcasts (Geethub #381)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #381. Add a dropdown so an item can be filed under Playlists, Albums or Podcasts.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #381 (idea). Vague, confirm the intent with Mal before building.
+
+### lyrics-button-disable: Deactivate the lyrics button when no lyrics are available (Geethub #382)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #382. Grey out the lyrics button like the video button when a song has no lyrics.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #382 (idea). Related: `video-playback-option`.
+
+### merge-mal-griot-artists: "mal griot" and "mal griot music" are the same artist (Geethub #383)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #383. Treat these two artist names as one (alias merge). Ask whether this should be a general rule (e.g. strip "music") or a one-off alias.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #383 (idea). Related: `strip-topic-artist-names`, `load-mal-griot-artist-page`.
+
+### playlist-thumb-art-toggle: Playlist thumb switches between the 2x2 collage and the playlist's own single art (Geethub #384)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Idea, Geethub issue #384. If a playlist has custom art, the thumb should be able to switch between the 2x2 collage and the 1x1 art.
+- **Touches:** index.html, area per description.
+- **Branch:** (none)
+- **Notes:** Synced from Geethub issue #384 (idea). Related: `playlist-image-reset`, `playlist-art-at-top`.
+
+### search-link-clears-queue: Searching/pasting a link clears the queue and doesn't add the album to the library (Geethub #386)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub issue #386 (urgent, per Mal). Searching a link now clears the queue and does not add the album to the library. Expected: a link should add its songs to the library (album/playlist as appropriate) and must not wipe the current queue. Likely a regression from recent work (`queue-add-collections`, `queue-multi-source-loads`, `queue-history-arrows`, `album-auto-assign`); check git log for the cause.
+- **Touches:** search-bar link handling, library add, queue state in index.html.
+- **Branch:** agent/search-link-clears-queue
+- **Notes:** Synced from Geethub issue #386 (bug, priority high, no steps given). Fourth lane, added mid-batch at Mal's request.
+
+### artist-more-albums: Load more albums per artist (follow-up to #377)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Mal (chat, 2026-10-11): artists still miss albums. Raise the per-artist release cap (`ARTIST_MAX_RELEASES = 12` in `worker/src/index.js`) well above 12 so full catalogs load, without breaking load time or worker limits.
+- **Touches:** worker/src/index.js artist loading; cache version.
+- **Branch:** agent/artist-releases
+- **Notes:** Follow-up to `artist-load-cap-500` (#377, in review on agent/library-history-fixes). No Geethub issue.
+
+### album-versions-dropdown: Group remasters, re-releases and b-sides under one album dropdown
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Mal (chat, 2026-10-11): when albums are just a remaster, re-release, deluxe edition or b-side/compilation of another album by the same artist, show them together in one dropdown group instead of separate tiles. Least clicks: the main album shows once, with a small expander listing its other versions.
+- **Touches:** library Albums section grouping (artist groups), release title matching.
+- **Branch:** agent/artist-releases
+- **Notes:** Same lane as `artist-more-albums`. Related: `albums-by-artist`, `artist-singles-features-albums`. Match on normalized titles (strip "remaster", "deluxe", "expanded", year tags, "(b-sides)").
+
+### artist-releases-next-day: When an artist hits the release cap, finish loading the rest automatically the next day
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Mal (chat, 2026-10-11): if an artist's catalog hits the per-artist release cap, remember that it was truncated and queue the remaining releases to load automatically the next day, on app load. No user action.
+- **Touches:** worker artist loading (paging/offset past the cap), client resume logic (see `artists-albums-resume-backfill`).
+- **Branch:** agent/artist-releases-2
+- **Notes:** Follow-up to `artist-more-albums` (cap 40).
+
+### artist-releases-load-order: Load releases in priority order: popular first, then latest and first releases, duplicate versions last
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Mal (chat, 2026-10-11): when a catalog exceeds the cap, choose and load releases in this order: most popular first, then prioritize the latest releases and the first (original) releases, and put duplicate versions (remasters, re-releases, deluxe, b-sides; see `album-versions-dropdown`) last.
+- **Touches:** worker release selection/sorting before the cap is applied.
+- **Branch:** agent/artist-releases-2
+- **Notes:** Interpretation: this governs which releases make the cap and in what order they load, not display order. Same lane as `artist-releases-next-day`.
+
+### single-song-link-options: Single-song links offer add to queue, play next, add to playlist, or play now
+- **Status:** merged
+- **Priority:** high
+- **Description:** Mal (chat, 2026-10-11): when a pasted/searched link is a single song, show a small choice: add to queue, play next, add to playlist, or play now (replaces the queue). Fewest taps; keep it a compact popup, no extra confirmation step.
+- **Touches:** `beginImport()` single-song branch, existing queue and add-to-playlist actions.
+- **Branch:** agent/single-song-link-options
+- **Notes:** Follow-up to `search-link-clears-queue` (#386); builds on that branch.
