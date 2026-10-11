@@ -8938,17 +8938,17 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #357 (idea). Related: `mobile-install-button`, `settings-install-button`, `feedback-button-install-bar`.
 
 ### player-title-centering: Song title is not centered on the player (Geethub #358)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #358. The song title on the player is not centered. The issue has no details (no device, no steps), so first reproduce on desktop and mobile to see which layout is off.
 - **Touches:** player title row in index.html.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub issue #358 (bug). Possible overlap with `player-controller-centering` (merged) and `feedback-install-bar` (#356, pill centered in title row); check those fixes did not regress before building anything new.
+- **Branch:** agent/desktop-player-layout (merged)
+- **Notes:** Synced from Geethub issue #358 (bug). Possible overlap with `player-controller-centering` (merged) and `feedback-install-bar` (#356, pill centered in title row); check those fixes did not regress before building anything new. Fixed: spacer balanced the like+more buttons but not the CuRRentSSsss thumbs-down, so the title shifted left when it showed; spacer now widens via :has(). Title was already centered in the empty state. Shell cache v121.
 
 ### desktop-album-art-size-again: Desktop album art section is still too small
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Reported again by Mal in chat (2026-10-11): on desktop the album art section of the player is too small. Make it larger and fill the available pane while keeping it centered.
 - **Touches:** desktop split-pane player art sizing in index.html.
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Repeat of Geethub #350 (album art too small on desktop, waiting-for-deployment) and #353 (`desktop-player-visuals-size`, merged). Check whether those fixes are live/regressed before changing sizing. Same layout area as `player-title-centering`, so run both in one lane.
+- **Branch:** agent/desktop-player-layout (merged)
+- **Notes:** Repeat of Geethub #350 (album art too small on desktop, waiting-for-deployment) and #353 (`desktop-player-visuals-size`, merged). Check whether those fixes are live/regressed before changing sizing. Same layout area as `player-title-centering`, so run both in one lane. Fixed: art width cap 640 -> 820px, vertical reserve 395 -> 380px, title gap 26 -> 16px. 1440x900: 453 -> 468px; 1920x1080: 618 -> 648px; transport stays clear of the bottom 44px.
