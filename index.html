@@ -8086,6 +8086,7 @@ function renderLibrary(){
     const card = document.createElement('div');
     card.className = 'lib-card' + (pinned ? ' is-pinned' : '') + (isArtist ? ' is-artist-card' : '') + (isAlbum ? ' is-album-card' : '');
     card.dataset.plId = id;
+    if (!isSystemPl && getLibrarySort() === 'custom') card.draggable = true; // manual order: drag to reorder
     const artDiv = document.createElement('div');
     artDiv.className = 'art';
     if (isLiked && withArt.length === 0){
@@ -10573,6 +10574,47 @@ function addablePlaylists(){
   document.addEventListener('pointerup', () => {
     if (!dragTrack) document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable]').forEach(r => r.removeAttribute('draggable'));
   });
+})();
+
+/* Manual sort: drag a playlist card onto another to reorder (Geethub #407).
+   The order is the saved library array (LS_LIB), so it survives switching to
+   another sort and back. Pinned cards only reorder among pinned, others among others. */
+(function(){
+  let dragId = null;
+  const cardOf = (el) => el && el.closest && el.closest('.lib-card[data-pl-id]');
+  const sysIds = () => [LIKED_ID, SWELL_ID, BLEND_ID, NP_ID];
+  const okTarget = (card) => !!card && !!dragId && card.dataset.plId !== dragId && !sysIds().includes(card.dataset.plId) && isPinned(card.dataset.plId) === isPinned(dragId);
+  function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); }
+  document.addEventListener('dragstart', (e) => {
+    const card = e.target.classList && e.target.classList.contains('lib-card') ? e.target : null;
+    if (!card || !card.draggable) return;
+    dragId = card.dataset.plId;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragId);
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!dragId) return;
+    const card = cardOf(e.target);
+    clearHi();
+    if (!okTarget(card)) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    card.classList.add('is-drop-target');
+  });
+  document.addEventListener('drop', (e) => {
+    if (!dragId) return;
+    const card = cardOf(e.target);
+    clearHi();
+    if (!okTarget(card)) return;
+    e.preventDefault();
+    const lib = getLibrary();
+    const from = lib.indexOf(dragId), to = lib.indexOf(card.dataset.plId);
+    if (from < 0 || to < 0) return;
+    lib.splice(from, 1);
+    lib.splice(to, 0, dragId); // lands on the target's slot, pushing it along
+    lsSet(LS_LIB, lib);
+    renderLibrary();
+  });
+  document.addEventListener('dragend', () => { dragId = null; clearHi(); });
 })();
 
 function openAddToPlaylistPicker(track){
