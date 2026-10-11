@@ -9210,7 +9210,7 @@ Add entries in this shape:
 - **Notes:** Follow-up to `search-link-clears-queue` (#386); builds on that branch.
 
 ### miniplayer-return-no-autoplay: When returning from the mini-player, stay paused if it was paused (Geethub #401)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Coming back from the mini-player to the main window must not start the music if the mini-player was paused. Keep playing only if it was playing.
 - **Touches:** mini-player return handoff
@@ -9266,7 +9266,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #395.
 
 ### queue-song-hover-fill: Hovering queue songs fills the row with the UI color (Geethub #394)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Queue song containers fill with the current UI color on hover.
 - **Touches:** queue rows hover
@@ -9322,7 +9322,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #388.
 
 ### search-history-scroll-readd: Search history scrollable; tapping an entry refills the box without searching (Geethub #387)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Search history should scroll, and tapping an entry puts its text in the box without auto-searching so terms can be added.
 - **Touches:** search bar history
