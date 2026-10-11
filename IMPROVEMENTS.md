@@ -9563,11 +9563,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #423. Pairs with #424.
 
 ### artist-thumb-name-in-front: Big artist name inside the thumb art should sit in front, not be cut off by the mask (Geethub #422)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** The large artist name drawn inside the thumbnail art is clipped by the mask; it should render in front of the art.
 - **Touches:** library artist thumbnails
-- **Branch:**
+- **Branch:** agent/library-thumb-polish
 - **Notes:** Synced from Geethub #422. 
 
 ### video-open-shortcuts: Keyboard shortcuts while video is open (Geethub #421)
@@ -9603,9 +9603,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #418. 
 
 ### library-hover-thumb-expand: Library hover: thumbs expand smoothly (Geethub #417)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** On hover over library items, all thumbs should expand smoothly.
 - **Touches:** library item hover CSS
-- **Branch:**
+- **Branch:** agent/library-thumb-polish
 - **Notes:** Synced from Geethub #417. Related to #403 (cassette hover expand).
