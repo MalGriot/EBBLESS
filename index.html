@@ -1864,7 +1864,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .artist-info .ai-bio{margin:0;font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-line;
   display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .artist-info .ai-bio.is-open{display:block}
-.artist-info .ai-more{margin-top:4px;padding:4px 0;font-size:12.5px;font-weight:600;color:var(--accent)}
+.artist-info .ai-more{display:block;margin:4px auto 0;padding:4px 0;font-size:12.5px;font-weight:600;color:var(--accent)}
 .artist-info .ai-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 0;font-size:12.5px}
 .artist-info .ai-facts dt{color:var(--faint)}
 .artist-info .ai-facts dd{margin:0;color:var(--text);min-width:0;overflow-wrap:anywhere}
@@ -8875,8 +8875,8 @@ function buildArtistInfoEl(info){
   box.className = 'artist-info';
   if (info.bio){
     const bio = document.createElement('p'); bio.className = 'ai-bio'; bio.textContent = info.bio;
-    const more = document.createElement('button'); more.type = 'button'; more.className = 'ai-more'; more.textContent = 'More';
-    const toggle = () => { const open = bio.classList.toggle('is-open'); more.textContent = open ? 'Less' : 'More'; };
+    const more = document.createElement('button'); more.type = 'button'; more.className = 'ai-more'; more.textContent = 'Read more';
+    const toggle = () => { const open = bio.classList.toggle('is-open'); more.textContent = open ? 'Less' : 'Read more'; };
     bio.addEventListener('click', toggle); more.addEventListener('click', toggle);
     box.appendChild(bio); box.appendChild(more);
     // short bios that already fit don't need the button
