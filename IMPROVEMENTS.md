@@ -9491,7 +9491,7 @@ Add entries in this shape:
 - **Notes:** Added from chat 2026-10-11. Sheet script changes live in Google Apps Script, so the owner must paste/redeploy it.
 
 ### remove-history-button: Remove the History button from the header nav (Geethub #431)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Remove the History button from the header nav.
 - **Touches:** header nav
@@ -9539,7 +9539,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #426. Copy change only.
 
 ### artist-bio-add-to-library: Artist bio: button to add the artist to your library when they aren't in it (Geethub #425)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Opening the bio of an artist who isn't in your library should show a button that adds their profile to your library.
 - **Touches:** artist bio panel, library
@@ -9563,7 +9563,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #423. Pairs with #424.
 
 ### artist-thumb-name-in-front: Big artist name inside the thumb art should sit in front, not be cut off by the mask (Geethub #422)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** The large artist name drawn inside the thumbnail art is clipped by the mask; it should render in front of the art.
 - **Touches:** library artist thumbnails
@@ -9579,7 +9579,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #421. Review: scoped to the video card being open (ytPanelOpen): Left/Right +/-5s, Shift+Left restart, Shift+Right next song; outside video the old bindings are unchanged. Settings list updated. Syntax-checked only; sw cache v154.
 
 ### link-loading-spinners: Loading circles where the 3-dot buttons are while links load (Geethub #420)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** While a track's link is still loading, show a small loading circle in place of its three-dot button.
 - **Touches:** track rows in library/playlists
@@ -9595,7 +9595,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #419. Bug. Related to merged playlist-full-loading. Review: resolvePlaylist now pre-fills every track slot as a no-videoId placeholder (greyed via .is-missing) and fills each by index, so the full count shows at once. Syntax-checked only, not run in a browser; sw cache v148.
 
 ### albums-show-year: Albums should show their release year (Geethub #418)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Show the release year on albums.
 - **Touches:** album rows/headers
@@ -9603,7 +9603,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #418. Review: resolvePlaylist stores releaseDate on albums (keeps an artist-import date, else looks up the first track via fetchTrackYear); library album cards show "Artist · year" only when known. Syntax-checked and loaded in preview; sw cache v156.
 
 ### library-hover-thumb-expand: Library hover: thumbs expand smoothly (Geethub #417)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** On hover over library items, all thumbs should expand smoothly.
 - **Touches:** library item hover CSS
