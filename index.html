@@ -7900,7 +7900,24 @@ libFilter.addEventListener('scroll', updateLibFilterMore, { passive: true });
 window.addEventListener('resize', updateLibFilterMore);
 libFilter.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-filter-btn');
-  if (btn) setLibraryFilter(btn.dataset.filter);
+  if (!btn) return;
+  const mode = btn.dataset.filter;
+  // #423/#424: pressing the already-active All / Albums chip collapses its dropdowns
+  if (mode === getLibraryFilter()){
+    if (mode === 'all'){
+      ['playlists', 'artists', 'albums', 'podcasts'].forEach(k => { libFolded[k] = true; });
+      renderLibrary();
+      return;
+    }
+    if (mode === 'albums'){
+      const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+      libAlbumGroupKeys.forEach(k => { f[k] = true; });
+      lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+      rerenderLibraryKeepPanel();
+      return;
+    }
+  }
+  setLibraryFilter(mode);
 });
 function applyLibSortUI(){
   const mode = getLibrarySort();
