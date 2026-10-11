@@ -10375,6 +10375,20 @@ function openSingleTrackDestinationPicker(track){
 // source (Spotify playlist/album / YouTube playlist) becomes all of its
 // tracks. onProgress(done, total) fires per-track for multi-track sources,
 // same shape as beginImport's matching-stage callback.
+// Matches one source track to a YouTube video for the add-by-link flow.
+// A burst of searches (an album) gets rate-limited by the backend and the
+// tail of the album used to come back unmatched (dead rows, Geethub #388),
+// so retry with a growing pause before giving up. Returns null if no match.
+async function matchLinkTrack(t, albumOpts){
+  for (let attempt = 1; attempt <= 4; attempt++){
+    try{
+      const m = await searchYouTubeCached(t.title, t.artist, t.duration, albumOpts);
+      if (m && m.videoId) return m;
+    } catch(e){}
+    if (attempt < 4) await sleep(1200 * attempt);
+  }
+  return null;
+}
 async function resolveTracksFromLink(input, onProgress){
   const parsedLink = parseImportLink(input);
   if (parsedLink && parsedLink.type === 'artist') throw new Error('Artist links make a playlist of their own - paste it in the main link bar instead.');
@@ -10411,12 +10425,8 @@ async function resolveTracksFromLink(input, onProgress){
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
       const art = await resolveTrackArt('spotify', t.title, t.artist, t.image || null);
-      try{
-        const match = await searchYouTube(t.title, t.artist, t.duration, undefined, sp.type === 'album' ? listName : undefined);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
-      } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
-      }
+      const match = await matchLinkTrack(t, sp.type === 'album' ? { album: listName, albumArt: t.image || null } : undefined);
+      resolved.push({ title: t.title, artist: t.artist, videoId: match ? match.videoId : null, matchedTitle: match ? (match.title || '') : '', channel: match ? (match.channel || '') : '', art, duration: match ? (match.duration || 0) : 0 });
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
     }
@@ -10442,12 +10452,8 @@ async function resolveTracksFromLink(input, onProgress){
       if (t.scId){
         resolved.push({ title: t.title, artist: t.artist, videoId: soundCloudVideoId(t.scId), matchedTitle: t.title, channel: t.artist, art, duration: Math.round((t.duration || 0) / 1000) });
       } else {
-        try{
-          const match = await searchYouTube(t.title, t.artist, t.duration);
-          resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
-        } catch(e){
-          resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
-        }
+        const match = await matchLinkTrack({ title: t.title, artist: t.artist, duration: t.duration });
+        resolved.push({ title: t.title, artist: t.artist, videoId: match ? match.videoId : null, matchedTitle: match ? (match.title || '') : '', channel: match ? (match.channel || '') : '', art, duration: match ? (match.duration || 0) : 0 });
       }
       if (onProgress) onProgress(i + 1, data.tracks.length);
       if (i < data.tracks.length - 1 && !t.scId) await sleep(350);
@@ -10469,12 +10475,8 @@ async function resolveTracksFromLink(input, onProgress){
     for (let i = 0; i < tracks.length; i++){
       const t = tracks[i];
       const art = await resolveTrackArt('applemusic', t.title, t.artist, t.image || null);
-      try{
-        const match = await searchYouTube(t.title, t.artist, undefined, undefined, am.type === 'album' ? listName : undefined);
-        resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', art, duration: match.duration || 0 });
-      } catch(e){
-        resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', art, duration: 0 });
-      }
+      const match = await matchLinkTrack({ title: t.title, artist: t.artist }, am.type === 'album' ? { album: listName, albumArt: t.image || null } : undefined);
+      resolved.push({ title: t.title, artist: t.artist, videoId: match ? match.videoId : null, matchedTitle: match ? (match.title || '') : '', channel: match ? (match.channel || '') : '', art, duration: match ? (match.duration || 0) : 0 });
       if (onProgress) onProgress(i + 1, tracks.length);
       if (i < tracks.length - 1) await sleep(350);
     }
@@ -10514,9 +10516,18 @@ function openAddLinksFlow(playlistId){
         const tracks = await resolveTracksFromLink(val, (done, total) => {
           if (total > 1 && $('linkAddBtn')) $('linkAddBtn').textContent = 'Matching ' + done + ' / ' + total + '…';
         });
-        const added = addTracksToPlaylist(playlistId, tracks);
+        // Never file an unmatched song as a dead row (Geethub #388).
+        const playable = tracks.filter(t => t.videoId);
+        const skipped = tracks.length - playable.length;
+        if (!playable.length) throw new Error("Couldn't find playable versions of those songs right now. Try again in a minute.");
+        const before = (getCachedPlaylist(playlistId) || pl).tracks.length;
+        const added = addTracksToPlaylist(playlistId, playable);
+        // lsSet swallows a full-storage failure; confirm the write landed
+        // before claiming success.
+        const after = getCachedPlaylist(playlistId);
+        if (added && (!after || after.tracks.length < before + added)) throw new Error("Couldn't save to your library. Storage may be full.");
         addedCount += added;
-        showToast(added ? 'Added ' + added + (added === 1 ? ' song' : ' songs') : 'Already in playlist');
+        showToast(added ? 'Added ' + added + (added === 1 ? ' song' : ' songs') + (skipped ? ' (' + skipped + ' not found)' : '') : 'Already in playlist');
         renderStep();
       } catch(e){
         errEl.textContent = plainError(e, "Couldn't add that. Try again in a minute.");
