@@ -475,6 +475,12 @@ body.onb-active .paste-guide{display:none}
    yet (a brand-new Swell before its first generation, or an empty manual
    playlist) - the app icon glyph, recolored to the same day's-color-clock
    accent as everything else, instead of an empty tile. */
+.lib-card .art.cycle .face.cover-face{display:block}
+.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 12s ease-in-out infinite}
+.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 12s ease-in-out infinite}
+@keyframes thumb-cycle-cover{0%,40%{opacity:1}50%,90%{opacity:0}100%{opacity:1}}
+@keyframes thumb-cycle-grid{0%,40%{opacity:0}50%,90%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.lib-card .art.cycle .face{animation:none}.lib-card .art.cycle .face.grid-face{display:none}}
 .lib-card .art .face.icon-face{display:flex;align-items:center;justify-content:center;background:#121212}
 .lib-card .art .face.icon-face img{width:44%;height:auto}
 /* Swell's own fallback for the same no-tracks-yet moment: a looping teaser
@@ -7956,12 +7962,26 @@ function renderLibrary(){
         const playPromise = blendVideo.play();
         if (playPromise && playPromise.catch) playPromise.catch(() => {});
       }
-    } else if (withArt.length === 0 && !pl.image){
-      // No matched tracks yet and no source-provided image (an empty
-      // manual playlist) - the E mark instead of an empty tile.
+    } else if (withArt.length === 0 && (!pl.image || (!isSystemPl && !isAlbum && !isPodcast && !isArtist))){
+      // No playable tracks (an empty playlist, even one with a cover) - the
+      // E mark instead of an empty tile. The system tiles (Liked, Currents,
+      // Swirl, On/Off Air) keep their own faces and only get the mark when
+      // they also have no image.
       artDiv.classList.add('single');
       artDiv.innerHTML = '<div class="face icon-face"><img src="brand/assets/mark.png" alt=""></div>';
-    } else if (pl.image && !(pl.thumbCollage && canToggleThumbArt(pl) && withArt.length > 1)){
+    } else if (canToggleThumbArt(pl) && withArt.length > 1){
+      // A playlist with its own cover and 2+ songs: the tile fades between
+      // the cover and the 2x2 song collage on its own (#384).
+      artDiv.classList.add('cycle');
+      const coverFace = document.createElement('div');
+      coverFace.className = 'face cover-face';
+      const cimg = document.createElement('img'); cimg.loading = 'lazy'; attachArtworkFallback(cimg, { art: pl.image });
+      coverFace.appendChild(cimg);
+      const gridFace = document.createElement('div');
+      gridFace.className = 'face grid-face';
+      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
+      artDiv.appendChild(coverFace); artDiv.appendChild(gridFace);
+    } else if (pl.image){
       // A real source-provided cover (Spotify/SoundCloud/Apple) always wins
       // over the per-track collage below. This used to render both and
       // crossfade between them forever (`.animated` + `lib-art-crossfade`),
@@ -8927,7 +8947,6 @@ function openLibCtxMenu(id, btn){
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
-    ...(canToggleThumbArt(pl) ? [{ action: 'thumbart', label: pl.thumbCollage ? 'Show playlist art' : 'Show song collage', icon: CTX_ICON_ART }] : []),
     { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
@@ -9196,11 +9215,6 @@ function handleLibCtxAction(action, id){
   if (!pl) return;
   if (action === 'rename') openRenamePlaylistFlow(id, pl);
   else if (action === 'art') openChangeArtFlow(id, pl);
-  else if (action === 'thumbart'){
-    if (pl.thumbCollage) delete pl.thumbCollage; else pl.thumbCollage = true;
-    lsSet(LS_PL(id), pl);
-    renderLibrary();
-  }
   else if (action === 'addqueue'){ const n = queueAddCollection(id); showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to queue' : 'Nothing to add'); }
   else if (action === 'duplicate') duplicateLibraryPlaylist(id, pl);
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
@@ -9254,7 +9268,7 @@ function openRenamePlaylistFlow(id, pl){
 }
 
 // Playlist (not album/podcast/artist) with its own cover and 2+ playable
-// songs: the tile can show either the cover or the 2x2 song collage (#384).
+// songs: the tile fades between the cover and the 2x2 song collage (#384).
 function canToggleThumbArt(pl){
   return !!pl && !!pl.image && !isAlbumEntry(pl) && !isPodcastEntry(pl) && !isArtistEntry(pl) &&
     Array.isArray(pl.tracks) && pl.tracks.filter(t => t.videoId).length > 1;
