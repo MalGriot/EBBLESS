@@ -419,6 +419,12 @@ body.onb-active .paste-guide{display:none}
 .lib-artist-divider .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-artist-divider .ct{flex:none;font-weight:400;opacity:.6;font-size:.85em}
 .lib-grid.is-list .lib-artist-divider{margin-top:8px}
+.lib-versions-btn{display:inline-flex;align-items:center;gap:3px;align-self:flex-start;margin-top:3px;padding:2px 0;background:none;border:0;color:var(--accent,#1db954);font:inherit;font-size:.78em;cursor:pointer}
+.lib-versions-btn .chev{width:12px;height:12px;transition:transform .15s}
+.lib-versions-btn[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.lib-grid .lib-versions{grid-column:1/-1;padding-left:16px;border-left:2px solid var(--line, rgba(255,255,255,.1))}
+.lib-grid .lib-versions.is-list .lib-card .art .title-overlay{display:none}
+.lib-grid .lib-versions.is-list .lib-card .info .name{display:block}
 .lib-card{min-width:0;position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
 .lib-card.is-drop-target{outline:2px solid var(--accent, #fff);outline-offset:3px;transform:scale(1.03)}
@@ -7703,6 +7709,27 @@ function albumArtistName(pl){
   const t = (pl.tracks || []).find(x => x && x.artist);
   return t ? stripTopicSuffix(t.artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim() : '';
 }
+// Album versions: a remaster, re-release, deluxe/expanded edition or b-side
+// set of an album the same artist already has in the library folds under that
+// album (one tile + a small expander) instead of showing as its own tile.
+// Conservative: only a tag in brackets or after a dash/colon, or a trailing
+// edition phrase, is stripped, and only same-artist albums whose remaining
+// title is identical are grouped.
+const LS_ALBUM_VERSIONS_OPEN = {}; // primary playlist id -> true (session only)
+const ALBUM_VER_WORD = /\b(?:re-?master(?:ed)?|deluxe|expanded|anniversar(?:y|ies)|editions?|re-?issue|re-?release|bonus|collector'?s?|b-?sides?|rarities|outtakes)\b/i;
+const ALBUM_VER_YEAR = /^\s*(?:19|20)\d{2}\s*$/;
+function albumVersionInfo(name){
+  const raw = String(name || '').replace(/\s+/g, ' ').trim();
+  let s = raw, changed = false;
+  const isTag = t => ALBUM_VER_WORD.test(t) || ALBUM_VER_YEAR.test(t);
+  s = s.replace(/\s*[\(\[]([^\)\]]*)[\)\]]/g, (m, t) => isTag(t) ? (changed = true, '') : m);
+  const dash = /^(.*?\S)\s+[-:]\s+([^-:]*)$/.exec(s);
+  if (dash && isTag(dash[2])){ s = dash[1]; changed = true; }
+  const tail = /\s+(?:the\s+)?(?:(?:(?:19|20)\d{2}\s+)?re-?master(?:ed)?|(?:super\s+)?deluxe|expanded|special|anniversary|collector'?s?|b-?sides?(?:\s*(?:&|and)\s*rarities)?|rarities)(?:\s+(?:edition|version))?$/i;
+  for (let i = 0; i < 3 && tail.test(s); i++){ s = s.replace(tail, ''); changed = true; }
+  const key = s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return { key: key.length >= 2 ? key : '', plain: !changed };
+}
 function renderLibrary(){
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
@@ -7973,6 +8000,7 @@ function renderLibrary(){
     if (isAlbum){
       const gk = artistNameKey(albumArtist) || '_';
       if (!albumGroups.has(gk)) albumGroups.set(gk, { name: albumArtist || 'Other', cards: [] });
+      card._albumVer = albumVersionInfo(pl.name);
       albumGroups.get(gk).cards.push(card);
     } else {
       (isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
@@ -8000,7 +8028,39 @@ function renderLibrary(){
         rerenderLibraryKeepPanel();
       });
       libraryAlbumsGrid.appendChild(div);
-      if (open) g.cards.forEach(c => libraryAlbumsGrid.appendChild(c));
+      if (!open) return;
+      const verSets = new Map(); // normalized title -> [cards], first-seen order
+      g.cards.forEach(c => {
+        const k = c._albumVer && c._albumVer.key ? c._albumVer.key : 'id:' + c.dataset.plId;
+        if (!verSets.has(k)) verSets.set(k, []);
+        verSets.get(k).push(c);
+      });
+      verSets.forEach(list => {
+        const main = list.find(c => c._albumVer && c._albumVer.plain) || list[0];
+        const others = list.filter(c => c !== main);
+        libraryAlbumsGrid.appendChild(main);
+        if (!others.length) return;
+        const mid = main.dataset.plId;
+        const showVers = !!searchQ || !!LS_ALBUM_VERSIONS_OPEN[mid];
+        const vb = document.createElement('button');
+        vb.type = 'button'; vb.className = 'lib-versions-btn';
+        vb.setAttribute('aria-expanded', String(showVers));
+        vb.innerHTML = '<svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg><span></span>';
+        vb.querySelector('span').textContent = others.length + (others.length === 1 ? ' more version' : ' more versions');
+        vb.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (LS_ALBUM_VERSIONS_OPEN[mid]) delete LS_ALBUM_VERSIONS_OPEN[mid]; else LS_ALBUM_VERSIONS_OPEN[mid] = true;
+          rerenderLibraryKeepPanel();
+        });
+        const mainInfo = main.querySelector('.info');
+        if (mainInfo) mainInfo.appendChild(vb);
+        if (showVers){
+          const box = document.createElement('div');
+          box.className = 'lib-grid is-list lib-versions';
+          others.forEach(c => box.appendChild(c));
+          libraryAlbumsGrid.appendChild(box);
+        }
+      });
     });
   }
   libraryArtistsHead.classList.toggle('hidden', artistCount === 0);

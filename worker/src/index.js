@@ -2662,10 +2662,10 @@ async function handleSoundCloud(url, ctx) {
 // Tracks come back in that page order, deduped by title, capped - matched
 // sources (Spotify/Apple Music, one YouTube search per track on the client)
 // lower than ones that are already playable (SoundCloud ids, YouTube ids).
-const ARTIST_CACHE_VERSION = 'a3';
+const ARTIST_CACHE_VERSION = 'a4';
 const ARTIST_MAX_MATCHED_TRACKS = 500;
 const ARTIST_MAX_NATIVE_TRACKS = 500;
-const ARTIST_MAX_RELEASES = 12;
+const ARTIST_MAX_RELEASES = 40;
 const ARTIST_MAX_YT_RELEASES = 8;
 const SOUNDCLOUD_ARTIST_TABS = new Set(['tracks', 'popular-tracks', 'albums', 'sets', 'reposts']);
 
@@ -2740,7 +2740,7 @@ async function spotifyArtistPayload(id) {
       releases.push({ id: m[1], image: spotifyLargestImage(r.coverArt && r.coverArt.sources) });
     });
   });
-  const albums = await mapWithConcurrency(releases.slice(0, ARTIST_MAX_RELEASES), 4, async r => {
+  const albums = await mapWithConcurrency(releases.slice(0, ARTIST_MAX_RELEASES), 6, async r => {
     const e = await spotifyEmbedEntity('album', r.id).catch(() => null);
     return ((e && e.trackList) || []).map(t => ({
       title: t.title, artist: t.subtitle || name, image: r.image,
@@ -2788,7 +2788,7 @@ async function appleMusicArtistPayload(storefront, id) {
       releases.push({ id: rid, image: appleArtworkUrl(it.artwork) });
     });
   });
-  const albums = await mapWithConcurrency(releases.slice(0, ARTIST_MAX_RELEASES), 4, async r => {
+  const albums = await mapWithConcurrency(releases.slice(0, ARTIST_MAX_RELEASES), 6, async r => {
     try {
       const ar = await fetch(`https://music.apple.com/${storefront}/album/x/${encodeURIComponent(r.id)}`, { headers: { 'User-Agent': DESKTOP_UA } });
       if (!ar.ok) return [];
