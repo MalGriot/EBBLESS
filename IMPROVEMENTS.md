@@ -9288,6 +9288,7 @@ Add entries in this shape:
 - **Touches:** global titles
 - **Branch:** agent/marquee-everywhere
 - **Notes:** Synced from Geethub #392.
+  **Built:** one shared helper (`mqStart`/`mqStop`, `MQ_SEL` in index.html next to `setMarqueeText`): overflowing ellipsis lines slide after a 0.7s pause, hold, ease back; fits stay static; reduced motion keeps the ellipsis. Hover/focus/touch for dense lists (search Recent history, library cards/list/dividers, tracks, queue rows, import preview, search picks, week-up); always-on for queue now-playing, cast bar label, queue heading. Left alone: existing `.marquee` titles, PiP mini player (own window), toasts/hints. Also covers search-history-line-marquee.
 
 ### artist-album-back-arrow: Album close 'x' in the artist window becomes a back '<' (Geethub #391)
 - **Status:** review

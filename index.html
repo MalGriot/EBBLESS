@@ -1037,6 +1037,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .marquee{overflow:hidden;white-space:nowrap;position:relative}
 .marquee>span{display:inline-block;white-space:nowrap}
 .marquee .marquee-track{display:inline-flex;white-space:nowrap;will-change:transform}
+.mq-inner{display:inline-block;white-space:nowrap;will-change:transform}
 .marquee .marquee-track>span{display:inline-block;white-space:nowrap;flex:none}
 .marquee.is-marquee .marquee-track{animation:marquee-scroll var(--marquee-dur,12s) linear infinite}
 /* Static (non-scrolling) state: a title that overflows but isn't animating -
@@ -18759,6 +18760,90 @@ function setMarqueeText(el, text){
     }
   })));
 }
+
+// Shared overflow marquee for every other ellipsis line (lists, queue, cards,
+// search history...). Dense lists scroll only while hovered/focused/touched;
+// the few single prominent lines in MQ_ALWAYS scroll whenever they overflow.
+// Text that fits is never touched. Reduced motion keeps the plain ellipsis.
+// The line's children are moved (not recreated) into one inner span that is
+// slid with the Web Animations API, then put back when it stops.
+var MQ_SEL = [
+  '.paste-recent-n','.paste-recent-s','.paste-hint-text','.lib-artist-divider .nm',
+  '.lib-card .name','.lib-card .count','.import-preview-row .t','.search-pick .n','.search-pick .s',
+  '.track-row .title','.track-row .artist','.q-now .title','.q-now .artist','.q-row .title','.q-row .artist',
+  '.cast-bar-label','.queue-head h2','.like-nudge .ln-text','.handoff-prompt .hp-sub',
+  '#weekUp .wu-li-name','#weekUp .wu-li-sub'
+].map(x => x + ':not(.marquee)').join(',');
+var MQ_ALWAYS = '.q-now .title,.q-now .artist,.cast-bar-label,.queue-head h2';
+var mqRunning = new Set();
+function mqStop(el){
+  clearTimeout(el._mqTimer);
+  if (!el._mqInner) return;
+  if (el._mqAnim){ el._mqAnim.cancel(); el._mqAnim = null; }
+  const inner = el._mqInner;
+  if (inner.parentNode === el){
+    while (inner.firstChild) el.insertBefore(inner.firstChild, inner);
+    inner.remove();
+  }
+  el._mqInner = null;
+  el.style.removeProperty('text-overflow');
+  mqRunning.delete(el);
+}
+function mqStart(el){
+  if (el._mqInner || marqueeReducedMotion() || el.closest('.marquee')) return;
+  const over = el.scrollWidth - el.clientWidth;
+  if (over <= 2 || !el.clientWidth) return;
+  const inner = document.createElement('span');
+  inner.className = 'mq-inner';
+  while (el.firstChild) inner.appendChild(el.firstChild);
+  el.appendChild(inner);
+  el.style.textOverflow = 'clip';
+  el._mqInner = inner;
+  el._mqKey = el.textContent + '|' + el.clientWidth;
+  const shift = Math.max(1, Math.ceil(inner.getBoundingClientRect().width - el.clientWidth + 8));
+  const move = shift / 60 * 1000, pause = 700, hold = 900;
+  const total = pause + move + hold + move + pause;
+  const at = ms => ms / total;
+  el._mqAnim = inner.animate([
+    { transform: 'translateX(0)', offset: 0 },
+    { transform: 'translateX(0)', offset: at(pause), easing: 'ease-in-out' },
+    { transform: 'translateX(-' + shift + 'px)', offset: at(pause + move) },
+    { transform: 'translateX(-' + shift + 'px)', offset: at(pause + move + hold), easing: 'ease-in-out' },
+    { transform: 'translateX(0)', offset: at(pause + 2 * move + hold) },
+    { transform: 'translateX(0)', offset: 1 }
+  ], { duration: total, iterations: Infinity });
+  mqRunning.add(el);
+}
+document.addEventListener('pointerover', e => {
+  const el = e.target.closest && e.target.closest(MQ_SEL);
+  if (!el) return;
+  clearTimeout(el._mqTimer);
+  mqStart(el);
+});
+document.addEventListener('pointerout', e => {
+  const el = e.target.closest && e.target.closest(MQ_SEL);
+  if (!el || el.contains(e.relatedTarget) || el.matches(MQ_ALWAYS)) return;
+  // a finger lifting fires pointerout right away: let touch scrolls play out
+  clearTimeout(el._mqTimer);
+  el._mqTimer = setTimeout(() => mqStop(el), e.pointerType === 'touch' ? 6000 : 0);
+});
+document.addEventListener('focusin', e => {
+  const el = e.target.closest && e.target.closest(MQ_SEL);
+  if (el) mqStart(el);
+});
+document.addEventListener('focusout', e => {
+  const el = e.target.closest && e.target.closest(MQ_SEL);
+  if (el && !el.matches(MQ_ALWAYS)) mqStop(el);
+});
+// Light upkeep: restart a running line when its text or width changed, drop
+// ones that left the page, and start the always-on lines when they overflow.
+setInterval(() => {
+  mqRunning.forEach(el => {
+    if (!el.isConnected){ mqStop(el); return; }
+    if (el._mqKey !== el.textContent + '|' + el.clientWidth){ mqStop(el); mqStart(el); }
+  });
+  document.querySelectorAll(MQ_ALWAYS).forEach(mqStart);
+}, 1500);
 
 function updateTrackMetaUI(t){
   $('trackMeta').classList.remove('is-empty');
