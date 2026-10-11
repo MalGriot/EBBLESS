@@ -366,6 +366,10 @@ body.onb-active .paste-guide{display:none}
    library doesn't hold are hidden by renderLibrary. */
 .lib-filter{display:flex;align-items:center;gap:8px;margin-top:12px;padding:4px 0;overflow-x:auto;scrollbar-width:none}
 .lib-filter::-webkit-scrollbar{display:none}
+.lib-filter-more{position:sticky;right:0;flex:none;width:32px;height:32px;margin-left:auto;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border-2);color:var(--faint)}
+.lib-filter-more:hover{color:var(--text)}
+.lib-filter-more svg{width:20px;height:20px}
+.lib-filter-more.is-back svg{transform:rotate(180deg)}
 .lib-filter-btn{position:relative;flex:none;height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--border-2);
   font-size:12.5px;font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .lib-filter-btn:hover{color:var(--text)}
@@ -3145,6 +3149,7 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
+          <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
           <div class="section-label">Playlists</div>
@@ -7650,7 +7655,14 @@ libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-mode]');
   if (!btn) return;
   e.stopPropagation();
-  setLibraryView(btn.dataset.mode);
+  // #380: switching to list mode collapses every artist group in Albums
+  if (btn.dataset.mode === 'list' && getLibraryView() !== 'list' && libAlbumGroupKeys.length){
+    const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+    libAlbumGroupKeys.forEach(k => { f[k] = true; });
+    lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+    setLibraryView('list');
+    renderLibrary();
+  } else setLibraryView(btn.dataset.mode);
   closeLibSortMenu();
 });
 const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts'];
@@ -7670,6 +7682,23 @@ function setLibraryFilter(mode){
   });
   renderLibrary();
 }
+// #366: when the filter row overflows, an inline arrow scrolls right to reveal
+// the last chip (Podcasts); at the end it flips to scroll all the way back.
+const libFilterMore = $('libFilterMore');
+function updateLibFilterMore(){
+  const over = libFilter.scrollWidth > libFilter.clientWidth + 2 && !libFilter.classList.contains('hidden');
+  libFilterMore.classList.toggle('hidden', !over);
+  if (!over) return;
+  const atEnd = libFilter.scrollLeft + libFilter.clientWidth >= libFilter.scrollWidth - 2;
+  libFilterMore.classList.toggle('is-back', atEnd);
+  libFilterMore.setAttribute('aria-label', atEnd ? 'Scroll back to the start' : 'Show more filters');
+}
+libFilterMore.addEventListener('click', () => {
+  const atEnd = libFilter.scrollLeft + libFilter.clientWidth >= libFilter.scrollWidth - 2;
+  libFilter.scrollTo({ left: atEnd ? 0 : libFilter.scrollWidth, behavior: 'smooth' });
+});
+libFilter.addEventListener('scroll', updateLibFilterMore, { passive: true });
+window.addEventListener('resize', updateLibFilterMore);
 libFilter.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-filter-btn');
   if (btn) setLibraryFilter(btn.dataset.filter);
@@ -7755,9 +7784,20 @@ function albumArtistName(pl){
     const owner = getCachedPlaylist(pl.artistSet.of);
     if (owner && owner.name) return owner.name;
   }
+  const split = (a) => stripTopicSuffix(a).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i).map(x => x.trim()).filter(Boolean);
+  // #378: an album whose artist is already in the library files under that
+  // artist, even when they are credited second on the first song.
+  if (libArtistNames.size){
+    const tr = (pl.tracks || []).filter(x => x && x.artist).slice(0, 30);
+    for (const x of tr){
+      for (const n of split(x.artist)){ const hit = libArtistNames.get(artistNameKey(n)); if (hit) return hit; }
+    }
+  }
   const t = (pl.tracks || []).find(x => x && x.artist);
-  return t ? stripTopicSuffix(t.artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim() : '';
+  return t ? (split(t.artist)[0] || '') : '';
 }
+let libArtistNames = new Map(); // artistNameKey -> name of each artist entry in the library (set by renderLibrary)
+let libAlbumGroupKeys = [];     // artist-group keys in the Albums section (set by renderLibrary)
 // Album versions: a remaster, re-release, deluxe/expanded edition or b-side
 // set of an album the same artist already has in the library folds under that
 // album (one tile + a small expander) instead of showing as its own tile.
@@ -7794,6 +7834,8 @@ function renderLibrary(){
   libHasPodcasts = ids.some(id => isPodcastEntry(getCachedPlaylist(id)));
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
   libHasArtists = ids.some(id => isArtistEntry(getCachedPlaylist(id)));
+  libArtistNames = new Map();
+  ids.forEach(id => { const p = getCachedPlaylist(id); if (p && isArtistEntry(p) && p.name) libArtistNames.set(artistNameKey(p.name), p.name); });
   libFilterArtists.classList.toggle('hidden', !libHasArtists);
   libHasAlbums = ids.some(id => { const p = getCachedPlaylist(id); return !!p && isAlbumEntry(p); });
   libFilterAlbums.classList.toggle('hidden', !libHasAlbums);
@@ -7803,6 +7845,7 @@ function renderLibrary(){
   libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', btn.dataset.filter === filter));
+  updateLibFilterMore();
   const showPlaylists = filter === 'all' || filter === 'playlists';
   const showArtists = filter === 'all' || filter === 'artists';
   const showAlbums = filter === 'all' || filter === 'albums';
@@ -8065,6 +8108,7 @@ function renderLibrary(){
   });
   if (albumGroups.size){
     const folded = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+    libAlbumGroupKeys = [...albumGroups.keys()];
     [...albumGroups.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
       // while searching, matching albums always show
       const open = !!searchQ || !folded[gk];
