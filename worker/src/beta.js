@@ -184,7 +184,7 @@ async function handleSignup(request, env, ctx, h) {
 // A tester whose rejoin was accepted has window_start (the next round's
 // date, or the acceptance): until then they stay expired; from it they get
 // a fresh 2 weeks, or 2 weeks from that round's feedback email once it's sent
-// (24h later, like a new tester).
+// (7 days later, like a new tester).
 export const BETA_WINDOW_MS = 14 * 24 * 3600 * 1000;
 export function windowEndsAt(t, now = Date.now()) {
   const sent = Number(t && t.feedback_request_sent) || 0;

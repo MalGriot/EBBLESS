@@ -13,7 +13,7 @@
 // Day to day you never touch code: set an applicant's applicant_status to
 // Accepted and this script creates their Tester row (next tester number,
 // private token, access link) and emails the invite. Set a tester's
-// tester_status to Inactive and their link stops working. 24 hours after
+// tester_status to Inactive and their link stops working. 7 days after
 // acceptance, each Active tester is emailed the feedback form once
 // (feedback_request_sent records when). Their 2-week window runs from that
 // email (the worker works it out; the app shows a recap when it's over).
@@ -28,7 +28,7 @@
 // number: accept it like any signup and their Testers row gets window_start
 // = the later of now and Settings next_round_start, round = next_round, and
 // they're emailed. From
-// window_start they get a fresh 2 weeks (and the feedback email again 24h
+// window_start they get a fresh 2 weeks (and the feedback email again 7 days
 // later, which sets the window like a new tester's). Same token, so their
 // history is untouched.
 //
@@ -192,7 +192,7 @@ function sendMail_(to, subject, text, html) {
   } catch (err) { return String(err); }
 }
 
-// ---------- feedback request (24h after access) ----------
+// ---------- feedback request (7 days after access, then every 7 days) ----------
 
 // First request goes out 7 days after a tester got access, then every 7 days
 // after the previous one while their window is still open. feedback_request_sent
