@@ -8883,7 +8883,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #350 (bug). Title only, no repro details. May relate to the merged `player-controller-centering` and `player-mobile-spacing` work; check those for sizing constraints.
 
 ### queue-drag-to-playlist-art: Drag queue songs and the playing album art into a playlist (Geethub #351)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #351. Drag a song from the queue into a playlist to add it. Drag the album art of the currently playing song into a playlist to add it. After adding this way, open that playlist's window.
 - **Touches:** drag and drop onto playlist cards, player album art, playlist panel open.
@@ -8891,7 +8891,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #351 (idea). Overlaps merged `drag songs into playlists` (#328, waiting for deployment): queue rows already drag to playlists. New parts are the playing-art drag source and opening the playlist after the drop.
 
 ### queue-history-arrows: Arrows in queue header to cycle through past queues (Geethub #352)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #352. Put back/forward arrows in the queue header so you can step through your history of queues and return to one you just replaced.
 - **Touches:** queue header, queue state history.
