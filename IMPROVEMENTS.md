@@ -9676,10 +9676,10 @@ Add entries in this shape:
   does not change. Needs an iPhone PWA and Android test with the screen locked.
 
 ### queue-window-bg-video: Queue window background video, rotated 90 degrees and tinted like the library bg (Geethub #438)
-- **Status:** merged
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Use the waves video (/Users/malcolm/Downloads/4866-181014376_medium.mp4, also pixabay.com/videos/background-yellow-abstract-waves-4866/) as the queue window background. Rotate it 90 degrees and recolor it the same way the library background video is recolored.
 - **Touches:** queue window background; library bg video code
 - **Branch:** agent/queue-bg-video
-- **Notes:** Synced from Geethub #438. Source file is in the user's Downloads; needs copying into the repo and compressing.
+- **Notes:** Synced from Geethub #438. Source file is in the user's Downloads; needs copying into the repo and compressing. Reverted after going live: the video layer covered the whole queue panel. Next try must keep it behind all queue content (z-index below rows/header, pointer-events none) and be checked visually.
 - **Review notes:** Queue panel now has a .q-bg layer (video rotated 90deg, same brightness/saturate filter and clock-accent color-blend tint as .lib-bg, poster fallback). Video recompressed to 175KB (480p, muted) at brand/assets/queue-bg.mp4 plus queue-bg-poster.jpg. Not in sw precache (library video is not either). Cache v159.

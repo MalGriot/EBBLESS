@@ -182,15 +182,6 @@ video.lib-bg-video.is-playing{opacity:1}
 .lib-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;
   opacity:.55;transition:background 4s linear}
 .lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
-/* Queue panel background video (#438): same recipe as the library bg (rotated, dimmed, clock-color wash), sitting behind the queue list. */
-#queue-panel{isolation:isolate}
-.q-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;container-type:size;z-index:-1;border-radius:inherit}
-.q-bg-video{position:absolute;top:50%;left:50%;width:102cqh;height:102cqw;transform:translate(-50%,-50%) rotate(90deg);
-  object-fit:cover;filter:saturate(1.05) brightness(.5)}
-.q-bg-poster{background:url(brand/assets/queue-bg-poster.jpg) center/cover no-repeat}
-video.q-bg-video{opacity:0}
-video.q-bg-video.is-playing{opacity:1}
-.q-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;opacity:.55;transition:background 4s linear}
 /* In the top bar (#319) the form is centered on the bar, which is the player's
    center too (the player is the middle pane in split-desktop). --tb-l / --tb-r
    reserve room for the logo and the help/Settings cluster; when the symmetric
@@ -4070,11 +4061,6 @@ body.week-up-on{overflow:hidden}
   <!-- ===== QUEUE PANEL ===== -->
   <div id="queue-scrim"></div>
   <div id="queue-panel">
-    <div class="q-bg" aria-hidden="true">
-      <div class="q-bg-video q-bg-poster"></div>
-      <video class="q-bg-video" autoplay muted loop playsinline preload="metadata" poster="brand/assets/queue-bg-poster.jpg" src="brand/assets/queue-bg.mp4"></video>
-      <div class="q-bg-tint"></div>
-    </div>
     <div class="queue-drag-handle"></div>
     <div class="queue-head">
       <h2>Queue</h2>
@@ -4320,7 +4306,7 @@ setTimeout(() => {
    retries play() on any background video autoplay left paused. */
 (() => {
   const kick = () => {
-    document.querySelectorAll('video.splash-video, video.lib-bg-video, video.q-bg-video').forEach(v => {
+    document.querySelectorAll('video.splash-video, video.lib-bg-video').forEach(v => {
       if (!v.paused) return;
       v.muted = true;
       const p = v.play();
@@ -4330,7 +4316,7 @@ setTimeout(() => {
   ['pointerdown', 'touchstart', 'keydown'].forEach(t => document.addEventListener(t, kick, { once: true, capture: true, passive: true }));
   // Splash/library videos stay invisible over their poster layers until
   // frames are really playing, so a blocked autoplay keeps the still up.
-  document.querySelectorAll('video.splash-video, video.lib-bg-video, video.q-bg-video').forEach(v => {
+  document.querySelectorAll('video.splash-video, video.lib-bg-video').forEach(v => {
     const sync = () => v.classList.toggle('is-playing', !v.paused && v.readyState >= 3);
     ['playing', 'pause', 'waiting', 'emptied', 'ended'].forEach(t => v.addEventListener(t, sync));
     sync();
