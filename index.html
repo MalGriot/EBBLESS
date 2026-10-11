@@ -6536,7 +6536,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // episodes etc.) - the show still loads; say why it starts elsewhere.
     // First import only, not the silent periodic refresh.
     if (pod.missingEpisode && !old) showToast('"' + pod.missingEpisode + '" isn\'t in the show\'s public feed (it may be subscriber-only). Playing the latest episode instead.');
-    const build = (extra) => Object.assign({ id: playlistId, type, name: show, image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, extra || {});
+    const build = (extra) => Object.assign({ id: playlistId, type, name: show, image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, (() => { const o = getCachedPlaylist(playlistId); return o && o.sectionOverride ? { sectionOverride: o.sectionOverride, albumOverride: o.albumOverride } : {}; })(), extra || {});
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
     let fired = false;
     const fireFirst = () => {
@@ -6578,8 +6578,10 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   // So does an artist's albumsAdded stamp (see addArtistAlbumsToLibrary),
   // read at write time since a fill can stamp it while this resolve runs.
   const albumOverride = albumOverrideOf(getCachedPlaylist(playlistId));
+  const sectionOverride = (getCachedPlaylist(playlistId) || {}).sectionOverride;
   const keepAlbumOverride = (p) => {
     if (albumOverride !== undefined) p.albumOverride = albumOverride;
+    if (sectionOverride) p.sectionOverride = sectionOverride;
     if (isArtistType(p.type)){ const cur = getCachedPlaylist(playlistId); if (cur && cur.albumsAdded) p.albumsAdded = true; }
     return p;
   };
@@ -7787,6 +7789,18 @@ function isPodcastEntry(pl){
 // CuRRentSSsss, user-made, Discover overflow), single tracks/videos, or
 // podcasts (always filed under Podcasts).
 function canToggleAlbum(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isPodcastEntry(pl) && !isArtistEntry(pl); }
+// "Show under" (Geethub #381): the listener can file any link-backed list
+// (podcasts included) under Playlists, Albums or Podcasts. Stored as
+// pl.sectionOverride ('playlists' | 'albums' | 'podcasts'); it only decides
+// which library section the card sits in (libSectionOf), so playback and
+// type-based behaviour are untouched. Choosing Albums/Playlists also sets
+// albumOverride so album-aware code agrees. resolvePlaylist carries it over.
+const LIB_SECTIONS = { playlists: 'playlist', albums: 'album', podcasts: 'podcast' };
+function canFileUnder(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isArtistEntry(pl); }
+function libSectionOf(pl){
+  const o = pl && canFileUnder(pl) ? LIB_SECTIONS[pl.sectionOverride] : undefined;
+  return o || (isPodcastEntry(pl) ? 'podcast' : isArtistEntry(pl) ? 'artist' : isAlbumEntry(pl) ? 'album' : 'playlist');
+}
 libViewToggle.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-mode]');
   if (!btn) return;
@@ -7967,15 +7981,15 @@ function renderLibrary(){
   libraryArtistsGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
   libraryPodcastsGrid.innerHTML = '';
-  libHasPodcasts = ids.some(id => isPodcastEntry(getCachedPlaylist(id)));
+  libHasPodcasts = ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'podcast'; });
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
   libHasArtists = ids.some(id => isArtistEntry(getCachedPlaylist(id)));
   libArtistNames = new Map();
   ids.forEach(id => { const p = getCachedPlaylist(id); if (p && isArtistEntry(p) && p.name) libArtistNames.set(artistNameKey(p.name), p.name); });
   libFilterArtists.classList.toggle('hidden', !libHasArtists);
-  libHasAlbums = ids.some(id => { const p = getCachedPlaylist(id); return !!p && isAlbumEntry(p); });
+  libHasAlbums = ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'album'; });
   libFilterAlbums.classList.toggle('hidden', !libHasAlbums);
-  libHasPlaylists = ids.some(id => { const p = getCachedPlaylist(id); return !!p && !isPodcastEntry(p) && !isArtistEntry(p) && !isAlbumEntry(p); });
+  libHasPlaylists = ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'playlist'; });
   libFilterPlaylists.classList.toggle('hidden', !libHasPlaylists);
   // chips only help when there's more than one kind to pick between
   libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
@@ -7987,7 +8001,7 @@ function renderLibrary(){
   const showAlbums = filter === 'all' || filter === 'albums';
   const showPodcasts = filter === 'all' || filter === 'podcasts';
   // which bucket a saved entry is filed under
-  const kindOf = (p) => isPodcastEntry(p) ? 'podcast' : isArtistEntry(p) ? 'artist' : isAlbumEntry(p) ? 'album' : 'playlist';
+  const kindOf = libSectionOf;
   const kindShown = (k) => k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
   libraryGrid.classList.toggle('hidden', !showPlaylists);
   const searchQ = normLibSearch(libSearch.value);
@@ -9116,8 +9130,11 @@ function openLibCtxMenu(id, btn){
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
   ];
-  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && canToggleAlbum(pl)){
-    items.push({ action: 'albumtoggle', label: isAlbumEntry(pl) ? 'Show under Playlists' : 'Show under Albums', icon: CTX_ICON_ALBUM });
+  if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && canFileUnder(pl)){
+    const cur = libSectionOf(pl);
+    [['playlists', 'Playlists'], ['albums', 'Albums'], ['podcasts', 'Podcasts']].forEach(([sec, label]) => {
+      if (LIB_SECTIONS[sec] !== cur) items.push({ action: 'showunder:' + sec, label: 'Show under ' + label, icon: CTX_ICON_ALBUM });
+    });
   }
   if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
@@ -9387,7 +9404,7 @@ function handleLibCtxAction(action, id){
   else if (action === 'copylink') copyPlaylistLink(pl);
   else if (action === 'replacelink') openReplaceLinkFlow(id, pl);
   else if (action === 'relinkall') manualRelinkPlaylist(id);
-  else if (action === 'albumtoggle') toggleAlbumOverride(id, pl);
+  else if (action.indexOf('showunder:') === 0) setSectionOverride(id, pl, action.slice(10));
   else if (action === 'delete'){
     // delete right away with an Undo in the toast (no confirm box)
     const libBefore = getLibrary().slice(), pinnedBefore = isPinned(id), data = lsGet(LS_PL(id), null);
@@ -9399,13 +9416,14 @@ function handleLibCtxAction(action, id){
 // Manual album/playlist re-filing (Geethub #209). Always stored as an
 // explicit boolean (even when it matches today's detection) so a later
 // re-resolve that re-detects the type can't flip the listener's choice.
-function toggleAlbumOverride(id, pl){
-  const makeAlbum = !isAlbumEntry(pl);
-  pl.albumOverride = makeAlbum;
+function setSectionOverride(id, pl, sec){
+  if (!LIB_SECTIONS[sec]) return;
+  pl.sectionOverride = sec;
+  pl.albumOverride = sec === 'albums';
   lsSet(LS_PL(id), pl);
-  if (state.playlist && state.playlist.id === id) state.playlist.albumOverride = makeAlbum;
+  if (state.playlist && state.playlist.id === id){ state.playlist.sectionOverride = sec; state.playlist.albumOverride = pl.albumOverride; }
   renderLibrary();
-  showToast(makeAlbum ? 'Now under Albums' : 'Now under Playlists');
+  showToast('Now under ' + sec.charAt(0).toUpperCase() + sec.slice(1));
 }
 
 function openRenamePlaylistFlow(id, pl){
