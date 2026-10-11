@@ -9663,9 +9663,10 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #437. Bug. Follow-up to merged bld-background-tab-autoadvance and soundcloud-native-playback; the earlier fix may not cover the app being fully backgrounded on mobile.
 
 ### queue-window-bg-video: Queue window background video, rotated 90 degrees and tinted like the library bg (Geethub #438)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Use the waves video (/Users/malcolm/Downloads/4866-181014376_medium.mp4, also pixabay.com/videos/background-yellow-abstract-waves-4866/) as the queue window background. Rotate it 90 degrees and recolor it the same way the library background video is recolored.
 - **Touches:** queue window background; library bg video code
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/queue-bg-video
 - **Notes:** Synced from Geethub #438. Source file is in the user's Downloads; needs copying into the repo and compressing.
+- **Review notes:** Queue panel now has a .q-bg layer (video rotated 90deg, same brightness/saturate filter and clock-accent color-blend tint as .lib-bg, poster fallback). Video recompressed to 175KB (480p, muted) at brand/assets/queue-bg.mp4 plus queue-bg-poster.jpg. Not in sw precache (library video is not either). Cache v159.
