@@ -12246,20 +12246,14 @@ function openPasteRecents(){
       '</div>';
     }).join('') + '</div>';
   pasteRecentsEl.hidden = false;
-  // phones: widen the list leftward so it starts just right of the logo
-  pasteRecentsEl.style.left = '';
+  // phones: wide list centered on the screen, starting just right of the logo (edges mirrored)
+  pasteRecentsEl.style.left = pasteRecentsEl.style.right = '';
   const wm = $('wordmarkBtn');
   if (wm && matchMedia('(max-width:859.98px)').matches){
-    const off = wm.getBoundingClientRect().right + 8 - pasteRecentsEl.getBoundingClientRect().left;
-    if (off < 0) pasteRecentsEl.style.left = off + 'px';
-    // ...and stop just left of the right-hand button cluster
-    pasteRecentsEl.style.right = '';
-    const edges = ['mobileHistBtn', 'helpBtn', 'testerBanner'].map(id => $(id)).filter(el => el && el.offsetWidth)
-      .map(el => el.getBoundingClientRect().left);
-    if (edges.length){
-      const roff = pasteRecentsEl.getBoundingClientRect().right - (Math.min(...edges) - 8);
-      if (roff < 0) pasteRecentsEl.style.right = roff + 'px';
-    }
+    const edge = wm.getBoundingClientRect().right + 8, vw = document.documentElement.clientWidth;
+    const box = pasteRecentsEl.getBoundingClientRect();
+    if (edge < box.left) pasteRecentsEl.style.left = (edge - box.left) + 'px';
+    if (vw - edge > box.right) pasteRecentsEl.style.right = (box.right - (vw - edge)) + 'px';
   }
   pasteRecentsActive = -1;
   urlInput.setAttribute('aria-expanded', 'true');
