@@ -196,9 +196,20 @@ function sendMail_(to, subject, text, html) {
 
 const FEEDBACK_REQUEST_AFTER_MS = 24 * 3600 * 1000;
 
-function feedbackRequestText_(first, link) {
+// Whole days since this tester's access started, from their own record
+// (window_start for a rejoin, else accepted_timestamp). Never a fixed number.
+function daysWithAccess_(t, now) {
+  const from = ms_(t.window_start) || ms_(t.accepted_timestamp);
+  return from ? Math.max(0, Math.floor((now - from) / 86400000)) : null;
+}
+function haveHadText_(days) {
+  if (days === null) return 'a little time';
+  return days === 0 ? 'a little time (you got access today)' : days === 1 ? '1 day' : days + ' days';
+}
+
+function feedbackRequestText_(first, link, days) {
   return 'Peace and love, ' + first + '.\n\n' +
-    'Just checking in now that you\u2019ve had a little time with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.\n\n' +
+    'Just checking in now that you\u2019ve had ' + haveHadText_(days) + ' with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.\n\n' +
     'What did you love? What confused you? What broke? What would make you want to come back?\n\n' +
     'Take a few minutes and tell me here:\n\n' + link + '\n\n' +
     'The feedback window is open for 2 weeks from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
@@ -206,12 +217,12 @@ function feedbackRequestText_(first, link) {
     'No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F\n\n' +
     'Mal';
 }
-function feedbackRequestHtml_(first, link) {
+function feedbackRequestHtml_(first, link, days) {
   const esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   const p = function (h) { return '<p style="margin:0 0 16px">' + h + '</p>'; };
   return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.5;color:#121212">' +
     p('Peace and love, ' + esc(first) + '.') +
-    p('Just checking in now that you\u2019ve had a little time with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.') +
+    p('Just checking in now that you\u2019ve had ' + haveHadText_(days) + ' with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.') +
     p('What did you love? What confused you? What broke? What would make you want to come back?') +
     p('Take a few minutes and tell me here:') +
     p('<a href="' + esc(link) + '">' + esc(link) + '</a>') +
@@ -240,7 +251,7 @@ function sendFeedbackRequests() {
       if (from && now - from < FEEDBACK_REQUEST_AFTER_MS) return;
       const first = String(t.name || '').split(/\s+/)[0] || 'friend';
       const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
-      const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link), feedbackRequestHtml_(first, link));
+      const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link, daysWithAccess_(t, now)), feedbackRequestHtml_(first, link, daysWithAccess_(t, now)));
       if (err) {
         const note = 'Feedback request NOT emailed: ' + err;
         if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
