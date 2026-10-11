@@ -15753,6 +15753,122 @@ function buildBlendTracks(){
   }
   return picks;
 }
+/* Swirl flow (GitHub #368). The round-robin above keeps the blend fair
+   across sources; this pass then orders the picks so neighbours sit well
+   together: no opera into death metal, loud into quiet, or a rap verse
+   into an instrumental. Only signals the app already has, nothing new to
+   call: tags (the track's own, else the /tags lookup cache), worker
+   /metrics when they've been fetched (BPM, energy, key, valence), a
+   genre/title keyword guess at energy and wordiness when metrics are
+   missing, the artist, and thumbs-down artists as a last resort.
+   Greedy chain: each next song is the best fit to the one before (and,
+   half as much, the one before that) from a window of the next
+   SWIRL_WINDOW picks, so the source mix stays spread out. Unknown
+   songs score neutral, so with no data the order is just the shuffle. */
+const SWIRL_WINDOW = 10;
+const SWIRL_WARM_MAX = 20;      // /tags lookups per reblend; the rest fill in over later days
+const SWIRL_HARD = ['metal', 'hardcore', 'punk', 'thrash', 'screamo', 'grindcore', 'drill', 'hard rock', 'industrial'];
+const SWIRL_CALM = ['classical', 'opera', 'ambient', 'lullaby', 'piano', 'acoustic', 'sleep', 'meditation', 'lo-fi', 'lofi', 'new age', 'orchestral', 'baroque', 'soft', 'chillout'];
+const SWIRL_WORDY = ['rap', 'hip-hop', 'hip hop', 'spoken word', 'poetry', 'trap'];
+const SWIRL_INSTR = ['instrumental', 'classical', 'ambient', 'orchestral', 'soundtrack', 'post-rock', 'baroque', 'lo-fi', 'lofi'];
+function swirlTagHit(tags, words){
+  return tags.some(t => words.some(w => t === w || t.includes(w)));
+}
+// -> { tags:Set, m, energy 0..1|null, vocal 0 (instrumental)..1 (wordy)|null, artist }
+function swirlProfile(track, tagList, metrics){
+  const tags = tagList.map(x => String(x).toLowerCase());
+  const title = String(track.title || '').toLowerCase();
+  let energy = metrics && typeof metrics.energy === 'number' ? metrics.energy : null;
+  if (energy == null){
+    if (swirlTagHit(tags, SWIRL_HARD)) energy = 0.9;
+    else if (swirlTagHit(tags, SWIRL_CALM) || /\b(acoustic|lullaby|unplugged)\b/.test(title)) energy = 0.15;
+  }
+  let vocal = null;
+  if (/\binstrumental\b/.test(title) || swirlTagHit(tags, SWIRL_INSTR)) vocal = 0;
+  else if (swirlTagHit(tags, SWIRL_WORDY)) vocal = 1;
+  return { tags: new Set(tags), m: metrics || null, energy, vocal, artist: primaryArtistKey(track.artist) };
+}
+// 0..1, 0.5 when the two share nothing comparable
+function swirlAffinity(a, b){
+  let total = 0, weight = 0;
+  const add = (s, w) => { total += s * w; weight += w; };
+  if (a.tags.size && b.tags.size){
+    let n = 0;
+    a.tags.forEach(t => { if (b.tags.has(t)) n++; });
+    add(Math.min(1, n / Math.min(a.tags.size, b.tags.size, 4)), 0.4);
+  }
+  const ms = metricSimilarity(a.m, b.m);
+  if (ms) add(ms.sim, 0.4 * ms.conf);
+  if (a.energy != null && b.energy != null) add(Math.max(0, 1 - Math.abs(a.energy - b.energy) / 0.6), 0.3);
+  if (a.vocal != null && b.vocal != null) add(1 - Math.abs(a.vocal - b.vocal), 0.2);
+  let s = weight ? total / weight : 0.5;
+  // never loud next to quiet, whatever else they share
+  if (a.energy != null && b.energy != null && Math.abs(a.energy - b.energy) > 0.55) s = Math.min(s, 0.2);
+  return s;
+}
+// sigOf(track) -> swirlProfile; declinedArtists: Set of artist keys
+function swirlFlowOrder(tracks, sigOf, declinedArtists, keepFirst){
+  const left = tracks.slice();
+  const out = [];
+  const sigs = new Map();
+  const sig = t => { if (!sigs.has(t)) sigs.set(t, sigOf(t)); return sigs.get(t); };
+  if (!left.length) return out;
+  out.push(left.shift());
+  if (!keepFirst && declinedArtists && declinedArtists.size){
+    // don't open on a thumbs-downed artist when anything else is available
+    const i = left.findIndex(t => !declinedArtists.has(sig(t).artist));
+    if (declinedArtists.has(sig(out[0]).artist) && i >= 0){ left.push(out[0]); out[0] = left.splice(i, 1)[0]; }
+  }
+  while (left.length){
+    const p1 = sig(out[out.length - 1]);
+    const p2 = out.length > 1 ? sig(out[out.length - 2]) : null;
+    let best = 0, bestScore = -Infinity;
+    const n = Math.min(SWIRL_WINDOW, left.length);
+    for (let i = 0; i < n; i++){
+      const c = sig(left[i]);
+      let s = swirlAffinity(p1, c) + (p2 ? 0.5 * swirlAffinity(p2, c) : 0);
+      if (p1.artist && c.artist === p1.artist) s -= 0.25;
+      if (declinedArtists && declinedArtists.has(c.artist)) s -= 0.6;
+      if (s > bestScore + 1e-9){ bestScore = s; best = i; }  // ties keep the shuffle order
+    }
+    out.push(left.splice(best, 1)[0]);
+  }
+  return out;
+}
+function swirlSigOf(){
+  const cache = lsGet(LS_TAG_CACHE, {}) || {};
+  return t => swirlProfile(t, tagNameList((t.tags && t.tags.length) ? t.tags : cache[tagCacheKey(t)]), metricMemo.get(tagCacheKey(t)) || null);
+}
+function swirlDeclinedArtists(){
+  const a = declinedStore().a;
+  return new Set(Object.keys(a).filter(k => a[k] > 0));
+}
+// Cold songs get their tags/metrics looked up in the background, then the
+// list is re-ordered once - but only when nothing from it is queued, so
+// it never reshuffles under a listener mid-play.
+let swirlWarmBusy = false;
+async function swirlWarmAndRetune(){
+  if (swirlWarmBusy) return;
+  swirlWarmBusy = true;
+  try{
+    const stamp = lsGet(LS_BLEND_GENERATED, 0);
+    const pl0 = getCachedPlaylist(BLEND_ID);
+    if (!pl0 || pl0.tracks.length < 3) return;
+    const cache = lsGet(LS_TAG_CACHE, {}) || {};
+    const cold = pl0.tracks.filter(t => !(t.tags && t.tags.length) && !cache[tagCacheKey(t)]).slice(0, SWIRL_WARM_MAX);
+    if (cold.length) await Promise.all(cold.map(t => lookupTrackTags(t).catch(() => [])));
+    for (let i = 0; i < 24; i += 12) await fetchTrackMetrics(pl0.tracks.slice(i, i + 12));
+    const pl = getCachedPlaylist(BLEND_ID);
+    if (!pl || lsGet(LS_BLEND_GENERATED, 0) !== stamp || state.queue.some(e => e.plId === BLEND_ID)) return;
+    const next = swirlFlowOrder(pl.tracks, swirlSigOf(), swirlDeclinedArtists(), false);
+    if (next.every((t, i) => t === pl.tracks[i])) return;
+    pl.tracks = next;
+    lsSet(LS_PL(BLEND_ID), pl);
+    if (state.playlist && state.playlist.id === BLEND_ID) state.playlist = pl;
+    rerenderLibraryKeepPanel();
+  } catch(e){ /* best-effort: the order stays as built */ }
+  finally { swirlWarmBusy = false; }
+}
 function refreshBlend(opts){
   const silent = !!(opts && opts.silent);
   const tracks0 = buildBlendTracks();
@@ -15765,12 +15881,14 @@ function refreshBlend(opts){
   // the song playing right now (if it's from SwiiiRrrLL) stays put as track 0
   const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
   const nowTrack = cur && cur.plId === BLEND_ID ? trackAt(state.queuePos) : null;
-  pl.tracks = nowTrack ? [nowTrack].concat(tracks0.filter(t => t.videoId !== nowTrack.videoId)) : tracks0;
+  const flowIn = nowTrack ? [nowTrack].concat(tracks0.filter(t => t.videoId !== nowTrack.videoId)) : tracks0;
+  pl.tracks = swirlFlowOrder(flowIn, swirlSigOf(), swirlDeclinedArtists(), !!nowTrack);
   lsSet(LS_PL(BLEND_ID), pl);
   lsSet(LS_BLEND_GENERATED, Date.now());
   if (state.playlist && state.playlist.id === BLEND_ID) state.playlist = pl;
   remapQueueAfterCurrentsReset(!!nowTrack, pl.tracks.length, BLEND_ID);
   rerenderLibraryKeepPanel();
+  swirlWarmAndRetune();
   if (!silent) showToast('New picks in ' + BLEND_NAME + ': ' + tracks0.length + (tracks0.length === 1 ? ' song' : ' songs'));
 }
 function refreshBlendIfStale(){

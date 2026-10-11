@@ -9026,11 +9026,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #367 (bug). 
 
 ### swirl-intelligence: Swirl should have some intelligence to it (Geethub #368)
-- **Status:** ready
+- **Status:** in progress (branch pushed, not merged)
 - **Priority:** low
 - **Description:** Idea, Geethub issue #368. Title only, no detail. Needs a conversation with Mal on what "intelligence" means before building.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/swirl-intelligence
 - **Notes:** Synced from Geethub issue #368 (idea). Ambiguous, ask before building. Related: `pin-order-currents-swirl-off-air`, `currents-thumbs-down`.
 
 ### artist-album-close-returns-to-artist: Opening an album inside the artist window: X should go back to the artist (Geethub #369)
