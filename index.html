@@ -1720,6 +1720,17 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .toast.has-action.is-open{pointer-events:auto}
 .toast-action{background:var(--accent);color:#1a1a1a;border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
+.load-ok{position:fixed;left:50%;top:42%;width:84px;height:84px;margin:-42px 0 0 -42px;z-index:79;pointer-events:none;
+  display:grid;place-items:center;border-radius:50%;background:rgba(26,26,26,.72);
+  box-shadow:0 0 0 1px var(--accent-dim),0 10px 32px rgba(0,0,0,.45);animation:loadOkPop 1.15s var(--ease-out) forwards}
+.load-ok::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:loadOkRing 1s var(--ease-out) forwards}
+.load-ok svg{width:40px;height:40px;fill:none;stroke:var(--accent);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.load-ok path{stroke-dasharray:30;stroke-dashoffset:30;animation:loadOkTick .38s .12s var(--ease-out) forwards}
+@keyframes loadOkPop{0%{opacity:0;transform:scale(.6)}18%{opacity:1;transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.06)}}
+@keyframes loadOkRing{0%{opacity:.9;transform:scale(.7)}100%{opacity:0;transform:scale(1.9)}}
+@keyframes loadOkTick{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.load-ok{animation:loadOkFade 1s linear forwards}.load-ok::before{display:none}.load-ok path{animation:none;stroke-dashoffset:0}
+  @keyframes loadOkFade{0%,80%{opacity:1}100%{opacity:0}}}
 .sw-update-toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translate(-50%,10px);z-index:81;
   display:flex;align-items:center;gap:12px;background:var(--panel-3);color:var(--text);font-size:12.5px;
   padding:10px 10px 10px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
@@ -7062,6 +7073,21 @@ function showToast(msg, action){
   toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), action ? 6000 : 2200);
 }
 
+// Geethub #398: brief accent check-mark pulse when a playlist/link loads.
+// Non-blocking (pointer-events none), self-removing, and a plain fade under
+// prefers-reduced-motion.
+function showLoadSuccess(){
+  try {
+    document.querySelectorAll('.load-ok').forEach(n => n.remove());
+    const el = document.createElement('div');
+    el.className = 'load-ok';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1250);
+  } catch(e){}
+}
+
 /* =========================================================================
    VIEW ROUTING
    ========================================================================= */
@@ -10985,7 +11011,7 @@ async function beginImport(id, force, type, targetIndex){
     if (cached){
       if (keepQueue && !isSingleTrackType(cached.type)){
         if (!wasSaved){ statsImport(id); saveToLibrary(id); renderLibrary(); }
-        showToast('Added ' + cached.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) });
+        showToast('Added ' + cached.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess();
         if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
         return;
       }
@@ -11007,6 +11033,7 @@ async function beginImport(id, force, type, targetIndex){
       buildQueueFrom(targetIndex || cached.focusIndex || 0);
       loadIndex(state.queuePos, true);
       setView('player');
+      showLoadSuccess();
       // Cached before the resolution logic last changed - the tracks that
       // are showing now may point at outdated links. Don't make the visitor
       // wait on a full re-resolve to see their playlist; refresh it behind
@@ -11080,7 +11107,7 @@ async function beginImport(id, force, type, targetIndex){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
-    if (keepQueue) showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) });
+    if (keepQueue){ showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess(); }
     if (!wasSaved && isArtistEntry(pl)){
       addArtistAlbumsToLibrary(pl);
       // warm the artist-info cache now so the bio is ready when the panel opens
@@ -11106,6 +11133,7 @@ async function beginImport(id, force, type, targetIndex){
       buildQueueFrom(targetIndex || pl.focusIndex || 0);
       loadIndex(state.queuePos, true);
       setView('player');
+      showLoadSuccess();
     }
   } catch(e){
     if (startedEarly) bgResolveProgress.delete(id);
