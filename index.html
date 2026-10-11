@@ -3800,6 +3800,8 @@ body.week-up-on{overflow:hidden}
           <li><span><kbd>Space</kbd></span>Play / pause</li>
           <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Previous / next song (podcasts: back / forward 15s)</li>
           <li><span><kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>Back / forward 10s (podcasts: previous / next episode)</li>
+          <li><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>With the video open: back / forward 5s</li>
+          <li><span><kbd>Shift</kbd>+<kbd>&larr;</kbd> <kbd>&rarr;</kbd></span>With the video open: restart the song / next song</li>
           <li><span><kbd>H</kbd></span>Home: back to the player</li>
           <li><span><kbd>P</kbd> or <kbd>L</kbd></span>Library</li>
           <li><span><kbd>Shift</kbd>+<kbd>L</kbd></span>Paste a link</li>
@@ -20500,10 +20502,14 @@ document.addEventListener('keydown', (e) => {
     // Podcasts swap the two (Geethub #234): plain arrows skip -/+15s,
     // shift+arrows go to the previous/next episode. Music is unchanged.
     case 'ArrowLeft':
+      // video open (Geethub #421): left -5s, shift+left restarts the song
+      if (ytPanelOpen()){ e.preventDefault(); kbSkipBy(e.shiftKey ? -1e9 : -5); break; }
       if (e.shiftKey === isPodcastTrack(currentTrack())) playPrev();
       else { e.preventDefault(); kbSkipBy(-seekStepS()); }
       break;
     case 'ArrowRight':
+      // video open (Geethub #421): right +5s, shift+right next song
+      if (ytPanelOpen()){ e.preventDefault(); if (e.shiftKey) playNext(false); else kbSkipBy(5); break; }
       if (e.shiftKey === isPodcastTrack(currentTrack())) playNext(false);
       else { e.preventDefault(); kbSkipBy(seekStepS()); }
       break;

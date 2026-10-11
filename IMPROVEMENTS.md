@@ -9571,12 +9571,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #422. 
 
 ### video-open-shortcuts: Keyboard shortcuts while video is open (Geethub #421)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Add shortcuts that work while the video view is open (issue gives no detail on which keys).
 - **Touches:** keyboard-shortcuts, video playback
-- **Branch:**
-- **Notes:** Synced from Geethub #421. Ambiguous: ask the owner which shortcuts.
+- **Branch:** agent/video-open-shortcuts
+- **Notes:** Synced from Geethub #421. Review: scoped to the video card being open (ytPanelOpen): Left/Right +/-5s, Shift+Left restart, Shift+Right next song; outside video the old bindings are unchanged. Settings list updated. Syntax-checked only; sw cache v154.
 
 ### link-loading-spinners: Loading circles where the 3-dot buttons are while links load (Geethub #420)
 - **Status:** ready
