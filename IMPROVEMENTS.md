@@ -9218,11 +9218,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #401.
 
 ### thumb-cycle-start-custom-art: On load, library thumb cycle starts on the custom art, not the 2x2 collage (Geethub #400)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** For library tiles that cycle between custom art and the 2x2 collage, the first frame on load should be the custom art.
 - **Touches:** playlist thumb auto-cycle
-- **Branch:**
+- **Branch:** agent/thumb-cycle-start-custom-art
 - **Notes:** Synced from Geethub #400.
 
 ### link-loaded-play-now: Successful link-load pop-up offers 'Play now' (Geethub #399)
@@ -9258,11 +9258,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #396.
 
 ### buttons-hover-expand: All buttons expand smoothly on hover (Geethub #395)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Every button in the app should scale up smoothly on hover.
 - **Touches:** global button styles
-- **Branch:**
+- **Branch:** agent/buttons-hover-expand
 - **Notes:** Synced from Geethub #395.
 
 ### queue-song-hover-fill: Hovering queue songs fills the row with the UI color (Geethub #394)
@@ -9306,11 +9306,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #390.
 
 ### auto-fix-broken-links: App should keep trying to fix broken links, preferring artist YouTube page and lyric videos (bug) (Geethub #389)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Malcolm is fixing many broken links manually, usually picking the first option shown. Auto-repair broken links and prioritize the artist's YouTube page and lyric videos.
 - **Touches:** link resolution / relink
-- **Branch:**
+- **Branch:** agent/auto-fix-broken-links
 - **Notes:** Synced from Geethub #389.
 
 ### add-links-not-adding: Adding links shows success but adds nothing; albums add dead links (bug) (Geethub #388)
