@@ -173,14 +173,14 @@ svg{display:block}
    rather than a distraction behind the playlist grid. */
 .lib-bg{position:fixed;left:0;right:0;top:var(--topbar-h);bottom:0;overflow:hidden;pointer-events:none;container-type:size;z-index:-1}
 .lib-bg-video{position:absolute;top:50%;left:50%;width:102cqh;height:102cqw;transform:translate(-50%,-50%) rotate(-90deg);
-  object-fit:cover;filter:saturate(1.05) brightness(.5)}
+  object-fit:cover;filter:grayscale(1) brightness(.5)}
 /* Same poster-layer treatment as the splash: the still sits under the video
    (sharing its rotated geometry) and the video only covers it while playing. */
 .lib-bg-poster{background:url(brand/assets/library-bg-poster.jpg) center/cover no-repeat}
 video.lib-bg-video{opacity:0}
 video.lib-bg-video.is-playing{opacity:1}
 .lib-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;
-  opacity:.55;transition:background 4s linear}
+  opacity:.85;transition:background 4s linear}
 .lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
 /* Queue panel background video (#438): same recipe as the library bg (rotated, dimmed, clock-color wash), sitting behind the queue list. */
 #queue-panel{isolation:isolate}
