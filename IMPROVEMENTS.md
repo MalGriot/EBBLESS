@@ -9030,7 +9030,7 @@ Add entries in this shape:
 - **Priority:** low
 - **Description:** Clarified by Mal: swirl should keep a groove and match vibes. Avoid jarring jumps: no opera next to death metal, loud next to quiet, fast next to slow, or lyric-heavy next to instrumental. Use sense so listening feels ebbless (smooth transitions in energy, tempo, genre, vocal vs instrumental).
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/swirl-intelligence
 - **Notes:** Synced from Geethub issue #368 (idea). Ambiguous, ask before building. Related: `pin-order-currents-swirl-off-air`, `currents-thumbs-down`.
 
 ### artist-album-close-returns-to-artist: Opening an album inside the artist window: X should go back to the artist (Geethub #369)
