@@ -9242,19 +9242,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #398.
 
 ### artist-hover-pic-expand: Hovering an artist expands their circular image and mask (Geethub #397)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On hover the picture expands AND its mask expands to reveal more of the image. Fill the container height in all modes without exceeding it. Overlaps artist-hover-animation (#359).
 - **Touches:** artist rows/cards hover
-- **Branch:**
+- **Branch:** agent/artist-hover-fx
 - **Notes:** Synced from Geethub #397.
 
 ### artist-hover-container-color: Hovering an artist tints the container with their pic color; same for albums (Geethub #396)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** On hover, the artist container takes the dominant color of the artist picture. Do the same for albums.
 - **Touches:** artist and album hover
-- **Branch:**
+- **Branch:** agent/artist-hover-fx
 - **Notes:** Synced from Geethub #396.
 
 ### buttons-hover-expand: All buttons expand smoothly on hover (Geethub #395)
@@ -9274,27 +9274,27 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #394.
 
 ### artist-reorder-albums: Reorder albums in the artist window (Geethub #393)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Add sort options for albums in the artist window: most recent, alphabetical, most popular (default).
 - **Touches:** artist window
-- **Branch:**
+- **Branch:** agent/artist-window-nav
 - **Notes:** Synced from Geethub #393.
 
 ### titles-marquee-everywhere: All truncated titles become scrolling marquees (Geethub #392)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Anywhere a title is cut off with '...', make it a scrolling marquee instead. Builds on footer-title-marquee.
 - **Touches:** global titles
-- **Branch:**
+- **Branch:** agent/marquee-everywhere
 - **Notes:** Synced from Geethub #392.
 
 ### artist-album-back-arrow: Album close 'x' in the artist window becomes a back '<' (Geethub #391)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Replace the x on albums inside the artist window with a back symbol '<'.
 - **Touches:** artist window album view
-- **Branch:**
+- **Branch:** agent/artist-window-nav
 - **Notes:** Synced from Geethub #391.
 
 ### desktop-art-still-too-small: LP, cassette and album art still too small on desktop (bug) (Geethub #390)
@@ -9338,9 +9338,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #385.
 
 ### search-history-line-marquee: Search history lines scroll as a marquee when they don't fit
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** In the search bar history list (the "Recent" dropdown), any line whose text is too long to fit should scroll as a marquee instead of cutting off with "...". Lines that fit stay static. Reuse the app's existing marquee behavior (see footer-title-marquee / live-now-marquee) so it looks and feels the same.
 - **Touches:** search history dropdown (`openPasteRecents`, `.paste-recent-n`, `.paste-recent-s`).
-- **Branch:**
+- **Branch:** agent/marquee-everywhere
 - **Notes:** Added from chat 2026-10-11. Subset of titles-marquee-everywhere (Geethub #392); if that lane runs first, fold this into it.
