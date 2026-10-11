@@ -178,14 +178,14 @@ async function handleSignup(request, env, ctx, h) {
   return h.json({ ok: true, already: !!r.already, status: String(r.status || 'Pending').toLowerCase(), full: !!r.full });
 }
 
-// The feedback email says "the feedback window is open for 7 days from
-// today", so a tester's window ends 7 days after feedback_request_sent.
+// The feedback email says "the feedback window is open for 2 weeks from
+// today", so a tester's window ends 2 weeks after feedback_request_sent.
 // null until that email has gone out (no expiry yet). Older clients ignore it.
 // A tester whose rejoin was accepted has window_start (the next round's
 // date, or the acceptance): until then they stay expired; from it they get
-// a fresh 7 days, or 7 days from that round's feedback email once it's sent
+// a fresh 2 weeks, or 2 weeks from that round's feedback email once it's sent
 // (24h later, like a new tester).
-export const BETA_WINDOW_MS = 7 * 24 * 3600 * 1000;
+export const BETA_WINDOW_MS = 14 * 24 * 3600 * 1000;
 export function windowEndsAt(t, now = Date.now()) {
   const sent = Number(t && t.feedback_request_sent) || 0;
   const start = Number(t && t.window_start) || 0;
@@ -196,7 +196,7 @@ export function windowEndsAt(t, now = Date.now()) {
   return sent > 0 ? sent + BETA_WINDOW_MS : null;
 }
 
-// What the app's 7-days-up recap needs for "Join the next beta", only when
+// What the app's 2-weeks-up recap needs for "Join the next beta", only when
 // set: nextRoundAt / nextRoundLabel ("Oct 20", in the Sheet's time zone)
 // while that date is ahead, rejoin 'requested' (waiting on review) or
 // 'approved' (accepted, round not open yet), round / nextRound numbers, and
