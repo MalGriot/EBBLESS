@@ -10570,9 +10570,19 @@ function isSingleTrackType(type){
 async function beginImport(id, force, type, targetIndex){
   importErr.textContent = '';
   const wasSaved = isSaved(id);
+  // Searching/pasting a link files its songs in the library (an album as an
+  // album) but never wipes a queue that is already going (Geethub #386). A
+  // single song still plays now, and an empty queue still starts the link.
+  const keepQueue = !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
+      if (keepQueue && !isSingleTrackType(cached.type)){
+        if (!wasSaved){ statsImport(id); saveToLibrary(id); renderLibrary(); }
+        showToast('Added ' + cached.name + ' to your library');
+        if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
+        return;
+      }
       if (isSingleTrackType(cached.type)){
         // A single song is playable exactly like any other one-track queue
         // (see discovery-radio-continuation): play it now - replacing
@@ -10639,10 +10649,12 @@ async function beginImport(id, force, type, targetIndex){
       // optimization for that one case.
       startedEarly = true;
       closeImportOverlay();
-      loadPlaylistIntoPlayer(partial);
-      buildQueueFrom(partial.focusIndex && partial.tracks[partial.focusIndex] && partial.tracks[partial.focusIndex].videoId ? partial.focusIndex : 0);
-      loadIndex(state.queuePos, true);
-      setView('player');
+      if (!keepQueue){
+        loadPlaylistIntoPlayer(partial);
+        buildQueueFrom(partial.focusIndex && partial.tracks[partial.focusIndex] && partial.tracks[partial.focusIndex].videoId ? partial.focusIndex : 0);
+        loadIndex(state.queuePos, true);
+        setView('player');
+      }
       // Save to the library now rather than waiting for the full resolve -
       // resolvePlaylist is already mirroring its progress to storage as
       // "resolving: true" (see its loop), so if the app gets backgrounded
@@ -10670,6 +10682,7 @@ async function beginImport(id, force, type, targetIndex){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
+    if (keepQueue) showToast('Added ' + pl.name + ' to your library');
     if (!wasSaved && isArtistEntry(pl)){
       addArtistAlbumsToLibrary(pl);
       // warm the artist-info cache now so the bio is ready when the panel opens
@@ -10682,11 +10695,13 @@ async function beginImport(id, force, type, targetIndex){
       // fresh playlist is cached and in the library either way, but only
       // touch the live player/queue if they're still on it, so background
       // resolution never yanks them back to a playlist they left.
-      if (state.playlist && state.playlist.id === id){
+      if (!keepQueue && state.playlist && state.playlist.id === id){
         const anchor = state.queue[state.queuePos] ? state.queue[state.queuePos].idx : 0;
         loadPlaylistIntoPlayer(pl);
         buildQueueFrom(anchor);
       }
+    } else if (keepQueue){
+      closeImportOverlay();
     } else {
       closeImportOverlay();
       loadPlaylistIntoPlayer(pl);
