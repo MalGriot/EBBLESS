@@ -9363,7 +9363,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #402. Need device/repro before it can be built; check worker logs.
 
 ### echo-ambient-library: EBBLESS Echo ambient sound library (planning only, needs your attention)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Original EBBLESS ambient sounds (rain, ocean, forest, night, city, fire, train, room tone, wind, monsoon, thunder) that can play under the music, with layering and per-sound volume. Part of the proposed FLOW tier. Parked: needs decisions on where the audio comes from and whether it can play beside the main player on phones before anything is built.
 - **Touches:** nothing yet. See docs/deep-roadmap.md (Open decisions, Feasibility checks).
@@ -9371,7 +9371,7 @@ Add entries in this shape:
 - **Notes:** Added from chat 2026-10-11. Do not flip to ready until the audio source is decided and logged per docs/AUDIO-LICENSES.md.
 
 ### deep-database-design: Design the pre-launch database for DEEP (testers, tiers, limits) - proposal only
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Before launch, propose a new database that holds tester status (permanent), subscription tier (Free/Deep/Flow/Horizon), and what's needed to grey out items past a limit. Tester and Patreon status are edited by hand in a sheet. Deliver a written proposal in docs/deep-roadmap.md for approval first; no building until approved.
 - **Touches:** worker / backend, docs/deep-roadmap.md (Implementation notes, Feasibility checks). Existing beta tester system.
@@ -9475,7 +9475,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #415. Ambiguous; ask before building.
 
 ### paid-custom-cursor: Paid tier feature: custom EBBLESS cursor (Geethub #416)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Custom desktop cursor: mini vinyl record with warm orange/gold center, fluid motion reacting to pointer speed, thin cyan halo rings that expand on hover. Full design spec is in the issue.
 - **Touches:** desktop cursor layer, paid-tier gating
@@ -9609,3 +9609,59 @@ Add entries in this shape:
 - **Touches:** library item hover CSS
 - **Branch:** agent/library-thumb-polish
 - **Notes:** Synced from Geethub #417. Related to #403 (cassette hover expand).
+
+### feedback-button-nav-position: Put the feedback button between the tutorial and settings buttons, labeled 'Feedback' (Geethub #432)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Move the feedback button in the header nav so it sits between the tutorial button and the settings button, and give it the label 'Feedback'.
+- **Touches:** header nav / feedback button
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #432. Related to merged feedback-popup-to-titlebar and mobile-feedback-tutorial-corner; check those placements first.
+
+### queue-save-clear-icons: Queue window: save and clear become symbols to save space (Geethub #433)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** In the queue window, replace the Save and Clear text buttons with icons (a floppy disc for save, a trash can for clear) to save space.
+- **Touches:** queue window header
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #433. Keep accessible labels/tooltips.
+
+### queue-discover-lightbulb: Queue window: Discover checkmark becomes a lightbulb that glows when on, dims when off (Geethub #434)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Replace the Discover checkmark in the queue window with a lightbulb icon. Lit with a slow, smooth glow animation while Discover is active; dimmed when it is off.
+- **Touches:** queue window Discover toggle
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #434.
+
+### library-view-order-all-sections: Library view-order options should apply to every section, not just playlists (bug) (Geethub #435)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** The library view-order options currently only reorder playlists. They should also apply to the other sections (albums, artists, podcasts, etc.).
+- **Touches:** library sort/view-order controls
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #435. Bug. Related to playlist-manual-order-drag (#407).
+
+### queue-missing-main-ui: Queue is missing from the main UI (bug) (Geethub #436)
+- **Status:** dropped
+- **Priority:** high
+- **Description:** The queue no longer appears in the main UI. Find out where/when it disappears (desktop or mobile) and restore it.
+- **Touches:** main UI queue entry point
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #436. Bug. Reporter gave no details; reproduce first. May relate to the header nav change in #431 (History removal) or queue panel changes.
+
+### soundcloud-next-song-page-closed: SoundCloud links don't play the next song when the page is not open (bug) (Geethub #437)
+- **Status:** ready
+- **Priority:** high
+- **Description:** When a SoundCloud-sourced track ends and the app is backgrounded or the page is not open/visible, the next song does not start.
+- **Touches:** SoundCloud native playback / track-end handling
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #437. Bug. Follow-up to merged bld-background-tab-autoadvance and soundcloud-native-playback; the earlier fix may not cover the app being fully backgrounded on mobile.
+
+### queue-window-bg-video: Queue window background video, rotated 90 degrees and tinted like the library bg (Geethub #438)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Use the waves video (/Users/malcolm/Downloads/4866-181014376_medium.mp4, also pixabay.com/videos/background-yellow-abstract-waves-4866/) as the queue window background. Rotate it 90 degrees and recolor it the same way the library background video is recolored.
+- **Touches:** queue window background; library bg video code
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #438. Source file is in the user's Downloads; needs copying into the repo and compressing.
