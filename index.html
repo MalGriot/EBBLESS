@@ -20621,6 +20621,9 @@ const MINI_PLAYER_STYLE = `
     box-shadow:0 4px 14px rgba(0,0,0,.35)}
   .mp-art-ghost{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:transform .35s ease}
   body:hover .mp-art-ghost{transform:scale(1.04)}
+  #mpArtWrap{cursor:pointer}
+  #mpArtWrap:hover #mpArt,#mpArtWrap:hover .mp-art-ghost{transform:scale(1.08)}
+  #mpLogo{cursor:pointer}
   #mpArt{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
   #mpArt[src=""],.mpq-row img[src=""]{visibility:hidden}
   /* art styles (#330/#331): same three looks as the main player, kept light */
@@ -20847,6 +20850,10 @@ function buildMiniPlayerDOM(win){
   // Every control forwards to the main player's own button, so the mini
   // player runs exactly the same handler (and needle sfx, skip signal,
   // like/flag bookkeeping) as a click on the real thing.
+  // Art or logo click: back to the main app (focus the opener tab, close the mini window)
+  const backToApp = () => { try { window.focus(); } catch(e){} try { win.close(); } catch(e){} };
+  doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')) backToApp(); });
+  doc.getElementById('mpLogo').addEventListener('click', backToApp);
   const forward = (id, target) => doc.getElementById(id).addEventListener('click', () => { target.click(); updateMiniPlayerUI(); });
   forward('mpPrev', prevBtn);
   forward('mpNext', nextBtn);
