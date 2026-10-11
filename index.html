@@ -1784,8 +1784,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   /* 430 = the rest of the stack (tabs, title/artist, controls, "Ads playing?"
      + margins, bottom clearance); 300 overflowed the pane and clipped the
      tabs/ads button (Geethub #322) */
-  .artwork-wrap{width:min(440px,34vw,max(72px,calc(100dvh - var(--topbar-h) - 430px)))}
-  .track-meta{width:min(440px,34vw)}
+  .artwork-wrap{width:min(560px,52vw,max(72px,calc(100dvh - var(--topbar-h) - 430px)))}
+  .track-meta{width:min(560px,52vw)}
   .track-meta .title{font-size:26px}
   body.queue-open .view-scroll,body.queue-open #topbar{margin-right:380px;transition:margin var(--dur-surface) var(--ease-in-out)}
   #view-player{overflow-y:hidden}
@@ -1806,6 +1806,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
    below forces each pane back to the row's actual (stretched) height so
    their own overflow rules take over instead of the grid growing around them. */
 @media (min-width:1150px){
+  /* Geethub #350: art fills the center pane (viewport minus the two 340px side panes, 60px breathing room) */
+  body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(640px,calc(100vw - 740px),max(72px,calc(100dvh - var(--topbar-h) - 430px)))}
+  body.split-desktop:not(.desktop-fs) .track-meta{width:min(520px,calc(100vw - 740px))}
   /* Settings (issue #78): on this split-desktop layout, Settings swaps into
      the center pane in #view-player's place instead of navigating away to
      its own screen. Below this 1150px breakpoint none of this block's
