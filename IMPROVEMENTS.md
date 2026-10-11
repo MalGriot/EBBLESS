@@ -9379,7 +9379,7 @@ Add entries in this shape:
 - **Notes:** Added from chat 2026-10-11. Design left to Claude. See docs/deep-roadmap.md for all decisions.
 
 ### artist-link-pick-albums: When you add an artist link, show an album picker (Geethub #412)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Adding an artist link opens a window with all their albums in a grid. You pick 10 to add first. (DEEP paywall idea: add more than 10, plus an 'add all' option.)
 - **Touches:** artist link add flow
@@ -9395,7 +9395,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #411.
 
 ### artist-bio-read-more: Artist bio 'more' button: centered, says 'Read more' (Geethub #410)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Center the 'more' button on the artist bio and label it 'Read more'.
 - **Touches:** artist window bio
@@ -9411,7 +9411,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #409.
 
 ### library-playlist-groups: Library playlists split into EBBLESS-made and user-added (Geethub #408)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Group playlists in the library under better labels: EBBLESS-made vs user-added. Group titles are clickable and collapse their lists.
 - **Touches:** library playlists
@@ -9419,7 +9419,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #408.
 
 ### playlist-manual-order-drag: Drag playlists into a custom order in manual mode (Geethub #407)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** In manual mode, playlists can be dragged into any order. The order is saved, so switching to alphabetical and back returns to the custom order until it is changed again.
 - **Touches:** library playlists sort
@@ -9435,7 +9435,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #406.
 
 ### speaker-icon-under-thumb: Speaker icon next to the title under album/playlist/podcast thumbs (Geethub #405)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Show the same speaker icon used next to the playing song title in the library beside the title under the thumb art, for albums, playlists, podcasts, etc.
 - **Touches:** library thumbs
@@ -9443,9 +9443,49 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #405.
 
 ### cd-hover-dropshadow: CD hover animation: add a drop shadow, expand art smoothly (Geethub #404)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Put a drop shadow on the CD from the album art in the album thumb hover. Also expand the art under the clipping mask smoothly on hover.
 - **Touches:** library album thumb hover
 - **Branch:**
 - **Notes:** Synced from Geethub #404.
+
+### cassette-skip-reverse-rewind: Cassette skip-ahead plays the rewind sound backwards (Geethub #413)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** In Cassette mode, when the user skips ahead, play the existing cassette rewind sound reversed (fast-forward feel).
+- **Touches:** cassette sfx, skip-next handling
+- **Branch:**
+- **Notes:** Synced from Geethub #413. Builds on merged cassette-rewind-sfx.
+
+### miniplayer-art-hover-click: Miniplayer album art: smooth hover expand, click returns to app (Geethub #414)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** On hover the miniplayer art expands a bit smoothly. Clicking it brings you back to the main app. The logo in the miniplayer should do the same.
+- **Touches:** desktop mini-player
+- **Branch:**
+- **Notes:** Synced from Geethub #414.
+
+### artist-names-left-justified: Artist names should be left justified (Geethub #415)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug report with no detail: artist names should be left justified. Needs a screenshot or the exact screen to know where.
+- **Touches:** unknown
+- **Branch:**
+- **Notes:** Synced from Geethub #415. Ambiguous; ask before building.
+
+### paid-custom-cursor: Paid tier feature: custom EBBLESS cursor (Geethub #416)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Custom desktop cursor: mini vinyl record with warm orange/gold center, fluid motion reacting to pointer speed, thin cyan halo rings that expand on hover. Full design spec is in the issue.
+- **Touches:** desktop cursor layer, paid-tier gating
+- **Branch:**
+- **Notes:** Synced from Geethub #416.
+
+### tester-window-two-weeks: Beta tester window: 7 days to 2 weeks, and find why no 7-day email/deactivation happened for testers
+- **Status:** ready
+- **Priority:** high
+- **Description:** (1) Investigate: the owner is a tester and never got the feedback email or auto-deactivation. The 7-day window only starts when `feedback_request_sent` is written by the Sheet script (tools/beta-sheet.gs, ~line 226-247), so find out whether that send runs for existing/early testers and why it did not for the owner. Report the cause before changing anything big. (2) Change the window from 7 to 14 days everywhere: BETA_WINDOW_MS in worker/src/beta.js, the feedback email copy in tools/beta-sheet.gs, and the app copy ("your 7 days", "THAT'S YOUR 7 DAYS", What's new text, tester recap, rejoin text) in index.html. Also bring back the beta tester feedback intake channel from branch agent/tester-feedback-form (.github/ISSUE_TEMPLATE/tester-feedback.yml plus the 7-line index.html hook), updating it to match.
+- **Touches:** worker/src/beta.js, tools/beta-sheet.gs (needs redeploying by the owner), index.html tester recap copy, branch agent/tester-feedback-form.
+- **Branch:** agent/tester-feedback-form (existing, unmerged)
+- **Notes:** Added from chat 2026-10-11. Sheet script changes live in Google Apps Script, so the owner must paste/redeploy it.
