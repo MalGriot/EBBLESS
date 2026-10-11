@@ -9651,12 +9651,25 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #436. Bug. Reporter gave no details; reproduce first. May relate to the header nav change in #431 (History removal) or queue panel changes.
 
 ### soundcloud-next-song-page-closed: SoundCloud links don't play the next song when the page is not open (bug) (Geethub #437)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** When a SoundCloud-sourced track ends and the app is backgrounded or the page is not open/visible, the next song does not start.
 - **Touches:** SoundCloud native playback / track-end handling
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** `agent/soundcloud-next-song-bg`
 - **Notes:** Synced from Geethub #437. Bug. Follow-up to merged bld-background-tab-autoadvance and soundcloud-native-playback; the earlier fix may not cover the app being fully backgrounded on mobile.
+- **Review note:** Earlier fixes (`bld-background-tab-autoadvance`: standby
+  deck no longer autoplays; `soundcloud-native-playback`: widget decks) only
+  covered a hidden desktop tab, where JS keeps running. They never covered a
+  backgrounded or locked mobile page, which stays alive only while
+  `keepAliveAudio` plays. Suspected root cause: the SC widget can report PAUSE
+  just before FINISH at a natural end; the PAUSE handler flipped the UI to
+  paused and `setPlayingUI(false)` stopped `keepAliveAudio`, so the OS could
+  freeze the page before FINISH ran `playNext`. Fix: a PAUSE in the last 1.5s
+  of a sound is held for FINISH (reflected after 1.5s if FINISH never
+  comes). UNTESTED on any device, and the PAUSE-before-FINISH ordering was not
+  observed, only inferred. Separately, iOS refusing to start a SoundCloud
+  iframe while locked (see `iosLockedStallCheck`) is a platform limit this
+  does not change. Needs an iPhone PWA and Android test with the screen locked.
 
 ### queue-window-bg-video: Queue window background video, rotated 90 degrees and tinted like the library bg (Geethub #438)
 - **Status:** ready
