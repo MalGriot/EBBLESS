@@ -9218,7 +9218,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #401.
 
 ### thumb-cycle-start-custom-art: On load, library thumb cycle starts on the custom art, not the 2x2 collage (Geethub #400)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** For library tiles that cycle between custom art and the 2x2 collage, the first frame on load should be the custom art.
 - **Touches:** playlist thumb auto-cycle
@@ -9258,7 +9258,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #396.
 
 ### buttons-hover-expand: All buttons expand smoothly on hover (Geethub #395)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Every button in the app should scale up smoothly on hover.
 - **Touches:** global button styles
@@ -9306,7 +9306,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #390.
 
 ### auto-fix-broken-links: App should keep trying to fix broken links, preferring artist YouTube page and lyric videos (bug) (Geethub #389)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Malcolm is fixing many broken links manually, usually picking the first option shown. Auto-repair broken links and prioritize the artist's YouTube page and lyric videos.
 - **Touches:** link resolution / relink
