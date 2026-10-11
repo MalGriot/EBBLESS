@@ -9523,7 +9523,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #428. 
 
 ### miniplayer-color-bg: Miniplayer background color (Geethub #427)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Mini player needs a colored background (issue gives no detail; likely tint from the album art or accent color).
 - **Touches:** desktop mini-player
@@ -9571,7 +9571,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #422. 
 
 ### video-open-shortcuts: Keyboard shortcuts while video is open (Geethub #421)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Add shortcuts that work while the video view is open (issue gives no detail on which keys).
 - **Touches:** keyboard-shortcuts, video playback
