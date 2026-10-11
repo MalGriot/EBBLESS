@@ -6688,7 +6688,11 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   // Album tracks are matched in album mode (see searchYouTubeCached): the
   // artist's Topic upload of the album cut, checked against the album cover.
   const albumOpts = isAlbumEntry({ type, albumOverride }) ? { album: name, albumArt: image || null } : null;
-  const resolved = [];
+  // Full count from the start: every track not matched yet sits in its slot
+  // as a placeholder with no videoId, so the library shows the real total
+  // with the unresolved rows greyed (.is-missing) until each one loads
+  // (Geethub #419). Each match below replaces its own slot by index.
+  const resolved = tracks.map(t => ({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art: t.image || null, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined }));
   // relink-while-loading: expose the in-flight list so a "Fix this song"
   // pick on an already-resolved row lands in it too (see applyRelinkChoice);
   // otherwise the next snapshot write below would overwrite the pick.
@@ -6714,12 +6718,12 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       // srcDuration = the source's own length (seconds), kept separately
       // from `duration` (the matched video's) for the wrong-track log and
       // the refresh-link picker's search.
-      resolved.push({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
+      resolved[i] = ({ title: t.title, artist: t.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art, duration: match.duration || 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
     } catch(e){
       const art = await resolveTrackArt(sourceKind, t.title, t.artist, t.image || null);
-      resolved.push({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
+      resolved[i] = ({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
     }
-    onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[resolved.length - 1] });
+    onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[i] });
     // Fire as soon as the first *playable* track lands (not necessarily
     // index 0 - an early match can fail) so the caller can start playback
     // without waiting on the rest of the playlist to resolve. `resolved` is

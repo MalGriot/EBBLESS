@@ -9587,12 +9587,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #420. Related to #419.
 
 ### album-add-full-count-greyed: Adding an album should show the full track count immediately, with unloaded tracks greyed (Geethub #419)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Adding an album currently counts up as tracks load. It should show the full count right away and show not-yet-loaded tracks greyed out until they resolve.
 - **Touches:** album add flow, playlist-full-loading
-- **Branch:**
-- **Notes:** Synced from Geethub #419. Bug. Related to merged playlist-full-loading.
+- **Branch:** agent/album-add-full-count
+- **Notes:** Synced from Geethub #419. Bug. Related to merged playlist-full-loading. Review: resolvePlaylist now pre-fills every track slot as a no-videoId placeholder (greyed via .is-missing) and fills each by index, so the full count shows at once. Syntax-checked only, not run in a browser; sw cache v148.
 
 ### albums-show-year: Albums should show their release year (Geethub #418)
 - **Status:** ready
