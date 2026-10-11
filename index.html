@@ -10753,7 +10753,12 @@ function stageMatchingProgress(done, total, track){
 function plainError(e, fallback){
   const raw = String((e && e.message) || e || '');
   if (raw) console.warn('[ebbless] load error:', raw);
-  if (/failed to fetch|networkerror|load failed|network ?error|err_|could not reach|timed? ?out|aborted/i.test(raw))
+  // The backend answered but its own upstream (SoundCloud, Spotify, an
+  // internal error) failed: not the listener's internet, so don't say so
+  // (Geethub #402). Only a failed fetch from this device is a network error.
+  if (/^(could not reach|internal error)|could not reach (soundcloud|spotify|apple|youtube)/i.test(raw))
+    return 'EBBLESS couldn\'t load that from the source right now. Try again in a minute.';
+  if (/failed to fetch|networkerror|load failed|network ?error|^err_|timed? ?out|aborted/i.test(raw))
     return "We couldn't reach EBBLESS. Check your internet and try again.";
   if (/private|not found|no (track|artist|video) data|has no (tracks|videos)|deleted/i.test(raw) && /^[a-z]/.test(raw))
     return 'That playlist or song may be private. Make it public and paste it again.';
