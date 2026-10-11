@@ -15,7 +15,7 @@
 // private token, access link) and emails the invite. Set a tester's
 // tester_status to Inactive and their link stops working. 24 hours after
 // acceptance, each Active tester is emailed the feedback form once
-// (feedback_request_sent records when). Their 7-day window runs from that
+// (feedback_request_sent records when). Their 2-week window runs from that
 // email (the worker works it out; the app shows a recap when it's over).
 //
 // Rejoining needs feedback first: a Feedback row from that tester with
@@ -28,7 +28,7 @@
 // number: accept it like any signup and their Testers row gets window_start
 // = the later of now and Settings next_round_start, round = next_round, and
 // they're emailed. From
-// window_start they get a fresh 7 days (and the feedback email again 24h
+// window_start they get a fresh 2 weeks (and the feedback email again 24h
 // later, which sets the window like a new tester's). Same token, so their
 // history is untouched.
 //
@@ -196,26 +196,37 @@ function sendMail_(to, subject, text, html) {
 
 const FEEDBACK_REQUEST_AFTER_MS = 24 * 3600 * 1000;
 
-function feedbackRequestText_(first, link) {
+// Whole days since this tester's access started, from their own record
+// (window_start for a rejoin, else accepted_timestamp). Never a fixed number.
+function daysWithAccess_(t, now) {
+  const from = ms_(t.window_start) || ms_(t.accepted_timestamp);
+  return from ? Math.max(0, Math.floor((now - from) / 86400000)) : null;
+}
+function haveHadText_(days) {
+  if (days === null) return 'a little time';
+  return days === 0 ? 'a little time (you got access today)' : days === 1 ? '1 day' : days + ' days';
+}
+
+function feedbackRequestText_(first, link, days) {
   return 'Peace and love, ' + first + '.\n\n' +
-    'Just checking in now that you\u2019ve had a little time with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.\n\n' +
+    'Just checking in now that you\u2019ve had ' + haveHadText_(days) + ' with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.\n\n' +
     'What did you love? What confused you? What broke? What would make you want to come back?\n\n' +
     'Take a few minutes and tell me here:\n\n' + link + '\n\n' +
-    'The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
+    'The feedback window is open for 2 weeks from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
     'Your feedback is also what unlocks the next beta round for you.\n\n' +
     'No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F\n\n' +
     'Mal';
 }
-function feedbackRequestHtml_(first, link) {
+function feedbackRequestHtml_(first, link, days) {
   const esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   const p = function (h) { return '<p style="margin:0 0 16px">' + h + '</p>'; };
   return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.5;color:#121212">' +
     p('Peace and love, ' + esc(first) + '.') +
-    p('Just checking in now that you\u2019ve had a little time with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.') +
+    p('Just checking in now that you\u2019ve had ' + haveHadText_(days) + ' with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.') +
     p('What did you love? What confused you? What broke? What would make you want to come back?') +
     p('Take a few minutes and tell me here:') +
     p('<a href="' + esc(link) + '">' + esc(link) + '</a>') +
-    p('<b>The feedback window is open for 7 days from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
+    p('<b>The feedback window is open for 2 weeks from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
     p('Your feedback is also what unlocks the next beta round for you.') +
     p('No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F') +
     p('Mal') + '</div>';
@@ -235,11 +246,12 @@ function sendFeedbackRequests() {
       if (t.tester_status !== 'Active' || !t.access_token || !t.email) return;
       const start = ms_(t.window_start), sent = ms_(t.feedback_request_sent);
       if (sent && !(start && sent < start)) return;
+      // A row added by hand has no accepted_timestamp: send now rather than never.
       const from = start || ms_(t.accepted_timestamp);
-      if (!from || now - from < FEEDBACK_REQUEST_AFTER_MS) return;
+      if (from && now - from < FEEDBACK_REQUEST_AFTER_MS) return;
       const first = String(t.name || '').split(/\s+/)[0] || 'friend';
       const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
-      const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link), feedbackRequestHtml_(first, link));
+      const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link, daysWithAccess_(t, now)), feedbackRequestHtml_(first, link, daysWithAccess_(t, now)));
       if (err) {
         const note = 'Feedback request NOT emailed: ' + err;
         if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
@@ -253,7 +265,7 @@ function sendFeedbackRequests() {
 // ---------- inactivity reminder (48h without opening the app) ----------
 
 const INACTIVE_AFTER_MS = 48 * 3600 * 1000;
-const WINDOW_MS = 7 * 24 * 3600 * 1000;
+const WINDOW_MS = 14 * 24 * 3600 * 1000;
 
 function reminderText_(first, link) {
   return 'Peace, ' + first + '.\n\n' +
@@ -267,7 +279,7 @@ function reminderText_(first, link) {
 // quiet stretch: 48h+ since last_active (Analytics tab), or since access if
 // they've never opened it. reminder_sent is stamped so it doesn't repeat until
 // they've been active again and gone quiet again. Skips testers excluded from
-// analytics (no activity data) and anyone whose 7-day window has ended.
+// analytics (no activity data) and anyone whose 2-week window has ended.
 function sendInactivityReminders_() {
   const sh = sheet_(TESTERS), ash = sheet_(ANALYTICS);
   withLock_(function () {
@@ -370,7 +382,7 @@ function me_(token) {
   const t = activeTester_(token);
   if (!t) return { ok: true, tester: null };
   // feedback_request_sent (ms epoch, or null if not emailed yet): the worker
-  // derives the tester's 7-day window end from it (the email says so), and
+  // derives the tester's 2-week window end from it (the email says so), and
   // from window_start once they've rejoined for a new round.
   const sent = t.feedback_request_sent instanceof Date ? t.feedback_request_sent.getTime() : Date.parse(t.feedback_request_sent);
   const round = nextRound_();
@@ -450,7 +462,7 @@ function rejoin_(token) {
     if (rejoinOpen_(t)) return { already: true, t: t };
     if (!feedbackGiven_(t)) return { needsFeedback: true, t: t };
     const now = new Date(), stamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    const note = 'Rejoin request from ' + t.tester_number + ' ' + stamp + ' (accept to give them a fresh 7 days)';
+    const note = 'Rejoin request from ' + t.tester_number + ' ' + stamp + ' (accept to give them a fresh 2 weeks)';
     const a = records_(ash).filter(function (x) { return x.applicant_id && x.applicant_id === t.applicant_id; })[0];
     if (a) {
       setCell_(ash, a._row, 'applicant_status', 'Pending');
@@ -699,11 +711,11 @@ function rejoinAccepted_(result) {
   const when = Utilities.formatDate(result.start, Session.getScriptTimeZone(), 'MMM d');
   const first = String(t.name || '').split(/\s+/)[0];
   const err = sendMail_(t.email, 'You\'re back in: ' + t.tester_number, 'Peace ' + first + ',\n\nYou\'re in for the next EBBLESS beta round. ' +
-    (later ? 'It opens ' + when + ', and your 7 days start then.' : 'Your fresh 7 days start now.') +
+    (later ? 'It opens ' + when + ', and your 2 weeks start then.' : 'Your fresh 2 weeks start now.') +
     ' Same link as before, and your library and history are right where you left them:\n' + accessLink_(t.access_token) + '\n\nMAL GRIOT');
   const note = (err ? 'Rejoin email NOT sent: ' + err : 'Rejoin accepted, emailed') + ' ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') + ', window starts ' + when;
   setCell_(tsh, result.row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
-  const msg = t.name + ' (' + t.tester_number + ') rejoined for the next round. Fresh 7 days from ' + when + (err ? '. Email failed, see notes.' : '. Emailed.');
+  const msg = t.name + ' (' + t.tester_number + ') rejoined for the next round. Fresh 2 weeks from ' + when + (err ? '. Email failed, see notes.' : '. Emailed.');
   toast_(msg);
   return msg;
 }
@@ -788,6 +800,19 @@ function resendSelected() {
 
 // ---------- setup ----------
 
+// Installs just the two triggers. The hourly feedback-email trigger exists
+// only if setup() ran after that feature shipped; if it never did, no tester
+// ever gets the feedback email, so their window never starts and nothing
+// deactivates. Run this once from the Apps Script editor (approve the prompt).
+function installTriggers() {
+  const ss = ss_();
+  ScriptApp.getProjectTriggers().forEach(function (tr) {
+    if (tr.getHandlerFunction() === 'onBetaEdit' || tr.getHandlerFunction() === 'sendFeedbackRequests') ScriptApp.deleteTrigger(tr);
+  });
+  ScriptApp.newTrigger('onBetaEdit').forSpreadsheet(ss).onEdit().create();
+  ScriptApp.newTrigger('sendFeedbackRequests').timeBased().everyHours(1).create();
+}
+
 function colLetter_(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
 
 function setup() {
@@ -867,7 +892,7 @@ function setup() {
   ensureHeaders_(set, ['setting', 'value', 'about']);
   set.setFrozenRows(1);
   [['next_round', 2, 'Round number accepted rejoins move into (Testers.round). Bump it once that round has opened, before the next one.'],
-   ['next_round_start', '', 'Date that round opens. Accepted rejoins get a fresh 7 days from this date (or from when you accept, if later). Testers see it on the Join the next beta button.']]
+   ['next_round_start', '', 'Date that round opens. Accepted rejoins get a fresh 2 weeks from this date (or from when you accept, if later). Testers see it on the Join the next beta button.']]
     .forEach(function (d) {
       if (!records_(set).some(function (r) { return String(r.setting).trim() === d[0]; })) append_(set, { setting: d[0], value: d[1], about: d[2] });
     });

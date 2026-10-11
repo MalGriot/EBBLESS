@@ -2934,7 +2934,7 @@ body.week-up-on{overflow:hidden}
   const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;  // keep in sync with BETA_LEASE_MS in worker/src/beta.js
   const RENEW_WAIT_MS = 10000;
   // What /beta/me (or /beta/claim) said about this tester: first name, label
-  // and when their 7-day window ends (ms, absent until the feedback email
+  // and when their 2-week window ends (ms, absent until the feedback email
   // goes out). Read by the app's TESTER WEEK UP block; cleared with the token.
   const LS_ME = 'ebbless:betaMe';
   const REFRESH_MSG = 'Your access on this device needs a quick refresh. Sign in with Google to continue.';
@@ -2977,7 +2977,7 @@ body.week-up-on{overflow:hidden}
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
     ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
-      // "Join the next beta" on the 7-days-up recap (absent when not set)
+      // "Join the next beta" on the 2-weeks-up recap (absent when not set)
       rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
       round: Number(d.round) > 0 ? Number(d.round) : null, nextRound: Number(d.nextRound) > 0 ? Number(d.nextRound) : null,
       feedbackGiven: typeof d.feedbackGiven === 'boolean' ? d.feedbackGiven : null }));
@@ -3766,6 +3766,14 @@ body.week-up-on{overflow:hidden}
             <div class="desc">New features and fixes in each version of EBBLESS.</div>
           </div>
           <button class="btn-ghost" id="whatsNewBtn">View</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Report as a beta tester</div>
+            <div class="desc">Testing EBBLESS? Log how a specific thing went - opens a quick issue form on GitHub, no EBBLESS account needed, just GitHub.</div>
+          </div>
+          <a class="btn-ghost" id="testerFeedbackBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=tester-feedback.yml&labels=tester-feedback" target="_blank" rel="noopener">Report</a>
+        </div>
         </div>
       </div>
       <!-- Keyboard shortcuts (Geethub #246): mirrors the document keydown
@@ -13018,9 +13026,9 @@ const WHATS_NEW = [
   ]},
   { version: 80, date: '2026-10-06', items: [
     'Big playlists: each song shows its own album art instead of the playlist cover.',
-    'The beta page is rebuilt: how to join, what happens after, your 7 days, screenshots, updates and answers to common questions.',
+    'The beta page is rebuilt: how to join, what happens after, your 2 weeks, screenshots, updates and answers to common questions.',
     'The EBBLESS lock screen leads with Join the beta. Testers just open the link in their email.',
-    'Testers: when your 7 days are up, you get one last song, then your week, wrapped.'
+    'Testers: when your 2 weeks are up, you get one last song, then your week, wrapped.'
   ]},
   { version: 78, date: '2026-10-05', items: [
     'Hear an ad? Tap "Ads playing?" under the controls and we get what the player saw, so we can stamp it out.',
@@ -13653,7 +13661,7 @@ setInterval(playLogTick, PLAY_LOG_TICK_MS);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden'){ playLogTick(); playLogStamp(false); } });
 
 /* ---------- TESTER WEEK UP ----------
-   A beta tester's window is 7 days from their feedback email (the worker's
+   A beta tester's window is 2 weeks from their feedback email (the worker's
    /beta/me windowEndsAt, saved by the beta lock in ebbless:betaMe). Once it
    has passed, the app still opens and works until one full song finishes
    in that page session (playLogCompleted). Then every control freezes, the
@@ -13766,9 +13774,9 @@ function weekUpHtml(r, opts){
   const stat = (n, label) => '<div class="wu-stat"><span class="wu-num" data-n="' + n + '">' + (opts.instant ? n.toLocaleString() : '0') + '</span><span class="wu-stat-l">' + label + '</span></div>';
   let html = '<div class="wu-bg" aria-hidden="true"><div class="wu-poster"></div><div class="wu-tint"></div><div class="wu-fade"></div></div>' +
     '<div class="wu-wrap">' +
-    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this after one full song once their 7 days are up.<button type="button" class="wu-close" id="wuClose">Close</button></div>' : '') +
+    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this after one full song once their 2 weeks are up.<button type="button" class="wu-close" id="wuClose">Close</button></div>' : '') +
     '<div class="wu-top wu-reveal"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="wu-tag">' + escapeHtml(me.label || 'Beta tester') + '</span></div>' +
-    '<h1 class="wu-reveal" id="wuTitle">THAT\'S YOUR 7 DAYS' + (first ? ', ' + escapeHtml(first.toUpperCase()) : '') + '.</h1>' +
+    '<h1 class="wu-reveal" id="wuTitle">THAT\'S YOUR 2 WEEKS' + (first ? ', ' + escapeHtml(first.toUpperCase()) : '') + '.</h1>' +
     '<div class="wu-rule wu-reveal"></div>' +
     '<p class="wu-lead wu-reveal">' + (first ? escapeHtml(first) + ', your' : 'Your') + ' week in the EBBLESS beta is a wrap. Thank you for pressing play, poking around, and finding the rough edges.</p>' +
     '<p class="wu-lead wu-reveal">One last thing before the music stops: tell us how it really felt. The good, the bad, the weird. All of it helps.</p>' +
@@ -13892,7 +13900,7 @@ function showWeekUp(opts){
 }
 // "Join the next beta": one tap, no form. POST /beta/rejoin with the tester
 // token puts them back in the review queue (their own Applicants row, set
-// to Pending); accepting it gives them a fresh 7 days from the next round's
+// to Pending); accepting it gives them a fresh 2 weeks from the next round's
 // date, same token, history untouched. State comes from /beta/me (saved in
 // ebbless:betaMe), so a repeat tap or another device shows "on the list".
 // Feedback unlocks it: until /beta/me says feedbackGiven (a beta feedback
@@ -13908,7 +13916,7 @@ function weekUpJoinSet(btn, note, me){
     note.textContent = 'Feedback for this round unlocks ' + round + '. Send it, come back here, and join in one tap.';
   } else if (me.rejoin === 'approved'){
     btn.disabled = true; btn.textContent = 'YOU\'RE IN FOR THE NEXT ROUND';
-    note.textContent = date ? 'It opens ' + date + '. Your fresh 7 days start then.' : 'Your fresh 7 days start when the round opens.';
+    note.textContent = date ? 'It opens ' + date + '. Your fresh 2 weeks start then.' : 'Your fresh 2 weeks start when the round opens.';
   } else if (me.rejoin === 'requested'){
     btn.disabled = true; btn.textContent = 'YOU\'RE ON THE LIST';
     note.textContent = (date ? 'Next round starts ' + date + '. ' : '') + 'You\'ll get an email when you\'re in.';
