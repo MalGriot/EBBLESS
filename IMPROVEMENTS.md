@@ -9361,3 +9361,19 @@ Add entries in this shape:
 - **Touches:** playlist load flow / worker request
 - **Branch:**
 - **Notes:** Synced from Geethub #402. Need device/repro before it can be built; check worker logs.
+
+### echo-ambient-library: EBBLESS Echo ambient sound library (planning only, needs your attention)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Original EBBLESS ambient sounds (rain, ocean, forest, night, city, fire, train, room tone, wind, monsoon, thunder) that can play under the music, with layering and per-sound volume. Part of the proposed FLOW tier. Parked: needs decisions on where the audio comes from and whether it can play beside the main player on phones before anything is built.
+- **Touches:** nothing yet. See docs/deep-roadmap.md (Open decisions, Feasibility checks).
+- **Branch:**
+- **Notes:** Added from chat 2026-10-11. Do not flip to ready until the audio source is decided and logged per docs/AUDIO-LICENSES.md.
+
+### deep-database-design: Design the pre-launch database for DEEP (testers, tiers, limits) - proposal only
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Before launch, propose a new database that holds tester status (permanent), subscription tier (Free/Deep/Flow/Horizon), and what's needed to grey out items past a limit. Tester and Patreon status are edited by hand in a sheet. Deliver a written proposal in docs/deep-roadmap.md for approval first; no building until approved.
+- **Touches:** worker / backend, docs/deep-roadmap.md (Implementation notes, Feasibility checks). Existing beta tester system.
+- **Branch:**
+- **Notes:** Added from chat 2026-10-11. Design left to Claude. See docs/deep-roadmap.md for all decisions.
