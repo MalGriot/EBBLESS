@@ -10567,12 +10567,53 @@ function isSingleTrackType(type){
   return type === 'track' || type === 'sc_track' || type === 'am_track' || type === 'yt_video';
 }
 
+// A pasted/searched link that resolved to one song. With nothing playing it
+// plays right away, as before (then offers where to save it). With a queue
+// already going, ask what to do with it instead of wiping the queue: four
+// one-tap choices, no confirmation step. Shared ?import=&track= links
+// (targetIndex) keep the old play-now behaviour.
+function playSingleSongLink(pl, targetIndex){
+  const track = pl.tracks[0];
+  const playNow = (offerSave) => {
+    loadPlaylistIntoPlayer(pl);
+    buildQueueFrom(0);
+    loadIndex(state.queuePos, true);
+    setView('player');
+    if (offerSave) openSingleTrackDestinationPicker(track);
+  };
+  if (targetIndex || !(state.queue.length > 0 && state.queuePos >= 0) || !track || !track.videoId){ playNow(true); return; }
+  // queue entries point at a playlist by id, so the one-song list must be
+  // findable later (playlistById falls back to the cache)
+  if (!getCachedPlaylist(pl.id)) persistPlaylistObj(pl);
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">&ldquo;' + escapeHtml(track.title) + '&rdquo;</div>' +
+    '<button class="btn-ghost" id="ssNextBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Play next</button>' +
+    '<button class="btn-ghost" id="ssQueueBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Add to queue</button>' +
+    '<button class="btn-ghost" id="ssPlaylistBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Add to playlist</button>' +
+    '<button class="btn-ghost" id="ssNowBtn" style="width:100%;text-align:left;display:block">Play now (replaces the queue)</button>';
+  $('ssNextBtn').addEventListener('click', () => { closeImportOverlay(); queuePlayNext(0, pl.id); showToast('Playing next'); });
+  $('ssQueueBtn').addEventListener('click', () => { closeImportOverlay(); queueAddToEnd(0, pl.id); showToast('Added to queue'); });
+  $('ssPlaylistBtn').addEventListener('click', () => openAddToPlaylistPicker(track));
+  $('ssNowBtn').addEventListener('click', () => { closeImportOverlay(); playNow(false); });
+}
+
 async function beginImport(id, force, type, targetIndex){
   importErr.textContent = '';
   const wasSaved = isSaved(id);
+  // Searching/pasting a link files its songs in the library (an album as an
+  // album) but never wipes a queue that is already going (Geethub #386). A
+  // single song still plays now, and an empty queue still starts the link.
+  const keepQueue = !targetIndex && state.queue.length > 0 && state.queuePos >= 0 && !isSingleTrackType(type);
   if (!force){
     const cached = getCachedPlaylist(id);
     if (cached){
+      if (keepQueue && !isSingleTrackType(cached.type)){
+        if (!wasSaved){ statsImport(id); saveToLibrary(id); renderLibrary(); }
+        showToast('Added ' + cached.name + ' to your library');
+        if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
+        return;
+      }
       if (isSingleTrackType(cached.type)){
         // A single song is playable exactly like any other one-track queue
         // (see discovery-radio-continuation): play it now - replacing
@@ -10584,11 +10625,7 @@ async function beginImport(id, force, type, targetIndex){
         // and extends the queue around this track (isDiscoverOn defaults to
         // true), and playNext/finishQueueAtEnd carry that continuation
         // through when the track actually ends.
-        loadPlaylistIntoPlayer(cached);
-        buildQueueFrom(0);
-        loadIndex(state.queuePos, true);
-        setView('player');
-        openSingleTrackDestinationPicker(cached.tracks[0]);
+        playSingleSongLink(cached, targetIndex);
         return;
       }
       loadPlaylistIntoPlayer(cached);
@@ -10639,10 +10676,12 @@ async function beginImport(id, force, type, targetIndex){
       // optimization for that one case.
       startedEarly = true;
       closeImportOverlay();
-      loadPlaylistIntoPlayer(partial);
-      buildQueueFrom(partial.focusIndex && partial.tracks[partial.focusIndex] && partial.tracks[partial.focusIndex].videoId ? partial.focusIndex : 0);
-      loadIndex(state.queuePos, true);
-      setView('player');
+      if (!keepQueue){
+        loadPlaylistIntoPlayer(partial);
+        buildQueueFrom(partial.focusIndex && partial.tracks[partial.focusIndex] && partial.tracks[partial.focusIndex].videoId ? partial.focusIndex : 0);
+        loadIndex(state.queuePos, true);
+        setView('player');
+      }
       // Save to the library now rather than waiting for the full resolve -
       // resolvePlaylist is already mirroring its progress to storage as
       // "resolving: true" (see its loop), so if the app gets backgrounded
@@ -10660,16 +10699,13 @@ async function beginImport(id, force, type, targetIndex){
       // whatever was already playing and builds a fresh one-track queue
       // around it, which Discover then extends/continues exactly like it
       // does for any other playlist - then still offer to save it.
-      loadPlaylistIntoPlayer(pl);
-      buildQueueFrom(0);
-      loadIndex(state.queuePos, true);
-      setView('player');
-      openSingleTrackDestinationPicker(pl.tracks[0]);
+      playSingleSongLink(pl, targetIndex);
       return;
     }
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
+    if (keepQueue) showToast('Added ' + pl.name + ' to your library');
     if (!wasSaved && isArtistEntry(pl)){
       addArtistAlbumsToLibrary(pl);
       // warm the artist-info cache now so the bio is ready when the panel opens
@@ -10682,11 +10718,13 @@ async function beginImport(id, force, type, targetIndex){
       // fresh playlist is cached and in the library either way, but only
       // touch the live player/queue if they're still on it, so background
       // resolution never yanks them back to a playlist they left.
-      if (state.playlist && state.playlist.id === id){
+      if (!keepQueue && state.playlist && state.playlist.id === id){
         const anchor = state.queue[state.queuePos] ? state.queue[state.queuePos].idx : 0;
         loadPlaylistIntoPlayer(pl);
         buildQueueFrom(anchor);
       }
+    } else if (keepQueue){
+      closeImportOverlay();
     } else {
       closeImportOverlay();
       loadPlaylistIntoPlayer(pl);
