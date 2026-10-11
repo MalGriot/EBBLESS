@@ -976,6 +976,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .track-meta .title-row .title{flex:1;min-width:0}
 /* balances the like + options buttons on the right so the title stays centered */
 .track-meta .title-row::before{content:'';flex:none;width:50px}
+/* the CuRRentSSsss thumbs-down adds a third right-side button (22px + 6px gap): widen the spacer to match (Geethub #358) */
+.track-meta .title-row:has(.player-decline-btn:not([hidden]))::before{width:78px}
 
 .marquee{overflow:hidden;white-space:nowrap;position:relative}
 .marquee>span{display:inline-block;white-space:nowrap}
@@ -1826,7 +1828,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
    their own overflow rules take over instead of the grid growing around them. */
 @media (min-width:1150px){
   /* Geethub #350: art fills the center pane (viewport minus the two 340px side panes, 60px breathing room) */
-  body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(640px,calc(100vw - 740px),max(72px,calc(100dvh - var(--topbar-h) - 395px)))}
+  /* art grows again (desktop art too small, repeat of #350): cap 640 -> 820px so tall/wide screens fill the pane; 380 reserve + 16px title gap frees ~15px vs 395 */
+  body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 740px),max(72px,calc(100dvh - var(--topbar-h) - 380px)))}
+  body.split-desktop:not(.desktop-fs) .track-meta{margin-top:clamp(8px,2dvh,16px)}
   body.split-desktop:not(.desktop-fs) .track-meta{width:min(520px,calc(100vw - 740px))}
   /* Settings (issue #78): on this split-desktop layout, Settings swaps into
      the center pane in #view-player's place instead of navigating away to
