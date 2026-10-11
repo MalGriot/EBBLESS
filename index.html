@@ -9133,7 +9133,6 @@ function openLibCtxMenu(id, btn){
     { action: 'blend-reshuffle', label: 'New picks', icon: CTX_ICON_REFRESH },
   ] : id === NP_ID ? [
     { action: 'np-tune', label: npFeed.onAir ? (npTuned ? 'Back to live' : 'Tune in') : 'Off air', icon: CTX_ICON_REFRESH, off: !npFeed.onAir },
-    { action: 'np-open', label: 'Show songs', icon: CTX_ICON_ADD_QUEUE },
     { action: 'np-refresh', label: 'Refresh now', icon: CTX_ICON_REFRESH },
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
@@ -9412,7 +9411,6 @@ function handleLibCtxAction(action, id){
   if (action === 'blend-reshuffle'){ refreshBlend({ reshuffle: true }); return; }
   if (action === 'np-refresh'){ refreshNowPlaying(true); return; }
   if (action === 'np-tune'){ npTuneIn(); return; }
-  if (action === 'np-open'){ toggleLibraryPlaylistPanel(NP_ID); return; }
   if (action === 'currents-more'){ refreshCurrents('more'); return; }
   if (action === 'currents-reset'){ resetCurrentsDay(); return; }
   const pl = getCachedPlaylist(id);
