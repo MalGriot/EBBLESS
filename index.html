@@ -3871,6 +3871,7 @@ body.week-up-on{overflow:hidden}
       <h2>Queue</h2>
       <button class="qh-arrow" id="queueHistBack" title="Previous queue" aria-label="Previous queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg></button>
       <button class="qh-arrow" id="queueHistFwd" title="Next queue" aria-label="Next queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg></button>
+      <button class="qh-arrow" id="queueHistBtn" title="History" aria-label="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
       <button class="discover-toggle" id="discoverToggleBtn" title="Keep playing similar songs when this queue ends" aria-pressed="true">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-5.41L15.59 9 17 10.41 11 16.41 7 12.41 8.41 11z"/></svg>
         Discover
@@ -8104,6 +8105,7 @@ function openPlayHistory(){
   playHistOpen = true;
   renderPlayHistory();
   histPanel.classList.add('is-open'); histScrim.classList.add('is-open');
+  histBody.scrollTop = 0; if (histBody.parentElement) histBody.parentElement.scrollTop = 0;
   $('histBtn').classList.add('is-active');
 }
 function closePlayHistory(){
@@ -8112,7 +8114,7 @@ function closePlayHistory(){
   histPanel.classList.remove('is-open'); histScrim.classList.remove('is-open');
   $('histBtn').classList.remove('is-active');
 }
-['histBtn', 'mobileHistBtn'].forEach(id => $(id).addEventListener('click', () => playHistOpen ? closePlayHistory() : openPlayHistory()));
+['histBtn', 'mobileHistBtn', 'queueHistBtn'].forEach(id => $(id).addEventListener('click', () => playHistOpen ? closePlayHistory() : openPlayHistory()));
 $('histCloseBtn').addEventListener('click', closePlayHistory);
 histScrim.addEventListener('click', closePlayHistory);
 $('histClearBtn').addEventListener('click', () => { lsSet(LS_PLAYHIST, []); renderPlayHistory(); });
@@ -8125,8 +8127,10 @@ attachSwipeToDismiss(histPanel, closePlayHistory);
    rather than navigating away from the library view)
    ========================================================================= */
 let openLibraryPanelId = null;
+let libplReturnTo = null;  // artist panel id to go back to when an album opened from it is closed (#369)
 
 function closeLibraryPlaylistPanel(){
+  libplReturnTo = null;
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
@@ -8150,6 +8154,7 @@ function toggleLibraryPlaylistPanel(id){
   }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
+  libplReturnTo = null;
 
   if (id === NP_ID) refreshNowPlaying();
   if (id === SWELL_ID){
@@ -8284,7 +8289,7 @@ function toggleLibraryPlaylistPanel(id){
         const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = albumArtistName(a);
         meta.appendChild(ttl); meta.appendChild(sub);
         row.appendChild(img); row.appendChild(meta);
-        row.addEventListener('click', () => toggleLibraryPlaylistPanel(aid));
+        row.addEventListener('click', () => { toggleLibraryPlaylistPanel(aid); if (openLibraryPanelId === aid) libplReturnTo = id; });
         list.appendChild(row);
       });
       libplBody.prepend(box);
@@ -8297,6 +8302,7 @@ function toggleLibraryPlaylistPanel(id){
   if (deskFsPhase1() && !state.deskFsLibOpen) toggleDesktopFsLib();
   markNowPlaying();
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  { const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0; }  // always open at the top (#365)
   syncHistoryBuffer();
   refreshPlayNudge();
   // Same staleness check as playPlaylistNow/beginImport - this is the
@@ -8310,10 +8316,16 @@ function toggleLibraryPlaylistPanel(id){
 
 libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
 libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
-libplCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
-$('libplCloseTab').addEventListener('click', (e) => { e.stopPropagation(); closeLibraryPlaylistPanel(); });
-libplScrim.addEventListener('click', closeLibraryPlaylistPanel);
-attachSwipeToDismiss(libplPanel, closeLibraryPlaylistPanel);
+// closing an album that was opened from inside an artist's page goes back to that artist (#369)
+function dismissLibraryPlaylistPanel(){
+  const back = libplReturnTo;
+  if (back && getCachedPlaylist(back)) toggleLibraryPlaylistPanel(back);
+  else closeLibraryPlaylistPanel();
+}
+libplCloseBtn.addEventListener('click', (e) => { e.stopPropagation(); dismissLibraryPlaylistPanel(); });
+$('libplCloseTab').addEventListener('click', (e) => { e.stopPropagation(); dismissLibraryPlaylistPanel(); });
+libplScrim.addEventListener('click', dismissLibraryPlaylistPanel);
+attachSwipeToDismiss(libplPanel, dismissLibraryPlaylistPanel);
 
 /* =========================================================================
    ARTIST PAGE (Geethub #299, bio half of #298): tap the player's artist name
@@ -18563,7 +18575,7 @@ function bumpPlayCount(entry){
   if (!t) return;
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
-  recordPlayHistory(t);
+  recordLatestPlayed(t);
   npSchedulePublish(4000);
   if (!isPodcastPlaylistId(entry.plId)) noteTaste(t, 'play');
 }
@@ -18571,7 +18583,7 @@ function bumpPlayCount(entry){
 // Discover overflow) it came from. CuRRentSSsss reads it for its "based on
 // the latest song" seed and to never serve something already heard.
 const PLAY_HISTORY_MAX = 400;
-function recordPlayHistory(t){
+function recordLatestPlayed(t){
   if (!t || !t.videoId) return;
   const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.v !== t.videoId);
   hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
