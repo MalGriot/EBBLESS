@@ -9336,3 +9336,11 @@ Add entries in this shape:
 - **Touches:** player click handling / report link
 - **Branch:** agent/wrong-link-report-random
 - **Notes:** Synced from Geethub #385.
+
+### search-history-line-marquee: Search history lines scroll as a marquee when they don't fit
+- **Status:** ready
+- **Priority:** medium
+- **Description:** In the search bar history list (the "Recent" dropdown), any line whose text is too long to fit should scroll as a marquee instead of cutting off with "...". Lines that fit stay static. Reuse the app's existing marquee behavior (see footer-title-marquee / live-now-marquee) so it looks and feels the same.
+- **Touches:** search history dropdown (`openPasteRecents`, `.paste-recent-n`, `.paste-recent-s`).
+- **Branch:**
+- **Notes:** Added from chat 2026-10-11. Subset of titles-marquee-everywhere (Geethub #392); if that lane runs first, fold this into it.
