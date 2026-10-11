@@ -6640,8 +6640,8 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       image = resolved[0].art || ('https://i.ytimg.com/vi/' + resolved[0].videoId + '/hqdefault.jpg');
     }
     resolved.forEach((t, i) => onProgress({ stage: 'matching', done: i + 1, total: resolved.length, track: t }));
-    // The worker reads the playlist page, which holds at most the first 100
-    // videos; `truncated` says there were more.
+    // The worker follows the page's continuations (#406); `truncated` says
+    // some videos still couldn't be read.
     const payload = keepAlbumOverride({ id: playlistId, type, name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), truncated: !!truncated, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
     lsSet(LS_PL(playlistId), payload);
     return payload;
@@ -11456,6 +11456,44 @@ async function runArtistAlbumsBackfill(){
     if (Array.isArray(resume) && resume.length) await addArtistAlbumsToLibrary(pl, resume);
     else if (!pl.albumsAdded) await addArtistAlbumsToLibrary(pl);
     else if (!pl.extrasAdded) await addArtistExtras(pl);
+  }
+  await recheckCappedPlaylists().catch(e => console.warn('[ebbless] capped playlist recheck failed', e));
+}
+// Geethub #406: YouTube playlists imported before the worker followed
+// continuations stopped at the page's first 100 videos. Once per playlist
+// (capRechecked), a saved yt playlist holding exactly 100 songs (or flagged
+// truncated) is re-read in full and any songs it doesn't have yet are
+// appended. Existing songs, order and relinks are untouched.
+const CAP_RECHECK_SIZE = 100;
+async function recheckCappedPlaylists(){
+  for (const id of getLibrary()){
+    const pl = getCachedPlaylist(id);
+    if (!pl || !isSaved(id) || pl.capRechecked || pl.resolving) continue;
+    if (pl.type !== 'yt_playlist' && pl.type !== 'yt_album') continue;
+    if (!(pl.tracks && pl.tracks.length === CAP_RECHECK_SIZE) && !pl.truncated) continue;
+    let data;
+    try { data = await fetchYouTubePlaylist(id.replace(/^yt:/, '')); } catch(e){ continue; } // retried next launch
+    const cur = getCachedPlaylist(id);
+    if (!cur) continue;
+    const have = new Set((cur.tracks || []).map(t => t && t.videoId).filter(Boolean));
+    const fresh = (data.tracks || []).filter(t => t.videoId && !have.has(t.videoId));
+    for (let i = 0; i < fresh.length; i++){
+      const t = fresh[i];
+      const art = await resolveTrackArt('youtube', t.title, t.artist, null).catch(() => null);
+      const latest = getCachedPlaylist(id);
+      if (!latest) break;
+      latest.tracks = (latest.tracks || []).concat([{ title: t.title, artist: t.artist, videoId: t.videoId, matchedTitle: t.title, channel: t.artist, plays: 0, art }]);
+      persistPlaylistObj(latest);
+      if (i < fresh.length - 1) await sleep(350);
+    }
+    const done = getCachedPlaylist(id);
+    if (!done) continue;
+    done.truncated = !!data.truncated;
+    // Still truncated with nothing new = the worker couldn't follow the
+    // continuation (e.g. not deployed yet): leave it due for the next launch.
+    if (!data.truncated || fresh.length) done.capRechecked = true;
+    persistPlaylistObj(done);
+    if (fresh.length) rerenderLibraryKeepPanel();
   }
 }
 

@@ -17,7 +17,7 @@ import {
 import { handleBeta, betaInAppReport } from './beta.js';
 import { handleAdmin } from './admin.js';
 import { handleNowPlaying } from './nowplaying.js';
-import { deepFindKey, ytPlaylistFromData, ytLockupVideos } from './yt-page.js';
+import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
@@ -777,14 +777,14 @@ async function handleTrack(url, ctx) {
 // ---------- GET /ytplaylist?id=<youtube playlist id> ----------
 // Reads the playlist page itself (ytInitialData -> lockupViewModel rows, see
 // ytPlaylistFromData). That page only carries the first ~100 videos; the
-// rest sit behind YouTube's internal "innertube" continuation API (unstable
-// clientVersion/visitorData requirements), which this app avoids, so a
-// longer playlist comes back capped at what the page gives, truncated:true.
+// rest are fetched by following the page's browse continuation token
+// (ytFollowContinuations, Geethub #406). If that fails, the playlist comes
+// back capped at what the page gave, truncated:true.
 // YouTube's public playlist RSS feed (first ~15 videos only) is kept as a
 // fallback for when the page read fails (bot-check interstitial, or a page
 // shape change); it has been reported 404ing for valid playlists, which is why
 // it's no longer the primary source.
-const YTPLAYLIST_CACHE_VERSION = 'p2';
+const YTPLAYLIST_CACHE_VERSION = 'p3';
 
 // SOCS (on top of fetchYouTubePage's CONSENT) gets past the consent wall
 // YouTube puts in front of channel and playlist pages for EU-located requests.
@@ -796,13 +796,44 @@ async function ytInitialDataOf(pageUrl) {
   if (mi === -1) return null;
   const jsonStr = extractBalancedJson(html, html.indexOf('{', mi));
   if (!jsonStr) return null;
-  try { return JSON.parse(jsonStr); } catch (e) { return null; }
+  let data;
+  try { data = JSON.parse(jsonStr); } catch (e) { return null; }
+  const cv = /"INNERTUBE_CONTEXT_CLIENT_VERSION":"([^"]+)"/.exec(html);
+  data.__clientVersion = cv ? cv[1] : null;
+  return data;
+}
+// The page carries only the first ~100 rows; follow YouTube's browse
+// continuation (Geethub #406) for the rest, up to YT_MAX_PAGES extra pages.
+// Any failure just leaves the list as far as it got, still truncated:true.
+const YT_MAX_PAGES = 15;
+async function ytFollowContinuations(data, page, artist) {
+  let token = ytRowsContinuation(data);
+  if (!token || !data.__clientVersion) return;
+  const seen = new Set(page.tracks.map(t => t.videoId));
+  for (let n = 0; token && n < YT_MAX_PAGES; n++) {
+    let reply = null;
+    try {
+      const res = await fetch('https://www.youtube.com/youtubei/v1/browse?prettyPrint=false', {
+        method: 'POST',
+        headers: { 'User-Agent': DESKTOP_UA, 'Content-Type': 'application/json', 'Origin': 'https://www.youtube.com' },
+        body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: data.__clientVersion, hl: 'en', gl: 'US' } }, continuation: token }),
+      });
+      if (res.ok) reply = await res.json();
+    } catch (e) { reply = null; }
+    if (!reply) return;
+    ytLockupVideos(reply, artist).forEach(v => { if (!seen.has(v.videoId)) { seen.add(v.videoId); page.tracks.push(v); } });
+    token = ytRowsContinuation(reply);
+  }
+  page.truncated = !!token;
 }
 // Shared by /ytplaylist and /artist (album playlists). null when the page
 // couldn't be read at all; `artist` overrides each row's channel name.
 async function readYtPlaylistPage(id, artist) {
   const data = await ytInitialDataOf('https://www.youtube.com/playlist?list=' + encodeURIComponent(id));
-  return data ? ytPlaylistFromData(data, artist) : null;
+  if (!data) return null;
+  const page = ytPlaylistFromData(data, artist);
+  if (page.truncated) await ytFollowContinuations(data, page, artist);
+  return page;
 }
 
 // XML entity-decode for the small set YouTube's feed actually emits.
