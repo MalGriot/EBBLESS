@@ -1885,7 +1885,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 @media (min-width:1150px){
   /* Geethub #350: art fills the center pane (viewport minus the two 340px side panes, 60px breathing room) */
   /* art grows again (desktop art too small, repeat of #350): cap 640 -> 820px so tall/wide screens fill the pane; 380 reserve + 16px title gap frees ~15px vs 395 */
-  body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 740px),max(72px,calc(100dvh - var(--topbar-h) - 380px)))}
+  /* Geethub #390 (still too small): tabs move up (stage top pad 27 -> 8px) and the transport drops a little (bottom pad 44 -> 28px); that ~35px goes to the art: reserve 380 -> 345px */
+  body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 740px),max(72px,calc(100dvh - var(--topbar-h) - 345px)))}
+  body.split-desktop:not(.desktop-fs) .player-stage{padding-top:8px}
+  body.split-desktop:not(.desktop-fs) #view-player .view-scroll{padding-bottom:28px}
   body.split-desktop:not(.desktop-fs) .track-meta{margin-top:clamp(8px,2dvh,16px)}
   body.split-desktop:not(.desktop-fs) .track-meta{width:min(520px,calc(100vw - 740px))}
   /* Settings (issue #78): on this split-desktop layout, Settings swaps into

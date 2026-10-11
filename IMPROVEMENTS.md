@@ -9303,7 +9303,7 @@ Add entries in this shape:
 - **Description:** Make the art bigger on desktop. OK to move the player controls down a bit and the album art tab up a bit, just keep the balance. Follow-up to desktop-album-art-size-again / desktop-player-visuals-size.
 - **Touches:** desktop player layout
 - **Branch:** agent/desktop-art-still-too-small
-- **Notes:** Synced from Geethub #390.
+- **Notes:** Synced from Geethub #390. Fixed: art vertical reserve 380 -> 345px, stage top pad 27 -> 8px (tabs up), view bottom pad 44 -> 28px (transport down). 1440x900: art 468 -> 503px; 1280x720: 288 -> 323px; transport stays 34px clear of bottom. Mobile untouched (rules only in the 1150px split-desktop block). Shell cache v129.
 
 ### auto-fix-broken-links: App should keep trying to fix broken links, preferring artist YouTube page and lyric videos (bug) (Geethub #389)
 - **Status:** ready
