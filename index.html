@@ -647,6 +647,13 @@ body.onb-active .paste-guide{display:none}
 .lib-ctx-item svg{width:15px;height:15px;flex:none;opacity:.85}
 .lib-ctx-item.is-danger{color:var(--bad)}
 .lib-ctx-item.is-off{opacity:.5}
+.lib-ctx-sub-wrap{position:relative}
+.lib-ctx-chev{margin-left:auto;width:14px;height:14px;flex:none;opacity:.7}
+.lib-ctx-fly{display:none;position:absolute;top:-7px;left:100%;min-width:170px;padding:6px;border-radius:14px;
+  background:var(--panel-3);border:1px solid var(--border-2);box-shadow:0 20px 44px -14px rgba(0,0,0,.6)}
+.lib-ctx-fly.fly-left{left:auto;right:100%}
+.lib-ctx-sub-wrap:hover>.lib-ctx-fly,.lib-ctx-sub-wrap.is-sub-open>.lib-ctx-fly{display:block}
+.lib-ctx-sub-wrap:hover>.lib-ctx-item,.lib-ctx-sub-wrap.is-sub-open>.lib-ctx-item{background:var(--panel-2);color:var(--text)}
 .lib-ctx-item.is-danger:hover{background:rgba(255,80,80,.12);color:var(--bad)}
 .lib-ctx-sep{height:1px;background:var(--border-2);margin:6px 4px}
 
@@ -9144,6 +9151,7 @@ const CTX_ICON_FLAG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14
 const CTX_ICON_DECLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
 const CTX_ICON_ADD_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/></svg>';
+const CTX_ICON_CHEVRON = '<svg class="lib-ctx-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const CTX_ICON_ALBUM = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 14.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm0-5.5a1 1 0 100 2 1 1 0 000-2z"/></svg>';
 const CTX_ICON_ANTENNA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 6.5a5 5 0 000 7M15.5 6.5a5 5 0 010 7M5.7 3.8a9 9 0 000 12.4M18.3 3.8a9 9 0 010 12.4M12 12v9M9 21h6"/></svg>';
 const CTX_ICON_ANTENNA_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 6.5a5 5 0 000 7M15.5 6.5a5 5 0 010 7M5.7 3.8a9 9 0 000 12.4M18.3 3.8a9 9 0 010 12.4M12 12v9M9 21h6"/><path d="M3 3l18 18"/></svg>';
@@ -9221,7 +9229,7 @@ function openLibCtxMenu(id, btn){
     const sub = [['playlists', 'Playlists'], ['albums', 'Albums'], ['podcasts', 'Podcasts']]
       .filter(([sec]) => LIB_SECTIONS[sec] !== cur)
       .map(([sec, label]) => ({ action: 'showunder:' + sec, label, icon: CTX_ICON_ALBUM }));
-    items.push({ label: 'Move to >', icon: CTX_ICON_ALBUM, sub });
+    items.push({ label: 'Move to', icon: CTX_ICON_ALBUM, sub });
   }
   if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
@@ -9253,12 +9261,34 @@ function openLibCtxMenu(id, btn){
       }
       const b = document.createElement('button');
       b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '') + (item.off ? ' is-off' : '');
-      b.innerHTML = item.icon + '<span>' + item.label + '</span>';
+      b.innerHTML = item.icon + '<span>' + item.label + '</span>' + (item.sub ? CTX_ICON_CHEVRON : '');
       if (item.off) b.setAttribute('aria-disabled', 'true');
+      if (item.sub){
+        // submenu opens as a flyout right beside this row: on hover (CSS) or tap
+        const wrap = document.createElement('div'); wrap.className = 'lib-ctx-sub-wrap';
+        const fly = document.createElement('div'); fly.className = 'lib-ctx-fly';
+        const placeFly = () => {
+          fly.classList.remove('fly-left'); fly.style.top = '';
+          fly.style.display = 'block';
+          const w = wrap.getBoundingClientRect(), f = fly.getBoundingClientRect();
+          fly.style.display = '';
+          if (w.right + f.width > window.innerWidth - 8) fly.classList.add('fly-left');
+          const over = w.top - 7 + f.height - (window.innerHeight - 8);
+          if (over > 0) fly.style.top = (-7 - over) + 'px';
+        };
+        item.sub.forEach(si => {
+          const sb = document.createElement('button'); sb.className = 'lib-ctx-item';
+          sb.innerHTML = si.icon + '<span>' + si.label + '</span>';
+          sb.addEventListener('click', (e) => { e.stopPropagation(); closeLibCtxMenu(); handleLibCtxAction(si.action, id); });
+          fly.appendChild(sb);
+        });
+        wrap.addEventListener('mouseenter', placeFly);
+        b.addEventListener('click', (e) => { e.stopPropagation(); placeFly(); wrap.classList.toggle('is-sub-open'); });
+        wrap.appendChild(b); wrap.appendChild(fly); libCtxMenu.appendChild(wrap);
+        return;
+      }
       b.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (item.sub){ renderCtxItems([{ label: 'Back', icon: '', back: true }].concat(item.sub)); positionLibCtxMenu(btn); return; }
-        if (item.back){ renderCtxItems(items); positionLibCtxMenu(btn); return; }
         closeLibCtxMenu(); handleLibCtxAction(item.action, id);
       });
       libCtxMenu.appendChild(b);
