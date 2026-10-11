@@ -8907,11 +8907,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #353 (idea). Likely duplicate or follow-up of merged #350 `desktop-album-art-size` (waiting for deployment): check after deploy whether it is already fixed.
 
 ### dark-text-on-light-art-ui: Use dark text when UI turns light from album art color (Geethub #354)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #354. When the UI changes to white or very light because of the album art color, text should switch to a darker color so it does not disappear.
 - **Touches:** cover-color theming (accent, tints), text contrast.
-- **Branch:**
+- **Branch:** agent/dark-text-light-art
 - **Notes:** Synced from Geethub issue #354 (bug). Likely caused by the recent cover-color UI work (afd4f11). Related: `player-button-colors`.
 
 ### library-grid-thumb-sizes: Library grid mixes thumb sizes between 2x2 and 3x3 (Geethub #355)
