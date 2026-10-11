@@ -17285,6 +17285,22 @@ function createSCDeckPlayer(deck, videoId){
       widget.play();
       return;
     }
+    // soundcloud-next-song-page-closed (#437): the widget's audio element
+    // can report PAUSE a beat before FINISH when a sound runs out. Reflecting
+    // it flips the UI to paused and stops keepAliveAudio (setPlayingUI), the
+    // last thing holding a backgrounded/locked mobile page awake - so the OS
+    // can freeze the page before FINISH ever advances the queue. A pause
+    // within the last 1.5s of the sound is held back for FINISH to follow;
+    // if it doesn't (a real pause right at the end) it is reflected after.
+    if (deck === activeDeck() && deck._scDur > 3 && deck._scPos >= deck._scDur - 1.5){
+      deck._scState = YT.PlayerState.PAUSED;
+      deck._scPausedAt = Date.now();
+      setTimeout(function(){
+        if (deck.gen !== myGen || deck !== activeDeck() || deck._scState !== YT.PlayerState.PAUSED) return;
+        onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
+      }, 1500);
+      return;
+    }
     deck._scState = YT.PlayerState.PAUSED;
     deck._scPausedAt = Date.now();
     onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
