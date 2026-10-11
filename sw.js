@@ -28,10 +28,14 @@
 // IMPORTANT: bump CACHE_VERSION on every deploy you want existing
 // installs/tabs to pick up promptly.
 <<<<<<< HEAD
-const CACHE_VERSION = 'ebbless-shell-v141';
+<<<<<<< HEAD
+const CACHE_VERSION = 'ebbless-shell-v142';
 =======
-const CACHE_VERSION = 'ebbless-shell-v141';
+const CACHE_VERSION = 'ebbless-shell-v142';
 >>>>>>> agent/speaker-icon-under-thumb
+=======
+const CACHE_VERSION = 'ebbless-shell-v142';
+>>>>>>> agent/cassette-skip-reverse-rewind
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './sfx/needle-drop.mp3', './sfx/needle-lift.mp3', './sfx/cassette-rewind.mp3'];
 
 self.addEventListener('install', (e) => {

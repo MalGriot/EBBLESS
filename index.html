@@ -20016,7 +20016,7 @@ const LP_SFX_SRC = { drop: LP_NEEDLE_DROP_SRC, lift: LP_NEEDLE_LIFT_SRC, rewind:
 // Issue #205: at 0.35/0.2 the drop's loudest 50ms landed around -25dBFS and
 // the lift around -17dBFS - the lift fires at the top of the pause fade,
 // with the music still near full volume, so both were effectively masked.
-const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5, rewind: 0.6 };
+const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5, rewind: 0.6, rewindrev: 0.6 };
 // skip the sfx rather than play it late (slow first fetch, context waking)
 const LP_NEEDLE_MAX_LAG_MS = 300;
 let lpSfxCtx = null;
@@ -20062,6 +20062,15 @@ function lpNeedlePrefetch(kinds){
 }
 function lpNeedleBuffer(ctx, kind){
   if (lpSfxBuffers[kind]) return lpSfxBuffers[kind];
+  // skip-ahead on the cassette: the rewind sound reversed (decoded once)
+  if (kind === 'rewindrev'){
+    return (lpSfxBuffers[kind] = lpNeedleBuffer(ctx, 'rewind').then(buf => {
+      if (!buf) return null;
+      const rev = ctx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+      for (let c = 0; c < buf.numberOfChannels; c++) rev.getChannelData(c).set(buf.getChannelData(c).slice().reverse());
+      return rev;
+    }));
+  }
   lpNeedlePrefetch([kind]);
   const p = lpSfxBytes[kind]
     .then(ab => ab ? new Promise((res, rej) => ctx.decodeAudioData(ab.slice(0), res, rej)) : null)
@@ -20079,7 +20088,7 @@ function lpSfxContext(){
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
     lpSfxCtx = new AC();
     // warm all buffers so the first toggle of the other kind isn't lost to a decode
-    lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift'); lpNeedleBuffer(lpSfxCtx, 'rewind');
+    lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift'); lpNeedleBuffer(lpSfxCtx, 'rewind'); lpNeedleBuffer(lpSfxCtx, 'rewindrev');
   }
   if (lpSfxCtx.state !== 'running') lpSfxCtx.resume().catch(() => {});
   return lpSfxCtx;
@@ -20100,7 +20109,7 @@ function cassetteOnScreen(){
   return !!cs && cs.getClientRects().length > 0;
 }
 function playLpNeedle(kind){
-  if (!(kind === 'rewind' ? cassetteOnScreen() : lpRecordOnScreen())) return;
+  if (!(kind === 'rewind' || kind === 'rewindrev' ? cassetteOnScreen() : lpRecordOnScreen())) return;
   try{
     const ctx = lpSfxContext(), t0 = Date.now();
     if (!ctx) return;
@@ -20172,6 +20181,7 @@ function playNext(auto){
   if (weekUp.frozen) return;   // TESTER WEEK UP: the song that ended was the last one
   pendingAutoStart = !!auto;
   if (!auto) recordSkipIfEarly();
+  if (!auto) playLpNeedle('rewindrev');
   if (auto && state.repeat === 'one'){ loadIndex(state.queuePos, true); return; }
   const opts = auto ? null : { crossfade: true };
   let pos = state.queuePos + 1;
