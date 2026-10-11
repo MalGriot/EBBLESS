@@ -470,6 +470,7 @@ body.onb-active .paste-guide{display:none}
 .lib-card .name.np-off,.lib-card .art .title-overlay .marquee.np-off{color:#9a9a9a}
 .lib-card .name.np-on,.lib-card .art .title-overlay .marquee.np-on{color:#fff}
 /* green blinking dot to the left of the "LIVE Now" line */
+#libplTitle.np-live::after{content:'';display:inline-block;width:7px;height:7px;margin-left:8px;border-radius:50%;background:#3ddc84;vertical-align:middle;animation:new-dot-blink 1.4s ease-in-out infinite}
 .lib-card .lib-desc.np-onair{position:relative;padding-left:14px}
 .lib-card .lib-desc.np-onair::before{content:'';position:absolute;left:1px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#3ddc84;animation:new-dot-blink 1.4s ease-in-out infinite}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
@@ -8050,6 +8051,7 @@ function toggleLibraryPlaylistPanel(id){
   openLibraryPanelId = id;
   libplPanel.classList.remove('is-artist-info');
   libplTitle.textContent = pl.name;
+  libplTitle.classList.toggle('np-live', id === NP_ID && npFeed.onAir);
   // cover art at the top of the panel: prefer the playlist's own source
   // cover (Spotify/SoundCloud/Apple), falling back to the first track that
   // has any resolvable artwork so a manual/matched playlist isn't left blank.
