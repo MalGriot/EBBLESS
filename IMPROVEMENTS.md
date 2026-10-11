@@ -9210,11 +9210,11 @@ Add entries in this shape:
 - **Notes:** Follow-up to `search-link-clears-queue` (#386); builds on that branch.
 
 ### miniplayer-return-no-autoplay: When returning from the mini-player, stay paused if it was paused (Geethub #401)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Coming back from the mini-player to the main window must not start the music if the mini-player was paused. Keep playing only if it was playing.
 - **Touches:** mini-player return handoff
-- **Branch:**
+- **Branch:** agent/miniplayer-return-no-autoplay
 - **Notes:** Synced from Geethub #401.
 
 ### thumb-cycle-start-custom-art: On load, library thumb cycle starts on the custom art, not the 2x2 collage (Geethub #400)
@@ -9266,11 +9266,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #395.
 
 ### queue-song-hover-fill: Hovering queue songs fills the row with the UI color (Geethub #394)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Queue song containers fill with the current UI color on hover.
 - **Touches:** queue rows hover
-- **Branch:**
+- **Branch:** agent/queue-song-hover-fill
 - **Notes:** Synced from Geethub #394.
 
 ### artist-reorder-albums: Reorder albums in the artist window (Geethub #393)
@@ -9322,11 +9322,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #388.
 
 ### search-history-scroll-readd: Search history scrollable; tapping an entry refills the box without searching (Geethub #387)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Search history should scroll, and tapping an entry puts its text in the box without auto-searching so terms can be added.
 - **Touches:** search bar history
-- **Branch:**
+- **Branch:** agent/search-history-scroll-readd
 - **Notes:** Synced from Geethub #387.
 
 ### wrong-link-report-random: Player sometimes reports a wrong link at random (bug) (Geethub #385)
