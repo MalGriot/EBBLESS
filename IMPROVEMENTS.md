@@ -9377,3 +9377,75 @@ Add entries in this shape:
 - **Touches:** worker / backend, docs/deep-roadmap.md (Implementation notes, Feasibility checks). Existing beta tester system.
 - **Branch:**
 - **Notes:** Added from chat 2026-10-11. Design left to Claude. See docs/deep-roadmap.md for all decisions.
+
+### artist-link-pick-albums: When you add an artist link, show an album picker (Geethub #412)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Adding an artist link opens a window with all their albums in a grid. You pick 10 to add first. (DEEP paywall idea: add more than 10, plus an 'add all' option.)
+- **Touches:** artist link add flow
+- **Branch:**
+- **Notes:** Synced from Geethub #412.
+
+### marquee-left-only: All text marquees scroll left only; every cut-off title scrolls, never '...' (bug) (Geethub #411)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Marquees should only scroll left. Every title that does not fit (queue songs, library titles, etc.) should scroll left instead of showing '...'. Overlaps the marquee-everywhere lane, check it first.
+- **Touches:** marquee / truncated titles
+- **Branch:**
+- **Notes:** Synced from Geethub #411.
+
+### artist-bio-read-more: Artist bio 'more' button: centered, says 'Read more' (Geethub #410)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Center the 'more' button on the artist bio and label it 'Read more'.
+- **Touches:** artist window bio
+- **Branch:**
+- **Notes:** Synced from Geethub #410.
+
+### artist-window-autoclose: Artist window closes by itself after ~3 seconds (bug) (Geethub #409)
+- **Status:** merged
+- **Priority:** high
+- **Description:** The artist window should stay open. Library and queue should auto-close only after 60 seconds of inactivity.
+- **Touches:** artist window, library/queue panels
+- **Branch:**
+- **Notes:** Synced from Geethub #409.
+
+### library-playlist-groups: Library playlists split into EBBLESS-made and user-added (Geethub #408)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Group playlists in the library under better labels: EBBLESS-made vs user-added. Group titles are clickable and collapse their lists.
+- **Touches:** library playlists
+- **Branch:**
+- **Notes:** Synced from Geethub #408.
+
+### playlist-manual-order-drag: Drag playlists into a custom order in manual mode (Geethub #407)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In manual mode, playlists can be dragged into any order. The order is saved, so switching to alphabetical and back returns to the custom order until it is changed again.
+- **Touches:** library playlists sort
+- **Branch:**
+- **Notes:** Synced from Geethub #407.
+
+### playlist-song-cap: No cap on songs in added playlists (bug) (Geethub #406)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Added playlists have no song cap. Also recheck all existing playlists that have 100 songs in case songs were left out.
+- **Touches:** playlist import
+- **Branch:**
+- **Notes:** Synced from Geethub #406.
+
+### speaker-icon-under-thumb: Speaker icon next to the title under album/playlist/podcast thumbs (Geethub #405)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Show the same speaker icon used next to the playing song title in the library beside the title under the thumb art, for albums, playlists, podcasts, etc.
+- **Touches:** library thumbs
+- **Branch:**
+- **Notes:** Synced from Geethub #405.
+
+### cd-hover-dropshadow: CD hover animation: add a drop shadow, expand art smoothly (Geethub #404)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Put a drop shadow on the CD from the album art in the album thumb hover. Also expand the art under the clipping mask smoothly on hover.
+- **Touches:** library album thumb hover
+- **Branch:**
+- **Notes:** Synced from Geethub #404.
