@@ -4146,6 +4146,24 @@ if (!isStandaloneDisplay()){
     document.dispatchEvent(new CustomEvent('ebbless:install-available'));
   });
 }
+// Remembers that EBBLESS is installed on this browser profile, so an install
+// button/banner isn't offered in a plain tab once it is (Chrome never fires
+// beforeinstallprompt for an installed app). Set when the app runs standalone,
+// on appinstalled, or when getInstalledRelatedApps finds it (manifest
+// related_applications).
+const INSTALLED_KEY = 'ebbless:installed';
+function knownInstalled(){
+  try { return localStorage.getItem(INSTALLED_KEY) === '1'; } catch(e){ return false; }
+}
+function markInstalled(){
+  try { localStorage.setItem(INSTALLED_KEY, '1'); } catch(e){}
+  document.dispatchEvent(new CustomEvent('ebbless:installed'));
+}
+if (isStandaloneDisplay()) markInstalled();
+window.addEventListener('appinstalled', markInstalled);
+if (!isIOS && navigator.getInstalledRelatedApps){
+  navigator.getInstalledRelatedApps().then((apps) => { if (apps && apps.length) markInstalled(); }).catch(() => {});
+}
 async function runInstallPrompt(){
   if (!deferredInstallPrompt) return false;
   const prompt = deferredInstallPrompt;
@@ -20821,7 +20839,8 @@ if (screen.orientation && screen.orientation.lock){
       installBtn.textContent = installed ? 'Installed' : 'Install';
       if (installDesc) installDesc.textContent = installed ? 'EBBLESS is installed on this device.' : DEFAULT_DESC;
     };
-    setInstalled(isStandaloneDisplay());
+    setInstalled(isStandaloneDisplay() || knownInstalled());
+    document.addEventListener('ebbless:installed', () => setInstalled(true));
     installBtn.addEventListener('click', async () => {
       installBtn.disabled = true;
       const canPrompt = await waitForInstallPrompt(2000);
@@ -20839,7 +20858,7 @@ if (screen.orientation && screen.orientation.lock){
       }
     });
     window.addEventListener('appinstalled', () => setInstalled(true));
-    document.addEventListener('ebbless:install-available', () => setInstalled(false));
+    document.addEventListener('ebbless:install-available', () => { if (!knownInstalled()) setInstalled(false); });
   }
 }
 
@@ -20869,11 +20888,11 @@ function installBannerBlocked(){
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
-  if (!installBanner || isStandaloneDisplay() || mobileInstallGate) return;
+  if (!installBanner || isStandaloneDisplay() || knownInstalled() || mobileInstallGate) return;
   try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
   let clearSince = 0;
   const tick = () => {
-    if (installBannerDone || isStandaloneDisplay()) return;
+    if (installBannerDone || isStandaloneDisplay() || knownInstalled()) return;
     if (installBannerBlocked()){ clearSince = 0; setTimeout(tick, 1000); return; }
     if (!clearSince) clearSince = Date.now();
     if (Date.now() - clearSince < 1500){ setTimeout(tick, 500); return; }
@@ -20912,6 +20931,7 @@ if (installBanner){
     setInstallBanner(false);
   });
   window.addEventListener('appinstalled', () => { installBannerDone = true; setInstallBanner(false); });
+  document.addEventListener('ebbless:installed', () => { installBannerDone = true; setInstallBanner(false); });
   // a native prompt turned up after the manual steps were shown: offer it
   document.addEventListener('ebbless:install-available', () => {
     installBannerBtn.hidden = false;
