@@ -7984,7 +7984,10 @@ function albumVersionInfo(name){
 function renderLibrary(){
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
-  if (!String(openLibraryPanelId || '').startsWith('artistinfo:')) closeLibraryPlaylistPanel();
+  // (#409) an artist window (page or saved artist entry) stays open until the
+  // user closes it: background re-renders (sync, art backfill) must not shut it
+  const openPl = openLibraryPanelId ? getCachedPlaylist(openLibraryPanelId) : null;
+  if (!String(openLibraryPanelId || '').startsWith('artistinfo:') && !isArtistEntry(openPl)) closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
   const ids = orderedLibraryIds();
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
@@ -16371,6 +16374,19 @@ function closeQueuePanel(restoreView = true){
   syncHistoryBuffer();
 }
 queueScrim.addEventListener('click', closeQueuePanel);
+
+// library and queue panels close after 60s of no interaction (#409); any
+// touch, click, key or scroll resets the clock. Artist windows are exempt.
+let panelIdleSince = Date.now();
+['pointerdown','keydown','wheel','touchstart','scroll'].forEach(ev =>
+  document.addEventListener(ev, () => { panelIdleSince = Date.now(); }, { capture: true, passive: true }));
+setInterval(() => {
+  const lib = openLibraryPanelId && !String(openLibraryPanelId).startsWith(ARTIST_INFO_PREFIX) && !isArtistEntry(getCachedPlaylist(openLibraryPanelId));
+  if (!lib && !state.queueOpen){ panelIdleSince = Date.now(); return; }
+  if (Date.now() - panelIdleSince < 60000) return;
+  if (state.queueOpen) closeQueuePanel(false);
+  if (lib) closeLibraryPlaylistPanel();
+}, 5000);
 
 /* mobile: swipe down on a sheet's drag handle to dismiss it (used by both
    the queue panel and the library playlist panel) */
