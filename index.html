@@ -10949,7 +10949,7 @@ async function beginImport(id, force, type, targetIndex){
     if (cached){
       if (keepQueue && !isSingleTrackType(cached.type)){
         if (!wasSaved){ statsImport(id); saveToLibrary(id); renderLibrary(); }
-        showToast('Added ' + cached.name + ' to your library');
+        showToast('Added ' + cached.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) });
         if (isResolveStale(cached)) reResolveStaleInBackground(id, cached.type);
         return;
       }
@@ -11044,7 +11044,7 @@ async function beginImport(id, force, type, targetIndex){
     if (!startedEarly) statsImport(id);
     saveToLibrary(id);
     renderLibrary();
-    if (keepQueue) showToast('Added ' + pl.name + ' to your library');
+    if (keepQueue) showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) });
     if (!wasSaved && isArtistEntry(pl)){
       addArtistAlbumsToLibrary(pl);
       // warm the artist-info cache now so the bio is ready when the panel opens
