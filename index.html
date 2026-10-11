@@ -1362,6 +1362,13 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .q-row .q-menu,.q-now .q-menu{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
 .q-row .q-menu:hover,.q-row .q-menu.is-active,.q-now .q-menu:hover,.q-now .q-menu.is-active{background:var(--panel-3);color:var(--text)}
 .q-row .q-menu svg,.q-now .q-menu svg{width:13px;height:13px}
+/* Hover fills the row with the current UI color (#394); text flips to --on-accent so light colors stay legible */
+.q-row{transition:background-color var(--dur-ui) var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .q-row:not(.is-dragging):hover{background:var(--accent)}
+  .q-row:not(.is-dragging):hover .title,.q-row:not(.is-dragging):hover .artist,.q-row:not(.is-dragging):hover .handle,
+  .q-row:not(.is-dragging):hover .remove:not(:hover),.q-row:not(.is-dragging):hover .q-menu:not(:hover):not(.is-active){color:var(--on-accent,#151107)}
+}
 .q-empty{padding:40px 10px;text-align:center;color:var(--faint-2);font-size:12.5px}
 .q-loading .flow-line{max-width:220px;margin:14px auto 0}
 .q-loading .counter{font-size:11px;color:var(--faint-2);margin-top:8px}
