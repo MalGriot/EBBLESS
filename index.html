@@ -1052,7 +1052,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .report-match-btn svg{width:13px;height:13px}
 .report-match-btn:hover{background:var(--panel-3);color:var(--text)}
 .report-match-btn:active{transform:scale(.88)}
-.report-match-btn[hidden],.track-meta .title-row .report-match-btn{display:none}
+/* #385: the flag icons are gone everywhere (fullscreen included); "This isn't the right song" lives only in the song options menu. The buttons stay in the DOM as inert targets for that menu item. */
+.report-match-btn[hidden],.track-meta .title-row .report-match-btn,#flow-layer .flow-meta .report-match-btn{display:none!important}
 .report-match-btn.is-sent{color:var(--player-accent, var(--accent))}
 .ads-report-btn{display:block;margin:10px auto 0;padding:5px 12px;border-radius:999px;border:1px solid var(--panel-3);
   background:transparent;color:var(--faint);font:inherit;font-size:12px;cursor:pointer;
@@ -20066,7 +20067,7 @@ const MINI_PLAYER_STYLE = `
   body.mp-small #mpCard{padding:8px;gap:2px 8px}
   body.mp-small:not(.shape-card) #mpCard{grid-template-columns:calc(var(--card-h) - 16px) minmax(0,1fr);
     grid-template-rows:18px minmax(0,1fr) 10px 30px}
-  body.mp-small #mpStyle,body.mp-small #mpReset,body.mp-small #mpFlag,body.mp-small #mpShuffle,body.mp-small #mpRepeat,
+  body.mp-small #mpStyle,body.mp-small #mpReset,body.mp-small #mpShuffle,body.mp-small #mpRepeat,
   body.mp-small #mpCur,body.mp-small #mpDur,body.mp-small:not(.shape-card) #mpArtist,
   body.mp-small.pod-playing .mp-skip{display:none!important}
   /* Safety net if the OS lets the window go narrower than the floor: drop the art so the title and controls stay readable. */
@@ -20280,7 +20281,6 @@ function buildMiniPlayerDOM(win){
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
         btn('mpStyle', 'mp-tool', 'Album color background', MP_ICO.style) +
         btn('mpReset', 'mp-tool', 'Reset shape', MP_ICO.reset) +
-        btn('mpFlag', 'mp-tool', 'This isn\'t the right song', MP_ICO.flag) +
         '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
         btn('mpQueueBtn', 'mp-tool', 'Queue', MP_ICO.queue) +
       '</div>' +
@@ -20314,7 +20314,6 @@ function buildMiniPlayerDOM(win){
   forward('mpShuffle', shuffleBtn);
   forward('mpRepeat', repeatBtn);
   forward('mpLike', playerLikeBtn);
-  forward('mpFlag', reportMatchBtn);
   const seekEl = doc.getElementById('mpSeekTrack');
   seekEl.addEventListener('click', (e) => { seekFromClientX(seekEl, e.clientX); updateMiniPlayerUI(); });
   doc.getElementById('mpQueueBtn').addEventListener('click', toggleMiniQueue);
@@ -20598,9 +20597,6 @@ function updateMiniPlayerUI(){
   like.classList.toggle('is-liked', liked);
   like.title = playerLikeBtn.title; like.setAttribute('aria-label', playerLikeBtn.title);
   like.querySelector('svg').setAttribute('fill', liked ? 'currentColor' : 'none');
-  const flag = doc.getElementById('mpFlag');
-  flag.classList.toggle('is-active', reportMatchBtn.classList.contains('is-sent'));
-  flag.title = reportMatchBtn.title;
   const ad = activeDeck();
   if (ad.player && ad.player.getCurrentTime && ad.player.getDuration){
     const cur = ad.player.getCurrentTime() || 0, dur = ad.player.getDuration() || 0;
