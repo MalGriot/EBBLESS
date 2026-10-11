@@ -9638,12 +9638,13 @@ Add entries in this shape:
 - **Review:** Discover now shows a lightbulb: amber with a slow 3.2s glow when on, dimmed when off (static glow under reduced-motion). Branch agent/queue-header-icons (cache v158).
 
 ### library-view-order-all-sections: Library view-order options should apply to every section, not just playlists (bug) (Geethub #435)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The library view-order options currently only reorder playlists. They should also apply to the other sections (albums, artists, podcasts, etc.).
 - **Touches:** library sort/view-order controls
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/library-view-order-all
 - **Notes:** Synced from Geethub #435. Bug. Related to playlist-manual-order-drag (#407).
+- **Review:** Sort already reordered artists/podcasts/playlists via orderedLibraryIds; albums ignored it because by-artist groups were always A-Z. Groups now follow Most listened to / Most songs (alpha and manual stay A-Z); cards inside groups were already ordered. Playlist drag untouched (still manual-only). Cache v158.
 
 ### queue-missing-main-ui: Queue is missing from the main UI (bug) (Geethub #436)
 - **Status:** dropped
