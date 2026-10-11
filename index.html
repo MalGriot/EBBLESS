@@ -9830,6 +9830,36 @@ function applyRelinkChoice(plId, trackIdx, candidate){
   relinkAlbumSiblings(plId, trackIdx, candidate);
 }
 
+// Geethub #389: a track whose YouTube link fails to play (removed, private,
+// embedding blocked) is repaired automatically with the best-ranked other
+// candidate (the worker ranks official artist channel / lyric uploads high),
+// instead of waiting for the listener to open the relink picker. Bounded: each
+// failed videoId is tried once, and at most 3 repairs per track per session.
+const brokenLinkTried = new Set();
+const brokenLinkRepairs = new Map();
+async function autoRepairBrokenLink(deck, code){
+  if (![100, 101, 150, 153].includes(code)) return;
+  const failed = deck.videoId;
+  if (!failed || brokenLinkTried.has(failed) || deck !== activeDeck()) return;
+  const entry = state.queue[state.queuePos];
+  const pl = entry && getCachedPlaylist(entry.plId);
+  const t = pl && pl.tracks[entry.idx];
+  if (!t || t.videoId !== failed || isNativeVideoId(failed) || t.podcast) return;
+  brokenLinkTried.add(failed);
+  const key = entry.plId + ':' + entry.idx;
+  const n = brokenLinkRepairs.get(key) || 0;
+  if (n >= 3) return;
+  brokenLinkRepairs.set(key, n + 1);
+  try{
+    const data = await searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT);
+    const list = (data.candidates && data.candidates.length) ? data.candidates : (data.videoId ? [data] : []);
+    const best = list.find(c => c && c.videoId && c.videoId !== failed && !brokenLinkTried.has(c.videoId));
+    const cur = state.queue[state.queuePos];
+    if (!best || !cur || cur.plId !== entry.plId || cur.idx !== entry.idx || t.videoId !== failed) return;
+    applyRelinkChoice(entry.plId, entry.idx, best);
+  } catch(e){}
+}
+
 // Geethub #316: fixing one song in an album points the album's other
 // unplayable songs (no videoId) at the same source (same channel/uploader),
 // automatically. Only tracks with no working link are touched; a song with
@@ -16496,7 +16526,7 @@ function createDeckPlayer(deck, videoId){
       },
       onStateChange: function(e){ if (deck.gen === myGen){ onDeckStateChange(deck, e); if (deck === activeDeck()) ytPanelBtnSync(); } },
       // only recorded, for the YouTube tab's availability (ytPanelBtnSync)
-      onError: function(){ if (deck.gen === myGen){ deck.ytErrorFor = deck.videoId; if (deck === activeDeck()) ytPanelBtnSync(); } },
+      onError: function(e){ if (deck.gen === myGen){ deck.ytErrorFor = deck.videoId; if (deck === activeDeck()) ytPanelBtnSync(); autoRepairBrokenLink(deck, e && e.data); } },
       onPlaybackQualityChange: function(){ if (deck.gen === myGen) forceLowestQuality(deck); }
     }
   });

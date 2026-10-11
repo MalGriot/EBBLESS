@@ -469,6 +469,10 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   if (channel.endsWith('- topic')) score += 5;
   if (AUDIO_HINTS.some(h => title.includes(h))) score += 4;
   if (channel.includes(firstArtist)) score += 3;
+  // Geethub #389: prefer the artist's own YouTube channel (name matches
+  // exactly, or "<artist> official") and lyric videos over third-party uploads.
+  if (firstArtist && (channel === firstArtist || channel === firstArtist + ' official' || channel === firstArtist + 'vevo')) score += 2;
+  if (title.includes('lyric')) score += 1;
   if (MUSIC_VIDEO_HINTS.some(h => title.includes(h))) score += 1;
   // VEVO uploads are music videos, not audio-only tracks - they can splice in
   // spoken intros/skits (see AUDIO_HINTS comment above), so avoid favoring
