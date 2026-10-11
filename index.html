@@ -220,11 +220,11 @@ body.split-desktop #topbar{z-index:42}
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
 .import-row button:active{transform:scale(.97)}
-/* #loadBtn is the magnifier inside the field (left), the form's submit button */
-.import-row #loadBtn{position:absolute;left:5px;top:0;bottom:0;margin:auto 0;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--faint);border-radius:50%}
+/* #loadBtn is the magnifier inside the field (right), the form's submit button */
+.import-row #loadBtn{position:absolute;right:5px;top:0;bottom:0;margin:auto 0;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--faint);border-radius:50%}
 .import-row #loadBtn:hover,.import-row #loadBtn:focus-visible{color:var(--text)}
 .import-row #loadBtn svg{width:18px;height:18px}
-.import-field input{padding-left:42px}
+.import-field input{padding-right:42px}
 .import-err{font-size:12.5px;color:var(--bad);margin:0;min-height:0}
 /* the form lives in the top bar (#319): errors hang below it */
 .import-row .import-err:not(:empty){position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:22;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 12px}
@@ -232,8 +232,8 @@ body.split-desktop #topbar{z-index:42}
    Speech API is missing) + the interpreter's stages in the import overlay */
 .import-field{flex:1;min-width:0;display:flex;position:relative}
 .import-field input{min-width:0;width:100%}
-.import-field:has(.mic-btn:not([hidden])) input{padding-right:48px}
-.import-row .mic-btn{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:36px;height:36px;padding:0;
+.import-field:has(.mic-btn:not([hidden])) input{padding-left:48px}
+.import-row .mic-btn{position:absolute;top:50%;left:6px;transform:translateY(-50%);width:36px;height:36px;padding:0;
   display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;
   border-radius:50%;color:var(--faint)}
 .import-row .mic-btn:active{transform:translateY(-50%) scale(.94)}
@@ -329,11 +329,11 @@ body.onb-active .paste-guide{display:none}
    transparent while the overlay is live (hint-live), the overlay hides
    itself once there's text, and the mic's "Listening..." placeholder wins
    while it's recording. The "tab" key chip fills a personalized hint in. */
-.paste-hint{position:absolute;left:46px;right:17px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
+.paste-hint{position:absolute;left:14px;right:46px;top:0;bottom:0;display:flex;align-items:center;gap:8px;min-width:0;
   pointer-events:none;color:var(--faint-2);font-size:14.5px;white-space:nowrap;transition:opacity 260ms var(--ease-out)}
 .paste-hint[hidden]{display:none}
 .paste-hint.is-swapping{opacity:0}
-.import-field:has(.mic-btn:not([hidden])) .paste-hint{right:50px}
+.import-field:has(.mic-btn:not([hidden])) .paste-hint{left:50px}
 .paste-hint-text{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .import-row .paste-hint-try{flex:none;pointer-events:auto;background:transparent;color:var(--faint);padding:3px 6px;
   border:1px solid var(--border-2);border-radius:5px;font-size:11px;font-weight:600;line-height:1;letter-spacing:.04em}
