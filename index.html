@@ -347,6 +347,8 @@ body.onb-active .paste-guide{display:none}
 
 .section-label{font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--faint-2);text-transform:uppercase;margin:28px 0 12px}
 .section-label:first-of-type{margin-top:8px}
+.album-sort-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.album-sort{font:inherit;font-size:11px;letter-spacing:.3px;text-transform:none;font-weight:500;color:var(--faint-2);background:transparent;border:1px solid var(--border,rgba(255,255,255,.14));border-radius:999px;padding:3px 8px;max-width:50%}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .section-label-row .section-label{margin:28px 0 2px}
 .section-label-row:first-of-type .section-label{margin-top:0}
@@ -8313,9 +8315,17 @@ attachSwipeToDismiss(histPanel, closePlayHistory);
    ========================================================================= */
 let openLibraryPanelId = null;
 let libplReturnTo = null;  // artist panel id to go back to when an album opened from it is closed (#369)
+// #391: an album opened from an artist's page shows a back "<" instead of the "x"
+const LIBPL_X_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
+const LIBPL_BACK_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>';
+function syncLibplCloseBtn(){
+  const back = !!(libplReturnTo && openLibraryPanelId && openLibraryPanelId !== libplReturnTo);
+  libplCloseBtn.setAttribute('aria-label', back ? 'Back' : 'Close');
+  libplCloseBtn.innerHTML = back ? LIBPL_BACK_ICON : LIBPL_X_ICON;
+}
 
 function closeLibraryPlaylistPanel(){
-  libplReturnTo = null;
+  libplReturnTo = null; syncLibplCloseBtn();
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
@@ -8332,6 +8342,23 @@ function playLibraryTrackInline(id, index){
   loadIndex(state.queuePos, true);
 }
 
+// #393: order of the albums on an artist's page. "Most popular" uses the
+// listener's own play counts (the app stores no catalog popularity), so with
+// no plays yet it keeps the library order, which is the artist's catalog order.
+// "Most recent" uses the release date stamped on albums added since #393;
+// albums without one follow in their original order.
+const LS_ARTIST_ALBUM_SORT = 'ebbless:artistAlbumSort'; // 'popular' | 'recent' | 'alpha'
+function sortArtistAlbumIds(ids, mode){
+  const base = ids.slice(), pl = (id) => getCachedPlaylist(id);
+  if (mode === 'alpha') return base.sort((x, y) => pl(x).name.localeCompare(pl(y).name, undefined, { sensitivity: 'base', numeric: true }));
+  if (mode === 'recent'){
+    const dated = base.filter(id => pl(id).releaseDate).sort((x, y) => String(pl(y).releaseDate).localeCompare(String(pl(x).releaseDate)));
+    return dated.concat(base.filter(id => !pl(id).releaseDate));
+  }
+  const plays = (id) => totalPlaylistPlays(pl(id));
+  return base.map((id, i) => ({ id, i })).sort((x, y) => (plays(y.id) - plays(x.id)) || (x.i - y.i)).map(x => x.id);
+}
+
 function toggleLibraryPlaylistPanel(id){
   if (openLibraryPanelId === id){
     closeLibraryPlaylistPanel();
@@ -8339,7 +8366,7 @@ function toggleLibraryPlaylistPanel(id){
   }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
-  libplReturnTo = null;
+  libplReturnTo = null; syncLibplCloseBtn();
 
   if (id === NP_ID) refreshNowPlaying();
   if (id === SWELL_ID){
@@ -8457,26 +8484,36 @@ function toggleLibraryPlaylistPanel(id){
   if (isArtistEntry(pl)){
     const mine = artistAlbumIds.slice();
     if (mine.length){
-      // one artist here, so no divider: just their albums, sorted by album name
-      mine.sort((x, y) => getCachedPlaylist(x).name.localeCompare(getCachedPlaylist(y).name, undefined, { sensitivity: 'base', numeric: true }));
+      // one artist here, so no divider: just their albums, in the chosen order (#393)
       const box = document.createElement('div');
-      const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Albums';
+      const lbl = document.createElement('div'); lbl.className = 'section-label album-sort-row'; lbl.appendChild(document.createTextNode('Albums'));
+      const sortSel = document.createElement('select'); sortSel.className = 'album-sort'; sortSel.setAttribute('aria-label', 'Sort albums');
+      [['popular', 'Most popular'], ['recent', 'Most recent'], ['alpha', 'A to Z']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sortSel.appendChild(o); });
+      let sortMode = lsGet(LS_ARTIST_ALBUM_SORT, 'popular');
+      if (!['popular', 'recent', 'alpha'].includes(sortMode)) sortMode = 'popular';
+      sortSel.value = sortMode;
+      lbl.appendChild(sortSel);
       box.appendChild(lbl);
       const list = box;
-      mine.forEach(aid => {
-        const a = getCachedPlaylist(aid);
-        const row = document.createElement('div'); row.className = 'track-row';
-        const img = document.createElement('img');
-        const first = (a.tracks || []).find(t => t && t.art);
-        if (a.image) attachArtworkFallback(img, { art: a.image }); else if (first) attachArtworkFallback(img, first);
-        const meta = document.createElement('div'); meta.className = 'meta';
-        const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = a.name;
-        const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = albumArtistName(a);
-        meta.appendChild(ttl); meta.appendChild(sub);
-        row.appendChild(img); row.appendChild(meta);
-        row.addEventListener('click', () => { toggleLibraryPlaylistPanel(aid); if (openLibraryPanelId === aid) libplReturnTo = id; });
-        list.appendChild(row);
-      });
+      const renderAlbumRows = () => {
+        list.querySelectorAll('.track-row').forEach(r => r.remove());
+        sortArtistAlbumIds(mine, sortMode).forEach(aid => {
+          const a = getCachedPlaylist(aid);
+          const row = document.createElement('div'); row.className = 'track-row';
+          const img = document.createElement('img');
+          const first = (a.tracks || []).find(t => t && t.art);
+          if (a.image) attachArtworkFallback(img, { art: a.image }); else if (first) attachArtworkFallback(img, first);
+          const meta = document.createElement('div'); meta.className = 'meta';
+          const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = a.name;
+          const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = albumArtistName(a);
+          meta.appendChild(ttl); meta.appendChild(sub);
+          row.appendChild(img); row.appendChild(meta);
+          row.addEventListener('click', () => { toggleLibraryPlaylistPanel(aid); if (openLibraryPanelId === aid){ libplReturnTo = id; syncLibplCloseBtn(); } });
+          list.appendChild(row);
+        });
+      };
+      sortSel.addEventListener('change', () => { sortMode = sortSel.value; lsSet(LS_ARTIST_ALBUM_SORT, sortMode); renderAlbumRows(); });
+      renderAlbumRows();
       libplBody.prepend(box);
     }
     loadArtistInfoInto(id, pl.name, (pl.tracks.find(t => t.title) || {}).title, false);
@@ -10995,7 +11032,7 @@ async function itunesArtistAlbums(pl){
     .sort((a, b) => (COMPILATION_RE.test(String(a.collectionName)) - COMPILATION_RE.test(String(b.collectionName))) || String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
     .slice(0, ARTIST_ALBUMS_MAX)
     .sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || ''))).reverse()
-    .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName) }));
+    .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName), releaseDate: String(r.releaseDate || '') || undefined }));
 }
 // Each artist's fill runs once: the artist's own entry is stamped
 // albumsAdded (it syncs with the library, so another device won't fill it
@@ -11041,7 +11078,7 @@ async function addArtistAlbumsOnly(pl, resume){
         // best-effort, like seedStarterLibrary - a failed or dead album is just skipped
         if (await queueBackgroundLoad(a.id, a.type || 'am_album')){
           const added = getCachedPlaylist(a.id);
-          if (added){ added.importedUnder = pl.name; lsSet(LS_PL(a.id), added); }
+          if (added){ added.importedUnder = pl.name; if (a.releaseDate) added.releaseDate = a.releaseDate; lsSet(LS_PL(a.id), added); }
           saveToLibrary(a.id);
           rerenderLibraryKeepPanel();
         }
