@@ -434,8 +434,33 @@ body.onb-active .paste-guide{display:none}
 .lib-grid .lib-versions.is-list .lib-card .info .name{display:block}
 .lib-card{min-width:0;position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
-.lib-card.is-drop-target{outline:2px solid var(--accent, #fff);outline-offset:3px;transform:scale(1.03)}
+.lib-card.is-drop-target{outline:2px solid var(--accent, #fff);outline-offset:3px;transform:translateY(-4px) scale(1.04)}
+.lib-card.is-drop-target .art{box-shadow:0 10px 24px rgba(0,0,0,.5),0 0 0 3px color-mix(in srgb,var(--accent, #fff) 35%,transparent)}
+.lib-card .art{transition:box-shadow var(--dur-ui) var(--ease-out)}
 .is-song-drag{opacity:.5}
+/* artist tiles (#374): round, a touch larger than the square tiles' art */
+.lib-card.is-artist-card .art{border-radius:50%;transition:transform var(--dur-ui) var(--ease-out),box-shadow var(--dur-ui) var(--ease-out)}
+.lib-card.is-artist-card .art img{border-radius:50%}
+.lib-card.is-artist-card .art .menu-btn{top:10%;right:10%}
+.lib-card.is-artist-card .art .pin{top:10%;left:10%}
+.lib-card.is-artist-card .name,.lib-card.is-artist-card .count{text-align:center}
+.lib-grid:not(.is-list) .lib-card.is-artist-card .art{transform:scale(1.06)}
+.lib-grid:not(.is-list) .lib-card.is-artist-card{padding:3%}
+/* album tiles (#375): a CD slides out from behind the cover and spins on hover */
+.lib-card .cd-disc{display:none}
+@media (hover:hover) and (pointer:fine){
+  .lib-grid:not(.is-list) .lib-card.is-album-card .art{z-index:1}
+  .lib-grid:not(.is-list) .lib-card.is-album-card:hover{z-index:3}
+  .lib-grid:not(.is-list) .lib-card.is-album-card .cd-disc{display:block;position:absolute;z-index:0;top:4%;left:4%;width:92%;aspect-ratio:1;border-radius:50%;pointer-events:none;opacity:0;
+    background:radial-gradient(circle at 50% 50%,#1b1b1b 0 7%,transparent 7.5% 17%,#d8d8d8 17.5% 19%,transparent 19.5%),
+      conic-gradient(from 20deg,#f3f3f3,#9fd8ff,#fff,#ffb6f0,#f3f3f3,#b6ffd0,#fff,#ffe9a8,#f3f3f3);
+    box-shadow:0 2px 8px rgba(0,0,0,.45);transition:transform .45s var(--ease-out),opacity .2s}
+  .lib-grid:not(.is-list) .lib-card.is-album-card:hover .cd-disc{opacity:1;transform:translateX(24%);animation:cd-spin 2.4s linear .45s infinite}
+}
+@keyframes cd-spin{from{transform:translateX(24%) rotate(0)}to{transform:translateX(24%) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .lib-grid .lib-card.is-album-card:hover .cd-disc{animation:none}
+}
 .lib-card .art{position:relative;width:100%;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;container-type:size}
 .lib-card .art img{width:100%;height:100%;object-fit:cover;display:block;background:var(--panel-2)}
@@ -1754,6 +1779,11 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
    at the top of the library panel (see openArtistPage) */
 #trackArtist{cursor:pointer}
 #trackArtist:hover span{text-decoration:underline;text-underline-offset:3px}
+@media (hover:hover){
+  #trackArtist:not(.is-marquee)>span{transition:transform var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  #trackArtist:not(.is-marquee):hover>span{transform:scale(1.06);color:var(--accent)}
+}
+@media (prefers-reduced-motion:reduce){#trackArtist:not(.is-marquee):hover>span{transform:none}}
 #libpl-panel.is-artist-info .libpl-play,#libpl-panel.is-artist-info .libpl-art-play{display:none}
 .artist-info{padding:6px 14px 14px;border-bottom:1px solid var(--border);margin-bottom:6px}
 .artist-info .ai-bio{margin:0;font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-line;
@@ -7836,7 +7866,7 @@ function renderLibrary(){
     const pinned = isPinned(id);
     const withArt = pl.tracks.filter(t => t.videoId).slice(0, 4);
     const card = document.createElement('div');
-    card.className = 'lib-card' + (pinned ? ' is-pinned' : '');
+    card.className = 'lib-card' + (pinned ? ' is-pinned' : '') + (isArtist ? ' is-artist-card' : '') + (isAlbum ? ' is-album-card' : '');
     card.dataset.plId = id;
     const artDiv = document.createElement('div');
     artDiv.className = 'art';
@@ -7888,7 +7918,7 @@ function renderLibrary(){
       // manual playlist) - the E mark instead of an empty tile.
       artDiv.classList.add('single');
       artDiv.innerHTML = '<div class="face icon-face"><img src="brand/assets/mark.png" alt=""></div>';
-    } else if (pl.image){
+    } else if (pl.image && !(pl.thumbCollage && canToggleThumbArt(pl) && withArt.length > 1)){
       // A real source-provided cover (Spotify/SoundCloud/Apple) always wins
       // over the per-track collage below. This used to render both and
       // crossfade between them forever (`.animated` + `lib-art-crossfade`),
@@ -8011,6 +8041,7 @@ function renderLibrary(){
       rowActions.appendChild(rowPinBtn); rowActions.appendChild(rowMenuBtn);
     }
 
+    if (isAlbum){ const disc = document.createElement('div'); disc.className = 'cd-disc'; disc.setAttribute('aria-hidden', 'true'); card.appendChild(disc); }
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
     card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));   // ON AIR opens like any playlist; tuning in is the first song or the menu
     if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
@@ -8852,6 +8883,7 @@ function openLibCtxMenu(id, btn){
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },
     { action: 'art', label: 'Change art', icon: CTX_ICON_ART },
+    ...(canToggleThumbArt(pl) ? [{ action: 'thumbart', label: pl.thumbCollage ? 'Show playlist art' : 'Show song collage', icon: CTX_ICON_ART }] : []),
     { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
     { action: 'duplicate', label: 'Duplicate', icon: CTX_ICON_DUPLICATE },
     { action: 'pin', label: pinned ? 'Unpin' : 'Pin to top', icon: CTX_ICON_PIN },
@@ -9120,6 +9152,11 @@ function handleLibCtxAction(action, id){
   if (!pl) return;
   if (action === 'rename') openRenamePlaylistFlow(id, pl);
   else if (action === 'art') openChangeArtFlow(id, pl);
+  else if (action === 'thumbart'){
+    if (pl.thumbCollage) delete pl.thumbCollage; else pl.thumbCollage = true;
+    lsSet(LS_PL(id), pl);
+    renderLibrary();
+  }
   else if (action === 'addqueue'){ const n = queueAddCollection(id); showToast(n ? 'Added ' + n + (n === 1 ? ' song' : ' songs') + ' to queue' : 'Nothing to add'); }
   else if (action === 'duplicate') duplicateLibraryPlaylist(id, pl);
   else if (action === 'pin'){ togglePin(id); renderLibrary(); showToast(isPinned(id) ? 'Pinned to top' : 'Unpinned'); }
@@ -9170,6 +9207,13 @@ function openRenamePlaylistFlow(id, pl){
   }
   $('plRenameBtn').addEventListener('click', submit);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+}
+
+// Playlist (not album/podcast/artist) with its own cover and 2+ playable
+// songs: the tile can show either the cover or the 2x2 song collage (#384).
+function canToggleThumbArt(pl){
+  return !!pl && !!pl.image && !isAlbumEntry(pl) && !isPodcastEntry(pl) && !isArtistEntry(pl) &&
+    Array.isArray(pl.tracks) && pl.tracks.filter(t => t.videoId).length > 1;
 }
 
 function openChangeArtFlow(id, pl){
