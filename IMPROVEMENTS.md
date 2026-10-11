@@ -9611,7 +9611,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #417. Related to #403 (cassette hover expand).
 
 ### feedback-button-nav-position: Put the feedback button between the tutorial and settings buttons, labeled 'Feedback' (Geethub #432)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Move the feedback button in the header nav so it sits between the tutorial button and the settings button, and give it the label 'Feedback'.
 - **Touches:** header nav / feedback button
@@ -9620,7 +9620,7 @@ Add entries in this shape:
 - **Review note:** Desktop (>=860px): new "Feedback" nav button in #topnav right before Settings (after tutorial), shown for the same testers as the old pill; the pill is hidden there. Phones keep the #372/#361 order (history, tutorial, round feedback icon far right) since Settings is not in the phone header. Search-bar reserve (--tb-r) widened so it does not collide. Cache v158.
 
 ### queue-save-clear-icons: Queue window: save and clear become symbols to save space (Geethub #433)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the queue window, replace the Save and Clear text buttons with icons (a floppy disc for save, a trash can for clear) to save space.
 - **Touches:** queue window header
@@ -9629,7 +9629,7 @@ Add entries in this shape:
 - **Review:** Save is now a floppy-disc icon and Clear a trash-can icon in the queue header; aria-label and title kept. Branch agent/queue-header-icons (cache v158).
 
 ### queue-discover-lightbulb: Queue window: Discover checkmark becomes a lightbulb that glows when on, dims when off (Geethub #434)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Replace the Discover checkmark in the queue window with a lightbulb icon. Lit with a slow, smooth glow animation while Discover is active; dimmed when it is off.
 - **Touches:** queue window Discover toggle
@@ -9638,7 +9638,7 @@ Add entries in this shape:
 - **Review:** Discover now shows a lightbulb: amber with a slow 3.2s glow when on, dimmed when off (static glow under reduced-motion). Branch agent/queue-header-icons (cache v158).
 
 ### library-view-order-all-sections: Library view-order options should apply to every section, not just playlists (bug) (Geethub #435)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The library view-order options currently only reorder playlists. They should also apply to the other sections (albums, artists, podcasts, etc.).
 - **Touches:** library sort/view-order controls
@@ -9655,7 +9655,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #436. Bug. Reporter gave no details; reproduce first. May relate to the header nav change in #431 (History removal) or queue panel changes.
 
 ### soundcloud-next-song-page-closed: SoundCloud links don't play the next song when the page is not open (bug) (Geethub #437)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** When a SoundCloud-sourced track ends and the app is backgrounded or the page is not open/visible, the next song does not start.
 - **Touches:** SoundCloud native playback / track-end handling
@@ -9676,7 +9676,7 @@ Add entries in this shape:
   does not change. Needs an iPhone PWA and Android test with the screen locked.
 
 ### queue-window-bg-video: Queue window background video, rotated 90 degrees and tinted like the library bg (Geethub #438)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Use the waves video (/Users/malcolm/Downloads/4866-181014376_medium.mp4, also pixabay.com/videos/background-yellow-abstract-waves-4866/) as the queue window background. Rotate it 90 degrees and recolor it the same way the library background video is recolored.
 - **Touches:** queue window background; library bg video code
