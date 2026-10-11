@@ -20617,6 +20617,11 @@ async function openMiniPlayer(){
     const prefs = miniPlayerPrefs();
     const win = await documentPictureInPicture.requestWindow({ width: prefs.w, height: prefs.h });
     miniPlayerWin = win;
+    // The browser opens this window just after the tab went hidden, i.e. after
+    // the visibilitychange handler already saw playback as live. From here the
+    // listener controls play/pause in the mini player, so returning must not
+    // force-resume a track they paused there.
+    if (document.visibilityState === 'hidden') wasPlayingBeforeHide = false;
     mpQueue = null;
     mpShrunk = null;
     buildMiniPlayerDOM(win);
