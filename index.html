@@ -297,6 +297,13 @@ body.split-desktop #topbar{z-index:42}
 .paste-recent-s{font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .import-row .paste-recents .paste-recent-x{flex:none;width:36px;height:36px;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center}
 .import-row .paste-recents .paste-recent-x:hover{color:var(--text)}
+.import-row .paste-recents .paste-recent-ins{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.import-row .paste-recents .paste-recent-ins svg{width:18px;height:18px}
+.import-row .paste-recents .paste-recent-ins:hover,.import-row .paste-recents .paste-recent-ins:focus-visible{color:var(--text)}
+/* phones: insert arrow tucks next to the x (the list's left edge is set in openPasteRecents) */
+@media (max-width:859.98px){
+  .import-row .paste-recents .paste-recent-ins{margin-right:-10px}
+}
 body.onb-active .paste-guide{display:none}
 @keyframes paste-guide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes paste-guide-ring{0%,100%{box-shadow:0 0 0 0 var(--accent-dim)}50%{box-shadow:0 0 0 6px var(--accent-dim)}}
@@ -12234,10 +12241,20 @@ function openPasteRecents(){
         (r.src ? PASTE_RECENT_ICO_LINK : PASTE_RECENT_ICO_SEARCH) +
         '<span class="paste-recent-txt"><span class="paste-recent-n">' + escapeHtml(l.name) + '</span>' +
         (l.sub ? '<span class="paste-recent-s">' + escapeHtml(l.sub) + '</span>' : '') + '</span>' +
+        (r.src ? '' : '<button type="button" class="paste-recent-ins" tabindex="-1" aria-label="Put in search box to edit" title="Put in search box to edit" data-ins="' + i + '"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 7h8.6L6.3 16.3l1.4 1.4L17 8.4V17h2V5H7z"/></svg></button>') +
         '<button type="button" class="paste-recent-x" tabindex="-1" aria-label="Remove from recents" data-x="' + i + '">&times;</button>' +
       '</div>';
     }).join('') + '</div>';
   pasteRecentsEl.hidden = false;
+  // phones: wide list centered on the screen, starting just right of the logo (edges mirrored)
+  pasteRecentsEl.style.left = pasteRecentsEl.style.right = '';
+  const wm = $('wordmarkBtn');
+  if (wm && matchMedia('(max-width:859.98px)').matches){
+    const edge = wm.getBoundingClientRect().right + 8, vw = document.documentElement.clientWidth;
+    const box = pasteRecentsEl.getBoundingClientRect();
+    if (edge < box.left) pasteRecentsEl.style.left = (edge - box.left) + 'px';
+    if (vw - edge > box.right) pasteRecentsEl.style.right = (box.right - (vw - edge)) + 'px';
+  }
   pasteRecentsActive = -1;
   urlInput.setAttribute('aria-expanded', 'true');
   const listEl = pasteRecentsEl.querySelector('.paste-recents-list');
@@ -12274,6 +12291,16 @@ if (pasteRecentsEl){
     if (e.target.closest('.paste-recents-clear')){
       lsSet(LS_PASTE_RECENTS, []);
       closePasteRecents();
+      return;
+    }
+    const ins = e.target.closest('[data-ins]');
+    if (ins){   // put the text back in the bar to edit; no search runs
+      const r = getPasteRecents()[+ins.dataset.ins];
+      if (!r) return;
+      urlInput.value = r.q + ' ';
+      closePasteRecents();
+      urlInput.focus();
+      urlInput.setSelectionRange(urlInput.value.length, urlInput.value.length);
       return;
     }
     const x = e.target.closest('[data-x]');
