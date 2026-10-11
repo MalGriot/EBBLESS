@@ -1354,6 +1354,8 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .fb-extra .fb-extra-x{position:absolute;right:0;top:8px;width:28px;height:28px;border-radius:50%;color:var(--faint);font-size:20px;line-height:1}
 .fb-extra .fb-extra-x:hover{color:var(--text)}
 .fb-extra textarea{min-height:80px}
+.fb-num{font-size:13px;font-weight:700;color:var(--text);margin:0 0 8px}
+.fb-extra .fb-num{padding-right:32px}
 .fb-add{align-self:flex-start;margin:-2px 0 12px;padding:6px 2px;font-size:13px;font-weight:600;color:var(--accent)}
 #feedback-modal.is-vibe .fb-std{display:none}
 #feedback-modal.is-vibe:not(.has-thumb) .fb-detail{display:none}
@@ -3755,6 +3757,7 @@ body.week-up-on{overflow:hidden}
         <span>Nah</span>
       </button>
     </div>
+    <div class="fb-num fb-std" id="fbNum1" hidden>Issue 1</div>
     <div class="fb-field fb-std">
       <label for="fbCategory">What kind?</label>
       <select id="fbCategory">
@@ -11932,13 +11935,20 @@ const fbTitle = $('feedbackModalTitle'), fbIntro = $('fbIntro'), fbMessageLabel 
 const fbThumbs = [$('fbThumbUp'), $('fbThumbDown')];
 const FB_STD_COPY = { title: fbTitle.textContent, intro: fbIntro.textContent, label: fbMessageLabel.textContent, placeholder: fbMessage.placeholder };
 const fbExtras = $('fbExtras'), fbAddBtn = $('fbAddBtn');
+// "Issue N" headings only show once there is more than one issue
+function fbRenumber(){
+  const xs = fbExtras.querySelectorAll('.fb-extra');
+  $('fbNum1').hidden = !xs.length;
+  xs.forEach((w, i) => { w.querySelector('.fb-num').textContent = 'Issue ' + (i + 2); });
+}
 function fbAddExtra(){
   const wrap = document.createElement('div'); wrap.className = 'fb-extra';
-  wrap.innerHTML = '<button type="button" class="fb-extra-x" aria-label="Remove this issue">&times;</button>'
+  wrap.innerHTML = '<button type="button" class="fb-extra-x" aria-label="Remove this issue">&times;</button><div class="fb-num"></div>'
     + '<div class="fb-field"><label>What kind?</label><select class="fb-x-cat"><option value="bug">Something\'s broken</option><option value="idea">An idea</option><option value="other">Something else</option></select></div>'
     + '<div class="fb-field"><label>What\'s up?</label><textarea class="fb-x-msg" maxlength="4000" placeholder="Another thing: what happened, or what\'s the idea?"></textarea></div>';
-  wrap.querySelector('.fb-extra-x').addEventListener('click', () => wrap.remove());
+  wrap.querySelector('.fb-extra-x').addEventListener('click', () => { wrap.remove(); fbRenumber(); });
   fbExtras.appendChild(wrap);
+  fbRenumber();
   wrap.querySelector('textarea').focus();
 }
 fbAddBtn.addEventListener('click', fbAddExtra);
@@ -11957,7 +11967,7 @@ function setFbMode(vibe){
 }
 function openFeedbackModal(){
   setFbMode(null);
-  if (!fbMessage.value.trim()) fbExtras.textContent = '';
+  if (!fbMessage.value.trim()){ fbExtras.textContent = ''; fbRenumber(); }
   setFbStatus('');
   if (!fbContact.value.trim() && !lsGet(LS_PROFILE_SIGNED_OUT, false)) fbContact.value = lsGet(LS_PROFILE_EMAIL, '') || '';
   dangerScrim.classList.add('is-open');
@@ -12370,8 +12380,8 @@ feedbackModal.addEventListener('submit', async (e) => {
   try {
     // each issue goes as its own report so each can be triaged on its own; whatever sent is cleared, whatever didn't stays
     if (typed || vibe){ await postReport(basePayload); fbMessage.value = ''; }
-    for (const x of extras){ await postReport({ ...basePayload, category: x.category, message: x.message }); x.el.remove(); }
-    fbExtras.textContent = '';
+    for (const x of extras){ await postReport({ ...basePayload, category: x.category, message: x.message }); x.el.remove(); fbRenumber(); }
+    fbExtras.textContent = ''; fbRenumber();
     if (vibe){ vibe.sent = true; if (!vibe.force) vibeCheckAnswered(); }
     const n = (typed || vibe ? 1 : 0) + extras.length;
     setFbStatus(n > 1 ? 'Sent ' + n + ' issues. Thank you, this really helps.' : 'Sent. Thank you, this really helps.', 'ok');
