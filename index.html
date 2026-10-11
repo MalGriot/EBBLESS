@@ -9995,11 +9995,23 @@ function addablePlaylists(){
   function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); }
   document.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const art = e.target.closest && e.target.closest('#artworkWrap');
+    if (art && !e.target.closest('button')){ art.draggable = true; return; }
     const row = rowOf(e.target);
     if (!row || e.target.closest('.handle, button')) return;
     row.draggable = true;
   });
   document.addEventListener('dragstart', (e) => {
+    const art = e.target.closest && e.target.closest('#artworkWrap');
+    if (art){
+      // album art of the playing song drags as that song
+      const ct = currentTrack();
+      if (!ct || !ct.videoId){ e.preventDefault(); return; }
+      dragTrack = ct;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', ct.title + ' - ' + ct.artist);
+      return;
+    }
     const row = rowOf(e.target);
     if (!row || !row.draggable) return;
     let t = null;
@@ -10032,14 +10044,16 @@ function addablePlaylists(){
     if (!okTarget(card)) return;
     e.preventDefault();
     addTrackToPlaylist(card.dataset.plId, dragTrack);
+    // show where it landed
+    if (openLibraryPanelId !== card.dataset.plId) toggleLibraryPlaylistPanel(card.dataset.plId);
   });
   document.addEventListener('dragend', () => {
     dragTrack = null; clearHi();
     document.querySelectorAll('.is-song-drag').forEach(r => r.classList.remove('is-song-drag'));
-    document.querySelectorAll('.track-row[draggable], .q-row[draggable]').forEach(r => r.removeAttribute('draggable'));
+    document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable]').forEach(r => r.removeAttribute('draggable'));
   });
   document.addEventListener('pointerup', () => {
-    if (!dragTrack) document.querySelectorAll('.track-row[draggable], .q-row[draggable]').forEach(r => r.removeAttribute('draggable'));
+    if (!dragTrack) document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable]').forEach(r => r.removeAttribute('draggable'));
   });
 })();
 
