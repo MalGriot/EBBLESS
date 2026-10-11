@@ -8920,3 +8920,19 @@ Add entries in this shape:
 - **Touches:** library grid rendering, thumbnail size selection.
 - **Branch:** agent/library-grid-thumbs
 - **Notes:** Synced from Geethub issue #355 (bug). No repro details.
+
+### feedback-button-install-bar: Feedback button sinks out of place when the "works best as an app" bar appears (Geethub #356)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #356. When the "EBBLESS works best as an app..." install bar pops up, the feedback button sinks out of place. It should stay correctly positioned whether or not the bar is showing.
+- **Touches:** install banner, feedback button positioning (likely related to merged `feedback-popup-to-titlebar`).
+- **Branch:** agent/feedback-install-bar
+- **Notes:** Synced from Geethub issue #356 (bug). No repro details.
+
+### install-button-auto-install: Install button should install the app automatically, not just show steps (Geethub #357)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #357. When someone taps the install button, it should trigger the install itself (native install prompt where the browser supports it) instead of only showing manual steps. Keep the step-by-step instructions as a fallback only where the browser cannot prompt (e.g. iOS Safari).
+- **Touches:** install button handlers (splash, Settings, install bar), beforeinstallprompt handling.
+- **Branch:** agent/install-auto
+- **Notes:** Synced from Geethub issue #357 (idea). Related: `mobile-install-button`, `settings-install-button`, `feedback-button-install-bar`.
