@@ -27,35 +27,7 @@
 //
 // IMPORTANT: bump CACHE_VERSION on every deploy you want existing
 // installs/tabs to pick up promptly.
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 const CACHE_VERSION = 'ebbless-shell-v147';
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/speaker-icon-under-thumb
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/cassette-skip-reverse-rewind
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/miniplayer-art-hover-click
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/library-playlist-groups
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/playlist-manual-order-drag
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/artist-link-pick-albums
-=======
-const CACHE_VERSION = 'ebbless-shell-v147';
->>>>>>> agent/artist-names-left-justified
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './sfx/needle-drop.mp3', './sfx/needle-lift.mp3', './sfx/cassette-rewind.mp3'];
 
 self.addEventListener('install', (e) => {
