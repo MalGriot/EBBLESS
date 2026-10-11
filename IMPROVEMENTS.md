@@ -9531,11 +9531,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #427. Ambiguous: ask the owner which color before building.
 
 ### show-under-move-to-label: Rename 'show under' to 'move to >' (Geethub #426)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** The 'show under' menu label should say 'move to >'.
 - **Touches:** library show-under dropdown (library-show-under-dropdown)
-- **Branch:**
+- **Branch:** agent/show-under-move-to
 - **Notes:** Synced from Geethub #426. Copy change only.
 
 ### artist-bio-add-to-library: Artist bio: button to add the artist to your library when they aren't in it (Geethub #425)

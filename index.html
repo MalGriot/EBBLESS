@@ -9202,7 +9202,7 @@ function openLibCtxMenu(id, btn){
     const sub = [['playlists', 'Playlists'], ['albums', 'Albums'], ['podcasts', 'Podcasts']]
       .filter(([sec]) => LIB_SECTIONS[sec] !== cur)
       .map(([sec, label]) => ({ action: 'showunder:' + sec, label, icon: CTX_ICON_ALBUM }));
-    items.push({ label: 'Show under...', icon: CTX_ICON_ALBUM, sub });
+    items.push({ label: 'Move to >', icon: CTX_ICON_ALBUM, sub });
   }
   if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
