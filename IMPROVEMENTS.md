@@ -8873,3 +8873,11 @@ Add entries in this shape:
 - **Touches:** artist bio fetch/cache, queue next-up logic.
 - **Branch:** 
 - **Notes:** Synced from Geethub issue #347 (idea). Title only.
+
+### desktop-album-art-too-small: Album art is too small on desktop
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #350. On desktop the album art in the player renders too small. Make it larger so it fills the available player space.
+- **Touches:** desktop player layout, album art sizing.
+- **Branch:** agent/desktop-album-art-size (merged 4924fc7)
+- **Notes:** Synced from Geethub issue #350 (bug). Title only, no repro details. May relate to the merged `player-controller-centering` and `player-mobile-spacing` work; check those for sizing constraints.
