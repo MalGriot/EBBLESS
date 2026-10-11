@@ -9489,3 +9489,123 @@ Add entries in this shape:
 - **Touches:** worker/src/beta.js, tools/beta-sheet.gs (needs redeploying by the owner), index.html tester recap copy, branch agent/tester-feedback-form.
 - **Branch:** agent/tester-feedback-form (existing, unmerged)
 - **Notes:** Added from chat 2026-10-11. Sheet script changes live in Google Apps Script, so the owner must paste/redeploy it.
+
+### remove-history-button: Remove the History button from the header nav (Geethub #431)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Remove the History button from the header nav.
+- **Touches:** header nav
+- **Branch:**
+- **Notes:** Synced from Geethub #431. Note: History button was added in playing-history and moved in history-button-in-queue-header; confirm where it should live (if anywhere) before removing.
+
+### fullscreen-search-not-clickable: Fullscreen: the search bar isn't clickable (Geethub #430)
+- **Status:** ready
+- **Priority:** high
+- **Description:** In fullscreen the search bar can't be clicked.
+- **Touches:** fullscreen layering, search bar
+- **Branch:**
+- **Notes:** Synced from Geethub #430. Bug. Possibly related to merged fullscreen-search-covers-art-tab (#364); check for a regression.
+
+### doubletap-fullscreen-art-off-center: Double-clicking player art opens fullscreen with the art off-center (Geethub #429)
+- **Status:** ready
+- **Priority:** high
+- **Description:** Double-clicking the album art in the player enters fullscreen, but the art lands off-center.
+- **Touches:** album-art-doubletap, fullscreen centering
+- **Branch:**
+- **Notes:** Synced from Geethub #429. Bug. Related to merged fullscreen-artwork-centering.
+
+### on-air-menu-antenna-icon: On-air 3-dot menu: on air / off air options should use an antenna icon (Geethub #428)
+- **Status:** ready
+- **Priority:** low
+- **Description:** In the on-air three-dot menu, the 'on air' and 'off air' list options should use an antenna icon.
+- **Touches:** on-air 3-dot menu icons
+- **Branch:**
+- **Notes:** Synced from Geethub #428. 
+
+### miniplayer-color-bg: Miniplayer background color (Geethub #427)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Mini player needs a colored background (issue gives no detail; likely tint from the album art or accent color).
+- **Touches:** desktop mini-player
+- **Branch:**
+- **Notes:** Synced from Geethub #427. Ambiguous: ask the owner which color before building.
+
+### show-under-move-to-label: Rename 'show under' to 'move to >' (Geethub #426)
+- **Status:** ready
+- **Priority:** low
+- **Description:** The 'show under' menu label should say 'move to >'.
+- **Touches:** library show-under dropdown (library-show-under-dropdown)
+- **Branch:**
+- **Notes:** Synced from Geethub #426. Copy change only.
+
+### artist-bio-add-to-library: Artist bio: button to add the artist to your library when they aren't in it (Geethub #425)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Opening the bio of an artist who isn't in your library should show a button that adds their profile to your library.
+- **Touches:** artist bio panel, library
+- **Branch:**
+- **Notes:** Synced from Geethub #425. Related to the artist-link work already merged.
+
+### albums-button-collapse-all: Albums button, pressed again while active, collapses all album sublists (Geethub #424)
+- **Status:** ready
+- **Priority:** low
+- **Description:** When the Albums filter is active, pressing it again collapses every sublist in that section.
+- **Touches:** library filter buttons
+- **Branch:**
+- **Notes:** Synced from Geethub #424. Pairs with #423.
+
+### all-button-collapse-all: Library 'All' button, pressed again while active, collapses all dropdowns (Geethub #423)
+- **Status:** ready
+- **Priority:** low
+- **Description:** When 'All' is active, pressing it again collapses every dropdown (playlists, albums, artists, podcasts).
+- **Touches:** library filter buttons
+- **Branch:**
+- **Notes:** Synced from Geethub #423. Pairs with #424.
+
+### artist-thumb-name-in-front: Big artist name inside the thumb art should sit in front, not be cut off by the mask (Geethub #422)
+- **Status:** ready
+- **Priority:** low
+- **Description:** The large artist name drawn inside the thumbnail art is clipped by the mask; it should render in front of the art.
+- **Touches:** library artist thumbnails
+- **Branch:**
+- **Notes:** Synced from Geethub #422. 
+
+### video-open-shortcuts: Keyboard shortcuts while video is open (Geethub #421)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Add shortcuts that work while the video view is open (issue gives no detail on which keys).
+- **Touches:** keyboard-shortcuts, video playback
+- **Branch:**
+- **Notes:** Synced from Geethub #421. Ambiguous: ask the owner which shortcuts.
+
+### link-loading-spinners: Loading circles where the 3-dot buttons are while links load (Geethub #420)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** While a track's link is still loading, show a small loading circle in place of its three-dot button.
+- **Touches:** track rows in library/playlists
+- **Branch:**
+- **Notes:** Synced from Geethub #420. Related to #419.
+
+### album-add-full-count-greyed: Adding an album should show the full track count immediately, with unloaded tracks greyed (Geethub #419)
+- **Status:** ready
+- **Priority:** high
+- **Description:** Adding an album currently counts up as tracks load. It should show the full count right away and show not-yet-loaded tracks greyed out until they resolve.
+- **Touches:** album add flow, playlist-full-loading
+- **Branch:**
+- **Notes:** Synced from Geethub #419. Bug. Related to merged playlist-full-loading.
+
+### albums-show-year: Albums should show their release year (Geethub #418)
+- **Status:** ready
+- **Priority:** low
+- **Description:** Show the release year on albums.
+- **Touches:** album rows/headers
+- **Branch:**
+- **Notes:** Synced from Geethub #418. 
+
+### library-hover-thumb-expand: Library hover: thumbs expand smoothly (Geethub #417)
+- **Status:** ready
+- **Priority:** low
+- **Description:** On hover over library items, all thumbs should expand smoothly.
+- **Touches:** library item hover CSS
+- **Branch:**
+- **Notes:** Synced from Geethub #417. Related to #403 (cassette hover expand).
