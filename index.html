@@ -4148,6 +4148,18 @@ async function runInstallPrompt(){
   const choice = await prompt.userChoice;
   return choice.outcome === 'accepted';
 }
+// The native prompt can still be a moment away when someone taps Install
+// (event not fired yet): wait briefly for it before falling back to manual
+// steps. Skipped on iOS, which never fires it. The tap's user activation
+// outlasts the wait, so prompt() is still allowed.
+function waitForInstallPrompt(ms){
+  if (deferredInstallPrompt || isIOS) return Promise.resolve(!!deferredInstallPrompt);
+  return new Promise((resolve) => {
+    const done = () => { clearTimeout(t); document.removeEventListener('ebbless:install-available', done); resolve(!!deferredInstallPrompt); };
+    const t = setTimeout(done, ms);
+    document.addEventListener('ebbless:install-available', done);
+  });
+}
 // Manual-install instructions for browsers with no programmatic prompt
 // (always iOS Safari) - shared by the Settings install row and the banner.
 const INSTALL_HINT_IOS = 'Tap Share, then Add to Home Screen.';
@@ -20805,7 +20817,10 @@ if (screen.orientation && screen.orientation.lock){
     };
     setInstalled(isStandaloneDisplay());
     installBtn.addEventListener('click', async () => {
-      if (deferredInstallPrompt){
+      installBtn.disabled = true;
+      const canPrompt = await waitForInstallPrompt(2000);
+      installBtn.disabled = false;
+      if (canPrompt){
         installBtn.disabled = true;
         const accepted = await runInstallPrompt();
         // appinstalled flips it to Installed; a dismissal leaves it usable.
@@ -20862,8 +20877,11 @@ function scheduleInstallBanner(){
 }
 if (installBanner){
   installBannerBtn.addEventListener('click', async () => {
-    if (deferredInstallPrompt){ await runInstallPrompt(); return; } // appinstalled hides it
     if (isIOS){ showIOSInstallSheet(); return; }
+    installBannerBtn.disabled = true;
+    const canPrompt = await waitForInstallPrompt(2000);
+    installBannerBtn.disabled = false;
+    if (canPrompt){ await runInstallPrompt(); return; } // appinstalled hides it
     installBannerBtn.hidden = true;
     installBannerText.textContent = '';
     if (isIOS){
@@ -24238,8 +24256,8 @@ function showInstallGate(){
     }
     document.addEventListener('ebbless:install-available', () => { if (!btn.hidden){ setReady(); setHelp(''); } });
     btn.addEventListener('click', async () => {
-      if (!deferredInstallPrompt){ setHelp(MENU_HELP); flashHelp(); return; }
       btn.disabled = true;
+      if (!(await waitForInstallPrompt(2000))){ btn.disabled = false; setHelp(MENU_HELP); flashHelp(); return; }
       const accepted = await runInstallPrompt();
       if (!accepted){ setReady(); setHelp(MENU_HELP); }
     });
