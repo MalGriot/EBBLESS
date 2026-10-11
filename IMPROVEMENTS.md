@@ -8936,3 +8936,19 @@ Add entries in this shape:
 - **Touches:** install button handlers (splash, Settings, install bar), beforeinstallprompt handling.
 - **Branch:** agent/install-auto
 - **Notes:** Synced from Geethub issue #357 (idea). Related: `mobile-install-button`, `settings-install-button`, `feedback-button-install-bar`.
+
+### player-title-centering: Song title is not centered on the player (Geethub #358)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #358. The song title on the player is not centered. The issue has no details (no device, no steps), so first reproduce on desktop and mobile to see which layout is off.
+- **Touches:** player title row in index.html.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub issue #358 (bug). Possible overlap with `player-controller-centering` (merged) and `feedback-install-bar` (#356, pill centered in title row); check those fixes did not regress before building anything new.
+
+### desktop-album-art-size-again: Desktop album art section is still too small
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Reported again by Mal in chat (2026-10-11): on desktop the album art section of the player is too small. Make it larger and fill the available pane while keeping it centered.
+- **Touches:** desktop split-pane player art sizing in index.html.
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Repeat of Geethub #350 (album art too small on desktop, waiting-for-deployment) and #353 (`desktop-player-visuals-size`, merged). Check whether those fixes are live/regressed before changing sizing. Same layout area as `player-title-centering`, so run both in one lane.
