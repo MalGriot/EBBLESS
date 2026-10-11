@@ -4844,7 +4844,13 @@ async function pickAlbumArtMatch(match, artUrl){
 // A YouTube-sourced artist is often the auto-generated "<Artist> - Topic"
 // channel name - the credit is the artist (GitHub #240). Display/stored
 // credit only: matching still reads the raw channel off /search results.
-function stripTopicSuffix(artist){ return String(artist || '').replace(/\s+-\s+Topic$/i, ''); }
+// Also folds known alias labels into one artist (#383: "mal griot music" is "mal griot").
+const ARTIST_LABEL_ALIASES = [/^(mal griot)\s+music$/i];
+function stripTopicSuffix(artist){
+  const a = String(artist || '').replace(/\s+-\s+Topic$/i, '');
+  for (const re of ARTIST_LABEL_ALIASES) if (re.test(a)) return a.replace(re, '$1');
+  return a;
+}
 function stripTopicArtists(tracks){
   if (Array.isArray(tracks)) tracks.forEach(t => { if (t && t.artist) t.artist = stripTopicSuffix(t.artist); });
   return tracks;
