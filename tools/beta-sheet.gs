@@ -80,7 +80,7 @@ HEADERS[APPLICANTS] = ['applicant_id', 'name', 'email', 'Instagram', 'device', '
   'rejoin_requested', 'google_email'];
 HEADERS[TESTERS] = ['tester_id', 'tester_number', 'applicant_id', 'name', 'email', 'accepted_timestamp',
   'access_token', 'access_link', 'tester_status', 'notes', 'feedback_request_sent', 'exclude_from_analytics',
-  'rejoin_requested', 'window_start', 'round', 'google_email', 'reminder_sent'];
+  'rejoin_requested', 'window_start', 'round', 'google_email', 'reminder_sent', 'feedback_request_last', 'feedback_request_count'];
 HEADERS[FEEDBACK] = ['feedback_id', 'tester_id', 'tester_number', 'submitted_timestamp', 'source', 'category', 'feeling',
   'what_happened', 'what_they_expected', 'anything_else', 'keep_using', 'screenshot',
   'device', 'operating_system', 'browser', 'viewport', 'user_agent',
@@ -194,7 +194,12 @@ function sendMail_(to, subject, text, html) {
 
 // ---------- feedback request (24h after access) ----------
 
-const FEEDBACK_REQUEST_AFTER_MS = 24 * 3600 * 1000;
+// First request goes out 7 days after a tester got access, then every 7 days
+// after the previous one while their window is still open. feedback_request_sent
+// is the FIRST send (the worker anchors the 2-week window to it, so it must not
+// move); feedback_request_last / _count track the repeats.
+const FEEDBACK_REQUEST_AFTER_MS = 7 * 24 * 3600 * 1000;
+const FEEDBACK_REQUEST_EVERY_MS = 7 * 24 * 3600 * 1000;
 
 // Whole days since this tester's access started, from their own record
 // (window_start for a rejoin, else accepted_timestamp). Never a fixed number.
@@ -207,17 +212,19 @@ function haveHadText_(days) {
   return days === 0 ? 'a little time (you got access today)' : days === 1 ? '1 day' : days + ' days';
 }
 
-function feedbackRequestText_(first, link, days) {
+function untilText_(ms) { return Utilities.formatDate(new Date(ms), Session.getScriptTimeZone(), 'MMMM d'); }
+
+function feedbackRequestText_(first, link, days, until) {
   return 'Peace and love, ' + first + '.\n\n' +
     'Just checking in now that you\u2019ve had ' + haveHadText_(days) + ' with EBBLESS. I\u2019m really curious what you\u2019ve made of it so far.\n\n' +
     'What did you love? What confused you? What broke? What would make you want to come back?\n\n' +
     'Take a few minutes and tell me here:\n\n' + link + '\n\n' +
-    'The feedback window is open for 2 weeks from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
+    'The feedback window is open until ' + untilText_(until) + '. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.\n\n' +
     'Your feedback is also what unlocks the next beta round for you.\n\n' +
     'No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F\n\n' +
     'Mal';
 }
-function feedbackRequestHtml_(first, link, days) {
+function feedbackRequestHtml_(first, link, days, until) {
   const esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   const p = function (h) { return '<p style="margin:0 0 16px">' + h + '</p>'; };
   return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.5;color:#121212">' +
@@ -226,40 +233,79 @@ function feedbackRequestHtml_(first, link, days) {
     p('What did you love? What confused you? What broke? What would make you want to come back?') +
     p('Take a few minutes and tell me here:') +
     p('<a href="' + esc(link) + '">' + esc(link) + '</a>') +
-    p('<b>The feedback window is open for 2 weeks from today. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
+    p('<b>The feedback window is open until ' + untilText_(until) + '. After that, I\u2019ll close this round of beta feedback and start going through everything everyone has sent in.</b>') +
     p('Your feedback is also what unlocks the next beta round for you.') +
     p('No rush. Take some time to actually play with it first. And please be honest. \u2764\uFE0F') +
     p('Mal') + '</div>';
 }
 
-// Hourly time trigger (created by setup): emails each Active tester the
-// feedback form once, 24h after accepted_timestamp, and stamps
-// feedback_request_sent so it never goes out twice. A failed send leaves the
-// cell blank (retried next hour) and notes why. A rejoined tester gets it
-// once more, 24h after their window_start.
+// Hourly time trigger (created by installTriggers): emails each Active tester
+// the feedback form 7 days after they got access, then again every 7 days
+// while their 2-week window (from the first send) is open, unless they have
+// already sent feedback. A failed send leaves the stamp alone (retried next
+// hour) and notes why. A rejoined tester starts over from window_start.
+function feedbackDue_(t, now) {
+  if (t.tester_status !== 'Active' || !t.access_token || !t.email) return null;
+  const start = ms_(t.window_start), accepted = ms_(t.accepted_timestamp);
+  const base = start || accepted;
+  if (!base || now - base < FEEDBACK_REQUEST_AFTER_MS) return null;
+  let first = ms_(t.feedback_request_sent);
+  if (first && start && first < start) first = 0;           // stamp from before a rejoin
+  if (!first) return { first: now, repeat: false };
+  const until = first + WINDOW_MS;
+  const last = Math.max(first, ms_(t.feedback_request_last));
+  if (now >= until || now - last < FEEDBACK_REQUEST_EVERY_MS) return null;
+  if (feedbackGiven_(t)) return null;
+  return { first: first, repeat: true };
+}
+function mailFeedbackRequest_(sh, t, now, due) {
+  const first = String(t.name || '').split(/\s+/)[0] || 'friend';
+  const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
+  const days = daysWithAccess_(t, now), until = due.first + WINDOW_MS;
+  const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link, days, until), feedbackRequestHtml_(first, link, days, until));
+  if (err) {
+    const note = 'Feedback request NOT emailed: ' + err;
+    if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
+    return false;
+  }
+  const stamp = new Date(now);
+  if (!due.repeat) setCell_(sh, t._row, 'feedback_request_sent', stamp);
+  setCell_(sh, t._row, 'feedback_request_last', stamp);
+  setCell_(sh, t._row, 'feedback_request_count', (Number(t.feedback_request_count) || 0) + 1);
+  return true;
+}
 function sendFeedbackRequests() {
   const sh = sheet_(TESTERS);
   withLock_(function () {
     ensureHeaders_(sh, HEADERS[TESTERS]);
     const now = Date.now();
     records_(sh).forEach(function (t) {
-      if (t.tester_status !== 'Active' || !t.access_token || !t.email) return;
-      const start = ms_(t.window_start), sent = ms_(t.feedback_request_sent);
-      if (sent && !(start && sent < start)) return;
-      // A row added by hand has no accepted_timestamp: send now rather than never.
-      const from = start || ms_(t.accepted_timestamp);
-      if (from && now - from < FEEDBACK_REQUEST_AFTER_MS) return;
-      const first = String(t.name || '').split(/\s+/)[0] || 'friend';
-      const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
-      const err = sendMail_(t.email, 'EBBLESS BETA: tell me what you think', feedbackRequestText_(first, link, daysWithAccess_(t, now)), feedbackRequestHtml_(first, link, daysWithAccess_(t, now)));
-      if (err) {
-        const note = 'Feedback request NOT emailed: ' + err;
-        if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
-      }
-      else setCell_(sh, t._row, 'feedback_request_sent', new Date());
+      const due = feedbackDue_(t, now);
+      if (due) mailFeedbackRequest_(sh, t, now, due);
     });
   });
   sendInactivityReminders_();
+}
+
+// TEST: sends the real feedback email to the owner's own tester row only,
+// ignoring the 7-day wait, and stamps that row so you can see it on the
+// Testers sheet (feedback_request_last / feedback_request_count). Matches by the
+// account running the script, then by TEST_EMAIL below if set.
+const TEST_EMAIL = '';
+function sendFeedbackTestToMe() {
+  const sh = sheet_(TESTERS);
+  const me = [Session.getEffectiveUser().getEmail(), TEST_EMAIL].map(function (v) { return String(v || '').trim().toLowerCase(); }).filter(Boolean);
+  withLock_(function () {
+    ensureHeaders_(sh, HEADERS[TESTERS]);
+    const now = Date.now();
+    const t = records_(sh).filter(function (r) {
+      return r.tester_status === 'Active' && r.access_token && me.indexOf(String(r.email).trim().toLowerCase()) >= 0;
+    })[0];
+    if (!t) { toast_('No Active tester row with token for: ' + me.join(', ') + '. Set TEST_EMAIL.'); return; }
+    const first = ms_(t.feedback_request_sent);
+    const ok = mailFeedbackRequest_(sh, t, now, { first: first || now, repeat: !!first });
+    toast_(ok ? 'Test feedback email sent to ' + t.email : 'Send failed, see notes column');
+  });
 }
 
 // ---------- inactivity reminder (48h without opening the app) ----------
