@@ -8954,11 +8954,11 @@ Add entries in this shape:
 - **Notes:** Repeat of Geethub #350 (album art too small on desktop, waiting-for-deployment) and #353 (`desktop-player-visuals-size`, merged). Check whether those fixes are live/regressed before changing sizing. Same layout area as `player-title-centering`, so run both in one lane. Fixed: art width cap 640 -> 820px, vertical reserve 395 -> 380px, title gap 26 -> 16px. 1440x900: 453 -> 468px; 1920x1080: 618 -> 648px; transport stays clear of the bottom 44px.
 
 ### artist-hover-animation: Hovering an artist on the main player needs an on:hover animation (Geethub #359)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #359. Add a hover animation to artist names/icons on the main player.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/tile-hover-visuals
 - **Notes:** Synced from Geethub issue #359 (idea). 
 
 ### settings-last-button: Put Settings as the last button on the right (Geethub #360)
@@ -8978,19 +8978,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #361 (bug). Related: `feedback-button-install-bar`, #372.
 
 ### queue-arrows-dont-switch-song: Changing the queue with the arrows shouldn't change the song immediately (Geethub #362)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #362. Cycling past queues with the header arrows should preview/load that queue without switching the playing song right away.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/queue-lyrics-fixes
 - **Notes:** Synced from Geethub issue #362 (idea). Follow-up to `queue-history-arrows` (#352, merged).
 
 ### drag-over-playlist-hover: Dragging a song over a playlist gives the playlist a hover animation (Geethub #363)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #363. While dragging a song over a playlist, the playlist tile should animate (highlight/lift) to show it is a drop target.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/tile-hover-visuals
 - **Notes:** Synced from Geethub issue #363 (idea). Follow-up to `drag-songs-into-playlists` and `queue-drag-to-playlist-art`.
 
 ### fullscreen-search-covers-art-tab: Desktop in-browser fullscreen: search bar covers the album art tab (Geethub #364)
@@ -9010,11 +9010,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #365 (bug). 
 
 ### library-tabs-scroll-arrows: Library filter row (All/Playlists/Albums/Artists/Podcasts): inline scroll arrows (Geethub #366)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #366. Add a right arrow that scrolls the filter row to reveal Podcasts, and once there a left arrow that scrolls all the way back.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/library-behavior
 - **Notes:** Synced from Geethub issue #366 (idea). 
 
 ### live-now-marquee-clip: "Live now" marquee text should cut off at the green linking dot (Geethub #367)
@@ -9074,19 +9074,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #373 (bug). Related: `currents-thumbs-down`, `player-title-centering`.
 
 ### artist-icons-circles: Artist icons should be circles, same size or a bit larger (Geethub #374)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #374. Make artist icons round, same size or slightly bigger.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/tile-hover-visuals
 - **Notes:** Synced from Geethub issue #374 (idea). 
 
 ### album-cd-hover-spin: Album icons: a CD slides out and spins on hover (Geethub #375)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #375. On hover, a shiny-side-up CD slides out from the album tile and spins.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/tile-hover-visuals
 - **Notes:** Synced from Geethub issue #375 (idea). Related: #374, `playlist-thumb-hover-open`.
 
 ### miniplayer-queue-text-unreadable: Mini-player queue text unreadable when paint button is active (Geethub #376)
@@ -9106,11 +9106,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #377 (bug). Related: `artists-albums-resume-backfill`, `artist-singles-features-albums`.
 
 ### album-auto-assign-artist: Adding an album assigns it to an existing artist automatically (Geethub #378)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #378. When an album is added and its artist already exists in the library, file it under that artist.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/library-behavior
 - **Notes:** Synced from Geethub issue #378 (idea). Related: `albums-by-artist`, `library-artists-section`.
 
 ### fix-song-album-source-checkbox: Fix-this-song window: checkbox to pull all other album songs from the same source (Geethub #379)
@@ -9122,11 +9122,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #379 (idea). Likely overlap with `fix-album-source-for-all` (#316, merged, automatic). Ask Mal whether a checkbox is still wanted or the automatic version covers it.
 
 ### list-mode-collapse-artists: Switching to list mode minimizes all artists in the album section (Geethub #380)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #380. When the library switches to list mode, collapse every artist group in the albums section.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/library-behavior
 - **Notes:** Synced from Geethub issue #380 (idea). Related: `albums-by-artist`.
 
 ### library-show-under-dropdown: Library: "show under" dropdown to place items under playlists, albums or podcasts (Geethub #381)
@@ -9138,11 +9138,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #381 (idea). Vague, confirm the intent with Mal before building.
 
 ### lyrics-button-disable: Deactivate the lyrics button when no lyrics are available (Geethub #382)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #382. Grey out the lyrics button like the video button when a song has no lyrics.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/queue-lyrics-fixes
 - **Notes:** Synced from Geethub issue #382 (idea). Related: `video-playback-option`.
 
 ### merge-mal-griot-artists: "mal griot" and "mal griot music" are the same artist (Geethub #383)
@@ -9154,11 +9154,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #383 (idea). Related: `strip-topic-artist-names`, `load-mal-griot-artist-page`.
 
 ### playlist-thumb-art-toggle: Playlist thumb switches between the 2x2 collage and the playlist's own single art (Geethub #384)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub issue #384. If a playlist has custom art, the thumb should be able to switch between the 2x2 collage and the 1x1 art.
 - **Touches:** index.html, area per description.
-- **Branch:** (none)
+- **Branch:** agent/tile-hover-visuals
 - **Notes:** Synced from Geethub issue #384 (idea). Related: `playlist-image-reset`, `playlist-art-at-top`.
 
 ### search-link-clears-queue: Searching/pasting a link clears the queue and doesn't add the album to the library (Geethub #386)
