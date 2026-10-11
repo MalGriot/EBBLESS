@@ -9611,12 +9611,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #417. Related to #403 (cassette hover expand).
 
 ### feedback-button-nav-position: Put the feedback button between the tutorial and settings buttons, labeled 'Feedback' (Geethub #432)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Move the feedback button in the header nav so it sits between the tutorial button and the settings button, and give it the label 'Feedback'.
 - **Touches:** header nav / feedback button
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/feedback-nav-position
 - **Notes:** Synced from Geethub #432. Related to merged feedback-popup-to-titlebar and mobile-feedback-tutorial-corner; check those placements first.
+- **Review note:** Desktop (>=860px): new "Feedback" nav button in #topnav right before Settings (after tutorial), shown for the same testers as the old pill; the pill is hidden there. Phones keep the #372/#361 order (history, tutorial, round feedback icon far right) since Settings is not in the phone header. Search-bar reserve (--tb-r) widened so it does not collide. Cache v158.
 
 ### queue-save-clear-icons: Queue window: save and clear become symbols to save space (Geethub #433)
 - **Status:** review
