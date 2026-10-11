@@ -468,6 +468,26 @@ body.onb-active .paste-guide{display:none}
     box-shadow:0 2px 8px rgba(0,0,0,.45);transition:transform .45s var(--ease-out),opacity .2s}
   .lib-grid:not(.is-list) .lib-card.is-album-card:hover .cd-disc{opacity:1;transform:translateX(24%);animation:cd-spin 2.4s linear .45s infinite}
 }
+/* artist/album hover (#397, #396): the container takes the picture's dominant
+   color (--hover-tint, set on first hover by the JS near sampleDominantColor);
+   the artist circle grows to fill the row/tile height and its image zooms out
+   so the mask reveals more of the picture. Hover-capable devices only. */
+@media (hover:hover) and (pointer:fine){
+  .lib-card.is-artist-card .art img{transform:scale(1.14);transition:transform var(--dur-ui) var(--ease-out)}
+  .lib-card.is-artist-card:hover .art img{transform:scale(1)}
+  .lib-grid.is-list .lib-card.is-artist-card .art{transition:transform var(--dur-ui) var(--ease-out),box-shadow var(--dur-ui) var(--ease-out)}
+  .lib-grid.is-list .lib-card.is-artist-card:hover .art{transform:scale(1.27)}
+  .lib-card.is-artist-card,.lib-card.is-album-card{transition:transform var(--dur-ui) var(--ease-out),background-color var(--dur-ui) var(--ease-out),box-shadow var(--dur-ui) var(--ease-out)}
+  .lib-grid .lib-card.is-artist-card.is-artist-card:hover,.lib-grid .lib-card.is-album-card.is-album-card:hover{background-color:color-mix(in srgb,var(--hover-tint,var(--accent)) 38%,var(--panel-2))}
+  .lib-grid:not(.is-list) .lib-card.is-artist-card:hover,.lib-grid:not(.is-list) .lib-card.is-album-card:hover{box-shadow:0 0 0 5px color-mix(in srgb,var(--hover-tint,var(--accent)) 38%,var(--panel-2))}
+  .lib-grid.is-list .lib-card.is-artist-card:hover .name,.lib-grid.is-list .lib-card.is-album-card:hover .name{color:#fff}
+  .lib-grid.is-list .lib-card.is-artist-card:hover .count,.lib-grid.is-list .lib-card.is-album-card:hover .count{color:rgba(255,255,255,.78)}
+}
+@media (prefers-reduced-motion:reduce){
+  .lib-card.is-artist-card .art img,.lib-card.is-artist-card,.lib-card.is-album-card,.lib-grid.is-list .lib-card.is-artist-card .art{transition:none}
+  .lib-card.is-artist-card:hover .art img{transform:scale(1.14)}
+  .lib-grid.is-list .lib-card.is-artist-card:hover .art{transform:none}
+}
 @keyframes cd-spin{from{transform:translateX(24%) rotate(0)}to{transform:translateX(24%) rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){
   .lib-grid .lib-card.is-album-card:hover .cd-disc{animation:none}
@@ -7574,6 +7594,30 @@ function ensureLegibleAccent(rgbStr){
   s = Math.max(s, 0.45);
   const [br, bg, bb] = hslToRgb(h, s, l);
   return 'rgb(' + br + ',' + bg + ',' + bb + ')';
+}
+// Artist/album card hover tint (#396): sample the card's picture once on
+// first hover and expose it as --hover-tint (CSS decides how to use it).
+// Unreadable (cross-origin) art just keeps the --accent fallback.
+const hoverTintCache = new Map();
+if (window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+  document.addEventListener('pointerover', (e) => {
+    const card = e.target.closest && e.target.closest('.lib-card.is-artist-card, .lib-card.is-album-card');
+    if (!card || card._tintReq) return;
+    const src = (card.querySelector('.art img') || {}).currentSrc;
+    if (!src) return;
+    card._tintReq = true;
+    if (hoverTintCache.has(src)){ const c = hoverTintCache.get(src); if (c) card.style.setProperty('--hover-tint', c); return; }
+    const probe = new Image();
+    probe.crossOrigin = 'anonymous';
+    probe.onload = () => {
+      let c = null;
+      try { c = sampleDominantColor(probe); } catch (err) {}
+      hoverTintCache.set(src, c);
+      if (c) card.style.setProperty('--hover-tint', c);
+    };
+    probe.onerror = () => { hoverTintCache.set(src, null); };
+    probe.src = src;
+  });
 }
 let playerAccentReqId = 0;
 // the current song's sampled color (or null): everything that follows the
