@@ -9832,6 +9832,14 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
     $('relinkBackBtn').addEventListener('click', closeImportOverlay);
     return;
   }
+  // Geethub #379: in an album, one checkbox sends the pick to every other
+  // song too (replacing their links, not just filling empty ones).
+  const relinkPl = getCachedPlaylist(plId);
+  const albumChkHtml = (relinkPl && isAlbumEntry(relinkPl) && relinkPl.tracks.length > 1)
+    ? '<label style="display:flex;align-items:center;gap:10px;margin:12px 0;font-size:13.5px;color:var(--text);cursor:pointer">' +
+        '<input id="relinkAlbumChk" type="checkbox" style="width:18px;height:18px;margin:0;accent-color:var(--accent);flex:none">' +
+        '<span>Use this source for the rest of the album</span></label>'
+    : '';
   const rows = list.map((c, i) => {
     const source = c.source || 'youtube';
     const isCurrent = c.videoId === currentVideoId;
@@ -9844,17 +9852,19 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
   importStage.innerHTML =
     '<div class="step">Pick a new link for &ldquo;' + escapeHtml(label) + '&rdquo;</div>' +
     '<div class="search-results" id="relinkCandidates">' + rows + '</div>' +
+    albumChkHtml +
     '<button class="btn-ghost" id="relinkBackBtn" style="width:100%">Cancel</button>';
   importStage.querySelectorAll('#relinkCandidates .search-pick').forEach(btn => {
     btn.addEventListener('click', () => {
       const c = list[parseInt(btn.dataset.i, 10)];
-      if (c) applyRelinkChoice(plId, trackIdx, c);
+      const chk = $('relinkAlbumChk');
+      if (c) applyRelinkChoice(plId, trackIdx, c, !!(chk && chk.checked));
     });
   });
   $('relinkBackBtn').addEventListener('click', closeImportOverlay);
 }
 
-function applyRelinkChoice(plId, trackIdx, candidate){
+function applyRelinkChoice(plId, trackIdx, candidate, allAlbum){
   const pl = getCachedPlaylist(plId);
   const t = pl && pl.tracks[trackIdx];
   if (!t) return;
@@ -9899,7 +9909,7 @@ function applyRelinkChoice(plId, trackIdx, candidate){
     syncWrongTrackFlagUI(t);
   }
   if (!keepsNativeArt) refreshRelinkedTrackArt(plId, trackIdx, t);
-  relinkAlbumSiblings(plId, trackIdx, candidate);
+  relinkAlbumSiblings(plId, trackIdx, candidate, !!allAlbum);
 }
 
 // Geethub #389: a track whose YouTube link fails to play (removed, private,
@@ -9937,13 +9947,13 @@ async function autoRepairBrokenLink(deck, code){
 // automatically. Only tracks with no working link are touched; a song with
 // a source already is never overridden, and a song the source doesn't have
 // stays unplayable. Best-effort and silent per song.
-async function relinkAlbumSiblings(plId, trackIdx, candidate){
+async function relinkAlbumSiblings(plId, trackIdx, candidate, replaceAll){
   const pl0 = getCachedPlaylist(plId);
   const channel = candidate && candidate.channel;
   if (!pl0 || !channel || !isAlbumEntry(pl0)) return;
   const sc = isSoundCloudVideoId(candidate.videoId);
   const todo = [];
-  pl0.tracks.forEach((x, i) => { if (i !== trackIdx && x && !x.videoId && !x.podcast) todo.push(i); });
+  pl0.tracks.forEach((x, i) => { if (i !== trackIdx && x && !x.podcast && (replaceAll ? !isAudioVideoId(x.videoId) : !x.videoId)) todo.push(i); });
   let fixed = 0;
   for (const i of todo){
     const x = pl0.tracks[i];
@@ -9960,7 +9970,8 @@ async function relinkAlbumSiblings(plId, trackIdx, candidate){
     // Re-read so edits made while searching aren't clobbered.
     const pl = playlistById(plId);
     const t = pl && pl.tracks[i];
-    if (!t || t.videoId || t.title !== x.title || t.artist !== x.artist) continue;
+    if (!t || t.videoId !== x.videoId || t.title !== x.title || t.artist !== x.artist) continue;
+    if (hit.videoId === t.videoId) continue;
     t.videoId = hit.videoId; t.matchedTitle = hit.title || ''; t.channel = hit.channel || ''; t.duration = hit.duration || 0;
     persistPlaylistObj(pl);
     if (state.playlist && state.playlist.id === plId) state.playlist = pl;
@@ -9968,6 +9979,7 @@ async function relinkAlbumSiblings(plId, trackIdx, candidate){
   }
   if (!fixed) return;
   renderLibrary();
+  if (replaceAll) pl0.tracks.forEach((_, i) => { if (i !== trackIdx) repaintOpenLibPanelTrack(plId, i, playlistById(plId)); });
   showToast(fixed === 1 ? 'Fixed 1 more song from the same source' : 'Fixed ' + fixed + ' more songs from the same source');
 }
 
