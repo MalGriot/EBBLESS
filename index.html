@@ -7400,10 +7400,18 @@ function ensureLegibleAccent(rgbStr){
   return 'rgb(' + br + ',' + bg + ',' + bb + ')';
 }
 let playerAccentReqId = 0;
+// the current song's sampled color (or null): everything that follows the
+// Rosicrucian color clock (--accent, tints, splash, ambient) follows this
+// instead while a song has one, so the UI matches the player buttons
+let songAccent = null;
+function setSongAccent(color){
+  songAccent = color ? (color === '#fff' ? 'rgb(255,255,255)' : color) : null;
+  try { updateLibraryClockColor(); } catch (e) {}
+}
 function updatePlayerAccentColor(track){
   const reqId = ++playerAccentReqId;
   const url = artworkUrls(track)[0];
-  if (!url){ document.documentElement.style.setProperty('--player-accent', 'var(--accent)'); return; }
+  if (!url){ document.documentElement.style.setProperty('--player-accent', 'var(--accent)'); setSongAccent(null); return; }
   const probe = new Image();
   probe.crossOrigin = 'anonymous';
   probe.onload = () => {
@@ -7412,10 +7420,12 @@ function updatePlayerAccentColor(track){
     try { color = sampleDominantColor(probe); } catch (e) { color = null; }
     if (color) { try { color = ensureLegibleAccent(color); } catch (e) {} }
     document.documentElement.style.setProperty('--player-accent', color || 'var(--accent)');
+    setSongAccent(color);
   };
   probe.onerror = () => {
     if (reqId !== playerAccentReqId) return;
     document.documentElement.style.setProperty('--player-accent', 'var(--accent)');
+    setSongAccent(null);
   };
   probe.src = url;
 }
@@ -16503,7 +16513,7 @@ function vizRosicrucianColor(){
    is playing. Vars are set on the root so splash/#ambient (outside
    #view-library) can read them too. */
 function updateLibraryClockColor(){
-  const solid = vizRosicrucianColor();
+  const solid = songAccent || vizRosicrucianColor();
   const [cr, cg, cb] = solid.startsWith('#') ? vizHexToRgb(solid) : solid.match(/\d+/g).map(Number);
   const alpha = (a) => `rgba(${cr},${cg},${cb},${a})`;
   const root = document.documentElement.style;
