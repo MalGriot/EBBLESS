@@ -300,6 +300,10 @@ body.split-desktop #topbar{z-index:42}
 .import-row .paste-recents .paste-recent-ins{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
 .import-row .paste-recents .paste-recent-ins svg{width:18px;height:18px}
 .import-row .paste-recents .paste-recent-ins:hover,.import-row .paste-recents .paste-recent-ins:focus-visible{color:var(--text)}
+/* phones: insert arrow tucks next to the x (the list's left edge is set in openPasteRecents) */
+@media (max-width:859.98px){
+  .import-row .paste-recents .paste-recent-ins{margin-right:-10px}
+}
 body.onb-active .paste-guide{display:none}
 @keyframes paste-guide-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes paste-guide-ring{0%,100%{box-shadow:0 0 0 0 var(--accent-dim)}50%{box-shadow:0 0 0 6px var(--accent-dim)}}
@@ -12242,6 +12246,21 @@ function openPasteRecents(){
       '</div>';
     }).join('') + '</div>';
   pasteRecentsEl.hidden = false;
+  // phones: widen the list leftward so it starts just right of the logo
+  pasteRecentsEl.style.left = '';
+  const wm = $('wordmarkBtn');
+  if (wm && matchMedia('(max-width:859.98px)').matches){
+    const off = wm.getBoundingClientRect().right + 8 - pasteRecentsEl.getBoundingClientRect().left;
+    if (off < 0) pasteRecentsEl.style.left = off + 'px';
+    // ...and stop just left of the right-hand button cluster
+    pasteRecentsEl.style.right = '';
+    const edges = ['mobileHistBtn', 'helpBtn', 'testerBanner'].map(id => $(id)).filter(el => el && el.offsetWidth)
+      .map(el => el.getBoundingClientRect().left);
+    if (edges.length){
+      const roff = pasteRecentsEl.getBoundingClientRect().right - (Math.min(...edges) - 8);
+      if (roff < 0) pasteRecentsEl.style.right = roff + 'px';
+    }
+  }
   pasteRecentsActive = -1;
   urlInput.setAttribute('aria-expanded', 'true');
   const listEl = pasteRecentsEl.querySelector('.paste-recents-list');
