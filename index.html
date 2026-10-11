@@ -468,6 +468,14 @@ body.onb-active .paste-guide{display:none}
 .np-pill.is-off{color:var(--faint);opacity:.8}
 .lib-card .lib-desc.np-onair{color:var(--accent);opacity:1;font-weight:600}
 .lib-card .name.np-off,.lib-card .art .title-overlay .marquee.np-off{color:#9a9a9a}
+.lib-card .name.np-on,.lib-card .art .title-overlay .marquee.np-on{color:#fff}
+/* dot beside the ON AIR card title: green + blinking when live, white + still when off air */
+.lib-card .name.np-on::after,.lib-card .name.np-off::after,
+.lib-card .art .title-overlay .marquee.np-on>span::after,.lib-card .art .title-overlay .marquee.np-off>span::after{
+  content:'';display:inline-block;width:.24em;height:.24em;margin-left:.25em;border-radius:50%;vertical-align:middle}
+.lib-card .name.np-on::after,.lib-card .name.np-off::after{width:7px;height:7px;margin-left:7px}
+.lib-card .name.np-on::after,.lib-card .art .title-overlay .marquee.np-on>span::after{background:#3ddc84;animation:new-dot-blink 1.4s ease-in-out infinite}
+.lib-card .name.np-off::after,.lib-card .art .title-overlay .marquee.np-off>span::after{background:#fff}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
 .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
 @keyframes current-label-cycle{
@@ -7776,17 +7784,17 @@ function renderLibrary(){
       artDiv.appendChild(pinBtn);
     }
 
-    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = (id === NP_ID && !npFeed.onAir) ? 'Off air' : pl.name;
-    if (id === NP_ID && !npFeed.onAir) name.classList.add('np-off');
+    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = (id === NP_ID && !npFeed.onAir) ? 'Off Air' : pl.name;
+    if (id === NP_ID) name.classList.add(npFeed.onAir ? 'np-on' : 'np-off');
     const titleOverlay = document.createElement('div'); titleOverlay.className = 'title-overlay';
     const marqueeEl = document.createElement('div');
-    marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '') + (id === NP_ID && !npFeed.onAir ? ' np-off' : '');
-    marqueeEl.dataset.text = (id === NP_ID && !npFeed.onAir) ? 'Off air' : pl.name;
+    marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '') + (id === NP_ID ? (npFeed.onAir ? ' np-on' : ' np-off') : '');
+    marqueeEl.dataset.text = (id === NP_ID && !npFeed.onAir) ? 'Off Air' : pl.name;
     titleOverlay.appendChild(marqueeEl);
-    if (id === SWELL_ID || (id === NP_ID && npFeed.onAir)){
+    if (id === SWELL_ID){
       const dot = document.createElement('span');
-      dot.className = 'new-dot' + (id === NP_ID || swellHasUnseenDrop() ? ' is-active' : '');
-      dot.setAttribute('aria-label', id === NP_ID ? 'On air' : swellHasUnseenDrop() ? 'New music' : '');
+      dot.className = 'new-dot' + (swellHasUnseenDrop() ? ' is-active' : '');
+      dot.setAttribute('aria-label', swellHasUnseenDrop() ? 'New music' : '');
       name.appendChild(dot);
       const overlayDot = dot.cloneNode(true);
       titleOverlay.appendChild(overlayDot);
@@ -7845,7 +7853,7 @@ function renderLibrary(){
     }
 
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
-    card.addEventListener('click', () => { if (id === NP_ID && npFeed.onAir && !npTuned) npTuneIn(); else toggleLibraryPlaylistPanel(id); });
+    card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));   // ON AIR opens like any playlist; tuning in is the first song or the menu
     if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       attachLongPress(card, () => {
         const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
@@ -9752,7 +9760,7 @@ function npSyncPill(){
   npPill.hidden = false;
   const live = npIsLive();
   npPill.className = 'np-pill ' + (live ? 'is-live' : npFeed.onAir ? 'is-behind' : 'is-off');
-  npPill.textContent = live ? 'LIVE' : npFeed.onAir ? 'BACK TO LIVE' : 'Off air';
+  npPill.textContent = live ? 'LIVE' : npFeed.onAir ? 'BACK TO LIVE' : 'Off Air';
   npPill.disabled = live || !npFeed.onAir;
 }
 npPill.addEventListener('click', npBackToLive);
