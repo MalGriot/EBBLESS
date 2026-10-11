@@ -9144,9 +9144,11 @@ function openLibCtxMenu(id, btn){
   ];
   if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && canFileUnder(pl)){
     const cur = libSectionOf(pl);
-    [['playlists', 'Playlists'], ['albums', 'Albums'], ['podcasts', 'Podcasts']].forEach(([sec, label]) => {
-      if (LIB_SECTIONS[sec] !== cur) items.push({ action: 'showunder:' + sec, label: 'Show under ' + label, icon: CTX_ICON_ALBUM });
-    });
+    // one entry; tapping it swaps the menu for a small sub-list of the other sections
+    const sub = [['playlists', 'Playlists'], ['albums', 'Albums'], ['podcasts', 'Podcasts']]
+      .filter(([sec]) => LIB_SECTIONS[sec] !== cur)
+      .map(([sec, label]) => ({ action: 'showunder:' + sec, label, icon: CTX_ICON_ALBUM }));
+    items.push({ label: 'Show under...', icon: CTX_ICON_ALBUM, sub });
   }
   if (id !== SWELL_ID && id !== BLEND_ID && id !== NP_ID && link){
     items.push({ action: 'share', label: 'Share', icon: CTX_ICON_SHARE });
@@ -9168,20 +9170,28 @@ function openLibCtxMenu(id, btn){
     items.push({ action: 'delete', label: 'Delete', icon: CTX_ICON_DELETE, danger: true });
   }
 
-  libCtxMenu.innerHTML = '';
-  items.forEach(item => {
-    if (item.sep){
-      const sep = document.createElement('div'); sep.className = 'lib-ctx-sep';
-      libCtxMenu.appendChild(sep);
-      return;
-    }
-    const b = document.createElement('button');
-    b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '') + (item.off ? ' is-off' : '');
-    b.innerHTML = item.icon + '<span>' + item.label + '</span>';
-    if (item.off) b.setAttribute('aria-disabled', 'true');
-    b.addEventListener('click', (e) => { e.stopPropagation(); closeLibCtxMenu(); handleLibCtxAction(item.action, id); });
-    libCtxMenu.appendChild(b);
-  });
+  const renderCtxItems = (list) => {
+    libCtxMenu.innerHTML = '';
+    list.forEach(item => {
+      if (item.sep){
+        const sep = document.createElement('div'); sep.className = 'lib-ctx-sep';
+        libCtxMenu.appendChild(sep);
+        return;
+      }
+      const b = document.createElement('button');
+      b.className = 'lib-ctx-item' + (item.danger ? ' is-danger' : '') + (item.off ? ' is-off' : '');
+      b.innerHTML = item.icon + '<span>' + item.label + '</span>';
+      if (item.off) b.setAttribute('aria-disabled', 'true');
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.sub){ renderCtxItems([{ label: 'Back', icon: '', back: true }].concat(item.sub)); positionLibCtxMenu(btn); return; }
+        if (item.back){ renderCtxItems(items); positionLibCtxMenu(btn); return; }
+        closeLibCtxMenu(); handleLibCtxAction(item.action, id);
+      });
+      libCtxMenu.appendChild(b);
+    });
+  };
+  renderCtxItems(items);
 
   if (openCtxMenu && openCtxMenu.btn) openCtxMenu.btn.classList.remove('is-active');
   openCtxMenu = { id, btn };
