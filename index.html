@@ -4969,7 +4969,7 @@ const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolvin
 // changes - short, since that's the moment a handoff prompt matters. A pull
 // that changes nothing costs a KV read, not a write.
 const PROFILE_RESYNC_ON_SHOW_MS = 60 * 1000;
-let profileIdToken = null;     // this page load's ID token; re-obtained via One Tap every visit, never persisted
+let profileIdToken = null;     // what the worker sees as "idToken": EBBLESS's own session token (kept on the device, see LOGIN SESSION), or this load's Google ID token until one is minted
 let profileTokenExp = 0;       // ms the token expires (from its own payload - display/refresh hint only)
 let profileSyncTimer = null;
 let profileSyncInFlight = null;
@@ -5452,7 +5452,7 @@ async function syncProfileNow(opts){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken: profileIdToken, v: PROFILE_SCHEMA, profile: local }),
       });
-      if (res.status === 401){ profileSyncStatus = 'expired'; return; }
+      if (res.status === 401){ if (sessionRejected()) return; profileSyncStatus = 'expired'; return; }
       const data = await res.json().catch(() => null);
       // A pre-v2 Worker 400s a body without `library` - see legacyProfileSync.
       if (data && !data.profile && (res.ok || res.status === 400)){
@@ -5512,6 +5512,52 @@ async function legacyProfileSync(){
   await post('/profile/sync', { library: { lib, pinned: getPinnedLibrary(), playlists } });
 }
 
+/* ---------- LOGIN SESSION ----------
+   Sign in with Google once; the worker trades that token for its own
+   long-lived session token (POST /auth/session), kept in localStorage and
+   sent in place of a Google token on every later visit. So signing in is
+   automatic even where the browser blocks Google's silent sign-in (One Tap /
+   FedCM), which is what made some people sign in every single time. Raw
+   localStorage on purpose: it's a credential, so it must never go through
+   lsSet and sync into the account profile. Sign out revokes it server side. */
+const LS_SESSION = 'ebbless:session';   // { t: token, sub, exp }
+function isOurSession(t){ return typeof t === 'string' && t.indexOf('ebs1.') === 0; }
+function sessionRaw(){ try { return JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch(e){ return null; } }
+function sessionLoad(){ const s = sessionRaw(); return s && isOurSession(s.t) && s.exp > Date.now() ? s : null; }
+function sessionDrop(){ try { localStorage.removeItem(LS_SESSION); } catch(e){} }
+async function mintSession(credential, sub){
+  try{
+    const res = await fetch(BACKEND + '/auth/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: credential }) });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || !isOurSession(d.session)) return;
+    try { localStorage.setItem(LS_SESSION, JSON.stringify({ t: d.session, sub: sub || '', exp: +d.expiresAt || 0 })); } catch(e){ return; }
+    // from here the page runs on the session, so the Google token's one-hour
+    // life no longer matters
+    if (profileIdToken === credential){ profileIdToken = d.session; profileTokenExp = 0; }
+  } catch(e){}
+}
+// On load: a remembered session signs the person back in with no Google involved.
+function restoreSession(){
+  if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ sessionDrop(); return; }
+  const s = sessionLoad();
+  if (!s || profileIdToken) return;
+  profileIdToken = s.t; profileTokenExp = 0;
+  renderAccountRow();
+  syncProfileNow({ force: true });
+  const gate = window.ebblessBetaGate;
+  if (gate && s.sub && ((gate.locked && gate.locked()) || (gate.renewing && gate.renewing()))) betaAccountLink(s.t, s.sub);
+}
+// The worker said the session is no good (revoked, expired): forget it and
+// fall back to Google's silent sign-in, which mints a new one.
+function sessionRejected(){
+  if (!isOurSession(profileIdToken)) return false;
+  sessionDrop(); profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
+  renderAccountRow();
+  silentReSignIn();
+  return true;
+}
+
 // The Google ID token only lasts about an hour, and One Tap is the only way
 // to get a new one. A signed-in user whose token ran out (or whose One Tap
 // got skipped on load) re-asks silently here instead of waiting for them to
@@ -5541,6 +5587,7 @@ function handleGoogleCredential(response){
   profileSyncStatus = '';
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
+  mintSession(response.credential, sub);
 }
 
 // Redirect sign-in (installed iOS app, worker /beta/google): the beta lock
@@ -5633,6 +5680,8 @@ window.addEventListener('ebbless:betarelock', () => { if (gsiReady) renderBetaGa
 // from quietly signing them straight back in on the next load.
 function signOutProfile(){
   clearTimeout(profileSyncTimer); profileSyncTimer = null;
+  const sess = sessionRaw(); sessionDrop();
+  if (sess && isOurSession(sess.t)) fetch(BACKEND + '/auth/signout', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: sess.t }) }).catch(() => {});
   profileIdToken = null; profileTokenExp = 0; profileSyncStatus = '';
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch(e){}
   lsDel(LS_PROFILE_EMAIL);
@@ -6053,6 +6102,8 @@ function initGoogleOneTap(attempt){
     // then - the alternative is the lock, not a quiet app.
     const gate = window.ebblessBetaGate, renewing = !!(gate && gate.renewing && gate.renewing());
     if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true){ if (renewing) gate.leaseFailed(); return; }
+    // signed back in by the remembered session: no Google prompt (a beta lease renewal went through it too)
+    if (isOurSession(profileIdToken)) return;
     // A returning signed-in user (email remembered, never signed out) skips the
     // cooldown: their One Tap is the silent auto sign-in, not a prompt to nag.
     const returning = !!lsGet(LS_PROFILE_EMAIL, '');
@@ -6080,6 +6131,7 @@ function initGoogleOneTap(attempt){
   if ((attempt || 0) < 25) setTimeout(() => initGoogleOneTap((attempt || 0) + 1), 200);
 }
 window.addEventListener('load', () => initGoogleOneTap());
+setTimeout(restoreSession, 0);   // after the rest of this script has run, before 'load' (One Tap) so it can skip the prompt
 
 function getLibrary(){ return lsGet(LS_LIB, []); }
 function saveToLibrary(id){

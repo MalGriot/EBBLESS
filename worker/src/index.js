@@ -18,6 +18,7 @@ import { handleBeta, betaInAppReport } from './beta.js';
 import { handleAdmin } from './admin.js';
 import { handleNowPlaying } from './nowplaying.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos } from './yt-page.js';
+import { handleSession, isSessionToken, verifySession } from './session.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
 export { PodCaptioner, PodCaptionBudget };
@@ -4205,7 +4206,7 @@ function b64urlToJson(b64url) {
 // audience (our OAuth client id), issuer, and expiry - the same checks
 // Google's own client libraries do, just without pulling in a dependency
 // for a Worker that otherwise has none.
-async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
+async function verifyGoogleJwt(idToken, clientId, env, ctx) {
   const parts = (idToken || '').split('.');
   if (parts.length !== 3) throw new Error('malformed id token');
   const [headerB64, payloadB64, sigB64] = parts;
@@ -4230,6 +4231,13 @@ async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
   if (!valid) throw new Error('bad signature');
 
   return payload; // { sub, email, email_verified, name, picture, ... }
+}
+
+// What every endpoint calls: accepts either a Google ID token or one of our
+// own session tokens (see session.js) and returns the same payload shape.
+async function verifyGoogleIdToken(idToken, clientId, env, ctx) {
+  if (isSessionToken(idToken)) return verifySession(idToken, env, ctx);
+  return verifyGoogleJwt(idToken, clientId, env, ctx);
 }
 
 // ---- profile merge (schema v2) - kept identical in index.html and
@@ -4609,6 +4617,7 @@ export default {
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
+      if (url.pathname === '/auth/session' || url.pathname === '/auth/signout') return await handleSession(request, url, env, ctx, { json, verifyGoogleJwt });
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
