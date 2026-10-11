@@ -9026,7 +9026,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #367 (bug). 
 
 ### swirl-intelligence: Swirl should have some intelligence to it (Geethub #368)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub issue #368. Title only, no detail. Needs a conversation with Mal on what "intelligence" means before building.
 - **Touches:** index.html, area per description.
@@ -9114,7 +9114,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #378 (idea). Related: `albums-by-artist`, `library-artists-section`.
 
 ### fix-song-album-source-checkbox: Fix-this-song window: checkbox to pull all other album songs from the same source (Geethub #379)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub issue #379. Add a checkbox in the fix-this-song window so the rest of the album uses the same source.
 - **Touches:** index.html, area per description.
@@ -9130,7 +9130,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #380 (idea). Related: `albums-by-artist`.
 
 ### library-show-under-dropdown: Library: "show under" dropdown to place items under playlists, albums or podcasts (Geethub #381)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub issue #381. Add a dropdown so an item can be filed under Playlists, Albums or Podcasts.
 - **Touches:** index.html, area per description.
@@ -9146,7 +9146,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #382 (idea). Related: `video-playback-option`.
 
 ### merge-mal-griot-artists: "mal griot" and "mal griot music" are the same artist (Geethub #383)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub issue #383. Treat these two artist names as one (alias merge). Ask whether this should be a general rule (e.g. strip "music") or a one-off alias.
 - **Touches:** index.html, area per description.
@@ -9208,3 +9208,131 @@ Add entries in this shape:
 - **Touches:** `beginImport()` single-song branch, existing queue and add-to-playlist actions.
 - **Branch:** agent/single-song-link-options
 - **Notes:** Follow-up to `search-link-clears-queue` (#386); builds on that branch.
+
+### miniplayer-return-no-autoplay: When returning from the mini-player, stay paused if it was paused (Geethub #401)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Coming back from the mini-player to the main window must not start the music if the mini-player was paused. Keep playing only if it was playing.
+- **Touches:** mini-player return handoff
+- **Branch:**
+- **Notes:** Synced from Geethub #401.
+
+### thumb-cycle-start-custom-art: On load, library thumb cycle starts on the custom art, not the 2x2 collage (Geethub #400)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** For library tiles that cycle between custom art and the 2x2 collage, the first frame on load should be the custom art.
+- **Touches:** playlist thumb auto-cycle
+- **Branch:**
+- **Notes:** Synced from Geethub #400.
+
+### link-loaded-play-now: Successful link-load pop-up offers 'Play now' (Geethub #399)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** The success pop-up after a link loads should include a play-now option.
+- **Touches:** add-link success toast
+- **Branch:**
+- **Notes:** Synced from Geethub #399.
+
+### load-success-animation: Beautiful success animation when a playlist/link loads (Geethub #398)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Add a noticeable but short, non-intrusive, non-corny success animation that fits the brand exactly, shown when a playlist or other load succeeds. Design it as a professional UI designer would.
+- **Touches:** add-link success feedback
+- **Branch:**
+- **Notes:** Synced from Geethub #398.
+
+### artist-hover-pic-expand: Hovering an artist expands their circular image and mask (Geethub #397)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** On hover the picture expands AND its mask expands to reveal more of the image. Fill the container height in all modes without exceeding it. Overlaps artist-hover-animation (#359).
+- **Touches:** artist rows/cards hover
+- **Branch:**
+- **Notes:** Synced from Geethub #397.
+
+### artist-hover-container-color: Hovering an artist tints the container with their pic color; same for albums (Geethub #396)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** On hover, the artist container takes the dominant color of the artist picture. Do the same for albums.
+- **Touches:** artist and album hover
+- **Branch:**
+- **Notes:** Synced from Geethub #396.
+
+### buttons-hover-expand: All buttons expand smoothly on hover (Geethub #395)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Every button in the app should scale up smoothly on hover.
+- **Touches:** global button styles
+- **Branch:**
+- **Notes:** Synced from Geethub #395.
+
+### queue-song-hover-fill: Hovering queue songs fills the row with the UI color (Geethub #394)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Queue song containers fill with the current UI color on hover.
+- **Touches:** queue rows hover
+- **Branch:**
+- **Notes:** Synced from Geethub #394.
+
+### artist-reorder-albums: Reorder albums in the artist window (Geethub #393)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Add sort options for albums in the artist window: most recent, alphabetical, most popular (default).
+- **Touches:** artist window
+- **Branch:**
+- **Notes:** Synced from Geethub #393.
+
+### titles-marquee-everywhere: All truncated titles become scrolling marquees (Geethub #392)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Anywhere a title is cut off with '...', make it a scrolling marquee instead. Builds on footer-title-marquee.
+- **Touches:** global titles
+- **Branch:**
+- **Notes:** Synced from Geethub #392.
+
+### artist-album-back-arrow: Album close 'x' in the artist window becomes a back '<' (Geethub #391)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Replace the x on albums inside the artist window with a back symbol '<'.
+- **Touches:** artist window album view
+- **Branch:**
+- **Notes:** Synced from Geethub #391.
+
+### desktop-art-still-too-small: LP, cassette and album art still too small on desktop (bug) (Geethub #390)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Make the art bigger on desktop. OK to move the player controls down a bit and the album art tab up a bit, just keep the balance. Follow-up to desktop-album-art-size-again / desktop-player-visuals-size.
+- **Touches:** desktop player layout
+- **Branch:** agent/desktop-art-still-too-small
+- **Notes:** Synced from Geethub #390.
+
+### auto-fix-broken-links: App should keep trying to fix broken links, preferring artist YouTube page and lyric videos (bug) (Geethub #389)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Malcolm is fixing many broken links manually, usually picking the first option shown. Auto-repair broken links and prioritize the artist's YouTube page and lyric videos.
+- **Touches:** link resolution / relink
+- **Branch:**
+- **Notes:** Synced from Geethub #389.
+
+### add-links-not-adding: Adding links shows success but adds nothing; albums add dead links (bug) (Geethub #388)
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Add-link pop-up says it worked but nothing is added to the library. When an album is added it comes with many dead links. Regression from earlier behavior.
+- **Touches:** add-link flow
+- **Branch:** agent/add-links-not-adding
+- **Notes:** Synced from Geethub #388.
+
+### search-history-scroll-readd: Search history scrollable; tapping an entry refills the box without searching (Geethub #387)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Search history should scroll, and tapping an entry puts its text in the box without auto-searching so terms can be added.
+- **Touches:** search bar history
+- **Branch:**
+- **Notes:** Synced from Geethub #387.
+
+### wrong-link-report-random: Player sometimes reports a wrong link at random (bug) (Geethub #385)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** No flag exists anymore, but clicking on the player sometimes shows it is reporting a wrong link. Happens randomly on different buttons.
+- **Touches:** player click handling / report link
+- **Branch:** agent/wrong-link-report-random
+- **Notes:** Synced from Geethub #385.
