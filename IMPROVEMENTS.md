@@ -8903,8 +8903,8 @@ Add entries in this shape:
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #353. On desktop the art window does not fill enough space, so everything inside it (LP, cassette, cymatics, lyrics) renders smaller than it should. Make the window use more of the available space.
 - **Touches:** desktop player layout, art window sizing.
-- **Branch:** agent/desktop-art-window- **Notes:** Synced from Geethub issue #353 (idea). Likely duplicate or follow-up of merged #350 `desktop-album-art-size` (waiting for deployment): check after deploy whether it is already fixed.
- Follow-up: #350 (197c477) widened the art window but the 430px vertical reserve was still the binding cap at typical heights (1440x900: 418px). LP, cassette, cymatics and lyrics all render inside .artwork-wrap, so lowering the reserve to 395px enlarges all of them (453px at 1440x900) with the Ads playing button still on screen. Shell cache v118.
+- **Branch:** agent/desktop-art-window
+- **Notes:** Synced from Geethub issue #353 (idea). Likely duplicate or follow-up of merged #350 `desktop-album-art-size` (waiting for deployment): check after deploy whether it is already fixed. Follow-up: #350 (197c477) widened the art window but the 430px vertical reserve was still the binding cap at typical heights (1440x900: 418px). LP, cassette, cymatics and lyrics all render inside .artwork-wrap, so lowering the reserve to 395px enlarges all of them (453px at 1440x900) with the Ads playing button still on screen. Shell cache v118.
 ### dark-text-on-light-art-ui: Use dark text when UI turns light from album art color (Geethub #354)
 - **Status:** ready
 - **Priority:** medium
