@@ -4771,8 +4771,8 @@ function artistPageUrl(type, id){
   }
   return null;
 }
-async function fetchArtist(type, id){
-  const res = await fetch(BACKEND + '/artist?url=' + encodeURIComponent(artistPageUrl(type, id)));
+async function fetchArtist(type, id, offset){
+  const res = await fetch(BACKEND + '/artist?url=' + encodeURIComponent(artistPageUrl(type, id)) + (offset ? '&offset=' + offset : ''));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ? "Couldn't load that artist page: " + data.error + '.' : ('backend returned ' + res.status));
   stripTopicArtists(data.tracks);
@@ -6484,9 +6484,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     lsSet(LS_PL(playlistId), payload);
     return payload;
   }
-  let name, image, tracks;
+  let name, image, tracks, more = null;
   if (isArtistType(type)){
-    ({ name, image, tracks } = await fetchArtist(type, playlistId));
+    ({ name, image, tracks, more } = await fetchArtist(type, playlistId));
   } else if (type === 'sc_playlist' || type === 'sc_album'){
     const sc = await fetchSoundCloudLink(decodeURIComponent(playlistId.slice(3)));
     if (sc.kind !== 'playlist') throw new Error("That SoundCloud link isn't a playlist.");
@@ -6562,6 +6562,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   }
   resolvingTracks.delete(playlistId);
   const payload = keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
+  // Catalog cut at the worker's release cap: remember where to resume, and
+  // try again after a day (loadMoreArtistReleases, run on app load).
+  if (more && more.next) payload.releasesMore = { next: more.next, retryAfter: Date.now() + RELEASES_MORE_DELAY_MS };
   lsSet(LS_PL(playlistId), payload);
   return payload;
 }
@@ -10880,6 +10883,55 @@ async function addArtistAlbumsOnly(pl, resume){
     }
   } finally { artistAlbumsInFlight.delete(pl.id); }
 }
+// An artist whose catalog was cut at the release cap (pl.releasesMore, set by
+// resolvePlaylist) gets the next batch of releases a day later, on app load:
+// the worker's /artist?offset= returns them in the same popularity/latest/
+// first/duplicates-last order. New songs are matched like resolvePlaylist's
+// (YouTube search + art) and appended in chunks, skipping songs already
+// there, so a run cut short by closing the app just repeats safely.
+const RELEASES_MORE_DELAY_MS = 24 * 60 * 60 * 1000;
+async function loadMoreArtistReleases(pl){
+  const m = pl && pl.releasesMore;
+  if (!m || !m.next || Date.now() < (m.retryAfter || 0) || !isSaved(pl.id) || artistAlbumsInFlight.has(pl.id)) return;
+  artistAlbumsInFlight.add(pl.id);
+  try{
+    const data = await fetchArtist(pl.type, pl.id, m.next).catch(() => null);
+    if (!data) return; // offline / backend down: still due, retried next launch
+    const sourceKind = sourceKindForType(pl.type);
+    const have = new Set((getCachedPlaylist(pl.id).tracks || []).map(t => normalizeArtistQuery(t && t.title)));
+    const fresh = (data.tracks || []).filter(t => {
+      const k = normalizeArtistQuery(t.title);
+      if (!k || have.has(k)) return false;
+      have.add(k);
+      return true;
+    });
+    let chunk = [];
+    const flush = () => {
+      const cur = getCachedPlaylist(pl.id);
+      if (!cur || !chunk.length) { chunk = []; return; }
+      cur.tracks = (cur.tracks || []).concat(chunk);
+      chunk = [];
+      persistPlaylistObj(cur);
+    };
+    for (let i = 0; i < fresh.length; i++){
+      const t = fresh[i];
+      const [match, art] = await Promise.all([
+        searchYouTubeCached(t.title, t.artist, t.duration).catch(() => null),
+        resolveTrackArt(sourceKind, t.title, t.artist, t.image || null).catch(() => t.image || null),
+      ]);
+      chunk.push({ title: t.title, artist: t.artist, videoId: match ? match.videoId : null, matchedTitle: (match && match.title) || '', channel: (match && match.channel) || '', plays: 0, art, duration: (match && match.duration) || 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
+      if (chunk.length >= 20) flush();
+      if (i < fresh.length - 1) await sleep(350);
+    }
+    flush();
+    const cur = getCachedPlaylist(pl.id);
+    if (!cur) return;
+    if (data.more && data.more.next) cur.releasesMore = { next: data.more.next, retryAfter: Date.now() + RELEASES_MORE_DELAY_MS };
+    else delete cur.releasesMore;
+    persistPlaylistObj(cur);
+    if (fresh.length) rerenderLibraryKeepPanel();
+  } finally { artistAlbumsInFlight.delete(pl.id); }
+}
 // Geethub #298: besides their albums, an artist also gets one album of their
 // singles and one of the songs they're featured on (credited on, but not the
 // main artist). Both are built from iTunes' keyless lookup/search as 'custom'
@@ -10977,6 +11029,7 @@ async function runArtistAlbumsBackfill(){
   for (const id of getLibrary()){
     const pl = getCachedPlaylist(id);
     if (!pl || !isArtistEntry(pl) || !isSaved(id)) continue;
+    if (pl.releasesMore) await loadMoreArtistReleases(pl).catch(e => console.warn('[ebbless] more artist releases failed', e));
     const resume = lsGet(LS_ARTIST_ALBUMS_PENDING, {})[id];
     if (Array.isArray(resume) && resume.length) await addArtistAlbumsToLibrary(pl, resume);
     else if (!pl.albumsAdded) await addArtistAlbumsToLibrary(pl);
