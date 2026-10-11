@@ -9491,11 +9491,11 @@ Add entries in this shape:
 - **Notes:** Added from chat 2026-10-11. Sheet script changes live in Google Apps Script, so the owner must paste/redeploy it.
 
 ### remove-history-button: Remove the History button from the header nav (Geethub #431)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Remove the History button from the header nav.
 - **Touches:** header nav
-- **Branch:**
+- **Branch:** agent/artist-bio-add-and-history
 - **Notes:** Synced from Geethub #431. Note: History button was added in playing-history and moved in history-button-in-queue-header; confirm where it should live (if anywhere) before removing.
 
 ### fullscreen-search-not-clickable: Fullscreen: the search bar isn't clickable (Geethub #430)
@@ -9539,11 +9539,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #426. Copy change only.
 
 ### artist-bio-add-to-library: Artist bio: button to add the artist to your library when they aren't in it (Geethub #425)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Opening the bio of an artist who isn't in your library should show a button that adds their profile to your library.
 - **Touches:** artist bio panel, library
-- **Branch:**
+- **Branch:** agent/artist-bio-add-and-history
 - **Notes:** Synced from Geethub #425. Related to the artist-link work already merged.
 
 ### albums-button-collapse-all: Albums button, pressed again while active, collapses all album sublists (Geethub #424)

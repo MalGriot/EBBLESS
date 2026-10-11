@@ -3169,10 +3169,6 @@ body.week-up-on{overflow:hidden}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
         <span>Queue</span>
       </button>
-      <button class="nav-btn" id="histBtn" type="button" aria-label="History" title="History">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-        <span>History</span>
-      </button>
       <button class="nav-btn" data-view="settings">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
         <span>Settings</span>
@@ -8545,15 +8541,15 @@ function openPlayHistory(){
   renderPlayHistory();
   histPanel.classList.add('is-open'); histScrim.classList.add('is-open');
   histBody.scrollTop = 0; if (histBody.parentElement) histBody.parentElement.scrollTop = 0;
-  $('histBtn').classList.add('is-active');
+  $('mobileHistBtn').classList.add('is-active');
 }
 function closePlayHistory(){
   if (!playHistOpen) return;
   playHistOpen = false;
   histPanel.classList.remove('is-open'); histScrim.classList.remove('is-open');
-  $('histBtn').classList.remove('is-active');
+  $('mobileHistBtn').classList.remove('is-active');
 }
-['histBtn', 'mobileHistBtn', 'queueHistBtn'].forEach(id => $(id).addEventListener('click', () => playHistOpen ? closePlayHistory() : openPlayHistory()));
+['mobileHistBtn', 'queueHistBtn'].forEach(id => $(id).addEventListener('click', () => playHistOpen ? closePlayHistory() : openPlayHistory()));
 $('histCloseBtn').addEventListener('click', closePlayHistory);
 histScrim.addEventListener('click', closePlayHistory);
 $('histClearBtn').addEventListener('click', () => { lsSet(LS_PLAYHIST, []); renderPlayHistory(); });
@@ -9039,6 +9035,21 @@ function loadArtistInfoInto(panelId, name, title, standalone){
       if (!has) libplBody.innerHTML = '<div class="empty-lib">No verified info found for this artist yet.</div>';
       if (info && info.name) libplTitle.textContent = info.name;
       if (info && info.image){ attachArtworkFallback(libplArt, { art: info.image }); libplArtWrap.hidden = false; }
+      // artist isn't in the library: offer to add their profile, using the
+      // same artist-page link import a pasted link takes (Spotify first)
+      const pref = ['Spotify', 'YouTube', 'Apple Music', 'SoundCloud'];
+      const cand = ((info && info.links) || []).map(l => ({ l, p: parseImportLink(l.url) }))
+        .filter(x => x.p && x.p.type === 'artist')
+        .sort((x, y) => pref.indexOf(x.l.label) - pref.indexOf(y.l.label))[0];
+      if (cand){
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'btn-ghost is-active artist-add-btn';
+        add.style.cssText = 'width:100%;margin-bottom:12px';
+        add.textContent = 'Add to library';
+        add.addEventListener('click', () => { closeLibraryPlaylistPanel(); beginImportFromParsedLink(cand.p); });
+        libplBody.prepend(add);
+      }
     }
     addArtistMixButton(name);
   };
