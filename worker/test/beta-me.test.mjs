@@ -19,12 +19,13 @@ function me(tester, token = TOKEN) {
     new URL('https://w.test/beta/me'), env, { waitUntil() {} }, h);
 }
 
-test('BETA_WINDOW_MS is 7 days', () => {
-  assert.equal(BETA_WINDOW_MS, 7 * 24 * 3600 * 1000);
+test('BETA_WINDOW_MS is 14 days', () => {
+  assert.equal(BETA_WINDOW_MS, 14 * 24 * 3600 * 1000);
 });
 
-test('windowEndsAt: feedback_request_sent + 7 days, or null', () => {
+test('windowEndsAt: window_anchor (else feedback_request_sent) + 14 days, or null', () => {
   assert.equal(windowEndsAt({ feedback_request_sent: 1000 }), 1000 + BETA_WINDOW_MS);
+  assert.equal(windowEndsAt({ window_anchor: 500, feedback_request_sent: 1000 }), 500 + BETA_WINDOW_MS);
   assert.equal(windowEndsAt({ feedback_request_sent: null }), null);
   assert.equal(windowEndsAt({}), null);
   assert.equal(windowEndsAt(null), null);

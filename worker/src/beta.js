@@ -178,8 +178,8 @@ async function handleSignup(request, env, ctx, h) {
   return h.json({ ok: true, already: !!r.already, status: String(r.status || 'Pending').toLowerCase(), full: !!r.full });
 }
 
-// The feedback email says "the feedback window is open for 2 weeks from
-// today", so a tester's window ends 2 weeks after feedback_request_sent.
+// A tester's window ends 2 weeks after access began (window_anchor), or after
+// feedback_request_sent for older clients.
 // null until that email has gone out (no expiry yet). Older clients ignore it.
 // A tester whose rejoin was accepted has window_start (the next round's
 // date, or the acceptance): until then they stay expired; from it they get
@@ -187,7 +187,8 @@ async function handleSignup(request, env, ctx, h) {
 // (7 days later, like a new tester).
 export const BETA_WINDOW_MS = 14 * 24 * 3600 * 1000;
 export function windowEndsAt(t, now = Date.now()) {
-  const sent = Number(t && t.feedback_request_sent) || 0;
+  // window_anchor: when access began (sheet sends it once the first feedback email has gone out)
+  const sent = Number(t && t.window_anchor) || Number(t && t.feedback_request_sent) || 0;
   const start = Number(t && t.window_start) || 0;
   if (start > 0) {
     if (start > now) return Math.min(sent > 0 ? sent + BETA_WINDOW_MS : start, start);
