@@ -1399,6 +1399,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
    they shouldn't share the queue/library sliding-sheet pattern - modeled
    on the same scrim used above but a fixed centered card instead of an
    edge-docked panel) ---------- */
+.album-pick-scrim{position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.album-pick{width:min(520px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r-lg);padding:20px}
+.album-pick h2{font-size:16px;font-weight:700;margin:0 0 4px;color:var(--text)}
+.album-pick p{font-size:13px;color:var(--faint);margin:0 0 12px}
+.album-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.album-pick-item{background:none;border:2px solid transparent;border-radius:10px;padding:4px;color:var(--text);font-size:11.5px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.album-pick-item.is-on{border-color:var(--accent);background:rgba(255,255,255,.06)}
+.album-pick-item img,.album-pick-noart{width:100%;aspect-ratio:1;border-radius:6px;object-fit:cover;background:var(--panel)}
+.album-pick-noart{display:block}
 #danger-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #danger-scrim.is-open{opacity:1;pointer-events:auto}
@@ -11234,7 +11243,7 @@ async function beginImport(id, force, type, targetIndex){
     renderLibrary();
     if (keepQueue){ showToast('Added ' + pl.name + ' to your library', { label: 'Play now', run: () => playPlaylistNow(id) }); showLoadSuccess(); }
     if (!wasSaved && isArtistEntry(pl)){
-      addArtistAlbumsToLibrary(pl);
+      addArtistAlbumsToLibrary(pl, undefined, true);
       // warm the artist-info cache now so the bio is ready when the panel opens
       fetchArtistInfo(pl.name, (pl.tracks.find(t => t.title) || {}).title).catch(() => {});
     }
@@ -11285,7 +11294,7 @@ const artistAlbumsInFlight = new Set();
 async function soundCloudArtistAlbums(pl){
   const data = await fetchArtist(pl.type, pl.id);
   return (data.albums || []).slice(0, ARTIST_ALBUMS_MAX).reverse()
-    .map(a => ({ id: 'sc:' + encodeURIComponent(a.url), key: normalizeArtistQuery(a.title), type: 'sc_album' }));
+    .map(a => ({ id: 'sc:' + encodeURIComponent(a.url), key: normalizeArtistQuery(a.title), type: 'sc_album', name: String(a.title || ''), art: a.image || a.artwork || null }));
 }
 async function itunesArtistAlbums(pl){
   let artistId, storefront = 'us';
@@ -11319,7 +11328,7 @@ async function itunesArtistAlbums(pl){
     .sort((a, b) => (COMPILATION_RE.test(String(a.collectionName)) - COMPILATION_RE.test(String(b.collectionName))) || String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
     .slice(0, ARTIST_ALBUMS_MAX)
     .sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || ''))).reverse()
-    .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName), releaseDate: String(r.releaseDate || '') || undefined }));
+    .map(r => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName), releaseDate: String(r.releaseDate || '') || undefined, name: String(r.collectionName || ''), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : null }));
 }
 // Each artist's fill runs once: the artist's own entry is stamped
 // albumsAdded (it syncs with the library, so another device won't fill it
@@ -11333,7 +11342,37 @@ function setArtistAlbumsPending(artistId, list){
   if (list && list.length) all[artistId] = list; else delete all[artistId];
   lsSet(LS_ARTIST_ALBUMS_PENDING, all);
 }
-async function addArtistAlbumsOnly(pl, resume){
+// Geethub #412: a freshly added artist with more than ALBUM_PICK_FIRST albums
+// to add gets a grid window to choose which ones come in (newest preselected).
+const ALBUM_PICK_FIRST = 10;
+function pickArtistAlbums(artistName, albums){
+  return new Promise(resolve => {
+    const sel = new Set(albums.slice(-ALBUM_PICK_FIRST).map(a => a.id)); // list is oldest-first
+    const scrim = document.createElement('div');
+    scrim.className = 'album-pick-scrim';
+    scrim.innerHTML = '<div class="album-pick" role="dialog" aria-modal="true"><h2>Pick albums by ' + escapeHtml(artistName) + '</h2>'
+      + '<p>Choose up to ' + ALBUM_PICK_FIRST + ' to add first.</p><div class="album-pick-grid"></div>'
+      + '<div class="danger-modal-actions"><button type="button" class="btn-ghost" data-act="skip">Skip</button><button type="button" class="btn-ghost" data-act="add"></button></div></div>';
+    const grid = scrim.querySelector('.album-pick-grid'), addBtn = scrim.querySelector('[data-act="add"]');
+    const sync = () => {
+      grid.querySelectorAll('.album-pick-item').forEach(el => el.classList.toggle('is-on', sel.has(el.dataset.id)));
+      addBtn.textContent = 'Add ' + sel.size; addBtn.disabled = !sel.size;
+    };
+    albums.slice().reverse().forEach(a => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'album-pick-item'; b.dataset.id = a.id;
+      b.innerHTML = (a.art ? '<img src="' + escapeHtml(a.art) + '" alt="" loading="lazy">' : '<span class="album-pick-noart"></span>') + '<span>' + escapeHtml(a.name || a.key) + '</span>';
+      b.addEventListener('click', () => { if (sel.has(a.id)) sel.delete(a.id); else if (sel.size < ALBUM_PICK_FIRST) sel.add(a.id); else showToast('Pick up to ' + ALBUM_PICK_FIRST + ' albums'); sync(); });
+      grid.appendChild(b);
+    });
+    const done = (list) => { scrim.remove(); resolve(list); };
+    scrim.querySelector('[data-act="skip"]').addEventListener('click', () => done([]));
+    addBtn.addEventListener('click', () => done(albums.filter(a => sel.has(a.id))));
+    document.body.appendChild(scrim);
+    sync();
+  });
+}
+async function addArtistAlbumsOnly(pl, resume, pick){
   if (artistAlbumsInFlight.has(pl.id)) return;
   artistAlbumsInFlight.add(pl.id);
   try{
@@ -11354,7 +11393,8 @@ async function addArtistAlbumsOnly(pl, resume){
       const p = getCachedPlaylist(id);
       return !!p && isAlbumEntry(p) && normalizeArtistQuery(p.name) === a.key && (p.tracks || []).some(t => songCreditsArtist(t && t.artist, want));
     });
-    const todo = albums.filter(a => !alreadyHave(a) && !PERIODYSSIUS_RE.test(a.key)); // Periodyssius is a YouTube playlist now (#336)
+    let todo = albums.filter(a => !alreadyHave(a) && !PERIODYSSIUS_RE.test(a.key)); // Periodyssius is a YouTube playlist now (#336)
+    if (pick && !resume && todo.length > ALBUM_PICK_FIRST) todo = await pickArtistAlbums(pl.name, todo);
     setArtistAlbumsPending(pl.id, todo);
     if (!todo.length) return;
     showToast('Adding ' + todo.length + (todo.length === 1 ? ' album' : ' albums') + ' by ' + pl.name);
@@ -11501,8 +11541,8 @@ async function addArtistExtras(pl){
     for (const id of made) await rematchUnmatchedInBackground(id);
   } finally { artistAlbumsInFlight.delete(pl.id); }
 }
-async function addArtistAlbumsToLibrary(pl, resume){
-  await addArtistAlbumsOnly(pl, resume);
+async function addArtistAlbumsToLibrary(pl, resume, pick){
+  await addArtistAlbumsOnly(pl, resume, pick);
   await addArtistExtras(pl);
 }
 // On launch, once startup (and, when signed in, the first profile sync) has

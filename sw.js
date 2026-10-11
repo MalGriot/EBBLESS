@@ -32,22 +32,26 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
-const CACHE_VERSION = 'ebbless-shell-v145';
+<<<<<<< HEAD
+const CACHE_VERSION = 'ebbless-shell-v146';
 =======
-const CACHE_VERSION = 'ebbless-shell-v145';
+const CACHE_VERSION = 'ebbless-shell-v146';
 >>>>>>> agent/speaker-icon-under-thumb
 =======
-const CACHE_VERSION = 'ebbless-shell-v145';
+const CACHE_VERSION = 'ebbless-shell-v146';
 >>>>>>> agent/cassette-skip-reverse-rewind
 =======
-const CACHE_VERSION = 'ebbless-shell-v145';
+const CACHE_VERSION = 'ebbless-shell-v146';
 >>>>>>> agent/miniplayer-art-hover-click
 =======
-const CACHE_VERSION = 'ebbless-shell-v145';
+const CACHE_VERSION = 'ebbless-shell-v146';
 >>>>>>> agent/library-playlist-groups
 =======
-const CACHE_VERSION = 'ebbless-shell-v145';
+const CACHE_VERSION = 'ebbless-shell-v146';
 >>>>>>> agent/playlist-manual-order-drag
+=======
+const CACHE_VERSION = 'ebbless-shell-v146';
+>>>>>>> agent/artist-link-pick-albums
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './sfx/needle-drop.mp3', './sfx/needle-lift.mp3', './sfx/cassette-rewind.mp3'];
 
 self.addEventListener('install', (e) => {
