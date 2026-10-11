@@ -9298,7 +9298,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #391.
 
 ### desktop-art-still-too-small: LP, cassette and album art still too small on desktop (bug) (Geethub #390)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Make the art bigger on desktop. OK to move the player controls down a bit and the album art tab up a bit, just keep the balance. Follow-up to desktop-album-art-size-again / desktop-player-visuals-size.
 - **Touches:** desktop player layout
@@ -9314,7 +9314,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #389.
 
 ### add-links-not-adding: Adding links shows success but adds nothing; albums add dead links (bug) (Geethub #388)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Add-link pop-up says it worked but nothing is added to the library. When an album is added it comes with many dead links. Regression from earlier behavior.
 - **Touches:** add-link flow
@@ -9330,7 +9330,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #387.
 
 ### wrong-link-report-random: Player sometimes reports a wrong link at random (bug) (Geethub #385)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** No flag exists anymore, but clicking on the player sometimes shows it is reporting a wrong link. Happens randomly on different buttons.
 - **Touches:** player click handling / report link
