@@ -184,14 +184,14 @@ video.lib-bg-video.is-playing{opacity:1}
 .lib-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 120% 70% at 50% 0%, transparent 0%, var(--bg) 88%)}
 /* Queue panel background video (#438): same recipe as the library bg (rotated, dimmed, clock-color wash), sitting behind the queue list. */
 #queue-panel{isolation:isolate}
-.q-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;container-type:size;z-index:-1;border-radius:inherit}
+.q-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;container-type:size;z-index:-1;border-radius:inherit;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 30%,#000 70%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0%,#000 30%,#000 70%,transparent 100%)}
 .q-bg-video{position:absolute;top:50%;left:50%;width:102cqh;height:102cqw;transform:translate(-50%,-50%) rotate(90deg);
-  object-fit:cover;filter:saturate(1.05) brightness(.32)}
+  object-fit:cover;filter:grayscale(1) brightness(.5)}
 .q-bg-poster{background:url(brand/assets/queue-bg-poster.jpg) center/cover no-repeat}
 video.q-bg-video{opacity:0}
 video.q-bg-video.is-playing{opacity:1}
-.q-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom, var(--panel) 0%, transparent 35%, transparent 55%, var(--panel) 100%)}
-.q-bg-tint{position:absolute;inset:0;background:var(--player-accent,var(--clock-accent,#e0b26a));mix-blend-mode:color;opacity:.4;transition:background 4s linear}
+.q-bg-tint{position:absolute;inset:0;background:var(--clock-accent,#e0b26a);mix-blend-mode:color;opacity:.85;transition:background 4s linear}
 /* In the top bar (#319) the form is centered on the bar, which is the player's
    center too (the player is the middle pane in split-desktop). --tb-l / --tb-r
    reserve room for the logo and the help/Settings cluster; when the symmetric
