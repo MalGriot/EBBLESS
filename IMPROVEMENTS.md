@@ -9026,9 +9026,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #367 (bug). 
 
 ### swirl-intelligence: Swirl should have some intelligence to it (Geethub #368)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
-- **Description:** Idea, Geethub issue #368. Title only, no detail. Needs a conversation with Mal on what "intelligence" means before building.
+- **Description:** Clarified by Mal: swirl should keep a groove and match vibes. Avoid jarring jumps: no opera next to death metal, loud next to quiet, fast next to slow, or lyric-heavy next to instrumental. Use sense so listening feels ebbless (smooth transitions in energy, tempo, genre, vocal vs instrumental).
 - **Touches:** index.html, area per description.
 - **Branch:** (none)
 - **Notes:** Synced from Geethub issue #368 (idea). Ambiguous, ask before building. Related: `pin-order-currents-swirl-off-air`, `currents-thumbs-down`.
@@ -9114,7 +9114,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #378 (idea). Related: `albums-by-artist`, `library-artists-section`.
 
 ### fix-song-album-source-checkbox: Fix-this-song window: checkbox to pull all other album songs from the same source (Geethub #379)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub issue #379. Add a checkbox in the fix-this-song window so the rest of the album uses the same source.
 - **Touches:** index.html, area per description.
@@ -9130,9 +9130,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #380 (idea). Related: `albums-by-artist`.
 
 ### library-show-under-dropdown: Library: "show under" dropdown to place items under playlists, albums or podcasts (Geethub #381)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
-- **Description:** Idea, Geethub issue #381. Add a dropdown so an item can be filed under Playlists, Albums or Podcasts.
+- **Description:** Clarified by Mal: a dropdown on each library item that files it under Playlists, Albums or Podcasts. Least clicks: one tap to open, one to pick.
 - **Touches:** index.html, area per description.
 - **Branch:** (none)
 - **Notes:** Synced from Geethub issue #381 (idea). Vague, confirm the intent with Mal before building.
@@ -9146,7 +9146,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #382 (idea). Related: `video-playback-option`.
 
 ### merge-mal-griot-artists: "mal griot" and "mal griot music" are the same artist (Geethub #383)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub issue #383. Treat these two artist names as one (alias merge). Ask whether this should be a general rule (e.g. strip "music") or a one-off alias.
 - **Touches:** index.html, area per description.
@@ -9226,7 +9226,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #400.
 
 ### link-loaded-play-now: Successful link-load pop-up offers 'Play now' (Geethub #399)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The success pop-up after a link loads should include a play-now option.
 - **Touches:** add-link success toast
@@ -9234,7 +9234,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #399.
 
 ### load-success-animation: Beautiful success animation when a playlist/link loads (Geethub #398)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Add a noticeable but short, non-intrusive, non-corny success animation that fits the brand exactly, shown when a playlist or other load succeeds. Design it as a professional UI designer would.
 - **Touches:** add-link success feedback
@@ -9345,3 +9345,19 @@ Add entries in this shape:
 - **Touches:** search history dropdown (`openPasteRecents`, `.paste-recent-n`, `.paste-recent-s`).
 - **Branch:** agent/marquee-everywhere
 - **Notes:** Added from chat 2026-10-11. Subset of titles-marquee-everywhere (Geethub #392); if that lane runs first, fold this into it.
+
+### cassette-hover-expand: Cassette on the main UI smoothly widens to the title marquee width on hover (Geethub #403)
+- **Status:** review
+- **Priority:** low
+- **Description:** On hover, the cassette on the main UI should smoothly expand to the width of the title marquee.
+- **Touches:** main player cassette visual / title marquee
+- **Branch:**
+- **Notes:** Synced from Geethub #403.
+
+### playlist-load-couldnt-reach: "Couldn't load that playlist / couldn't reach ebbless" error (bug) (Geethub #402)
+- **Status:** review
+- **Priority:** high
+- **Description:** Loading a playlist shows "Couldn't load that playlist. We couldn't reach ebbless. Check your internet and try again." No repro steps or device given.
+- **Touches:** playlist load flow / worker request
+- **Branch:**
+- **Notes:** Synced from Geethub #402. Need device/repro before it can be built; check worker logs.
