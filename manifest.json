@@ -13,6 +13,9 @@
     "method": "GET",
     "params": { "title": "share_title", "text": "share_text", "url": "share_url" }
   },
+  "protocol_handlers": [
+    { "protocol": "web+ebbless", "url": "./index.html?open=%s" }
+  ],
   "related_applications": [
     { "platform": "webapp", "url": "https://malgriot.github.io/EBBLESS/manifest.json" }
   ],

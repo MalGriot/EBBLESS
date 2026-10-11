@@ -4164,6 +4164,14 @@ window.addEventListener('appinstalled', markInstalled);
 if (!isIOS && navigator.getInstalledRelatedApps){
   navigator.getInstalledRelatedApps().then((apps) => { if (apps && apps.length) markInstalled(); }).catch(() => {});
 }
+// Installed but browsing in a tab: launch the installed app via the
+// protocol handler in manifest.json (Chrome asks once, then opens the app
+// window). Returns after a beat so callers can show a hint if nothing opened.
+function openInApp(){
+  location.href = 'web+ebbless:open';
+  return new Promise((r) => setTimeout(r, 1500));
+}
+const INSTALL_HINT_OPEN = 'Click the Open in app icon at the right end of the address bar.';
 async function runInstallPrompt(){
   if (!deferredInstallPrompt) return false;
   const prompt = deferredInstallPrompt;
@@ -20835,13 +20843,19 @@ if (screen.orientation && screen.orientation.lock){
   if (installBlock && installBtn){
     const DEFAULT_DESC = installDesc ? installDesc.textContent : '';
     const setInstalled = (installed) => {
-      installBtn.disabled = installed;
-      installBtn.textContent = installed ? 'Installed' : 'Install';
+      const inTab = installed && !isStandaloneDisplay();
+      installBtn.disabled = installed && !inTab;
+      installBtn.textContent = inTab ? 'Open in app' : installed ? 'Installed' : 'Install';
       if (installDesc) installDesc.textContent = installed ? 'EBBLESS is installed on this device.' : DEFAULT_DESC;
     };
     setInstalled(isStandaloneDisplay() || knownInstalled());
     document.addEventListener('ebbless:installed', () => setInstalled(true));
     installBtn.addEventListener('click', async () => {
+      if (knownInstalled() && !isStandaloneDisplay()){
+        await openInApp();
+        if (installDesc) installDesc.textContent = INSTALL_HINT_OPEN;
+        return;
+      }
       installBtn.disabled = true;
       const canPrompt = await waitForInstallPrompt(2000);
       installBtn.disabled = false;
@@ -20881,6 +20895,13 @@ function setInstallBanner(show){
   installBanner.hidden = !show;
   document.body.classList.toggle('install-banner-on', show);
 }
+// Installed already, but this is a plain tab: offer to jump to the app.
+function setInstallBannerOpenMode(){
+  if (!installBanner || isStandaloneDisplay()) return;
+  installBannerText.textContent = 'EBBLESS is installed on this device. Open it in the app.';
+  installBannerBtn.textContent = 'Open in app';
+  installBannerBtn.hidden = false;
+}
 function installBannerBlocked(){
   const splashEl = $('splash');
   if (splashEl && !splashEl.classList.contains('is-hidden')) return true;
@@ -20888,20 +20909,29 @@ function installBannerBlocked(){
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
-  if (!installBanner || isStandaloneDisplay() || knownInstalled() || mobileInstallGate) return;
+  if (!installBanner || isStandaloneDisplay() || mobileInstallGate) return;
   try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
   let clearSince = 0;
   const tick = () => {
-    if (installBannerDone || isStandaloneDisplay() || knownInstalled()) return;
+    if (installBannerDone || isStandaloneDisplay()) return;
     if (installBannerBlocked()){ clearSince = 0; setTimeout(tick, 1000); return; }
     if (!clearSince) clearSince = Date.now();
     if (Date.now() - clearSince < 1500){ setTimeout(tick, 500); return; }
+    if (knownInstalled()) setInstallBannerOpenMode();
     setInstallBanner(true);
   };
   tick();
 }
 if (installBanner){
   installBannerBtn.addEventListener('click', async () => {
+    if (knownInstalled()){
+      installBannerBtn.disabled = true;
+      await openInApp();
+      installBannerBtn.disabled = false;
+      installBannerText.textContent = INSTALL_HINT_OPEN;
+      installBannerBtn.hidden = true;
+      return;
+    }
     if (isIOS){ showIOSInstallSheet(); return; }
     installBannerBtn.disabled = true;
     const canPrompt = await waitForInstallPrompt(2000);
@@ -20931,7 +20961,7 @@ if (installBanner){
     setInstallBanner(false);
   });
   window.addEventListener('appinstalled', () => { installBannerDone = true; setInstallBanner(false); });
-  document.addEventListener('ebbless:installed', () => { installBannerDone = true; setInstallBanner(false); });
+  document.addEventListener('ebbless:installed', () => { if (!installBanner.hidden) setInstallBannerOpenMode(); });
   // a native prompt turned up after the manual steps were shown: offer it
   document.addEventListener('ebbless:install-available', () => {
     installBannerBtn.hidden = false;
