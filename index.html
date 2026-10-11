@@ -467,8 +467,10 @@ body.onb-active .paste-guide{display:none}
   .lib-grid:not(.is-list) .lib-card.is-album-card .cd-disc{display:block;position:absolute;z-index:0;top:4%;left:4%;width:92%;aspect-ratio:1;border-radius:50%;pointer-events:none;opacity:0;
     background:radial-gradient(circle at 50% 50%,#1b1b1b 0 7%,transparent 7.5% 17%,#d8d8d8 17.5% 19%,transparent 19.5%),
       conic-gradient(from 20deg,#f3f3f3,#9fd8ff,#fff,#ffb6f0,#f3f3f3,#b6ffd0,#fff,#ffe9a8,#f3f3f3);
-    box-shadow:0 2px 8px rgba(0,0,0,.45);transition:transform .45s var(--ease-out),opacity .2s}
-  .lib-grid:not(.is-list) .lib-card.is-album-card:hover .cd-disc{opacity:1;transform:translateX(24%);animation:cd-spin 2.4s linear .45s infinite}
+    box-shadow:0 0 0 rgba(0,0,0,0);transition:transform .45s var(--ease-out),opacity .2s,box-shadow .45s var(--ease-out)}
+  .lib-grid:not(.is-list) .lib-card.is-album-card:hover .cd-disc{opacity:1;transform:translateX(24%);box-shadow:0 0 16px 3px rgba(0,0,0,.6);animation:cd-spin 2.4s linear .45s infinite}
+  .lib-grid:not(.is-list) .lib-card.is-album-card .art img{transform:scale(1.14);transition:transform var(--dur-ui) var(--ease-out)}
+  .lib-grid:not(.is-list) .lib-card.is-album-card:hover .art img{transform:scale(1)}
 }
 /* artist/album hover (#397, #396): the container takes the picture's dominant
    color (--hover-tint, set on first hover by the JS near sampleDominantColor);
@@ -488,6 +490,7 @@ body.onb-active .paste-guide{display:none}
 @media (prefers-reduced-motion:reduce){
   .lib-card.is-artist-card .art img,.lib-card.is-artist-card,.lib-card.is-album-card,.lib-grid.is-list .lib-card.is-artist-card .art{transition:none}
   .lib-card.is-artist-card:hover .art img{transform:scale(1.14)}
+  .lib-grid:not(.is-list) .lib-card.is-album-card .art img,.lib-grid:not(.is-list) .lib-card.is-album-card:hover .art img{transform:none;transition:none}
   .lib-grid.is-list .lib-card.is-artist-card:hover .art{transform:none}
 }
 @keyframes cd-spin{from{transform:translateX(24%) rotate(0)}to{transform:translateX(24%) rotate(360deg)}}
