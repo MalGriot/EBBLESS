@@ -9210,7 +9210,7 @@ Add entries in this shape:
 - **Notes:** Follow-up to `search-link-clears-queue` (#386); builds on that branch.
 
 ### miniplayer-return-no-autoplay: When returning from the mini-player, stay paused if it was paused (Geethub #401)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Coming back from the mini-player to the main window must not start the music if the mini-player was paused. Keep playing only if it was playing.
 - **Touches:** mini-player return handoff
@@ -9218,7 +9218,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #401.
 
 ### thumb-cycle-start-custom-art: On load, library thumb cycle starts on the custom art, not the 2x2 collage (Geethub #400)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** For library tiles that cycle between custom art and the 2x2 collage, the first frame on load should be the custom art.
 - **Touches:** playlist thumb auto-cycle
@@ -9258,7 +9258,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #396.
 
 ### buttons-hover-expand: All buttons expand smoothly on hover (Geethub #395)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Every button in the app should scale up smoothly on hover.
 - **Touches:** global button styles
@@ -9266,7 +9266,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #395.
 
 ### queue-song-hover-fill: Hovering queue songs fills the row with the UI color (Geethub #394)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Queue song containers fill with the current UI color on hover.
 - **Touches:** queue rows hover
@@ -9299,7 +9299,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #391.
 
 ### desktop-art-still-too-small: LP, cassette and album art still too small on desktop (bug) (Geethub #390)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Make the art bigger on desktop. OK to move the player controls down a bit and the album art tab up a bit, just keep the balance. Follow-up to desktop-album-art-size-again / desktop-player-visuals-size.
 - **Touches:** desktop player layout
@@ -9307,7 +9307,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #390. Fixed: art vertical reserve 380 -> 345px, stage top pad 27 -> 8px (tabs up), view bottom pad 44 -> 28px (transport down). 1440x900: art 468 -> 503px; 1280x720: 288 -> 323px; transport stays 34px clear of bottom. Mobile untouched (rules only in the 1150px split-desktop block). Shell cache v129.
 
 ### auto-fix-broken-links: App should keep trying to fix broken links, preferring artist YouTube page and lyric videos (bug) (Geethub #389)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Malcolm is fixing many broken links manually, usually picking the first option shown. Auto-repair broken links and prioritize the artist's YouTube page and lyric videos.
 - **Touches:** link resolution / relink
@@ -9315,7 +9315,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #389.
 
 ### add-links-not-adding: Adding links shows success but adds nothing; albums add dead links (bug) (Geethub #388)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Add-link pop-up says it worked but nothing is added to the library. When an album is added it comes with many dead links. Regression from earlier behavior.
 - **Touches:** add-link flow
@@ -9331,7 +9331,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #387.
 
 ### wrong-link-report-random: Player sometimes reports a wrong link at random (bug) (Geethub #385)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** No flag exists anymore, but clicking on the player sometimes shows it is reporting a wrong link. Happens randomly on different buttons.
 - **Touches:** player click handling / report link
