@@ -9242,7 +9242,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #398.
 
 ### artist-hover-pic-expand: Hovering an artist expands their circular image and mask (Geethub #397)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On hover the picture expands AND its mask expands to reveal more of the image. Fill the container height in all modes without exceeding it. Overlaps artist-hover-animation (#359).
 - **Touches:** artist rows/cards hover
@@ -9250,7 +9250,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #397.
 
 ### artist-hover-container-color: Hovering an artist tints the container with their pic color; same for albums (Geethub #396)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On hover, the artist container takes the dominant color of the artist picture. Do the same for albums.
 - **Touches:** artist and album hover
@@ -9274,7 +9274,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #394.
 
 ### artist-reorder-albums: Reorder albums in the artist window (Geethub #393)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Add sort options for albums in the artist window: most recent, alphabetical, most popular (default).
 - **Touches:** artist window
@@ -9282,7 +9282,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #393.
 
 ### titles-marquee-everywhere: All truncated titles become scrolling marquees (Geethub #392)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Anywhere a title is cut off with '...', make it a scrolling marquee instead. Builds on footer-title-marquee.
 - **Touches:** global titles
@@ -9291,7 +9291,7 @@ Add entries in this shape:
   **Built:** one shared helper (`mqStart`/`mqStop`, `MQ_SEL` in index.html next to `setMarqueeText`): overflowing ellipsis lines slide after a 0.7s pause, hold, ease back; fits stay static; reduced motion keeps the ellipsis. Hover/focus/touch for dense lists (search Recent history, library cards/list/dividers, tracks, queue rows, import preview, search picks, week-up); always-on for queue now-playing, cast bar label, queue heading. Left alone: existing `.marquee` titles, PiP mini player (own window), toasts/hints. Also covers search-history-line-marquee.
 
 ### artist-album-back-arrow: Album close 'x' in the artist window becomes a back '<' (Geethub #391)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Replace the x on albums inside the artist window with a back symbol '<'.
 - **Touches:** artist window album view
@@ -9339,7 +9339,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #385.
 
 ### search-history-line-marquee: Search history lines scroll as a marquee when they don't fit
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the search bar history list (the "Recent" dropdown), any line whose text is too long to fit should scroll as a marquee instead of cutting off with "...". Lines that fit stay static. Reuse the app's existing marquee behavior (see footer-title-marquee / live-now-marquee) so it looks and feels the same.
 - **Touches:** search history dropdown (`openPasteRecents`, `.paste-recent-n`, `.paste-recent-s`).
