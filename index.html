@@ -10567,6 +10567,37 @@ function isSingleTrackType(type){
   return type === 'track' || type === 'sc_track' || type === 'am_track' || type === 'yt_video';
 }
 
+// A pasted/searched link that resolved to one song. With nothing playing it
+// plays right away, as before (then offers where to save it). With a queue
+// already going, ask what to do with it instead of wiping the queue: four
+// one-tap choices, no confirmation step. Shared ?import=&track= links
+// (targetIndex) keep the old play-now behaviour.
+function playSingleSongLink(pl, targetIndex){
+  const track = pl.tracks[0];
+  const playNow = (offerSave) => {
+    loadPlaylistIntoPlayer(pl);
+    buildQueueFrom(0);
+    loadIndex(state.queuePos, true);
+    setView('player');
+    if (offerSave) openSingleTrackDestinationPicker(track);
+  };
+  if (targetIndex || !(state.queue.length > 0 && state.queuePos >= 0) || !track || !track.videoId){ playNow(true); return; }
+  // queue entries point at a playlist by id, so the one-song list must be
+  // findable later (playlistById falls back to the cache)
+  if (!getCachedPlaylist(pl.id)) persistPlaylistObj(pl);
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">&ldquo;' + escapeHtml(track.title) + '&rdquo;</div>' +
+    '<button class="btn-ghost" id="ssNextBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Play next</button>' +
+    '<button class="btn-ghost" id="ssQueueBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Add to queue</button>' +
+    '<button class="btn-ghost" id="ssPlaylistBtn" style="width:100%;text-align:left;margin-bottom:8px;display:block">Add to playlist</button>' +
+    '<button class="btn-ghost" id="ssNowBtn" style="width:100%;text-align:left;display:block">Play now (replaces the queue)</button>';
+  $('ssNextBtn').addEventListener('click', () => { closeImportOverlay(); queuePlayNext(0, pl.id); showToast('Playing next'); });
+  $('ssQueueBtn').addEventListener('click', () => { closeImportOverlay(); queueAddToEnd(0, pl.id); showToast('Added to queue'); });
+  $('ssPlaylistBtn').addEventListener('click', () => openAddToPlaylistPicker(track));
+  $('ssNowBtn').addEventListener('click', () => { closeImportOverlay(); playNow(false); });
+}
+
 async function beginImport(id, force, type, targetIndex){
   importErr.textContent = '';
   const wasSaved = isSaved(id);
@@ -10594,11 +10625,7 @@ async function beginImport(id, force, type, targetIndex){
         // and extends the queue around this track (isDiscoverOn defaults to
         // true), and playNext/finishQueueAtEnd carry that continuation
         // through when the track actually ends.
-        loadPlaylistIntoPlayer(cached);
-        buildQueueFrom(0);
-        loadIndex(state.queuePos, true);
-        setView('player');
-        openSingleTrackDestinationPicker(cached.tracks[0]);
+        playSingleSongLink(cached, targetIndex);
         return;
       }
       loadPlaylistIntoPlayer(cached);
@@ -10672,11 +10699,7 @@ async function beginImport(id, force, type, targetIndex){
       // whatever was already playing and builds a fresh one-track queue
       // around it, which Discover then extends/continues exactly like it
       // does for any other playlist - then still offer to save it.
-      loadPlaylistIntoPlayer(pl);
-      buildQueueFrom(0);
-      loadIndex(state.queuePos, true);
-      setView('player');
-      openSingleTrackDestinationPicker(pl.tracks[0]);
+      playSingleSongLink(pl, targetIndex);
       return;
     }
     if (!startedEarly) statsImport(id);
