@@ -9515,7 +9515,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #429. Bug. Related to merged fullscreen-artwork-centering. Fixed: hover grow `scale:var(--art-hx)` multiplied the fixed translate(-50%,-50%) so the art shifted when the pointer was still over it; desktop-fs .artwork-wrap now sets scale:1. Analysis only, not browser-tested.
 
 ### on-air-menu-antenna-icon: On-air 3-dot menu: on air / off air options should use an antenna icon (Geethub #428)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** In the on-air three-dot menu, the 'on air' and 'off air' list options should use an antenna icon.
 - **Touches:** on-air 3-dot menu icons
@@ -9531,7 +9531,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #427. Ambiguous: ask the owner which color before building.
 
 ### show-under-move-to-label: Rename 'show under' to 'move to >' (Geethub #426)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** The 'show under' menu label should say 'move to >'.
 - **Touches:** library show-under dropdown (library-show-under-dropdown)
@@ -9547,7 +9547,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #425. Related to the artist-link work already merged.
 
 ### albums-button-collapse-all: Albums button, pressed again while active, collapses all album sublists (Geethub #424)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** When the Albums filter is active, pressing it again collapses every sublist in that section.
 - **Touches:** library filter buttons
@@ -9555,7 +9555,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #424. Pairs with #423.
 
 ### all-button-collapse-all: Library 'All' button, pressed again while active, collapses all dropdowns (Geethub #423)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** When 'All' is active, pressing it again collapses every dropdown (playlists, albums, artists, podcasts).
 - **Touches:** library filter buttons
