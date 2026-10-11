@@ -56,3 +56,22 @@ export function ytPlaylistFromData(data, artist) {
   const missing = !tracks.length && alerts.some(a => a && a.type === 'ERROR');
   return { name, tracks, truncated: more, missing };
 }
+
+// Token for the next page of playlist rows, or null at the end. Works on both
+// the page's ytInitialData (rows sit in an itemSectionRenderer) and a
+// /youtubei/v1/browse continuation reply (rows sit in continuationItems).
+export function ytRowsContinuation(data) {
+  const lists = [];
+  const sections = [];
+  deepFindKey(data, 'itemSectionRenderer', sections);
+  sections.forEach(sec => { if (sec && Array.isArray(sec.contents)) lists.push(sec.contents); });
+  deepFindKey(data, 'continuationItems', lists);
+  for (const list of lists) {
+    if (!Array.isArray(list) || !list.some(c => c && c.lockupViewModel)) continue;
+    const item = list.find(c => c && c.continuationItemViewModel);
+    const cmd = item && item.continuationItemViewModel.continuationCommand;
+    const tok = cmd && cmd.innertubeCommand && cmd.innertubeCommand.continuationCommand && cmd.innertubeCommand.continuationCommand.token;
+    if (tok) return tok;
+  }
+  return null;
+}

@@ -2,7 +2,7 @@
 // Dependency-free: run with `npm test` in worker/ (node --test).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ytLockupVideos, ytPlaylistFromData } from '../src/yt-page.js';
+import { ytLockupVideos, ytPlaylistFromData, ytRowsContinuation } from '../src/yt-page.js';
 
 // Trimmed to the shape YouTube's playlist page ytInitialData has today.
 function lockup(id, title, channel, type = 'LOCKUP_CONTENT_TYPE_VIDEO') {
@@ -75,6 +75,17 @@ test('error alert with no rows is reported as missing', () => {
   });
   assert.equal(r.missing, true);
   assert.equal(r.tracks.length, 0);
+});
+
+test('finds the row-list continuation token on the page and in a continuation reply', () => {
+  const more = { continuationItemViewModel: { continuationCommand: { innertubeCommand: { continuationCommand: { token: 'TOK' } } } } };
+  const shelf = { itemSectionRenderer: { contents: [{ horizontalShelfViewModel: {} }, more] } };
+  const rows = { itemSectionRenderer: { contents: [lockup('aaaaaaaaaaa', 'A', 'C'), more] } };
+  assert.equal(ytRowsContinuation({ a: shelf, b: rows }), 'TOK');
+  const reply = { onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems: [lockup('bbbbbbbbbbb', 'B', 'C'), more] } }] };
+  assert.equal(ytRowsContinuation(reply), 'TOK');
+  assert.equal(ytRowsContinuation({ onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems: [lockup('bbbbbbbbbbb', 'B', 'C')] } }] }), null);
+  assert.equal(ytRowsContinuation({ a: shelf }), null);
 });
 
 test('falls back to the microformat title, then a generic name', () => {
