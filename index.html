@@ -1195,6 +1195,8 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 .track-row .artist{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .track-row.is-missing{opacity:.42}
 .track-row.is-missing .title{text-decoration:none}
+.row-spinner{width:16px;height:16px;margin:6px;border-radius:50%;border:2px solid var(--faint);border-top-color:transparent;animation:row-spin .8s linear infinite;box-sizing:border-box}
+@keyframes row-spin{to{transform:rotate(360deg)}}
 .track-row .row-actions{flex:none;display:flex;align-items:center;gap:2px;opacity:.75;transition:opacity var(--dur-ui) var(--ease-out)}
 .track-row:hover .row-actions,.track-row .row-actions button:active{opacity:1}
 .track-row .row-actions button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
@@ -6769,6 +6771,15 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   }
   resolvingTracks.delete(playlistId);
   const payload = keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION });
+  // Release year for albums (Geethub #418): keep a date already stored (the
+  // artist import sets one), else look it up from the first matched track.
+  if (albumOpts){
+    const prev = getCachedPlaylist(playlistId);
+    const first = resolved.find(rt => rt.videoId) || resolved[0];
+    let yr = prev && prev.releaseDate ? String(prev.releaseDate) : '';
+    if (!yr && first){ try{ yr = String(await fetchTrackYear(first.title, first.artist) || ''); } catch(e){} }
+    if (yr) payload.releaseDate = yr;
+  }
   // Catalog cut at the worker's release cap: remember where to resume, and
   // try again after a day (loadMoreArtistReleases, run on app load).
   if (more && more.next) payload.releasesMore = { next: more.next, retryAfter: Date.now() + RELEASES_MORE_DELAY_MS };
@@ -8300,8 +8311,9 @@ function renderLibrary(){
     const info = document.createElement('div'); info.className = 'info';
     info.appendChild(name); if (desc) info.appendChild(desc);
     const albumArtist = isAlbum ? albumArtistName(pl) : '';
-    if (albumArtist){
-      const by = document.createElement('div'); by.className = 'count lib-album-artist'; by.textContent = albumArtist;
+    const albumYear = isAlbum ? ((/^(\d{4})/.exec(String(pl.releaseDate || '')) || [])[1] || '') : '';
+    if (albumArtist || albumYear){
+      const by = document.createElement('div'); by.className = 'count lib-album-artist'; by.textContent = albumArtist + (albumArtist && albumYear ? ' \u00b7 ' : '') + albumYear;
       info.appendChild(by);
     }
     info.appendChild(count);
@@ -8692,7 +8704,12 @@ function toggleLibraryPlaylistPanel(id){
       menuBtn.setAttribute('aria-label', 'Song options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
       menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(id, i, menuBtn); });
-      rowActions.appendChild(menuBtn);
+      // link still loading (placeholder with no videoId while the list
+      // resolves): a small spinner sits where the three dots will be (#420)
+      if (!t.videoId && pl.resolving){
+        const spin = document.createElement('span'); spin.className = 'row-spinner'; spin.setAttribute('role', 'status'); spin.setAttribute('aria-label', 'Loading link');
+        rowActions.appendChild(spin);
+      } else rowActions.appendChild(menuBtn);
       row.appendChild(rowActions);
       if (t.videoId){
         row.addEventListener('click', () => playLibraryTrackInline(id, i));
