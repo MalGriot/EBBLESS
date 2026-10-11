@@ -9547,19 +9547,19 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #425. Related to the artist-link work already merged.
 
 ### albums-button-collapse-all: Albums button, pressed again while active, collapses all album sublists (Geethub #424)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** When the Albums filter is active, pressing it again collapses every sublist in that section.
 - **Touches:** library filter buttons
-- **Branch:**
+- **Branch:** agent/library-collapse-all
 - **Notes:** Synced from Geethub #424. Pairs with #423.
 
 ### all-button-collapse-all: Library 'All' button, pressed again while active, collapses all dropdowns (Geethub #423)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** When 'All' is active, pressing it again collapses every dropdown (playlists, albums, artists, podcasts).
 - **Touches:** library filter buttons
-- **Branch:**
+- **Branch:** agent/library-collapse-all
 - **Notes:** Synced from Geethub #423. Pairs with #424.
 
 ### artist-thumb-name-in-front: Big artist name inside the thumb art should sit in front, not be cut off by the mask (Geethub #422)
