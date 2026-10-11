@@ -8881,3 +8881,43 @@ Add entries in this shape:
 - **Touches:** desktop player layout, album art sizing.
 - **Branch:** agent/desktop-album-art-size (merged 4924fc7)
 - **Notes:** Synced from Geethub issue #350 (bug). Title only, no repro details. May relate to the merged `player-controller-centering` and `player-mobile-spacing` work; check those for sizing constraints.
+
+### queue-drag-to-playlist-art: Drag queue songs and the playing album art into a playlist (Geethub #351)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #351. Drag a song from the queue into a playlist to add it. Drag the album art of the currently playing song into a playlist to add it. After adding this way, open that playlist's window.
+- **Touches:** drag and drop onto playlist cards, player album art, playlist panel open.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #351 (idea). Overlaps merged `drag songs into playlists` (#328, waiting for deployment): queue rows already drag to playlists. New parts are the playing-art drag source and opening the playlist after the drop.
+
+### queue-history-arrows: Arrows in queue header to cycle through past queues (Geethub #352)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #352. Put back/forward arrows in the queue header so you can step through your history of queues and return to one you just replaced.
+- **Touches:** queue header, queue state history.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #352 (idea).
+
+### desktop-player-visuals-size: Desktop art window too small, so LP, cassette, cymatics, lyrics all look small (Geethub #353)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #353. On desktop the art window does not fill enough space, so everything inside it (LP, cassette, cymatics, lyrics) renders smaller than it should. Make the window use more of the available space.
+- **Touches:** desktop player layout, art window sizing.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #353 (idea). Likely duplicate or follow-up of merged #350 `desktop-album-art-size` (waiting for deployment): check after deploy whether it is already fixed.
+
+### dark-text-on-light-art-ui: Use dark text when UI turns light from album art color (Geethub #354)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #354. When the UI changes to white or very light because of the album art color, text should switch to a darker color so it does not disappear.
+- **Touches:** cover-color theming (accent, tints), text contrast.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #354 (bug). Likely caused by the recent cover-color UI work (afd4f11). Related: `player-button-colors`.
+
+### library-grid-thumb-sizes: Library grid mixes thumb sizes between 2x2 and 3x3 (Geethub #355)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #355. In the library, the 2x2 grid shows some 3x3-sized thumbs and the 3x3 grid shows some 2x2-sized thumbs. Each grid mode should render its own thumb size consistently.
+- **Touches:** library grid rendering, thumbnail size selection.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #355 (bug). No repro details.
