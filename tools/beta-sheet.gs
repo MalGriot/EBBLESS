@@ -185,9 +185,21 @@ function inviteText_(t) {
     'Have fun with it.';
 }
 
+// Emails go out from FROM_EMAIL. Apps Script can only send as the account
+// running it, so: if that account IS FROM_EMAIL (script owned by it), MailApp
+// as usual; else if FROM_EMAIL is a "Send mail as" alias on the running
+// account, send through GmailApp with from:; else fall back to the running
+// account with Reply-To set to FROM_EMAIL (replies still land there).
+const FROM_EMAIL = 'ebbless.music@gmail.com';
 function sendMail_(to, subject, text, html) {
   try {
-    MailApp.sendEmail({ to: to, subject: subject, body: text, htmlBody: html || undefined, name: SENDER_NAME });
+    const opts = { to: to, subject: subject, body: text, htmlBody: html || undefined, name: SENDER_NAME };
+    const me = String(Session.getEffectiveUser().getEmail() || '').toLowerCase();
+    if (me === FROM_EMAIL) { MailApp.sendEmail(opts); return ''; }
+    let alias = false;
+    try { alias = GmailApp.getAliases().map(function (x) { return x.toLowerCase(); }).indexOf(FROM_EMAIL) >= 0; } catch (err) {}
+    if (alias) GmailApp.sendEmail(to, subject, text, { htmlBody: html || undefined, name: SENDER_NAME, from: FROM_EMAIL, replyTo: FROM_EMAIL });
+    else { opts.replyTo = FROM_EMAIL; MailApp.sendEmail(opts); }
     return '';
   } catch (err) { return String(err); }
 }
