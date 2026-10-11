@@ -7764,12 +7764,12 @@ function renderLibrary(){
       artDiv.appendChild(pinBtn);
     }
 
-    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = (id === NP_ID && !npFeed.onAir) ? 'OFF AIR' : pl.name;
+    const name = document.createElement('div'); name.className = 'name' + (id === SWELL_ID ? ' current-label' : ''); name.textContent = (id === NP_ID && !npFeed.onAir) ? 'Off air' : pl.name;
     if (id === NP_ID && !npFeed.onAir) name.classList.add('np-off');
     const titleOverlay = document.createElement('div'); titleOverlay.className = 'title-overlay';
     const marqueeEl = document.createElement('div');
     marqueeEl.className = 'marquee' + (id === SWELL_ID ? ' current-label' : '') + (id === NP_ID && !npFeed.onAir ? ' np-off' : '');
-    marqueeEl.dataset.text = (id === NP_ID && !npFeed.onAir) ? 'OFF AIR' : pl.name;
+    marqueeEl.dataset.text = (id === NP_ID && !npFeed.onAir) ? 'Off air' : pl.name;
     titleOverlay.appendChild(marqueeEl);
     if (id === SWELL_ID || (id === NP_ID && npFeed.onAir)){
       const dot = document.createElement('span');
@@ -9740,7 +9740,7 @@ function npSyncPill(){
   npPill.hidden = false;
   const live = npIsLive();
   npPill.className = 'np-pill ' + (live ? 'is-live' : npFeed.onAir ? 'is-behind' : 'is-off');
-  npPill.textContent = live ? 'LIVE' : npFeed.onAir ? 'BACK TO LIVE' : 'OFF AIR';
+  npPill.textContent = live ? 'LIVE' : npFeed.onAir ? 'BACK TO LIVE' : 'Off air';
   npPill.disabled = live || !npFeed.onAir;
 }
 npPill.addEventListener('click', npBackToLive);
