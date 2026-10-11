@@ -9128,6 +9128,8 @@ const CTX_ICON_DECLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 const CTX_ICON_DELETE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h1v13a2 2 0 002 2h10a2 2 0 002-2V6h1V4h-5V3H9zm2 5h2v10h-2V8zm-4 0h2v10H7V8zm8 0h2v10h-2V8z"/></svg>';
 const CTX_ICON_ADD_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/></svg>';
 const CTX_ICON_ALBUM = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 14.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9zm0-5.5a1 1 0 100 2 1 1 0 000-2z"/></svg>';
+const CTX_ICON_ANTENNA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 6.5a5 5 0 000 7M15.5 6.5a5 5 0 010 7M5.7 3.8a9 9 0 000 12.4M18.3 3.8a9 9 0 010 12.4M12 12v9M9 21h6"/></svg>';
+const CTX_ICON_ANTENNA_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 6.5a5 5 0 000 7M15.5 6.5a5 5 0 010 7M5.7 3.8a9 9 0 000 12.4M18.3 3.8a9 9 0 010 12.4M12 12v9M9 21h6"/><path d="M3 3l18 18"/></svg>';
 const CTX_ICON_SHARE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08a2.9 2.9 0 00-1.96.77l-7.13-4.15a2.92 2.92 0 000-1.4l7.05-4.11a3 3 0 10-.9-1.72l-7.05 4.11a3 3 0 100 4.84l7.13 4.15a2.92 2.92 0 10.86-1.49z"/></svg>';
 
 // Reverses a resolved playlist's {type,id} back into the URL it was
@@ -9187,7 +9189,7 @@ function openLibCtxMenu(id, btn){
   ] : id === BLEND_ID ? [
     { action: 'blend-reshuffle', label: 'New picks', icon: CTX_ICON_REFRESH },
   ] : id === NP_ID ? [
-    { action: 'np-tune', label: npFeed.onAir ? (npTuned ? 'Back to live' : 'Tune in') : 'Off air', icon: CTX_ICON_REFRESH, off: !npFeed.onAir },
+    { action: 'np-tune', label: npFeed.onAir ? (npTuned ? 'Back to live' : 'Tune in') : 'Off air', icon: npFeed.onAir ? CTX_ICON_ANTENNA : CTX_ICON_ANTENNA_OFF, off: !npFeed.onAir },
     { action: 'np-refresh', label: 'Refresh now', icon: CTX_ICON_REFRESH },
   ] : [
     { action: 'rename', label: 'Rename', icon: CTX_ICON_RENAME },

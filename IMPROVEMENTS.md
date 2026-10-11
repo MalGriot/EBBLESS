@@ -9515,11 +9515,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #429. Bug. Related to merged fullscreen-artwork-centering. Fixed: hover grow `scale:var(--art-hx)` multiplied the fixed translate(-50%,-50%) so the art shifted when the pointer was still over it; desktop-fs .artwork-wrap now sets scale:1. Analysis only, not browser-tested.
 
 ### on-air-menu-antenna-icon: On-air 3-dot menu: on air / off air options should use an antenna icon (Geethub #428)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** In the on-air three-dot menu, the 'on air' and 'off air' list options should use an antenna icon.
 - **Touches:** on-air 3-dot menu icons
-- **Branch:**
+- **Branch:** agent/on-air-antenna-icon
 - **Notes:** Synced from Geethub #428. 
 
 ### miniplayer-color-bg: Miniplayer background color (Geethub #427)
