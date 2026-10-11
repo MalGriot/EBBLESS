@@ -1303,7 +1303,13 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out)}
 .queue-head .discover-toggle svg{width:13px;height:13px;flex:none}
 .queue-head .discover-toggle:hover{color:var(--text)}
-.queue-head .discover-toggle.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.queue-head .discover-toggle svg{opacity:.4;transition:opacity var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.queue-head .discover-toggle.is-active{color:var(--text)}
+.queue-head .discover-toggle.is-active svg{opacity:1;color:#ffc83d;animation:bulbGlow 3.2s ease-in-out infinite}
+@keyframes bulbGlow{0%,100%{filter:drop-shadow(0 0 1px rgba(255,200,61,.5))}50%{filter:drop-shadow(0 0 6px rgba(255,200,61,.95))}}
+@media (prefers-reduced-motion:reduce){.queue-head .discover-toggle.is-active svg{animation:none;filter:drop-shadow(0 0 4px rgba(255,200,61,.8))}}
+.queue-head .qh-icon{display:flex;align-items:center;justify-content:center;width:26px;height:26px}
+.queue-head .qh-icon svg{width:17px;height:17px}
 .queue-head .qh-arrow{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint);margin-left:-6px}
 .queue-head .qh-arrow svg{width:14px;height:14px}
 .queue-head .qh-arrow:hover:not(:disabled){background:var(--panel-2);color:var(--text)}
@@ -4052,11 +4058,11 @@ body.week-up-on{overflow:hidden}
       <button class="qh-arrow" id="queueHistFwd" title="Next queue" aria-label="Next queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg></button>
       <button class="qh-arrow" id="queueHistBtn" title="History" aria-label="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
       <button class="discover-toggle" id="discoverToggleBtn" title="Keep playing similar songs when this queue ends" aria-pressed="true">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-5.41L15.59 9 17 10.41 11 16.41 7 12.41 8.41 11z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-4 12.74V17a1 1 0 001 1h6a1 1 0 001-1v-2.26A7 7 0 0012 2zm-2 18h4v1a1 1 0 01-1 1h-2a1 1 0 01-1-1v-1z"/></svg>
         Discover
       </button>
-      <button class="re" id="queueSaveBtn" title="Save this queue as a new playlist in your library">Save</button>
-      <button class="clear" id="queueClearBtn">Clear</button>
+      <button class="re qh-icon" id="queueSaveBtn" title="Save this queue as a new playlist in your library" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg></button>
+      <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
     </div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody"></div>

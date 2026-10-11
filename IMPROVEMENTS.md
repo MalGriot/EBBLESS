@@ -9619,20 +9619,22 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #432. Related to merged feedback-popup-to-titlebar and mobile-feedback-tutorial-corner; check those placements first.
 
 ### queue-save-clear-icons: Queue window: save and clear become symbols to save space (Geethub #433)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** In the queue window, replace the Save and Clear text buttons with icons (a floppy disc for save, a trash can for clear) to save space.
 - **Touches:** queue window header
 - **Branch:** (filled in by the manager once a lane is claimed)
 - **Notes:** Synced from Geethub #433. Keep accessible labels/tooltips.
+- **Review:** Save is now a floppy-disc icon and Clear a trash-can icon in the queue header; aria-label and title kept. Branch agent/queue-header-icons (cache v158).
 
 ### queue-discover-lightbulb: Queue window: Discover checkmark becomes a lightbulb that glows when on, dims when off (Geethub #434)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Replace the Discover checkmark in the queue window with a lightbulb icon. Lit with a slow, smooth glow animation while Discover is active; dimmed when it is off.
 - **Touches:** queue window Discover toggle
 - **Branch:** (filled in by the manager once a lane is claimed)
 - **Notes:** Synced from Geethub #434.
+- **Review:** Discover now shows a lightbulb: amber with a slow 3.2s glow when on, dimmed when off (static glow under reduced-motion). Branch agent/queue-header-icons (cache v158).
 
 ### library-view-order-all-sections: Library view-order options should apply to every section, not just playlists (bug) (Geethub #435)
 - **Status:** ready
