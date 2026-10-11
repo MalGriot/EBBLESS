@@ -25559,7 +25559,8 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
 <script>
 /* Hover expand for every button (#395). Web Animations on the independent
    'scale' property, so it never fights a button's own transition/transform.
-   Real mouse hover only; skipped for reduced motion and disabled buttons. */
+   Real mouse hover only; skipped for reduced motion, disabled buttons and the
+   splash wordmark (#splashLogoBtn). */
 (function(){
   if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   var rm = matchMedia('(prefers-reduced-motion:reduce)');
@@ -25572,7 +25573,7 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
   document.addEventListener('pointerover', function(e){
     if (e.pointerType !== 'mouse' || rm.matches) return;
     var b = e.target.closest && e.target.closest('button');
-    if (!b || b.disabled || (e.relatedTarget && b.contains(e.relatedTarget))) return;
+    if (!b || b.id === 'splashLogoBtn' || b.disabled || (e.relatedTarget && b.contains(e.relatedTarget))) return;
     grow(b, '1.07');
   });
   document.addEventListener('pointerout', function(e){
