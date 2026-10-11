@@ -471,7 +471,7 @@ body.onb-active .paste-guide{display:none}
 .lib-card .name.np-on,.lib-card .art .title-overlay .marquee.np-on{color:#fff}
 /* green blinking dot to the left of the "LIVE Now" line */
 #libplTitle.np-live::after{content:'';display:inline-block;width:7px;height:7px;margin-left:8px;border-radius:50%;background:#3ddc84;vertical-align:middle;animation:new-dot-blink 1.4s ease-in-out infinite}
-.lib-card .lib-desc.np-onair{position:relative;padding-left:14px}
+.lib-card .lib-desc.np-onair{position:relative;padding-left:14px;min-width:0}
 .lib-card .lib-desc.np-onair::before{content:'';position:absolute;left:1px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#3ddc84;animation:new-dot-blink 1.4s ease-in-out infinite}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
 .lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
@@ -2050,8 +2050,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      after it in source order so would already win, but set it on all
      three for clarity/consistency. */
   body.split-desktop.desktop-fs:not(.view-settings-active) .visual-tabs{
-    /* vertically centered in the topbar row, between the logo and nav */
-    position:absolute;top:calc(var(--topbar-h) / 2);left:50%;transform:translate(-50%,-50%);z-index:2;
+    /* just under the topbar row: the centered search field owns that row */
+    position:absolute;top:calc(var(--topbar-h) + 2px);left:50%;transform:translateX(-50%);z-index:2;
   }
   body.split-desktop.desktop-fs:not(.view-settings-active) .track-meta{
     position:absolute;left:50%;bottom:156px;transform:translateX(-50%);z-index:2;
@@ -7918,8 +7918,11 @@ function renderLibrary(){
     let desc = null;
     if (id === NP_ID){
       if (npFeed.onAir){   // off air: no second line; on air: one line, marquee if long
-        desc = document.createElement('div'); desc.className = 'count lib-desc np-onair marquee';
-        desc.dataset.text = 'LIVE Now: ' + (npFeed.current.t || '');
+        // wrapper holds the dot + padding; the inner marquee clips at the dot's edge
+        desc = document.createElement('div'); desc.className = 'count lib-desc np-onair';
+        const descMq = document.createElement('div'); descMq.className = 'marquee';
+        descMq.dataset.text = 'LIVE Now: ' + (npFeed.current.t || '');
+        desc.appendChild(descMq);
       }
       if (!pl.tracks.length) count.textContent = 'Nothing yet. Check back soon.';
     }
@@ -8033,7 +8036,7 @@ function renderLibrary(){
   try{ refreshPlayNudge(); } catch(e){}
 }
 function refreshLibraryMarquees(){
-  document.querySelectorAll('.lib-card .art .title-overlay .marquee, .lib-card .lib-desc.marquee').forEach(el => {
+  document.querySelectorAll('.lib-card .art .title-overlay .marquee, .lib-card .lib-desc .marquee').forEach(el => {
     setMarqueeText(el, el.dataset.text || '');
   });
 }
@@ -19831,7 +19834,7 @@ const MINI_PLAYER_STYLE = `
   body.pod-playing #mpControls button:not(#mpPlay){width:28px}
   #mpControls #mpPlay:hover{background:var(--accent);filter:brightness(1.08);transform:scale(1.06)}
   #mpPlay svg{width:20px;height:20px}
-  #mpQueue{display:none;position:relative;flex:1;min-height:0;overflow-y:auto;background:#181818;
+  #mpQueue{display:none;position:relative;flex:1;min-height:0;overflow-y:auto;background:#181818;color:var(--mp-fg,#fff);
     border-top:1px solid rgba(255,255,255,.08);padding:6px}
   body.q-open #mpQueue{display:block}
   body.q-up #mpQueue{order:-1;border-top:none;border-bottom:1px solid rgba(255,255,255,.08)}
@@ -19840,17 +19843,20 @@ const MINI_PLAYER_STYLE = `
   body.q-overlay.q-up #mpQueue{bottom:0;animation:mpPull .18s ease-out}
   @keyframes mpDrop{from{transform:translateY(-100%)}to{transform:none}}
   @keyframes mpPull{from{transform:translateY(100%)}to{transform:none}}
+  #mpQueue .mp-tool{color:var(--mp-fg2,rgba(255,255,255,.6))}
+  #mpQueue .mp-tool:hover{color:var(--mp-fg,#fff)}
+  body.style-art #mpQueue{background:color-mix(in srgb,var(--mp-tint,#e0b26a) 50%,#0b0b0b)}
   .mpq-head{position:sticky;top:-6px;z-index:1;display:flex;align-items:center;justify-content:space-between;margin:-6px -6px 0;
-    padding:6px 6px 4px 12px;background:#181818;font-size:12px;font-weight:600}
-  .mpq-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#888;padding:6px 6px 4px}
+    padding:6px 6px 4px 12px;background:inherit;font-size:12px;font-weight:600}
+  .mpq-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mp-fg2,#888);padding:6px 6px 4px}
   .mpq-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer}
-  .mpq-row:hover{background:rgba(255,255,255,.08)}
+  .mpq-row:hover{background:rgba(128,128,128,.22)}
   .mpq-row.is-now{cursor:default;background:rgba(224,178,106,.1)}
   .mpq-row img{width:32px;height:32px;border-radius:4px;object-fit:cover;background:#282828;flex:none}
   .mpq-row .t{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mpq-row .a{font-size:11px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mpq-row .a{font-size:11px;color:var(--mp-fg2,#999);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mpq-row>div{min-width:0}
-  .mpq-empty{font-size:12px;color:#888;padding:14px 6px;text-align:center}
+  .mpq-empty{font-size:12px;color:var(--mp-fg2,#888);padding:14px 6px;text-align:center}
 `;
 function miniPlayerSupported(){ return 'documentPictureInPicture' in window; }
 function miniPlayerPrefs(){
@@ -20232,7 +20238,20 @@ function updateMiniPlayerUI(){
     // runs on the mini player's twice-a-second clock too.
     // Background tint = the album-art color the main player already sampled (--player-accent); it resolves async, so re-read each tick
     const tint = getComputedStyle(document.documentElement).getPropertyValue('--player-accent').trim();
-    if (tint && doc.body.style.getPropertyValue('--mp-tint') !== tint) doc.body.style.setProperty('--mp-tint', tint);
+    if (tint && doc.body.style.getPropertyValue('--mp-tint') !== tint){
+      doc.body.style.setProperty('--mp-tint', tint);
+      // Queue text must contrast with the tinted background (50% tint over #0b0b0b)
+      const probe = doc.createElement('span'); probe.style.color = tint; doc.body.appendChild(probe);
+      const m = doc.defaultView.getComputedStyle(probe).color.match(/[\d.]+/g); probe.remove();
+      if (m && m.length >= 3){
+        const lin = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+        const mix = c => (Number(c) + 11) / 2;
+        const L = .2126 * lin(mix(m[0])) + .7152 * lin(mix(m[1])) + .0722 * lin(mix(m[2]));
+        const dark = L > .3;
+        doc.body.style.setProperty('--mp-fg', dark ? '#111' : '#fff');
+        doc.body.style.setProperty('--mp-fg2', dark ? 'rgba(0,0,0,.65)' : 'rgba(255,255,255,.65)');
+      }
+    }
     if (titleEl._marqueeText !== (t.title || '')) setMarqueeText(titleEl, t.title || '');
     if (artistEl._marqueeText !== (t.artist || '')) setMarqueeText(artistEl, t.artist || '');
   }
