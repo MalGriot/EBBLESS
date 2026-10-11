@@ -3194,7 +3194,7 @@ body.week-up-on{overflow:hidden}
             </svg>
             <span class="v-tab-label">Visualizer</span>
           </button>
-          <button class="v-tab" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
+          <button class="v-tab" id="lyricsTabBtn" data-mode="lyrics" title="Lyrics" aria-label="Show lyrics">
             <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5 4h11l3 3v13H5zm2 5h9v2H7zm0 4h9v2H7zm0 4h6v2H7z"/></svg>
             <span class="v-tab-label">Lyrics</span>
           </button>
@@ -15745,10 +15745,24 @@ function queueHistStep(dir){
   const sn = qhist[i];
   const originPl = playlistById(sn.queue[0].plId);
   if (originPl) loadPlaylistIntoPlayer(originPl);
-  state.queue = sn.queue.map(e => e.discover ? { plId: e.plId, idx: e.idx, discover: true } : { plId: e.plId, idx: e.idx });
-  state.queuePos = sn.pos;
-  renderQueuePanel();
-  loadIndex(state.queuePos, true);
+  const cp = e => e.discover ? { plId: e.plId, idx: e.idx, discover: true } : { plId: e.plId, idx: e.idx };
+  const nowE = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  if (nowE){
+    // the playing song keeps playing: it stays "now" and the picked queue
+    // becomes what comes after it (its own current song first, unless that
+    // is the song already playing). Picking a song or the song ending
+    // moves on from there.
+    const same = sn.queue[sn.pos].plId === nowE.plId && sn.queue[sn.pos].idx === nowE.idx;
+    state.queue = [cp(nowE)].concat(sn.queue.slice(same ? sn.pos + 1 : sn.pos).map(cp));
+    state.queuePos = 0;
+    renderQueuePanel();
+    schedulePreload(0);
+  } else {
+    state.queue = sn.queue.map(cp);
+    state.queuePos = sn.pos;
+    renderQueuePanel();
+    loadIndex(state.queuePos, true);
+  }
   qhSave();
 }
 $('queueHistBack').addEventListener('click', () => queueHistStep(-1));
@@ -18512,6 +18526,26 @@ function maybeLoadLyrics(){
   loadLyricsForTrack(t);
 }
 
+// The Lyrics tab is disabled (like the Video tab) when the current song has
+// no lyrics: SoundCloud songs, episodes with no captions and none to
+// generate, and songs whose lyrics lookup came back empty. The lookup is
+// fetched in the background (cached, shared with the lyrics view); until it
+// answers, or if it fails, the tab stays enabled.
+function lyricsBtnSync(){
+  const btn = $('lyricsTabBtn');
+  if (!btn) return;
+  const t = currentTrack();
+  let ok = true;
+  if (t && t.videoId){
+    if (isPodcastTrack(t)) ok = podHasText(t) || capCanGen(t);
+    else if (isNativeVideoId(t.videoId)) ok = false;
+    else if (lyricsCache.has(t.videoId)) ok = !!(lyricsCache.get(t.videoId).lines || []).length;
+    else fetchLyrics(t).then(() => { const ct = currentTrack(); if (ct && ct.videoId === t.videoId) lyricsBtnSync(); }).catch(() => {});
+  }
+  btn.disabled = !ok;
+  btn.setAttribute('aria-disabled', String(!ok));
+}
+
 function updateLyricsHighlight(cur){
   if (visualMode !== 'lyrics' || !lyricsState.synced || !lyricsState.lines.length) return;
   const lines = lyricsState.lines;
@@ -18863,6 +18897,7 @@ function reflectCurrentTrackUI(pos, opts){
   updateTrackMetaUI(t);
   updateCreditsSpotifyLink(entry, t);
   ytPanelBtnSync();
+  lyricsBtnSync();
   // new track: never carry the previous one's position/duration over - the
   // seek poll stops while paused, so a stale full bar would otherwise stick
   // until the new track actually starts reporting (issue #213)
@@ -19775,7 +19810,7 @@ document.addEventListener('keydown', (e) => {
       if (!e.repeat) kbToggleVisual('viz');
       break;
     case 'c': case 'C':
-      if (!e.repeat) kbToggleVisual('lyrics');
+      if (!e.repeat && (visualMode === 'lyrics' || !$('lyricsTabBtn').disabled)) kbToggleVisual('lyrics');
       break;
     case 'v': case 'V':
       // toggles the YouTube tab's card; openYtPanel is a no-op while the
