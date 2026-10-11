@@ -20741,7 +20741,7 @@ let miniPlayerWin = null;
 // reopens a PiP window where it was last closed unless
 // preferInitialWindowPlacement asks it not to.
 const LS_MINI_PLAYER = 'ebbless:miniPlayer';  // { w, h, style } - PiP mini player's last content size and look
-const MP_DEFAULT = { w: 380, h: 148, style: 'solid' };
+const MP_DEFAULT = { w: 380, h: 148, style: 'art' };  // style 'art' = animated lava-lamp art background (default), 'solid' = plain black
 const MP_MIN_W = 300, MP_MIN_H = 120;
 const MP_QUEUE_H = 260;        // extra height the queue popover grows the window by
 const MP_OVERLAY_MIN_H = 300;  // a window at least this tall shows the queue over the player instead of growing
@@ -20775,6 +20775,21 @@ const MINI_PLAYER_STYLE = `
   #mpBg{position:absolute;inset:0;background:color-mix(in srgb,var(--mp-tint,#e0b26a) 50%,#0b0b0b);
     opacity:0;transition:opacity .4s ease,background-color .6s ease;pointer-events:none}
   body.style-art #mpBg{opacity:1}
+  /* lava lamp: same drift as the main #ambient, as CSS animation (main tab's rAF is paused while PiP is up) */
+  #mpBg{overflow:hidden}
+  #mpBg .mpl{position:absolute;inset:-40%;background-size:cover;background-position:center;opacity:0;transform:scale(1.15);
+    filter:blur(40px) saturate(1.3) brightness(.5);transition:opacity 1.4s ease}
+  #mpBg .mpl.is-active{opacity:.85;animation:mp-drift 16s ease-in-out infinite}
+  #mpBg .mpl.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+  @keyframes mp-drift{
+    0%{transform:translate(0,0) scale(1.2);filter:blur(36px) saturate(1.1) brightness(.4)}
+    20%{transform:translate(-9%,7%) scale(1.42);filter:blur(46px) saturate(1.55) brightness(.62)}
+    40%{transform:translate(8%,-9%) scale(1.5);filter:blur(40px) saturate(1.7) brightness(.68)}
+    60%{transform:translate(10%,9%) scale(1.28);filter:blur(50px) saturate(1.35) brightness(.45)}
+    80%{transform:translate(-7%,-6%) scale(1.46);filter:blur(42px) saturate(1.6) brightness(.64)}
+    100%{transform:translate(0,0) scale(1.2);filter:blur(36px) saturate(1.1) brightness(.4)}
+  }
+  @media (prefers-reduced-motion:reduce){#mpBg .mpl.is-active{animation:none}}
   #mpCard{position:relative;flex:none;height:var(--card-h);padding:12px;display:grid;gap:4px 12px;
     grid-template-columns:calc(var(--card-h) - 24px) minmax(0,1fr);grid-template-rows:22px minmax(0,1fr) 16px 36px;
     grid-template-areas:"art head" "art meta" "art seek" "art ctl";
@@ -20909,7 +20924,7 @@ function miniPlayerPrefs(){
   return {
     w: Math.max(MP_MIN_W, Math.round(p.w) || MP_DEFAULT.w),
     h: Math.max(MP_MIN_H, Math.round(p.h) || MP_DEFAULT.h),
-    style: p.style === 'art' ? 'art' : MP_DEFAULT.style
+    style: p.style === 'solid' ? 'solid' : MP_DEFAULT.style
   };
 }
 function saveMiniPlayerPrefs(patch){
@@ -20994,7 +21009,7 @@ function buildMiniPlayerDOM(win){
   const btn = (id, cls, label, ico) =>
     '<button id="' + id + '" class="' + cls + '" title="' + label + '" aria-label="' + label + '"><svg viewBox="0 0 24 24">' + ico + '</svg></button>';
   doc.body.innerHTML =
-    '<div id="mpBg"></div>' +
+    '<div id="mpBg"><div class="mpl" id="mpLavaA"></div><div class="mpl" id="mpLavaB"></div></div>' +
     '<div id="mpEdge" title="Shrink" role="button" aria-label="Shrink"></div>' +
     '<div id="mpCard">' +
       '<div id="mpArtWrap" data-art-style="default"><img id="mpArt" alt="">' +
@@ -21270,6 +21285,12 @@ function updateMiniPlayerUI(){
     const art = lead ? lead.url : (artworkUrls(t)[0] || '');
     if (artEl.getAttribute('src') !== art){
       setMiniPlayerArt(artEl, art, lead ? lead.ms : MP_ART_FADE_MS);
+      const lavaA = doc.getElementById('mpLavaA'), lavaB = doc.getElementById('mpLavaB');
+      if (lavaA && lavaB){
+        const nxt = lavaA.classList.contains('is-active') ? lavaB : lavaA, cur = nxt === lavaA ? lavaB : lavaA;
+        nxt.style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'none';
+        nxt.classList.add('is-active'); cur.classList.remove('is-active');
+      }
       doc.getElementById('mpArtWrap').style.setProperty('--mp-art', art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'none');
       const csArt = doc.getElementById('cassetteLabelArt');
       if (csArt){

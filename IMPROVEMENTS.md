@@ -9523,11 +9523,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #428. 
 
 ### miniplayer-color-bg: Miniplayer background color (Geethub #427)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Mini player needs a colored background (issue gives no detail; likely tint from the album art or accent color).
 - **Touches:** desktop mini-player
-- **Branch:**
+- **Branch:** agent/mini-player-lava-bg
 - **Notes:** Synced from Geethub #427. Ambiguous: ask the owner which color before building.
 
 ### show-under-move-to-label: Rename 'show under' to 'move to >' (Geethub #426)
