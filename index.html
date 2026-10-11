@@ -8361,6 +8361,7 @@ function renderLibrary(){
       const gk = artistNameKey(albumArtist) || '_';
       if (!albumGroups.has(gk)) albumGroups.set(gk, { name: albumArtist || 'Other', cards: [] });
       card._albumVer = albumVersionInfo(pl.name);
+      card._sortPlays = totalPlaylistPlays(pl); card._sortTracks = pl.tracks.length;
       albumGroups.get(gk).cards.push(card);
     } else {
       (isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
@@ -8373,7 +8374,11 @@ function renderLibrary(){
   if (albumGroups.size){
     const folded = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
     libAlbumGroupKeys = [...albumGroups.keys()];
-    [...albumGroups.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
+    // View menu applies to albums too: by-artist groups follow the chosen order
+    // (album cards inside each group are already in that order from orderedLibraryIds)
+    const albumSortMode = getLibrarySort();
+    const grpScore = (g) => g.cards.reduce((n, c) => n + (albumSortMode === 'plays_desc' ? c._sortPlays : c._sortTracks), 0);
+    [...albumGroups.entries()].sort((a, b) => (albumSortMode === 'plays_desc' || albumSortMode === 'tracks_desc') ? (grpScore(b[1]) - grpScore(a[1])) || a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' }) : a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
       // while searching, matching albums always show
       const open = !!searchQ || !folded[gk];
       const div = document.createElement('button');
