@@ -9499,20 +9499,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #431. Note: History button was added in playing-history and moved in history-button-in-queue-header; confirm where it should live (if anywhere) before removing.
 
 ### fullscreen-search-not-clickable: Fullscreen: the search bar isn't clickable (Geethub #430)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** In fullscreen the search bar can't be clicked.
 - **Touches:** fullscreen layering, search bar
-- **Branch:**
-- **Notes:** Synced from Geethub #430. Bug. Possibly related to merged fullscreen-search-covers-art-tab (#364); check for a regression.
+- **Branch:** agent/fullscreen-bugs-429-430
+- **Notes:** Synced from Geethub #430. Bug. Possibly related to merged fullscreen-search-covers-art-tab (#364); check for a regression. Fixed: #topbar has pointer-events:none in desktop-fs and #importForm (search) didn't opt back in; added it to the auto list. Not browser-tested end to end (no track in headless pane).
 
 ### doubletap-fullscreen-art-off-center: Double-clicking player art opens fullscreen with the art off-center (Geethub #429)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Double-clicking the album art in the player enters fullscreen, but the art lands off-center.
 - **Touches:** album-art-doubletap, fullscreen centering
-- **Branch:**
-- **Notes:** Synced from Geethub #429. Bug. Related to merged fullscreen-artwork-centering.
+- **Branch:** agent/fullscreen-bugs-429-430
+- **Notes:** Synced from Geethub #429. Bug. Related to merged fullscreen-artwork-centering. Fixed: hover grow `scale:var(--art-hx)` multiplied the fixed translate(-50%,-50%) so the art shifted when the pointer was still over it; desktop-fs .artwork-wrap now sets scale:1. Analysis only, not browser-tested.
 
 ### on-air-menu-antenna-icon: On-air 3-dot menu: on air / off air options should use an antenna icon (Geethub #428)
 - **Status:** ready
