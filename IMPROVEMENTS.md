@@ -9322,7 +9322,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #388.
 
 ### search-history-scroll-readd: Search history scrollable; tapping an entry refills the box without searching (Geethub #387)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Search history should scroll, and tapping an entry puts its text in the box without auto-searching so terms can be added.
 - **Touches:** search bar history
