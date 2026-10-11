@@ -8899,14 +8899,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #352 (idea).
 
 ### desktop-player-visuals-size: Desktop art window too small, so LP, cassette, cymatics, lyrics all look small (Geethub #353)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #353. On desktop the art window does not fill enough space, so everything inside it (LP, cassette, cymatics, lyrics) renders smaller than it should. Make the window use more of the available space.
 - **Touches:** desktop player layout, art window sizing.
 - **Branch:** agent/desktop-art-window
 - **Notes:** Synced from Geethub issue #353 (idea). Likely duplicate or follow-up of merged #350 `desktop-album-art-size` (waiting for deployment): check after deploy whether it is already fixed. Follow-up: #350 (197c477) widened the art window but the 430px vertical reserve was still the binding cap at typical heights (1440x900: 418px). LP, cassette, cymatics and lyrics all render inside .artwork-wrap, so lowering the reserve to 395px enlarges all of them (453px at 1440x900) with the Ads playing button still on screen. Shell cache v118.
 ### dark-text-on-light-art-ui: Use dark text when UI turns light from album art color (Geethub #354)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #354. When the UI changes to white or very light because of the album art color, text should switch to a darker color so it does not disappear.
 - **Touches:** cover-color theming (accent, tints), text contrast.
@@ -8914,7 +8914,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #354 (bug). Likely caused by the recent cover-color UI work (afd4f11). Related: `player-button-colors`.
 
 ### library-grid-thumb-sizes: Library grid mixes thumb sizes between 2x2 and 3x3 (Geethub #355)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #355. In the library, the 2x2 grid shows some 3x3-sized thumbs and the 3x3 grid shows some 2x2-sized thumbs. Each grid mode should render its own thumb size consistently.
 - **Touches:** library grid rendering, thumbnail size selection.
