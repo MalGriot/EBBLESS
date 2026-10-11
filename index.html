@@ -1075,6 +1075,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .marquee .marquee-track{display:inline-flex;white-space:nowrap;will-change:transform}
 .mq-inner{display:inline-block;white-space:nowrap;will-change:transform}
 .mq-copy{display:inline-block;white-space:nowrap}
+.mq-ghost::after{content:attr(data-t)}
 .marquee .marquee-track>span{display:inline-block;white-space:nowrap;flex:none}
 .marquee.is-marquee .marquee-track{animation:marquee-scroll var(--marquee-dur,12s) linear infinite}
 /* Static (non-scrolling) state: a title that overflows but isn't animating -
@@ -19175,7 +19176,14 @@ function mqStart(el){
   const a = document.createElement('span');
   a.className = 'mq-copy';
   while (el.firstChild) a.appendChild(el.firstChild);
-  const b = a.cloneNode(true);
+  // Text-only lines get a CSS-drawn ghost copy so el.textContent stays the
+  // single original string; lines with child elements fall back to a clone.
+  let b;
+  if (!a.children.length){
+    b = document.createElement('span');
+    b.className = 'mq-copy mq-ghost';
+    b.setAttribute('data-t', a.textContent);
+  } else b = a.cloneNode(true);
   b.setAttribute('aria-hidden', 'true');
   b.style.marginLeft = '48px';
   inner.appendChild(a); inner.appendChild(b);
