@@ -8891,11 +8891,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #351 (idea). Overlaps merged `drag songs into playlists` (#328, waiting for deployment): queue rows already drag to playlists. New parts are the playing-art drag source and opening the playlist after the drop.
 
 ### queue-history-arrows: Arrows in queue header to cycle through past queues (Geethub #352)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #352. Put back/forward arrows in the queue header so you can step through your history of queues and return to one you just replaced.
 - **Touches:** queue header, queue state history.
-- **Branch:**
+- **Branch:** agent/queue-history
 - **Notes:** Synced from Geethub issue #352 (idea).
 
 ### desktop-player-visuals-size: Desktop art window too small, so LP, cassette, cymatics, lyrics all look small (Geethub #353)

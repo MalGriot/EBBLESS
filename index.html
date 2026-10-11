@@ -1174,6 +1174,10 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head .discover-toggle svg{width:13px;height:13px;flex:none}
 .queue-head .discover-toggle:hover{color:var(--text)}
 .queue-head .discover-toggle.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.queue-head .qh-arrow{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint);margin-left:-6px}
+.queue-head .qh-arrow svg{width:14px;height:14px}
+.queue-head .qh-arrow:hover:not(:disabled){background:var(--panel-2);color:var(--text)}
+.queue-head .qh-arrow:disabled{opacity:.3;cursor:default}
 .queue-head .re{font-size:12px;color:var(--faint-2);flex:none}
 .queue-head .re:hover{color:var(--faint)}
 .queue-head .close-btn{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
@@ -3859,6 +3863,8 @@ body.week-up-on{overflow:hidden}
     <div class="queue-drag-handle"></div>
     <div class="queue-head">
       <h2>Queue</h2>
+      <button class="qh-arrow" id="queueHistBack" title="Previous queue" aria-label="Previous queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg></button>
+      <button class="qh-arrow" id="queueHistFwd" title="Next queue" aria-label="Next queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg></button>
       <button class="discover-toggle" id="discoverToggleBtn" title="Keep playing similar songs when this queue ends" aria-pressed="true">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-5.41L15.59 9 17 10.41 11 16.41 7 12.41 8.41 11z"/></svg>
         Discover
@@ -13302,6 +13308,7 @@ function validIndices(pl){
 /* builds a fresh queue out of a single playlist, starting at startIndex.
    plId defaults to the playlist currently being viewed. */
 function buildQueueFrom(startIndex, plId){
+  queueHistSnapshot();
   plId = plId || (state.playlist && state.playlist.id);
   const pl = playlistById(plId);
   if (!pl) return;
@@ -13378,6 +13385,7 @@ function queueJumpTo(pos){
   loadIndex(state.queuePos, true);
 }
 function queueClearUpcoming(){
+  queueHistSnapshot();
   const cleared = state.queue.slice(state.queuePos + 1);
   state.queue = state.queue.slice(0, state.queuePos + 1);
   renderQueuePanel();
@@ -15358,6 +15366,63 @@ function renderQueuePanel(){
     wireQueueRowGestures(row, handle);
   });
 }
+
+/* Queue history: back/forward arrows in the queue header step through past
+   queues. A snapshot is taken when the queue is replaced wholesale (new
+   playlist/song started, Clear), never on reorder/add/remove. Capped, and
+   persisted so it survives a reload. qhCur === hist.length means "live". */
+const LS_QHIST = 'ebbless:queueHist';
+const QHIST_MAX = 10;
+let qhist = (() => { const h = lsGet(LS_QHIST, []); return Array.isArray(h) ? h.slice(-QHIST_MAX) : []; })();
+let qhCur = qhist.length;
+function qhSnap(){ return { queue: state.queue.map(e => e.discover ? { plId: e.plId, idx: e.idx, discover: true } : { plId: e.plId, idx: e.idx }), pos: state.queuePos }; }
+function qhSame(a, b){ return !!a && !!b && a.pos === b.pos && JSON.stringify(a.queue) === JSON.stringify(b.queue); }
+function qhPush(snap){
+  if (qhSame(qhist[qhist.length - 1], snap)) return;
+  qhist.push(snap);
+  if (qhist.length > QHIST_MAX) qhist.shift();
+}
+function qhSave(){ lsSet(LS_QHIST, qhist); updateQueueHistBtns(); }
+function queueHistSnapshot(){
+  if (state.queuePos < 0 || !state.queue.length) return;
+  qhPush(qhSnap());
+  qhCur = qhist.length;
+  qhSave();
+}
+function updateQueueHistBtns(){
+  const b = $('queueHistBack'), f = $('queueHistFwd');
+  if (!b || !f) return;
+  b.disabled = qhCur <= 0 || (qhCur === qhist.length && !qhist.length);
+  f.disabled = qhCur >= qhist.length - 1;
+}
+function qhValid(sn){
+  return !!sn && Array.isArray(sn.queue) && sn.queue.length && sn.pos >= 0 && sn.pos < sn.queue.length && sn.queue.every(e => {
+    const pl = e && playlistById(e.plId);
+    return !!(pl && pl.tracks[e.idx] && pl.tracks[e.idx].videoId);
+  });
+}
+function queueHistStep(dir){
+  if (dir < 0 && qhCur === qhist.length && state.queuePos >= 0 && state.queue.length){
+    // leaving the live queue: keep it as the forward end of the history
+    qhPush(qhSnap());
+    qhCur = qhist.length - 1;
+  }
+  let i = qhCur + dir;
+  while (i >= 0 && i < qhist.length && !qhValid(qhist[i])) i += dir;
+  if (i < 0 || i >= qhist.length){ qhSave(); return; }
+  qhCur = i;
+  const sn = qhist[i];
+  const originPl = playlistById(sn.queue[0].plId);
+  if (originPl) loadPlaylistIntoPlayer(originPl);
+  state.queue = sn.queue.map(e => e.discover ? { plId: e.plId, idx: e.idx, discover: true } : { plId: e.plId, idx: e.idx });
+  state.queuePos = sn.pos;
+  renderQueuePanel();
+  loadIndex(state.queuePos, true);
+  qhSave();
+}
+$('queueHistBack').addEventListener('click', () => queueHistStep(-1));
+$('queueHistFwd').addEventListener('click', () => queueHistStep(1));
+updateQueueHistBtns();
 
 queueClearBtn.addEventListener('click', queueClearUpcoming);
 
