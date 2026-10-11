@@ -9379,7 +9379,7 @@ Add entries in this shape:
 - **Notes:** Added from chat 2026-10-11. Design left to Claude. See docs/deep-roadmap.md for all decisions.
 
 ### artist-link-pick-albums: When you add an artist link, show an album picker (Geethub #412)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Adding an artist link opens a window with all their albums in a grid. You pick 10 to add first. (DEEP paywall idea: add more than 10, plus an 'add all' option.)
 - **Touches:** artist link add flow
@@ -9395,7 +9395,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #411.
 
 ### artist-bio-read-more: Artist bio 'more' button: centered, says 'Read more' (Geethub #410)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Center the 'more' button on the artist bio and label it 'Read more'.
 - **Touches:** artist window bio
@@ -9411,7 +9411,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #409.
 
 ### library-playlist-groups: Library playlists split into EBBLESS-made and user-added (Geethub #408)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Group playlists in the library under better labels: EBBLESS-made vs user-added. Group titles are clickable and collapse their lists.
 - **Touches:** library playlists
@@ -9419,7 +9419,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #408.
 
 ### playlist-manual-order-drag: Drag playlists into a custom order in manual mode (Geethub #407)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In manual mode, playlists can be dragged into any order. The order is saved, so switching to alphabetical and back returns to the custom order until it is changed again.
 - **Touches:** library playlists sort
@@ -9435,7 +9435,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #406.
 
 ### speaker-icon-under-thumb: Speaker icon next to the title under album/playlist/podcast thumbs (Geethub #405)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Show the same speaker icon used next to the playing song title in the library beside the title under the thumb art, for albums, playlists, podcasts, etc.
 - **Touches:** library thumbs
@@ -9443,7 +9443,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #405.
 
 ### cd-hover-dropshadow: CD hover animation: add a drop shadow, expand art smoothly (Geethub #404)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Put a drop shadow on the CD from the album art in the album thumb hover. Also expand the art under the clipping mask smoothly on hover.
 - **Touches:** library album thumb hover
@@ -9451,7 +9451,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #404.
 
 ### cassette-skip-reverse-rewind: Cassette skip-ahead plays the rewind sound backwards (Geethub #413)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In Cassette mode, when the user skips ahead, play the existing cassette rewind sound reversed (fast-forward feel).
 - **Touches:** cassette sfx, skip-next handling
@@ -9459,7 +9459,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #413. Builds on merged cassette-rewind-sfx.
 
 ### miniplayer-art-hover-click: Miniplayer album art: smooth hover expand, click returns to app (Geethub #414)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On hover the miniplayer art expands a bit smoothly. Clicking it brings you back to the main app. The logo in the miniplayer should do the same.
 - **Touches:** desktop mini-player
@@ -9467,7 +9467,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #414.
 
 ### artist-names-left-justified: Artist names should be left justified (Geethub #415)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug report with no detail: artist names should be left justified. Needs a screenshot or the exact screen to know where.
 - **Touches:** unknown
