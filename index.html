@@ -1074,6 +1074,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .marquee>span{display:inline-block;white-space:nowrap}
 .marquee .marquee-track{display:inline-flex;white-space:nowrap;will-change:transform}
 .mq-inner{display:inline-block;white-space:nowrap;will-change:transform}
+.mq-copy{display:inline-block;white-space:nowrap}
+.mq-ghost::after{content:attr(data-t)}
 .marquee .marquee-track>span{display:inline-block;white-space:nowrap;flex:none}
 .marquee.is-marquee .marquee-track{animation:marquee-scroll var(--marquee-dur,12s) linear infinite}
 /* Static (non-scrolling) state: a title that overflows but isn't animating -
@@ -19151,8 +19153,8 @@ function setMarqueeText(el, text){
 }
 
 // Shared overflow marquee for every other ellipsis line (lists, queue, cards,
-// search history...). Dense lists scroll only while hovered/focused/touched;
-// the few single prominent lines in MQ_ALWAYS scroll whenever they overflow.
+// search history...). Any line that overflows and is on screen scrolls left
+// on its own, looping (never reverses); see mqSweep.
 // Text that fits is never touched. Reduced motion keeps the plain ellipsis.
 // The line's children are moved (not recreated) into one inner span that is
 // slid with the Web Animations API, then put back when it stops.
@@ -19163,76 +19165,78 @@ var MQ_SEL = [
   '.cast-bar-label','.queue-head h2','.like-nudge .ln-text','.handoff-prompt .hp-sub',
   '#weekUp .wu-li-name','#weekUp .wu-li-sub'
 ].map(x => x + ':not(.marquee)').join(',');
-var MQ_ALWAYS = '.q-now .title,.q-now .artist,.cast-bar-label,.queue-head h2';
 var mqRunning = new Set();
 function mqStop(el){
   clearTimeout(el._mqTimer);
   if (!el._mqInner) return;
   if (el._mqAnim){ el._mqAnim.cancel(); el._mqAnim = null; }
-  const inner = el._mqInner;
-  if (inner.parentNode === el){
-    while (inner.firstChild) el.insertBefore(inner.firstChild, inner);
+  const inner = el._mqInner, a = el._mqA;
+  if (inner.parentNode === el && a){
+    while (a.firstChild) el.insertBefore(a.firstChild, inner);
     inner.remove();
   }
-  el._mqInner = null;
+  el._mqInner = el._mqA = null;
   el.style.removeProperty('text-overflow');
   mqRunning.delete(el);
 }
+function mqKey(el){ return (el._mqA ? el._mqA.textContent : el.textContent) + '|' + el.clientWidth; }
+// Left-only loop, same as the player title marquee: two copies of the line
+// side by side, slid left by exactly one copy + gap, then the loop restarts
+// (never reverses). A short pause at the start of each pass.
 function mqStart(el){
   if (el._mqInner || marqueeReducedMotion() || el.closest('.marquee')) return;
   const over = el.scrollWidth - el.clientWidth;
   if (over <= 2 || !el.clientWidth) return;
   const inner = document.createElement('span');
   inner.className = 'mq-inner';
-  while (el.firstChild) inner.appendChild(el.firstChild);
+  const a = document.createElement('span');
+  a.className = 'mq-copy';
+  while (el.firstChild) a.appendChild(el.firstChild);
+  // Text-only lines get a CSS-drawn ghost copy so el.textContent stays the
+  // single original string; lines with child elements fall back to a clone.
+  let b;
+  if (!a.children.length){
+    b = document.createElement('span');
+    b.className = 'mq-copy mq-ghost';
+    b.setAttribute('data-t', a.textContent);
+  } else b = a.cloneNode(true);
+  b.setAttribute('aria-hidden', 'true');
+  b.style.marginLeft = '48px';
+  inner.appendChild(a); inner.appendChild(b);
   el.appendChild(inner);
   el.style.textOverflow = 'clip';
-  el._mqInner = inner;
-  el._mqKey = el.textContent + '|' + el.clientWidth;
-  const shift = Math.max(1, Math.ceil(inner.getBoundingClientRect().width - el.clientWidth + 8));
-  const move = shift / 60 * 1000, pause = 700, hold = 900;
-  const total = pause + move + hold + move + pause;
-  const at = ms => ms / total;
+  el._mqInner = inner; el._mqA = a;
+  el._mqKey = mqKey(el);
+  const dist = b.getBoundingClientRect().left - a.getBoundingClientRect().left;
+  if (!(dist > 0)){ mqStop(el); return; }
+  const move = dist / 80 * 1000, pause = 2000;
+  const total = pause + move;
   el._mqAnim = inner.animate([
     { transform: 'translateX(0)', offset: 0 },
-    { transform: 'translateX(0)', offset: at(pause), easing: 'ease-in-out' },
-    { transform: 'translateX(-' + shift + 'px)', offset: at(pause + move) },
-    { transform: 'translateX(-' + shift + 'px)', offset: at(pause + move + hold), easing: 'ease-in-out' },
-    { transform: 'translateX(0)', offset: at(pause + 2 * move + hold) },
-    { transform: 'translateX(0)', offset: 1 }
-  ], { duration: total, iterations: Infinity });
+    { transform: 'translateX(0)', offset: pause / total },
+    { transform: 'translateX(-' + dist + 'px)', offset: 1 }
+  ], { duration: total, iterations: Infinity, easing: 'linear' });
   mqRunning.add(el);
 }
-document.addEventListener('pointerover', e => {
-  const el = e.target.closest && e.target.closest(MQ_SEL);
-  if (!el) return;
-  clearTimeout(el._mqTimer);
-  mqStart(el);
-});
-document.addEventListener('pointerout', e => {
-  const el = e.target.closest && e.target.closest(MQ_SEL);
-  if (!el || el.contains(e.relatedTarget) || el.matches(MQ_ALWAYS)) return;
-  // a finger lifting fires pointerout right away: let touch scrolls play out
-  clearTimeout(el._mqTimer);
-  el._mqTimer = setTimeout(() => mqStop(el), e.pointerType === 'touch' ? 6000 : 0);
-});
-document.addEventListener('focusin', e => {
-  const el = e.target.closest && e.target.closest(MQ_SEL);
-  if (el) mqStart(el);
-});
-document.addEventListener('focusout', e => {
-  const el = e.target.closest && e.target.closest(MQ_SEL);
-  if (el && !el.matches(MQ_ALWAYS)) mqStop(el);
-});
-// Light upkeep: restart a running line when its text or width changed, drop
-// ones that left the page, and start the always-on lines when they overflow.
-setInterval(() => {
+// Every overflowing line scrolls on its own (no hover needed). Only lines
+// currently on screen run; the sweep below starts/stops them.
+function mqVisible(el){
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
+}
+function mqSweep(){
   mqRunning.forEach(el => {
-    if (!el.isConnected){ mqStop(el); return; }
-    if (el._mqKey !== el.textContent + '|' + el.clientWidth){ mqStop(el); mqStart(el); }
+    if (!el.isConnected || !el._mqInner || el._mqInner.parentNode !== el || !mqVisible(el)){ mqStop(el); return; }
+    if (el._mqKey !== mqKey(el)){ mqStop(el); mqStart(el); }
   });
-  document.querySelectorAll(MQ_ALWAYS).forEach(mqStart);
-}, 1500);
+  const todo = [];
+  document.querySelectorAll(MQ_SEL).forEach(el => {
+    if (!el._mqInner && el.clientWidth && el.scrollWidth - el.clientWidth > 2 && mqVisible(el)) todo.push(el);
+  });
+  todo.forEach(mqStart);
+}
+setInterval(mqSweep, 800);
+setTimeout(mqSweep, 300);
 
 function updateTrackMetaUI(t){
   $('trackMeta').classList.remove('is-empty');
@@ -21002,9 +21006,9 @@ function renderMiniQueue(){
     img.onerror = () => { img.style.visibility = 'hidden'; };
     img.src = artworkUrls(t)[0] || '';
     const meta = doc.createElement('div');
-    meta.innerHTML = '<div class="t"></div><div class="a"></div>';
-    meta.firstChild.textContent = t.title || '';
-    meta.lastChild.textContent = t.artist || '';
+    meta.innerHTML = '<div class="t marquee"></div><div class="a marquee"></div>';
+    setMarqueeText(meta.firstChild, t.title || '');
+    setMarqueeText(meta.lastChild, t.artist || '');
     r.appendChild(img); r.appendChild(meta);
     if (pos !== state.queuePos) r.addEventListener('click', () => { queueJumpTo(pos); updateMiniPlayerUI(); });
     return r;
