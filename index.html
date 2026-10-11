@@ -1682,6 +1682,8 @@ body.split-desktop .tester-banner .tb-send{width:30px;height:30px;padding:0;bord
 .tester-banner .tb-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .tester-banner .tb-close:hover{background:var(--panel-2);color:var(--text)}
 .tester-banner .tb-close svg{width:14px;height:14px}
+/* install banner grows the topbar's bottom padding; keep the pill centered in the title row above it, not the padded box */
+body.install-banner-on:not(.onb-active):not(.desktop-fs) .tester-banner{bottom:var(--ib-h)}
 body.onb-active .tester-banner,body.desktop-fs .tester-banner,body:has(#splash:not(.is-hidden)) .tester-banner,
 body:has(#flow-layer.is-open) .tester-banner,body:has(#lyricsFsLayer.is-open) .tester-banner,
 body:has(#danger-scrim.is-open) .tester-banner,body:has(#beta-lock:not([hidden])) .tester-banner{display:none}
