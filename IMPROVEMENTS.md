@@ -8915,9 +8915,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #354 (bug). Likely caused by the recent cover-color UI work (afd4f11). Related: `player-button-colors`.
 
 ### library-grid-thumb-sizes: Library grid mixes thumb sizes between 2x2 and 3x3 (Geethub #355)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #355. In the library, the 2x2 grid shows some 3x3-sized thumbs and the 3x3 grid shows some 2x2-sized thumbs. Each grid mode should render its own thumb size consistently.
 - **Touches:** library grid rendering, thumbnail size selection.
-- **Branch:**
+- **Branch:** agent/library-grid-thumbs
 - **Notes:** Synced from Geethub issue #355 (bug). No repro details.

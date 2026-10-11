@@ -384,7 +384,7 @@ body.onb-active .paste-guide{display:none}
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
 
-.lib-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 16px}
+.lib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px}
 #libraryGrid{margin-top:14px}
 /* library-search: live filter over the user's own saved playlists/albums
    and their tracks (see renderLibrary()). Styled like .import-row's input.
@@ -411,7 +411,7 @@ body.onb-active .paste-guide{display:none}
   input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select{font-size:16px!important}
 }
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
-.lib-grid.is-compact{grid-template-columns:repeat(3,1fr);gap:14px 12px}
+.lib-grid.is-compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
 .lib-artist-divider{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;margin-top:6px;background:none;border:0;border-bottom:1px solid var(--line, rgba(255,255,255,.1));color:var(--text);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .lib-artist-divider:first-child{margin-top:0}
 .lib-artist-divider .chev{flex:none;width:14px;height:14px;transition:transform .15s}
@@ -419,7 +419,7 @@ body.onb-active .paste-guide{display:none}
 .lib-artist-divider .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lib-artist-divider .ct{flex:none;font-weight:400;opacity:.6;font-size:.85em}
 .lib-grid.is-list .lib-artist-divider{margin-top:8px}
-.lib-card{position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
+.lib-card{min-width:0;position:relative;cursor:pointer;border-radius:var(--r-md);transition:transform var(--dur-ui) var(--ease-out)}
 .lib-card:active{transform:scale(.97)}
 .lib-card.is-drop-target{outline:2px solid var(--accent, #fff);outline-offset:3px;transform:scale(1.03)}
 .is-song-drag{opacity:.5}
@@ -1775,7 +1775,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 308px)))}
   .track-meta{width:min(340px,84vw)}
-  .lib-grid{grid-template-columns:repeat(2,1fr)}
+  .lib-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ctl-btn{width:44px;height:44px}
   .ctl-btn svg{width:18px;height:18px}
   .ctl-btn.main{width:58px;height:58px}
