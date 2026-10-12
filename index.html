@@ -543,6 +543,9 @@ body.onb-active .paste-guide{display:none}
      its focal point lands in the middle of the square tile instead of
      riding high and right. */
   transform:scale(1.06) translate(-4.4%,1.8%)}
+/* ON AIR / SwiiiRrrLL looping art, laid over the normal tile (#444) */
+.lib-card .art .pl-art-video{position:absolute;inset:0;z-index:1;background:#121212}
+.lib-card .art .pl-art-video img,.lib-card .art .pl-art-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 /* Liked Songs always gets a heart glyph instead of a track-art grid -
    it's the one playlist whose identity is the "liked" action itself,
    not its contents. */
@@ -5174,8 +5177,13 @@ const BLEND_ID = 'blend';                    // fixed id for the built-in SwiiiR
 const BLEND_NAME = 'SwiiiRrrLL';
 const NP_ID = 'nowplaying';                  // fixed id for the built-in live "what MAL GRIOT is playing" playlist
 const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
-const BLEND_THUMB_SRC = 'brand/assets/swirl-thumb.mp4';  // SwiiiRrrLL's looping library tile
-let blendThumbFailed = false;                // clip missing/unplayable - use the track collage instead
+// Looping art for SwiiiRrrLL and ON AIR (Geethub #444): a muted video laid over
+// the normal tile, still poster underneath. Reduced-motion gets the poster only;
+// a clip that won't load is removed, leaving the normal art showing.
+const PL_ART_VIDEO = {
+  [BLEND_ID]: { src: 'brand/assets/swirl-art.mp4', poster: 'brand/assets/swirl-art-poster.jpg' },
+  [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg' }
+};
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
@@ -8218,20 +8226,6 @@ function renderLibrary(){
         const playPromise = swellVideo.play();
         if (playPromise && playPromise.catch) playPromise.catch(() => {});
       }
-    } else if (id === BLEND_ID && !blendThumbFailed){
-      // SwiiiRrrLL's tile is always its own looping clip, not a track
-      // collage - its tracks change every day. Same autoplay handling as
-      // the CuRRentSSsss teaser above. If the clip can't load, fall back to
-      // the normal collage for the rest of the session.
-      artDiv.classList.add('single');
-      artDiv.innerHTML = '<div class="face video-face"><video autoplay muted loop playsinline src="' + BLEND_THUMB_SRC + '"></video></div>';
-      const blendVideo = artDiv.querySelector('.video-face video');
-      if (blendVideo){
-        blendVideo.muted = true;
-        blendVideo.addEventListener('error', () => { if (!blendThumbFailed){ blendThumbFailed = true; rerenderLibraryKeepPanel(); } });
-        const playPromise = blendVideo.play();
-        if (playPromise && playPromise.catch) playPromise.catch(() => {});
-      }
     } else if (withArt.length === 0 && (!pl.image || (!isSystemPl && !isAlbum && !isPodcast && !isArtist))){
       // No playable tracks (an empty playlist, even one with a cover) - the
       // E mark instead of an empty tile. The system tiles (Liked, Currents,
@@ -8285,6 +8279,22 @@ function renderLibrary(){
       }
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
+    }
+    if (PL_ART_VIDEO[id]){
+      const av = PL_ART_VIDEO[id];
+      const face = document.createElement('div'); face.className = 'pl-art-video';
+      const poster = document.createElement('img'); poster.src = av.poster; poster.alt = ''; poster.onerror = () => face.remove();
+      face.appendChild(poster);
+      if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
+        const v = document.createElement('video');
+        v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
+        v.poster = av.poster;
+        v.addEventListener('error', () => v.remove());
+        v.src = av.src;
+        face.appendChild(v);
+        const pp = v.play(); if (pp && pp.catch) pp.catch(() => {});
+      }
+      artDiv.appendChild(face);
     }
     if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       const menuBtn = document.createElement('button');
