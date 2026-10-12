@@ -545,6 +545,7 @@ body.onb-active .paste-guide{display:none}
 /* ON AIR / SwiiiRrrLL looping art, laid over the normal tile (#444) */
 .lib-card .art .pl-art-video{position:absolute;inset:0;z-index:1;background:#121212}
 .lib-card .art .pl-art-video img,.lib-card .art .pl-art-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.lib-card[data-pl-id="swell"] .art .pl-art-video video{transform:scale(1.06) translate(-4.4%,1.8%)}
 /* Liked Songs always gets a heart glyph instead of a track-art grid -
    it's the one playlist whose identity is the "liked" action itself,
    not its contents. */
@@ -5186,6 +5187,7 @@ const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
 // the normal tile, still poster underneath. Reduced-motion gets the poster only;
 // a clip that won't load is removed, leaving the normal art showing.
 const PL_ART_VIDEO = {
+  [SWELL_ID]: { src: 'brand/assets/swell-thumb-pingpong.mp4', poster: null },  // CuRRentSSsss: the clip showed only before its first drop (#456)
   [BLEND_ID]: { src: 'brand/assets/swirl-art.mp4', poster: 'brand/assets/swirl-art-poster.jpg' },
   [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg' }
 };
@@ -7271,7 +7273,7 @@ function setView(name){
   // here on every switch into library rather than only at creation time.
   if (name === 'library'){
     // same for SwiiiRrrLL's looping thumb
-    const teaserVideos = libraryGrid ? libraryGrid.querySelectorAll('.lib-card[data-pl-id="' + SWELL_ID + '"] .video-face video, .lib-card[data-pl-id="' + BLEND_ID + '"] .video-face video') : [];
+    const teaserVideos = libraryGrid ? libraryGrid.querySelectorAll('.lib-card .video-face video, .lib-card .pl-art-video video') : [];
     teaserVideos.forEach(v => {
       if (!v.paused) return;
       v.muted = true;
@@ -8286,15 +8288,17 @@ function renderLibrary(){
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
-    if (PL_ART_VIDEO[id]){
+    if (PL_ART_VIDEO[id] && !artDiv.querySelector('.video-face')){
       const av = PL_ART_VIDEO[id];
       const face = document.createElement('div'); face.className = 'pl-art-video';
-      const poster = document.createElement('img'); poster.src = av.poster; poster.alt = ''; poster.onerror = () => face.remove();
-      face.appendChild(poster);
+      if (av.poster){
+        const poster = document.createElement('img'); poster.src = av.poster; poster.alt = ''; poster.onerror = () => face.remove();
+        face.appendChild(poster);
+      }
       if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
         const v = document.createElement('video');
         v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto';
-        v.poster = av.poster;
+        if (av.poster) v.poster = av.poster;
         v.addEventListener('error', () => v.remove());
         v.src = av.src;
         face.appendChild(v);
