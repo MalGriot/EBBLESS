@@ -9703,7 +9703,7 @@ Add entries in this shape:
 - **Review notes:** Artist name overlay in grid modes is now inset 6% each side (was -8%) so it stays inside its own cell and still sits in front of the art (#422). Checked mobile 3x3 and 2x2, desktop, split-desktop. Cache v167.
 
 ### soundcloud-art-library-thumbs: SoundCloud album art not turned into library thumbs (bug) (Geethub #439)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** SoundCloud album art shows in the queue and main player but not as thumbnails in the library. Find where library thumbs are built and why SoundCloud art is skipped.
 - **Touches:** library thumb generation, SoundCloud art
@@ -9719,3 +9719,11 @@ Add entries in this shape:
 - **Branch:** agent/loose-album-tracks
 - **Notes:** Synced from Geethub #440. Bug. Related to album-auto-assign-artist (#378), albums-by-artist, artists-albums-resume-backfill.
 - **Review note:** Root cause: an artist page's Singles list = songs not found on any library album credited to that artist by exact name key. Two gaps: (1) albums filed under another artist name (importedUnder / first-song artist) never counted even when they credit this artist, (2) the one-shot album fill (stamped albumsAdded) skips albums left out of the picker, past the cap, or that failed to load, so their songs stay loose forever. Fix: dedup now also counts any library album crediting the artist (shared songDedupKey); new refileLooseArtistTracks runs after the launch backfill, at most weekly per device, max 3 artists with loose songs, re-reads the iTunes album list and adds only missing albums (max 3 per artist) whose tracklist holds a loose song. Tracks store no album name, so title match is the only metadata. Untested with real library data (helpers sit in the app IIFE); only booted the page and syntax-checked. SoundCloud artists are not covered by the weekly check. sw cache v169.
+
+### nowplaying-worker-art: ON AIR feed should carry album art so every listener sees it (follow-up to Geethub #439)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The worker's /nowplaying feed returns only video id, title and artist. Store and return `art` too, and have the app send it when posting, so listeners without the song in their library still see the cover on the ON AIR / OFF AIR card.
+- **Touches:** worker/src/nowplaying.js (applyPost, viewOf), app npPost
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Needs a worker deploy, which the owner must approve. Client-side library fallback already shipped (cache v171).
