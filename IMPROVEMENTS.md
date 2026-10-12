@@ -9816,11 +9816,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #452. Related to queue-history-arrows (#352) and queue-arrows-centered-history-between (#449).
 
 ### ad-timer-progress-fill: Waiting out the ad timer: progress bar and play circle show real fill (Geethub #453)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea. When a track is loaded and is only waiting out the ad timer, keep the current loading animations until the track is loaded, then switch the progress bar and the play button circle to filling up with actual progress.
 - **Touches:** Player progress bar, play button.
-- **Branch:**
+- **Branch:** agent/ad-timer-progress
 - **Notes:** Synced from Geethub #453.
 
 ### podcast-captions-ahead: Podcast captions run a few lines ahead of the audio (bug, Geethub #454)
