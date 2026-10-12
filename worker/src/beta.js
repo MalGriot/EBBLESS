@@ -214,12 +214,21 @@ export function rejoinFields(t, now = Date.now()) {
   return out;
 }
 
+// The playlist link a tester put in the signup form, handed back only when
+// the app asks (`playlist: true`, i.e. it hasn't imported it yet) so the app
+// can load it as a playlist on first login. Anything that isn't a plain
+// http(s) link is dropped.
+export function signupPlaylistFields(t, want) {
+  const link = want === true ? str(t && t.signup_playlist, 300) : '';
+  return /^https?:\/\/\S+$/i.test(link) ? { playlist: link } : {};
+}
+
 async function handleMe(request, env, ctx, h) {
   const { body, error } = await readBody(request, h.json, 2_000);
   if (error) return error;
-  const t = TOKEN_RE.test(String(body.token || '')) ? (await sheet(env, 'me', { token: body.token })).tester : null;
+  const t = TOKEN_RE.test(String(body.token || '')) ? (await sheet(env, 'me', { token: body.token, ...(body.playlist === true ? { playlist: true } : {}) })).tester : null;
   if (!t) return h.json({ error: 'This tester link isn\'t active.' }, 404);
-  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
+  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t), ...rejoinFields(t), ...signupPlaylistFields(t, body.playlist) });
 }
 
 // "Join the next beta" on the recap: one tap, token only. The Sheet puts the
@@ -357,12 +366,13 @@ async function handleLink(request, env, ctx, h) {
 // Shared by /beta/claim and the redirect sign-in below: a verified Google
 // account -> its tester token (linked earlier, or found by the email it
 // signed up with), or null.
-async function claimForGoogle(g, env) {
+async function claimForGoogle(g, env, wantPlaylist) {
+  const pl = wantPlaylist === true ? { playlist: true } : {};
   let token = await env.PROFILES.get(betaLinkKey(g.sub));
-  let t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token })).tester : null;
+  let t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token, ...pl })).tester : null;
   if (!t && g.email) {
     // Older Sheet scripts don't know the action: same as no match.
-    const r = await sheet(env, 'token_by_email', { email: g.email }).catch(() => null);
+    const r = await sheet(env, 'token_by_email', { email: g.email, ...pl }).catch(() => null);
     if (r && r.tester && TOKEN_RE.test(String(r.token || ''))) {
       token = r.token; t = r.tester;
       await env.PROFILES.put(betaLinkKey(g.sub), token);
@@ -378,10 +388,10 @@ async function handleClaim(request, env, ctx, h) {
   const g = await googleSub(body, env, ctx, h);
   if (g.error) return g.error;
   if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
-  const c = await claimForGoogle(g, env);
+  const c = await claimForGoogle(g, env, body.playlist === true);
   if (!c) return h.json({ error: NOT_ON_LIST }, 404);
   const { token, t } = c;
-  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t) });
+  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t), ...signupPlaylistFields(t, body.playlist) });
 }
 
 // Google sign-in by redirect (GSI ux_mode 'redirect', login_uri =

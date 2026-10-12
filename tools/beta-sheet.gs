@@ -410,8 +410,8 @@ function doPost(e) {
   try {
     if (b.action === 'status') return out_({ ok: true, active: activeCount_(), cap: CAP });
     if (b.action === 'signup') return out_(signup_(b.applicant || {}));
-    if (b.action === 'me') return out_(me_(b.token));
-    if (b.action === 'token_by_email') return out_(tokenByEmail_(b.email));
+    if (b.action === 'me') return out_(me_(b.token, b.playlist === true));
+    if (b.action === 'token_by_email') return out_(tokenByEmail_(b.email, b.playlist === true));
     if (b.action === 'report') return out_(report_(b));
     if (b.action === 'activity') return out_(activity_(b));
     if (b.action === 'rejoin') return out_(rejoin_(b.token));
@@ -470,7 +470,10 @@ function activeTester_(token) {
   })[0] || null;
 }
 
-function me_(token) {
+// wantPlaylist: also return the playlist link they put in the signup form
+// (Applicants.Spotify_playlist), for the app to load on first login. Only
+// asked for until the app has imported it, so the usual call stays one read.
+function me_(token, wantPlaylist) {
   const t = activeTester_(token);
   if (!t) return { ok: true, tester: null };
   // feedback_request_sent (ms epoch, or null if not emailed yet): the worker
@@ -478,7 +481,12 @@ function me_(token) {
   // from window_start once they've rejoined for a new round.
   const sent = t.feedback_request_sent instanceof Date ? t.feedback_request_sent.getTime() : Date.parse(t.feedback_request_sent);
   const round = nextRound_();
-  return { ok: true, tester: { id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null, window_anchor: sent ? (feedbackBase_(t) || null) : null,
+  let signupPlaylist = '';
+  if (wantPlaylist && t.applicant_id) {
+    const a = records_(sheet_(APPLICANTS)).filter(function (r) { return r.applicant_id === t.applicant_id; })[0];
+    signupPlaylist = a ? String(a.Spotify_playlist || '').trim() : '';
+  }
+  return { ok: true, tester: { signup_playlist: signupPlaylist, id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null, window_anchor: sent ? (feedbackBase_(t) || null) : null,
     window_start: ms_(t.window_start) || null, rejoin_pending: rejoinOpen_(t), next_round_start: round.at || null, next_round_label: round.label,
     round: roundOf_(t), next_round: nextRoundFor_(t, round), feedback_given: feedbackGiven_(t) } };
 }
@@ -487,14 +495,14 @@ function me_(token) {
 // is an Active tester's google_email (the account they signed up with) or
 // invite address gets that tester's token (the same thing the invite email
 // already gave that inbox). Never called without SHEET_SECRET.
-function tokenByEmail_(email) {
+function tokenByEmail_(email, wantPlaylist) {
   email = String(email || '').trim().toLowerCase();
   const same = function (v) { return String(v || '').trim().toLowerCase() === email; };
   const t = email ? records_(sheet_(TESTERS)).filter(function (r) {
     return r.tester_status === 'Active' && r.access_token && (same(r.google_email) || same(r.email));
   })[0] : null;
   if (!t) return { ok: true, tester: null };
-  const out = me_(t.access_token);
+  const out = me_(t.access_token, wantPlaylist);
   out.token = String(t.access_token);
   return out;
 }

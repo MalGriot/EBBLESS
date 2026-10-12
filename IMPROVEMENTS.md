@@ -9753,12 +9753,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #445. Check git history for the old blinking style. Related to feedback-prompt.
 
 ### beta-signup-playlist-preload: Beta signup: the playlist a tester pastes in the form should be preloaded when they first log in (Geethub #446)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The playlist a tester pastes into the beta signup form should already be in the app, loaded, the first time they log in.
 - **Touches:** beta signup form (beta/index.html), worker/src/beta.js, first-login flow
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/beta-playlist-preload
 - **Notes:** Synced from Geethub #446. Related to google-email-signup-access. Least clicks: no pasting inside the app.
+- **Review notes:** The signup form already collected the playlist link (Applicants.Spotify_playlist). Now /beta/me and /beta/claim hand it to the app once, and the app loads it as a playlist on first login with no taps; it marks itself done on the device and skips it if that playlist is already in the library, so later logins never import twice. Needs deploy: worker, and the Apps Script (tools/beta-sheet.gs `me_` / `tokenByEmail_`); until the script is redeployed nothing preloads (safe no-op). Not verified: a real signup-to-login run against the live Sheet/Google (worker tests and script syntax only). Cache v172.
 
 ### library-all-artist-dropdown-scroll-jump: Library "All" mode: opening or closing an artist dropdown jumps the list to the top (bug) (Geethub #447)
 - **Status:** ready

@@ -3009,8 +3009,21 @@ body.week-up-on{overflow:hidden}
   if (/^[0-9a-f]{32}$/.test(bc || '')){ window.ebblessGoogleCode = bc; }
   if (qt || be || bc){ q.delete('t'); q.delete('c'); const s = q.toString(); try { history.replaceState(history.state, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch(e){} }
 
+  // The playlist they pasted into the signup form (worker sends it only
+  // while LS_PL_DONE is unset). Parked in LS_PL for the app to import as a
+  // playlist on first login; the app sets LS_PL_DONE once it has, so later
+  // logins and other devices never ask for it again.
+  const LS_PL = 'ebbless:betaSignupPlaylist', LS_PL_DONE = 'ebbless:betaSignupPlaylistDone';
+  const wantPl = () => !ls.get(LS_PL_DONE);
+  function savePlaylist(d){
+    const u = d && typeof d.playlist === 'string' ? d.playlist.trim().slice(0, 300) : '';
+    if (!u || !/^https?:\/\/\S+$/i.test(u) || !wantPl()) return;
+    ls.set(LS_PL, u);
+    try { window.dispatchEvent(new Event('ebbless:betaplaylist')); } catch(e){}
+  }
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
+    savePlaylist(d);
     ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
       // "Join the next beta" on the 2-weeks-up recap (absent when not set)
       rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
@@ -3020,7 +3033,7 @@ body.week-up-on{overflow:hidden}
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
     try {
-      const res = await fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+      const res = await fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...(wantPl() ? { playlist: true } : {}) }) });
       if (res.ok){ saveMe(await res.json().catch(() => null)); return 'ok'; }
       return res.status === 404 ? 'no' : 'net';
     } catch(e){ return 'net'; }
@@ -5910,7 +5923,8 @@ async function betaAccountLink(idToken, sub){
     const renewing = !!(gate && gate.renewing && gate.renewing());
     if (gate && (gate.locked() || renewing)){
       if (!renewing) gate.msg('Checking your Google account...');
-      const res = await post('/beta/claim', { idToken });
+      let wantPl = true; try { wantPl = !localStorage.getItem('ebbless:betaSignupPlaylistDone'); } catch(e){}
+      const res = await post('/beta/claim', wantPl ? { idToken, playlist: true } : { idToken });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil, data); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
       else if (renewing) gate.leaseFailed();
@@ -11866,6 +11880,26 @@ function applyShareTargetFromUrl(){
   urlInput.value = candidate.slice(0, 250);
   try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
 }
+
+// Beta signup playlist (Geethub #446): the link a tester put in the signup
+// form arrives with /beta/me or /beta/claim (beta lock script parks it in
+// LS_BETA_PL) and loads here as a playlist on their first login, no pasting.
+// Marked done first, so a failed or repeat run never imports twice; also
+// skipped if that playlist is already in the library (another device).
+const LS_BETA_PL = 'ebbless:betaSignupPlaylist', LS_BETA_PL_DONE = 'ebbless:betaSignupPlaylistDone';
+let betaPlaylistReady = false;
+function applyBetaSignupPlaylist(){
+  if (!betaPlaylistReady) return;
+  let link = '';
+  try { link = localStorage.getItem(LS_BETA_PL) || ''; localStorage.removeItem(LS_BETA_PL); localStorage.setItem(LS_BETA_PL_DONE, '1'); } catch(e){}
+  if (!link) return;
+  const parsed = parseImportLink(link);
+  if (!parsed || parsed.source === 'podcast') return;
+  const { id } = libraryEntryForParsedLink(parsed);
+  if (getLibrary().includes(id)) return;
+  beginImportFromParsedLink(parsed);
+}
+window.addEventListener('ebbless:betaplaylist', applyBetaSignupPlaylist);
 
 importForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -24021,6 +24055,7 @@ function startApp(){
     // screen at this point (z-index 9999 vs. #import-overlay's 60) so this
     // resolves quietly underneath it, same as any other cold-boot work here.
     applySharedImportFromUrl();
+    betaPlaylistReady = true; applyBetaSignupPlaylist();
   } catch(e){
     // Best-effort recovery: land on whatever view makes sense rather than
     // leaving the DOM in whatever half-rendered state the throw above left
