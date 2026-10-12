@@ -9792,19 +9792,19 @@ Add entries in this shape:
 - **Notes:** Follow-up to remove-history-button (Geethub #431), which was built but apparently misses mobile or is not yet deployed. Check whether #431 is live before building.
 
 ### history-date-dividers: History: section dividers with dates, last 7 days only (Geethub #450)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea. In the History panel, group songs under date dividers (month spelled out and day, no year, e.g. "October 12"). Only go back 7 days max.
 - **Touches:** History panel.
-- **Branch:**
+- **Branch:** agent/history-panel-dividers-back
 - **Notes:** Synced from Geethub #450.
 
 ### queue-history-back-arrow: Queue: History panel needs a back arrow to return to the queue (Geethub #451)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea. The History view opened from the queue should have a back arrow, like the albums view in the artist window, that returns you to the queue.
 - **Touches:** History panel, queue.
-- **Branch:**
+- **Branch:** agent/history-panel-dividers-back
 - **Notes:** Synced from Geethub #451.
 
 ### queue-arrows-skip-ends: Queue arrows: skip-to-first and skip-to-last buttons (Geethub #452)

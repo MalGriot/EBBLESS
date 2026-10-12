@@ -1332,6 +1332,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #hist-scrim.is-open{opacity:1;pointer-events:auto}
 #hist-panel{position:fixed;z-index:42;background:var(--panel);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.5)}
 #histBody .track-row{cursor:pointer}
+.hist-day{text-transform:none;letter-spacing:.3px;font-size:11.5px}
 .hist-empty{padding:28px 20px;color:var(--faint);font-size:13px;text-align:center}
 @media (min-width:860px){
   #hist-panel{top:var(--topbar-h);right:0;bottom:0;width:380px;border-left:1px solid var(--border);
@@ -4107,8 +4108,8 @@ body.week-up-on{overflow:hidden}
     <div class="queue-head">
       <h2>History</h2>
       <button class="clear" id="histClearBtn">Clear</button>
-      <button class="close-btn" id="histCloseBtn" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
+      <button class="close-btn" id="histCloseBtn" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>
       </button>
     </div>
     <div class="queue-scroll">
@@ -8564,14 +8565,23 @@ let playHistOpen = false;
 
 function renderPlayHistory(){
   histBody.textContent = '';
-  const list = lsGet(LS_PLAYHIST, []);
+  // #450: only the last 7 days (today + 6 earlier), grouped under date dividers
+  const cut = new Date(); cut.setHours(0,0,0,0); cut.setDate(cut.getDate() - 6);
+  const list = lsGet(LS_PLAYHIST, []).filter(h => h.ts >= cut.getTime());
   if (!list.length){
     const d = document.createElement('div'); d.className = 'hist-empty';
     d.textContent = 'Songs you play for more than 10 seconds show up here.';
     histBody.appendChild(d);
     return;
   }
+  let lastDay = '';
   list.forEach(h => {
+    const day = new Date(h.ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    if (day !== lastDay){
+      lastDay = day;
+      const hd = document.createElement('div'); hd.className = 'q-section-label hist-day'; hd.textContent = day;
+      histBody.appendChild(hd);
+    }
     const row = document.createElement('div'); row.className = 'track-row';
     const img = document.createElement('img'); attachArtworkFallback(img, h);
     const meta = document.createElement('div'); meta.className = 'meta';
@@ -8603,7 +8613,8 @@ function closePlayHistory(){
   histPanel.classList.remove('is-open'); histScrim.classList.remove('is-open');
 }
 $('queueHistBtn').addEventListener('click', () => playHistOpen ? closePlayHistory() : openPlayHistory());
-$('histCloseBtn').addEventListener('click', closePlayHistory);
+// #451: the back arrow returns to the queue (on mobile opening History closed it)
+$('histCloseBtn').addEventListener('click', () => { closePlayHistory(); if (!state.queueOpen) openQueuePanel(); });
 histScrim.addEventListener('click', closePlayHistory);
 $('histClearBtn').addEventListener('click', () => { lsSet(LS_PLAYHIST, []); renderPlayHistory(); });
 attachSwipeToDismiss(histPanel, closePlayHistory);
