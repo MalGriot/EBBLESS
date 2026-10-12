@@ -6585,7 +6585,7 @@ Add entries in this shape:
   **Decision (2026-09-30):** cover every target that's feasible (phone <-> desktop via accounts sync; speakers via Cast / Remote Playback API; car via Media Session). Sequenced after `accounts-profiles`.
   **Split (2026-09-30):** part 1 (this lane, started now): speakers (Cast / Remote Playback) + car/lock-screen (Media Session completeness). Part 2, phone <-> desktop session handoff, starts after `accounts-profiles` lands.
   **Part 2 started (2026-09-30):** phone <-> desktop handoff on `agent/handoff-devices`, branched from `agent/accounts-profiles` (merge accounts first).
-  **Part 1 built (ff8c79a, `agent/cross-platform-handoff`):** full Media Session (real-size artwork, all actions except ±10s on iOS so prev/next stay, guarded position state); Chromecast via lazy Cast SDK - YouTube tracks to YouTube receiver by id, podcasts to Default Media Receiver, EBBLESS keeps the queue and advances on the device, mirrored controls, "Playing on <device>" bar, local resume at position on stop; AirPlay button for podcast episodes on Safari. Unverified on real hardware: YouTube receiver accepting load-by-id (falls back locally with a toast if not). 
+  **Part 1 built (ff8c79a, `agent/cross-platform-handoff`):** full Media Session (real-size artwork, all actions except ±10s on iOS so prev/next stay, guarded position state); Chromecast via lazy Cast SDK - YouTube tracks to YouTube receiver by id, podcasts to Default Media Receiver, EBBLESS keeps the queue and advances on the device, mirrored controls, "Playing on <device>" bar, local resume at position on stop; AirPlay button for podcast episodes on Safari. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play on real hardware: YouTube receiver accepting load-by-id (falls back locally with a toast if not). 
   **Part 2 built (0a47011, `agent/handoff-devices`, contains accounts):** per-device `now` session in the synced profile (queue <=100, index, position, play state; newest per device, <=8 devices, 24h expiry relative to newest); "Continue from <device>?" prompt on open/focus when another device played in the last 30 min; Continue restores queue/index/position; the other device pauses with "Playing on <device>" on its next sync. ~12 KV writes/hour of listening max. Merge note: one trivial CSS conflict with `encourage-liking-songs` (both append a block after `.sw-update-toast` rules) - keep both.
 
 ### contextual-awareness: Music that adapts to weather, time of day, movement
@@ -7608,7 +7608,7 @@ Add entries in this shape:
 - **Touches:** Settings layout.
 - **Branch:** agent/settings-feedback-first
 - **Notes:** Synced from Geethub issue #239 (bug).
-  **Built (be10352):** whole Feedback & support block moved to top of Settings (its other rows are beta-hidden, so moving only the row would leave an empty heading). `ensureAccountBlock()` now inserts Account below it. Unverified in browser; check the tutorial crossfade step still shows the toggle on small screens.
+  **Built (be10352):** whole Feedback & support block moved to top of Settings (its other rows are beta-hidden, so moving only the row would leave an empty heading). `ensureAccountBlock()` now inserts Account below it. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play in browser; check the tutorial crossfade step still shows the toggle on small screens.
 
 ### strip-topic-artist-names: Artist names still show " - Topic" in places
 - **Status:** merged
@@ -7620,7 +7620,7 @@ Add entries in this shape:
 - **Touches:** track artist normalization (see existing `- Topic` strip near index.html:5158, 7716).
 - **Branch:** agent/strip-topic-artist-names
 - **Notes:** Synced from Geethub issue #240 (bug).
-  **Built (6e4965c):** `stripTopicSuffix()` / `stripTopicArtists()` applied in fetchYouTubePlaylist, fetchYouTubeVideo, fetchArtist, getCachedPlaylist (cleans old saved data on load), resolveDiscoverMetadata, device handoff; old album-only inline replaces removed. Matching/search and worker untouched. Side effect: stored `channel` also stripped on non-album YouTube imports. Unverified in browser.
+  **Built (6e4965c):** `stripTopicSuffix()` / `stripTopicArtists()` applied in fetchYouTubePlaylist, fetchYouTubeVideo, fetchArtist, getCachedPlaylist (cleans old saved data on load), resolveDiscoverMetadata, device handoff; old album-only inline replaces removed. Matching/search and worker untouched. Side effect: stored `channel` also stripped on non-album YouTube imports. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play in browser.
 
 ### lockscreen-art-youtube-thumb: Lock screen shows YouTube thumbnail instead of album art for one track
 - **Status:** merged
@@ -7642,7 +7642,7 @@ Add entries in this shape:
 - **Touches:** add-to-playlist picker.
 - **Branch:** agent/add-to-playlist-all-playlists
 - **Notes:** Synced from Geethub issue #243 (bug). Title only, no repro details.
-  **Built (46efa84):** new `addablePlaylists()` used by `openAddToPlaylistPicker` and `openSingleTrackDestinationPicker`; was filtering to `type === "custom"` only. Now lists imported playlists too; excludes CuRRentSSsss, SwiiiRrrLL, albums, podcasts, single tracks. Lists grow to 55vh/50vh. Unverified in browser.
+  **Built (46efa84):** new `addablePlaylists()` used by `openAddToPlaylistPicker` and `openSingleTrackDestinationPicker`; was filtering to `type === "custom"` only. Now lists imported playlists too; excludes CuRRentSSsss, SwiiiRrrLL, albums, podcasts, single tracks. Lists grow to 55vh/50vh. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play in browser.
 
 ### podcast-chapters-captions: Podcast chapters and captions
 - **Status:** merged
@@ -8778,7 +8778,7 @@ Add entries in this shape:
 - **Description:** Idea, Mal's feedback (Android, 2026-10-02). Device defaults for those links open in EBBLESS, or EBBLESS appears in the share/open menu. Likely needs share target / URL handling in manifest.json.
 - **Touches:** manifest.json share_target, link capture.
 - **Branch:** agent/music-links-open
-- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Audit found the supported piece already shipped: manifest.json share_target (GET, share_title/share_text/share_url) plus applyShareTargetFromUrl() in index.html, which pulls the first http(s) URL and runs it through the paste box, so Spotify, Apple Music and YouTube (Music) links shared from those apps import. EBBLESS appears in the Android Share sheet once installed as a PWA (WebAPK); no code change needed. Cannot be done: Android will not let a PWA claim other sites' https links (Spotify, music.apple.com, music.youtube.com) as default open targets; that needs a native app with verified assetlinks on those domains, and scope_extensions only works for origins you control. Manifest protocol_handlers/launch_handler do not help (custom web+ schemes only). Unverified on a real Android device in this pass; the share-sheet entry may need a PWA reinstall if installed before share_target was added.
+- **Notes:** From Mal's own tester feedback (MATCH_REPORTS). Audit found the supported piece already shipped: manifest.json share_target (GET, share_title/share_text/share_url) plus applyShareTargetFromUrl() in index.html, which pulls the first http(s) URL and runs it through the paste box, so Spotify, Apple Music and YouTube (Music) links shared from those apps import. EBBLESS appears in the Android Share sheet once installed as a PWA (WebAPK); no code change needed. Cannot be done: Android will not let a PWA claim other sites' https links (Spotify, music.apple.com, music.youtube.com) as default open targets; that needs a native app with verified assetlinks on those domains, and scope_extensions only works for origins you control. Manifest protocol_handlers/launch_handler do not help (custom web+ schemes only). Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play on a real Android device in this pass; the share-sheet entry may need a PWA reinstall if installed before share_target was added.
 
 ### shazam-feature: Shazam-style song identification
 - **Status:** archived
@@ -9830,7 +9830,7 @@ Add entries in this shape:
 - **Touches:** Podcast captions.
 - **Branch:** agent/podcast-caption-sync
 - **Notes:** Synced from Geethub #454.
-- **Built:** Generated captions placed each slice by byte share of the player's reported duration; if that duration comes back short (no length header) every later slice lands early. Now the seconds-per-byte rate is measured from the first full decoded slice (rec.spb) and used for slice offsets. Unverified with real audio. SW cache v175.
+- **Built:** Generated captions placed each slice by byte share of the player's reported duration; if that duration comes back short (no length header) every later slice lands early. Now the seconds-per-byte rate is measured from the first full decoded slice (rec.spb) and used for slice offsets. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play with real audio. SW cache v175.
 
 ### off-air-thumb-loop-fade: Off Air thumbnail video should fade into a loop (Geethub #455)
 - **Status:** ready

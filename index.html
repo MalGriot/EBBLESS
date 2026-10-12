@@ -19085,6 +19085,13 @@ async function generateCaptions(t, onUpdate){
   capPrune();
   const lang = capLang(t), english = lang === 'en';
   const rec = (await capGet(id)) || { ts: Date.now(), total: 0, parts: {}, done: false };
+  // records saved before slices were timed by measured seconds-per-byte
+  // (capV 2) carry the old timing baked in: drop their slices so they
+  // regenerate with the new timing the next time the episode plays
+  if (rec.capV !== 2){
+    rec.parts = {}; rec.done = false; delete rec.spb; rec.capV = 2;
+    await capPut(id, rec);
+  }
   job.rec = rec; job.lang = lang;
   if (job.cancelled) return;
   if (rec.a0 == null){
