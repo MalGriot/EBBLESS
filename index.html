@@ -8038,6 +8038,8 @@ function markNowPlaying(){
 // singles/features sets point at their artist; anything else falls back to
 // the first-named artist on its first song.
 const LS_ALBUM_ARTIST_FOLDED = 'ebbless:albumArtistFolded'; // { artistKey: true }
+// compare titles ignoring case/punctuation and edition tags (Remastered ####, Single Version, feat. ...)
+function songDedupKey(title){ return normalizeArtistQuery(String(title || '').replace(/\s*[\(\[][^\)\]]*\b(remaster(ed)?|single version|radio edit|feat\.?|ft\.?|featuring|with|version|mono|stereo|deluxe)\b[^\)\]]*[\)\]]/gi, '').replace(/\s+-\s+(\d{4}\s+)?(remaster(ed)?|single version|radio edit|mono|stereo)\b.*$/i, '')) || normalizeArtistQuery(title); }
 function albumArtistName(pl){
   if (!pl) return '';
   if (pl.importedUnder) return pl.importedUnder;
@@ -8697,9 +8699,14 @@ function toggleLibraryPlaylistPanel(id){
   // aren't on one of those albums (singles); the albums hold the rest
   const artistAlbumIds = isArtistEntry(pl) ? orderedLibraryIds().filter(aid => { const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && artistNameKey(albumArtistName(a)) === artistNameKey(pl.name); }) : [];
   // compare titles ignoring case/punctuation and edition tags (Remastered ####, Single Version, feat. ...)
-  const songKey = (title) => normalizeArtistQuery(String(title || '').replace(/\s*[\(\[][^\)\]]*\b(remaster(ed)?|single version|radio edit|feat\.?|ft\.?|featuring|with|version|mono|stereo|deluxe)\b[^\)\]]*[\)\]]/gi, '').replace(/\s+-\s+(\d{4}\s+)?(remaster(ed)?|single version|radio edit|mono|stereo)\b.*$/i, '')) || normalizeArtistQuery(title);
+  const songKey = songDedupKey;
   const onAlbum = new Map(); // song key -> { pl: album, t: its track }
-  artistAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => { if (!t) return; const k = songKey(t.title), prev = onAlbum.get(k); if (!prev || (!prev.t.videoId && t.videoId)) onAlbum.set(k, { pl: a, t }); }); });
+  // #440: songs also count as on an album when any non-singles album in the
+  // library credits this artist on them, even if the album is filed under
+  // another artist name (so it isn't in artistAlbumIds above).
+  const wantArtist = normalizeArtistQuery(pl.name);
+  const dedupAlbumIds = isArtistEntry(pl) ? artistAlbumIds.concat(orderedLibraryIds().filter(aid => { if (artistAlbumIds.includes(aid)) return false; const a = getCachedPlaylist(aid); return !!a && isAlbumEntry(a) && !a.artistSet && (a.tracks || []).some(t => t && songCreditsArtist(t.artist, wantArtist)); })) : [];
+  dedupAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => { if (!t) return; const k = songKey(t.title), prev = onAlbum.get(k); if (!prev || (!prev.t.videoId && t.videoId)) onAlbum.set(k, { pl: a, t }); }); });
   const adoptedInto = new Set();
   let singlesLabelShown = false;
   if (!pl.tracks.length){
@@ -11698,6 +11705,58 @@ async function runArtistAlbumsBackfill(){
     else if (!pl.extrasAdded) await addArtistExtras(pl);
   }
   await recheckCappedPlaylists().catch(e => console.warn('[ebbless] capped playlist recheck failed', e));
+  await refileLooseArtistTracks().catch(e => console.warn('[ebbless] loose track refile failed', e));
+}
+// Geethub #440: songs on an artist's page that no album in the library holds
+// show as loose "Singles". An artist's album fill is one-shot (stamped
+// albumsAdded) and skips albums left out of the picker, past the cap, or that
+// failed to load, so those songs stay loose. At most once a week per device
+// (LS_LOOSE_REFILE_AT), for up to REFILE_ARTISTS_PER_RUN artists that have
+// loose songs, re-read the iTunes album list and add only the missing albums
+// whose track list holds a loose song (max REFILE_ALBUMS_PER_ARTIST each).
+// Once they land the artist page files those songs under the album.
+const LS_LOOSE_REFILE_AT = 'ebbless:looseRefileAt';
+const REFILE_EVERY_MS = 7 * 24 * 60 * 60 * 1000, REFILE_ARTISTS_PER_RUN = 3, REFILE_ALBUMS_PER_ARTIST = 3;
+function looseArtistTrackKeys(pl){
+  const want = normalizeArtistQuery(pl.name), have = new Set();
+  getLibrary().forEach(id => {
+    const a = getCachedPlaylist(id);
+    if (!a || !isAlbumEntry(a) || a.artistSet) return;
+    if (artistNameKey(albumArtistName(a)) !== artistNameKey(pl.name) && !(a.tracks || []).some(t => t && songCreditsArtist(t.artist, want))) return;
+    (a.tracks || []).forEach(t => { if (t) have.add(songDedupKey(t.title)); });
+  });
+  return new Set((pl.tracks || []).filter(t => t && t.title && !have.has(songDedupKey(t.title))).map(t => songDedupKey(t.title)));
+}
+async function refileLooseArtistTracks(){
+  if (Date.now() - lsGet(LS_LOOSE_REFILE_AT, 0) < REFILE_EVERY_MS || !navigator.onLine) return;
+  let artists = 0;
+  for (const id of getLibrary()){
+    const pl = getCachedPlaylist(id);
+    if (!pl || !isArtistEntry(pl) || pl.type === 'sc_artist' || !isSaved(id) || !pl.albumsAdded || artistAlbumsInFlight.has(id)) continue;
+    const loose = looseArtistTrackKeys(pl);
+    if (!loose.size) continue;
+    if (artists++ >= REFILE_ARTISTS_PER_RUN) break;
+    const albums = await itunesArtistAlbums(pl).catch(() => null);
+    if (!albums) continue;
+    let added = 0;
+    for (const a of albums){
+      if (added >= REFILE_ALBUMS_PER_ARTIST || getLibrary().includes(a.id)) continue;
+      const cut = a.id.indexOf(':');
+      const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: a.id.slice(cut + 1), entity: 'song', limit: '200', country: a.id.slice(0, cut) })).catch(() => null);
+      if (!res || !res.ok) continue;
+      const rows = ((await res.json().catch(() => ({}))).results || []).filter(r => r && r.wrapperType === 'track');
+      if (!rows.some(r => loose.has(songDedupKey(r.trackName)))) { await sleep(400); continue; }
+      if (await queueBackgroundLoad(a.id, a.type || 'am_album')){
+        const got = getCachedPlaylist(a.id);
+        if (got){ got.importedUnder = pl.name; if (a.releaseDate) got.releaseDate = a.releaseDate; lsSet(LS_PL(a.id), got); }
+        saveToLibrary(a.id);
+        rerenderLibraryKeepPanel();
+        added++;
+      }
+      await sleep(400);
+    }
+  }
+  lsSet(LS_LOOSE_REFILE_AT, Date.now());
 }
 // Geethub #406: YouTube playlists imported before the worker followed
 // continuations stopped at the page's first 100 videos. Once per playlist
