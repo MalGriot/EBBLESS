@@ -9792,7 +9792,7 @@ Add entries in this shape:
 - **Notes:** Follow-up to remove-history-button (Geethub #431), which was built but apparently misses mobile or is not yet deployed. Check whether #431 is live before building.
 
 ### history-date-dividers: History: section dividers with dates, last 7 days only (Geethub #450)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea. In the History panel, group songs under date dividers (month spelled out and day, no year, e.g. "October 12"). Only go back 7 days max.
 - **Touches:** History panel.
@@ -9800,7 +9800,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #450.
 
 ### queue-history-back-arrow: Queue: History panel needs a back arrow to return to the queue (Geethub #451)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea. The History view opened from the queue should have a back arrow, like the albums view in the artist window, that returns you to the queue.
 - **Touches:** History panel, queue.
@@ -9808,7 +9808,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #451.
 
 ### queue-arrows-skip-ends: Queue arrows: skip-to-first and skip-to-last buttons (Geethub #452)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea. Add skip-to-first and skip-to-last buttons beside the queue history arrows to jump to the earliest and the most recent saved queue. Use the skip-track icons from the player.
 - **Touches:** Queue header arrows row.
@@ -9816,7 +9816,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #452. Related to queue-history-arrows (#352) and queue-arrows-centered-history-between (#449).
 
 ### ad-timer-progress-fill: Waiting out the ad timer: progress bar and play circle show real fill (Geethub #453)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea. When a track is loaded and is only waiting out the ad timer, keep the current loading animations until the track is loaded, then switch the progress bar and the play button circle to filling up with actual progress.
 - **Touches:** Player progress bar, play button.
@@ -9824,7 +9824,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #453.
 
 ### podcast-captions-ahead: Podcast captions run a few lines ahead of the audio (bug, Geethub #454)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug. Podcast captions are consistently a few lines ahead of what is being said. Find the sync offset and fix it.
 - **Touches:** Podcast captions.
@@ -9832,7 +9832,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #454.
 
 ### off-air-thumb-loop-fade: Off Air thumbnail video should fade into a loop (Geethub #455)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea. The Off Air thumb video should fade into a seamless loop.
 - **Touches:** Off Air thumb video.
@@ -9840,7 +9840,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #455.
 
 ### currents-thumb-video-missing: Currents thumbnail video is missing (bug, Geethub #456)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug. The Currents playlist thumb video does not show. Find why and restore it.
 - **Touches:** Currents thumb.
