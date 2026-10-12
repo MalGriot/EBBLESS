@@ -9729,12 +9729,13 @@ Add entries in this shape:
 - **Notes:** Needs a worker deploy, which the owner must approve. Client-side library fallback already shipped (cache v171).
 
 ### queue-header-arrows-own-row: Queue window: move the arrows to their own row so the "Queue" title is fully visible (Geethub #443)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** In the queue window, take the arrows out of the header and put them in a row of their own, below Now Playing and above Next. That frees room so the "Queue" title shows fully without scrolling as a marquee.
 - **Touches:** queue window header
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/queue-arrows-row
 - **Notes:** Synced from Geethub #443. Related to queue-history-arrows (#352).
+- **Review notes:** The back, forward and history arrows now sit in their own row under the Now Playing song and above Next, so the Queue title in the header has the room and no longer scrolls. Same panel serves desktop and mobile. Cache v172.
 
 ### swirl-onair-playlist-art: Swirl and On Air playlist art from two videos (Geethub #444)
 - **Status:** ready
