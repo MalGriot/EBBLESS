@@ -9816,7 +9816,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #452. Related to queue-history-arrows (#352) and queue-arrows-centered-history-between (#449).
 
 ### ad-timer-progress-fill: Waiting out the ad timer: progress bar and play circle show real fill (Geethub #453)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea. When a track is loaded and is only waiting out the ad timer, keep the current loading animations until the track is loaded, then switch the progress bar and the play button circle to filling up with actual progress.
 - **Touches:** Player progress bar, play button.
@@ -9824,7 +9824,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #453.
 
 ### podcast-captions-ahead: Podcast captions run a few lines ahead of the audio (bug, Geethub #454)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug. Podcast captions are consistently a few lines ahead of what is being said. Find the sync offset and fix it.
 - **Touches:** Podcast captions.
@@ -9841,7 +9841,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #455.
 
 ### currents-thumb-video-missing: Currents thumbnail video is missing (bug, Geethub #456)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug. The Currents playlist thumb video does not show. Find why and restore it.
 - **Touches:** Currents thumb.
