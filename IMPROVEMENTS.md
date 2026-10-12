@@ -9727,3 +9727,35 @@ Add entries in this shape:
 - **Touches:** worker/src/nowplaying.js (applyPost, viewOf), app npPost
 - **Branch:** (filled in by the manager once a lane is claimed)
 - **Notes:** Needs a worker deploy, which the owner must approve. Client-side library fallback already shipped (cache v171).
+
+### queue-header-arrows-own-row: Queue window: move the arrows to their own row so the "Queue" title is fully visible (Geethub #443)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** In the queue window, take the arrows out of the header and put them in a row of their own, below Now Playing and above Next. That frees room so the "Queue" title shows fully without scrolling as a marquee.
+- **Touches:** queue window header
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #443. Related to queue-history-arrows (#352).
+
+### swirl-onair-playlist-art: Swirl and On Air playlist art from two videos (Geethub #444)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Use two supplied video files as the art for the Swirl and On Air playlists: /Users/malcolm/Downloads/66262-516980798_medium.mp4 and /Users/malcolm/Downloads/107303-676158761_medium.mp4. The issue doesn't say which video goes with which playlist.
+- **Touches:** Swirl and On Air playlist cards, art
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #444. Ask which video is for which playlist, and whether they should loop as moving art or be a still frame.
+
+### feedback-button-blink: Feedback button icon should blink and be obvious again (Geethub #445)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The feedback button icon used to blink and stand out. Bring that back so it is obvious again.
+- **Touches:** feedback button icon
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #445. Check git history for the old blinking style. Related to feedback-prompt.
+
+### beta-signup-playlist-preload: Beta signup: the playlist a tester pastes in the form should be preloaded when they first log in (Geethub #446)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The playlist a tester pastes into the beta signup form should already be in the app, loaded, the first time they log in.
+- **Touches:** beta signup form (beta/index.html), worker/src/beta.js, first-login flow
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #446. Related to google-email-signup-access. Least clicks: no pasting inside the app.
