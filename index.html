@@ -19020,6 +19020,11 @@ function capAudioStart(buf){
 // episode seconds at a byte position (constant bitrate past the tag)
 function capOffset(rec, byte, dur){
   const a0 = rec.a0 || 0;
+  // rec.spb: seconds per byte measured from a slice's decoded audio, which
+  // is exact for constant bitrate; the player's duration is only an estimate
+  // (it can come back short for files with no length header), and an
+  // underestimate puts every later slice's captions ahead of the audio
+  if (rec.spb) return Math.max(0, (byte - a0) * rec.spb);
   return Math.max(0, (byte - a0) / (rec.total - a0) * dur);
 }
 // slices timed without the tag (saved before it was measured, or made by the
@@ -19121,6 +19126,10 @@ async function generateCaptions(t, onUpdate){
       try { audio = await capDecode(buf); decoded++; }
       catch(e){ if (!decoded && first) throw e; rec.parts[i] = []; continue; }
       finally { first = false; }
+      if (!rec.spb){
+        const bytes = end - start + 1 - (i === 0 ? rec.a0 || 0 : 0), spb = audio.length / 16000 / bytes;
+        if (end - start + 1 === CAP_CHUNK_BYTES && audio.length >= 16000 * 20 && spb > 1 / 64000 && spb < 1 / 1000) rec.spb = spb;
+      }
       const chunks = await capRun(model, audio, english ? null : lang);
       const offset = capOffset(rec, start, dur);
       rec.parts[i] = chunks

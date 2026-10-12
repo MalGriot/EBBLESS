@@ -9824,12 +9824,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #453.
 
 ### podcast-captions-ahead: Podcast captions run a few lines ahead of the audio (bug, Geethub #454)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug. Podcast captions are consistently a few lines ahead of what is being said. Find the sync offset and fix it.
 - **Touches:** Podcast captions.
-- **Branch:**
+- **Branch:** agent/podcast-caption-sync
 - **Notes:** Synced from Geethub #454.
+- **Built:** Generated captions placed each slice by byte share of the player's reported duration; if that duration comes back short (no length header) every later slice lands early. Now the seconds-per-byte rate is measured from the first full decoded slice (rec.spb) and used for slice offsets. Unverified with real audio. SW cache v175.
 
 ### off-air-thumb-loop-fade: Off Air thumbnail video should fade into a loop (Geethub #455)
 - **Status:** ready
