@@ -9833,11 +9833,11 @@ Add entries in this shape:
 - **Built:** Generated captions placed each slice by byte share of the player's reported duration; if that duration comes back short (no length header) every later slice lands early. Now the seconds-per-byte rate is measured from the first full decoded slice (rec.spb) and used for slice offsets. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play with real audio. SW cache v175.
 
 ### off-air-thumb-loop-fade: Off Air thumbnail video should fade into a loop (Geethub #455)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea. The Off Air thumb video should fade into a seamless loop.
 - **Touches:** Off Air thumb video.
-- **Branch:**
+- **Branch:** agent/off-air-thumb-loop
 - **Notes:** Synced from Geethub #455.
 
 ### currents-thumb-video-missing: Currents thumbnail video is missing (bug, Geethub #456)

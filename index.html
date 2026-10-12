@@ -5195,7 +5195,7 @@ const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
 const PL_ART_VIDEO = {
   [SWELL_ID]: { src: 'brand/assets/swell-thumb-pingpong.mp4', poster: null },  // CuRRentSSsss: the clip showed only before its first drop (#456)
   [BLEND_ID]: { src: 'brand/assets/swirl-art.mp4', poster: 'brand/assets/swirl-art-poster.jpg' },
-  [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg' }
+  [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg', xfade: true }  // xfade: two stacked clips fade into each other at the end instead of a hard restart (#455)
 };
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
@@ -8309,6 +8309,36 @@ function renderLibrary(){
         v.src = av.src;
         face.appendChild(v);
         const pp = v.play(); if (pp && pp.catch) pp.catch(() => {});
+        if (av.xfade){
+          // Seamless loop (#455): a second copy sits on top at opacity 0; in the last
+          // 0.9s it restarts and fades in over the first, then the roles swap.
+          const FADE = 0.9;
+          const v2 = v.cloneNode(false);
+          v2.muted = true; v2.loop = false; v.loop = false; v2.autoplay = false;
+          v2.addEventListener('error', () => v2.remove());
+          v2.src = av.src; v2.style.opacity = '0'; v2.style.transition = 'opacity ' + FADE + 's linear';
+          face.appendChild(v2);
+          let cur = v, nxt = v2, fading = false;
+          const swap = () => {
+            cur.style.transition = 'none'; cur.style.opacity = '0'; cur.pause();
+            const t = cur; cur = nxt; nxt = t; fading = false;
+            void cur.offsetWidth; nxt.style.transition = 'opacity ' + FADE + 's linear';
+          };
+          const tick = () => {
+            if (!face.isConnected) return;
+            const d = cur.duration;
+            if (!fading && d && isFinite(d) && !cur.paused && d - cur.currentTime <= FADE){
+              fading = true; nxt.currentTime = 0;
+              const p2 = nxt.play(); if (p2 && p2.catch) p2.catch(() => {});
+              nxt.style.opacity = '1';
+              setTimeout(swap, FADE * 1000);
+            }
+            requestAnimationFrame(tick);
+          };
+          const restart = () => { if (cur.ended && !fading){ cur.currentTime = 0; cur.play().catch(() => {}); } };
+          v.addEventListener('ended', restart); v2.addEventListener('ended', restart);
+          requestAnimationFrame(tick);
+        }
       }
       artDiv.appendChild(face);
     }
