@@ -9784,9 +9784,9 @@ Add entries in this shape:
 - **Notes:** Builds on #443 (arrows on their own row, in review). Likely best done after that merges.
 
 ### mobile-remove-history-header: Mobile: History button is still in the header nav, remove it (Geethub #448)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug report, Geethub issue #448. On mobile the History button still shows in the header nav. Remove it there.
 - **Touches:** header nav, mobile layout.
-- **Branch:**
+- **Branch:** agent/mobile-history-header
 - **Notes:** Follow-up to remove-history-button (Geethub #431), which was built but apparently misses mobile or is not yet deployed. Check whether #431 is live before building.
