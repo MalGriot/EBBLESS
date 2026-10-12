@@ -9792,7 +9792,7 @@ Add entries in this shape:
 - **Notes:** Follow-up to remove-history-button (Geethub #431), which was built but apparently misses mobile or is not yet deployed. Check whether #431 is live before building.
 
 ### history-date-dividers: History: section dividers with dates, last 7 days only (Geethub #450)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea. In the History panel, group songs under date dividers (month spelled out and day, no year, e.g. "October 12"). Only go back 7 days max.
 - **Touches:** History panel.
@@ -9800,7 +9800,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #450.
 
 ### queue-history-back-arrow: Queue: History panel needs a back arrow to return to the queue (Geethub #451)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea. The History view opened from the queue should have a back arrow, like the albums view in the artist window, that returns you to the queue.
 - **Touches:** History panel, queue.
@@ -9808,7 +9808,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #451.
 
 ### queue-arrows-skip-ends: Queue arrows: skip-to-first and skip-to-last buttons (Geethub #452)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea. Add skip-to-first and skip-to-last buttons beside the queue history arrows to jump to the earliest and the most recent saved queue. Use the skip-track icons from the player.
 - **Touches:** Queue header arrows row.
@@ -9833,7 +9833,7 @@ Add entries in this shape:
 - **Built:** Generated captions placed each slice by byte share of the player's reported duration; if that duration comes back short (no length header) every later slice lands early. Now the seconds-per-byte rate is measured from the first full decoded slice (rec.spb) and used for slice offsets. Unverified. Older saved records are reset (capV 2) and regenerate with the new timing on next play with real audio. SW cache v175.
 
 ### off-air-thumb-loop-fade: Off Air thumbnail video should fade into a loop (Geethub #455)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea. The Off Air thumb video should fade into a seamless loop.
 - **Touches:** Off Air thumb video.
