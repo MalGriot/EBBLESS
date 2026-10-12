@@ -9685,7 +9685,7 @@ Add entries in this shape:
 - **Review notes:** Queue panel now has a .q-bg layer (video rotated 90deg, same brightness/saturate filter and clock-accent color-blend tint as .lib-bg, poster fallback). Video recompressed to 175KB (480p, muted) at brand/assets/queue-bg.mp4 plus queue-bg-poster.jpg. Not in sw precache (library video is not either). Cache v159.
 
 ### artist-circles-too-big: Artist circles are too big and bleed over other UI (bug) (Geethub #442)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Library artist circles are too large and overlap other UI in the app. Size them so they stay inside their grid cell.
 - **Touches:** library artist circles
@@ -9694,7 +9694,7 @@ Add entries in this shape:
 - **Review notes:** Grid artist circles now scale(.9) inside 6% card padding (was 1.06 scale / 3%), hover grows to .98 so they never touch neighbors or cross the cell. Checked mobile 3x3 and 2x2, desktop, split-desktop. Cache v167.
 
 ### artist-grid-name-padding: Artist grid (2x2, 3x3): name text touches the thumb edge and bleeds into neighbors (bug) (Geethub #441)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** In the library artists 2x2 and 3x3 grid modes, the name text over the thumbs touches the edge and bleeds into the next artist. Add a little padding/margin and keep it inside its own cell.
 - **Touches:** library artist grid name overlay
@@ -9708,10 +9708,10 @@ Add entries in this shape:
 - **Description:** SoundCloud album art shows in the queue and main player but not as thumbnails in the library. Find where library thumbs are built and why SoundCloud art is skipped.
 - **Touches:** library thumb generation, SoundCloud art
 - **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub #439. Bug.
+- **Notes:** Synced from Geethub #439. Bug. Owner clarified (2026-10-12): the missing art is on the ON AIR / OFF AIR library card. The first lane (branch agent/soundcloud-library-thumbs, worker album-list image, not merged) fixed the artist album picker instead; redo against the On Air card.
 
 ### loose-album-tracks-in-artist-lists: Album tracks listed as loose singles in artist lists; add regular checks (bug) (Geethub #440)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Many album tracks appear as loose songs in the library artist lists instead of inside their album. Fix the grouping, and add a check that runs regularly to re-file loose tracks into their albums.
 - **Touches:** artist lists, album grouping, backfill
