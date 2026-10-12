@@ -1846,7 +1846,12 @@ body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 /* stays obvious: soft accent pulse (not on reduced-motion) */
 @keyframes tbPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 5px rgba(224,178,106,.45)}}
 .tester-banner:not([hidden]){animation:tbPulse 2s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.tester-banner:not([hidden]){animation:none;outline:2px solid var(--accent)}}
+/* Geethub #445: the header Feedback button (desktop, since #432) lost the pulse the pill had; give it the same blink on its icon + ring */
+@keyframes navFbBlink{0%,100%{color:inherit;box-shadow:0 0 0 0 rgba(224,178,106,0)}50%{color:var(--accent);box-shadow:0 0 0 5px rgba(224,178,106,.45)}}
+#navFeedbackBtn:not([hidden]){animation:navFbBlink 1.6s ease-in-out infinite;border-radius:12px}
+#navFeedbackBtn:not([hidden]) svg{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.tester-banner:not([hidden]){animation:none;outline:2px solid var(--accent)}
+  #navFeedbackBtn:not([hidden]){animation:none;outline:2px solid var(--accent)}}
 .tester-banner .tb-send{flex:none;background:var(--accent);color:#1a1a1a;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
 /* icon-only form (phones, split desktop): the base padding above came later in the cascade and squeezed the icon to a sliver (Geethub #361) */
 @media (max-width:859.98px){.tester-banner .tb-send{padding:0}.tester-banner .tb-ico{width:18px;height:18px;flex:none}}
