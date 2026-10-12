@@ -9721,7 +9721,7 @@ Add entries in this shape:
 - **Review note:** Root cause: an artist page's Singles list = songs not found on any library album credited to that artist by exact name key. Two gaps: (1) albums filed under another artist name (importedUnder / first-song artist) never counted even when they credit this artist, (2) the one-shot album fill (stamped albumsAdded) skips albums left out of the picker, past the cap, or that failed to load, so their songs stay loose forever. Fix: dedup now also counts any library album crediting the artist (shared songDedupKey); new refileLooseArtistTracks runs after the launch backfill, at most weekly per device, max 3 artists with loose songs, re-reads the iTunes album list and adds only missing albums (max 3 per artist) whose tracklist holds a loose song. Tracks store no album name, so title match is the only metadata. Untested with real library data (helpers sit in the app IIFE); only booted the page and syntax-checked. SoundCloud artists are not covered by the weekly check. sw cache v169.
 
 ### nowplaying-worker-art: ON AIR feed should carry album art so every listener sees it (follow-up to Geethub #439)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The worker's /nowplaying feed returns only video id, title and artist. Store and return `art` too, and have the app send it when posting, so listeners without the song in their library still see the cover on the ON AIR / OFF AIR card.
 - **Touches:** worker/src/nowplaying.js (applyPost, viewOf), app npPost
@@ -9731,7 +9731,7 @@ Add entries in this shape:
 - **Notes:** Needs a worker deploy, which the owner must approve. Client-side library fallback already shipped (cache v171).
 
 ### queue-header-arrows-own-row: Queue window: move the arrows to their own row so the "Queue" title is fully visible (Geethub #443)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the queue window, take the arrows out of the header and put them in a row of their own, below Now Playing and above Next. That frees room so the "Queue" title shows fully without scrolling as a marquee.
 - **Touches:** queue window header
@@ -9740,7 +9740,7 @@ Add entries in this shape:
 - **Review notes:** The back, forward and history arrows now sit in their own row under the Now Playing song and above Next, so the Queue title in the header has the room and no longer scrolls. Same panel serves desktop and mobile. Cache v172.
 
 ### swirl-onair-playlist-art: Swirl and On Air playlist art from two videos (Geethub #444)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Use two supplied video files as the art for the Swirl and On Air playlists: /Users/malcolm/Downloads/66262-516980798_medium.mp4 and /Users/malcolm/Downloads/107303-676158761_medium.mp4. The issue doesn't say which video goes with which playlist.
 - **Touches:** Swirl and On Air playlist cards, art
@@ -9749,7 +9749,7 @@ Add entries in this shape:
 - **Review notes:** Swirl and On Air library cards now play small muted looping clips (swirl-art.mp4 510KB, onair-art.mp4 163KB, 480px, no audio) over the normal tile, with a still poster underneath. Reduced-motion shows the poster only; if a clip fails it drops away and the old art shows. Blinking dot and LIVE now line untouched. Replaces the old missing swirl-thumb.mp4 reference. Not precached (matches the other brand videos). Cache v172.
 
 ### feedback-button-blink: Feedback button icon should blink and be obvious again (Geethub #445)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The feedback button icon used to blink and stand out. Bring that back so it is obvious again.
 - **Touches:** feedback button icon
@@ -9758,7 +9758,7 @@ Add entries in this shape:
 - **Review notes:** The old pulse only survived on the phone pill; the Feedback button in the header nav (desktop, since #432) had none. It now blinks again: icon flashes accent gold with a soft ring every 1.6s. Reduced-motion users get a steady outline instead. Cache v172.
 
 ### beta-signup-playlist-preload: Beta signup: the playlist a tester pastes in the form should be preloaded when they first log in (Geethub #446)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The playlist a tester pastes into the beta signup form should already be in the app, loaded, the first time they log in.
 - **Touches:** beta signup form (beta/index.html), worker/src/beta.js, first-login flow
@@ -9767,7 +9767,7 @@ Add entries in this shape:
 - **Review notes:** The signup form already collected the playlist link (Applicants.Spotify_playlist). Now /beta/me and /beta/claim hand it to the app once, and the app loads it as a playlist on first login with no taps; it marks itself done on the device and skips it if that playlist is already in the library, so later logins never import twice. Needs deploy: worker, and the Apps Script (tools/beta-sheet.gs `me_` / `tokenByEmail_`); until the script is redeployed nothing preloads (safe no-op). Not verified: a real signup-to-login run against the live Sheet/Google (worker tests and script syntax only). Cache v172.
 
 ### library-all-artist-dropdown-scroll-jump: Library "All" mode: opening or closing an artist dropdown jumps the list to the top (bug) (Geethub #447)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** In the library's All mode, opening or closing an artist dropdown flashes the view to the top of the menu. It should stay at the same scroll position.
 - **Touches:** library All view, artist dropdown toggle, scroll position
