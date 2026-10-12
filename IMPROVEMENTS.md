@@ -9721,7 +9721,7 @@ Add entries in this shape:
 - **Review note:** Root cause: an artist page's Singles list = songs not found on any library album credited to that artist by exact name key. Two gaps: (1) albums filed under another artist name (importedUnder / first-song artist) never counted even when they credit this artist, (2) the one-shot album fill (stamped albumsAdded) skips albums left out of the picker, past the cap, or that failed to load, so their songs stay loose forever. Fix: dedup now also counts any library album crediting the artist (shared songDedupKey); new refileLooseArtistTracks runs after the launch backfill, at most weekly per device, max 3 artists with loose songs, re-reads the iTunes album list and adds only missing albums (max 3 per artist) whose tracklist holds a loose song. Tracks store no album name, so title match is the only metadata. Untested with real library data (helpers sit in the app IIFE); only booted the page and syntax-checked. SoundCloud artists are not covered by the weekly check. sw cache v169.
 
 ### nowplaying-worker-art: ON AIR feed should carry album art so every listener sees it (follow-up to Geethub #439)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The worker's /nowplaying feed returns only video id, title and artist. Store and return `art` too, and have the app send it when posting, so listeners without the song in their library still see the cover on the ON AIR / OFF AIR card.
 - **Touches:** worker/src/nowplaying.js (applyPost, viewOf), app npPost
@@ -9729,7 +9729,7 @@ Add entries in this shape:
 - **Notes:** Needs a worker deploy, which the owner must approve. Client-side library fallback already shipped (cache v171).
 
 ### queue-header-arrows-own-row: Queue window: move the arrows to their own row so the "Queue" title is fully visible (Geethub #443)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** In the queue window, take the arrows out of the header and put them in a row of their own, below Now Playing and above Next. That frees room so the "Queue" title shows fully without scrolling as a marquee.
 - **Touches:** queue window header
@@ -9737,7 +9737,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #443. Related to queue-history-arrows (#352).
 
 ### swirl-onair-playlist-art: Swirl and On Air playlist art from two videos (Geethub #444)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Use two supplied video files as the art for the Swirl and On Air playlists: /Users/malcolm/Downloads/66262-516980798_medium.mp4 and /Users/malcolm/Downloads/107303-676158761_medium.mp4. The issue doesn't say which video goes with which playlist.
 - **Touches:** Swirl and On Air playlist cards, art
@@ -9745,7 +9745,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #444. Ask which video is for which playlist, and whether they should loop as moving art or be a still frame.
 
 ### feedback-button-blink: Feedback button icon should blink and be obvious again (Geethub #445)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The feedback button icon used to blink and stand out. Bring that back so it is obvious again.
 - **Touches:** feedback button icon
@@ -9753,9 +9753,17 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #445. Check git history for the old blinking style. Related to feedback-prompt.
 
 ### beta-signup-playlist-preload: Beta signup: the playlist a tester pastes in the form should be preloaded when they first log in (Geethub #446)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The playlist a tester pastes into the beta signup form should already be in the app, loaded, the first time they log in.
 - **Touches:** beta signup form (beta/index.html), worker/src/beta.js, first-login flow
 - **Branch:** (filled in by the manager once a lane is claimed)
 - **Notes:** Synced from Geethub #446. Related to google-email-signup-access. Least clicks: no pasting inside the app.
+
+### library-all-artist-dropdown-scroll-jump: Library "All" mode: opening or closing an artist dropdown jumps the list to the top (bug) (Geethub #447)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** In the library's All mode, opening or closing an artist dropdown flashes the view to the top of the menu. It should stay at the same scroll position.
+- **Touches:** library All view, artist dropdown toggle, scroll position
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #447. Bug.
