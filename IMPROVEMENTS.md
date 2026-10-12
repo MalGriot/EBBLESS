@@ -9703,12 +9703,13 @@ Add entries in this shape:
 - **Review notes:** Artist name overlay in grid modes is now inset 6% each side (was -8%) so it stays inside its own cell and still sits in front of the art (#422). Checked mobile 3x3 and 2x2, desktop, split-desktop. Cache v167.
 
 ### soundcloud-art-library-thumbs: SoundCloud album art not turned into library thumbs (bug) (Geethub #439)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** SoundCloud album art shows in the queue and main player but not as thumbnails in the library. Find where library thumbs are built and why SoundCloud art is skipped.
 - **Touches:** library thumb generation, SoundCloud art
 - **Branch:** (filled in by the manager once a lane is claimed)
 - **Notes:** Synced from Geethub #439. Bug. Owner clarified (2026-10-12): the missing art is on the ON AIR / OFF AIR library card. The first lane (branch agent/soundcloud-library-thumbs, worker album-list image, not merged) fixed the artist album picker instead; redo against the On Air card.
+- **Review note:** Cause: the /nowplaying feed carries only v/t/a (no art), so ON AIR / OFF AIR tracks were built with art null; YouTube ids fall back to img.youtube.com but sc: ids have no fallback, so SoundCloud songs left blank tiles. Fix (client only, refreshNowPlaying): fill missing art from the same videoId in any library playlist, and re-save/re-render the card when art gets filled. Limit: a listener whose library lacks that SoundCloud song still sees a blank tile; fully fixing that needs the worker to store and return `art` (POST /nowplaying body + viewOf in worker/src/nowplaying.js, plus the app sending t.art). Not deployed. Verified locally: Off Air card shows a seeded SoundCloud cover in the 2x2 (feed was off air with 3 sc: songs in recent). cache v171.
 
 ### loose-album-tracks-in-artist-lists: Album tracks listed as loose singles in artist lists; add regular checks (bug) (Geethub #440)
 - **Status:** merged
