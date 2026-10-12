@@ -9745,12 +9745,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #444. Owner delegated the call (2026-10-12): 107303-676158761_medium.mp4 (blue/gold vortex, 10s, 1280x720) = Swirl; 66262-516980798_medium.mp4 (red/teal flame swirl, 17.8s, 2732x1440, 18MB) = On Air. Moving muted loops, with a still poster frame as fallback and for reduced-motion. Compress to small web mp4 (repo-friendly) before committing.
 
 ### feedback-button-blink: Feedback button icon should blink and be obvious again (Geethub #445)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The feedback button icon used to blink and stand out. Bring that back so it is obvious again.
 - **Touches:** feedback button icon
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/feedback-blink
 - **Notes:** Synced from Geethub #445. Check git history for the old blinking style. Related to feedback-prompt.
+- **Review notes:** The old pulse only survived on the phone pill; the Feedback button in the header nav (desktop, since #432) had none. It now blinks again: icon flashes accent gold with a soft ring every 1.6s. Reduced-motion users get a steady outline instead. Cache v172.
 
 ### beta-signup-playlist-preload: Beta signup: the playlist a tester pastes in the form should be preloaded when they first log in (Geethub #446)
 - **Status:** ready
