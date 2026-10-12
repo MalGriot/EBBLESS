@@ -460,8 +460,8 @@ body.onb-active .paste-guide{display:none}
 .lib-card.is-artist-card .name,.lib-card.is-artist-card .count{text-align:center}
 .lib-grid.is-list .lib-card.is-artist-card .info{align-items:stretch}
 .lib-grid.is-list .lib-card.is-artist-card .name,.lib-grid.is-list .lib-card.is-artist-card .count{text-align:left}
-.lib-grid:not(.is-list) .lib-card.is-artist-card .art{transform:scale(1.06)}
-.lib-grid:not(.is-list) .lib-card.is-artist-card{padding:3%}
+.lib-grid:not(.is-list) .lib-card.is-artist-card .art{transform:scale(.9)}
+.lib-grid:not(.is-list) .lib-card.is-artist-card{padding:6%}
 /* album tiles (#375): a CD slides out from behind the cover and spins on hover */
 .lib-card .cd-disc{display:none}
 @media (hover:hover) and (pointer:fine){
@@ -493,16 +493,16 @@ body.onb-active .paste-guide{display:none}
 /* #422: artist name sits in front of the round art, not clipped by its mask */
 .lib-card.is-artist-card .art{overflow:visible}
 .lib-card.is-artist-card .art .face{border-radius:50%;overflow:hidden}
-.lib-grid:not(.is-list) .lib-card.is-artist-card .art .title-overlay{left:-8%;right:-8%;z-index:4;background:none;text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.8)}
+.lib-grid:not(.is-list) .lib-card.is-artist-card .art .title-overlay{left:6%;right:6%;width:auto;z-index:4;background:none;text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.8)}
 /* #417: grid thumbs expand smoothly on hover */
 @media (hover:hover) and (pointer:fine){
   .lib-grid:not(.is-list) .lib-card .art{transition:transform var(--dur-ui) var(--ease-out),box-shadow var(--dur-ui) var(--ease-out)}
   .lib-grid:not(.is-list) .lib-card:hover .art{transform:scale(1.06)}
-  .lib-grid:not(.is-list) .lib-card.is-artist-card:hover .art{transform:scale(1.12)}
+  .lib-grid:not(.is-list) .lib-card.is-artist-card:hover .art{transform:scale(.98)}
 }
 @media (prefers-reduced-motion:reduce){
   .lib-grid:not(.is-list) .lib-card .art,.lib-grid:not(.is-list) .lib-card:hover .art{transition:none;transform:none}
-  .lib-grid:not(.is-list) .lib-card.is-artist-card .art,.lib-grid:not(.is-list) .lib-card.is-artist-card:hover .art{transform:scale(1.06)}
+  .lib-grid:not(.is-list) .lib-card.is-artist-card .art,.lib-grid:not(.is-list) .lib-card.is-artist-card:hover .art{transform:scale(.9)}
 }
 @media (prefers-reduced-motion:reduce){
   .lib-card.is-artist-card .art img,.lib-card.is-artist-card,.lib-card.is-album-card,.lib-grid.is-list .lib-card.is-artist-card .art{transition:none}

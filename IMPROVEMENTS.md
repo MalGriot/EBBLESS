@@ -9685,20 +9685,22 @@ Add entries in this shape:
 - **Review notes:** Queue panel now has a .q-bg layer (video rotated 90deg, same brightness/saturate filter and clock-accent color-blend tint as .lib-bg, poster fallback). Video recompressed to 175KB (480p, muted) at brand/assets/queue-bg.mp4 plus queue-bg-poster.jpg. Not in sw precache (library video is not either). Cache v159.
 
 ### artist-circles-too-big: Artist circles are too big and bleed over other UI (bug) (Geethub #442)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Library artist circles are too large and overlap other UI in the app. Size them so they stay inside their grid cell.
 - **Touches:** library artist circles
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/artist-grid-fixes
 - **Notes:** Synced from Geethub #442. Bug. Related to artist-icons-circles (#374) and artist-hover-pic-expand (#397).
+- **Review notes:** Grid artist circles now scale(.9) inside 6% card padding (was 1.06 scale / 3%), hover grows to .98 so they never touch neighbors or cross the cell. Checked mobile 3x3 and 2x2, desktop, split-desktop. Cache v167.
 
 ### artist-grid-name-padding: Artist grid (2x2, 3x3): name text touches the thumb edge and bleeds into neighbors (bug) (Geethub #441)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** In the library artists 2x2 and 3x3 grid modes, the name text over the thumbs touches the edge and bleeds into the next artist. Add a little padding/margin and keep it inside its own cell.
 - **Touches:** library artist grid name overlay
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/artist-grid-fixes
 - **Notes:** Synced from Geethub #441. Bug. Related to artist-thumb-name-in-front (#422): keep the name in front of the art.
+- **Review notes:** Artist name overlay in grid modes is now inset 6% each side (was -8%) so it stays inside its own cell and still sits in front of the art (#422). Checked mobile 3x3 and 2x2, desktop, split-desktop. Cache v167.
 
 ### soundcloud-art-library-thumbs: SoundCloud album art not turned into library thumbs (bug) (Geethub #439)
 - **Status:** ready
