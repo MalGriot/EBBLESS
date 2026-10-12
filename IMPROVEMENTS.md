@@ -9737,12 +9737,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #443. Related to queue-history-arrows (#352).
 
 ### swirl-onair-playlist-art: Swirl and On Air playlist art from two videos (Geethub #444)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Use two supplied video files as the art for the Swirl and On Air playlists: /Users/malcolm/Downloads/66262-516980798_medium.mp4 and /Users/malcolm/Downloads/107303-676158761_medium.mp4. The issue doesn't say which video goes with which playlist.
 - **Touches:** Swirl and On Air playlist cards, art
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/swirl-onair-art
 - **Notes:** Synced from Geethub #444. Owner delegated the call (2026-10-12): 107303-676158761_medium.mp4 (blue/gold vortex, 10s, 1280x720) = Swirl; 66262-516980798_medium.mp4 (red/teal flame swirl, 17.8s, 2732x1440, 18MB) = On Air. Moving muted loops, with a still poster frame as fallback and for reduced-motion. Compress to small web mp4 (repo-friendly) before committing.
+- **Review notes:** Swirl and On Air library cards now play small muted looping clips (swirl-art.mp4 510KB, onair-art.mp4 163KB, 480px, no audio) over the normal tile, with a still poster underneath. Reduced-motion shows the poster only; if a clip fails it drops away and the old art shows. Blinking dot and LIVE now line untouched. Replaces the old missing swirl-thumb.mp4 reference. Not precached (matches the other brand videos). Cache v172.
 
 ### feedback-button-blink: Feedback button icon should blink and be obvious again (Geethub #445)
 - **Status:** ready
