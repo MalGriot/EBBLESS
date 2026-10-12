@@ -9776,11 +9776,11 @@ Add entries in this shape:
 - **Review notes:** Opening or closing an artist dropdown (and album "more versions") rebuilt the list and snapped it to the top; the library now remembers its scroll spot and puts it back after the rebuild. Reproduced the jump (600 to 0) before the fix; after it the position holds at desktop 1280 and mobile 390 with a seeded library. Cache v172.
 
 ### queue-arrows-centered-history-between: Queue window: center the arrows and put the History button between them (Geethub #449)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #449. In the queue window header, center the back/forward arrows, and place the History button between the two arrows.
 - **Touches:** queue header (follows queue-header-arrows-own-row, Geethub #443).
-- **Branch:**
+- **Branch:** agent/queue-arrows-center
 - **Notes:** Builds on #443 (arrows on their own row, in review). Likely best done after that merges.
 
 ### mobile-remove-history-header: Mobile: History button is still in the header nav, remove it (Geethub #448)
