@@ -164,3 +164,27 @@ test('GET cache hit avoids the KV read', async () => {
   await s.call('GET'); await s.call('GET');
   assert.equal(s.io.gets, after1);
 });
+
+test('art: https only, capped, stored, returned for current and recent; old state reads as empty', async () => {
+  const s = setup();
+  const ART = 'https://i.example.com/c.jpg';
+  await s.call('POST', { token: 'owner', body: { ...post('a', 0), art: ART } });
+  let j = await (await s.call('GET')).json();
+  assert.equal(j.current.art, ART);
+  // art-only change is not a no-op
+  const puts = s.io.puts;
+  await s.call('POST', { token: 'owner', body: { ...post('a', 0), art: ART + '?2' } });
+  assert.equal(s.io.puts, puts + 1);
+  await s.call('POST', { token: 'owner', body: { ...post('b', 0), art: 'http://x.com/a.jpg' } });   // not https
+  j = await (await s.call('GET')).json();
+  assert.equal(j.current.art, ''); assert.equal(j.recent[0].art, ART + '?2');
+  await s.call('POST', { token: 'owner', body: { ...post('c', 0), art: 'data:image/png;base64,AAAA' } });
+  assert.equal((await (await s.call('GET')).json()).current.art, '');
+  await s.call('POST', { token: 'owner', body: { ...post('d', 0), art: 'https://x.com/' + 'a'.repeat(600) } });   // over the cap
+  assert.equal((await (await s.call('GET')).json()).current.art, '');
+  await s.call('POST', { token: 'owner', body: post('e', 0) });   // old client: no art field
+  assert.equal((await (await s.call('GET')).json()).current.art, '');
+  // old stored state (no art anywhere) still views fine
+  const v = viewOf({ now: { v: 'o', t: 'T', a: 'A', pos: 0, playing: true, at: 1000, startedAt: 1000, dur: 100 }, items: [{ v: 'p', t: 'T', a: 'A', startedAt: 1 }] }, 2000);
+  assert.equal(v.current.art, ''); assert.equal(v.recent[0].art, '');
+});

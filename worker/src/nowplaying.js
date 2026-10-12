@@ -2,13 +2,13 @@
 //
 //   GET  /nowplaying   public, read-only. Server time is the only clock:
 //     { serverTime, onAir, current, recent }
-//       current: { v, t, a, startedAt, pos, playing }  pos = live position in
+//       current: { v, t, a, art, startedAt, pos, playing }  pos = live position in
 //                seconds AT serverTime (listeners add their own elapsed time
 //                since the response arrived, never their device clock)
-//       recent:  [{ v, t, a, startedAt }] newest first, up to NP_MAX
+//       recent:  [{ v, t, a, art, startedAt }] newest first, up to NP_MAX
 //       v is the app's track id (YouTube id, or its sc:/audio: forms), so it
 //       carries the source; listeners play it like any playlist track.
-//   POST /nowplaying   owner only: { v, t, a, pos, playing }
+//   POST /nowplaying   owner only: { v, t, a, art?, pos, playing }
 //     `Authorization: Bearer <Google ID token>` from the app's existing
 //     Sign in with Google. The token is verified server-side (signature,
 //     audience, expiry) and its verified email must equal the OWNER_EMAIL
@@ -39,6 +39,17 @@ const FAIL_LIMIT = 30, FAIL_WINDOW_S = 900;
 
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001F\u007F]/g, ' ').trim().slice(0, max);
 
+export const ART_MAX = 500;
+// Cover art: https URL only, capped. Anything else (data:, http:, junk) -> ''.
+export function cleanArt(u) {
+  const s = clean(u, ART_MAX + 1);
+  if (!s || s.length > ART_MAX || !/^https:\/\/[^\s\/]+/i.test(s)) return '';
+  return s;
+}
+// Older stored state has no art: read it as ''.
+const artOf = x => (x && typeof x.art === 'string' ? cleanArt(x.art) : '');
+
+
 // Pure. state = { now: {v,t,a,pos,playing,at,startedAt} | null, items: [...] }
 // Same song: refresh pos/playing/at. New song: the old one drops into history
 // (newest first, de-duped by id) and the new one starts a fresh startedAt.
@@ -46,9 +57,9 @@ export function applyPost(state, post, now) {
   const st = state && typeof state === 'object' ? state : {};
   const prev = st.now || null;
   let items = Array.isArray(st.items) ? st.items : [];
-  const cur = { v: post.v, t: post.t, a: post.a, pos: post.pos, dur: post.dur, playing: post.playing, at: now, startedAt: now - Math.round(post.pos * 1000) };
+  const cur = { v: post.v, t: post.t, a: post.a, art: post.art || '', pos: post.pos, dur: post.dur, playing: post.playing, at: now, startedAt: now - Math.round(post.pos * 1000) };
   if (prev && prev.v !== post.v) {
-    items = [{ v: prev.v, t: prev.t, a: prev.a, startedAt: prev.startedAt }, ...items.filter(x => x && x.v !== prev.v)];
+    items = [{ v: prev.v, t: prev.t, a: prev.a, art: artOf(prev), startedAt: prev.startedAt }, ...items.filter(x => x && x.v !== prev.v)];
   }
   items = items.filter(x => x && x.v !== post.v).slice(0, NP_MAX);
   return { now: cur, items };
@@ -65,7 +76,7 @@ export function isLive(n, t) {
 // True when this post would leave the stored state effectively unchanged.
 export function isNoOp(state, post, now) {
   const n = state && state.now;
-  if (!n || n.v !== post.v || n.playing !== post.playing || n.t !== post.t || n.a !== post.a) return false;
+  if (!n || n.v !== post.v || n.playing !== post.playing || n.t !== post.t || n.a !== post.a || artOf(n) !== (post.art || '')) return false;
   if (Math.abs((n.dur || 0) - (post.dur || 0)) > 1) return false;
   return Math.abs(posAt(n, now) - post.pos) <= SAME_POS_S;
 }
@@ -73,7 +84,7 @@ export function isNoOp(state, post, now) {
 export function viewOf(state, serverTime) {
   const st = state && typeof state === 'object' ? state : {};
   const n = st.now || null;
-  const recent = (Array.isArray(st.items) ? st.items : []).map(x => ({ v: x.v, t: x.t, a: x.a, startedAt: x.startedAt }));
+  const recent = (Array.isArray(st.items) ? st.items : []).map(x => ({ v: x.v, t: x.t, a: x.a, art: artOf(x), startedAt: x.startedAt }));
   if (!n) return { serverTime, onAir: false, current: null, recent };
   const live = isLive(n, serverTime);
   let pos = posAt(n, serverTime);
@@ -81,7 +92,7 @@ export function viewOf(state, serverTime) {
   return {
     serverTime,
     onAir: live,
-    current: { v: n.v, t: n.t, a: n.a, startedAt: n.startedAt, pos: Math.round(pos * 100) / 100, dur: n.dur || 0, playing: live },
+    current: { v: n.v, t: n.t, a: n.a, art: artOf(n), startedAt: n.startedAt, pos: Math.round(pos * 100) / 100, dur: n.dur || 0, playing: live },
     recent,
   };
 }
@@ -138,7 +149,7 @@ export async function handleNowPlaying(request, url, env, ctx, deps) {
     if (text.length > 2000) return reply({ error: 'too large' }, 413, own);
     let body;
     try { body = JSON.parse(text) || {}; } catch (e) { return reply({ error: 'invalid json body' }, 400, own); }
-    const post = { v: clean(body.v, 40), t: clean(body.t, 200), a: clean(body.a, 200), pos: Number(body.pos), dur: Number(body.dur), playing: body.playing === true };
+    const post = { v: clean(body.v, 40), t: clean(body.t, 200), a: clean(body.a, 200), art: cleanArt(body.art), pos: Number(body.pos), dur: Number(body.dur), playing: body.playing === true };
     if (!post.v || !post.t) return reply({ error: 'Need v (track id) and t (title).' }, 400, own);
     if (!Number.isFinite(post.pos) || post.pos < 0 || post.pos > 86400) post.pos = 0;
     if (!Number.isFinite(post.dur) || post.dur < 0 || post.dur > 86400) post.dur = 0;

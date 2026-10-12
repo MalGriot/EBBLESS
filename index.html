@@ -10387,7 +10387,7 @@ function npPost(snap, keepalive){
   const tok = profileIdToken;
   npLastSent = { t: snap.t, v: snap.v, pos: snap.pos, dur: snap.dur, playing: snap.playing, at: performance.now() };
   fetch(BACKEND + '/nowplaying', { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-    body: JSON.stringify({ v: snap.v, t: snap.t.title || '', a: snap.t.artist || '', pos: snap.pos, dur: snap.dur, playing: snap.playing }) })
+    body: JSON.stringify({ v: snap.v, t: snap.t.title || '', a: snap.t.artist || '', art: /^https:\/\//i.test(snap.t.art || '') ? snap.t.art : '', pos: snap.pos, dur: snap.dur, playing: snap.playing }) })
     .then(r => { if (r.status === 403) npForbiddenToken = tok; }).catch(() => {});
 }
 function npPublishNow(){
@@ -10451,8 +10451,8 @@ async function refreshNowPlaying(manual){
     if (!pl) return;
     const old = pl.tracks || [];
     const byId = new Map(old.map(t => [t.videoId, t]));
-    let tracks = feed.map(x => byId.get(x.v) || { title: x.t, artist: x.a || '', videoId: x.v, matchedTitle: x.t, channel: x.a || '', plays: 0, art: null, duration: 0 });
-    // The feed carries no art. YouTube ids fall back to img.youtube.com, but
+    let tracks = feed.map(x => byId.get(x.v) || { title: x.t, artist: x.a || '', videoId: x.v, matchedTitle: x.t, channel: x.a || '', plays: 0, art: x.art || null, duration: 0 });
+    // Older feeds (or songs posted without art) carry none. YouTube ids fall back to img.youtube.com, but
     // SoundCloud (sc:) ids have no such fallback, so the card's 2x2 grid was
     // blank. Borrow the cover from the same song in any library playlist.
     let artFilled = false;
