@@ -9808,11 +9808,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #451.
 
 ### queue-arrows-skip-ends: Queue arrows: skip-to-first and skip-to-last buttons (Geethub #452)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea. Add skip-to-first and skip-to-last buttons beside the queue history arrows to jump to the earliest and the most recent saved queue. Use the skip-track icons from the player.
 - **Touches:** Queue header arrows row.
-- **Branch:**
+- **Branch:** agent/queue-arrows-skip-ends
 - **Notes:** Synced from Geethub #452. Related to queue-history-arrows (#352) and queue-arrows-centered-history-between (#449).
 
 ### ad-timer-progress-fill: Waiting out the ad timer: progress bar and play circle show real fill (Geethub #453)

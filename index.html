@@ -4092,9 +4092,11 @@ body.week-up-on{overflow:hidden}
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody">
       <div class="q-arrows" id="queueArrowsRow">
+        <button class="qh-arrow" id="queueHistFirst" title="Earliest queue" aria-label="Earliest queue" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
         <button class="qh-arrow" id="queueHistBack" title="Previous queue" aria-label="Previous queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg></button>
         <button class="qh-arrow" id="queueHistBtn" title="History" aria-label="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
         <button class="qh-arrow" id="queueHistFwd" title="Next queue" aria-label="Next queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button class="qh-arrow" id="queueHistLast" title="Latest queue" aria-label="Latest queue" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
       </div>
     </div>
     </div>
@@ -7164,7 +7166,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
       miniPrevBtn = $('miniPrevBtn'), miniNextBtn = $('miniNextBtn'), miniShuffleBtn = $('miniShuffleBtn'),
       miniRepeatBtn = $('miniRepeatBtn'), miniRepeatOneBadge = $('miniRepeatOneBadge'), miniLikeBtn = $('miniLikeBtn');
 const bottomNav = $('bottom-nav');
-const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueArrowsRow = $('queueArrowsRow'), queueHistBackBtn = $('queueHistBack'), queueHistFwdBtn = $('queueHistFwd'), queueClearBtn = $('queueClearBtn');
+const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueArrowsRow = $('queueArrowsRow'), queueHistBackBtn = $('queueHistBack'), queueHistFwdBtn = $('queueHistFwd'), queueHistFirstBtn = $('queueHistFirst'), queueHistLastBtn = $('queueHistLast'), queueClearBtn = $('queueClearBtn');
 const discoverToggleBtn = $('discoverToggleBtn');
 const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt'), libplArtPlayBtn = $('libplArtPlayBtn');
 const libCtxMenu = $('libCtxMenu');
@@ -16547,6 +16549,8 @@ function updateQueueHistBtns(){
   if (!b || !f) return;
   b.disabled = qhCur <= 0 || (qhCur === qhist.length && !qhist.length);
   f.disabled = qhCur >= qhist.length - 1;
+  if (queueHistFirstBtn) queueHistFirstBtn.disabled = b.disabled;
+  if (queueHistLastBtn) queueHistLastBtn.disabled = f.disabled;
 }
 function qhValid(sn){
   return !!sn && Array.isArray(sn.queue) && sn.queue.length && sn.pos >= 0 && sn.pos < sn.queue.length && sn.queue.every(e => {
@@ -16554,14 +16558,15 @@ function qhValid(sn){
     return !!(pl && pl.tracks[e.idx] && pl.tracks[e.idx].videoId);
   });
 }
-function queueHistStep(dir){
+function queueHistStep(dir, edge){
   if (dir < 0 && qhCur === qhist.length && state.queuePos >= 0 && state.queue.length){
     // leaving the live queue: keep it as the forward end of the history
     qhPush(qhSnap());
     qhCur = qhist.length - 1;
   }
-  let i = qhCur + dir;
-  while (i >= 0 && i < qhist.length && !qhValid(qhist[i])) i += dir;
+  let i = edge ? (dir < 0 ? 0 : qhist.length - 1) : qhCur + dir;
+  if (edge) while (i >= 0 && i < qhist.length && !qhValid(qhist[i])) i -= dir;
+  else while (i >= 0 && i < qhist.length && !qhValid(qhist[i])) i += dir;
   if (i < 0 || i >= qhist.length){ qhSave(); return; }
   qhCur = i;
   const sn = qhist[i];
@@ -16589,6 +16594,8 @@ function queueHistStep(dir){
 }
 $('queueHistBack').addEventListener('click', () => queueHistStep(-1));
 $('queueHistFwd').addEventListener('click', () => queueHistStep(1));
+$('queueHistFirst').addEventListener('click', () => queueHistStep(-1, true));
+$('queueHistLast').addEventListener('click', () => queueHistStep(1, true));
 updateQueueHistBtns();
 
 queueClearBtn.addEventListener('click', queueClearUpcoming);
