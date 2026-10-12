@@ -16019,7 +16019,12 @@ function remapQueueAfterCurrentsReset(keptNow, newCount, plId){
 // one was open so an update doesn't yank it out from under the listener.
 function rerenderLibraryKeepPanel(){
   const openId = openLibraryPanelId;
+  // (#447) renderLibrary empties and refills the grids, which clamps the
+  // library view's scroll to the top; put it back so toggling an artist
+  // dropdown (or album versions) doesn't jump the list
+  const sc = views.library, top = sc ? sc.scrollTop : 0;
   renderLibrary();
+  if (sc && top) sc.scrollTop = top;
   if (openId && getCachedPlaylist(openId)) toggleLibraryPlaylistPanel(openId);
 }
 // mode: 'reset' | 'block' | 'more' (see buildCurrentsPicks). opts: silent,

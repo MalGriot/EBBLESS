@@ -9761,9 +9761,10 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #446. Related to google-email-signup-access. Least clicks: no pasting inside the app.
 
 ### library-all-artist-dropdown-scroll-jump: Library "All" mode: opening or closing an artist dropdown jumps the list to the top (bug) (Geethub #447)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** In the library's All mode, opening or closing an artist dropdown flashes the view to the top of the menu. It should stay at the same scroll position.
 - **Touches:** library All view, artist dropdown toggle, scroll position
-- **Branch:** (filled in by the manager once a lane is claimed)
+- **Branch:** agent/all-artist-scroll
 - **Notes:** Synced from Geethub #447. Bug.
+- **Review notes:** Opening or closing an artist dropdown (and album "more versions") rebuilt the list and snapped it to the top; the library now remembers its scroll spot and puts it back after the rebuild. Reproduced the jump (600 to 0) before the fix; after it the position holds at desktop 1280 and mobile 390 with a seeded library. Cache v172.
