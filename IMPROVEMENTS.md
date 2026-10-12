@@ -9840,9 +9840,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #455.
 
 ### currents-thumb-video-missing: Currents thumbnail video is missing (bug, Geethub #456)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug. The Currents playlist thumb video does not show. Find why and restore it.
 - **Touches:** Currents thumb.
-- **Branch:**
+- **Branch:** agent/currents-thumb-video
 - **Notes:** Synced from Geethub #456.
