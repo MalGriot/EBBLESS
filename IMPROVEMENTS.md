@@ -127,12 +127,12 @@ Add entries in this shape:
 -->
 
 ### ui-color-fade: UI colors fade into the next song's color instead of snapping (Geethub #476)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #476. When the track changes and the UI color (accent/tint from the album art) changes, it should fade smoothly into the next color rather than switching instantly.
 - **Touches:** accent/theme color update on track change (`--player-accent` and related CSS variables).
-- **Branch:**
-- **Notes:** Synced from Geethub #476. No further detail given. Cassette copies already fade tone via a CSS color transition; check what else snaps. Overlaps album-art-based UI recolor work.
+- **Branch:** agent/ui-color-fade
+- **Notes:** Synced from Geethub #476. No further detail given. Cassette copies already fade tone via a CSS color transition; check what else snaps. Overlaps album-art-based UI recolor work. Built: Accent colors fade over 500ms via @property-registered --clock-accent/--player-accent (CSS only); off under reduce-motion. Only tested in a minimal page; mini player follows intermediate colors during the fade. Cache v189.
 
 ### cassette-tape-wave-rock: Stacked cassettes in the cassette animation rock at different intervals, like waves (Geethub #475)
 - **Status:** merged
@@ -143,28 +143,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #475. Related to cassette-fullscreen-animation and cassette-cycle-7-tapes; check for overlap before building. Stacked copies now rock about 2.2 degrees, 3.4s per swing, each slot lagging the one in front (CS_ROCK in csStackFrame); fades in with the rise and out on collapse. Syntax-checked only, not watched in a live browser. Cache v186.
 
 ### rename-window-wording: Rename window should say album or song, not "playlist" (Geethub #472)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #472. When renaming an album or song, the pop-up currently says "Rename playlist". It should say "Rename album" or "Rename song" to match what is being renamed.
 - **Touches:** rename dialog in the library.
-- **Branch:**
-- **Notes:** Synced from Geethub #472. Pairs with rename-song-title-artist (#473); do them together.
+- **Branch:** agent/rename-dialog
+- **Notes:** Synced from Geethub #472. Pairs with rename-song-title-artist (#473); do them together. Built: Heading names song/album/playlist/podcast/artist. Not run in a browser. Cache v189.
 
 ### rename-song-title-artist: Renaming a song or album lets you edit both title and artist (Geethub #473)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #473. When renaming an album or song, the rename window should let you change the song title and the artist.
 - **Touches:** rename dialog and saved track/album metadata.
-- **Branch:**
-- **Notes:** Synced from Geethub #473. Pairs with rename-window-wording (#472).
+- **Branch:** agent/rename-dialog
+- **Notes:** Synced from Geethub #473. Pairs with rename-window-wording (#472). Built: Song: title+artist; album: name+artist (pl.artistName, read first by albumArtistName). Renamed song/album name can revert on re-resolve (artist override kept). Not run in a browser. Cache v189.
 
 ### match-links-grid: Matching links window on desktop shows a grid, not a scrolling list (Geethub #474)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #474. On desktop, the matching-links window should lay the link choices out as a grid instead of a scrolling list.
 - **Touches:** desktop match/relink window.
-- **Branch:**
-- **Notes:** Synced from Geethub #474. Overlaps the match UI refresh mentioned in draggables (#471) and matching-songs-bug (#465).
+- **Branch:** agent/match-links-grid
+- **Notes:** Synced from Geethub #474. Overlaps the match UI refresh mentioned in draggables (#471) and matching-songs-bug (#465). Built: CSS grid for #relinkCandidates under body.split-desktop; mobile keeps list. Not seen rendered. Cache v189.
 
 ### breathe-love-deep-album: "Breathe Love Deep" should be an album sourced from SoundCloud
 - **Status:** merged
@@ -10025,12 +10025,12 @@ Add entries in this shape:
 - **Notes:** Marvis Pro's most distinctive customization.
 
 ### desktop-rounded-corners-panels: Desktop library and queue panels get rounded top and bottom corners (Geethub #470)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #470. On desktop, the library and queue panels should have rounded corners at both the top and the bottom.
 - **Touches:** desktop library and queue panel CSS.
-- **Branch:**
-- **Notes:** Synced from Geethub issue #470 (idea). No further detail given.
+- **Branch:** agent/rounded-corners-panels
+- **Notes:** Synced from Geethub issue #470 (idea). No further detail given. Built: 14px (--r-lg) on library, queue, playlist, history panels; desktop-fs drawers round inner corners only. Computed styles checked, subtle visually. Cache v189.
 
 ### draggables: Drag and drop everywhere (songs, playlists, artists, now-playing art) (Geethub #471)
 - **Status:** ready
