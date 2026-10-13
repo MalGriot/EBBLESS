@@ -10015,3 +10015,11 @@ Add entries in this shape:
 - **Touches:** `scSetSourceFor`, `scSetVerify`, SC adapter `loadVideoById`, `loadIndex`, `createSCDeckPlayer`.
 - **Branch:** agent/soundcloud-set-skip
 - **Notes:** Covers one set in order or reordered. NOT covered (still stalls hidden): loose single tracks, queues crossing several sets, SoundCloud after YouTube, artist-page queues. Side effect: Previous within about 6s of an auto-advance cold-loads (about 2s). Not tested in the real PiP window. Deployed for owner testing. Cache v184. Findings in memory project_sc_hidden_tab_findings.
+
+### soundcloud-mixed-hidden: SC autoplay for mixed, loose and multi-set queues while the mini-player is open (reopen of #458)
+- **Status:** merged
+- **Priority:** high
+- **Description:** A SoundCloud player hosted in a visible window can start new sounds while the main tab is hidden. While the mini-player is open and clicked or typed in once, the SoundCloud decks are rebuilt inside the PiP document (`scHost`, `rehostSCDecks`, `attachMiniPlayerSC`) and moved back when it closes. Set-skip stays as the fallback.
+- **Touches:** mini-player, SC decks, `createSCDeckPlayer`.
+- **Branch:** agent/soundcloud-mixed-hidden
+- **Notes:** Tested with a popup stand-in only; real PiP click-unlock untested. Before the first click in the mini-player only the old behaviour applies. Possible audio gap at the first click and about 1 to 2s on close. A YouTube song once stuck at 0 while hidden (not investigated). Deployed for owner testing. Cache v185.
