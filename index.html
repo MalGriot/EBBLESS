@@ -4873,6 +4873,45 @@ async function searchArtistProfile(query){
   }
 }
 
+// Did-you-mean (GitHub #463): when a search finds nothing, ask iTunes' keyless
+// fuzzy song search for the closest artist, title or "artist title" and offer
+// it only if it is a near miss of what was typed (small edit distance), so an
+// unrelated fuzzy hit is never suggested. Resolves null on any miss/failure.
+function editDistance(a, b){
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++){
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+async function suggestSpelling(query){
+  const want = normalizeArtistQuery(query);
+  if (want.length < 3) return null;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 4000);
+  try{
+    const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: query, entity: 'song', limit: '5' }), { signal: ctl.signal });
+    const songs = r.ok ? ((await r.json()).results || []) : [];
+    let best = null, bestD = Infinity;
+    songs.forEach(t => {
+      [t.artistName, t.trackName, t.artistName + ' ' + t.trackName].forEach(c => {
+        const n = normalizeArtistQuery(c);
+        if (!c || !n || n === want) return;
+        const d = editDistance(want, n);
+        if (d < bestD){ bestD = d; best = c; }
+      });
+    });
+    return best && bestD <= Math.max(1, Math.floor(want.length / 4)) ? best : null;
+  } catch(e){
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // A failed match here (YouTube's scrape occasionally 502s with a consent/
 // bot-check page instead of results - transient, not title-related) used to
 // permanently drop the track from the queue on the first miss, which could
@@ -11411,6 +11450,13 @@ async function beginVibeSearch(query){
     const results = await searchPlaylistsByVibe(query);
     shown = results;
     stageSearchResults(artist ? [artist].concat(results) : results, query, seq);
+    if (!artist && !results.length){
+      const guess = await suggestSpelling(query);
+      if (guess && seq === vibeSearchSeq && importStage.querySelector('[data-search-seq="' + seq + '"]') && !artist){
+        importStage.insertAdjacentHTML('afterbegin', '<button class="btn-ghost" id="didYouMeanBtn" style="width:100%;margin-bottom:12px">Did you mean &ldquo;' + escapeHtml(guess) + '&rdquo;?</button>');
+        $('didYouMeanBtn').addEventListener('click', () => beginVibeSearch(guess));
+      }
+    }
   } catch(e){
     const a = await artistP;
     if (a && seq === vibeSearchSeq){ shown = []; stageSearchResults([a], query, seq); return; }
