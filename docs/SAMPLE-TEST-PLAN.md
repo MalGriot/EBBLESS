@@ -25,13 +25,14 @@ Open `/sample/` in a private window.
    `?` button, which blinks, with "You should start here." No countdown is
    running (the pill reads `15:00`).
 2. Wait 30 seconds. The pill still reads `15:00`.
-3. Click **Start the tutorial**. The tutorial runs, its music plays, the pill
+3. The tutorial prompt appears about 7 seconds after the splash is gone and the `?` button is on screen (not before). Click **Start the tutorial**. The tutorial runs, its music plays, the pill
    still reads `15:00`. Finish or skip it.
 4. Reopen the tutorial from `?`. Works.
 5. Paste a Spotify playlist, a YouTube link and a SoundCloud link. Each
    loads. Nothing plays yet, pill still `15:00`.
 6. Press play on a song. The pill starts counting within a second.
-7. Pause, open Settings, open Library, open the queue. The pill keeps running.
+7. Pause: the pill freezes and dims. Resume: it counts again. While a song is loading (spinner or ad wait) it does not count. Opening Settings, Library or the queue while music plays does not stop it.
+7b. Tap the pill: "End the sample?" appears. Keep exploring closes it. End sample and join the beta goes to the signup form.
 8. Cassette, LP, visualizer, lyrics. In **Safari** check the cassette
    specifically (the `<base>` / `url(#id)` risk). Note if it looks blank.
 9. Toggle Discover on a playlist and let it queue a few songs.

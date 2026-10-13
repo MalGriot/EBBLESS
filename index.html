@@ -2976,7 +2976,8 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-or{margin:20px 0 10px;font-size:13px}
 #beta-lock .bl-google[hidden]{display:none}
 #beta-lock .bl-gbtn{min-height:40px;display:flex;justify-content:center}
-#beta-lock .bl-join{margin:28px 0 0;padding:17px 24px;font-size:15px;letter-spacing:1.6px}
+#beta-lock .bl-try{margin:28px 0 0;padding:17px 24px;font-size:15px;letter-spacing:1.6px}
+#beta-lock .bl-join{margin:12px 0 0;padding:15px 24px;font-size:14px;letter-spacing:1.4px}
 #beta-lock .bl-lede{color:#f2f2f2;font-size:18px;margin:0 0 8px}
 #beta-lock .bl-flow{display:flex;flex-wrap:wrap;gap:6px 0;list-style:none;margin:18px 0 0;padding:0;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#cfcfcf}
 #beta-lock .bl-flow li+li::before{content:"\2192";color:var(--accent);margin:0 10px}
@@ -2993,13 +2994,13 @@ body.week-up-on{overflow:hidden}
     <h1 id="bl-title">EBBLESS IS IN PRIVATE BETA.</h1>
     <div class="bl-rule"></div>
     <p class="bl-lede">Be one of the first to experience EBBLESS.</p>
-    <p>Join the beta and, once approved, we'll email you your personal link to get in.</p>
+    <p>Try it for 15 minutes, no sign-up. Or join the beta and, once approved, we'll email you your personal link to get in.</p>
     <ol class="bl-flow" aria-label="How you get in">
       <li>Join</li><li>Approval</li><li>Email</li><li>You're in</li>
     </ol>
-    <a class="bl-btn primary bl-join" href="beta/">JOIN THE BETA</a>
+    <a class="bl-btn primary bl-try" href="sample/">TRY THE 15 MINUTE TRIAL</a>
+    <a class="bl-btn bl-join" href="beta/#join">SIGN UP FOR THE BETA</a>
     <a class="bl-learn" href="welcome/">See what EBBLESS is</a>
-    <a class="bl-learn" href="sample/">Try it for 15 minutes</a>
     <div class="bl-rule bl-rule-soft"></div>
     <!-- Tester way in: the invite link does it all (?t= below). The Google
          button (rendered by the app once GSI loads) claims by the Google
@@ -3066,6 +3067,7 @@ body.week-up-on{overflow:hidden}
   if (iosStandalone){
     // Already signed up (that's how they got the app): no Join button here.
     document.querySelector('#beta-lock .bl-join').hidden = true;
+    document.querySelector('#beta-lock .bl-try').hidden = true;
     document.getElementById('bl-how').textContent = 'Sign in with Google using the account you signed up with.';
     document.getElementById('bl-gnote').hidden = true;
     document.getElementById('bl-ios').hidden = false;
@@ -25885,7 +25887,7 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
    edited system clock start a fresh trial. */
 (function sampleMode(){
   if (!EBB_SAMPLE) return;
-  const KEY = 'ebbless:sampleTrial', COOKIE = 'ebbless_sample';
+  const KEY = 'ebbless:sampleTrial', COOKIE = 'ebbless_sample2';
   const TOTAL_MS = 15 * 60 * 1000, WARN_MS = 2 * 60 * 1000;
   const INTRO_DONE_KEY = 'ebbless:sampleIntroDone';
   const byId = (id) => document.getElementById(id);
@@ -25893,19 +25895,22 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
   const cookiePath = root.pathname.replace(/[^/]*$/, '') || '/';
   let rec = null, timer = 0, ended = false, pill = null;
 
-  const readCookie = () => { const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=(\\d+)(?:x(\\d))?')); return m ? { start: +m[1], expired: m[2] === '1' } : null; };
-  const writeCookie = (r) => { try { document.cookie = COOKIE + '=' + r.start + (r.expired ? 'x1' : 'x0') + '; max-age=2592000; path=' + cookiePath + '; SameSite=Lax'; } catch(e){} };
+  // The record holds `used`: milliseconds of real playback. Wall-clock time
+  // (loading, pauses, browsing) is not counted. The cookie mirrors `used`.
+  const readCookie = () => { const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=(\\d+)(?:x(\\d))?')); return m ? { used: +m[1], expired: m[2] === '1' } : null; };
+  const writeCookie = (r) => { try { document.cookie = COOKIE + '=' + Math.round(r.used) + (r.expired ? 'x1' : 'x0') + '; max-age=2592000; path=' + cookiePath + '; SameSite=Lax'; } catch(e){} };
   function load(){
     let r = null;
     try { r = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
     const c = readCookie();
-    if (!(r && r.start > 0)) r = c ? { v: 1, start: c.start, expired: c.expired } : null;
-    else if (c && c.start && c.start < r.start) r = Object.assign({}, r, { start: c.start });   // the earlier of the two
-    if (r && (r.expired || Date.now() - r.start >= TOTAL_MS)) r.expired = true;
+    if (r && r.v !== 2 && r.start > 0) r = { v: 2, id: r.id, used: Math.min(TOTAL_MS, Math.max(0, Date.now() - r.start)), expired: !!r.expired, warned: !!r.warned };   // first release counted wall-clock time
+    if (!(r && r.used >= 0)) r = c ? { v: 2, used: c.used, expired: c.expired } : null;
+    else if (c && c.used > r.used) r = Object.assign({}, r, { used: c.used, expired: r.expired || c.expired });   // the larger of the two
+    if (r && (r.expired || r.used >= TOTAL_MS)) r.expired = true;
     return r;
   }
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(rec)); } catch(e){} writeCookie(rec); }
-  const remaining = () => rec ? Math.max(0, TOTAL_MS - (Date.now() - rec.start)) : TOTAL_MS;
+  const remaining = () => rec ? Math.max(0, TOTAL_MS - rec.used) : TOTAL_MS;
   const fmt = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   function render(){
@@ -25913,8 +25918,9 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
     const left = remaining();
     pill.querySelector('.sc-time').textContent = fmt(left);
     pill.classList.toggle('is-warn', !!rec && !ended && left <= WARN_MS);
-    pill.title = rec ? 'Time left in the sample' : 'Your 15 minutes start when you press play';
-    pill.setAttribute('aria-label', rec ? fmt(left) + ' left in the sample' : '15 minute sample, starts when you press play');
+    pill.classList.toggle('is-paused', !!rec && !ended && !counting());
+    pill.title = rec ? 'Time left in the sample. It only runs while music plays. Tap to end the sample.' : 'Your 15 minutes start when you press play. Tap to end the sample.';
+    pill.setAttribute('aria-label', (rec ? fmt(left) + ' left in the sample.' : '15 minute sample, starts when you press play.') + ' Opens the end sample choice.');
   }
 
   // ---- start: the first real track playing
@@ -25922,19 +25928,36 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
     return artworkWrap.classList.contains('is-playing') && !document.body.classList.contains('onb-active')
       && !!(state.queue && state.queue[state.queuePos]);
   }
+  // time only runs while a track is really playing: not while it loads
+  // (activeLoadProgress covers the load spinner and the ad-wait), not paused
+  function counting(){
+    let loading = false;
+    try { loading = activeLoadProgress() !== null; } catch(e){}
+    return playingNow() && !loading;
+  }
   function maybeStart(){
     if (rec || ended || !playingNow()) return;
-    rec = { v: 1, id: Math.random().toString(36).slice(2), start: Date.now() };
+    rec = { v: 2, id: Math.random().toString(36).slice(2), used: 0 };
+    lastTick = Date.now(); lastSave = lastTick;
     save(); dismissIntro(); render(); startTicking();
   }
 
   // ---- ticking, warning, expiry
-  function startTicking(){ if (!timer) timer = setInterval(tick, 1000); }
+  let lastTick = 0, lastSave = 0, wasCounting = false;
+  function startTicking(){ if (!timer) timer = setInterval(tick, 500); }
   function tick(){
     if (!rec) return;
+    const now = Date.now();
+    // a background tab only ticks about once a minute, so allow a longer gap there
+    const dt = lastTick ? Math.min(now - lastTick, document.hidden ? 70000 : 2500) : 0;
+    lastTick = now;
+    if (ended){ if (artworkWrap.classList.contains('is-playing')) try { pausePlayback(); } catch(e){} render(); return; }
+    const c = counting();
+    if (c) rec.used += dt;
+    if ((c && now - lastSave > 5000) || (wasCounting && !c)){ save(); lastSave = now; }
+    wasCounting = c;
     const left = remaining();
     render();
-    if (ended){ if (artworkWrap.classList.contains('is-playing')) try { pausePlayback(); } catch(e){} return; }
     if (left <= 0){ expire(); return; }
     if (left <= WARN_MS && !rec.warned){
       rec.warned = true; save();
@@ -25944,8 +25967,8 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
   function expire(){
     if (ended) return;
     ended = true;
-    if (rec){ rec.expired = true; save(); }
-    dismissIntro();
+    if (rec){ rec.expired = true; rec.used = Math.max(rec.used, TOTAL_MS); save(); }
+    dismissIntro(); closeConfirm();
     try { if (typeof cancelPrevIntro === 'function' && cancelPrevIntro){ cancelPrevIntro(); } } catch(e){}
     try { pausePlayback(); } catch(e){}
     try { if (typeof castActive === 'function' && castActive()) castStop(); } catch(e){}
@@ -25963,7 +25986,7 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
     let el = byId('sampleEnd');
     if (!el){
       el = document.createElement('div');
-      el.id = 'sampleEnd'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'seTitle');
+      el.id = 'sampleEnd'; el.className = 'sample-modal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'seTitle');
       el.innerHTML = '<div class="se-card"><img src="brand/assets/wordmark-white.png" alt="EBBLESS">'
         + '<h2 id="seTitle">You’ve reached the edge of the sample.</h2><div class="se-rule"></div>'
         + '<p class="se-lede">You’ve had a taste of EBBLESS. The full experience is waiting for you.</p>'
@@ -25978,6 +26001,34 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
     }
     el.hidden = false;
     const j = byId('seJoin'); if (j) j.focus({ preventScroll: true });
+  }
+
+  // ---- tapping the pill: end the sample and try the real thing?
+  function closeConfirm(){ const c = byId('sampleConfirm'); if (c) c.remove(); document.removeEventListener('keydown', confirmKey, true); }
+  function confirmKey(e){ if (e.key === 'Escape') closeConfirm(); }
+  function showConfirm(){
+    if (ended || byId('sampleConfirm')) return;
+    dismissIntro();
+    const el = document.createElement('div');
+    el.id = 'sampleConfirm'; el.className = 'sample-modal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'scTitle');
+    el.style.zIndex = '20001';
+    el.innerHTML = '<div class="se-card"><h2 id="scTitle">End the sample?</h2><div class="se-rule"></div>'
+      + '<p class="se-lede">Ready for the real thing?</p>'
+      + '<p>Ending the sample takes you to the beta signup. ' + (rec ? 'You have ' + fmt(remaining()) + ' of listening left, and it won\u2019t carry over.' : 'Your 15 minutes haven\u2019t started yet.') + '</p>'
+      + '<button type="button" class="se-cta" id="scEnd">End sample and join the beta</button>'
+      + '<a class="se-alt" href="./">Already approved? Open EBBLESS</a>'
+      + '<button type="button" class="se-alt" id="scKeep" style="margin-top:10px">Keep exploring</button></div>';
+    document.body.appendChild(el);
+    el.querySelector('#scKeep').addEventListener('click', closeConfirm);
+    el.addEventListener('click', (e) => { if (e.target === el) closeConfirm(); });
+    el.querySelector('#scEnd').addEventListener('click', () => {
+      if (!rec) rec = { v: 2, id: Math.random().toString(36).slice(2), used: 0 };
+      rec.used = TOTAL_MS; rec.expired = true; save();
+      try { pausePlayback(); } catch(e){}
+      location.href = 'beta/#join';
+    });
+    document.addEventListener('keydown', confirmKey, true);
+    el.querySelector('#scKeep').focus({ preventScroll: true });
   }
 
   // ---- intro: dim everything, blink the tutorial button, one clear next step
@@ -26042,27 +26093,43 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
     if (help && !watched) help.classList.add('is-nudge');
     if (help) help.addEventListener('click', () => help.classList.remove('is-nudge'));
     // countdown pill, right after the tutorial button
-    pill = document.createElement('span');
-    pill.id = 'sampleClock'; pill.setAttribute('role', 'timer');
+    pill = document.createElement('button');
+    pill.id = 'sampleClock'; pill.type = 'button';
+    pill.addEventListener('click', showConfirm);
     pill.innerHTML = '<span class="sc-tag">Sample</span><span class="sc-time">15:00</span>';
     if (help && help.parentNode) help.parentNode.insertBefore(pill, help.nextSibling); else byId('topbar').appendChild(pill);
 
     rec = load();
     if (rec && rec.expired){ expire(); return; }
-    if (rec){ startTicking(); tick(); }
+    if (rec){ lastTick = Date.now(); lastSave = lastTick; startTicking(); tick(); }
     render();
     new MutationObserver(maybeStart).observe(artworkWrap, { attributes: true, attributeFilter: ['class'] });
-    document.addEventListener('visibilitychange', tick);
+    document.addEventListener('visibilitychange', () => { tick(); if (rec && !ended) save(); });
+    window.addEventListener('pagehide', () => { if (rec && !ended){ tick(); save(); } });
     window.addEventListener('pageshow', tick);
     let introDone = false; try { introDone = localStorage.getItem(INTRO_DONE_KEY) === '1'; } catch(e){}
-    if (!rec && !introDone) setTimeout(() => { if (!rec && !ended) showIntro(); }, 700);
+    if (!rec && !introDone){
+      // wait for the splash to clear and the tutorial button to be on screen, then give 7 s
+      const t0 = Date.now(); let seen = 0;
+      const wait = setInterval(() => {
+        if (rec || ended || Date.now() - t0 > 90000){ clearInterval(wait); return; }
+        const sp = byId('splash'), h = byId('helpBtn');
+        const cs = sp ? getComputedStyle(sp) : null;
+        const spShown = !!sp && !sp.classList.contains('is-hidden') && cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.05;
+        const hr = h ? h.getBoundingClientRect() : null;
+        const ready = !spShown && hr && hr.width > 0 && hr.right > 0 && !document.body.classList.contains('onb-active');
+        if (!ready){ seen = 0; return; }
+        if (!seen) seen = Date.now();
+        if (Date.now() - seen >= 7000){ clearInterval(wait); if (!rec && !ended && !document.body.classList.contains('onb-active')) showIntro(); }
+      }, 250);
+    }
   };
 
   // test and owner helpers, in the style of ebblessStats
   window.ebblessSample = {
-    status: () => ({ started: !!rec, expired: ended, remainingMs: remaining() }),
-    expireNow(){ if (!rec){ rec = { v: 1, id: 'dev', start: Date.now() }; } rec.start = Date.now() - TOTAL_MS; save(); tick(); },
-    skipTo(ms){ if (!rec){ rec = { v: 1, id: 'dev', start: Date.now() }; } rec.start = Date.now() - (TOTAL_MS - ms); save(); startTicking(); tick(); },
+    status: () => ({ started: !!rec, expired: ended, counting: !!rec && counting(), remainingMs: remaining() }),
+    expireNow(){ if (!rec) rec = { v: 2, id: 'dev', used: 0 }; rec.used = TOTAL_MS; save(); startTicking(); tick(); },
+    skipTo(ms){ if (!rec) rec = { v: 2, id: 'dev', used: 0 }; rec.used = TOTAL_MS - ms; lastTick = Date.now(); save(); startTicking(); tick(); },
     reset(){ try { localStorage.removeItem(KEY); } catch(e){} try { document.cookie = COOKIE + '=; max-age=0; path=' + cookiePath; } catch(e){} try { sessionStorage.clear(); } catch(e){} location.reload(); }
   };
 })();
@@ -26381,9 +26448,10 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
 </script>
 <style>
 /* SAMPLE MODE styles (logic: "SAMPLE MODE" in the main script). Inert unless the page is a sample. */
-#sampleClock{order:3;display:none;align-items:center;gap:6px;flex:none;padding:5px 11px;border-radius:999px;border:1px solid var(--accent-dim,rgba(224,178,106,.4));color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#sampleClock{order:3;display:none;align-items:center;gap:6px;flex:none;cursor:pointer;background:none;font-family:inherit;padding:5px 11px;border-radius:999px;border:1px solid var(--accent-dim,rgba(224,178,106,.4));color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.6px;font-variant-numeric:tabular-nums;white-space:nowrap}
 body.is-sample #sampleClock{display:inline-flex}
 #sampleClock .sc-tag{opacity:.7;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;font-size:10px}
+#sampleClock.is-paused{opacity:.6}
 #sampleClock.is-warn{background:var(--accent);color:#121212;animation:sampleWarn 1.2s ease-in-out infinite}
 @keyframes sampleWarn{50%{opacity:.6}}
 @media (max-width:640px){#sampleClock{padding:4px 9px;font-size:11px}#sampleClock .sc-tag{display:none}}
@@ -26404,16 +26472,18 @@ body.is-sample.split-desktop #topbar{--tb-r:272px}
 #sampleBubble .sb-go{background:var(--accent);color:#121212;border:1px solid var(--accent)}
 #sampleBubble .sb-skip{background:none;color:#bdbdbd;border:0;padding:9px 4px;text-decoration:underline;text-underline-offset:3px}
 @media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{animation:none;box-shadow:0 0 0 3px var(--accent)}#sampleClock.is-warn{animation:none}}
-#sampleEnd{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
-#sampleEnd[hidden]{display:none}
-#sampleEnd .se-card{width:min(520px,100%);padding:30px 26px 24px;border-radius:20px;background:#161616;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.6)}
-#sampleEnd img{height:20px;display:block;margin-bottom:26px}
-#sampleEnd h2{margin:0;font-size:clamp(26px,7vw,36px);line-height:1.05;letter-spacing:-.01em;text-transform:uppercase}
-#sampleEnd .se-rule{height:1px;background:var(--accent);margin:16px 0}
-#sampleEnd p{margin:0 0 10px;color:#a8a8a8;font-size:15px;line-height:1.5}
-#sampleEnd p.se-lede{color:#f2f2f2;font-size:17px}
-#sampleEnd .se-cta{display:block;text-align:center;margin-top:22px;padding:16px 24px;border-radius:999px;background:var(--accent);color:#121212;font-weight:700;letter-spacing:1.6px;font-size:14px;text-transform:uppercase;text-decoration:none}
-#sampleEnd .se-alt{display:block;text-align:center;margin-top:14px;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px}
+.sample-modal{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
+.sample-modal[hidden]{display:none}
+.sample-modal .se-card{width:min(520px,100%);padding:30px 26px 24px;border-radius:20px;background:#161616;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.sample-modal img{height:20px;display:block;margin-bottom:26px}
+.sample-modal h2{margin:0;font-size:clamp(26px,7vw,36px);line-height:1.05;letter-spacing:-.01em;text-transform:uppercase}
+.sample-modal .se-rule{height:1px;background:var(--accent);margin:16px 0}
+.sample-modal p{margin:0 0 10px;color:#a8a8a8;font-size:15px;line-height:1.5}
+.sample-modal p.se-lede{color:#f2f2f2;font-size:17px}
+.sample-modal .se-cta{display:block;text-align:center;margin-top:22px;padding:16px 24px;border-radius:999px;background:var(--accent);color:#121212;font-weight:700;letter-spacing:1.6px;font-size:14px;text-transform:uppercase;text-decoration:none}
+.sample-modal .se-alt{display:block;text-align:center;margin-top:14px;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px}
+button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sample-modal .se-cta{border:0;font-family:inherit;cursor:pointer;width:100%}
 </style>
 <script>
 /* Hover expand for every button (#395). Web Animations on the independent

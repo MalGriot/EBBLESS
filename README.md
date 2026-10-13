@@ -101,9 +101,14 @@ backstop; main script: intro, clock, expiry; plus `EBB_SAMPLE` checks).
   `ebbless:sampleTrial` (and an `ebbless_sample` cookie) touch real storage.
   Posts to account, profile, feedback, stats and shared-KV routes are blocked.
 - The 15 minutes start the first time a real queue track plays (not the
-  tutorial's music), survive refresh, and end with a "Join the beta" screen
-  (`beta/#join`; "Join the waitlist" if the beta is full). It is a soft limit:
-  private windows, clearing site data or another browser start a new trial.
+  tutorial's music) and only run while a track is really playing: loading,
+  the ad wait and pauses do not count. Used time survives refresh. Tapping
+  the countdown pill asks whether to end the sample and join the beta. At 0
+  the screen ends with "Join the beta" (`beta/#join`; "Join the waitlist" if
+  the beta is full). It is a soft limit: private windows, clearing site data
+  or another browser start a new trial.
+- The tutorial prompt waits for the splash to clear and the tutorial button
+  to show, then another 7 seconds.
 - A browser with a beta tester token is sent to the real app
   (`?sample=force` shows the sample anyway).
 - Console: `ebblessSample.status()`, `.skipTo(ms)`, `.expireNow()`, `.reset()`.
