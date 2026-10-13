@@ -17550,14 +17550,50 @@ function makeSCPlayerAdapter(deck, widget, myGen){
       // callback of a load that a newer one already superseded.
       const mySeq = ++loadSeq;
       const onLoad = typeof opts === 'object' && opts.onLoad;
-      widget.load(soundCloudTrackApiUrl(v), {
-        auto_play: deck === activeDeck(), show_artwork: false,
-        callback: function(){
-          if (deck.gen !== myGen || mySeq !== loadSeq) return;
-          widget.setVolume(muted ? 0 : vol);
-          if (onLoad) onLoad();
-        },
-      });
+      const live = () => deck.gen === myGen && mySeq === loadSeq;
+      const loaded = () => { widget.setVolume(muted ? 0 : vol); if (onLoad) onLoad(); };
+      const loadSingle = () => {
+        deck.scSet = null;
+        widget.load(soundCloudTrackApiUrl(v), {
+          auto_play: deck === activeDeck(), show_artwork: false,
+          callback: function(){ if (live()) loaded(); },
+        });
+      };
+      // #458: a sound in a set this deck's widget already holds is reached with
+      // skip(), not load() (see scSetSourceFor); load() of a new sound into a
+      // hidden page never starts playing. Falls back to load() if the widget
+      // doesn't land on the sound.
+      const set = scSetSourceFor(v, deck === activeDeck() ? state.queuePos : deck.pos);
+      if (set && document.hidden && deck === activeDeck() && deck.scSet && deck.scSet.url === set.url){
+        const want = soundCloudTrackId(v), i = deck.scSet.ids.indexOf(want);
+        if (i >= 0){
+          const cur = (cb) => widget.getCurrentSound(function(s){ if (live()) cb(!!s && String(s.id) === want); });
+          const t0 = Date.now();
+          const landed = () => { widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; }); loaded(); };
+          const poll = () => cur(function(ok){
+            if (ok) landed();
+            else if (Date.now() - t0 > 6000) loadSingle();
+            else setTimeout(poll, 250);
+          });
+          cur(function(ok){ if (ok) landed(); else { widget.skip(i); setTimeout(poll, 250); } });
+          return;
+        }
+      }
+      if (set){
+        const loadSet = (startIdx, retry) => widget.load(set.url, {
+          auto_play: deck === activeDeck(), show_artwork: false, start_track: startIdx,
+          callback: function(){
+            if (!live()) return;
+            scSetVerify(deck, widget, myGen, set.url, v, function(ok, i){
+              if (!live()) return;
+              if (ok) loaded();
+              else if (i >= 0 && !retry) loadSet(i, true);
+              else loadSingle();
+            });
+          },
+        });
+        loadSet(set.idx, false);
+      } else loadSingle();
       // .load() doesn't re-fire READY on an already-bound widget (verified
       // directly against the real widget), so this is the only place the
       // new track's duration gets (re-)fetched. Gen-guarded like every other
@@ -17569,6 +17605,44 @@ function makeSCPlayerAdapter(deck, widget, myGen){
   };
 }
 function soundCloudTrackApiUrl(videoId){ return 'https://api.soundcloud.com/tracks/' + soundCloudTrackId(videoId); }
+// #458: SoundCloud's widget can't start a NEW sound via load()/play() while the
+// page is hidden (observed in a real hidden tab: position frozen until the tab
+// is shown again). A widget that has the whole SET loaded and playing keeps
+// advancing, and skip(i) lands on any sound in it, even hidden. So a SoundCloud
+// track that came from a saved set (sc_playlist/sc_album) is loaded as that
+// set, starting at its index; deck.scSet = { url, ids } records what the
+// widget holds so a hidden advance can skip() instead of load(). Returns
+// { url, idx } (idx = the track's slot in the app's copy of the set), or null
+// for a track with no known set (single track, artist page, custom list).
+function scSetSourceFor(videoId, hintPos){
+  if (!isSoundCloudVideoId(videoId)) return null;
+  const pick = (p) => {
+    const e = state.queue[p], t = trackAt(p);
+    if (!e || !t || t.videoId !== videoId) return null;
+    const pl = playlistById(e.plId);
+    if (!pl || (pl.type !== 'sc_playlist' && pl.type !== 'sc_album')) return null;
+    const url = canonicalLinkForPlaylist(pl);
+    return url ? { url, idx: e.idx } : null;
+  };
+  let r = hintPos >= 0 ? pick(hintPos) : null;
+  for (let d = 0; !r && d < state.queue.length; d++) r = pick(state.queuePos + d) || pick(state.queuePos - d);
+  return r;
+}
+// After a set load: record the widget's sound ids on the deck and report
+// whether it is on videoId, plus where videoId sits in the widget's own list
+// (-1 if it isn't in it) - the widget's order is trusted over the app's copy.
+function scSetVerify(deck, widget, myGen, url, videoId, done){
+  const want = soundCloudTrackId(videoId);
+  widget.getSounds(function(list){
+    if (deck.gen !== myGen) return;
+    const ids = (list || []).map(x => String(x.id));
+    widget.getCurrentSound(function(cur){
+      if (deck.gen !== myGen) return;
+      deck.scSet = { url, ids };
+      done(!!cur && String(cur.id) === want, ids.indexOf(want));
+    });
+  });
+}
 // Same URL shape SoundCloud's own oEmbed endpoint returns for a track/set
 // permalink (verified directly against https://soundcloud.com/oembed) -
 // built here instead of round-tripping through oEmbed per track since the
@@ -17588,8 +17662,9 @@ function soundCloudTrackApiUrl(videoId){ return 'https://api.soundcloud.com/trac
 // silently paused the one that had just started - until the listener came
 // back to the tab and the visibilitychange handler's resumePlayback() kicked
 // it again.
-function soundCloudWidgetSrc(videoId, autoPlay){
-  return 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(soundCloudTrackApiUrl(videoId)) +
+function soundCloudWidgetSrc(videoId, autoPlay, set){
+  return 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(set ? set.url : soundCloudTrackApiUrl(videoId)) +
+    (set ? '&start_track=' + set.idx : '') +
     '&auto_play=' + (autoPlay ? 'true' : 'false') + '&show_artwork=false&visual=false&download=false&sharing=false' +
     '&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&buying=false&liking=false';
 }
@@ -17623,7 +17698,9 @@ function createSCDeckPlayer(deck, videoId){
   const iframe = document.createElement('iframe');
   iframe.id = deck.scId;
   iframe.setAttribute('allow', 'autoplay');
-  iframe.src = soundCloudWidgetSrc(videoId, deck === activeDeck());
+  deck.scSet = null;
+  const set = scSetSourceFor(videoId, deck === activeDeck() ? state.queuePos : deck.pos);
+  iframe.src = soundCloudWidgetSrc(videoId, deck === activeDeck(), set);
   old.replaceWith(iframe);
   const widget = SC.Widget(iframe);
   deck.player = makeSCPlayerAdapter(deck, widget, myGen);
@@ -17636,7 +17713,20 @@ function createSCDeckPlayer(deck, videoId){
     // pendingVideoId to the same id it passes createDeckPlayer) - reloading
     // it here would just restart/delay the same sound, so only load a
     // pending track that's actually different.
-    if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; if (v !== videoId) deck.player.loadVideoById({ videoId: v }); }
+    let reloaded = false;
+    if (deck.pendingVideoId){ const v = deck.pendingVideoId; deck.pendingVideoId = null; if (v !== videoId){ reloaded = true; deck.player.loadVideoById({ videoId: v }); } }
+    // #458: built from a set - note its sound ids and make sure it landed on
+    // this track (else correct it, or drop back to the single track)
+    if (set && !reloaded) scSetVerify(deck, widget, myGen, set.url, videoId, function(ok, i){
+      if (ok) return;
+      if (i >= 0){
+        if (deck === activeDeck()) widget.skip(i);
+        else widget.load(set.url, { auto_play: false, show_artwork: false, start_track: i });
+      } else {
+        deck.scSet = null;
+        widget.load(soundCloudTrackApiUrl(videoId), { auto_play: deck === activeDeck(), show_artwork: false });
+      }
+    });
     deck.confirmed = false;
     // No ad-preroll wait for SoundCloud - confirm (and, for the active
     // deck, unmute/seek-to-0/reflect play state) right away.
@@ -17737,7 +17827,19 @@ function createSCDeckPlayer(deck, videoId){
     }
     onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
   });
-  widget.bind(SC.Widget.Events.FINISH, function(){ if (deck.gen !== myGen) return; deck._scState = YT.PlayerState.ENDED; onDeckStateChange(deck, { data: YT.PlayerState.ENDED }); });
+  widget.bind(SC.Widget.Events.FINISH, function(){
+    if (deck.gen !== myGen) return;
+    // #458: a widget holding a set starts the set's next sound on its own the
+    // moment one ends. Hidden, that is exactly what keeps audio going (the
+    // advance in loadIndex adopts it or skip()s to the right sound). Visible,
+    // the app hands over to its standby deck instead, so stop the widget here
+    // and, once it has been swapped out, forget the song it still claims to hold.
+    const setDeck = !!deck.scSet && !document.hidden;
+    if (setDeck) widget.pause();
+    deck._scState = YT.PlayerState.ENDED;
+    onDeckStateChange(deck, { data: YT.PlayerState.ENDED });
+    if (setDeck && deck !== activeDeck() && deck.gen === myGen) resetDeck(deck);
+  });
   widget.bind(SC.Widget.Events.PLAY_PROGRESS, function(data){ if (deck.gen === myGen) deck._scPos = (data && data.currentPosition || 0) / 1000; });
 }
 
@@ -20480,8 +20582,12 @@ function loadIndex(pos, autoplay, opts){
   // browser is throttling, so its play() takes only when the tab is shown again.
   // Load the next song into the active widget instead, the one that was just
   // audibly playing (INFERRED fix, not observed in a hidden tab).
-  const scInPlace = trackStartAuto && document.visibilityState === 'hidden' && isSoundCloudVideoId(t.videoId) &&
-    ad0.kind === 'sc' && ad0.player && ad0.ready && !castActive();
+  // #458 (observed fix): the active widget holds this song's set, so skip()
+  // to it (adapter loadVideoById) - also for a manual next/prev from the mini player.
+  const scSetSkip = document.hidden && isSoundCloudVideoId(t.videoId) && ad0.kind === 'sc' && ad0.player && ad0.ready &&
+    !castActive() && !!ad0.scSet && ad0.scSet.ids.indexOf(soundCloudTrackId(t.videoId)) >= 0;
+  const scInPlace = scSetSkip || (trackStartAuto && document.visibilityState === 'hidden' && isSoundCloudVideoId(t.videoId) &&
+    ad0.kind === 'sc' && ad0.player && ad0.ready && !castActive());
   if (!reuseLockedAudio && !iosInPlace && !scInPlace && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
     promoteDeckDirect(nd, pos, autoplay !== false);
     maybeExtendDiscoverQueue();
