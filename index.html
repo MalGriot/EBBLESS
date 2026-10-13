@@ -23702,6 +23702,8 @@ function csGhostPlace(el, x, y, rot, s){
    and slides out of sight as it passes the top */
 const CS_T = {gapIn:.7, rise:1.3, hold:2.4, collapse:1.6, rest:9, gather:1.4, pause:.4, spread:2.6,
   omega:10, ramp:2, lift:.8, slide:1.8, retreat:.5, resume:.8};
+// stacked-copy rocking (issue #475): degrees, seconds per swing, radians of lag per slot
+const CS_ROCK = {deg:2.2, period:3.4, lag:.75};
 function csStackTimes(n){
   const stackEnd = CS_T.gapIn * (n - 1) + CS_T.rise, upHoldEnd = stackEnd + CS_T.hold;
   // first (upward) pass slides back behind - collapse is staggered .06s per copy
@@ -23754,15 +23756,17 @@ function csStackFrame(now){
     const yS = dy * slot, sS = 1 - G.shrink * slot;
     const yP = dy * i, sP = 1 - G.shrink * i;
     const a = csClamp((tt - CS_T.gapIn * i) / CS_T.rise), e = csEaseOut(a);
-    let x = 0, y = yP + (yS - yP) * e, s = sP + (sS - sP) * e, rot = 0, op = csClamp(a * 3) * bo;
+    // issue #475: stacked copies rock like a wave, each a step behind the one in front
+    const rock = CS_ROCK.deg * Math.sin(2 * Math.PI * t / CS_ROCK.period - slot * CS_ROCK.lag);
+    let x = 0, y = yP + (yS - yP) * e, s = sP + (sS - sP) * e, rot = rock * e, op = csClamp(a * 3) * bo;
     if (t > hEnd){
       if (!csStack.desk){
         // collapse, back copies first, into the main cassette
         const c = csEaseInOut(csClamp((t - hEnd - (G.n - 1 - i) * .06) / CS_T.collapse));
-        y = yS * (1 - c); s = sS + (1 - sS) * c * .98; op = bo * (1 - csClamp((c - .7) / .3));
+        y = yS * (1 - c); s = sS + (1 - sS) * c * .98; rot = rock * (1 - c); op = bo * (1 - csClamp((c - .7) / .3));
       } else {
         const g = csEaseInOut(csClamp((t - hEnd) / CS_T.gather));
-        y = yS * (1 - g); s = sS + (.98 - sS) * g;
+        y = yS * (1 - g); s = sS + (.98 - sS) * g; rot = rock * (1 - g);
         if (t > T.spreadStart){
           const ex = T.spinStart + T.exits[i];
           const ang = t < ex ? (G.n - i - .5) * 360 / G.n + csSpinDeg(t - T.spinStart) : 360;
