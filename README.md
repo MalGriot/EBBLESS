@@ -80,13 +80,31 @@ The welcome page (`welcome/`, served at `/EBBLESS/welcome/`) embeds the real pla
 in an iframe (`welcome/app-demo.html`, `welcome/app-ambient.css`). Both are generated from
 `index.html` by `python3 scripts/build-landing-demo.py`: it lifts the app's own
 stylesheet, player markup and the exact record / cassette / cymatics / lyrics
-code, and wraps them with a small stand-in for playback
-(`scripts/landing-demo-shim.js`, `landing-demo-driver.js`). Re-run it after
-changing the player; it stops with an error if a marker it needs has moved.
-The looping preview plays no audio; the one-song test ("Try it") plays a single
-song through YouTube. The demo never touches the app's storage; the page only
-remembers that the test was used (`ebbless:landingTested`).
-The page's own links into the beta use `/beta/#join`, which opens the signup form.
+code, and wraps them with a small stand-in for the library and storage
+(`scripts/landing-demo-shim.js`) and the demo driver (`landing-demo-driver.js`).
+Re-run it after changing the player; it stops with an error if a marker it needs
+has moved.
+
+- The player plays three real songs in full through one YouTube player
+  (`DEMO_TRACKS` in the driver: I Tried It, Free Fall, burn; only burn has a
+  video, which opens in the Video button). It starts paused: the visitor
+  presses play. Chapters never change the song.
+- Only the Record, Cassette, Cymatics and Lyrics chapters (`data-mode`) set the
+  art style, plus the player's own buttons. After 30 quiet seconds the player
+  moves to the next style (cover, LP, cassette, cymatics, lyrics, video for burn).
+- On narrow widths the art styles are six open buttons beside the art
+  (3 each side); on wide ones the app's own tab bar.
+- The artist name opens a short bio of MAL GRIOT (facts from `CLAUDE.md` only).
+- Desktop (1100px and up) is a fixed window with no scrolling: chapters page by
+  wheel, arrow keys, the rail, or the arrows at the bottom right. A Phone /
+  Tablet / Desktop switch resizes the same iframe inside a device frame (it does
+  not reload, so the song keeps playing). Phone and tablet scroll with a firm
+  snap, and the chapter title in the top bar has an arrow to the next chapter.
+- The search chapter's chips type their example into the player's paste box.
+- The "Try it" chapter points at the 15-minute sample (`sample/`).
+- The page's own links into the beta use `/beta/#join`, which opens the signup form.
+- For a quick look: `?device=phone|tablet|laptop` picks the frame, and a
+  `#chapter-id` hash opens that chapter.
 
 ## Sample (15-minute try-out)
 
