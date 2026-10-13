@@ -85,7 +85,7 @@ code, and wraps them with a small stand-in for the library and storage
 Re-run it after changing the player; it stops with an error if a marker it needs
 has moved.
 
-- The player plays three real songs in full through one YouTube player
+- The player plays three real songs in full through two YouTube players (decks), so songs blend into each other for the app's longest blend (10s, same as Settings > Blend length), skips blend too, and play/pause use the app's own short fades. The record and cassette styles play the app's needle-drop, needle-lift and tape-rewind sounds (`sfx/`), using the app's own code.
   (`DEMO_TRACKS` in the driver: I Tried It, Free Fall, burn; only burn has a
   video, which opens in the Video button). It starts paused: the visitor
   presses play. Chapters never change the song.

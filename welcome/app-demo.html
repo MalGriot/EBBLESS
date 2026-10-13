@@ -2875,9 +2875,9 @@ html,body{height:100%;overflow:hidden;background:#121212}
 .lyrics-scroller::-webkit-scrollbar{display:none}
 #bottom-nav button{pointer-events:none}
 /* the real song's player: invisible but on screen (audio only; browsers will not start an offscreen video) until video mode puts it over the art */
-#ytWrap{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
-#ytWrap.on{right:auto;bottom:auto;opacity:1;z-index:6;border-radius:12px;overflow:hidden}
-#ytWrap iframe{width:100%;height:100%;border:0}
+#ytWrap0,#ytWrap1{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
+#ytWrap0.on,#ytWrap1.on{right:auto;bottom:auto;opacity:1;z-index:6;border-radius:12px;overflow:hidden}
+.ytw iframe{width:100%;height:100%;border:0}
 /* the artist name is a link, like in the app */
 #trackArtist.demo-link{cursor:pointer}
 #trackArtist.demo-link:hover span{text-decoration:underline;text-underline-offset:3px}
@@ -4491,6 +4491,141 @@ function recordGameTap(){
 }
 recGameEl.addEventListener('click', recordGameTap);
 
+/* ---- from index.html: LP needle and tape sounds ---- */
+/* ---------- LP needle sfx (Spinning Record art style only) ----------
+   A soft needle-drop on a user play and a needle-lift on a user pause.
+   Only userTogglePlayback() and the media session play/pause handlers fire
+   it - never auto-advance, crossfades, or programmatic pauses/resumes
+   (tutorial replay, visibility resume), which call playIndex/pausePlayback/
+   resumePlayback directly. It's fire-and-forget: nothing awaits it, so the
+   real play/pause (and its fade) runs exactly as before.
+   Real sound bites: drop the files in sfx/ and set the two paths below.
+   Empty = synthesized Web Audio placeholder. A file that fails to load
+   falls back to the placeholder too. */
+const LP_NEEDLE_DROP_SRC = 'sfx/needle-drop.mp3';
+const LP_NEEDLE_LIFT_SRC = 'sfx/needle-lift.mp3';
+// Cassette art style: a tape-rewind sound when the user restarts the current
+// song (prev past the restart threshold). Shares the needle sfx context,
+// prefetch and decode path below; no synth fallback, a failed load is silent.
+const CASSETTE_REWIND_SRC = 'sfx/cassette-rewind.mp3';
+const LP_SFX_SRC = { drop: LP_NEEDLE_DROP_SRC, lift: LP_NEEDLE_LIFT_SRC, rewind: CASSETTE_REWIND_SRC };
+// per-kind: the lift file runs ~11dB hotter on average than the drop file.
+// Issue #205: at 0.35/0.2 the drop's loudest 50ms landed around -25dBFS and
+// the lift around -17dBFS - the lift fires at the top of the pause fade,
+// with the music still near full volume, so both were effectively masked.
+const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5, rewind: 0.6, rewindrev: 0.6 };
+// skip the sfx rather than play it late (slow first fetch, context waking)
+const LP_NEEDLE_MAX_LAG_MS = 300;
+let lpSfxCtx = null;
+const lpSfxBuffers = {};
+// raw file bytes, fetched ahead of the first toggle (issue #205: the first
+// play/pause after load used to start the fetch itself, and on a real
+// network fetch + decode blew LP_NEEDLE_MAX_LAG_MS so it was silently skipped)
+const lpSfxBytes = {};
+
+function lpSynthNeedle(ctx, kind){
+  const drop = kind === 'drop';
+  const sr = ctx.sampleRate, len = Math.floor(sr * (drop ? 0.38 : 0.26));
+  const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  let lp = 0;
+  for (let i = 0; i < len; i++){
+    const t = i / sr;
+    // surface hiss: low-passed noise that swells in (drop) or tails off (lift)
+    lp += 0.25 * ((Math.random() * 2 - 1) - lp);
+    const env = drop ? Math.min(1, t / 0.03) * Math.exp(-t * 7) : Math.exp(-t * 14);
+    let s = lp * 0.12 * env;
+    // sparse crackle
+    if (Math.random() < (drop ? 0.0009 : 0.0005)) s += (Math.random() * 2 - 1) * 0.35 * env;
+    // stylus contact: a short click plus a low thump (drop) or lighter pop (lift)
+    const ct = drop ? t - 0.012 : t;
+    if (ct >= 0){
+      s += Math.sin(2 * Math.PI * (drop ? 70 : 110) * ct) * Math.exp(-ct * (drop ? 45 : 60)) * (drop ? 0.55 : 0.3);
+      if (ct < 0.004) s += (Math.random() * 2 - 1) * (1 - ct / 0.004) * 0.45;
+    }
+    d[i] = s;
+  }
+  const tail = Math.min(len, Math.floor(sr * 0.01));
+  for (let i = 0; i < tail; i++) d[len - 1 - i] *= i / tail;
+  return buf;
+}
+function lpNeedlePrefetch(kinds){
+  (kinds || ['drop', 'lift']).forEach(kind => {
+    if (lpSfxBytes[kind]) return;
+    const src = LP_SFX_SRC[kind];
+    lpSfxBytes[kind] = src
+      ? fetch(src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).catch(() => null)
+      : Promise.resolve(null);
+  });
+}
+function lpNeedleBuffer(ctx, kind){
+  if (lpSfxBuffers[kind]) return lpSfxBuffers[kind];
+  // skip-ahead on the cassette: the rewind sound reversed (decoded once)
+  if (kind === 'rewindrev'){
+    return (lpSfxBuffers[kind] = lpNeedleBuffer(ctx, 'rewind').then(buf => {
+      if (!buf) return null;
+      const rev = ctx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+      for (let c = 0; c < buf.numberOfChannels; c++) rev.getChannelData(c).set(buf.getChannelData(c).slice().reverse());
+      return rev;
+    }));
+  }
+  lpNeedlePrefetch([kind]);
+  const p = lpSfxBytes[kind]
+    .then(ab => ab ? new Promise((res, rej) => ctx.decodeAudioData(ab.slice(0), res, rej)) : null)
+    .catch(() => null)
+    .then(buf => buf || (kind === 'rewind' ? null : lpSynthNeedle(ctx, kind)));
+  return (lpSfxBuffers[kind] = p);
+}
+// create (or wake) the sfx context - only ever from inside a user gesture
+function lpSfxContext(){
+  if (!lpSfxCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    // iOS routes Web Audio through the ringer by default, so the silent
+    // switch muted the sfx while the YouTube video kept playing (issue #205)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
+    lpSfxCtx = new AC();
+    // warm all buffers so the first toggle of the other kind isn't lost to a decode
+    lpNeedleBuffer(lpSfxCtx, 'drop'); lpNeedleBuffer(lpSfxCtx, 'lift'); lpNeedleBuffer(lpSfxCtx, 'rewind'); lpNeedleBuffer(lpSfxCtx, 'rewindrev');
+  }
+  if (lpSfxCtx.state !== 'running') lpSfxCtx.resume().catch(() => {});
+  return lpSfxCtx;
+}
+// only when the record is actually showing: the fullscreen flow view's
+// record, or the player's record (not viz/lyrics, not a hidden player pane)
+function lpRecordOnScreen(){
+  if (artStyle !== 'record' || document.visibilityState !== 'visible') return false;
+  if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'record';
+  const rec = document.getElementById('artRecord');
+  return !!rec && rec.getClientRects().length > 0;
+}
+// same idea for the cassette: fullscreen flow cassette or the player's cassette
+function cassetteOnScreen(){
+  if (artStyle !== 'cassette' || document.visibilityState !== 'visible') return false;
+  if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'cassette';
+  const cs = document.getElementById('artCassette');
+  return !!cs && cs.getClientRects().length > 0;
+}
+function playLpNeedle(kind){
+  if (!(kind === 'rewind' || kind === 'rewindrev' ? cassetteOnScreen() : lpRecordOnScreen())) return;
+  try{
+    const ctx = lpSfxContext(), t0 = Date.now();
+    if (!ctx) return;
+    // starts suspended until a user gesture - every caller runs inside one
+    // (or a media session action); if it won't wake, the sfx just doesn't play
+    const ready = ctx.state === 'running' ? null : ctx.resume();
+    Promise.all([lpNeedleBuffer(ctx, kind), ready]).then(([buf]) => {
+      if (!buf || ctx.state !== 'running' || Date.now() - t0 > LP_NEEDLE_MAX_LAG_MS) return;
+      const g = ctx.createGain();
+      g.gain.value = LP_NEEDLE_SFX_VOLUME[kind];
+      const s = ctx.createBufferSource();
+      s.buffer = buf;
+      s.connect(g); g.connect(ctx.destination);
+      s.start();
+    }).catch(() => {});
+  } catch(e){}
+}
+
+
 /* ---- from index.html: cassette ---- */
 /* =========================================================================
    CASSETTE — physical object driven by real playback state.
@@ -4889,7 +5024,7 @@ function buildQueue(){
     const m = document.createElement('button'); m.className = 'q-menu'; m.setAttribute('aria-label', 'Song options'); m.innerHTML = DOTS;
     const rm = document.createElement('button'); rm.className = 'remove'; rm.setAttribute('aria-label', 'Remove from queue'); rm.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
     const i = img(t), mt = meta(t);
-    const jump = () => demoLoad(DEMO_TRACKS.indexOf(t), true);
+    const jump = () => skipTo(DEMO_TRACKS.indexOf(t));
     i.addEventListener('click', jump); mt.addEventListener('click', jump);
     row.append(h, i, mt, m, rm); body.append(row);
   });
@@ -4900,62 +5035,138 @@ function syncWide(){
 }
 addEventListener('resize', syncWide);
 
-// ---- the real song: one YouTube player carries all three
-let yt = null, ytReady = false, wantPlay = false, unmuteAt = 0, demoDur = 0, stopAtEnd = false;
+// ---- the real songs: two YouTube players ("decks") so songs can blend, like the app's own two-deck player.
+// Blends are the app's longest (Settings, Blend length: 10s) and play/pause use the app's own short fades.
+const XF_MS = 10000;
+const PAUSE_FADE_OUT_MS = 600, PAUSE_FADE_IN_MS = 320;
+const decks = [];
+let ai = 0, wantPlay = false, demoDur = 0, xf = null;
+const D = () => decks[ai], S = () => decks[1 - ai];
 function loadYT(cb){
   if (window.YT && YT.Player) return cb();
   window.onYouTubeIframeAPIReady = cb;
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.append(s);
 }
+function setVol(d, v){ d.vol = v; try { d.p.setVolume(Math.round(v)); } catch(e){} }
+function ramp(d, from, to, ms, done){
+  clearInterval(d.rampT);
+  const t0 = performance.now();
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    setVol(d, from + (to - from) * k);
+    if (k >= 1){ clearInterval(d.rampT); d.rampT = 0; if (done) done(); }
+  };
+  step(); d.rampT = setInterval(step, 50);
+}
 function initPlayer(){
-  const host = document.createElement('div'); host.id = 'ytWrap';
-  host.innerHTML = '<div id="ytHost"></div>';
-  document.body.append(host);
   loadYT(() => {
-    yt = new YT.Player('ytHost', {
-      width: 200, height: 200, videoId: DEMO_TRACKS[0].videoId,
-      playerVars: { autoplay: 0, controls: 0, playsinline: 1, rel: 0, modestbranding: 1, mute: 1, disablekb: 1, iv_load_policy: 3 },
-      events: {
-        onReady: () => { ytReady = true; if (wantPlay){ wantPlay = false; startPlay(); } },
-        onStateChange: (e) => {
-          if (e.data === 1){ setPlayingUI(true); if (!unmuteAt) unmuteAt = performance.now() + 5000; demoPost(); }
-          else if (e.data === 2){ setPlayingUI(false); demoPost(); }
-          else if (e.data === 0) songEnded();
+    [0, 1].forEach(n => {
+      const wrap = document.createElement('div'); wrap.className = 'ytw'; wrap.id = 'ytWrap' + n;
+      wrap.innerHTML = '<div id="ytHost' + n + '"></div>'; document.body.append(wrap);
+      const d = { n, wrap, p: null, ready: false, vid: DEMO_TRACKS[n].videoId, vol: 100, unmuteAt: 0, confirmed: false, fadeIn: 0, primedAt: 0, rampT: 0 };
+      decks[n] = d;
+      d.p = new YT.Player('ytHost' + n, {
+        width: 200, height: 200, videoId: d.vid,
+        playerVars: { autoplay: 0, controls: 0, playsinline: 1, rel: 0, modestbranding: 1, mute: 1, disablekb: 1, iv_load_policy: 3 },
+        events: {
+          onReady: () => { d.ready = true; if (d === D() && wantPlay){ wantPlay = false; startPlay(); } },
+          onStateChange: (e) => deckState(d, e.data),
+          onError: () => { if (d === D()) songEnded(); },   // a video that cannot play: move on
         },
-        onError: () => { songEnded(); },   // a video that cannot play: move on
-      },
+      });
     });
   });
-  setInterval(() => {
-    if (!yt || !ytReady || !yt.getCurrentTime) return;
-    demoClock = yt.getCurrentTime() || 0;
-    const d = yt.getDuration && yt.getDuration();
-    if (d && d !== demoDur){ demoDur = d; $('timeDur').textContent = fmt(d); }
-    $('timeCur').textContent = fmt(demoClock);
-    // stay muted until the right video has been playing for 5s (the app's own pre-roll caution)
-    if (unmuteAt && performance.now() > unmuteAt && yt.isMuted && yt.isMuted()){
-      const vd = yt.getVideoData && yt.getVideoData();
-      if (yt.getPlayerState() === 1 && (!vd || vd.video_id === demo.track.videoId)){ yt.unMute(); yt.setVolume(100); }
-    }
-  }, 250);
+  setInterval(tickAudio, 250);
 }
-function startPlay(){
-  if (!ytReady){ wantPlay = true; return; }
-  unmuteAt = 0;
-  yt.mute(); yt.playVideo();
+function deckState(d, st){
+  if (d !== D()) return;   // the standby / fading-out deck never drives the player's buttons
+  if (st === 1){
+    setPlayingUI(true);
+    if (!d.unmuteAt && !d.confirmed) d.unmuteAt = performance.now() + 5000;
+    if (d.fadeIn){ const ms = d.fadeIn; d.fadeIn = 0; ramp(d, 0, 100, ms); }
+    demoPost();
+  } else if (st === 2){ if (!d.pausing) setPlayingUI(false); demoPost(); }
+  else if (st === 0) songEnded();
 }
-function demoLoad(i, autoplay){
+function adClear(d){
+  const vd = d.p.getVideoData && d.p.getVideoData();
+  return d.p.getPlayerState() === 1 && (!vd || vd.video_id === d.vid);
+}
+function tickAudio(){
+  const d = D(); if (!d || !d.ready || !d.p.getCurrentTime) return;
+  demoClock = d.p.getCurrentTime() || 0;
+  const dur = d.p.getDuration && d.p.getDuration();
+  if (dur && dur !== demoDur){ demoDur = dur; $('timeDur').textContent = fmt(dur); }
+  $('timeCur').textContent = fmt(demoClock);
+  // stay muted until the right video has been playing for 5s (the app's own pre-roll caution)
+  if (d.unmuteAt && performance.now() > d.unmuteAt && d.p.isMuted && d.p.isMuted() && adClear(d)){ d.p.unMute(); d.confirmed = true; d.unmuteAt = 0; }
+  // blend into the next song: warm it up quietly first, then start the blend XF_MS before the end
+  if (!demo.playing || xf || !demoDur || demo.i >= DEMO_TRACKS.length - 1 || !S().ready) return;
+  const left = demoDur - demoClock, n = S();
+  if (left <= XF_MS / 1000 + 8 && !n.primedAt){ n.p.mute(); setVol(n, 0); n.p.playVideo(); n.primedAt = performance.now(); }
+  if (left <= XF_MS / 1000 && n.primedAt && performance.now() - n.primedAt > 5000 && adClear(n)) blendTo(demo.i + 1, true);
+}
+// the new song becomes the song straight away (art, title, queue, lyrics); the old one fades out underneath
+function blendTo(idx, warm){
+  const o = D(), n = S();
+  xf = { o, n };
+  ai = 1 - ai;
+  uiFor(idx);
+  n.vid = DEMO_TRACKS[idx].videoId; n.confirmed = !!warm; n.fadeIn = 0; n.unmuteAt = 0;
+  if (warm){ n.p.seekTo(0, true); n.p.unMute(); }
+  else { n.p.mute(); setVol(n, 0); n.p.loadVideoById(n.vid); }
+  ramp(n, 0, 100, XF_MS);
+  ramp(o, o.vol, 0, XF_MS, () => { try { o.p.pauseVideo(); } catch(e){} setVol(o, 100); o.primedAt = 0; xf = null; preloadNext(); });
+}
+// the idle deck gets the following song cued and ready
+function preloadNext(){
+  const n = S(); if (!n || !n.ready) return;
+  const nx = DEMO_TRACKS[demo.i + 1];
+  n.primedAt = 0; n.confirmed = false; n.unmuteAt = 0; setVol(n, 0);
+  try { n.p.mute(); if (nx){ n.vid = nx.videoId; n.p.cueVideoById(nx.videoId); } else n.p.stopVideo(); } catch(e){}
+}
+function uiFor(i){
   demo.i = (i + DEMO_TRACKS.length) % DEMO_TRACKS.length;
-  demoClock = 0; demoDur = 0; unmuteAt = 0;
+  demoClock = 0; demoDur = 0;
   $('timeCur').textContent = '0:00'; $('timeDur').textContent = '0:00';
   showSong(DEMO_TRACKS[demo.i]);
   maybeLoadLyrics(); lyricsState.activeIdx = -1;
-  if (!ytReady) { wantPlay = !!autoplay; return; }
-  yt.mute();
-  if (autoplay) yt.loadVideoById(demo.track.videoId); else yt.cueVideoById(demo.track.videoId);
 }
-// a song finished: the next one goes on, and after the last one the first is ready to press play again
+function startPlay(){
+  const d = D();
+  if (!d.ready){ wantPlay = true; return; }
+  playLpNeedle('drop');
+  if (!d.confirmed) { d.unmuteAt = 0; d.p.mute(); }
+  d.pausing = false; d.fadeIn = PAUSE_FADE_IN_MS;
+  setVol(d, 0); d.p.playVideo();
+  if (xf){ ramp(xf.o, xf.o.vol, xf.o.vol, 1); }
+}
+function userPause(){
+  const d = D();
+  playLpNeedle('lift');
+  d.pausing = true; setPlayingUI(false);
+  const stop = (x) => ramp(x, x.vol, 0, PAUSE_FADE_OUT_MS, () => { try { x.p.pauseVideo(); } catch(e){} setVol(x, 100); });
+  stop(d);
+  if (xf){ stop(xf.o); xf = null; setTimeout(preloadNext, PAUSE_FADE_OUT_MS + 100); }   // a blend in flight just stops
+}
+// load a song with no blend: a cut (used when nothing is playing, or a blend cannot run)
+function demoLoad(i, autoplay){
+  uiFor(i);
+  const d = D(); d.confirmed = false; d.unmuteAt = 0; d.vid = DEMO_TRACKS[demo.i].videoId;
+  if (!d.ready){ wantPlay = !!autoplay; return; }
+  d.p.mute(); setVol(d, 100);
+  if (autoplay) d.p.loadVideoById(d.vid); else d.p.cueVideoById(d.vid);
+  preloadNext();
+}
+// skip to a song: blend into it when music is playing, otherwise just cue it
+function skipTo(i){
+  const idx = (i + DEMO_TRACKS.length) % DEMO_TRACKS.length;
+  if (demo.playing && S() && S().ready && !xf) blendTo(idx, false);
+  else demoLoad(idx, demo.playing || wantPlay);
+}
+// a song finished with no blend (the next one was not ready): after the last song, the first waits paused
 function songEnded(){
+  if (xf) return;
   if (demo.i >= DEMO_TRACKS.length - 1){ setPlayingUI(false); demoLoad(0, false); }
   else demoLoad(demo.i + 1, true);
 }
@@ -4970,6 +5181,7 @@ function setDemoMode(key){
   }
   if (key === 'viz' || key === 'lyrics') setVisualMode(key);
   else if (key !== 'video'){ setVisualMode('art'); setArtStyle(key); }
+  if (key === 'record') lpNeedlePrefetch(['drop', 'lift']); else if (key === 'cassette') lpNeedlePrefetch(['rewind']);
   $('ytPanelBtn').classList.toggle('is-active', demo.videoOn);
   document.body.classList.toggle('demo-video', demo.videoOn);
   if (wasVideo !== demo.videoOn) placeVideo();
@@ -4977,12 +5189,18 @@ function setDemoMode(key){
 }
 // the video is the same player that carries the sound: when video mode is on it sits over the art
 function placeVideo(){
-  const w = $('ytWrap'); if (!w) return;
-  if (!demo.videoOn){ w.classList.remove('on'); w.style.cssText = ''; return; }
+  if (!decks.length) return;
   const r = artworkWrap.getBoundingClientRect();
-  w.classList.add('on');
-  Object.assign(w.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  decks.forEach(d => {
+    const on = demo.videoOn && d === D();
+    d.wrap.classList.toggle('on', on);
+    if (on) Object.assign(d.wrap.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    else d.wrap.style.cssText = '';
+  });
 }
+// the needle and tape sounds: wake the audio context on the press that comes before the click (as the app does)
+function lpSfxUnlock(){ if (artStyle !== 'record' && artStyle !== 'cassette') return; try { lpSfxContext(); } catch(e){} }
+['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, lpSfxUnlock, true));
 let lastActivity = performance.now();
 const activity = () => { lastActivity = performance.now(); };
 ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => addEventListener(ev, activity, { passive: true, capture: true }));
@@ -5128,14 +5346,14 @@ function syncSideBtns(){
 
 // ---- controls
 $('playBtn').addEventListener('click', () => {
-  if (!ytReady){ wantPlay = !wantPlay; return; }
-  if (yt.getPlayerState() === 1) yt.pauseVideo(); else startPlay();
+  const d = D(); if (!d || !d.ready){ wantPlay = !wantPlay; return; }
+  if (demo.playing) userPause(); else startPlay();
 });
-$('nextBtn').addEventListener('click', () => demoLoad(demo.i + 1, demo.playing || wantPlay));
-$('prevBtn').addEventListener('click', () => { if (demoClock > 4 && yt && ytReady){ yt.seekTo(0, true); demoClock = 0; } else demoLoad(demo.i - 1, demo.playing || wantPlay); });
+$('nextBtn').addEventListener('click', () => { playLpNeedle('rewindrev'); skipTo(demo.i + 1); });
+$('prevBtn').addEventListener('click', () => { if (demoClock > 4 && D() && D().ready){ playLpNeedle('rewind'); D().p.seekTo(0, true); demoClock = 0; } else skipTo(demo.i - 1); });
 $('seekTrack').addEventListener('click', (e) => {
   const r = seekTrack.getBoundingClientRect(), f = Math.max(0, Math.min(0.99, (e.clientX - r.left) / r.width));
-  if (yt && ytReady && demoDur){ yt.seekTo(f * demoDur, true); cassetteSeekPulse(); }
+  if (D() && D().ready && demoDur){ D().p.seekTo(f * demoDur, true); cassetteSeekPulse(); }
 });
 $('playerLikeBtn').addEventListener('click', () => $('playerLikeBtn').classList.toggle('is-liked'));
 $('ytPanelBtn').addEventListener('click', () => { if (demo.track.hasVideo) setDemoMode(demo.videoOn ? 'default' : 'video'); });

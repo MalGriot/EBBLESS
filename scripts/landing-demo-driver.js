@@ -140,7 +140,7 @@ function buildQueue(){
     const m = document.createElement('button'); m.className = 'q-menu'; m.setAttribute('aria-label', 'Song options'); m.innerHTML = DOTS;
     const rm = document.createElement('button'); rm.className = 'remove'; rm.setAttribute('aria-label', 'Remove from queue'); rm.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
     const i = img(t), mt = meta(t);
-    const jump = () => demoLoad(DEMO_TRACKS.indexOf(t), true);
+    const jump = () => skipTo(DEMO_TRACKS.indexOf(t));
     i.addEventListener('click', jump); mt.addEventListener('click', jump);
     row.append(h, i, mt, m, rm); body.append(row);
   });
@@ -151,62 +151,138 @@ function syncWide(){
 }
 addEventListener('resize', syncWide);
 
-// ---- the real song: one YouTube player carries all three
-let yt = null, ytReady = false, wantPlay = false, unmuteAt = 0, demoDur = 0, stopAtEnd = false;
+// ---- the real songs: two YouTube players ("decks") so songs can blend, like the app's own two-deck player.
+// Blends are the app's longest (Settings, Blend length: 10s) and play/pause use the app's own short fades.
+const XF_MS = 10000;
+const PAUSE_FADE_OUT_MS = 600, PAUSE_FADE_IN_MS = 320;
+const decks = [];
+let ai = 0, wantPlay = false, demoDur = 0, xf = null;
+const D = () => decks[ai], S = () => decks[1 - ai];
 function loadYT(cb){
   if (window.YT && YT.Player) return cb();
   window.onYouTubeIframeAPIReady = cb;
   const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.append(s);
 }
+function setVol(d, v){ d.vol = v; try { d.p.setVolume(Math.round(v)); } catch(e){} }
+function ramp(d, from, to, ms, done){
+  clearInterval(d.rampT);
+  const t0 = performance.now();
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    setVol(d, from + (to - from) * k);
+    if (k >= 1){ clearInterval(d.rampT); d.rampT = 0; if (done) done(); }
+  };
+  step(); d.rampT = setInterval(step, 50);
+}
 function initPlayer(){
-  const host = document.createElement('div'); host.id = 'ytWrap';
-  host.innerHTML = '<div id="ytHost"></div>';
-  document.body.append(host);
   loadYT(() => {
-    yt = new YT.Player('ytHost', {
-      width: 200, height: 200, videoId: DEMO_TRACKS[0].videoId,
-      playerVars: { autoplay: 0, controls: 0, playsinline: 1, rel: 0, modestbranding: 1, mute: 1, disablekb: 1, iv_load_policy: 3 },
-      events: {
-        onReady: () => { ytReady = true; if (wantPlay){ wantPlay = false; startPlay(); } },
-        onStateChange: (e) => {
-          if (e.data === 1){ setPlayingUI(true); if (!unmuteAt) unmuteAt = performance.now() + 5000; demoPost(); }
-          else if (e.data === 2){ setPlayingUI(false); demoPost(); }
-          else if (e.data === 0) songEnded();
+    [0, 1].forEach(n => {
+      const wrap = document.createElement('div'); wrap.className = 'ytw'; wrap.id = 'ytWrap' + n;
+      wrap.innerHTML = '<div id="ytHost' + n + '"></div>'; document.body.append(wrap);
+      const d = { n, wrap, p: null, ready: false, vid: DEMO_TRACKS[n].videoId, vol: 100, unmuteAt: 0, confirmed: false, fadeIn: 0, primedAt: 0, rampT: 0 };
+      decks[n] = d;
+      d.p = new YT.Player('ytHost' + n, {
+        width: 200, height: 200, videoId: d.vid,
+        playerVars: { autoplay: 0, controls: 0, playsinline: 1, rel: 0, modestbranding: 1, mute: 1, disablekb: 1, iv_load_policy: 3 },
+        events: {
+          onReady: () => { d.ready = true; if (d === D() && wantPlay){ wantPlay = false; startPlay(); } },
+          onStateChange: (e) => deckState(d, e.data),
+          onError: () => { if (d === D()) songEnded(); },   // a video that cannot play: move on
         },
-        onError: () => { songEnded(); },   // a video that cannot play: move on
-      },
+      });
     });
   });
-  setInterval(() => {
-    if (!yt || !ytReady || !yt.getCurrentTime) return;
-    demoClock = yt.getCurrentTime() || 0;
-    const d = yt.getDuration && yt.getDuration();
-    if (d && d !== demoDur){ demoDur = d; $('timeDur').textContent = fmt(d); }
-    $('timeCur').textContent = fmt(demoClock);
-    // stay muted until the right video has been playing for 5s (the app's own pre-roll caution)
-    if (unmuteAt && performance.now() > unmuteAt && yt.isMuted && yt.isMuted()){
-      const vd = yt.getVideoData && yt.getVideoData();
-      if (yt.getPlayerState() === 1 && (!vd || vd.video_id === demo.track.videoId)){ yt.unMute(); yt.setVolume(100); }
-    }
-  }, 250);
+  setInterval(tickAudio, 250);
 }
-function startPlay(){
-  if (!ytReady){ wantPlay = true; return; }
-  unmuteAt = 0;
-  yt.mute(); yt.playVideo();
+function deckState(d, st){
+  if (d !== D()) return;   // the standby / fading-out deck never drives the player's buttons
+  if (st === 1){
+    setPlayingUI(true);
+    if (!d.unmuteAt && !d.confirmed) d.unmuteAt = performance.now() + 5000;
+    if (d.fadeIn){ const ms = d.fadeIn; d.fadeIn = 0; ramp(d, 0, 100, ms); }
+    demoPost();
+  } else if (st === 2){ if (!d.pausing) setPlayingUI(false); demoPost(); }
+  else if (st === 0) songEnded();
 }
-function demoLoad(i, autoplay){
+function adClear(d){
+  const vd = d.p.getVideoData && d.p.getVideoData();
+  return d.p.getPlayerState() === 1 && (!vd || vd.video_id === d.vid);
+}
+function tickAudio(){
+  const d = D(); if (!d || !d.ready || !d.p.getCurrentTime) return;
+  demoClock = d.p.getCurrentTime() || 0;
+  const dur = d.p.getDuration && d.p.getDuration();
+  if (dur && dur !== demoDur){ demoDur = dur; $('timeDur').textContent = fmt(dur); }
+  $('timeCur').textContent = fmt(demoClock);
+  // stay muted until the right video has been playing for 5s (the app's own pre-roll caution)
+  if (d.unmuteAt && performance.now() > d.unmuteAt && d.p.isMuted && d.p.isMuted() && adClear(d)){ d.p.unMute(); d.confirmed = true; d.unmuteAt = 0; }
+  // blend into the next song: warm it up quietly first, then start the blend XF_MS before the end
+  if (!demo.playing || xf || !demoDur || demo.i >= DEMO_TRACKS.length - 1 || !S().ready) return;
+  const left = demoDur - demoClock, n = S();
+  if (left <= XF_MS / 1000 + 8 && !n.primedAt){ n.p.mute(); setVol(n, 0); n.p.playVideo(); n.primedAt = performance.now(); }
+  if (left <= XF_MS / 1000 && n.primedAt && performance.now() - n.primedAt > 5000 && adClear(n)) blendTo(demo.i + 1, true);
+}
+// the new song becomes the song straight away (art, title, queue, lyrics); the old one fades out underneath
+function blendTo(idx, warm){
+  const o = D(), n = S();
+  xf = { o, n };
+  ai = 1 - ai;
+  uiFor(idx);
+  n.vid = DEMO_TRACKS[idx].videoId; n.confirmed = !!warm; n.fadeIn = 0; n.unmuteAt = 0;
+  if (warm){ n.p.seekTo(0, true); n.p.unMute(); }
+  else { n.p.mute(); setVol(n, 0); n.p.loadVideoById(n.vid); }
+  ramp(n, 0, 100, XF_MS);
+  ramp(o, o.vol, 0, XF_MS, () => { try { o.p.pauseVideo(); } catch(e){} setVol(o, 100); o.primedAt = 0; xf = null; preloadNext(); });
+}
+// the idle deck gets the following song cued and ready
+function preloadNext(){
+  const n = S(); if (!n || !n.ready) return;
+  const nx = DEMO_TRACKS[demo.i + 1];
+  n.primedAt = 0; n.confirmed = false; n.unmuteAt = 0; setVol(n, 0);
+  try { n.p.mute(); if (nx){ n.vid = nx.videoId; n.p.cueVideoById(nx.videoId); } else n.p.stopVideo(); } catch(e){}
+}
+function uiFor(i){
   demo.i = (i + DEMO_TRACKS.length) % DEMO_TRACKS.length;
-  demoClock = 0; demoDur = 0; unmuteAt = 0;
+  demoClock = 0; demoDur = 0;
   $('timeCur').textContent = '0:00'; $('timeDur').textContent = '0:00';
   showSong(DEMO_TRACKS[demo.i]);
   maybeLoadLyrics(); lyricsState.activeIdx = -1;
-  if (!ytReady) { wantPlay = !!autoplay; return; }
-  yt.mute();
-  if (autoplay) yt.loadVideoById(demo.track.videoId); else yt.cueVideoById(demo.track.videoId);
 }
-// a song finished: the next one goes on, and after the last one the first is ready to press play again
+function startPlay(){
+  const d = D();
+  if (!d.ready){ wantPlay = true; return; }
+  playLpNeedle('drop');
+  if (!d.confirmed) { d.unmuteAt = 0; d.p.mute(); }
+  d.pausing = false; d.fadeIn = PAUSE_FADE_IN_MS;
+  setVol(d, 0); d.p.playVideo();
+  if (xf){ ramp(xf.o, xf.o.vol, xf.o.vol, 1); }
+}
+function userPause(){
+  const d = D();
+  playLpNeedle('lift');
+  d.pausing = true; setPlayingUI(false);
+  const stop = (x) => ramp(x, x.vol, 0, PAUSE_FADE_OUT_MS, () => { try { x.p.pauseVideo(); } catch(e){} setVol(x, 100); });
+  stop(d);
+  if (xf){ stop(xf.o); xf = null; setTimeout(preloadNext, PAUSE_FADE_OUT_MS + 100); }   // a blend in flight just stops
+}
+// load a song with no blend: a cut (used when nothing is playing, or a blend cannot run)
+function demoLoad(i, autoplay){
+  uiFor(i);
+  const d = D(); d.confirmed = false; d.unmuteAt = 0; d.vid = DEMO_TRACKS[demo.i].videoId;
+  if (!d.ready){ wantPlay = !!autoplay; return; }
+  d.p.mute(); setVol(d, 100);
+  if (autoplay) d.p.loadVideoById(d.vid); else d.p.cueVideoById(d.vid);
+  preloadNext();
+}
+// skip to a song: blend into it when music is playing, otherwise just cue it
+function skipTo(i){
+  const idx = (i + DEMO_TRACKS.length) % DEMO_TRACKS.length;
+  if (demo.playing && S() && S().ready && !xf) blendTo(idx, false);
+  else demoLoad(idx, demo.playing || wantPlay);
+}
+// a song finished with no blend (the next one was not ready): after the last song, the first waits paused
 function songEnded(){
+  if (xf) return;
   if (demo.i >= DEMO_TRACKS.length - 1){ setPlayingUI(false); demoLoad(0, false); }
   else demoLoad(demo.i + 1, true);
 }
@@ -221,6 +297,7 @@ function setDemoMode(key){
   }
   if (key === 'viz' || key === 'lyrics') setVisualMode(key);
   else if (key !== 'video'){ setVisualMode('art'); setArtStyle(key); }
+  if (key === 'record') lpNeedlePrefetch(['drop', 'lift']); else if (key === 'cassette') lpNeedlePrefetch(['rewind']);
   $('ytPanelBtn').classList.toggle('is-active', demo.videoOn);
   document.body.classList.toggle('demo-video', demo.videoOn);
   if (wasVideo !== demo.videoOn) placeVideo();
@@ -228,12 +305,18 @@ function setDemoMode(key){
 }
 // the video is the same player that carries the sound: when video mode is on it sits over the art
 function placeVideo(){
-  const w = $('ytWrap'); if (!w) return;
-  if (!demo.videoOn){ w.classList.remove('on'); w.style.cssText = ''; return; }
+  if (!decks.length) return;
   const r = artworkWrap.getBoundingClientRect();
-  w.classList.add('on');
-  Object.assign(w.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  decks.forEach(d => {
+    const on = demo.videoOn && d === D();
+    d.wrap.classList.toggle('on', on);
+    if (on) Object.assign(d.wrap.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    else d.wrap.style.cssText = '';
+  });
 }
+// the needle and tape sounds: wake the audio context on the press that comes before the click (as the app does)
+function lpSfxUnlock(){ if (artStyle !== 'record' && artStyle !== 'cassette') return; try { lpSfxContext(); } catch(e){} }
+['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, lpSfxUnlock, true));
 let lastActivity = performance.now();
 const activity = () => { lastActivity = performance.now(); };
 ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => addEventListener(ev, activity, { passive: true, capture: true }));
@@ -379,14 +462,14 @@ function syncSideBtns(){
 
 // ---- controls
 $('playBtn').addEventListener('click', () => {
-  if (!ytReady){ wantPlay = !wantPlay; return; }
-  if (yt.getPlayerState() === 1) yt.pauseVideo(); else startPlay();
+  const d = D(); if (!d || !d.ready){ wantPlay = !wantPlay; return; }
+  if (demo.playing) userPause(); else startPlay();
 });
-$('nextBtn').addEventListener('click', () => demoLoad(demo.i + 1, demo.playing || wantPlay));
-$('prevBtn').addEventListener('click', () => { if (demoClock > 4 && yt && ytReady){ yt.seekTo(0, true); demoClock = 0; } else demoLoad(demo.i - 1, demo.playing || wantPlay); });
+$('nextBtn').addEventListener('click', () => { playLpNeedle('rewindrev'); skipTo(demo.i + 1); });
+$('prevBtn').addEventListener('click', () => { if (demoClock > 4 && D() && D().ready){ playLpNeedle('rewind'); D().p.seekTo(0, true); demoClock = 0; } else skipTo(demo.i - 1); });
 $('seekTrack').addEventListener('click', (e) => {
   const r = seekTrack.getBoundingClientRect(), f = Math.max(0, Math.min(0.99, (e.clientX - r.left) / r.width));
-  if (yt && ytReady && demoDur){ yt.seekTo(f * demoDur, true); cassetteSeekPulse(); }
+  if (D() && D().ready && demoDur){ D().p.seekTo(f * demoDur, true); cassetteSeekPulse(); }
 });
 $('playerLikeBtn').addEventListener('click', () => $('playerLikeBtn').classList.toggle('is-liked'));
 $('ytPanelBtn').addEventListener('click', () => { if (demo.track.hasVideo) setDemoMode(demo.videoOn ? 'default' : 'video'); });

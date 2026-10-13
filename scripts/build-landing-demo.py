@@ -102,15 +102,21 @@ if _old not in game:
     die('recordGameInFlow changed; update the demo patch')
 game = game.replace(_old, 'function recordGameInFlow(){ return true; }')
 
+_ls = SRC.index('/* ---------- LP needle sfx')
+_le = SRC.index('// Fetch the files up front in LP mode')
+lpsfx = SRC[_ls:_le]
+if 'function playLpNeedle' not in lpsfx or 'function lpSfxContext' not in lpsfx:
+    die('LP sfx block moved; update the demo patch')
+
 shim = (HERE / 'landing-demo-shim.js').read_text()
 driver = (HERE / 'landing-demo-driver.js').read_text()
 
 js = shim
-_blocks = viz + visual_mode + record + game + cassette + tabs + lyrics
+_blocks = viz + visual_mode + record + game + cassette + tabs + lyrics + lpsfx
 _declared = set(re.findall(r'\b(?:const|let|var)\s+(LS_[A-Z_]+)', _blocks)) | set(re.findall(r'\b(?:const|let|var)\s+(LS_[A-Z_]+)', shim))
 _used = set(re.findall(r'\b(LS_[A-Z_0-9]+)\b', _blocks))
 js += '\n// storage keys the app code names (values unused: storage is in-memory here)\n' + ''.join("const %s = '%s';\n" % (n, n) for n in sorted(_used - _declared))
-for label, code in (('visualizer (cymatics)', viz), ('visual mode + art style', visual_mode), ('record', record), ('record tap game', game),
+for label, code in (('visualizer (cymatics)', viz), ('visual mode + art style', visual_mode), ('record', record), ('record tap game', game), ('LP needle and tape sounds', lpsfx),
                     ('cassette', cassette), ('player tabs', tabs), ('lyrics', lyrics)):
     js += verbatim(label, code)
 js += driver
@@ -129,9 +135,9 @@ html,body{height:100%;overflow:hidden;background:#121212}
 .lyrics-scroller::-webkit-scrollbar{display:none}
 #bottom-nav button{pointer-events:none}
 /* the real song's player: invisible but on screen (audio only; browsers will not start an offscreen video) until video mode puts it over the art */
-#ytWrap{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
-#ytWrap.on{right:auto;bottom:auto;opacity:1;z-index:6;border-radius:12px;overflow:hidden}
-#ytWrap iframe{width:100%;height:100%;border:0}
+#ytWrap0,#ytWrap1{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
+#ytWrap0.on,#ytWrap1.on{right:auto;bottom:auto;opacity:1;z-index:6;border-radius:12px;overflow:hidden}
+.ytw iframe{width:100%;height:100%;border:0}
 /* the artist name is a link, like in the app */
 #trackArtist.demo-link{cursor:pointer}
 #trackArtist.demo-link:hover span{text-decoration:underline;text-underline-offset:3px}
