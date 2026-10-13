@@ -9993,12 +9993,12 @@ Add entries in this shape:
 - **Review note:** Cause: #439 only filled art on the ON AIR / OFF AIR card. Any other library playlist, album or 2x2 collage holding an sc: song saved without art (older or cached items) still rendered a blank cell, since sc: ids have no img.youtube.com fallback. Fix: renderLibrary now borrows the cover for art-less sc:/au: songs from the same song in any other library playlist (render only, nothing rewritten). Limit: a song with no art anywhere in the library stays blank. Not deployed. cache v181.
 
 ### advanced-settings-p1: Advanced settings section, phase 1: Look, Library, Playback (Geethub #469)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #469: everything Marvis Pro can change, EBBLESS should let you change, to a reasonable limit, with these higher-level options at the bottom of Settings. Phase 1: add a collapsed "Advanced" block at the bottom of Settings (below Library & data). Controls, each one tap, no paste fields: (Look) default album-art style, accent color, motion full/reduced; theme only if it is dark/auto, no light theme yet; (Library) default grid size 2x2/3x3, default sort, which library sections show; (Playback) move Blend length here or mirror it, start loud/quiet. Mostly surface existing behavior and save the choice. Add a "Reset advanced settings" button. Per-device storage (localStorage, try/catch).
 - **Touches:** Settings screen (`settingsAppBlock` area and below), album-art style default, library grid defaults, CSS accent variables.
-- **Branch:**
-- **Notes:** Research: Marvis Pro changes themes, layout (list/grid, rows, artwork shape, spacing), widgets, gestures, sidebar folders. Skipped for EBBLESS: app icons (native only) and widgets (iOS only). Open questions for the owner: light theme at all? sync across devices once accounts exist (see accounts-profiles)? Phase 1 stays per-device.
+- **Branch:** agent/advanced-settings-p1
+- **Notes:** Research: Marvis Pro changes themes, layout (list/grid, rows, artwork shape, spacing), widgets, gestures, sidebar folders. Skipped for EBBLESS: app icons (native only) and widgets (iOS only). Open questions for the owner: light theme at all? sync across devices once accounts exist (see accounts-profiles)? Phase 1 stays per-device. Built: collapsed Advanced block below Library & data (Look, Library, Playback, Reset); new key ebbless:advanced for accent, motion, hidden sections, start volume. Start volume = Even out volume headroom (Quiet -5 dB default, Loud -2 dB); owner to confirm that is what "start loud/quiet" meant. Not checked on phone width or by ear. Cache v187.
 
 ### advanced-settings-p2-player-layout: Advanced settings phase 2: choose which player buttons and info show (Geethub #469)
 - **Status:** draft
