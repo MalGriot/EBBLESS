@@ -1314,6 +1314,15 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 @media (prefers-reduced-motion:reduce){.track-row.is-now-playing:not(:has(.row-actions)) .title::before,.track-row.is-now-playing .row-actions::before{animation:none}}
 :root{--ico-spk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z'/%3E%3C/svg%3E")}
 
+/* ---------- matching status (Geethub #465): progress bar centered on the footer, not a window ---------- */
+#match-status{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:43;width:min(420px,calc(100vw - 24px));box-sizing:border-box;
+  padding:8px 14px 10px;background:var(--panel);border:1px solid var(--border);border-bottom:0;border-radius:10px 10px 0 0;text-align:center}
+#match-status[hidden]{display:none}
+#match-status .ms-names{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#match-status .ms-count{font-size:11px;color:var(--faint);margin-top:4px}
+#match-status .flow-line{margin-top:6px}
+body:has(#mini-bar:not([hidden])) #match-status{margin-bottom:56px}
+
 /* ---------- mini bar ---------- */
 #mini-bar{position:fixed;left:0;right:0;bottom:0;z-index:42;display:flex;align-items:center;gap:12px;
   padding:8px 14px;background:var(--panel);border-top:1px solid var(--border);cursor:pointer;
@@ -2024,7 +2033,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   .view,#import-overlay{bottom:calc(var(--nav-h) + var(--safe-b))}
   .view-scroll{padding:4px 18px calc(120px + var(--safe-b))}
   #bottom-nav{display:flex}
-  #mini-bar{bottom:calc(var(--nav-h) + var(--safe-b))}
+  #mini-bar,#match-status{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
   .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 308px)))}
   .track-meta{width:min(340px,84vw)}
@@ -4157,6 +4166,13 @@ body.week-up-on{overflow:hidden}
         <span class="one" id="miniRepeatOneBadge" hidden>1</span>
       </button>
     </div>
+  </div>
+
+  <!-- ===== MATCHING STATUS (footer progress bar) ===== -->
+  <div id="match-status" hidden role="status" aria-live="polite">
+    <div class="ms-names" id="matchNames"></div>
+    <div class="flow-line"><div class="fill" id="matchFill"></div></div>
+    <div class="ms-count" id="matchCounter"></div>
   </div>
 
   <!-- ===== BOTTOM NAV ===== -->
@@ -6953,6 +6969,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
       resolved[i] = ({ title: t.title, artist: t.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art, duration: 0, srcDuration: Math.round((t.duration || 0) / 1000) || null, spotifyId: t.spotifyId || undefined });
     }
     onProgress({ stage: 'matching', done: i + 1, total: tracks.length, track: resolved[i] });
+    fillLibRowLive(playlistId, i, resolved[i]);
     // Fire as soon as the first *playable* track lands (not necessarily
     // index 0 - an early match can fail) so the caller can start playback
     // without waiting on the rest of the playlist to resolve. `resolved` is
@@ -10208,7 +10225,6 @@ function openReplaceLinkFlow(id, pl){
     stageFinding();
     resolvePlaylist(newId, newType, (p) => {
       if (p.stage === 'matching'){
-        if (!$('matchFill')) stageMatching(null, p.total);
         stageMatchingProgress(p.done, p.total, p.track);
       }
     }).then(newPl => {
@@ -10217,6 +10233,7 @@ function openReplaceLinkFlow(id, pl){
       renderLibrary();
       showToast('Link updated');
     }).catch(e => {
+      hideMatchStatus();
       stageError(plainError(e), submit);
     });
   }
@@ -10486,6 +10503,28 @@ async function relinkAlbumSiblings(plId, trackIdx, candidate, replaceAll){
 // old thumbnail until reopened. Repaints just that row's art - and the
 // panel's cover, when it's borrowed from a track (same pick as
 // toggleLibraryPlaylistPanel) - in place.
+// Geethub #465: a library row still matching keeps its spinner until its
+// link is found, then fills in right where it is - spinner swapped for the
+// song menu, greyed state lifted, title and art filled - without leaving and
+// re-entering the playlist panel. A song with no match just stops spinning.
+function fillLibRowLive(plId, idx, t){
+  if (openLibraryPanelId !== plId || !t) return;
+  const row = libplBody.querySelector('.track-row[data-idx="' + idx + '"]');
+  const spin = row && row.querySelector('.row-spinner');
+  if (!row || row.dataset.plId !== plId || !spin) return;
+  const title = row.querySelector('.title'); if (title) title.textContent = t.title;
+  const img = row.querySelector('img'); if (img && (t.videoId || t.art)) attachArtworkFallback(img, t);
+  const menuBtn = document.createElement('button');
+  menuBtn.setAttribute('aria-label', 'Song options'); menuBtn.setAttribute('aria-haspopup', 'true'); menuBtn.setAttribute('aria-expanded', 'false');
+  menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+  menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(plId, idx, menuBtn); });
+  spin.replaceWith(menuBtn);
+  if (t.videoId){
+    row.classList.remove('is-missing');
+    row.addEventListener('click', () => playLibraryTrackInline(plId, idx));
+  }
+}
+
 function repaintOpenLibPanelTrack(plId, trackIdx, pl){
   if (openLibraryPanelId !== plId || !pl) return;
   const t = pl.tracks[trackIdx];
@@ -11349,28 +11388,34 @@ function stageFinding(){
     '<div class="counter">Reading the playlist</div>';
 }
 
+// Matching status lives in the footer bar (#match-status), never in the
+// import overlay: searching or loading something else while songs match
+// opens the overlay normally and nothing here pulls it back (Geethub #465).
+let matchStatusTimer = null;
+function closeFindingOverlay(){ if (/^Finding your music/.test(importStage.textContent)) closeImportOverlay(); }
 function stageMatching(name, total){
-  importStage.innerHTML =
-    '<div class="step">Matching songs&hellip;</div>' +
-    '<div class="flow-line"><div class="fill" id="matchFill"></div></div>' +
-    '<div class="counter" id="matchCounter">0 / ' + total + '</div>' +
-    '<div class="import-preview" id="importPreview"></div>';
+  clearTimeout(matchStatusTimer);
+  // only drop the "Finding your music" window; a search the listener opened
+  // meanwhile stays put
+  closeFindingOverlay();
+  $('match-status').hidden = false;
+  $('matchFill').style.width = '0%';
+  $('matchNames').textContent = 'Matching songs\u2026';
+  $('matchCounter').textContent = '0 / ' + total + queuedImportsLabel();
+}
+
+function hideMatchStatus(){
+  clearTimeout(matchStatusTimer);
+  const bar = $('match-status'); if (bar) bar.hidden = true;
 }
 
 function stageMatchingProgress(done, total, track){
-  const fill = $('matchFill'); if (fill) fill.style.width = Math.round((done/total)*100) + '%';
-  const counter = $('matchCounter'); if (counter) counter.textContent = done + ' / ' + total;
-  const preview = $('importPreview');
-  if (preview && track){
-    const row = document.createElement('div');
-    row.className = 'import-preview-row';
-    const img = document.createElement('img');
-    if (track.videoId || track.art) attachArtworkFallback(img, track);
-    const t = document.createElement('div'); t.className = 't'; t.textContent = track.title + ' — ' + track.artist;
-    row.appendChild(img); row.appendChild(t);
-    preview.insertBefore(row, preview.firstChild);
-    while (preview.children.length > 5) preview.removeChild(preview.lastChild);
-  }
+  if ($('match-status').hidden) stageMatching(null, total);
+  clearTimeout(matchStatusTimer);
+  $('matchFill').style.width = Math.round((done/total)*100) + '%';
+  $('matchCounter').textContent = done + ' / ' + total + queuedImportsLabel();
+  if (track && track.title) $('matchNames').textContent = 'Matching: ' + track.title + (track.artist ? ' - ' + track.artist : '');
+  if (done >= total) matchStatusTimer = setTimeout(hideMatchStatus, 900);
 }
 
 // Plain-language version of a load/import/search error for the screen;
@@ -11398,6 +11443,7 @@ function plainError(e, fallback){
 }
 
 function stageError(msg, onRetry, title){
+  openImportOverlay();
   importStage.innerHTML =
     '<div class="import-error">' +
       '<div class="step">' + escapeHtml(title || 'Couldn’t load that playlist.') + '</div>' +
@@ -11579,7 +11625,25 @@ function playSingleSongLink(pl, targetIndex){
   $('ssNowBtn').addEventListener('click', () => { closeImportOverlay(); playNow(false); });
 }
 
-async function beginImport(id, force, type, targetIndex){
+// Loads run one at a time (Geethub #465): anything started while another
+// import is still matching waits its turn instead of fighting it for the
+// screen. The footer bar shows how many are waiting.
+let importChain = Promise.resolve();
+let importsPending = 0;
+function queuedImportsLabel(){ return importsPending > 1 ? ' (+' + (importsPending - 1) + ' queued)' : ''; }
+function beginImport(id, force, type, targetIndex){
+  const waited = importsPending > 0;
+  if (waited){
+    closeImportOverlay();
+    showToast('Queued. It loads after the current matching.');
+  }
+  importsPending++;
+  const run = importChain.then(() => beginImportNow(id, force, type, targetIndex, waited)).catch((e) => console.warn('[ebbless] queued import failed:', e));
+  importChain = run.then(() => { importsPending--; });
+  return run;
+}
+
+async function beginImportNow(id, force, type, targetIndex, waited){
   importErr.textContent = '';
   const wasSaved = isSaved(id);
   // Searching/pasting a link files its songs in the library (an album as an
@@ -11626,8 +11690,7 @@ async function beginImport(id, force, type, targetIndex){
     const cached = getCachedPlaylist(id);
     type = (cached && cached.type) || 'playlist';
   }
-  openImportOverlay();
-  stageFinding();
+  if (!waited){ openImportOverlay(); stageFinding(); }
   // Once the first playable track lands, jump into the player and start it
   // rather than making the listener sit through the whole import overlay -
   // the rest keeps resolving underneath while it plays.
@@ -11635,7 +11698,6 @@ async function beginImport(id, force, type, targetIndex){
   try{
     const pl = await resolvePlaylist(id, type, (p) => {
       if (p.stage === 'matching'){
-        if (!$('matchFill')) stageMatching(null, p.total);
         stageMatchingProgress(p.done, p.total, p.track);
         // Once playback has already jumped into the player, the import
         // overlay above is gone - route the same progress into the queue
@@ -11657,7 +11719,7 @@ async function beginImport(id, force, type, targetIndex){
       // starts on the shared song, at the cost of the early-jump-in
       // optimization for that one case.
       startedEarly = true;
-      closeImportOverlay();
+      closeFindingOverlay();
       if (!keepQueue){
         loadPlaylistIntoPlayer(partial);
         buildQueueFrom(partial.focusIndex && partial.tracks[partial.focusIndex] && partial.tracks[partial.focusIndex].videoId ? partial.focusIndex : 0);
@@ -11675,7 +11737,7 @@ async function beginImport(id, force, type, targetIndex){
       renderLibrary();
     });
     if (isSingleTrackType(pl.type)){
-      closeImportOverlay();
+      closeFindingOverlay();
       // See the cache-hit branch above (discovery-radio-continuation): play
       // the freshly-resolved single song immediately - this replaces
       // whatever was already playing and builds a fresh one-track queue
@@ -11706,9 +11768,9 @@ async function beginImport(id, force, type, targetIndex){
         buildQueueFrom(anchor);
       }
     } else if (keepQueue){
-      closeImportOverlay();
+      closeFindingOverlay();
     } else {
-      closeImportOverlay();
+      closeFindingOverlay();
       loadPlaylistIntoPlayer(pl);
       buildQueueFrom(targetIndex || pl.focusIndex || 0);
       loadIndex(state.queuePos, true);
@@ -11717,6 +11779,7 @@ async function beginImport(id, force, type, targetIndex){
     }
   } catch(e){
     if (startedEarly) bgResolveProgress.delete(id);
+    hideMatchStatus();
     stageError(plainError(e), () => beginImport(id, true, type, targetIndex));
   }
 }
@@ -12563,6 +12626,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
   const pl = { id, type: 'custom', name: interp.title || 'Your vibe', image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: String(text || '').slice(0, 300) };
   persistPlaylistObj(pl);
   if (save){ saveToLibrary(id); renderLibrary(); }
+  closeImportOverlay();
   stageMatching(null, order.length);
   let started = false;
   for (let i = 0; i < order.length; i++){
@@ -12596,6 +12660,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
   }
   bgResolveProgress.delete(id);
   if (!started){
+    hideMatchStatus();
     stageError("Couldn't find playable versions of those songs right now.", () => playVibePlaylist(interp, list, startIdx, save, text), 'Couldn’t build that playlist.');
     return;
   }
