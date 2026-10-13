@@ -3,8 +3,8 @@
    bio for MAL GRIOT, a typed-ideas paste box, and a message channel to the
    welcome page. Nothing is stored. ---- */
 const DEMO_TRACKS = [
-  { id: 'itriedit', title: 'I Tried It', artist: 'Unnayanaa feat. MAL GRIOT', art: 'beta/media/art/itriedit.jpg', videoId: 'medJeT7lt5k', dur: 357 },
-  { id: 'freefall', title: 'Free Fall', artist: 'Stalvart John, MAL GRIOT', art: 'beta/media/art/freefall.jpg', videoId: 'Gof4wPG7kRU', dur: 340 },
+  { id: 'itriedit', title: 'I Tried It', artist: 'Unnayanaa feat. MAL GRIOT', art: 'beta/media/art/itriedit.jpg', videoId: 'medJeT7lt5k', dur: 357, alts: [{ videoId: 'TU5KSFNjc-E', dur: 215 }] },
+  { id: 'freefall', title: 'Free Fall', artist: 'Stalvart John, MAL GRIOT', art: 'beta/media/art/freefall.jpg', videoId: 'Gof4wPG7kRU', dur: 340, alts: [{ videoId: 'HAhQIoTg0No', dur: 346 }, { videoId: 'A037pwqvV6s', dur: 173 }] },
   { id: 'burn', title: 'burn', artist: 'MAL GRIOT', art: 'beta/media/art/breathlovedeep.jpg', videoId: '-p1xP7LNGuQ', hasVideo: true, dur: 229 },
 ];
 const DEMO_LYRICS = ['Music deserves your attention.', 'Not your attention span.', 'Press play.', 'Let it run.', 'Stay a while.', 'Nothing else is asking for you.', 'Just the song.', 'And the next one.']
@@ -152,8 +152,8 @@ function syncWide(){
 addEventListener('resize', syncWide);
 
 // ---- the real songs: two YouTube players ("decks") so songs can blend, like the app's own two-deck player.
-// Blends are the app's longest (Settings, Blend length: 10s) and play/pause use the app's own short fades.
-const XF_MS = 10000;
+// Blends are half the app's longest (the Settings Blend length slider tops out at 10s); play/pause use the app's own short fades.
+const XF_MS = 5000;   // half of the app's longest blend (10s)
 const PAUSE_FADE_OUT_MS = 600, PAUSE_FADE_IN_MS = 320;
 const ALT_FADE_IN_MS = 1200;   // fade in when the song starts from 0:00 after the muted wait or an ad
 const decks = [];
@@ -188,12 +188,23 @@ function initPlayer(){
         events: {
           onReady: () => { d.ready = true; if (d === D() && wantPlay){ wantPlay = false; startPlay(); } },
           onStateChange: (e) => deckState(d, e.data),
-          onError: () => { if (d === D()) songEnded(); },   // a video that cannot play: move on
+          onError: () => deckError(d),
         },
       });
     });
   });
   setInterval(tickAudio, 250);
+}
+// YouTube will not play this version here (a regional or embed limit): try another version of the song, else move on
+function deckError(d){
+  const t = DEMO_TRACKS.find(x => x.videoId === d.vid);
+  if (t && t.alts && t.alts.length){
+    Object.assign(t, t.alts.shift());
+    d.vid = t.videoId; d.confirmed = false; d.unmuteAt = 0; d.lastT = null; d.moving = false; d.primedAt = 0;
+    try { d.p.mute(); setVol(d, d === D() ? 100 : 0); if (d === D() && (demo.playing || wantPlay || xf)) d.p.loadVideoById(d.vid); else d.p.cueVideoById(d.vid); } catch(e){}
+    return;
+  }
+  if (d === D()) songEnded();
 }
 function deckState(d, st){
   if (d !== D()) return;   // the standby / fading-out deck never drives the player's buttons
@@ -223,11 +234,11 @@ function adClear(d){
 // the song proper has started behind the muted wait (or an ad): back to 0:00 and fade in
 function startAudible(d){
   d.confirmed = true; d.unmuteAt = 0; d.lastT = null; d.moving = false;
-  const inBlend = xf && xf.n === d;
   d.p.seekTo(0, true);
-  if (!inBlend) setVol(d, 0);
+  setVol(d, 0);
   d.p.unMute();
-  if (!inBlend) ramp(d, 0, 100, ALT_FADE_IN_MS);
+  if (xf && xf.n === d && xf.pending){ xf.pending = false; startFades(xf.o, d); }   // a skip: the blend starts now
+  else ramp(d, 0, 100, ALT_FADE_IN_MS);
 }
 function adNote(on){
   let el = $('adNote');
@@ -252,16 +263,18 @@ function tickAudio(){
   if (left <= XF_MS / 1000 && n.primedAt && performance.now() - n.primedAt > 5000 && adClear(n)) blendTo(demo.i + 1, true);
 }
 // the new song becomes the song straight away (art, title, queue, lyrics); the old one fades out underneath
-function blendTo(idx, warm){
-  const o = D(), n = S();
-  xf = { o, n };
-  ai = 1 - ai;
-  uiFor(idx);
-  n.vid = DEMO_TRACKS[idx].videoId; n.confirmed = !!warm; n.fadeIn = 0; n.unmuteAt = 0;
-  if (warm){ n.p.seekTo(0, true); n.p.unMute(); n.lastT = null; n.moving = false; }
-  else { n.p.mute(); setVol(n, 0); n.p.loadVideoById(n.vid); }
+function startFades(o, n){
   ramp(n, 0, 100, XF_MS);
   ramp(o, o.vol, 0, XF_MS, () => { try { o.p.pauseVideo(); } catch(e){} setVol(o, 100); o.primedAt = 0; xf = null; preloadNext(); });
+}
+function blendTo(idx, warm){
+  const o = D(), n = S();
+  xf = { o, n, pending: !warm };
+  ai = 1 - ai;
+  uiFor(idx);
+  n.vid = DEMO_TRACKS[idx].videoId; n.confirmed = !!warm; n.fadeIn = 0; n.unmuteAt = 0; n.lastT = null; n.moving = false;
+  if (warm){ n.p.seekTo(0, true); n.p.unMute(); setVol(n, 0); startFades(o, n); }
+  else { n.p.mute(); setVol(n, 0); n.p.loadVideoById(n.vid); }   // the old song plays on at full volume until this one is really playing
 }
 // the idle deck gets the following song cued and ready
 function preloadNext(){
@@ -284,7 +297,6 @@ function startPlay(){
   if (!d.confirmed) { d.unmuteAt = 0; d.p.mute(); }
   d.pausing = false; d.fadeIn = PAUSE_FADE_IN_MS;
   setVol(d, 0); d.p.playVideo();
-  if (xf){ ramp(xf.o, xf.o.vol, xf.o.vol, 1); }
 }
 function userPause(){
   const d = D();
