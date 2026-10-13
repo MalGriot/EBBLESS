@@ -4486,7 +4486,7 @@ body.week-up-on{overflow:hidden}
        actual <iframe> already pointing at the widget URL to bind to (unlike
        YT.Player, which takes over a plain element itself), so these sit here
        pre-created rather than being swapped in/out of the yt-deck-* slots. -->
-  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><div id="yt-deck-c"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe><iframe id="sc-deck-c" allow="autoplay"></iframe></div>
+  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><div id="yt-deck-c"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe><iframe id="sc-deck-c" allow="autoplay"></iframe><div id="yt-deck-p1"></div><div id="yt-deck-p2"></div><div id="yt-deck-p3"></div><iframe id="sc-deck-p1" allow="autoplay"></iframe><iframe id="sc-deck-p2" allow="autoplay"></iframe><iframe id="sc-deck-p3" allow="autoplay"></iframe></div>
   <!-- near-silent (not truly zero-amplitude — Chromium's audible-source
        heuristic ignores pure digital silence) loop: keeps the tab holding an
        active local media session so mobile OSes grant lock-screen/
@@ -17480,6 +17480,19 @@ function makeDeck(id, scId){ return { id, scId, kind: 'yt', gen: 0, player: null
 // deck, kept warm on the previous track so Previous is as instant as Next
 // (previous-track-instant). Decks are re-slotted by swapping array entries.
 const decks = [ makeDeck('yt-deck-a', 'sc-deck-a'), makeDeck('yt-deck-b', 'sc-deck-b'), makeDeck('yt-deck-c', 'sc-deck-c') ];
+// #458: extra SoundCloud decks, outside decks[], each holding an upcoming song
+// (beyond the standby one) loaded and warmed while the page is visible, so a
+// hidden stretch of several SoundCloud songs can keep advancing (see
+// scPoolSweep). They are swapped into the standby slot as the queue advances.
+const SC_POOL_SIZE = 3;
+const scPool = [ makeDeck('yt-deck-p1', 'sc-deck-p1'), makeDeck('yt-deck-p2', 'sc-deck-p2'), makeDeck('yt-deck-p3', 'sc-deck-p3') ];
+// SoundCloud pauses every other widget sharing its storage partition when one
+// plays. A `credentialless` iframe gets its own partition (observed: it does not
+// pause, nor get paused by, a normal one), so SoundCloud decks live in one of two
+// lanes: 'N' (normal) and 'C' (credentialless); a deck in the lane the playing
+// song is not in can be warmed without interrupting it. Browsers without the
+// attribute keep one lane and only warm when no SoundCloud song is playing.
+const SC_LANES = typeof HTMLIFrameElement !== 'undefined' && 'credentialless' in HTMLIFrameElement.prototype;
 let activeIdx = 0;
 const activeDeck = () => decks[activeIdx];
 const standbyDeck = () => decks[1 - activeIdx];
@@ -17878,7 +17891,8 @@ function makeSCPlayerAdapter(deck, widget, myGen){
     // (visible page only) so it can be started later, then park it at 0:00.
     // The PLAY handler ignores events while deck._scWarming is set.
     warm(){
-      if (loading || deck._scWarmed || deck._scWarming) return;
+      if (loading || deck._scWarmed || deck._scWarming) return false;
+      if (decks.concat(scPool).some(d => d !== deck && d._scWarming)) return false;
       const tok = deck._scWarming = {};
       const finish = () => {
         if (deck._scWarming !== tok) return;
@@ -17888,10 +17902,24 @@ function makeSCPlayerAdapter(deck, widget, myGen){
         if (deck.gen !== myGen || deck === activeDeck() || swapInProgress) return;
         widget.pause(); widget.seekTo(0); deck._scPos = 0;
       };
-      deck._scWarmPlay = () => setTimeout(finish, 400);
+      // PLAY only means play() was accepted: a cold sound needs about a second
+      // before audio really runs (observed), and only one whose audio has run
+      // can be started again once the page is hidden. So hold the silent play
+      // until the widget's position moves, then park it.
+      deck._scWarmPlay = () => {
+        const poll = (n) => {
+          if (deck._scWarming !== tok) return;
+          widget.getPosition(function(ms){
+            if (deck._scWarming !== tok) return;
+            if (ms > 20 || n > 40) setTimeout(finish, 60); else setTimeout(() => poll(n + 1), 80);
+          });
+        };
+        poll(0);
+      };
       widget.setVolume(0);
       widget.play();
-      setTimeout(finish, 3000);
+      setTimeout(finish, 4000);
+      return true;
     },
     loadVideoById(opts){
       const v = typeof opts === 'string' ? opts : opts.videoId;
@@ -18055,10 +18083,92 @@ function scHost(){
 // hidden behind the mini player. Does nothing for a hidden page.
 function warmSCStandby(deck){
   if (document.hidden || swapInProgress || !deck || deck.kind !== 'sc' || !deck.ready || !deck.player || !deck.player.warm) return;
-  if (deck !== standbyDeck() || deck.pos < 0 || routeLocked()) return;
+  if ((deck !== standbyDeck() && scPool.indexOf(deck) < 0) || deck.pos < 0 || routeLocked()) return;
   const ad = activeDeck();
-  if (ad.kind === 'sc' || ad.kind === 'cast') return;
-  deck.player.warm();
+  if (ad.kind === 'cast') return;
+  scWarmNow(deck);
+}
+// Warm a deck without stopping the song that is playing: if that song is
+// SoundCloud and shares this deck's lane, rebuild the deck in the other lane first.
+function scWarmNow(deck){
+  const ad = activeDeck();
+  if (ad !== deck && ad.kind === 'sc' && ad._scState === YT.PlayerState.PLAYING && !(SC_LANES && deck.scLane && deck.scLane !== ad.scLane)){
+    if (SC_LANES && deck.videoId && deck.ready && !deck._scLaneFix){
+      deck._scLaneFix = true;
+      deck.ready = false;
+      createSCDeckPlayer(deck, deck.videoId, { paused: true });
+    }
+    return false;
+  }
+  return deck.player.warm();
+}
+// The SoundCloud songs after the standby one that need a warmed deck of their
+// own (see scPool): { pos, t }, at most SC_POOL_SIZE, looking SC_WARM_AHEAD
+// queue positions ahead. A song in a set the playing deck (or an earlier entry)
+// already holds is skipped: it is reached with skip(), which works hidden.
+const SC_WARM_AHEAD = 8;
+function scPoolWanted(){
+  const out = [], held = [], seen = {};
+  const ad = activeDeck();
+  if (ad.scSet) held.push(ad.scSet.url);
+  let p = state.queuePos;
+  for (let n = 0; n < SC_WARM_AHEAD && out.length < SC_POOL_SIZE; n++){
+    p = computeNextPos(p, false);
+    if (p < 0 || p === state.queuePos || seen[p]) break;
+    seen[p] = 1;
+    const t = trackAt(p);
+    if (!t || !t.videoId || !isSoundCloudVideoId(t.videoId)) continue;
+    const set = scSetSourceFor(t.videoId, p);
+    if (set && held.indexOf(set.url) >= 0) continue;
+    if (set) held.push(set.url);
+    if (n > 0) out.push({ pos: p, t });
+  }
+  return out;
+}
+// Every 2 s while the page is visible (desktop, SoundCloud widgets hosted in
+// this page): warm the standby/pool decks one at a time, then load one missing
+// upcoming song into a free pool deck. Hidden pages do nothing here - a widget
+// can only be warmed while visible.
+function scPoolSweep(){
+  if (document.hidden || swapInProgress || routeLocked() || castActive() || isIOS || !(window.SC && SC.Widget)) return;
+  if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return; // phones/tablets: keep memory low
+  if (scHost().win !== window) return;
+  const want = scPoolWanted();
+  scPool.forEach(d => { if (d.pos >= 0 && !want.some(w => w.pos === d.pos && w.t.videoId === d.videoId)) resetDeck(d); });
+  if (decks.concat(scPool).some(d => d._scWarming)) return;
+  const sd = standbyDeck();
+  const ready = [sd].concat(scPool).filter(d => d.pos >= 0 && d.kind === 'sc' && d.ready && d.player && d.player.warm && !d._scWarmed);
+  for (let i = 0; i < ready.length; i++) if (scWarmNow(ready[i])) return;
+  if (scPool.some(d => d.pos >= 0 && (!d.ready || !d._scWarmed))) return;
+  const w = want.find(w => !scPool.some(d => d.pos === w.pos && d.videoId === w.t.videoId));
+  const free = w && scPool.find(d => d.pos < 0);
+  if (!free) return;
+  free.pos = w.pos;
+  loadIntoDeck(free, w.t.videoId, false);
+}
+setInterval(scPoolSweep, 2000);
+// Next song already loaded (and warmed) in a pool deck: swap it into the
+// standby slot, the displaced deck becoming a free pool deck. True if adopted.
+function adoptPooledSC(pos, t){
+  if (swapInProgress || routeLocked() || !t || !isSoundCloudVideoId(t.videoId)) return false;
+  const pd = scPool.find(d => d.pos === pos && d.videoId === t.videoId && d.kind === 'sc' && d.ready && d.player);
+  if (!pd) return false;
+  const si = 1 - activeIdx, nd = decks[si];
+  if (nd.pos === pos && nd.videoId === t.videoId && nd.kind === 'sc' && nd.ready && nd.player && (nd._scWarmed || !pd._scWarmed)) return false;
+  decks[si] = pd;
+  scPool[scPool.indexOf(pd)] = nd;
+  resetDeck(nd);
+  return true;
+}
+// PiP just took over (or gave back) the SoundCloud iframes: pool decks sit in
+// the main page, so drop them; the sweep refills them when it applies again.
+function scPoolDrop(){
+  scPool.forEach(d => {
+    d.gen++;
+    if (d.kind === 'sc'){ try { resetDeck(d); } catch(e){} const f = document.getElementById(d.scId); if (f && f.getAttribute('src')) f.src = 'about:blank'; d.player = null; d.ready = false; d.kind = 'yt'; }
+    else resetDeck(d);
+    d._scWarmed = false; d._scWarming = null;
+  });
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) warmSCStandby(standbyDeck()); });
 // Rebuild every SoundCloud deck in the current host (PiP just opened or closed),
@@ -18066,6 +18176,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) warm
 function rehostSCDecks(){
   if (swapInProgress){ setTimeout(rehostSCDecks, 1000); return; }
   const host = scHost();
+  if (host.win !== window) scPoolDrop();
   decks.forEach(deck => {
     if (deck.kind !== 'sc' || !deck.player || !deck.videoId || deck.scHostWin === host.win) return;
     const active = deck === activeDeck();
@@ -18109,6 +18220,11 @@ function createSCDeckPlayer(deck, videoId, opts){
   const iframe = host.doc.createElement('iframe');
   iframe.id = deck.scId;
   iframe.setAttribute('allow', 'autoplay');
+  // lane (see SC_LANES): a deck that is not the playing one goes in the lane the playing song is not in
+  const adk = activeDeck();
+  deck.scLane = !SC_LANES || deck === adk || adk.kind !== 'sc' || !adk.scLane ? 'N' : adk.scLane === 'N' ? 'C' : 'N';
+  deck._scLaneFix = false;
+  if (deck.scLane === 'C') iframe.setAttribute('credentialless', '');
   deck.scSet = null;
   const set = scSetSourceFor(videoId, deck === activeDeck() ? state.queuePos : deck.pos);
   const autoPlay = deck === activeDeck() && !(opts && opts.paused);
@@ -18456,6 +18572,7 @@ function schedulePreload(afterPos){
   const t = trackAt(pos);
   if (deck.pos === pos && t && deck.videoId === t.videoId && (deck.player || deck.pendingVideoId)) return;
   if (!t || !t.videoId){ resetDeck(deck); return; }
+  if (adoptPooledSC(pos, t)) return;
   resetDeck(deck);
   deck.pos = pos;
   loadIntoDeck(deck, t.videoId, false);
@@ -21077,6 +21194,7 @@ function loadIndex(pos, autoplay, opts){
   // one's art - "Glowed Up" art, a different song playing
   // (wrong-song-kaytranada-glowed-up). Only promote when the deck actually
   // holds this track's video.
+  adoptPooledSC(pos, t);
   const nd = standbyDeck(), ad0 = activeDeck();
   // Locked iPhone (#257): a podcast following a podcast loads into the
   // active deck's <audio> element, which iOS already lets play in the
@@ -21095,9 +21213,10 @@ function loadIndex(pos, autoplay, opts){
   // audibly playing (INFERRED fix, not observed in a hidden tab).
   // #458 (observed fix): the active widget holds this song's set, so skip()
   // to it (adapter loadVideoById) - also for a manual next/prev from the mini player.
+  const ndWarmSC = nd.kind === 'sc' && nd._scWarmed && nd.ready && nd.pos === pos && nd.videoId === t.videoId;
   const scSetSkip = document.hidden && isSoundCloudVideoId(t.videoId) && ad0.kind === 'sc' && ad0.player && ad0.ready &&
     !castActive() && !!ad0.scSet && ad0.scSet.ids.indexOf(soundCloudTrackId(t.videoId)) >= 0;
-  const scInPlace = scSetSkip || (trackStartAuto && document.visibilityState === 'hidden' && isSoundCloudVideoId(t.videoId) &&
+  const scInPlace = scSetSkip || (!ndWarmSC && trackStartAuto && document.visibilityState === 'hidden' && isSoundCloudVideoId(t.videoId) &&
     ad0.kind === 'sc' && ad0.player && ad0.ready && !castActive());
   if (!reuseLockedAudio && !iosInPlace && !scInPlace && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
     promoteDeckDirect(nd, pos, autoplay !== false);
