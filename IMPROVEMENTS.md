@@ -127,12 +127,12 @@ Add entries in this shape:
 -->
 
 ### cassette-tape-wave-rock: Stacked cassettes in the cassette animation rock at different intervals, like waves (Geethub #475)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #475. In the cassette animation, the tapes that stack should rock back and forth, each at a different interval (staggered phase), so the stack moves like waves.
 - **Touches:** cassette stack animation (fullscreen cassette stack / orbit).
-- **Branch:**
-- **Notes:** Synced from Geethub #475. Related to cassette-fullscreen-animation and cassette-cycle-7-tapes; check for overlap before building.
+- **Branch:** agent/cassette-tape-wave-rock
+- **Notes:** Synced from Geethub #475. Related to cassette-fullscreen-animation and cassette-cycle-7-tapes; check for overlap before building. Stacked copies now rock about 2.2 degrees, 3.4s per swing, each slot lagging the one in front (CS_ROCK in csStackFrame); fades in with the rise and out on collapse. Syntax-checked only, not watched in a live browser. Cache v186.
 
 ### rename-window-wording: Rename window should say album or song, not "playlist" (Geethub #472)
 - **Status:** draft
