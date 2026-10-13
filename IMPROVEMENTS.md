@@ -9999,3 +9999,11 @@ Add entries in this shape:
 - **Touches:** library, queue, match list UI, now-playing art, discovery/radio.
 - **Branch:**
 - **Notes:** Overlaps merged drag-songs-into-playlists (#328) and queue-drag-to-playlist-art (#351), which already cover library/queue rows into playlist cards and part of the art drag. Treat those as done and build the rest on top. Large; consider splitting into phases like advanced-settings.
+
+### soundcloud-autoplay-hidden: SC next song silent or skips to 0:07 in the desktop mini-player (reopen of #458)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Follow-up to soundcloud-autoplay-again. The watchdog's deck rebuild resumed from a stale position (0:07 jump) and the next song still did not play while the page was hidden.
+- **Touches:** `loadIndex` (hidden-page SC in-place advance), `watchSCAutoAdvance`.
+- **Branch:** agent/soundcloud-autoplay-hidden
+- **Notes:** Root cause NOT confirmed (no hidden-tab test possible). Fix: hidden-page SC to SC auto-advance loads into the active widget instead of starting the cold preloaded standby; rebuild branch removed from the watchdog. Deployed for live testing. Cache v183.
