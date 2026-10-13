@@ -9914,12 +9914,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #466.
 
 ### matching-songs-bug: Bug while matching songs (Geethub #465)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #465. Three fixes around the song-matching flow: (1) the "matching songs" status should be a bar in the center of the footer player bar, not a window. (2) You can search and load other things while matching is still running; right now it snaps back to the matching window after a search. Anything newly loaded should queue up and run after the current matching finishes. (3) Songs still matching in the library show a loading animation (keep that); when the link is found the animation should stop and the title should fill in live, in front of you, instead of only after leaving and re-entering the window.
 - **Touches:** matching/link-resolution progress UI, footer player bar, search/load flow, library row rendering.
-- **Branch:** 
-- **Notes:** Synced from Geethub #465. Detail taken from the issue body. (4) Owner addition: the matching status should show the names of the songs being loaded, with a progress bar. Related: background-playlist-loading, search-while-results-showing (#464).
+- **Branch:** agent/matching-songs-bug
+- **Notes:** Synced from Geethub #465. Detail taken from the issue body. (4) Owner addition: the matching status should show the names of the songs being loaded, with a progress bar. Related: background-playlist-loading, search-while-results-showing (#464). Built: footer progress bar (song name, n/total, +N queued), serial import queue (beginImport wraps beginImportNow), fillLibRowLive for live library rows. Not tested against a real playlist import; fillLibRowLive only syntax-checked. Cache v188.
 
 ### search-while-results-showing: Search again while old results are showing: clear them and load the new ones (Geethub #464)
 - **Status:** merged
