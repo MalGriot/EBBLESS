@@ -10033,12 +10033,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #470 (idea). No further detail given. Built: 14px (--r-lg) on library, queue, playlist, history panels; desktop-fs drawers round inner corners only. Computed styles checked, subtle visually. Cache v189.
 
 ### draggables: Drag and drop everywhere (songs, playlists, artists, now-playing art) (Geethub #471)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** high
 - **Description:** Idea, Geethub issue #471. (1) Drag songs from the link-match list into a playlist (needs a refreshed match UI that fits the rest of the app, with more control). (2) Drag a library song into the queue and it lands where dropped, with queue songs visibly shifting. (3) Drag a playlist or album from library to queue, with a confirm prompt first. (4) Drag an artist from library to queue to start "[artist] Radio" (their songs mixed with similar artists), confirm first. (5) Drag the now-playing album art to the queue to start "[song] Radio", confirm first. (6) Drag the now-playing art onto a library playlist (it glows on hover); dropping elsewhere in the library asks which playlist. (7) Polish the existing drag-to-browser-tab Google search so the drag looks designed, and extend it to albums and now-playing art.
 - **Touches:** library, queue, match list UI, now-playing art, discovery/radio.
-- **Branch:**
-- **Notes:** Overlaps merged drag-songs-into-playlists (#328) and queue-drag-to-playlist-art (#351), which already cover library/queue rows into playlist cards and part of the art drag. Treat those as done and build the rest on top. Large; consider splitting into phases like advanced-settings.
+- **Branch:** agent/draggables-p1 (phase 1 merged)
+- **Notes:** Overlaps merged drag-songs-into-playlists (#328) and queue-drag-to-playlist-art (#351), which already cover library/queue rows into playlist cards and part of the art drag. Treat those as done and build the rest on top. Large; consider splitting into phases like advanced-settings. PHASE 1 MERGED (items 2 and 3): library song drag into queue with gap and shift, playlist/album card drag with confirm; card reorder drag now only in Manual order. Drag itself NOT tested in a real browser. REMAINING: (1) match-list drag into playlist, (4) artist radio drag, (5) now-playing art to queue radio, (6) now-playing art onto playlist, (7) Google drag polish. Cache v191.
 
 ### soundcloud-autoplay-hidden: SC next song silent or skips to 0:07 in the desktop mini-player (reopen of #458)
 - **Status:** merged
