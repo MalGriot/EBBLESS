@@ -107,6 +107,22 @@ function ss_() {
   return SpreadsheetApp.getActive() || SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
 }
 function sheet_(name) { return ss_().getSheetByName(name); }
+// Read-only check of the 7/14-day rule: run it from the Apps Script editor and
+// read View > Logs. One line per Active tester: round, accepted date, window
+// length, when their window ends and which feedback email is next. Sends
+// nothing and writes nothing.
+function previewWindows() {
+  const now = Date.now(), tz = Session.getScriptTimeZone();
+  const fmtD = function (ms) { return ms ? Utilities.formatDate(new Date(ms), tz, 'yyyy-MM-dd HH:mm') : '-'; };
+  records_(sheet_(TESTERS)).forEach(function (t) {
+    if (t.tester_status !== 'Active') return;
+    const base = feedbackBase_(t), days = windowDays_(t), due = feedbackDue_(t, now);
+    Logger.log(t.tester_number + ' | round ' + roundOf_(t) + ' | accepted ' + fmtD(ms_(t.accepted_timestamp)) +
+      ' | window ' + days + ' days | ends ' + fmtD(base ? base + days * DAY_MS : 0) +
+      ' | next email ' + (due ? (due.skip ? 'skip (feedback given)' : (due.closing ? 'round over' : 'feedback request')) : 'none due'));
+  });
+}
+
 function cols_(sh) {
   const m = {};
   sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].forEach(function (h, i) { if (h) m[String(h).trim()] = i; });
