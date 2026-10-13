@@ -10009,12 +10009,12 @@ Add entries in this shape:
 - **Notes:** Research: Marvis Pro changes themes, layout (list/grid, rows, artwork shape, spacing), widgets, gestures, sidebar folders. Skipped for EBBLESS: app icons (native only) and widgets (iOS only). Open questions for the owner: light theme at all? sync across devices once accounts exist (see accounts-profiles)? Phase 1 stays per-device. Built: collapsed Advanced block below Library & data (Look, Library, Playback, Reset); new key ebbless:advanced for accent, motion, hidden sections, start volume. Start volume = Even out volume headroom (Quiet -5 dB default, Loud -2 dB); owner to confirm that is what "start loud/quiet" meant. Not checked on phone width or by ear. Cache v187.
 
 ### advanced-settings-p2-player-layout: Advanced settings phase 2: choose which player buttons and info show (Geethub #469)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub issue #469. Checklist in Advanced settings to show/hide player buttons and track info, and optionally reorder buttons. Do after advanced-settings-p1.
 - **Touches:** player controls row, Settings.
-- **Branch:**
-- **Notes:** Marvis Pro equivalent: hide/show metadata and controls per widget.
+- **Branch:** agent/advanced-settings-p2
+- **Notes:** Marvis Pro equivalent: hide/show metadata and controls per widget. Built: Player group in Advanced with 5 chips (Shuffle, Repeat, Like, Artist name, Times), saved as phide in ebbless:advanced, applies to full player, mini bar, fullscreen; play/pause, prev/next, seek, song menu, fullscreen never hideable. Reorder skipped (three separate player markups). Not checked at phone width or fullscreen. Cache v190.
 
 ### advanced-settings-p3-gestures: Advanced settings phase 3: customizable gestures (Geethub #469)
 - **Status:** ready
