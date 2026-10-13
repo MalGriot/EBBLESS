@@ -138,6 +138,9 @@ html,body{height:100%;overflow:hidden;background:#121212}
 #ytWrap0,#ytWrap1{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
 #ytWrap0.on,#ytWrap1.on{right:auto;bottom:auto;opacity:1;z-index:6;border-radius:12px;overflow:hidden}
 .ytw iframe{width:100%;height:100%;border:0}
+#adNote{position:fixed;left:50%;bottom:calc(var(--nav-h,64px) + 14px);transform:translateX(-50%);z-index:40;max-width:calc(100% - 32px);padding:8px 14px;border-radius:999px;background:rgba(24,24,24,.92);border:1px solid rgba(255,255,255,.14);color:#cfcfcf;font-size:12px;text-align:center;pointer-events:none}
+body.split-desktop #adNote{bottom:84px}
+#adNote[hidden]{display:none}
 /* the artist name is a link, like in the app */
 #trackArtist.demo-link{cursor:pointer}
 #trackArtist.demo-link:hover span{text-decoration:underline;text-underline-offset:3px}

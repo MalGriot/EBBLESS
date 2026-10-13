@@ -3,9 +3,9 @@
    bio for MAL GRIOT, a typed-ideas paste box, and a message channel to the
    welcome page. Nothing is stored. ---- */
 const DEMO_TRACKS = [
-  { id: 'itriedit', title: 'I Tried It', artist: 'Unnayanaa feat. MAL GRIOT', art: 'beta/media/art/itriedit.jpg', videoId: 'medJeT7lt5k' },
-  { id: 'freefall', title: 'Free Fall', artist: 'Stalvart John, MAL GRIOT', art: 'beta/media/art/freefall.jpg', videoId: 'Gof4wPG7kRU' },
-  { id: 'burn', title: 'burn', artist: 'MAL GRIOT', art: 'beta/media/art/breathlovedeep.jpg', videoId: '-p1xP7LNGuQ', hasVideo: true },
+  { id: 'itriedit', title: 'I Tried It', artist: 'Unnayanaa feat. MAL GRIOT', art: 'beta/media/art/itriedit.jpg', videoId: 'medJeT7lt5k', dur: 357 },
+  { id: 'freefall', title: 'Free Fall', artist: 'Stalvart John, MAL GRIOT', art: 'beta/media/art/freefall.jpg', videoId: 'Gof4wPG7kRU', dur: 340 },
+  { id: 'burn', title: 'burn', artist: 'MAL GRIOT', art: 'beta/media/art/breathlovedeep.jpg', videoId: '-p1xP7LNGuQ', hasVideo: true, dur: 229 },
 ];
 const DEMO_LYRICS = ['Music deserves your attention.', 'Not your attention span.', 'Press play.', 'Let it run.', 'Stay a while.', 'Nothing else is asking for you.', 'Just the song.', 'And the next one.']
   .map((text, i) => ({ t: i * 6, text }));
@@ -155,6 +155,7 @@ addEventListener('resize', syncWide);
 // Blends are the app's longest (Settings, Blend length: 10s) and play/pause use the app's own short fades.
 const XF_MS = 10000;
 const PAUSE_FADE_OUT_MS = 600, PAUSE_FADE_IN_MS = 320;
+const ALT_FADE_IN_MS = 1200;   // fade in when the song starts from 0:00 after the muted wait or an ad
 const decks = [];
 let ai = 0, wantPlay = false, demoDur = 0, xf = null;
 const D = () => decks[ai], S = () => decks[1 - ai];
@@ -204,9 +205,34 @@ function deckState(d, st){
   } else if (st === 2){ if (!d.pausing) setPlayingUI(false); demoPost(); }
   else if (st === 0) songEnded();
 }
+// Is the song itself playing, and not an ad in front of it? YouTube reports the song's own id while an ad
+// runs, so this also needs the length to match what the song should be and its clock to be moving.
 function adClear(d){
+  const st = d.p.getPlayerState();
+  if (st !== 1) return false;
   const vd = d.p.getVideoData && d.p.getVideoData();
-  return d.p.getPlayerState() === 1 && (!vd || vd.video_id === d.vid);
+  if (vd && vd.video_id && vd.video_id !== d.vid) return false;
+  const want = (DEMO_TRACKS.find(t => t.videoId === d.vid) || {}).dur, got = d.p.getDuration && d.p.getDuration();
+  if (want && got && Math.abs(got - want) > 6) return false;
+  const t = d.p.getCurrentTime(), now = performance.now();
+  if (d.lastT == null || t < d.lastT - 0.5){ d.lastT = t; d.lastTAt = now; return false; }
+  if (t - d.lastT > 0.4){ d.lastT = t; d.lastTAt = now; d.moving = true; }
+  else if (now - d.lastTAt > 2500) d.moving = false;
+  return !!d.moving;
+}
+// the song proper has started behind the muted wait (or an ad): back to 0:00 and fade in
+function startAudible(d){
+  d.confirmed = true; d.unmuteAt = 0; d.lastT = null; d.moving = false;
+  const inBlend = xf && xf.n === d;
+  d.p.seekTo(0, true);
+  if (!inBlend) setVol(d, 0);
+  d.p.unMute();
+  if (!inBlend) ramp(d, 0, 100, ALT_FADE_IN_MS);
+}
+function adNote(on){
+  let el = $('adNote');
+  if (!el && on){ el = document.createElement('div'); el.id = 'adNote'; el.setAttribute('role', 'status'); el.textContent = 'An ad is playing first. Your song starts as soon as it ends.'; document.body.append(el); }
+  if (el) el.hidden = !on;
 }
 function tickAudio(){
   const d = D(); if (!d || !d.ready || !d.p.getCurrentTime) return;
@@ -215,7 +241,10 @@ function tickAudio(){
   if (dur && dur !== demoDur){ demoDur = dur; $('timeDur').textContent = fmt(dur); }
   $('timeCur').textContent = fmt(demoClock);
   // stay muted until the right video has been playing for 5s (the app's own pre-roll caution)
-  if (d.unmuteAt && performance.now() > d.unmuteAt && d.p.isMuted && d.p.isMuted() && adClear(d)){ d.p.unMute(); d.confirmed = true; d.unmuteAt = 0; }
+  if (d.unmuteAt && performance.now() > d.unmuteAt && d.p.isMuted && d.p.isMuted()){ if (adClear(d)) startAudible(d); }
+  // say so when an ad is holding the song back (the video is out of sight, so it cannot be skipped from here)
+  const waiting = demo.playing && d.p.getPlayerState() === 1 && !d.confirmed && d.unmuteAt && performance.now() > d.unmuteAt + 1500;
+  adNote(!!waiting);
   // blend into the next song: warm it up quietly first, then start the blend XF_MS before the end
   if (!demo.playing || xf || !demoDur || demo.i >= DEMO_TRACKS.length - 1 || !S().ready) return;
   const left = demoDur - demoClock, n = S();
@@ -229,7 +258,7 @@ function blendTo(idx, warm){
   ai = 1 - ai;
   uiFor(idx);
   n.vid = DEMO_TRACKS[idx].videoId; n.confirmed = !!warm; n.fadeIn = 0; n.unmuteAt = 0;
-  if (warm){ n.p.seekTo(0, true); n.p.unMute(); }
+  if (warm){ n.p.seekTo(0, true); n.p.unMute(); n.lastT = null; n.moving = false; }
   else { n.p.mute(); setVol(n, 0); n.p.loadVideoById(n.vid); }
   ramp(n, 0, 100, XF_MS);
   ramp(o, o.vol, 0, XF_MS, () => { try { o.p.pauseVideo(); } catch(e){} setVol(o, 100); o.primedAt = 0; xf = null; preloadNext(); });
