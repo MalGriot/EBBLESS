@@ -10017,12 +10017,12 @@ Add entries in this shape:
 - **Notes:** Marvis Pro equivalent: hide/show metadata and controls per widget. Built: Player group in Advanced with 5 chips (Shuffle, Repeat, Like, Artist name, Times), saved as phide in ebbless:advanced, applies to full player, mini bar, fullscreen; play/pause, prev/next, seek, song menu, fullscreen never hideable. Reorder skipped (three separate player markups). Not checked at phone width or fullscreen. Cache v190.
 
 ### advanced-settings-p3-gestures: Advanced settings phase 3: customizable gestures (Geethub #469)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub issue #469. Let the user choose what double-tap, long-press and swipe on album art, track rows and thumbs do (for example open artist, like, add to playlist, fullscreen). Biggest and riskiest part; do after phase 1 and 2, and check against existing gestures (album-art-doubletap, album-art-swipe-nav).
 - **Touches:** album art gestures, library rows, Settings.
-- **Branch:**
-- **Notes:** Marvis Pro's most distinctive customization.
+- **Branch:** agent/advanced-settings-p3
+- **Notes:** Marvis Pro's most distinctive customization. Built: Gestures group in Advanced, double-tap (default Fullscreen) and long-press (default Nothing) on album art can be Fullscreen/Like/Open artist/Add to playlist/Play-pause/Nothing. Like, Open artist, Add to playlist and real touch hardware untested. NOT done: swipe actions, track-row gestures (overlap draggables), long-press on cymatics/fullscreen art, desktop right-click. Cache v192.
 
 ### desktop-rounded-corners-panels: Desktop library and queue panels get rounded top and bottom corners (Geethub #470)
 - **Status:** merged
