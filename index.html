@@ -21208,7 +21208,7 @@ const MINI_PLAYER_STYLE = `
   /* art styles (#330/#331): same three looks as the main player, kept light */
   #mpArtWrap{container-type:size}
   #mpRecord,#mpTape{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-  #mpArtWrap[data-art-style="record"],#mpArtWrap[data-art-style="cassette"]{background:transparent;box-shadow:none}
+  #mpArtWrap[data-art-style="record"],#mpArtWrap[data-art-style="cassette"]{background:transparent;box-shadow:none;overflow:visible}
   #mpArtWrap:not([data-art-style="default"]) #mpArt,#mpArtWrap:not([data-art-style="default"]) .mp-art-ghost{display:none}
   #mpArtWrap[data-art-style="record"] #mpRecord,#mpArtWrap[data-art-style="cassette"] #mpTape{display:block}
   /* centred with margins, not translate: the spin keyframe sets transform, which replaced the translate and made the LP slide off-centre (#337) */
