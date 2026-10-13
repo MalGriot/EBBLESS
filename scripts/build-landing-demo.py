@@ -163,9 +163,9 @@ body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 6
 #queue-panel .queue-head .discover-toggle,#queue-panel .queue-head .qh-icon{pointer-events:none}
 .bio-photo{display:block;width:100%;max-height:230px;object-fit:cover;object-position:center 20%;border-radius:12px;margin-bottom:14px}
 /* phone dock: the search bar shows while the page is teaching search */
-.compact.show-search #topbar{display:flex!important}
+.compact.show-search #topbar{display:flex!important;position:absolute;top:0;left:0;right:0;z-index:30;background:transparent;border:0;box-shadow:none}
 .compact.show-search #topbar .wordmark{display:none}
-.compact.show-search .view{top:var(--topbar-h)}
+.side-btn svg.cym-icon{width:20px;height:20px}
 /* a phone frame has a notch: give the top bar room beneath it */
 @media (max-width:430px){body:not(.compact){--topbar-h:100px}body:not(.compact) #topbar{padding-top:40px}}
 /* compact: the stage only, for the phone dock */

@@ -21,7 +21,6 @@
   <symbol id="i-cover" viewBox="0 0 24 24"><path fill="currentColor" d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/></symbol>
   <symbol id="i-lp" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></symbol>
   <symbol id="i-tape" viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v12H3zm2 2v8h14V8zm3 1.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 15h8v1H8z"/></symbol>
-  <symbol id="i-cym" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></symbol>
   <symbol id="i-lyrics" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/></symbol>
   <symbol id="i-video" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5h18v14H3zm2 2v10h14V7zm4 1.5v7l6-3.5z"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11"/><rect x="9.5" y="11" width="5" height="4" rx="1"/></g></symbol>
@@ -74,7 +73,7 @@
       <a href="#import" data-s="import">Bring your music</a>
       <a href="#search" data-s="search">Search anything</a>
       <a href="#artist" data-s="artist">Artists and shows</a>
-      <a href="#discover" data-s="discover">Wander</a>
+      <a href="#discover" data-s="discover">Discover</a>
       <a href="#lp" data-s="lp">Record</a>
       <a href="#cassette" data-s="cassette">Cassette</a>
       <a href="#cymatics" data-s="cymatics">Cymatics</a>
@@ -129,10 +128,10 @@
     <section class="step" id="problem">
       <div class="step-in">
         <p class="eyebrow">A note from the maker</p>
-        <h2 class="h2">Listening turned into managing.</h2>
+        <h2 class="h2">Why are we paying more to get less?</h2>
         <p class="copy">Somewhere along the way, music became a chore. Subscriptions for the basics. Ads in the middle of the good part. Playlists picked for you, not by you.</p>
         <p class="copy strong">I made EBBLESS to give listening back to you.</p>
-        <p class="sign">MAL GRIOT</p>
+        <p class="sign">Peace and love,<br>Mal<br><span>EBBLESS Dev</span></p>
       </div>
     </section>
 
@@ -143,7 +142,7 @@
         <ul class="gives">
           <li><svg class="ico" aria-hidden="true"><use href="#i-break"/></svg><span class="was">Interruptions</span><span class="now">Songs run straight through.</span></li>
           <li><svg class="ico" aria-hidden="true"><use href="#i-paywall"/></svg><span class="was">Paywalled basics</span><span class="now">Everything in the player is open.</span></li>
-          <li><svg class="ico" aria-hidden="true"><use href="#i-dial"/></svg><span class="was">Their algorithm</span><span class="now">You steer. Paste, search, wander.</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-dial"/></svg><span class="was">Their algorithm</span><span class="now">You steer. Paste, search, discover.</span></li>
           <li><svg class="ico" aria-hidden="true"><use href="#i-home"/></svg><span class="was">Rented music</span><span class="now">Your library lives on your device.</span></li>
         </ul>
       </div>
@@ -157,7 +156,7 @@
           <li class="f-flow"><i><svg aria-hidden="true"><use href="#i-wave"/></svg></i><b>Flow</b><span>Songs run into each other. The tide never breaks.</span></li>
           <li class="f-swell"><i><svg aria-hidden="true"><use href="#i-swell"/></svg></i><b>CuRRentSSsss</b><span>Daily picks that grow from what you play.</span></li>
           <li class="f-swirl"><i><svg aria-hidden="true"><use href="#i-swirl"/></svg></i><b>SwiiiRrrLL</b><span>A mix of your own library, stirred.</span></li>
-          <li class="f-wander"><i><svg aria-hidden="true"><use href="#i-wander"/></svg></i><b>Wander</b><span>When the queue ends, similar songs pick up.</span></li>
+          <li class="f-wander"><i><svg aria-hidden="true"><use href="#i-wander"/></svg></i><b>Discover</b><span>When the queue ends, similar songs pick up.</span></li>
         </ul>
       </div>
     </section>
@@ -200,12 +199,16 @@
         <h2 class="h2">Link an artist. Get everything they've made.</h2>
         <p class="lede">Paste an artist page or a podcast show and EBBLESS brings in the whole catalog, or every episode, ready to play.</p>
         <p class="small">Click an artist's name in the player to see who they are. Try it on the player now.</p>
+        <div class="shots" aria-label="Examples from the app">
+          <figure><div class="phone"><img src="shots/artist.jpg" alt="An artist page in EBBLESS" loading="lazy"></div><figcaption>Artist page</figcaption></figure>
+          <figure><div class="phone"><img src="shots/show.jpg" alt="A podcast show page in EBBLESS" loading="lazy"></div><figcaption>Show page</figcaption></figure>
+        </div>
       </div>
     </section>
 
     <section class="step" id="discover">
       <div class="step-in">
-        <p class="eyebrow">Wander</p>
+        <p class="eyebrow">Discover</p>
         <h2 class="h2">Follow your curiosity.</h2>
         <p class="lede">Type a mood instead of a link. When your queue ends, Discover keeps going in the same lane. There's a switch to turn it off.</p>
         <p class="quote">"rainy Sunday, something warm and slow"</p>
@@ -230,7 +233,7 @@
 
     <section class="step" id="cymatics" data-mode="viz">
       <div class="step-in">
-        <p class="eyebrow"><svg class="ico" aria-hidden="true"><use href="#i-cym"/></svg>Cymatics</p>
+        <p class="eyebrow"><svg class="cym-icon ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><g class="cym-ph"><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></g><g class="cym-ph"><path d="M12 4.6Q12 12 19.4 12Q12 12 12 19.4Q12 12 4.6 12Q12 12 12 4.6z"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></g><g class="cym-ph" fill="currentColor" stroke="none"><circle cx="12" cy="6.4" r="1.3"/><circle cx="16.85" cy="9.2" r="1.3"/><circle cx="16.85" cy="14.8" r="1.3"/><circle cx="12" cy="17.6" r="1.3"/><circle cx="7.15" cy="14.8" r="1.3"/><circle cx="7.15" cy="9.2" r="1.3"/><circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></g></svg>Cymatics</p>
         <h2 class="h2">Watch sound take shape.</h2>
         <p class="lede">Sand settling into the patterns of a vibrating plate, turning slowly. Change the pattern, speed and rotation in the app.</p>
       </div>
@@ -286,7 +289,7 @@
       <div class="step-in">
         <p class="eyebrow">Try it</p>
         <h2 class="h2">Use the real thing for 15 minutes.</h2>
-        <p class="lede">No account. Load your own music, play it, wander. Your 15 minutes only run while a song is playing.</p>
+        <p class="lede">No account. Load your own music, play it, discover. Your 15 minutes only run while a song is playing.</p>
         <div class="cta-row">
           <a class="btn primary big" href="../sample/">Try it for 15 minutes</a>
           <a class="btn big" href="../beta/#join">Join the beta</a>

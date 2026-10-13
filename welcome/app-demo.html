@@ -2909,9 +2909,9 @@ body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 6
 #queue-panel .queue-head .discover-toggle,#queue-panel .queue-head .qh-icon{pointer-events:none}
 .bio-photo{display:block;width:100%;max-height:230px;object-fit:cover;object-position:center 20%;border-radius:12px;margin-bottom:14px}
 /* phone dock: the search bar shows while the page is teaching search */
-.compact.show-search #topbar{display:flex!important}
+.compact.show-search #topbar{display:flex!important;position:absolute;top:0;left:0;right:0;z-index:30;background:transparent;border:0;box-shadow:none}
 .compact.show-search #topbar .wordmark{display:none}
-.compact.show-search .view{top:var(--topbar-h)}
+.side-btn svg.cym-icon{width:20px;height:20px}
 /* a phone frame has a notch: give the top bar room beneath it */
 @media (max-width:430px){body:not(.compact){--topbar-h:100px}body:not(.compact) #topbar{padding-top:40px}}
 /* compact: the stage only, for the phone dock */
@@ -5076,7 +5076,7 @@ function openBio(){
   const el = document.createElement('div');
   el.id = 'bio'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bioName');
   el.innerHTML = '<div class="bio-card"><button type="button" class="bio-x" aria-label="Close">&times;</button>'
-    + '<img class="bio-photo" src="welcome/mal-griot.jpg" alt="MAL GRIOT" onerror="this.remove()">'
+    + '<img class="bio-photo" src="https://i1.sndcdn.com/avatars-k6lvnqMkRN59yuG4-87Dfog-t500x500.jpg" alt="MAL GRIOT" onerror="this.remove()">'
     + '<p class="bio-eyebrow">Artist</p><h2 id="bioName">MAL GRIOT</h2>'
     + '<p>Queens, New York-born vocalist, spoken-word artist, live host and MC, and voice actor, based in India.</p>'
     + '<p>His work moves across music, live performance, sound design, wellness, creative technology, web development and artist branding. His sound draws on Black American culture: soul, funk, hip-hop, R&amp;B and Afro-house.</p>'
@@ -5101,7 +5101,7 @@ const SIDE_BTNS = [
   { key: 'default', label: 'Cover', side: 0, svg: '<path d="M4 5h16v14H4zm2 2v10h12V7zm2 8l3-3.5 2.2 2.6L14 10l4 5z"/>' },
   { key: 'record', label: 'LP', side: 0, svg: '<path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>' },
   { key: 'cassette', label: 'Tape', side: 0, svg: '<path d="M3 6h18v12H3zm2 2v8h14V8zm3 1.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 15h8v1H8z"/>' },
-  { key: 'viz', label: 'Cymatics', side: 1, svg: '<path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm0 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>' },
+  { key: 'viz', label: 'Cymatics', side: 1, html: '<svg class="cym-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><g class="cym-ph"><circle cx="12" cy="12" r="5.2"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></g><g class="cym-ph"><path d="M12 4.6Q12 12 19.4 12Q12 12 12 19.4Q12 12 4.6 12Q12 12 12 4.6z"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></g><g class="cym-ph" fill="currentColor" stroke="none"><circle cx="12" cy="6.4" r="1.3"/><circle cx="16.85" cy="9.2" r="1.3"/><circle cx="16.85" cy="14.8" r="1.3"/><circle cx="12" cy="17.6" r="1.3"/><circle cx="7.15" cy="14.8" r="1.3"/><circle cx="7.15" cy="9.2" r="1.3"/><circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.4"/></g></svg>' },
   { key: 'lyrics', label: 'Lyrics', side: 1, svg: '<path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z"/>' },
   { key: 'video', label: 'Video', side: 1, svg: '<path d="M3 5h18v14H3zm2 2v10h14V7zm4 1.5v7l6-3.5z"/>' },
 ];
@@ -5113,7 +5113,7 @@ const SIDE_BTNS = [
   SIDE_BTNS.forEach(b => {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'side-btn'; el.dataset.key = b.key; el.setAttribute('aria-label', b.label); el.title = b.label;
-    el.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + b.svg + '</svg><span>' + b.label + '</span>';
+    el.innerHTML = (b.html || '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + b.svg + '</svg>') + '<span>' + b.label + '</span>';
     el.addEventListener('click', () => { if (b.key === 'video' && !demo.track.hasVideo) return; setDemoMode(b.key); });
     cols[b.side].append(el);
   });
