@@ -17418,16 +17418,17 @@ function onDeckStateChange(deck, e){
 
 // #458 (reopened): behind the desktop mini player the queue advances and the
 // UI shows the next song, but the SoundCloud widget's play never takes until
-// the tab is shown again, at which point it starts on its own. The advance is
+// the tab is shown again, at which point it starts on its own (see scInPlace in
+// loadIndex for the in-place advance). The advance is
 // a one-shot play() postMessage (or load + auto_play) into an iframe the
 // browser is throttling; nothing re-checked that audio actually began. After
 // an auto-advance onto a SoundCloud deck, re-send play() until the widget
-// reports PLAYING, and rebuild the deck if it never came up. Stands down on
+// reports PLAYING (no deck rebuild: it resumed from a stale position, the
+// likely 0:07 skip). Stands down on
 // any user pause (pausePlayback bumps scWatchId), a skip, or a track change.
 let scWatchId = 0;
 function watchSCAutoAdvance(){
   const id = ++scWatchId, startPos = state.queuePos, t0 = Date.now();
-  let rebuilt = false;
   const tick = () => {
     if (id !== scWatchId || state.queuePos !== startPos || weekUp.frozen) return;
     const ad = activeDeck();
@@ -17438,9 +17439,6 @@ function watchSCAutoAdvance(){
     if (ad.ready && ad.confirmed){
       ad.player.setVolume(effectiveVolume(ad));
       ad.player.playVideo();
-    } else if (waited > 10000 && !rebuilt){
-      rebuilt = true;
-      rebuildActiveDeck();
     }
     setTimeout(tick, 1500);
   };
@@ -20466,7 +20464,7 @@ function loadIndex(pos, autoplay, opts){
   // one's art - "Glowed Up" art, a different song playing
   // (wrong-song-kaytranada-glowed-up). Only promote when the deck actually
   // holds this track's video.
-  const nd = standbyDeck();
+  const nd = standbyDeck(), ad0 = activeDeck();
   // Locked iPhone (#257): a podcast following a podcast loads into the
   // active deck's <audio> element, which iOS already lets play in the
   // background, rather than starting the standby deck's element cold.
@@ -20477,7 +20475,14 @@ function loadIndex(pos, autoplay, opts){
   // active deck's already-unlocked player instead, unless the standby deck
   // has played with sound before.
   const iosInPlace = trackStartAuto && iosColdDeck(nd) && iosCanAdvanceInPlace(t.videoId);
-  if (!reuseLockedAudio && !iosInPlace && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
+  // #458: hidden page (desktop mini player, other tab), SoundCloud to
+  // SoundCloud. The standby widget has never played and sits in an iframe the
+  // browser is throttling, so its play() takes only when the tab is shown again.
+  // Load the next song into the active widget instead, the one that was just
+  // audibly playing (INFERRED fix, not observed in a hidden tab).
+  const scInPlace = trackStartAuto && document.visibilityState === 'hidden' && isSoundCloudVideoId(t.videoId) &&
+    ad0.kind === 'sc' && ad0.player && ad0.ready && !castActive();
+  if (!reuseLockedAudio && !iosInPlace && !scInPlace && nd.pos === pos && nd.player && nd.ready && nd.videoId === t.videoId && !routeLocked()){
     promoteDeckDirect(nd, pos, autoplay !== false);
     maybeExtendDiscoverQueue();
     return;
