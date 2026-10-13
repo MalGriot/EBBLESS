@@ -9847,3 +9847,10 @@ Add entries in this shape:
 - **Touches:** Currents thumb.
 - **Branch:** agent/currents-thumb-video
 - **Notes:** Synced from Geethub #456.
+
+### soundcloud-thumbs-library-again: SoundCloud thumbnails still missing in the library (bug) (Geethub #459)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Follow-up to soundcloud-art-library-thumbs (#439). SoundCloud art still blank on some library tiles.
+- **Branch:** agent/soundcloud-thumbs-library-again
+- **Review note:** Cause: #439 only filled art on the ON AIR / OFF AIR card. Any other library playlist, album or 2x2 collage holding an sc: song saved without art (older or cached items) still rendered a blank cell, since sc: ids have no img.youtube.com fallback. Fix: renderLibrary now borrows the cover for art-less sc:/au: songs from the same song in any other library playlist (render only, nothing rewritten). Limit: a song with no art anywhere in the library stays blank. Not deployed. cache v181.
