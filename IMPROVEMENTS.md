@@ -9865,7 +9865,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #469.
 
 ### change-album-art: Let the user change a song's or album's art (Geethub #468)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #468. Let the user swap the album art. Issue gives no detail; likely overlaps track-relink-menu thumbnail choices.
 - **Touches:** (to be found)
@@ -9873,7 +9873,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #468.
 
 ### keyboard-shortcuts-flaky: Keyboard shortcuts sometimes don't work (bug, Geethub #467)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #467. Shortcuts intermittently stop responding. Find the cause (focus in inputs, video open, fullscreen).
 - **Touches:** (to be found)
@@ -9881,7 +9881,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #467.
 
 ### artist-label-wrong-song: Player shows the artist's name on a song that isn't theirs when playing from an artist page (bug, Geethub #466)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #466. Playing from an artist page sometimes labels a non-artist song with that artist. Label should come from the real track.
 - **Touches:** (to be found)
@@ -9897,7 +9897,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #465.
 
 ### search-while-results-showing: Search again while old results are showing: clear them and load the new ones (Geethub #464)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #464. Typing a new search with results on screen should replace them without closing first.
 - **Touches:** (to be found)
@@ -9905,7 +9905,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #464.
 
 ### search-spellcheck: Search should suggest spelling fixes (Geethub #463)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #463. Add did-you-mean spellcheck to song search.
 - **Touches:** (to be found)
@@ -9913,7 +9913,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #463.
 
 ### miniplayer-lp-clipped-edges: Mini-player LP shows cut-off border and drop shadow edges (bug, Geethub #462)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #462. The LP in the mini-player has its border and shadow clipped. Related: miniplayer-art-lp-cassette.
 - **Touches:** (to be found)
@@ -9921,7 +9921,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #462.
 
 ### tutorial-button-blink: Tutorial button blinks if the user has never played the tutorial (Geethub #461)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #461. Blink the tutorial button until the tutorial has been played once. Related: feedback-button-blink.
 - **Touches:** (to be found)
@@ -9929,7 +9929,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #461.
 
 ### artist-name-hover-likes-song: Clicking an artist name in the player sometimes likes the song instead (bug, Geethub #460)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #460. When the cursor is not exactly on the artist name (hover expands it), the click lands on the like. Fix hit area. Related: artist-hover-animation.
 - **Touches:** (to be found)
@@ -9937,7 +9937,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #460.
 
 ### soundcloud-thumbs-library-again: SoundCloud thumbs still not showing in the library (bug, Geethub #459)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #459. Follow-up to soundcloud-art-library-thumbs (#439, merged). Still broken; find the remaining case.
 - **Touches:** (to be found)
@@ -9945,7 +9945,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #459.
 
 ### soundcloud-miniplayer-autoplay: SoundCloud songs don't advance automatically in the mini-player (bug, Geethub #458)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #458. Related to soundcloud-next-song-page-closed (#437) and bld-background-tab-autoadvance. Check the mini-player window case.
 - **Touches:** (to be found)
@@ -9953,7 +9953,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #458.
 
 ### liked-songs-playlist-video: Video for the Liked Songs playlist (Geethub #457)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #457. Issue title only. Likely a thumb video like Off Air and Currents have.
 - **Touches:** (to be found)
@@ -9961,7 +9961,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #457.
 
 ### soundcloud-thumbs-library-again: SoundCloud thumbnails still missing in the library (bug) (Geethub #459)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Follow-up to soundcloud-art-library-thumbs (#439). SoundCloud art still blank on some library tiles.
 - **Branch:** agent/soundcloud-thumbs-library-again
