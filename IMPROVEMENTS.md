@@ -10007,3 +10007,11 @@ Add entries in this shape:
 - **Touches:** `loadIndex` (hidden-page SC in-place advance), `watchSCAutoAdvance`.
 - **Branch:** agent/soundcloud-autoplay-hidden
 - **Notes:** Root cause NOT confirmed (no hidden-tab test possible). Fix: hidden-page SC to SC auto-advance loads into the active widget instead of starting the cold preloaded standby; rebuild branch removed from the watchdog. Deployed for live testing. Cache v183.
+
+### soundcloud-set-skip: SC next song plays while the mini-player is open, via set widget skip (reopen of #458)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Observed root cause: a SoundCloud sound never started while the page was visible cannot start while hidden (position frozen). A widget holding a set advances natively and takes skip(i) while hidden. Songs from a saved set now load as the whole set, and hidden advances use skip.
+- **Touches:** `scSetSourceFor`, `scSetVerify`, SC adapter `loadVideoById`, `loadIndex`, `createSCDeckPlayer`.
+- **Branch:** agent/soundcloud-set-skip
+- **Notes:** Covers one set in order or reordered. NOT covered (still stalls hidden): loose single tracks, queues crossing several sets, SoundCloud after YouTube, artist-page queues. Side effect: Previous within about 6s of an auto-advance cold-loads (about 2s). Not tested in the real PiP window. Deployed for owner testing. Cache v184. Findings in memory project_sc_hidden_tab_findings.
