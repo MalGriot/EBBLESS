@@ -126,6 +126,38 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### cassette-tape-wave-rock: Stacked cassettes in the cassette animation rock at different intervals, like waves (Geethub #475)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #475. In the cassette animation, the tapes that stack should rock back and forth, each at a different interval (staggered phase), so the stack moves like waves.
+- **Touches:** cassette stack animation (fullscreen cassette stack / orbit).
+- **Branch:**
+- **Notes:** Synced from Geethub #475. Related to cassette-fullscreen-animation and cassette-cycle-7-tapes; check for overlap before building.
+
+### rename-window-wording: Rename window should say album or song, not "playlist" (Geethub #472)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #472. When renaming an album or song, the pop-up currently says "Rename playlist". It should say "Rename album" or "Rename song" to match what is being renamed.
+- **Touches:** rename dialog in the library.
+- **Branch:**
+- **Notes:** Synced from Geethub #472. Pairs with rename-song-title-artist (#473); do them together.
+
+### rename-song-title-artist: Renaming a song or album lets you edit both title and artist (Geethub #473)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #473. When renaming an album or song, the rename window should let you change the song title and the artist.
+- **Touches:** rename dialog and saved track/album metadata.
+- **Branch:**
+- **Notes:** Synced from Geethub #473. Pairs with rename-window-wording (#472).
+
+### match-links-grid: Matching links window on desktop shows a grid, not a scrolling list (Geethub #474)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #474. On desktop, the matching-links window should lay the link choices out as a grid instead of a scrolling list.
+- **Touches:** desktop match/relink window.
+- **Branch:**
+- **Notes:** Synced from Geethub #474. Overlaps the match UI refresh mentioned in draggables (#471) and matching-songs-bug (#465).
+
 ### breathe-love-deep-album: "Breathe Love Deep" should be an album sourced from SoundCloud
 - **Status:** merged
 - **Priority:** medium
