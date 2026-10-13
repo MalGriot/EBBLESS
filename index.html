@@ -2171,6 +2171,14 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   /* Search/relink/import window: only the middle (player) pane, between
      the library and queue panes, like Settings; topbar and side panes stay. */
   body.split-desktop #import-overlay{position:relative;inset:auto;grid-column:2;grid-row:2;min-height:0;z-index:5}
+  /* Geethub #474: the relink picker's link choices form a grid on desktop
+     instead of a scrolling list (mobile keeps the list). */
+  body.split-desktop .import-stage:has(#relinkCandidates){max-width:min(760px,100%);max-height:100%;overflow-y:auto}
+  body.split-desktop #relinkCandidates{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;max-height:none;overflow:visible}
+  body.split-desktop #relinkCandidates .search-pick{margin-bottom:0;flex-direction:column;align-items:stretch;gap:8px}
+  body.split-desktop #relinkCandidates .search-pick img,
+  body.split-desktop #relinkCandidates .search-pick.is-video img{width:100%;height:auto;aspect-ratio:16/9}
+  body.split-desktop #relinkCandidates .search-pick:not(.is-video) img{aspect-ratio:1/1}
   /* issue #135/#198: the library playlist panel opens over the library pane
      (column 1), not over the queue. It shares that grid cell with
      #view-library (higher z-index), so it's exactly the pane's size and its
