@@ -13,10 +13,12 @@
 // Day to day you never touch code: set an applicant's applicant_status to
 // Accepted and this script creates their Tester row (next tester number,
 // private token, access link) and emails the invite. Set a tester's
-// tester_status to Inactive and their link stops working. 24 hours, 7 days and 14
-// days after acceptance each Active tester is emailed (feedback_request_sent
-// is the first). Their 2-week window runs from acceptance (the worker works it
-// out; the app shows a recap when it's over).
+// tester_status to Inactive and their link stops working. A round-1 tester accepted
+// on or after SHORT_ROUND1_FROM gets a 7-day window (emails at 24 hours and 7
+// days); round 2+ testers, and round-1 testers accepted before that date, get 14
+// days (emails at 24 hours, 7 days and 14 days). feedback_request_sent is the
+// first email. The window runs from acceptance (me_ sends window_days, the
+// worker works out the end; the app shows a recap when it's over).
 //
 // Rejoining needs feedback first: a Feedback row from that tester with
 // source "feedback survey", "feedback page" or "in-app feedback" (the app's
@@ -204,14 +206,32 @@ function sendMail_(to, subject, text, html) {
   } catch (err) { return String(err); }
 }
 
-// ---------- feedback emails (24h, 7 days and 14 days after access) ----------
+// ---------- tester window length ----------
 
-// Feedback emails go out 24 hours, 7 days and 14 days after a tester got
-// access (window_start for a rejoin, else accepted_timestamp). The 14-day one
-// closes the round. feedback_request_sent is the FIRST send (24h email) and
-// feedback_request_last / _count track the rest. The 2-week window itself runs
+// Round 1 testers accepted on or after this moment get 7 days; everyone who
+// was already in (accepted earlier) keeps 14, and so does every later round.
+// Keep in step with nothing else: the worker just reads window_days from me_.
+const SHORT_ROUND1_FROM = Date.UTC(2026, 9, 14);   // 2026-10-14 00:00 UTC
+const DAY_MS = 24 * 3600 * 1000;
+function windowDays_(t) {
+  if (roundOf_(t) > 1) return 14;
+  const accepted = ms_(t.accepted_timestamp);
+  return accepted && accepted >= SHORT_ROUND1_FROM ? 7 : 14;
+}
+function windowMs_(t) { return windowDays_(t) * DAY_MS; }
+function windowLabel_(t) { return windowDays_(t) === 7 ? '7 days' : '2 weeks'; }
+
+// ---------- feedback emails (24h, 7 days and, in a 14-day window, 14 days) ----------
+
+// Feedback emails go out 24 hours after a tester got access (window_start for
+// a rejoin, else accepted_timestamp), and at the end of the window: 7 days in
+// a 7-day window, otherwise 7 days (mid-window) and 14 days (end). The last
+// one closes the round. feedback_request_sent is the FIRST send (24h email)
+// and feedback_request_last / _count track the rest. The window itself runs
 // from access, not from any email.
-const FEEDBACK_MILESTONES_MS = [1, 7, 14].map(function (d) { return d * 24 * 3600 * 1000; });
+function feedbackMilestones_(t) {
+  return (windowDays_(t) === 7 ? [1, 7] : [1, 7, 14]).map(function (d) { return d * DAY_MS; });
+}
 
 // Whole days since this tester's access started, from their own record
 // (window_start for a rejoin, else accepted_timestamp). Never a fixed number.
@@ -272,19 +292,21 @@ function feedbackDue_(t, now) {
   if (!base) return null;
   const sentCount = feedbackSentCount_(t);
   let reached = 0;
-  FEEDBACK_MILESTONES_MS.forEach(function (ms, i) { if (now - base >= ms) reached = i + 1; });
+  const miles = feedbackMilestones_(t);
+  miles.forEach(function (ms, i) { if (now - base >= ms) reached = i + 1; });
   if (reached <= sentCount) return null;
-  const idx = reached - 1;                                   // 0 = 24h, 1 = 7 day, 2 = 14 day
-  if (idx < 2 && feedbackGiven_(t)) return { skip: true, count: reached };
-  return { idx: idx, count: reached, base: base };
+  const idx = reached - 1;                                   // 0 = 24h; the last one closes the round
+  const closing = idx === miles.length - 1;
+  if (!closing && feedbackGiven_(t)) return { skip: true, count: reached };
+  return { idx: idx, count: reached, base: base, closing: closing };
 }
 function mailFeedbackRequest_(sh, t, now, due) {
   const first = String(t.name || '').split(/\s+/)[0] || 'friend';
   const link = SITE_URL + 'feedback.html?t=' + encodeURIComponent(t.access_token);
-  const days = daysWithAccess_(t, now), until = due.base + WINDOW_MS;
-  const text = due.idx === 2 ? roundOverText_(first, link, feedbackGiven_(t)) : feedbackRequestText_(first, link, days, until);
-  const html = due.idx === 2 ? roundOverHtml_(first, link, feedbackGiven_(t)) : feedbackRequestHtml_(first, link, days, until);
-  const err = sendMail_(t.email, due.idx === 2 ? 'EBBLESS BETA: your 2 weeks are up' : 'EBBLESS BETA: tell me what you think', text, html);
+  const days = daysWithAccess_(t, now), until = due.base + windowMs_(t), span = windowLabel_(t);
+  const text = due.closing ? roundOverText_(first, link, feedbackGiven_(t), span) : feedbackRequestText_(first, link, days, until);
+  const html = due.closing ? roundOverHtml_(first, link, feedbackGiven_(t), span) : feedbackRequestHtml_(first, link, days, until);
+  const err = sendMail_(t.email, due.closing ? 'EBBLESS BETA: your ' + span + ' are up' : 'EBBLESS BETA: tell me what you think', text, html);
   if (err) {
     const note = 'Feedback request NOT emailed: ' + err;
     if (String(t.notes || '').indexOf(note) < 0) setCell_(sh, t._row, 'notes', (t.notes ? t.notes + '\n' : '') + note);
@@ -300,20 +322,20 @@ function stampFeedback_(sh, t, now, count) {
   setCell_(sh, t._row, 'feedback_request_last', stamp);
   setCell_(sh, t._row, 'feedback_request_count', count);
 }
-function roundOverText_(first, link, gave) {
+function roundOverText_(first, link, gave, span) {
   return 'Peace and love, ' + first + '.\n\n' +
-    'Your 2 weeks with EBBLESS are up, and this beta round is closed for you. Thank you for being in it.\n\n' +
+    'Your ' + span + ' with EBBLESS are up, and this beta round is closed for you. Thank you for being in it.\n\n' +
     (gave
       ? 'I\u2019ve got your feedback. If you want in on the next round, open EBBLESS and tap the join-next-round button. I go through every request by hand.\n\n'
       : 'Want in on the next round? It starts with your feedback. Tell me what you made of it here:\n\n' + link + '\n\nThen open EBBLESS and tap the join-next-round button. I go through every request by hand.\n\n') +
     'Mal';
 }
-function roundOverHtml_(first, link, gave) {
+function roundOverHtml_(first, link, gave, span) {
   const esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   const p = function (h) { return '<p style="margin:0 0 16px">' + h + '</p>'; };
   return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:15px;line-height:1.5;color:#121212">' +
     p('Peace and love, ' + esc(first) + '.') +
-    p('Your 2 weeks with EBBLESS are up, and this beta round is closed for you. Thank you for being in it.') +
+    p('Your ' + esc(span) + ' with EBBLESS are up, and this beta round is closed for you. Thank you for being in it.') +
     (gave
       ? p('I\u2019ve got your feedback. If you want in on the next round, open EBBLESS and tap the join-next-round button. I go through every request by hand.')
       : p('Want in on the next round? It starts with your feedback. Tell me what you made of it here:') + p('<a href="' + esc(link) + '">' + esc(link) + '</a>') + p('Then open EBBLESS and tap the join-next-round button. I go through every request by hand.')) +
@@ -358,7 +380,6 @@ function sendFeedbackTestToMe() {
 // ---------- inactivity reminder (48h without opening the app) ----------
 
 const INACTIVE_AFTER_MS = 48 * 3600 * 1000;
-const WINDOW_MS = 14 * 24 * 3600 * 1000;
 
 function reminderText_(first, link) {
   return 'Peace, ' + first + '.\n\n' +
@@ -372,7 +393,7 @@ function reminderText_(first, link) {
 // quiet stretch: 48h+ since last_active (Analytics tab), or since access if
 // they've never opened it. reminder_sent is stamped so it doesn't repeat until
 // they've been active again and gone quiet again. Skips testers excluded from
-// analytics (no activity data) and anyone whose 2-week window has ended.
+// analytics (no activity data) and anyone whose window (7 or 14 days) has ended.
 function sendInactivityReminders_() {
   const sh = sheet_(TESTERS), ash = sheet_(ANALYTICS);
   withLock_(function () {
@@ -388,7 +409,7 @@ function sendInactivityReminders_() {
       if (now - ref < INACTIVE_AFTER_MS) return;
       const sent = ms_(t.reminder_sent);
       if (sent && sent >= ref) return;
-      if (now > base + WINDOW_MS) return;
+      if (now > base + windowMs_(t)) return;
       const first = String(t.name || '').split(/\s+/)[0] || 'friend';
       const err = sendMail_(t.email, 'EBBLESS BETA: still around?', reminderText_(first, accessLink_(t.access_token)));
       if (err) {
@@ -477,8 +498,8 @@ function me_(token, wantPlaylist) {
   const t = activeTester_(token);
   if (!t) return { ok: true, tester: null };
   // feedback_request_sent (ms epoch, or null if not emailed yet): the worker
-  // derives the tester's 2-week window end from it (the email says so), and
-  // from window_start once they've rejoined for a new round.
+  // derives the tester's window end from it (the email says so), using
+  // window_days (7 or 14), and from window_start once they've rejoined for a new round.
   const sent = t.feedback_request_sent instanceof Date ? t.feedback_request_sent.getTime() : Date.parse(t.feedback_request_sent);
   const round = nextRound_();
   let signupPlaylist = '';
@@ -486,7 +507,7 @@ function me_(token, wantPlaylist) {
     const a = records_(sheet_(APPLICANTS)).filter(function (r) { return r.applicant_id === t.applicant_id; })[0];
     signupPlaylist = a ? String(a.Spotify_playlist || '').trim() : '';
   }
-  return { ok: true, tester: { signup_playlist: signupPlaylist, id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null, window_anchor: sent ? (feedbackBase_(t) || null) : null,
+  return { ok: true, tester: { signup_playlist: signupPlaylist, id: t.tester_id, number: numFrom_(t.tester_number), label: String(t.tester_number), name: String(t.name).split(/\s+/)[0], feedback_request_sent: sent || null, window_anchor: sent ? (feedbackBase_(t) || null) : null, window_days: windowDays_(t),
     window_start: ms_(t.window_start) || null, rejoin_pending: rejoinOpen_(t), next_round_start: round.at || null, next_round_label: round.label,
     round: roundOf_(t), next_round: nextRoundFor_(t, round), feedback_given: feedbackGiven_(t) } };
 }

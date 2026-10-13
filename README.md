@@ -169,16 +169,24 @@ are never reused: if #017 goes Inactive, the next person is #051.
 Emails (signup confirmation, invite) go out from the Gmail account that owns
 the script. The worker needs the `SHEET_URL` and `SHEET_SECRET` secrets.
 
-### When a tester's 7 days are up
+### When a tester's window is up
 
-The feedback email says the window is open for 7 days, so `/beta/me` (and
-`/beta/claim`) return `windowEndsAt` = `feedback_request_sent` + 7 days, or
-`null` before that email has gone out. The beta lock saves it with the
+The window length depends on the round. A round-1 tester accepted on or
+after `SHORT_ROUND1_FROM` (`tools/beta-sheet.gs`, 2026-10-14 UTC) gets **7
+days**; round 2 and later get **14 days**, and round-1 testers accepted
+before that date keep 14 (grandfathered). The Sheet decides (`windowDays_`)
+and sends `window_days` in `me_`; the worker (`windowEndsAt`,
+`worker/src/beta.js`) treats a missing value as 14. `/beta/me` (and
+`/beta/claim`) return `windowEndsAt` = window anchor + that many days (null
+before the first feedback email has gone out), plus `windowDays: 7` only for
+7-day testers. A 7-day window gets feedback emails at 24 hours and 7 days
+(the 7-day one closes the round); a 14-day window keeps 24 hours, 7 days and
+14 days. The beta lock saves it with the
 tester's first name in `ebbless:betaMe`. Past that time the app still opens
 and plays normally until one full song finishes in that session (heard at
 least 30s and half the track, not skipped or seeked to the end). Then
 playback stops, every control freezes, the app fades out, and a "That's
-your 7 days, <name>" screen takes over: "Give feedback"
+your 7 days (or 2 weeks), <name>" screen takes over: "Give feedback"
 (`beta/feedback.html?t=<token>`) and a Wrapped-style recap of their week.
 
 The recap comes from the on-device PLAY LOG in `index.html`

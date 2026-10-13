@@ -178,23 +178,30 @@ async function handleSignup(request, env, ctx, h) {
   return h.json({ ok: true, already: !!r.already, status: String(r.status || 'Pending').toLowerCase(), full: !!r.full });
 }
 
-// A tester's window ends 2 weeks after access began (window_anchor), or after
-// feedback_request_sent for older clients.
+// A tester's window ends window_days after access began (window_anchor), or
+// after feedback_request_sent for older clients. window_days comes from the
+// Sheet (7 for a new round-1 tester, 14 for round 2+ and for round-1 testers
+// who were in before the 7-day rule); absent means 14, as before.
 // null until that email has gone out (no expiry yet). Older clients ignore it.
 // A tester whose rejoin was accepted has window_start (the next round's
 // date, or the acceptance): until then they stay expired; from it they get
 // a fresh 2 weeks, or 2 weeks from that round's feedback email once it's sent
 // (7 days later, like a new tester).
 export const BETA_WINDOW_MS = 14 * 24 * 3600 * 1000;
+export function windowMs(t) {
+  const d = Number(t && t.window_days);
+  return d === 7 || d === 14 ? d * 24 * 3600 * 1000 : BETA_WINDOW_MS;
+}
 export function windowEndsAt(t, now = Date.now()) {
+  const span = windowMs(t);
   // window_anchor: when access began (sheet sends it once the first feedback email has gone out)
   const sent = Number(t && t.window_anchor) || Number(t && t.feedback_request_sent) || 0;
   const start = Number(t && t.window_start) || 0;
   if (start > 0) {
-    if (start > now) return Math.min(sent > 0 ? sent + BETA_WINDOW_MS : start, start);
-    return Math.max(sent, start) + BETA_WINDOW_MS;
+    if (start > now) return Math.min(sent > 0 ? sent + span : start, start);
+    return Math.max(sent, start) + span;
   }
-  return sent > 0 ? sent + BETA_WINDOW_MS : null;
+  return sent > 0 ? sent + span : null;
 }
 
 // What the app's 2-weeks-up recap needs for "Join the next beta", only when
@@ -205,6 +212,7 @@ export function windowEndsAt(t, now = Date.now()) {
 export function rejoinFields(t, now = Date.now()) {
   const out = {};
   if (Number(t && t.round) > 0) out.round = Number(t.round);
+  if (windowMs(t) !== BETA_WINDOW_MS) out.windowDays = windowMs(t) / (24 * 3600 * 1000);
   if (Number(t && t.next_round) > 0) out.nextRound = Number(t.next_round);
   if (t && typeof t.feedback_given === 'boolean') out.feedbackGiven = t.feedback_given;
   const at = Number(t && t.next_round_start) || 0;

@@ -2981,7 +2981,7 @@ body.week-up-on{overflow:hidden}
   const BETA_LEASE_MS = 14 * 24 * 3600 * 1000;  // keep in sync with BETA_LEASE_MS in worker/src/beta.js
   const RENEW_WAIT_MS = 10000;
   // What /beta/me (or /beta/claim) said about this tester: first name, label
-  // and when their 2-week window ends (ms, absent until the feedback email
+  // and when their window (7 days or 2 weeks, windowDays) ends (ms, absent until the feedback email
   // goes out). Read by the app's TESTER WEEK UP block; cleared with the token.
   const LS_ME = 'ebbless:betaMe';
   const REFRESH_MSG = 'Your access on this device needs a quick refresh. Sign in with Google to continue.';
@@ -3040,7 +3040,9 @@ body.week-up-on{overflow:hidden}
       // "Join the next beta" on the 2-weeks-up recap (absent when not set)
       rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
       round: Number(d.round) > 0 ? Number(d.round) : null, nextRound: Number(d.nextRound) > 0 ? Number(d.nextRound) : null,
-      feedbackGiven: typeof d.feedbackGiven === 'boolean' ? d.feedbackGiven : null }));
+      feedbackGiven: typeof d.feedbackGiven === 'boolean' ? d.feedbackGiven : null,
+      // 7 only for a new round-1 tester; absent = the usual 2 weeks
+      windowDays: Number(d.windowDays) === 7 ? 7 : null }));
   }
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
@@ -14055,9 +14057,9 @@ function weekUpHtml(r, opts){
   const stat = (n, label) => '<div class="wu-stat"><span class="wu-num" data-n="' + n + '">' + (opts.instant ? n.toLocaleString() : '0') + '</span><span class="wu-stat-l">' + label + '</span></div>';
   let html = '<div class="wu-bg" aria-hidden="true"><div class="wu-poster"></div><div class="wu-tint"></div><div class="wu-fade"></div></div>' +
     '<div class="wu-wrap">' +
-    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this after one full song once their 2 weeks are up.<button type="button" class="wu-close" id="wuClose">Close</button></div>' : '') +
+    (opts.preview ? '<div class="wu-preview">Preview' + (opts.demo ? ' with demo data' : '') + '. Testers see this after one full song once their window (7 days or 2 weeks) is up.<button type="button" class="wu-close" id="wuClose">Close</button></div>' : '') +
     '<div class="wu-top wu-reveal"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="wu-tag">' + escapeHtml(me.label || 'Beta tester') + '</span></div>' +
-    '<h1 class="wu-reveal" id="wuTitle">THAT\'S YOUR 2 WEEKS' + (first ? ', ' + escapeHtml(first.toUpperCase()) : '') + '.</h1>' +
+    '<h1 class="wu-reveal" id="wuTitle">THAT\'S YOUR ' + (me.windowDays === 7 ? '7 DAYS' : '2 WEEKS') + (first ? ', ' + escapeHtml(first.toUpperCase()) : '') + '.</h1>' +
     '<div class="wu-rule wu-reveal"></div>' +
     '<p class="wu-lead wu-reveal">' + (first ? escapeHtml(first) + ', your' : 'Your') + ' week in the EBBLESS beta is a wrap. Thank you for pressing play, poking around, and finding the rough edges.</p>' +
     '<p class="wu-lead wu-reveal">One last thing before the music stops: tell us how it really felt. The good, the bad, the weird. All of it helps.</p>' +
