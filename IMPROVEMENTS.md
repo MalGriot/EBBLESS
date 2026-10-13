@@ -126,6 +126,14 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### ui-color-fade: UI colors fade into the next song's color instead of snapping (Geethub #476)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #476. When the track changes and the UI color (accent/tint from the album art) changes, it should fade smoothly into the next color rather than switching instantly.
+- **Touches:** accent/theme color update on track change (`--player-accent` and related CSS variables).
+- **Branch:**
+- **Notes:** Synced from Geethub #476. No further detail given. Cassette copies already fade tone via a CSS color transition; check what else snaps. Overlaps album-art-based UI recolor work.
+
 ### cassette-tape-wave-rock: Stacked cassettes in the cassette animation rock at different intervals, like waves (Geethub #475)
 - **Status:** merged
 - **Priority:** medium
