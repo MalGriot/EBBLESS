@@ -9676,7 +9676,7 @@ Add entries in this shape:
   does not change. Needs an iPhone PWA and Android test with the screen locked.
 
 ### soundcloud-miniplayer-autoplay: SoundCloud songs don't advance on their own in the mini-player window (bug) (Geethub #458)
-- **Status:** in review
+- **Status:** merged
 - **Priority:** high
 - **Description:** With the page hidden behind the desktop mini player, a SoundCloud song ends and the next one does not start.
 - **Touches:** SoundCloud widget PAUSE handler (`createSCDeckPlayer`)
@@ -9884,10 +9884,10 @@ Add entries in this shape:
 ### matching-songs-bug: Bug while matching songs (Geethub #465)
 - **Status:** ready
 - **Priority:** medium
-- **Description:** Bug, Geethub issue #465. Issue title only, no detail. Ask owner what happens.
-- **Touches:** (to be found)
+- **Description:** Bug, Geethub issue #465. Three fixes around the song-matching flow: (1) the "matching songs" status should be a bar in the center of the footer player bar, not a window. (2) You can search and load other things while matching is still running; right now it snaps back to the matching window after a search. Anything newly loaded should queue up and run after the current matching finishes. (3) Songs still matching in the library show a loading animation (keep that); when the link is found the animation should stop and the title should fill in live, in front of you, instead of only after leaving and re-entering the window.
+- **Touches:** matching/link-resolution progress UI, footer player bar, search/load flow, library row rendering.
 - **Branch:** 
-- **Notes:** Synced from Geethub #465.
+- **Notes:** Synced from Geethub #465. Detail taken from the issue body. (4) Owner addition: the matching status should show the names of the songs being loaded, with a progress bar. Related: background-playlist-loading, search-while-results-showing (#464).
 
 ### search-while-results-showing: Search again while old results are showing: clear them and load the new ones (Geethub #464)
 - **Status:** merged
@@ -9983,3 +9983,19 @@ Add entries in this shape:
 - **Touches:** album art gestures, library rows, Settings.
 - **Branch:**
 - **Notes:** Marvis Pro's most distinctive customization.
+
+### desktop-rounded-corners-panels: Desktop library and queue panels get rounded top and bottom corners (Geethub #470)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #470. On desktop, the library and queue panels should have rounded corners at both the top and the bottom.
+- **Touches:** desktop library and queue panel CSS.
+- **Branch:**
+- **Notes:** Synced from Geethub issue #470 (idea). No further detail given.
+
+### draggables: Drag and drop everywhere (songs, playlists, artists, now-playing art) (Geethub #471)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Idea, Geethub issue #471. (1) Drag songs from the link-match list into a playlist (needs a refreshed match UI that fits the rest of the app, with more control). (2) Drag a library song into the queue and it lands where dropped, with queue songs visibly shifting. (3) Drag a playlist or album from library to queue, with a confirm prompt first. (4) Drag an artist from library to queue to start "[artist] Radio" (their songs mixed with similar artists), confirm first. (5) Drag the now-playing album art to the queue to start "[song] Radio", confirm first. (6) Drag the now-playing art onto a library playlist (it glows on hover); dropping elsewhere in the library asks which playlist. (7) Polish the existing drag-to-browser-tab Google search so the drag looks designed, and extend it to albums and now-playing art.
+- **Touches:** library, queue, match list UI, now-playing art, discovery/radio.
+- **Branch:**
+- **Notes:** Overlaps merged drag-songs-into-playlists (#328) and queue-drag-to-playlist-art (#351), which already cover library/queue rows into playlist cards and part of the art drag. Treat those as done and build the rest on top. Large; consider splitting into phases like advanced-settings.
