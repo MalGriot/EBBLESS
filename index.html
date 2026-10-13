@@ -8297,9 +8297,22 @@ function renderLibrary(){
   let searchTrackCount = 0;
   let artistCount = 0, albumCount = 0, podcastCount = 0;
   const albumGroups = new Map(); // artistKey -> { name, cards }
+  // SoundCloud (sc:) songs saved without art (older or cached items) have no
+  // img.youtube.com fallback, so their tiles and collage cells were blank.
+  // Borrow the cover from the same song in any other library playlist (render
+  // only, nothing is rewritten) - same idea as the ON AIR card fill (#439).
+  let scArtById = null;
+  const scArtFor = (t) => {
+    if (!scArtById){
+      scArtById = new Map();
+      ids.forEach(lid => { const lp = getCachedPlaylist(lid); if (lp && lp.tracks) lp.tracks.forEach(x => { if (x && x.art && x.videoId && isNativeVideoId(x.videoId) && !scArtById.has(x.videoId)) scArtById.set(x.videoId, x.art); }); });
+    }
+    return scArtById.get(t.videoId) || null;
+  };
   ids.forEach(id => {
     const pl = getCachedPlaylist(id);
     if (!pl) return;
+    if (pl.tracks) pl.tracks.forEach(t => { if (t && !t.art && t.videoId && isNativeVideoId(t.videoId)){ const a = scArtFor(t); if (a) t.art = a; } });
     if (searchQ){
       try{
         if (!kindShown(kindOf(pl))) return;
