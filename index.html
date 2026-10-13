@@ -17412,8 +17412,39 @@ function onDeckStateChange(deck, e){
   else if (e.data === YT.PlayerState.PAUSED){ if (!(deck.unstickAt && Date.now() - deck.unstickAt < 1500)) setPlayingUI(false); }
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
-    if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); }
+    if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); watchSCAutoAdvance(); }
   }
+}
+
+// #458 (reopened): behind the desktop mini player the queue advances and the
+// UI shows the next song, but the SoundCloud widget's play never takes until
+// the tab is shown again, at which point it starts on its own. The advance is
+// a one-shot play() postMessage (or load + auto_play) into an iframe the
+// browser is throttling; nothing re-checked that audio actually began. After
+// an auto-advance onto a SoundCloud deck, re-send play() until the widget
+// reports PLAYING, and rebuild the deck if it never came up. Stands down on
+// any user pause (pausePlayback bumps scWatchId), a skip, or a track change.
+let scWatchId = 0;
+function watchSCAutoAdvance(){
+  const id = ++scWatchId, startPos = state.queuePos, t0 = Date.now();
+  let rebuilt = false;
+  const tick = () => {
+    if (id !== scWatchId || state.queuePos !== startPos || weekUp.frozen) return;
+    const ad = activeDeck();
+    if (ad.kind !== 'sc' || !ad.player || swapInProgress) { if (Date.now() - t0 < 30000) setTimeout(tick, 1000); return; }
+    if (ad._scState === YT.PlayerState.PLAYING) return;
+    const waited = Date.now() - t0;
+    if (waited > 30000) return;
+    if (ad.ready && ad.confirmed){
+      ad.player.setVolume(effectiveVolume(ad));
+      ad.player.playVideo();
+    } else if (waited > 10000 && !rebuilt){
+      rebuilt = true;
+      rebuildActiveDeck();
+    }
+    setTimeout(tick, 1500);
+  };
+  setTimeout(tick, 2000);
 }
 
 // EBBLESS only plays audio (artwork is rendered separately) so every deck is
@@ -20623,6 +20654,7 @@ function rebuildActiveDeck(){
 }
 
 function fadeOutAndPause(deck){
+  scWatchId++;   // a user pause ends the SoundCloud auto-advance watch
   // Pausing mid-fade (crossfade-start-and-preload): a skip fade's standby
   // deck still holds the outgoing track, so re-aim the preload at the next
   // one - otherwise the next Next is a cold load. No-op after an automatic
