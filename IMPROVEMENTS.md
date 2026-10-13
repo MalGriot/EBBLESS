@@ -9856,13 +9856,6 @@ Add entries in this shape:
 - **Branch:** agent/currents-thumb-video
 - **Notes:** Synced from Geethub #456.
 
-### advanced-settings: Advanced settings section (Geethub #469)
-- **Status:** draft
-- **Priority:** medium
-- **Description:** Idea, Geethub issue #469. Add an Advanced settings section. Issue gives no detail; ask owner what belongs in it.
-- **Touches:** (to be found)
-- **Branch:** 
-- **Notes:** Synced from Geethub #469.
 
 ### change-album-art: Let the user change a song's or album's art (Geethub #468)
 - **Status:** merged
@@ -9966,3 +9959,27 @@ Add entries in this shape:
 - **Description:** Follow-up to soundcloud-art-library-thumbs (#439). SoundCloud art still blank on some library tiles.
 - **Branch:** agent/soundcloud-thumbs-library-again
 - **Review note:** Cause: #439 only filled art on the ON AIR / OFF AIR card. Any other library playlist, album or 2x2 collage holding an sc: song saved without art (older or cached items) still rendered a blank cell, since sc: ids have no img.youtube.com fallback. Fix: renderLibrary now borrows the cover for art-less sc:/au: songs from the same song in any other library playlist (render only, nothing rewritten). Limit: a song with no art anywhere in the library stays blank. Not deployed. cache v181.
+
+### advanced-settings-p1: Advanced settings section, phase 1: Look, Library, Playback (Geethub #469)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #469: everything Marvis Pro can change, EBBLESS should let you change, to a reasonable limit, with these higher-level options at the bottom of Settings. Phase 1: add a collapsed "Advanced" block at the bottom of Settings (below Library & data). Controls, each one tap, no paste fields: (Look) default album-art style, accent color, motion full/reduced; theme only if it is dark/auto, no light theme yet; (Library) default grid size 2x2/3x3, default sort, which library sections show; (Playback) move Blend length here or mirror it, start loud/quiet. Mostly surface existing behavior and save the choice. Add a "Reset advanced settings" button. Per-device storage (localStorage, try/catch).
+- **Touches:** Settings screen (`settingsAppBlock` area and below), album-art style default, library grid defaults, CSS accent variables.
+- **Branch:**
+- **Notes:** Research: Marvis Pro changes themes, layout (list/grid, rows, artwork shape, spacing), widgets, gestures, sidebar folders. Skipped for EBBLESS: app icons (native only) and widgets (iOS only). Open questions for the owner: light theme at all? sync across devices once accounts exist (see accounts-profiles)? Phase 1 stays per-device.
+
+### advanced-settings-p2-player-layout: Advanced settings phase 2: choose which player buttons and info show (Geethub #469)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #469. Checklist in Advanced settings to show/hide player buttons and track info, and optionally reorder buttons. Do after advanced-settings-p1.
+- **Touches:** player controls row, Settings.
+- **Branch:**
+- **Notes:** Marvis Pro equivalent: hide/show metadata and controls per widget.
+
+### advanced-settings-p3-gestures: Advanced settings phase 3: customizable gestures (Geethub #469)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub issue #469. Let the user choose what double-tap, long-press and swipe on album art, track rows and thumbs do (for example open artist, like, add to playlist, fullscreen). Biggest and riskiest part; do after phase 1 and 2, and check against existing gestures (album-art-doubletap, album-art-swipe-nav).
+- **Touches:** album art gestures, library rows, Settings.
+- **Branch:**
+- **Notes:** Marvis Pro's most distinctive customization.
