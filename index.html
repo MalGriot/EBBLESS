@@ -1825,6 +1825,18 @@ body.queue-over-fs #queue-scrim{bottom:0}
 
 .settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
 .slider-val{color:var(--faint);font-weight:400;margin-left:6px}
+/* Advanced settings: collapsed block, one-tap chip rows */
+.adv-block>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 12px}
+.adv-block>summary::-webkit-details-marker{display:none}
+.adv-block>summary svg{transition:transform var(--dur-ui) var(--ease-out)}
+.adv-block[open]>summary svg{transform:rotate(180deg)}
+.adv-group{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:18px 0 2px}
+.adv-chips{display:flex;flex-wrap:wrap;gap:8px}
+.adv-chips .btn-ghost{padding:6px 14px;font-size:12.5px}
+.adv-chips .adv-swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--sw,#888)}
+.adv-chips .adv-swatch.is-active{border-color:var(--text);background:var(--sw,#888)}
+.adv-chips .adv-swatch-auto{background:conic-gradient(#e0b26a,#1db954,#4aa3ff,#a97cff,#e0b26a)}
+html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
 .slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--border-2);outline:none;margin:4px 0}
 .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform var(--dur-ui) var(--ease-out);border:none}
 .slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
@@ -3991,6 +4003,72 @@ body.week-up-on{overflow:hidden}
           <button class="btn-danger btn-hold" id="clearLibraryBtn" aria-label="Clear all saved playlists. Press and hold to confirm."><span class="btn-hold-fill" aria-hidden="true"></span><span class="btn-hold-label">Hold to clear playlists</span></button>
         </div>
       </div>
+      <details class="settings-block adv-block" id="settingsAdvancedBlock">
+        <summary>Advanced<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <div class="adv-group">Look</div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Album art style</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Album art style"><button type="button" class="btn-ghost" data-adv="art" data-val="default">Default</button><button type="button" class="btn-ghost" data-adv="art" data-val="record">Record</button><button type="button" class="btn-ghost" data-adv="art" data-val="cassette">Cassette</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Accent color</div>
+            <div class="desc">Auto follows the time of day.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Accent color"><button type="button" class="btn-ghost adv-swatch adv-swatch-auto" data-adv="accent" data-val="" aria-label="Accent: auto (follows the time of day)"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#e0b26a" style="--sw:#e0b26a" aria-label="Accent: gold"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#1db954" style="--sw:#1db954" aria-label="Accent: green"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#4aa3ff" style="--sw:#4aa3ff" aria-label="Accent: blue"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#ff5c8a" style="--sw:#ff5c8a" aria-label="Accent: pink"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#a97cff" style="--sw:#a97cff" aria-label="Accent: violet"></button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Motion</div>
+            <div class="desc">Reduced stills most animations.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Motion"><button type="button" class="btn-ghost" data-adv="motion" data-val="full">Full</button><button type="button" class="btn-ghost" data-adv="motion" data-val="reduced">Reduced</button></div>
+        </div>
+        <div class="adv-group">Library</div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Grid size</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Grid size"><button type="button" class="btn-ghost" data-adv="grid" data-val="grid">2x2</button><button type="button" class="btn-ghost" data-adv="grid" data-val="compact">3x3</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Sort</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Sort"><button type="button" class="btn-ghost" data-adv="sort" data-val="custom">My order</button><button type="button" class="btn-ghost" data-adv="sort" data-val="alpha">A to Z</button><button type="button" class="btn-ghost" data-adv="sort" data-val="plays_desc">Most played</button><button type="button" class="btn-ghost" data-adv="sort" data-val="tracks_desc">Most songs</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Sections to show</div>
+            <div class="desc">Tap to hide or show a section in your library.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Sections to show"><button type="button" class="btn-ghost" data-adv="sec" data-val="playlist">Playlists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="album">Albums</button><button type="button" class="btn-ghost" data-adv="sec" data-val="artist">Artists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="podcast">Podcasts</button></div>
+        </div>
+        <div class="adv-group">Playback</div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Blend length</div>
+            <div class="desc">Same setting as Playback above.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Blend length"><button type="button" class="btn-ghost" data-adv="blend" data-val="2000">2s</button><button type="button" class="btn-ghost" data-adv="blend" data-val="4000">4s</button><button type="button" class="btn-ghost" data-adv="blend" data-val="6000">6s</button><button type="button" class="btn-ghost" data-adv="blend" data-val="8000">8s</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Start volume</div>
+            <div class="desc">Loud leaves less headroom. Works with Even out volume.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Start volume"><button type="button" class="btn-ghost" data-adv="start" data-val="quiet">Quiet</button><button type="button" class="btn-ghost" data-adv="start" data-val="loud">Loud</button></div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Reset advanced settings</div>
+            <div class="desc">Puts everything in this block back to its default.</div>
+          </div>
+          <button type="button" class="btn-ghost" id="advResetBtn">Reset</button>
+        </div>
+      </details>
     </div>
   </main>
 
@@ -5264,6 +5342,21 @@ const LS_PINNED = 'ebbless:pinned';          // array of pinned playlist ids, mo
 const LS_LASTPLAYED = (id) => 'ebbless:lastplayed:' + id;  // ms timestamp a playlist last started playing
 const LS_LASTOPENED = (id) => 'ebbless:lastopened:' + id;  // ms timestamp a playlist's tracklist panel was last opened
 const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
+/* Advanced settings (phase 1): per-device prefs that have no older home.
+   { accent: '#hex' (absent = follow the color clock), motion: 'reduced',
+   hide: ['album', ...] library sections hidden, start: 'loud' }. The rest of
+   the Advanced block mirrors settings that already persist elsewhere. */
+const LS_ADV = 'ebbless:advanced';
+let advCache = null;
+function advPrefs(){
+  if (!advCache){ const v = lsGet(LS_ADV, {}); advCache = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; }
+  return advCache;
+}
+function advSet(key, val){
+  const p = advPrefs();
+  if (val === null || val === undefined) delete p[key]; else p[key] = val;
+  lsSet(LS_ADV, p);
+}
 /* ---------- volume leveling (volume-equalizer) ----------
    Evens out loudness between tracks. YouTube measures every video's
    loudness (playerConfig.audioConfig.loudnessDb, surfaced by the worker's
@@ -5278,6 +5371,7 @@ const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
 const LS_LEVEL = 'ebbless:volumeLevel';      // true = even out loudness between tracks (default on)
 const LS_LOUDNESS = 'ebbless:loudness:v1';   // videoId -> YouTube loudnessDb (null = looked up, none)
 const LEVEL_TARGET_DB = -5;
+const LEVEL_TARGET_LOUD_DB = -2;             // Advanced > Start volume: Loud keeps less headroom
 const LOUDNESS_CACHE_MAX = 3000;
 let levelOn = lsGet(LS_LEVEL, true) !== false;
 let loudnessMemo = null;
@@ -5290,7 +5384,7 @@ function levelGainFor(videoId){
   if (!levelOn) return 1;
   const db = videoId ? loudnessMap()[videoId] : null;
   const level = Math.min(typeof db === 'number' ? db : 0, 0);
-  return Math.min(1, Math.pow(10, (LEVEL_TARGET_DB - level) / 20));
+  return Math.min(1, Math.pow(10, ((advPrefs().start === 'loud' ? LEVEL_TARGET_LOUD_DB : LEVEL_TARGET_DB) - level) / 20));
 }
 // Full volume for a deck (100 * its track's leveling gain). Every fade/
 // crossfade scales from this, so leveling rides along with all of them.
@@ -8278,25 +8372,26 @@ function renderLibrary(){
   libraryArtistsGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
   libraryPodcastsGrid.innerHTML = '';
-  libHasPodcasts = ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'podcast'; });
+  const advHide = advPrefs().hide || [];
+  libHasPodcasts = !advHide.includes('podcast') && ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'podcast'; });
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
-  libHasArtists = ids.some(id => isArtistEntry(getCachedPlaylist(id)));
+  libHasArtists = !advHide.includes('artist') && ids.some(id => isArtistEntry(getCachedPlaylist(id)));
   libArtistNames = new Map();
   ids.forEach(id => { const p = getCachedPlaylist(id); if (p && isArtistEntry(p) && p.name) libArtistNames.set(artistNameKey(p.name), p.name); });
   libFilterArtists.classList.toggle('hidden', !libHasArtists);
-  libHasAlbums = ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'album'; });
+  libHasAlbums = !advHide.includes('album') && ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'album'; });
   libFilterAlbums.classList.toggle('hidden', !libHasAlbums);
-  libHasPlaylists = ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'playlist'; });
+  libHasPlaylists = !advHide.includes('playlist') && ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'playlist'; });
   libFilterPlaylists.classList.toggle('hidden', !libHasPlaylists);
   // chips only help when there's more than one kind to pick between
   libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', btn.dataset.filter === filter));
   updateLibFilterMore();
-  const showPlaylists = filter === 'all' || filter === 'playlists';
-  const showArtists = filter === 'all' || filter === 'artists';
-  const showAlbums = filter === 'all' || filter === 'albums';
-  const showPodcasts = filter === 'all' || filter === 'podcasts';
+  const showPlaylists = (filter === 'all' || filter === 'playlists') && !advHide.includes('playlist');
+  const showArtists = (filter === 'all' || filter === 'artists') && !advHide.includes('artist');
+  const showAlbums = (filter === 'all' || filter === 'albums') && !advHide.includes('album');
+  const showPodcasts = (filter === 'all' || filter === 'podcasts') && !advHide.includes('podcast');
   // which bucket a saved entry is filed under
   const kindOf = libSectionOf;
   const kindShown = (k) => k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
@@ -18290,7 +18385,7 @@ function vizRosicrucianColor(){
    is playing. Vars are set on the root so splash/#ambient (outside
    #view-library) can read them too. */
 function updateLibraryClockColor(){
-  const solid = songAccent || vizRosicrucianColor();
+  const solid = advPrefs().accent || songAccent || vizRosicrucianColor();
   const [cr, cg, cb] = solid.startsWith('#') ? vizHexToRgb(solid) : solid.match(/\d+/g).map(Number);
   const alpha = (a) => `rgba(${cr},${cg},${cb},${a})`;
   const root = document.documentElement.style;
@@ -18812,6 +18907,64 @@ function setArtStyle(style){
   if (typeof syncFlowArtStyle === 'function') syncFlowArtStyle();
   csStackSync();
 }
+/* ---------- Advanced settings (phase 1) ----------
+   Look / Library / Playback chips. Art style, grid size, sort and blend length
+   mirror settings that already persist (and sync) elsewhere; accent, motion,
+   hidden sections and start volume live in LS_ADV. */
+const advBlock = $('settingsAdvancedBlock');
+function advRender(){
+  const p = advPrefs();
+  const active = {
+    art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '',
+    grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
+    start: p.start === 'loud' ? 'loud' : 'quiet'
+  };
+  const hide = p.hide || [];
+  advBlock.querySelectorAll('[data-adv]').forEach(b => {
+    const k = b.dataset.adv, v = b.dataset.val;
+    const on = k === 'sec' ? !hide.includes(v) : active[k] === v;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+function advApplyMotion(){ document.documentElement.classList.toggle('reduce-motion', advPrefs().motion === 'reduced'); }
+function advChoose(k, v){
+  if (k === 'art') setArtStyle(v);
+  else if (k === 'motion'){ advSet('motion', v === 'reduced' ? 'reduced' : null); advApplyMotion(); }
+  else if (k === 'accent'){ advSet('accent', v || null); updateLibraryClockColor(); }
+  else if (k === 'grid') setLibraryView(v);
+  else if (k === 'sort'){ setLibrarySort(v); applyLibSortUI(); renderLibrary(); }
+  else if (k === 'blend'){ crossfadePrefs.ms = parseInt(v, 10) || 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI(); }
+  else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
+  else if (k === 'sec'){
+    const hide = (advPrefs().hide || []).slice(), i = hide.indexOf(v);
+    if (i >= 0) hide.splice(i, 1); else hide.push(v);
+    advSet('hide', hide.length ? hide : null);
+    renderLibrary();
+  }
+  advRender();
+}
+advBlock.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-adv]');
+  if (b) advChoose(b.dataset.adv, b.dataset.val);
+});
+$('advResetBtn').addEventListener('click', () => {
+  advCache = {};
+  lsSet(LS_ADV, {});
+  advApplyMotion();
+  updateLibraryClockColor();
+  setArtStyle('default');
+  setLibraryView('compact');
+  setLibrarySort('custom'); applyLibSortUI();
+  crossfadePrefs.ms = 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI();
+  reapplyLevel();
+  renderLibrary();
+  advRender();
+});
+advBlock.addEventListener('toggle', advRender);
+advApplyMotion();
+advRender();
+
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
 function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
 function toggleArtStyleMenu(){ artStyleMenu.classList.toggle('is-open'); }
