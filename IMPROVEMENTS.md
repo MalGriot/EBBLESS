@@ -132,7 +132,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub issue #485. In the artist window, each song row should have the add-to-playlist/library icon button.
 - **Touches:** artist window song rows.
 - **Branch:**
-- **Notes:** Synced from Geethub #485. Same window as artist-window-album-list (#479 area); do together.
+- **Notes:** Synced from Geethub #485. Same window as artist-window-album-list (#482); do together.
 
 ### custom-cursor: Custom EBBLESS cursor that follows the UI color, flowy, with a watery trail (Geethub #484)
 - **Status:** draft
