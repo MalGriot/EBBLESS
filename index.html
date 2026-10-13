@@ -1850,6 +1850,12 @@ body.queue-over-fs #queue-scrim{bottom:0}
 .adv-block[open]>summary svg{transform:rotate(180deg)}
 .adv-group{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:18px 0 2px}
 .adv-chips{display:flex;flex-wrap:wrap;gap:8px}
+/* Advanced settings: player items hidden by choice (html.adv-hide-*). Never covers play/pause, prev/next, seek or the song menu. */
+html.adv-hide-shuffle #shuffleBtn,html.adv-hide-shuffle #miniShuffleBtn,html.adv-hide-shuffle #flowShuffleBtn,
+html.adv-hide-repeat #repeatBtn,html.adv-hide-repeat #miniRepeatBtn,html.adv-hide-repeat #flowRepeatBtn,
+html.adv-hide-like #playerLikeBtn,html.adv-hide-like #miniLikeBtn,html.adv-hide-like #flowLikeBtn,
+html.adv-hide-artist #trackArtist,html.adv-hide-artist #miniArtist,html.adv-hide-artist #flowArtist,
+html.adv-hide-times #timeCur,html.adv-hide-times #timeDur,html.adv-hide-times #flowTimeCur,html.adv-hide-times #flowTimeDur{display:none!important}
 .adv-chips .btn-ghost{padding:6px 14px;font-size:12.5px}
 .adv-chips .adv-swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--sw,#888)}
 .adv-chips .adv-swatch.is-active{border-color:var(--text);background:var(--sw,#888)}
@@ -4094,6 +4100,14 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Start volume"><button type="button" class="btn-ghost" data-adv="start" data-val="quiet">Quiet</button><button type="button" class="btn-ghost" data-adv="start" data-val="loud">Loud</button></div>
         </div>
+        <div class="adv-group">Player</div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Player buttons and info</div>
+            <div class="desc">Tap to show or hide. Play, skip and the song menu always stay.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Player buttons and info"><button type="button" class="btn-ghost" data-adv="ph" data-val="shuffle">Shuffle</button><button type="button" class="btn-ghost" data-adv="ph" data-val="repeat">Repeat</button><button type="button" class="btn-ghost" data-adv="ph" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="ph" data-val="artist">Artist name</button><button type="button" class="btn-ghost" data-adv="ph" data-val="times">Times</button></div>
+        </div>
         <div class="settings-row">
           <div>
             <div class="label">Reset advanced settings</div>
@@ -5384,7 +5398,8 @@ const LS_LASTOPENED = (id) => 'ebbless:lastopened:' + id;  // ms timestamp a pla
 const LS_PL = (id) => 'ebbless:playlist:' + id;  // resolved playlist cache
 /* Advanced settings (phase 1): per-device prefs that have no older home.
    { accent: '#hex' (absent = follow the color clock), motion: 'reduced',
-   hide: ['album', ...] library sections hidden, start: 'loud' }. The rest of
+   hide: ['album', ...] library sections hidden, start: 'loud',
+   phide: ['shuffle', ...] player buttons/info hidden }. The rest of
    the Advanced block mirrors settings that already persist elsewhere. */
 const LS_ADV = 'ebbless:advanced';
 let advCache = null;
@@ -19033,10 +19048,15 @@ function advRender(){
   const hide = p.hide || [];
   advBlock.querySelectorAll('[data-adv]').forEach(b => {
     const k = b.dataset.adv, v = b.dataset.val;
-    const on = k === 'sec' ? !hide.includes(v) : active[k] === v;
+    const on = k === 'sec' ? !hide.includes(v) : k === 'ph' ? !(p.phide || []).includes(v) : active[k] === v;
     b.classList.toggle('is-active', on);
     b.setAttribute('aria-pressed', String(on));
   });
+}
+const ADV_PH = ['shuffle','repeat','like','artist','times'];
+function advApplyPlayer(){
+  const h = advPrefs().phide;
+  ADV_PH.forEach(k => document.documentElement.classList.toggle('adv-hide-' + k, Array.isArray(h) && h.includes(k)));
 }
 function advApplyMotion(){ document.documentElement.classList.toggle('reduce-motion', advPrefs().motion === 'reduced'); }
 function advChoose(k, v){
@@ -19047,6 +19067,12 @@ function advChoose(k, v){
   else if (k === 'sort'){ setLibrarySort(v); applyLibSortUI(); renderLibrary(); }
   else if (k === 'blend'){ crossfadePrefs.ms = parseInt(v, 10) || 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI(); }
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
+  else if (k === 'ph' && ADV_PH.includes(v)){
+    const h = (advPrefs().phide || []).slice(), i = h.indexOf(v);
+    if (i >= 0) h.splice(i, 1); else h.push(v);
+    advSet('phide', h.length ? h : null);
+    advApplyPlayer();
+  }
   else if (k === 'sec'){
     const hide = (advPrefs().hide || []).slice(), i = hide.indexOf(v);
     if (i >= 0) hide.splice(i, 1); else hide.push(v);
@@ -19063,6 +19089,7 @@ $('advResetBtn').addEventListener('click', () => {
   advCache = {};
   lsSet(LS_ADV, {});
   advApplyMotion();
+  advApplyPlayer();
   updateLibraryClockColor();
   setArtStyle('default');
   setLibraryView('compact');
@@ -19074,6 +19101,7 @@ $('advResetBtn').addEventListener('click', () => {
 });
 advBlock.addEventListener('toggle', advRender);
 advApplyMotion();
+advApplyPlayer();
 advRender();
 
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
