@@ -17668,7 +17668,41 @@ function soundCloudWidgetSrc(videoId, autoPlay, set){
     '&auto_play=' + (autoPlay ? 'true' : 'false') + '&show_artwork=false&visual=false&download=false&sharing=false' +
     '&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&buying=false&liking=false';
 }
-function createSCDeckPlayer(deck, videoId){
+// #458: where SoundCloud deck iframes live. While the mini player (Document
+// Picture-in-Picture) is open, its window stays visible when the main tab is
+// hidden, and a SoundCloud widget can only start a NEW sound while its own page
+// is visible - so the SC iframes and the Widget API (the PiP window's own copy
+// of api.js, since widget events go to the iframe's parent window) are hosted
+// in the PiP document then. Otherwise they sit in the main page as ever.
+function scHost(){
+  const w = miniPlayerWin;
+  // Chrome only lets the PiP document's SoundCloud iframes autoplay with sound
+  // once someone has clicked/typed in that window (observed: before that,
+  // play() starts and is paused again at once), so main hosts them until then.
+  if (w && !w.closed && w.SC && w.SC.Widget && w.navigator.userActivation && w.navigator.userActivation.hasBeenActive){
+    const box = w.document.getElementById('scPipHost');
+    if (box) return { win: w, doc: w.document, SC: w.SC, box };
+  }
+  return { win: window, doc: document, SC: window.SC, box: null };
+}
+// Rebuild every SoundCloud deck in the current host (PiP just opened or closed),
+// the playing one resuming from where it was.
+function rehostSCDecks(){
+  if (swapInProgress){ setTimeout(rehostSCDecks, 1000); return; }
+  const host = scHost();
+  decks.forEach(deck => {
+    if (deck.kind !== 'sc' || !deck.player || !deck.videoId || deck.scHostWin === host.win) return;
+    const active = deck === activeDeck();
+    if (!active && deck.pos < 0) return;
+    const playing = active && artworkWrap.classList.contains('is-playing');
+    const entry = state.queue[state.queuePos], pos = deck._scPos || 0, t0 = Date.now();
+    // the old widget keeps playing until the new one is READY, so resume that much later
+    if (active && entry && pos > 1) pendingResume = { plId: entry.plId, idx: entry.idx, get position(){ return pos + (playing ? (Date.now() - t0) / 1000 : 0); } };
+    deck.ready = false;
+    createSCDeckPlayer(deck, deck.videoId, { paused: active && !playing });
+  });
+}
+function createSCDeckPlayer(deck, videoId, opts){
   deck.kind = 'sc';
   deck.ready = false;
   deck._scPos = 0; deck._scDur = 0; deck._scState = -1;
@@ -17694,18 +17728,25 @@ function createSCDeckPlayer(deck, videoId){
   // widget a fresh contentWindow identity to filter its postMessage
   // listener on). YT.Player doesn't need this: it always builds its own
   // fresh iframe under the target element regardless.
-  const old = document.getElementById(deck.scId);
-  const iframe = document.createElement('iframe');
+  const host = scHost();
+  deck.scHostWin = host.win;
+  const iframe = host.doc.createElement('iframe');
   iframe.id = deck.scId;
   iframe.setAttribute('allow', 'autoplay');
   deck.scSet = null;
   const set = scSetSourceFor(videoId, deck === activeDeck() ? state.queuePos : deck.pos);
-  iframe.src = soundCloudWidgetSrc(videoId, deck === activeDeck(), set);
-  old.replaceWith(iframe);
-  const widget = SC.Widget(iframe);
+  const autoPlay = deck === activeDeck() && !(opts && opts.paused);
+  iframe.src = soundCloudWidgetSrc(videoId, autoPlay, set);
+  // In the PiP host the main page's iframe (if it still holds a sound) is left
+  // playing until this widget is READY, then blanked - see the READY handler.
+  const mainFrame = host.box ? document.getElementById(deck.scId) : null;
+  const old = host.doc.getElementById(deck.scId);
+  if (old) old.replaceWith(iframe); else host.box.appendChild(iframe);
+  const widget = host.SC.Widget(iframe);
   deck.player = makeSCPlayerAdapter(deck, widget, myGen);
-  widget.bind(SC.Widget.Events.READY, function(){
+  widget.bind(host.SC.Widget.Events.READY, function(){
     if (deck.gen !== myGen) return;
+    if (mainFrame && mainFrame.getAttribute('src')) mainFrame.src = 'about:blank';
     deck.ready = true;
     widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
     deck.player.setVolume(deck === activeDeck() ? effectiveVolume(deck) : 0);
@@ -17742,10 +17783,10 @@ function createSCDeckPlayer(deck, videoId){
     // its own embedding page sent it. YT doesn't need this: its playerVars
     // start it autoplaying *muted* (always allowed), and onDeckConfirmed
     // above just unmutes an already-playing player.
-    if (deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
+    if (!(opts && opts.paused) && deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
     if (deck === activeDeck()) updateAdLoadingIcon();
   });
-  widget.bind(SC.Widget.Events.PLAY, function(){
+  widget.bind(host.SC.Widget.Events.PLAY, function(){
     if (deck.gen !== myGen) return;
     // Safety net for the standby-autoplay race described at
     // soundCloudWidgetSrc: a standby deck should never be playing outside a
@@ -22025,6 +22066,29 @@ function updateMiniPlayerUI(){
   }
   if (mpQueue && mpQueue.sig !== state.queuePos + ':' + state.queue.length) renderMiniQueue();
 }
+// #458: give the PiP document a home for SoundCloud deck iframes plus its own
+// copy of the Widget API, then move the SoundCloud decks over once it loads.
+function attachMiniPlayerSC(win){
+  const doc = win.document;
+  const box = doc.createElement('div');
+  box.id = 'scPipHost';
+  box.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+  doc.body.appendChild(box);
+  const tag = doc.createElement('script');
+  tag.src = 'https://w.soundcloud.com/player/api.js';
+  tag.onload = () => { if (miniPlayerWin === win && !win.closed) rehostSCDecks(); };
+  doc.head.appendChild(tag);
+  // first click/key in the PiP window unlocks audio there: move the decks over
+  // once whatever that click did (play/pause, next...) has settled
+  const unlock = () => setTimeout(() => {
+    if (miniPlayerWin !== win || win.closed || !win.navigator.userActivation || !win.navigator.userActivation.hasBeenActive) return;
+    win.removeEventListener('pointerdown', unlock, true);
+    win.removeEventListener('keydown', unlock, true);
+    rehostSCDecks();
+  }, 700);
+  win.addEventListener('pointerdown', unlock, true);
+  win.addEventListener('keydown', unlock, true);
+}
 async function openMiniPlayer(){
   if (!miniPlayerSupported() || !currentTrack()) return;
   if (miniPlayerWin && !miniPlayerWin.closed){ updateMiniPlayerUI(); return; }
@@ -22041,7 +22105,8 @@ async function openMiniPlayer(){
     mpShrunk = null;
     buildMiniPlayerDOM(win);
     updateMiniPlayerUI();
-    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; } }, { once: true });
+    attachMiniPlayerSC(win);
+    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; rehostSCDecks(); } }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,
