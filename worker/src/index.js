@@ -2697,7 +2697,7 @@ async function handleSoundCloud(url, ctx) {
 // Tracks come back in that page order, deduped by title, capped - matched
 // sources (Spotify/Apple Music, one YouTube search per track on the client)
 // lower than ones that are already playable (SoundCloud ids, YouTube ids).
-const ARTIST_CACHE_VERSION = 'a5';
+const ARTIST_CACHE_VERSION = 'a6';
 const ARTIST_MAX_MATCHED_TRACKS = 500;
 const ARTIST_MAX_NATIVE_TRACKS = 500;
 const ARTIST_MAX_RELEASES = 40;
@@ -2856,7 +2856,7 @@ async function appleMusicArtistPayload(storefront, id, offset) {
 
   const featured = sections.find(s => s.itemKind === 'artistFeaturedContentAndTracks');
   const topSongs = offset ? [] : ((featured && featured.items && featured.items[0] && featured.items[0].tracks) || [])
-    .map(t => ({ title: t.title || '', artist: name, image: appleArtworkUrl(t.artwork), duration: t.duration || 0 }));
+    .map(t => ({ title: t.title || '', artist: t.artistName || name, image: appleArtworkUrl(t.artwork), duration: t.duration || 0 }));
 
   // Release shelves only - not the artist's playlists, "appears on", or
   // music videos.
@@ -2954,8 +2954,10 @@ async function youTubeArtistPayload(path) {
   }
   const albums = await mapWithConcurrency(releaseIds.slice(0, ARTIST_MAX_YT_RELEASES), 3, async pid => {
     try {
-      const p = await readYtPlaylistPage(pid, name);
-      return p ? p.tracks : [];
+      // each row keeps its own credited artist (a release can hold songs by
+      // others); only a row with none falls back to the channel's name
+      const p = await readYtPlaylistPage(pid);
+      return p ? p.tracks.map(t => ({ ...t, artist: t.artist || name })) : [];
     } catch (e) { return []; }
   });
   const uploads = videosData ? ytLockupVideos(videosData, name) : [];
