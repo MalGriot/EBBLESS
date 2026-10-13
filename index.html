@@ -1504,6 +1504,11 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   .q-row:not(.is-dragging):hover .remove:not(:hover),.q-row:not(.is-dragging):hover .q-menu:not(:hover):not(.is-active){color:var(--on-accent,#151107)}
 }
 .q-empty{padding:40px 10px;text-align:center;color:var(--faint-2);font-size:12.5px}
+/* Drag into the queue (Geethub #471): a gap opens where the drop will land */
+.q-drop-ph{height:0;margin:0;border-radius:var(--r-md);border:2px dashed transparent;box-sizing:border-box;overflow:hidden;
+  transition:height var(--dur-ui) var(--ease-out),margin var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out),background-color var(--dur-ui) var(--ease-out)}
+.q-drop-ph.is-open{height:46px;margin:2px 0;border-color:var(--accent, #fff);background:color-mix(in srgb,var(--accent, #fff) 14%,transparent)}
+.queue-scroll.is-drop-target{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent, #fff) 45%,transparent)}
 .q-loading .flow-line{max-width:220px;margin:14px auto 0}
 .q-loading .counter{font-size:11px;color:var(--faint-2);margin-top:8px}
 
@@ -11212,7 +11217,7 @@ function addablePlaylists(){
   function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); }
   document.addEventListener('dragstart', (e) => {
     const card = e.target.classList && e.target.classList.contains('lib-card') ? e.target : null;
-    if (!card || !card.draggable) return;
+    if (!card || !card.draggable || getLibrarySort() !== 'custom') return;
     dragId = card.dataset.plId;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', dragId);
@@ -11240,6 +11245,108 @@ function addablePlaylists(){
     renderLibrary();
   });
   document.addEventListener('dragend', () => { dragId = null; clearHi(); });
+})();
+
+/* Desktop drag a library song, playlist or album into the queue (Geethub #471).
+   A song lands where it is dropped, the rows below it shift down as a gap opens
+   under the pointer. A playlist/album asks first (Enter confirms). Mouse only:
+   armed on a mouse pointerdown like the other drags, so touch is untouched. */
+(function(){
+  let drag = null; // { kind: 'song', plId, idx } | { kind: 'coll', plId }
+  let ph = null, dropIdx = -1;
+  const scrollEl = () => queueBody.closest('.queue-scroll') || queueBody;
+  function clearUi(){
+    if (ph){ ph.remove(); ph = null; }
+    dropIdx = -1;
+    scrollEl().classList.remove('is-drop-target');
+  }
+  function insertAt(clientY){
+    const rows = Array.from(queueBody.querySelectorAll('.q-row'));
+    const i = rows.findIndex(r => { const b = r.getBoundingClientRect(); return clientY < b.top + b.height / 2; });
+    return { rows, i: i < 0 ? rows.length : i };
+  }
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const card = e.target.closest && e.target.closest('.lib-card[data-pl-id]');
+    if (!card || card.draggable || card.classList.contains('is-artist-card') || e.target.closest('button')) return;
+    card.draggable = true;
+  });
+  const disarm = () => document.querySelectorAll('.lib-card[draggable="true"]').forEach(c => { if (getLibrarySort() !== 'custom') c.removeAttribute('draggable'); });
+  document.addEventListener('pointerup', () => { if (!drag) disarm(); });
+  document.addEventListener('dragstart', (e) => {
+    if (e.defaultPrevented) return;
+    drag = null;
+    const card = e.target.classList && e.target.classList.contains('lib-card') ? e.target : null;
+    if (card){
+      if (card.classList.contains('is-artist-card') || !getCachedPlaylist(card.dataset.plId)) return;
+      drag = { kind: 'coll', plId: card.dataset.plId };
+    } else {
+      const row = e.target.closest && e.target.closest('.track-row');
+      if (!row || !row.draggable || !row.dataset.plId) return;
+      drag = { kind: 'song', plId: row.dataset.plId, idx: parseInt(row.dataset.idx, 10) };
+    }
+    e.dataTransfer.effectAllowed = 'copyMove';
+    try { e.dataTransfer.setData('text/plain', drag.plId); } catch(_){}
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!drag) return;
+    const sc = scrollEl();
+    if (!sc.contains(e.target)){ clearUi(); return; }
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    sc.classList.add('is-drop-target');
+    // edge auto-scroll so far rows are reachable
+    const b = sc.getBoundingClientRect();
+    if (e.clientY < b.top + 36) sc.scrollTop -= 12; else if (e.clientY > b.bottom - 36) sc.scrollTop += 12;
+    if (state.queuePos < 0 || !queueBody.querySelector('.q-row')){ dropIdx = -1; return; }
+    const { rows, i } = insertAt(e.clientY);
+    if (i === dropIdx && ph && ph.isConnected) return;
+    dropIdx = i;
+    if (!ph){ ph = document.createElement('div'); ph.className = 'q-drop-ph'; }
+    if (i < rows.length) rows[i].before(ph); else rows[rows.length - 1].after(ph);
+    requestAnimationFrame(() => { if (ph) ph.classList.add('is-open'); });
+  });
+  function insertCollection(plId, toPos){
+    const pl = playlistById(plId);
+    let order = pl ? validIndices(pl) : [];
+    if (!order.length) return 0;
+    if (state.queuePos < 0 || toPos >= state.queue.length) return queueAddCollection(plId);
+    if (state.shuffle) order = shuffleTail(order, 0);
+    state.queue.splice(toPos, 0, ...order.map(idx => ({ plId, idx })));
+    renderQueuePanel();
+    schedulePreload(state.queuePos);
+    return order.length;
+  }
+  document.addEventListener('drop', (e) => {
+    if (!drag || !scrollEl().contains(e.target)) return;
+    e.preventDefault();
+    const d = drag; drag = null;
+    const toPos = dropIdx < 0 ? state.queue.length : state.queuePos + 1 + dropIdx;
+    clearUi();
+    if (d.kind === 'song'){
+      const pl = playlistById(d.plId);
+      if (!pl || !pl.tracks[d.idx] || !pl.tracks[d.idx].videoId) return;
+      if (state.queuePos < 0){ queueAddToEnd(d.idx, d.plId); }
+      else { state.queue.splice(toPos, 0, { plId: d.plId, idx: d.idx }); renderQueuePanel(); schedulePreload(state.queuePos); }
+      showToast('Added to queue');
+      return;
+    }
+    const pl = playlistById(d.plId);
+    const n = pl ? validIndices(pl).length : 0;
+    if (!n){ showToast('Nothing to add'); return; }
+    openImportOverlay();
+    importStage.innerHTML =
+      '<div class="step">Add &ldquo;' + escapeHtml(pl.name) + '&rdquo; to the queue?</div>' +
+      '<button class="btn-ghost is-active" id="dqAddBtn" style="width:100%;margin-bottom:8px">Add ' + n + (n === 1 ? ' song' : ' songs') + '</button>' +
+      '<button class="btn-ghost" id="dqCancelBtn" style="width:100%">Cancel</button>';
+    $('dqAddBtn').addEventListener('click', () => {
+      closeImportOverlay();
+      const added = insertCollection(d.plId, toPos);
+      showToast(added ? 'Added ' + added + (added === 1 ? ' song' : ' songs') + ' to queue' : 'Nothing to add');
+    });
+    $('dqCancelBtn').addEventListener('click', closeImportOverlay);
+    $('dqAddBtn').focus(); // Enter confirms
+  });
+  document.addEventListener('dragend', () => { drag = null; clearUi(); disarm(); });
 })();
 
 function openAddToPlaylistPicker(track){
