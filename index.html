@@ -17861,7 +17861,7 @@ function createDeckPlayer(deck, videoId){
 // and-wait-5-seconds dance entirely (scheduleAdCheck/checkDeckReady) and
 // confirms the deck the moment the widget reports READY.
 function makeSCPlayerAdapter(deck, widget, myGen){
-  let vol = 100, muted = false, loadSeq = 0;
+  let vol = 100, muted = false, loadSeq = 0, loading = false;
   return {
     playVideo(){ widget.play(); },
     pauseVideo(){ widget.pause(); },
@@ -17873,9 +17873,30 @@ function makeSCPlayerAdapter(deck, widget, myGen){
     getCurrentTime(){ return deck._scPos || 0; },
     getDuration(){ return deck._scDur || 0; },
     seekTo(seconds){ const ms = Math.max(0, Math.round((seconds || 0) * 1000)); widget.seekTo(ms); deck._scPos = seconds || 0; },
+    // #458: a sound that never started while its page was visible can't start
+    // once the page is hidden. Play a standby sound at volume 0 for a moment
+    // (visible page only) so it can be started later, then park it at 0:00.
+    // The PLAY handler ignores events while deck._scWarming is set.
+    warm(){
+      if (loading || deck._scWarmed || deck._scWarming) return;
+      const tok = deck._scWarming = {};
+      const finish = () => {
+        if (deck._scWarming !== tok) return;
+        deck._scWarming = null;
+        deck._scWarmed = true;
+        deck._scWarmPlay = null;
+        if (deck.gen !== myGen || deck === activeDeck() || swapInProgress) return;
+        widget.pause(); widget.seekTo(0); deck._scPos = 0;
+      };
+      deck._scWarmPlay = () => setTimeout(finish, 400);
+      widget.setVolume(0);
+      widget.play();
+      setTimeout(finish, 3000);
+    },
     loadVideoById(opts){
       const v = typeof opts === 'string' ? opts : opts.videoId;
       deck._scPos = 0; deck._scDur = 0; deck._scState = -1;
+      deck._scWarmed = false; deck._scWarming = null; loading = true;
       // Only the active deck autoplays - a standby deck loading with
       // auto_play:true would start playing (muted) on its own, and
       // SoundCloud's widget pauses every other SoundCloud player on the
@@ -17894,7 +17915,7 @@ function makeSCPlayerAdapter(deck, widget, myGen){
       const mySeq = ++loadSeq;
       const onLoad = typeof opts === 'object' && opts.onLoad;
       const live = () => deck.gen === myGen && mySeq === loadSeq;
-      const loaded = () => { widget.setVolume(muted ? 0 : vol); if (onLoad) onLoad(); };
+      const loaded = () => { loading = false; widget.setVolume(muted ? 0 : vol); if (onLoad) onLoad(); warmSCStandby(deck); };
       const loadSingle = () => {
         deck.scSet = null;
         widget.load(soundCloudTrackApiUrl(v), {
@@ -18028,6 +18049,18 @@ function scHost(){
   }
   return { win: window, doc: document, SC: window.SC, box: null };
 }
+// #458: while a non-SoundCloud song plays and the page is visible, start the
+// SoundCloud standby deck's sound silently for a moment (see the adapter's
+// warm()) so the next SoundCloud song can still be started once the page is
+// hidden behind the mini player. Does nothing for a hidden page.
+function warmSCStandby(deck){
+  if (document.hidden || swapInProgress || !deck || deck.kind !== 'sc' || !deck.ready || !deck.player || !deck.player.warm) return;
+  if (deck !== standbyDeck() || deck.pos < 0 || routeLocked()) return;
+  const ad = activeDeck();
+  if (ad.kind === 'sc' || ad.kind === 'cast') return;
+  deck.player.warm();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) warmSCStandby(standbyDeck()); });
 // Rebuild every SoundCloud deck in the current host (PiP just opened or closed),
 // the playing one resuming from where it was.
 function rehostSCDecks(){
@@ -18102,7 +18135,7 @@ function createSCDeckPlayer(deck, videoId, opts){
     // #458: built from a set - note its sound ids and make sure it landed on
     // this track (else correct it, or drop back to the single track)
     if (set && !reloaded) scSetVerify(deck, widget, myGen, set.url, videoId, function(ok, i){
-      if (ok) return;
+      if (ok){ warmSCStandby(deck); return; }
       if (i >= 0){
         if (deck === activeDeck()) widget.skip(i);
         else widget.load(set.url, { auto_play: false, show_artwork: false, start_track: i });
@@ -18112,6 +18145,7 @@ function createSCDeckPlayer(deck, videoId, opts){
       }
     });
     deck.confirmed = false;
+    deck._scWarmed = false; deck._scWarming = null;
     // No ad-preroll wait for SoundCloud - confirm (and, for the active
     // deck, unmute/seek-to-0/reflect play state) right away.
     onDeckConfirmed(deck);
@@ -18128,9 +18162,11 @@ function createSCDeckPlayer(deck, videoId, opts){
     // above just unmutes an already-playing player.
     if (!(opts && opts.paused) && deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
     if (deck === activeDeck()) updateAdLoadingIcon();
+    if (!set && !reloaded) warmSCStandby(deck);
   });
   widget.bind(host.SC.Widget.Events.PLAY, function(){
     if (deck.gen !== myGen) return;
+    if (deck._scWarming && deck !== activeDeck() && !swapInProgress){ if (deck._scWarmPlay) deck._scWarmPlay(); deck._scWarmPlay = null; return; }
     // Safety net for the standby-autoplay race described at
     // soundCloudWidgetSrc: a standby deck should never be playing outside a
     // crossfade (runCrossfade sets swapInProgress before it starts the
@@ -22060,6 +22096,9 @@ const MINI_PLAYER_STYLE = `
   .mpq-row .t{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mpq-row .a{font-size:11px;color:var(--mp-fg2,#999);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mpq-row>div{min-width:0}
+  #mpHint{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);z-index:3;max-width:calc(100% - 16px);padding:2px 8px;border-radius:999px;
+    background:rgba(0,0,0,.55);color:rgba(255,255,255,.8);font-size:10px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  #mpHint[hidden]{display:none}
   .mpq-empty{font-size:12px;color:var(--mp-fg2,#888);padding:14px 6px;text-align:center}
 `;
 function miniPlayerSupported(){ return 'documentPictureInPicture' in window; }
@@ -22180,7 +22219,8 @@ function buildMiniPlayerDOM(win){
         '<button id="mpRepeat" title="Repeat" aria-label="Repeat"><svg viewBox="0 0 24 24">' + MP_ICO.repeat + '</svg><span id="mpRepeatOne" hidden>1</span></button>' +
       '</div>' +
     '</div>' +
-    '<div id="mpQueue" role="dialog" aria-label="Queue"></div>';
+    '<div id="mpQueue" role="dialog" aria-label="Queue"></div>' +
+    '<div id="mpHint" hidden>Tap once to keep music flowing</div>';
   const mpTape = doc.getElementById('mpTape'), srcSvg = $('cassetteSvg');
   if (mpTape && srcSvg){
     mpTape.appendChild(srcSvg.cloneNode(true));
@@ -22499,6 +22539,19 @@ function updateMiniPlayerUI(){
     doc.getElementById('mpDur').textContent = formatTime(dur);
   }
   if (mpQueue && mpQueue.sig !== state.queuePos + ':' + state.queue.length) renderMiniQueue();
+  const hint = doc.getElementById('mpHint');
+  if (hint) hint.hidden = !miniPlayerNeedsTap(miniPlayerWin);
+}
+// #458: true while the PiP window has had no click/key yet (so Chrome blocks
+// SoundCloud autoplay there) and a SoundCloud song is playing or coming up.
+function miniPlayerNeedsTap(win){
+  const ua = win.navigator.userActivation;
+  if (!ua || ua.hasBeenActive) return false;
+  for (let p = Math.max(0, state.queuePos), n = 0; p < state.queue.length && n < 25; p++, n++){
+    const t = trackAt(p);
+    if (t && isSoundCloudVideoId(t.videoId)) return true;
+  }
+  return false;
 }
 // #458: give the PiP document a home for SoundCloud deck iframes plus its own
 // copy of the Widget API, then move the SoundCloud decks over once it loads.
@@ -22514,13 +22567,17 @@ function attachMiniPlayerSC(win){
   doc.head.appendChild(tag);
   // first click/key in the PiP window unlocks audio there: move the decks over
   // once whatever that click did (play/pause, next...) has settled
+  // (pointerup, not pointerdown: the click's own action - play/next/prev - runs
+  // right after it, and the 250 ms lets that settle before the decks move)
   const unlock = () => setTimeout(() => {
     if (miniPlayerWin !== win || win.closed || !win.navigator.userActivation || !win.navigator.userActivation.hasBeenActive) return;
-    win.removeEventListener('pointerdown', unlock, true);
+    win.removeEventListener('pointerup', unlock, true);
     win.removeEventListener('keydown', unlock, true);
+    const hint = win.document.getElementById('mpHint');
+    if (hint) hint.hidden = true;
     rehostSCDecks();
-  }, 700);
-  win.addEventListener('pointerdown', unlock, true);
+  }, 250);
+  win.addEventListener('pointerup', unlock, true);
   win.addEventListener('keydown', unlock, true);
 }
 async function openMiniPlayer(){
