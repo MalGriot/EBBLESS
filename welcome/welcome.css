@@ -40,7 +40,7 @@ img{display:block;max-width:100%}
 .page{display:block}
 .rail{display:none}
 main{display:block}
-.canvas{position:sticky;top:var(--hud-h);z-index:5;height:var(--dock-h);background:linear-gradient(rgba(18,18,18,.55),rgba(18,18,18,.35))}
+.canvas{position:sticky;top:var(--hud-h);z-index:5;height:var(--dock-h);background:#121212}
 .devbar{display:none}
 .stage{height:100%;display:flex;justify-content:center}
 .device,.screen{display:contents}

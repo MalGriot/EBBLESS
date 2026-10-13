@@ -105,9 +105,9 @@ js += driver
 
 override = """
 /* landing demo overrides: the app's own HUD, minus what needs a library or account */
-html,body{height:100%;overflow:hidden;background:transparent}
+html,body{height:100%;overflow:hidden;background:#121212}
 #app{position:fixed;inset:0}
-#ambient{background:transparent}
+#ambient{background:#121212}
 .view-scroll{padding:6px 12px 8px;max-width:none}
 #topbar{padding:0 10px;padding-top:0}
 #topbar .tester-banner,#topbar #helpBtn,#topbar #topnav,#topbar .install-banner,#installBanner,.paste-guide,#pasteGuide{display:none!important}
@@ -144,7 +144,7 @@ html,body{height:100%;overflow:hidden;background:transparent}
   #artRow .artwork-wrap{flex:1 1 auto;min-width:0;width:auto!important;max-width:calc(100vh - 230px)}
 }
 /* a phone frame has a notch: give the top bar room beneath it */
-@media (max-width:430px){body:not(.compact){--topbar-h:92px}body:not(.compact) #topbar{padding-top:32px}}
+@media (max-width:430px){body:not(.compact){--topbar-h:100px}body:not(.compact) #topbar{padding-top:40px}}
 /* compact: the stage only, for the phone dock */
 .compact #topbar,.compact #bottom-nav{display:none!important}
 .compact .view{top:0;bottom:0}
