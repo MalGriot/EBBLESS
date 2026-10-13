@@ -1974,13 +1974,12 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .currents-hint{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
 /* artist page (#299): tap the player's artist name -> bio, facts and links
    at the top of the library panel (see openArtistPage) */
-#trackArtist{cursor:pointer}
+#trackArtist{cursor:pointer;padding-bottom:6px}
 #trackArtist:hover span{text-decoration:underline;text-underline-offset:3px}
 @media (hover:hover){
-  #trackArtist:not(.is-marquee)>span{transition:transform var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
-  #trackArtist:not(.is-marquee):hover>span{transform:scale(1.06);color:var(--accent)}
+  #trackArtist:not(.is-marquee)>span{transition:color var(--dur-ui) var(--ease-out)}
+  #trackArtist:not(.is-marquee):hover>span{color:var(--accent)}
 }
-@media (prefers-reduced-motion:reduce){#trackArtist:not(.is-marquee):hover>span{transform:none}}
 #libpl-panel.is-artist-info .libpl-play,#libpl-panel.is-artist-info .libpl-art-play{display:none}
 .artist-info{padding:6px 14px 14px;border-bottom:1px solid var(--border);margin-bottom:6px}
 .artist-info .ai-bio{margin:0;font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-line;
@@ -9314,10 +9313,12 @@ function openArtistPick(names, title, anchor){
   artistPickMenu = m;
 }
 document.addEventListener('click', (e) => { if (artistPickMenu && !artistPickMenu.contains(e.target)) closeArtistPick(); });
+let lastArtistClickAt = 0;
 trackArtist.addEventListener('click', (e) => {
   const t = currentTrack();
   if (!t || !t.artist) return;
   e.stopPropagation();
+  lastArtistClickAt = Date.now();
   const names = splitArtistNames(t.artist);
   if (names.length > 1) openArtistPick(names, t.title, trackArtist);
   else openArtistPage(t.artist, t.title);
@@ -23610,6 +23611,9 @@ function closeLyricsFs(){
 lyricsFsExitBtn.addEventListener('click', closeLyricsFs);
 function handleLikeBtnClick(e){
   e.stopPropagation();
+  // a click right after tapping the artist name is a follow-up on the name (the
+  // artist window can shift the layout under the cursor), never a like (#460)
+  if (Date.now() - lastArtistClickAt < 700) return;
   const t = currentTrack();
   if (!t || !t.videoId) return;
   toggleLikeTrack(t);
