@@ -2,6 +2,8 @@
    the app's own player code (pasted below, verbatim) can run on its own.
    Nothing here touches localStorage; the driver plays the songs. */
 const $ = (id) => document.getElementById(id);
+// the page's own storage is the app's storage (same site): keep the demo's writes (the record game's best score) in memory
+const localStorage = (() => { const m = {}; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; } }; })();
 const _mem = {};
 const lsGet = (k, d) => (k in _mem ? _mem[k] : d);
 const lsSet = (k, v) => { _mem[k] = v; };
@@ -20,10 +22,6 @@ const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const ambientEl = $('ambient'), ambientA = $('ambient-a'), ambientB = $('ambient-b');
 
 // things the full app has that the demo does not
-const recGame = { on: false };
-let recGameMul = 1;
-const REC_GAME_HIT_DEG = 0;
-const recordGameInFlow = () => false, recordGameCancel = () => {}, recordGameEnd = () => {}, recordGameTap = () => {};
 const csStackSetPlaying = () => {}, csStackSync = () => {}, syncFlowArtStyle = () => {};
 const capSyncWakeLock = () => {}, flowRemountVisual = () => {};
 const isPodcastTrack = () => false;

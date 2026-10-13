@@ -2870,7 +2870,6 @@ html,body{height:100%;overflow:hidden;background:#121212}
 #topbar{padding:0 10px;padding-top:0}
 #topbar .tester-banner,#topbar #helpBtn,#topbar #topnav,#topbar .install-banner,#installBanner,.paste-guide,#pasteGuide{display:none!important}
 #fsBtn,#desktopFsExitBtn,#castBtn,#chapBtn,#chapPanel,#reportMatchBtn,#playerDeclineBtn,#emptyFindBtn,#castBar,#npLivePill,#adsReportBtn,#skipBackBtn,#skipFwdBtn{display:none!important}
-.track-meta .title-row::before{display:none}
 .title-row{gap:10px}
 .lyrics-scroller{scrollbar-width:none;-ms-overflow-style:none}
 .lyrics-scroller::-webkit-scrollbar{display:none}
@@ -2901,6 +2900,18 @@ html,body{height:100%;overflow:hidden;background:#121212}
   .art-side{display:flex;flex-direction:column;gap:8px;width:56px;flex:none}
   #artRow .artwork-wrap{flex:1 1 auto;min-width:0;width:auto!important;max-width:calc(100vh - 230px)}
 }
+/* the library and queue panes: the app's own desktop layout, only on frames wide enough for it */
+body:not(.split-desktop) #view-library,body:not(.split-desktop) #queue-panel{display:none!important}
+body.split-desktop .art-side{display:none}
+body.split-desktop #bottom-nav{display:none}
+body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 690px),max(72px,calc(100dvh - var(--topbar-h) - 262px)))}
+.lib-bg-poster{background:url(brand/assets/library-bg-poster.jpg) center/cover no-repeat}
+#queue-panel .queue-head .discover-toggle,#queue-panel .queue-head .qh-icon{pointer-events:none}
+.bio-photo{display:block;width:100%;max-height:230px;object-fit:cover;object-position:center 20%;border-radius:12px;margin-bottom:14px}
+/* phone dock: the search bar shows while the page is teaching search */
+.compact.show-search #topbar{display:flex!important}
+.compact.show-search #topbar .wordmark{display:none}
+.compact.show-search .view{top:var(--topbar-h)}
 /* a phone frame has a notch: give the top bar room beneath it */
 @media (max-width:430px){body:not(.compact){--topbar-h:100px}body:not(.compact) #topbar{padding-top:40px}}
 /* compact: the stage only, for the phone dock */
@@ -2980,6 +2991,112 @@ html,body{height:100%;overflow:hidden;background:#121212}
       <button type="button" class="ib-close" id="installBannerClose" aria-label="Hide for now"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>
     </div>
   </header>
+<main class="view" id="view-library">
+    <div class="lib-bg">
+      <div class="lib-bg-video lib-bg-poster"></div>
+      
+      <div class="lib-bg-tint"></div>
+    </div>
+    <div class="view-scroll">
+      <div class="queue-head">
+        <h2>Library</h2>
+      </div>
+
+      <div id="libraryEmpty" class="empty-lib hidden">
+        Paste a playlist, album, song, or podcast link to begin.
+        <div><button class="btn-ghost" id="newPlaylistBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">+ New playlist</button></div>
+      </div>
+
+      <div id="libraryListWrap">
+        <div class="section-label-row">
+          <div class="lib-head-actions">
+            <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+            </button>
+            <!-- one "View" menu holds sort order and layout (was a sort icon
+                 plus three tiny layout icons) -->
+            <div class="lib-sort">
+              <button type="button" class="btn-ghost lib-tb-btn lib-view-btn" id="libSortBtn" aria-label="View: sort and layout" aria-haspopup="true" aria-expanded="false" style="padding:5px 12px;font-size:12.5px">View<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
+              <div class="art-style-menu lib-sort-menu" id="libSortMenu">
+                <div class="lib-menu-head">Sort by</div>
+                <button class="art-style-opt" data-sort="custom">
+                  <span class="art-style-label">Manual order</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <button class="art-style-opt" data-sort="alpha">
+                  <span class="art-style-label">Alphabetical</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <button class="art-style-opt" data-sort="plays_desc">
+                  <span class="art-style-label">Most listened to</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <button class="art-style-opt" data-sort="tracks_desc">
+                  <span class="art-style-label">Most songs</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
+                <div class="lib-menu-head">Layout</div>
+                <div id="libViewToggle" role="group" aria-label="Library layout">
+                  <button type="button" class="art-style-opt" data-mode="grid">
+                    <svg class="lib-view-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                    <span class="art-style-label">Grid</span>
+                    <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                  </button>
+                  <button type="button" class="art-style-opt" data-mode="compact">
+                    <svg class="lib-view-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="2.5" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="16" y="2.5" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="16" y="9.25" width="5.5" height="5.5" rx="1"/><rect x="2.5" y="16" width="5.5" height="5.5" rx="1"/><rect x="9.25" y="16" width="5.5" height="5.5" rx="1"/><rect x="16" y="16" width="5.5" height="5.5" rx="1"/></svg>
+                    <span class="art-style-label">Small grid</span>
+                    <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                  </button>
+                  <button type="button" class="art-style-opt" data-mode="list">
+                    <svg class="lib-view-ico" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="4.5" width="5" height="5" rx="1"/><rect x="3" y="14.5" width="5" height="5" rx="1"/><rect x="10.5" y="6" width="10.5" height="2" rx="1"/><rect x="10.5" y="16" width="10.5" height="2" rx="1"/></svg>
+                    <span class="art-style-label">List</span>
+                    <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lib-search hidden" id="libSearchBox" role="search">
+          <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+          <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
+          <button type="button" class="lib-filter-btn" data-filter="all">All</button>
+          <button type="button" class="lib-filter-btn" data-filter="playlists" id="libFilterPlaylists">Playlists</button>
+          <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
+          <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
+        </div>
+        <div class="section-label-row hidden" id="libraryPlaylistsHead">
+          <div class="section-label">Playlists</div>
+        </div>
+        <div class="lib-grid" id="libraryGrid"></div>
+        <div class="section-label-row hidden" id="libraryArtistsHead">
+          <div class="section-label">Artists</div>
+        </div>
+        <div class="lib-grid" id="libraryArtistsGrid"></div>
+        <div class="section-label-row hidden" id="libraryAlbumsHead">
+          <div class="section-label">Albums</div>
+        </div>
+        <div class="lib-grid" id="libraryAlbumsGrid"></div>
+        <div class="section-label-row hidden" id="libraryPodcastsHead">
+          <div class="section-label">Podcasts</div>
+        </div>
+        <div class="lib-grid" id="libraryPodcastsGrid"></div>
+        <div class="hidden" id="libSearchTracks">
+          <div class="section-label">Songs</div>
+          <div id="libSearchTracksList"></div>
+        </div>
+        <div class="empty-lib hidden" id="libraryFilterEmpty"></div>
+      </div>
+    </div>
+  </main>
 <main class="view" id="view-player">
     <div class="view-scroll">
       <div class="player-stage">
@@ -3375,6 +3492,31 @@ html,body{height:100%;overflow:hidden;background:#121212}
       </div>
     </div>
   </main>
+<div id="queue-panel">
+    <div class="queue-drag-handle"></div>
+    <div class="queue-head">
+      <h2>Queue</h2>
+      <button class="discover-toggle" id="discoverToggleBtn" title="Keep playing similar songs when this queue ends" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-4 12.74V17a1 1 0 001 1h6a1 1 0 001-1v-2.26A7 7 0 0012 2zm-2 18h4v1a1 1 0 01-1 1h-2a1 1 0 01-1-1v-1z"/></svg>
+        Discover
+      </button>
+      <button class="re qh-icon" id="queueSaveBtn" title="Save this queue as a new playlist in your library" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg></button>
+      <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
+    </div>
+    <div class="queue-scroll">
+      <div class="queue-body" id="queueBody">
+      <div class="q-arrows" id="queueArrowsRow">
+        <button class="qh-arrow" id="queueHistFirst" title="Earliest queue" aria-label="Earliest queue" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+        <button class="qh-arrow" id="queueHistBack" title="Previous queue" aria-label="Previous queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg></button>
+        <button class="qh-arrow" id="queueHistBtn" title="History" aria-label="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></button>
+        <button class="qh-arrow" id="queueHistFwd" title="Next queue" aria-label="Next queue" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg></button>
+        <button class="qh-arrow" id="queueHistLast" title="Latest queue" aria-label="Latest queue" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  
 <nav id="bottom-nav">
     <button data-view="library">
       <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.5 2h11A1.5 1.5 0 0 1 22 3.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 8 14.5v-11A1.5 1.5 0 0 1 9.5 2zM15 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M5 5h1.5v11.5A1.5 1.5 0 0 0 8 18h11.5v1.5H7.5A2.5 2.5 0 0 1 5 17V5zM2 8h1.5v11a1.5 1.5 0 0 0 1.5 1.5h11.5V22H4.5A2.5 2.5 0 0 1 2 19.5V8z"/></svg>
@@ -3399,6 +3541,8 @@ html,body{height:100%;overflow:hidden;background:#121212}
    the app's own player code (pasted below, verbatim) can run on its own.
    Nothing here touches localStorage; the driver plays the songs. */
 const $ = (id) => document.getElementById(id);
+// the page's own storage is the app's storage (same site): keep the demo's writes (the record game's best score) in memory
+const localStorage = (() => { const m = {}; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; } }; })();
 const _mem = {};
 const lsGet = (k, d) => (k in _mem ? _mem[k] : d);
 const lsSet = (k, v) => { _mem[k] = v; };
@@ -3417,10 +3561,6 @@ const lyricsWrap = $('lyricsWrap'), lyricsScroller = $('lyricsScroller');
 const ambientEl = $('ambient'), ambientA = $('ambient-a'), ambientB = $('ambient-b');
 
 // things the full app has that the demo does not
-const recGame = { on: false };
-let recGameMul = 1;
-const REC_GAME_HIT_DEG = 0;
-const recordGameInFlow = () => false, recordGameCancel = () => {}, recordGameEnd = () => {}, recordGameTap = () => {};
 const csStackSetPlaying = () => {}, csStackSync = () => {}, syncFlowArtStyle = () => {};
 const capSyncWakeLock = () => {}, flowRemountVisual = () => {};
 const isPodcastTrack = () => false;
@@ -4131,6 +4271,226 @@ recordApplyRotation();
 
 
 
+/* ---- from index.html: record tap game ---- */
+/* RECORD TAP GAME (issue #116): lives only in the fullscreen flow view
+   with the record showing. A double-tap on the spinning record arms a run
+   at 0 (base speed, dot at the rim); a double-tap during a run restarts it
+   fresh. Single taps never start anything; during a run, a single tap
+   within REC_GAME_HIT_DEG of 0deg (album art upright) scores and speeds the
+   platter up a little (recGameMul). Any other tap, or letting a required
+   0deg pass go by untapped, ends it: score blinks 3x and goes, best blinks
+   3x more and goes, platter eases back to normal pace. The first 0deg pass
+   after arming is a free one (recGame.grace). Each point walks the 0deg
+   dot one REC_GAME_DOT_STEP toward the label (clamped at REC_GAME_DOT_MAX).
+   Leaving fullscreen ends a run silently, best kept. Tapping the art never
+   plays/pauses; in fullscreen double-tap no longer exits either.
+   The angle is read at pointerdown (and extrapolated past the last frame),
+   not at click, so touch click latency doesn't eat the window. */
+const REC_GAME_HIT_DEG = 16;        /* +/- around 0deg; ~133ms each side at the base 120deg/s */
+const REC_GAME_SPEEDUP = 1.04, REC_GAME_MAX_MUL = 2.2;
+const REC_GAME_DOT_TOP = 3.5, REC_GAME_DOT_STEP = 1, REC_GAME_DOT_MAX = 25; /* % of the disc from its top edge; label edge is at 31% */
+const LS_REC_GAME_BEST = 'ebbless:recordTapBest';
+const recGameEl = recordDisc.parentElement;
+const recGameHud = recGameEl.querySelector('.rec-game-hud');
+const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestEl = recGameHud.querySelector('.rec-game-best');
+const recGameDot = recGameEl.querySelector('.rec-game-dot');
+const recGameMark = recGameEl.querySelector('.rec-game-mark'), recGameRing = recGameEl.querySelector('.rec-game-ring');
+const recGameFlare = recGameEl.querySelector('.rec-game-flare');
+const recGame = { on: false, score: 0, best: 0, startBest: 0, newBest: false, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
+/* same window as DOUBLE_TAP_MS in the art double-tap handler */
+const REC_GAME_DBL_MS = 300;
+function recordGameReadBest(){ try { return parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){ return 0; } }
+function recordGameInFlow(){ return true; }
+// end a run with no blink (left fullscreen); best already saved as it grew
+function recordGameCancel(){
+  recGame.on = false;
+  clearTimeout(recGame.overT);
+  recGameEl.classList.remove('is-game');
+  recGameDot.style.top = '';
+  // fade back in the visual tabs (issue #296)
+  document.getElementById('visualTabs')?.classList.remove('rec-game-active');
+  recGameHud.dataset.phase = '';
+  recGameHud.classList.remove('is-new');
+}
+let recGameMul = 1;
+function recordGameAngleNow(){
+  const rate = REC_DEG_PER_S * recSpeedMul * recGameMul / 1000;
+  return recAngle + (recLastTs ? Math.max(0, Math.min(64, performance.now() - recLastTs)) * rate : 0);
+}
+function recordGameRender(){
+  recGameScoreEl.textContent = recGame.score;
+  recGameBestEl.textContent = 'Best ' + recGame.best;
+  recGameDot.style.top = Math.min(REC_GAME_DOT_MAX, REC_GAME_DOT_TOP + Math.max(0, recGame.score - 1) * REC_GAME_DOT_STEP) + '%';
+}
+function recordGameStart(){
+  clearTimeout(recGame.overT);
+  // grace: the next 0deg pass may be tapped but needn't be, so a run armed
+  // just before 0deg isn't lost on a pass the player had no time for
+  const best = recordGameReadBest();
+  Object.assign(recGame, { on: true, score: 0, best, startBest: best, newBest: false, rev: Math.floor(recordGameAngleNow() / 360), grace: true });
+  recGameMul = 1;
+  recGameHud.classList.remove('is-new');
+  recGameEl.classList.add('is-game');
+  closeArtStyleMenu(); // issue #235: no art-style menu over a run
+  // fade out the visual tabs (art style selector) while game is playing (issue #296)
+  document.getElementById('visualTabs')?.classList.add('rec-game-active');
+  recGameHud.dataset.phase = 'run';
+  recordGameRender();
+}
+function recordGameEnd(){
+  recGame.on = false;
+  recGameEl.classList.remove('is-game');
+  recGameDot.style.top = '';
+  // fade back in the visual tabs (issue #296)
+  document.getElementById('visualTabs')?.classList.remove('rec-game-active');
+  recGameHud.dataset.phase = 'over';
+  clearTimeout(recGame.overT);
+  recGame.overT = setTimeout(() => { recGameHud.dataset.phase = ''; }, 2200);
+}
+/* scoring feedback. Every hit: the score pops, the target tick flashes and
+   a thin accent ring bursts from where the dot was hit (bigger and
+   brighter every 5 points, so a streak builds). Each hit cancels the last
+   hit's animations so rapid hits never stack. Passing the run's starting
+   best (once per run, only if there was a best to beat): a "New best"
+   flare, the Best number pulsing, and a ring of small accent sparks off
+   the record edge, plus the splash's entry sound (recordGameBestSound);
+   Best stays accent through the end blink. No per-hit tick: the app's
+   only UI sounds (LP needle sfx) have no setting to turn them off. Web
+   Animations on transform/opacity only, all pointer-events:none, nothing
+   awaited, so taps and timing are untouched. Reduced motion (the game is
+   off there anyway) would get opacity-only versions. */
+let recHitAnims = [], recSparks = null, recBestAnims = [];
+function recAnimate(el, frames, opts, bag){ const a = el.animate(frames, opts); bag.push(a); return a; }
+function recordGameHitFx(dotTop){
+  recHitAnims.forEach(a => a.cancel()); recHitAnims = [];
+  if (!recGameEl.animate) return;
+  if (recReducedMotion){ recAnimate(recGameScoreEl, [{ opacity: .4 }, { opacity: 1 }], 220, recHitAnims); return; }
+  const tier = Math.min(4, Math.floor(recGame.score / 5));
+  recAnimate(recGameScoreEl, [
+    { transform: 'scale(1)', easing: 'cubic-bezier(.2,1.8,.4,1)' },
+    { transform: 'scale(1.3)', offset: .35, easing: 'cubic-bezier(.65,0,.35,1)' },
+    { transform: 'scale(1)' }], 300, recHitAnims);
+  recAnimate(recGameMark, [{ transform: 'scaleY(1)', opacity: .9 }, { transform: 'scaleY(1.9)', opacity: 1, offset: .3 }, { transform: 'scaleY(1)', opacity: .9 }], 280, recHitAnims);
+  recGameRing.style.top = 'calc(' + (2 + dotTop * .96).toFixed(2) + '% + 3px)';
+  recAnimate(recGameRing, [
+    { transform: 'scale(.35)', opacity: Math.min(1, .55 + tier * .11) },
+    { transform: 'scale(' + (2.4 + tier * .55).toFixed(2) + ')', opacity: 0 }],
+    { duration: 380, easing: 'cubic-bezier(.16,1,.3,1)' }, recHitAnims);
+}
+/* new-best sound: the same intro-theme snippet the splash plays on entry
+   (#onbMusic, brand/assets/intro-theme.mp3) through the same plain <audio>
+   path, on a clone so the original's state is never touched (as the
+   tutorial's echo taps do). Same 0.5s trim as the splash, held briefly then
+   faded. An <audio> element mixes over the YouTube player without pausing
+   or ducking it; there's no app sound setting governing the splash sound,
+   so none here either. Blocked or failed playback is swallowed. Fired from
+   inside the scoring click, so it counts as a user gesture. Plays again on
+   every further point of a new-best run; each play cuts the previous one. */
+let recBestAudio = null;
+function recordGameBestSound(){
+  try {
+    const src = document.getElementById('onbMusic');
+    if (!src) return;
+    if (recBestAudio){ try { recBestAudio.pause(); } catch(e){} }
+    const a = recBestAudio = src.cloneNode(true), VOL = 0.6;
+    a.removeAttribute('id');
+    a.volume = VOL;
+    const trim = () => { try { a.currentTime = 0.5; } catch(e){} };
+    if (a.readyState >= 1) trim(); else a.addEventListener('loadedmetadata', trim, { once: true });
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {});
+    setTimeout(() => {
+      const t0 = Date.now();
+      const step = () => {
+        try {
+          const k = Math.min(1, (Date.now() - t0) / 1400);
+          a.volume = VOL * (1 - k);
+          if (recBestAudio !== a) return;
+          if (k < 1) setTimeout(step, 40); else a.pause();
+        } catch(e){}
+      };
+      step();
+    }, 900);
+  } catch(e){}
+}
+function recordGameBestFx(){
+  recGameHud.classList.add('is-new');
+  recordGameBestSound();
+  recBestAnims.forEach(a => a.cancel()); recBestAnims = [];
+  if (!recGameEl.animate) return;
+  recAnimate(recGameFlare, recReducedMotion
+    ? [{ opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 1, offset: .75 }, { opacity: 0 }]
+    : [{ opacity: 0, transform: 'translate(-50%,6px) scale(.9)', easing: 'cubic-bezier(.16,1,.3,1)' },
+       { opacity: 1, transform: 'translate(-50%,0) scale(1)', offset: .15 },
+       { opacity: 1, transform: 'translate(-50%,0) scale(1)', offset: .75, easing: 'ease-in' },
+       { opacity: 0, transform: 'translate(-50%,-4px) scale(1)' }], 1300, recBestAnims);
+  if (recReducedMotion) return;
+  recAnimate(recGameBestEl, [{ transform: 'scale(1)' }, { transform: 'scale(1.25)', offset: .4 }, { transform: 'scale(1)' }],
+    { duration: 400, iterations: 3, easing: 'ease-in-out' }, recBestAnims);
+  if (!recSparks){
+    recSparks = [];
+    for (let i = 0; i < 14; i++){ const el = document.createElement('div'); el.className = 'rec-game-spark'; recGameEl.appendChild(el); recSparks.push(el); }
+  }
+  const R = recordDisc.offsetWidth / 2;
+  recSparks.forEach((el, i) => {
+    const th = i * (360 / recSparks.length) + (Math.random() * 14 - 7), out = R + 16 + Math.random() * 18;
+    recAnimate(el, [
+      { transform: 'rotate(' + th + 'deg) translateY(' + (-R * .94).toFixed(1) + 'px) scale(.4)', opacity: 0 },
+      { transform: 'rotate(' + th + 'deg) translateY(' + (-R).toFixed(1) + 'px) scale(1)', opacity: 1, offset: .18 },
+      { transform: 'rotate(' + (th + 5) + 'deg) translateY(' + (-out).toFixed(1) + 'px) scale(.3)', opacity: 0 }],
+      { duration: 900 + Math.random() * 400, delay: i * 18, easing: 'cubic-bezier(.16,1,.3,1)' }, recBestAnims);
+  });
+}
+// every press on the record gets a quick grow-and-settle pulse (hit or
+// miss, game or not). Scales the .art-record wrapper, never the rotating
+// .record-disc, so the spin angle is untouched; transform-only, no layout.
+let recPressAnim = null;
+recGameEl.addEventListener('pointerdown', () => {
+  recGame.downAt = performance.now(); recGame.downAngle = recordGameAngleNow();
+  if (recReducedMotion || !recGameEl.animate) return;
+  if (recPressAnim) recPressAnim.cancel();
+  recPressAnim = recGameEl.animate([
+    { transform: 'scale(1)', easing: 'cubic-bezier(.16,1,.3,1)' },
+    { transform: 'scale(1.05)', offset: .4, easing: 'cubic-bezier(.65,0,.35,1)' },
+    { transform: 'scale(1)' }], 180);
+});
+function recordGameTap(){
+  if (!recordGameInFlow()) return;
+  const now = Date.now();
+  const a = performance.now() - recGame.downAt < 1000 ? recGame.downAngle : recordGameAngleNow();
+  recGame.downAt = 0;
+  if (now - recGame.lastTap < REC_GAME_DBL_MS){
+    // double-tap: (re)start a fresh run. The pair's first tap may already
+    // have scored into a new best during a run - that write is dropped.
+    recGame.lastTap = 0;
+    if (recGame.stored !== null){
+      try { if (recGame.stored) localStorage.setItem(LS_REC_GAME_BEST, String(recGame.stored)); else localStorage.removeItem(LS_REC_GAME_BEST); } catch(err){}
+    }
+    recGame.stored = null;
+    if (!recReducedMotion && recTargetMul === 1) recordGameStart();
+    return;
+  }
+  recGame.lastTap = now;
+  recGame.stored = recGame.on ? recordGameReadBest() : null;
+  if (!recGame.on) return;
+  const rev = Math.round(a / 360), hit = Math.abs(a - rev * 360) <= REC_GAME_HIT_DEG;
+  if (!hit || rev <= recGame.rev){ recordGameEnd(); return; }
+  const hitDotTop = parseFloat(recGameDot.style.top) || REC_GAME_DOT_TOP;
+  recGame.score++; recGame.rev = rev; recGame.grace = false;
+  recGameMul = Math.min(REC_GAME_MAX_MUL, recGameMul * REC_GAME_SPEEDUP);
+  if (recGame.score > recGame.best){
+    recGame.best = recGame.score;
+    try { localStorage.setItem(LS_REC_GAME_BEST, String(recGame.best)); } catch(err){}
+  }
+  recordGameRender();
+  recordGameHitFx(hitDotTop);
+  if (recGame.startBest > 0 && recGame.score > recGame.startBest){
+    if (!recGame.newBest){ recGame.newBest = true; recordGameBestFx(); }
+    else recordGameBestSound(); // every further point of a new-best run raises the best again
+  }
+}
+recGameEl.addEventListener('click', recordGameTap);
+
 /* ---- from index.html: cassette ---- */
 /* =========================================================================
    CASSETTE — physical object driven by real playback state.
@@ -4400,7 +4760,7 @@ const DEMO_LYRICS = ['Music deserves your attention.', 'Not your attention span.
   .map((text, i) => ({ t: i * 6, text }));
 const IDLE_MS = 30000;   // quiet this long and the art moves to the next mode
 const MODE_ORDER = ['default', 'record', 'cassette', 'viz', 'lyrics', 'video'];   // cover, LP, cassette, cymatics, lyrics, video (only a song that has one)
-const demo = { i: -1, track: null, playing: false, accent: [224, 178, 106], slot: 0, videoOn: false };
+const demo = { i: -1, track: null, playing: false, accent: [224, 178, 106], slot: 0, videoOn: false, accentOverride: false, forceSpin: false };
 const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const fmt = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -4425,6 +4785,7 @@ function demoAccent(img){
     return c3.map(Math.round);
   } catch(e){ return null; }
 }
+let songColor = null;   // the current song's own color, kept while the page is showing other colors
 function setAccent(c){
   demo.accent = c;
   const rgb = 'rgb(' + c.join(',') + ')';
@@ -4436,7 +4797,7 @@ function setPlayingUI(on){
   demo.playing = on;
   artworkWrap.classList.toggle('is-playing', on);
   $('playIco').innerHTML = on ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
-  vizSetPlaying(on); recordSetPlaying(on); cassetteSetPlaying(on); lyricsSetPlaying(on);
+  vizSetPlaying(on); recordSetPlaying(on || demo.forceSpin); cassetteSetPlaying(on); lyricsSetPlaying(on);
 }
 
 // one place that puts a song on the real player's art, ambient, record and cassette
@@ -4449,7 +4810,7 @@ function showSong(t){
     lon.style.backgroundImage = 'url(' + t.art + ')'; lon.classList.add('is-active'); loff.classList.remove('is-active');
     recordLabelImg.src = t.art;
     const probe = new Image(); probe.crossOrigin = 'anonymous';
-    probe.onload = () => { const c = demoAccent(probe); if (c && demo.track === t){ setAccent(c); demoPost(); } };
+    probe.onload = () => { const c = demoAccent(probe); if (c && demo.track === t){ songColor = c; if (!demo.accentOverride) setAccent(c); demoPost(); } };
     probe.src = t.art;
   }
   demo.slot ^= 1;
@@ -4457,6 +4818,7 @@ function showSong(t){
   $('trackTitle').firstElementChild.textContent = t.title;
   $('trackArtist').firstElementChild.textContent = t.artist;
   $('trackMeta').classList.remove('is-empty');
+  try { buildQueue(); } catch(e){}
   const vb = $('ytPanelBtn'); vb.disabled = !t.hasVideo; vb.setAttribute('aria-disabled', t.hasVideo ? 'false' : 'true');
   if (!t.hasVideo && demo.videoOn) setDemoMode('default');
   demoPost();
@@ -4467,6 +4829,76 @@ function demoPost(){
   try { syncSideBtns(); } catch(e){}
   try { parent.postMessage({ type: 'ebb-demo', song: demo.i, mode: demoKey(), title: demo.track && demo.track.title, artist: demo.track && demo.track.artist, art: demo.track && demo.track.art, playing: demo.playing }, '*'); } catch(e){}
 }
+
+// ---- library and queue: the app's own panes, filled with the sample music. Shown when the frame is wide
+// enough for the app's desktop layout (body.split-desktop), like the real thing.
+const LIB = {
+  playlists: [{ name: 'EBBLESS sample', sub: '3 songs \u00b7 15 min', arts: DEMO_TRACKS.map(t => t.art).concat(['brand/assets/swirl-art-poster.jpg']), pinned: true },
+              { name: 'Liked Songs', sub: '1 song', heart: true }],
+  artists: [{ name: 'MAL GRIOT', sub: '12 songs', art: 'beta/media/art/breathlovedeep.jpg' }],
+  albums: [{ name: 'Breathelovedeep', by: 'MAL GRIOT', sub: '10 songs \u00b7 33 min', art: 'beta/media/art/breathlovedeep.jpg' },
+           { name: 'Free Fall', by: 'Stalvart John, MAL GRIOT', sub: '1 song \u00b7 6 min', art: 'beta/media/art/freefall.jpg' },
+           { name: 'I Tried It', by: 'Unnayanaa, MAL GRIOT', sub: '1 song \u00b7 6 min', art: 'beta/media/art/itriedit.jpg' }],
+};
+const DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+function libCard(c, kind){
+  const el = document.createElement('div');
+  el.className = 'lib-card' + (c.pinned ? ' is-pinned' : '') + (kind === 'artist' ? ' is-artist-card' : '') + (kind === 'album' ? ' is-album-card' : '');
+  const art = document.createElement('div'); art.className = 'art';
+  if (c.heart){ art.classList.add('single'); art.innerHTML = '<div class="face heart-face"><div class="heart-glyph"></div></div>'; }
+  else if (c.arts){ c.arts.forEach(a => { const i = document.createElement('img'); i.src = a; i.alt = ''; art.append(i); }); }
+  else { art.classList.add('single'); const i = document.createElement('img'); i.src = c.art; i.alt = ''; art.append(i); }
+  const mb = document.createElement('button'); mb.className = 'menu-btn'; mb.setAttribute('aria-label', 'Playlist options'); mb.innerHTML = DOTS; art.append(mb);
+  const ov = document.createElement('div'); ov.className = 'title-overlay'; const mq = document.createElement('div'); mq.className = 'marquee'; mq.dataset.text = c.name; ov.append(mq); art.append(ov);
+  const info = document.createElement('div'); info.className = 'info';
+  const name = document.createElement('div'); name.className = 'name'; name.textContent = c.name; info.append(name);
+  if (c.by){ const by = document.createElement('div'); by.className = 'count lib-album-artist'; by.textContent = c.by; info.append(by); }
+  const ct = document.createElement('div'); ct.className = 'count'; ct.textContent = c.sub; info.append(ct);
+  el.append(art, info);
+  return el;
+}
+function buildLibrary(){
+  [['libraryPlaylistsHead', 'libraryGrid', LIB.playlists, 'playlist'], ['libraryArtistsHead', 'libraryArtistsGrid', LIB.artists, 'artist'], ['libraryAlbumsHead', 'libraryAlbumsGrid', LIB.albums, 'album']].forEach(([head, grid, items, kind]) => {
+    $(head).classList.remove('hidden');
+    const g = $(grid); g.textContent = '';
+    items.forEach(c => g.append(libCard(c, kind)));
+  });
+  ['libFilterArtists'].forEach(id => $(id).classList.remove('hidden'));
+  document.querySelector('#libFilter [data-filter="all"]').classList.add('is-active');
+}
+function buildQueue(){
+  const body = $('queueBody'); if (!body || !demo.track) return;
+  const arrows = $('queueArrowsRow'); body.textContent = '';
+  const lbl = (t) => { const d = document.createElement('div'); d.className = 'q-section-label'; d.textContent = t; return d; };
+  const meta = (t, extra) => { const m = document.createElement('div'); m.className = 'meta'; m.innerHTML = '<div class="title"></div><div class="artist"></div>'; m.querySelector('.title').textContent = t.title; m.querySelector('.artist').textContent = t.artist + (extra || ''); return m; };
+  const img = (t) => { const i = document.createElement('img'); i.src = t.art; i.alt = ''; return i; };
+  body.append(lbl('Now playing from EBBLESS sample'));
+  const now = document.createElement('div'); now.className = 'q-now';
+  const pb = document.createElement('button'); pb.className = 'play-btn'; pb.setAttribute('aria-label', 'Play or pause');
+  pb.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor">' + (demo.playing ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>') + '</svg>';
+  pb.addEventListener('click', () => $('playBtn').click());
+  const nb = document.createElement('button'); nb.className = 'q-menu'; nb.setAttribute('aria-label', 'Song options'); nb.innerHTML = DOTS;
+  now.append(img(demo.track), meta(demo.track), nb, pb);
+  body.append(now, arrows);
+  const rest = [];
+  for (let k = 1; k < DEMO_TRACKS.length; k++) rest.push(DEMO_TRACKS[(demo.i + k) % DEMO_TRACKS.length]);
+  rest.forEach((t, k) => {
+    body.append(lbl(k === 0 ? 'Next' : 'Later'));
+    const row = document.createElement('div'); row.className = 'q-row';
+    const h = document.createElement('div'); h.className = 'handle'; h.innerHTML = '<svg viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.4"/><circle cx="9" cy="2" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/></svg>';
+    const m = document.createElement('button'); m.className = 'q-menu'; m.setAttribute('aria-label', 'Song options'); m.innerHTML = DOTS;
+    const rm = document.createElement('button'); rm.className = 'remove'; rm.setAttribute('aria-label', 'Remove from queue'); rm.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
+    const i = img(t), mt = meta(t);
+    const jump = () => demoLoad(DEMO_TRACKS.indexOf(t), true);
+    i.addEventListener('click', jump); mt.addEventListener('click', jump);
+    row.append(h, i, mt, m, rm); body.append(row);
+  });
+}
+function syncWide(){
+  const wide = !document.body.classList.contains('compact') && innerWidth >= 1150;
+  document.body.classList.toggle('split-desktop', wide);
+}
+addEventListener('resize', syncWide);
 
 // ---- the real song: one YouTube player carries all three
 let yt = null, ytReady = false, wantPlay = false, unmuteAt = 0, demoDur = 0, stopAtEnd = false;
@@ -4576,11 +5008,40 @@ function tick(ts){
   if (k !== lastKey){ lastKey = k; demoPost(); }
 }
 
+// ---- the record game, shown in action: the platter spins (even with the music paused), the bot double-taps
+// to start a run, taps each time the art comes back upright, then lets one go by. The game itself is the app's own code.
+let botT = 0, botNext = 0, botStopAt = 0, botLastRev = -1;
+function botTick(){
+  const now = performance.now();
+  if (!recGame.on){
+    if (now < botNext || recTargetMul < 1) return;
+    recGameEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    setTimeout(() => recGameEl.dispatchEvent(new MouseEvent('click', { bubbles: true })), 110);
+    botStopAt = 4 + Math.floor(Math.random() * 5); botLastRev = -1;
+    botNext = now + 4200;
+    return;
+  }
+  const a = recordGameAngleNow(), target = (recGame.rev + 1) * 360;
+  if (recGame.score >= botStopAt) return;        // let it go by: the run ends
+  if (target - a < 5 && target - a > -5 && botLastRev !== target){ botLastRev = target; recGameEl.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+}
+function gameDemo(on){
+  if (on === !!botT) return;
+  if (on){
+    demo.forceSpin = true; if (!demo.playing) recordSetPlaying(true);
+    botNext = performance.now() + 900; botT = setInterval(botTick, 20);
+  } else {
+    clearInterval(botT); botT = 0;
+    try { recordGameCancel(); } catch(e){}
+    demo.forceSpin = false; recordSetPlaying(demo.playing);
+  }
+}
+
 // ---- the paste box: one typist at a time. A new run cancels the old one, so
 // ideas never play over each other.
 const input = $('urlInput');
 let typeRun = 0;
-const IDEAS = ['open.spotify.com/playlist/…', 'rainy Sunday, something warm and slow', 'music.apple.com/…/album/…', 'an artist you love', 'youtube.com/watch?v=…', 'soundcloud.com/artist/sets/…', 'afro-house', 'a podcast show or RSS feed'];
+const IDEAS = ['https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M', 'rainy Sunday, something warm and slow', 'https://soundcloud.com/mal-griot/sets/breathelovedeep', 'Unnayanaa', 'https://youtu.be/-p1xP7LNGuQ', 'afro-house', 'https://music.apple.com/us/album/blonde/1146195596'];
 async function typeText(text, run){
   for (let i = 1; i <= text.length; i++){ if (run !== typeRun) return false; input.value = text.slice(0, i); await wait(45); }
   return true;
@@ -4605,7 +5066,7 @@ async function typeExample(text){
   input.value = '';
   if (reducedMotion){ input.value = text; return; }
   if (!(await typeText(text, run))) return;
-  await wait(6000); if (run !== typeRun) return;
+  await wait(30000); if (run !== typeRun) return;
   typeIdeas();
 }
 
@@ -4615,6 +5076,7 @@ function openBio(){
   const el = document.createElement('div');
   el.id = 'bio'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bioName');
   el.innerHTML = '<div class="bio-card"><button type="button" class="bio-x" aria-label="Close">&times;</button>'
+    + '<img class="bio-photo" src="welcome/mal-griot.jpg" alt="MAL GRIOT" onerror="this.remove()">'
     + '<p class="bio-eyebrow">Artist</p><h2 id="bioName">MAL GRIOT</h2>'
     + '<p>Queens, New York-born vocalist, spoken-word artist, live host and MC, and voice actor, based in India.</p>'
     + '<p>His work moves across music, live performance, sound design, wellness, creative technology, web development and artist branding. His sound draws on Black American culture: soul, funk, hip-hop, R&amp;B and Afro-house.</p>'
@@ -4684,15 +5146,24 @@ addEventListener('message', (e) => {
   const m = e.data || {};
   if (m.type === 'ebb-set'){ activity(); if (m.mode) setDemoMode(m.mode); }
   if (m.type === 'ebb-activity') activity();
-  if (m.type === 'ebb-type' && m.text) typeExample(String(m.text));
+  if (m.type === 'ebb-type' && m.text){ document.body.classList.add('show-search'); typeExample(String(m.text)); }
+  if (m.type === 'ebb-ui'){ document.body.classList.toggle('show-search', !!m.search); }
+  if (m.type === 'ebb-game') gameDemo(!!m.on);
+  if (m.type === 'ebb-accent'){
+    if (m.rgb){ demo.accentOverride = true; setAccent(m.rgb); }
+    else { demo.accentOverride = false; if (songColor) setAccent(songColor); }
+  }
 });
 
 setVisualMode('art');
 vizSetSpeed(3);   // cymatics start at 3x
+vizSetRotate(true);   // and turn slowly
 input.readOnly = true; input.placeholder = 'Paste a link, search, or describe your vibe';
 { const b = document.querySelector('#bottom-nav [data-view="player"]'); if (b) b.classList.add('is-active'); }
+buildLibrary();
 initPlayer();
 demoLoad(0, false);
+syncWide();
 setPlayingUI(false);
 typeIdeas();
 requestAnimationFrame(tick);

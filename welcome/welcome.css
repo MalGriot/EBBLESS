@@ -55,8 +55,8 @@ main{display:block}
 .hud{position:fixed;top:0;left:0;right:0;z-index:40;height:var(--hud-h);display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:0 12px;padding-top:env(safe-area-inset-top,0px);
   background:#121212;border-bottom:1px solid var(--border)}
 .hud-mark img{height:24px;width:auto}
-.hud-mid{display:flex;align-items:center;justify-content:center;gap:2px;min-width:0}
-.hud-ch{min-width:0;max-width:100%;padding:6px 6px;font-size:13px;font-weight:600;letter-spacing:.2px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud-mid{display:flex;align-items:center;justify-content:flex-start;gap:2px;min-width:0}
+.hud-ch{min-width:0;max-width:100%;padding:6px 6px;font-size:13px;font-weight:600;letter-spacing:.2px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hud-ch span{display:block;overflow:hidden;text-overflow:ellipsis}
 .hud-ch[aria-expanded=true]{color:var(--accent)}
 .hud-next{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--accent);animation:nudge 2.4s ease-in-out infinite}
@@ -105,6 +105,44 @@ main{display:block}
 .steps b{font-size:15px;font-weight:600}
 .steps span{font-size:13.5px;color:var(--faint)}
 
+/* symbols and the new chapter parts */
+.ico{width:1.15em;height:1.15em;flex:none;fill:currentColor;stroke:none}
+svg.ico use{pointer-events:none}
+.eyebrow .ico{width:15px;height:15px;margin:-2px 8px -2px 0;vertical-align:middle}
+.sign{margin:14px 0 0;font-size:13px;font-weight:700;letter-spacing:2.4px;color:var(--text)}
+.gives{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px}
+.gives li{display:grid;grid-template-columns:30px 1fr;column-gap:12px;align-items:center;padding:11px 13px;border:1px solid var(--border);border-radius:var(--r-md);background:rgba(24,24,24,.72)}
+.gives .ico{grid-row:1/span 2;width:24px;height:24px;color:var(--accent)}
+.gives .was{font-size:11.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+.gives .now{font-size:14.5px;font-weight:600}
+.flows{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.flows li{display:flex;flex-direction:column;gap:3px;padding:13px 13px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:rgba(24,24,24,.72)}
+.flows i{display:flex;width:34px;height:34px;align-items:center;justify-content:center;border-radius:50%;background:var(--accent-dim);color:var(--accent);margin-bottom:5px;overflow:hidden}
+.flows svg{width:22px;height:22px}
+.flows b{font-size:14.5px}
+.flows span{font-size:12.5px;color:var(--faint);line-height:1.4}
+.f-flow svg{animation:flowx 2.4s linear infinite}
+.f-swell svg{animation:swellp 2.6s ease-in-out infinite}
+.f-swirl svg{animation:spin 5s linear infinite}
+.f-wander svg{animation:drift 3s ease-in-out infinite}
+@keyframes flowx{from{transform:translateX(-6px)}to{transform:translateX(6px)}}
+@keyframes swellp{0%,100%{transform:scale(.8)}50%{transform:scale(1.15)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes drift{0%,100%{transform:translate(-2px,2px)}50%{transform:translate(3px,-3px)}}
+.srcs{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:7px}
+.srcs li{padding:9px 15px;border-radius:999px;border:1px solid var(--border-2);background:rgba(24,24,24,.7);font-size:14px;font-weight:600}
+.tiles{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tiles li{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 8px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:rgba(24,24,24,.72);color:var(--accent)}
+.tiles .ico{width:30px;height:30px}
+.tiles span{font-size:11.5px;color:var(--faint)}
+.how{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:7px}
+.how li{display:grid;grid-template-columns:24px 1fr;column-gap:11px;align-items:start;font-size:13.5px;line-height:1.4}
+.how .ico{width:20px;height:20px;color:var(--accent);margin-top:1px}
+.dino-line{display:block}
+.dino{display:inline-block;width:42px;height:42px;vertical-align:-14px;margin-right:10px;color:var(--text);animation:trot .5s steps(2) infinite}
+.dino svg{width:100%;height:100%;display:block;shape-rendering:crispEdges}
+@keyframes trot{50%{transform:translateY(-2px)}}
+
 /* long copy, chips, color swatches */
 .copy{margin:0 0 12px;color:var(--faint);font-size:15px;line-height:1.55;max-width:50ch}
 .copy.strong{color:var(--text);font-weight:600;font-size:16px;margin-bottom:0}
@@ -112,11 +150,9 @@ main{display:block}
 .chips button{padding:8px 13px;border-radius:999px;border:1px solid var(--border-2);background:rgba(24,24,24,.7);font-size:13px;color:var(--text);
   transition:border-color var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
 .chips button:hover{border-color:var(--accent);background:var(--accent-dim)}
-.swatches{display:flex;gap:7px;margin-top:6px}
-.swatches i{width:34px;height:34px;border-radius:50%;background:var(--accent);animation:hues 9s linear infinite}
-.swatches i:nth-child(2){animation-delay:-1.3s}.swatches i:nth-child(3){animation-delay:-2.6s}.swatches i:nth-child(4){animation-delay:-3.9s}
-.swatches i:nth-child(5){animation-delay:-5.2s}.swatches i:nth-child(6){animation-delay:-6.5s}.swatches i:nth-child(7){animation-delay:-7.8s}
-@keyframes hues{to{filter:hue-rotate(360deg)}}
+.swatches{display:flex;gap:9px;margin-top:8px}
+.swatches i{width:36px;height:36px;border-radius:50%;background:var(--c);opacity:.5;transform:scale(.86);transition:opacity 500ms var(--ease-out),transform 500ms var(--ease-out),box-shadow 500ms var(--ease-out)}
+.swatches i.is-on{opacity:1;transform:scale(1.12);box-shadow:0 0 0 3px #121212,0 0 0 5px var(--c)}
 .pager{display:none}
 
 @media (max-width:1099px){
@@ -139,7 +175,7 @@ main{display:block}
   :root{--dock-h:100vh}
   html,body{height:100%;overflow:hidden;scroll-snap-type:none}
   .hud,.sheet{display:none!important}
-  .page{display:grid;grid-template-columns:260px minmax(0,1fr) minmax(400px,480px);height:100vh}
+  .page{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(380px,430px);height:100vh}
   .rail{display:flex;flex-direction:column;grid-column:1;position:relative;height:100vh;overflow:hidden;z-index:6;
     padding:clamp(14px,3vh,26px) 18px clamp(12px,2.4vh,20px) 22px;background:rgba(18,18,18,.62);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-right:1px solid var(--border)}
   .rail-logo img{height:22px;width:auto}
@@ -183,7 +219,7 @@ main{display:block}
   .step{position:absolute;inset:0;min-height:0;height:auto;scroll-margin-top:0;padding:0 44px 0 36px;background:none;justify-content:center;
     opacity:0;visibility:hidden;pointer-events:none;transition:opacity 380ms var(--ease-out),visibility 0s 380ms}
   .step.is-active{opacity:1;visibility:visible;pointer-events:auto;transition:opacity 420ms 140ms var(--ease-out),visibility 0s}
-  .step-in{margin:0;max-width:430px;opacity:1;transform:none}
+  .step-in{margin:0;max-width:410px;opacity:1;transform:none}
   .step.is-active .step-in{animation:rise 520ms 140ms var(--ease-out) both}
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
   .h1{font-size:clamp(32px,3.2vw,46px)}

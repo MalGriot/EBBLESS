@@ -26,7 +26,7 @@
     frameReady = false;
     frame.src = 'app-demo.html' + (wide.matches ? '' : '?compact');
   }
-  frame.addEventListener('load', () => { frameReady = true; applyDevice(); sendMode(true); });
+  frame.addEventListener('load', () => { frameReady = true; applyDevice(); sendMode(true); fx = { game: false, search: false, color: false }; applyFx(true); });
   const tell = (msg) => { try { frame.contentWindow.postMessage(msg, '*'); } catch(e){} };
 
   // ---------------------------------------------------------- the device (desktop)
@@ -35,7 +35,7 @@
   const DEVICES = {
     phone: { w: 390, h: 844, bezel: 13, base: 0 },
     tablet: { w: 768, h: 1024, bezel: 15, base: 0 },
-    laptop: { w: 860, h: 580, bezel: 12, base: 18 },
+    laptop: { w: 1200, h: 760, bezel: 12, base: 18 },
   };
   let device = 'laptop';
   { const q = new URLSearchParams(location.search).get('device'); if (DEVICES[q]) device = q; }   // ?device=phone|tablet|laptop
@@ -55,8 +55,66 @@
   addEventListener('resize', () => { applyDevice(); if (!wide.matches) onScroll(); });
   wide.addEventListener('change', () => { loadFrame(); setupMode(); });
 
-  // ---------------------------------------------------------- the search chips: type the example into the player's box
+  // ---------------------------------------------------------- the search chips: put the example in the player's search bar
   qa('#chips button').forEach(b => b.addEventListener('click', () => tell({ type: 'ebb-type', text: b.dataset.type })));
+
+  // ---------------------------------------------------------- the dinosaur (a hand-drawn pixel sprite)
+  (function(){
+    const rows = [
+      '.........#######..',
+      '........##########',
+      '........###.######',
+      '........##########',
+      '........##########',
+      '........####......',
+      '........#########.',
+      '#.......####......',
+      '#......#####......',
+      '##....#######..#..',
+      '###..###########..',
+      '####.###########..',
+      '.##############.#.',
+      '..#############...',
+      '...###########....',
+      '....#########.....',
+      '.....####.###.....',
+      '.....###..##......',
+      '.....#....#.......',
+      '.....##...##......'];
+    const el = $('dino'); if (!el) return;
+    let r = '';
+    rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] === '#') r += '<rect x="' + x + '" y="' + y + '" width="1" height="1"/>'; });
+    r += '<rect x="11" y="2" width="1" height="1" fill="#121212"/>';
+    el.innerHTML = '<svg viewBox="0 0 18 20" fill="currentColor" aria-hidden="true">' + r + '</svg>';
+  })();
+
+  // ---------------------------------------------------------- the color chapter: the swatches and the player change together
+  let colorT = 0, colorI = 0;
+  const swatches = qa('#swatches i');
+  function colorStep(){
+    swatches.forEach((el, n) => el.classList.toggle('is-on', n === colorI));
+    const hex = getComputedStyle(swatches[colorI]).getPropertyValue('--c').trim();
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if (m) tell({ type: 'ebb-accent', rgb: [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] });
+    colorI = (colorI + 1) % swatches.length;
+  }
+  function colorPlay(on){
+    clearInterval(colorT); colorT = 0;
+    if (on){ colorI = 0; colorStep(); colorT = setInterval(colorStep, 1600); }
+    else { swatches.forEach(el => el.classList.remove('is-on')); tell({ type: 'ebb-accent', rgb: null }); }
+  }
+
+  // ---------------------------------------------------------- chapter side effects on the player (never the song)
+  let fx = { game: false, search: false, color: false };
+  function applyFx(force){
+    if (!frameReady) return;
+    const id = steps[cur].id;
+    const want = { game: id === 'game', search: id === 'search', color: id === 'color' };
+    if (force || want.game !== fx.game) tell({ type: 'ebb-game', on: want.game });
+    if (force || want.search !== fx.search) tell({ type: 'ebb-ui', search: want.search });
+    if (want.color !== fx.color || force) colorPlay(want.color);
+    fx = want;
+  }
 
   // ---------------------------------------------------------- ambient: the app's own layers, following the art
   const ambA = $('ambient-a'), ambB = $('ambient-b');
@@ -117,7 +175,7 @@
     $('hudNext').disabled = i === steps.length - 1;
     const p = steps.length > 1 ? i / (steps.length - 1) : 0;
     $('hudProg').style.transform = 'scaleX(' + p + ')'; $('railProg').style.transform = 'scaleY(' + p + ')';
-    if (changed || (opts && opts.force)) sendMode(false);
+    if (changed || (opts && opts.force)){ sendMode(false); applyFx(false); }
     if (!(opts && opts.noHash)) { try { history.replaceState(null, '', '#' + el.id); } catch(e){} }
   }
   const stepIndex = (id) => steps.findIndex(s => s.id === id);
@@ -200,7 +258,8 @@
     $('meterLeft').textContent = left ? left + (left === 1 ? ' spot left' : ' spots left') : 'Full';
     $('meter').hidden = false;
     requestAnimationFrame(() => { $('meterFill').style.width = clamp(s.filled / s.cap * 100, 0, 100) + '%'; });
-    if (!s.open) qa('a[href$="beta/#join"]').forEach(a => { if (/Get beta access/.test(a.textContent)) a.textContent = 'Join the waitlist'; });
+    const hs = $('heroSpots'); if (hs){ hs.textContent = left ? s.filled + ' of ' + s.cap + ' beta spots taken.' : 'The beta is full. Join the waitlist.'; hs.hidden = false; }
+    if (!s.open) qa('a[href$="beta/#join"]').forEach(a => { if (/Get beta access|Join the beta/.test(a.textContent)) a.textContent = 'Join the waitlist'; });
   }).catch(() => {});
 
   // ---------------------------------------------------------- start

@@ -11,7 +11,7 @@ const DEMO_LYRICS = ['Music deserves your attention.', 'Not your attention span.
   .map((text, i) => ({ t: i * 6, text }));
 const IDLE_MS = 30000;   // quiet this long and the art moves to the next mode
 const MODE_ORDER = ['default', 'record', 'cassette', 'viz', 'lyrics', 'video'];   // cover, LP, cassette, cymatics, lyrics, video (only a song that has one)
-const demo = { i: -1, track: null, playing: false, accent: [224, 178, 106], slot: 0, videoOn: false };
+const demo = { i: -1, track: null, playing: false, accent: [224, 178, 106], slot: 0, videoOn: false, accentOverride: false, forceSpin: false };
 const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const fmt = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -36,6 +36,7 @@ function demoAccent(img){
     return c3.map(Math.round);
   } catch(e){ return null; }
 }
+let songColor = null;   // the current song's own color, kept while the page is showing other colors
 function setAccent(c){
   demo.accent = c;
   const rgb = 'rgb(' + c.join(',') + ')';
@@ -47,7 +48,7 @@ function setPlayingUI(on){
   demo.playing = on;
   artworkWrap.classList.toggle('is-playing', on);
   $('playIco').innerHTML = on ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
-  vizSetPlaying(on); recordSetPlaying(on); cassetteSetPlaying(on); lyricsSetPlaying(on);
+  vizSetPlaying(on); recordSetPlaying(on || demo.forceSpin); cassetteSetPlaying(on); lyricsSetPlaying(on);
 }
 
 // one place that puts a song on the real player's art, ambient, record and cassette
@@ -60,7 +61,7 @@ function showSong(t){
     lon.style.backgroundImage = 'url(' + t.art + ')'; lon.classList.add('is-active'); loff.classList.remove('is-active');
     recordLabelImg.src = t.art;
     const probe = new Image(); probe.crossOrigin = 'anonymous';
-    probe.onload = () => { const c = demoAccent(probe); if (c && demo.track === t){ setAccent(c); demoPost(); } };
+    probe.onload = () => { const c = demoAccent(probe); if (c && demo.track === t){ songColor = c; if (!demo.accentOverride) setAccent(c); demoPost(); } };
     probe.src = t.art;
   }
   demo.slot ^= 1;
@@ -68,6 +69,7 @@ function showSong(t){
   $('trackTitle').firstElementChild.textContent = t.title;
   $('trackArtist').firstElementChild.textContent = t.artist;
   $('trackMeta').classList.remove('is-empty');
+  try { buildQueue(); } catch(e){}
   const vb = $('ytPanelBtn'); vb.disabled = !t.hasVideo; vb.setAttribute('aria-disabled', t.hasVideo ? 'false' : 'true');
   if (!t.hasVideo && demo.videoOn) setDemoMode('default');
   demoPost();
@@ -78,6 +80,76 @@ function demoPost(){
   try { syncSideBtns(); } catch(e){}
   try { parent.postMessage({ type: 'ebb-demo', song: demo.i, mode: demoKey(), title: demo.track && demo.track.title, artist: demo.track && demo.track.artist, art: demo.track && demo.track.art, playing: demo.playing }, '*'); } catch(e){}
 }
+
+// ---- library and queue: the app's own panes, filled with the sample music. Shown when the frame is wide
+// enough for the app's desktop layout (body.split-desktop), like the real thing.
+const LIB = {
+  playlists: [{ name: 'EBBLESS sample', sub: '3 songs \u00b7 15 min', arts: DEMO_TRACKS.map(t => t.art).concat(['brand/assets/swirl-art-poster.jpg']), pinned: true },
+              { name: 'Liked Songs', sub: '1 song', heart: true }],
+  artists: [{ name: 'MAL GRIOT', sub: '12 songs', art: 'beta/media/art/breathlovedeep.jpg' }],
+  albums: [{ name: 'Breathelovedeep', by: 'MAL GRIOT', sub: '10 songs \u00b7 33 min', art: 'beta/media/art/breathlovedeep.jpg' },
+           { name: 'Free Fall', by: 'Stalvart John, MAL GRIOT', sub: '1 song \u00b7 6 min', art: 'beta/media/art/freefall.jpg' },
+           { name: 'I Tried It', by: 'Unnayanaa, MAL GRIOT', sub: '1 song \u00b7 6 min', art: 'beta/media/art/itriedit.jpg' }],
+};
+const DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+function libCard(c, kind){
+  const el = document.createElement('div');
+  el.className = 'lib-card' + (c.pinned ? ' is-pinned' : '') + (kind === 'artist' ? ' is-artist-card' : '') + (kind === 'album' ? ' is-album-card' : '');
+  const art = document.createElement('div'); art.className = 'art';
+  if (c.heart){ art.classList.add('single'); art.innerHTML = '<div class="face heart-face"><div class="heart-glyph"></div></div>'; }
+  else if (c.arts){ c.arts.forEach(a => { const i = document.createElement('img'); i.src = a; i.alt = ''; art.append(i); }); }
+  else { art.classList.add('single'); const i = document.createElement('img'); i.src = c.art; i.alt = ''; art.append(i); }
+  const mb = document.createElement('button'); mb.className = 'menu-btn'; mb.setAttribute('aria-label', 'Playlist options'); mb.innerHTML = DOTS; art.append(mb);
+  const ov = document.createElement('div'); ov.className = 'title-overlay'; const mq = document.createElement('div'); mq.className = 'marquee'; mq.dataset.text = c.name; ov.append(mq); art.append(ov);
+  const info = document.createElement('div'); info.className = 'info';
+  const name = document.createElement('div'); name.className = 'name'; name.textContent = c.name; info.append(name);
+  if (c.by){ const by = document.createElement('div'); by.className = 'count lib-album-artist'; by.textContent = c.by; info.append(by); }
+  const ct = document.createElement('div'); ct.className = 'count'; ct.textContent = c.sub; info.append(ct);
+  el.append(art, info);
+  return el;
+}
+function buildLibrary(){
+  [['libraryPlaylistsHead', 'libraryGrid', LIB.playlists, 'playlist'], ['libraryArtistsHead', 'libraryArtistsGrid', LIB.artists, 'artist'], ['libraryAlbumsHead', 'libraryAlbumsGrid', LIB.albums, 'album']].forEach(([head, grid, items, kind]) => {
+    $(head).classList.remove('hidden');
+    const g = $(grid); g.textContent = '';
+    items.forEach(c => g.append(libCard(c, kind)));
+  });
+  ['libFilterArtists'].forEach(id => $(id).classList.remove('hidden'));
+  document.querySelector('#libFilter [data-filter="all"]').classList.add('is-active');
+}
+function buildQueue(){
+  const body = $('queueBody'); if (!body || !demo.track) return;
+  const arrows = $('queueArrowsRow'); body.textContent = '';
+  const lbl = (t) => { const d = document.createElement('div'); d.className = 'q-section-label'; d.textContent = t; return d; };
+  const meta = (t, extra) => { const m = document.createElement('div'); m.className = 'meta'; m.innerHTML = '<div class="title"></div><div class="artist"></div>'; m.querySelector('.title').textContent = t.title; m.querySelector('.artist').textContent = t.artist + (extra || ''); return m; };
+  const img = (t) => { const i = document.createElement('img'); i.src = t.art; i.alt = ''; return i; };
+  body.append(lbl('Now playing from EBBLESS sample'));
+  const now = document.createElement('div'); now.className = 'q-now';
+  const pb = document.createElement('button'); pb.className = 'play-btn'; pb.setAttribute('aria-label', 'Play or pause');
+  pb.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor">' + (demo.playing ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>') + '</svg>';
+  pb.addEventListener('click', () => $('playBtn').click());
+  const nb = document.createElement('button'); nb.className = 'q-menu'; nb.setAttribute('aria-label', 'Song options'); nb.innerHTML = DOTS;
+  now.append(img(demo.track), meta(demo.track), nb, pb);
+  body.append(now, arrows);
+  const rest = [];
+  for (let k = 1; k < DEMO_TRACKS.length; k++) rest.push(DEMO_TRACKS[(demo.i + k) % DEMO_TRACKS.length]);
+  rest.forEach((t, k) => {
+    body.append(lbl(k === 0 ? 'Next' : 'Later'));
+    const row = document.createElement('div'); row.className = 'q-row';
+    const h = document.createElement('div'); h.className = 'handle'; h.innerHTML = '<svg viewBox="0 0 12 16" fill="currentColor"><circle cx="3" cy="2" r="1.4"/><circle cx="9" cy="2" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="14" r="1.4"/><circle cx="9" cy="14" r="1.4"/></svg>';
+    const m = document.createElement('button'); m.className = 'q-menu'; m.setAttribute('aria-label', 'Song options'); m.innerHTML = DOTS;
+    const rm = document.createElement('button'); rm.className = 'remove'; rm.setAttribute('aria-label', 'Remove from queue'); rm.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
+    const i = img(t), mt = meta(t);
+    const jump = () => demoLoad(DEMO_TRACKS.indexOf(t), true);
+    i.addEventListener('click', jump); mt.addEventListener('click', jump);
+    row.append(h, i, mt, m, rm); body.append(row);
+  });
+}
+function syncWide(){
+  const wide = !document.body.classList.contains('compact') && innerWidth >= 1150;
+  document.body.classList.toggle('split-desktop', wide);
+}
+addEventListener('resize', syncWide);
 
 // ---- the real song: one YouTube player carries all three
 let yt = null, ytReady = false, wantPlay = false, unmuteAt = 0, demoDur = 0, stopAtEnd = false;
@@ -187,11 +259,40 @@ function tick(ts){
   if (k !== lastKey){ lastKey = k; demoPost(); }
 }
 
+// ---- the record game, shown in action: the platter spins (even with the music paused), the bot double-taps
+// to start a run, taps each time the art comes back upright, then lets one go by. The game itself is the app's own code.
+let botT = 0, botNext = 0, botStopAt = 0, botLastRev = -1;
+function botTick(){
+  const now = performance.now();
+  if (!recGame.on){
+    if (now < botNext || recTargetMul < 1) return;
+    recGameEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    setTimeout(() => recGameEl.dispatchEvent(new MouseEvent('click', { bubbles: true })), 110);
+    botStopAt = 4 + Math.floor(Math.random() * 5); botLastRev = -1;
+    botNext = now + 4200;
+    return;
+  }
+  const a = recordGameAngleNow(), target = (recGame.rev + 1) * 360;
+  if (recGame.score >= botStopAt) return;        // let it go by: the run ends
+  if (target - a < 5 && target - a > -5 && botLastRev !== target){ botLastRev = target; recGameEl.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+}
+function gameDemo(on){
+  if (on === !!botT) return;
+  if (on){
+    demo.forceSpin = true; if (!demo.playing) recordSetPlaying(true);
+    botNext = performance.now() + 900; botT = setInterval(botTick, 20);
+  } else {
+    clearInterval(botT); botT = 0;
+    try { recordGameCancel(); } catch(e){}
+    demo.forceSpin = false; recordSetPlaying(demo.playing);
+  }
+}
+
 // ---- the paste box: one typist at a time. A new run cancels the old one, so
 // ideas never play over each other.
 const input = $('urlInput');
 let typeRun = 0;
-const IDEAS = ['open.spotify.com/playlist/…', 'rainy Sunday, something warm and slow', 'music.apple.com/…/album/…', 'an artist you love', 'youtube.com/watch?v=…', 'soundcloud.com/artist/sets/…', 'afro-house', 'a podcast show or RSS feed'];
+const IDEAS = ['https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M', 'rainy Sunday, something warm and slow', 'https://soundcloud.com/mal-griot/sets/breathelovedeep', 'Unnayanaa', 'https://youtu.be/-p1xP7LNGuQ', 'afro-house', 'https://music.apple.com/us/album/blonde/1146195596'];
 async function typeText(text, run){
   for (let i = 1; i <= text.length; i++){ if (run !== typeRun) return false; input.value = text.slice(0, i); await wait(45); }
   return true;
@@ -216,7 +317,7 @@ async function typeExample(text){
   input.value = '';
   if (reducedMotion){ input.value = text; return; }
   if (!(await typeText(text, run))) return;
-  await wait(6000); if (run !== typeRun) return;
+  await wait(30000); if (run !== typeRun) return;
   typeIdeas();
 }
 
@@ -226,6 +327,7 @@ function openBio(){
   const el = document.createElement('div');
   el.id = 'bio'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bioName');
   el.innerHTML = '<div class="bio-card"><button type="button" class="bio-x" aria-label="Close">&times;</button>'
+    + '<img class="bio-photo" src="welcome/mal-griot.jpg" alt="MAL GRIOT" onerror="this.remove()">'
     + '<p class="bio-eyebrow">Artist</p><h2 id="bioName">MAL GRIOT</h2>'
     + '<p>Queens, New York-born vocalist, spoken-word artist, live host and MC, and voice actor, based in India.</p>'
     + '<p>His work moves across music, live performance, sound design, wellness, creative technology, web development and artist branding. His sound draws on Black American culture: soul, funk, hip-hop, R&amp;B and Afro-house.</p>'
@@ -295,15 +397,24 @@ addEventListener('message', (e) => {
   const m = e.data || {};
   if (m.type === 'ebb-set'){ activity(); if (m.mode) setDemoMode(m.mode); }
   if (m.type === 'ebb-activity') activity();
-  if (m.type === 'ebb-type' && m.text) typeExample(String(m.text));
+  if (m.type === 'ebb-type' && m.text){ document.body.classList.add('show-search'); typeExample(String(m.text)); }
+  if (m.type === 'ebb-ui'){ document.body.classList.toggle('show-search', !!m.search); }
+  if (m.type === 'ebb-game') gameDemo(!!m.on);
+  if (m.type === 'ebb-accent'){
+    if (m.rgb){ demo.accentOverride = true; setAccent(m.rgb); }
+    else { demo.accentOverride = false; if (songColor) setAccent(songColor); }
+  }
 });
 
 setVisualMode('art');
 vizSetSpeed(3);   // cymatics start at 3x
+vizSetRotate(true);   // and turn slowly
 input.readOnly = true; input.placeholder = 'Paste a link, search, or describe your vibe';
 { const b = document.querySelector('#bottom-nav [data-view="player"]'); if (b) b.classList.add('is-active'); }
+buildLibrary();
 initPlayer();
 demoLoad(0, false);
+syncWide();
 setPlayingUI(false);
 typeIdeas();
 requestAnimationFrame(tick);

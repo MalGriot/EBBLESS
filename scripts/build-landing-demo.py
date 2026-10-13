@@ -70,6 +70,10 @@ view = between('<main class="view" id="view-player" hidden>', '</main>', include
 view = view.replace('<main class="view" id="view-player" hidden>', '<main class="view" id="view-player">', 1)
 topbar = between('<header id="topbar">', '</header>', include_end=True)
 bottom_nav = between('<nav id="bottom-nav">', '</nav>', include_end=True)
+library = between('<main class="view" id="view-library">', '</main>', include_end=True)
+library = re.sub(r'<video class="lib-bg-video".*?</video>', '', library, flags=re.S)
+library = library.replace('id="libraryListWrap" class="hidden"', 'id="libraryListWrap"')
+queue = between('<div id="queue-panel">', '<!-- ===== PLAYING HISTORY PANEL')
 ambient_markup = '<div id="ambient"><div class="layer" id="ambient-a"></div><div class="layer" id="ambient-b"></div></div>'
 
 # ---- JS: the app's own animation code
@@ -90,15 +94,23 @@ if "el.scrollIntoView({ block: 'center', behavior: 'smooth' });" not in lyrics:
 lyrics = lyrics.replace("el.scrollIntoView({ block: 'center', behavior: 'smooth' });",
                         "lyricsScroller.scrollTo({ top: el.offsetTop - lyricsScroller.clientHeight / 2 + el.offsetHeight / 2, behavior: 'smooth' });")
 
+_gs = SRC.index('/* RECORD TAP GAME (issue')
+_ge = SRC.index("recGameEl.addEventListener('click', recordGameTap);") + len("recGameEl.addEventListener('click', recordGameTap);")
+game = SRC[_gs:_ge]
+_old = 'function recordGameInFlow(){ return !!state.flowOpen && flowArtWrap.contains(recGameEl); }'
+if _old not in game:
+    die('recordGameInFlow changed; update the demo patch')
+game = game.replace(_old, 'function recordGameInFlow(){ return true; }')
+
 shim = (HERE / 'landing-demo-shim.js').read_text()
 driver = (HERE / 'landing-demo-driver.js').read_text()
 
 js = shim
-_blocks = viz + visual_mode + record + cassette + tabs + lyrics
+_blocks = viz + visual_mode + record + game + cassette + tabs + lyrics
 _declared = set(re.findall(r'\b(?:const|let|var)\s+(LS_[A-Z_]+)', _blocks)) | set(re.findall(r'\b(?:const|let|var)\s+(LS_[A-Z_]+)', shim))
 _used = set(re.findall(r'\b(LS_[A-Z_0-9]+)\b', _blocks))
 js += '\n// storage keys the app code names (values unused: storage is in-memory here)\n' + ''.join("const %s = '%s';\n" % (n, n) for n in sorted(_used - _declared))
-for label, code in (('visualizer (cymatics)', viz), ('visual mode + art style', visual_mode), ('record', record),
+for label, code in (('visualizer (cymatics)', viz), ('visual mode + art style', visual_mode), ('record', record), ('record tap game', game),
                     ('cassette', cassette), ('player tabs', tabs), ('lyrics', lyrics)):
     js += verbatim(label, code)
 js += driver
@@ -112,7 +124,6 @@ html,body{height:100%;overflow:hidden;background:#121212}
 #topbar{padding:0 10px;padding-top:0}
 #topbar .tester-banner,#topbar #helpBtn,#topbar #topnav,#topbar .install-banner,#installBanner,.paste-guide,#pasteGuide{display:none!important}
 #fsBtn,#desktopFsExitBtn,#castBtn,#chapBtn,#chapPanel,#reportMatchBtn,#playerDeclineBtn,#emptyFindBtn,#castBar,#npLivePill,#adsReportBtn,#skipBackBtn,#skipFwdBtn{display:none!important}
-.track-meta .title-row::before{display:none}
 .title-row{gap:10px}
 .lyrics-scroller{scrollbar-width:none;-ms-overflow-style:none}
 .lyrics-scroller::-webkit-scrollbar{display:none}
@@ -143,6 +154,18 @@ html,body{height:100%;overflow:hidden;background:#121212}
   .art-side{display:flex;flex-direction:column;gap:8px;width:56px;flex:none}
   #artRow .artwork-wrap{flex:1 1 auto;min-width:0;width:auto!important;max-width:calc(100vh - 230px)}
 }
+/* the library and queue panes: the app's own desktop layout, only on frames wide enough for it */
+body:not(.split-desktop) #view-library,body:not(.split-desktop) #queue-panel{display:none!important}
+body.split-desktop .art-side{display:none}
+body.split-desktop #bottom-nav{display:none}
+body.split-desktop:not(.desktop-fs) .artwork-wrap{width:min(820px,calc(100vw - 690px),max(72px,calc(100dvh - var(--topbar-h) - 262px)))}
+.lib-bg-poster{background:url(brand/assets/library-bg-poster.jpg) center/cover no-repeat}
+#queue-panel .queue-head .discover-toggle,#queue-panel .queue-head .qh-icon{pointer-events:none}
+.bio-photo{display:block;width:100%;max-height:230px;object-fit:cover;object-position:center 20%;border-radius:12px;margin-bottom:14px}
+/* phone dock: the search bar shows while the page is teaching search */
+.compact.show-search #topbar{display:flex!important}
+.compact.show-search #topbar .wordmark{display:none}
+.compact.show-search .view{top:var(--topbar-h)}
 /* a phone frame has a notch: give the top bar room beneath it */
 @media (max-width:430px){body:not(.compact){--topbar-h:100px}body:not(.compact) #topbar{padding-top:40px}}
 /* compact: the stage only, for the phone dock */
@@ -173,7 +196,7 @@ html = """<!DOCTYPE html>
 %s
 </script>
 </body></html>
-""" % (css, override, '', ambient_markup + '\n' + topbar + '\n' + view + '\n' + bottom_nav, js)
+""" % (css, override, '', ambient_markup + '\n' + topbar + '\n' + library + '\n' + view + '\n' + queue + '\n' + bottom_nav, js)
 
 # the base href makes the app's relative asset paths (brand/assets/...) resolve from beta/
 html = html.replace('<head><meta charset="UTF-8">', '<head><meta charset="UTF-8">\n<base href="../">', 1)

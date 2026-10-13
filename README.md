@@ -94,7 +94,9 @@ has moved.
   moves to the next style (cover, LP, cassette, cymatics, lyrics, video for burn).
 - On narrow widths the art styles are six open buttons beside the art
   (3 each side); on wide ones the app's own tab bar.
-- The artist name opens a short bio of MAL GRIOT (facts from `CLAUDE.md` only).
+- The artist name opens a short bio of MAL GRIOT (facts from `CLAUDE.md` only). Add a photo at `welcome/mal-griot.jpg` and the bio shows it (nothing shows if the file is missing).
+- On wide frames (the laptop frame) the player shows the app's own three panes: Library and Queue filled with the sample music, built from the real markup and styles.
+- "The game" chapter switches to the record and a bot plays the app's own record tap game (`gameDemo` in the driver); "Color" cycles the player's accent through the seven color-clock colors with the swatches.
 - Desktop (1100px and up) is a fixed window with no scrolling: chapters page by
   wheel, arrow keys, the rail, or the arrows at the bottom right. A Phone /
   Tablet / Desktop switch resizes the same iframe inside a device frame (it does
