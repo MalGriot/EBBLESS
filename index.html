@@ -96,6 +96,15 @@
 }
 *{box-sizing:border-box}
 html{-webkit-tap-highlight-color:transparent}
+/* Registering the two accent roots as <color> lets them transition, so a track
+   change fades every accent-colored UI element (--accent follows --clock-accent)
+   into the new album-art color instead of snapping. */
+@property --clock-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
+@property --player-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
+html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out)}
+html.clock-color-init,
+html.reduce-motion{transition:none}
+@media (prefers-reduced-motion:reduce){html{transition:none}}
 body{
   margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   background:var(--bg);color:var(--text);overflow:hidden;height:100vh;height:100dvh;
