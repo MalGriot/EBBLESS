@@ -126,6 +126,22 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### artist-window-song-add-button: Songs in the artist window get an add-to-playlist/library icon button (Geethub #485)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #485. In the artist window, each song row should have the add-to-playlist/library icon button.
+- **Touches:** artist window song rows.
+- **Branch:**
+- **Notes:** Synced from Geethub #485. Same window as artist-window-album-list (#479 area); do together.
+
+### custom-cursor: Custom EBBLESS cursor that follows the UI color, flowy, with a watery trail (Geethub #484)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #484. A custom cursor that changes color with the UI accent, has a slightly flowy, very EBBLESS shape and animation, and maybe a watery trail.
+- **Touches:** desktop pointer layer, accent color vars.
+- **Branch:**
+- **Notes:** Synced from Geethub #484. Overlaps archived paid-custom-cursor (#416), which framed it as a paid-tier feature; decide whether this ships free first. Desktop only (touch has no cursor). Respect reduced motion.
+
 ### ui-color-fade: UI colors fade into the next song's color instead of snapping (Geethub #476)
 - **Status:** merged
 - **Priority:** medium
