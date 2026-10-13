@@ -9840,16 +9840,19 @@ function openChangeArtFlow(id, pl){
     renderLibrary();
     showToast('Playlist art updated');
   }
-  openArtPicker('Change playlist art', pl.image !== original ? resetLabel : null, '', apply, () => apply(original));
+  const sug = (pl.tracks || []).map(x => x.art).filter(u => u && u !== pl.image);
+  if (original && original !== pl.image) sug.unshift(original);
+  openArtPicker('Change playlist art', pl.image !== original ? resetLabel : null, '', apply, () => apply(original), sug);
 }
 
 // The URL / upload / reset picker shared by playlist art (openChangeArtFlow)
 // and per-track art (openTrackArtFlow). extraHtml sits between the upload
 // button and the reset button (the track flow's "whole album" checkbox).
-function openArtPicker(heading, resetLabel, extraHtml, apply, onReset){
+function openArtPicker(heading, resetLabel, extraHtml, apply, onReset, suggestions){
   openImportOverlay();
   importStage.innerHTML =
     '<div class="step">' + heading + '</div>' +
+    '<div id="plArtSug" style="display:none;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-bottom:14px"></div>' +
     '<input id="plArtUrlInput" type="text" placeholder="Paste an image URL" autocomplete="off" spellcheck="false" ' +
       'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:10px">' +
     '<button class="btn-ghost is-active" id="plArtUrlBtn" style="width:100%;margin-bottom:14px">Use this image</button>' +
@@ -9883,6 +9886,50 @@ function openArtPicker(heading, resetLabel, extraHtml, apply, onReset){
   });
   const resetBtn = $('plArtResetBtn');
   if (resetBtn) resetBtn.addEventListener('click', onReset);
+  // One-tap covers (no paste needed): each suggestion is an image URL; ones
+  // that fail to load are dropped. `suggestions` is a Promise of a URL list.
+  if (suggestions){
+    const box = $('plArtSug');
+    const seen = new Set();
+    Promise.resolve(suggestions).then(list => {
+      (list || []).forEach(u => {
+        if (!u || seen.has(u) || seen.size >= 8) return;
+        seen.add(u);
+        const img = new Image();
+        img.onload = () => {
+          if (img.naturalWidth <= YT_PLACEHOLDER_SIZE.w && img.naturalHeight <= YT_PLACEHOLDER_SIZE.h) return;
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'btn-ghost'; b.setAttribute('aria-label', 'Use this cover');
+          b.style.cssText = 'padding:0;aspect-ratio:1;overflow:hidden;border-radius:8px';
+          img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+          b.appendChild(img);
+          b.addEventListener('click', () => apply(u));
+          box.appendChild(b); box.style.display = 'grid';
+        };
+        img.referrerPolicy = 'no-referrer';
+        img.src = u;
+      });
+    }).catch(() => {});
+  }
+}
+
+// Candidate covers for a track: the Spotify match, other copies of the song in
+// the library, and the matched video's thumbnail.
+async function trackArtSuggestions(t){
+  const out = [];
+  try{
+    const params = new URLSearchParams({ title: t.title || '', artist: t.artist || '' });
+    const res = await fetch(BACKEND + '/spotifyart?' + params.toString());
+    if (res.ok){ const d = await res.json(); if (d && d.image) out.push(d.image); }
+  } catch(e){}
+  const key = artTrackKey(t);
+  getLibrary().forEach(id => {
+    const p = playlistById(id);
+    if (p && Array.isArray(p.tracks)) p.tracks.forEach(x => { if (x !== t && x.art && artTrackKey(x) === key) out.push(x.art); });
+  });
+  if (Object.prototype.hasOwnProperty.call(t, 'originalArt') && t.originalArt) out.push(t.originalArt);
+  if (t.videoId && !isNativeVideoId(t.videoId)) out.push('https://img.youtube.com/vi/' + t.videoId + '/hqdefault.jpg');
+  return out.filter(u => u !== t.art);
 }
 
 /* =========================================================================
@@ -9968,7 +10015,7 @@ function openTrackArtFlow(plId, trackIdx){
     renderQueuePanel();
     showToast(whole ? 'Art updated for ' + changed + ' songs' : 'Song art updated');
   }
-  openArtPicker('Change song art', resetLabel, albumHtml, apply, () => apply(undefined));
+  openArtPicker('Change song art', resetLabel, albumHtml, apply, () => apply(undefined), trackArtSuggestions(t));
 }
 
 function duplicateLibraryPlaylist(id, pl){
