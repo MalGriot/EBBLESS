@@ -88,6 +88,27 @@ song through YouTube. The demo never touches the app's storage; the page only
 remembers that the test was used (`ebbless:landingTested`).
 The page's own links into the beta use `/beta/#join`, which opens the signup form.
 
+## Sample (15-minute try-out)
+
+`/EBBLESS/sample/` (`sample/index.html`) runs the real app in sample mode. The
+stub fetches `../index.html`, adds `<base href="../">` and sets
+`window.__EBB_SAMPLE`; `../?sample` does the same without the stub. Design and
+decisions: [`docs/SAMPLE-SPLASH-PLAN.md`](docs/SAMPLE-SPLASH-PLAN.md). In
+`index.html` look for "SAMPLE MODE" (head script: flag, storage shim, network
+backstop; main script: intro, clock, expiry; plus `EBB_SAMPLE` checks).
+
+- Storage is a throwaway copy (sessionStorage under `ebbless-sample:`); only
+  `ebbless:sampleTrial` (and an `ebbless_sample` cookie) touch real storage.
+  Posts to account, profile, feedback, stats and shared-KV routes are blocked.
+- The 15 minutes start the first time a real queue track plays (not the
+  tutorial's music), survive refresh, and end with a "Join the beta" screen
+  (`beta/#join`; "Join the waitlist" if the beta is full). It is a soft limit:
+  private windows, clearing site data or another browser start a new trial.
+- A browser with a beta tester token is sent to the real app
+  (`?sample=force` shows the sample anyway).
+- Console: `ebblessSample.status()`, `.skipTo(ms)`, `.expireNow()`, `.reset()`.
+- Bump `CACHE_VERSION` in `sw.js` with any change to `index.html`.
+
 ## Reading tester feedback
 
 Settings > Feedback & support > "Send feedback" lets beta testers report bugs or ideas

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><title>EBBLESS sample</title>
+<meta name="theme-color" content="#121212">
+<style>html{background:#121212}</style></head><body>
+<noscript>EBBLESS needs JavaScript. <a href="../">Open EBBLESS</a></noscript>
+<script>
+/* EBBLESS sample entry (docs/SAMPLE-SPLASH-PLAN.md).
+   Boots the real ../index.html at this URL with sample mode on: fetches it,
+   adds <base href="../"> so its relative links resolve, and sets the sample
+   flag before any of its scripts run. A browser that already holds a beta
+   tester token goes to the real app instead (?sample=force shows the sample
+   anyway). If anything about the fetch fails, fall back to ../?sample=1. */
+(function(){
+  var root = new URL('../', location.href).href;
+  var force = /[?&]sample=force(?:&|$)/.test(location.search);
+  try {
+    var tok = localStorage.getItem('ebbless:betaToken');
+    if (!force && tok && /^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(tok)){ location.replace(root); return; }
+  } catch(e){}
+  fetch(root + 'index.html', { cache: 'no-cache' }).then(function(r){
+    if (!r.ok) throw new Error(r.status);
+    return r.text();
+  }).then(function(html){
+    var inject = '<base href="' + root + '"><script>window.__EBB_SAMPLE=true;window.__EBB_SAMPLE_STUB=true;<\/script>';
+    html = html.replace(/<head[^>]*>/i, function(m){ return m + inject; });
+    document.open(); document.write(html); document.close();
+  }).catch(function(){ location.replace(root + '?sample=1' + (force ? '=force' : '')); });
+})();
+</script></body></html>

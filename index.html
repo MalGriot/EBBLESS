@@ -8,6 +8,65 @@
 <link rel="icon" type="image/png" sizes="16x16" href="brand/assets/icons/favicon-16.png">
 <meta name="description" content="Music without the ebb. Paste a playlist, keep listening.">
 <meta name="theme-color" content="#121212">
+<script>
+/* ---- SAMPLE MODE (docs/SAMPLE-SPLASH-PLAN.md) ----
+   /sample/ (sample/index.html) or ?sample runs this same app as a 15-minute
+   try-out. Everything the visitor does lands in a throwaway copy of
+   localStorage (sessionStorage under a prefix: survives a refresh, gone when
+   the tab closes), so no real library, settings or beta data is read or
+   written. Only the trial record ebbless:sampleTrial reaches real storage.
+   Anything that could write to an account or the worker is blocked below.
+   A browser that already holds a beta tester token goes to the real app
+   instead (add ?sample=force to see the sample anyway). Runs before every
+   other script: it must stay first. */
+(function(){
+  var on = window.__EBB_SAMPLE === true || /[?&]sample(?:[=&]|$)/.test(location.search);
+  window.__EBB_SAMPLE = on;
+  if (!on) return;
+  var real = null, ss = null;
+  try { real = window.localStorage; real.getItem('x'); } catch(e){ real = null; }
+  try { ss = window.sessionStorage; ss.getItem('x'); } catch(e){ ss = null; }
+  var force = /[?&]sample=force(?:&|$)/.test(location.search);
+  try {
+    var tok = real && real.getItem('ebbless:betaToken');
+    if (!force && tok && /^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(tok) && !window.__EBB_SAMPLE_STUB){
+      location.replace(location.pathname); return;
+    }
+  } catch(e){}
+  var P = 'ebbless-sample:', PASS = { 'ebbless:sampleTrial': 1 }, mem = {};
+  function names(){
+    var out = [], i, k;
+    if (ss){ for (i = 0; i < ss.length; i++){ k = ss.key(i); if (k && k.indexOf(P) === 0) out.push(k.slice(P.length)); } }
+    else out = Object.keys(mem);
+    return out;
+  }
+  var shim = {
+    getItem: function(k){ k = String(k); if (PASS[k]) return real ? real.getItem(k) : null; if (ss) return ss.getItem(P + k); return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+    setItem: function(k, v){ k = String(k); v = String(v); if (PASS[k]){ if (real) real.setItem(k, v); return; } if (ss) ss.setItem(P + k, v); else mem[k] = v; },
+    removeItem: function(k){ k = String(k); if (PASS[k]){ if (real) real.removeItem(k); return; } if (ss) ss.removeItem(P + k); else delete mem[k]; },
+    clear: function(){ names().forEach(function(k){ shim.removeItem(k); }); },
+    key: function(i){ return names()[i] || null; }
+  };
+  Object.defineProperty(shim, 'length', { get: function(){ return names().length; } });
+  Object.defineProperty(window, 'localStorage', { configurable: true, get: function(){ return shim; } });
+  // the "what's new" card is for people who already knew EBBLESS
+  try { if (shim.getItem('ebbless:whatsNewSeen') === null) shim.setItem('ebbless:whatsNewSeen', '999999'); } catch(e){}
+  // Backstop: nothing the sample does may write to the worker's account,
+  // profile, feedback, stats or shared-KV routes (the UI for each is hidden
+  // or reworded too; this just guarantees nothing leaves if one slips by).
+  var BLOCK = /\/(pool\/signal|report|tester-report|profile\/|auth\/|nowplaying|podcaption\/|beta\/(activity|me|claim|link|rejoin|google))/;
+  var realFetch = window.fetch;
+  if (realFetch) window.fetch = function(input, init){
+    try {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      if (method === 'POST' && /workers\.dev/.test(url) && BLOCK.test(url))
+        return Promise.resolve(new Response('{"error":"Not available in the sample."}', { status: 403, headers: { 'Content-Type': 'application/json' } }));
+    } catch(e){}
+    return realFetch.apply(this, arguments);
+  };
+})();
+</script>
 <link rel="manifest" href="manifest.json">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="apple-touch-icon" href="brand/assets/icons/apple-touch-icon.png">
@@ -2940,6 +2999,7 @@ body.week-up-on{overflow:hidden}
     </ol>
     <a class="bl-btn primary bl-join" href="beta/">JOIN THE BETA</a>
     <a class="bl-learn" href="welcome/">See what EBBLESS is</a>
+    <a class="bl-learn" href="sample/">Try it for 15 minutes</a>
     <div class="bl-rule bl-rule-soft"></div>
     <!-- Tester way in: the invite link does it all (?t= below). The Google
          button (rendered by the app once GSI loads) claims by the Google
@@ -2962,6 +3022,8 @@ body.week-up-on{overflow:hidden}
   const lock = document.getElementById('beta-lock');
   const host = location.hostname;
   if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || location.protocol === 'file:'){ lock.hidden = true; return; }
+  // the sample is open to everyone (see SAMPLE MODE in <head>)
+  if (window.__EBB_SAMPLE === true){ lock.hidden = true; return; }
   // Owner's ?mal link skips the tester lock too (same session flag the mobile
   // install gate reads), so he can test on any device without an invite.
   try {
@@ -4287,6 +4349,7 @@ body.week-up-on{overflow:hidden}
    flat 401 from YouTube. This small dedicated Cloudflare Worker does both
    fetches server-side and returns clean JSON. See worker/src/index.js.
    ========================================================================= */
+const EBB_SAMPLE = window.__EBB_SAMPLE === true;   // set by the SAMPLE MODE script in <head>
 const BACKEND_PROD = 'https://spotify-youtube-search.malgriot.workers.dev';
 const BACKEND_STAGING = 'https://spotify-youtube-search-staging.malgriot.workers.dev';
 // ?backend=staging routes this load (and every load after, via localStorage)
@@ -4434,7 +4497,7 @@ const installGateSkip = (() => {
     return sessionStorage.getItem('ebbless:gateSkip') === '1';
   } catch(e){ return false; }
 })();
-const mobileInstallGate = !installGateSkip && !isStandaloneDisplay() && (isMobileUA || isIOS ||
+const mobileInstallGate = !window.__EBB_SAMPLE && !installGateSkip && !isStandaloneDisplay() && (isMobileUA || isIOS ||
   (!!window.matchMedia && matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820));
 const INSTALL_HINT_MENU = 'Open your browser menu and choose Install app or Add to Home Screen (in Safari on Mac: File, then Add to Dock).';
 // iPhone/iPad install steps (#314). iOS has no install API and not every
@@ -6344,6 +6407,12 @@ function renderAccountRow(){
   const block = ensureAccountBlock();
   if (!block) return;
   const label = block.querySelector('#accountLabel'), desc = block.querySelector('#accountDesc'), actions = block.querySelector('#accountActions');
+  if (EBB_SAMPLE){
+    label.textContent = 'Sync across devices';
+    desc.textContent = 'Not in the sample. Join the beta to keep your library on every device.';
+    actions.innerHTML = '<a class="btn-ghost" href="beta/#join" style="text-decoration:none">Join the beta</a>';
+    return;
+  }
   const email = lsGet(LS_PROFILE_EMAIL, '');
   const signedIn = !!profileIdToken;
   const syncedAt = fmtSyncedAgo(lsGet(LS_PROFILE_SYNCED_AT, 0));
@@ -6401,6 +6470,7 @@ setInterval(() => { if (!document.hidden && profileIdToken) renderAccountRow(); 
 const LS_ONETAP_DISMISSED = 'ebbless:oneTapDismissedAt';
 const ONETAP_DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 function initGoogleOneTap(attempt){
+  if (EBB_SAMPLE) return;   // no account in the sample
   if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('REPLACE_')) return;
   if (window.google && window.google.accounts && window.google.accounts.id){
     try{
@@ -12584,7 +12654,7 @@ function shouldShowPasteGuide(){
   if (!pasteGuideEl || lsGet(LS_PASTE_GUIDE_DISMISSED, false)) return false;
   const splashEl = $('splash');
   if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
-  if (document.body.classList.contains('onb-active')) return false;
+  if (document.body.classList.contains('onb-active') || document.body.classList.contains('sample-intro')) return false;
   if (hasOwnPlaylists()) return false;
   return pasteBarVisible();
 }
@@ -15126,7 +15196,7 @@ async function fetchThisIsPlaylist(artist){
 // Fire-and-forget: pooling is a bonus signal, never something playback
 // should wait on or fail over.
 function postPoolSignal(tags, weight){
-  if (!tags || tags.length < 2 || !weight) return;
+  if (EBB_SAMPLE || !tags || tags.length < 2 || !weight) return;
   try{
     fetch(BACKEND + '/pool/signal', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -22283,7 +22353,7 @@ function installBannerBlocked(){
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
-  if (!installBanner || isStandaloneDisplay() || mobileInstallGate) return;
+  if (!installBanner || isStandaloneDisplay() || mobileInstallGate || EBB_SAMPLE) return;
   try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
   let clearSince = 0;
   const tick = () => {
@@ -23822,9 +23892,9 @@ function flagWrongTrack(){
   saveWrongTrackLog(log);
   flaggedTrackKeys.add(wrongTrackKey(t));
   syncWrongTrackFlagUI(t);
-  showToast('Thanks, we\'ll find a better match.');
+  showToast(EBB_SAMPLE ? 'Noted for this session. Reports go to us once you join the beta.' : 'Thanks, we\'ll find a better match.');
 
-  if (t.videoId){
+  if (t.videoId && !EBB_SAMPLE){
     fetch(BACKEND + '/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -25802,6 +25872,201 @@ function showSplashChoice(){
 // renders and plays fine on a touch/mobile viewport; only the eligibility
 // check was wrong.
 const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointer: coarse)').matches);
+/* ---------- SAMPLE MODE ----------
+   The 15-minute try-out (docs/SAMPLE-SPLASH-PLAN.md). Storage isolation and
+   the network backstop live in the <head> script; this adds the pieces that
+   need the finished app: the "start here" intro, the countdown, the 2-minute
+   warning and the expiry screen.
+   The clock starts the first time a real queue track is playing (not the
+   tutorial's own music, not an import or a paused queue). The record is
+   ebbless:sampleTrial in real localStorage, mirrored to a cookie, so refresh,
+   reopening and a casual "clear cookies" all keep the same clock. It is a
+   soft limit: private windows, clearing all site data, another browser or an
+   edited system clock start a fresh trial. */
+(function sampleMode(){
+  if (!EBB_SAMPLE) return;
+  const KEY = 'ebbless:sampleTrial', COOKIE = 'ebbless_sample';
+  const TOTAL_MS = 15 * 60 * 1000, WARN_MS = 2 * 60 * 1000;
+  const INTRO_DONE_KEY = 'ebbless:sampleIntroDone';
+  const byId = (id) => document.getElementById(id);
+  const root = new URL(document.baseURI);
+  const cookiePath = root.pathname.replace(/[^/]*$/, '') || '/';
+  let rec = null, timer = 0, ended = false, pill = null;
+
+  const readCookie = () => { const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=(\\d+)(?:x(\\d))?')); return m ? { start: +m[1], expired: m[2] === '1' } : null; };
+  const writeCookie = (r) => { try { document.cookie = COOKIE + '=' + r.start + (r.expired ? 'x1' : 'x0') + '; max-age=2592000; path=' + cookiePath + '; SameSite=Lax'; } catch(e){} };
+  function load(){
+    let r = null;
+    try { r = JSON.parse(localStorage.getItem(KEY)); } catch(e){}
+    const c = readCookie();
+    if (!(r && r.start > 0)) r = c ? { v: 1, start: c.start, expired: c.expired } : null;
+    else if (c && c.start && c.start < r.start) r = Object.assign({}, r, { start: c.start });   // the earlier of the two
+    if (r && (r.expired || Date.now() - r.start >= TOTAL_MS)) r.expired = true;
+    return r;
+  }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(rec)); } catch(e){} writeCookie(rec); }
+  const remaining = () => rec ? Math.max(0, TOTAL_MS - (Date.now() - rec.start)) : TOTAL_MS;
+  const fmt = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+  function render(){
+    if (!pill) return;
+    const left = remaining();
+    pill.querySelector('.sc-time').textContent = fmt(left);
+    pill.classList.toggle('is-warn', !!rec && !ended && left <= WARN_MS);
+    pill.title = rec ? 'Time left in the sample' : 'Your 15 minutes start when you press play';
+    pill.setAttribute('aria-label', rec ? fmt(left) + ' left in the sample' : '15 minute sample, starts when you press play');
+  }
+
+  // ---- start: the first real track playing
+  function playingNow(){
+    return artworkWrap.classList.contains('is-playing') && !document.body.classList.contains('onb-active')
+      && !!(state.queue && state.queue[state.queuePos]);
+  }
+  function maybeStart(){
+    if (rec || ended || !playingNow()) return;
+    rec = { v: 1, id: Math.random().toString(36).slice(2), start: Date.now() };
+    save(); dismissIntro(); render(); startTicking();
+  }
+
+  // ---- ticking, warning, expiry
+  function startTicking(){ if (!timer) timer = setInterval(tick, 1000); }
+  function tick(){
+    if (!rec) return;
+    const left = remaining();
+    render();
+    if (ended){ if (artworkWrap.classList.contains('is-playing')) try { pausePlayback(); } catch(e){} return; }
+    if (left <= 0){ expire(); return; }
+    if (left <= WARN_MS && !rec.warned){
+      rec.warned = true; save();
+      try { showToast('2 minutes left in the sample'); } catch(e){}
+    }
+  }
+  function expire(){
+    if (ended) return;
+    ended = true;
+    if (rec){ rec.expired = true; save(); }
+    dismissIntro();
+    try { if (typeof cancelPrevIntro === 'function' && cancelPrevIntro){ cancelPrevIntro(); } } catch(e){}
+    try { pausePlayback(); } catch(e){}
+    try { if (typeof castActive === 'function' && castActive()) castStop(); } catch(e){}
+    try { if (typeof pipWindow !== 'undefined' && pipWindow) pipWindow.close(); } catch(e){}
+    try {
+      if (navigator.mediaSession) ['play','pause','previoustrack','nexttrack','seekbackward','seekforward','seekto','stop'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, null); } catch(e){} });
+    } catch(e){}
+    // backstop: nothing can start a track once the sample is over
+    try { playIndex = function(){ return undefined; }; } catch(e){}
+    const app = byId('app'); if (app) app.inert = true;
+    showEnd();
+    render();
+  }
+  function showEnd(){
+    let el = byId('sampleEnd');
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'sampleEnd'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'seTitle');
+      el.innerHTML = '<div class="se-card"><img src="brand/assets/wordmark-white.png" alt="EBBLESS">'
+        + '<h2 id="seTitle">You’ve reached the edge of the sample.</h2><div class="se-rule"></div>'
+        + '<p class="se-lede">You’ve had a taste of EBBLESS. The full experience is waiting for you.</p>'
+        + '<p>Join the beta to keep listening, explore your music and make EBBLESS your own.</p>'
+        + '<a class="se-cta" id="seJoin" href="beta/#join">Join the beta</a>'
+        + '<a class="se-alt" href="./">Already approved? Open EBBLESS</a></div>';
+      document.body.appendChild(el);
+      // beta full: same switch the welcome page makes
+      fetch(BACKEND + '/beta/status').then(r => r.ok ? r.json() : Promise.reject()).then(st => {
+        if (st && st.open === false) byId('seJoin').textContent = 'Join the waitlist';
+      }).catch(() => {});
+    }
+    el.hidden = false;
+    const j = byId('seJoin'); if (j) j.focus({ preventScroll: true });
+  }
+
+  // ---- intro: dim everything, blink the tutorial button, one clear next step
+  let dim = null, spot = null, bubble = null, introPlacer = 0;
+  function placeIntro(){
+    const btn = byId('helpBtn');
+    if (!spot || !btn) return;
+    const r = btn.getBoundingClientRect();
+    if (!r.width){ return; }
+    const pad = 6;
+    Object.assign(spot.style, { left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + pad * 2) + 'px', height: (r.height + pad * 2) + 'px' });
+    const bw = bubble.offsetWidth || 280, bh = bubble.offsetHeight || 140;
+    let left = Math.min(window.innerWidth - bw - 16, Math.max(16, r.right - bw));
+    let top = r.bottom + 16;
+    if (top + bh > window.innerHeight - 16) top = Math.max(16, r.top - bh - 16);
+    bubble.style.left = left + 'px'; bubble.style.top = top + 'px';
+  }
+  function dismissIntro(markDone){
+    if (!dim) return;
+    [dim, spot, bubble].forEach(e => e && e.remove());
+    dim = spot = bubble = null;
+    document.body.classList.remove('sample-intro');
+    clearInterval(introPlacer);
+    window.removeEventListener('resize', placeIntro);
+    document.removeEventListener('keydown', introKey, true);
+    if (markDone !== false) try { localStorage.setItem(INTRO_DONE_KEY, '1'); } catch(e){}
+    try { refreshPasteGuide(); } catch(e){}
+  }
+  function introKey(e){ if (e.key === 'Escape') dismissIntro(); }
+  function showIntro(){
+    const btn = byId('helpBtn');
+    if (!btn || dim || ended) return;
+    dim = document.createElement('div'); dim.id = 'sampleDim';
+    spot = document.createElement('div'); spot.id = 'sampleSpot';
+    bubble = document.createElement('div'); bubble.id = 'sampleBubble'; bubble.setAttribute('role', 'dialog'); bubble.setAttribute('aria-label', 'You should start here');
+    bubble.innerHTML = '<b>You should start here.</b><p>A quick tour of what EBBLESS does. Your 15 minutes only start when you press play.</p>'
+      + '<div class="sb-row"><button type="button" class="sb-go">Start the tutorial</button><button type="button" class="sb-skip">Explore on my own</button></div>';
+    document.body.append(dim, spot, bubble);
+    document.body.classList.add('sample-intro');
+    bubble.querySelector('.sb-go').addEventListener('click', () => { dismissIntro(); btn.click(); });
+    bubble.querySelector('.sb-skip').addEventListener('click', () => dismissIntro());
+    dim.addEventListener('click', (e) => {
+      const r = btn.getBoundingClientRect();
+      const hit = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      dismissIntro(); if (hit) btn.click();
+    });
+    window.addEventListener('resize', placeIntro);
+    document.addEventListener('keydown', introKey, true);
+    placeIntro();
+    introPlacer = setInterval(placeIntro, 400);   // the top bar settles after fonts and the pill land
+    bubble.querySelector('.sb-go').focus({ preventScroll: true });
+  }
+
+  window.ebbSampleBoot = function(){
+    document.body.classList.add('is-sample');
+    // controls that would reach an account, feedback or the install flow
+    ['installBlock', 'installBanner', 'navFeedbackBtn', 'testerBanner'].forEach(id => { const e = byId(id); if (e) e.style.display = 'none'; });
+    const fb = byId('feedbackBtn'); if (fb){ const row = fb.closest('.settings-row'); if (row) row.style.display = 'none'; }
+    // keep the tutorial replayable and, until it has been watched, blinking
+    const help = byId('helpBtn');
+    let watched = false; try { watched = localStorage.getItem('ebbless:tutorialWatched') === 'true'; } catch(e){}
+    if (help && !watched) help.classList.add('is-nudge');
+    if (help) help.addEventListener('click', () => help.classList.remove('is-nudge'));
+    // countdown pill, right after the tutorial button
+    pill = document.createElement('span');
+    pill.id = 'sampleClock'; pill.setAttribute('role', 'timer');
+    pill.innerHTML = '<span class="sc-tag">Sample</span><span class="sc-time">15:00</span>';
+    if (help && help.parentNode) help.parentNode.insertBefore(pill, help.nextSibling); else byId('topbar').appendChild(pill);
+
+    rec = load();
+    if (rec && rec.expired){ expire(); return; }
+    if (rec){ startTicking(); tick(); }
+    render();
+    new MutationObserver(maybeStart).observe(artworkWrap, { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('pageshow', tick);
+    let introDone = false; try { introDone = localStorage.getItem(INTRO_DONE_KEY) === '1'; } catch(e){}
+    if (!rec && !introDone) setTimeout(() => { if (!rec && !ended) showIntro(); }, 700);
+  };
+
+  // test and owner helpers, in the style of ebblessStats
+  window.ebblessSample = {
+    status: () => ({ started: !!rec, expired: ended, remainingMs: remaining() }),
+    expireNow(){ if (!rec){ rec = { v: 1, id: 'dev', start: Date.now() }; } rec.start = Date.now() - TOTAL_MS; save(); tick(); },
+    skipTo(ms){ if (!rec){ rec = { v: 1, id: 'dev', start: Date.now() }; } rec.start = Date.now() - (TOTAL_MS - ms); save(); startTicking(); tick(); },
+    reset(){ try { localStorage.removeItem(KEY); } catch(e){} try { document.cookie = COOKIE + '=; max-age=0; path=' + cookiePath; } catch(e){} try { sessionStorage.clear(); } catch(e){} location.reload(); }
+  };
+})();
+
 const introEligibleNow = true;
 
 let onboardingComplete = false;
@@ -26097,6 +26362,13 @@ if (introBeatCapture){
   // the forced gold set earlier with the real time-of-day color again
   document.documentElement.style.setProperty('--clock-accent', '#e0b26a');
 } else if (forceIntroPreview) runIntro(true);
+else if (EBB_SAMPLE){
+  // Sample: straight into the real app, then the sample intro (SAMPLE MODE
+  // module above). No splash choice, no install gate.
+  discardIntroChrome(); startApp();
+  const go = () => { if (window.ebbSampleBoot) window.ebbSampleBoot(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+}
 else if (mobileInstallGate && !isIPhone) showInstallGate();
 else if (onboardingComplete && !tutorialWatched && inviteDueToday(TUTORIAL_INVITE_DAY_KEY)){
   // Took "Enter" without ever watching - offer the choice again, once a day.
@@ -26107,6 +26379,42 @@ else if (onboardingComplete || !introEligibleNow){ discardIntroChrome(); startAp
 else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
 })();
 </script>
+<style>
+/* SAMPLE MODE styles (logic: "SAMPLE MODE" in the main script). Inert unless the page is a sample. */
+#sampleClock{order:3;display:none;align-items:center;gap:6px;flex:none;padding:5px 11px;border-radius:999px;border:1px solid var(--accent-dim,rgba(224,178,106,.4));color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+body.is-sample #sampleClock{display:inline-flex}
+#sampleClock .sc-tag{opacity:.7;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;font-size:10px}
+#sampleClock.is-warn{background:var(--accent);color:#121212;animation:sampleWarn 1.2s ease-in-out infinite}
+@keyframes sampleWarn{50%{opacity:.6}}
+@media (max-width:640px){#sampleClock{padding:4px 9px;font-size:11px}#sampleClock .sc-tag{display:none}}
+/* the pill sits in the right cluster: widen the room the search field leaves for it */
+@media (max-width:859.98px){body.is-sample #topbar{--tb-r:160px}}
+@media (min-width:860px){body.is-sample #topbar{--tb-r:560px}}
+@media (min-width:860px) and (max-width:1149.98px){body.is-sample #topbar{--tb-r:360px}}
+body.is-sample.split-desktop #topbar{--tb-r:272px}
+#helpBtn.is-nudge{animation:sampleBlink 1.5s ease-in-out infinite;opacity:1;color:var(--accent)}
+@keyframes sampleBlink{0%,100%{box-shadow:0 0 0 0 rgba(224,178,106,0)}50%{box-shadow:0 0 0 7px rgba(224,178,106,.5)}}
+#sampleDim{position:fixed;inset:0;z-index:10005;cursor:default}
+#sampleSpot{position:fixed;z-index:10005;pointer-events:none;border-radius:50%;box-shadow:0 0 0 200vmax rgba(10,10,10,.78),0 0 0 2px var(--accent);transition:opacity 300ms}
+#sampleBubble{position:fixed;z-index:10006;width:min(280px,calc(100vw - 32px));padding:16px 18px;border-radius:16px;background:#1c1c1c;color:#f2f2f2;border:1px solid var(--accent-dim,rgba(224,178,106,.4));box-shadow:0 14px 40px rgba(0,0,0,.55);font-size:15px;line-height:1.45}
+#sampleBubble b{display:block;font-size:17px;margin-bottom:4px}
+#sampleBubble p{margin:0 0 12px;color:#bdbdbd;font-size:13px}
+#sampleBubble .sb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#sampleBubble button{font:inherit;font-size:13px;font-weight:600;letter-spacing:.8px;border-radius:999px;padding:9px 16px;cursor:pointer}
+#sampleBubble .sb-go{background:var(--accent);color:#121212;border:1px solid var(--accent)}
+#sampleBubble .sb-skip{background:none;color:#bdbdbd;border:0;padding:9px 4px;text-decoration:underline;text-underline-offset:3px}
+@media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{animation:none;box-shadow:0 0 0 3px var(--accent)}#sampleClock.is-warn{animation:none}}
+#sampleEnd{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
+#sampleEnd[hidden]{display:none}
+#sampleEnd .se-card{width:min(520px,100%);padding:30px 26px 24px;border-radius:20px;background:#161616;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+#sampleEnd img{height:20px;display:block;margin-bottom:26px}
+#sampleEnd h2{margin:0;font-size:clamp(26px,7vw,36px);line-height:1.05;letter-spacing:-.01em;text-transform:uppercase}
+#sampleEnd .se-rule{height:1px;background:var(--accent);margin:16px 0}
+#sampleEnd p{margin:0 0 10px;color:#a8a8a8;font-size:15px;line-height:1.5}
+#sampleEnd p.se-lede{color:#f2f2f2;font-size:17px}
+#sampleEnd .se-cta{display:block;text-align:center;margin-top:22px;padding:16px 24px;border-radius:999px;background:var(--accent);color:#121212;font-weight:700;letter-spacing:1.6px;font-size:14px;text-transform:uppercase;text-decoration:none}
+#sampleEnd .se-alt{display:block;text-align:center;margin-top:14px;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px}
+</style>
 <script>
 /* Hover expand for every button (#395). Web Animations on the independent
    'scale' property, so it never fights a button's own transition/transform.
