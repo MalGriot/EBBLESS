@@ -4108,6 +4108,21 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Player buttons and info"><button type="button" class="btn-ghost" data-adv="ph" data-val="shuffle">Shuffle</button><button type="button" class="btn-ghost" data-adv="ph" data-val="repeat">Repeat</button><button type="button" class="btn-ghost" data-adv="ph" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="ph" data-val="artist">Artist name</button><button type="button" class="btn-ghost" data-adv="ph" data-val="times">Times</button></div>
         </div>
+        <div class="adv-group">Gestures</div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Double-tap album art</div>
+            <div class="desc">Fullscreen is the default. Double-tap in fullscreen cymatics still closes it.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Double-tap album art"><button type="button" class="btn-ghost" data-adv="gdt" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="none">Nothing</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Long-press album art</div>
+            <div class="desc">Nothing by default. Hold the art for half a second.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Long-press album art"><button type="button" class="btn-ghost" data-adv="glp" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="glp" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="glp" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="glp" data-val="none">Nothing</button></div>
+        </div>
         <div class="settings-row">
           <div>
             <div class="label">Reset advanced settings</div>
@@ -19043,7 +19058,8 @@ function advRender(){
   const active = {
     art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
-    start: p.start === 'loud' ? 'loud' : 'quiet'
+    start: p.start === 'loud' ? 'loud' : 'quiet',
+    gdt: advGestureOf('gdt'), glp: advGestureOf('glp')
   };
   const hide = p.hide || [];
   advBlock.querySelectorAll('[data-adv]').forEach(b => {
@@ -19059,6 +19075,24 @@ function advApplyPlayer(){
   ADV_PH.forEach(k => document.documentElement.classList.toggle('adv-hide-' + k, Array.isArray(h) && h.includes(k)));
 }
 function advApplyMotion(){ document.documentElement.classList.toggle('reduce-motion', advPrefs().motion === 'reduced'); }
+/* Gestures: what double-tap and long-press on the player's album art do.
+   Defaults are the old behavior (double-tap = fullscreen, long-press =
+   nothing), stored only when changed. Actions reuse existing functions. */
+const ADV_GACT = ['fullscreen','like','artist','playlist','play','none'];
+const ADV_GDEF = { gdt: 'fullscreen', glp: 'none' };
+function advGestureOf(k){ const v = advPrefs()[k]; return ADV_GACT.includes(v) ? v : ADV_GDEF[k]; }
+function advRunGesture(k){
+  const a = advGestureOf(k), t = currentTrack();
+  if (a === 'fullscreen') fsBtn.click();
+  else if (a === 'play') playBtn.click();
+  else if (!t || !t.videoId) return;
+  else if (a === 'like') toggleLikeTrack(t);
+  else if (a === 'playlist') openAddToPlaylistPicker(t);
+  else if (a === 'artist' && t.artist){
+    const names = splitArtistNames(t.artist);
+    if (names.length > 1) openArtistPick(names, t.title, trackArtist); else openArtistPage(t.artist, t.title);
+  }
+}
 function advChoose(k, v){
   if (k === 'art') setArtStyle(v);
   else if (k === 'motion'){ advSet('motion', v === 'reduced' ? 'reduced' : null); advApplyMotion(); }
@@ -19067,6 +19101,7 @@ function advChoose(k, v){
   else if (k === 'sort'){ setLibrarySort(v); applyLibSortUI(); renderLibrary(); }
   else if (k === 'blend'){ crossfadePrefs.ms = parseInt(v, 10) || 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI(); }
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
+  else if ((k === 'gdt' || k === 'glp') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
   else if (k === 'ph' && ADV_PH.includes(v)){
     const h = (advPrefs().phide || []).slice(), i = h.indexOf(v);
     if (i >= 0) h.splice(i, 1); else h.push(v);
@@ -24684,8 +24719,28 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
       else lastTap = now;
     });
   }
-  onDoubleTap(artworkWrap, () => fsBtn.click());
+  onDoubleTap(artworkWrap, () => advRunGesture('gdt'));
   onDoubleTap(flowVizWrap, closeFlow);
+})();
+
+/* long-press on the player's album art -> the action chosen under Advanced >
+   Gestures. Does nothing (and swallows nothing) unless one is chosen. */
+(function(){
+  const HOLD_MS = 500, TOL = 10;
+  let timer = null, sx = 0, sy = 0, fired = false;
+  artworkWrap.addEventListener('touchstart', (e) => {
+    fired = false;
+    if (advGestureOf('glp') === 'none' || e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; fired = true; if (navigator.vibrate) navigator.vibrate(12); advRunGesture('glp'); }, HOLD_MS);
+  }, { passive: true });
+  artworkWrap.addEventListener('touchmove', (e) => {
+    if (!timer) return;
+    if (Math.abs(e.touches[0].clientX - sx) > TOL || Math.abs(e.touches[0].clientY - sy) > TOL){ clearTimeout(timer); timer = null; }
+  }, { passive: true });
+  artworkWrap.addEventListener('touchend', (e) => { if (timer){ clearTimeout(timer); timer = null; } if (fired){ fired = false; e.preventDefault(); } });
+  artworkWrap.addEventListener('touchcancel', () => { clearTimeout(timer); timer = null; });
 })();
 
 /* swipe left/right on the player view's album art -> next/prev track, same
