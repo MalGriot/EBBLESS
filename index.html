@@ -17552,17 +17552,35 @@ function createSCDeckPlayer(deck, videoId){
     // can freeze the page before FINISH ever advances the queue. A pause
     // within the last 1.5s of the sound is held back for FINISH to follow;
     // if it doesn't (a real pause right at the end) it is reflected after.
-    if (deck === activeDeck() && deck._scDur > 3 && deck._scPos >= deck._scDur - 1.5){
-      deck._scState = YT.PlayerState.PAUSED;
-      deck._scPausedAt = Date.now();
+    // soundcloud-miniplayer-autoplay (#458): the cached _scPos comes from
+    // PLAY_PROGRESS, which lags or stops while the page is hidden behind the
+    // desktop mini player, so the end-of-sound check below asks the widget for
+    // its real position instead, and a held pause with no FINISH after it
+    // advances the queue rather than sitting paused on the last second.
+    const stale = function(){ return deck.gen !== myGen || deck !== activeDeck() || deck._scState !== YT.PlayerState.PAUSED; };
+    const holdForFinish = function(){
       setTimeout(function(){
-        if (deck.gen !== myGen || deck !== activeDeck() || deck._scState !== YT.PlayerState.PAUSED) return;
-        onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
+        if (stale()) return;
+        widget.getPosition(function(ms){
+          if (stale()) return;
+          deck._scPos = (ms || 0) / 1000;
+          if (deck._scPos >= deck._scDur - 1.5){ deck._scState = YT.PlayerState.ENDED; onDeckStateChange(deck, { data: YT.PlayerState.ENDED }); }
+          else onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
+        });
       }, 1500);
-      return;
-    }
+    };
     deck._scState = YT.PlayerState.PAUSED;
     deck._scPausedAt = Date.now();
+    if (deck === activeDeck() && deck._scDur > 3){
+      if (deck._scPos >= deck._scDur - 1.5){ holdForFinish(); return; }
+      widget.getPosition(function(ms){
+        if (stale()) return;
+        deck._scPos = (ms || 0) / 1000;
+        if (deck._scPos >= deck._scDur - 1.5) holdForFinish();
+        else onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
+      });
+      return;
+    }
     onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
   });
   widget.bind(SC.Widget.Events.FINISH, function(){ if (deck.gen !== myGen) return; deck._scState = YT.PlayerState.ENDED; onDeckStateChange(deck, { data: YT.PlayerState.ENDED }); });

@@ -9675,6 +9675,14 @@ Add entries in this shape:
   iframe while locked (see `iosLockedStallCheck`) is a platform limit this
   does not change. Needs an iPhone PWA and Android test with the screen locked.
 
+### soundcloud-miniplayer-autoplay: SoundCloud songs don't advance on their own in the mini-player window (bug) (Geethub #458)
+- **Status:** in review
+- **Priority:** high
+- **Description:** With the page hidden behind the desktop mini player, a SoundCloud song ends and the next one does not start.
+- **Touches:** SoundCloud widget PAUSE handler (`createSCDeckPlayer`)
+- **Branch:** `agent/soundcloud-miniplayer-autoplay`
+- **Review note:** Remaining gap after `soundcloud-next-song-page-closed`: its end-of-sound check read the cached `_scPos` from PLAY_PROGRESS, which lags or stops while the page is hidden, so a PAUSE at the natural end was reflected as a real pause. Now the widget is asked for its real position, and a held end-pause with no FINISH after it advances the queue. UNTESTED in a real PiP window; cause inferred from code, not observed.
+
 ### queue-window-bg-video: Queue window background video, rotated 90 degrees and tinted like the library bg (Geethub #438)
 - **Status:** dropped
 - **Priority:** medium
