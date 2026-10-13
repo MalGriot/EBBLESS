@@ -31,6 +31,24 @@ test('windowEndsAt: window_anchor (else feedback_request_sent) + 14 days, or nul
   assert.equal(windowEndsAt(null), null);
 });
 
+test('windowEndsAt: window_days 7 shortens the window, anything else stays 14', () => {
+  const day = 24 * 3600 * 1000;
+  assert.equal(windowEndsAt({ feedback_request_sent: 1000, window_days: 7 }), 1000 + 7 * day);
+  assert.equal(windowEndsAt({ feedback_request_sent: 1000, window_days: 14 }), 1000 + 14 * day);
+  assert.equal(windowEndsAt({ feedback_request_sent: 1000, window_days: 3 }), 1000 + 14 * day);
+  assert.equal(windowEndsAt({ window_days: 7 }), null);
+});
+
+test('/beta/me reports windowDays only for a 7-day tester', async () => {
+  const sent = Date.UTC(2026, 9, 14);
+  const day = 24 * 3600 * 1000;
+  const short = await (await me({ number: 8, label: 'T8', name: 'Bo', feedback_request_sent: sent, window_days: 7 })).json();
+  assert.equal(short.windowEndsAt, sent + 7 * day);
+  assert.equal(short.windowDays, 7);
+  const long = await (await me({ number: 9, label: 'T9', name: 'Cy', feedback_request_sent: sent, window_days: 14 })).json();
+  assert.equal('windowDays' in long, false);
+});
+
 test('/beta/me returns windowEndsAt once the feedback email has gone out', async () => {
   const sent = Date.UTC(2026, 9, 1);
   const res = await me({ number: 7, label: 'T7', name: 'Ann', feedback_request_sent: sent });
