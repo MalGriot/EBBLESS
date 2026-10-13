@@ -10063,3 +10063,59 @@ Add entries in this shape:
 - **Touches:** mini-player, SC decks, `createSCDeckPlayer`.
 - **Branch:** agent/soundcloud-mixed-hidden
 - **Notes:** Tested with a popup stand-in only; real PiP click-unlock untested. Before the first click in the mini-player only the old behaviour applies. Possible audio gap at the first click and about 1 to 2s on close. A YouTube song once stuck at 0 while hidden (not investigated). Deployed for owner testing. Cache v185.
+
+### beta-genre-auto-playlists: Beta signup genres auto-create library playlists named "[genre/artist] radio for [name]" (Geethub #477)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #477. Whatever genres/artists a person gives at beta signup, generate playlists from them and add them to their library automatically (no asking). Name each "[genre/artist] radio for [their name]".
+- **Touches:** beta signup flow, playlist generation from prompt.
+- **Branch:**
+- **Notes:** Synced from Geethub #477. Relates to beta-signup-playlist-preload.
+
+### artist-name-hitbox: Artist name still too hard to click: bigger hit box (Geethub #478)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #478. Tapping the artist name needs a bigger hit box. User missed the letters and thumbs-downed a song instead.
+- **Touches:** player artist name tap target.
+- **Branch:**
+- **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries.
+
+### thumbs-down-fade-out: Thumbs-down fades the song out instead of cutting it short (Geethub #479)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #479. When a song is thumbs-downed, fade the audio out before skipping instead of cutting abruptly.
+- **Touches:** thumbs-down handler, volume ramp.
+- **Branch:**
+- **Notes:** Synced from Geethub #479. No further detail given.
+
+### miniplayer-always-on-top: Mini-player stays on screen over other apps (Geethub #480)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #480. The mini-player should remain visible above other apps.
+- **Touches:** mini-player / Picture-in-Picture.
+- **Branch:**
+- **Notes:** Synced from Geethub #480. Browser PiP already floats; true always-on-top over all apps may need the installed desktop app. Overlaps #481.
+
+### miniplayer-customization: Mini-player customization when the desktop app is installed (Geethub #481)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #481 (a question). Can the mini-player be customized when the desktop app is installed? Needs scoping.
+- **Touches:** mini-player, desktop install.
+- **Branch:**
+- **Notes:** Synced from Geethub #481. No detail given. Overlaps #480; fold together when scoped.
+
+### artist-window-album-list: Artist window shows a list of their albums with add-to-library button (Geethub #482)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #482. In the artist window show their albums as titles plus album art, each with an add-to-library icon button.
+- **Touches:** artist window.
+- **Branch:**
+- **Notes:** Synced from Geethub #482. Overlaps artist-more-albums and albums-by-artist entries.
+
+### cassette-sfx-volume: Cassette sound effects at half the volume (Geethub #483)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #483. Cassette sfx are too loud; halve the volume.
+- **Touches:** cassette sfx gain.
+- **Branch:**
+- **Notes:** Synced from Geethub #483. No further detail given.
