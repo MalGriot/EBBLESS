@@ -5328,6 +5328,7 @@ const NOWPLAYING_TITLE = 'ON AIR';   // the live feed's name: rename here only
 const PL_ART_VIDEO = {
   [SWELL_ID]: { src: 'brand/assets/swell-thumb-pingpong.mp4', poster: null },  // CuRRentSSsss: the clip showed only before its first drop (#456)
   [BLEND_ID]: { src: 'brand/assets/swirl-art.mp4', poster: 'brand/assets/swirl-art-poster.jpg' },
+  [LIKED_ID]: { src: 'brand/assets/liked-art.mp4', poster: 'brand/assets/liked-art-poster.jpg', xfade: true },  // Liked Songs (#457): drop the files in and they show; until then the normal tile stays
   [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg', xfade: true }  // xfade: two stacked clips fade into each other at the end instead of a hard restart (#455)
 };
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
