@@ -127,7 +127,7 @@ Add entries in this shape:
 -->
 
 ### ui-color-fade: UI colors fade into the next song's color instead of snapping (Geethub #476)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #476. When the track changes and the UI color (accent/tint from the album art) changes, it should fade smoothly into the next color rather than switching instantly.
 - **Touches:** accent/theme color update on track change (`--player-accent` and related CSS variables).
@@ -143,7 +143,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #475. Related to cassette-fullscreen-animation and cassette-cycle-7-tapes; check for overlap before building. Stacked copies now rock about 2.2 degrees, 3.4s per swing, each slot lagging the one in front (CS_ROCK in csStackFrame); fades in with the rise and out on collapse. Syntax-checked only, not watched in a live browser. Cache v186.
 
 ### rename-window-wording: Rename window should say album or song, not "playlist" (Geethub #472)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #472. When renaming an album or song, the pop-up currently says "Rename playlist". It should say "Rename album" or "Rename song" to match what is being renamed.
 - **Touches:** rename dialog in the library.
@@ -151,7 +151,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #472. Pairs with rename-song-title-artist (#473); do them together.
 
 ### rename-song-title-artist: Renaming a song or album lets you edit both title and artist (Geethub #473)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #473. When renaming an album or song, the rename window should let you change the song title and the artist.
 - **Touches:** rename dialog and saved track/album metadata.
@@ -159,7 +159,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #473. Pairs with rename-window-wording (#472).
 
 ### match-links-grid: Matching links window on desktop shows a grid, not a scrolling list (Geethub #474)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #474. On desktop, the matching-links window should lay the link choices out as a grid instead of a scrolling list.
 - **Touches:** desktop match/relink window.
@@ -10009,7 +10009,7 @@ Add entries in this shape:
 - **Notes:** Research: Marvis Pro changes themes, layout (list/grid, rows, artwork shape, spacing), widgets, gestures, sidebar folders. Skipped for EBBLESS: app icons (native only) and widgets (iOS only). Open questions for the owner: light theme at all? sync across devices once accounts exist (see accounts-profiles)? Phase 1 stays per-device. Built: collapsed Advanced block below Library & data (Look, Library, Playback, Reset); new key ebbless:advanced for accent, motion, hidden sections, start volume. Start volume = Even out volume headroom (Quiet -5 dB default, Loud -2 dB); owner to confirm that is what "start loud/quiet" meant. Not checked on phone width or by ear. Cache v187.
 
 ### advanced-settings-p2-player-layout: Advanced settings phase 2: choose which player buttons and info show (Geethub #469)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub issue #469. Checklist in Advanced settings to show/hide player buttons and track info, and optionally reorder buttons. Do after advanced-settings-p1.
 - **Touches:** player controls row, Settings.
@@ -10017,7 +10017,7 @@ Add entries in this shape:
 - **Notes:** Marvis Pro equivalent: hide/show metadata and controls per widget.
 
 ### advanced-settings-p3-gestures: Advanced settings phase 3: customizable gestures (Geethub #469)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub issue #469. Let the user choose what double-tap, long-press and swipe on album art, track rows and thumbs do (for example open artist, like, add to playlist, fullscreen). Biggest and riskiest part; do after phase 1 and 2, and check against existing gestures (album-art-doubletap, album-art-swipe-nav).
 - **Touches:** album art gestures, library rows, Settings.
@@ -10025,7 +10025,7 @@ Add entries in this shape:
 - **Notes:** Marvis Pro's most distinctive customization.
 
 ### desktop-rounded-corners-panels: Desktop library and queue panels get rounded top and bottom corners (Geethub #470)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #470. On desktop, the library and queue panels should have rounded corners at both the top and the bottom.
 - **Touches:** desktop library and queue panel CSS.
@@ -10033,7 +10033,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub issue #470 (idea). No further detail given.
 
 ### draggables: Drag and drop everywhere (songs, playlists, artists, now-playing art) (Geethub #471)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Idea, Geethub issue #471. (1) Drag songs from the link-match list into a playlist (needs a refreshed match UI that fits the rest of the app, with more control). (2) Drag a library song into the queue and it lands where dropped, with queue songs visibly shifting. (3) Drag a playlist or album from library to queue, with a confirm prompt first. (4) Drag an artist from library to queue to start "[artist] Radio" (their songs mixed with similar artists), confirm first. (5) Drag the now-playing album art to the queue to start "[song] Radio", confirm first. (6) Drag the now-playing art onto a library playlist (it glows on hover); dropping elsewhere in the library asks which playlist. (7) Polish the existing drag-to-browser-tab Google search so the drag looks designed, and extend it to albums and now-playing art.
 - **Touches:** library, queue, match list UI, now-playing art, discovery/radio.
