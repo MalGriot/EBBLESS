@@ -20865,7 +20865,11 @@ function kbSeekBy(delta){
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
-  const isTyping = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  // Only real text entry blocks shortcuts. A focused range slider (seek bar,
+  // volume), checkbox or button-type input keeps focus after a click and used
+  // to silently kill every shortcut (Geethub #467).
+  const nonText = t && t.tagName === 'INPUT' && /^(range|checkbox|radio|button|submit|reset|file|color|image)$/i.test(t.type);
+  const isTyping = t && !nonText && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
   if (isTyping) return;
   switch (e.key){
     case ' ':
