@@ -2605,6 +2605,9 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 #onbCaptionMain span::before{content:'';position:absolute;left:calc(50% + var(--tab-shift,0px));bottom:-5px;transform:translateX(-50%);
   width:30px;height:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(224,178,106,.7)}
 #onbCaptionMain.is-visible{opacity:1}
+/* no room above the box (desktop: it sits in the top bar) - the headline sits below it instead, tab on top */
+#onbCaptionMain.onb-cap-below{transform:translate(-50%,0)}
+#onbCaptionMain.onb-cap-below span::before{bottom:auto;top:-5px}
 #onbCaption.onb-cap-plain span{background:none;border:none;box-shadow:none;
   backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;max-width:min(92vw,560px);
   font-size:clamp(22px,5vw,34px);font-weight:700;letter-spacing:.02em}
@@ -24764,7 +24767,10 @@ function runIntro(preview){
       return;
     }
     const r = els.length > 1 ? unionRect(els) : els[0].getBoundingClientRect();
-    const above = positionOnbBubble(captionEl, r, vw, vh, 'below', forceAbove);
+    // the headline caption is sitting below this target: stack under it
+    const rPos = (mainBelowBottom && captionMainEl.classList.contains('is-visible') && r.top < mainBelowBottom)
+      ? { left: r.left, width: r.width, top: r.top, bottom: mainBelowBottom } : r;
+    const above = positionOnbBubble(captionEl, rPos, vw, vh, 'below', forceAbove);
     captionEl.classList.toggle('onb-cap-above', above);
     if (spotlightEl){
       const pad = 10;
@@ -24812,10 +24818,17 @@ function runIntro(preview){
   // it just holds position over `el` for as long as the caller keeps it
   // visible, so the app's one core action reads as a headline rather than
   // one more line in the narration bubble's cycle
+  let mainBelowBottom = 0;
   function placeMainCaptionNear(el){
     if (!el) return;
     const r = el.getBoundingClientRect();
-    positionOnbBubble(captionMainEl, r, window.innerWidth, window.innerHeight, 'above', false, 14);
+    // not enough room above the box (desktop: it sits in the top bar) -
+    // go below it instead of clamping on top of it, and remember where the
+    // headline ends so placeCaptionNear() stacks the second caption under it
+    const noRoom = r.top - 14 - (captionMainEl.getBoundingClientRect().height || 49) < 8;
+    captionMainEl.classList.toggle('onb-cap-below', noRoom);
+    positionOnbBubble(captionMainEl, r, window.innerWidth, window.innerHeight, noRoom ? 'below' : 'above', false, 14);
+    mainBelowBottom = noRoom ? r.bottom + 14 + (captionMainEl.getBoundingClientRect().height || 49) : 0;
   }
   function setMainCaption(text, el){
     if (done) return;
@@ -24829,6 +24842,7 @@ function runIntro(preview){
     later(() => { if (!done) placeMainCaptionNear(el); }, 400);
   }
   function clearMainCaption(){
+    mainBelowBottom = 0;
     captionMainEl.classList.remove('is-visible');
   }
 
