@@ -6951,7 +6951,9 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
   // read at write time since a fill can stamp it while this resolve runs.
   const albumOverride = albumOverrideOf(getCachedPlaylist(playlistId));
   const sectionOverride = (getCachedPlaylist(playlistId) || {}).sectionOverride;
+  const keptArtistName = (getCachedPlaylist(playlistId) || {}).artistName;
   const keepAlbumOverride = (p) => {
+    if (keptArtistName) p.artistName = keptArtistName;
     if (albumOverride !== undefined) p.albumOverride = albumOverride;
     if (sectionOverride) p.sectionOverride = sectionOverride;
     if (isArtistType(p.type)){ const cur = getCachedPlaylist(playlistId); if (cur && cur.albumsAdded) p.albumsAdded = true; }
@@ -8334,6 +8336,7 @@ const LS_ALBUM_ARTIST_FOLDED = 'ebbless:albumArtistFolded'; // { artistKey: true
 function songDedupKey(title){ return normalizeArtistQuery(String(title || '').replace(/\s*[\(\[][^\)\]]*\b(remaster(ed)?|single version|radio edit|feat\.?|ft\.?|featuring|with|version|mono|stereo|deluxe)\b[^\)\]]*[\)\]]/gi, '').replace(/\s+-\s+(\d{4}\s+)?(remaster(ed)?|single version|radio edit|mono|stereo)\b.*$/i, '')) || normalizeArtistQuery(title); }
 function albumArtistName(pl){
   if (!pl) return '';
+  if (pl.artistName) return pl.artistName; // listener's own edit (rename window, #473)
   if (pl.importedUnder) return pl.importedUnder;
   if (pl.artistSet){
     const owner = getCachedPlaylist(pl.artistSet.of);
@@ -9971,28 +9974,47 @@ function setSectionOverride(id, pl, sec){
   showToast('Now under ' + sec.charAt(0).toUpperCase() + sec.slice(1));
 }
 
+// Rename (Geethub #472/#473). The window names what it renames: a song (a
+// single-track entry) edits title + artist, an album edits album name + artist
+// (stored as pl.artistName, read first by albumArtistName), anything else is
+// name only. Fields are prefilled so saving with no edits changes nothing.
 function openRenamePlaylistFlow(id, pl){
+  const isSong = isSingleTrackType(pl.type) && !!(pl.tracks && pl.tracks[0]);
+  const isAlbum = !isSong && isAlbumEntry(pl);
+  const kind = isSong ? 'song' : isAlbum ? 'album' : isPodcastEntry(pl) ? 'podcast' : isArtistEntry(pl) ? 'artist' : 'playlist';
+  const withArtist = isSong || isAlbum;
+  const fieldCss = 'width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px';
   openImportOverlay();
   importStage.innerHTML =
-    '<div class="step">Rename playlist</div>' +
-    '<input id="plRenameInput" type="text" placeholder="Playlist name" autocomplete="off" spellcheck="false" ' +
-      'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
+    '<div class="step">Rename ' + kind + '</div>' +
+    '<input id="plRenameInput" type="text" placeholder="' + (isSong ? 'Song title' : isAlbum ? 'Album name' : kind.charAt(0).toUpperCase() + kind.slice(1) + ' name') + '" autocomplete="off" spellcheck="false" style="' + fieldCss + '">' +
+    (withArtist ? '<input id="plRenameArtist" type="text" placeholder="Artist" autocomplete="off" spellcheck="false" style="' + fieldCss + '">' : '') +
     '<button class="btn-ghost is-active" id="plRenameBtn" style="width:100%">Save</button>';
   const input = $('plRenameInput');
-  input.value = pl.name;
+  const artistInput = $('plRenameArtist');
+  input.value = isSong ? (pl.tracks[0].title || pl.name || '') : pl.name;
+  if (artistInput) artistInput.value = isSong ? (pl.tracks[0].artist || '') : albumArtistName(pl);
   input.focus(); input.select();
   function submit(){
     const name = input.value.trim();
     if (!name) return;
-    pl.name = name;
+    const artist = artistInput ? artistInput.value.trim() : '';
+    const apply = (p) => {
+      p.name = name;
+      if (isSong && p.tracks && p.tracks[0]){ p.tracks[0].title = name; p.tracks[0].artist = artist; }
+      else if (isAlbum && artistInput){ if (artist) p.artistName = artist; else delete p.artistName; }
+    };
+    apply(pl);
     lsSet(LS_PL(id), pl);
-    if (state.playlist && state.playlist.id === id) state.playlist.name = name;
+    if (state.playlist && state.playlist.id === id) apply(state.playlist);
     closeImportOverlay();
     renderLibrary();
+    const e = state.queue[state.queuePos];
+    if (isSong && e && e.plId === id){ const t = currentTrack(); if (t) updateTrackMetaUI(t); }
     showToast('Renamed');
   }
   $('plRenameBtn').addEventListener('click', submit);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  [input, artistInput].forEach(el => { if (el) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); }); });
 }
 
 // Playlist (not album/podcast/artist) with its own cover and 2+ playable
