@@ -2177,6 +2177,13 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     min-height:0;transform:none!important;border-left:1px solid var(--border);
   }
   body.split-desktop #queue-scrim{display:none!important}
+  /* Geethub #470: library and queue panes get rounded corners top and bottom
+     (clipped by their own overflow). In desktop-fs they become edge drawers
+     (rules further down), where only the inner-facing corners round. */
+  body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel){border-radius:var(--r-lg)}
+  body.split-desktop:not(.desktop-fs) #hist-panel{border-radius:var(--r-lg)}
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#view-library,#libpl-panel){border-radius:0 var(--r-lg) var(--r-lg) 0}
+  body.split-desktop.desktop-fs:not(.view-settings-active) #queue-panel{border-radius:var(--r-lg) 0 0 var(--r-lg)}
   /* Search/relink/import window: only the middle (player) pane, between
      the library and queue panes, like Settings; topbar and side panes stay. */
   body.split-desktop #import-overlay{position:relative;inset:auto;grid-column:2;grid-row:2;min-height:0;z-index:5}
