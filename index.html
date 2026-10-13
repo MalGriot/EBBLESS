@@ -11221,7 +11221,7 @@ function setImportHint(){ /* static text; kept for future contextual tips */ }
 
 function openImportOverlay(){
   importOverlay.classList.add('is-open');
-  if (loadBtn){ loadBtn.disabled = true; loadBtn.classList.add('onb-loading'); }
+  if (loadBtn) loadBtn.classList.add('onb-loading');
 }
 function closeImportOverlay(){
   importOverlay.classList.remove('is-open');
@@ -11402,6 +11402,7 @@ async function beginVibeSearch(query){
   openImportOverlay();
   stageSearching(query);
   const seq = ++vibeSearchSeq;
+  vibeResultsToken++; // a newer search wins over any in-flight sentence search
   let artist = null, shown = null;
   const artistP = searchArtistProfile(query).then(a => {
     artist = a;
@@ -11410,10 +11411,12 @@ async function beginVibeSearch(query){
   });
   try{
     const results = await searchPlaylistsByVibe(query);
+    if (seq !== vibeSearchSeq) return; // a newer search replaced this one
     shown = results;
     stageSearchResults(artist ? [artist].concat(results) : results, query, seq);
   } catch(e){
     const a = await artistP;
+    if (seq !== vibeSearchSeq) return;
     if (a && seq === vibeSearchSeq){ shown = []; stageSearchResults([a], query, seq); return; }
     stageError(plainError(e), () => beginVibeSearch(query), "Couldn’t search for that.");
   }
@@ -12350,6 +12353,7 @@ let vibeResultsToken = 0;
 async function beginConversationalVibe(text){
   statsFeature('vibe_search');
   const token = ++vibeResultsToken;
+  vibeSearchSeq++; // cancels any in-flight keyword search
   openImportOverlay();
   stageInterpreting(text);
   let interp;
