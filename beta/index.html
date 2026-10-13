@@ -317,6 +317,8 @@
   // Show the form right away; status only fills in the meter and can be slow
   // (sheet read on a cache miss). The worker still enforces the cap on submit.
   show('open');
+  // /beta/#join (from the welcome page) opens the form straight away
+  if (location.hash === '#join') join();
   Beta.api('/beta/status').then(s => {
     const left = Math.max(0, s.cap - s.filled);
     $('meterCount').textContent = s.filled + ' / ' + s.cap + ' testers';

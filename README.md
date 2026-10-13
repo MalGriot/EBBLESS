@@ -74,6 +74,20 @@ testing. Staging has its own separate KV namespaces (see `worker/wrangler.toml`)
 so nothing written there touches production's quota. Plain `npx wrangler
 deploy` (no `--env`) still targets production as before.
 
+## Welcome page (the beta splash)
+
+The welcome page (`welcome/`, served at `/EBBLESS/welcome/`) embeds the real player
+in an iframe (`welcome/app-demo.html`, `welcome/app-ambient.css`). Both are generated from
+`index.html` by `python3 scripts/build-landing-demo.py`: it lifts the app's own
+stylesheet, player markup and the exact record / cassette / cymatics / lyrics
+code, and wraps them with a small stand-in for playback
+(`scripts/landing-demo-shim.js`, `landing-demo-driver.js`). Re-run it after
+changing the player; it stops with an error if a marker it needs has moved.
+The looping preview plays no audio; the one-song test ("Try it") plays a single
+song through YouTube. The demo never touches the app's storage; the page only
+remembers that the test was used (`ebbless:landingTested`).
+The page's own links into the beta use `/beta/#join`, which opens the signup form.
+
 ## Reading tester feedback
 
 Settings > Feedback & support > "Send feedback" lets beta testers report bugs or ideas
