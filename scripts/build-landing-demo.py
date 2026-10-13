@@ -117,15 +117,40 @@ html,body{height:100%;overflow:hidden;background:transparent}
 .lyrics-scroller{scrollbar-width:none;-ms-overflow-style:none}
 .lyrics-scroller::-webkit-scrollbar{display:none}
 #bottom-nav button{pointer-events:none}
-.demo-test .controls-row #prevBtn,.demo-test .controls-row #nextBtn,.demo-test #shuffleBtn,.demo-test #repeatBtn{display:none}
-.demo-lock #urlInput{opacity:.5;pointer-events:none}
-.demo-loop .seek-row .t{display:none}
+/* the real song's player: invisible but on screen (audio only; browsers will not start an offscreen video) until video mode puts it over the art */
+#ytWrap{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
+#ytWrap.on{right:auto;bottom:auto;opacity:1;z-index:6;border-radius:12px;overflow:hidden}
+#ytWrap iframe{width:100%;height:100%;border:0}
+/* the artist name is a link, like in the app */
+#trackArtist.demo-link{cursor:pointer}
+#trackArtist.demo-link:hover span{text-decoration:underline;text-underline-offset:3px}
+#bio{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(10,10,10,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.bio-card{position:relative;width:min(380px,100%);max-height:100%;overflow:auto;padding:22px 20px 18px;border-radius:16px;background:#181818;border:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px rgba(0,0,0,.6);color:#f2f2f2;font-size:14px;line-height:1.5}
+.bio-card h2{margin:0 0 10px;font-size:26px;letter-spacing:-.01em}
+.bio-card p{margin:0 0 10px;color:#b4b4b4}
+.bio-card .bio-eyebrow{margin:0 0 4px;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent)}
+.bio-card .bio-made{color:#f2f2f2;font-weight:600;margin-bottom:0}
+.bio-x{position:absolute;top:8px;right:10px;width:32px;height:32px;border-radius:50%;font-size:22px;line-height:1;color:#b4b4b4;background:none;border:0;cursor:pointer}
+/* art styles: one row with the art in the middle. The side buttons show on narrow widths, the app's tab bar on wide ones. */
+#artRow{display:flex;align-items:stretch;justify-content:center;gap:10px;width:100%}
+.art-side{display:none}
+.side-btn{flex:1 1 0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#b4b4b4;font:inherit;font-size:10px;letter-spacing:.3px;cursor:pointer;padding:4px 2px}
+.side-btn svg{width:20px;height:20px}
+.side-btn.is-active{background:var(--accent);border-color:var(--accent);color:#121212}
+.side-btn:disabled{opacity:.35;cursor:default}
+@media (max-width:859.98px){
+  .visual-tabs{display:none!important}
+  .art-side{display:flex;flex-direction:column;gap:8px;width:56px;flex:none}
+  #artRow .artwork-wrap{flex:1 1 auto;min-width:0;width:auto!important;max-width:calc(100vh - 230px)}
+}
+/* a phone frame has a notch: give the top bar room beneath it */
+@media (max-width:430px){body:not(.compact){--topbar-h:92px}body:not(.compact) #topbar{padding-top:32px}}
 /* compact: the stage only, for the phone dock */
-.compact #topbar,.compact #bottom-nav,.compact .visual-tabs{display:none!important}
+.compact #topbar,.compact #bottom-nav{display:none!important}
 .compact .view{top:0;bottom:0}
 .compact .view-scroll{padding:6px 10px 6px}
 .compact .player-stage{padding-top:0}
-.compact .artwork-wrap{width:min(88vw,calc(100vh - 104px))!important}
+.compact #artRow .artwork-wrap{max-width:calc(100vh - 120px)}
 .compact .transport-full{margin-top:0}
 .compact .track-meta{margin-top:6px}
 """

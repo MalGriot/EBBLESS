@@ -1,6 +1,6 @@
 /* Landing demo shim: stands in for the playback engine, library and storage so
    the app's own player code (pasted below, verbatim) can run on its own.
-   Nothing here plays audio or touches localStorage. */
+   Nothing here touches localStorage; the driver plays the songs. */
 const $ = (id) => document.getElementById(id);
 const _mem = {};
 const lsGet = (k, d) => (k in _mem ? _mem[k] : d);
@@ -30,10 +30,8 @@ const isPodcastTrack = () => false;
 const refreshSwellIfDue = () => {};
 let songAccent = null;
 let demoClock = 0;
-const activeDeck = () => ({ player: { getCurrentTime: () => demoClock, seekTo: (t) => { demoClock = t; }, playVideo: () => demoSetPlaying(true) } });
+const activeDeck = () => ({ player: { getCurrentTime: () => demoClock, seekTo: (t) => { demoClock = t; }, playVideo: () => {} } });
 const currentTrack = () => demo.track;
 const artworkUrls = (t) => (t && t.art ? [t.art] : []);
 const maybeLoadLyrics = () => { renderLyrics({ _videoId: demo.track.id, lines: DEMO_LYRICS, synced: true }); };
-let testMode = false;   // the one-song test (see the driver); false = the looping preview
-document.body.classList.add('demo-loop');
 if (/[?&]compact\b/.test(location.search)) document.body.classList.add('compact');

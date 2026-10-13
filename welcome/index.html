@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>EBBLESS: Music deserves your attention</title>
-<meta name="description" content="Music deserves your attention. Not your attention span. EBBLESS is a player built for listening. Join the beta.">
+<meta name="description" content="Music deserves your attention. Not your attention span. EBBLESS is a player built for listening. Try it for 15 minutes or join the beta.">
 <meta name="theme-color" content="#121212">
 <meta property="og:title" content="EBBLESS: Music deserves your attention">
-<meta property="og:description" content="Music deserves your attention. Not your attention span. Join the EBBLESS beta.">
+<meta property="og:description" content="Music deserves your attention. Not your attention span. Try EBBLESS for 15 minutes or join the beta.">
 <meta property="og:image" content="https://malgriot.github.io/EBBLESS/brand/assets/og-image.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../brand/assets/icons/favicon-32.png">
 <link rel="apple-touch-icon" href="../brand/assets/icons/apple-touch-icon.png">
@@ -19,13 +19,15 @@
 <a class="skip" href="#story">Skip to the story</a>
 <div id="ambient" aria-hidden="true"><div class="layer" id="ambient-a"></div><div class="layer" id="ambient-b"></div></div>
 
-<!-- phone and tablet: the compact app HUD -->
+<!-- phone and tablet: the compact app HUD. The title sits in the middle with an arrow to the next chapter. -->
 <header class="hud" id="hud">
   <a class="hud-mark" href="#open" aria-label="EBBLESS, back to the start"><img src="../brand/assets/mark-white.png" alt=""></a>
-  <p class="hud-ch" id="hudCh" aria-live="polite">Welcome</p>
-  <button class="hud-q" id="qBtn" type="button" aria-expanded="false" aria-controls="sheet" aria-label="Chapters">
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
-  </button>
+  <div class="hud-mid">
+    <button class="hud-ch" id="hudChBtn" type="button" aria-expanded="false" aria-controls="sheet" aria-label="Chapters"><span id="hudCh" aria-live="polite">Welcome</span></button>
+    <button class="hud-next" id="hudNext" type="button" aria-label="Next chapter">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
   <a class="btn primary sm hud-cta" href="../beta/#join">Get beta access</a>
   <i class="hud-prog" id="hudProg" aria-hidden="true"></i>
 </header>
@@ -33,7 +35,7 @@
   <ol class="sheet-list" id="sheetList"></ol>
 </div>
 
-<div class="page" id="page" style="--n:13">
+<div class="page" id="page" style="--n:18">
 
   <!-- left: identity, where you are, the way in -->
   <aside class="rail" aria-label="Story">
@@ -42,14 +44,19 @@
       <p class="rail-group">Why</p>
       <a href="#open" data-s="open">Welcome</a>
       <a href="#problem" data-s="problem">The problem</a>
+      <a href="#lost" data-s="lost">What we lost</a>
       <a href="#alt" data-s="alt">A different way</a>
       <p class="rail-group">Inside</p>
       <a href="#import" data-s="import">Bring your music</a>
+      <a href="#search" data-s="search">Search anything</a>
+      <a href="#artist" data-s="artist">Artists and shows</a>
       <a href="#discover" data-s="discover">Wander</a>
       <a href="#lp" data-s="lp">Record</a>
       <a href="#cassette" data-s="cassette">Cassette</a>
       <a href="#cymatics" data-s="cymatics">Cymatics</a>
       <a href="#lyrics" data-s="lyrics">Lyrics</a>
+      <a href="#game" data-s="game">The game</a>
+      <a href="#color" data-s="color">Color</a>
       <a href="#everywhere" data-s="everywhere">Everywhere</a>
       <a href="#try" data-s="try">Try it</a>
       <p class="rail-group">Beta</p>
@@ -58,53 +65,62 @@
     </nav>
     <div class="rail-foot">
       <p class="rail-now" id="railNow" aria-live="off"></p>
-      <a class="btn primary" href="../beta/#join">Get beta access</a>
+      <a class="btn primary" href="../sample/">Try the 15 minute trial</a>
+      <a class="btn" href="../beta/#join">Get beta access</a>
       <a class="rail-open" href="../">Already approved? Open EBBLESS</a>
     </div>
     <i class="rail-prog" id="railProg" aria-hidden="true"></i>
   </aside>
 
-  <!-- center: the real player -->
+  <!-- center: the real player, in the device you pick -->
   <div class="canvas" id="canvas">
-    <div class="canvas-in"><iframe id="player" title="The EBBLESS player, running"></iframe></div>
+    <div class="devbar" id="devbar" role="group" aria-label="See the player on a device">
+      <button type="button" data-dev="phone" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg>Phone</button>
+      <button type="button" data-dev="tablet" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="2.5" width="15" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg>Tablet</button>
+      <button type="button" data-dev="laptop" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></svg>Desktop</button>
+    </div>
+    <div class="stage" id="stage">
+      <div class="device d-laptop" id="device">
+        <div class="screen"><iframe id="player" title="The EBBLESS player, running" allow="autoplay; encrypted-media"></iframe></div>
+      </div>
+    </div>
   </div>
 
   <!-- right: the story -->
   <main id="story">
 
-    <section class="step" id="open" data-mode="default" data-song="0">
+    <section class="step" id="open">
       <div class="step-in">
         <p class="eyebrow">EBBLESS beta</p>
         <h1 class="h1">Music deserves your attention. Not your attention span.</h1>
-        <p class="lede">EBBLESS is a player for the music you already have, built to be listened to.</p>
+        <p class="lede">EBBLESS is a player for the music you already have, built to be listened to. Press play on the player and hear it.</p>
         <div class="cta-row">
-          <a class="btn primary big" href="../beta/#join">Get beta access</a>
-          <a class="btn big" href="../">Open EBBLESS</a>
+          <a class="btn primary big" href="../sample/">Try the 15 minute trial</a>
+          <a class="btn big" href="../beta/#join">Get beta access</a>
         </div>
-        <p class="small">Already approved? Your personal link is in your email.</p>
-        <ul class="asks" aria-label="Three questions">
-          <li><a href="#problem"><b>Why should I care?</b><span>Listening turned into managing.</span></a></li>
-          <li><a href="#alt"><b>What's different?</b><span>It's built around listening.</span></a></li>
-          <li><a href="#beta"><b>How do I get in?</b><span>Join the beta. It's approved by hand.</span></a></li>
-        </ul>
+        <p class="small">Already approved? <a href="../">Open EBBLESS</a> with the link in your email.</p>
       </div>
     </section>
 
-    <section class="step" id="problem" data-mode="default" data-song="0">
+    <section class="step" id="problem">
       <div class="step-in">
         <p class="eyebrow">The problem</p>
         <h2 class="h2">Listening turned into managing.</h2>
-        <ol class="loop" aria-label="A familiar loop">
-          <li>Open the app for one song.</li>
-          <li>Search. Skip. Search again.</li>
-          <li>Scroll the recommendations.</li>
-          <li>Forty minutes later, nothing really played.</li>
-        </ol>
-        <p class="lede">Most music apps are built around finding the next thing to play. That's useful. It also keeps pulling you out of the song you're in.</p>
+        <p class="copy">The problem is not just that music became managing. It also got paywalled, and basic features for managing, accessing, and getting a flow going with your music (so you can listen to music for hours) were restricted. It's not a basic function of a music player.</p>
       </div>
     </section>
 
-    <section class="step" id="alt" data-mode="default" data-song="1">
+    <section class="step" id="lost">
+      <div class="step-in">
+        <p class="eyebrow">What we lost</p>
+        <h2 class="h2">It stopped being ours.</h2>
+        <p class="copy">We got bombarded with visual and audio ads that interrupt our flow and take us off the track that was connecting us to our music in the first place. We got subscriptions for things that were first given to us for free for years. We lost access to the infinite amount of music on the internet because it got locked behind these platforms. We lost the ability to change our listening experience and mold it for ourselves.</p>
+        <p class="copy">We got locked into large algorithm systems that care less about what we personally want to listen to and more about what's popular. They are trying to shape our brains into only hearing certain sounds. We also got our data mined and sold, and the companies we are paying are also paying for things we don't necessarily agree on. It's not about us, and these apps are just being rented to us. They're not ours.</p>
+        <p class="copy strong">EBBLESS is here to change all that.</p>
+      </div>
+    </section>
+
+    <section class="step" id="alt">
       <div class="step-in">
         <p class="eyebrow">A different way</p>
         <h2 class="h2">EBBLESS is built for listening.</h2>
@@ -118,7 +134,7 @@
       </div>
     </section>
 
-    <section class="step" id="import" data-mode="default" data-song="1">
+    <section class="step" id="import">
       <div class="step-in">
         <p class="eyebrow">Bring your music</p>
         <h2 class="h2">Paste a playlist. It plays.</h2>
@@ -133,7 +149,40 @@
       </div>
     </section>
 
-    <section class="step" id="discover" data-mode="default" data-song="2">
+    <section class="step" id="search">
+      <div class="step-in">
+        <p class="eyebrow">Search anything</p>
+        <h2 class="h2">One box. Type or paste almost anything.</h2>
+        <p class="lede">EBBLESS works out what you gave it. Tap an example to watch it go into the box on the player.</p>
+        <ul class="chips" id="chips">
+          <li><button type="button" data-type="open.spotify.com/playlist/…">A Spotify playlist</button></li>
+          <li><button type="button" data-type="music.apple.com/…/album/…">An Apple Music album</button></li>
+          <li><button type="button" data-type="youtube.com/watch?v=…">A YouTube or YouTube Music link</button></li>
+          <li><button type="button" data-type="soundcloud.com/artist/sets/…">A SoundCloud song or set</button></li>
+          <li><button type="button" data-type="a song title">A song title</button></li>
+          <li><button type="button" data-type="an artist you love">An artist</button></li>
+          <li><button type="button" data-type="afro-house, neo-soul, jazz">A genre</button></li>
+          <li><button type="button" data-type="rainy Sunday, something warm and slow">A vibe or a mood</button></li>
+          <li><button type="button" data-type="open.spotify.com/artist/…">A link to an artist page</button></li>
+          <li><button type="button" data-type="a podcast show, episode or RSS feed">A podcast show or episode</button></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="step" id="artist">
+      <div class="step-in">
+        <p class="eyebrow">Artists and shows</p>
+        <h2 class="h2">Link a whole artist. Get everything they've made.</h2>
+        <p class="lede">Paste an artist page, or a podcast show, from any of your sources. EBBLESS brings in their catalog or every episode, in one place, ready to play.</p>
+        <ul class="cards two">
+          <li><b>Artist pages</b><span>Spotify, Apple Music, YouTube, SoundCloud</span></li>
+          <li><b>Podcast shows</b><span>A show, an episode or an RSS feed</span></li>
+        </ul>
+        <p class="small">Click an artist's name in the player to open their page. Try it on the player now.</p>
+      </div>
+    </section>
+
+    <section class="step" id="discover">
       <div class="step-in">
         <p class="eyebrow">Wander</p>
         <h2 class="h2">Follow your curiosity.</h2>
@@ -143,7 +192,7 @@
       </div>
     </section>
 
-    <section class="step" id="lp" data-mode="record" data-song="0">
+    <section class="step" id="lp" data-mode="record">
       <div class="step-in">
         <p class="eyebrow">Record</p>
         <h2 class="h2">Spin it like vinyl.</h2>
@@ -151,7 +200,7 @@
       </div>
     </section>
 
-    <section class="step" id="cassette" data-mode="cassette" data-song="1">
+    <section class="step" id="cassette" data-mode="cassette">
       <div class="step-in">
         <p class="eyebrow">Cassette</p>
         <h2 class="h2">Press play on a tape.</h2>
@@ -159,7 +208,7 @@
       </div>
     </section>
 
-    <section class="step" id="cymatics" data-mode="viz" data-song="2">
+    <section class="step" id="cymatics" data-mode="viz">
       <div class="step-in">
         <p class="eyebrow">Cymatics</p>
         <h2 class="h2">Watch sound take shape.</h2>
@@ -167,7 +216,7 @@
       </div>
     </section>
 
-    <section class="step" id="lyrics" data-mode="lyrics" data-song="0">
+    <section class="step" id="lyrics" data-mode="lyrics">
       <div class="step-in">
         <p class="eyebrow">Lyrics</p>
         <h2 class="h2">Follow along.</h2>
@@ -175,7 +224,24 @@
       </div>
     </section>
 
-    <section class="step" id="everywhere" data-mode="default" data-song="1">
+    <section class="step" id="game">
+      <div class="step-in">
+        <p class="eyebrow">The game</p>
+        <h2 class="h2">There's a game hiding in the record.</h2>
+        <p class="lede">Go fullscreen with the record showing and double-tap it to start a run. Tap as the album art comes back upright. Every hit speeds the platter up. Miss, and the run ends. Your best score is kept.</p>
+      </div>
+    </section>
+
+    <section class="step" id="color">
+      <div class="step-in">
+        <p class="eyebrow">Color</p>
+        <h2 class="h2">The whole app changes color with you.</h2>
+        <p class="lede">The color of EBBLESS moves with the time of day, and takes on the color of the song that's playing. Watch it change from one song to the next.</p>
+        <div class="swatches" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </section>
+
+    <section class="step" id="everywhere">
       <div class="step-in">
         <p class="eyebrow">Everywhere</p>
         <h2 class="h2">Plays where you are.</h2>
@@ -187,26 +253,19 @@
       </div>
     </section>
 
-    <section class="step" id="try" data-mode="default" data-song="0" data-test="1">
+    <section class="step" id="try">
       <div class="step-in">
         <p class="eyebrow">Try it</p>
-        <h2 class="h2">Paste a link. Hear one song.</h2>
-        <p class="lede">A song link plays that song. An album, playlist or artist link plays its first. You get one try.</p>
-        <form class="try-form" id="tryForm" novalidate>
-          <label class="sr" for="tryInput">A Spotify, YouTube, Apple Music or SoundCloud link</label>
-          <input id="tryInput" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a link to play one song">
-          <button class="btn primary" type="submit">Play</button>
-        </form>
-        <p class="small try-note" id="tryNote" aria-live="polite">On a computer, use the paste box at the top of the player.</p>
-        <p class="small" id="tryPlaying" hidden>Your one song is playing.</p>
-        <div class="try-after" id="tryAfter" hidden>
-          <p class="lede">That was your test. The rest is in the beta.</p>
-          <a class="btn primary big" href="../beta/#join">Get beta access</a>
+        <h2 class="h2">Use the real thing for 15 minutes.</h2>
+        <p class="lede">No account. Load your own music, play it, wander. Your 15 minutes only run while a song is playing.</p>
+        <div class="cta-row">
+          <a class="btn primary big" href="../sample/">Try the 15 minute trial</a>
+          <a class="btn big" href="../beta/#join">Get beta access</a>
         </div>
       </div>
     </section>
 
-    <section class="step" id="beta" data-mode="default" data-song="2">
+    <section class="step" id="beta">
       <div class="step-in">
         <p class="eyebrow">The beta</p>
         <h2 class="h2">Be one of the first 50.</h2>
@@ -218,23 +277,30 @@
           <li><b>Join</b><span>Tell us a little about you.</span></li>
           <li><b>We review it by hand</b><span>Approval takes a little time.</span></li>
           <li><b>You get an email</b><span>It has your personal link to EBBLESS.</span></li>
-          <li><b>Listen for two weeks</b><span>Then tell us the truth. Your feedback shapes what EBBLESS becomes.</span></li>
+          <li><b>Listen for 7 days</b><span>Then tell us the truth. Your feedback shapes what EBBLESS becomes.</span></li>
         </ol>
       </div>
     </section>
 
-    <section class="step" id="join" data-mode="default" data-song="0">
+    <section class="step" id="join">
       <div class="step-in">
         <p class="eyebrow">Get access</p>
         <h2 class="h2">Come listen.</h2>
         <div class="cta-row">
           <a class="btn primary big" id="ctaJoin" href="../beta/#join">Get beta access</a>
+          <a class="btn big" href="../sample/">Try the 15 minute trial</a>
         </div>
         <p class="small">Already approved? <a href="../">Open EBBLESS</a> with the link in your email.</p>
         <p class="fine">Your answers are only seen by us and are only used to run the EBBLESS beta.</p>
       </div>
     </section>
 
+    <!-- desktop: the window is fixed, so the chapters page instead of scrolling -->
+    <div class="pager" id="pager" aria-label="Chapters">
+      <span class="pager-n tnum" id="pagerN">01 / 18</span>
+      <button type="button" id="pagerUp" aria-label="Previous chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button type="button" id="pagerDown" aria-label="Next chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
   </main>
 </div>
 
