@@ -3092,12 +3092,23 @@ body.week-up-on{overflow:hidden}
   addEventListener('DOMContentLoaded', function(){
     var b = document.createElement('button');
     b.type = 'button';
-    b.textContent = 'Copy perf report';
+    b.textContent = 'Send perf report';
     b.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483646;font:600 12px system-ui;color:#000;background:#e0b26a;border:0;padding:6px 10px;border-radius:8px;cursor:pointer';
     b.addEventListener('click', function(ev){
       ev.stopPropagation();
+      ev.preventDefault();
+      // opens a prefilled GitHub issue; the user only presses Submit
+      var body = report();
+      if (body.length > 6000) body = body.slice(0, 6000) + '\n...(truncated)';
+      window.open('https://github.com/MalGriot/EBBLESS/issues/new?title=' + encodeURIComponent('[perf] #487 freeze report') +
+        '&labels=' + encodeURIComponent('perf') + '&body=' + encodeURIComponent('```\n' + body + '\n```'), '_blank', 'noopener');
+      b.textContent = 'Opened - press Submit there';
+      setTimeout(function(){ b.textContent = 'Send perf report'; }, 4000);
+    }, true);
+    b.addEventListener('contextmenu', function(ev){
+      ev.preventDefault();
       var txt = report();
-      var done = function(){ b.textContent = 'Copied (' + frames.length + ' stalls)'; setTimeout(function(){ b.textContent = 'Copy perf report'; }, 2500); };
+      var done = function(){ b.textContent = 'Copied (' + frames.length + ' stalls)'; setTimeout(function(){ b.textContent = 'Send perf report'; }, 2500); };
       (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt).then(done) : Promise.reject()).catch(function(){
         var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;inset:10%;z-index:2147483647;font:11px monospace';
         document.body.appendChild(ta); ta.select();
