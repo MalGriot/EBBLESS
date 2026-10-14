@@ -3026,6 +3026,32 @@ body.week-up-on{overflow:hidden}
   #weekUp,#weekUp .wu-reveal{transition:opacity .4s linear;transform:none}
 }
 </style>
+<script>
+/* GPU test switches (#487): ?gpu=noambient,noresize,noanim turns suspects off on
+   real hardware to find what glitches; remembered until ?gpu=off. A small
+   badge shows while any are on. Temporary - remove once #487 is closed. */
+(function(){
+  var KEY = 'ebbless:gpuTest', on = '';
+  try {
+    var m = /[?&]gpu=([a-z,]+)/.exec(location.search);
+    if (m) { if (m[1] === 'off') localStorage.removeItem(KEY); else localStorage.setItem(KEY, m[1]); }
+    on = localStorage.getItem(KEY) || '';
+  } catch(e){}
+  window.__EBB_GPU = on.split(',').filter(Boolean);
+  window.__EBB_GPU.forEach(function(f){ document.documentElement.classList.add('gpu-' + f); });
+  if (!window.__EBB_GPU.length) return;
+  addEventListener('DOMContentLoaded', function(){
+    var b = document.createElement('div');
+    b.textContent = 'GPU test: ' + window.__EBB_GPU.join(', ');
+    b.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483646;font:600 11px system-ui;color:#000;background:#e0b26a;padding:3px 7px;border-radius:6px;pointer-events:none';
+    document.body.appendChild(b);
+  });
+})();
+</script>
+<style>
+html.gpu-noambient :is(#ambient,#flow-layer .flow-ambient) .layer{display:none}
+html.gpu-noanim *,html.gpu-noanim *::before,html.gpu-noanim *::after{animation-play-state:paused!important}
+</style>
 </head>
 <body>
 
@@ -8056,6 +8082,7 @@ function setAmbient(track){
 // keep the canvas aspect matched to the screen (rotation, window resize)
 let ambientResizeT = 0;
 addEventListener('resize', () => {
+  if (window.__EBB_GPU && window.__EBB_GPU.indexOf('noresize') !== -1) return; // GPU test switch (#487)
   clearTimeout(ambientResizeT);
   ambientResizeT = setTimeout(() => {
     paintAmbient(ambientActive === 'a' ? ambientA : ambientB, ambientImg);
