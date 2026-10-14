@@ -8438,6 +8438,7 @@ function updatePlayerAccentColor(track){
    ========================================================================= */
 function getLibraryView(){ return lsGet(LS_LIB_VIEW, 'compact'); }
 function setLibraryView(mode){
+  const prevView = getLibraryView();
   lsSet(LS_LIB_VIEW, mode);
   libraryGrid.classList.toggle('is-list', mode === 'list');
   libraryGrid.classList.toggle('is-compact', mode === 'compact');
@@ -8450,6 +8451,12 @@ function setLibraryView(mode){
   libViewToggle.querySelectorAll('[data-mode]').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
+  // All's overview keeps two rows per section, so a new column count needs a
+  // fresh trim (#487); grids are still empty at startup, so boot skips this
+  if (prevView !== mode && getLibraryFilter() === 'all' && libraryGrid.children.length + libraryArtistsGrid.children.length + libraryAlbumsGrid.children.length + libraryPodcastsGrid.children.length){
+    rerenderLibraryKeepPanel();
+    return;
+  }
   refreshLibraryMarquees();
 }
 // sc_album is a SoundCloud "set" (SoundCloud has no separate album URL
