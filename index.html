@@ -9177,6 +9177,9 @@ function libraryAllOverview(totals){
     more.addEventListener('click', (e) => {
       e.stopPropagation();
       setLibraryFilter(key);
+      // the filter row can overflow (Podcasts sits at the far end): bring the lit chip into view
+      const chip = libFilter.querySelector('[data-filter="' + key + '"]');
+      if (chip) libFilter.scrollTo({ left: chip.offsetLeft - (libFilter.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' });
       const vs = document.querySelector('#view-library .view-scroll');
       if (vs) vs.scrollTop = 0;
       document.getElementById('view-library').scrollTop = 0;
@@ -9479,6 +9482,8 @@ function toggleLibraryPlaylistPanel(id){
       const meta = document.createElement('div'); meta.className = 'meta';
       const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
       const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
+      // (#486) episode date, from the feed's pubDate (ms)
+      if (t.podcast && t.published) artist.textContent += ' · ' + new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       meta.appendChild(title); meta.appendChild(artist);
       row.appendChild(img); row.appendChild(meta);
       const rowActions = document.createElement('div'); rowActions.className = 'row-actions';
