@@ -101,7 +101,9 @@ html{-webkit-tap-highlight-color:transparent}
    into the new album-art color instead of snapping. */
 @property --clock-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
 @property --player-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
+/* accent fade (#476) off again: with the custom cursor on, a cleared-cache load froze (#487)
 html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out)}
+*/
 html.clock-color-init,
 html.reduce-motion{transition:none}
 @media (prefers-reduced-motion:reduce){html{transition:none}}
@@ -27933,7 +27935,10 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
   function readColor(t){
     if (t - lastCol < 150) return;
     lastCol = t;
-    var c = getComputedStyle(root).getPropertyValue('--accent').trim();
+    // inline value set by updateLibraryClockColor(): getComputedStyle here forced a
+    // full-page restyle on every read, which froze the page while the accent
+    // fade was restyling it every frame (#487)
+    var c = root.style.getPropertyValue('--clock-accent').trim();
     if (c) color = c;
   }
   function frame(t){
