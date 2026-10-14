@@ -1670,7 +1670,7 @@ body.queue-over-fs #queue-scrim{bottom:0}
    desktop screen, where library/queue (bg video, blend layer, marquees) are
    all still up; the button path slides them away first. Visible again the
    moment flow closes (their own transitions don't include visibility). */
-body:has(#flow-layer.is-open) :is(#ambient,#topbar,#view-library,#view-player,#queue-panel,#hist-panel,#libpl-panel){
+body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-library,#view-player,#queue-panel,#hist-panel,#libpl-panel){
   visibility:hidden;transition:visibility 0s var(--dur-surface)}
 /* own lava-lamp ambient (mirrors #ambient, driven by the same artwork) so the
    fullscreen view blooms/fades/shifts with the album art's colors instead of
@@ -24387,29 +24387,59 @@ function exitDocFs(){
 
 // immersive: also take the browser fullscreen (defaults on for split-desktop;
 // the cymatics fsBtn path passes false so that one stays an in-page overlay)
+// #487: the window resizing to/from browser fullscreen while the layer fades
+// flickered. In: fade over the normal window first, then go fullscreen under
+// the now-opaque layer. Out: leave fullscreen first, bring the app underneath
+// back while still covered, give it two frames to draw, then fade.
+const FLOW_FADE_MS = (v => Number.isFinite(v) ? v : 500)(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dur-surface')));
+let flowFsT = 0, flowCloseSeq = 0;
 function openFlow(immersive = document.body.classList.contains('split-desktop')){
+  clearTimeout(flowFsT);
+  flowCloseSeq++; // cancels a close still waiting on the fullscreen exit
+  flowLayer.classList.remove('is-leaving');
   state.flowOpen = true;
   flowArtStyleAnchor.appendChild(visualTabsEl);
   flowMountVisual();
   flowLayer.classList.add('is-open');
-  if (immersive) requestDocFs();
+  if (immersive) flowFsT = setTimeout(() => { if (state.flowOpen) requestDocFs(); }, FLOW_FADE_MS);
   armFsIdleTimer();
   csStackSync();
   syncHistoryBuffer();
 }
 function closeFlow(){
+  clearTimeout(flowFsT);
   state.flowOpen = false;
-  flowLayer.classList.remove('is-open');
-  exitDocFs();
+  const seq = ++flowCloseSeq;
+  const fade = () => {
+    if (seq !== flowCloseSeq) return;
+    flowLayer.classList.remove('is-open', 'is-leaving');
+    flowUnmountVisual();
+    if (visualTabsEl.parentElement === flowArtStyleAnchor){
+      visualTabsHome.insertBefore(visualTabsEl, visualTabsAnchor);
+      closeArtStyleMenu();
+    }
+    csStackSync();
+  };
+  const fadeSoon = () => requestAnimationFrame(() => requestAnimationFrame(fade));
+  flowLayer.classList.add('is-leaving'); // un-hides the covered app (see #flow-layer CSS)
+  if (flowDocFs && docFsElement()){
+    let started = false;
+    const go = () => {
+      if (started) return;
+      started = true;
+      ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => document.removeEventListener(t, go));
+      fadeSoon();
+    };
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => document.addEventListener(t, go));
+    setTimeout(go, 900);
+    exitDocFs();
+  } else {
+    exitDocFs();
+    fadeSoon();
+  }
   // back to desktop-fs (F pressed from there) keeps idling on the shared
   // timer; otherwise this just clears it and reveals everything
   armFsIdleTimer();
-  flowUnmountVisual();
-  if (visualTabsEl.parentElement === flowArtStyleAnchor){
-    visualTabsHome.insertBefore(visualTabsEl, visualTabsAnchor);
-    closeArtStyleMenu();
-  }
-  csStackSync();
   syncHistoryBuffer();
 }
 // flow-mode X: one click all the way back to the main screen, even from the
