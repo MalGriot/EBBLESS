@@ -3188,9 +3188,20 @@ body.week-up-on{overflow:hidden}
     ls.set(LS_PL, u);
     try { window.dispatchEvent(new Event('ebbless:betaplaylist')); } catch(e){}
   }
+  // Same idea for the genres/artists from the signup form: the app makes a
+  // "[genre/artist] radio for [name]" playlist from each on first login.
+  const LS_MU = 'ebbless:betaSignupMusic', LS_MU_DONE = 'ebbless:betaSignupMusicDone';
+  const wantMu = () => !ls.get(LS_MU_DONE);
+  function saveMusic(d){
+    const m = d && typeof d.music === 'string' ? d.music.trim().slice(0, 500) : '';
+    if (!m || !wantMu()) return;
+    ls.set(LS_MU, JSON.stringify({ music: m, name: String(d.name || '').slice(0, 40) }));
+    try { window.dispatchEvent(new Event('ebbless:betamusic')); } catch(e){}
+  }
   function saveMe(d){
     if (!d || typeof d !== 'object') return;
     savePlaylist(d);
+    saveMusic(d);
     ls.set(LS_ME, JSON.stringify({ name: String(d.name || ''), label: String(d.label || ''), windowEndsAt: Number(d.windowEndsAt) > 0 ? Number(d.windowEndsAt) : null,
       // "Join the next beta" on the 2-weeks-up recap (absent when not set)
       rejoin: d.rejoin === 'requested' || d.rejoin === 'approved' ? d.rejoin : '', nextRoundAt: Number(d.nextRoundAt) > 0 ? Number(d.nextRoundAt) : null, nextRoundLabel: String(d.nextRoundLabel || ''),
@@ -3202,7 +3213,7 @@ body.week-up-on{overflow:hidden}
   // 'ok' | 'no' (rejected) | 'net' (couldn't ask)
   async function check(token){
     try {
-      const res = await fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...(wantPl() ? { playlist: true } : {}) }) });
+      const res = await fetch(backend + '/beta/me', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...(wantPl() ? { playlist: true } : {}), ...(wantMu() ? { music: true } : {}) }) });
       if (res.ok){ saveMe(await res.json().catch(() => null)); return 'ok'; }
       return res.status === 404 ? 'no' : 'net';
     } catch(e){ return 'net'; }
@@ -6255,7 +6266,8 @@ async function betaAccountLink(idToken, sub){
     if (gate && (gate.locked() || renewing)){
       if (!renewing) gate.msg('Checking your Google account...');
       let wantPl = true; try { wantPl = !localStorage.getItem('ebbless:betaSignupPlaylistDone'); } catch(e){}
-      const res = await post('/beta/claim', wantPl ? { idToken, playlist: true } : { idToken });
+      let wantMu = true; try { wantMu = !localStorage.getItem('ebbless:betaSignupMusicDone'); } catch(e){}
+      const res = await post('/beta/claim', { idToken, ...(wantPl ? { playlist: true } : {}), ...(wantMu ? { music: true } : {}) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil, data); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
       else if (renewing) gate.leaseFailed();
@@ -12524,6 +12536,64 @@ function applyBetaSignupPlaylist(){
   beginImportFromParsedLink(parsed);
 }
 window.addEventListener('ebbless:betaplaylist', applyBetaSignupPlaylist);
+
+// Beta signup genres/artists (Geethub #477): each one becomes a saved
+// "[genre/artist] radio for [name]" playlist, built quietly in the
+// background with the same interpreter + ranking as typing a vibe. No
+// prompts, nothing starts playing. Marked done first so it never repeats;
+// an item whose playlist name is already in the library is skipped.
+const LS_BETA_MU = 'ebbless:betaSignupMusic', LS_BETA_MU_DONE = 'ebbless:betaSignupMusicDone';
+const BETA_RADIO_MAX = 4;
+function betaRadioItems(text){
+  const seen = new Set(), out = [];
+  String(text || '').split(/[,;\n\/|]+/).forEach(x => {
+    const v = x.replace(/\s+/g, ' ').trim().slice(0, 50), k = v.toLowerCase();
+    if (v.length < 2 || seen.has(k)) return;
+    seen.add(k); out.push(v);
+  });
+  return out.slice(0, BETA_RADIO_MAX);
+}
+async function buildRadioPlaylist(item, name){
+  const title = item + ' radio' + (name ? ' for ' + name : '');
+  const taken = getLibrary().some(id => { const pl = getCachedPlaylist(id); return pl && String(pl.name || '').toLowerCase() === title.toLowerCase(); });
+  if (taken) return;
+  const interp = await fetchVibeInterpretation(item);
+  const list = await rankVibeTracks(interp);
+  if (!list.length) return;
+  const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const pl = { id, type: 'custom', name: title, image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: item };
+  persistPlaylistObj(pl);
+  saveToLibrary(id); renderLibrary();
+  for (let i = 0; i < list.length; i++){
+    const t = list[i];
+    const [match, art] = await Promise.all([
+      searchYouTubeCached(t.title, t.artist).catch(() => null),
+      t.image ? Promise.resolve(t.image) : resolveTrackArt('applemusic', t.title, t.artist, null).catch(() => null),
+    ]);
+    pl.tracks.push({ title: t.title, artist: t.artist, videoId: (match && match.videoId) || null, matchedTitle: (match && match.title) || '', channel: (match && match.channel) || '', plays: 0, art, duration: (match && match.duration) || 0 });
+    pl.ts = Date.now();
+    persistPlaylistObj(pl);
+    if (state.playlist && state.playlist.id === id) state.playlist = pl;
+    await sleep(350);
+  }
+  renderLibrary();
+}
+let betaRadioRunning = false;
+async function applyBetaSignupMusic(){
+  if (!betaPlaylistReady || betaRadioRunning) return;
+  let raw = '';
+  try { raw = localStorage.getItem(LS_BETA_MU) || ''; localStorage.removeItem(LS_BETA_MU); localStorage.setItem(LS_BETA_MU_DONE, '1'); } catch(e){}
+  if (!raw) return;
+  let d = null; try { d = JSON.parse(raw); } catch(e){}
+  if (!d || !d.music) return;
+  betaRadioRunning = true;
+  try {
+    for (const item of betaRadioItems(d.music)){
+      try { await buildRadioPlaylist(item, String(d.name || '').trim()); } catch(e){ console.warn('[ebbless] beta radio failed', item, e); }
+    }
+  } finally { betaRadioRunning = false; }
+}
+window.addEventListener('ebbless:betamusic', applyBetaSignupMusic);
 
 importForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -25234,7 +25304,7 @@ function startApp(){
     // screen at this point (z-index 9999 vs. #import-overlay's 60) so this
     // resolves quietly underneath it, same as any other cold-boot work here.
     applySharedImportFromUrl();
-    betaPlaylistReady = true; applyBetaSignupPlaylist();
+    betaPlaylistReady = true; applyBetaSignupPlaylist(); applyBetaSignupMusic();
   } catch(e){
     // Best-effort recovery: land on whatever view makes sense rather than
     // leaving the DOM in whatever half-rendered state the throw above left

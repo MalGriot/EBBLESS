@@ -231,12 +231,20 @@ export function signupPlaylistFields(t, want) {
   return /^https?:\/\/\S+$/i.test(link) ? { playlist: link } : {};
 }
 
+// Genres/artists from the signup form ("What do you listen to most?"), handed
+// back only when the app asks (`music: true`) so it can make radio playlists
+// on first login. Plain text only, capped.
+export function signupMusicFields(t, want) {
+  const m = want === true ? str(t && t.signup_music, 500) : '';
+  return m ? { music: m } : {};
+}
+
 async function handleMe(request, env, ctx, h) {
   const { body, error } = await readBody(request, h.json, 2_000);
   if (error) return error;
-  const t = TOKEN_RE.test(String(body.token || '')) ? (await sheet(env, 'me', { token: body.token, ...(body.playlist === true ? { playlist: true } : {}) })).tester : null;
+  const t = TOKEN_RE.test(String(body.token || '')) ? (await sheet(env, 'me', { token: body.token, ...(body.playlist === true ? { playlist: true } : {}), ...(body.music === true ? { music: true } : {}) })).tester : null;
   if (!t) return h.json({ error: 'This tester link isn\'t active.' }, 404);
-  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t), ...rejoinFields(t), ...signupPlaylistFields(t, body.playlist) });
+  return h.json({ number: t.number, label: t.label, name: t.name, windowEndsAt: windowEndsAt(t), ...rejoinFields(t), ...signupPlaylistFields(t, body.playlist), ...signupMusicFields(t, body.music) });
 }
 
 // "Join the next beta" on the recap: one tap, token only. The Sheet puts the
@@ -374,8 +382,8 @@ async function handleLink(request, env, ctx, h) {
 // Shared by /beta/claim and the redirect sign-in below: a verified Google
 // account -> its tester token (linked earlier, or found by the email it
 // signed up with), or null.
-async function claimForGoogle(g, env, wantPlaylist) {
-  const pl = wantPlaylist === true ? { playlist: true } : {};
+async function claimForGoogle(g, env, wantPlaylist, wantMusic) {
+  const pl = { ...(wantPlaylist === true ? { playlist: true } : {}), ...(wantMusic === true ? { music: true } : {}) };
   let token = await env.PROFILES.get(betaLinkKey(g.sub));
   let t = token && TOKEN_RE.test(token) ? (await sheet(env, 'me', { token, ...pl })).tester : null;
   if (!t && g.email) {
@@ -396,10 +404,10 @@ async function handleClaim(request, env, ctx, h) {
   const g = await googleSub(body, env, ctx, h);
   if (g.error) return g.error;
   if (await throttled(request, ctx, h.envCache, 'link', LINK_LIMIT, LINK_WINDOW_S)) return h.json({ error: 'Too many tries. Give it a few minutes.' }, 429);
-  const c = await claimForGoogle(g, env, body.playlist === true);
+  const c = await claimForGoogle(g, env, body.playlist === true, body.music === true);
   if (!c) return h.json({ error: NOT_ON_LIST }, 404);
   const { token, t } = c;
-  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t), ...signupPlaylistFields(t, body.playlist) });
+  return h.json({ token, number: t.number, label: t.label, name: t.name, leaseUntil: Date.now() + BETA_LEASE_MS, windowEndsAt: windowEndsAt(t), ...rejoinFields(t), ...signupPlaylistFields(t, body.playlist), ...signupMusicFields(t, body.music) });
 }
 
 // Google sign-in by redirect (GSI ux_mode 'redirect', login_uri =

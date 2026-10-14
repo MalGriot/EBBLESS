@@ -10081,11 +10081,11 @@ Add entries in this shape:
 - **Notes:** Tested with a popup stand-in only; real PiP click-unlock untested. Before the first click in the mini-player only the old behaviour applies. Possible audio gap at the first click and about 1 to 2s on close. A YouTube song once stuck at 0 while hidden (not investigated). Deployed for owner testing. Cache v185.
 
 ### beta-genre-auto-playlists: Beta signup genres auto-create library playlists named "[genre/artist] radio for [name]" (Geethub #477)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #477. Whatever genres/artists a person gives at beta signup, generate playlists from them and add them to their library automatically (no asking). Name each "[genre/artist] radio for [their name]".
 - **Touches:** beta signup flow, playlist generation from prompt.
-- **Branch:**
+- **Branch:** agent/beta-genre-auto-playlists
 - **Notes:** Synced from Geethub #477. Relates to beta-signup-playlist-preload.
 
 ### artist-name-hitbox: Artist name still too hard to click: bigger hit box (Geethub #478)
@@ -10093,7 +10093,10 @@ Add entries in this shape:
 - **Priority:** medium
 - **Description:** Bug, Geethub #478. Tapping the artist name needs a bigger hit box. User missed the letters and thumbs-downed a song instead.
 - **Touches:** player artist name tap target.
-- **Branch:**
+- **Br
+- **Review notes:** The signup answer to "What do you listen to most?" (Applicants.music_preferences) now reaches the app via /beta/me and /beta/claim (`music: true`, asked until done). On first login the app splits it on commas/slashes (max 4 items), and for each builds a saved playlist "[item] radio for [first name]" in the background with the same interpreter and ranking as typing a vibe: no prompts, nothing starts playing. Marked done first so it never repeats. Needs deploy: worker and the Apps Script (tools/beta-sheet.gs `me_`); until the script is redeployed nothing is created (safe no-op). Verified locally in Chrome: two items made two saved playlists with all songs matched; worker tests pass. Not verified: a real signup-to-login run. Cache v195.
+
+anch:**
 - **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries.
 
 ### thumbs-down-fade-out: Thumbs-down fades the song out instead of cutting it short (Geethub #479)
