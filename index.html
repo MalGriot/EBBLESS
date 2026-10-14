@@ -2018,7 +2018,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .currents-hint{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
 /* artist page (#299): tap the player's artist name -> bio, facts and links
    at the top of the library panel (see openArtistPage) */
-#trackArtist{cursor:pointer;padding-bottom:6px}
+/* #478: bigger tap target around the artist name (the text alone was too small to hit reliably);
+   padding/negative margins keep the visual position and spacing unchanged */
+#trackArtist{cursor:pointer;padding:5px 16px 16px;margin:0 -16px -10px}
 #trackArtist:hover span{text-decoration:underline;text-underline-offset:3px}
 @media (hover:hover){
   #trackArtist:not(.is-marquee)>span{transition:color var(--dur-ui) var(--ease-out)}
@@ -21470,7 +21472,7 @@ const LP_SFX_SRC = { drop: LP_NEEDLE_DROP_SRC, lift: LP_NEEDLE_LIFT_SRC, rewind:
 // Issue #205: at 0.35/0.2 the drop's loudest 50ms landed around -25dBFS and
 // the lift around -17dBFS - the lift fires at the top of the pause fade,
 // with the music still near full volume, so both were effectively masked.
-const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5, rewind: 0.6, rewindrev: 0.6 };
+const LP_NEEDLE_SFX_VOLUME = { drop: 1, lift: 0.5, rewind: 0.3, rewindrev: 0.3 };
 // skip the sfx rather than play it late (slow first fetch, context waking)
 const LP_NEEDLE_MAX_LAG_MS = 300;
 let lpSfxCtx = null;
