@@ -1585,6 +1585,11 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #yt-host.is-shown{position:fixed;z-index:72;opacity:1;pointer-events:auto;border-radius:var(--r-md);background:#000}
 #yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
 #yt-host.is-shown > .yt-on{z-index:1}
+/* #523: covers the live player while an ad is held silent (card and F fullscreen) */
+.yt-ad-cover[hidden]{display:none}
+#yt-host.is-shown > .yt-ad-cover{z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;
+  text-align:center;background:#000;color:var(--faint);font-size:13px;line-height:1.5}
+#yt-host:fullscreen > .yt-ad-cover{font-size:18px}
 /* ---------- tester feedback form (no login, no GitHub - posts to the
    worker's /tester-report). Reuses #danger-scrim and the danger modal's
    centered-card look, just wider and with form fields ---------- */
@@ -4613,7 +4618,7 @@ body.week-up-on{overflow:hidden}
        actual <iframe> already pointing at the widget URL to bind to (unlike
        YT.Player, which takes over a plain element itself), so these sit here
        pre-created rather than being swapped in/out of the yt-deck-* slots. -->
-  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><div id="yt-deck-c"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe><iframe id="sc-deck-c" allow="autoplay"></iframe><div id="yt-deck-p1"></div><div id="yt-deck-p2"></div><div id="yt-deck-p3"></div><iframe id="sc-deck-p1" allow="autoplay"></iframe><iframe id="sc-deck-p2" allow="autoplay"></iframe><iframe id="sc-deck-p3" allow="autoplay"></iframe></div>
+  <div id="yt-host"><div id="yt-deck-a"></div><div id="yt-deck-b"></div><div id="yt-deck-c"></div><iframe id="sc-deck-a" allow="autoplay"></iframe><iframe id="sc-deck-b" allow="autoplay"></iframe><iframe id="sc-deck-c" allow="autoplay"></iframe><div id="yt-deck-p1"></div><div id="yt-deck-p2"></div><div id="yt-deck-p3"></div><iframe id="sc-deck-p1" allow="autoplay"></iframe><iframe id="sc-deck-p2" allow="autoplay"></iframe><iframe id="sc-deck-p3" allow="autoplay"></iframe><div class="yt-ad-cover" id="ytAdCover" hidden></div></div>
   <!-- near-silent (not truly zero-amplitude — Chromium's audible-source
        heuristic ignores pure digital silence) loop: keeps the tab holding an
        active local media session so mobile OSes grant lock-screen/
@@ -14497,7 +14502,7 @@ function updateCreditsSpotifyLink(entry, t){
 // embed, and it is never reparented (moving an iframe reloads it): it is
 // only placed over #ytSlot with fixed positioning, and re-synced while open
 // so track changes, deck swaps and resizes follow along.
-const ytModal = $('yt-modal'), ytSlot = $('ytSlot'), ytSlotNote = $('ytSlotNote'), ytHost = $('yt-host'), ytPanelBtn = $('ytPanelBtn');
+const ytModal = $('yt-modal'), ytSlot = $('ytSlot'), ytSlotNote = $('ytSlotNote'), ytHost = $('yt-host'), ytPanelBtn = $('ytPanelBtn'), ytAdCover = $('ytAdCover');
 let ytPanelTimer = null;
 function ytPanelOpen(){ return ytModal.classList.contains('is-open'); }
 // The YouTube tab only works while the current track is actually playing
@@ -14530,13 +14535,16 @@ function ytPanelSync(){
   const open = ytPanelOpen();
   const deck = activeDeck(), t = trackAt(state.queuePos);
   const el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
-  // #523: an ad held silent isn't shown either - the card says what's happening instead
-  const adTxt = open ? adWaitText() : '';
-  const show = open && !!el && el.tagName === 'IFRAME' && !adTxt;
+  const show = open && !!el && el.tagName === 'IFRAME';
+  // #523: an ad held silent is covered by a note saying what's happening. A
+  // cover inside #yt-host, not hiding the player, so F fullscreen gets it too.
+  const adTxt = show ? adWaitText() : '';
+  ytAdCover.hidden = !adTxt;
+  if (adTxt) ytAdCover.textContent = adTxt;
   Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
   ytHost.classList.toggle('is-shown', show);
   ytSlotNote.hidden = show || !open;
-  if (open && !show) ytSlotNote.textContent = adTxt || 'Loading the video\u2026';
+  if (open && !show) ytSlotNote.textContent = 'Loading the video\u2026';
   if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
   const r = ytSlot.getBoundingClientRect();
   ytHost.style.left = r.left + 'px';
@@ -18580,6 +18588,7 @@ function onDeckStateChange(deck, e){
   else if (e.data === YT.PlayerState.PAUSED){ if (!(deck.unstickAt && Date.now() - deck.unstickAt < 1500)) setPlayingUI(false); }
   else if (e.data === YT.PlayerState.ENDED){
     if (swapInProgress) return;
+    if (deck.confirmed && deck.kind === 'yt' && state.repeat === 'one' && !weekUp.frozen){ loopOneInPlace(deck); return; }
     if (deck.confirmed){ recordListenSignal(trackAt(state.queuePos), 1); notePlayedThrough(state.queuePos); playNext(true); watchSCAutoAdvance(); }
   }
 }
@@ -21987,7 +21996,8 @@ function maybeStartCrossfade(cur, dur){
   if (!crossfadePrefs.on || crossfadeTriggered || swapInProgress || routeLocked()) return;
   if (!dur || dur - cur > crossfadePrefs.ms / 1000) return;
   const nd = standbyDeck();
-  const nextPos = computeNextPos(state.queuePos, false);
+  // repeat-one (#523): fade into the same song, preloaded on the standby deck
+  const nextPos = state.repeat === 'one' ? state.queuePos : computeNextPos(state.queuePos, false);
   if (nextPos < 0 || nd.pos !== nextPos || !nd.player || !nd.ready || !nd.confirmed) return;
   if (!trackAt(nextPos) || nd.videoId !== trackAt(nextPos).videoId) return;
   // SoundCloud only lets one widget on the page play at a time (verified
@@ -24641,10 +24651,12 @@ const AD_DODGE_AFTER_MS = 8000;
 // #523: the YouTube card no longer blocks this - it follows the active deck,
 // so it just moves on to the next song's video.
 function adDodgeTarget(ad, nd){
-  if (swapInProgress || routeLocked() || state.repeat === 'one') return -1;
+  if (swapInProgress || routeLocked()) return -1;
   // iPhone (#286): handing off to a standby player no tap has started stalls
   if (iosColdDeck(nd)) return -1;
-  const p = state.queuePos, n = p + 1;
+  // repeat-one: the standby deck holds this same song (schedulePreload), so
+  // the dodge restarts it from the top there instead
+  const p = state.queuePos, n = state.repeat === 'one' ? p : p + 1;
   const ta = trackAt(p), tb = trackAt(n);
   if (!ta || !tb || ta.videoId !== ad.videoId) return -1;
   if (nd.pos !== n || !nd.player || !nd.ready || !nd.confirmed || nd.videoId !== tb.videoId) return -1;
@@ -24663,7 +24675,7 @@ function maybeDodgeAd(){
   if (n < 0) return;
   const q = state.queue;
   [q[p], q[n]] = [q[n], q[p]];
-  ad.adDodge = trackStartAuto ? 'swap' : 'return';
+  ad.adDodge = trackStartAuto || n === p ? 'swap' : 'return';
   ad.pos = n;
   adLog(ad, 'dodge', ad.adDodge + ' ' + ad.adSeen);
   promoteDeckDirect(nd, p, true, true);
@@ -25000,7 +25012,25 @@ function updateSeekUI(){
   advApplySpeed(ad);
   syncMediaPositionState(false);
   maybeStartCrossfade(cur, dur);
+  maybeLoopOne(ad, cur, dur);
   cassetteSetProgress(cur, dur);
+}
+// repeat-one (#523): a YouTube song restarts on its own player just before
+// it ends, rather than reloading at ENDED (a reload can bring a fresh
+// pre-roll ad). With crossfade on, maybeStartCrossfade fades into the copy
+// on the standby deck instead when it's ready. A hidden tab polls ~1s apart,
+// so it looks further ahead there; the ENDED handler is the last fallback.
+function maybeLoopOne(ad, cur, dur){
+  if (state.repeat !== 'one' || ad.kind !== 'yt' || !ad.confirmed || swapInProgress || crossfadeTriggered || !dur) return;
+  if (dur - cur > (document.hidden ? 1.5 : 0.5) || ad.player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+  loopOneInPlace(ad);
+}
+function loopOneInPlace(ad){
+  recordListenSignal(trackAt(state.queuePos), 1);
+  notePlayedThrough(state.queuePos);
+  lastTrackStartTs = Date.now();
+  ad.player.seekTo(0, true);
+  ad.player.playVideo();
 }
 function seekPctAt(trackEl, clientX){
   const rect = trackEl.getBoundingClientRect();
