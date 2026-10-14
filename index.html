@@ -27731,6 +27731,7 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
    Native cursor stays for text fields, and everywhere when reduced motion is on
    or the pointer is coarse/touch. */
 (function(){
+  return; // disabled while testing #487 (blinking graphics); remove to re-enable
   if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   var cv = document.createElement('canvas');
