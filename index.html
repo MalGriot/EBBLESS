@@ -1462,6 +1462,22 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 }
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .queue-body{padding:4px 12px 24px}
+.libpl-addbar{padding:0 12px 8px;flex:none}
+.libpl-addbar .btn-ghost{width:100%}
+.as-head{width:100%;text-align:left;margin-bottom:12px}
+.as-head .as-to{font-size:15px;font-weight:600;color:var(--text)}
+.as-head .as-to span{color:var(--faint-2);font-weight:400}
+.as-head .as-count{font-size:12px;color:var(--faint-2);margin-top:2px}
+.as-input{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:16px;margin-bottom:10px}
+.as-list{width:100%;max-height:min(340px,48vh);overflow-y:auto;margin-bottom:10px}
+.as-msg{font-size:13px;color:var(--faint-2);padding:14px 4px}
+.as-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.as-row .search-pick{margin-bottom:0;flex:1;min-width:0}
+.as-add{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--border-2);background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+.as-add:hover,.as-add:focus-visible{background:var(--panel-2);outline:none}
+.as-add.is-done{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#111)}
+.as-add.is-again{width:auto;padding:0 12px;border-radius:20px;font-size:12px}
+.as-back{width:100%;margin-bottom:8px}
 .libpl-art-wrap{padding:4px 20px 14px}
 .libpl-art{display:block;width:100%;aspect-ratio:1;max-width:220px;margin:0 auto;border-radius:var(--r-md);
   object-fit:cover;background:var(--panel-3)}
@@ -4519,6 +4535,7 @@ body.week-up-on{overflow:hidden}
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
       </button>
     </div>
+    <div class="libpl-addbar" id="libplAddBar" hidden><button type="button" class="btn-ghost" id="libplAddBtn">+ Add songs</button></div>
     <div class="queue-scroll">
       <div class="libpl-art-wrap" id="libplArtWrap" hidden><div class="libpl-art-box"><img class="libpl-art" id="libplArt" alt=""><button class="libpl-art-play" id="libplArtPlayBtn" aria-label="Play playlist"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></button></div></div>
       <div class="queue-body" id="libplBody"></div>
@@ -7678,7 +7695,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueArrowsRow = $('queueArrowsRow'), queueHistBackBtn = $('queueHistBack'), queueHistFwdBtn = $('queueHistFwd'), queueHistFirstBtn = $('queueHistFirst'), queueHistLastBtn = $('queueHistLast'), queueClearBtn = $('queueClearBtn');
 const discoverToggleBtn = $('discoverToggleBtn');
-const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt'), libplArtPlayBtn = $('libplArtPlayBtn');
+const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt'), libplArtPlayBtn = $('libplArtPlayBtn'), libplAddBar = $('libplAddBar'), libplAddBtn = $('libplAddBtn');
 const libCtxMenu = $('libCtxMenu');
 const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
@@ -9352,6 +9369,7 @@ function closeLibraryPlaylistPanel(){
   libplReturnTo = null; libplResume = null; syncLibplCloseBtn();
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
+  libplAddBar.hidden = true;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
   syncHistoryBuffer();
   try{ refreshPlayNudge(); } catch(e){}
@@ -9403,6 +9421,7 @@ function toggleLibraryPlaylistPanel(id){
   if (pl.smart) refreshSmartPlaylist(id);
 
   openLibraryPanelId = id;
+  libplAddBar.hidden = !addablePlaylists().some(p => p.id === id);
   libplPanel.classList.remove('is-artist-info');
   libplTitle.textContent = pl.name;
   libplTitle.classList.toggle('np-live', id === NP_ID && npFeed.onAir);
@@ -9980,6 +9999,7 @@ function openArtistPage(rawName, title){
   if (openLibraryPanelId === id) return;
   if (state.queueOpen) closeQueuePanel();
   openLibraryPanelId = id;
+  libplAddBar.hidden = true;
   libplPanel.classList.add('is-artist-info');
   // a multi-artist credit opens on the first-named artist
   libplTitle.textContent = name.split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim() || name;
@@ -12329,6 +12349,138 @@ async function resolveTracksFromLink(input, onProgress){
 // "+ Add song" opens this: paste one link at a time — a song, a playlist, or
 // an album — and each resolves straight into the target playlist without
 // leaving the overlay, so several links can be dropped in back to back.
+/* =========================================================================
+   ADD SONGS (#547): a search view that adds songs to the open playlist.
+   Each result is one exact source (SoundCloud upload or YouTube video), added
+   as picked, never swapped for another version. Tapping a result plays it;
+   "Back to what you were playing" restores the queue, song and position from
+   before the first tap of this add session.
+   ========================================================================= */
+let addSongsSnap = null;
+function addSongsCandidateToTrack(c){
+  const sc = isSoundCloudVideoId(c.videoId);
+  return { title: c.title || '', artist: c.channel || '', videoId: c.videoId, matchedTitle: c.title || '', channel: c.channel || '',
+    duration: c.duration || 0, art: c.image || (sc ? null : refreshLinkCandidateThumb(c.videoId)), plays: 0 };
+}
+async function searchSongCandidates(q){
+  const yt = searchYouTube(q, '', 0, 8).then(d =>
+    (d.candidates && d.candidates.length) ? d.candidates : (d.videoId ? [{ videoId: d.videoId, title: d.title, channel: d.channel, duration: d.duration }] : []));
+  const sc = searchSoundCloudTracks(q, 6);
+  const [a, b] = await Promise.allSettled([sc, yt]);
+  if (a.status === 'rejected' && b.status === 'rejected') throw (b.reason || a.reason || new Error('search failed'));
+  const seen = new Set();
+  return (a.status === 'fulfilled' ? a.value : []).map(c => Object.assign({ source: 'soundcloud' }, c))
+    .concat((b.status === 'fulfilled' ? b.value : []).map(c => Object.assign({ source: 'youtube' }, c)))
+    .filter(c => c && c.videoId && !seen.has(c.videoId) && seen.add(c.videoId));
+}
+function addSongsSnapshot(){
+  if (addSongsSnap || state.queuePos < 0 || !state.queue.length) return;
+  const ad = activeDeck();
+  addSongsSnap = {
+    queue: state.queue.map(e => Object.assign({}, e)), queuePos: state.queuePos, playlist: state.playlist,
+    position: (ad && ad.player && ad.player.getCurrentTime) ? (ad.player.getCurrentTime() || 0) : 0,
+  };
+}
+function addSongsRestore(){
+  const sn = addSongsSnap;
+  if (!sn) return;
+  const entry = sn.queue[sn.queuePos];
+  if (sn.playlist) loadPlaylistIntoPlayer(sn.playlist);
+  state.queue = sn.queue.map(e => Object.assign({}, e));
+  state.queuePos = sn.queuePos;
+  if (entry && sn.position > 1) pendingResume = { plId: entry.plId, idx: entry.idx, position: sn.position };
+  renderQueuePanel();
+  loadIndex(state.queuePos, true);
+}
+function playAddSongsCandidate(c){
+  addSongsSnapshot();
+  const track = addSongsCandidateToTrack(c);
+  const pl = { id: 'addprev:' + c.videoId, type: 'track', name: track.title, image: null, tracks: [track], ts: Date.now() };
+  persistPlaylistObj(pl);
+  loadPlaylistIntoPlayer(pl);
+  buildQueueFrom(0, pl.id);
+  loadIndex(state.queuePos, true);
+}
+function openAddSongsView(plId){
+  const pl0 = getCachedPlaylist(plId);
+  if (!pl0) return;
+  addSongsSnap = null;
+  // drop earlier one-song previews that nothing in the queue points at any more
+  try{
+    const live = new Set(state.queue.map(e => e.plId));
+    Object.keys(localStorage).filter(k => k.startsWith(LS_PL('addprev:')) && !live.has(k.slice(LS_PL('').length))).forEach(k => localStorage.removeItem(k));
+  } catch(e){}
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="as-head"><div class="as-to"><span>Adding to:</span> <b id="asName"></b></div><div class="as-count" id="asCount"></div></div>' +
+    '<input class="as-input" id="asInput" type="search" placeholder="Search for a song" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">' +
+    '<div class="as-list" id="asList"></div>' +
+    '<button class="btn-ghost as-back" id="asBack" hidden>Back to what you were playing</button>' +
+    '<button class="btn-ghost is-active" id="asDone" style="width:100%">Done</button>';
+  $('asName').textContent = pl0.name;
+  const input = $('asInput'), list = $('asList');
+  const curPl = () => getCachedPlaylist(plId);
+  const paintCount = () => { const p = curPl(); if (p) $('asCount').textContent = p.tracks.length + (p.tracks.length === 1 ? ' song' : ' songs'); };
+  paintCount();
+  let token = 0, results = [];
+  const refreshPanel = () => {
+    paintCount();
+    if (openLibraryPanelId !== plId) return;
+    const sc = libplPanel.querySelector('.queue-scroll'), top = sc ? sc.scrollTop : 0;
+    reopenLibraryPanel(plId);
+    if (sc) sc.scrollTop = top;
+  };
+  const inPlaylist = (c) => curPl().tracks.some(t => t.videoId === c.videoId);
+  function paintResults(){
+    list.innerHTML = results.map((c, i) => {
+      const label = SEARCH_SOURCE_LABEL[c.source] || c.source;
+      const sub = [c.channel, c.duration ? formatTime(c.duration) : '', label].filter(Boolean).join(' · ');
+      const image = c.image || (c.source === 'youtube' ? refreshLinkCandidateThumb(c.videoId) : '');
+      return '<div class="as-row" data-i="' + i + '">' +
+        searchPickRowHtml(i, image, c.title || '(untitled)', escapeHtml(sub), c.source === 'youtube' ? 'is-video' : '') +
+        '<button type="button" class="as-add" aria-label="Add to playlist">+</button></div>';
+    }).join('');
+    list.querySelectorAll('.as-row').forEach(row => {
+      const c = results[parseInt(row.dataset.i, 10)], btn = row.querySelector('.as-add');
+      row.querySelector('.search-pick').addEventListener('click', () => { playAddSongsCandidate(c); $('asBack').hidden = !addSongsSnap; });
+      let armed = false;
+      btn.addEventListener('click', () => {
+        const dup = inPlaylist(c);
+        if (dup && !armed){
+          armed = true; btn.classList.add('is-again'); btn.textContent = 'Add again?'; return;
+        }
+        if (!addTracksToPlaylist(plId, [addSongsCandidateToTrack(c)], true)){ showToast('Couldn’t add that song.'); return; }
+        armed = false; btn.classList.remove('is-again'); btn.classList.add('is-done'); btn.textContent = '✓'; btn.setAttribute('aria-label', 'Added');
+        refreshPanel();
+      });
+    });
+  }
+  async function run(){
+    const q = input.value.trim();
+    const my = ++token;
+    if (!q){ results = []; list.innerHTML = ''; return; }
+    list.innerHTML = '<div class="as-msg">Searching&hellip;</div>';
+    try{
+      const r = await searchSongCandidates(q);
+      if (my !== token) return;
+      results = r;
+      if (!r.length){ list.innerHTML = '<div class="as-msg">No songs found for “' + escapeHtml(q) + '”. Try different words.</div>'; return; }
+      paintResults();
+    } catch(e){
+      if (my !== token) return;
+      list.innerHTML = '<div class="as-msg">Couldn’t search right now.</div><button type="button" class="btn-ghost" id="asRetry" style="width:100%">Try again</button>';
+      $('asRetry').addEventListener('click', run);
+    }
+  }
+  let deb = null;
+  input.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(run, 450); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter'){ e.preventDefault(); clearTimeout(deb); run(); } });
+  $('asBack').addEventListener('click', () => { addSongsRestore(); $('asBack').hidden = true; addSongsSnap = null; });
+  $('asDone').addEventListener('click', closeImportOverlay);
+  input.focus();
+}
+libplAddBtn.addEventListener('click', () => { if (openLibraryPanelId) openAddSongsView(openLibraryPanelId); });
+
 function openAddLinksFlow(playlistId){
   const pl = getCachedPlaylist(playlistId);
   if (!pl) return;
