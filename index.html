@@ -27654,5 +27654,93 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
   });
 })();
 </script>
+<script>
+/* custom-cursor (#484): free, desktop-only. A small accent-colored droplet that
+   stretches with pointer speed, grows over clickable things, and leaves a short
+   watery trail. One pointer-events:none canvas; rAF runs only while it moves.
+   Native cursor stays for text fields, and everywhere when reduced motion is on
+   or the pointer is coarse/touch. */
+(function(){
+  if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  var cv = document.createElement('canvas');
+  cv.setAttribute('aria-hidden', 'true');
+  cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .2s';
+  var st = document.createElement('style');
+  st.textContent = 'html.cc-on,html.cc-on *:not(input):not(textarea):not(select):not([contenteditable=""]):not([contenteditable="true"]){cursor:none!important}';
+  var ctx = cv.getContext('2d'), dpr = 1, W = 0, H = 0;
+  var mx = 0, my = 0, x = 0, y = 0, vx = 0, vy = 0, r = 5, tr = 5;
+  var trail = [], raf = 0, color = '#e0b26a', lastCol = 0, seen = false, textMode = false;
+  var root = document.documentElement;
+  function size(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function readColor(t){
+    if (t - lastCol < 150) return;
+    lastCol = t;
+    var c = getComputedStyle(root).getPropertyValue('--accent').trim();
+    if (c) color = c;
+  }
+  function frame(t){
+    raf = 0;
+    readColor(t);
+    var dx = mx - x, dy = my - y;
+    vx = vx * .62 + dx * .22; vy = vy * .62 + dy * .22;
+    x += vx; y += vy;
+    r += (tr - r) * .2;
+    var sp = Math.sqrt(vx * vx + vy * vy);
+    if (sp > .05) trail.push({x: x, y: y});
+    if (trail.length > 22) trail.shift();
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = color; ctx.strokeStyle = color;
+    // watery trail: shrinking, fading beads along the path
+    for (var i = 0; i < trail.length; i++) {
+      var p = trail[i], k = i / trail.length;
+      ctx.globalAlpha = k * .35 * Math.min(1, sp / 3);
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * k * .8, 0, 6.2832); ctx.fill();
+    }
+    if (!textMode) {
+      // droplet: stretched along velocity, squashed across it
+      var ang = Math.atan2(vy, vx), s = Math.min(sp / 14, .6);
+      ctx.globalAlpha = 1;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+      ctx.beginPath(); ctx.ellipse(0, 0, r * (1 + s), r * (1 - s * .4), 0, 0, 6.2832); ctx.fill();
+      ctx.restore();
+      // soft ring that breathes wider over clickable things
+      ctx.globalAlpha = .45; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(mx, my, r + 5 + (tr > 6 ? 3 : 0), 0, 6.2832); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    var moving = sp > .05 || Math.abs(dx) + Math.abs(dy) > .3 || Math.abs(tr - r) > .05;
+    if (!moving) trail.shift(); // drain the trail, keep the droplet drawn at rest
+    if (moving || trail.length) raf = requestAnimationFrame(frame);
+  }
+  function kick(){ if (!raf) raf = requestAnimationFrame(frame); }
+  function start(){
+    document.head.appendChild(st);
+    document.body.appendChild(cv);
+    size();
+    addEventListener('resize', size);
+    addEventListener('pointermove', function(e){
+      if (e.pointerType !== 'mouse') return;
+      mx = e.clientX; my = e.clientY;
+      if (!seen) { seen = true; x = mx; y = my; root.classList.add('cc-on'); cv.style.opacity = '1'; }
+      var el = e.target, hot = false;
+      textMode = !!(el && el.closest && el.closest('input,textarea,select,[contenteditable="true"],[contenteditable=""]'));
+      if (!textMode && el && el.closest) hot = !!el.closest('a,button,[role="button"],[onclick],label,summary,[tabindex]:not([tabindex="-1"])');
+      tr = hot ? 9 : 5;
+      kick();
+    }, {passive: true});
+    document.addEventListener('pointerleave', function(){ cv.style.opacity = '0'; });
+    document.addEventListener('pointerenter', function(){ if (seen) cv.style.opacity = '1'; });
+    addEventListener('blur', function(){ cv.style.opacity = '0'; });
+    addEventListener('focus', function(){ if (seen) cv.style.opacity = '1'; });
+  }
+  if (document.body) start(); else addEventListener('DOMContentLoaded', start);
+})();
+</script>
 </body>
 </html>
