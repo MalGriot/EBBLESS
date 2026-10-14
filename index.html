@@ -3051,6 +3051,62 @@ body.week-up-on{overflow:hidden}
   });
 })();
 </script>
+<script>
+/* perf recorder (#487): ?perf records every stalled frame (Long Animation
+   Frames API) with the scripts that ran in it; a chip bottom-right copies a
+   report to paste back. ?perf=off stops it. Temporary - remove with the GPU
+   test switches. */
+(function(){
+  var KEY = 'ebbless:perf', on = false;
+  try {
+    var m = /[?&]perf(?:=([a-z]+))?(?:&|$)/.exec(location.search);
+    if (m) { if (m[1] === 'off') localStorage.removeItem(KEY); else localStorage.setItem(KEY, '1'); }
+    on = localStorage.getItem(KEY) === '1';
+  } catch(e){}
+  if (!on || !window.PerformanceObserver) return;
+  var frames = [], scripts = {}, t0 = Date.now();
+  function add(e){
+    if (e.duration < 100) return;
+    var ss = (e.scripts || []).map(function(s){
+      var k = (s.invokerType || '') + ' ' + (s.invoker || '') + ' | ' + (s.sourceFunctionName || '?') + ' @' + (s.sourceURL || '').split('/').pop().split('?')[0] + ':' + s.sourceCharPosition;
+      var a = scripts[k] || (scripts[k] = {n: 0, ms: 0, forced: 0});
+      a.n++; a.ms += s.duration; a.forced += s.forcedStyleAndLayoutDuration || 0;
+      return k.slice(0, 120) + ' ' + Math.round(s.duration) + 'ms' + (s.forcedStyleAndLayoutDuration > 20 ? ' (forced layout ' + Math.round(s.forcedStyleAndLayoutDuration) + ')' : '');
+    });
+    var render = e.renderStart ? Math.round(e.startTime + e.duration - e.renderStart) : 0;
+    var style = e.styleAndLayoutStart ? Math.round(e.startTime + e.duration - e.styleAndLayoutStart) : 0;
+    frames.push({at: Math.round(e.startTime), ms: Math.round(e.duration), block: Math.round(e.blockingDuration || 0), render: render, styleLayout: style, scripts: ss.slice(0, 5)});
+  }
+  try { new PerformanceObserver(function(l){ l.getEntries().forEach(add); }).observe({type: 'long-animation-frame', buffered: true}); }
+  catch(e){ try { new PerformanceObserver(function(l){ l.getEntries().forEach(function(e){ if (e.duration >= 100) frames.push({at: Math.round(e.startTime), ms: Math.round(e.duration), longtask: true}); }); }).observe({type: 'longtask', buffered: true}); } catch(e2){} }
+  function report(){
+    var top = Object.keys(scripts).map(function(k){ return [k, scripts[k]]; }).sort(function(a, b){ return b[1].ms - a[1].ms; }).slice(0, 25)
+      .map(function(x){ return Math.round(x[1].ms) + 'ms x' + x[1].n + (x[1].forced > 20 ? ' forced:' + Math.round(x[1].forced) : '') + '  ' + x[0]; });
+    var worst = frames.slice().sort(function(a, b){ return b.ms - a.ms; }).slice(0, 15);
+    var total = frames.reduce(function(a, f){ return a + f.ms; }, 0);
+    return 'EBBLESS perf ' + new Date(t0).toISOString() + ' ' + navigator.userAgent + '\n' +
+      'stalled frames: ' + frames.length + ', total ' + Math.round(total) + 'ms over ' + Math.round((Date.now() - t0) / 1000) + 's, dpr ' + devicePixelRatio + ', ' + innerWidth + 'x' + innerHeight + '\n\n' +
+      'TOP SCRIPTS\n' + top.join('\n') + '\n\nWORST FRAMES\n' + worst.map(function(f){ return JSON.stringify(f); }).join('\n');
+  }
+  window.__ebbPerfReport = report;
+  addEventListener('DOMContentLoaded', function(){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Copy perf report';
+    b.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483646;font:600 12px system-ui;color:#000;background:#e0b26a;border:0;padding:6px 10px;border-radius:8px;cursor:pointer';
+    b.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      var txt = report();
+      var done = function(){ b.textContent = 'Copied (' + frames.length + ' stalls)'; setTimeout(function(){ b.textContent = 'Copy perf report'; }, 2500); };
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt).then(done) : Promise.reject()).catch(function(){
+        var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;inset:10%;z-index:2147483647;font:11px monospace';
+        document.body.appendChild(ta); ta.select();
+      });
+    }, true);
+    document.body.appendChild(b);
+  });
+})();
+</script>
 <style>
 html.gpu-noambient :is(#ambient,#flow-layer .flow-ambient) .layer{display:none}
 html.gpu-noanim *,html.gpu-noanim *::before,html.gpu-noanim *::after{animation-play-state:paused!important}
