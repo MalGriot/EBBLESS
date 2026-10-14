@@ -10243,11 +10243,11 @@ Add entries in this shape:
 
 ### playlist-workspaces: Playlist workspaces (Geethub #506)
 - **Status:** draft
-- **Priority:** low
-- **Description:** Idea, Geethub #506. Playlist workspaces.
+- **Priority:** medium
+- **Description:** Idea, Geethub #506. Playlist workspaces. Parent entry; the work lives in the child entries.
 - **Touches:**
 - **Branch:** 
-- **Notes:** Synced from Geethub #506. Vague; needs clarifying.
+- **Notes:** Synced from Geethub #506. Clarified 2026-10-15 and split into #544-#551. Decisions: desktop left pane = playlist/library, right = queue; no isolated preview, one-tap "Back to what you were playing" instead; drag to reorder; can add to imported playlists (auto-updating ones get a "Make a copy" prompt, declined additions survive refreshes); ask on duplicates. Order: ask-before-duplicate-song (#544) first; lane A #545 > #546 > #547 > #548; lane B #549 alone (queue engine); lane C #550 > #551. Done when all children ship.
 
 ### artist-search-error: Searching an artist (e.g. FKJ) then tapping the result says 'couldn't reach EBBLESS' (Geethub #505)
 - **Status:** merged
@@ -10400,3 +10400,267 @@ Add entries in this shape:
 - **Touches:** `maybeDodgeAd`, `guardActiveDeckAd`, `skipHeldAd`, `adWaitText`, `ytPanelSync` (#ytAdCover), repeat-one (`maybeLoopOne`, `maybeStartCrossfade`).
 - **Branch:** agent/ad-experience-523 (merged), then main
 - **Notes:** Shipped 2026-10-15, cache v236-v237. The dodge also works with the YouTube card open. An ad held inside a song for 10s hands off to the next song; the held one plays next, from the top (once per video). "Ads playing?" turns into an "Ad playing. Skipping in Xs" countdown. A cover hides held ads in the card and in F fullscreen. Repeat-one restarts in place or crossfades into its preloaded copy instead of reloading. Verified in the local preview with faked ads; real F fullscreen and iPhone not yet checked. The real adblock (Mac app, #524) is parked.
+
+### playlist-copy-prompt-spotify: Make a copy prompt for auto-updating Spotify playlists (Geethub #551)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #551. Part of #506. When a playlist is an imported Spotify one that auto-refreshes, offer a prompt to make a editable copy.
+- **Touches:** playlist import/refresh.
+- **Branch:** 
+- **Notes:** Synced from Geethub #551. Child of playlist-workspaces (#506).
+
+### playlist-keep-added-songs: Keep songs added to imported playlists when they refresh (Geethub #550)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #550. Part of #506. Songs a user adds to an imported playlist must survive the refresh.
+- **Touches:** playlist refresh.
+- **Branch:** 
+- **Notes:** Synced from Geethub #550. Child of playlist-workspaces (#506).
+
+### playlist-drag-reorder: Drag to reorder songs inside a playlist (Geethub #549)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #549. Part of #506. Drag songs to reorder within an open playlist.
+- **Touches:** playlist panel.
+- **Branch:** 
+- **Notes:** Synced from Geethub #549. Child of playlist-workspaces (#506).
+
+### playlist-drag-songs-in: Drag songs into the open playlist (Geethub #548)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #548. Part of #506. Drag songs from search/browse into the open playlist.
+- **Touches:** playlist panel.
+- **Branch:** 
+- **Notes:** Synced from Geethub #548. Child of playlist-workspaces (#506).
+
+### playlist-add-songs-back-button: Add songs button in the playlist, with Back to what you were playing (Geethub #547)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #547. Part of #506. An Add songs button inside a playlist, plus a Back control that returns to what was playing.
+- **Touches:** playlist panel.
+- **Branch:** 
+- **Notes:** Synced from Geethub #547. Child of playlist-workspaces (#506).
+
+### playlist-stays-open-browsing: Keep the playlist open while searching and browsing (Geethub #546)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #546. Part of #506. The open playlist should not close when the user searches or browses.
+- **Touches:** playlist panel, search.
+- **Branch:** 
+- **Notes:** Synced from Geethub #546. Child of playlist-workspaces (#506). Related to bug #536.
+
+### desktop-playlist-left-pane: Desktop: open playlist takes the left pane, queue stays on the right (Geethub #545)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #545. Part of #506. On desktop an open playlist fills the left pane while the queue stays on the right.
+- **Touches:** desktop layout.
+- **Branch:** 
+- **Notes:** Synced from Geethub #545. Child of playlist-workspaces (#506).
+
+### ask-before-duplicate-song: Ask before adding a song that is already in the playlist (Geethub #544)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #544. Part of #506. Prompt when adding a duplicate song.
+- **Touches:** playlist add.
+- **Branch:** 
+- **Notes:** Synced from Geethub #544. Child of playlist-workspaces (#506).
+
+### research-soundiiz: Reverse engineer Soundiiz (Geethub #543)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #543. Research how Soundiiz works and what EBBLESS can learn for playlist import/transfer.
+- **Touches:** research only.
+- **Branch:** 
+- **Notes:** Synced from Geethub #543. Group with #520, #521, #522 as one playlist-transfer-tools research lane.
+
+### research-tidal-uvp: Research Tidal's unique selling points and try to incorporate them (Geethub #542)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #542. Research Tidal's USPs and propose which fit EBBLESS.
+- **Touches:** research only.
+- **Branch:** 
+- **Notes:** Synced from Geethub #542. Check against the mission statement.
+
+### electron-spoof-user-agent: Spoof the User-Agent dynamically in Electron (Geethub #541)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #541. Idea: change the User-Agent dynamically in the desktop (Electron) app.
+- **Touches:** desktop/ Electron.
+- **Branch:** 
+- **Notes:** Synced from Geethub #541. Ad-related group with #527-#529, #539, #540. Ad avoidance is core (#523 shipped); must stay within terms the user accepts.
+
+### yt-ad-blocking-more: More on ad blocking YouTube (compliantly) (Geethub #540)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #540. Further YouTube ad handling, compliantly.
+- **Touches:** ad handling.
+- **Branch:** 
+- **Notes:** Synced from Geethub #540. Ad group, see #541.
+
+### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
+- **Touches:** ad handling.
+- **Branch:** 
+- **Notes:** Synced from Geethub #539. Ad group, see #541.
+
+### mobile-swipe-down-close: Mobile: swiping down from a window should close it (Geethub #538)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #538. On mobile, swiping down on a window/panel closes it.
+- **Touches:** mobile panels.
+- **Branch:** 
+- **Notes:** Synced from Geethub #538. Check overlap with existing swipe entries.
+
+### popular-youtube-first: For popular music, prioritize popular YouTube videos (Geethub #537)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #537. When matching popular songs, rank the most-viewed YouTube videos first; they are most likely the right link.
+- **Touches:** link matching.
+- **Branch:** 
+- **Notes:** Synced from Geethub #537. Related to link-match-accuracy.
+
+### bug-tabs-close-while-browsing: Playlist, album and artist tabs close while I'm still going through them (Geethub #536)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Idea, Geethub #536. Bug #536. These windows close on their own while the user is browsing.
+- **Touches:** playlist/album/artist windows.
+- **Branch:** 
+- **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546).
+
+### smart-playlist-more-parameters: Smart playlist needs way more parameters (Geethub #535)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #535. Add many more parameters to smart playlists.
+- **Touches:** smart playlist.
+- **Branch:** 
+- **Notes:** Synced from Geethub #535. Related to currents-playlist-algorithm.
+
+### shared-playlists: Shared playlists that multiple users can build together (Geethub #534)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #534. Several users build one playlist together.
+- **Touches:** playlists, accounts.
+- **Branch:** 
+- **Notes:** Synced from Geethub #534. Depends on accounts-profiles.
+
+### go-into-songs: Go into songs instead of them just playing (Geethub #533)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #533. Tapping a song should be able to open a song page, not only play.
+- **Touches:** song rows, song page.
+- **Branch:** 
+- **Notes:** Synced from Geethub #533. Related to #531 and #532.
+
+### album-info: Album info (Geethub #532)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #532. Show info about an album (details, year, etc.).
+- **Touches:** album window.
+- **Branch:** 
+- **Notes:** Synced from Geethub #532. Related to artist-window-album-tracks.
+
+### album-cover-opens-album: Clicking the album cover should open the album (Geethub #531)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #531. Tapping the album cover in the player opens that album.
+- **Touches:** player art.
+- **Branch:** 
+- **Notes:** Synced from Geethub #531. Check overlap with logo-tap/art tap entries.
+
+### bug-cursor-invisible-same-color: Cursor is impossible to see when it matches the art and UI (Geethub #530)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Idea, Geethub #530. Bug #530. Need a clever, stylish fix so the custom cursor stays visible on same-color backgrounds.
+- **Touches:** custom cursor.
+- **Branch:** 
+- **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499).
+
+### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
+- **Touches:** ad handling.
+- **Branch:** 
+- **Notes:** Synced from Geethub #529. Ad group, see #541.
+
+### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #528. Investigate and implement.
+- **Touches:** ad handling.
+- **Branch:** 
+- **Notes:** Synced from Geethub #528. Ad group, see #541.
+
+### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #527. Investigate and implement.
+- **Touches:** ad handling.
+- **Branch:** 
+- **Notes:** Synced from Geethub #527. Ad group, see #541.
+
+### miniplayer-shape-per-skin: Mini-player shape changes with different skins (Geethub #526)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #526. The mini-player shape should follow the skin, not always a circle.
+- **Touches:** mini-player.
+- **Branch:** 
+- **Notes:** Synced from Geethub #526. Related to miniplayer-inherits-art-style.
+
+### miniplayer-moveable: Desktop mini-player should be moveable (Geethub #525)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #525. Let the user drag the mini-player.
+- **Touches:** mini-player.
+- **Branch:** 
+- **Notes:** Synced from Geethub #525. Check mini-player-polish; may already exist.
+
+### research-songshift: Reverse engineer SongShift (Geethub #522)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #522. Research songshift.com for playlist transfer.
+- **Touches:** research only.
+- **Branch:** 
+- **Notes:** Synced from Geethub #522. Playlist-transfer research lane with #520, #521, #543.
+
+### research-freeyourmusic: Research FreeYourMusic (Geethub #521)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #521. Research freeyourmusic.com.
+- **Touches:** research only.
+- **Branch:** 
+- **Notes:** Synced from Geethub #521. Playlist-transfer research lane.
+
+### research-tunemymusic: Reverse engineer TuneMyMusic (Geethub #520)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #520. Research tunemymusic.com.
+- **Touches:** research only.
+- **Branch:** 
+- **Notes:** Synced from Geethub #520. Playlist-transfer research lane.
+
+### vibe-cnn-research: Research convolutional neural networks to catch a listener's vibe 95% accurately (Geethub #519)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #519. Research whether CNNs could make vibe matching far more accurate.
+- **Touches:** research only.
+- **Branch:** 
+- **Notes:** Synced from Geethub #519. Related to currents-playlist-algorithm.
+
+### bug-ads-since-install: Getting ads since installing the app (Geethub #518)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Idea, Geethub #518. Bug #518. Ads appear after the app was installed.
+- **Touches:** ads.
+- **Branch:** 
+- **Notes:** Synced from Geethub #518. Related to #523 (shipped) and ad group; needs repro platform.
+
+### bug-progress-full-frozen: Song loads, progress bar is full and frozen, no play (Geethub #517)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Idea, Geethub #517. Bug #517. Sometimes the song loads with the progress bar filled and never plays.
+- **Touches:** playback.
+- **Branch:** 
+- **Notes:** Synced from Geethub #517. Related to autoadvance-stall-full-progress.
