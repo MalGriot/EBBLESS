@@ -23227,9 +23227,11 @@ function mpDesktopSize(shape){
 const MINI_DESKTOP_STYLE = `
   /* a dark color-scheme makes Chromium paint a dark backdrop behind the page, which hides the see-through corners */
   :root{color-scheme:normal}
-  /* #511: plain "transparent" is the default, so the page would paint body's #121212 over the whole window, corners
-     included. A near-zero alpha is not the default, so body's background stays on the body and the clip shows through. */
-  html{background:rgba(0,0,0,.004);overflow:hidden}
+  /* #511: a body background gets painted over the whole window (corners included) when html's is the default. So the
+     body paints nothing itself; its dark fill is a ::before layer, which the shape's clip cuts to the rounded outline. */
+  html{background:transparent;overflow:hidden}
+  body.mp-desktop{background:transparent;isolation:isolate}
+  body.mp-desktop::before{content:'';position:absolute;inset:0;background:#121212;z-index:-1;pointer-events:none}
   body.mp-desktop{-webkit-app-region:drag;border-radius:16px}
   body.mp-desktop button,body.mp-desktop #mpSeekTrack,body.mp-desktop #mpArtWrap,body.mp-desktop #mpLogo,
   body.mp-desktop #mpQueue,body.mp-desktop #mpEdge,#mpMenu{-webkit-app-region:no-drag}
@@ -23248,6 +23250,7 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-disc:hover #mpControls{opacity:1;pointer-events:auto}
   body.mp-shape-disc #mpShuffle,body.mp-shape-disc #mpRepeat,body.mp-shape-disc .mp-skip{display:none!important}
   body.mp-shape-float{background:transparent}
+  body.mp-shape-float::before{display:none}
   body.mp-shape-float #mpBg{display:none}
   body.mp-shape-float #mpCard{text-shadow:0 1px 3px rgba(0,0,0,.85)}
   body.mp-shape-float:hover #mpCard{background:rgba(0,0,0,.4);border-radius:16px}
