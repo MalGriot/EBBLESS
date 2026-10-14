@@ -10097,12 +10097,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries.
 
 ### thumbs-down-fade-out: Thumbs-down fades the song out instead of cutting it short (Geethub #479)
-- **Status:** review
+- **Status:** done
 - **Priority:** medium
 - **Description:** Idea, Geethub #479. When a song is thumbs-downed, fade the audio out before skipping instead of cutting abruptly.
 - **Touches:** thumbs-down handler, volume ramp.
-- **Branch:**
-- **Notes:** Synced from Geethub #479. No further detail given.
+- **Branch:** agent/thumbs-down-fade-out
+- **Notes:** Synced from Geethub #479. Shipped: 700ms volume ramp on the playing deck, then the normal decline. No fade on iOS/cast (no volume control), when crossfade already fades the skip, or on the last queued song (pause fade covers it).
 
 ### miniplayer-always-on-top: Mini-player stays on screen over other apps (Geethub #480)
 - **Status:** draft
