@@ -6059,6 +6059,16 @@ function noteProfileWrite(key, val){
       const a = new Set((val.tracks || []).map(profTrackKey));
       a.forEach(k => { if (!b.has(k)) tr[k] = { at: now }; });
       b.forEach(k => { if (!a.has(k)) tr[k] = { at: now, del: 1 }; });
+    } else if (val !== undefined && val && val.type !== 'custom' && !PROFILE_REGENERATED_IDS.includes(id)){
+      // #550: an imported playlist syncs whole, but songs the user added by
+      // hand are stamped one by one so they survive another device's refresh
+      const manualKeys = (pl) => new Set(((pl && pl.tracks) || []).filter(t => t && t.manual && t.videoId).map(profTrackKey));
+      const b = manualKeys(before), a = manualKeys(val);
+      if (a.size || b.size){
+        const tr = meta.tr[id] = profObj(meta.tr[id]);
+        a.forEach(k => { if (!b.has(k)) tr[k] = { at: now }; });
+        b.forEach(k => { if (!a.has(k)) tr[k] = { at: now, del: 1 }; });
+      }
     }
   } else if (val !== undefined && profStable(lsGet(key, null)) === profStable(val)){
     return false;
@@ -6146,6 +6156,32 @@ function remapQueueForPlaylist(id, oldPl, newPl){
   state.queuePos = state.queuePos < 0 || !queue.length ? -1 : Math.min(Math.max(pos, 0), queue.length - 1);
 }
 
+// #550: a synced imported playlist arrives whole (the newest copy wins), which
+// would drop songs this device's user added by hand to it. Keep those, unless
+// the winning copy's stamps say they were removed after they were added, and
+// drop any the user here removed that the winning copy still lists.
+function carryManualTracks(e, cur, localTr){
+  if (!e || e.del || !e.d || e.d.type === 'custom' || !cur || !Array.isArray(cur.tracks)) return e;
+  const remoteTr = profObj(e.tr);
+  const stamp = (m, k) => (m[k] && m[k].at) || 0;
+  const keep = (e.d.tracks || []).filter(t => {
+    const k = profTrackKey(t);
+    return !(t && t.manual && localTr[k] && localTr[k].del && localTr[k].at > stamp(remoteTr, k));
+  });
+  const have = new Set(keep.map(profTrackKey));
+  const carried = cur.tracks.filter(t => {
+    const k = profTrackKey(t);
+    if (!t || !t.manual || !t.videoId || have.has(k)) return false;
+    if (localTr[k] && localTr[k].del) return false;
+    return !(remoteTr[k] && remoteTr[k].del && remoteTr[k].at >= stamp(localTr, k));
+  });
+  if (!carried.length && keep.length === (e.d.tracks || []).length) return e;
+  const tr = Object.assign({}, remoteTr);
+  carried.forEach(t => { const k = profTrackKey(t); tr[k] = localTr[k] && !localTr[k].del ? localTr[k] : { at: Date.now() }; });
+  Object.keys(localTr).forEach(k => { if (localTr[k] && localTr[k].del && stamp(localTr, k) > stamp(tr, k)) tr[k] = localTr[k]; });
+  return Object.assign({}, e, { d: Object.assign({}, e.d, { tracks: keep.concat(carried) }), tr, carried: true });
+}
+
 // Writes a merged profile into localStorage (only what differs), adopts its
 // stamps/tombstones as this device's own, and refreshes whatever's on
 // screen. Setters are reused for settings so every bit of UI they touch
@@ -6164,9 +6200,11 @@ function applyMergedProfile(M){
     meta.k[LS_LIB] = M.lib.at; meta.k[LS_PINNED] = M.pin.at;
     Object.entries(M.pl).forEach(([id, e]) => {
       const key = LS_PL(id);
-      meta.k[key] = e.at;
-      if (e.tr) meta.tr[id] = e.tr; else delete meta.tr[id];
       const cur = getCachedPlaylist(id);
+      const localTr = profObj(meta.tr[id]);
+      e = carryManualTracks(e, cur, localTr);
+      meta.k[key] = e.carried ? Date.now() : e.at;
+      if (e.tr) meta.tr[id] = e.tr; else delete meta.tr[id];
       if (e.del){
         if (cur){ oldPls[id] = cur; lsDel(key); changedPl.push(id); }
       } else if (!cur || profStable(cur) !== profStable(e.d)){
