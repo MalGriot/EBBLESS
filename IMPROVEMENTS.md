@@ -10053,8 +10053,8 @@ Add entries in this shape:
 - **Priority:** high
 - **Description:** Idea, Geethub issue #471. (1) Drag songs from the link-match list into a playlist (needs a refreshed match UI that fits the rest of the app, with more control). (2) Drag a library song into the queue and it lands where dropped, with queue songs visibly shifting. (3) Drag a playlist or album from library to queue, with a confirm prompt first. (4) Drag an artist from library to queue to start "[artist] Radio" (their songs mixed with similar artists), confirm first. (5) Drag the now-playing album art to the queue to start "[song] Radio", confirm first. (6) Drag the now-playing art onto a library playlist (it glows on hover); dropping elsewhere in the library asks which playlist. (7) Polish the existing drag-to-browser-tab Google search so the drag looks designed, and extend it to albums and now-playing art.
 - **Touches:** library, queue, match list UI, now-playing art, discovery/radio.
-- **Branch:** agent/draggables-p1 (phase 1 merged)
-- **Notes:** Overlaps merged drag-songs-into-playlists (#328) and queue-drag-to-playlist-art (#351), which already cover library/queue rows into playlist cards and part of the art drag. Treat those as done and build the rest on top. Large; consider splitting into phases like advanced-settings. PHASE 1 MERGED (items 2 and 3): library song drag into queue with gap and shift, playlist/album card drag with confirm; card reorder drag now only in Manual order. Drag itself NOT tested in a real browser. REMAINING: (1) match-list drag into playlist, (4) artist radio drag, (5) now-playing art to queue radio, (6) now-playing art onto playlist, (7) Google drag polish. Cache v191.
+- **Branch:** agent/draggables-p1 (phase 1 merged), agent/draggables-p2
+- **Notes:** Overlaps merged drag-songs-into-playlists (#328) and queue-drag-to-playlist-art (#351), which already cover library/queue rows into playlist cards and part of the art drag. Treat those as done and build the rest on top. Large; consider splitting into phases like advanced-settings. PHASE 1 MERGED (items 2 and 3): library song drag into queue with gap and shift, playlist/album card drag with confirm; card reorder drag now only in Manual order. Drag itself NOT tested in a real browser. REMAINING: (1) match-list drag into playlist, (4) artist radio drag, (5) now-playing art to queue radio, (6) now-playing art onto playlist, (7) Google drag polish. Cache v191. PHASE 2 BUILT on agent/draggables-p2 (all remaining items): match-links window rows drag (window fades so library cards take the drop, closes on drop); artist card to queue starts "[artist] Radio" (their songs 1:2 with Discover picks from 3 seeds), confirm first; now-playing art to queue starts "[song] Radio" (song keeps playing in place, upcoming replaced), confirm first; radio is a radio:<key> playlist kept out of the library, discoverOriginId follows it so Discover keeps it going; art/queue song dropped elsewhere in the library opens the playlist picker; every drag shows an art+name chip (setDragChip) and cards now put their name (not the id) in text/plain, so tab-drop searches work for albums/playlists/artists too (also fixes library song rows, whose text was being overwritten by the plId). Drag NOT tested in a real browser. Cache v201.
 
 ### soundcloud-autoplay-hidden: SC next song silent or skips to 0:07 in the desktop mini-player (reopen of #458)
 - **Status:** merged
@@ -10106,12 +10106,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #479. Shipped: 700ms volume ramp on the playing deck, then the normal decline. No fade on iOS/cast (no volume control), when crossfade already fades the skip, or on the last queued song (pause fade covers it).
 
 ### miniplayer-always-on-top: Mini-player stays on screen over other apps (Geethub #480)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #480. The mini-player should remain visible above other apps.
 - **Touches:** mini-player / Picture-in-Picture.
 - **Branch:**
-- **Notes:** Synced from Geethub #480. Browser PiP already floats; true always-on-top over all apps may need the installed desktop app. Overlaps #481.
+- **Notes:** Synced from Geethub #480. Browser PiP already floats; true always-on-top over all apps may need the installed desktop app. Overlaps #481. 2026-10-14: user confirmed it already floats over other apps; it only disappears when switching to another macOS desktop (Space). That is Chrome's Picture-in-Picture window behavior and can't be changed from the web page; only a native desktop app could pin to all Spaces. Closed.
 
 ### miniplayer-customization: Mini-player customization when the desktop app is installed (Geethub #481)
 - **Status:** draft
@@ -10119,7 +10119,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #481 (a question). Can the mini-player be customized when the desktop app is installed? Needs scoping.
 - **Touches:** mini-player, desktop install.
 - **Branch:**
-- **Notes:** Synced from Geethub #481. No detail given. Overlaps #480; fold together when scoped.
+- **Notes:** Synced from Geethub #481. 2026-10-14 scope from user: change the whole structure and shape of the mini-player, with alpha (transparent, non-rectangular) frames. Browser Picture-in-Picture windows are always opaque rectangles, so a shaped/transparent frame needs a native desktop wrapper (e.g. Tauri/Electron transparent frameless window). The layout inside the rectangle can be reworked on the web. Needs a decision on the native app before work starts.
 
 ### artist-window-album-list: Artist window shows a list of their albums with add-to-library button (Geethub #482)
 - **Status:** merged

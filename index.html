@@ -519,6 +519,12 @@ body.onb-active .paste-guide{display:none}
 .lib-card.is-drop-target .art{box-shadow:0 10px 24px rgba(0,0,0,.5),0 0 0 3px color-mix(in srgb,var(--accent, #fff) 35%,transparent)}
 .lib-card .art{transition:box-shadow var(--dur-ui) var(--ease-out)}
 .is-song-drag{opacity:.5}
+.drag-chip{position:fixed;top:-200px;left:0;z-index:-1;display:flex;align-items:center;gap:10px;max-width:280px;padding:6px 16px 6px 6px;border-radius:999px;background:var(--panel-3);border:1px solid var(--border-2);color:var(--text);font-size:13px;font-weight:600;line-height:1.25;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+.drag-chip img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none}
+.drag-chip .txt{min-width:0}
+.drag-chip .t,.drag-chip .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drag-chip .s{font-weight:400;font-size:12px;color:var(--faint)}
+body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 /* artist tiles (#374): round, a touch larger than the square tiles' art */
 .lib-card.is-artist-card .art{border-radius:50%;transition:transform var(--dur-ui) var(--ease-out),box-shadow var(--dur-ui) var(--ease-out)}
 .lib-card.is-artist-card .art img{border-radius:50%}
@@ -10627,6 +10633,7 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
     '<div class="search-results" id="relinkCandidates">' + rows + '</div>' +
     albumChkHtml +
     '<button class="btn-ghost" id="relinkBackBtn" style="width:100%">Cancel</button>';
+  relinkDragCtx = { list, t };
   importStage.querySelectorAll('#relinkCandidates .search-pick').forEach(btn => {
     btn.addEventListener('click', () => {
       const c = list[parseInt(btn.dataset.i, 10)];
@@ -11245,12 +11252,29 @@ function addablePlaylists(){
     !isSingleTrackType(p.type) && !isPodcastEntry(p) && !isArtistEntry(p) && !isAlbumEntry(p));
 }
 
+/* What every desktop drag shows under the pointer (Geethub #471): the art and
+   name, so a drop on a playlist, the queue or a browser tab (which searches
+   the text) reads as a deliberate action rather than a ghost of the row. */
+function setDragChip(e, title, sub, art){
+  if (!e.dataTransfer || !e.dataTransfer.setDragImage) return;
+  const chip = document.createElement('div');
+  chip.className = 'drag-chip';
+  chip.innerHTML = (art ? '<img alt="" src="' + escapeHtml(art) + '">' : '') + '<div class="txt"><div class="t"></div><div class="s"></div></div>';
+  chip.querySelector('.t').textContent = title || '';
+  chip.querySelector('.s').textContent = sub || '';
+  document.body.appendChild(chip);
+  e.dataTransfer.setDragImage(chip, 24, 24);
+  setTimeout(() => chip.remove(), 0);
+}
+let relinkDragCtx = null; // { list, t } of the open matching-links window
+
 /* Desktop drag a song (library row or queue row) onto a playlist card to add it
    (Geethub #328). Native HTML5 drag, armed only on a mouse pointerdown so touch
    scrolling and the queue handle's pointer-based reorder are untouched. */
 (function(){
-  let dragTrack = null;
+  let dragTrack = null, dragFromLib = false, relinkDrag = false;
   const rowOf = (el) => el && el.closest && el.closest('.track-row, .q-row');
+  const inLibrary = (el) => !!(el && el.closest && el.closest('#view-library'));
   const cardOf = (el) => el && el.closest && el.closest('.lib-card[data-pl-id]');
   const okTarget = (card) => !!card && addablePlaylists().some(p => p.id === card.dataset.plId);
   function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); }
@@ -11258,6 +11282,8 @@ function addablePlaylists(){
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const art = e.target.closest && e.target.closest('#artworkWrap');
     if (art && !e.target.closest('button')){ art.draggable = true; return; }
+    const pick = e.target.closest && e.target.closest('#relinkCandidates .search-pick');
+    if (pick){ pick.draggable = true; return; }
     const row = rowOf(e.target);
     if (!row || e.target.closest('.handle, button')) return;
     row.draggable = true;
@@ -11268,9 +11294,24 @@ function addablePlaylists(){
       // album art of the playing song drags as that song
       const ct = currentTrack();
       if (!ct || !ct.videoId){ e.preventDefault(); return; }
-      dragTrack = ct;
+      dragTrack = ct; dragFromLib = false;
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('text/plain', ct.title + ' - ' + ct.artist);
+      setDragChip(e, ct.title, ct.artist, ct.art);
+      return;
+    }
+    // a link from the matching-links window drags as that song with that
+    // link; the window fades out so the library cards underneath take the drop
+    const pick = e.target.closest && e.target.closest('#relinkCandidates .search-pick');
+    if (pick && pick.draggable && relinkDragCtx){
+      const c = relinkDragCtx.list[parseInt(pick.dataset.i, 10)], src = relinkDragCtx.t;
+      if (!c || !src){ e.preventDefault(); return; }
+      dragTrack = { title: src.title, artist: src.artist, videoId: c.videoId, matchedTitle: c.title || '', channel: c.channel || '', duration: c.duration || 0, art: src.art || null, plays: 0 };
+      dragFromLib = false; relinkDrag = true;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', src.title + ' - ' + src.artist);
+      setDragChip(e, src.title, src.artist, src.art);
+      setTimeout(() => document.body.classList.add('relink-dragging'), 0);
       return;
     }
     const row = rowOf(e.target);
@@ -11285,16 +11326,21 @@ function addablePlaylists(){
       t = pl && pl.tracks[parseInt(row.dataset.idx, 10)];
     }
     if (!t || !t.videoId){ e.preventDefault(); return; }
-    dragTrack = t;
+    dragTrack = t; dragFromLib = !row.classList.contains('q-row');
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', t.title + ' - ' + t.artist);
+    setDragChip(e, t.title, t.artist, t.art);
     row.classList.add('is-song-drag');
   });
   document.addEventListener('dragover', (e) => {
     if (!dragTrack) return;
     const card = cardOf(e.target);
     clearHi();
-    if (!okTarget(card)) return;
+    if (!okTarget(card)){
+      // a song from outside the library dropped anywhere else in it asks which playlist
+      if (!dragFromLib && inLibrary(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+      return;
+    }
     e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
     card.classList.add('is-drop-target');
   });
@@ -11302,19 +11348,28 @@ function addablePlaylists(){
     if (!dragTrack) return;
     const card = cardOf(e.target);
     clearHi();
-    if (!okTarget(card)) return;
+    if (!okTarget(card)){
+      if (dragFromLib || !inLibrary(e.target)) return;
+      e.preventDefault();
+      const t = dragTrack;
+      if (relinkDrag) closeImportOverlay();
+      openAddToPlaylistPicker(t);
+      return;
+    }
     e.preventDefault();
+    if (relinkDrag) closeImportOverlay();
     addTrackToPlaylist(card.dataset.plId, dragTrack);
     // show where it landed
     if (openLibraryPanelId !== card.dataset.plId) toggleLibraryPlaylistPanel(card.dataset.plId);
   });
   document.addEventListener('dragend', () => {
-    dragTrack = null; clearHi();
+    dragTrack = null; dragFromLib = false; relinkDrag = false; clearHi();
+    document.body.classList.remove('relink-dragging');
     document.querySelectorAll('.is-song-drag').forEach(r => r.classList.remove('is-song-drag'));
-    document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable]').forEach(r => r.removeAttribute('draggable'));
+    document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable], .search-pick[draggable]').forEach(r => r.removeAttribute('draggable'));
   });
   document.addEventListener('pointerup', () => {
-    if (!dragTrack) document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable]').forEach(r => r.removeAttribute('draggable'));
+    if (!dragTrack) document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable], .search-pick[draggable]').forEach(r => r.removeAttribute('draggable'));
   });
 })();
 
@@ -11364,7 +11419,7 @@ function addablePlaylists(){
    under the pointer. A playlist/album asks first (Enter confirms). Mouse only:
    armed on a mouse pointerdown like the other drags, so touch is untouched. */
 (function(){
-  let drag = null; // { kind: 'song', plId, idx } | { kind: 'coll', plId }
+  let drag = null; // { kind: 'song', plId, idx } | { kind: 'coll' | 'artist', plId } | { kind: 'np' }
   let ph = null, dropIdx = -1;
   const scrollEl = () => queueBody.closest('.queue-scroll') || queueBody;
   function clearUi(){
@@ -11380,7 +11435,7 @@ function addablePlaylists(){
   document.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const card = e.target.closest && e.target.closest('.lib-card[data-pl-id]');
-    if (!card || card.draggable || card.classList.contains('is-artist-card') || e.target.closest('button')) return;
+    if (!card || card.draggable || e.target.closest('button')) return;
     card.draggable = true;
   });
   const disarm = () => document.querySelectorAll('.lib-card[draggable="true"]').forEach(c => { if (getLibrarySort() !== 'custom') c.removeAttribute('draggable'); });
@@ -11390,15 +11445,22 @@ function addablePlaylists(){
     drag = null;
     const card = e.target.classList && e.target.classList.contains('lib-card') ? e.target : null;
     if (card){
-      if (card.classList.contains('is-artist-card') || !getCachedPlaylist(card.dataset.plId)) return;
-      drag = { kind: 'coll', plId: card.dataset.plId };
+      const pl = getCachedPlaylist(card.dataset.plId);
+      if (!pl) return;
+      const artist = card.classList.contains('is-artist-card');
+      drag = { kind: artist ? 'artist' : 'coll', plId: card.dataset.plId };
+      // the card's name is what a drop on a browser tab searches
+      const by = artist ? '' : (pl.artist || pl.owner || '');
+      try { e.dataTransfer.setData('text/plain', pl.name + (by ? ' - ' + by : '')); } catch(_){}
+      setDragChip(e, pl.name, artist ? 'Artist' : by, pl.image);
+    } else if (e.target.closest && e.target.closest('#artworkWrap')){
+      drag = { kind: 'np' };
     } else {
       const row = e.target.closest && e.target.closest('.track-row');
       if (!row || !row.draggable || !row.dataset.plId) return;
       drag = { kind: 'song', plId: row.dataset.plId, idx: parseInt(row.dataset.idx, 10) };
     }
     e.dataTransfer.effectAllowed = 'copyMove';
-    try { e.dataTransfer.setData('text/plain', drag.plId); } catch(_){}
   });
   document.addEventListener('dragover', (e) => {
     if (!drag) return;
@@ -11409,6 +11471,7 @@ function addablePlaylists(){
     // edge auto-scroll so far rows are reachable
     const b = sc.getBoundingClientRect();
     if (e.clientY < b.top + 36) sc.scrollTop -= 12; else if (e.clientY > b.bottom - 36) sc.scrollTop += 12;
+    if (drag.kind === 'artist' || drag.kind === 'np') return; // a radio replaces the queue, no landing spot
     if (state.queuePos < 0 || !queueBody.querySelector('.q-row')){ dropIdx = -1; return; }
     const { rows, i } = insertAt(e.clientY);
     if (i === dropIdx && ph && ph.isConnected) return;
@@ -11434,6 +11497,29 @@ function addablePlaylists(){
     const d = drag; drag = null;
     const toPos = dropIdx < 0 ? state.queue.length : state.queuePos + 1 + dropIdx;
     clearUi();
+    if (d.kind === 'artist' || d.kind === 'np'){
+      let name, own;
+      if (d.kind === 'np'){
+        const ct = currentTrack();
+        if (!ct || !ct.videoId) return;
+        name = ct.title + ' Radio'; own = [ct];
+      } else {
+        const pl = playlistById(d.plId);
+        own = pl ? pl.tracks.filter(t => t && t.videoId) : [];
+        if (!own.length){ showToast('Nothing to play yet'); return; }
+        name = pl.name + ' Radio';
+      }
+      openImportOverlay();
+      importStage.innerHTML =
+        '<div class="step">Start &ldquo;' + escapeHtml(name) + '&rdquo;?</div>' +
+        '<p style="margin:0 0 14px;color:var(--faint);font-size:13.5px">' + (d.kind === 'np' ? 'This song keeps playing, then similar songs. ' : 'Their songs mixed with similar artists. ') + 'It replaces what&rsquo;s up next.</p>' +
+        '<button class="btn-ghost is-active" id="dqAddBtn" style="width:100%;margin-bottom:8px">Start radio</button>' +
+        '<button class="btn-ghost" id="dqCancelBtn" style="width:100%">Cancel</button>';
+      $('dqAddBtn').addEventListener('click', () => { closeImportOverlay(); startRadio(name, own, d.kind === 'np'); });
+      $('dqCancelBtn').addEventListener('click', closeImportOverlay);
+      $('dqAddBtn').focus();
+      return;
+    }
     if (d.kind === 'song'){
       const pl = playlistById(d.plId);
       if (!pl || !pl.tracks[d.idx] || !pl.tracks[d.idx].videoId) return;
@@ -11460,6 +11546,55 @@ function addablePlaylists(){
   });
   document.addEventListener('dragend', () => { drag = null; clearUi(); disarm(); });
 })();
+
+/* "[artist] Radio" / "[song] Radio" (Geethub #471): a playlist that never goes
+   in the library, the seed songs mixed with Discover's similar picks. Discover
+   stays on for it (discoverOriginId follows radio ids), so it keeps going.
+   keepPlaying (song radio): the playing song becomes the radio's first song
+   in place, so it isn't restarted, and everything after it is replaced. */
+let radioBusy = false;
+async function startRadio(name, own, keepPlaying){
+  if (radioBusy) return;
+  radioBusy = true;
+  showToast('Starting ' + name + '...');
+  try {
+    const exclude = new Set(own.map(t => t.videoId));
+    const seeds = keepPlaying ? own.slice(0, 1) : shuffleTail(own.slice(), 0).slice(0, 3);
+    const batches = await Promise.all(seeds.map(s => fetchDiscoverCandidates([s], exclude, keepPlaying ? 15 : 8, false).catch(() => [])));
+    // round-robin across seeds so one seed's neighbors don't bunch up
+    const found = [], seen = new Set(exclude);
+    for (let i = 0; batches.some(b => b[i]); i++) batches.forEach(b => { const t = b[i]; if (t && t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); found.push(t); } });
+    let tracks;
+    if (keepPlaying) tracks = [own[0]].concat(found);
+    else {
+      // one of theirs, two similar, repeat
+      const mine = shuffleTail(own.slice(), 0).slice(0, 15);
+      tracks = [];
+      for (let a = 0, b = 0; a < mine.length || b < found.length;){
+        if (a < mine.length) tracks.push(mine[a++]);
+        for (let k = 0; k < 2 && b < found.length; k++) tracks.push(found[b++]);
+      }
+    }
+    if (tracks.length < 2){ showToast("Couldn't find songs for " + name); return; }
+    const key = keepPlaying ? own[0].videoId : name.toLowerCase();
+    const id = 'radio:' + key;
+    const pl = { id, type: 'custom', name, image: tracks[0].art || null, tracks: tracks.map(t => Object.assign({}, t, { plays: 0 })), ts: Date.now() };
+    persistPlaylistObj(pl);
+    if (keepPlaying && state.queuePos >= 0){
+      const ct = currentTrack();
+      if (!ct || ct.videoId !== own[0].videoId){ showToast('The song changed, radio not started'); return; }
+      queueHistSnapshot();
+      state.queue = state.queue.slice(0, state.queuePos).concat(pl.tracks.map((t, idx) => ({ plId: id, idx })));
+      renderQueuePanel();
+      schedulePreload(state.queuePos);
+    } else {
+      loadPlaylistIntoPlayer(pl);
+      buildQueueFrom(0, id);
+      loadIndex(state.queuePos, true);
+    }
+    showToast('Playing ' + name);
+  } finally { radioBusy = false; }
+}
 
 function openAddToPlaylistPicker(track){
   openImportOverlay();
@@ -16499,6 +16634,10 @@ function noteDiscoverEmpty(){
 // pointing at the real origin even once later entries are synthetic
 // discover-ext ones, so this stays stable across extensions.
 function discoverOriginId(){
+  // a radio keeps extending itself even when played history sits ahead of it
+  const cur = state.queuePos >= 0 && state.queue[state.queuePos];
+  const m = cur && /^(?:discover-ext:)?(radio:.*)$/.exec(String(cur.plId));
+  if (m) return m[1];
   return (state.queue[0] && state.queue[0].plId) || (state.playlist && state.playlist.id) || null;
 }
 
