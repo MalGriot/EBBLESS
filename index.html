@@ -21025,7 +21025,27 @@ function marqueeFlush(win){
       { transform: 'translateX(0)', offset: pause / totalDur },
       { transform: 'translateX(-' + dist + 'px)', offset: 1 }
     ], { duration: totalDur * 1000, iterations: Infinity, easing: 'linear' });
+    marqueeVisibilityObserve(it.el, win);
   });
+}
+// #487: a big library had ~400 card titles scrolling at once, nearly all
+// off screen - hundreds of animated GPU layers. Each marquee only runs
+// while it's actually on screen.
+function marqueeVisibilityObserve(el, win){
+  if (typeof win.IntersectionObserver !== 'function') return;
+  if (!win._marqueeVisObs){
+    win._marqueeVisObs = new win.IntersectionObserver(entries => entries.forEach(e => {
+      // removed from the page (library re-render): stop watching it
+      if (!e.target.isConnected){ win._marqueeVisObs.unobserve(e.target); e.target._marqueeVisObserved = false; return; }
+      const a = e.target._marqueeAnim;
+      e.target._marqueeOnScreen = e.isIntersecting;
+      if (!a) return;
+      if (e.isIntersecting){ if (a.playState === 'paused') a.play(); }
+      else if (a.playState === 'running') a.pause();
+    }), { rootMargin: '64px' });
+  }
+  if (el._marqueeOnScreen === false && el._marqueeAnim) el._marqueeAnim.pause();
+  if (!el._marqueeVisObserved){ win._marqueeVisObs.observe(el); el._marqueeVisObserved = true; }
 }
 
 // Shared overflow marquee for every other ellipsis line (lists, queue, cards,
