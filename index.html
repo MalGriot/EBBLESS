@@ -1892,6 +1892,8 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .adv-block[open]>summary svg{transform:rotate(180deg)}
 .adv-group{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:18px 0 2px}
 .adv-chips{display:flex;flex-wrap:wrap;gap:8px}
+.pl-sort-bar{margin:0 0 10px;gap:6px}
+.adv-chips.pl-sort-bar .btn-ghost{padding:4px 11px;font-size:12px}
 /* Advanced settings: player items hidden by choice (html.adv-hide-*). Never covers play/pause, prev/next, seek or the song menu. */
 html.adv-hide-shuffle #shuffleBtn,html.adv-hide-shuffle #miniShuffleBtn,html.adv-hide-shuffle #flowShuffleBtn,
 html.adv-hide-repeat #repeatBtn,html.adv-hide-repeat #miniRepeatBtn,html.adv-hide-repeat #flowRepeatBtn,
@@ -4177,6 +4179,20 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Sections to show"><button type="button" class="btn-ghost" data-adv="sec" data-val="playlist">Playlists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="album">Albums</button><button type="button" class="btn-ghost" data-adv="sec" data-val="artist">Artists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="podcast">Podcasts</button></div>
         </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Section order</div>
+            <div class="desc">Tap a section to move it to the top.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Section order" id="advSecOrder"></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Section names</div>
+            <div class="desc">Tap to rename. Leave it empty to go back to the original name.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Section names" id="advSecNames"></div>
+        </div>
         <div class="adv-group">Playback</div>
         <div class="settings-row settings-row-slider">
           <div>
@@ -4214,6 +4230,19 @@ body.week-up-on{overflow:hidden}
             <div class="desc">Nothing by default. Hold the art for half a second.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Long-press album art"><button type="button" class="btn-ghost" data-adv="glp" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="glp" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="glp" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="glp" data-val="none">Nothing</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Triple-tap album art</div>
+            <div class="desc">Nothing by default. When set, double-tap waits a moment to tell the two apart.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Triple-tap album art"><button type="button" class="btn-ghost" data-adv="gtt" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="none">Nothing</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Double-tap the Library tab</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Double-tap the Library tab"><button type="button" class="btn-ghost" data-adv="glib" data-val="none">Nothing</button><button type="button" class="btn-ghost" data-adv="glib" data-val="top">Back to top</button><button type="button" class="btn-ghost" data-adv="glib" data-val="search">Search library</button></div>
         </div>
         <div class="adv-group">Backup</div>
         <div class="settings-row">
@@ -9336,6 +9365,7 @@ function toggleLibraryPlaylistPanel(id){
   }
 
   if (state.queueOpen) closeQueuePanel();
+  if (pl.smart) refreshSmartPlaylist(id);
 
   openLibraryPanelId = id;
   libplPanel.classList.remove('is-artist-info');
@@ -9398,10 +9428,35 @@ function toggleLibraryPlaylistPanel(id){
   dedupAlbumIds.forEach(aid => { const a = getCachedPlaylist(aid); if (!a.artistSet) (a.tracks || []).forEach(t => { if (!t) return; const k = songKey(t.title), prev = onAlbum.get(k); if (!prev || (!prev.t.videoId && t.videoId)) onAlbum.set(k, { pl: a, t }); }); });
   const adoptedInto = new Set();
   let singlesLabelShown = false;
+  if (pl.smart){
+    const line = document.createElement('div');
+    line.className = 'currents-hint smart-hint';
+    line.innerHTML = '<span></span> <button type="button" class="btn-ghost" style="padding:3px 10px;font-size:12px;margin-left:6px">Edit rules</button>';
+    line.querySelector('span').textContent = smartSummary(pl.smart) + '.';
+    line.querySelector('button').addEventListener('click', () => openSmartPlaylistFlow(id));
+    libplBody.appendChild(line);
+  }
+  // song order for this playlist only (#469 phase 4)
+  if (pl.tracks.length > 2 && id !== NP_ID && id !== SWELL_ID && !isArtistEntry(pl) && !isPodcastEntry(pl)){
+    const cur = plSortOf(id);
+    const bar = document.createElement('div');
+    bar.className = 'adv-chips pl-sort-bar';
+    bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Song order for this playlist');
+    bar.innerHTML = PL_SORTS.map(([k, label]) => '<button type="button" class="btn-ghost' + (k === cur ? ' is-active' : '') + '" data-plsort="' + k + '" aria-pressed="' + (k === cur) + '">' + label + '</button>').join('');
+    bar.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-plsort]');
+      if (!b || b.dataset.plsort === plSortOf(id)) return;
+      setPlSort(id, b.dataset.plsort);
+      openLibraryPanelId = null;
+      toggleLibraryPlaylistPanel(id);
+    });
+    libplBody.appendChild(bar);
+  }
   if (!pl.tracks.length){
     libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
-    pl.tracks.forEach((t, i) => {
+    plTrackOrder(pl).forEach((i) => {
+      const t = pl.tracks[i];
       const dup = onAlbum.get(songKey(t.title));
       if (dup){
         // the album owns this song; if its copy has no video yet, adopt the single's so nothing is lost
@@ -11416,6 +11471,131 @@ function toggleLikeTrack(track){
   renderQueuePanel();
 }
 
+/* Smart playlists (#469 phase 4, Marvis "smart rules"): a custom playlist with
+   pl.smart = { plays, liked, artist, q, sort, limit } whose songs are picked
+   from the whole library and rebuilt when it's opened or played. Hand-adding
+   is off for them (addablePlaylists) since a rebuild would drop the song. */
+const SMART_DEF = { plays: 0, liked: false, artist: '', q: '', sort: 'plays', limit: 50 };
+function smartMatches(rules, selfId){
+  const r = Object.assign({}, SMART_DEF, rules || {});
+  const liked = new Set(((getCachedPlaylist(LIKED_ID) || {}).tracks || []).map(t => t && t.videoId).filter(Boolean));
+  const self = selfId ? getCachedPlaylist(selfId) : null;
+  const byV = new Map();
+  const take = (t) => {
+    if (!t || !t.videoId) return;
+    const prev = byV.get(t.videoId);
+    if (!prev) byV.set(t.videoId, Object.assign({}, t, { plays: t.plays || 0 }));
+    else prev.plays = Math.max(prev.plays, t.plays || 0);
+  };
+  getLibrary().forEach(id => {
+    if (id === selfId || PROFILE_REGENERATED_IDS.includes(id)) return;
+    const pl = getCachedPlaylist(id);
+    if (!pl || !Array.isArray(pl.tracks) || pl.smart || isPodcastEntry(pl)) return;
+    pl.tracks.forEach(take);
+  });
+  // plays counted on the smart playlist's own copies carry over
+  if (self && self.tracks) self.tracks.forEach(t => { const x = t && byV.get(t.videoId); if (x) x.plays = Math.max(x.plays, t.plays || 0); });
+  const norm = (x) => normLibSearch(x || '');
+  const art = norm(r.artist), q = norm(r.q);
+  let out = Array.from(byV.values()).filter(t =>
+    (t.plays || 0) >= (r.plays || 0) &&
+    (!r.liked || liked.has(t.videoId)) &&
+    (!art || norm(t.artist).includes(art)) &&
+    (!q || norm(t.title).includes(q) || norm(t.artist).includes(q)));
+  const cmp = (a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+  if (r.sort === 'alpha') out.sort((a, b) => cmp(a.title, b.title));
+  else if (r.sort === 'artist') out.sort((a, b) => cmp(a.artist, b.artist) || cmp(a.title, b.title));
+  else if (r.sort === 'random') out = shuffleTail(out, 0);
+  else out.sort((a, b) => (b.plays || 0) - (a.plays || 0));
+  return r.limit > 0 ? out.slice(0, r.limit) : out;
+}
+// Rebuilds a smart playlist's songs; writes only when the list changed.
+function refreshSmartPlaylist(id){
+  const pl = getCachedPlaylist(id);
+  if (!pl || !pl.smart) return pl;
+  const next = smartMatches(pl.smart, id);
+  const same = next.length === pl.tracks.length && next.every((t, i) => pl.tracks[i] && pl.tracks[i].videoId === t.videoId);
+  if (same) return pl;
+  pl.tracks = next;
+  pl.ts = Date.now();
+  persistPlaylistObj(pl);
+  if (state.playlist && state.playlist.id === id) state.playlist = pl;
+  return pl;
+}
+function smartSummary(r){
+  r = Object.assign({}, SMART_DEF, r || {});
+  const bits = [];
+  if (r.liked) bits.push('liked');
+  if (r.plays) bits.push('played ' + r.plays + '+ times');
+  if (r.artist) bits.push('by ' + r.artist);
+  if (r.q) bits.push('with "' + r.q + '"');
+  const order = { plays: 'most played first', alpha: 'A to Z', artist: 'by artist', random: 'shuffled' }[r.sort] || '';
+  return (bits.length ? 'Songs ' + bits.join(', ') : 'All your songs') + ', ' + order + (r.limit ? ', up to ' + r.limit : '');
+}
+function openSmartPlaylistFlow(editId, name){
+  const editing = editId ? getCachedPlaylist(editId) : null;
+  const r = Object.assign({}, SMART_DEF, (editing && editing.smart) || {});
+  const field = 'width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:14px;margin-bottom:12px';
+  const group = (label, key, opts) => '<div class="adv-group" style="margin-top:6px">' + label + '</div><div class="adv-chips" style="margin:6px 0 12px" data-smart="' + key + '">' +
+    opts.map(([v, l]) => '<button type="button" class="btn-ghost" data-v="' + v + '">' + l + '</button>').join('') + '</div>';
+  openImportOverlay();
+  importStage.innerHTML = '<div id="smWrap">' +
+    '<div class="step">' + (editing ? 'Edit smart playlist' : 'Smart playlist') + '</div>' +
+    '<input id="smName" type="text" placeholder="Name" autocomplete="off" spellcheck="false" style="' + field + '">' +
+    group('Played at least', 'plays', [[0, 'Any'], [3, '3 times'], [10, '10 times'], [25, '25 times']]) +
+    group('Only liked songs', 'liked', [['', 'No'], ['1', 'Yes']]) +
+    '<div class="adv-group" style="margin-top:6px">Artist (optional)</div>' +
+    '<input id="smArtist" type="text" placeholder="Any artist" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    '<div class="adv-group" style="margin-top:6px">Title or artist has (optional)</div>' +
+    '<input id="smQ" type="text" placeholder="Any words" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    group('Order', 'sort', [['plays', 'Most played'], ['alpha', 'A to Z'], ['artist', 'Artist'], ['random', 'Shuffle']]) +
+    group('How many', 'limit', [[25, '25'], [50, '50'], [100, '100'], [0, 'All']]) +
+    '<div id="smCount" style="color:var(--faint);font-size:13px;margin:4px 0 12px"></div>' +
+    '<button class="btn-ghost is-active" id="smSave" style="width:100%;margin-bottom:8px">' + (editing ? 'Save' : 'Create') + '</button>' +
+    '<button class="btn-ghost" id="smCancel" style="width:100%">Cancel</button></div>';
+  const nameIn = $('smName'), artIn = $('smArtist'), qIn = $('smQ');
+  nameIn.value = editing ? editing.name : (name || '');
+  artIn.value = r.artist; qIn.value = r.q;
+  function paint(){
+    $('smWrap').querySelectorAll('[data-smart]').forEach(g => {
+      const k = g.dataset.smart;
+      g.querySelectorAll('[data-v]').forEach(b => {
+        const on = k === 'liked' ? (b.dataset.v === '1') === !!r.liked : String(r[k]) === b.dataset.v;
+        b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on));
+      });
+    });
+    r.artist = artIn.value.trim(); r.q = qIn.value.trim();
+    const n = smartMatches(r, editId).length;
+    $('smCount').textContent = n + (n === 1 ? ' song matches' : ' songs match') + ' right now.';
+  }
+  $('smWrap').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-smart] [data-v]');
+    if (!b) return;
+    const k = b.closest('[data-smart]').dataset.smart, v = b.dataset.v;
+    r[k] = k === 'liked' ? v === '1' : (k === 'plays' || k === 'limit') ? +v : v;
+    paint();
+  });
+  artIn.addEventListener('input', paint); qIn.addEventListener('input', paint);
+  paint();
+  $('smSave').addEventListener('click', () => {
+    paint();
+    const nm = nameIn.value.trim() || 'Smart playlist';
+    const rules = { plays: r.plays, liked: r.liked, artist: r.artist, q: r.q, sort: r.sort, limit: r.limit };
+    let pl = editing;
+    if (!pl) pl = createCustomPlaylist(nm);
+    pl = getCachedPlaylist(pl.id);
+    pl.name = nm; pl.smart = rules; pl.tracks = [];
+    persistPlaylistObj(pl);
+    refreshSmartPlaylist(pl.id);
+    closeImportOverlay();
+    renderLibrary();
+    showToast((editing ? 'Saved ' : 'Made ') + nm);
+    if (!editing) toggleLibraryPlaylistPanel(pl.id);
+  });
+  $('smCancel').addEventListener('click', closeImportOverlay);
+  if (!editing) nameIn.focus();
+}
+
 function createCustomPlaylist(name){
   const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const pl = { id, type: 'custom', name, image: null, tracks: [], ts: Date.now() };
@@ -11463,7 +11643,8 @@ function openCreatePlaylistFlow(trackToAdd, opts){
     '<input id="plNameInput" type="text" placeholder="Playlist name" autocomplete="off" spellcheck="false" ' +
       'style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px">' +
     '<button class="btn-ghost is-active" id="plCreateBtn" style="width:100%">Create</button>' +
-    (!trackToAdd && !(opts && opts.onCreate) ? '<button class="btn-ghost" id="plCreateLinksBtn" style="width:100%;margin-top:8px">Create and add by link</button>' : '');
+    (!trackToAdd && !(opts && opts.onCreate) ? '<button class="btn-ghost" id="plCreateLinksBtn" style="width:100%;margin-top:8px">Create and add by link</button>' +
+      '<button class="btn-ghost" id="plCreateSmartBtn" style="width:100%;margin-top:8px">Make a smart playlist</button>' : '');
   const input = $('plNameInput');
   if (opts && opts.prefill){ input.value = opts.prefill; input.select(); }
   input.focus();
@@ -11487,6 +11668,7 @@ function openCreatePlaylistFlow(trackToAdd, opts){
   }
   $('plCreateBtn').addEventListener('click', () => submit());
   if ($('plCreateLinksBtn')) $('plCreateLinksBtn').addEventListener('click', () => submit(true));
+  if ($('plCreateSmartBtn')) $('plCreateSmartBtn').addEventListener('click', () => openSmartPlaylistFlow(null, input.value.trim()));
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
 }
 $('newPlaylistBtn').addEventListener('click', () => openCreatePlaylistFlow());
@@ -11502,7 +11684,7 @@ $('newPlaylistBtnEmpty').addEventListener('click', () => openCreatePlaylistFlow(
 // curate), and single-track/video entries (one song, not a playlist).
 function addablePlaylists(){
   return getLibrary().map(id => getCachedPlaylist(id)).filter(p =>
-    p && Array.isArray(p.tracks) && !PROFILE_REGENERATED_IDS.includes(p.id) &&
+    p && Array.isArray(p.tracks) && !p.smart && !PROFILE_REGENERATED_IDS.includes(p.id) &&
     !isSingleTrackType(p.type) && !isPodcastEntry(p) && !isArtistEntry(p) && !isAlbumEntry(p));
 }
 
@@ -12091,7 +12273,7 @@ function openAddLinksFlow(playlistId){
    else is queued */
 function playPlaylistNow(id){
   if (id === NP_ID && npFeed.onAir){ npTuneIn(); return; }
-  const pl = getCachedPlaylist(id);
+  const pl = refreshSmartPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
   if (id === SWELL_ID){
     const dot = libraryGrid.querySelector('[data-pl-id="' + SWELL_ID + '"] .new-dot');
@@ -12099,7 +12281,7 @@ function playPlaylistNow(id){
   }
   loadPlaylistIntoPlayer(pl);
   setView('player');
-  buildQueueFrom(0, pl.id);
+  buildQueueFrom(-1, pl.id); // -1 = from the top of its own order (per-playlist sort)
   loadIndex(state.queuePos, true);
   // Same staleness check beginImport already does for a cached playlist
   // about to play (see isResolveStale/reResolveStaleInBackground) - this is
@@ -15468,7 +15650,33 @@ function loadPlaylistIntoPlayer(pl){
    NOW = queue[queuePos]; upcoming = queue[queuePos+1 ...]
    ========================================================================= */
 function validIndices(pl){
-  return pl.tracks.map((t,i) => i).filter(i => pl.tracks[i].videoId);
+  return plTrackOrder(pl).filter(i => pl.tracks[i].videoId);
+}
+/* Per-playlist song order (#469 phase 4, Marvis-style "this playlist only"):
+   'ebbless:plview:<id>' = { sort }. Changes how the playlist lists AND plays;
+   indices into pl.tracks never change, so the queue, likes and links don't care. */
+const LS_PLVIEW = (id) => 'ebbless:plview:' + id;
+const PL_SORTS = [['', 'Original'], ['alpha', 'A to Z'], ['artist', 'Artist'], ['plays', 'Most played'], ['newest', 'Newest']];
+const plViewCache = new Map();
+function plSortOf(id){
+  if (!plViewCache.has(id)){ const v = lsGet(LS_PLVIEW(id), null); plViewCache.set(id, v && typeof v === 'object' ? v : {}); }
+  const s = plViewCache.get(id).sort;
+  return PL_SORTS.some(x => x[0] === s) ? s : '';
+}
+function setPlSort(id, sort){
+  plViewCache.set(id, sort ? { sort } : {});
+  if (sort) lsSet(LS_PLVIEW(id), { sort }); else { try { localStorage.removeItem(LS_PLVIEW(id)); } catch(e){} }
+}
+function plTrackOrder(pl){
+  const idx = pl.tracks.map((t, i) => i);
+  const s = pl.id ? plSortOf(pl.id) : '';
+  if (!s) return idx;
+  if (s === 'newest') return idx.reverse();
+  const T = (i) => pl.tracks[i] || {};
+  const cmp = (a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+  if (s === 'alpha') return idx.sort((a, b) => cmp(T(a).title, T(b).title) || a - b);
+  if (s === 'artist') return idx.sort((a, b) => cmp(T(a).artist, T(b).artist) || a - b);
+  return idx.sort((a, b) => ((T(b).plays || 0) - (T(a).plays || 0)) || a - b);
 }
 
 /* builds a fresh queue out of a single playlist, starting at startIndex.
@@ -19884,7 +20092,7 @@ function advRender(){
     art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet',
-    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'),
+    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none',
     shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
   const hide = p.hide || [];
@@ -19944,7 +20152,7 @@ $('playerAddPlBtn').addEventListener('click', () => {
    Defaults are the old behavior (double-tap = fullscreen, long-press =
    nothing), stored only when changed. Actions reuse existing functions. */
 const ADV_GACT = ['fullscreen','like','artist','playlist','play','none'];
-const ADV_GDEF = { gdt: 'fullscreen', glp: 'none' };
+const ADV_GDEF = { gdt: 'fullscreen', glp: 'none', gtt: 'none' };
 function advGestureOf(k){ const v = advPrefs()[k]; return ADV_GACT.includes(v) ? v : ADV_GDEF[k]; }
 function advRunGesture(k){
   const a = advGestureOf(k), t = currentTrack();
@@ -19966,7 +20174,15 @@ function advChoose(k, v){
   else if (k === 'sort'){ setLibrarySort(v); applyLibSortUI(); renderLibrary(); }
   else if (k === 'blend'){ crossfadePrefs.ms = parseInt(v, 10) || 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI(); }
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
-  else if ((k === 'gdt' || k === 'glp') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
+  else if ((k === 'gdt' || k === 'glp' || k === 'gtt') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
+  else if (k === 'glib') advSet('glib', v === 'none' ? null : v);
+  else if (k === 'secorder' && ADV_SECS[v]){
+    const o = advSecOrder().filter(x => x !== v);
+    o.unshift(v);
+    advSet('secOrder', o.join() === Object.keys(ADV_SECS).join() ? null : o);
+    advApplySections();
+  }
+  else if (k === 'secname' && ADV_SECS[v]){ advRenameSection(v); return; }
   else if (k === 'shape'){ advSet('shape', v === 'rounded' ? null : v); advApplyLook(); }
   else if (k === 'thumbs'){ advSet('thumbs', v === 'hide' ? 'hide' : null); advApplyLook(); }
   else if (k === 'dense'){ advSet('dense', v === 'tight' ? 'tight' : null); advApplyLook(); }
@@ -20000,6 +20216,7 @@ $('advResetBtn').addEventListener('click', () => {
   advApplyMotion();
   advApplyPlayer();
   advApplyLook(); advRenderSpeed(); advApplySpeed(activeDeck());
+  if (typeof advApplySections === 'function') advApplySections();
   updateLibraryClockColor();
   setArtStyle('default');
   setLibraryView('compact');
@@ -20015,6 +20232,51 @@ advApplyPlayer();
 advApplyLook();
 advRenderSpeed();
 advRender();
+
+/* Library sections (#469 phase 4): their order and names. Order moves each
+   section's header+grid pair in the DOM (the "See all" overview lives inside
+   the grid, so it travels along); names relabel the header and filter chip. */
+const ADV_SECS = { playlist: ['Playlists', libraryPlaylistsHead, libraryGrid, 'libFilterPlaylists'], artist: ['Artists', libraryArtistsHead, libraryArtistsGrid, 'libFilterArtists'], album: ['Albums', libraryAlbumsHead, libraryAlbumsGrid, 'libFilterAlbums'], podcast: ['Podcasts', libraryPodcastsHead, libraryPodcastsGrid, 'libFilterPodcasts'] };
+function advSecOrder(){
+  const o = (advPrefs().secOrder || []).filter(k => ADV_SECS[k]);
+  Object.keys(ADV_SECS).forEach(k => { if (!o.includes(k)) o.push(k); });
+  return o;
+}
+function advSecName(k){ const n = (advPrefs().secNames || {})[k]; return n || ADV_SECS[k][0]; }
+function advApplySections(){
+  const end = $('libSearchTracks');
+  advSecOrder().forEach(k => { const [, head, grid] = ADV_SECS[k]; end.before(head); end.before(grid); });
+  Object.keys(ADV_SECS).forEach(k => {
+    const [, head, , fid] = ADV_SECS[k];
+    head.querySelector('.section-label').textContent = advSecName(k);
+    $(fid).textContent = advSecName(k);
+  });
+  const chip = (k, kind) => '<button type="button" class="btn-ghost" data-adv="' + kind + '" data-val="' + k + '">' + escapeHtml(advSecName(k)) + '</button>';
+  $('advSecOrder').innerHTML = advSecOrder().map(k => chip(k, 'secorder')).join('');
+  $('advSecNames').innerHTML = Object.keys(ADV_SECS).map(k => chip(k, 'secname')).join('');
+}
+function advRenameSection(k){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Rename &ldquo;' + escapeHtml(advSecName(k)) + '&rdquo;</div>' +
+    '<input type="text" id="advSecNameInput" maxlength="24" autocomplete="off" spellcheck="false" style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;color:var(--text);font-size:14.5px;margin-bottom:14px" placeholder="' + escapeHtml(ADV_SECS[k][0]) + '">' +
+    '<button class="btn-ghost is-active" id="advSecNameSave" style="width:100%;margin-bottom:8px">Save</button>' +
+    '<button class="btn-ghost" id="advSecNameCancel" style="width:100%">Cancel</button>';
+  const input = $('advSecNameInput');
+  input.value = (advPrefs().secNames || {})[k] || '';
+  const save = () => {
+    const names = Object.assign({}, advPrefs().secNames || {}), v = input.value.replace(/\s+/g, ' ').trim();
+    if (v && v !== ADV_SECS[k][0]) names[k] = v; else delete names[k];
+    advSet('secNames', Object.keys(names).length ? names : null);
+    closeImportOverlay();
+    advApplySections(); advRender();
+  };
+  $('advSecNameSave').addEventListener('click', save);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
+  $('advSecNameCancel').addEventListener('click', closeImportOverlay);
+  input.focus();
+}
+advApplySections();
 
 /* Back up / restore settings (#469 phase 4): one file with this device's
    settings (not the library, which profile sync already carries). Restoring
@@ -25740,7 +26002,25 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
       else lastTap = now;
     });
   }
-  onDoubleTap(artworkWrap, () => advRunGesture('gdt'));
+  // album art: double-tap, or triple-tap when one is chosen (#469 phase 4).
+  // With triple-tap set, the second tap waits one window for a third.
+  let taps = 0, lastArtTap = 0, tapTimer = null;
+  artworkWrap.addEventListener('click', () => {
+    const now = Date.now();
+    taps = now - lastArtTap < DOUBLE_TAP_MS ? taps + 1 : 1;
+    lastArtTap = now;
+    clearTimeout(tapTimer);
+    const triple = advGestureOf('gtt') !== 'none';
+    if (taps === 2 && !triple){ taps = 0; lastArtTap = 0; advRunGesture('gdt'); }
+    else if (taps === 2) tapTimer = setTimeout(() => { taps = 0; advRunGesture('gdt'); }, DOUBLE_TAP_MS);
+    else if (taps >= 3){ taps = 0; lastArtTap = 0; advRunGesture('gtt'); }
+  });
+  // Library tab double-tap: back to top or open library search (#469 phase 4)
+  document.querySelectorAll('#topnav [data-view="library"], #bottom-nav button[data-view="library"]').forEach(b => onDoubleTap(b, () => {
+    const a = advPrefs().glib;
+    if (a === 'top'){ const sc = document.querySelector('#view-library .view-scroll') || $('view-library'); sc.scrollTo({ top: 0, behavior: 'smooth' }); }
+    else if (a === 'search'){ setView('library'); if (libSearchBox.classList.contains('hidden')) $('libSearchToggle').click(); libSearch.focus(); }
+  }));
   onDoubleTap(flowVizWrap, closeFlow);
 })();
 
