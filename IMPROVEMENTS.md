@@ -10135,3 +10135,11 @@ Add entries in this shape:
 - **Touches:** cassette sfx gain.
 - **Branch:**
 - **Notes:** Synced from Geethub #483. No further detail given.
+
+### soundcloud-warm-ahead: SC autoplay while hidden for loose and cross-set queues, no click (reopen of #458)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Warms upcoming SoundCloud songs while the page is visible so they can start while hidden. Standby warm-up while a YouTube song plays; widgets run in separate `credentialless` storage lanes so warming never pauses the playing song; a pool of 3 extra decks keeps the next 3 to 4 songs warmed. PiP "Tap once to keep music flowing" hint until the first click in the mini-player.
+- **Touches:** SC decks, `warmSCStandby`, `scPool`, `loadIndex`, mini-player.
+- **Branch:** agent/soundcloud-sc-warm-ahead (includes agent/soundcloud-yt-to-sc-warm)
+- **Notes:** Verified hidden in real Chrome: 4 loose songs in a row, 6 with two sets plus loose. Song 5+ of a hidden stretch still needs a click. Chrome only (credentialless); off on iOS and touch devices. 6 SC iframes instead of 3 (about 75 to 110 MB each). Real PiP window untested. Cache v193.
