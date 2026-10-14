@@ -72,7 +72,11 @@ function createMainWindow(){
   mainWin.webContents.on('did-create-window', (child, { frameName }) => {
     if (frameName !== MINI_NAME) return;
     child.setAlwaysOnTop(true, 'floating');
-    child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    // #510: without skipTransformProcessType, Electron turns the app into a
+    // background agent while this is on, which removes the Dock and Cmd+Tab icon
+    child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+    // #512: re-assert the pin each time the window is shown, macOS can drop it
+    child.on('show', () => { try { child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true }); child.setAlwaysOnTop(true, 'floating'); } catch(e){} });
     // #511: macOS keeps the old frame's opaque corners on a transparent window
     // after a resize (Card -> Disc/Pill); clear them each time the size changes
     const clearCorners = () => { try { child.setBackgroundColor('#00000000'); child.invalidateShadow(); } catch(e){} };

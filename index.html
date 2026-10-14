@@ -8692,7 +8692,10 @@ function renderLibrary(){
   // (#409) an artist window (page or saved artist entry) stays open until the
   // user closes it: background re-renders (sync, art backfill) must not shut it
   const openPl = openLibraryPanelId ? getCachedPlaylist(openLibraryPanelId) : null;
-  if (!String(openLibraryPanelId || '').startsWith('artistinfo:') && !isArtistEntry(openPl)) closeLibraryPlaylistPanel();
+  // #536: playlist and album windows get the same treatment: a background re-render
+  // (sync, art backfill, play counts) only closes the window if its playlist is gone.
+  // Callers that need the contents rebuilt use reopenLibraryPanel().
+  if (!String(openLibraryPanelId || '').startsWith('artistinfo:') && !openPl) closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
   const ids = orderedLibraryIds();
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
@@ -9337,6 +9340,9 @@ function syncLibplCloseBtn(){
   libplCloseBtn.setAttribute('aria-label', back ? 'Back' : 'Close');
   libplCloseBtn.innerHTML = back ? LIBPL_BACK_ICON : LIBPL_X_ICON;
 }
+
+// rebuild the open window's contents in place (after a re-render, a removal, a re-sort)
+function reopenLibraryPanel(id){ openLibraryPanelId = null; toggleLibraryPlaylistPanel(id); }
 
 function closeLibraryPlaylistPanel(){
   libplReturnTo = null; syncLibplCloseBtn();
@@ -10420,13 +10426,13 @@ function handleTrackCtxAction(action, plId, trackIdx){
     showToast('Removed from playlist', { label: 'Undo', run: () => {
       const wasOpen = openLibraryPanelId === plId;
       insertTrackIntoPlaylistAt(plId, trackIdx, t);
-      if (wasOpen) toggleLibraryPlaylistPanel(plId); // renderLibrary closed it
+      if (wasOpen) reopenLibraryPanel(plId);
     } });
     // removeTrackFromPlaylistAt triggers renderLibrary(), which always closes
     // the open library panel (see renderLibrary's closeLibraryPlaylistPanel()
     // call) - reopen it for the same playlist so the row just vanishes
     // in place instead of dropping the user back out to the grid.
-    toggleLibraryPlaylistPanel(plId);
+    reopenLibraryPanel(plId);
   }
 }
 
@@ -10713,7 +10719,7 @@ function openTrackArtFlow(plId, trackIdx){
     closeImportOverlay();
     const panelId = openLibraryPanelId;
     renderLibrary();
-    if (panelId) toggleLibraryPlaylistPanel(panelId);
+    if (panelId) reopenLibraryPanel(panelId);
     const q = state.queue[state.queuePos];
     const qPl = q && playlistById(q.plId);
     const cur = qPl && qPl.tracks[q.idx];
@@ -11303,7 +11309,14 @@ function npPost(snap, keepalive){
   npLastSent = { t: snap.t, v: snap.v, pos: snap.pos, dur: snap.dur, playing: snap.playing, at: performance.now() };
   fetch(BACKEND + '/nowplaying', { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
     body: JSON.stringify({ v: snap.v, t: snap.t.title || '', a: snap.t.artist || '', art: /^https:\/\//i.test(snap.t.art || '') ? snap.t.art : '', pos: snap.pos, dur: snap.dur, playing: snap.playing }) })
-    .then(r => { if (r.status === 403) npForbiddenToken = tok; }).catch(() => {});
+    .then(r => { if (r.status === 403) npForbiddenToken = tok; else if (!r.ok) npPostFailed(snap); }).catch(() => npPostFailed(snap));
+}
+// #500: a post that never landed (offline, expired token, worker hiccup) must not
+// count as "already said", or the feed stays Off Air while this app plays
+function npPostFailed(snap){
+  if (npLastSent && npLastSent.v === snap.v) npLastSent.failed = true;
+  clearTimeout(npPubTimer);
+  npPubTimer = setTimeout(npPublishNow, 15000);
 }
 function npPublishNow(){
   if (!npCanPublish()) return;
@@ -11311,7 +11324,7 @@ function npPublishNow(){
   if (!snap) return;
   const L = npLastSent;
   // identical to what the worker already has: say nothing
-  if (L && L.v === snap.v && L.playing === snap.playing && Math.abs(snap.dur - L.dur) <= 1 && Math.abs(snap.pos - npPredicted()) <= 2) return;
+  if (L && !L.failed && L.v === snap.v && L.playing === snap.playing && Math.abs(snap.dur - L.dur) <= 1 && Math.abs(snap.pos - npPredicted()) <= 2) return;
   npSeekSince = 0; npSeekDiff = null;
   npPost(snap);
 }
@@ -17521,7 +17534,7 @@ function rerenderLibraryKeepPanel(){
   const sc = views.library, top = sc ? sc.scrollTop : 0;
   renderLibrary();
   if (sc && top) sc.scrollTop = top;
-  if (openId && getCachedPlaylist(openId)) toggleLibraryPlaylistPanel(openId);
+  if (openId && getCachedPlaylist(openId)) reopenLibraryPanel(openId);
 }
 // mode: 'reset' | 'block' | 'more' (see buildCurrentsPicks). opts: silent,
 // doneToast (false skips the closing toast), timeCtx + block (which drop and
@@ -19480,6 +19493,9 @@ function updateAdLoadingIcon(){
   try { paintAdStatus(); } catch(e){}
   const p = activeLoadProgress();
   const fill = typeof p === 'number';
+  // #517: the bar sits full while a deck waits to be confirmed. If its timer never
+  // fired (throttled tab, a player that stalled), confirm it here instead of staying frozen
+  if (fill && p * UNMUTE_DELAY_MS > UNMUTE_MAX_WAIT_MS + 3000){ const d = activeDeck(); adLog(d, 'wait-watchdog', ''); checkDeckReady(d); }
   [seekTrack, flowSeekTrack].forEach(el => { el.classList.toggle('is-loading', p !== null); el.classList.toggle('ad-fill', fill); });
   if (p === null) return false;
   if (fill){ const w = Math.min(100, Math.max(0, p * 100)) + '%'; seekFill.style.width = w; flowSeekFill.style.width = w; miniLineFill.style.width = w; }
