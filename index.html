@@ -23168,7 +23168,101 @@ const MINI_PLAYER_STYLE = `
   #mpHint[hidden]{display:none}
   .mpq-empty{font-size:12px;color:var(--mp-fg2,#888);padding:14px 6px;text-align:center}
 `;
-function miniPlayerSupported(){ return 'documentPictureInPicture' in window; }
+/* EBBLESS for Mac (desktop/, #480 #481): instead of a Picture-in-Picture
+   window (Electron has one, but it's an opaque rectangle that stays on one
+   desktop), the mini player opens a named window that the app makes frameless,
+   see-through and pinned above every app and desktop. The mini player code
+   below writes into it exactly as it does into a PiP window. Shapes (card,
+   pill, disc, float) only exist there. */
+const isDesktopApp = !!(window.ebblessDesktop && window.ebblessDesktop.platform);
+function requestMiniWindow(width, height){
+  if (!isDesktopApp) return documentPictureInPicture.requestWindow({ width, height });
+  const w = window.open('about:blank', 'ebbless-mini', 'width=' + width + ',height=' + height);
+  return w ? Promise.resolve(w) : Promise.reject(new Error('mini window blocked'));
+}
+const MP_SHAPES = ['card', 'pill', 'disc', 'float'];
+const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'Disc', float: 'Float (no frame)' };
+function mpDesktopShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : 'card'; }
+function mpDesktopSize(shape){
+  if (shape === 'pill') return { w: 420, h: 84 };
+  if (shape === 'disc') return { w: 240, h: 240 };
+  const p = miniPlayerPrefs();
+  return { w: p.w, h: p.h };
+}
+const MINI_DESKTOP_STYLE = `
+  /* a dark color-scheme makes Chromium paint a dark backdrop behind the page, which hides the see-through corners */
+  :root{color-scheme:normal}
+  html{background:transparent}
+  body.mp-desktop{-webkit-app-region:drag;border-radius:16px}
+  body.mp-desktop button,body.mp-desktop #mpSeekTrack,body.mp-desktop #mpArtWrap,body.mp-desktop #mpLogo,
+  body.mp-desktop #mpQueue,body.mp-desktop #mpEdge,body.mp-desktop #mpMenu{-webkit-app-region:no-drag}
+  body.mp-shape-pill{border-radius:999px}
+  body.mp-shape-pill #mpCard{padding-right:24px}
+  body.mp-shape-pill #mpArtWrap{border-radius:50%}
+  body.mp-shape-pill #mpEdge,body.mp-shape-pill #mpHead{display:none!important}
+  body.mp-shape-disc{border-radius:50%}
+  body.mp-shape-disc #mpHead,body.mp-shape-disc #mpMeta,body.mp-shape-disc #mpSeek,body.mp-shape-disc #mpEdge,body.mp-shape-disc #mpArtPick{display:none!important}
+  body.mp-shape-disc #mpCard{display:block;padding:0;height:100vh}
+  body.mp-shape-disc #mpArtWrap{position:absolute;inset:8px;width:auto;height:auto;border-radius:50%;box-shadow:none}
+  body.mp-shape-disc #mpArt,body.mp-shape-disc .mp-art-ghost{border-radius:50%}
+  body.mp-shape-disc #mpControls{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;padding:4px 8px;border-radius:999px;
+    background:rgba(0,0,0,.66);opacity:0;pointer-events:none;transition:opacity .2s ease}
+  body.mp-shape-disc:hover #mpControls{opacity:1;pointer-events:auto}
+  body.mp-shape-disc #mpShuffle,body.mp-shape-disc #mpRepeat,body.mp-shape-disc .mp-skip{display:none!important}
+  body.mp-shape-float{background:transparent}
+  body.mp-shape-float #mpBg{display:none}
+  body.mp-shape-float #mpCard{text-shadow:0 1px 3px rgba(0,0,0,.85)}
+  body.mp-shape-float:hover #mpCard{background:rgba(0,0,0,.4);border-radius:16px}
+  #mpMenu{position:fixed;z-index:20;min-width:150px;padding:4px;border-radius:10px;background:#1e1e1e;border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12.5px}
+  #mpMenu[hidden]{display:none}
+  #mpMenu .mpm-label{padding:6px 10px 2px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+  #mpMenu button{display:block;width:100%;text-align:left;border:none;background:transparent;padding:6px 10px;border-radius:6px;cursor:pointer;color:#fff}
+  #mpMenu button:hover{background:rgba(255,255,255,.1)}
+  #mpMenu button.is-active{color:var(--accent)}
+`;
+// Right-click menu in the Mac app's mini player: pick a shape, go back, close.
+function wireMiniDesktop(win){
+  const doc = win.document;
+  doc.body.classList.add('mp-desktop', 'mp-shape-' + mpDesktopShape());
+  const style = doc.createElement('style');
+  style.textContent = MINI_DESKTOP_STYLE;
+  doc.head.appendChild(style);
+  const menu = doc.createElement('div');
+  menu.id = 'mpMenu'; menu.hidden = true; menu.setAttribute('role', 'menu');
+  doc.body.appendChild(menu);
+  const close = () => { menu.hidden = true; };
+  const setShape = (shape) => {
+    MP_SHAPES.forEach(x => doc.body.classList.toggle('mp-shape-' + x, x === shape));
+    saveMiniPlayerPrefs({ shape });
+    const sz = mpDesktopSize(shape);
+    try { win.resizeTo(sz.w, sz.h); } catch(e){}
+  };
+  doc.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const cur = mpDesktopShape();
+    menu.innerHTML = '<div class="mpm-label">Shape</div>' +
+      MP_SHAPES.map(x => '<button type="button" data-shape="' + x + '" class="' + (x === cur ? 'is-active' : '') + '">' + MP_SHAPE_LABEL[x] + '</button>').join('') +
+      '<div class="mpm-label">Window</div><button type="button" data-act="app">Open EBBLESS</button><button type="button" data-act="close">Close mini player</button>';
+    menu.hidden = false;
+    const r = menu.getBoundingClientRect();
+    menu.style.left = Math.max(4, Math.min(e.clientX, win.innerWidth - r.width - 4)) + 'px';
+    menu.style.top = Math.max(4, Math.min(e.clientY, win.innerHeight - r.height - 4)) + 'px';
+  });
+  menu.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    close();
+    if (b.dataset.shape) setShape(b.dataset.shape);
+    else if (b.dataset.act === 'app'){ window.ebblessDesktop.focusMain(); }
+    else if (b.dataset.act === 'close'){ try { win.close(); } catch(_){} }
+  });
+  doc.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) close(); }, true);
+  doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
+// Closing or minimizing the Mac app's window floats the mini player
+if (isDesktopApp) window.ebblessDesktop.onAway(() => { if (currentTrack()) openMiniPlayer(); });
+function miniPlayerSupported(){ return isDesktopApp || 'documentPictureInPicture' in window; }
 function miniPlayerPrefs(){
   const p = lsGet(LS_MINI_PLAYER, null) || {};
   return {
@@ -23297,7 +23391,10 @@ function buildMiniPlayerDOM(win){
   // player runs exactly the same handler (and needle sfx, skip signal,
   // like/flag bookkeeping) as a click on the real thing.
   // Art or logo click: back to the main app (focus the opener tab, close the mini window)
-  const backToApp = () => { try { window.focus(); } catch(e){} try { win.close(); } catch(e){} };
+  const backToApp = () => {
+    if (isDesktopApp){ window.ebblessDesktop.focusMain(); return; } // the Mac app keeps it floating
+    try { window.focus(); } catch(e){} try { win.close(); } catch(e){}
+  };
   doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')) backToApp(); });
   doc.getElementById('mpLogo').addEventListener('click', backToApp);
   const forward = (id, target) => doc.getElementById(id).addEventListener('click', () => { target.click(); updateMiniPlayerUI(); });
@@ -23406,6 +23503,7 @@ function onMiniPlayerResize(){
   win.clearTimeout(mpSaveTimer);
   // A window grown for the queue popover, or shrunk from the top edge, isn't the user's chosen size
   if (mpQueue || mpShrunk) return;
+  if (isDesktopApp && mpDesktopShape() !== 'card') return; // pill/disc sizes are fixed
   // (the PiP window's own timers - the hidden main tab's are throttled)
   mpSaveTimer = win.setTimeout(() => {
     if (miniPlayerWin === win && !mpQueue && !mpShrunk && !win.document.body.classList.contains('mp-small')) saveMiniPlayerPrefs({ w: win.innerWidth, h: win.innerHeight });
@@ -23651,8 +23749,8 @@ async function openMiniPlayer(){
   if (!miniPlayerSupported() || !currentTrack()) return;
   if (miniPlayerWin && !miniPlayerWin.closed){ updateMiniPlayerUI(); return; }
   try {
-    const prefs = miniPlayerPrefs();
-    const win = await documentPictureInPicture.requestWindow({ width: prefs.w, height: prefs.h });
+    const prefs = isDesktopApp ? mpDesktopSize(mpDesktopShape()) : miniPlayerPrefs();
+    const win = await requestMiniWindow(prefs.w, prefs.h);
     miniPlayerWin = win;
     // The browser opens this window just after the tab went hidden, i.e. after
     // the visibilitychange handler already saw playback as live. From here the
@@ -23662,6 +23760,7 @@ async function openMiniPlayer(){
     mpQueue = null;
     mpShrunk = null;
     buildMiniPlayerDOM(win);
+    if (isDesktopApp) wireMiniDesktop(win);
     updateMiniPlayerUI();
     attachMiniPlayerSC(win);
     win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; rehostSCDecks(); } }, { once: true });
