@@ -9335,11 +9335,12 @@ attachSwipeToDismiss(histPanel, closePlayHistory);
    ========================================================================= */
 let openLibraryPanelId = null;
 let libplReturnTo = null;  // artist panel id to go back to when an album opened from it is closed (#369)
+let libplResume = null;    // #546: { id, scroll } of the playlist an artist page replaced; closing the page brings it back
 // #391: an album opened from an artist's page shows a back "<" instead of the "x"
 const LIBPL_X_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 const LIBPL_BACK_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>';
 function syncLibplCloseBtn(){
-  const back = !!(libplReturnTo && openLibraryPanelId && openLibraryPanelId !== libplReturnTo);
+  const back = !!((libplReturnTo && openLibraryPanelId && openLibraryPanelId !== libplReturnTo) || libplResume);
   libplCloseBtn.setAttribute('aria-label', back ? 'Back' : 'Close');
   libplCloseBtn.innerHTML = back ? LIBPL_BACK_ICON : LIBPL_X_ICON;
 }
@@ -9348,7 +9349,7 @@ function syncLibplCloseBtn(){
 function reopenLibraryPanel(id){ openLibraryPanelId = null; toggleLibraryPlaylistPanel(id); }
 
 function closeLibraryPlaylistPanel(){
-  libplReturnTo = null; syncLibplCloseBtn();
+  libplReturnTo = null; libplResume = null; syncLibplCloseBtn();
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
@@ -9389,7 +9390,7 @@ function toggleLibraryPlaylistPanel(id){
   }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
-  libplReturnTo = null; syncLibplCloseBtn();
+  libplReturnTo = null; libplResume = null; syncLibplCloseBtn();
 
   if (id === NP_ID) refreshNowPlaying();
   if (id === SWELL_ID){
@@ -9632,6 +9633,13 @@ libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLib
 libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
 // closing an album that was opened from inside an artist's page goes back to that artist (#369)
 function dismissLibraryPlaylistPanel(){
+  const resume = libplResume;
+  if (resume && getCachedPlaylist(resume.id)){
+    toggleLibraryPlaylistPanel(resume.id);
+    const sc = libplPanel.querySelector('.queue-scroll');
+    if (sc) sc.scrollTop = resume.scroll || 0;
+    return;
+  }
   const back = libplReturnTo;
   if (back && getCachedPlaylist(back)) toggleLibraryPlaylistPanel(back);
   else closeLibraryPlaylistPanel();
@@ -9959,8 +9967,12 @@ function openArtistPage(rawName, title){
   if (!split && state.currentView !== 'library') setView('library');
   if (split && state.currentView === 'settings') setView(state.preSettingsView);
   const scroller = libplPanel.querySelector('.queue-scroll');
+  // #546: an open playlist isn't lost when an artist page takes its place; the back arrow returns to it
+  const openPrev = openLibraryPanelId && !String(openLibraryPanelId).startsWith(ARTIST_INFO_PREFIX) ? getCachedPlaylist(openLibraryPanelId) : null;
+  const prev = openPrev && !isArtistEntry(openPrev) ? { id: openLibraryPanelId, scroll: scroller ? scroller.scrollTop : 0 } : null;
+  const keepPrev = () => { if (prev && openLibraryPanelId !== prev.id){ libplResume = prev; syncLibplCloseBtn(); } };
   if (entryId){
-    if (openLibraryPanelId !== entryId){ toggleLibraryPlaylistPanel(entryId); if (scroller) scroller.scrollTop = 0; }
+    if (openLibraryPanelId !== entryId){ toggleLibraryPlaylistPanel(entryId); if (scroller) scroller.scrollTop = 0; keepPrev(); }
     addArtistMixButton(name);
     return;
   }
@@ -9978,6 +9990,7 @@ function openArtistPage(rawName, title){
   loadArtistInfoInto(id, name, title, true);
   if (deskFsPhase1() && !state.deskFsLibOpen) toggleDesktopFsLib();
   libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  keepPrev();
   syncHistoryBuffer();
 }
 // every artist credited on a track, in order, de-duplicated
