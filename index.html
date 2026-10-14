@@ -24669,12 +24669,21 @@ function adDodgeTarget(ad, nd){
 }
 function maybeDodgeAd(){
   const ad = activeDeck(), nd = standbyDeck();
+  // a confirmed song the zero-ads gate has kept silent this long gets the
+  // same hand-off as a held mid-song ad (#523)
+  if (ad.kind === 'yt' && ad.confirmed && ad.gateHeld && !ad.adDodge && Date.now() - ad.gateHeld >= AD_SKIP_AFTER_MS){
+    skipHeldAd(ad, 'gate ' + (ad.gateReason || ''));
+    return;
+  }
   if (ad.kind !== 'yt' || ad.confirmed || !ad.muteStartTs || ad.adDodge) return;
   const elapsed = Date.now() - ad.muteStartTs;
   if (elapsed < UNMUTE_DELAY_MS) return;
-  // 'no-duration' / 'not-moving' alone is just a slow load, not proof of an ad
-  const r = deckAdReason(ad, true);
-  ad.adSeen = r && r !== 'no-duration' && r !== 'not-moving' ? r : '';
+  // #523: any doubt at all still holding the song silent past
+  // AD_DODGE_AFTER_MS counts. Real pre-rolls mostly read as 'no-duration' /
+  // 'not-moving' (no song length, no clock), which this once ignored as a
+  // slow load - so the countdown ran out and nothing skipped. A slow load
+  // dodged by mistake just plays right after, from the top.
+  ad.adSeen = deckAdReason(ad, true);
   if (elapsed < AD_DODGE_AFTER_MS || !ad.adSeen) return;
   const p = state.queuePos, n = adDodgeTarget(ad, nd);
   if (n < 0) return;
@@ -24702,6 +24711,9 @@ function skipHeldAd(ad, reason){
   const p = state.queuePos, q = state.queue;
   [q[p], q[n]] = [q[n], q[p]];
   if (ad.unmuteTimer) clearTimeout(ad.unmuteTimer);
+  // drop the gate's "wants sound" too, or releaseSoundGates would unmute it
+  // in the background the moment its ad ends
+  ad.player.mute();
   ad.confirmed = false;
   ad.adMutedAt = 0;
   ad.muteStartTs = Date.now();
@@ -24731,7 +24743,7 @@ function adWaitText(){
   if (!ad.confirmed && ad.muteStartTs && !(ad.loadStartTs > ad.muteStartTs) && now - ad.muteStartTs >= UNMUTE_DELAY_MS){ since = ad.muteStartTs; after = AD_DODGE_AFTER_MS; }
   else if (ad.confirmed && ad.adMutedAt > 0){ since = ad.adMutedAt; after = AD_SKIP_AFTER_MS; }
   // the zero-ads gate holding a confirmed, playing deck silent
-  else if (ad.confirmed && ad.gateHeld && now - ad.gateHeld >= AD_GATE_NOTE_MS){ since = ad.gateHeld; after = 0; }
+  else if (ad.confirmed && ad.gateHeld && now - ad.gateHeld >= AD_GATE_NOTE_MS){ since = ad.gateHeld; after = AD_SKIP_AFTER_MS; }
   else return '';
   const canSkip = adDodgeTarget(ad, standbyDeck()) >= 0 && !(ad.confirmed && adSkippedVids.has(ad.videoId));
   const left = Math.ceil((since + after - Date.now()) / 1000);
