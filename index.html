@@ -504,6 +504,11 @@ body.onb-active .paste-guide{display:none}
   input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),textarea,select{font-size:16px!important}
 }
 .lib-grid.is-list{display:flex;flex-direction:column;gap:2px}
+/* All view's per-section "See all (N)" (libraryAllOverview, #487) */
+.lib-see-all{grid-column:1/-1;justify-self:start;align-self:flex-start;margin-top:4px;padding:7px 14px;border-radius:999px;
+  border:1px solid var(--border);background:none;color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  transition:background var(--dur-ui) var(--ease-out)}
+.lib-see-all:hover{background:var(--panel-2)}
 .lib-grid.is-compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
 .lib-artist-divider{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;margin-top:6px;background:none;border:0;border-bottom:1px solid var(--line, rgba(255,255,255,.1));color:var(--text);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .lib-artist-divider:first-child{margin-top:0}
@@ -9136,12 +9141,47 @@ function renderLibrary(){
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
   });
+  // #487: All is an overview - each section shows its first two rows, with
+  // "See all (N)" opening that section's own filter. Rendering every card
+  // here made a big library's All view heavy enough to glitch the screen.
+  if (filter === 'all' && !searchQ){
+    const playlistCount = libraryGrid.querySelectorAll(':scope > .lib-card').length;
+    libraryAllOverview({ playlists: playlistCount, artists: artistCount, albums: albumCount, podcasts: podcastCount });
+  }
   const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
   markNowPlaying();
   try{ refreshPlayNudge(); } catch(e){}
+}
+function libraryAllOverview(totals){
+  const view = getLibraryView();
+  [[libraryGrid, 'playlists'], [libraryArtistsGrid, 'artists'], [libraryAlbumsGrid, 'albums'], [libraryPodcastsGrid, 'podcasts']].forEach(([grid, key]) => {
+    if (grid.classList.contains('hidden')) return;
+    const cards = Array.from(grid.children).filter(c => c.classList.contains('lib-card'));
+    let keep = 6;
+    if (view !== 'list'){
+      const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 2;
+      keep = cols * 2;
+    }
+    if (cards.length <= keep) return;
+    // drop everything after the last kept card: cards, group labels, artist
+    // dividers, version boxes
+    let n = cards[keep - 1].nextSibling;
+    while (n){ const next = n.nextSibling; n.remove(); n = next; }
+    const more = document.createElement('button');
+    more.type = 'button'; more.className = 'lib-see-all';
+    more.textContent = 'See all (' + Math.max(totals[key] || 0, cards.length) + ')';
+    more.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setLibraryFilter(key);
+      const vs = document.querySelector('#view-library .view-scroll');
+      if (vs) vs.scrollTop = 0;
+      document.getElementById('view-library').scrollTop = 0;
+    });
+    grid.appendChild(more);
+  });
 }
 function refreshLibraryMarquees(){
   document.querySelectorAll('.lib-card .art .title-overlay .marquee, .lib-card .lib-desc .marquee').forEach(el => {
