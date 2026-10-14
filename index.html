@@ -2021,6 +2021,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 /* #478: bigger tap target around the artist name (the text alone was too small to hit reliably);
    padding/negative margins keep the visual position and spacing unchanged */
 #trackArtist{cursor:pointer;padding:5px 16px 16px;margin:0 -16px -10px}
+/* the whole box is the tap target: children never take the hit, so a tap on
+   a gap between words lands on the artist element itself */
+#trackArtist *{pointer-events:none}
 #trackArtist:hover span{text-decoration:underline;text-underline-offset:3px}
 @media (hover:hover){
   #trackArtist:not(.is-marquee)>span{transition:color var(--dur-ui) var(--ease-out)}
