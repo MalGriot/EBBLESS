@@ -10119,15 +10119,15 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #480. The mini-player should remain visible above other apps.
 - **Touches:** mini-player / Picture-in-Picture.
 - **Branch:**
-- **Notes:** Synced from Geethub #480. Browser PiP already floats; true always-on-top over all apps may need the installed desktop app. Overlaps #481. 2026-10-14: user confirmed it already floats over other apps; it only disappears when switching to another macOS desktop (Space). That is Chrome's Picture-in-Picture window behavior and can't be changed from the web page; only a native desktop app could pin to all Spaces. Closed.
+- **Notes:** Synced from Geethub #480. Browser PiP already floats; true always-on-top over all apps may need the installed desktop app. Overlaps #481. 2026-10-14: user confirmed it already floats over other apps; it only disappears when switching to another macOS desktop (Space). That is Chrome's Picture-in-Picture window behavior and can't be changed from the web page; only a native desktop app could pin to all Spaces. Closed. 2026-10-14: user chose a native Mac app; shipped with miniplayer-customization (desktop/, Electron).
 
 ### miniplayer-customization: Mini-player customization when the desktop app is installed (Geethub #481)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #481 (a question). Can the mini-player be customized when the desktop app is installed? Needs scoping.
 - **Touches:** mini-player, desktop install.
 - **Branch:**
-- **Notes:** Synced from Geethub #481. 2026-10-14 scope from user: change the whole structure and shape of the mini-player, with alpha (transparent, non-rectangular) frames. Browser Picture-in-Picture windows are always opaque rectangles, so a shaped/transparent frame needs a native desktop wrapper (e.g. Tauri/Electron transparent frameless window). The layout inside the rectangle can be reworked on the web. Needs a decision on the native app before work starts.
+- **Notes:** Synced from Geethub #481. 2026-10-14 scope from user: change the whole structure and shape of the mini-player, with alpha (transparent, non-rectangular) frames. Browser Picture-in-Picture windows are always opaque rectangles, so a shaped/transparent frame needs a native desktop wrapper (e.g. Tauri/Electron transparent frameless window). The layout inside the rectangle can be reworked on the web. Needs a decision on the native app before work starts. 2026-10-14 BUILT: desktop/ Electron app (loads the live site, so it is always current). Mini player opens as a frameless, see-through window pinned above every app, desktop (Space) and full-screen app; right-click picks a shape: Card, Pill, Disc, Float (no frame), or Open EBBLESS / Close. Closing/minimizing the main window keeps music playing and floats the mini player. Electron 33 has its own Document PiP, so the page routes to its own window via requestMiniWindow when window.ebblessDesktop exists. Verified with a scripted Electron run: plays, floats on close, alwaysOnTop + all Spaces true, card/disc/pill render. NOT verified: see-through corners by eye (captures have no alpha), Google sign-in inside the app (likely blocked by Google in embedded browsers; links open in the default browser). dmg is unsigned (no Apple Developer ID): Gatekeeper warning until signed + notarized. Build: cd desktop && npm install && npm run dist. Cache v229.
 
 ### artist-window-album-list: Artist window shows a list of their albums with add-to-library button (Geethub #482)
 - **Status:** merged
