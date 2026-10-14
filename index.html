@@ -86,7 +86,7 @@
   --bg:#121212; --panel:#181818; --panel-2:#202020; --panel-3:#282828;
   --text:#f2f2f2; --faint:#9a9a9a; --faint-2:#6c6c6c;
   --accent:var(--clock-accent, #e0b26a); --accent-dim:rgba(224,178,106,.16);
-  --player-accent:var(--accent);
+  --player-accent:var(--accent); --on-player-accent:var(--on-accent,#151107);
   --good:#2fbf71; --bad:#e0645e; --border:rgba(255,255,255,.08); --border-2:rgba(255,255,255,.14);
   --r-sm:6px; --r-md:8px; --r-lg:14px;
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
@@ -810,7 +810,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .big-play{width:72px;height:72px;border-radius:50%;background:var(--accent);display:flex;align-items:center;
   justify-content:center;transition:transform var(--dur-ui) var(--ease-out);box-shadow:0 8px 30px rgba(224,178,106,.25)}
 .big-play:active{transform:scale(.94)}
-.big-play svg{width:26px;height:26px;color:#151107;margin-left:3px}
+.big-play svg{width:26px;height:26px;color:var(--on-accent,#151107);margin-left:3px}
 .import-error{display:flex;flex-direction:column;align-items:center;gap:16px}
 .import-error .msg{font-size:14.5px;color:var(--text);max-width:320px;line-height:1.5}
 .btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out)}
@@ -876,7 +876,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .visual-tabs .v-tab svg{width:16px;height:16px}
 .v-tab-label{font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .visual-tabs .v-tab:hover{color:var(--text)}
-.visual-tabs .v-tab.is-active{background:var(--player-accent);color:#151107}
+.visual-tabs .v-tab.is-active{background:var(--player-accent);color:var(--on-player-accent,#151107)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
 /* visualizer tab icon: three cymatics plate figures crossfading, one full
    3-shape cycle every 20s (3 cycles/min). each phase holds ~5s, fades ~1.7s.
@@ -1117,7 +1117,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .lyric-line.is-chapter{margin-top:14px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 .lyric-line.is-chapter:first-child{margin-top:0}
 .lyric-line.is-chapter.is-current{font-size:12px}
-.cap-install-btn{margin-top:12px;padding:8px 16px;border-radius:20px;background:var(--player-accent);color:#151107;font-size:13px;font-weight:700}
+.cap-install-btn{margin-top:12px;padding:8px 16px;border-radius:20px;background:var(--player-accent);color:var(--on-player-accent,#151107);font-size:13px;font-weight:700}
 .lyrics-credit{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;color:var(--faint-2);
   pointer-events:none}
 .viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
@@ -1139,7 +1139,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .viz-ctl-btn.viz-auto-btn{font-size:16px;font-weight:700;line-height:1}
 .viz-ctl-btn.viz-speed-btn{width:auto;padding:0 9px;border-radius:15px;font-size:12px;font-weight:700;letter-spacing:.02em}
 .viz-ctl-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
-.viz-ctl-btn.is-active{background:var(--player-accent);color:#151107}
+.viz-ctl-btn.is-active{background:var(--player-accent);color:var(--on-player-accent,#151107)}
 .art-fs-btn{position:absolute;top:10px;right:10px;z-index:6;width:32px;height:32px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.6);color:var(--faint);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
@@ -1273,7 +1273,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .ctl-btn:active{transform:scale(.92)}
 .ctl-btn svg{width:16px;height:16px}
 .ctl-btn.is-active{color:var(--player-accent)}
-.ctl-btn.main{width:52px;height:52px;background:var(--player-accent);color:#151107}
+.ctl-btn.main{width:52px;height:52px;background:var(--player-accent);color:var(--on-player-accent,#151107)}
 .ctl-btn.main:hover{background:var(--player-accent)}
 .ctl-btn.main svg{width:19px;height:19px}
 .ctl-btn.small{width:32px;height:32px}
@@ -1497,7 +1497,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .q-now .meta{min-width:0;flex:1}
 .q-now .title{font-size:13.5px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q-now .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--player-accent);color:#151107;
+.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--player-accent);color:var(--on-player-accent,#151107);
   display:flex;align-items:center;justify-content:center;transition:transform var(--dur-ui) var(--ease-out)}
 .q-now .play-btn:active{transform:scale(.92)}
 .q-now .play-btn svg{width:15px;height:15px}
@@ -4771,7 +4771,8 @@ setTimeout(() => {
    both the splash screen and the Settings button below read this same
    deferred event rather than each registering their own listener. */
 let deferredInstallPrompt = null;
-const isStandaloneDisplay = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+// installed PWAs can report standalone, window-controls-overlay, minimal-ui or fullscreen (Chrome/Edge on desktop) - any of them means "not a tab"
+const isStandaloneDisplay = () => ['standalone', 'window-controls-overlay', 'minimal-ui', 'fullscreen'].some(m => window.matchMedia('(display-mode: ' + m + ')').matches) || navigator.standalone === true;
 const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 // iOS Safari never fires beforeinstallprompt (no programmatic install API at
 // all there) - includes iPadOS, which reports as "MacIntel" but is
@@ -8386,10 +8387,21 @@ function setSongAccent(color){
   songAccent = color ? (color === '#fff' ? 'rgb(255,255,255)' : color) : null;
   try { updateLibraryClockColor(); } catch (e) {}
 }
+// text color for anything filled with an accent: dark on light colors, white on dark ones
+function onAccentFor(color){
+  const [r, g, b] = color.startsWith('#') ? vizHexToRgb(color) : color.match(/\d+/g).map(Number);
+  return (r * 0.299 + g * 0.587 + b * 0.114) / 255 > 0.6 ? '#151107' : '#fff';
+}
+function setPlayerAccent(color){
+  const st = document.documentElement.style;
+  st.setProperty('--player-accent', color || 'var(--accent)');
+  if (color){ try { st.setProperty('--on-player-accent', onAccentFor(color)); } catch (e) { st.removeProperty('--on-player-accent'); } }
+  else st.removeProperty('--on-player-accent');
+}
 function updatePlayerAccentColor(track){
   const reqId = ++playerAccentReqId;
   const url = artworkUrls(track)[0];
-  if (!url){ document.documentElement.style.setProperty('--player-accent', 'var(--accent)'); setSongAccent(null); return; }
+  if (!url){ setPlayerAccent(null); setSongAccent(null); return; }
   const probe = new Image();
   probe.crossOrigin = 'anonymous';
   probe.onload = () => {
@@ -8397,12 +8409,12 @@ function updatePlayerAccentColor(track){
     let color = null;
     try { color = sampleDominantColor(probe); } catch (e) { color = null; }
     if (color) { try { color = ensureLegibleAccent(color); } catch (e) {} }
-    document.documentElement.style.setProperty('--player-accent', color || 'var(--accent)');
+    setPlayerAccent(color);
     setSongAccent(color);
   };
   probe.onerror = () => {
     if (reqId !== playerAccentReqId) return;
-    document.documentElement.style.setProperty('--player-accent', 'var(--accent)');
+    setPlayerAccent(null);
     setSongAccent(null);
   };
   probe.src = url;
@@ -9185,7 +9197,11 @@ function libraryAllOverview(totals){
       setLibraryFilter(key);
       // the filter row can overflow (Podcasts sits at the far end): bring the lit chip into view
       const chip = libFilter.querySelector('[data-filter="' + key + '"]');
-      if (chip) libFilter.scrollTo({ left: chip.offsetLeft - (libFilter.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' });
+      if (chip){
+        // .lib-filter isn't positioned, so chip.offsetLeft is relative to a farther ancestor: measure against the row itself
+        const cr = chip.getBoundingClientRect(), fr = libFilter.getBoundingClientRect();
+        libFilter.scrollTo({ left: libFilter.scrollLeft + (cr.left - fr.left) - (fr.width - cr.width) / 2, behavior: 'smooth' });
+      }
       const vs = document.querySelector('#view-library .view-scroll');
       if (vs) vs.scrollTop = 0;
       document.getElementById('view-library').scrollTop = 0;
@@ -19618,7 +19634,7 @@ function updateLibraryClockColor(){
   const root = document.documentElement.style;
   root.setProperty('--clock-accent', solid);
   // text/knob color for anything filled with the accent: dark when the accent is light
-  root.setProperty('--on-accent', (cr * 0.299 + cg * 0.587 + cb * 0.114) / 255 > 0.6 ? '#151107' : '#fff');
+  root.setProperty('--on-accent', onAccentFor(solid));
   root.setProperty('--clock-tint', alpha(.22));
   root.setProperty('--clock-tint-splash', alpha(.4));
   ambientEl.style.setProperty('--clock-tint-ambient', state.currentView === 'library' ? alpha(.3) : 'transparent');
