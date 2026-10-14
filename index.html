@@ -9130,8 +9130,9 @@ function refreshLibraryMarquees(){
   });
   observeLibraryCards();
 }
-// #487: cards off screen lose their looping animations (see .lib-offscreen)
-let libCardObs = null;
+// #487: cards off screen lose their looping animations (see .lib-offscreen).
+// var, not let: renderLibrary runs during startup, before this line.
+var libCardObs = null;
 function observeLibraryCards(){
   if (typeof IntersectionObserver !== 'function') return;
   if (!libCardObs) libCardObs = new IntersectionObserver(entries => entries.forEach(e => {
