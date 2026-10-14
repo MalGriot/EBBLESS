@@ -10098,12 +10098,12 @@ Add entries in this shape:
 - **Review notes:** The signup answer to "What do you listen to most?" (Applicants.music_preferences) now reaches the app via /beta/me and /beta/claim (`music: true`, asked until done). On first login the app splits it on commas/slashes (max 4 items), and for each builds a saved playlist "[item] radio for [first name]" in the background with the same interpreter and ranking as typing a vibe: no prompts, nothing starts playing. Marked done first so it never repeats. Needs deploy: worker and the Apps Script (tools/beta-sheet.gs `me_`); until the script is redeployed nothing is created (safe no-op). Verified locally in Chrome: two items made two saved playlists with all songs matched; worker tests pass. Not verified: a real signup-to-login run. Cache v195.
 
 ### artist-name-hitbox: Artist name still too hard to click: bigger hit box (Geethub #478)
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** Bug, Geethub #478. Tapping the artist name needs a bigger hit box. User missed the letters and thumbs-downed a song instead.
 - **Touches:** player artist name tap target.
 - **Branch:**
-- **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries.
+- **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries. Closed by user 2026-10-14.
 
 ### thumbs-down-fade-out: Thumbs-down fades the song out instead of cutting it short (Geethub #479)
 - **Status:** merged
@@ -10152,3 +10152,243 @@ Add entries in this shape:
 - **Touches:** SC decks, `warmSCStandby`, `scPool`, `loadIndex`, mini-player.
 - **Branch:** agent/soundcloud-sc-warm-ahead (includes agent/soundcloud-yt-to-sc-warm)
 - **Notes:** Verified hidden in real Chrome: 4 loose songs in a row, 6 with two sets plus loose. Song 5+ of a hidden stretch still needs a click. Chrome only (credentialless); off on iOS and touch devices. 6 SC iframes instead of 3 (about 75 to 110 MB each). Real PiP window untested. Cache v193.
+
+### glitch-blink-487: Rapidly blinking background and menus (GPU glitch) (Geethub #487)
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Bug, Geethub #487. Rapidly blinking background and menus (GPU glitch).
+- **Touches:**
+- **Branch:** agent/glitch-blink-487
+- **Notes:** Synced from Geethub #487. Lane already active (see AGENTS.md); several commits on its branch.
+
+### mac-warning-softener: Soften the Mac security warning so people don't get scared (Geethub #516)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #516. Soften the Mac security warning so people don't get scared.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry.
+
+### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #515. Build the desktop app for Intel Macs and Windows PC.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #515. 
+
+### app-download-link: Download link for the Mac app (GitHub Release linked from the site) (Geethub #514)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #514. Download link for the Mac app (GitHub Release linked from the site).
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #514. 
+
+### mac-chrome-duplicate-spotlight: Mac app shows 3 entries in Cmd+Space after removing the Chrome install (Geethub #513)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Bug, Geethub #513. Mac app shows 3 entries in Cmd+Space after removing the Chrome install.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #513. Probably leftover installed web-app shortcuts.
+
+### mini-follow-desktops: Mini player doesn't follow you when you swipe to another desktop (Geethub #512)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #512. Mini player doesn't follow you when you swipe to another desktop.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #512. Regression of the pinned-on-every-desktop goal in desktop/.
+
+### mini-corners-disc-pill: Disc and Pill mini player shapes have non-see-through corners (Geethub #511)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub #511. Disc and Pill mini player shapes have non-see-through corners.
+- **Touches:**
+- **Branch:** agent/batch-505-504
+- **Notes:** Synced from Geethub #511. Shipped 2026-10-14 (cache v235): the Mac mini player's body paints nothing itself; its dark fill is a clipped ::before layer, and html stays truly transparent. A body background propagating over a default-transparent html was painting the corners; a near-zero alpha html turned them black. Confirmed by user. Mac app v1.0.3.
+
+### mac-dock-icon-mini: Dock and Cmd+Tab icon disappear while in mini player mode (Geethub #510)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #510. Dock and Cmd+Tab icon disappear while in mini player mode.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #510. 
+
+### mini-and-full-both-open: Mini player stays open while the full player is open (Geethub #509)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub #509. Mini player stays open while the full player is open.
+- **Touches:**
+- **Branch:** agent/batch-505-504
+- **Notes:** Synced from Geethub #509. Shipped 2026-10-14 in Mac app v1.0.3: the main process sends ebbless:back on show/restore and the page closes the mini player. Not yet confirmed by user.
+
+### installed-app-install-banner: Installed Mac app still shows the 'you should install' banner (Geethub #508)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #508. Installed Mac app still shows the 'you should install' banner.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #508. 
+
+### logo-hold-opens-mini: Hold the logo to open the mini player (optional in advanced settings) (Geethub #507)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #507. Hold the logo to open the mini player (optional in advanced settings).
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #507. 
+
+### playlist-workspaces: Playlist workspaces (Geethub #506)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #506. Playlist workspaces.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #506. Vague; needs clarifying.
+
+### artist-search-error: Searching an artist (e.g. FKJ) then tapping the result says 'couldn't reach EBBLESS' (Geethub #505)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub #505. Searching an artist (e.g. FKJ) then tapping the result says 'couldn't reach EBBLESS'.
+- **Touches:**
+- **Branch:** agent/batch-505-504
+- **Notes:** Synced from Geethub #505. Overlaps #504: fix the error and open the same artist window. Shipped 2026-10-14 (cache v232): an artist pick in search opens the artist window instead of running the import. Fixed together with #504.
+
+### search-artist-opens-artist-window: Tapping an artist in search opens the same artist window as from the player (Geethub #504)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub #504. Tapping an artist in search opens the same artist window as from the player.
+- **Touches:**
+- **Branch:** agent/batch-505-504
+- **Notes:** Synced from Geethub #504. Pair with #505. Shipped 2026-10-14 (cache v232): an artist pick in search closes the overlay and calls openArtistPage, the same window the player's artist name opens.
+
+### footer-player-with-overlays: Show the footer player when results or add-playlist windows hide the player (Geethub #503)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #503. Show the footer player when results or add-playlist windows hide the player.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #503. 
+
+### landscape-view: Enable and optimize landscape view (Geethub #502)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #502. Enable and optimize landscape view.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #502. 
+
+### button-text-color-consistency: Buttons mix white and black text when the UI color changes (Geethub #501)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #501. Buttons mix white and black text when the UI color changes.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #501. Related to #354 (merged).
+
+### on-air-thumb-wrong: On/off air thumb shows off air while music plays (Geethub #500)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub #500. On/off air thumb shows off air while music plays.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #500. 
+
+### cursor-brainstorm: Show different custom cursor options (Geethub #499)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #499. Show different custom cursor options.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #499. Related to #416 (paid custom cursor).
+
+### made-by-ebbless-section: Currents, Swirl and On Air belong in the 'Made by EBBLESS' section (Geethub #498)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Bug, Geethub #498. Currents, Swirl and On Air belong in the 'Made by EBBLESS' section.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #498. 
+
+### artist-bio-photo-gaps: Many artists show albums but no bio or picture; needs more sources (Geethub #497)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub #497. Many artists show albums but no bio or picture; needs more sources.
+- **Touches:**
+- **Branch:** agent/batch-505-504
+- **Notes:** Synced from Geethub #497. Related to #490, #347. Shipped 2026-10-14: worker /artistinfo (cache v2) falls back to a Wikipedia search (name must match, music words required) and a Deezer artist photo when MusicBrainz has no Wikipedia link or no entry; the client keeps the album list when there is no info. Fallbacks not yet seen firing on a real artist. Worker version da3d0680.
+
+### podcast-art-loop: Podcast art flips between 2x2 and 1x1 grid art; podcasts should be 1x1 only (Geethub #496)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub #496. Podcast art flips between 2x2 and 1x1 grid art; podcasts should be 1x1 only.
+- **Touches:**
+- **Branch:** agent/batch-505-504
+- **Notes:** Synced from Geethub #496. Shipped 2026-10-14 (cache v232), unconfirmed: a list made only of podcast episodes (e.g. a copied show saved as custom) no longer fades between cover and 2x2 grid (canToggleThumbArt). Root cause was a guess; ask for repro steps if a normal podcast still loops.
+
+### see-all-podcasts-pill-scroll: 'See all' on podcasts scrolls the category pills to the lit podcasts pill (Geethub #495)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #495. 'See all' on podcasts scrolls the category pills to the lit podcasts pill.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #495. 
+
+### albums-no-artist-sections: Album grid views without artist sections, toggle in advanced settings (Geethub #494)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #494. Album grid views without artist sections, toggle in advanced settings.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #494. 
+
+### tutorial-button-first-fullscreen: Can't click the tutorial button on first fullscreen (Geethub #492)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub #492. Can't click the tutorial button on first fullscreen.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #492. 
+
+### link-grid-hover-clip: Link-matching grid plays a looping video clip on hover (Geethub #491)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #491. Link-matching grid plays a looping video clip on hover.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #491. 
+
+### artist-window-album-tracks: In the artist window, show album tracks, add them to library, show album year (Geethub #490)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub #490. In the artist window, show album tracks, add them to library, show album year.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #490. Related to #497.
+
+### share-song-animation: Sharing a song to socials shows an animated EBBLESS logo with a link back (Geethub #489)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #489. Sharing a song to socials shows an animated EBBLESS logo with a link back.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #489. 
+
+### stem-isolation-dj: Isolate stems with UVR as a DJ feature (Geethub #488)
+- **Status:** archived
+- **Priority:** low
+- **Description:** Idea, Geethub #488. Isolate stems with UVR as a DJ feature.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #488. Big; likely post-MVP.
+
+### podcast-episode-dates: Show the date on podcast episodes (Geethub #486)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #486. Show the date on podcast episodes.
+- **Touches:**
+- **Branch:** 
+- **Notes:** Synced from Geethub #486. 
