@@ -127,7 +127,7 @@ Add entries in this shape:
 -->
 
 ### artist-window-song-add-button: Songs in the artist window get an add-to-playlist/library icon button (Geethub #485)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #485. In the artist window, each song row should have the add-to-playlist/library icon button.
 - **Touches:** artist window song rows.
@@ -135,7 +135,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #485. Same window as artist-window-album-list (#482); do together.
 
 ### custom-cursor: Custom EBBLESS cursor that follows the UI color, flowy, with a watery trail (Geethub #484)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #484. A custom cursor that changes color with the UI accent, has a slightly flowy, very EBBLESS shape and animation, and maybe a watery trail.
 - **Touches:** desktop pointer layer, accent color vars.
@@ -10081,7 +10081,7 @@ Add entries in this shape:
 - **Notes:** Tested with a popup stand-in only; real PiP click-unlock untested. Before the first click in the mini-player only the old behaviour applies. Possible audio gap at the first click and about 1 to 2s on close. A YouTube song once stuck at 0 while hidden (not investigated). Deployed for owner testing. Cache v185.
 
 ### beta-genre-auto-playlists: Beta signup genres auto-create library playlists named "[genre/artist] radio for [name]" (Geethub #477)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #477. Whatever genres/artists a person gives at beta signup, generate playlists from them and add them to their library automatically (no asking). Name each "[genre/artist] radio for [their name]".
 - **Touches:** beta signup flow, playlist generation from prompt.
@@ -10097,7 +10097,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries.
 
 ### thumbs-down-fade-out: Thumbs-down fades the song out instead of cutting it short (Geethub #479)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #479. When a song is thumbs-downed, fade the audio out before skipping instead of cutting abruptly.
 - **Touches:** thumbs-down handler, volume ramp.
@@ -10121,7 +10121,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #481. No detail given. Overlaps #480; fold together when scoped.
 
 ### artist-window-album-list: Artist window shows a list of their albums with add-to-library button (Geethub #482)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #482. In the artist window show their albums as titles plus album art, each with an add-to-library icon button.
 - **Touches:** artist window.
