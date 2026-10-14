@@ -8535,6 +8535,7 @@ function getLibraryFilter(){
   return libFilterCycleModes().includes(mode) ? mode : 'all';
 }
 function setLibraryFilter(mode){
+  libShowCount = LIB_PAGE; // each filter starts at one page (#487)
   lsSet(LS_LIB_FILTER, mode);
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.filter === mode);
@@ -9154,13 +9155,38 @@ function renderLibrary(){
   if (filter === 'all' && !searchQ){
     const playlistCount = libraryGrid.querySelectorAll(':scope > .lib-card').length;
     libraryAllOverview({ playlists: playlistCount, artists: artistCount, albums: albumCount, podcasts: podcastCount });
-  }
+  } else if (!searchQ) libraryCapSection(filter);
   const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
   markNowPlaying();
   try{ refreshPlayNudge(); } catch(e){}
+}
+// Single-section filters draw LIB_PAGE cards, then "Show N more" (#487).
+// var, not const: renderLibrary runs during startup, before these lines.
+var LIB_PAGE = 48, libShowCount = 48;
+function trimLibraryGrid(grid, keep){
+  const cards = Array.from(grid.children).filter(c => c.classList.contains('lib-card'));
+  if (cards.length <= keep) return cards.length;
+  let n = cards[keep - 1].nextSibling;
+  while (n){ const next = n.nextSibling; n.remove(); n = next; }
+  return cards.length;
+}
+function libraryCapSection(filter){
+  const grid = { playlists: libraryGrid, artists: libraryArtistsGrid, albums: libraryAlbumsGrid, podcasts: libraryPodcastsGrid }[filter];
+  if (!grid || grid.classList.contains('hidden')) return;
+  const total = trimLibraryGrid(grid, libShowCount);
+  if (total <= libShowCount) return;
+  const more = document.createElement('button');
+  more.type = 'button'; more.className = 'lib-see-all';
+  more.textContent = 'Show ' + Math.min(LIB_PAGE, total - libShowCount) + ' more';
+  more.addEventListener('click', (e) => {
+    e.stopPropagation();
+    libShowCount += LIB_PAGE;
+    rerenderLibraryKeepPanel();
+  });
+  grid.appendChild(more);
 }
 function libraryAllOverview(totals){
   const view = getLibraryView();
@@ -9175,8 +9201,7 @@ function libraryAllOverview(totals){
     if (cards.length <= keep) return;
     // drop everything after the last kept card: cards, group labels, artist
     // dividers, version boxes
-    let n = cards[keep - 1].nextSibling;
-    while (n){ const next = n.nextSibling; n.remove(); n = next; }
+    trimLibraryGrid(grid, keep);
     const more = document.createElement('button');
     more.type = 'button'; more.className = 'lib-see-all';
     more.textContent = 'See all (' + Math.max(totals[key] || 0, cards.length) + ')';
