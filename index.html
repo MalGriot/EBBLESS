@@ -285,7 +285,7 @@ body.split-desktop #topbar{z-index:42}
 .import-row input::placeholder{color:var(--faint-2)}
 .import-row input:focus{outline:none;border-color:var(--accent)}
 .import-row button{
-  flex:none;background:var(--accent);color:#151107;border-radius:var(--r-md);padding:0 16px;font-weight:600;
+  flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:var(--r-md);padding:0 16px;font-weight:600;
   font-size:14px;white-space:nowrap;
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),background var(--dur-surface) var(--ease-in-out);
 }
@@ -652,7 +652,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .np-pill[hidden]{display:none}
 .np-pill.is-live{border-color:var(--accent);color:var(--accent)}
 .np-pill.is-live::before{content:'';display:inline-block;width:6px;height:6px;margin-right:7px;border-radius:50%;background:var(--accent);vertical-align:middle;animation:new-dot-blink 1.4s ease-in-out infinite}
-.np-pill.is-behind{background:var(--accent);color:#000;border-color:var(--accent)}
+.np-pill.is-behind{background:var(--accent);color:var(--on-accent,#151107);border-color:var(--accent)}
 .np-pill.is-off{color:var(--faint);opacity:.8}
 .lib-card .lib-desc.np-onair{color:var(--accent);opacity:1;font-weight:600}
 .lib-card .name.np-off,.lib-card .art .title-overlay .marquee.np-off{color:#9a9a9a}
@@ -821,14 +821,14 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .signin-nudge{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translateX(-50%);z-index:79;width:min(340px,calc(100vw - 32px));
   background:var(--panel-3);color:var(--text);font-size:12.5px;padding:14px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);
   display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
-.btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+.btn-ghost.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 /* on/off switch (Settings > Playback); .is-active + aria-checked = on */
 .switch{position:relative;flex:none;width:46px;height:28px;border-radius:14px;padding:0;background:var(--panel-3);border:1px solid var(--border-2);
   cursor:pointer;transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out)}
 .switch .switch-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
   box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform var(--dur-ui) var(--ease-out)}
 .switch.is-active{background:var(--accent);border-color:var(--accent)}
-.switch.is-active .switch-knob{transform:translateX(18px);background:var(--on-accent,#fff)}
+.switch.is-active .switch-knob{transform:translateX(18px);background:var(--on-accent,#151107)}
 .switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .settings-row .switch{margin-left:16px}
 select.btn-ghost{-webkit-appearance:none;appearance:none;background-color:var(--panel-2);color:var(--text)}
@@ -1238,7 +1238,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
 /* empty player: nothing loaded yet - plain message plus a way to the Library */
 .empty-find-btn{display:none;margin:14px auto 0;font:inherit;font-size:14px;font-weight:600;padding:10px 22px;border-radius:999px;
-  background:var(--accent);color:#151107;transition:filter var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+  background:var(--accent);color:var(--on-accent,#151107);transition:filter var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .empty-find-btn:hover{filter:brightness(1.1)}
 .empty-find-btn:active{transform:scale(.96)}
 .track-meta.is-empty .empty-find-btn{display:inline-block}
@@ -1471,7 +1471,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .libpl-art-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   background:rgba(0,0,0,.32);opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
 .libpl-art-box:hover .libpl-art-play,.libpl-art-play:focus-visible{opacity:1}
-.libpl-art-play span{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#151107;
+.libpl-art-play span{width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--on-accent,#151107);
   display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.4);
   transition:transform var(--dur-ui) var(--ease-out)}
 .libpl-art-play:hover span{transform:scale(1.06)}
@@ -1483,7 +1483,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   .libpl-art-play svg{width:20px;height:20px;margin-left:2px}
 }
 .queue-head .libpl-play{flex:none;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;
-  padding:7px 16px 7px 12px;border-radius:999px;background:var(--accent);color:#151107;
+  padding:7px 16px 7px 12px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);
   transition:filter var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .queue-head .libpl-play svg{width:15px;height:15px;flex:none}
 .queue-head .libpl-play:hover{filter:brightness(1.1)}
@@ -1931,7 +1931,7 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .toast.is-open{opacity:1;transform:translate(-50%,0)}
 .toast.has-action{display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px}
 .toast.has-action.is-open{pointer-events:auto}
-.toast-action{background:var(--accent);color:#1a1a1a;border:0;border-radius:14px;padding:6px 14px;
+.toast-action{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
 .load-ok{position:fixed;left:50%;top:42%;width:84px;height:84px;margin:-42px 0 0 -42px;z-index:79;pointer-events:none;
   display:grid;place-items:center;border-radius:50%;background:rgba(26,26,26,.72);
@@ -1950,7 +1950,7 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .sw-update-toast[hidden]{display:none}
 .sw-update-toast.is-open{opacity:1;transform:translate(-50%,0)}
-.sw-update-toast button{background:var(--accent);color:#1a1a1a;border:0;border-radius:14px;padding:6px 14px;
+.sw-update-toast button{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
 /* encourage-liking-songs (#40): post-listen "Like this?" chip. Same shape
    as the SW update toast, sitting one row above the regular toast so the
@@ -1965,7 +1965,7 @@ body.split-desktop .like-nudge{bottom:auto;top:calc(var(--topbar-h) + 12px)}
 .like-nudge.is-open{opacity:1;transform:translate(-50%,0)}
 .like-nudge .ln-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .like-nudge .ln-text b{font-weight:600}
-.like-nudge .ln-like{flex:none;display:flex;align-items:center;gap:6px;background:var(--accent);color:#1a1a1a;
+.like-nudge .ln-like{flex:none;display:flex;align-items:center;gap:6px;background:var(--accent);color:var(--on-accent,#151107);
   border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
 .like-nudge .ln-like svg{width:13px;height:13px}
 .like-nudge .ln-close{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
@@ -2006,7 +2006,7 @@ body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 @media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{animation:none;box-shadow:0 0 0 2px var(--accent)}}
 @media (prefers-reduced-motion:reduce){.tester-banner:not([hidden]){animation:none;outline:2px solid var(--accent)}
   #navFeedbackBtn:not([hidden]){animation:none;outline:2px solid var(--accent)}}
-.tester-banner .tb-send{flex:none;background:var(--accent);color:#1a1a1a;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
+.tester-banner .tb-send{flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
 /* icon-only form (phones, split desktop): the base padding above came later in the cascade and squeezed the icon to a sliver (Geethub #361) */
 @media (max-width:859.98px){.tester-banner .tb-send{padding:0}.tester-banner .tb-ico{width:18px;height:18px;flex:none}}
 body.split-desktop .tester-banner .tb-send{padding:0}body.split-desktop .tester-banner .tb-ico{width:18px;height:18px;flex:none}
@@ -2031,7 +2031,7 @@ body:has(#danger-scrim.is-open) .tester-banner,body:has(#beta-lock:not([hidden])
 .install-banner .ib-short{display:none}
 @media (max-width:700px){.install-banner .ib-long{display:none}.install-banner .ib-short{display:inline}}
 .install-banner .ib-share{display:inline-block;width:15px;height:15px;vertical-align:-3px;margin:0 2px;color:var(--accent)}
-.install-banner .ib-install{flex:none;background:var(--accent);color:#1a1a1a;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:600}
+.install-banner .ib-install{flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:14px;padding:6px 14px;font-size:12px;font-weight:600}
 .install-banner .ib-install[hidden]{display:none}
 .install-banner .ib-close{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .install-banner .ib-close:hover{background:var(--panel-3);color:var(--text)}
@@ -2053,7 +2053,7 @@ body.onb-active .install-banner,body.desktop-fs .install-banner{display:none}
 .ios-install .ii-share{display:inline-block;width:16px;height:16px;vertical-align:-3px;color:var(--accent)}
 .ios-install details{margin:0 0 14px;color:var(--faint);font-size:14px}
 .ios-install summary{cursor:pointer;color:var(--text);font-weight:600;margin-bottom:6px}
-.ios-install .ii-btn{display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;background:var(--accent);color:#1a1a1a;font-size:15px;font-weight:600;text-align:center}
+.ios-install .ii-btn{display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;background:var(--accent);color:var(--on-accent,#151107);font-size:15px;font-weight:600;text-align:center}
 .ios-install .ii-btn.ii-alt{background:var(--panel-3);color:var(--text)}
 @media (min-width:860px){.install-banner{padding-left:22px}}
 body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
@@ -2108,7 +2108,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .handoff-prompt button{flex:none;border:0;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
 .handoff-prompt .hp-dismiss{background:transparent;color:var(--faint)}
 .handoff-prompt .hp-dismiss:hover{color:var(--text)}
-.handoff-prompt .hp-go{background:var(--accent);color:#1a1a1a}
+.handoff-prompt .hp-go{background:var(--accent);color:var(--on-accent,#151107)}
 
 /* ---------- responsive layout switches ---------- */
 @media (max-width:859.98px){
@@ -2560,7 +2560,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .splash-choice-btn:hover,.splash-choice-btn:focus-visible{background:rgba(32,32,32,.92);border-color:rgba(255,255,255,.5)}
 .splash-choice-btn:active{transform:scale(.96)}
-.splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:#121212;font-weight:600}
+.splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
 .splash-choice-btn-primary:hover,.splash-choice-btn-primary:focus-visible{background:var(--accent);filter:brightness(1.08)}
 /* mobile install gate (#262): phones/tablets in a browser tab get only an
    Install button here (no Tutorial/Enter) plus platform directions beneath
@@ -2997,7 +2997,7 @@ body.week-up-on{overflow:hidden}
 #weekUp .wu-lead{color:#c9c9c9;margin:0 0 10px;max-width:48ch}
 #weekUp .wu-btn{display:block;width:100%;text-align:center;font-weight:600;letter-spacing:1.2px;font-size:13px;text-decoration:none;color:var(--text);
   border:1px solid var(--border-2);border-radius:var(--r-md);padding:15px 16px;margin:22px 0 0;transition:transform var(--dur-ui) var(--ease-out),filter var(--dur-ui)}
-#weekUp .wu-btn.primary{background:var(--accent);border-color:var(--accent);color:#121212;box-shadow:0 10px 30px -12px var(--accent)}
+#weekUp .wu-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);box-shadow:0 10px 30px -12px var(--accent)}
 #weekUp .wu-btn:hover{filter:brightness(1.06)}
 #weekUp .wu-btn:active{transform:scale(.98)}
 #weekUp .wu-btn:focus-visible,#weekUp .wu-close:focus-visible{outline:2px solid var(--text);outline-offset:3px}
@@ -3033,7 +3033,7 @@ body.week-up-on{overflow:hidden}
 #weekUp .wu-chips{display:flex;flex-wrap:wrap;gap:8px}
 #weekUp .wu-chip{display:inline-flex;align-items:baseline;gap:8px;border:1px solid var(--border-2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
 #weekUp .wu-chip span{font-weight:400;font-size:12px;color:var(--faint)}
-#weekUp .wu-chip.is-top{background:var(--accent);border-color:var(--accent);color:#121212}
+#weekUp .wu-chip.is-top{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 #weekUp .wu-chip.is-top span{color:rgba(18,18,18,.7)}
 #weekUp .wu-saved p{margin:0 0 8px;color:#c9c9c9}
 #weekUp .wu-faint,#weekUp .wu-saved .wu-faint{color:var(--faint);font-size:13px;margin:0}
@@ -3085,7 +3085,7 @@ body.week-up-on{overflow:hidden}
 #beta-lock p{color:#9a9a9a;margin:0 0 8px;max-width:46ch}
 #beta-lock .bl-btn{display:block;width:100%;text-align:center;font:inherit;font-weight:600;letter-spacing:1.2px;font-size:13px;
   padding:13px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#f2f2f2;text-decoration:none;cursor:pointer}
-#beta-lock .bl-btn.primary{background:var(--accent);border-color:var(--accent);color:#121212}
+#beta-lock .bl-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 #beta-lock .bl-msg{min-height:1.5em;font-size:13px;color:#e0645e;margin:4px 0 0}
 #beta-lock .bl-or{margin:20px 0 10px;font-size:13px}
 #beta-lock .bl-google[hidden]{display:none}
@@ -9091,7 +9091,7 @@ function renderLibrary(){
   // (#408) split playlists into EBBLESS-made (starter) and user-added, each
   // under a small label; only when both groups exist and not searching
   if (!searchQ && showPlaylists){
-    const made = new Set(starterLibraryIds());
+    const made = new Set(starterLibraryIds().concat([SWELL_ID, BLEND_ID, NP_ID]));
     const cards = Array.from(libraryGrid.querySelectorAll(':scope > .lib-card'));
     const mine = cards.filter(c => !made.has(c.dataset.plId)), theirs = cards.filter(c => made.has(c.dataset.plId));
     if (mine.length && theirs.length){
@@ -11273,6 +11273,9 @@ setInterval(() => {
   if (!npLastSent || !npLastSent.playing || !npCanPublish() || !artworkWrap.classList.contains('is-playing')) { npSeekSince = 0; npSeekDiff = null; npMismatchSince = 0; return; }
   const l = npLocal();
   if (!l) return;
+  // the duration can show up after the song started (streams report 0 at first);
+  // re-post once it's known, or the worker drops the broadcast after 10 minutes
+  if (!npLastSent.dur && l.v === npLastSent.v){ const ad = activeDeck(); if (ad && ad.player && ad.player.getDuration && +ad.player.getDuration() > 0){ npPublishNow(); return; } }
   if (l.v !== npLastSent.v){ npMismatchSince = npMismatchSince || Date.now(); if (Date.now() - npMismatchSince > 4000){ npMismatchSince = 0; npPublishNow(); } return; }
   npMismatchSince = 0;
   const diff = l.pos - npPredicted();
@@ -23133,7 +23136,7 @@ const MINI_PLAYER_STYLE = `
   #mpShuffle.is-active,#mpRepeat.is-active{color:var(--accent)!important}
   #mpShuffle svg,#mpRepeat svg{width:16px;height:16px}
   #mpRepeatOne{position:absolute;top:3px;right:3px;font-size:8px;font-weight:700;line-height:1}
-  #mpControls #mpPlay{width:36px;height:36px;background:var(--accent);color:#151107}
+  #mpControls #mpPlay{width:36px;height:36px;background:var(--accent);color:var(--on-accent,#151107)}
   .mp-skip{display:none!important}
   body.pod-playing .mp-skip{display:flex!important}
   .mp-skip text{font:700 7.5px/1 system-ui,sans-serif}
@@ -24393,7 +24396,7 @@ function installBannerBlocked(){
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
-  if (!installBanner || isStandaloneDisplay() || mobileInstallGate || EBB_SAMPLE) return;
+  if (!installBanner || isStandaloneDisplay() || isDesktopApp || mobileInstallGate || EBB_SAMPLE) return;
   try { if (sessionStorage.getItem(INSTALL_BANNER_CLOSED_KEY)) return; } catch(e){}
   let clearSince = 0;
   const tick = () => {
@@ -28601,7 +28604,7 @@ else { markInviteShown(TUTORIAL_INVITE_DAY_KEY); showSplashChoice(); }
 body.is-sample #sampleClock{display:inline-flex}
 #sampleClock .sc-tag{opacity:.7;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;font-size:10px}
 #sampleClock.is-paused{opacity:.6}
-#sampleClock.is-warn{background:var(--accent);color:#121212;animation:sampleWarn 1.2s ease-in-out infinite}
+#sampleClock.is-warn{background:var(--accent);color:var(--on-accent,#151107);animation:sampleWarn 1.2s ease-in-out infinite}
 @keyframes sampleWarn{50%{opacity:.6}}
 @media (max-width:640px){#sampleClock{padding:4px 9px;font-size:11px}#sampleClock .sc-tag{display:none}}
 /* the pill sits in the right cluster: widen the room the search field leaves for it */
@@ -28618,7 +28621,7 @@ body.is-sample.split-desktop #topbar{--tb-r:272px}
 #sampleBubble p{margin:0 0 12px;color:#bdbdbd;font-size:13px}
 #sampleBubble .sb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #sampleBubble button{font:inherit;font-size:13px;font-weight:600;letter-spacing:.8px;border-radius:999px;padding:9px 16px;cursor:pointer}
-#sampleBubble .sb-go{background:var(--accent);color:#121212;border:1px solid var(--accent)}
+#sampleBubble .sb-go{background:var(--accent);color:var(--on-accent,#151107);border:1px solid var(--accent)}
 #sampleBubble .sb-skip{background:none;color:#bdbdbd;border:0;padding:9px 4px;text-decoration:underline;text-underline-offset:3px}
 @media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{animation:none;box-shadow:0 0 0 3px var(--accent)}#sampleClock.is-warn{animation:none}}
 .sample-modal{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
@@ -28629,7 +28632,7 @@ body.is-sample.split-desktop #topbar{--tb-r:272px}
 .sample-modal .se-rule{height:1px;background:var(--accent);margin:16px 0}
 .sample-modal p{margin:0 0 10px;color:#a8a8a8;font-size:15px;line-height:1.5}
 .sample-modal p.se-lede{color:#f2f2f2;font-size:17px}
-.sample-modal .se-cta{display:block;text-align:center;margin-top:22px;padding:16px 24px;border-radius:999px;background:var(--accent);color:#121212;font-weight:700;letter-spacing:1.6px;font-size:14px;text-transform:uppercase;text-decoration:none}
+.sample-modal .se-cta{display:block;text-align:center;margin-top:22px;padding:16px 24px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);font-weight:700;letter-spacing:1.6px;font-size:14px;text-transform:uppercase;text-decoration:none}
 .sample-modal .se-alt{display:block;text-align:center;margin-top:14px;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px}
 button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;font-size:13px;color:#9a9a9a;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sample-modal .se-cta{border:0;font-family:inherit;cursor:pointer;width:100%}
