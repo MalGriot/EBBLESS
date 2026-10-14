@@ -24410,8 +24410,10 @@ function closeFlow(){
   clearTimeout(flowFsT);
   state.flowOpen = false;
   const seq = ++flowCloseSeq;
+  let faded = false;
   const fade = () => {
-    if (seq !== flowCloseSeq) return;
+    if (faded || seq !== flowCloseSeq) return;
+    faded = true;
     flowLayer.classList.remove('is-open', 'is-leaving');
     flowUnmountVisual();
     if (visualTabsEl.parentElement === flowArtStyleAnchor){
@@ -24420,7 +24422,8 @@ function closeFlow(){
     }
     csStackSync();
   };
-  const fadeSoon = () => requestAnimationFrame(() => requestAnimationFrame(fade));
+  // two frames for the app underneath to draw; the timer covers a hidden tab (no rAF)
+  const fadeSoon = () => { requestAnimationFrame(() => requestAnimationFrame(fade)); setTimeout(fade, 150); };
   flowLayer.classList.add('is-leaving'); // un-hides the covered app (see #flow-layer CSS)
   if (flowDocFs && docFsElement()){
     let started = false;
