@@ -10087,16 +10087,14 @@ Add entries in this shape:
 - **Touches:** beta signup flow, playlist generation from prompt.
 - **Branch:** agent/beta-genre-auto-playlists
 - **Notes:** Synced from Geethub #477. Relates to beta-signup-playlist-preload.
+- **Review notes:** The signup answer to "What do you listen to most?" (Applicants.music_preferences) now reaches the app via /beta/me and /beta/claim (`music: true`, asked until done). On first login the app splits it on commas/slashes (max 4 items), and for each builds a saved playlist "[item] radio for [first name]" in the background with the same interpreter and ranking as typing a vibe: no prompts, nothing starts playing. Marked done first so it never repeats. Needs deploy: worker and the Apps Script (tools/beta-sheet.gs `me_`); until the script is redeployed nothing is created (safe no-op). Verified locally in Chrome: two items made two saved playlists with all songs matched; worker tests pass. Not verified: a real signup-to-login run. Cache v195.
 
 ### artist-name-hitbox: Artist name still too hard to click: bigger hit box (Geethub #478)
 - **Status:** draft
 - **Priority:** medium
 - **Description:** Bug, Geethub #478. Tapping the artist name needs a bigger hit box. User missed the letters and thumbs-downed a song instead.
 - **Touches:** player artist name tap target.
-- **Br
-- **Review notes:** The signup answer to "What do you listen to most?" (Applicants.music_preferences) now reaches the app via /beta/me and /beta/claim (`music: true`, asked until done). On first login the app splits it on commas/slashes (max 4 items), and for each builds a saved playlist "[item] radio for [first name]" in the background with the same interpreter and ranking as typing a vibe: no prompts, nothing starts playing. Marked done first so it never repeats. Needs deploy: worker and the Apps Script (tools/beta-sheet.gs `me_`); until the script is redeployed nothing is created (safe no-op). Verified locally in Chrome: two items made two saved playlists with all songs matched; worker tests pass. Not verified: a real signup-to-login run. Cache v195.
-
-anch:**
+- **Branch:**
 - **Notes:** Synced from Geethub #478. Check spacing from the thumbs-down button; see earlier artist-name entries.
 
 ### thumbs-down-fade-out: Thumbs-down fades the song out instead of cutting it short (Geethub #479)
