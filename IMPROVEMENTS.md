@@ -10040,6 +10040,14 @@ Add entries in this shape:
 - **Branch:** agent/advanced-settings-p3
 - **Notes:** Marvis Pro's most distinctive customization. Built: Gestures group in Advanced, double-tap (default Fullscreen) and long-press (default Nothing) on album art can be Fullscreen/Like/Open artist/Add to playlist/Play-pause/Nothing. Like, Open artist, Add to playlist and real touch hardware untested. NOT done: swipe actions, track-row gestures (overlap draggables), long-press on cymatics/fullscreen art, desktop right-click. Cache v192.
 
+
+### advanced-settings-p4-marvis-gaps: Advanced settings phase 4: the rest of what Marvis Pro lets you change (Geethub #469)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub #469. Researched Marvis Pro against phases 1-3 and added the gaps: art shape (rounded/square/circle), hide song thumbnails, tight spacing, List grid, Add to playlist + Speed player buttons (off by default; speed YouTube only, reapplied each song after ads), back up / restore settings to a file, library section order + rename, per-playlist song order (Original/A to Z/Artist/Most played/Newest; lists AND plays in that order via validIndices), triple-tap album art, double-tap the Library tab (top / search), smart playlists (rules: plays, liked, artist, words, order, limit; rebuilt on open/play; no hand-adding).
+- **Touches:** Advanced settings block, renderLibrary section heads, validIndices/plTrackOrder, playlist panel, create-playlist flow, player title row, updateSeekUI.
+- **Branch:** agent/adv-settings-p4
+- **Notes:** Verified in browser with seeded data: every Advanced chip, section order/rename, per-playlist sort, smart playlist create + rules count. Caught and fixed a startup TDZ crash (backup key list). Not tested: real speed change on a playing YouTube song, backup file round trip, triple-tap by touch, smart playlist across profile sync (per-track merge may churn; converges since each device rebuilds). Section-header gestures skipped (header tap already folds). Cache v228.
 ### desktop-rounded-corners-panels: Desktop library and queue panels get rounded top and bottom corners (Geethub #470)
 - **Status:** merged
 - **Priority:** medium
