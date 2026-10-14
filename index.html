@@ -1703,6 +1703,12 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
    curve. .no-slide-anim snaps it (used on open so the art doesn't glide in
    from the idle position while the layer is still fading up). */
 #flow-layer #flowArtWrap{transition:transform 600ms var(--ease-in-out)}
+/* #487: LP and cassette redraw from scratch when the window snaps to/from
+   browser fullscreen (parts went missing for a second); held invisible while
+   it settles (.fs-settling, see openFlow/closeFlow), then faded in */
+#flow-layer #flowArtWrap:is([data-art-style="record"],[data-art-style="cassette"]){
+  transition:transform 600ms var(--ease-in-out),opacity 300ms var(--ease-out)}
+#flow-layer.fs-settling #flowArtWrap:is([data-art-style="record"],[data-art-style="cassette"]){opacity:0}
 #flow-layer #flowArtWrap.no-slide-anim{transition:none}
 @media (prefers-reduced-motion:reduce){
   #flow-layer #flowArtWrap{transition:none}
@@ -24393,15 +24399,35 @@ function exitDocFs(){
 // back while still covered, give it two frames to draw, then fade.
 const FLOW_FADE_MS = (v => Number.isFinite(v) ? v : 500)(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dur-surface')));
 let flowFsT = 0, flowCloseSeq = 0;
+const flowArtHeavy = () => /^(record|cassette)$/.test(flowArtWrap.dataset.artStyle || '');
+// cb once the browser-fullscreen change has happened and had a moment to draw
+// (timer fallback: no event if the request was refused, no rAF in a hidden tab)
+function onDocFsSettled(cb){
+  let done = false;
+  const evs = ['fullscreenchange', 'webkitfullscreenchange'];
+  const go = () => {
+    if (done) return;
+    done = true;
+    evs.forEach(t => document.removeEventListener(t, go));
+    setTimeout(cb, 200);
+  };
+  evs.forEach(t => document.addEventListener(t, go));
+  setTimeout(go, 1000);
+}
 function openFlow(immersive = document.body.classList.contains('split-desktop')){
   clearTimeout(flowFsT);
-  flowCloseSeq++; // cancels a close still waiting on the fullscreen exit
+  const seq = ++flowCloseSeq; // also cancels a close still waiting on the fullscreen exit
   flowLayer.classList.remove('is-leaving');
   state.flowOpen = true;
   flowArtStyleAnchor.appendChild(visualTabsEl);
   flowMountVisual();
+  flowLayer.classList.toggle('fs-settling', immersive && flowArtHeavy() && !docFsElement());
   flowLayer.classList.add('is-open');
-  if (immersive) flowFsT = setTimeout(() => { if (state.flowOpen) requestDocFs(); }, FLOW_FADE_MS);
+  if (immersive) flowFsT = setTimeout(() => {
+    if (!state.flowOpen) return;
+    requestDocFs();
+    onDocFsSettled(() => { if (seq === flowCloseSeq) flowLayer.classList.remove('fs-settling'); });
+  }, FLOW_FADE_MS);
   armFsIdleTimer();
   csStackSync();
   syncHistoryBuffer();
@@ -24414,7 +24440,7 @@ function closeFlow(){
   const fade = () => {
     if (faded || seq !== flowCloseSeq) return;
     faded = true;
-    flowLayer.classList.remove('is-open', 'is-leaving');
+    flowLayer.classList.remove('is-open', 'is-leaving', 'fs-settling');
     flowUnmountVisual();
     if (visualTabsEl.parentElement === flowArtStyleAnchor){
       visualTabsHome.insertBefore(visualTabsEl, visualTabsAnchor);
@@ -24426,16 +24452,14 @@ function closeFlow(){
   const fadeSoon = () => { requestAnimationFrame(() => requestAnimationFrame(fade)); setTimeout(fade, 150); };
   flowLayer.classList.add('is-leaving'); // un-hides the covered app (see #flow-layer CSS)
   if (flowDocFs && docFsElement()){
-    let started = false;
-    const go = () => {
-      if (started) return;
-      started = true;
-      ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => document.removeEventListener(t, go));
-      fadeSoon();
-    };
-    ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => document.addEventListener(t, go));
-    setTimeout(go, 900);
-    exitDocFs();
+    // LP/cassette fade out before the window resizes under them
+    const heavy = flowArtHeavy();
+    if (heavy) flowLayer.classList.add('fs-settling');
+    setTimeout(() => {
+      if (seq !== flowCloseSeq) return;
+      onDocFsSettled(fadeSoon);
+      exitDocFs();
+    }, heavy ? 300 : 0);
   } else {
     exitDocFs();
     fadeSoon();
