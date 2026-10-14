@@ -14537,7 +14537,9 @@ function ytPanelSync(){
   const show = open && !!el && el.tagName === 'IFRAME';
   // #523: an ad held silent is covered by a note saying what's happening. A
   // cover inside #yt-host, not hiding the player, so F fullscreen gets it too.
-  const adTxt = show ? adWaitText() : '';
+  // the first seconds of a load are the muted ad wait too (onDeckConfirmed
+  // restarts the song at 0:00), so anything showing then is covered as well
+  const adTxt = show ? (adWaitText() || (deck.confirmed ? '' : 'Starting your song\u2026')) : '';
   ytAdCover.hidden = !adTxt;
   if (adTxt) ytAdCover.textContent = adTxt;
   Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
@@ -19456,6 +19458,10 @@ function setPlayIcons(inner, spin){
 // whether it drew the loading state, so callers can skip their own icon
 // update for that tick.
 function updateAdLoadingIcon(){
+  // the ad countdown ticks with the loading ring: through a song's start only
+  // the ring's timer runs, the seek poll covers the rest (#523). Guarded:
+  // a deck can start loading before the ad code below has initialized.
+  try { paintAdStatus(); } catch(e){}
   const p = activeLoadProgress();
   const fill = typeof p === 'number';
   [seekTrack, flowSeekTrack].forEach(el => { el.classList.toggle('is-loading', p !== null); el.classList.toggle('ad-fill', fill); });
@@ -24711,12 +24717,21 @@ function skipHeldAd(ad, reason){
 // #523: what the listener is told while an ad is held silent ('' if none),
 // on the player (paintAdStatus) and over the YouTube card (ytPanelSync), so
 // the silence never goes unexplained.
+// Keyed on what the listener notices (silence past the normal start wait),
+// not on which ad signal fired: a real pre-roll didn't always trip the
+// signals a faked one did, so the skip happened with no word on screen.
+const AD_GATE_NOTE_MS = 1500;
 function adWaitText(){
   const ad = activeDeck();
-  if (!ad || ad.kind !== 'yt' || ad.adDodge) return '';
+  // only while the app is in its playing state: a player that never started
+  // (autoplay blocked, shown as a play button) isn't an ad
+  if (!ad || ad.kind !== 'yt' || ad.adDodge || !ad.player || !artworkWrap.classList.contains('is-playing')) return '';
+  const now = Date.now();
   let since, after;
-  if (!ad.confirmed && ad.muteStartTs && ad.adSeen){ since = ad.muteStartTs; after = AD_DODGE_AFTER_MS; }
+  if (!ad.confirmed && ad.muteStartTs && !(ad.loadStartTs > ad.muteStartTs) && now - ad.muteStartTs >= UNMUTE_DELAY_MS){ since = ad.muteStartTs; after = AD_DODGE_AFTER_MS; }
   else if (ad.confirmed && ad.adMutedAt > 0){ since = ad.adMutedAt; after = AD_SKIP_AFTER_MS; }
+  // the zero-ads gate holding a confirmed, playing deck silent
+  else if (ad.confirmed && ad.gateHeld && now - ad.gateHeld >= AD_GATE_NOTE_MS){ since = ad.gateHeld; after = 0; }
   else return '';
   const canSkip = adDodgeTarget(ad, standbyDeck()) >= 0 && !(ad.confirmed && adSkippedVids.has(ad.videoId));
   const left = Math.ceil((since + after - Date.now()) / 1000);
@@ -24726,6 +24741,7 @@ let adStatusShown = '';
 function paintAdStatus(){
   const txt = adWaitText();
   if (txt === adStatusShown) return;
+  if (txt && !adStatusShown) adLog(activeDeck(), 'status', '');
   adStatusShown = txt;
   adsReportBtn.textContent = txt || 'Ads playing?';
   adsReportBtn.classList.toggle('is-ad', !!txt);
@@ -24982,7 +24998,6 @@ function updateSeekUI(){
   updateAdLoadingIcon();
   maybeDodgeAd();
   iosLockedStallCheck();
-  paintAdStatus();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
   const held = guardActiveDeckAd();
