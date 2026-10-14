@@ -20281,14 +20281,14 @@ advApplySections();
 /* Back up / restore settings (#469 phase 4): one file with this device's
    settings (not the library, which profile sync already carries). Restoring
    writes each key back through lsSet so sync sees the change, then reloads. */
-const ADV_BACKUP_KEYS = [LS_ADV, LS_LEVEL, LS_CROSSFADE, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, LS_ART_STYLE, LS_MINI_PLAYER, LS_ARTIST_ALBUM_SORT];
+const advBackupKeys = () => [LS_ADV, LS_LEVEL, LS_CROSSFADE, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, LS_ART_STYLE, LS_MINI_PLAYER, LS_ARTIST_ALBUM_SORT];
 const ADV_BACKUP_PREFIXES = ['ebbless:plview:'];
 $('advBackupBtn').addEventListener('click', () => {
   const keys = {};
   try {
     for (let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
-      if (ADV_BACKUP_KEYS.includes(k) || ADV_BACKUP_PREFIXES.some(x => k.startsWith(x))) keys[k] = lsGet(k, null);
+      if (advBackupKeys().includes(k) || ADV_BACKUP_PREFIXES.some(x => k.startsWith(x))) keys[k] = lsGet(k, null);
     }
   } catch(e){}
   const blob = new Blob([JSON.stringify({ ebblessSettings: 1, at: Date.now(), keys }, null, 1)], { type: 'application/json' });
@@ -20309,7 +20309,7 @@ $('advRestoreFile').addEventListener('change', async (e) => {
   if (!d || d.ebblessSettings !== 1 || !d.keys || typeof d.keys !== 'object'){ showToast("That isn't an EBBLESS settings file"); return; }
   let n = 0;
   Object.keys(d.keys).forEach(k => {
-    if (!(ADV_BACKUP_KEYS.includes(k) || ADV_BACKUP_PREFIXES.some(x => k.startsWith(x))) || d.keys[k] === null) return;
+    if (!(advBackupKeys().includes(k) || ADV_BACKUP_PREFIXES.some(x => k.startsWith(x))) || d.keys[k] === null) return;
     lsSet(k, d.keys[k]); n++;
   });
   showToast(n ? 'Settings restored' : 'Nothing to restore');
