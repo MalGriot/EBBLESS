@@ -135,7 +135,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #485. Same window as artist-window-album-list (#482); do together.
 
 ### custom-cursor: Custom EBBLESS cursor that follows the UI color, flowy, with a watery trail (Geethub #484)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #484. A custom cursor that changes color with the UI accent, has a slightly flowy, very EBBLESS shape and animation, and maybe a watery trail.
 - **Touches:** desktop pointer layer, accent color vars.
