@@ -23227,15 +23227,17 @@ function mpDesktopSize(shape){
 const MINI_DESKTOP_STYLE = `
   /* a dark color-scheme makes Chromium paint a dark backdrop behind the page, which hides the see-through corners */
   :root{color-scheme:normal}
-  html{background:transparent}
+  html{background:transparent;overflow:hidden}
+  /* html owns the page overflow now, so body's overflow:hidden clips its square children to the rounded shape (#511) */
   body.mp-desktop{-webkit-app-region:drag;border-radius:16px}
   body.mp-desktop button,body.mp-desktop #mpSeekTrack,body.mp-desktop #mpArtWrap,body.mp-desktop #mpLogo,
-  body.mp-desktop #mpQueue,body.mp-desktop #mpEdge,body.mp-desktop #mpMenu{-webkit-app-region:no-drag}
-  body.mp-shape-pill{border-radius:999px}
+  body.mp-desktop #mpQueue,body.mp-desktop #mpEdge,#mpMenu{-webkit-app-region:no-drag}
+  body.mp-shape-pill{border-radius:999px;clip-path:inset(0 round 999px)}
   body.mp-shape-pill #mpCard{padding-right:24px}
   body.mp-shape-pill #mpArtWrap{border-radius:50%}
   body.mp-shape-pill #mpEdge,body.mp-shape-pill #mpHead{display:none!important}
-  body.mp-shape-disc{border-radius:50%}
+  body.mp-shape-disc{border-radius:50%;clip-path:circle(50%)}
+  body.mp-shape-card{clip-path:inset(0 round 16px)}
   body.mp-shape-disc #mpHead,body.mp-shape-disc #mpMeta,body.mp-shape-disc #mpSeek,body.mp-shape-disc #mpEdge,body.mp-shape-disc #mpArtPick{display:none!important}
   body.mp-shape-disc #mpCard{display:block;padding:0;height:100vh}
   body.mp-shape-disc #mpArtWrap{position:absolute;inset:8px;width:auto;height:auto;border-radius:50%;box-shadow:none}
@@ -23265,7 +23267,7 @@ function wireMiniDesktop(win){
   doc.head.appendChild(style);
   const menu = doc.createElement('div');
   menu.id = 'mpMenu'; menu.hidden = true; menu.setAttribute('role', 'menu');
-  doc.body.appendChild(menu);
+  doc.documentElement.appendChild(menu); // outside body so the shape's clip never cuts the menu
   const close = () => { menu.hidden = true; };
   const setShape = (shape) => {
     MP_SHAPES.forEach(x => doc.body.classList.toggle('mp-shape-' + x, x === shape));
