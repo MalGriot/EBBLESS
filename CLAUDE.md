@@ -74,3 +74,32 @@ Rules of the road:
   live session may be mid-edit on - even "protecting" it that way can look
   to that session like its own change disappeared. Surface what you found
   and let the user decide.
+
+## GPU budget (see #487)
+
+Rapid blinking of the background and menus (#487) came from GPU memory
+running out: big blurred layers, videos, and infinite animations kept running
+while hidden, piling up feature by feature. No single change looked wrong.
+Every visual change must follow these rules:
+
+- **Hidden means stopped.** Anything not on screen must not animate or play:
+  pause its animations (`animation-play-state:paused`), pause its videos, or
+  take it out of rendering (`display:none`, or `visibility:hidden` after a
+  fade). `opacity:0` alone does NOT stop the work - the layer still composites.
+- **Covered means stopped.** If a full-screen view covers something (e.g.
+  `#flow-layer` over `#ambient`), pause what's underneath while it's open.
+- **Animate only `transform` and `opacity`.** Never put `filter`, `blur`,
+  `backdrop-filter`, `box-shadow`, or size/position properties in keyframes or
+  long-running transitions; set them once, statically.
+- **`will-change` only on what is animating right now** (e.g. the
+  `.is-active` layer), never on a whole set of layers, and never "just in case".
+- **Large blurred/filtered layers are expensive.** A new full-screen blur,
+  video, canvas, or backdrop effect needs a pause-when-hidden path in the same
+  commit. Prefer reusing an existing layer over adding another.
+- **rAF loops must idle.** Stop requesting frames when nothing changes
+  (see the custom cursor, which only runs while the pointer moves).
+
+On localhost the app runs a dev-only GPU watchdog that logs
+`[gpu-watchdog]` console warnings for hidden infinite animations, hidden
+playing videos, and too many large blurred layers at once. When verifying a
+visual change, check the console for these and fix any you introduced.

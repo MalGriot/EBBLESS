@@ -132,8 +132,9 @@ svg{display:block}
 /* ambient background: blurred artwork, subtle, crossfading, slowly drifting
    like a lava lamp (position/scale + brightness/saturation breathing) */
 #ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bg)}
-#ambient .layer{position:absolute;inset:-40%;background-size:cover;background-position:center;
-  filter:blur(70px) saturate(1.3) brightness(.45);transform:scale(1.15);opacity:0;
+/* #487: layers are tiny canvases holding pre-blurred art (see paintAmbient),
+   stretched by the compositor - no CSS filter, so the GPU texture stays small */
+#ambient .layer{position:absolute;left:-40%;top:-40%;width:180%;height:180%;transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
 #ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite;will-change:transform}
 /* #487: fullscreen covers this completely, so stop animating it underneath */
@@ -1666,8 +1667,7 @@ body.queue-over-fs #queue-scrim{bottom:0}
    fullscreen view blooms/fades/shifts with the album art's colors instead of
    sitting on a flat --bg fill */
 #flow-layer .flow-ambient{position:absolute;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
-#flow-layer .flow-ambient .layer{position:absolute;inset:-40%;background-size:cover;background-position:center;
-  filter:blur(70px) saturate(1.3) brightness(.45);transform:scale(1.15);opacity:0;
+#flow-layer .flow-ambient .layer{position:absolute;left:-40%;top:-40%;width:180%;height:180%;transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
 #flow-layer .flow-ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite;will-change:transform}
 #flow-layer:not(.is-open) .flow-ambient .layer{animation-play-state:paused}
@@ -2793,12 +2793,15 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 }
 
 #onbDiscovery{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;
-  opacity:0;filter:blur(14px);transform:scale(.9);pointer-events:none;
-  transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
+  opacity:0;filter:blur(14px);transform:scale(.9);pointer-events:none;visibility:hidden;
+  transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),visibility 0s 900ms}
+/* #487: hidden means stopped - no painting or looping animations while not shown */
+body:not(.onb-stage-discovery) #onbDiscovery:not(.is-captured) *{animation-play-state:paused}
 #onbDiscovery .lib-card{width:min(220px,58vw);cursor:default}
 #onbDiscovery .lib-card .art .title-overlay{display:flex}
 #onbDiscovery .lib-card .info{display:none}
-body.onb-stage-discovery #onbDiscovery{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-stage-discovery #onbDiscovery,#onbDiscovery.is-captured{opacity:1;filter:blur(0);transform:scale(1);visibility:visible;
+  transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),visibility 0s}
 
 /* #splash is opaque and visible by default (it's the no-FOUC cover shown
    before JS decides what to do) and sits at z-index 9999 - normally that's
@@ -2926,8 +2929,9 @@ body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);gr
 
 @media (prefers-reduced-motion:reduce){
   #onbMark.is-idle #onbWord{animation:none}
-  body.onb-active #view-library,body.onb-active #view-player,#onbDiscovery,#onbWord,#onbCaption,#onbCaptionMain{
+  body.onb-active #view-library,body.onb-active #view-player,#onbWord,#onbCaption,#onbCaptionMain{
     transition-property:opacity!important;transform:none!important;filter:none!important}
+  #onbDiscovery{transition-property:opacity,visibility!important;transform:none!important;filter:none!important}
 }
 /* ---- tester week up + recap (TESTER WEEK UP in the script) ----
    The app fades and blurs out under body.week-up-fading, then #weekUp fades
@@ -3334,7 +3338,7 @@ body.week-up-on{overflow:hidden}
 </div>
 
 <div id="app">
-  <div id="ambient"><div class="layer" id="ambient-a"></div><div class="layer" id="ambient-b"></div></div>
+  <div id="ambient"><canvas class="layer" id="ambient-a"></canvas><canvas class="layer" id="ambient-b"></canvas></div>
 
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
@@ -4428,7 +4432,7 @@ body.week-up-on{overflow:hidden}
 
   <!-- ===== FLOW / FULLSCREEN ===== -->
   <div id="flow-layer">
-    <div class="flow-ambient"><div class="layer" id="flowAmbientA"></div><div class="layer" id="flowAmbientB"></div></div>
+    <div class="flow-ambient"><canvas class="layer" id="flowAmbientA"></canvas><canvas class="layer" id="flowAmbientB"></canvas></div>
     <div class="flow-chrome">
       <div class="flow-top">
         <!-- Library/Queue/Settings: leave fullscreen, then open that menu -->
@@ -4632,6 +4636,13 @@ setTimeout(() => {
     const syncSplash = () => splashBox.classList.contains('is-hidden') ? splashVid.pause() : resume(splashVid);
     new MutationObserver(syncSplash).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
     syncSplash();
+  }
+  const onbVid = document.querySelector('#onbDiscovery video');
+  if (onbVid){
+    const onbBox = document.getElementById('onbDiscovery');
+    const syncOnb = () => (document.body.classList.contains('onb-stage-discovery') || onbBox.classList.contains('is-captured')) ? resume(onbVid) : onbVid.pause();
+    new MutationObserver(syncOnb).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    syncOnb();
   }
   const libVid = document.querySelector('video.lib-bg-video');
   if (libVid && 'IntersectionObserver' in window){
@@ -7961,12 +7972,39 @@ desktopFsExitBtn.addEventListener('click', (e) => { e.stopPropagation(); closeDe
    AMBIENT BACKGROUND (blurred artwork, crossfade)
    ========================================================================= */
 let ambientActive = 'a', flowAmbientActive = 'a';
-function setAmbient(track){
+// #487: the art used to be blurred by CSS on layers 180% of the screen; two to
+// four of those (crossfade, fullscreen) ran a Retina GPU out of memory and the
+// page blinked. Now the art is blurred once into a ~96px canvas and the
+// compositor stretches it - a blur has no detail to lose.
+const AMBIENT_W = 96;
+let ambientToken = 0, ambientImg = null;
+function paintAmbient(cv, img){
+  const W = AMBIENT_W, H = Math.max(1, Math.round(W * innerHeight / Math.max(1, innerWidth)));
+  cv.width = W; cv.height = H; // also clears
+  const iw = img && img.naturalWidth, ih = img && img.naturalHeight;
+  if (!iw || !ih) return;
+  const ctx = cv.getContext('2d');
+  // cover-fit with overscan so the blur has art past the edges
+  const sc = Math.max((W + 16) / iw, (H + 16) / ih);
+  const dw = iw * sc, dh = ih * sc, dx = (W - dw) / 2, dy = (H - dh) / 2;
+  if ('filter' in ctx){
+    ctx.filter = 'blur(2.6px) saturate(1.3) brightness(.45)';
+    ctx.drawImage(img, dx, dy, dw, dh);
+  } else {
+    // no canvas filters (older Safari): downsample hard, let the stretch blur it, darken
+    const t = document.createElement('canvas'), k = 12 / W;
+    t.width = 12; t.height = Math.max(1, Math.round(H * k));
+    t.getContext('2d').drawImage(img, dx * k, dy * k, dw * k, dh * k);
+    ctx.drawImage(t, 0, 0, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+function swapAmbient(img){
+  ambientImg = img;
   const cur = ambientActive === 'a' ? ambientA : ambientB;
   const nxt = ambientActive === 'a' ? ambientB : ambientA;
-  const chain = artworkUrls(track);
-  const url = chain[0] || '';
-  nxt.style.backgroundImage = url ? "url('" + url + "')" : 'none';
+  paintAmbient(nxt, img);
   requestAnimationFrame(() => {
     nxt.classList.add('is-active');
     cur.classList.remove('is-active');
@@ -7975,13 +8013,33 @@ function setAmbient(track){
 
   const flowCur = flowAmbientActive === 'a' ? flowAmbientA : flowAmbientB;
   const flowNxt = flowAmbientActive === 'a' ? flowAmbientB : flowAmbientA;
-  flowNxt.style.backgroundImage = url ? "url('" + url + "')" : 'none';
+  paintAmbient(flowNxt, img);
   requestAnimationFrame(() => {
     flowNxt.classList.add('is-active');
     flowCur.classList.remove('is-active');
   });
   flowAmbientActive = flowAmbientActive === 'a' ? 'b' : 'a';
 }
+function setAmbient(track){
+  const url = artworkUrls(track)[0] || '';
+  const token = ++ambientToken;
+  if (!url){ swapAmbient(null); return; }
+  // cross-origin art taints the canvas, which only blocks reading it back
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => { if (token === ambientToken) swapAmbient(img); };
+  img.onerror = () => { if (token === ambientToken) swapAmbient(null); };
+  img.src = url;
+}
+// keep the canvas aspect matched to the screen (rotation, window resize)
+let ambientResizeT = 0;
+addEventListener('resize', () => {
+  clearTimeout(ambientResizeT);
+  ambientResizeT = setTimeout(() => {
+    paintAmbient(ambientActive === 'a' ? ambientA : ambientB, ambientImg);
+    paintAmbient(flowAmbientActive === 'a' ? flowAmbientA : flowAmbientB, ambientImg);
+  }, 200);
+});
 
 /* =========================================================================
    ARTWORK CROSSFADE (player + flow)
@@ -22268,16 +22326,16 @@ const MINI_PLAYER_STYLE = `
   /* lava lamp: same drift as the main #ambient, as CSS animation (main tab's rAF is paused while PiP is up) */
   #mpBg{overflow:hidden}
   #mpBg .mpl{position:absolute;inset:-40%;background-size:cover;background-position:center;opacity:0;transform:scale(1.15);
-    filter:blur(40px) saturate(1.3) brightness(.5);transition:opacity 1.4s ease}
+    filter:blur(40px) saturate(1.4) brightness(.52);transition:opacity 1.4s ease}
   #mpBg .mpl.is-active{opacity:.85;animation:mp-drift 16s ease-in-out infinite}
   #mpBg .mpl.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
   @keyframes mp-drift{
-    0%{transform:translate(0,0) scale(1.2);filter:blur(36px) saturate(1.1) brightness(.4)}
-    20%{transform:translate(-9%,7%) scale(1.42);filter:blur(46px) saturate(1.55) brightness(.62)}
-    40%{transform:translate(8%,-9%) scale(1.5);filter:blur(40px) saturate(1.7) brightness(.68)}
-    60%{transform:translate(10%,9%) scale(1.28);filter:blur(50px) saturate(1.35) brightness(.45)}
-    80%{transform:translate(-7%,-6%) scale(1.46);filter:blur(42px) saturate(1.6) brightness(.64)}
-    100%{transform:translate(0,0) scale(1.2);filter:blur(36px) saturate(1.1) brightness(.4)}
+    0%{transform:translate(0,0) scale(1.2)}
+    20%{transform:translate(-9%,7%) scale(1.42)}
+    40%{transform:translate(8%,-9%) scale(1.5)}
+    60%{transform:translate(10%,9%) scale(1.28)}
+    80%{transform:translate(-7%,-6%) scale(1.46)}
+    100%{transform:translate(0,0) scale(1.2)}
   }
   @media (prefers-reduced-motion:reduce){#mpBg .mpl.is-active{animation:none}}
   #mpCard{position:relative;flex:none;height:var(--card-h);padding:12px;display:grid;gap:4px 12px;
@@ -27598,6 +27656,8 @@ if (introBeatCapture){
       setView('player');
       capStage('discovery');
       capDiscovery.style.opacity = '1'; capDiscovery.style.filter = 'blur(0)'; capDiscovery.style.transform = 'scale(1)';
+      capDiscovery.classList.add('is-captured');
+      { const v = capDiscovery.querySelector('video'); if (v && v.paused){ const p = v.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); } }
       capCaptionText('New music for you', capDiscovery.querySelector('.lib-card'));
       break;
     case 'mentions':
@@ -27830,6 +27890,60 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     addEventListener('focus', function(){ if (seen) cv.style.opacity = '1'; });
   }
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
+})();
+</script>
+<script>
+/* gpu-watchdog (#487): dev-only, localhost. Warns in the console when GPU work
+   keeps running out of sight - the pile-up that made the background and menus
+   blink. Rules it checks are in CLAUDE.md "GPU budget". Flags only things seen
+   on two scans in a row, so normal fades and transitions don't trip it. */
+(function(){
+  if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
+  var seenOnce = new Set(), warned = new Set();
+  function name(el){
+    if (el.id) return '#' + el.id;
+    var c = typeof el.className === 'string' ? el.className.trim().split(/\s+/).slice(0, 3).join('.') : '';
+    return el.tagName.toLowerCase() + (c ? '.' + c : '') + (el.parentElement ? ' in ' + (el.parentElement.id ? '#' + el.parentElement.id : el.parentElement.tagName.toLowerCase()) : '');
+  }
+  function opacityZero(from){
+    for (var a = from; a && a.nodeType === 1; a = a.parentElement) if (getComputedStyle(a).opacity === '0') return true;
+    return false;
+  }
+  // videos decode whenever they play, however they're hidden
+  function hidden(el){
+    if (!el.isConnected || !el.getClientRects().length) return true;
+    return getComputedStyle(el).visibility === 'hidden' || opacityZero(el);
+  }
+  // animations: display:none / visibility:hidden already stop rendering, so the
+  // trap is a layer still rendering under an opacity:0 ancestor (an animation
+  // may fade its own target on purpose, so start at the parent)
+  function renderingHidden(el){
+    if (!el.isConnected || !el.getClientRects().length || getComputedStyle(el).visibility === 'hidden') return false;
+    return opacityZero(el.parentElement);
+  }
+  function scan(){
+    if (document.hidden) return;
+    var now = new Set(), bigBlur = [], vpArea = innerWidth * innerHeight;
+    document.getAnimations().forEach(function(an){
+      var t = an.effect && an.effect.target;
+      if (!t || t.nodeType !== 1 || an.playState !== 'running') return;
+      if (an.effect.getTiming().iterations !== Infinity) return;
+      if (renderingHidden(t)) now.add('hidden infinite animation "' + (an.animationName || 'web animation') + '" on ' + name(t));
+      else if (/blur\(/.test(getComputedStyle(t).filter)) {
+        var r = t.getBoundingClientRect();
+        if (r.width * r.height > vpArea) bigBlur.push(name(t));
+      }
+    });
+    document.querySelectorAll('video').forEach(function(v){
+      if (!v.paused && hidden(v)) now.add('hidden video still playing: ' + name(v));
+    });
+    if (bigBlur.length > 2) now.add(bigBlur.length + ' large blurred layers animating at once: ' + bigBlur.join(', '));
+    now.forEach(function(k){
+      if (seenOnce.has(k) && !warned.has(k)) { warned.add(k); console.warn('[gpu-watchdog] ' + k + ' - see CLAUDE.md "GPU budget"'); }
+    });
+    seenOnce = now;
+  }
+  setInterval(scan, 4000);
 })();
 </script>
 </body>
