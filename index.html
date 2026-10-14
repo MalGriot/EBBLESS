@@ -1665,6 +1665,13 @@ body.queue-over-fs #queue-scrim{bottom:0}
 #flow-layer{position:fixed;inset:0;z-index:50;background:var(--bg);opacity:0;pointer-events:none;visibility:hidden;
   transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s var(--dur-surface);display:flex;flex-direction:column;align-items:center;justify-content:center}
 #flow-layer.is-open{opacity:1;pointer-events:auto;visibility:visible;transition:opacity var(--dur-surface) var(--ease-in-out),visibility 0s}
+/* #487 covered means stopped: once the opaque fullscreen layer has faded in,
+   take the app underneath out of rendering. Matters most for F from the main
+   desktop screen, where library/queue (bg video, blend layer, marquees) are
+   all still up; the button path slides them away first. Visible again the
+   moment flow closes (their own transitions don't include visibility). */
+body:has(#flow-layer.is-open) :is(#ambient,#topbar,#view-library,#view-player,#queue-panel,#hist-panel,#libpl-panel){
+  visibility:hidden;transition:visibility 0s var(--dur-surface)}
 /* own lava-lamp ambient (mirrors #ambient, driven by the same artwork) so the
    fullscreen view blooms/fades/shifts with the album art's colors instead of
    sitting on a flat --bg fill */
@@ -4655,8 +4662,13 @@ setTimeout(() => {
     syncOnb();
   }
   const libVid = document.querySelector('video.lib-bg-video');
+  const flowEl = document.getElementById('flow-layer');
   if (libVid && 'IntersectionObserver' in window){
-    new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? resume(libVid) : libVid.pause())).observe(libVid);
+    // on screen and not covered by fullscreen flow
+    let libInView = false;
+    const syncLib = () => (libInView && !(flowEl && flowEl.classList.contains('is-open'))) ? resume(libVid) : libVid.pause();
+    new IntersectionObserver(es => es.forEach(e => { libInView = e.isIntersecting; syncLib(); })).observe(libVid);
+    if (flowEl) new MutationObserver(syncLib).observe(flowEl, { attributes: true, attributeFilter: ['class'] });
   }
 })();
 
