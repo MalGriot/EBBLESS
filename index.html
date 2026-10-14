@@ -604,6 +604,10 @@ body.onb-active .paste-guide{display:none}
 @keyframes thumb-cycle-cover{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}
 @keyframes thumb-cycle-grid{0%,41%{opacity:0}50%,91%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.lib-card .art.cycle .face{animation:none}.lib-card .art.cycle .face.grid-face{display:none}}
+/* #487: a big library had hundreds of these crossfades running off screen,
+   each its own GPU layer. Off-screen cards (refreshLibraryMarquees' observer)
+   drop the animation entirely so the layers go away; cover shows meanwhile. */
+.lib-card.lib-offscreen .art.cycle .face{animation:none}
 .lib-card .art .face.icon-face{display:flex;align-items:center;justify-content:center;background:#121212}
 .lib-card .art .face.icon-face img{width:44%;height:auto}
 /* Swell's own fallback for the same no-tracks-yet moment: a looping teaser
@@ -9123,6 +9127,22 @@ function renderLibrary(){
 function refreshLibraryMarquees(){
   document.querySelectorAll('.lib-card .art .title-overlay .marquee, .lib-card .lib-desc .marquee').forEach(el => {
     setMarqueeText(el, el.dataset.text || '');
+  });
+  observeLibraryCards();
+}
+// #487: cards off screen lose their looping animations (see .lib-offscreen)
+let libCardObs = null;
+function observeLibraryCards(){
+  if (typeof IntersectionObserver !== 'function') return;
+  if (!libCardObs) libCardObs = new IntersectionObserver(entries => entries.forEach(e => {
+    if (!e.target.isConnected){ libCardObs.unobserve(e.target); e.target._libCardObserved = false; return; }
+    e.target.classList.toggle('lib-offscreen', !e.isIntersecting);
+  }), { rootMargin: '200px' });
+  document.querySelectorAll('.lib-card').forEach(card => {
+    if (card._libCardObserved) return;
+    card._libCardObserved = true;
+    card.classList.add('lib-offscreen'); // until the first callback says otherwise
+    libCardObs.observe(card);
   });
 }
 
