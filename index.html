@@ -101,9 +101,7 @@ html{-webkit-tap-highlight-color:transparent}
    into the new album-art color instead of snapping. */
 @property --clock-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
 @property --player-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
-/* accent fade (#476) off again: with the custom cursor on, a cleared-cache load froze (#487)
 html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out)}
-*/
 html.clock-color-init,
 html.reduce-motion{transition:none}
 @media (prefers-reduced-motion:reduce){html{transition:none}}
@@ -3037,111 +3035,6 @@ body.week-up-on{overflow:hidden}
   body.week-up-fading > :not(#weekUp){transition:opacity .4s linear;filter:none}
   #weekUp,#weekUp .wu-reveal{transition:opacity .4s linear;transform:none}
 }
-</style>
-<script>
-/* GPU test switches (#487): ?gpu=noambient,noresize,noanim,nocursor,noaccentfade turns suspects off on
-   real hardware to find what glitches; remembered until ?gpu=off. A small
-   badge shows while any are on. Temporary - remove once #487 is closed. */
-(function(){
-  var KEY = 'ebbless:gpuTest', on = '';
-  try {
-    var m = /[?&]gpu=([a-z,]+)/.exec(location.search);
-    if (m) { if (m[1] === 'off') localStorage.removeItem(KEY); else localStorage.setItem(KEY, m[1]); }
-    on = localStorage.getItem(KEY) || '';
-  } catch(e){}
-  window.__EBB_GPU = on.split(',').filter(Boolean);
-  window.__EBB_GPU.forEach(function(f){ document.documentElement.classList.add('gpu-' + f); });
-  if (!window.__EBB_GPU.length) return;
-  addEventListener('DOMContentLoaded', function(){
-    var b = document.createElement('div');
-    b.textContent = 'GPU test: ' + window.__EBB_GPU.join(', ');
-    b.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483646;font:600 11px system-ui;color:#000;background:#e0b26a;padding:3px 7px;border-radius:6px;pointer-events:none';
-    document.body.appendChild(b);
-  });
-})();
-</script>
-<script>
-/* perf recorder (#487): ?perf records every stalled frame (Long Animation
-   Frames API) with the scripts that ran in it; a chip bottom-right copies a
-   report to paste back. ?perf=off stops it. Temporary - remove with the GPU
-   test switches. */
-(function(){
-  var KEY = 'ebbless:perf', on = false;
-  try {
-    var m = /[?&]perf(?:=([a-z]+))?(?:&|$)/.exec(location.search);
-    if (m) { if (m[1] === 'off') localStorage.removeItem(KEY); else localStorage.setItem(KEY, '1'); }
-    on = localStorage.getItem(KEY) === '1';
-  } catch(e){}
-  if (!on || !window.PerformanceObserver) return;
-  var frames = [], scripts = {}, t0 = Date.now();
-  function add(e){
-    if (e.duration < 100) return;
-    var ss = (e.scripts || []).map(function(s){
-      var k = (s.invokerType || '') + ' ' + (s.invoker || '') + ' | ' + (s.sourceFunctionName || '?') + ' @' + (s.sourceURL || '').split('/').pop().split('?')[0] + ':' + s.sourceCharPosition;
-      var a = scripts[k] || (scripts[k] = {n: 0, ms: 0, forced: 0});
-      a.n++; a.ms += s.duration; a.forced += s.forcedStyleAndLayoutDuration || 0;
-      return k.slice(0, 120) + ' ' + Math.round(s.duration) + 'ms' + (s.forcedStyleAndLayoutDuration > 20 ? ' (forced layout ' + Math.round(s.forcedStyleAndLayoutDuration) + ')' : '');
-    });
-    var render = e.renderStart ? Math.round(e.startTime + e.duration - e.renderStart) : 0;
-    var style = e.styleAndLayoutStart ? Math.round(e.startTime + e.duration - e.styleAndLayoutStart) : 0;
-    frames.push({at: Math.round(e.startTime), ms: Math.round(e.duration), block: Math.round(e.blockingDuration || 0), render: render, styleLayout: style, scripts: ss.slice(0, 5)});
-  }
-  try { new PerformanceObserver(function(l){ l.getEntries().forEach(add); }).observe({type: 'long-animation-frame', buffered: true}); }
-  catch(e){ try { new PerformanceObserver(function(l){ l.getEntries().forEach(function(e){ if (e.duration >= 100) frames.push({at: Math.round(e.startTime), ms: Math.round(e.duration), longtask: true}); }); }).observe({type: 'longtask', buffered: true}); } catch(e2){} }
-  function report(){
-    var top = Object.keys(scripts).map(function(k){ return [k, scripts[k]]; }).sort(function(a, b){ return b[1].ms - a[1].ms; }).slice(0, 25)
-      .map(function(x){ return Math.round(x[1].ms) + 'ms x' + x[1].n + (x[1].forced > 20 ? ' forced:' + Math.round(x[1].forced) : '') + '  ' + x[0]; });
-    var worst = frames.slice().sort(function(a, b){ return b.ms - a.ms; }).slice(0, 15);
-    var total = frames.reduce(function(a, f){ return a + f.ms; }, 0);
-    var dom = '';
-    try {
-      var cnt = function(sel){ var e = document.querySelector(sel); return e ? e.getElementsByTagName('*').length : -1; };
-      var libTracks = 0, libLists = 0;
-      try { JSON.parse(localStorage.getItem('ebbless:library') || '[]').forEach(function(id){ libLists++; var pl = JSON.parse(localStorage.getItem('ebbless:playlist:' + id) || 'null'); if (pl && pl.tracks) libTracks += pl.tracks.length; }); } catch(e){}
-      var containers = 0; document.querySelectorAll('*').forEach(function(e){ var ct = getComputedStyle(e).containerType; if (ct && ct !== 'normal') containers++; });
-      dom = 'DOM: nodes ' + document.getElementsByTagName('*').length + ', library ' + cnt('#view-library') + ', player ' + cnt('#view-player') + ', queue ' + cnt('#queue-panel') +
-        ', libpl ' + cnt('#libpl-panel') + ', hist ' + cnt('#hist-panel') + ', flow ' + cnt('#flow-layer') + ', iframes ' + document.querySelectorAll('iframe').length +
-        ', size-containers ' + containers + ', marquees ' + document.querySelectorAll('.marquee,.mq-inner').length + ', lib-cards ' + document.querySelectorAll('.lib-card').length +
-        ', rows ' + document.querySelectorAll('.track-row,.q-row').length + ', anims ' + document.getAnimations().length + '\nlibrary: ' + libLists + ' lists, ' + libTracks + ' songs, view ' + (localStorage.getItem('ebbless:libraryView') || '') + '\n';
-    } catch(e){ dom = 'DOM stats failed: ' + e.message + '\n'; }
-    return 'EBBLESS perf ' + new Date(t0).toISOString() + ' ' + navigator.userAgent + '\n' + dom +
-      'stalled frames: ' + frames.length + ', total ' + Math.round(total) + 'ms over ' + Math.round((Date.now() - t0) / 1000) + 's, dpr ' + devicePixelRatio + ', ' + innerWidth + 'x' + innerHeight + '\n\n' +
-      'TOP SCRIPTS\n' + top.join('\n') + '\n\nWORST FRAMES\n' + worst.map(function(f){ return JSON.stringify(f); }).join('\n');
-  }
-  window.__ebbPerfReport = report;
-  addEventListener('DOMContentLoaded', function(){
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = 'Send perf report';
-    b.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483646;font:600 12px system-ui;color:#000;background:#e0b26a;border:0;padding:6px 10px;border-radius:8px;cursor:pointer';
-    b.addEventListener('click', function(ev){
-      ev.stopPropagation();
-      ev.preventDefault();
-      // opens a prefilled GitHub issue; the user only presses Submit
-      var body = report();
-      if (body.length > 6000) body = body.slice(0, 6000) + '\n...(truncated)';
-      window.open('https://github.com/MalGriot/EBBLESS/issues/new?title=' + encodeURIComponent('[perf] #487 freeze report') +
-        '&labels=' + encodeURIComponent('perf') + '&body=' + encodeURIComponent('```\n' + body + '\n```'), '_blank', 'noopener');
-      b.textContent = 'Opened - press Submit there';
-      setTimeout(function(){ b.textContent = 'Send perf report'; }, 4000);
-    }, true);
-    b.addEventListener('contextmenu', function(ev){
-      ev.preventDefault();
-      var txt = report();
-      var done = function(){ b.textContent = 'Copied (' + frames.length + ' stalls)'; setTimeout(function(){ b.textContent = 'Send perf report'; }, 2500); };
-      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt).then(done) : Promise.reject()).catch(function(){
-        var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;inset:10%;z-index:2147483647;font:11px monospace';
-        document.body.appendChild(ta); ta.select();
-      });
-    }, true);
-    document.body.appendChild(b);
-  });
-})();
-</script>
-<style>
-html.gpu-noambient :is(#ambient,#flow-layer .flow-ambient) .layer{display:none}
-html.gpu-noanim *,html.gpu-noanim *::before,html.gpu-noanim *::after{animation-play-state:paused!important}
-html.gpu-noaccentfade{transition:none!important}
 </style>
 </head>
 <body>
@@ -8192,7 +8085,6 @@ function setAmbient(track){
 // keep the canvas aspect matched to the screen (rotation, window resize)
 let ambientResizeT = 0;
 addEventListener('resize', () => {
-  if (window.__EBB_GPU && window.__EBB_GPU.indexOf('noresize') !== -1) return; // GPU test switch (#487)
   clearTimeout(ambientResizeT);
   ambientResizeT = setTimeout(() => {
     paintAmbient(ambientActive === 'a' ? ambientA : ambientB, ambientImg);
@@ -28135,7 +28027,6 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
    Native cursor stays for text fields, and everywhere when reduced motion is on
    or the pointer is coarse/touch. */
 (function(){
-  if (window.__EBB_GPU && window.__EBB_GPU.indexOf('nocursor') !== -1) return; // GPU test switch (#487)
   if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   var cv = document.createElement('canvas');
