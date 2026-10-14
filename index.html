@@ -1586,10 +1586,9 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
 #yt-host.is-shown > .yt-on{z-index:1}
 /* #523: covers the live player while an ad is held silent (card and F fullscreen) */
-.yt-ad-cover[hidden]{display:none}
-#yt-host.is-shown > .yt-ad-cover{z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;
+#yt-host.is-shown > .yt-ad-cover:not([hidden]){z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;
   text-align:center;background:#000;color:var(--faint);font-size:13px;line-height:1.5}
-#yt-host:fullscreen > .yt-ad-cover{font-size:18px}
+#yt-host:fullscreen > .yt-ad-cover:not([hidden]){font-size:18px}
 /* ---------- tester feedback form (no login, no GitHub - posts to the
    worker's /tester-report). Reuses #danger-scrim and the danger modal's
    centered-card look, just wider and with form fields ---------- */
