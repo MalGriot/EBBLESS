@@ -1771,6 +1771,8 @@ body.queue-over-fs #queue-scrim{bottom:0}
   transition:opacity 600ms var(--ease-in-out)}
 #flow-layer.is-open .flow-chrome>*{pointer-events:auto}
 #flow-layer.chrome-hidden .flow-chrome{opacity:0;pointer-events:none}
+/* #487: idle-hidden fullscreen chrome stops its looping icons (help blink, visual-tab glyphs) */
+:is(body.fs-chrome-hidden,#flow-layer.chrome-hidden) :is(#topbar,.visual-tabs) *{animation-play-state:paused}
 #flow-layer.chrome-hidden{cursor:none}
 .flow-top{display:flex;justify-content:flex-end;align-items:flex-start;position:relative}
 /* Library/Queue/Settings in fullscreen (flow overlay + lyrics fullscreen):
