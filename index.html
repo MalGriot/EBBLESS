@@ -3028,7 +3028,7 @@ body.week-up-on{overflow:hidden}
 }
 </style>
 <script>
-/* GPU test switches (#487): ?gpu=noambient,noresize,noanim turns suspects off on
+/* GPU test switches (#487): ?gpu=noambient,noresize,noanim,nocursor,noaccentfade turns suspects off on
    real hardware to find what glitches; remembered until ?gpu=off. A small
    badge shows while any are on. Temporary - remove once #487 is closed. */
 (function(){
@@ -3052,6 +3052,7 @@ body.week-up-on{overflow:hidden}
 <style>
 html.gpu-noambient :is(#ambient,#flow-layer .flow-ambient) .layer{display:none}
 html.gpu-noanim *,html.gpu-noanim *::before,html.gpu-noanim *::after{animation-play-state:paused!important}
+html.gpu-noaccentfade{transition:none!important}
 </style>
 </head>
 <body>
@@ -27911,6 +27912,7 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
    Native cursor stays for text fields, and everywhere when reduced motion is on
    or the pointer is coarse/touch. */
 (function(){
+  if (window.__EBB_GPU && window.__EBB_GPU.indexOf('nocursor') !== -1) return; // GPU test switch (#487)
   if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
   if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   var cv = document.createElement('canvas');
