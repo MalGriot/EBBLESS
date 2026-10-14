@@ -1898,6 +1898,14 @@ html.adv-hide-repeat #repeatBtn,html.adv-hide-repeat #miniRepeatBtn,html.adv-hid
 html.adv-hide-like #playerLikeBtn,html.adv-hide-like #miniLikeBtn,html.adv-hide-like #flowLikeBtn,
 html.adv-hide-artist #trackArtist,html.adv-hide-artist #miniArtist,html.adv-hide-artist #flowArtist,
 html.adv-hide-times #timeCur,html.adv-hide-times #timeDur,html.adv-hide-times #flowTimeCur,html.adv-hide-times #flowTimeDur{display:none!important}
+html:not(.adv-show-addpl) #playerAddPlBtn,html:not(.adv-show-speed) #playerSpeedBtn{display:none!important}
+.player-speed-btn{width:auto;min-width:22px;padding:0 4px;border-radius:11px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+html.adv-shape-square .lib-card:not(.is-artist-card) .art,html.adv-shape-square .lib-card:not(.is-artist-card) .art img,html.adv-shape-square .track-row img,html.adv-shape-square .q-row img{border-radius:0}
+html.adv-shape-circle .lib-card .art,html.adv-shape-circle .lib-card .art img,html.adv-shape-circle .track-row img,html.adv-shape-circle .q-row img{border-radius:50%}
+html.adv-no-thumbs .track-row img,html.adv-no-thumbs .q-row img{display:none}
+html.adv-dense .track-row,html.adv-dense .q-row{padding-top:4px;padding-bottom:4px}
+html.adv-dense .lib-grid{gap:10px 10px}
+html.adv-dense .lib-grid.is-compact{gap:8px 8px}
 .adv-chips .btn-ghost{padding:6px 14px;font-size:12.5px}
 .adv-chips .adv-swatch{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--sw,#888)}
 .adv-chips .adv-swatch.is-active{border-color:var(--text);background:var(--sw,#888)}
@@ -3885,6 +3893,11 @@ body.week-up-on{overflow:hidden}
             <button class="player-like-btn" id="playerLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
             </button>
+            <!-- Advanced settings: shown only when picked under Player buttons (#469) -->
+            <button class="player-like-btn player-speed-btn" id="playerSpeedBtn" title="Playback speed" aria-label="Playback speed: 1x">1x</button>
+            <button class="player-like-btn" id="playerAddPlBtn" title="Add to playlist" aria-label="Add to playlist">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h12M3 12h12M3 18h7M18 13v8M14 17h8"/></svg>
+            </button>
             <!-- song options (incl. "This isn't the right song", which replaced the
                  flag icon beside the title; #reportMatchBtn stays as a hidden
                  target for the mini player's flag and the menu item) -->
@@ -4124,12 +4137,32 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Motion"><button type="button" class="btn-ghost" data-adv="motion" data-val="full">Full</button><button type="button" class="btn-ghost" data-adv="motion" data-val="reduced">Reduced</button></div>
         </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Art shape</div>
+            <div class="desc">Library covers and song thumbnails.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Art shape"><button type="button" class="btn-ghost" data-adv="shape" data-val="rounded">Rounded</button><button type="button" class="btn-ghost" data-adv="shape" data-val="square">Square</button><button type="button" class="btn-ghost" data-adv="shape" data-val="circle">Circle</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Song thumbnails</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Song thumbnails"><button type="button" class="btn-ghost" data-adv="thumbs" data-val="show">Show</button><button type="button" class="btn-ghost" data-adv="thumbs" data-val="hide">Hide</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Spacing</div>
+            <div class="desc">Tight fits more on screen.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Spacing"><button type="button" class="btn-ghost" data-adv="dense" data-val="regular">Regular</button><button type="button" class="btn-ghost" data-adv="dense" data-val="tight">Tight</button></div>
+        </div>
         <div class="adv-group">Library</div>
         <div class="settings-row settings-row-slider">
           <div>
             <div class="label">Grid size</div>
           </div>
-          <div class="adv-chips" role="group" aria-label="Grid size"><button type="button" class="btn-ghost" data-adv="grid" data-val="grid">2x2</button><button type="button" class="btn-ghost" data-adv="grid" data-val="compact">3x3</button></div>
+          <div class="adv-chips" role="group" aria-label="Grid size"><button type="button" class="btn-ghost" data-adv="grid" data-val="grid">2x2</button><button type="button" class="btn-ghost" data-adv="grid" data-val="compact">3x3</button><button type="button" class="btn-ghost" data-adv="grid" data-val="list">List</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
@@ -4165,7 +4198,7 @@ body.week-up-on{overflow:hidden}
             <div class="label">Player buttons and info</div>
             <div class="desc">Tap to show or hide. Play, skip and the song menu always stay.</div>
           </div>
-          <div class="adv-chips" role="group" aria-label="Player buttons and info"><button type="button" class="btn-ghost" data-adv="ph" data-val="shuffle">Shuffle</button><button type="button" class="btn-ghost" data-adv="ph" data-val="repeat">Repeat</button><button type="button" class="btn-ghost" data-adv="ph" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="ph" data-val="artist">Artist name</button><button type="button" class="btn-ghost" data-adv="ph" data-val="times">Times</button></div>
+          <div class="adv-chips" role="group" aria-label="Player buttons and info"><button type="button" class="btn-ghost" data-adv="ph" data-val="shuffle">Shuffle</button><button type="button" class="btn-ghost" data-adv="ph" data-val="repeat">Repeat</button><button type="button" class="btn-ghost" data-adv="ph" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="ph" data-val="artist">Artist name</button><button type="button" class="btn-ghost" data-adv="ph" data-val="times">Times</button><button type="button" class="btn-ghost" data-adv="pshow" data-val="addpl">Add to playlist</button><button type="button" class="btn-ghost" data-adv="pshow" data-val="speed">Speed</button></div>
         </div>
         <div class="adv-group">Gestures</div>
         <div class="settings-row settings-row-slider">
@@ -4181,6 +4214,15 @@ body.week-up-on{overflow:hidden}
             <div class="desc">Nothing by default. Hold the art for half a second.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Long-press album art"><button type="button" class="btn-ghost" data-adv="glp" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="glp" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="glp" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="glp" data-val="none">Nothing</button></div>
+        </div>
+        <div class="adv-group">Backup</div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Back up settings</div>
+            <div class="desc">Saves your settings to a file. Open it on another device to bring them over.</div>
+          </div>
+          <div class="adv-chips"><button type="button" class="btn-ghost" id="advBackupBtn">Save</button><button type="button" class="btn-ghost" id="advRestoreBtn">Open</button></div>
+          <input type="file" id="advRestoreFile" accept="application/json,.json" hidden>
         </div>
         <div class="settings-row">
           <div>
@@ -19842,12 +19884,13 @@ function advRender(){
     art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet',
-    gdt: advGestureOf('gdt'), glp: advGestureOf('glp')
+    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'),
+    shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
   const hide = p.hide || [];
   advBlock.querySelectorAll('[data-adv]').forEach(b => {
     const k = b.dataset.adv, v = b.dataset.val;
-    const on = k === 'sec' ? !hide.includes(v) : k === 'ph' ? !(p.phide || []).includes(v) : active[k] === v;
+    const on = k === 'sec' ? !hide.includes(v) : k === 'ph' ? !(p.phide || []).includes(v) : k === 'pshow' ? (p.pshow || []).includes(v) : active[k] === v;
     b.classList.toggle('is-active', on);
     b.setAttribute('aria-pressed', String(on));
   });
@@ -19858,6 +19901,45 @@ function advApplyPlayer(){
   ADV_PH.forEach(k => document.documentElement.classList.toggle('adv-hide-' + k, Array.isArray(h) && h.includes(k)));
 }
 function advApplyMotion(){ document.documentElement.classList.toggle('reduce-motion', advPrefs().motion === 'reduced'); }
+/* Look (#469 phase 4): art shape, song thumbnails, spacing, all as html classes */
+function advApplyLook(){
+  const p = advPrefs(), h = document.documentElement.classList;
+  h.toggle('adv-shape-square', p.shape === 'square');
+  h.toggle('adv-shape-circle', p.shape === 'circle');
+  h.toggle('adv-no-thumbs', p.thumbs === 'hide');
+  h.toggle('adv-dense', p.dense === 'tight');
+  const show = p.pshow || [];
+  ADV_PSHOW.forEach(k => h.toggle('adv-show-' + k, show.includes(k)));
+}
+/* Player extras off by default (#469 phase 4): Add to playlist and Speed. Speed
+   is per device and only reaches players that support it (YouTube); the seek
+   tick re-applies it to each new song once its ads are past (advApplySpeed). */
+const ADV_PSHOW = ['addpl','speed'];
+const ADV_SPEEDS = [1, 1.25, 1.5, 0.75];
+function advSpeed(){ const v = +advPrefs().speed; return ADV_SPEEDS.includes(v) && advPrefs().pshow && advPrefs().pshow.includes('speed') ? v : 1; }
+function advApplySpeed(ad){
+  if (!ad || !ad.player || !ad.player.setPlaybackRate || !ad.player.getPlaybackRate || ad.kind === 'cast' || ad.adMutedAt > 0) return;
+  const want = advSpeed();
+  try { if (+ad.player.getPlaybackRate() !== want) ad.player.setPlaybackRate(want); } catch(e){}
+}
+function advRenderSpeed(){
+  const b = $('playerSpeedBtn'), v = advSpeed();
+  b.textContent = v + 'x';
+  b.setAttribute('aria-label', 'Playback speed: ' + v + 'x');
+  b.classList.toggle('is-active', v !== 1);
+}
+$('playerSpeedBtn').addEventListener('click', () => {
+  const i = ADV_SPEEDS.indexOf(advSpeed());
+  const next = ADV_SPEEDS[(i + 1) % ADV_SPEEDS.length];
+  advSet('speed', next === 1 ? null : next);
+  advRenderSpeed();
+  advApplySpeed(activeDeck());
+  showToast('Speed ' + next + 'x');
+});
+$('playerAddPlBtn').addEventListener('click', () => {
+  const t = currentTrack();
+  if (t && t.videoId) openAddToPlaylistPicker(t);
+});
 /* Gestures: what double-tap and long-press on the player's album art do.
    Defaults are the old behavior (double-tap = fullscreen, long-press =
    nothing), stored only when changed. Actions reuse existing functions. */
@@ -19885,6 +19967,15 @@ function advChoose(k, v){
   else if (k === 'blend'){ crossfadePrefs.ms = parseInt(v, 10) || 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI(); }
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
   else if ((k === 'gdt' || k === 'glp') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
+  else if (k === 'shape'){ advSet('shape', v === 'rounded' ? null : v); advApplyLook(); }
+  else if (k === 'thumbs'){ advSet('thumbs', v === 'hide' ? 'hide' : null); advApplyLook(); }
+  else if (k === 'dense'){ advSet('dense', v === 'tight' ? 'tight' : null); advApplyLook(); }
+  else if (k === 'pshow' && ADV_PSHOW.includes(v)){
+    const s2 = (advPrefs().pshow || []).slice(), i = s2.indexOf(v);
+    if (i >= 0) s2.splice(i, 1); else s2.push(v);
+    advSet('pshow', s2.length ? s2 : null);
+    advApplyLook(); advRenderSpeed(); advApplySpeed(activeDeck());
+  }
   else if (k === 'ph' && ADV_PH.includes(v)){
     const h = (advPrefs().phide || []).slice(), i = h.indexOf(v);
     if (i >= 0) h.splice(i, 1); else h.push(v);
@@ -19908,6 +19999,7 @@ $('advResetBtn').addEventListener('click', () => {
   lsSet(LS_ADV, {});
   advApplyMotion();
   advApplyPlayer();
+  advApplyLook(); advRenderSpeed(); advApplySpeed(activeDeck());
   updateLibraryClockColor();
   setArtStyle('default');
   setLibraryView('compact');
@@ -19920,7 +20012,47 @@ $('advResetBtn').addEventListener('click', () => {
 advBlock.addEventListener('toggle', advRender);
 advApplyMotion();
 advApplyPlayer();
+advApplyLook();
+advRenderSpeed();
 advRender();
+
+/* Back up / restore settings (#469 phase 4): one file with this device's
+   settings (not the library, which profile sync already carries). Restoring
+   writes each key back through lsSet so sync sees the change, then reloads. */
+const ADV_BACKUP_KEYS = [LS_ADV, LS_LEVEL, LS_CROSSFADE, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, LS_ART_STYLE, LS_MINI_PLAYER, LS_ARTIST_ALBUM_SORT];
+const ADV_BACKUP_PREFIXES = ['ebbless:plview:'];
+$('advBackupBtn').addEventListener('click', () => {
+  const keys = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (ADV_BACKUP_KEYS.includes(k) || ADV_BACKUP_PREFIXES.some(x => k.startsWith(x))) keys[k] = lsGet(k, null);
+    }
+  } catch(e){}
+  const blob = new Blob([JSON.stringify({ ebblessSettings: 1, at: Date.now(), keys }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ebbless-settings.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast('Settings saved');
+});
+$('advRestoreBtn').addEventListener('click', () => $('advRestoreFile').click());
+$('advRestoreFile').addEventListener('change', async (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  let d = null;
+  try { d = JSON.parse(await f.text()); } catch(_){}
+  if (!d || d.ebblessSettings !== 1 || !d.keys || typeof d.keys !== 'object'){ showToast("That isn't an EBBLESS settings file"); return; }
+  let n = 0;
+  Object.keys(d.keys).forEach(k => {
+    if (!(ADV_BACKUP_KEYS.includes(k) || ADV_BACKUP_PREFIXES.some(x => k.startsWith(x))) || d.keys[k] === null) return;
+    lsSet(k, d.keys[k]); n++;
+  });
+  showToast(n ? 'Settings restored' : 'Nothing to restore');
+  if (n) setTimeout(() => location.reload(), 900);
+});
 
 function openArtStyleMenu(){ artStyleMenu.classList.add('is-open'); }
 function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
@@ -24367,6 +24499,7 @@ function updateSeekUI(){
   paintSeekUI(cur, dur);
   updateLyricsHighlight(cur);
   capPreload();
+  advApplySpeed(ad);
   syncMediaPositionState(false);
   maybeStartCrossfade(cur, dur);
   cassetteSetProgress(cur, dur);
