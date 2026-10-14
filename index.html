@@ -16188,10 +16188,42 @@ function dropCurrentsTrackAt(idx){
 }
 // Thumbs-down: out of CuRRentSSsss now (skipped first if it's playing),
 // never suggested again, and its artist/genres count against future picks.
-function declineCurrentsTrack(idx){
+// Geethub #479: a thumbs-down on the song that's playing fades it out first
+// instead of cutting it. Volume ramp on the active deck, then the normal
+// decline (skip, drop, toast) runs. Skipped where a fade can't be heard or
+// something else already fades: iOS and cast (no volume control), a skip
+// crossfade (crossfade on, except SoundCloud to SoundCloud), the last queued
+// song (pausePlayback fades), a deck that isn't playing.
+const DECLINE_FADE_MS = 700;
+let declineFading = false;
+function fadeOutThenDecline(idx){
+  const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  const ad = activeDeck();
+  if (declineFading || isIOS || castActive() || swapInProgress || isFadingOut(ad)) return false;
+  if (!cur || cur.plId !== SWELL_ID || cur.idx !== idx || state.queuePos >= state.queue.length - 1) return false;
+  if (!ad.player || !ad.player.setVolume || !ad.player.getPlayerState || ad.player.getPlayerState() !== 1) return false;
+  const nt = trackAt(state.queuePos + 1);
+  if (crossfadePrefs.on && !(ad.kind === 'sc' && nt && isSoundCloudVideoId(nt.videoId))) return false;
+  declineFading = true;
+  const qpos = state.queuePos, gen = ad.gen, start = Date.now();
+  const setVol = (g) => { try { ad.player.setVolume(Math.round(effectiveVolume(ad) * g)); } catch(e){} };
+  const tick = () => {
+    const p = Math.min(1, (Date.now() - start) / DECLINE_FADE_MS);
+    // the listener moved on mid-fade: stand down, decline without skipping
+    const moved = activeDeck() !== ad || ad.gen !== gen || state.queuePos !== qpos;
+    if (p < 1 && !moved){ setVol(1 - (0.5 - 0.5 * Math.cos(Math.PI * p) ) ); setTimeout(tick, PAUSE_FADE_TICK_MS); return; }
+    declineFading = false;
+    declineCurrentsTrack(idx, true);
+    if (!moved) setVol(1);   // the skip has moved off this deck; the next song must not inherit silence
+  };
+  tick();
+  return true;
+}
+function declineCurrentsTrack(idx, faded){
   const pl = playlistById(SWELL_ID);
   const t = pl && pl.tracks[idx];
   if (!t || !t.videoId) return;
+  if (!faded && fadeOutThenDecline(idx)) return;
   const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
   let stopped = false;
   if (cur && cur.plId === SWELL_ID && cur.idx === idx){
