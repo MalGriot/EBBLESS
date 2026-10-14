@@ -2645,8 +2645,7 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
   transition:opacity 550ms var(--ease-out),left 550ms var(--ease-out),top 550ms var(--ease-out)}
 #onbCaption span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
   font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:min(300px,78vw);
-  background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:linear-gradient(180deg,rgba(24,19,12,.94),rgba(10,8,5,.96));
   border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
   box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(224,178,106,.08) inset;
   padding:13px 22px;border-radius:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
@@ -2683,8 +2682,7 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
   transition:opacity 550ms var(--ease-out),left 550ms var(--ease-out),top 550ms var(--ease-out)}
 #onbCaptionMain span{position:relative;display:inline-block;color:var(--text);font-size:clamp(14.5px,3vw,17px);
   font-weight:600;letter-spacing:.01em;line-height:1.35;text-align:center;max-width:min(300px,78vw);
-  background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:linear-gradient(180deg,rgba(24,19,12,.94),rgba(10,8,5,.96));
   border:1px solid rgba(224,178,106,.4);border-top-color:rgba(224,178,106,.55);
   box-shadow:0 14px 34px rgba(0,0,0,.45),0 0 0 1px rgba(224,178,106,.08) inset;
   padding:13px 22px;border-radius:16px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
@@ -2755,8 +2753,7 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
    for the outro */
 #onbPager{--onb-gold:#e0b26a;position:fixed;left:50%;bottom:calc(var(--nav-h) + var(--safe-b) + 14px);transform:translateX(-50%);
   z-index:10006;display:flex;align-items:center;padding:4px 4px 4px 8px;border-radius:999px;
-  background:linear-gradient(180deg,rgba(24,19,12,.82),rgba(10,8,5,.88));
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:linear-gradient(180deg,rgba(24,19,12,.94),rgba(10,8,5,.96));
   border:1px solid rgba(224,178,106,.28);box-shadow:0 10px 26px rgba(0,0,0,.4);
   opacity:0;pointer-events:none;transition:opacity 400ms var(--ease-out)}
 #onbPager.is-visible{opacity:1;pointer-events:auto}
@@ -2810,15 +2807,15 @@ body.onb-stage-outro #onbWord{opacity:1;transform:scale(1)}
 }
 
 #onbDiscovery{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;
-  opacity:0;filter:blur(14px);transform:scale(.9);pointer-events:none;visibility:hidden;
-  transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),visibility 0s 900ms}
+  opacity:0;transform:scale(.9);pointer-events:none;visibility:hidden;
+  transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),visibility 0s 900ms}
 /* #487: hidden means stopped - no painting or looping animations while not shown */
 body:not(.onb-stage-discovery) #onbDiscovery:not(.is-captured) *{animation-play-state:paused}
 #onbDiscovery .lib-card{width:min(220px,58vw);cursor:default}
 #onbDiscovery .lib-card .art .title-overlay{display:flex}
 #onbDiscovery .lib-card .info{display:none}
-body.onb-stage-discovery #onbDiscovery,#onbDiscovery.is-captured{opacity:1;filter:blur(0);transform:scale(1);visibility:visible;
-  transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),visibility 0s}
+body.onb-stage-discovery #onbDiscovery,#onbDiscovery.is-captured{opacity:1;transform:scale(1);visibility:visible;
+  transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out),visibility 0s}
 
 /* #splash is opaque and visible by default (it's the no-FOUC cover shown
    before JS decides what to do) and sits at z-index 9999 - normally that's
@@ -2846,9 +2843,9 @@ body.onb-active.onb-show-libpl #libpl-scrim{display:block!important;z-index:1000
 body.onb-active.onb-show-libpl:not(.split-desktop) #bottom-nav{display:flex!important;z-index:10004!important}
 body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-desktop) #view-player,body.onb-active:not(.split-desktop) #view-settings{
   position:fixed!important;inset:0!important;top:0!important;z-index:10001;
-  opacity:0;filter:blur(14px);transform:scale(.92);pointer-events:none;
-  transition:opacity 900ms var(--ease-in-out),filter 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
-body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;filter:blur(0);transform:scale(1)}
+  opacity:0;transform:scale(.92);pointer-events:none;
+  transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
+body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;transform:scale(1)}
 body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 /* hidden during beta (everyone reports through Send feedback); Shift+B / Shift+S
    still click the hidden bug / idea links */
@@ -2936,7 +2933,7 @@ body.onb-stage-settings.split-desktop #onbBackdrop{opacity:0;pointer-events:none
 /* the "loaded library" beat promotes #view-library like the input stage
    does, but shows the populated grid (one real playlist card) instead of
    the paste form */
-body.onb-active.onb-stage-library #view-library{opacity:1;filter:blur(0);transform:scale(1)}
+body.onb-active.onb-stage-library #view-library{opacity:1;transform:scale(1)}
 body.onb-stage-library:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-library:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
