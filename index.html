@@ -101,7 +101,9 @@ html{-webkit-tap-highlight-color:transparent}
    into the new album-art color instead of snapping. */
 @property --clock-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
 @property --player-accent{syntax:'<color>';inherits:true;initial-value:#e0b26a}
+/* accent fade (#476) disabled while testing #487 (blinking graphics)
 html{transition:--clock-accent var(--dur-surface) var(--ease-in-out),--player-accent var(--dur-surface) var(--ease-in-out)}
+*/
 html.clock-color-init,
 html.reduce-motion{transition:none}
 @media (prefers-reduced-motion:reduce){html{transition:none}}
