@@ -7548,6 +7548,8 @@ function upgradeArtUrl(url){
 function thumbArtUrl(url){
   if (typeof url !== 'string') return url;
   if (/^https:\/\/(i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab67616d0000b273/.test(url)) return url.replace('ab67616d0000b273', 'ab67616d00001e02');
+  if (/^https:\/\/(i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab6761610000e5eb/.test(url)) return url.replace('ab6761610000e5eb', 'ab67616100005174'); // artist 640 -> 320
+  if (/^https:\/\/[a-z0-9-]*\.dzcdn\.net\//.test(url)) return url.replace(/\/(\d{3,4})x(\d{3,4})-/, (m, w) => (+w > 300 ? '/250x250-' : m));
   if (/^https:\/\/[a-z0-9.-]*mzstatic\.com\//.test(url)) return url.replace(/\/(\d{2,4})x(\d{2,4})(bb|cc)?\.(jpg|jpeg|png|webp)$/i, (m, w, h, suf, ext) => (+w > 300 ? '/300x300' + (suf || 'bb') + '.' + ext : m));
   if (/^https:\/\/[a-z0-9.-]*sndcdn\.com\//.test(url)) return url.replace(/-(t500x500|original|large)\./, '-t300x300.');
   if (/^https:\/\/(img\.youtube\.com|i\.ytimg\.com)\/vi\//.test(url)) return url.replace(/\/(maxresdefault|sddefault)\.jpg$/, '/hqdefault.jpg');
