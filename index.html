@@ -1754,9 +1754,11 @@ body.queue-over-fs #queue-scrim{bottom:0}
 /* issue #153: white title/artist vanished over white-heavy album art in
    fullscreen - soft dark halo, near-invisible on dark art */
 #flow-layer .flow-meta .title,#flow-layer .flow-meta .artist{text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.3)}
-#flow-layer .flow-meta .player-like-btn{pointer-events:auto}
+/* only while fullscreen is open: the closed layer is still laid out (opacity 0),
+   and these buttons were catching taps and hovers meant for the player's artist name (#478) */
+#flow-layer.is-open .flow-meta .player-like-btn{pointer-events:auto}
 #flow-layer .flow-meta .flow-meta-actions{display:flex;align-items:center;justify-content:center;gap:10px}
-#flow-layer .flow-meta .report-match-btn{pointer-events:auto}
+#flow-layer.is-open .flow-meta .report-match-btn{pointer-events:auto}
 #flow-layer .flow-chrome{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:space-between;
   padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:none;
   transition:opacity 600ms var(--ease-in-out)}
