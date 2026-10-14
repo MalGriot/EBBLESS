@@ -2277,6 +2277,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     transform:translateX(-100%);
   }
   body.split-desktop #libpl-panel.is-open{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.35)}
+  /* #545: the open playlist covers the library pane, so the cards underneath
+     stop animating (GPU budget: covered means stopped) */
+  body.split-desktop:not(.desktop-fs):has(#libpl-panel.is-open) #view-library *{animation-play-state:paused!important}
   /* Geethub #276: a slim tab on the panel's right edge (over the player
      pane's left margin) that slides the panel shut, chevron pointing the
      way it closes. Outside the panel so it never sits on its scrollbar;
