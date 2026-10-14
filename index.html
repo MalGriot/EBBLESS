@@ -1463,6 +1463,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .queue-body{padding:4px 12px 24px}
 .libpl-addbar{padding:0 12px 8px;flex:none}
+#libpl-panel.is-drop-target{outline:2px solid var(--accent);outline-offset:-2px}
 .libpl-addbar .btn-ghost{width:100%}
 .as-head{width:100%;text-align:left;margin-bottom:12px}
 .as-head .as-to{font-size:15px;font-weight:600;color:var(--text)}
@@ -11837,17 +11838,24 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
    (Geethub #328). Native HTML5 drag, armed only on a mouse pointerdown so touch
    scrolling and the queue handle's pointer-based reorder are untouched. */
 (function(){
-  let dragTrack = null, dragFromLib = false, relinkDrag = false;
+  let dragTrack = null, dragFromLib = false, relinkDrag = false, dragSrcPl = null;
   const rowOf = (el) => el && el.closest && el.closest('.track-row, .q-row');
   const inLibrary = (el) => !!(el && el.closest && el.closest('#view-library'));
   const cardOf = (el) => el && el.closest && el.closest('.lib-card[data-pl-id]');
   const okTarget = (card) => !!card && addablePlaylists().some(p => p.id === card.dataset.plId);
-  function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); }
+  function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); libplPanel.classList.remove('is-drop-target'); }
+  // #548: the open playlist is itself a drop target (not the one the song is already dragged out of)
+  function panelDropId(el){
+    if (!el || !el.closest || !el.closest('#libpl-panel') || !openLibraryPanelId) return null;
+    if (!addablePlaylists().some(p => p.id === openLibraryPanelId)) return null;
+    if (dragFromLib && dragSrcPl === openLibraryPanelId) return null;
+    return openLibraryPanelId;
+  }
   document.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const art = e.target.closest && e.target.closest('#artworkWrap');
     if (art && !e.target.closest('button')){ art.draggable = true; return; }
-    const pick = e.target.closest && e.target.closest('#relinkCandidates .search-pick');
+    const pick = e.target.closest && e.target.closest('#relinkCandidates .search-pick, .as-row .search-pick');
     if (pick){ pick.draggable = true; return; }
     const row = rowOf(e.target);
     if (!row || e.target.closest('.handle, button')) return;
@@ -11863,6 +11871,17 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('text/plain', ct.title + ' - ' + ct.artist);
       setDragChip(e, ct.title, ct.artist, ct.art);
+      return;
+    }
+    // a result from the Add songs view drags as that exact source (#548)
+    const asPick = e.target.closest && e.target.closest('.as-row .search-pick');
+    if (asPick && asPick.draggable){
+      const c = addSongsResults[parseInt(asPick.dataset.i, 10)];
+      if (!c){ e.preventDefault(); return; }
+      dragTrack = addSongsCandidateToTrack(c); dragFromLib = false; dragSrcPl = null;
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', dragTrack.title);
+      setDragChip(e, dragTrack.title, dragTrack.artist, dragTrack.art);
       return;
     }
     // a link from the matching-links window drags as that song with that
@@ -11882,6 +11901,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     const row = rowOf(e.target);
     if (!row || !row.draggable) return;
     let t = null;
+    dragSrcPl = null;
     if (row.classList.contains('q-row')){
       const en = state.queue[parseInt(row.dataset.pos, 10)];
       const pl = en && playlistById(en.plId);
@@ -11889,6 +11909,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     } else {
       const pl = getCachedPlaylist(row.dataset.plId);
       t = pl && pl.tracks[parseInt(row.dataset.idx, 10)];
+      dragSrcPl = row.dataset.plId;
     }
     if (!t || !t.videoId){ e.preventDefault(); return; }
     dragTrack = t; dragFromLib = !row.classList.contains('q-row');
@@ -11901,6 +11922,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     if (!dragTrack) return;
     const card = cardOf(e.target);
     clearHi();
+    if (panelDropId(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; libplPanel.classList.add('is-drop-target'); return; }
     if (!okTarget(card)){
       // a song from outside the library dropped anywhere else in it asks which playlist
       if (!dragFromLib && inLibrary(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
@@ -11912,7 +11934,25 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   document.addEventListener('drop', (e) => {
     if (!dragTrack) return;
     const card = cardOf(e.target);
+    const panelId = panelDropId(e.target);
     clearHi();
+    if (panelId){
+      e.preventDefault();
+      const addViewOpen = !!$('asInput') && importOverlay.classList.contains('is-open');
+      if (relinkDrag) closeImportOverlay();
+      addTrackToPlaylistAsk(panelId, dragTrack, () => {
+        // the panel shows the new song; a duplicate prompt that replaced the Add songs view gives it back
+        if (openLibraryPanelId === panelId){
+          const sc = libplPanel.querySelector('.queue-scroll'), top = sc ? sc.scrollTop : 0;
+          reopenLibraryPanel(panelId);
+          if (sc) sc.scrollTop = top;
+        }
+        if (addViewOpen && !$('asInput')) openAddSongsView(panelId);
+        const ac = $('asCount'), np = getCachedPlaylist(panelId);
+        if (ac && np) ac.textContent = np.tracks.length + (np.tracks.length === 1 ? ' song' : ' songs');
+      });
+      return;
+    }
     if (!okTarget(card)){
       if (dragFromLib || !inLibrary(e.target)) return;
       e.preventDefault();
@@ -11928,7 +11968,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     if (openLibraryPanelId !== card.dataset.plId) toggleLibraryPlaylistPanel(card.dataset.plId);
   });
   document.addEventListener('dragend', () => {
-    dragTrack = null; dragFromLib = false; relinkDrag = false; clearHi();
+    dragTrack = null; dragFromLib = false; relinkDrag = false; dragSrcPl = null; clearHi();
     document.body.classList.remove('relink-dragging');
     document.querySelectorAll('.is-song-drag').forEach(r => r.classList.remove('is-song-drag'));
     document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable], .search-pick[draggable]').forEach(r => r.removeAttribute('draggable'));
@@ -12357,6 +12397,7 @@ async function resolveTracksFromLink(input, onProgress){
    before the first tap of this add session.
    ========================================================================= */
 let addSongsSnap = null;
+let addSongsResults = [];  // what the Add songs view lists now, so a result can be dragged out of it (#548)
 function addSongsCandidateToTrack(c){
   const sc = isSoundCloudVideoId(c.videoId);
   return { title: c.title || '', artist: c.channel || '', videoId: c.videoId, matchedTitle: c.title || '', channel: c.channel || '',
@@ -12432,6 +12473,7 @@ function openAddSongsView(plId){
   };
   const inPlaylist = (c) => curPl().tracks.some(t => t.videoId === c.videoId);
   function paintResults(){
+    addSongsResults = results;
     list.innerHTML = results.map((c, i) => {
       const label = SEARCH_SOURCE_LABEL[c.source] || c.source;
       const sub = [c.channel, c.duration ? formatTime(c.duration) : '', label].filter(Boolean).join(' · ');
