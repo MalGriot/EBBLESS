@@ -10,6 +10,10 @@ const APP_URL = process.env.EBBLESS_URL || 'https://malgriot.github.io/EBBLESS/'
 const APP_ORIGIN = new URL(APP_URL).origin;
 const MINI_NAME = 'ebbless-mini';
 
+// Google refuses sign-in from browsers that announce themselves as Electron
+// ("This browser or app may not be secure"), so identify as the Chrome it is.
+app.userAgentFallback = app.userAgentFallback.replace(/ Electron\/\S+/, '').replace(/ EBBLESS\/\S+/i, '');
+
 // Music keeps playing (and crossfades keep their timing) with the window hidden
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
@@ -46,7 +50,19 @@ function createMainWindow(){
         }
       };
     }
-    // anything else (help pages, Spotify links, sign-in pop-ups) opens in the browser
+    // Google sign-in pop-up stays in the app: it hands the sign-in back to
+    // this window (window.opener), which a browser tab can't do
+    if (/^https:\/\/accounts\.google\.com\//i.test(url)){
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 500, height: 640, parent: mainWin, title: 'Sign in',
+          autoHideMenuBar: true, backgroundColor: '#ffffff',
+          webPreferences: { contextIsolation: true, sandbox: true }
+        }
+      };
+    }
+    // anything else (help pages, Spotify links) opens in the browser
     if (/^https?:/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
