@@ -7542,6 +7542,21 @@ function upgradeArtUrl(url){
   }
   return url;
 }
+// #487: library cards are small, but got the same 640-1200px art as the
+// player - hundreds of full-size decodes ran the GPU out of memory in grid
+// view. Cards ask for each source's ~300px variant first (attachCardArt).
+function thumbArtUrl(url){
+  if (typeof url !== 'string') return url;
+  if (/^https:\/\/(i\.scdn\.co|image-cdn-[a-z]+\.spotifycdn\.com)\/image\/ab67616d0000b273/.test(url)) return url.replace('ab67616d0000b273', 'ab67616d00001e02');
+  if (/^https:\/\/[a-z0-9.-]*mzstatic\.com\//.test(url)) return url.replace(/\/(\d{2,4})x(\d{2,4})(bb|cc)?\.(jpg|jpeg|png|webp)$/i, (m, w, h, suf, ext) => (+w > 300 ? '/300x300' + (suf || 'bb') + '.' + ext : m));
+  if (/^https:\/\/[a-z0-9.-]*sndcdn\.com\//.test(url)) return url.replace(/-(t500x500|original|large)\./, '-t300x300.');
+  if (/^https:\/\/(img\.youtube\.com|i\.ytimg\.com)\/vi\//.test(url)) return url.replace(/\/(maxresdefault|sddefault)\.jpg$/, '/hqdefault.jpg');
+  return url;
+}
+function attachCardArt(img, track){
+  img.decoding = 'async';
+  attachArtworkFallback(img, track, true);
+}
 function artworkUrls(track){
   const chain = [];
   if (track && track.art){
@@ -7567,8 +7582,10 @@ function artworkUrls(track){
 // otherwise get stuck showing it. Checking the decoded size on load catches
 // that case too.
 const YT_PLACEHOLDER_SIZE = { w: 120, h: 90 };
-function attachArtworkFallback(img, track){
-  const chain = artworkUrls(track);
+function attachArtworkFallback(img, track, thumb){
+  let chain = artworkUrls(track);
+  // thumbnails first, the full-size chain behind them if a variant is missing
+  if (thumb) chain = Array.from(new Set(chain.map(thumbArtUrl).concat(chain)));
   if (!chain.length){ img.removeAttribute('src'); return; }
   let i = 0;
   img.onerror = function(){ i++; if (i < chain.length) img.src = chain[i]; else img.onerror = null; };
@@ -8738,7 +8755,7 @@ function renderLibrary(){
           row.className = 'track-row' + (t.videoId ? '' : ' is-missing');
           row.dataset.plId = id; row.dataset.idx = i;
           const img = document.createElement('img');
-          if (t.videoId || t.art) attachArtworkFallback(img, t);
+          if (t.videoId || t.art) attachCardArt(img, t);
           const meta = document.createElement('div'); meta.className = 'meta';
           const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
           const artist = document.createElement('div'); artist.className = 'artist';
@@ -8821,11 +8838,11 @@ function renderLibrary(){
       artDiv.classList.add('cycle');
       const coverFace = document.createElement('div');
       coverFace.className = 'face cover-face';
-      const cimg = document.createElement('img'); cimg.loading = 'eager'; attachArtworkFallback(cimg, { art: pl.image }); // eager: the tile opens on the custom art, so it must be painted at first frame
+      const cimg = document.createElement('img'); cimg.loading = 'eager'; attachCardArt(cimg, { art: pl.image }); // eager: the tile opens on the custom art, so it must be painted at first frame
       coverFace.appendChild(cimg);
       const gridFace = document.createElement('div');
       gridFace.className = 'face grid-face';
-      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
+      withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachCardArt(img, t); gridFace.appendChild(img); });
       artDiv.appendChild(coverFace); artDiv.appendChild(gridFace);
     } else if (pl.image){
       // A real source-provided cover (Spotify/SoundCloud/Apple) always wins
@@ -8839,7 +8856,7 @@ function renderLibrary(){
       // cover (see the branch below), just never a substitute for real art
       // once it's available.
       artDiv.classList.add('single');
-      const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, { art: pl.image });
+      const img = document.createElement('img'); img.loading = 'lazy'; attachCardArt(img, { art: pl.image });
       artDiv.appendChild(img);
     } else if (isAlbum || isPodcast){
       // An album with no source cover on file (e.g. a Spotify album
@@ -8849,15 +8866,15 @@ function renderLibrary(){
       // album art, so the first track's stands in for it. Same for a podcast
       // with no show artwork saved: its episodes carry the show's art.
       artDiv.classList.add('single');
-      const img = document.createElement('img'); img.loading = 'lazy'; attachArtworkFallback(img, pl.tracks.find(t => t.art) || withArt[0]);
+      const img = document.createElement('img'); img.loading = 'lazy'; attachCardArt(img, pl.tracks.find(t => t.art) || withArt[0]);
       artDiv.appendChild(img);
     } else {
       const gridFace = document.createElement('div');
       gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
       if (withArt.length === 1){
-        const img = document.createElement('img'); attachArtworkFallback(img, withArt[0]); gridFace.appendChild(img);
+        const img = document.createElement('img'); attachCardArt(img, withArt[0]); gridFace.appendChild(img);
       } else {
-        withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachArtworkFallback(img, t); gridFace.appendChild(img); });
+        withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachCardArt(img, t); gridFace.appendChild(img); });
       }
       if (withArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
