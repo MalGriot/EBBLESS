@@ -1117,19 +1117,21 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
    by vizControlsPlace) instead of sitting over the art's bottom corner */
 .visual-tabs > .viz-controls{right:auto;bottom:auto;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:5}
 .visual-tabs:has(.v-tab[data-mode="viz"].is-active) > .viz-controls{opacity:1;pointer-events:auto}
+/* #487: no backdrop-filter on these or .art-fs-btn - in fullscreen they float over
+   the drifting ambient, and re-blurring it every frame flickered/garbled on Mac */
 .viz-ctl-btn{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:rgba(10,10,10,.45);color:var(--faint);backdrop-filter:blur(6px);flex:none;
+  background:rgba(10,10,10,.6);color:var(--faint);flex:none;
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .viz-ctl-btn svg{width:15px;height:15px}
 .viz-ctl-btn.viz-auto-btn{font-size:16px;font-weight:700;line-height:1}
 .viz-ctl-btn.viz-speed-btn{width:auto;padding:0 9px;border-radius:15px;font-size:12px;font-weight:700;letter-spacing:.02em}
-.viz-ctl-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
+.viz-ctl-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
 .viz-ctl-btn.is-active{background:var(--player-accent);color:#151107}
 .art-fs-btn{position:absolute;top:10px;right:10px;z-index:6;width:32px;height:32px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.45);color:var(--faint);
-  backdrop-filter:blur(6px);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.6);color:var(--faint);
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .art-fs-btn svg{width:15px;height:15px}
-.art-fs-btn:hover{background:rgba(10,10,10,.65);color:var(--text)}
+.art-fs-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
 /* cast/AirPlay (cross-platform-handoff): an .art-fs-btn twin in the art's
    other top corner, only shown once a target exists (see castRenderUI) */
 .art-cast-btn{right:auto;left:10px}
@@ -27944,6 +27946,27 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
       if (!v.paused && hidden(v)) now.add('hidden video still playing: ' + name(v));
     });
     if (bigBlur.length > 2) now.add(bigBlur.length + ' large blurred layers animating at once: ' + bigBlur.join(', '));
+    // backdrop-filter over something that moves re-blurs every frame
+    var movers = [];
+    document.getAnimations().forEach(function(an){
+      var t = an.effect && an.effect.target;
+      if (!t || t.nodeType !== 1 || an.playState !== 'running' || an.effect.getTiming().iterations !== Infinity) return;
+      var r = t.getBoundingClientRect();
+      if (r.width * r.height > 100000 && !renderingHidden(t)) movers.push({el: t, r: r});
+    });
+    document.querySelectorAll('video').forEach(function(v){
+      if (!v.paused && !hidden(v)) movers.push({el: v, r: v.getBoundingClientRect()});
+    });
+    if (movers.length) document.querySelectorAll('body *').forEach(function(el){
+      var cs = getComputedStyle(el);
+      if (cs.backdropFilter === 'none' || !cs.backdropFilter || hidden(el)) return;
+      var r = el.getBoundingClientRect();
+      movers.forEach(function(m){
+        if (m.el.contains(el) || el.contains(m.el)) return;
+        if (r.right > m.r.left && r.left < m.r.right && r.bottom > m.r.top && r.top < m.r.bottom)
+          now.add('backdrop-filter on ' + name(el) + ' over moving ' + name(m.el));
+      });
+    });
     now.forEach(function(k){
       if (seenOnce.has(k) && !warned.has(k)) { warned.add(k); console.warn('[gpu-watchdog] ' + k + ' - see CLAUDE.md "GPU budget"'); }
     });

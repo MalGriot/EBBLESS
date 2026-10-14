@@ -93,6 +93,10 @@ Every visual change must follow these rules:
   long-running transitions; set them once, statically.
 - **`will-change` only on what is animating right now** (e.g. the
   `.is-active` layer), never on a whole set of layers, and never "just in case".
+- **No `backdrop-filter` over anything that moves.** A blurred-glass button or
+  panel above an animating layer (the drifting ambient, video, visualizer)
+  re-blurs every frame; in fullscreen this flickered and garbled controls on
+  Mac Chrome (#487). Use a solid/semi-opaque fill there instead.
 - **Large blurred/filtered layers are expensive.** A new full-screen blur,
   video, canvas, or backdrop effect needs a pause-when-hidden path in the same
   commit. Prefer reusing an existing layer over adding another.
@@ -101,5 +105,6 @@ Every visual change must follow these rules:
 
 On localhost the app runs a dev-only GPU watchdog that logs
 `[gpu-watchdog]` console warnings for hidden infinite animations, hidden
-playing videos, and too many large blurred layers at once. When verifying a
+playing videos, too many large blurred layers at once, and `backdrop-filter`
+over moving content. When verifying a
 visual change, check the console for these and fix any you introduced.
