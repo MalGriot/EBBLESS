@@ -2078,6 +2078,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 }
 #libpl-panel.is-artist-info .libpl-play,#libpl-panel.is-artist-info .libpl-art-play{display:none}
 .artist-info{padding:6px 14px 14px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.pod-host{padding:10px 14px 0;font-size:15px;font-weight:600;color:var(--text)}
 .artist-info .ai-bio{margin:0;font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-line;
   display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .artist-info .ai-bio.is-open{display:block}
@@ -7125,7 +7126,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // episodes etc.) - the show still loads; say why it starts elsewhere.
     // First import only, not the silent periodic refresh.
     if (pod.missingEpisode && !old) showToast('"' + pod.missingEpisode + '" isn\'t in the show\'s public feed (it may be subscriber-only). Playing the latest episode instead.');
-    const build = (extra) => Object.assign({ id: playlistId, type, name: show, image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, (() => { const o = getCachedPlaylist(playlistId); return o && o.sectionOverride ? { sectionOverride: o.sectionOverride, albumOverride: o.albumOverride } : {}; })(), extra || {});
+    const build = (extra) => Object.assign({ id: playlistId, type, name: show, author: pod.author || '', description: pod.description || '', image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, (() => { const o = getCachedPlaylist(playlistId); return o && o.sectionOverride ? { sectionOverride: o.sectionOverride, albumOverride: o.albumOverride } : {}; })(), extra || {});
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
     let fired = false;
     const fireFirst = () => {
@@ -9481,9 +9482,13 @@ function toggleLibraryPlaylistPanel(id){
       if (t.videoId || t.art) attachArtworkFallback(img, t);
       const meta = document.createElement('div'); meta.className = 'meta';
       const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
-      const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
-      // (#486) episode date, from the feed's pubDate (ms)
-      if (t.podcast && t.published) artist.textContent += ' · ' + new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const artist = document.createElement('div'); artist.className = 'artist';
+      if (t.podcast){
+        // (#486) episode date from the feed's pubDate (ms), then length, then listened state
+        const date = t.published ? new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const left = podProgressLabel((lsGet(LS_POD_PROGRESS, {}) || {})[t.videoId]);
+        artist.textContent = [date, t.duration ? formatTime(t.duration) : '', left].filter(Boolean).join(' · ');
+      } else artist.textContent = t.artist;
       meta.appendChild(title); meta.appendChild(artist);
       row.appendChild(img); row.appendChild(meta);
       const rowActions = document.createElement('div'); rowActions.className = 'row-actions';
@@ -9520,6 +9525,23 @@ function toggleLibraryPlaylistPanel(id){
     });
   }
   adoptedInto.forEach(persistPlaylistObj);
+  // a podcast's page: the host under the show thumb, with their info and links like an artist page,
+  // then the show's own blurb and website (prepends run bottom-up, so this is built in reverse)
+  if (isPodcastEntry(pl)){
+    const host = pl.author || ((pl.tracks.find(t => t && t.artist) || {}).artist || '');
+    const showLinks = pl.link ? [{ label: 'Website', url: pl.link }] : [];
+    if (pl.description || showLinks.length) libplBody.prepend(buildArtistInfoEl({ bio: pl.description || '', facts: [], links: showLinks }));
+    const hostSlot = document.createElement('div');
+    libplBody.prepend(hostSlot);
+    if (host && host !== pl.name){
+      const hostName = document.createElement('div'); hostName.className = 'pod-host'; hostName.textContent = host;
+      libplBody.prepend(hostName);
+      fetchArtistInfo(host, '').then((info) => {
+        if (openLibraryPanelId !== id || !hostSlot.isConnected) return;
+        if (info && (info.bio || info.facts.length || info.links.length)) hostSlot.appendChild(buildArtistInfoEl(info));
+      }, () => {});
+    }
+  }
   // an artist's own page also gets their bio, facts and links on top (#298)
   if (isArtistEntry(pl)){
     const mine = artistAlbumIds.slice();
@@ -24820,6 +24842,25 @@ document.addEventListener('click', (e) => {
 // after release they hold the dropped spot (seekHold) until the deck reports
 // a time near it, so the 250ms poll can't snap them back to the old position.
 let seekDrag = null, seekHold = null;
+// Per-episode listening position, so episode rows can say "played" or "X left".
+// { [videoId]: { pos, dur } }, saved at most every 5s while an episode plays.
+const LS_POD_PROGRESS = 'ebbless:podProgress';
+let podProgressAt = 0;
+function notePodProgress(cur, dur){
+  const t = currentTrack();
+  if (!t || !t.videoId || !isPodcastTrack(t) || !(cur > 0) || !(dur > 0)) return;
+  if (Date.now() - podProgressAt < 5000) return;
+  podProgressAt = Date.now();
+  const map = lsGet(LS_POD_PROGRESS, {}) || {};
+  map[t.videoId] = { pos: Math.round(cur), dur: Math.round(dur) };
+  lsSet(LS_POD_PROGRESS, map);
+}
+// "Played" when nearly finished, "12:30 left" when partway, '' when never started
+function podProgressLabel(p){
+  if (!p || !(p.pos > 5)) return '';
+  if (p.dur && p.pos >= p.dur - 15) return 'Played';
+  return (p.dur ? formatTime(Math.max(0, p.dur - p.pos)) : formatTime(p.pos)) + (p.dur ? ' left' : ' in');
+}
 function paintSeekUI(cur, dur){
   if (seekDrag) cur = seekDrag.pct * dur;
   else if (seekHold){
@@ -24831,6 +24872,7 @@ function paintSeekUI(cur, dur){
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   if (!seekTrack.classList.contains('ad-fill')){ seekFill.style.width = pct + '%'; flowSeekFill.style.width = pct + '%'; miniLineFill.style.width = pct + '%'; }
   seekKnob.style.left = pct + '%'; flowSeekKnob.style.left = pct + '%';
+  if (!seekDrag) notePodProgress(cur, dur);
   timeCur.textContent = formatTime(cur); timeDur.textContent = formatTime(dur);
   flowTimeCur.textContent = formatTime(cur); flowTimeDur.textContent = formatTime(dur);
 }

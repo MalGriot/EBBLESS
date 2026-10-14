@@ -1054,6 +1054,8 @@ function parsePodcastFeed(xml) {
   const image = xmlAttr(chanHead, 'itunes:image', 'href') || (imgBlock ? xmlTag(imgBlock[0], 'url') : '') || null;
   const link = xmlTag(chanHead, 'link');
   const language = xmlTag(chanHead, 'language').toLowerCase();
+  // the show's own blurb, as plain text (feeds wrap it in HTML)
+  const description = (xmlTag(chanHead, 'itunes:summary') || xmlTag(chanHead, 'description')).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500);
   const episodes = [];
   const itemRe = /<item[\s>][\s\S]*?<\/item>/gi;
   let m;
@@ -1075,7 +1077,7 @@ function parsePodcastFeed(xml) {
   }
   // feeds are nearly always newest-first already; make sure
   if (episodes.some(e => e.published)) episodes.sort((a, b) => b.published - a.published);
-  return { name, author, image, link, language, episodes };
+  return { name, author, image, link, language, description, episodes };
 }
 // Best directory hit for a show name: exact title match first, then a
 // contains-match, with a matching author as a tiebreak. null if nothing
@@ -1554,7 +1556,7 @@ async function handlePodcast(url, ctx) {
   // The linked episode isn't in the public feed (subscriber-only/premium
   // episodes, or since removed) - still return the show, and say so.
   const missingEpisode = focus === -1 && episodeTitle ? episodeTitle : undefined;
-  const payload = { name: feed.name || 'Podcast', author: feed.author || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, language: feed.language || '', episodes: feed.episodes, focus, missingEpisode };
+  const payload = { name: feed.name || 'Podcast', author: feed.author || '', description: feed.description || '', image: feed.image || null, link: link || feed.link || feedUrl, feedUrl, language: feed.language || '', episodes: feed.episodes, focus, missingEpisode };
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
