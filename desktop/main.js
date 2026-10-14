@@ -5,10 +5,18 @@
 // (Space) and over full-screen apps - which Chrome's Picture-in-Picture can't.
 const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const path = require('path');
+const crypto = require('crypto');
 
 const APP_URL = process.env.EBBLESS_URL || 'https://malgriot.github.io/EBBLESS/';
 const APP_ORIGIN = new URL(APP_URL).origin;
 const MINI_NAME = 'ebbless-mini';
+// Google blocks sign-in inside desktop apps, whatever they call themselves, so
+// sign-in happens in the real browser (desktop/signin.html) and comes back on
+// an ebbless:// link carrying a one-time state this app handed out.
+const SIGNIN_URL = new URL('desktop/signin.html', APP_URL).href;
+const SIGNIN_TTL_MS = 10 * 60 * 1000;
+let pendingSignin = null; // { state, at }
+app.setAsDefaultProtocolClient('ebbless');
 
 // Google refuses sign-in from browsers that announce themselves as Electron
 // ("This browser or app may not be secure"), so identify as the Chrome it is.
@@ -50,17 +58,11 @@ function createMainWindow(){
         }
       };
     }
-    // Google sign-in pop-up stays in the app: it hands the sign-in back to
-    // this window (window.opener), which a browser tab can't do
+    // Google's sign-in pop-up: do it in the browser instead (see SIGNIN_URL)
     if (/^https:\/\/accounts\.google\.com\//i.test(url)){
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          width: 500, height: 640, parent: mainWin, title: 'Sign in',
-          autoHideMenuBar: true, backgroundColor: '#ffffff',
-          webPreferences: { contextIsolation: true, sandbox: true }
-        }
-      };
+      pendingSignin = { state: crypto.randomBytes(16).toString('hex'), at: Date.now() };
+      shell.openExternal(SIGNIN_URL + '?state=' + pendingSignin.state);
+      return { action: 'deny' };
     }
     // anything else (help pages, Spotify links) opens in the browser
     if (/^https?:/i.test(url)) shell.openExternal(url);
@@ -90,6 +92,22 @@ function createMainWindow(){
 
   mainWin.loadURL(APP_URL);
 }
+
+// ebbless://signin#state=..&credential=.. from desktop/signin.html
+function handleDeepLink(link){
+  let u;
+  try { u = new URL(link); } catch(e){ return; }
+  if (u.protocol !== 'ebbless:' || u.hostname !== 'signin' || !mainWin) return;
+  const q = new URLSearchParams(u.hash.slice(1));
+  const ok = !!pendingSignin && q.get('state') === pendingSignin.state && Date.now() - pendingSignin.at < SIGNIN_TTL_MS;
+  if (!ok) return; // not the sign-in this app started: ignore it, keep waiting for the real one
+  pendingSignin = null; // one use
+  const credential = q.get('credential') || '';
+  if (mainWin.isMinimized()) mainWin.restore();
+  mainWin.show(); mainWin.focus();
+  if (credential.split('.').length === 3) mainWin.webContents.send('ebbless:signin', credential);
+}
+app.on('open-url', (e, link) => { e.preventDefault(); handleDeepLink(link); });
 
 ipcMain.on('ebbless:focus-main', () => {
   if (!mainWin) return;

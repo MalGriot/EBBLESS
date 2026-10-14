@@ -1,7 +1,7 @@
 {
   "name": "ebbless-desktop",
   "productName": "EBBLESS",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "EBBLESS for Mac: the web app in its own window, with a mini player that floats over every app and desktop.",
   "main": "main.js",
   "private": true,
@@ -37,7 +37,15 @@
     },
     "directories": {
       "output": "dist"
-    }
+    },
+    "protocols": [
+      {
+        "name": "EBBLESS",
+        "schemes": [
+          "ebbless"
+        ]
+      }
+    ]
   },
   "allowScripts": {
     "electron@33.2.1": true,

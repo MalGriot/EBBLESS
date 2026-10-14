@@ -23262,6 +23262,10 @@ function wireMiniDesktop(win){
 }
 // Closing or minimizing the Mac app's window floats the mini player
 if (isDesktopApp) window.ebblessDesktop.onAway(() => { if (currentTrack()) openMiniPlayer(); });
+// Mac app sign-in comes back from the browser (desktop/signin.html) as a Google credential
+if (isDesktopApp && window.ebblessDesktop.onSignin) window.ebblessDesktop.onSignin((cred) => {
+  if (typeof cred === 'string' && cred.split('.').length === 3) handleGoogleCredential({ credential: cred });
+});
 function miniPlayerSupported(){ return isDesktopApp || 'documentPictureInPicture' in window; }
 function miniPlayerPrefs(){
   const p = lsGet(LS_MINI_PLAYER, null) || {};

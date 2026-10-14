@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sign in to EBBLESS</title>
+<link rel="icon" href="../brand/assets/icons/favicon-32.png">
+<style>
+  :root{--bg:#121212;--panel:#1c1c1c;--text:#f2f2f2;--faint:#9a9a9a;--accent:#e0b26a;--border:rgba(255,255,255,.12)}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  main{width:min(380px,100%);padding:32px 28px;border-radius:16px;background:var(--panel);border:1px solid var(--border);text-align:center}
+  img.mark{width:48px;height:48px;margin-bottom:14px}
+  h1{font-size:20px;margin:0 0 8px}
+  p{font-size:14px;line-height:1.45;color:var(--faint);margin:0 0 20px}
+  #gbtn{display:flex;justify-content:center;min-height:44px}
+  a.open{display:inline-block;margin-top:6px;padding:10px 20px;border-radius:999px;background:var(--accent);color:#121212;font-weight:600;text-decoration:none}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <img class="mark" src="../brand/assets/mark.png" alt="">
+  <h1 id="title">Sign in to EBBLESS</h1>
+  <p id="msg">Sign in with Google here, and you'll be sent back to the EBBLESS app.</p>
+  <div id="gbtn"></div>
+  <a class="open" id="openApp" href="#" hidden>Open EBBLESS</a>
+</main>
+<script>
+// EBBLESS for Mac sign-in (desktop/main.js). Google blocks sign-in inside
+// desktop apps, so the app opens this page in the real browser with a
+// one-time ?state; the Google credential goes back to the app through the
+// ebbless:// link, and the app only accepts it with the state it handed out.
+(function(){
+  var CLIENT_ID = '1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com';
+  var state = new URLSearchParams(location.search).get('state') || '';
+  var title = document.getElementById('title'), msg = document.getElementById('msg'), open = document.getElementById('openApp');
+  if (!/^[0-9a-f]{32}$/.test(state)){
+    title.textContent = 'Start from the app';
+    msg.textContent = 'Open EBBLESS on your Mac and tap Sign in with Google there.';
+    return;
+  }
+  function onCredential(r){
+    if (!r || !r.credential) return;
+    var link = 'ebbless://signin#state=' + state + '&credential=' + encodeURIComponent(r.credential);
+    document.getElementById('gbtn').hidden = true;
+    title.textContent = "You're signed in";
+    msg.textContent = 'Head back to EBBLESS. If it didn’t open by itself, tap the button.';
+    open.href = link; open.hidden = false;
+    location.href = link;
+  }
+  var s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+  s.onload = function(){
+    google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential, auto_select: false });
+    google.accounts.id.renderButton(document.getElementById('gbtn'), { type: 'standard', theme: 'filled_black', size: 'large', shape: 'pill', text: 'signin_with' });
+  };
+  s.onerror = function(){ msg.textContent = "Couldn't reach Google. Check your connection and reload."; };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>
