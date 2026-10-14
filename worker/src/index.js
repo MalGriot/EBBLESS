@@ -2256,7 +2256,7 @@ async function getLrclibMatch(title, artist, duration) {
 // cached answer, and MusicBrainz gets a proper User-Agent (browsers can't
 // set one). Hits cache for a month, misses for a day.
 const MB_API = 'https://musicbrainz.org/ws/2/';
-const ARTIST_INFO_CACHE_VERSION = 'v1';
+const ARTIST_INFO_CACHE_VERSION = 'v2';
 const ARTIST_INFO_HIT_TTL = 30 * 86400;
 const ARTIST_INFO_MISS_TTL = 86400;
 function aiNameKey(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
@@ -2313,7 +2313,7 @@ function aiLink(rel) {
   return null;
 }
 const AI_LINK_ORDER = ['Website', 'Instagram', 'X', 'TikTok', 'Facebook', 'Threads', 'Bluesky', 'Spotify', 'Apple Music', 'YouTube', 'SoundCloud', 'Bandcamp', 'Tour dates'];
-async function buildArtistInfo(name, title) {
+async function buildArtistInfoMb(name, title) {
   const ck = aiNameKey(name);
   let mbid = await aiFindMbId(name, title);
   const primary = aiPrimaryName(name);
@@ -2371,6 +2371,42 @@ async function buildArtistInfo(name, title) {
     }
   } catch (e) { /* MusicBrainz facts and links still show on their own */ }
   return info;
+}
+// #497: many artists have no Wikidata/Wikipedia link on MusicBrainz (or no
+// MusicBrainz entry at all), so they showed albums but no bio or photo.
+// Fallbacks, only when the main chain came up empty: a Wikipedia search whose
+// top hit is clearly this musician, and Deezer's artist photo.
+const AI_MUSIC_WORDS = /\b(singer|rapper|musician|band|duo|group|producer|DJ|songwriter|vocalist|composer|guitarist|pianist|drummer|bassist|record|hip[- ]hop|R&B|electronic|artist)\b/i;
+async function aiWikipediaFallback(name, info) {
+  const q = await aiJson('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&list=search&srlimit=3&srsearch=' + encodeURIComponent(aiQuoted(name) + ' musician OR band OR singer OR rapper OR DJ'));
+  const key = aiNameKey(name);
+  const hit = ((q.query && q.query.search) || []).find(r => {
+    const t = aiNameKey(String(r.title).replace(/\s*\([^)]*\)\s*$/, ''));
+    return t === key && AI_MUSIC_WORDS.test(r.snippet.replace(/<[^>]+>/g, '') + ' ' + r.title);
+  });
+  if (!hit) return;
+  const wp = await aiJson('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=extracts|pageimages&exintro=1&explaintext=1&piprop=thumbnail&pithumbsize=500&titles=' + encodeURIComponent(hit.title));
+  const page = Object.values((wp.query && wp.query.pages) || {})[0];
+  if (page && page.extract && AI_MUSIC_WORDS.test(page.extract.slice(0, 400))) {
+    info.bio = page.extract.trim().replace(/\n{2,}/g, '\n').replace(/\(\s*[;,]?\s*/g, '(').replace(/\s*\(\)/g, '');
+    info.wikiUrl = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(page.title.replace(/ /g, '_'));
+    if (!info.image && page.thumbnail) info.image = page.thumbnail.source;
+  }
+}
+async function aiDeezerImage(name) {
+  const d = await aiJson('https://api.deezer.com/search/artist?limit=5&q=' + encodeURIComponent(name));
+  const key = aiNameKey(name);
+  const hit = (d.data || []).find(a => aiNameKey(a.name) === key && a.picture_xl && !/\/artist\/\/|\/images\/artist\/\//.test(a.picture_xl));
+  return hit ? hit.picture_xl.replace('1000x1000', '500x500') : '';
+}
+async function buildArtistInfo(name, title) {
+  let info = null;
+  try { info = await buildArtistInfoMb(name, title); } catch (e) { /* fall back below; rethrown only if nothing else answers */ var mbErr = e; }
+  const base = info || { name: aiPrimaryName(name) || name, mbUrl: '', facts: [], links: [], bio: '', wikiUrl: '', image: '', usedWikidata: false };
+  if (!base.bio) { try { await aiWikipediaFallback(aiPrimaryName(name) || name, base); } catch (e) { /* optional */ } }
+  if (!base.image) { try { base.image = await aiDeezerImage(aiPrimaryName(name) || name); } catch (e) { /* optional */ } }
+  if (!info && !base.bio && !base.image) { if (mbErr) throw mbErr; return null; }
+  return base;
 }
 async function handleArtistInfo(url, ctx) {
   const name = (url.searchParams.get('name') || '').trim().slice(0, 200);

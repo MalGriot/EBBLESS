@@ -73,6 +73,11 @@ function createMainWindow(){
     if (frameName !== MINI_NAME) return;
     child.setAlwaysOnTop(true, 'floating');
     child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    // #511: macOS keeps the old frame's opaque corners on a transparent window
+    // after a resize (Card -> Disc/Pill); clear them each time the size changes
+    const clearCorners = () => { try { child.setBackgroundColor('#00000000'); child.invalidateShadow(); } catch(e){} };
+    child.on('resize', clearCorners);
+    child.on('resized', clearCorners);
   });
 
   // links that leave the app go to the browser instead of replacing it
@@ -89,6 +94,9 @@ function createMainWindow(){
     mainWin.webContents.send('ebbless:away');
   });
   mainWin.on('minimize', () => mainWin.webContents.send('ebbless:away'));
+  // #509: the full window is back, so the mini player goes away
+  mainWin.on('show', () => mainWin.webContents.send('ebbless:back'));
+  mainWin.on('restore', () => mainWin.webContents.send('ebbless:back'));
 
   mainWin.loadURL(APP_URL);
 }

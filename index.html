@@ -9821,11 +9821,11 @@ function buildArtistInfoEl(info){
   const src = document.createElement('div'); src.className = 'ai-source';
   src.append('From ');
   const srcLink = (label, url) => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = label; return a; };
-  const parts = [srcLink('MusicBrainz', info.mbUrl)];
+  const parts = info.mbUrl ? [srcLink('MusicBrainz', info.mbUrl)] : [];
   if (info.usedWikidata) parts.push(document.createTextNode('Wikidata'));
   if (info.wikiUrl) parts.push(srcLink('Wikipedia', info.wikiUrl));
   parts.forEach((n, i) => { if (i) src.append(i === parts.length - 1 ? ' and ' : ', '); src.append(n); });
-  box.appendChild(src);
+  if (parts.length) box.appendChild(src);
   return box;
 }
 // fills the open panel's top with the artist's info; `standalone` is the
@@ -9894,7 +9894,7 @@ function loadArtistInfoInto(panelId, name, title, standalone){
     const has = info && (info.bio || info.facts.length || info.links.length);
     if (has) libplBody.prepend(buildArtistInfoEl(info));
     if (standalone){
-      if (!has) libplBody.innerHTML = '<div class="empty-lib">No verified info found for this artist yet.</div>';
+      if (!has && !(info && info.image)) libplBody.insertAdjacentHTML('afterbegin', '<div class="empty-lib">No verified info found for this artist yet.</div>');
       if (info && info.name) libplTitle.textContent = info.name;
       if (info && info.image){ attachArtworkFallback(libplArt, { art: info.image }); libplArtWrap.hidden = false; }
       // artist isn't in the library: offer to add their profile, using the
@@ -10504,7 +10504,9 @@ function openRenamePlaylistFlow(id, pl){
 // songs: the tile fades between the cover and the 2x2 song collage (#384).
 function canToggleThumbArt(pl){
   return !!pl && !!pl.image && !isAlbumEntry(pl) && !isPodcastEntry(pl) && !isArtistEntry(pl) &&
-    Array.isArray(pl.tracks) && pl.tracks.filter(t => t.videoId).length > 1;
+    Array.isArray(pl.tracks) && pl.tracks.filter(t => t.videoId).length > 1 &&
+    // #496: a list of only podcast episodes (e.g. a copied show, saved as custom) stays 1x1
+    !pl.tracks.every(t => t && (t.podcast === true || isAudioVideoId(t.videoId)));
 }
 
 function openChangeArtFlow(id, pl){
@@ -12492,6 +12494,9 @@ function stageSearchResults(results, query, seq){
     btn.addEventListener('click', () => {
       const r = results[parseInt(btn.dataset.i, 10)];
       if (!r) return;
+      // An artist pick opens the same artist window as tapping the name in
+      // the player (#504), not an import that can fail offline-looking (#505).
+      if (r.isArtist){ closeImportOverlay(); openArtistPage(r.name); return; }
       // Same {source,type,id[,storefront]} shape parseImportLink() produces
       // for a pasted link - runs through the exact same resolve pipeline,
       // no new import logic for a search-picked candidate.
@@ -23292,6 +23297,8 @@ function wireMiniDesktop(win){
 }
 // Closing or minimizing the Mac app's window floats the mini player
 if (isDesktopApp) window.ebblessDesktop.onAway(() => { if (currentTrack()) openMiniPlayer(); });
+// #509: the full player is open again, so the mini player closes
+if (isDesktopApp && window.ebblessDesktop.onBack) window.ebblessDesktop.onBack(() => { if (miniPlayerWin && !miniPlayerWin.closed) try { miniPlayerWin.close(); } catch(_){} });
 // Mac app sign-in comes back from the browser (desktop/signin.html) as a Google credential
 if (isDesktopApp && window.ebblessDesktop.onSignin) window.ebblessDesktop.onSignin((cred) => {
   if (typeof cred === 'string' && cred.split('.').length === 3) handleGoogleCredential({ credential: cred });

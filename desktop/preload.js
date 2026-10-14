@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('ebblessDesktop', {
   focusMain: () => ipcRenderer.send('ebbless:focus-main'),
   // the main window was closed or minimized: the page floats the mini player
   onAway: (fn) => ipcRenderer.on('ebbless:away', () => fn()),
+  // the main window is back on screen: the page closes the mini player
+  onBack: (fn) => ipcRenderer.on('ebbless:back', () => fn()),
   // a Google credential from the browser sign-in (desktop/signin.html)
   onSignin: (fn) => ipcRenderer.on('ebbless:signin', (e, credential) => fn(credential))
 });
