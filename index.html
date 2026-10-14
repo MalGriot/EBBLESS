@@ -1225,6 +1225,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .ads-report-btn:hover{background:var(--panel-3);color:var(--text)}
 .ads-report-btn:disabled{opacity:.5;cursor:default}
 .ads-report-btn[hidden]{display:none}
+.ads-report-btn.is-ad{color:var(--text);border-color:var(--text)}
 body.split-desktop .ads-report-btn{margin-bottom:20px}
 .player-like-btn{flex:none;width:22px;height:22px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;color:var(--faint-2);
@@ -14529,11 +14530,13 @@ function ytPanelSync(){
   const open = ytPanelOpen();
   const deck = activeDeck(), t = trackAt(state.queuePos);
   const el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
-  const show = open && !!el && el.tagName === 'IFRAME';
+  // #523: an ad held silent isn't shown either - the card says what's happening instead
+  const adTxt = open ? adWaitText() : '';
+  const show = open && !!el && el.tagName === 'IFRAME' && !adTxt;
   Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
   ytHost.classList.toggle('is-shown', show);
   ytSlotNote.hidden = show || !open;
-  if (open && !show) ytSlotNote.textContent = 'Loading the video\u2026';
+  if (open && !show) ytSlotNote.textContent = adTxt || 'Loading the video\u2026';
   if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
   const r = ytSlot.getBoundingClientRect();
   ytHost.style.left = r.left + 'px';
@@ -18357,6 +18360,7 @@ function resetDeck(deck){
   deck.adIgnore = null;
   deck.adClock = null;
   deck.adDodge = null;
+  deck.adSeen = '';
   deck.resumeSeeked = false;
   deck.pos = -1;
   deck.pendingVideoId = null;
@@ -24604,7 +24608,11 @@ function guardActiveDeckAd(){
   const reason = deckAdReason(ad, false);
   if (reason){
     if (!ad.adMutedAt){ ad.adMutedAt = Date.now(); adLog(ad, 'mute', reason); }
-    if (Date.now() - ad.adMutedAt < AD_MUTE_MAX_MS){ ad.player.mute(); ad.adHeld = reason; return true; }
+    if (Date.now() - ad.adMutedAt < AD_MUTE_MAX_MS){
+      ad.player.mute(); ad.adHeld = reason;
+      if (Date.now() - ad.adMutedAt >= AD_SKIP_AFTER_MS) skipHeldAd(ad, reason);
+      return true;
+    }
     // Gave up: the signal that held it this long is probably a false alarm
     // for this track (e.g. a bad duration from search). Stop trusting just
     // that one until the next track; the others stay armed, so a later
@@ -24628,27 +24636,88 @@ function guardActiveDeckAd(){
 //    soon as its ad clears (returnFromAdDodge), and the fill-in moves back
 //    behind it to play in full afterwards.
 const AD_DODGE_AFTER_MS = 8000;
+// The queue place the standby deck can take over from an ad-held active
+// deck right now (its preloaded, already-confirmed next track), or -1.
+// #523: the YouTube card no longer blocks this - it follows the active deck,
+// so it just moves on to the next song's video.
+function adDodgeTarget(ad, nd){
+  if (swapInProgress || routeLocked() || state.repeat === 'one') return -1;
+  // iPhone (#286): handing off to a standby player no tap has started stalls
+  if (iosColdDeck(nd)) return -1;
+  const p = state.queuePos, n = p + 1;
+  const ta = trackAt(p), tb = trackAt(n);
+  if (!ta || !tb || ta.videoId !== ad.videoId) return -1;
+  if (nd.pos !== n || !nd.player || !nd.ready || !nd.confirmed || nd.videoId !== tb.videoId) return -1;
+  return n;
+}
 function maybeDodgeAd(){
   const ad = activeDeck(), nd = standbyDeck();
   if (ad.kind !== 'yt' || ad.confirmed || !ad.muteStartTs || ad.adDodge) return;
-  if (swapInProgress || routeLocked() || state.repeat === 'one' || ytPanelOpen()) return;
-  // iPhone (#286): handing off to a standby player no tap has started stalls
-  if (iosColdDeck(nd)) return;
-  if (Date.now() - ad.muteStartTs < AD_DODGE_AFTER_MS) return;
-  const p = state.queuePos, n = p + 1;
-  const ta = trackAt(p), tb = trackAt(n);
-  if (!ta || !tb || ta.videoId !== ad.videoId) return;
-  if (nd.pos !== n || !nd.player || !nd.ready || !nd.confirmed || nd.videoId !== tb.videoId) return;
+  const elapsed = Date.now() - ad.muteStartTs;
+  if (elapsed < UNMUTE_DELAY_MS) return;
   // 'no-duration' / 'not-moving' alone is just a slow load, not proof of an ad
-  const reason = deckAdReason(ad, true);
-  if (!reason || reason === 'no-duration' || reason === 'not-moving') return;
+  const r = deckAdReason(ad, true);
+  ad.adSeen = r && r !== 'no-duration' && r !== 'not-moving' ? r : '';
+  if (elapsed < AD_DODGE_AFTER_MS || !ad.adSeen) return;
+  const p = state.queuePos, n = adDodgeTarget(ad, nd);
+  if (n < 0) return;
   const q = state.queue;
   [q[p], q[n]] = [q[n], q[p]];
   ad.adDodge = trackStartAuto ? 'swap' : 'return';
   ad.pos = n;
-  adLog(ad, 'dodge', ad.adDodge + ' ' + reason);
+  adLog(ad, 'dodge', ad.adDodge + ' ' + ad.adSeen);
   promoteDeckDirect(nd, p, true, true);
   renderQueuePanel();
+}
+// #523: an ad inside an already-playing song (mid-roll, or a pre-roll that
+// outlasted the load wait) used to be held silent for up to AD_MUTE_MAX_MS.
+// After AD_SKIP_AFTER_MS the next song takes over instead, the same way as
+// the pre-roll dodge: the held song waits out its ad muted on the other deck
+// and plays right after, from the top (rewindPromotedDeck). Once per video,
+// so a false alarm (e.g. a bad duration from search) can't keep bouncing a
+// real song - the second time it is just held, as before.
+const AD_SKIP_AFTER_MS = 10000;
+const adSkippedVids = new Set();
+function skipHeldAd(ad, reason){
+  const nd = standbyDeck(), n = adDodgeTarget(ad, nd);
+  if (ad.kind !== 'yt' || n < 0 || adSkippedVids.has(ad.videoId)) return;
+  adSkippedVids.add(ad.videoId);
+  const p = state.queuePos, q = state.queue;
+  [q[p], q[n]] = [q[n], q[p]];
+  if (ad.unmuteTimer) clearTimeout(ad.unmuteTimer);
+  ad.confirmed = false;
+  ad.adMutedAt = 0;
+  ad.muteStartTs = Date.now();
+  ad.adDodge = 'swap';
+  ad.pos = n;
+  adLog(ad, 'dodge', 'swap held ' + reason);
+  promoteDeckDirect(nd, p, true, true);
+  // checkDeckReady waits the ad out (up to AD_MUTE_MAX_MS for a dodged deck),
+  // then onDeckConfirmed parks it paused for its turn
+  ad.unmuteTimer = setTimeout(() => checkDeckReady(ad), UNMUTE_RECHECK_MS);
+  renderQueuePanel();
+}
+// #523: what the listener is told while an ad is held silent ('' if none),
+// on the player (paintAdStatus) and over the YouTube card (ytPanelSync), so
+// the silence never goes unexplained.
+function adWaitText(){
+  const ad = activeDeck();
+  if (!ad || ad.kind !== 'yt' || ad.adDodge) return '';
+  let since, after;
+  if (!ad.confirmed && ad.muteStartTs && ad.adSeen){ since = ad.muteStartTs; after = AD_DODGE_AFTER_MS; }
+  else if (ad.confirmed && ad.adMutedAt > 0){ since = ad.adMutedAt; after = AD_SKIP_AFTER_MS; }
+  else return '';
+  const canSkip = adDodgeTarget(ad, standbyDeck()) >= 0 && !(ad.confirmed && adSkippedVids.has(ad.videoId));
+  const left = Math.ceil((since + after - Date.now()) / 1000);
+  return canSkip && left > 0 ? 'Ad playing. Skipping in ' + left + 's' : 'Ad playing. Your song starts right after';
+}
+let adStatusShown = '';
+function paintAdStatus(){
+  const txt = adWaitText();
+  if (txt === adStatusShown) return;
+  adStatusShown = txt;
+  adsReportBtn.textContent = txt || 'Ads playing?';
+  adsReportBtn.classList.toggle('is-ad', !!txt);
 }
 function returnFromAdDodge(deck){
   deck.adDodge = null;
@@ -24902,6 +24971,7 @@ function updateSeekUI(){
   updateAdLoadingIcon();
   maybeDodgeAd();
   iosLockedStallCheck();
+  paintAdStatus();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
   const held = guardActiveDeckAd();
