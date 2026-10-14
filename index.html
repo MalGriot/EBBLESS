@@ -4633,7 +4633,13 @@ setTimeout(() => {
   const splashBox = document.getElementById('splash');
   const splashVid = splashBox && splashBox.querySelector('video.splash-video');
   if (splashVid){
-    const syncSplash = () => splashBox.classList.contains('is-hidden') ? splashVid.pause() : resume(splashVid);
+    // pause only after the 420ms fade-out, or the splash flashes to its flat tint
+    let splashPauseT = 0;
+    const syncSplash = () => {
+      clearTimeout(splashPauseT);
+      if (!splashBox.classList.contains('is-hidden')) { resume(splashVid); return; }
+      splashPauseT = setTimeout(() => { if (splashBox.classList.contains('is-hidden')) splashVid.pause(); }, 600);
+    };
     new MutationObserver(syncSplash).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
     syncSplash();
   }
