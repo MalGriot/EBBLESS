@@ -2,7 +2,7 @@
 // Sheet (fetch), PROFILES KV, cache and Google token check are stubbed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handleBeta, signupPlaylistFields } from '../src/beta.js';
+import { handleBeta, signupPlaylistFields, signupMusicFields } from '../src/beta.js';
 
 const TOKEN = 't0123456789ab-' + '0'.repeat(32);
 
@@ -52,4 +52,11 @@ test('/beta/claim with playlist:true returns it; without, not', async () => {
   assert.equal((await (await t.post('/beta/claim', { idToken: 'x', playlist: true })).json()).playlist, 'https://youtu.be/xyz');
   t = setup('https://youtu.be/xyz');
   assert.equal('playlist' in (await (await t.post('/beta/claim', { idToken: 'x' })).json()), false);
+});
+
+test('signupMusicFields: only when asked, plain text, capped', () => {
+  assert.deepEqual(signupMusicFields({ signup_music: 'funk, Anderson .Paak' }, true), { music: 'funk, Anderson .Paak' });
+  assert.deepEqual(signupMusicFields({ signup_music: 'funk' }, undefined), {});
+  assert.deepEqual(signupMusicFields({ signup_music: '' }, true), {});
+  assert.equal(signupMusicFields({ signup_music: 'x'.repeat(900) }, true).music.length, 500);
 });
