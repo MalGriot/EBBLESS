@@ -10392,3 +10392,11 @@ Add entries in this shape:
 - **Touches:**
 - **Branch:** 
 - **Notes:** Synced from Geethub #486. 
+
+### ad-autoskip-523: Ads play for minutes with no indication; the app should skip them (Geethub #523)
+- **Status:** merged
+- **Priority:** high
+- **Description:** Bug, Geethub #523. Ads were held silent for up to 2 minutes (seen in video mode) with nothing on screen saying why.
+- **Touches:** `maybeDodgeAd`, `guardActiveDeckAd`, `skipHeldAd`, `adWaitText`, `ytPanelSync` (#ytAdCover), repeat-one (`maybeLoopOne`, `maybeStartCrossfade`).
+- **Branch:** agent/ad-experience-523 (merged), then main
+- **Notes:** Shipped 2026-10-15, cache v236-v237. The dodge also works with the YouTube card open. An ad held inside a song for 10s hands off to the next song; the held one plays next, from the top (once per video). "Ads playing?" turns into an "Ad playing. Skipping in Xs" countdown. A cover hides held ads in the card and in F fullscreen. Repeat-one restarts in place or crossfades into its preloaded copy instead of reloading. Verified in the local preview with faked ads; real F fullscreen and iPhone not yet checked. The real adblock (Mac app, #524) is parked.
