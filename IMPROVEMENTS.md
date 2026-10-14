@@ -127,11 +127,11 @@ Add entries in this shape:
 -->
 
 ### artist-window-song-add-button: Songs in the artist window get an add-to-playlist/library icon button (Geethub #485)
-- **Status:** review
+- **Status:** in review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #485. In the artist window, each song row should have the add-to-playlist/library icon button.
 - **Touches:** artist window song rows.
-- **Branch:**
+- **Branch:** agent/artist-window-albums-add
 - **Notes:** Synced from Geethub #485. Same window as artist-window-album-list (#482); do together.
 
 ### custom-cursor: Custom EBBLESS cursor that follows the UI color, flowy, with a watery trail (Geethub #484)
@@ -10121,11 +10121,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #481. No detail given. Overlaps #480; fold together when scoped.
 
 ### artist-window-album-list: Artist window shows a list of their albums with add-to-library button (Geethub #482)
-- **Status:** review
+- **Status:** in review
 - **Priority:** medium
 - **Description:** Idea, Geethub #482. In the artist window show their albums as titles plus album art, each with an add-to-library icon button.
 - **Touches:** artist window.
-- **Branch:**
+- **Branch:** agent/artist-window-albums-add
 - **Notes:** Synced from Geethub #482. Overlaps artist-more-albums and albums-by-artist entries.
 
 ### cassette-sfx-volume: Cassette sound effects at half the volume (Geethub #483)
