@@ -1,0 +1,66 @@
+{
+  "packageId": "io.github.malgriot.ebbless",
+  "host": "malgriot.github.io",
+  "name": "EBBLESS",
+  "launcherName": "EBBLESS",
+  "display": "standalone",
+  "themeColor": "#121212",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#121212",
+  "enableNotifications": false,
+  "startUrl": "/EBBLESS/index.html",
+  "iconUrl": "https://malgriot.github.io/EBBLESS/brand/assets/icons/icon-512.png",
+  "maskableIconUrl": "https://malgriot.github.io/EBBLESS/brand/assets/icons/icon-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./upload-keystore.p12",
+    "alias": "upload"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://malgriot.github.io/EBBLESS/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://malgriot.github.io/EBBLESS/",
+  "minSdkVersion": 21,
+  "shareTarget": {
+    "action": "https://malgriot.github.io/EBBLESS/index.html",
+    "method": "GET",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
+  "orientation": "portrait",
+  "fingerprints": [
+    {
+      "name": "upload key",
+      "value": "B1:9A:69:FD:97:3B:FC:25:DE:A7:5F:90:83:D1:E1:91:C3:99:C4:19:BA:82:95:25:50:BB:46:83:F4:10:57:7C"
+    }
+  ],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [
+    {
+      "protocol": "web+ebbless",
+      "url": "https://malgriot.github.io/EBBLESS/index.html?open=%s"
+    }
+  ],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}
