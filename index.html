@@ -4785,9 +4785,12 @@ setTimeout(() => {
   if (libVid && 'IntersectionObserver' in window){
     // on screen and not covered by fullscreen flow
     let libInView = false;
-    const syncLib = () => (libInView && !(flowEl && flowEl.classList.contains('is-open'))) ? resume(libVid) : libVid.pause();
+    // ...and not under the splash (IntersectionObserver ignores overlays; two decoders at once made the splash skip on budget Android phones)
+    const splashUp = () => !!(splashBox && !splashBox.classList.contains('is-hidden'));
+    const syncLib = () => (libInView && !splashUp() && !(flowEl && flowEl.classList.contains('is-open'))) ? resume(libVid) : libVid.pause();
     new IntersectionObserver(es => es.forEach(e => { libInView = e.isIntersecting; syncLib(); })).observe(libVid);
     if (flowEl) new MutationObserver(syncLib).observe(flowEl, { attributes: true, attributeFilter: ['class'] });
+    if (splashBox) new MutationObserver(syncLib).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
   }
 })();
 
