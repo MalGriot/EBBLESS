@@ -4765,12 +4765,17 @@ setTimeout(() => {
   if (splashVid){
     // pause only after the 420ms fade-out, or the splash flashes to its flat tint
     let splashPauseT = 0;
+    // the beta lock plays its own video over the splash: don't decode both
+    const lockBox = document.getElementById('beta-lock');
+    const lockUp = () => !!(lockBox && !lockBox.hidden);
     const syncSplash = () => {
       clearTimeout(splashPauseT);
+      if (lockUp()) { splashVid.pause(); return; }
       if (!splashBox.classList.contains('is-hidden')) { resume(splashVid); return; }
       splashPauseT = setTimeout(() => { if (splashBox.classList.contains('is-hidden')) splashVid.pause(); }, 600);
     };
     new MutationObserver(syncSplash).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
+    if (lockBox) new MutationObserver(syncSplash).observe(lockBox, { attributes: true, attributeFilter: ['hidden'] });
     syncSplash();
   }
   const onbVid = document.querySelector('#onbDiscovery video');
@@ -4786,11 +4791,13 @@ setTimeout(() => {
     // on screen and not covered by fullscreen flow
     let libInView = false;
     // ...and not under the splash (IntersectionObserver ignores overlays; two decoders at once made the splash skip on budget Android phones)
-    const splashUp = () => !!(splashBox && !splashBox.classList.contains('is-hidden'));
+    const splashUp = () => !!(splashBox && !splashBox.classList.contains('is-hidden')) || !!(document.getElementById('beta-lock') && !document.getElementById('beta-lock').hidden);
     const syncLib = () => (libInView && !splashUp() && !(flowEl && flowEl.classList.contains('is-open'))) ? resume(libVid) : libVid.pause();
     new IntersectionObserver(es => es.forEach(e => { libInView = e.isIntersecting; syncLib(); })).observe(libVid);
     if (flowEl) new MutationObserver(syncLib).observe(flowEl, { attributes: true, attributeFilter: ['class'] });
     if (splashBox) new MutationObserver(syncLib).observe(splashBox, { attributes: true, attributeFilter: ['class'] });
+    const lockEl = document.getElementById('beta-lock');
+    if (lockEl) new MutationObserver(syncLib).observe(lockEl, { attributes: true, attributeFilter: ['hidden'] });
   }
 })();
 

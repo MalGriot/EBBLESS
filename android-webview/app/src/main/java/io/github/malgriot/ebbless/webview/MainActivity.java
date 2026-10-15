@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         web = new KeepAliveWebView(this);
         web.setBackgroundColor(0xFF121212);
-        WebView.setWebContentsDebuggingEnabled(true);
+        WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF121212);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
