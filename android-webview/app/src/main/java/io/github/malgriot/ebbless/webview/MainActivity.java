@@ -93,7 +93,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         startForegroundService(new Intent(this, PlaybackService.class));
 
-        if (b != null) web.restoreState(b); else web.loadUrl(HOME);
+        if (b != null) web.restoreState(b); else web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); // Pages caches the page 10 min; always revalidate
         handleIntent(getIntent());
     }
 
