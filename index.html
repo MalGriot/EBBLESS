@@ -3116,6 +3116,8 @@ body.week-up-on{overflow:hidden}
   padding:13px 24px;border-radius:24px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#f2f2f2;text-decoration:none;cursor:pointer}
 #beta-lock .bl-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 #beta-lock .bl-msg{min-height:1.5em;font-size:13px;color:#e0645e;margin:4px 0 0}
+#beta-lock .bl-msg.bl-working{color:#e0b26a;animation:blWork 1s ease-in-out infinite alternate}
+@keyframes blWork{from{opacity:.35}to{opacity:1}}
 #beta-lock .bl-or{margin:20px 0 10px;font-size:13px}
 #beta-lock .bl-google[hidden]{display:none}
 #beta-lock .bl-gbtn{min-height:40px;display:flex;justify-content:center}
@@ -3231,7 +3233,7 @@ body.week-up-on{overflow:hidden}
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
   const relock = () => { lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
-  const msg = (t) => { document.getElementById('bl-msg').textContent = t || ''; };
+  const msg = (t) => { const m = document.getElementById('bl-msg'); m.textContent = t || ''; m.classList.toggle('bl-working', /\.\.\.$/.test(t || '')); };
   // iPhone/iPad home-screen app: its storage is apart from Safari's and the
   // invite link opens Safari, not this app, so Google sign-in is the way in.
   const iosStandalone = navigator.standalone === true && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
@@ -4796,7 +4798,7 @@ setTimeout(() => {
    deferred event rather than each registering their own listener. */
 let deferredInstallPrompt = null;
 // installed PWAs can report standalone, window-controls-overlay, minimal-ui or fullscreen (Chrome/Edge on desktop) - any of them means "not a tab"
-const isStandaloneDisplay = () => ['standalone', 'window-controls-overlay', 'minimal-ui', 'fullscreen'].some(m => window.matchMedia('(display-mode: ' + m + ')').matches) || navigator.standalone === true;
+const isStandaloneDisplay = () => ['standalone', 'window-controls-overlay', 'minimal-ui', 'fullscreen'].some(m => window.matchMedia('(display-mode: ' + m + ')').matches) || navigator.standalone === true || /EBBLESS-Android/.test(navigator.userAgent);   // the Android app (android-webview/) is an installed app
 const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 // iOS Safari never fires beforeinstallprompt (no programmatic install API at
 // all there) - includes iPadOS, which reports as "MacIntel" but is

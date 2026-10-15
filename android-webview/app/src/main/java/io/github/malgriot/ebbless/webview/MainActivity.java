@@ -48,6 +48,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         web = new KeepAliveWebView(this);
         web.setBackgroundColor(0xFF121212);
+        WebView.setWebContentsDebuggingEnabled(true);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF121212);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
@@ -114,7 +115,12 @@ public class MainActivity extends Activity {
         StringBuilder sb = new StringBuilder();
         for (byte x : r) sb.append(String.format("%02x", x));
         pendingState = sb.toString(); pendingAt = System.currentTimeMillis();
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SIGNIN_URL + "?state=" + pendingState)));
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(SIGNIN_URL + "?state=" + pendingState));
+        // The EBBLESS TWA claims links on this host; aim at the default browser so it can't grab this one.
+        android.content.pm.ResolveInfo rb = getPackageManager().resolveActivity(
+                new Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")), android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        if (rb != null && rb.activityInfo != null && !"android".equals(rb.activityInfo.packageName)) i.setPackage(rb.activityInfo.packageName);
+        startActivity(i);
     }
 
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); handleIntent(i); }
@@ -122,13 +128,16 @@ public class MainActivity extends Activity {
     private void handleIntent(Intent i) {
         Uri d = i == null ? null : i.getData();
         if (d == null || !"ebbless".equals(d.getScheme()) || !"signin".equals(d.getHost())) return;
+        android.util.Log.d("EBB/signin", "link in, fragment len=" + (d.getFragment() == null ? -1 : d.getFragment().length()) + " pending=" + (pendingState != null));
         Uri q = Uri.parse("x://x?" + d.getFragment());
         boolean ok = pendingState != null && pendingState.equals(q.getQueryParameter("state"))
                 && System.currentTimeMillis() - pendingAt < SIGNIN_TTL_MS;
+        android.util.Log.d("EBB/signin", "state ok=" + ok);
         pendingState = null; // one use
         String cred = q.getQueryParameter("credential");
         if (!ok || cred == null || cred.split("\\.").length != 3) return;
-        web.evaluateJavascript("window.ebblessOnSignin && window.ebblessOnSignin(" + JSONObject.quote(cred) + ")", null);
+        web.evaluateJavascript("window.ebblessOnSignin && window.ebblessOnSignin(" + JSONObject.quote(cred) + ")",
+                r -> android.util.Log.d("EBB/signin", "page hook returned " + r));
     }
 
     @Override public void onBackPressed() { moveTaskToBack(true); }
