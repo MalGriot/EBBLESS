@@ -23752,6 +23752,10 @@ if (isDesktopApp && window.ebblessDesktop.onBack) window.ebblessDesktop.onBack((
 if (isDesktopApp && window.ebblessDesktop.onSignin) window.ebblessDesktop.onSignin((cred) => {
   if (typeof cred === 'string' && cred.split('.').length === 3) handleGoogleCredential({ credential: cred });
 });
+// Android app (android-webview/): its browser sign-in hands the credential back here
+window.ebblessOnSignin = (cred) => {
+  if (typeof cred === 'string' && cred.split('.').length === 3) handleGoogleCredential({ credential: cred });
+};
 function miniPlayerSupported(){ return isDesktopApp || 'documentPictureInPicture' in window; }
 function miniPlayerPrefs(){
   const p = lsGet(LS_MINI_PLAYER, null) || {};

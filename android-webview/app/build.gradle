@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' }
+
+android {
+    compileSdkVersion 36
+    namespace "io.github.malgriot.ebbless.webview"
+    defaultConfig {
+        // Own package id for the test build so it installs next to the TWA.
+        applicationId "io.github.malgriot.ebbless.webview"
+        minSdkVersion 24
+        targetSdkVersion 35
+        versionCode 1
+        versionName "0.1.0"
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
