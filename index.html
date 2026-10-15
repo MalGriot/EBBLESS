@@ -9,6 +9,8 @@
    grayscale look into *-lite.mp4 and tints with a plain alpha overlay (no blend, no filter). */
 html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
 html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:.4}
+/* covered means not painted: while the splash or beta lock is up, skip painting the app beneath it (cost ~10% of video frames) */
+html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):not(style){visibility:hidden}
 </style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>EBBLESS</title>
@@ -4773,6 +4775,14 @@ setTimeout(() => {
       v.addEventListener('timeupdate', () => { if (v.duration && v.currentTime >= v.duration - 0.2) v.currentTime = 0; });
       v.addEventListener('ended', () => { v.currentTime = 0; const p = v.play(); if (p && p.catch) p.catch(() => {}); });
     });
+  }
+  if (document.documentElement.classList.contains('ebb-android')) {
+    const cvSplash = document.getElementById('splash'), cvLock = document.getElementById('beta-lock');
+    const syncCovered = () => document.documentElement.classList.toggle('ebb-covered',
+      !!(cvSplash && !cvSplash.classList.contains('is-hidden')) || !!(cvLock && !cvLock.hidden));
+    if (cvSplash) new MutationObserver(syncCovered).observe(cvSplash, { attributes: true, attributeFilter: ['class'] });
+    if (cvLock) new MutationObserver(syncCovered).observe(cvLock, { attributes: true, attributeFilter: ['hidden'] });
+    syncCovered();
   }
   // #487: both videos kept decoding while hidden (splash gone, library view
   // not shown), adding GPU load for nothing. Pause them while off screen.
