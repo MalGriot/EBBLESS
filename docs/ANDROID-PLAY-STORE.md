@@ -21,7 +21,18 @@ The key files never go in git. **Back up `~/.ebbless-android/`** somewhere safe
 (a password manager or encrypted drive). If it's lost, Play support can reset
 the upload key, but it takes days.
 
-## Step by step
+## Sideload APK (live now)
+
+Every signed build is published to the `android` GitHub Release at a fixed URL,
+linked from the beta page:
+https://github.com/MalGriot/EBBLESS/releases/download/android/ebbless.apk
+
+No Play account, review, or 14-day wait. Testers tap the link on their Android
+phone and allow installs from their browser when asked. To ship a new APK, push
+a change under `android/` or run `gh workflow run android.yml`. The release is
+never marked latest, so `releases/latest` stays the Mac app.
+
+## Step by step (Play Store, later)
 
 ### 1. Play Console account (you)
 
