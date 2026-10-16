@@ -41,7 +41,7 @@ if (/EBBLESS-Android/.test(navigator.userAgent)) { var pl = document.createEleme
    black frames whose transparency is the picture's brightness, laid over a solid accent layer. That
    is the same result as the grayscale + color-blend look (accent x brightness) with plain compositing. */
 html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
-html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0}
+html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #beta-lock .bl-video{transition:none}
 /* splash: flat black + logo until the new video is really playing, then the normal reveal (no grey poster flash) */
 html.ebb-android #splash .splash-poster{display:none}
