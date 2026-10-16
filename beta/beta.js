@@ -174,6 +174,8 @@
     bg.setAttribute('aria-hidden', 'true');
     bg.innerHTML = '<div class="bg-poster"></div><video class="bg-video" autoplay muted loop playsinline preload="auto" src="../brand/assets/splash-cymatics.mp4"></video><div class="bg-tint"></div>';
     document.body.prepend(bg);
+    // No color transition until the first frames have painted, so the wash never fades in from a fallback.
+    requestAnimationFrame(() => requestAnimationFrame(() => bg.classList.add('is-ready')));
     const v = bg.querySelector('video');
     v.addEventListener('playing', () => v.classList.add('is-playing'));
     const p = v.play(); if (p && p.catch) p.catch(() => {});
