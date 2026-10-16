@@ -157,8 +157,9 @@
     }
     return rgb(LETTER_COLORS[cur]);
   }
+  let held = null;   // [r,g,b] while a gold/red state overrides the clock
   function applyClock(){
-    const [r, g, b] = clockColor(), root = document.documentElement.style;
+    const [r, g, b] = held || clockColor(), root = document.documentElement.style;
     root.setProperty('--clock-accent', 'rgb(' + r + ',' + g + ',' + b + ')');
     root.setProperty('--accent-dim', 'rgba(' + r + ',' + g + ',' + b + ',.16)');
     root.setProperty('--clock-tint', 'rgba(' + r + ',' + g + ',' + b + ',.4)');
@@ -185,6 +186,8 @@
     const bg = document.querySelector('.bg'); if (!bg) return;
     bg.classList.toggle('is-verified', state === 'ok');
     bg.classList.toggle('is-missing', state === 'bad');
+    held = state === 'ok' ? [224, 178, 106] : state === 'bad' ? [217, 58, 58] : null;
+    applyClock();   // buttons and accents follow the wash
   }
   if (document.body) background(); else document.addEventListener('DOMContentLoaded', background);
 
