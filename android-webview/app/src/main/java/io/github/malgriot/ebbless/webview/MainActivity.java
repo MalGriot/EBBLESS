@@ -357,11 +357,12 @@ public class MainActivity extends Activity {
         pendingState = null; // one use
         String cred = q.getQueryParameter("credential");
         if (!ok || cred == null || cred.split("\\.").length != 3) return;
+        if (web == null) return;
         web.evaluateJavascript("window.ebblessOnSignin && window.ebblessOnSignin(" + JSONObject.quote(cred) + ")",
                 r -> android.util.Log.d("EBB/signin", "page hook returned " + r));
     }
 
     @Override public void onBackPressed() { moveTaskToBack(true); }
 
-    @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); web.saveState(b); }
+    @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); if (web != null) web.saveState(b); }   // the WebView is built a moment after the splash is up
 }
