@@ -61,6 +61,23 @@ public class MainActivity extends Activity {
         int px = (int) (192 * getResources().getDisplayMetrics().density);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px, px, android.view.Gravity.CENTER);
         launchCover.addView(logo, lp);
+        // "not frozen" cue with no animation and no GPU work: a small text line whose dots tick every half second
+        loadingText = new android.widget.TextView(this);
+        loadingText.setTextColor(0x99FFFFFF);
+        loadingText.setTextSize(13);
+        loadingText.setLetterSpacing(0.12f);
+        loadingText.setText("Loading");
+        FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER);
+        tp.topMargin = px / 2 + (int) (28 * getResources().getDisplayMetrics().density);
+        launchCover.addView(loadingText, tp);
+        launchCover.postDelayed(new Runnable() {
+            int n = 0;
+            @Override public void run() {
+                if (loadingText == null) return;
+                loadingText.setText("Loading" + ".....".substring(0, n++ % 4));
+                launchCover.postDelayed(this, 500);
+            }
+        }, 500);
         root.addView(launchCover, new FrameLayout.LayoutParams(-1, -1));
         launchCover.postDelayed(this::dropLaunchCover, 12000);   // never trap the user behind it
         web.addJavascriptInterface(new Object() {
@@ -154,11 +171,13 @@ public class MainActivity extends Activity {
     }
 
     private FrameLayout launchCover;
+    private android.widget.TextView loadingText;
 
     private void dropLaunchCover() {
         final FrameLayout c = launchCover;
         if (c == null) return;
         launchCover = null;
+        loadingText = null;
         c.animate().alpha(0f).setDuration(250).withEndAction(() -> { if (c.getParent() != null) ((android.view.ViewGroup) c.getParent()).removeView(c); }).start();
     }
 
@@ -166,7 +185,7 @@ public class MainActivity extends Activity {
     private android.webkit.WebResourceResponse bundledVideo(WebResourceRequest r) {
         Uri u = r.getUrl();
         String path = u.getPath();
-        if (!"malgriot.github.io".equals(u.getHost()) || path == null || !path.startsWith("/EBBLESS/brand/assets/") || !path.endsWith("-alpha.webm")) return null;
+        if (!"malgriot.github.io".equals(u.getHost()) || path == null || !path.startsWith("/EBBLESS/brand/assets/") || !(path.endsWith("-alpha.webm") || path.endsWith("/enter-sound.mp3"))) return null;
         try {
             android.content.res.AssetFileDescriptor fd = getAssets().openFd(path.substring("/EBBLESS/".length()));
             long total = fd.getLength(), start = 0, end = total - 1;
@@ -197,7 +216,7 @@ public class MainActivity extends Activity {
             h.put("Cache-Control", "no-cache");
             h.put("Access-Control-Allow-Origin", "*");
             if (partial) h.put("Content-Range", "bytes " + start + "-" + end + "/" + total);
-            return new android.webkit.WebResourceResponse("video/webm", null, partial ? 206 : 200, partial ? "Partial Content" : "OK", h, limited);
+            return new android.webkit.WebResourceResponse(path.endsWith(".mp3") ? "audio/mpeg" : "video/webm", null, partial ? 206 : 200, partial ? "Partial Content" : "OK", h, limited);
         } catch (java.io.IOException e) {
             return null;
         }

@@ -8,8 +8,8 @@ android {
         applicationId "io.github.malgriot.ebbless"
         minSdkVersion 24
         targetSdkVersion 35
-        versionCode 5
-        versionName "2.3.0"
+        versionCode 6
+        versionName "2.4.0"
     }
     buildTypes {
         // debug builds install next to the real app instead of over it
@@ -18,7 +18,7 @@ android {
     }
     // the splash/library background videos ship inside the app (copied from the site folder, so one source of truth)
     sourceSets.main.assets.srcDirs += "$buildDir/generated/videoAssets"
-    androidResources { noCompress 'webm' }
+    androidResources { noCompress 'webm', 'mp3' }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -26,7 +26,7 @@ android {
 }
 
 tasks.register('bundleVideos', Copy) {
-    from("$rootDir/../brand/assets") { include 'splash-cymatics-alpha.webm', 'library-bg-alpha.webm' }
+    from("$rootDir/../brand/assets") { include 'splash-cymatics-alpha.webm', 'library-bg-alpha.webm', 'enter-sound.mp3' }
     into "$buildDir/generated/videoAssets/brand/assets"
 }
 preBuild.dependsOn 'bundleVideos'
