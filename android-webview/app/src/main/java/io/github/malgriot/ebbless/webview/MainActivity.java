@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
     }
 
     private FrameLayout root;
+    private boolean recoveredLaunch;
     private NativeSplash splash;
     private volatile boolean splashHolding;
 
@@ -54,7 +55,9 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.setBackgroundColor(0xFF000000);
         setContentView(root);
-        if (b == null) {
+        recoveredLaunch = getIntent() != null && getIntent().getBooleanExtra("recovered", false);
+        registerScreenReceiver();
+        if (b == null && !recoveredLaunch) {
             // Cold start: the splash is native, so it is on screen at once and the (slow) web view is built after the first frame.
             String override = getSharedPreferences("ebb", MODE_PRIVATE).getString("accentOverride", "");
             splash = new NativeSplash(this, new NativeSplash.Listener() {
@@ -86,6 +89,35 @@ public class MainActivity extends Activity {
         initWeb(null);
     }
 
+    /**
+     * Screen off: the page hides everything visual so the browser can free its graphics memory (158 MB on a 2.8 GB phone,
+     * which is what got the app killed in the long soak). The playback decks keep running. Screen on: everything comes back.
+     */
+    private final android.content.BroadcastReceiver screenReceiver = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(android.content.Context c, Intent i) {
+            if (web == null || i == null) return;
+            boolean on = Intent.ACTION_SCREEN_ON.equals(i.getAction());
+            web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(" + on + ")", null);
+        }
+    };
+
+    private void registerScreenReceiver() {
+        android.content.IntentFilter f = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
+        f.addAction(Intent.ACTION_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, f, android.content.Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(screenReceiver, f);
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (web != null) web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(true)", null);   // never leave the page in lightweight mode while it is on screen
+    }
+
+    @Override protected void onDestroy() {
+        try { unregisterReceiver(screenReceiver); } catch (Exception ignored) {}
+        super.onDestroy();
+    }
+
     private void splashDone() {
         splash = null;
         splashHolding = false;
@@ -112,6 +144,10 @@ public class MainActivity extends Activity {
                     splash.dropForLock();
                 });
             }
+            /** The page's play state, so a restarted service knows whether the music was playing when the process was killed. */
+            @android.webkit.JavascriptInterface public void playing(boolean on) {
+                getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
+            }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }
@@ -124,7 +160,7 @@ public class MainActivity extends Activity {
         s.setSupportMultipleWindows(true);
         s.setJavaScriptCanOpenWindowsAutomatically(true);
         // Drop the "; wv" marker (some embeds treat WebViews as second-class) and say who we are.
-        s.setUserAgentString(s.getUserAgentString().replace("; wv)", ")") + " EBBLESS-Android/0.1" + (splashHolding ? " NativeSplash" : ""));
+        s.setUserAgentString(s.getUserAgentString().replace("; wv)", ")") + " EBBLESS-Android/0.1" + (splashHolding ? " NativeSplash" : "") + (recoveredLaunch ? " Recovered" : ""));
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
         cm.setAcceptThirdPartyCookies(web, true);

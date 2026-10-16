@@ -34,6 +34,20 @@
   setTimeout(function () { if (window.__ebbSplashDone) window.__ebbSplashDone(); }, 35000);
 })();
 </script>
+<script>
+/* The Android app flips this when the screen turns off/on: while off, everything visual is hidden (see html.ebb-screenoff CSS) so the
+   browser can free its graphics memory. The playback decks keep running. */
+window.__ebbScreen = function (on) { document.documentElement.classList.toggle('ebb-screenoff', !on); };
+/* Launched from the "EBBLESS was stopped" notice after the phone killed the app: act like a return from the background, so the
+   queue resumes and the splash is skipped. */
+try {
+  if (/ Recovered/.test(navigator.userAgent)) {
+    window.__ebbRecovered = true;
+    localStorage.setItem('ebbless:backgroundedAt', JSON.stringify(Date.now()));
+    localStorage.setItem('ebbless:wasPlayingAtBackground', 'true');
+  }
+} catch (e) {}
+</script>
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
 try { if (/NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone')) document.documentElement.classList.add('ebb-nsplash'); } catch (e) {}   // the app shows its own splash on a cold start
 if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
@@ -96,6 +110,10 @@ html.ebb-unlocked:not(.ebb-relock) #beta-lock{display:none!important}
 html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint{transition:background 3s ease-in-out}
 /* the app's native splash is up: the web one stays invisible (still wired up, so the app can press its Enter) and its videos stay unloaded */
 html.ebb-nsplash #splash{visibility:hidden!important}
+/* screen off (set by the Android app): hide every screen so the compositor can drop its textures; the players stay (#yt-host, audio) */
+html.ebb-screenoff #app > :not(#yt-host){visibility:hidden!important}
+html.ebb-screenoff body > :not(#app):not(script):not(style):not(link):not(audio){visibility:hidden!important}
+html.ebb-screenoff *, html.ebb-screenoff *::before, html.ebb-screenoff *::after{animation-play-state:paused!important}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -4888,6 +4906,13 @@ setTimeout(() => {
     syncCovered();
     // tell the app shell when Enter / Tutorial are wired up (it holds the visitor's tap until then), and which accent override to start on
     if (window.EbbNative) {
+      const aw = document.getElementById('artworkWrap');
+      if (aw && EbbNative.playing) {
+        let lastPlaying = null;
+        const reportPlaying = () => { const p = aw.classList.contains('is-playing'); if (p !== lastPlaying) { lastPlaying = p; try { EbbNative.playing(p); } catch (e) {} } };
+        new MutationObserver(reportPlaying).observe(aw, { attributes: true, attributeFilter: ['class'] });
+        reportPlaying();
+      }
       try {
         const adv = JSON.parse(localStorage.getItem('ebbless:advanced') || 'null');
         if (EbbNative.accentOverride) EbbNative.accentOverride(adv && typeof adv.accent === 'string' ? adv.accent : '');
@@ -27163,7 +27188,7 @@ function startApp(){
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
   const SPLASH_MS = 3400;
-  if (splashEl && resumingFromBackground && !document.documentElement.classList.contains('ebb-android')){
+  if (splashEl && resumingFromBackground && (!document.documentElement.classList.contains('ebb-android') || window.__ebbRecovered)){
     // #splash is opaque and visible by default (the no-FOUC cover, see its
     // CSS comment) so it still has to be explicitly dismissed here - just
     // skip the is-active reveal animation and the install-prompt/timeout
