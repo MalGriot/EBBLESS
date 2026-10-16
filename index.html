@@ -4751,7 +4751,7 @@ try { if (localStorage.getItem('ebbless_backend') === 'staging') BACKEND = BACKE
 setTimeout(() => {
   try{
     const splashSafetyEl = document.getElementById('splash');
-    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return') && !splashSafetyEl.classList.contains('is-gate')){
+    if (splashSafetyEl && !splashSafetyEl.classList.contains('is-hidden') && !splashSafetyEl.classList.contains('is-return') && !splashSafetyEl.classList.contains('is-gate') && !(document.documentElement.classList.contains('ebb-android') && splashSafetyEl.classList.contains('is-choice'))){
       splashSafetyEl.classList.add('is-hidden');
     }
   }catch(e){}
