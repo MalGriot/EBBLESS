@@ -23690,11 +23690,11 @@ document.addEventListener('keydown', (e) => {
       break;
     case 's': case 'S':
       if (e.repeat) break;
-      if (e.shiftKey){ const a = $('suggestIdeaBtn'); if (a) a.click(); }
+      if (e.shiftKey) window.open('https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea', '_blank', 'noopener'); // owner-only, unlisted
       else { const b = document.querySelector('#topnav [data-view="settings"]'); if (b) b.click(); }
       break;
     case 'b': case 'B':
-      if (e.shiftKey && !e.repeat){ const a = $('reportBugBtn'); if (a) a.click(); }
+      if (e.shiftKey && !e.repeat) window.open('https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug', '_blank', 'noopener'); // owner-only, unlisted
       break;
     case 'h': case 'H':
       // home (Geethub #245): back to the main player view from anywhere -
