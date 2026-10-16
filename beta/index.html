@@ -461,6 +461,7 @@
   function remember(kind){ try { localStorage.setItem(REQ, JSON.stringify({ kind, at: Date.now() })); } catch(e){} }
 
   function finish(r){
+    Beta.bgState(null);   // back to the color clock
     Beta.intro();
     if (r.already && r.status === 'accepted') youreIn('', false);
     else {
