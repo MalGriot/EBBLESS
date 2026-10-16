@@ -26,7 +26,7 @@ android {
 }
 
 tasks.register('bundleVideos', Copy) {
-    from("$rootDir/../brand/assets") { include 'splash-cymatics-alpha.webm', 'library-bg-alpha.webm', 'enter-sound.mp3', 'splash-cymatics-native.mp4', 'wordmark-white.png' }
+    from("$rootDir/../brand/assets") { include 'splash-cymatics-alpha.webm', 'enter-sound.mp3', 'splash-cymatics-native.mp4', 'wordmark-white.png' }
     into "$buildDir/generated/videoAssets/brand/assets"
 }
 preBuild.dependsOn 'bundleVideos'

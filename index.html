@@ -3581,11 +3581,7 @@ body.week-up-on{overflow:hidden}
 
   <!-- ===== LIBRARY ===== -->
   <main class="view" id="view-library">
-    <div class="lib-bg">
-      <div class="lib-bg-video lib-bg-poster"></div>
-      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" data-src="brand/assets/library-bg.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); if (!(a && document.documentElement.classList.contains('ebb-nsplash') && !v.classList.contains('bl-video'))) v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); if (v.classList.contains('splash-video') && window.EbbNative) EbbNative.ready(); }); } })();</script>
-      <div class="lib-bg-tint"></div>
-    </div>
+    <!-- the library no longer has its own background video: the player's ambient artwork background (#ambient) shows on every screen -->
     <div class="view-scroll">
       <div class="queue-head">
         <h2>Library</h2>
@@ -20213,7 +20209,7 @@ function updateLibraryClockColor(){
   root.setProperty('--on-accent', onAccentFor(solid));
   root.setProperty('--clock-tint', alpha(.22));
   root.setProperty('--clock-tint-splash', alpha(.4));
-  ambientEl.style.setProperty('--clock-tint-ambient', state.currentView === 'library' ? alpha(.3) : 'transparent');
+  ambientEl.style.setProperty('--clock-tint-ambient', 'transparent');   // same background on every screen (it used to be tinted in the library only)
 }
 updateLibraryClockColor();
 setTimeout(() => document.documentElement.classList.remove('clock-color-init'), 50);
