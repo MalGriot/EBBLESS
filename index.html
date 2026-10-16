@@ -560,10 +560,14 @@ body.onb-active .paste-guide{display:none}
 #view-library{overflow:hidden}
 #view-library>.view-scroll:has(#libraryListWrap:not(.hidden)){height:100%;padding-bottom:0;box-sizing:border-box;display:flex;flex-direction:column}
 #libraryListWrap:not(.hidden){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
-#libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(140px + var(--safe-b))}
+#libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(var(--nav-h) + 12px + var(--safe-b))}
 .lib-sec>.section-label-row{position:static;background:none;padding:0;margin:0}
 /* Geethub #552: the bar shows the section at the top of the list; it swaps names as the next section header reaches it */
-#libBarLabel{margin:6px 0 10px;cursor:pointer}
+#libBarLabel{margin:6px 0 10px;cursor:pointer;overflow:hidden}
+/* the name slides up into the bar when the section changes; transform and opacity only, and it stops once the label is hidden */
+#libBarLabel.is-swap{animation:libBarSlide .22s ease-out both}
+@keyframes libBarSlide{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#libBarLabel.is-swap{animation:none}}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
@@ -7905,7 +7909,11 @@ function updateLibBar(){
   heads.forEach(h => { if (h.getBoundingClientRect().top <= edge) active = h; });
   active.style.visibility = 'hidden';
   libBarHead = active;
-  libBarLabel.textContent = active.querySelector('.section-label').textContent;
+  const name = active.querySelector('.section-label').textContent;
+  if (libBarLabel.textContent !== name){
+    libBarLabel.textContent = name;
+    libBarLabel.classList.remove('is-swap'); void libBarLabel.offsetWidth; libBarLabel.classList.add('is-swap');
+  }
   libBarLabel.classList.remove('hidden');
 }
 libBarLabel.addEventListener('click', () => { if (libBarHead) libBarHead.click(); });
