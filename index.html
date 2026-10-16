@@ -11,13 +11,14 @@
 html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
 html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0}
 html.ebb-android #beta-lock .bl-video{transition:none}
-html.ebb-android #splash:has(.splash-video.is-playing) .splash-tint{opacity:1;z-index:-3}
-html.ebb-android #splash:has(.splash-video.is-playing) .splash-poster{display:none}
-html.ebb-android #beta-lock .bl-bg:has(.bl-video.is-playing) .bl-tint{opacity:1;z-index:-1}
-html.ebb-android #beta-lock .bl-bg:has(.bl-video.is-playing) .bl-poster{display:none}
+html.ebb-android video.ebb-ready{opacity:1!important}
+html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
+html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
+html.ebb-android #beta-lock .bl-bg:has(.bl-video.ebb-ready) .bl-tint{opacity:1;z-index:-1;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
+html.ebb-android #beta-lock .bl-bg:has(.bl-video.ebb-ready) .bl-poster{display:none}
 html.ebb-android .lib-bg{isolation:isolate}
-html.ebb-android .lib-bg:has(video.lib-bg-video.is-playing) .lib-bg-tint{opacity:1;z-index:-1}
-html.ebb-android .lib-bg:has(video.lib-bg-video.is-playing) .lib-bg-poster{display:none}
+html.ebb-android .lib-bg:has(video.lib-bg-video.ebb-ready) .lib-bg-tint{opacity:1;z-index:-1;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
+html.ebb-android .lib-bg:has(video.lib-bg-video.ebb-ready) .lib-bg-poster{display:none}
 /* covered means not painted: while the splash or beta lock is up, skip painting the app beneath it (cost ~10% of video frames) */
 html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):not(style){visibility:hidden}
 </style>
@@ -4779,6 +4780,11 @@ setTimeout(() => {
   // Android app: the browser's own loop freezes the frame ~0.4s at the wrap on budget phones.
   // Wrapping by seeking just before the end avoids the end-of-stream restart.
   if (document.documentElement.classList.contains('ebb-android')) {
+    // latch "ready" so the loop restart never drops the tint layer (that flashed the poster's color)
+    document.querySelectorAll('video.splash-video, video.bl-video, video.lib-bg-video').forEach(v => {
+      const rdy = () => v.classList.add('ebb-ready');
+      v.addEventListener('playing', rdy); if (!v.paused && v.readyState >= 3) rdy();
+    });
     document.querySelectorAll('video[loop]').forEach(v => {
       v.loop = false;
       v.addEventListener('timeupdate', () => { if (v.duration && v.currentTime >= v.duration - 0.2) v.currentTime = 0; });
