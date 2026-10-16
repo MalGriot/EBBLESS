@@ -22423,11 +22423,15 @@ function marqueeVisibilityObserve(el, win){
       // removed from the page (library re-render): stop watching it
       if (!e.target.isConnected){ win._marqueeVisObs.unobserve(e.target); e.target._marqueeVisObserved = false; return; }
       const a = e.target._marqueeAnim;
-      e.target._marqueeOnScreen = e.isIntersecting;
+      // isVisible (Chrome IO v2) is false for visibility:hidden / opacity:0 / covered
+      // elements, which plain isIntersecting ignores (a marquee kept running inside a
+      // hidden overlay); undefined elsewhere, so those fall back to isIntersecting
+      const on = e.isIntersecting && e.isVisible !== false;
+      e.target._marqueeOnScreen = on;
       if (!a) return;
-      if (e.isIntersecting){ if (a.playState === 'paused') a.play(); }
+      if (on){ if (a.playState === 'paused') a.play(); }
       else if (a.playState === 'running') a.pause();
-    }), { rootMargin: '64px' });
+    }), { rootMargin: '64px', trackVisibility: true, delay: 200 });
   }
   if (el._marqueeOnScreen === false && el._marqueeAnim) el._marqueeAnim.pause();
   if (!el._marqueeVisObserved){ win._marqueeVisObs.observe(el); el._marqueeVisObserved = true; }
