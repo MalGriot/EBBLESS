@@ -242,6 +242,13 @@ class NativeSplash extends FrameLayout {
         if (chosen) finish(false);
     }
 
+    /** Safety net: only if the page never became ready. A ready page waits for the visitor as long as they like. */
+    boolean dropIfStuck() {
+        if (finished || pageReady) return false;
+        finish(true);
+        return true;
+    }
+
     /** The page is showing something that must be seen now (the beta lock): get out of the way. */
     void dropForLock() { finish(true); }
 

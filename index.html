@@ -2125,8 +2125,9 @@ body.split-desktop .tester-banner .tb-send{width:30px;height:30px;padding:0;bord
 @media (min-width:860px) and (max-width:1149.98px){#topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:300px}}
 body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 /* stays obvious: soft accent pulse (not on reduced-motion) */
-@keyframes tbPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 0 5px rgba(224,178,106,.45)}}
-.tester-banner:not([hidden]){animation:tbPulse 2s ease-in-out infinite}
+/* pulse ring: opacity + transform on a pseudo-element (a box-shadow keyframe repaints the page every frame) */
+@keyframes tbRing{0%,100%{opacity:0;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}
+.tester-banner:not([hidden])::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:tbRing 2s ease-in-out infinite}
 /* Geethub #445: the header Feedback button (desktop, since #432) lost the pulse the pill had; give it the same blink on its icon + ring */
 /* the ring is a pseudo-element animated by opacity + transform only (box-shadow/color keyframes repainted the page every frame, forever) */
 @keyframes navFbRing{0%,100%{opacity:0;transform:scale(.92)}50%{opacity:1;transform:scale(1)}}
@@ -2136,7 +2137,7 @@ body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 #navFeedbackBtn:not([hidden]) svg{color:var(--accent)}
 /* Geethub #461: header tutorial button blinks (same keyframes as Feedback) until the tutorial has been played once */
 @media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{box-shadow:0 0 0 2px var(--accent)}#helpBtn.is-unplayed::after,#navFeedbackBtn:not([hidden])::after{animation:none}}
-@media (prefers-reduced-motion:reduce){.tester-banner:not([hidden]){animation:none;outline:2px solid var(--accent)}
+@media (prefers-reduced-motion:reduce){.tester-banner:not([hidden]){outline:2px solid var(--accent)}.tester-banner:not([hidden])::after{animation:none}
   #navFeedbackBtn:not([hidden]){animation:none;outline:2px solid var(--accent)}}
 .tester-banner .tb-send{flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
 /* icon-only form (phones, split desktop): the base padding above came later in the cascade and squeezed the icon to a sliver (Geethub #361) */
@@ -27156,7 +27157,7 @@ function startApp(){
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
   // the Android app always has the feedback button, tester or not, trial or not
-  if (document.documentElement.classList.contains('ebb-android')){ const fbNav = $('navFeedbackBtn'); if (fbNav) fbNav.hidden = false; }
+  if (document.documentElement.classList.contains('ebb-android')){ const fbNav = $('navFeedbackBtn'); if (fbNav) fbNav.hidden = false; if (testerBanner) testerBanner.hidden = false; }   // desktop nav button + the phone header icon
   try{ scheduleInstallBanner(); } catch(e){}
 
   const splashEl = $('splash');
@@ -29050,7 +29051,7 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
     document.body.classList.add('is-sample');
     // controls that would reach an account, feedback or the install flow
     // (the Android app keeps its feedback button in the trial too)
-    ['installBlock', 'installBanner', 'testerBanner'].concat(/EBBLESS-Android/.test(navigator.userAgent) ? [] : ['navFeedbackBtn']).forEach(id => { const e = byId(id); if (e) e.style.display = 'none'; });
+    ['installBlock', 'installBanner'].concat(/EBBLESS-Android/.test(navigator.userAgent) ? [] : ['navFeedbackBtn', 'testerBanner']).forEach(id => { const e = byId(id); if (e) e.style.display = 'none'; });
     const fb = byId('feedbackBtn'); if (fb){ const row = fb.closest('.settings-row'); if (row) row.style.display = 'none'; }
     // keep the tutorial replayable and, until it has been watched, blinking
     const help = byId('helpBtn');

@@ -67,7 +67,10 @@ public class MainActivity extends Activity {
             }, override);
             splashHolding = true;
             root.addView(splash, new FrameLayout.LayoutParams(-1, -1));
-            root.postDelayed(() -> { if (splash != null) splash.dropForLock(); }, 25000);   // never trap the user behind it
+            root.postDelayed(() -> {   // never trap the user behind a splash whose page never came up (a ready page waits for the visitor as long as it takes)
+                if (splash != null && splash.dropIfStuck() && web != null)
+                    web.evaluateJavascript("(function(){var s=document.getElementById('splash');if(s)s.classList.add('is-hidden');})()", null);
+            }, 25000);
             // building the WebView blocks this thread for a moment: wait until the splash video is up (or 2.5s) before starting it
             root.postDelayed(this::startWebOnce, 2500);
         } else {
