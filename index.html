@@ -5,10 +5,19 @@
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');</script>
 <style>
 /* Android app (android-webview/): budget phones dropped ~1 in 3 frames of the background videos
-   because of the live CSS filter plus the mix-blend-mode tint over them. Lite mode bakes the
-   grayscale look into *-lite.mp4 and tints with a plain alpha overlay (no blend, no filter). */
+   because of the live CSS filter plus the mix-blend-mode tint over them. Lite mode uses *-alpha.webm:
+   black frames whose transparency is the picture's brightness, laid over a solid accent layer. That
+   is the same result as the grayscale + color-blend look (accent x brightness) with plain compositing. */
 html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
-html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:.4}
+html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0}
+html.ebb-android #beta-lock .bl-video{transition:none}
+html.ebb-android #splash:has(.splash-video.is-playing) .splash-tint{opacity:1;z-index:-3}
+html.ebb-android #splash:has(.splash-video.is-playing) .splash-poster{display:none}
+html.ebb-android #beta-lock .bl-bg:has(.bl-video.is-playing) .bl-tint{opacity:1;z-index:-1}
+html.ebb-android #beta-lock .bl-bg:has(.bl-video.is-playing) .bl-poster{display:none}
+html.ebb-android .lib-bg{isolation:isolate}
+html.ebb-android .lib-bg:has(video.lib-bg-video.is-playing) .lib-bg-tint{opacity:1;z-index:-1}
+html.ebb-android .lib-bg:has(video.lib-bg-video.is-playing) .lib-bg-poster{display:none}
 /* covered means not painted: while the splash or beta lock is up, skip painting the app beneath it (cost ~10% of video frames) */
 html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):not(style){visibility:hidden}
 </style>
@@ -3159,7 +3168,7 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-small{font-size:13px;color:#6c6c6c;margin:20px 0 0}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
-  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-lite.mp4'); }</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
+  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
   <div class="bl-wrap">
     <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
     <h1 id="bl-title">YOU’RE EARLY. THAT’S A GOOD THING.</h1>
@@ -3394,7 +3403,7 @@ body.week-up-on{overflow:hidden}
 
 <div id="splash">
   <div class="splash-poster"></div>
-  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-lite.mp4'); }</script>
+  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
@@ -3486,7 +3495,7 @@ body.week-up-on{overflow:hidden}
   <main class="view" id="view-library">
     <div class="lib-bg">
       <div class="lib-bg-video lib-bg-poster"></div>
-      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-lite.mp4'); }</script>
+      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
       <div class="lib-bg-tint"></div>
     </div>
     <div class="view-scroll">
