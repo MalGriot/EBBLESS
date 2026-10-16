@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
+if (/EBBLESS-Android/.test(navigator.userAgent)) { try { if (/^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(localStorage.getItem('ebbless:betaToken') || '') && Date.now() - (+localStorage.getItem('ebbless:betaOk') || 0) < 7 * 24 * 3600 * 1000) document.documentElement.classList.add('ebb-unlocked'); } catch (e) {} }
 if (/EBBLESS-Android/.test(navigator.userAgent)) { var pl = document.createElement('link'); pl.rel = 'preload'; pl.as = 'video'; pl.href = 'brand/assets/splash-cymatics-alpha.webm'; document.head.appendChild(pl); }</script>
 <style>
 /* Android app (android-webview/): budget phones dropped ~1 in 3 frames of the background videos
@@ -26,6 +27,8 @@ html.ebb-android #splash.is-active .splash-black{animation-duration:700ms}
 html.ebb-android #splash.is-active img{animation:splash-logo-in 700ms var(--ease-out) 350ms forwards}
 html.ebb-android #splash.is-choice .splash-choice{transition-delay:1000ms}
 html.ebb-android #splash.is-choice.is-return .splash-choice{transition-delay:250ms}
+/* a device already let in must not flash the lock page while the script decides: hide it until the lock script re-locks */
+html.ebb-unlocked:not(.ebb-relock) #beta-lock{display:none!important}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -3267,7 +3270,7 @@ body.week-up-on{overflow:hidden}
   const video = lock.querySelector('.bl-video');
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
-  const relock = () => { lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
+  const relock = () => { document.documentElement.classList.add('ebb-relock'); lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
   const msg = (t) => { const m = document.getElementById('bl-msg'); m.textContent = t || ''; m.classList.toggle('bl-working', /\.\.\.$/.test(t || '')); };
   // iPhone/iPad home-screen app: its storage is apart from Safari's and the
   // invite link opens Safari, not this app, so Google sign-in is the way in.
@@ -27117,8 +27120,10 @@ function startApp(){
       if (document.documentElement.classList.contains('ebb-android') && splashVidEl && !splashVidEl.classList.contains('ebb-ready')){
         let started = false;
         const go = () => { if (started) return; started = true; startSplashMusic(); };
-        splashVidEl.addEventListener('playing', go, { once: true });
-        setTimeout(go, 4000);
+        // ...and after the app has finished booting behind it (boot blocks the main thread and made the theme skip)
+        const waitBoot = (n) => { if (splashEl.classList.contains('is-choice') || n > 40) setTimeout(go, 1200); else setTimeout(() => waitBoot(n + 1), 200); };
+        splashVidEl.addEventListener('playing', () => waitBoot(0), { once: true });
+        setTimeout(go, 9000);
       } else startSplashMusic();
     }
 
