@@ -7594,7 +7594,9 @@ async function resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack){
   const albumOverride = albumOverrideOf(getCachedPlaylist(playlistId));
   const sectionOverride = (getCachedPlaylist(playlistId) || {}).sectionOverride;
   const keptArtistName = (getCachedPlaylist(playlistId) || {}).artistName;
+  const keptCopyDeclined = !!(getCachedPlaylist(playlistId) || {}).copyDeclined;   // #551
   const keepAlbumOverride = (p) => {
+    if (keptCopyDeclined) p.copyDeclined = true;
     if (keptArtistName) p.artistName = keptArtistName;
     if (albumOverride !== undefined) p.albumOverride = albumOverride;
     if (sectionOverride) p.sectionOverride = sectionOverride;
@@ -11226,6 +11228,7 @@ function duplicateLibraryPlaylist(id, pl){
   lsSet(LS_LIB, lib);
   renderLibrary();
   showToast('Duplicated');
+  return newId;
 }
 
 function copyPlaylistLink(pl){
@@ -12188,10 +12191,40 @@ function addTrackToPlaylist(playlistId, track){
 // #544: every add path goes through here. A song already in the playlist
 // (same videoId) asks "Add again?" first instead of being skipped silently.
 // done(): called once this playlist is settled (added, skipped, or cancelled).
+// #551: an imported Spotify playlist re-fetches its songs from Spotify, so
+// edits there are not really "yours". Offer an editable copy first. Declining
+// is remembered per playlist (copyDeclined); the added song still survives
+// refreshes (#550).
+function isAutoRefreshSpotify(pl){
+  return !!pl && pl.type === 'playlist' && !pl.copyDeclined;
+}
+function offerPlaylistCopy(pl, track, finish){
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">This playlist updates from Spotify. Make a copy you can edit?</div>' +
+    '<div style="color:var(--faint-2);font-size:13px;margin-bottom:14px">' + escapeHtml(pl.name) + '</div>' +
+    '<button class="btn-ghost is-active" id="plCopyYesBtn" style="width:100%;margin-bottom:8px">Make a copy</button>' +
+    '<button class="btn-ghost" id="plCopyNoBtn" style="width:100%;margin-bottom:8px">Add here anyway</button>' +
+    '<button class="btn-ghost" id="plCopyCancelBtn" style="width:100%">Cancel</button>';
+  $('plCopyYesBtn').addEventListener('click', () => {
+    const copyId = duplicateLibraryPlaylist(pl.id, getCachedPlaylist(pl.id) || pl);
+    closeImportOverlay();
+    addTrackToPlaylistAsk(copyId, track, finish);
+  });
+  $('plCopyNoBtn').addEventListener('click', () => {
+    const cur = getCachedPlaylist(pl.id);
+    if (cur){ cur.copyDeclined = true; lsSet(LS_PL(pl.id), cur); }
+    closeImportOverlay();
+    addTrackToPlaylistAsk(pl.id, track, finish);
+  });
+  $('plCopyCancelBtn').addEventListener('click', () => { closeImportOverlay(); finish(); });
+}
+
 function addTrackToPlaylistAsk(playlistId, track, done){
   const pl = getCachedPlaylist(playlistId);
   const finish = () => { if (done) done(); };
   if (!pl) return finish();
+  if (isAutoRefreshSpotify(pl)) return offerPlaylistCopy(pl, track, finish);
   if (!track.videoId || !pl.tracks.some(t => t.videoId === track.videoId)){
     addTrackToPlaylist(playlistId, track);
     return finish();
@@ -12713,7 +12746,7 @@ function openSingleTrackDestinationPicker(track){
     closeImportOverlay();
   });
   importStage.querySelectorAll('.pl-pick').forEach(btn => {
-    btn.addEventListener('click', () => { addTrackToPlaylist(btn.dataset.id, track); closeImportOverlay(); });
+    btn.addEventListener('click', () => { addTrackToPlaylistAsk(btn.dataset.id, track, closeImportOverlay); });
   });
   $('plNewFromSingleTrackBtn').addEventListener('click', () => openCreatePlaylistFlow(track));
 }
