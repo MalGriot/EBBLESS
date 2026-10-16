@@ -10335,7 +10335,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #495. 'See all' on podcasts scrolls the category pills to the lit podcasts pill.
 - **Touches:**
 - **Branch:** agent/t1-buttons-nav
-- **Notes:** Reworked: on phones the filter pills are tighter and share the row evenly so all five fit on ONE row (no extra height, no scrolling); they only wrap below ~340px wide. Old scroll-to-chip code and the more-arrow stay as fallbacks. Verified at 390 and 360px.
+- **Notes:** Reworked per owner: All pill removed; the library is always the stacked sections. Playlists/Artists/Albums/Podcasts pills each fold or unfold their whole section (album artist groups too) and stay lit while open, so nothing scrolls and nothing is hidden. Sections get a divider line. Cards per section start at 24 with Show more. Verified at 390px. Old See-all code is now unused.
 
 ### albums-no-artist-sections: Album grid views without artist sections, toggle in advanced settings (Geethub #494)
 - **Status:** draft
