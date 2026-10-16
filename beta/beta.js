@@ -173,7 +173,7 @@
     const bg = document.createElement('div');
     bg.className = 'bg' + (document.body.dataset.bg === 'quiet' ? ' quiet' : '');
     bg.setAttribute('aria-hidden', 'true');
-    bg.innerHTML = '<div class="bg-poster"></div><video class="bg-video" autoplay muted loop playsinline preload="auto" src="../brand/assets/splash-cymatics.mp4"></video><div class="bg-tint"></div>';
+    bg.innerHTML = '<div class="bg-poster"></div><video class="bg-video" autoplay muted loop playsinline preload="auto" src="media/bg-video-gray.mp4"></video><div class="bg-tint"></div>';
     document.body.prepend(bg);
     // No color transition until the first frames have painted, so the wash never fades in from a fallback.
     requestAnimationFrame(() => requestAnimationFrame(() => bg.classList.add('is-ready')));
