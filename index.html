@@ -562,6 +562,8 @@ body.onb-active .paste-guide{display:none}
 #libraryListWrap:not(.hidden){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 #libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(140px + var(--safe-b))}
 .lib-sec>.section-label-row{position:sticky;top:0;z-index:3;background:transparent;padding:4px 0 8px;margin-bottom:-8px}
+/* sticky section titles sit over scrolling content: brighter text with a dark halo instead of a fill, so the bar stays transparent */
+.lib-sec>.section-label-row .section-label{color:var(--text);text-shadow:0 0 4px var(--bg),0 0 10px var(--bg),0 1px 2px #000}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
