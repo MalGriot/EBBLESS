@@ -18,6 +18,8 @@ html.ebb-android #splash .splash-tint{opacity:0}
 html.ebb-android #splash.is-active:not(:has(.splash-video.ebb-ready)) .splash-black{animation:none;opacity:1}
 html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) img{animation:none!important;opacity:0}
 html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
+/* the app's startup cover (grey ground + mark) sits above the splash: skip it so black goes straight to the splash */
+html.ebb-android body:not(.onb-active) #onbBackdrop, html.ebb-android body:not(.onb-active) #onbMark{display:none!important}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
