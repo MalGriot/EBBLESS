@@ -2132,7 +2132,7 @@ body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 @keyframes navFbRing{0%,100%{opacity:0;transform:scale(.92)}50%{opacity:1;transform:scale(1)}}
 #navFeedbackBtn:not([hidden]),#helpBtn.is-unplayed{position:relative;border-radius:12px}
 #navFeedbackBtn:not([hidden])::after,#helpBtn.is-unplayed::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:navFbRing 1.6s ease-in-out infinite}
-#navFeedbackBtn:not([hidden])::after{animation-duration:3s}   /* the feedback button pulses once every 3s; the help button keeps the faster 1.6s */
+#helpBtn.is-unplayed::after{animation-duration:3s}   /* the help button pulses once every 3s; the feedback button keeps the faster 1.6s */
 #navFeedbackBtn:not([hidden]) svg{color:var(--accent)}
 /* Geethub #461: header tutorial button blinks (same keyframes as Feedback) until the tutorial has been played once */
 @media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{box-shadow:0 0 0 2px var(--accent)}#helpBtn.is-unplayed::after,#navFeedbackBtn:not([hidden])::after{animation:none}}
