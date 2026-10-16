@@ -5134,6 +5134,29 @@ function showIOSInstallSheet(){
   iosInstallSheet.querySelector('.ii-inapp').style.display = installGateMode() === 'openout' ? '' : 'none';
   iosInstallSheet.hidden = false;
 }
+// Desktop install steps (#593). A Mac browser with no native prompt (Safari,
+// or Chrome/Edge after the prompt was dismissed) used to get a one-line hint
+// or nothing at all. This shows the manual steps in the same sheet.
+let desktopInstallSheet = null;
+function showDesktopInstallSheet(){
+  if (!desktopInstallSheet){
+    const el = document.createElement('div');
+    el.className = 'ios-install';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Install EBBLESS');
+    el.innerHTML = '<div class="ii-card"><h3>Install EBBLESS</h3>'
+      + '<p>Install it as an app: full screen, lock-screen controls, plays like a real player.</p>'
+      + '<p><b>Chrome or Edge:</b> click the install icon at the right end of the address bar, or open the browser menu and choose <b>Install EBBLESS</b>.</p>'
+      + '<p><b>Safari:</b> choose <b>File</b>, then <b>Add to Dock</b>.</p>'
+      + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
+    const close = () => { el.hidden = true; };
+    el.addEventListener('click', (e) => { if (e.target === el) close(); });
+    el.querySelector('.ii-close').addEventListener('click', close);
+    document.body.appendChild(el);
+    desktopInstallSheet = el;
+  }
+  desktopInstallSheet.hidden = false;
+}
 // Daily nudges: the splash install invite and the Tutorial/Enter choice each
 // run on the first load of a local calendar day only, and keep doing so daily
 // until the visitor installs (installed launches are standalone, so
@@ -25119,7 +25142,7 @@ if (screen.orientation && screen.orientation.lock){
         // No programmatic install API here (always the case on iOS Safari) -
         // point at the manual flow instead.
         if (isIOS) showIOSInstallSheet();
-        else installDesc.textContent = INSTALL_HINT_MENU;
+        else { installDesc.textContent = INSTALL_HINT_MENU; showDesktopInstallSheet(); }
       }
     });
     window.addEventListener('appinstalled', () => setInstalled(true));
@@ -25200,10 +25223,10 @@ if (installBanner){
       const line = document.createElement('span'); // keeps the icon inline inside the -webkit-box clamp
       line.append(pre, icon, 'Share' + post);
       installBannerText.append(line);
+    } else if (isMobileUA) {
+      installBannerText.textContent = 'Open your browser menu, then Install app or Add to Home Screen.';
     } else {
-      installBannerText.textContent = isMobileUA
-        ? 'Open your browser menu, then Install app or Add to Home Screen.'
-        : INSTALL_HINT_MENU;
+      showDesktopInstallSheet();
     }
   });
   $('installBannerClose').addEventListener('click', () => {
@@ -27361,6 +27384,8 @@ function startApp(){
             // Some other mobile browser that hasn't offered a native prompt
             // (and may never) - don't strand the visitor on the splash.
             hideSplash();
+            // Desktop Mac/PC with no native prompt: show the manual steps (#593)
+            if (!isMobileUA) showDesktopInstallSheet();
           }
         });
         window.addEventListener('appinstalled', hideSplash, { once: true });
