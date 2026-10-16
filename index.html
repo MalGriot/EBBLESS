@@ -767,7 +767,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card .lib-desc.np-onair{position:relative;padding-left:14px;min-width:0}
 .lib-card .lib-desc.np-onair::before{content:'';position:absolute;left:1px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#3ddc84;animation:new-dot-blink 1.4s ease-in-out infinite}
 @keyframes new-dot-blink{0%,100%{opacity:1}50%{opacity:.15}}
-.lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s linear infinite}
+.lib-card .name.current-label,.lib-card .art .title-overlay .marquee.current-label{animation:current-label-cycle 8s steps(4) infinite}   /* stepped: a smooth colour keyframe restyles every frame */
 @keyframes current-label-cycle{
   0%,100%{color:#ff5b5b}
   12.5%{color:#ff9f43}
@@ -1514,8 +1514,8 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head .discover-toggle:hover{color:var(--text)}
 .queue-head .discover-toggle svg{opacity:.4;transition:opacity var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .queue-head .discover-toggle.is-active{color:var(--text)}
-.queue-head .discover-toggle.is-active svg{opacity:1;color:#ffc83d;animation:bulbGlow 3.2s ease-in-out infinite}
-@keyframes bulbGlow{0%,100%{filter:drop-shadow(0 0 1px rgba(255,200,61,.5))}50%{filter:drop-shadow(0 0 6px rgba(255,200,61,.95))}}
+.queue-head .discover-toggle.is-active svg{opacity:1;color:#ffc83d;filter:drop-shadow(0 0 4px rgba(255,200,61,.8));animation:bulbGlow 3.2s ease-in-out infinite}
+@keyframes bulbGlow{0%,100%{opacity:.7}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.queue-head .discover-toggle.is-active svg{animation:none;filter:drop-shadow(0 0 4px rgba(255,200,61,.8))}}
 .queue-head .qh-icon{display:flex;align-items:center;justify-content:center;width:26px;height:26px}
 .queue-head .qh-icon svg{width:17px;height:17px}
