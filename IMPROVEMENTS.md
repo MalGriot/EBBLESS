@@ -10666,12 +10666,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #517. Related to autoadvance-stall-full-progress.
 
 ### the-controls-at-the-top-of: the controls at the top of library and queue should be fixed when scrolling (Geethub #552)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #552. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #552.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #552. Already on main (#586/#594): library bar fixed, list scrolls in .lib-body; queue head sits above .queue-scroll. Verified in browser, no new change.
 
 ### feedback-tester-s-wishes: feedback tester's wishes (Geethub #553)
 - **Status:** draft
@@ -10802,12 +10802,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #568.
 
 ### library-view-button-hitting-a-button: library view button: hitting a button in the "sort by" list should reverse the list by that parameter (Geethub #569)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #569. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #569.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #569. Already on main (0826165): tapping the active sort flips it. Verified present, no new change.
 
 ### soundcloud-links-only-play-on-my: soundcloud links only play on my phone and machine because i'm logged in (Geethub #570)
 - **Status:** draft
@@ -10858,12 +10858,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #575.
 
 ### button-to-reverse-the-direction-of: button to reverse the direction of the queue (Geethub #576)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #576. medium podcasts play into the previous episode. i'd prefer to play toward the newest
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #576.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #576. Already on main (102aa33): reverse button in the queue head. Verified present, no new change.
 
 ### mobile-ui-changes: mobile ui changes (Geethub #577)
 - **Status:** draft
@@ -10922,20 +10922,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #603.
 
 ### bug-library-thumb-titles-not-scrolling: library thumb titles are not scrolling (Geethub #601)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #601. Long titles on library thumbs should scroll.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #601.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #601. Fixed: marquee visibility observer (IO v2 isVisible) kept library-card titles paused; library cards now use isIntersecting only.
 
 ### bug-delete-playlist-skips-to-top: when you delete a playlist, the library skips to the top (Geethub #600)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #600. The list should stay in position after a delete.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #600.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #600. Fixed: delete handler restores .lib-body scrollTop after the re-render.
 
 ### bug-miniplayer-play-button-style: desktop: miniplayer play button should match the full app (Geethub #587)
 - **Status:** ready
@@ -10946,20 +10946,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #587.
 
 ### queue-finish-nothing-playing: when a queue finishes and discovery is off, return to nothing playing yet (Geethub #599)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #599. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #599.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #599. Fixed: finishQueueAtEnd calls resetToNothingPlaying() when the queue ends on its own, repeat off, discovery off. Manual next at the end is unchanged.
 
 ### library-thumbs-1x1-2x2: library thumbs change between 1x1 and 2x2 art every 7 seconds (Geethub #602)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #602. Must follow the GPU budget (transform/opacity only, pause when hidden).
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #602.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #602. Cover/2x2 crossfade already existed (#384, 17s loop); now a 14s loop so it flips every 7s. Opacity only; still pauses off-screen (.lib-offscreen) and when the view is hidden.
 
 ### hires-video-desktop: use the hi res video for desktop (Geethub #598)
 - **Status:** ready
