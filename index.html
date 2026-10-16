@@ -2,7 +2,8 @@
 <html lang="en" class="clock-color-init">
 <head>
 <meta charset="UTF-8">
-<script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');</script>
+<script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
+if (/EBBLESS-Android/.test(navigator.userAgent)) { var pl = document.createElement('link'); pl.rel = 'preload'; pl.as = 'video'; pl.href = 'brand/assets/splash-cymatics-alpha.webm'; document.head.appendChild(pl); }</script>
 <style>
 /* Android app (android-webview/): budget phones dropped ~1 in 3 frames of the background videos
    because of the live CSS filter plus the mix-blend-mode tint over them. Lite mode uses *-alpha.webm:
@@ -11,6 +12,10 @@
 html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
 html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0}
 html.ebb-android #beta-lock .bl-video{transition:none}
+/* splash: flat black + logo until the new video is really playing, then the normal reveal (no grey poster flash) */
+html.ebb-android #splash .splash-poster{display:none}
+html.ebb-android #splash .splash-tint{opacity:0}
+html.ebb-android #splash.is-active:not(:has(.splash-video.ebb-ready)) .splash-black{animation:none;opacity:1}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -27131,6 +27136,19 @@ function startApp(){
         // Don't strand a visitor on the splash forever if they never tap.
         setTimeout(hideSplash, 6000);
       }, INSTALL_INVITE_DELAY_MS);
+    } else if (document.documentElement.classList.contains('ebb-android')) {
+      // Android app: stay on the splash until Enter (or Tutorial) while the app loads behind it
+      splashEl.classList.add('is-choice');
+      const onHold = (e) => {
+        const t = e.target.closest ? e.target.closest('button') : null;
+        if (!t || (t.id !== 'splashSkipTutorial' && t.id !== 'splashPlayTutorial')) return;
+        e.stopPropagation(); e.preventDefault();
+        splashEl.removeEventListener('click', onHold, true);
+        splashEl.classList.remove('is-choice');
+        hideSplash();
+        if (t.id === 'splashPlayTutorial') replayTutorialBtn.click();
+      };
+      splashEl.addEventListener('click', onHold, true);
     } else {
       setTimeout(hideSplash, SPLASH_MS);
     }
