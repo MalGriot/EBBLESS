@@ -3256,6 +3256,10 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-tint{background:var(--accent);mix-blend-mode:color;transition:background 4s linear}
 #beta-lock .bl-fade{background:linear-gradient(rgba(18,18,18,.45) 0%, rgba(18,18,18,.82) 38%, #121212 72%)}
 #beta-lock{isolation:isolate}
+/* Google check on the lock: gold while verifying, red when no tester is found. Colors only, set once. */
+#beta-lock[data-verify=checking]{--accent:#e0b26a;--clock-accent:#e0b26a}
+#beta-lock[data-verify=no]{--accent:#d93a3a;--clock-accent:#d93a3a}
+#beta-lock[data-verify] .bl-tint{transition-duration:600ms}
 #beta-lock .bl-wrap{max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));transform-origin:top center}
 #beta-lock .bl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(16px,6vh,56px)}
 #beta-lock .bl-top img{height:20px;width:auto;display:block}
@@ -3384,6 +3388,7 @@ body.week-up-on{overflow:hidden}
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
   const relock = () => { document.documentElement.classList.add('ebb-relock'); if (window.EbbNative && EbbNative.lock) EbbNative.lock(); lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
+  const verify = (v) => { if (v) lock.dataset.verify = v; else delete lock.dataset.verify; };
   const msg = (t) => { const m = document.getElementById('bl-msg'); m.textContent = t || ''; m.classList.toggle('bl-working', /\.\.\.$/.test(t || '')); };
   // iPhone/iPad home-screen app: its storage is apart from Safari's and the
   // invite link opens Safari, not this app, so Google sign-in is the way in.
@@ -3484,6 +3489,7 @@ body.week-up-on{overflow:hidden}
     locked: () => !lock.hidden,
     renewing: () => lease === 'renewing',
     leaseFailed,
+    verify,
     unlockWith(t, until, me){
       if (!TOKEN_RE.test(String(t || ''))) return;
       saveMe(me);
@@ -3492,7 +3498,7 @@ body.week-up-on{overflow:hidden}
       lease = '';
       ls.set(LS_TOKEN, t); ls.set(LS_OK, String(now));
       ls.set(LS_LEASE, String(until > now ? until : now + BETA_LEASE_MS));
-      msg(''); unlock();
+      msg(''); verify(''); unlock();
     },
     msg,
   };
@@ -6790,14 +6796,14 @@ async function betaAccountLink(idToken, sub){
   try{
     const renewing = !!(gate && gate.renewing && gate.renewing());
     if (gate && (gate.locked() || renewing)){
-      if (!renewing) gate.msg('Checking your Google account...');
+      if (!renewing){ gate.msg('Checking your Google account...'); gate.verify('checking'); }
       let wantPl = true; try { wantPl = !localStorage.getItem('ebbless:betaSignupPlaylistDone'); } catch(e){}
       let wantMu = true; try { wantMu = !localStorage.getItem('ebbless:betaSignupMusicDone'); } catch(e){}
       const res = await post('/beta/claim', { idToken, ...(wantPl ? { playlist: true } : {}), ...(wantMu ? { music: true } : {}) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.token){ gate.unlockWith(data.token, data.leaseUntil, data); lsSet(LS_BETA_LINKED, sub + ':' + data.token); }
       else if (renewing) gate.leaseFailed();
-      else gate.msg(data.error || "Couldn't reach EBBLESS. Check your connection and try again.");
+      else { gate.msg(data.error || "Couldn't reach EBBLESS. Check your connection and try again."); gate.verify(res.status === 404 || res.status === 401 || res.status === 403 ? 'no' : ''); }
       return;
     }
     let token = '';
