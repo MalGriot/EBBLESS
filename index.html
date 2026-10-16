@@ -590,7 +590,7 @@ body.onb-active .paste-guide{display:none}
    their own row under the toolbar on every width, one tap each (replaced
    the phone-only button that silently cycled filters). Chips for kinds the
    library doesn't hold are hidden by renderLibrary. */
-.lib-filter{display:flex;align-items:center;gap:8px;margin-top:12px;padding:4px 0;overflow-x:auto;scrollbar-width:none}
+.lib-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding:4px 0}   /* #495: pills wrap onto a second row instead of scrolling, so Podcasts is never off-screen */
 .lib-filter::-webkit-scrollbar{display:none}
 .lib-filter-more{position:sticky;right:0;flex:none;width:32px;height:32px;margin-left:auto;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border-2);color:var(--faint)}
 .lib-filter-more:hover{color:var(--text)}
