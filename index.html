@@ -1259,6 +1259,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
   text-shadow:0 0 12px color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 35%),transparent)}
 @media (prefers-reduced-motion: reduce){.lyric-line{transition:none}}
 .lyrics-empty{padding:0 24px;color:var(--faint);font-size:13.5px;text-align:center;line-height:1.6}
+/* caption status stays in view over a chapters-only list (#603) */
+.lyrics-empty.cap-status{position:sticky;bottom:0;padding:8px 24px;background:rgba(20,20,20,.88);border-radius:10px}
 /* podcast captions (#241): chapter titles sit in the line list as small
    caps headings, still clickable to jump there */
 .lyric-line.is-chapter{margin-top:14px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}

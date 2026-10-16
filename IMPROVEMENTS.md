@@ -10914,12 +10914,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #582.
 
 ### bug-podcast-captions-not-loading: podcast captions are not loading (Geethub #603)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #603. Repro: open ?import=https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF&track=3.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #603.
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #603. Cause: on an episode with chapters but no feed transcript, only the chapter titles show while the first captions slice generates on device (model download plus first slice, about a minute), and the "Generating captions" note sat at the bottom of the list, out of view. The note is now pinned in view.
 
 ### bug-library-thumb-titles-not-scrolling: library thumb titles are not scrolling (Geethub #601)
 - **Status:** ready
