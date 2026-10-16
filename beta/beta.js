@@ -181,12 +181,13 @@
     v.addEventListener('playing', () => v.classList.add('is-playing'));
     const p = v.play(); if (p && p.catch) p.catch(() => {});
   }
-  // Gold while a Google account checks out, red when it isn't found; null resets to the clock color.
+  // Gold while a Google account checks out, green once signed in ('done'), red when it isn't found; null resets to the clock color.
   function bgState(state){
     const bg = document.querySelector('.bg'); if (!bg) return;
     bg.classList.toggle('is-verified', state === 'ok');
     bg.classList.toggle('is-missing', state === 'bad');
-    held = state === 'ok' ? [224, 178, 106] : state === 'bad' ? [217, 58, 58] : null;
+    bg.classList.toggle('is-signed', state === 'done');
+    held = state === 'ok' ? [224, 178, 106] : state === 'done' ? [79, 207, 122] : state === 'bad' ? [217, 58, 58] : null;
     applyClock();   // buttons and accents follow the wash
   }
   if (document.body) background(); else document.addEventListener('DOMContentLoaded', background);
