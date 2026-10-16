@@ -10410,12 +10410,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #551. Child of playlist-workspaces (#506).
 
 ### playlist-keep-added-songs: Keep songs added to imported playlists when they refresh (Geethub #550)
-- **Status:** draft
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #550. Part of #506. Songs a user adds to an imported playlist must survive the refresh.
 - **Touches:** playlist refresh.
-- **Branch:** 
-- **Notes:** Synced from Geethub #550. Child of playlist-workspaces (#506).
+- **Branch:** agent/playlist-ws-c
+- **Notes:** Synced from Geethub #550. Child of playlist-workspaces (#506). Built 2026-10-16: hand-added songs are captured when a refresh starts and carried through every payload written during it (mid-resolve snapshots used to wipe them), also for podcast shows.
 
 ### playlist-drag-reorder: Drag to reorder songs inside a playlist (Geethub #549)
 - **Status:** draft

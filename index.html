@@ -7454,15 +7454,26 @@ const RESOLVE_LOGIC_VERSION = 7;
 // Re-matching/re-resolving a playlist re-fetches its tracklist from the
 // source and would otherwise silently drop any songs the user added by hand
 // (from another playlist or a pasted link) — carry those forward.
+// #550: the cache is overwritten mid-resolve by in-progress snapshots, so the
+// hand-added songs are captured once when a resolve starts (manualCarry) and
+// every payload written during it carries them.
+const manualCarry = new Map();
 function withManualTracks(playlistId, resolvedTracks){
   const old = getCachedPlaylist(playlistId);
-  if (!old) return resolvedTracks;
+  const carried = manualCarry.get(playlistId) || (old ? old.tracks.filter(t => t.manual && t.videoId) : []);
+  if (!carried.length) return resolvedTracks;
   const known = new Set(resolvedTracks.filter(t => t.videoId).map(t => t.videoId));
-  const manual = old.tracks.filter(t => t.manual && t.videoId && !known.has(t.videoId));
+  const manual = carried.filter(t => !known.has(t.videoId));
   return manual.length ? resolvedTracks.concat(manual) : resolvedTracks;
 }
-
 async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
+  const old = getCachedPlaylist(playlistId);
+  const had = manualCarry.has(playlistId);
+  if (!had) manualCarry.set(playlistId, old ? old.tracks.filter(t => t.manual && t.videoId) : []);
+  try { return await resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack); }
+  finally { if (!had) manualCarry.delete(playlistId); }
+}
+async function resolvePlaylistInner(playlistId, type, onProgress, onFirstTrack){
   if (type === 'track' || type === 'sc_track' || type === 'am_track'){
     let title, artist, art = null, sourceDuration = 0, scId = null;
     if (type === 'sc_track'){
@@ -7539,7 +7550,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // episodes etc.) - the show still loads; say why it starts elsewhere.
     // First import only, not the silent periodic refresh.
     if (pod.missingEpisode && !old) showToast('"' + pod.missingEpisode + '" isn\'t in the show\'s public feed (it may be subscriber-only). Playing the latest episode instead.');
-    const build = (extra) => Object.assign({ id: playlistId, type, name: show, author: pod.author || '', description: pod.description || '', image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks, focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, (() => { const o = getCachedPlaylist(playlistId); return o && o.sectionOverride ? { sectionOverride: o.sectionOverride, albumOverride: o.albumOverride } : {}; })(), extra || {});
+    const build = (extra) => Object.assign({ id: playlistId, type, name: show, author: pod.author || '', description: pod.description || '', image: pod.image || null, originalImage: pod.image || null, link: pod.link || '', tracks: withManualTracks(playlistId, tracks), focusIndex: focus >= 0 ? focus : undefined, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION }, (() => { const o = getCachedPlaylist(playlistId); return o && o.sectionOverride ? { sectionOverride: o.sectionOverride, albumOverride: o.albumOverride } : {}; })(), extra || {});
     onProgress({ stage: 'matching', done: 0, total: tracks.length });
     let fired = false;
     const fireFirst = () => {
@@ -7713,7 +7724,7 @@ async function resolvePlaylist(playlistId, type, onProgress, onFirstTrack){
     // resume from. `resolving: true` marks this a snapshot-in-progress so
     // startApp's sweep can pick up a playlist a killed process left behind.
     if (firstTrackFired){
-      lsSet(LS_PL(playlistId), keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: resolved, ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION, resolving: true }));
+      lsSet(LS_PL(playlistId), keepAlbumOverride({ id: playlistId, type: type || 'playlist', name, image: image || null, originalImage: image || null, tracks: withManualTracks(playlistId, resolved), ts: Date.now(), resolveVersion: RESOLVE_LOGIC_VERSION, resolving: true }));
     }
     // The 350ms spacing exists to be polite to the /search backend
     // (YouTube-scraping, rate-limit-sensitive) - a native SoundCloud track
