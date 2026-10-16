@@ -69,6 +69,7 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
                 android.webkit.WebResourceResponse bundled = bundledVideo(r);
+                if (bundled == null) bundled = cachedPage(r);
                 return bundled != null ? bundled : super.shouldInterceptRequest(v, r);
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -97,8 +98,45 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         startForegroundService(new Intent(this, PlaybackService.class));
 
-        if (b != null) web.restoreState(b); else web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); // Pages caches the page 10 min; always revalidate
+        if (b != null) web.restoreState(b); else web.loadUrl(((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 ? HOME + "?mal" : HOME), java.util.Collections.singletonMap("Cache-Control", "no-cache")); // Pages caches the page 10 min; always revalidate
         handleIntent(getIntent());
+        refreshPageCopy();
+    }
+
+    /**
+     * Cold start spent ~2s just waiting on the network for index.html. Serve the copy saved on the last launch
+     * straight from disk and refresh it in the background, so a page update shows up one launch later.
+     */
+    private android.webkit.WebResourceResponse cachedPage(WebResourceRequest r) {
+        Uri u = r.getUrl();
+        if (!r.isForMainFrame() || !"malgriot.github.io".equals(u.getHost()) || !"/EBBLESS/index.html".equals(u.getPath())) return null;
+        java.io.File f = new java.io.File(getFilesDir(), "index.html");
+        if (!f.isFile() || f.length() < 100000) return null;
+        try {
+            java.util.Map<String, String> h = new java.util.HashMap<>();
+            h.put("Cache-Control", "no-cache");
+            return new android.webkit.WebResourceResponse("text/html", "UTF-8", 200, "OK", h, new java.io.FileInputStream(f));
+        } catch (java.io.IOException e) {
+            return null;
+        }
+    }
+
+    /** Pull the live index.html into filesDir for the next launch (written atomically, only if it looks whole). */
+    private void refreshPageCopy() {
+        new Thread(() -> {
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(HOME).openConnection();
+                c.setConnectTimeout(8000); c.setReadTimeout(15000);
+                c.setRequestProperty("Cache-Control", "no-cache");
+                if (c.getResponseCode() != 200) return;
+                java.io.File tmp = new java.io.File(getFilesDir(), "index.html.tmp");
+                try (java.io.InputStream in = c.getInputStream(); java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+                    byte[] buf = new byte[65536]; int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                }
+                if (tmp.length() > 100000) tmp.renameTo(new java.io.File(getFilesDir(), "index.html")); else tmp.delete();
+            } catch (Exception ignored) {}
+        }, "ebb-page-refresh").start();
     }
 
     /** The splash/library background videos live in the APK so they play at once; serves them with HTTP range support. */
