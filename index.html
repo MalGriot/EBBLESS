@@ -23528,9 +23528,34 @@ function finishQueueAtEnd(opts){
   let pos = state.queuePos + 1;
   if (pos >= state.queue.length){
     if (state.repeat === 'all'){ pos = 0; if (state.shuffle) state.queue = shuffleTail(state.queue, 0); }
-    else { setPlayingUI(false); return; }
+    else {
+      setPlayingUI(false);
+      // Geethub #599: a queue that ran out on its own, with discovery off, goes back to nothing playing yet
+      const origin = discoverOriginId();
+      if (!opts && !(origin && isDiscoverOn(origin))) resetToNothingPlaying();
+      return;
+    }
   }
   playIndex(pos, opts);
+}
+function resetToNothingPlaying(){
+  state.queue = []; state.queuePos = -1;
+  lsDel(LS_RESUME);
+  $('trackMeta').classList.add('is-empty');
+  setMarqueeText(trackTitle, 'Nothing playing yet');
+  setMarqueeText(trackArtist, '');
+  setMarqueeText(flowTitle, '');
+  setMarqueeText(flowArtist, '');
+  setMarqueeText(miniTitle, '');
+  setMarqueeText(miniArtist, '');
+  [artA, artB].forEach(a => { a.classList.remove('is-active'); a.removeAttribute('src'); });
+  recordLabelImg.removeAttribute('src');
+  cassetteLabelArt.removeAttribute('href'); cassetteLabelArt.removeAttribute('xlink:href');
+  cassetteLabelArt.classList.remove('is-loaded');
+  seekFill.style.width = '0%';
+  timeCur.textContent = '0:00'; timeDur.textContent = '0:00';
+  renderQueuePanel();
+  updateMiniBarVisibility();
 }
 
 // Manual skips (next/prev) ask for a crossfade - startSkipCrossfade()
