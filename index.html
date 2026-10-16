@@ -24088,14 +24088,14 @@ const MINI_PLAYER_STYLE = `
   #mpShuffle.is-active,#mpRepeat.is-active{color:var(--accent)!important}
   #mpShuffle svg,#mpRepeat svg{width:16px;height:16px}
   #mpRepeatOne{position:absolute;top:3px;right:3px;font-size:8px;font-weight:700;line-height:1}
-  #mpControls #mpPlay{width:36px;height:36px;background:var(--accent);color:var(--on-accent,#151107)}
+  #mpControls #mpPlay{width:38px;height:38px;background:var(--mp-play-bg,var(--accent));color:var(--mp-play-fg,#151107)}
   .mp-skip{display:none!important}
   body.pod-playing .mp-skip{display:flex!important}
   .mp-skip text{font:700 7.5px/1 system-ui,sans-serif}
   body.pod-playing #mpControls{gap:0}
   body.pod-playing #mpControls button:not(#mpPlay){width:28px}
-  #mpControls #mpPlay:hover{background:var(--accent);filter:brightness(1.08);transform:scale(1.06)}
-  #mpPlay svg{width:20px;height:20px}
+  #mpControls #mpPlay:hover{background:var(--mp-play-bg,var(--accent));filter:brightness(1.08);transform:scale(1.06)}
+  #mpPlay svg{width:19px;height:19px}
   #mpQueue{display:none;position:relative;flex:1;min-height:0;overflow-y:auto;background:#181818;color:var(--mp-fg,#fff);
     border-top:1px solid rgba(255,255,255,.08);padding:6px}
   body.q-open #mpQueue{display:block}
@@ -24628,6 +24628,10 @@ function updateMiniPlayerUI(){
     const tint = getComputedStyle(document.documentElement).getPropertyValue('--player-accent').trim();
     if (tint && doc.body.style.getPropertyValue('--mp-tint') !== tint){
       doc.body.style.setProperty('--mp-tint', tint);
+      // play button follows the full app's play button (#587): same fill and the same readable glyph color
+      const onTint = getComputedStyle(document.documentElement).getPropertyValue('--on-player-accent').trim() || getComputedStyle(document.documentElement).getPropertyValue('--on-accent').trim();
+      doc.body.style.setProperty('--mp-play-bg', tint);
+      if (onTint) doc.body.style.setProperty('--mp-play-fg', onTint);
       // Queue text must contrast with the tinted background (50% tint over #0b0b0b)
       const probe = doc.createElement('span'); probe.style.color = tint; doc.body.appendChild(probe);
       const m = doc.defaultView.getComputedStyle(probe).color.match(/[\d.]+/g); probe.remove();
