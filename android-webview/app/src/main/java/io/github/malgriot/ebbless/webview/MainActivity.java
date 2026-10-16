@@ -47,10 +47,10 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         web = new KeepAliveWebView(this);
-        web.setBackgroundColor(0xFF121212);
+        web.setBackgroundColor(0xFF000000);
         WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xFF121212);
+        root.setBackgroundColor(0xFF000000);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
 
@@ -67,6 +67,10 @@ public class MainActivity extends Activity {
         cm.setAcceptThirdPartyCookies(web, true);
 
         web.setWebViewClient(new WebViewClient() {
+            @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                android.webkit.WebResourceResponse bundled = bundledVideo(r);
+                return bundled != null ? bundled : super.shouldInterceptRequest(v, r);
+            }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 if (!r.isForMainFrame()) return false;
                 return route(r.getUrl());
@@ -95,6 +99,47 @@ public class MainActivity extends Activity {
 
         if (b != null) web.restoreState(b); else web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); // Pages caches the page 10 min; always revalidate
         handleIntent(getIntent());
+    }
+
+    /** The splash/library background videos live in the APK so they play at once; serves them with HTTP range support. */
+    private android.webkit.WebResourceResponse bundledVideo(WebResourceRequest r) {
+        Uri u = r.getUrl();
+        String path = u.getPath();
+        if (!"malgriot.github.io".equals(u.getHost()) || path == null || !path.startsWith("/EBBLESS/brand/assets/") || !path.endsWith("-alpha.webm")) return null;
+        try {
+            android.content.res.AssetFileDescriptor fd = getAssets().openFd(path.substring("/EBBLESS/".length()));
+            long total = fd.getLength(), start = 0, end = total - 1;
+            String range = r.getRequestHeaders().get("Range");
+            boolean partial = false;
+            if (range != null && range.startsWith("bytes=")) {
+                String[] p = range.substring(6).split("-", 2);
+                try {
+                    if (!p[0].isEmpty()) start = Long.parseLong(p[0]);
+                    if (p.length > 1 && !p[1].isEmpty()) end = Math.min(end, Long.parseLong(p[1]));
+                    partial = start <= end;
+                } catch (NumberFormatException ignored) {}
+            }
+            java.io.InputStream in = fd.createInputStream();
+            long skipped = 0;
+            while (skipped < start) { long n = in.skip(start - skipped); if (n <= 0) break; skipped += n; }
+            final long len = end - start + 1;
+            final java.io.InputStream src = in;
+            java.io.InputStream limited = new java.io.InputStream() {
+                long left = len;
+                @Override public int read() throws java.io.IOException { if (left <= 0) return -1; int b = src.read(); if (b >= 0) left--; return b; }
+                @Override public int read(byte[] b, int o, int l) throws java.io.IOException { if (left <= 0) return -1; int n = src.read(b, o, (int) Math.min(l, left)); if (n > 0) left -= n; return n; }
+                @Override public void close() throws java.io.IOException { src.close(); }
+            };
+            java.util.Map<String, String> h = new java.util.HashMap<>();
+            h.put("Accept-Ranges", "bytes");
+            h.put("Content-Length", String.valueOf(len));
+            h.put("Cache-Control", "no-cache");
+            h.put("Access-Control-Allow-Origin", "*");
+            if (partial) h.put("Content-Range", "bytes " + start + "-" + end + "/" + total);
+            return new android.webkit.WebResourceResponse("video/webm", null, partial ? 206 : 200, partial ? "Partial Content" : "OK", h, limited);
+        } catch (java.io.IOException e) {
+            return null;
+        }
     }
 
     /** true = handled here (don't load it in the WebView). */

@@ -16,8 +16,17 @@ android {
         debug { applicationIdSuffix ".debug" }
         release { minifyEnabled false }
     }
+    // the splash/library background videos ship inside the app (copied from the site folder, so one source of truth)
+    sourceSets.main.assets.srcDirs += "$buildDir/generated/videoAssets"
+    androidResources { noCompress 'webm' }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+tasks.register('bundleVideos', Copy) {
+    from("$rootDir/../brand/assets") { include 'splash-cymatics-alpha.webm', 'library-bg-alpha.webm' }
+    into "$buildDir/generated/videoAssets/brand/assets"
+}
+preBuild.dependsOn 'bundleVideos'
