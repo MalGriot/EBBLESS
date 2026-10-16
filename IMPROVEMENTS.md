@@ -10664,3 +10664,251 @@ Add entries in this shape:
 - **Touches:** playback.
 - **Branch:** 
 - **Notes:** Synced from Geethub #517. Related to autoadvance-stall-full-progress.
+
+### the-controls-at-the-top-of: the controls at the top of library and queue should be fixed when scrolling (Geethub #552)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #552. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #552.
+
+### feedback-tester-s-wishes: feedback tester's wishes (Geethub #553)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #553. medium Intuitive music app - you think about a song and can talk to it and it plays it - it understands if you've been in a fight and need to rage or chill, if you have a party- what mood you are in for to entertain Also
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #553.
+
+### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #554. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #554.
+
+### bug-lp-mode-has-song-art-in: lp mode has song art in it but cassette is blank (Geethub #555)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #555. medium pasted this in https://youtu.be/vbBHMKt9fzk?si=ORnLTK384u-LBkmY
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #555.
+
+### let-s-create-a-test-to: let's create a test to improve song matching (Geethub #556)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #556. medium we'll take a playlist and i'll match a bunch of songs manually. ebbless will study the pattern and learn it
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #556.
+
+### youtube-ads-tip-when-the-skip: youtube ads tip: when the skip button appears, you don't have to click it, all you have to do is refresh the page and it plays (Geethub #557)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #557. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #557.
+
+### bug-what-do-we-do-about-ads: what do we do about ads in the middle of the song? (Geethub #558)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #558. high
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #558.
+
+### what-happens-if-too-many-people: what happens if too many people are using the app (Geethub #559)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #559. medium what are the thresholds especially consider the thresholds of the adblocker part that's yet to be installed
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #559.
+
+### achievement-points-for-doing-some-tasks: achievement points for doing some tasks in the app (Geethub #560)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #560. medium adding playlist re-organizing changing a setting signing in using some secret features watching tutorial etc
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #560.
+
+### playing-the-next-song-in-the: playing the next song in the queue in the background to make sure the ad is played out could work also for preventing users from waiting (Geethub #561)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #561. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #561.
+
+### we-should-make-an-apk-for: we should make an apk for google play store asap to get more testers (Geethub #562)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #562. high
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #562.
+
+### reverse-engineer-caffeiene-to-implement-is: reverse engineer caffeiene to implement is in ebbless - possibly to cure iphone pausing issue (Geethub #563)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #563. medium https://www.zhornsoftware.co.uk/caffeine/
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #563.
+
+### bug-mac-app-going-into-miniplayer-removes: mac app: going into miniplayer removes app icon from dock (Geethub #564)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #564. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #564.
+
+### there-should-be-a-desktop-download: there should be a desktop download for pc (Geethub #565)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #565. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #565.
+
+### bug-when-you-try-to-install-the: when you try to install the app from the welcome/beta page, the link takes you to github. that's too complicated. one click, detect the OS and processor, download and install the appropriate app (Geethub #566)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #566. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #566.
+
+### bug-white-buttons-with-white-symbols-text: white buttons with white symbols/text are unreadable (Geethub #567)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #567. medium need a clever fix for this
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #567.
+
+### adblock-code-option: adblock code option (Geethub #568)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #568. medium # adblock ## Table of Contents - [CLI Microlink API example](#cli-microlink-api-example) - [cURL Microlink API example](#curl-microlink-api-example) - [JavaScript Microlink API example](#javascript-microlink-api-e
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #568.
+
+### library-view-button-hitting-a-button: library view button: hitting a button in the "sort by" list should reverse the list by that parameter (Geethub #569)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #569. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #569.
+
+### soundcloud-links-only-play-on-my: soundcloud links only play on my phone and machine because i'm logged in (Geethub #570)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #570. medium we need a workaround or an easy smooth way to log people in who don't have an account. would be nice if a google login logged in to all music player accounts or something
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #570.
+
+### since-soundcloud-needs-a-login-to: since soundcloud needs a login to play, are there any other apps we could get into the list of music links? (Geethub #571)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #571. medium we can log the person in at the start and the world of music will be wide open to them. make a list of free music apps that have the least redundancy that would be useful to have in this app. it may be that some m
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #571.
+
+### reverse-engineer-youtube-and-find-out: reverse engineer youtube and find out where the ads are coming from so we can stop them (Geethub #572)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #572. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #572.
+
+### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #573. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #573.
+
+### mobile-you-should-be-able-to: mobile: you should be able to swipe left and right to switch between library to player to queue to settings (Geethub #574)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #574. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #574.
+
+### bug-ads-playing-on-podcast: ads playing on podcast (Geethub #575)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #575. medium [nosleep](https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF)
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #575.
+
+### button-to-reverse-the-direction-of: button to reverse the direction of the queue (Geethub #576)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #576. medium podcasts play into the previous episode. i'd prefer to play toward the newest
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #576.
+
+### mobile-ui-changes: mobile ui changes (Geethub #577)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #577. medium library needs no "library" title library filter buttons should be at the top list mode: 3 dots button on the items should be more right - as right as possible holding a button in library or queue brings the menu u
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #577.
+
+### bug-critical-android-first-seconds-of-each: [CRITICAL] Android: first seconds of each song skip, then catch up (Geethub #578)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug, Geethub #578. ## Summary In the Android app (v2.7.1, TECNO POP 9, Android 14), the first seconds of a song skip and then catch up. Reported on both songs played in the soak test (the first and the second track of a queue), with the sc
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #578.
+
+### on-mobile-status-bar-make-it: on mobile status bar: make it the ebbless logo (Geethub #579)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #579. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #579.
+
+### bug-the-feedback-button-is-missing-from: the feedback button is missing from top nav (Geethub #580)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #580. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #580.
+
+### bug-mobile-lock-screen-controls-and-notifications: mobile lock screen controls and notifications bar controls missing (Geethub #581)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug, Geethub #581. medium
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #581.
+
+### find-music-button-should-activate-a: "find music" button should activate a screen (Geethub #582)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Idea, Geethub #582. medium The screen should first give them the option to search for music by different genres, artists, region, vibe. There should be a list of genres, like a grid of genres, and those genres should open up when you select
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #582.
