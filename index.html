@@ -27225,7 +27225,17 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
   // album art: double-tap, or triple-tap when one is chosen (#469 phase 4).
   // With triple-tap set, the second tap waits one window for a third.
   let taps = 0, lastArtTap = 0, tapTimer = null;
-  artworkWrap.addEventListener('click', () => {
+  // single tap on the cover opens the playing song's album (#531); it waits out the double/triple-tap window so those gestures win
+  function openPlayingAlbum(){
+    const t = currentTrack(), e = state.queue[state.queuePos];
+    if (!t || !e) return;
+    const album = albumForTrack(getCachedPlaylist(e.plId), t);
+    if (!album) return;
+    if (!document.body.classList.contains('split-desktop') && state.currentView !== 'library') setView('library');
+    if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id);
+  }
+  artworkWrap.addEventListener('click', (ev) => {
+    if (ev.target.closest && ev.target.closest('button, a')) return;
     const now = Date.now();
     taps = now - lastArtTap < DOUBLE_TAP_MS ? taps + 1 : 1;
     lastArtTap = now;
@@ -27234,6 +27244,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     if (taps === 2 && !triple){ taps = 0; lastArtTap = 0; advRunGesture('gdt'); }
     else if (taps === 2) tapTimer = setTimeout(() => { taps = 0; advRunGesture('gdt'); }, DOUBLE_TAP_MS);
     else if (taps >= 3){ taps = 0; lastArtTap = 0; advRunGesture('gtt'); }
+    else tapTimer = setTimeout(() => { taps = 0; openPlayingAlbum(); }, DOUBLE_TAP_MS + 20);
   });
   // Library tab double-tap: back to top or open library search (#469 phase 4)
   document.querySelectorAll('#topnav [data-view="library"], #bottom-nav button[data-view="library"]').forEach(b => onDoubleTap(b, () => {
