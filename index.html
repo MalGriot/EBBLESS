@@ -21,6 +21,10 @@ html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) .splash-choice{opaci
 /* the app's startup cover (grey ground + mark) sits above the splash: skip it so black goes straight to the splash */
 html.ebb-android body:not(.onb-active) #onbBackdrop, html.ebb-android body:not(.onb-active) #onbMark{display:none!important}
 html.ebb-android{background:#000}
+/* faster reveal in the app: black fades to the video in 0.7s (web: 2.6s), then logo, then buttons */
+html.ebb-android #splash.is-active .splash-black{animation-duration:700ms}
+html.ebb-android #splash.is-active img{animation:splash-logo-in 700ms var(--ease-out) 350ms forwards}
+html.ebb-android #splash.is-choice .splash-choice{transition-delay:1000ms}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
