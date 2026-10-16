@@ -24910,6 +24910,8 @@ if ('serviceWorker' in navigator){
         // The very first controllerchange (page had no controller yet, e.g.
         // first-ever install) isn't an update - skip the prompt for that one.
         if (!sawControllerBefore){ sawControllerBefore = true; return; }
+        // the Android app refreshes its own copy of the page on every launch; a reload here showed the splash a second time after an early Enter
+        if (document.documentElement.classList.contains('ebb-android')) return;
         if (swRefreshing) return;
         // Reload on its own, but never cut off a song: if something is
         // playing, wait until it pauses or ends.
