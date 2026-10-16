@@ -23,17 +23,25 @@ use `.debug` and install beside the real app.
 - **Local build:** JDK 17 + Android SDK (platform 36, build-tools 35/36), then
   `./gradlew assembleDebug` and `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 
-## CRITICAL NEXT STEP: 30-minute unplugged screen-off soak
+## Screen-off soak (measured 2026-10-16, TECNO POP 9, app 2.7.1)
 
-Passed so far: 5 minutes screen off, **on USB** (charging hides Doze), one
-phone (TECNO POP 9). Before telling testers to rely on this build:
+33 minutes with the screen off and the phone unplugged (10:07 -> 10:40, 65 samples every 30s,
+logged on the phone itself by `/sdcard/soak.sh`; the log has no gap longer than 33s, so the
+phone never suspended):
 
-1. Pair wireless debugging (`adb pair`, `adb connect`), unplug the cable.
-2. Play a YouTube track and a SoundCloud track, screen off, 30 minutes, battery
-   below ~80% and not charging.
-3. Pull evidence: `adb shell dumpsys audio` (stream `started`), foreground
-   service still up, no gap in playback you can hear.
-4. Also check the app switcher card after a long idle and a process restart,
-   and a fresh tester sign-in (non-owner Google account) end to end.
+- audio streams started in every sample, same process (pid) throughout, foreground service up throughout
+- battery 100% -> 95%; Doze never went past IDLE_PENDING because audio was playing (expected)
+- the system's audio mixer counted 2 underruns across the whole window
+- one 33s screen wake at 10:24 (the owner checking); playback continued through it
 
-If playback stops, fall back to the TWA APK above and re-publish it.
+Not covered yet: a longer run (1h+), SoundCloud as well as YouTube, a second phone, and a run
+with the phone idle in a pocket/bag (Wi-Fi sleep, thermal). The first seconds of a song can
+skip and then catch up (owner report, both test songs); the mixer shows no underruns, so
+that is the player buffering/CPU at track start, not the app's audio path.
+
+To repeat: `adb tcpip 5555 && adb connect <phone-ip>:5555` (approve the prompt on the phone),
+`adb push soak.sh /sdcard/ && adb shell "nohup setsid sh /sdcard/soak.sh >/dev/null 2>&1 &"`,
+play a long queue, lock, unplug, come back, `adb shell cat /sdcard/soak.log`.
+
+Rollback if playback ever stops in the field: the old TWA APK is saved at
+`~/android-tools/rollback/ebbless-twa-1.0.0.apk` on the owner's Mac.
