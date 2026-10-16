@@ -10282,12 +10282,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #502. 
 
 ### button-text-color-consistency: Buttons mix white and black text when the UI color changes (Geethub #501)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub #501. Buttons mix white and black text when the UI color changes.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #501. Related to #354 (merged).
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #501. Related to #354 (merged). Fixed with #567: onAccentFor picks dark or white text by WCAG contrast, so mid-tone UI colors like cyan no longer get white-on-light text.
 
 ### on-air-thumb-wrong: On/off air thumb shows off air while music plays (Geethub #500)
 - **Status:** merged
@@ -10306,12 +10306,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #499. Related to #416 (paid custom cursor).
 
 ### made-by-ebbless-section: Currents, Swirl and On Air belong in the 'Made by EBBLESS' section (Geethub #498)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Bug, Geethub #498. Currents, Swirl and On Air belong in the 'Made by EBBLESS' section.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #498. 
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #498.  Already in place since #408 (Currents, Swirl, On Air sit under Made by EBBLESS when the user also has playlists); verified with a test playlist, no code change.
 
 ### artist-bio-photo-gaps: Many artists show albums but no bio or picture; needs more sources (Geethub #497)
 - **Status:** merged
@@ -10330,12 +10330,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #496. Shipped 2026-10-14 (cache v232), unconfirmed: a list made only of podcast episodes (e.g. a copied show saved as custom) no longer fades between cover and 2x2 grid (canToggleThumbArt). Root cause was a guess; ask for repro steps if a normal podcast still loops.
 
 ### see-all-podcasts-pill-scroll: 'See all' on podcasts scrolls the category pills to the lit podcasts pill (Geethub #495)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #495. 'See all' on podcasts scrolls the category pills to the lit podcasts pill.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #495. 
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #495.  Already shipped in df78629; verified the lit Podcasts chip scrolls into view on a narrow viewport (smooth scroll does not animate in the preview pane, the offset math lands the chip in view).
 
 ### albums-no-artist-sections: Album grid views without artist sections, toggle in advanced settings (Geethub #494)
 - **Status:** draft
@@ -10562,12 +10562,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #532. Related to artist-window-album-tracks.
 
 ### album-cover-opens-album: Clicking the album cover should open the album (Geethub #531)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #531. Tapping the album cover in the player opens that album.
 - **Touches:** player art.
-- **Branch:** 
-- **Notes:** Synced from Geethub #531. Check overlap with logo-tap/art tap entries.
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #531. Check overlap with logo-tap/art tap entries. A single tap on the player's cover opens that song's album (waits out the double/triple-tap window so those gestures still win; ignores taps on buttons inside the art). Verified on localhost.
 
 ### bug-cursor-invisible-same-color: Cursor is impossible to see when it matches the art and UI (Geethub #530)
 - **Status:** draft
@@ -10786,12 +10786,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #566.
 
 ### bug-white-buttons-with-white-symbols-text: white buttons with white symbols/text are unreadable (Geethub #567)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub #567. medium need a clever fix for this
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #567.
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #567. Fixed with #501 (same fix: text color chosen from the button fill by contrast).
 
 ### adblock-code-option: adblock code option (Geethub #568)
 - **Status:** draft
@@ -10882,20 +10882,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #578.
 
 ### on-mobile-status-bar-make-it: on mobile status bar: make it the ebbless logo (Geethub #579)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #579. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #579.
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #579. Android notification small icon (status bar) is now the EBBLESS mark (drawable ic_stat_ebbless, Playback and Watchdog services) instead of the generic play icon. Not built or seen on a device.
 
 ### bug-the-feedback-button-is-missing-from: the feedback button is missing from top nav (Geethub #580)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub #580. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #580.
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #580. Already shipped in ea9ecd8 (nav Feedback button shows for everyone); verified on localhost desktop, no code change here.
 
 ### bug-mobile-lock-screen-controls-and-notifications: mobile lock screen controls and notifications bar controls missing (Geethub #581)
 - **Status:** draft
@@ -10938,12 +10938,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #600.
 
 ### bug-miniplayer-play-button-style: desktop: miniplayer play button should match the full app (Geethub #587)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #587. Use the same play button as the full app.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #587.
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #587. Mini-player play button now uses the full app's play fill (player accent) and its readable glyph color. Document PiP window not exercised in the browser pane.
 
 ### queue-finish-nothing-playing: when a queue finishes and discovery is off, return to nothing playing yet (Geethub #599)
 - **Status:** ready
@@ -10962,9 +10962,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #602.
 
 ### hires-video-desktop: use the hi res video for desktop (Geethub #598)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #598. Source file: /Users/malcolm/Downloads/204888-925552628.mp4. Must follow the GPU budget.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #598.
+- **Branch:** agent/t1-buttons-nav
+- **Notes:** Synced from Geethub #598. Desktop splash (min-width 1280, hover + fine pointer, not Android) plays brand/assets/splash-cymatics-hd.mp4 (1080p, 6.3MB re-encode of the source; original is 25MB). Everything else keeps the 720p or alpha clips. Existing splash pause-when-hidden path unchanged; no new gpu-watchdog warnings.
