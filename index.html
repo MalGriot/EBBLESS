@@ -526,6 +526,8 @@ body.onb-active .paste-guide{display:none}
 .album-sort{font:inherit;font-size:11px;letter-spacing:.3px;text-transform:none;font-weight:500;color:var(--faint-2);background:transparent;border:1px solid var(--border,rgba(255,255,255,.14));border-radius:999px;padding:3px 8px;max-width:50%}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .section-label-row .section-label{margin:28px 0 2px}
+/* Geethub #552: the library's top controls (new playlist, search, sort) stay pinned while the list scrolls. Solid fill, no blur, so nothing animates under it */
+#libraryListWrap>.section-label-row{position:sticky;top:0;z-index:3;background:var(--panel);padding:6px 0}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
