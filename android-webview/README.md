@@ -18,10 +18,12 @@ use `.debug` and install beside the real app.
   installed app (no install gate).
 - **Release:** `.github/workflows/android.yml` signs and publishes
   `ebbless.apk` to the `android` release on every push touching this folder.
-  The old TWA APK is saved at `~/android-tools/rollback/ebbless-twa-1.0.0.apk`
-  on the owner's Mac.
-- **Local build:** JDK 17 + Android SDK (platform 36, build-tools 35/36), then
-  `./gradlew assembleDebug` and `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
+  The old TWA APK is saved at `android-webview/rollback/ebbless-twa-1.0.0.apk`.
+- **Releases need no local tools:** push to `main` and GitHub Actions builds, signs and publishes `ebbless.apk`.
+  Page changes (index.html) need no build at all. A *local* debug build (to test on a phone with adb) needs JDK 17 and the
+  Android SDK (platform 36, build-tools 35/36); they were removed from the owner's Mac on 2026-10-16 to free ~1.7 GB and
+  can be reinstalled when needed, then `./gradlew assembleDebug` and `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+  (adb itself comes from Homebrew: `brew install android-platform-tools`).
 
 ## Screen-off soak (measured 2026-10-16, TECNO POP 9, app 2.7.1)
 
@@ -44,4 +46,4 @@ To repeat: `adb tcpip 5555 && adb connect <phone-ip>:5555` (approve the prompt o
 play a long queue, lock, unplug, come back, `adb shell cat /sdcard/soak.log`.
 
 Rollback if playback ever stops in the field: the old TWA APK is saved at
-`~/android-tools/rollback/ebbless-twa-1.0.0.apk` on the owner's Mac.
+`android-webview/rollback/ebbless-twa-1.0.0.apk`.
