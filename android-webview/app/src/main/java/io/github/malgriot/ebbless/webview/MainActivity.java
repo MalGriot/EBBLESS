@@ -44,52 +44,71 @@ public class MainActivity extends Activity {
         }
     }
 
+    private FrameLayout root;
+    private NativeSplash splash;
+    private volatile boolean splashHolding;
+
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
+        root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF000000);
+        setContentView(root);
+        if (b == null) {
+            // Cold start: the splash is native, so it is on screen at once and the (slow) web view is built after the first frame.
+            String override = getSharedPreferences("ebb", MODE_PRIVATE).getString("accentOverride", "");
+            splash = new NativeSplash(this, new NativeSplash.Listener() {
+                @Override public void onChoose(boolean tutorial) {
+                    if (web == null) return;
+                    web.evaluateJavascript("(function(){var x=document.getElementById('" + (tutorial ? "splashPlayTutorial" : "splashSkipTutorial") + "');if(x)x.click();})()", null);
+                }
+                @Override public void onFinished() { splashDone(); }
+            }, override);
+            splashHolding = true;
+            root.addView(splash, new FrameLayout.LayoutParams(-1, -1));
+            root.postDelayed(() -> { if (splash != null) splash.dropForLock(); }, 25000);   // never trap the user behind it
+            final Bundle bb = b;
+            root.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+                @Override public boolean onPreDraw() {
+                    root.getViewTreeObserver().removeOnPreDrawListener(this);
+                    root.post(() -> initWeb(bb));
+                    return true;
+                }
+            });
+        } else {
+            initWeb(b);
+        }
+    }
+
+    private void splashDone() {
+        splash = null;
+        splashHolding = false;
+        if (web == null) return;
+        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString().replace(" NativeSplash", ""));
+        // the web splash stays for "back to the splash"; wake its videos now that nothing is competing for the decoder
+        web.evaluateJavascript("(function(){document.documentElement.classList.remove('ebb-nsplash');document.querySelectorAll('video[data-src]').forEach(function(v){if(!v.getAttribute('src')&&!v.classList.contains('bl-video'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');});})()", null);
+    }
+
+    private void initWeb(Bundle b) {
         web = new KeepAliveWebView(this);
         web.setBackgroundColor(0xFF000000);
-        WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xFF000000);
-        root.addView(web, new FrameLayout.LayoutParams(-1, -1));
-        // Keep the launch logo up (same mark and spot as the system launch screen) until the page says its splash is ready,
-        // instead of an empty black screen while the page boots.
-        launchCover = new FrameLayout(this);
-        launchCover.setBackgroundColor(0xFF000000);
-        android.widget.ImageView logo = new android.widget.ImageView(this);
-        logo.setImageResource(R.mipmap.ic_maskable);
-        int px = (int) (192 * getResources().getDisplayMetrics().density);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px, px, android.view.Gravity.CENTER);
-        launchCover.addView(logo, lp);
-        // "not frozen" cue with no animation and no GPU work: a small text line whose dots tick every half second
-        loadingText = new android.widget.TextView(this);
-        loadingText.setTextColor(0x99FFFFFF);
-        loadingText.setTextSize(13);
-        loadingText.setLetterSpacing(0.08f);
-        loadingText.setGravity(android.view.Gravity.CENTER);
-        loadingText.setText("Turning the tides...");
-        FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER);
-        tp.topMargin = px / 2 + (int) (28 * getResources().getDisplayMetrics().density);
-        launchCover.addView(loadingText, tp);
-        launchCover.postDelayed(new Runnable() {
-            int n = 0;
-            @Override public void run() {
-                if (loadingText == null) return;
-                // the full line is always there (unrevealed dots are transparent), so the text stays centred while the dots tick
-                String line = "Turning the tides...";
-                android.text.SpannableString sp = new android.text.SpannableString(line);
-                int shown = n++ % 4;
-                sp.setSpan(new android.text.style.ForegroundColorSpan(0x00FFFFFF), line.length() - 3 + shown, line.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                loadingText.setText(sp);
-                launchCover.postDelayed(this, 500);
-            }
-        }, 500);
-        root.addView(launchCover, new FrameLayout.LayoutParams(-1, -1));
-        launchCover.postDelayed(this::dropLaunchCover, 12000);   // never trap the user behind it
+        root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
         web.addJavascriptInterface(new Object() {
-            @android.webkit.JavascriptInterface public void ready() { runOnUiThread(MainActivity.this::dropLaunchCover); }
+            @android.webkit.JavascriptInterface public void ready() {}
+            /** The page has wired up its own Enter / Tutorial. */
+            @android.webkit.JavascriptInterface public void choiceReady() { runOnUiThread(() -> { if (splash != null) splash.pageReady(); }); }
+            /** The beta lock is showing: the splash must not cover it. */
+            @android.webkit.JavascriptInterface public void lock() {
+                runOnUiThread(() -> {
+                    if (splash == null) return;
+                    if (web != null) web.evaluateJavascript("(function(){var s=document.getElementById('splash');if(s)s.classList.add('is-hidden');})()", null);
+                    splash.dropForLock();
+                });
+            }
+            @android.webkit.JavascriptInterface public void accentOverride(String css) {
+                getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
+            }
         }, "EbbNative");
-        setContentView(root);
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -98,7 +117,7 @@ public class MainActivity extends Activity {
         s.setSupportMultipleWindows(true);
         s.setJavaScriptCanOpenWindowsAutomatically(true);
         // Drop the "; wv" marker (some embeds treat WebViews as second-class) and say who we are.
-        s.setUserAgentString(s.getUserAgentString().replace("; wv)", ")") + " EBBLESS-Android/0.1");
+        s.setUserAgentString(s.getUserAgentString().replace("; wv)", ")") + " EBBLESS-Android/0.1" + (splashHolding ? " NativeSplash" : ""));
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
         cm.setAcceptThirdPartyCookies(web, true);
@@ -174,17 +193,6 @@ public class MainActivity extends Activity {
                 if (tmp.length() > 100000) tmp.renameTo(new java.io.File(getFilesDir(), "index.html")); else tmp.delete();
             } catch (Exception ignored) {}
         }, "ebb-page-refresh").start();
-    }
-
-    private FrameLayout launchCover;
-    private android.widget.TextView loadingText;
-
-    private void dropLaunchCover() {
-        final FrameLayout c = launchCover;
-        if (c == null) return;
-        launchCover = null;
-        loadingText = null;
-        c.animate().alpha(0f).setDuration(250).withEndAction(() -> { if (c.getParent() != null) ((android.view.ViewGroup) c.getParent()).removeView(c); }).start();
     }
 
     /** The splash/library background videos live in the APK so they play at once; serves them with HTTP range support. */

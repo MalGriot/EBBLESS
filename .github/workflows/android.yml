@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['android-webview/**', 'brand/assets/*-alpha.webm', 'brand/assets/enter-sound.mp3', '.github/workflows/android.yml']
+    paths: ['android-webview/**', 'brand/assets/*-alpha.webm', 'brand/assets/enter-sound.mp3', 'brand/assets/splash-cymatics-native.mp4', '.github/workflows/android.yml']
 
 jobs:
   build:
