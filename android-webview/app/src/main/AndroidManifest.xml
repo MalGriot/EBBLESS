@@ -39,6 +39,13 @@
             </intent-filter>
         </activity>
 
+        <!-- own process: survives the main (WebView) process being killed for memory, and says so -->
+        <service
+            android:name=".WatchdogService"
+            android:process=":watchdog"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <service
             android:name=".PlaybackService"
             android:exported="false"

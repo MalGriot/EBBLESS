@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Message;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -51,10 +52,11 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0);
+        WebView.setWebContentsDebuggingEnabled((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 || adbOn());   // inspectable only while the phone's USB debugging is on
         root = new FrameLayout(this);
         root.setBackgroundColor(0xFF000000);
         setContentView(root);
+        connectWatchdog();
         recoveredLaunch = getIntent() != null && getIntent().getBooleanExtra("recovered", false);
         registerScreenReceiver();
         if (b == null && !recoveredLaunch) {
@@ -100,6 +102,42 @@ public class MainActivity extends Activity {
             web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(" + on + ")", null);
         }
     };
+
+    private boolean adbOn() {
+        try { return android.provider.Settings.Global.getInt(getContentResolver(), android.provider.Settings.Global.ADB_ENABLED, 0) == 1; }
+        catch (Exception e) { return false; }
+    }
+
+    private android.os.Messenger watchdog;
+    private boolean lastPlaying;
+    private final android.os.Messenger selfMessenger = new android.os.Messenger(new android.os.Handler(android.os.Looper.getMainLooper()));
+    private final android.content.ServiceConnection watchdogConn = new android.content.ServiceConnection() {
+        @Override public void onServiceConnected(android.content.ComponentName n, IBinder b) {
+            watchdog = new android.os.Messenger(b);
+            try {
+                android.os.Message hello = android.os.Message.obtain(null, WatchdogService.MSG_HELLO);
+                hello.replyTo = selfMessenger;   // its binder dies with this process
+                watchdog.send(hello);
+                tellWatchdog(lastPlaying);
+            } catch (Exception ignored) {}
+        }
+        @Override public void onServiceDisconnected(android.content.ComponentName n) { watchdog = null; }
+    };
+
+    /** Start the watchdog (its own process, foreground) and connect to it. */
+    private void connectWatchdog() {
+        try {
+            Intent i = new Intent(this, WatchdogService.class);
+            startForegroundService(i);
+            bindService(i, watchdogConn, BIND_AUTO_CREATE);
+        } catch (Exception ignored) {}
+    }
+
+    private void tellWatchdog(boolean playing) {
+        lastPlaying = playing;
+        if (watchdog == null) return;
+        try { watchdog.send(android.os.Message.obtain(null, WatchdogService.MSG_PLAYING, playing ? 1 : 0, 0)); } catch (Exception ignored) {}
+    }
 
     private void registerScreenReceiver() {
         android.content.IntentFilter f = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
@@ -147,6 +185,7 @@ public class MainActivity extends Activity {
             /** The page's play state, so a restarted service knows whether the music was playing when the process was killed. */
             @android.webkit.JavascriptInterface public void playing(boolean on) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
+                tellWatchdog(on);
             }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
