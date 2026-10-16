@@ -10335,7 +10335,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #495. 'See all' on podcasts scrolls the category pills to the lit podcasts pill.
 - **Touches:**
 - **Branch:** agent/t1-buttons-nav
-- **Notes:** Synced from Geethub #495.  Already shipped in df78629; verified the lit Podcasts chip scrolls into view on a narrow viewport (smooth scroll does not animate in the preview pane, the offset math lands the chip in view).
+- **Notes:** Reworked: the filter pills wrap onto a second row on narrow screens instead of scrolling, so Podcasts is never hidden (the old scroll-to-chip code and the more-arrow stay as harmless fallbacks). Verified at 390px.
 
 ### albums-no-artist-sections: Album grid views without artist sections, toggle in advanced settings (Geethub #494)
 - **Status:** draft
