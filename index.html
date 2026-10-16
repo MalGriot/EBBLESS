@@ -4164,16 +4164,16 @@ body.week-up-on{overflow:hidden}
         <div class="settings-row beta-hidden">
           <div>
             <div class="label">Report a bug</div>
-            <div class="desc">Something broken or behaving strangely? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+            <div class="desc">Something broken or behaving strangely? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
           </div>
-          <a class="btn-ghost" id="reportBugBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=bug-report.yml&labels=bug" target="_blank" rel="noopener">Report a bug</a>
+          <button class="btn-ghost" id="reportBugBtn" type="button">Report a bug</button>
         </div>
         <div class="settings-row beta-hidden">
           <div>
             <div class="label">Suggest an improvement</div>
-            <div class="desc">Got an idea? Opens a quick issue form on GitHub — no EBBLESS account needed, just GitHub.</div>
+            <div class="desc">Got an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
           </div>
-          <a class="btn-ghost" id="suggestIdeaBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=improvement-idea.yml&labels=idea" target="_blank" rel="noopener">Suggest</a>
+          <button class="btn-ghost" id="suggestIdeaBtn" type="button">Suggest</button>
         </div>
         <div class="settings-row beta-hidden">
           <div>
@@ -4240,9 +4240,9 @@ body.week-up-on{overflow:hidden}
         <div class="settings-row">
           <div>
             <div class="label">Report as a beta tester</div>
-            <div class="desc">Testing EBBLESS? Log how a specific thing went - opens a quick issue form on GitHub, no EBBLESS account needed, just GitHub.</div>
+            <div class="desc">Testing EBBLESS? Log how a specific thing went. Tell us right here. No account, no GitHub, nothing to sign up for.</div>
           </div>
-          <a class="btn-ghost" id="testerFeedbackBtn" href="https://github.com/MalGriot/EBBLESS/issues/new?template=tester-feedback.yml&labels=tester-feedback" target="_blank" rel="noopener">Report</a>
+          <button class="btn-ghost" id="testerFeedbackBtn" type="button">Report</button>
         </div>
       </div>
       <!-- Keyboard shortcuts (Geethub #246): mirrors the document keydown
@@ -5018,9 +5018,25 @@ const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 // Desktop Firefox can't install web apps at all (no install prompt, no Add to Dock).
 const isFirefoxDesktop = /Firefox\//.test(navigator.userAgent) && !isMobileUA;
 const isMacDesktop = /Macintosh/.test(navigator.userAgent) && !isMobileUA;
-// Unsigned Mac app for Firefox users (#593). Empty until a build is published;
-// the Settings row shows the download only when this is set.
-const MAC_APP_URL = 'https://github.com/MalGriot/EBBLESS/releases/tag/v1.0.4';
+// Unsigned Mac app for Firefox users (#593). Direct DMG downloads on the v1.0.4 release.
+const MAC_APP_URLS = {
+  arm64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.4/EBBLESS-1.0.4-arm64.dmg',
+  x64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.4/EBBLESS-1.0.4.dmg'
+};
+// Firefox and Safari don't expose the chip, but the WebGL GPU name does:
+// Apple Silicon reports "Apple ...", Intel Macs report Intel/AMD. Returns
+// null when the GPU can't be read, so the caller asks the user instead.
+const macAppUrl = () => {
+  let renderer = '';
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '';
+  } catch (e) {}
+  if (/Intel|AMD|Radeon/i.test(renderer)) return MAC_APP_URLS.x64;
+  if (/Apple/i.test(renderer)) return MAC_APP_URLS.arm64;
+  return null;
+};
 // iOS Safari never fires beforeinstallprompt (no programmatic install API at
 // all there) - includes iPadOS, which reports as "MacIntel" but is
 // touch-only, unlike a real Mac.
@@ -15062,6 +15078,7 @@ fbThumbs.forEach(btn => btn.addEventListener('click', () => {
   setTimeout(() => fbMessage.focus(), 50);
 }));
 feedbackBtn.addEventListener('click', openFeedbackModal);
+['reportBugBtn', 'suggestIdeaBtn', 'testerFeedbackBtn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', openFeedbackModal); });
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);
 
@@ -25133,11 +25150,12 @@ if (screen.orientation && screen.orientation.lock){
         installBtn.textContent = 'Not in Firefox';
         if (installDesc){
           installDesc.textContent = 'Firefox can\'t install EBBLESS. Open it in Chrome, Edge or Safari to install.';
-          if (isMacDesktop && MAC_APP_URL){
-            const a = document.createElement('a');
-            a.href = MAC_APP_URL;
-            a.textContent = 'Download the Mac app';
-            installDesc.append(' ', a, '. If macOS blocks it, open System Settings, Privacy & Security, and choose Open Anyway.');
+          if (isMacDesktop){
+            const link = (text, href) => { const a = document.createElement('a'); a.href = href; a.textContent = text; return a; };
+            const url = macAppUrl();
+            if (url) installDesc.append(' ', link('Download the Mac app', url));
+            else installDesc.append(' Which Mac is this? ', link('Apple silicon', MAC_APP_URLS.arm64), ' or ', link('Intel', MAC_APP_URLS.x64), '.');
+            installDesc.append(' If macOS blocks it, open System Settings, Privacy & Security, and choose Open Anyway.');
           }
         }
       }
