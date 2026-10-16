@@ -165,7 +165,7 @@ html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):n
     try {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
       var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
-      if (method === 'POST' && /workers\.dev/.test(url) && BLOCK.test(url))
+      if (method === 'POST' && /workers\.dev/.test(url) && BLOCK.test(url) && !(/EBBLESS-Android/.test(navigator.userAgent) && /\/tester-report/.test(url)))
         return Promise.resolve(new Response('{"error":"Not available in the sample."}', { status: 403, headers: { 'Content-Type': 'application/json' } }));
     } catch(e){}
     return realFetch.apply(this, arguments);
@@ -27155,6 +27155,8 @@ function startApp(){
   try{ scheduleCapPrefetch(); } catch(e){}
   try{ scheduleVibeCheck(); } catch(e){}
   try{ initTesterBanner(); } catch(e){}
+  // the Android app always has the feedback button, tester or not, trial or not
+  if (document.documentElement.classList.contains('ebb-android')){ const fbNav = $('navFeedbackBtn'); if (fbNav) fbNav.hidden = false; }
   try{ scheduleInstallBanner(); } catch(e){}
 
   const splashEl = $('splash');
@@ -29047,7 +29049,8 @@ const isTouchDevice = !!(window.matchMedia && matchMedia('(hover: none), (pointe
   window.ebbSampleBoot = function(){
     document.body.classList.add('is-sample');
     // controls that would reach an account, feedback or the install flow
-    ['installBlock', 'installBanner', 'navFeedbackBtn', 'testerBanner'].forEach(id => { const e = byId(id); if (e) e.style.display = 'none'; });
+    // (the Android app keeps its feedback button in the trial too)
+    ['installBlock', 'installBanner', 'testerBanner'].concat(/EBBLESS-Android/.test(navigator.userAgent) ? [] : ['navFeedbackBtn']).forEach(id => { const e = byId(id); if (e) e.style.display = 'none'; });
     const fb = byId('feedbackBtn'); if (fb){ const row = fb.closest('.settings-row'); if (row) row.style.display = 'none'; }
     // keep the tutorial replayable and, until it has been watched, blinking
     const help = byId('helpBtn');
