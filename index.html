@@ -755,10 +755,11 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card .art.cycle .face.cover-face{display:block}
 .lib-card .art.cycle .face.cover-face{opacity:1}
 .lib-card .art.cycle .face.grid-face{opacity:0}
-.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 17s ease-in-out infinite}
-.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 17s ease-in-out infinite}
-@keyframes thumb-cycle-cover{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}
-@keyframes thumb-cycle-grid{0%,41%{opacity:0}50%,91%{opacity:1}100%{opacity:0}}
+.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 14s ease-in-out infinite}
+.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 14s ease-in-out infinite}
+/* Geethub #602: 14s loop = the art flips between 1x1 and 2x2 every 7s (opacity only) */
+@keyframes thumb-cycle-cover{0%,43%{opacity:1}50%,93%{opacity:0}100%{opacity:1}}
+@keyframes thumb-cycle-grid{0%,43%{opacity:0}50%,93%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.lib-card .art.cycle .face{animation:none}.lib-card .art.cycle .face.grid-face{display:none}}
 /* #487: a big library had hundreds of these crossfades running off screen,
    each its own GPU layer. Off-screen cards (refreshLibraryMarquees' observer)
