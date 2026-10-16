@@ -28,7 +28,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .bg.is-ready{opacity:1;transition:opacity 700ms var(--ease-out)}
 .bg.quiet{height:62vh}
 .bg-poster,.bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.15) brightness(.9)}
-.bg-poster{background:url(../brand/assets/splash-cymatics-poster.jpg) center/cover no-repeat}
+.bg-poster{background:url(media/bg-poster-gray.jpg) center/cover no-repeat;filter:none}
 .bg-video{opacity:0;transition:opacity 900ms var(--ease-out)}
 .bg-video.is-playing{opacity:1}
 .bg-tint{position:absolute;inset:0;background:var(--clock-accent,#9aa9bd);mix-blend-mode:color}
