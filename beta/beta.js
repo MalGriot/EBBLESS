@@ -169,7 +169,11 @@
 
   // Background layers (see .bg in beta.css). Form pages pass quiet so the
   // video stays up top and the fields sit on solid --bg.
+  // Inside the app's beta lock (iframe, ?embed=1): the lock's own video shows through, and color states go to the lock.
+  const EMBED = window.parent !== window && /[?&]embed=1/.test(location.search);
+  if (EMBED) document.documentElement.classList.add('embed');
   function background(){
+    if (EMBED) return;
     const bg = document.createElement('div');
     bg.className = 'bg' + (document.body.dataset.bg === 'quiet' ? ' quiet' : '');
     bg.setAttribute('aria-hidden', 'true');
@@ -183,10 +187,13 @@
   }
   // Gold while a Google account checks out, green once signed in ('done'), red when it isn't found; null resets to the clock color.
   function bgState(state){
-    const bg = document.querySelector('.bg'); if (!bg) return;
-    bg.classList.toggle('is-verified', state === 'ok');
-    bg.classList.toggle('is-missing', state === 'bad');
-    bg.classList.toggle('is-signed', state === 'done');
+    if (EMBED) try { parent.postMessage({ ebbBgState: state || null }, location.origin); } catch(e){}
+    const bg = document.querySelector('.bg');
+    if (bg){
+      bg.classList.toggle('is-verified', state === 'ok');
+      bg.classList.toggle('is-missing', state === 'bad');
+      bg.classList.toggle('is-signed', state === 'done');
+    }
     held = state === 'ok' ? [224, 178, 106] : state === 'done' ? [79, 207, 122] : state === 'bad' ? [217, 58, 58] : null;
     applyClock();   // buttons and accents follow the wash
   }

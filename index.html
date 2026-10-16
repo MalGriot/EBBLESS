@@ -3259,6 +3259,15 @@ body.week-up-on{overflow:hidden}
 /* Google check on the lock: gold while verifying, red when no tester is found. Colors only, set once. */
 #beta-lock[data-verify=checking]{--accent:#e0b26a;--clock-accent:#e0b26a}
 #beta-lock[data-verify=no]{--accent:#d93a3a;--clock-accent:#d93a3a}
+#beta-lock[data-verify=done]{--accent:#4fcf7a;--clock-accent:#4fcf7a}
+/* Sign up for the beta happens here, on the lock: the beta form sits in a frame over it (transparent, so the lock's video shows through) */
+#bl-signup{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column}
+#bl-signup[hidden]{display:none}
+#beta-lock.bl-signing .bl-wrap{visibility:hidden}
+#bl-signup .bl-su-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 4px;max-width:560px;width:100%;margin:0 auto;box-sizing:border-box}
+#bl-signup .bl-su-bar img{height:18px}
+#bl-signup .bl-su-back{font:inherit;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:#f2f2f2;background:none;border:0;padding:8px 0;cursor:pointer}
+#bl-signup iframe{flex:1;width:100%;border:0;background:transparent;color-scheme:dark}
 #beta-lock[data-verify] .bl-tint{transition-duration:600ms}
 #beta-lock .bl-wrap{max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));transform-origin:top center}
 #beta-lock .bl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(16px,6vh,56px)}
@@ -3315,7 +3324,7 @@ body.week-up-on{overflow:hidden}
       <li>Join</li><li>Approval</li><li>Email</li><li>You're in</li>
     </ol>
     <a class="bl-btn primary bl-try" href="sample/">TRY THE 15 MINUTE TRIAL</a>
-    <a class="bl-btn bl-join" href="beta/#join">SIGN UP FOR THE BETA</a>
+    <a class="bl-btn bl-join" href="beta/#join" id="bl-join">SIGN UP FOR THE BETA</a>
     <a class="bl-btn bl-learn" href="welcome/">SEE WHAT EBBLESS IS</a>
     <div class="bl-rule bl-rule-soft"></div>
     <!-- Tester way in: the invite link does it all (?t= below). The Google
@@ -3388,6 +3397,22 @@ body.week-up-on{overflow:hidden}
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
   const relock = () => { document.documentElement.classList.add('ebb-relock'); if (window.EbbNative && EbbNative.lock) EbbNative.lock(); lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
+  // SIGN UP FOR THE BETA opens the form right on the lock (no page change). The frame loads on first tap.
+  const su = document.createElement('div');
+  su.id = 'bl-signup'; su.hidden = true;
+  su.innerHTML = '<div class="bl-su-bar"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><button class="bl-su-back" type="button">Back</button></div>';
+  lock.append(su);
+  document.getElementById('bl-join').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!su.querySelector('iframe')){ const f = document.createElement('iframe'); f.title = 'Sign up for the EBBLESS beta'; f.src = 'beta/index.html?embed=1#join'; su.append(f); }
+    su.hidden = false; lock.classList.add('bl-signing');
+  });
+  su.querySelector('.bl-su-back').addEventListener('click', () => { su.hidden = true; lock.classList.remove('bl-signing'); verify(''); });
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || !('ebbBgState' in e.data)) return;
+    const m = { ok: 'checking', bad: 'no', done: 'done' }[e.data.ebbBgState];
+    verify(m || '');
+  });
   const verify = (v) => { if (v) lock.dataset.verify = v; else delete lock.dataset.verify; };
   const msg = (t) => { const m = document.getElementById('bl-msg'); m.textContent = t || ''; m.classList.toggle('bl-working', /\.\.\.$/.test(t || '')); };
   // iPhone/iPad home-screen app: its storage is apart from Safari's and the

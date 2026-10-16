@@ -286,3 +286,8 @@ body.joined .about .cta{display:none}
 #shot-zoom.show{opacity:1;pointer-events:auto}
 #shot-zoom img{max-width:90%;max-height:90%;border-radius:var(--r-md);cursor:zoom-out}
 #shot-zoom::before{content:'';position:absolute;inset:0}
+
+/* embedded in the app's beta lock: transparent, lock supplies wordmark, back button and video */
+html.embed,html.embed body{background:transparent}
+html.embed .top{display:none}
+html.embed .wrap{padding-top:12px}
