@@ -8150,9 +8150,19 @@ $('wordmarkBtn').addEventListener('click', () => setView('player'));
 // the same replay path as the "?" button. Clicks are intercepted in the
 // capture phase on #splash so any leftover one-shot listeners from the
 // cold-start showSplashChoice()/install invite never fire a second startApp().
+// Android app: the cold-start splash is native, so the web splash stays cloaked (and its videos unloaded) until the visitor comes back to it.
+function ebbWakeWebSplash(){
+  const root = document.documentElement;
+  if (!root.classList.contains('ebb-nsplash')) return;
+  root.classList.remove('ebb-nsplash');
+  document.querySelectorAll('video[data-src]').forEach(v => {
+    if (!v.getAttribute('src') && !v.classList.contains('bl-video')) v.src = v.getAttribute('data-src').replace('.mp4', '-alpha.webm');
+  });
+}
 function returnToSplash(){
   const splashEl = $('splash');
   if (!splashEl || !splashEl.classList.contains('is-hidden')) return;
+  ebbWakeWebSplash();
   splashEl.classList.remove('is-install');
   splashEl.classList.add('is-active', 'is-choice', 'is-return');
   splashEl.classList.remove('is-hidden');

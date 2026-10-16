@@ -88,8 +88,9 @@ public class MainActivity extends Activity {
         splashHolding = false;
         if (web == null) return;
         web.getSettings().setUserAgentString(web.getSettings().getUserAgentString().replace(" NativeSplash", ""));
-        // the web splash stays for "back to the splash"; wake its videos now that nothing is competing for the decoder
-        web.evaluateJavascript("(function(){document.documentElement.classList.remove('ebb-nsplash');document.querySelectorAll('video[data-src]').forEach(function(v){if(!v.getAttribute('src')&&!v.classList.contains('bl-video'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');});})()", null);
+        // the library's background video can load now that nothing competes for the decoder. The web splash stays cloaked
+        // (waking it here showed it fading out under a late-processed Enter); it wakes itself when the visitor returns to it.
+        web.evaluateJavascript("(function(){var v=document.querySelector('video.lib-bg-video');if(v&&!v.getAttribute('src'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');})()", null);
     }
 
     private void initWeb(Bundle b) {
