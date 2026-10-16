@@ -9983,7 +9983,7 @@ function toggleLibraryPlaylistPanel(id){
       const artist = document.createElement('div'); artist.className = 'artist';
       if (t.podcast){
         // (#486) episode date from the feed's pubDate (ms), then length, then listened state
-        const date = t.published ? new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const date = podDateLabel(t);
         const left = podProgressLabel((lsGet(LS_POD_PROGRESS, {}) || {})[t.videoId]);
         artist.textContent = [date, t.duration ? formatTime(t.duration) : '', left].filter(Boolean).join(' · ');
       } else artist.textContent = t.artist;
@@ -18666,7 +18666,7 @@ function renderQueuePanel(){
   const nowMeta = document.createElement('div'); nowMeta.className = 'meta';
   nowMeta.innerHTML = '<div class="title"></div><div class="artist"></div>';
   nowMeta.querySelector('.title').textContent = now.title;
-  nowMeta.querySelector('.artist').textContent = now.artist;
+  nowMeta.querySelector('.artist').textContent = [podDateLabel(now), now.artist].filter(Boolean).join(' · ');
   const nowPlayBtn = document.createElement('button'); nowPlayBtn.className = 'play-btn';
   nowPlayBtn.setAttribute('aria-label', 'Play or pause');
   const isPlaying = artworkWrap.classList.contains('is-playing');
@@ -18719,7 +18719,7 @@ function renderQueuePanel(){
     /* show which playlist a track came from when it's not the one being viewed,
        so it's clear the queue is mixing sources */
     const showSource = !state.playlist || entry.plId !== state.playlist.id;
-    meta.querySelector('.artist').textContent = t.artist + (showSource ? ' · ' + pl.name : '');
+    meta.querySelector('.artist').textContent = [podDateLabel(t), t.artist].filter(Boolean).join(' · ') + (showSource ? ' · ' + pl.name : '');
     const remove = document.createElement('button'); remove.className = 'remove'; remove.setAttribute('aria-label','Remove from queue');
     remove.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 
@@ -25894,6 +25894,10 @@ function notePodProgress(cur, dur){
   lsSet(LS_POD_PROGRESS, map);
 }
 // "Played" when nearly finished, "12:30 left" when partway, '' when never started
+// (#486) an episode's feed date as 'Oct 14, 2026' ('' when the feed gave none)
+function podDateLabel(t){
+  return t && t.podcast && t.published ? new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+}
 function podProgressLabel(p){
   if (!p || !(p.pos > 5)) return '';
   if (p.dur && p.pos >= p.dur - 15) return 'Played';

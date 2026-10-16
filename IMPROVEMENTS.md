@@ -10386,12 +10386,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #488. Big; likely post-MVP.
 
 ### podcast-episode-dates: Show the date on podcast episodes (Geethub #486)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #486. Show the date on podcast episodes.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #486. 
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #486.  Playlist rows already showed the date; the queue (now-playing row and upcoming rows) now shows it too via podDateLabel().
 
 ### ad-autoskip-523: Ads play for minutes with no indication; the app should skip them (Geethub #523)
 - **Status:** merged
