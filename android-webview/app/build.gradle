@@ -8,8 +8,8 @@ android {
         applicationId "io.github.malgriot.ebbless"
         minSdkVersion 24
         targetSdkVersion 35
-        versionCode 8
-        versionName "2.6.0"
+        versionCode 9
+        versionName "2.7.0"
     }
     buildTypes {
         // debug builds install next to the real app instead of over it
