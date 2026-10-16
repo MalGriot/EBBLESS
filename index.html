@@ -20,6 +20,7 @@ html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) img{animation:none!i
 html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
 /* the app's startup cover (grey ground + mark) sits above the splash: skip it so black goes straight to the splash */
 html.ebb-android body:not(.onb-active) #onbBackdrop, html.ebb-android body:not(.onb-active) #onbMark{display:none!important}
+html.ebb-android{background:#000}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -4791,7 +4792,12 @@ setTimeout(() => {
   if (document.documentElement.classList.contains('ebb-android')) {
     // latch "ready" so the loop restart never drops the tint layer (that flashed the poster's color)
     document.querySelectorAll('video.splash-video, video.bl-video, video.lib-bg-video').forEach(v => {
-      const rdy = () => v.classList.add('ebb-ready');
+      const rdy = () => {
+        v.classList.add('ebb-ready');
+        // start the splash reveal now, not after the whole app has booted behind it
+        const sp = v.classList.contains('splash-video') && document.getElementById('splash');
+        if (sp && !sp.classList.contains('is-hidden')) sp.classList.add('is-active');
+      };
       v.addEventListener('playing', rdy); if (!v.paused && v.readyState >= 3) rdy();
     });
     document.querySelectorAll('video[loop]').forEach(v => {
