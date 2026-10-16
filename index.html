@@ -601,7 +601,7 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-btn{position:relative;flex:none;height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--border-2);
   font-size:12.5px;font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .lib-filter-btn:hover{color:var(--text)}
-.lib-filter-btn.is-active{background:var(--text);border-color:var(--text);color:var(--bg)}
+.lib-filter-btn.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}   /* lit pills follow the UI color (#495) */
 .lib-head-actions{flex:1;min-width:0}
 .lib-head-actions #libSearchToggle{margin-left:auto}
 .lib-view-btn{display:inline-flex;align-items:center;gap:2px}
@@ -9590,7 +9590,8 @@ function renderLibrary(){
       head.dataset.foldHandlerAttached = 'true';
     }
     const folded = filter === 'all' && !!libFolded[key];
-    head.classList.toggle('hidden', filter !== 'all');
+    // a retracted section (pill off) shows no title or divider at all; empty sections stay hidden too (#495)
+    head.classList.toggle('hidden', filter !== 'all' || folded || (head !== libraryPlaylistsHead && head.classList.contains('hidden')));
     head.parentElement.classList.toggle('is-first-sec', !firstSecSeen && !head.classList.contains('hidden') && (firstSecSeen = true));
     head.setAttribute('aria-expanded', String(!folded));
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
