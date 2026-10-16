@@ -55,7 +55,7 @@ public class WatchdogService extends Service {
             nm.createNotificationChannel(new NotificationChannel(QUIET_CHANNEL, "Background safety", NotificationManager.IMPORTANCE_MIN));
         }
         Notification n = new Notification.Builder(this, QUIET_CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setSmallIcon(R.drawable.ic_stat_ebbless)
                 .setContentTitle("EBBLESS")
                 .setContentText("Keeping an eye on playback")
                 .setOngoing(true)
@@ -76,7 +76,7 @@ public class WatchdogService extends Service {
         Intent open = new Intent(this, MainActivity.class).putExtra("recovered", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 1, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new Notification.Builder(this, RECOVERY_CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setSmallIcon(R.drawable.ic_stat_ebbless)
                 .setContentTitle("EBBLESS was stopped")
                 .setContentText("Your phone needed the memory. Tap to pick up where you left off.")
                 .setContentIntent(pi)
