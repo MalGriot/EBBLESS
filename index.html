@@ -555,7 +555,8 @@ body.onb-active .paste-guide{display:none}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .section-label-row .section-label{margin:28px 0 2px}
 /* Geethub #552: the library's top controls (new playlist, search, sort) stay pinned while the list scrolls. The fill fades out at the bottom so there is no hard bar edge over the ambient background. Static, no blur, no animation */
-#libraryListWrap>.section-label-row{position:sticky;top:0;z-index:3;background:linear-gradient(to bottom,var(--bg) 0,var(--bg) 70%,rgba(18,18,18,0) 100%);padding:6px 0 18px;margin-bottom:-18px}
+.lib-top{position:sticky;top:0;z-index:4;background:transparent;padding:6px 0 18px;margin-bottom:-18px}
+.lib-sec>.section-label-row{position:sticky;top:var(--lib-top-h,0px);z-index:3;background:transparent;padding:4px 0 14px;margin-bottom:-14px}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
@@ -3127,7 +3128,9 @@ body.onb-stage-library:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-library:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
 body.onb-stage-library:not(.split-desktop) #view-library .view-scroll>*:not(#libraryListWrap){display:none}
-body.onb-stage-library:not(.split-desktop) #libraryListWrap>*:not(#libraryGrid){display:none}
+body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-top{display:none}
+body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-sec:not(:has(#libraryGrid)){display:none}
+body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-sec>*:not(#libraryGrid){display:none}
 body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);grid-template-columns:1fr}
 
 @media (prefers-reduced-motion:reduce){
@@ -3623,6 +3626,7 @@ body.week-up-on{overflow:hidden}
       </div>
 
       <div id="libraryListWrap" class="hidden">
+        <div class="lib-top" id="libTop">
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
@@ -3688,22 +3692,31 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
           <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
+        </div>
+        <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
           <div class="section-label">Playlists</div>
         </div>
         <div class="lib-grid" id="libraryGrid"></div>
+        </div>
+        <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryArtistsHead">
           <div class="section-label">Artists</div>
         </div>
         <div class="lib-grid" id="libraryArtistsGrid"></div>
+        </div>
+        <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryAlbumsHead">
           <div class="section-label">Albums</div>
         </div>
         <div class="lib-grid" id="libraryAlbumsGrid"></div>
+        </div>
+        <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryPodcastsHead">
           <div class="section-label">Podcasts</div>
         </div>
         <div class="lib-grid" id="libraryPodcastsGrid"></div>
+        </div>
         <div class="hidden" id="libSearchTracks">
           <div class="section-label">Songs</div>
           <div id="libSearchTracksList"></div>
@@ -7866,6 +7879,8 @@ const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('imp
 // whichever label is showing: "Find music", or "Go" on narrow phones
 function loadBtnLabel(){ return 'the magnifier'; }
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
+// section titles stick just under the fixed top container; keep their offset equal to its height
+if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--lib-top-h', $('libTop').offsetHeight + 'px')).observe($('libTop'));
 const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
