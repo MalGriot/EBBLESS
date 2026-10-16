@@ -5196,6 +5196,7 @@ function showMacOpenAnywaySheet(){
       + '<li>Enter your password or use Touch ID, then click <b>Open Anyway</b> again and finish the install</li>'
       + '</ol>'
       + '<p>On an older macOS, right-click the installer and choose <b>Open</b> instead.</p>'
+      + '<a class="ii-btn" href="x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension">Open Privacy &amp; Security</a>'
       + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
     const close = () => { el.hidden = true; };
     el.addEventListener('click', (e) => { if (e.target === el) close(); });
