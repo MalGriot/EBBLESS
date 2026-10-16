@@ -10138,7 +10138,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #482. Overlaps artist-more-albums and albums-by-artist entries.
 
 ### cassette-sfx-volume: Cassette sound effects at half the volume (Geethub #483)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #483. Cassette sfx are too loud; halve the volume.
 - **Touches:** cassette sfx gain.
@@ -10226,7 +10226,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #509. Shipped 2026-10-14 in Mac app v1.0.3: the main process sends ebbless:back on show/restore and the page closes the mini player. Not yet confirmed by user.
 
 ### installed-app-install-banner: Installed Mac app still shows the 'you should install' banner (Geethub #508)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #508. Installed Mac app still shows the 'you should install' banner.
 - **Touches:**
@@ -10242,7 +10242,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #507. 
 
 ### playlist-workspaces: Playlist workspaces (Geethub #506)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #506. Playlist workspaces. Parent entry; the work lives in the child entries.
 - **Touches:**
@@ -10346,7 +10346,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #494. 
 
 ### tutorial-button-first-fullscreen: Can't click the tutorial button on first fullscreen (Geethub #492)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub #492. Can't click the tutorial button on first fullscreen.
 - **Touches:**
@@ -10402,7 +10402,7 @@ Add entries in this shape:
 - **Notes:** Shipped 2026-10-15, cache v236-v237. The dodge also works with the YouTube card open. An ad held inside a song for 10s hands off to the next song; the held one plays next, from the top (once per video). "Ads playing?" turns into an "Ad playing. Skipping in Xs" countdown. A cover hides held ads in the card and in F fullscreen. Repeat-one restarts in place or crossfades into its preloaded copy instead of reloading. Verified in the local preview with faked ads; real F fullscreen and iPhone not yet checked. The real adblock (Mac app, #524) is parked.
 
 ### playlist-copy-prompt-spotify: Make a copy prompt for auto-updating Spotify playlists (Geethub #551)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #551. Part of #506. When a playlist is an imported Spotify one that auto-refreshes, offer a prompt to make a editable copy.
 - **Touches:** playlist import/refresh.
@@ -10410,7 +10410,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #551. Child of playlist-workspaces (#506).
 
 ### playlist-keep-added-songs: Keep songs added to imported playlists when they refresh (Geethub #550)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #550. Part of #506. Songs a user adds to an imported playlist must survive the refresh.
 - **Touches:** playlist refresh.
@@ -10418,7 +10418,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #550. Child of playlist-workspaces (#506).
 
 ### playlist-drag-reorder: Drag to reorder songs inside a playlist (Geethub #549)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #549. Part of #506. Drag songs to reorder within an open playlist.
 - **Touches:** playlist panel.
@@ -10426,7 +10426,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #549. Child of playlist-workspaces (#506).
 
 ### playlist-drag-songs-in: Drag songs into the open playlist (Geethub #548)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #548. Part of #506. Drag songs from search/browse into the open playlist.
 - **Touches:** playlist panel.
@@ -10434,7 +10434,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #548. Child of playlist-workspaces (#506).
 
 ### playlist-add-songs-back-button: Add songs button in the playlist, with Back to what you were playing (Geethub #547)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #547. Part of #506. An Add songs button inside a playlist, plus a Back control that returns to what was playing.
 - **Touches:** playlist panel.
@@ -10442,7 +10442,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #547. Child of playlist-workspaces (#506).
 
 ### playlist-stays-open-browsing: Keep the playlist open while searching and browsing (Geethub #546)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #546. Part of #506. The open playlist should not close when the user searches or browses.
 - **Touches:** playlist panel, search.
@@ -10450,7 +10450,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #546. Child of playlist-workspaces (#506). Related to bug #536.
 
 ### desktop-playlist-left-pane: Desktop: open playlist takes the left pane, queue stays on the right (Geethub #545)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #545. Part of #506. On desktop an open playlist fills the left pane while the queue stays on the right.
 - **Touches:** desktop layout.
@@ -10458,7 +10458,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #545. Child of playlist-workspaces (#506).
 
 ### ask-before-duplicate-song: Ask before adding a song that is already in the playlist (Geethub #544)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #544. Part of #506. Prompt when adding a duplicate song.
 - **Touches:** playlist add.
@@ -10658,7 +10658,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #518. Related to #523 (shipped) and ad group; needs repro platform.
 
 ### bug-progress-full-frozen: Song loads, progress bar is full and frozen, no play (Geethub #517)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** high
 - **Description:** Idea, Geethub #517. Bug #517. Sometimes the song loads with the progress bar filled and never plays.
 - **Touches:** playback.
