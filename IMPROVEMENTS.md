@@ -10959,7 +10959,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #602. Must follow the GPU budget (transform/opacity only, pause when hidden).
 - **Touches:** tbd.
 - **Branch:** agent/t1-library-queue
-- **Notes:** Synced from Geethub #602. Cover/2x2 crossfade already existed (#384, 17s loop); now a 14s loop so it flips every 7s. Opacity only; still pauses off-screen (.lib-offscreen) and when the view is hidden.
+- **Notes:** Synced from Geethub #602. Cover/2x2 crossfade already existed (#384, 17s loop); now a 42s loop so it flips every 21s. Opacity only; still pauses off-screen (.lib-offscreen) and when the view is hidden.
 
 ### hires-video-desktop: use the hi res video for desktop (Geethub #598)
 - **Status:** ready
