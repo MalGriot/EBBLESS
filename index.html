@@ -5019,11 +5019,11 @@ const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isFirefoxDesktop = /Firefox\//.test(navigator.userAgent) && !isMobileUA;
 const isMacDesktop = /Macintosh/.test(navigator.userAgent) && !isMobileUA;
 // Mac app installer for browsers that can't install the web app (Firefox, #593).
-// A .pkg (no disk image to drag out of): files it installs are not quarantined, so
-// the app itself opens without the "damaged" prompt. Direct downloads on the v1.0.5 release.
+// A drag-and-drop DMG with an ad-hoc signed app (unsigned reads as "damaged" on Apple silicon).
+// Direct downloads on the v1.0.6 release.
 const MAC_APP_URLS = {
-  arm64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.5/EBBLESS-1.0.5-arm64.pkg',
-  x64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.5/EBBLESS-1.0.5.pkg'
+  arm64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.6/EBBLESS-1.0.6-arm64.dmg',
+  x64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.6/EBBLESS-1.0.6.dmg'
 };
 // Firefox and Safari don't expose the chip, but the WebGL GPU name does:
 // Apple Silicon reports "Apple ...", Intel Macs report Intel/AMD. Returns
@@ -5187,15 +5187,13 @@ function showMacOpenAnywaySheet(){
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-label', 'Finish installing EBBLESS');
     el.innerHTML = '<div class="ii-card"><h3>Your download has started</h3>'
-      + '<p>macOS will block the installer the first time. That is normal. Do this once:</p>'
+      + '<p>Three steps. The last one only happens the first time:</p>'
       + '<ol style="text-align:left;margin:0 0 14px;padding-left:20px;line-height:1.5">'
-      + '<li>Open the <b>EBBLESS</b> installer from your Downloads</li>'
-      + '<li>When macOS says it can\u2019t verify it, click <b>Done</b> (not Move to Trash)</li>'
-      + '<li>Open <b>System Settings</b>, then <b>Privacy &amp; Security</b></li>'
-      + '<li>Scroll down to <b>Security</b> and click <b>Open Anyway</b> next to EBBLESS</li>'
-      + '<li>Enter your password or use Touch ID, then click <b>Open Anyway</b> again and finish the install</li>'
+      + '<li>Open the <b>EBBLESS</b> disk image from your Downloads and drag EBBLESS onto <b>Applications</b></li>'
+      + '<li>Open your <b>Applications</b> folder, then <b>right-click</b> (or Control-click) EBBLESS and choose <b>Open</b></li>'
+      + '<li>Click <b>Open</b> when macOS asks if you are sure</li>'
       + '</ol>'
-      + '<p>On an older macOS, right-click the installer and choose <b>Open</b> instead.</p>'
+      + '<p><b>Don\u2019t just double-click it.</b> That way macOS only offers Move to Trash. If you did, click Done, then use the button below and choose <b>Open Anyway</b> next to EBBLESS.</p>'
       + '<a class="ii-btn" href="x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension">Open Privacy &amp; Security</a>'
       + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
     const close = () => { el.hidden = true; };
