@@ -27047,7 +27047,7 @@ function startApp(){
   const splashEl = $('splash');
   const splashLogoBtn = $('splashLogoBtn');
   const SPLASH_MS = 3400;
-  if (splashEl && resumingFromBackground){
+  if (splashEl && resumingFromBackground && !document.documentElement.classList.contains('ebb-android')){
     // #splash is opaque and visible by default (the no-FOUC cover, see its
     // CSS comment) so it still has to be explicitly dismissed here - just
     // skip the is-active reveal animation and the install-prompt/timeout
