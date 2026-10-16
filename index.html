@@ -2,6 +2,38 @@
 <html lang="en" class="clock-color-init">
 <head>
 <meta charset="UTF-8">
+<script>
+/* While the app's native splash covers the page nobody can see it: run the page's animation frames at 4/s instead of 60,
+   keep videos from starting, and hold back the Google sign-in, YouTube and SoundCloud scripts. __ebbSplashDone() (called by the app
+   when the splash is gone) puts everything back and runs what was held. */
+(function () {
+  var ns = false;
+  try { ns = /NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone'); } catch (e) {}
+  window.__ebbNs = ns;
+  var after = [];
+  window.__ebbAfterSplash = function (fn) { if (window.__ebbNs) after.push(fn); else fn(); };
+  window.__ebbLoadGsi = function (cb) { var s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; if (cb) s.onload = cb; document.head.appendChild(s); };
+  if (!ns) { window.__ebbLoadGsi(); return; }
+  var rr = window.requestAnimationFrame, cr = window.cancelAnimationFrame, vp = HTMLVideoElement.prototype.play, held = [];
+  window.requestAnimationFrame = function (cb) { return setTimeout(function () { cb(performance.now()); }, 250); };
+  window.cancelAnimationFrame = function (id) { clearTimeout(id); };
+  HTMLVideoElement.prototype.play = function () { if (this.classList.contains('bl-video')) return vp.apply(this, arguments); held.push(this); return Promise.resolve(); };
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('video').forEach(function (v) { if (!v.classList.contains('bl-video')) { v.autoplay = false; try { v.pause(); } catch (e) {} } });
+  });
+  after.push(function () { window.__ebbLoadGsi(function () { try { initGoogleOneTap(); } catch (e) {} }); });
+  window.__ebbSplashDone = function () {
+    if (!window.__ebbNs) return;
+    window.__ebbNs = false;
+    try {
+      window.requestAnimationFrame = rr; window.cancelAnimationFrame = cr; HTMLVideoElement.prototype.play = vp;
+      held.forEach(function (v) { try { var p = v.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} });
+    } catch (e) {}
+    after.splice(0).forEach(function (f) { try { f(); } catch (e) {} });
+  };
+  setTimeout(function () { if (window.__ebbSplashDone) window.__ebbSplashDone(); }, 35000);
+})();
+</script>
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
 try { if (/NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone')) document.documentElement.classList.add('ebb-nsplash'); } catch (e) {}   // the app shows its own splash on a cold start
 if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
@@ -141,7 +173,7 @@ html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):n
 })();
 </script>
 <link rel="manifest" href="manifest.json">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Google sign-in (gsi/client) is loaded by window.__ebbLoadGsi in the first head script -->
 <link rel="apple-touch-icon" href="brand/assets/icons/apple-touch-icon.png">
 <meta property="og:title" content="EBBLESS">
 <meta property="og:description" content="Flow with the go. Sound surf through WAVs that never crash.">
@@ -25691,6 +25723,7 @@ function endSeekDrag(e, commit){
 let ytApiRequested = false;
 function ensureYouTubeApi(){
   if (ytApiRequested) return;
+  if (window.__ebbNs){ window.__ebbAfterSplash(ensureYouTubeApi); return; }
   ytApiRequested = true;
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
@@ -25704,6 +25737,7 @@ window.onYouTubeIframeAPIReady = function(){};
 let scApiRequested = false;
 function ensureSoundCloudWidgetApi(){
   if (scApiRequested) return;
+  if (window.__ebbNs){ window.__ebbAfterSplash(ensureSoundCloudWidgetApi); return; }
   scApiRequested = true;
   const tag = document.createElement('script');
   tag.src = 'https://w.soundcloud.com/player/api.js';
