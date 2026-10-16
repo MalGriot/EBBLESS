@@ -1,7 +1,7 @@
 #!/system/bin/sh
 # EBBLESS screen-off soak logger: one line every 30s into /sdcard/soak.log
 PKG=io.github.malgriot.ebbless
-UID_=$(pm list packages -U $PKG | sed 's/.*uid://')
+UID_=$(pm list packages -U | grep "package:$PKG " | sed 's/.*uid://')
 echo "# start $(date '+%Y-%m-%d %H:%M:%S') uid=$UID_" >> /sdcard/soak.log
 while :; do
   T=$(date +%H:%M:%S)
