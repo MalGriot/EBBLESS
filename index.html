@@ -561,9 +561,9 @@ body.onb-active .paste-guide{display:none}
 #view-library>.view-scroll:has(#libraryListWrap:not(.hidden)){height:100%;padding-bottom:0;box-sizing:border-box;display:flex;flex-direction:column}
 #libraryListWrap:not(.hidden){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 #libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(140px + var(--safe-b))}
-.lib-sec>.section-label-row{position:sticky;top:0;z-index:3;background:transparent;padding:4px 0 8px;margin-bottom:-8px}
-/* sticky section titles sit over scrolling content: brighter text with a dark halo instead of a fill, so the bar stays transparent */
-.lib-sec>.section-label-row .section-label{color:var(--text);text-shadow:0 0 4px var(--bg),0 0 10px var(--bg),0 1px 2px #000}
+.lib-sec>.section-label-row{position:static;background:none;padding:0;margin:0}
+/* Geethub #552: the bar shows the section at the top of the list; it swaps names as the next section header reaches it */
+#libBarLabel{margin:6px 0 10px;cursor:pointer}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
@@ -3697,6 +3697,7 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
           <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
+        <div class="section-label lib-bar-label hidden" id="libBarLabel" role="button" tabindex="0"></div>
         </div>
         <div class="lib-body">
         <div class="lib-sec">
@@ -7890,6 +7891,31 @@ const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libraryPodcastsHead = $('libraryPodcastsHead'), libraryPodcastsGrid = $('libraryPodcastsGrid');
+// Geethub #552: the top bar names the section at the top of the list. When the next section header reaches the bar, the name swaps and that header steps aside
+const libBarLabel = $('libBarLabel');
+let libBarHead = null;
+function updateLibBar(){
+  const body = document.querySelector('#libraryListWrap .lib-body');
+  if (!body) return;
+  const heads = [...body.querySelectorAll('.lib-sec>.section-label-row')].filter(h => !h.classList.contains('hidden'));
+  heads.forEach(h => { h.style.visibility = ''; });
+  if (!heads.length){ libBarLabel.classList.add('hidden'); libBarHead = null; return; }
+  const edge = body.getBoundingClientRect().top + 2;
+  let active = heads[0];
+  heads.forEach(h => { if (h.getBoundingClientRect().top <= edge) active = h; });
+  active.style.visibility = 'hidden';
+  libBarHead = active;
+  libBarLabel.textContent = active.querySelector('.section-label').textContent;
+  libBarLabel.classList.remove('hidden');
+}
+libBarLabel.addEventListener('click', () => { if (libBarHead) libBarHead.click(); });
+libBarLabel.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && libBarHead){ e.preventDefault(); libBarHead.click(); } });
+const libBody = document.querySelector('#libraryListWrap .lib-body');
+if (libBody){
+  libBody.addEventListener('scroll', updateLibBar, { passive: true });
+  new MutationObserver(updateLibBar).observe(libBody, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  updateLibBar();
+}
 const libFilterPodcasts = $('libFilterPodcasts');
 const libFilterArtists = $('libFilterArtists');
 const libraryFilterEmpty = $('libraryFilterEmpty');
