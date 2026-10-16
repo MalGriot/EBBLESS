@@ -52,6 +52,20 @@ public class MainActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF000000);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        // Keep the launch logo up (same mark and spot as the system launch screen) until the page says its splash is ready,
+        // instead of an empty black screen while the page boots.
+        launchCover = new FrameLayout(this);
+        launchCover.setBackgroundColor(0xFF000000);
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.mipmap.ic_maskable);
+        int px = (int) (192 * getResources().getDisplayMetrics().density);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(px, px, android.view.Gravity.CENTER);
+        launchCover.addView(logo, lp);
+        root.addView(launchCover, new FrameLayout.LayoutParams(-1, -1));
+        launchCover.postDelayed(this::dropLaunchCover, 12000);   // never trap the user behind it
+        web.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface public void ready() { runOnUiThread(MainActivity.this::dropLaunchCover); }
+        }, "EbbNative");
         setContentView(root);
 
         WebSettings s = web.getSettings();
@@ -137,6 +151,15 @@ public class MainActivity extends Activity {
                 if (tmp.length() > 100000) tmp.renameTo(new java.io.File(getFilesDir(), "index.html")); else tmp.delete();
             } catch (Exception ignored) {}
         }, "ebb-page-refresh").start();
+    }
+
+    private FrameLayout launchCover;
+
+    private void dropLaunchCover() {
+        final FrameLayout c = launchCover;
+        if (c == null) return;
+        launchCover = null;
+        c.animate().alpha(0f).setDuration(250).withEndAction(() -> { if (c.getParent() != null) ((android.view.ViewGroup) c.getParent()).removeView(c); }).start();
     }
 
     /** The splash/library background videos live in the APK so they play at once; serves them with HTTP range support. */
