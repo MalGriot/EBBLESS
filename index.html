@@ -554,9 +554,9 @@ body.onb-active .paste-guide{display:none}
 .album-sort{font:inherit;font-size:11px;letter-spacing:.3px;text-transform:none;font-weight:500;color:var(--faint-2);background:transparent;border:1px solid var(--border,rgba(255,255,255,.14));border-radius:999px;padding:3px 8px;max-width:50%}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .section-label-row .section-label{margin:28px 0 2px}
-/* Geethub #552: the library's top controls (new playlist, search, sort) stay pinned while the list scrolls. The fill fades out at the bottom so there is no hard bar edge over the ambient background. Static, no blur, no animation */
-.lib-top{position:sticky;top:0;z-index:4;background:transparent;padding:6px 0 18px;margin-bottom:-18px}
-.lib-sec>.section-label-row{position:sticky;top:var(--lib-top-h,0px);z-index:3;background:transparent;padding:4px 0 14px;margin-bottom:-14px}
+/* Geethub #552: the library's top controls (new playlist, search, sort) stay pinned while the list scrolls. Solid page-colour fill, so the content disappears under the fixed bar and the bar itself reads as transparent. Static, no blur, no animation */
+.lib-top{position:sticky;top:0;z-index:4;background:var(--bg);padding:6px 0 8px;margin-bottom:-8px}
+.lib-sec>.section-label-row{position:sticky;top:var(--lib-top-h,0px);z-index:3;background:var(--bg);padding:4px 0 8px;margin-bottom:-8px}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
@@ -3128,7 +3128,7 @@ body.onb-stage-library:not(.split-desktop) #view-library .lib-bg{display:none}
 body.onb-stage-library:not(.split-desktop) #view-library .view-scroll{display:flex;align-items:center;justify-content:center;height:100%;
   padding:0;margin:0!important;width:100%;max-width:none}
 body.onb-stage-library:not(.split-desktop) #view-library .view-scroll>*:not(#libraryListWrap){display:none}
-body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-top{display:none}
+body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-top>:not(.queue-head){display:none}
 body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-sec:not(:has(#libraryGrid)){display:none}
 body.onb-stage-library:not(.split-desktop) #libraryListWrap .lib-sec>*:not(#libraryGrid){display:none}
 body.onb-stage-library:not(.split-desktop) #libraryGrid{width:min(280px,72vw);grid-template-columns:1fr}
@@ -3616,17 +3616,15 @@ body.week-up-on{overflow:hidden}
   <main class="view" id="view-library">
     <!-- the library no longer has its own background video: the player's ambient artwork background (#ambient) shows on every screen -->
     <div class="view-scroll">
-      <div class="queue-head">
-        <h2>Library</h2>
-      </div>
-
       <div id="libraryEmpty" class="empty-lib hidden">
+        <div class="queue-head"><h2>Library</h2></div>
         Paste a playlist, album, song, or podcast link to begin.
         <div><button class="btn-ghost" id="newPlaylistBtnEmpty" style="margin-top:14px;padding:5px 14px;font-size:12.5px">+ New playlist</button></div>
       </div>
 
       <div id="libraryListWrap" class="hidden">
         <div class="lib-top" id="libTop">
+        <div class="queue-head"><h2>Library</h2></div>
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
@@ -20957,7 +20955,8 @@ function advSecOrder(){
 function advSecName(k){ const n = (advPrefs().secNames || {})[k]; return n || ADV_SECS[k][0]; }
 function advApplySections(){
   const end = $('libSearchTracks');
-  advSecOrder().forEach(k => { const [, head, grid] = ADV_SECS[k]; end.before(head); end.before(grid); });
+  // each section's header+grid sit in a .lib-sec block (their sticky header pushes against it), so move the block
+  advSecOrder().forEach(k => { const [, head, grid] = ADV_SECS[k]; const sec = head.parentElement; if (sec && sec.classList.contains('lib-sec')) end.before(sec); else { end.before(head); end.before(grid); } });
   Object.keys(ADV_SECS).forEach(k => {
     const [, head, , fid] = ADV_SECS[k];
     head.querySelector('.section-label').textContent = advSecName(k);
