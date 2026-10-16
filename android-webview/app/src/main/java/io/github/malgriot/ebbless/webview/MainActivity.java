@@ -65,8 +65,9 @@ public class MainActivity extends Activity {
         loadingText = new android.widget.TextView(this);
         loadingText.setTextColor(0x99FFFFFF);
         loadingText.setTextSize(13);
-        loadingText.setLetterSpacing(0.12f);
-        loadingText.setText("Loading");
+        loadingText.setLetterSpacing(0.08f);
+        loadingText.setGravity(android.view.Gravity.CENTER);
+        loadingText.setText("Bringing your music together...");
         FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER);
         tp.topMargin = px / 2 + (int) (28 * getResources().getDisplayMetrics().density);
         launchCover.addView(loadingText, tp);
@@ -74,7 +75,12 @@ public class MainActivity extends Activity {
             int n = 0;
             @Override public void run() {
                 if (loadingText == null) return;
-                loadingText.setText("Loading" + ".....".substring(0, n++ % 4));
+                // the full line is always there (unrevealed dots are transparent), so the text stays centred while the dots tick
+                String line = "Bringing your music together...";
+                android.text.SpannableString sp = new android.text.SpannableString(line);
+                int shown = n++ % 4;
+                sp.setSpan(new android.text.style.ForegroundColorSpan(0x00FFFFFF), line.length() - 3 + shown, line.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                loadingText.setText(sp);
                 launchCover.postDelayed(this, 500);
             }
         }, 500);
