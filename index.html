@@ -19238,6 +19238,8 @@ function resetDeck(deck){
   deck.adClock = null;
   deck.adDodge = null;
   deck.adSeen = '';
+  deck.songTime = 0;
+  deck.adResumeAt = 0;
   deck.resumeSeeked = false;
   deck.pos = -1;
   deck.pendingVideoId = null;
@@ -19429,7 +19431,9 @@ function onDeckConfirmed(deck){
     // The video plays muted (silently) through the whole pre-ad wait, so by the
     // time it's confirmed clean it has already drifted past the intro — snap
     // back to the start so the listener hears the song from 0:00.
-    if (!resumed && deck.player.seekTo) deck.player.seekTo(0, true);
+    // (#558: a song a mid-song ad bounced picks up where the ad cut in)
+    if (!resumed && deck.player.seekTo) deck.player.seekTo(deck.adResumeAt || 0, true);
+    deck.adResumeAt = 0;
     // Confirmed only because the wait cap ran out with an ad still playing:
     // stay muted and let guardActiveDeckAd unmute once the real video starts.
     const reason = deckAdReason(deck, true);
@@ -22849,9 +22853,13 @@ function cancelCrossfade(){
 // (prewarmResumeDeck). An unconfirmed deck gets the snap on confirm.
 // Shared by every promotion of the standby deck - the instant swap and
 // both crossfades (crossfade-start-and-preload) - so a song always starts
-// from the top.
+// from the top. A song a mid-song ad bounced (skipHeldAd) picks up where the
+// ad cut in instead (#558).
 function rewindPromotedDeck(nd){
-  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
+  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo && nd.adResumeAt){
+    nd.player.seekTo(nd.adResumeAt, true);
+    nd.adResumeAt = 0;
+  } else if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
     const cur = nd.player.getCurrentTime ? (nd.player.getCurrentTime() || 0) : 0;
     const st = nd.player.getPlayerState ? nd.player.getPlayerState() : -1;
     if (cur > 1 || st === YT.PlayerState.ENDED) nd.player.seekTo(0, true);
@@ -25602,16 +25610,20 @@ function maybeDodgeAd(){
 // outlasted the load wait) used to be held silent for up to AD_MUTE_MAX_MS.
 // After AD_SKIP_AFTER_MS the next song takes over instead, the same way as
 // the pre-roll dodge: the held song waits out its ad muted on the other deck
-// and plays right after, from the top (rewindPromotedDeck). Once per video,
-// so a false alarm (e.g. a bad duration from search) can't keep bouncing a
-// real song - the second time it is just held, as before.
-const AD_SKIP_AFTER_MS = 10000;
+// and plays right after, picking up where the ad cut in (#558, adResumeAt;
+// from the top if that was in its first seconds, or on repeat-one). Once per
+// video, so a false alarm (e.g. a bad duration from search) can't keep
+// bouncing a real song - the second time it is just held, as before.
+// #558: 10s of held silence felt broken; hand off after 2.5s.
+const AD_SKIP_AFTER_MS = 2500;
+const AD_RESUME_MIN_S = 5;
 const adSkippedVids = new Set();
 function skipHeldAd(ad, reason){
   const nd = standbyDeck(), n = adDodgeTarget(ad, nd);
   if (ad.kind !== 'yt' || n < 0 || adSkippedVids.has(ad.videoId)) return;
   adSkippedVids.add(ad.videoId);
   const p = state.queuePos, q = state.queue;
+  ad.adResumeAt = n !== p && ad.songTime >= AD_RESUME_MIN_S ? ad.songTime : 0;
   [q[p], q[n]] = [q[n], q[p]];
   if (ad.unmuteTimer) clearTimeout(ad.unmuteTimer);
   // drop the gate's "wants sound" too, or releaseSoundGates would unmute it
@@ -25935,6 +25947,9 @@ function updateSeekUI(){
       && !(ad.player.isMuted && ad.player.isMuted())) ad.iosWarm = true;
   const cur = ad.player.getCurrentTime() || 0;
   const dur = ad.player.getDuration() || 0;
+  // last spot the song itself was heard: the gate only lets sound through
+  // with proof of real content, so an ad's own clock never lands here (#558)
+  if (ad.kind === 'yt' && ad.wantSound && !ad.gateHeld) ad.songTime = cur;
   paintSeekUI(cur, dur);
   updateLyricsHighlight(cur);
   capPreload();
