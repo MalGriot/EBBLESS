@@ -16,6 +16,8 @@ html.ebb-android #beta-lock .bl-video{transition:none}
 html.ebb-android #splash .splash-poster{display:none}
 html.ebb-android #splash .splash-tint{opacity:0}
 html.ebb-android #splash.is-active:not(:has(.splash-video.ebb-ready)) .splash-black{animation:none;opacity:1}
+html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) img{animation:none!important;opacity:0}
+html.ebb-android #splash:not(:has(.splash-video.ebb-ready)) .splash-choice{opacity:0!important;pointer-events:none!important;transition:none!important}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -3174,7 +3176,7 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-small{font-size:13px;color:#6c6c6c;margin:20px 0 0}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
-  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
+  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
   <div class="bl-wrap">
     <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
     <h1 id="bl-title">YOU’RE EARLY. THAT’S A GOOD THING.</h1>
@@ -3409,7 +3411,7 @@ body.week-up-on{overflow:hidden}
 
 <div id="splash">
   <div class="splash-poster"></div>
-  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
+  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
@@ -3501,7 +3503,7 @@ body.week-up-on{overflow:hidden}
   <main class="view" id="view-library">
     <div class="lib-bg">
       <div class="lib-bg-video lib-bg-poster"></div>
-      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
+      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
       <div class="lib-bg-tint"></div>
     </div>
     <div class="view-scroll">
@@ -27078,6 +27080,7 @@ function startApp(){
       const SPLASH_MUSIC_FADE_MS = 2500;
       const splashMusicStartVol = splashMusicEl.volume;
       try { splashMusicEl.currentTime = SPLASH_MUSIC_TRIM_START_S; } catch (e) {}
+      const startSplashMusic = () => {
       const splashPlayPromise = splashMusicEl.play();
       if (splashPlayPromise && typeof splashPlayPromise.catch === 'function') splashPlayPromise.catch(() => {});
       setTimeout(() => {
@@ -27095,6 +27098,15 @@ function startApp(){
         };
         step();
       }, SPLASH_MUSIC_PREVIEW_MS - SPLASH_MUSIC_FADE_MS);
+      };
+      // Android app: the theme starts only once the splash video is on screen, so sound never leads the picture
+      const splashVidEl = splashEl.querySelector('video.splash-video');
+      if (document.documentElement.classList.contains('ebb-android') && splashVidEl && !splashVidEl.classList.contains('ebb-ready')){
+        let started = false;
+        const go = () => { if (started) return; started = true; startSplashMusic(); };
+        splashVidEl.addEventListener('playing', go, { once: true });
+        setTimeout(go, 4000);
+      } else startSplashMusic();
     }
 
     // On mobile, if EBBLESS isn't installed yet, let the splash's own
