@@ -3179,7 +3179,7 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-small{font-size:13px;color:#6c6c6c;margin:20px 0 0}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
-  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
+  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); }); }</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
   <div class="bl-wrap">
     <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
     <h1 id="bl-title">YOU’RE EARLY. THAT’S A GOOD THING.</h1>
@@ -3414,7 +3414,7 @@ body.week-up-on{overflow:hidden}
 
 <div id="splash">
   <div class="splash-poster"></div>
-  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
+  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" src="brand/assets/splash-cymatics.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); }); }</script>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
@@ -3506,7 +3506,7 @@ body.week-up-on{overflow:hidden}
   <main class="view" id="view-library">
     <div class="lib-bg">
       <div class="lib-bg-video lib-bg-poster"></div>
-      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); }</script>
+      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" src="brand/assets/library-bg.mp4"></video><script>if (document.documentElement.classList.contains('ebb-android')) { var v = document.currentScript.previousElementSibling; v.removeAttribute('poster'); v.src = v.getAttribute('src').replace('.mp4', '-alpha.webm'); v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); }); }</script>
       <div class="lib-bg-tint"></div>
     </div>
     <div class="view-scroll">
