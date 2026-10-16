@@ -60,24 +60,27 @@ public class MainActivity extends Activity {
             splash = new NativeSplash(this, new NativeSplash.Listener() {
                 @Override public void onChoose(boolean tutorial) {
                     if (web == null) return;
-                    web.evaluateJavascript("(function(){var x=document.getElementById('" + (tutorial ? "splashPlayTutorial" : "splashSkipTutorial") + "');if(x)x.click();})()", null);
+                    web.evaluateJavascript("window.__ebbNativeChose=true;(function(){var x=document.getElementById('" + (tutorial ? "splashPlayTutorial" : "splashSkipTutorial") + "');if(x)x.click();})()", null);
                 }
+                @Override public void onRevealed() { root.postDelayed(MainActivity.this::startWebOnce, 400); }
                 @Override public void onFinished() { splashDone(); }
             }, override);
             splashHolding = true;
             root.addView(splash, new FrameLayout.LayoutParams(-1, -1));
             root.postDelayed(() -> { if (splash != null) splash.dropForLock(); }, 25000);   // never trap the user behind it
-            final Bundle bb = b;
-            root.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
-                @Override public boolean onPreDraw() {
-                    root.getViewTreeObserver().removeOnPreDrawListener(this);
-                    root.post(() -> initWeb(bb));
-                    return true;
-                }
-            });
+            // building the WebView blocks this thread for a moment: wait until the splash video is up (or 2.5s) before starting it
+            root.postDelayed(this::startWebOnce, 2500);
         } else {
             initWeb(b);
         }
+    }
+
+    private boolean webStarted;
+
+    private void startWebOnce() {
+        if (webStarted || isFinishing()) return;
+        webStarted = true;
+        initWeb(null);
     }
 
     private void splashDone() {

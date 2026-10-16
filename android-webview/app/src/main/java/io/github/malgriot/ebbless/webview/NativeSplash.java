@@ -39,6 +39,8 @@ class NativeSplash extends FrameLayout {
     interface Listener {
         /** Visitor chose; the page should act (it is ready). */
         void onChoose(boolean tutorial);
+        /** Video is on screen; heavy work (the web view) may start now. */
+        void onRevealed();
         /** Splash is gone. */
         void onFinished();
     }
@@ -201,6 +203,7 @@ class NativeSplash extends FrameLayout {
     private void reveal() {
         if (revealed || finished) return;
         revealed = true;
+        listener.onRevealed();
         black.animate().alpha(0f).setDuration(700).withEndAction(() -> black.setVisibility(View.GONE)).start();
         logo.animate().alpha(1f).setStartDelay(350).setDuration(700).start();
         buttons.setVisibility(View.VISIBLE);

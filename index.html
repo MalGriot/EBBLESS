@@ -27213,6 +27213,8 @@ function startApp(){
     } else if (document.documentElement.classList.contains('ebb-android')) {
       // Android app: stay on the splash until Enter (or Tutorial) while the app loads behind it
       splashEl.classList.add('is-choice');
+      if (window.__ebbNativeChose) { splashEl.classList.remove('is-choice'); hideSplash(); }   // the native splash already took the visitor's choice
+      else {
       const onHold = (e) => {
         const t = e.target.closest ? e.target.closest('button') : null;
         if (!t || (t.id !== 'splashSkipTutorial' && t.id !== 'splashPlayTutorial')) return;
@@ -27224,6 +27226,7 @@ function startApp(){
         else if (window.__ebbEnterMusic && !document.documentElement.classList.contains('ebb-nsplash')) window.__ebbEnterMusic();
       };
       splashEl.addEventListener('click', onHold, true);
+      }
     } else {
       setTimeout(hideSplash, SPLASH_MS);
     }
