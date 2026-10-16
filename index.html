@@ -5042,7 +5042,11 @@ const macAppUrl = () => {
 // Firefox on a Mac has no install API, so the one Install button downloads the Mac app
 // instead. GitHub takes a few seconds to answer, so show the button working right away.
 const installsViaDownload = () => isFirefoxDesktop && isMacDesktop;
+let macDownloadStarted = false;
 function downloadMacApp(setLabel){
+  // second tap: the download already went, so bring the steps back (the modal links to a re-download)
+  if (macDownloadStarted){ showMacOpenAnywaySheet(); return; }
+  macDownloadStarted = true;
   setLabel('Starting download\u2026', true);
   // unknown chip: the Intel build also runs on Apple silicon (Rosetta); the reverse is not true
   const a = document.createElement('a');
@@ -5052,8 +5056,7 @@ function downloadMacApp(setLabel){
   a.click();
   a.remove();
   showMacOpenAnywaySheet();
-  setTimeout(() => setLabel('Check your Downloads', true), 4000);
-  setTimeout(() => setLabel('Install', false), 20000);
+  setTimeout(() => setLabel('Show install steps', false), 4000);
 }
 // iOS Safari never fires beforeinstallprompt (no programmatic install API at
 // all there) - includes iPadOS, which reports as "MacIntel" but is
@@ -5194,6 +5197,7 @@ function showMacOpenAnywaySheet(){
       + '<li>Click <b>Open</b> when macOS asks if you are sure</li>'
       + '</ol>'
       + '<p><b>Don\u2019t just double-click it.</b> That way macOS only offers Move to Trash. If you did, click Done, then use the button below and choose <b>Open Anyway</b> next to EBBLESS.</p>'
+      + '<a class="ii-btn" data-redownload href="#" rel="noopener">Download again</a>'
       + '<a class="ii-btn" href="x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension">Open Privacy &amp; Security</a>'
       + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
     const close = () => { el.hidden = true; };
@@ -5202,6 +5206,7 @@ function showMacOpenAnywaySheet(){
     document.body.appendChild(el);
     macOpenAnywaySheet = el;
   }
+  macOpenAnywaySheet.querySelector('[data-redownload]').href = macAppUrl() || MAC_APP_URLS.x64;
   macOpenAnywaySheet.hidden = false;
 }
 let desktopInstallSheet = null;
