@@ -21760,7 +21760,7 @@ function podTextLines(pt){
 // in a Web Worker) - free, no limits, nothing stored on any server. Audio
 // comes through the worker's /podaudio a slice at a time, starting at the
 // playhead so the part being listened to comes first. Results are kept on
-// this device only, for 7 days, then made fresh.
+// this device only, for 3 days (a month once the episode is well listened to), then made fresh.
 // Models: English-only tiny (~41 MB, one-time download) by default. A
 // non-English show needs the multilingual base model (~77 MB), which the
 // captions view offers to install - the small one can't do those at all.
@@ -21768,7 +21768,15 @@ var CAP_MODEL_EN = 'onnx-community/whisper-tiny.en';
 var CAP_MODEL_MULTI = 'onnx-community/whisper-base';
 var CAP_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0';
 var CAP_CHUNK_BYTES = 2 * 1024 * 1024;
-var CAP_TTL_MS = 7 * 24 * 3600 * 1000;
+var CAP_TTL_MS = 3 * 24 * 3600 * 1000;
+// an episode listened to a good way through is likely to be come back to:
+// its captions are kept a month instead of 3 days
+var CAP_TTL_LONG_MS = 30 * 24 * 3600 * 1000;
+function capKeepMs(id){
+  let p = null;
+  try { p = (lsGet(LS_POD_PROGRESS, {}) || {})[id]; } catch(e){}
+  return p && p.pos > 0 && (p.pos >= 600 || (p.dur && p.pos / p.dur >= 0.25)) ? CAP_TTL_LONG_MS : CAP_TTL_MS;
+}
 var LS_CAP_MULTI = 'ebbless_caption_multilingual';
 var capJob = null, capWorkerObj = null, capSeq = 0, capPending = new Map(), capModelProgress = {};
 function capLang(t){ return String((t && t.lang) || 'en').toLowerCase().split(/[-_]/)[0]; }
@@ -21904,7 +21912,7 @@ async function capGet(id){
   try {
     const db = await capDb();
     const rec = await new Promise((res, rej) => { const r = db.transaction('caps').objectStore('caps').get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-    if (rec && Date.now() - rec.ts > CAP_TTL_MS){ capDel(id); return null; }
+    if (rec && Date.now() - rec.ts > capKeepMs(id)){ capDel(id); return null; }
     return rec || null;
   } catch(e){ return null; }
 }
@@ -21914,14 +21922,14 @@ async function capPut(id, rec){
 async function capDel(id){
   try { const db = await capDb(); db.transaction('caps', 'readwrite').objectStore('caps').delete(id); } catch(e){}
 }
-// drop anything past its 7 days, once per session
+// drop anything past its keep time, once per session
 var capPruned = false;
 async function capPrune(){
   if (capPruned) return; capPruned = true;
   try {
     const db = await capDb();
     const cur = db.transaction('caps', 'readwrite').objectStore('caps').openCursor();
-    cur.onsuccess = () => { const c = cur.result; if (!c) return; if (!c.value || Date.now() - c.value.ts > CAP_TTL_MS) c.delete(); c.continue(); };
+    cur.onsuccess = () => { const c = cur.result; if (!c) return; if (!c.value || Date.now() - c.value.ts > capKeepMs(c.key)) c.delete(); c.continue(); };
   } catch(e){}
 }
 async function capFetch(url, start, end){
@@ -22036,28 +22044,38 @@ async function generateCaptions(t, onUpdate){
     const n = Math.ceil(rec.total / CAP_CHUNK_BYTES);
     // next slice to do: the first missing one at or after the playhead,
     // re-read every round so a seek or chapter jump pulls generation along
-    const next = () => {
+    const next = (skip) => {
       const p = activeDeck().player;
       const at = (p && p.getCurrentTime && p.getCurrentTime()) || 0;
       const a0 = rec.a0 || 0;
       const here = Math.min(n - 1, Math.max(0, Math.floor((a0 + at / dur * (rec.total - a0)) / CAP_CHUNK_BYTES)));
-      for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i]) return i; }
+      for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i] && i !== skip) return i; }
       return -1;
     };
     job.dur = dur; job.next = next;
-    let decoded = 0, first = true;
+    let decoded = 0, first = true, pre = null;
+    // the next slice downloads and decodes while the current one is being
+    // transcribed, so the worker never waits on the network (one extra
+    // decoded slice in memory, ~8 MB)
+    const load = (k) => {
+      const s0 = k * CAP_CHUNK_BYTES, e0 = Math.min(rec.total, s0 + CAP_CHUNK_BYTES) - 1;
+      return capFetch(url, s0, e0).then(({ buf }) => capDecode(buf).then(audio => ({ audio }), err => ({ err })));
+    };
     for (let i = next(); i >= 0; i = next()){
       if (job.cancelled) return;
       const start = i * CAP_CHUNK_BYTES, end = Math.min(rec.total, start + CAP_CHUNK_BYTES) - 1;
-      const { buf } = await capFetch(url, start, end);
-      let audio;
-      try { audio = await capDecode(buf); decoded++; }
-      catch(e){ if (!decoded && first) throw e; rec.parts[i] = []; continue; }
-      finally { first = false; }
+      const got = await (pre && pre.i === i ? pre.p : load(i));
+      pre = null;
+      const wasFirst = first; first = false;
+      if (got.err){ if (!decoded && wasFirst) throw got.err; rec.parts[i] = []; continue; }
+      decoded++;
+      const audio = got.audio;
       if (!rec.spb){
         const bytes = end - start + 1 - (i === 0 ? rec.a0 || 0 : 0), spb = audio.length / 16000 / bytes;
         if (end - start + 1 === CAP_CHUNK_BYTES && audio.length >= 16000 * 20 && spb > 1 / 64000 && spb < 1 / 1000) rec.spb = spb;
       }
+      const after = next(i);
+      if (after >= 0){ pre = { i: after, p: load(after) }; pre.p.catch(() => {}); }
       const chunks = await capRun(model, audio, english ? null : lang);
       const offset = capOffset(rec, start, dur);
       rec.parts[i] = chunks
