@@ -21922,6 +21922,26 @@ async function capPut(id, rec){
 async function capDel(id){
   try { const db = await capDb(); db.transaction('caps', 'readwrite').objectStore('caps').delete(id); } catch(e){}
 }
+// failsafe: never more than CAP_MAX_SAVED episodes' captions on the device.
+// When a new one starts, the surplus goes oldest first, short-keep (barely
+// listened) records before well-listened ones; the episode in hand is safe.
+var CAP_MAX_SAVED = 12;
+async function capEnforceMax(keepId){
+  try {
+    const db = await capDb();
+    const rows = await new Promise((res, rej) => {
+      const out = [], cur = db.transaction('caps').objectStore('caps').openCursor();
+      cur.onsuccess = () => { const c = cur.result; if (!c){ res(out); return; } out.push({ id: c.key, ts: (c.value && c.value.ts) || 0 }); c.continue(); };
+      cur.onerror = () => rej(cur.error);
+    });
+    // the episode in hand counts even if its record isn't written yet
+    const extra = rows.length + (rows.some(r => r.id === keepId) ? 0 : 1) - CAP_MAX_SAVED;
+    if (extra <= 0) return;
+    rows.filter(r => r.id !== keepId)
+      .sort((x, y) => (capKeepMs(x.id) - capKeepMs(y.id)) || (x.ts - y.ts))
+      .slice(0, extra).forEach(r => capDel(r.id));
+  } catch(e){}
+}
 // drop anything past its keep time, once per session
 var capPruned = false;
 async function capPrune(){
@@ -22012,6 +22032,7 @@ async function generateCaptions(t, onUpdate){
   const job = capJob = { id, t, cancelled: false, onUpdate, onProgress: null, lastActivity: Date.now(), rec: null, dur: 0, next: null };
   capSyncWakeLock();
   capPrune();
+  capEnforceMax(id);
   const lang = capLang(t), english = lang === 'en';
   const rec = (await capGet(id)) || { ts: Date.now(), total: 0, parts: {}, done: false };
   // records saved before slices were timed by measured seconds-per-byte
