@@ -25,14 +25,14 @@ use `.debug` and install beside the real app.
 
 ## Screen-off soak (measured 2026-10-16, TECNO POP 9, app 2.7.1)
 
-33 minutes with the screen off and the phone unplugged (10:07 -> 10:40, 65 samples every 30s,
+33 minutes with the screen off and the phone unplugged (10:07 -> 10:40, 65 samples every 30s; the logger ran on to 11:06, raw data in `test-data/soak-2026-10-16.log`,
 logged on the phone itself by `/sdcard/soak.sh`; the log has no gap longer than 33s, so the
 phone never suspended):
 
 - audio streams started in every sample, same process (pid) throughout, foreground service up throughout
 - battery 100% -> 95%; Doze never went past IDLE_PENDING because audio was playing (expected)
 - the system's audio mixer counted 2 underruns across the whole window
-- one 33s screen wake at 10:24 (the owner checking); playback continued through it
+- one 33s screen wake at 10:24:40 that nobody caused (owner was away). EBBLESS has no way to turn the screen on (no such permission or flag in the manifest or code). The system log from before 10:24:40 had rotated out, so the trigger is unknown; right after it `com.teqtic.lockmeout` posted a usage-stats notification and an OEM `WakeUpJobService` ran at 10:30. Playback continued through it
 
 Not covered yet: a longer run (1h+), SoundCloud as well as YouTube, a second phone, and a run
 with the phone idle in a pocket/bag (Wi-Fi sleep, thermal). The first seconds of a song can
