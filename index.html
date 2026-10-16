@@ -37,7 +37,17 @@
 <script>
 /* The Android app flips this when the screen turns off/on: while off, everything visual is hidden (see html.ebb-screenoff CSS) so the
    browser can free its graphics memory. The playback decks keep running. */
-window.__ebbScreen = function (on) { document.documentElement.classList.toggle('ebb-screenoff', !on); };
+var __ebbReclaimTimer = 0;
+/* Garbage piles up in the page (the renderer reached ~350 MB while ~190 MB is live data) and the browser frees it lazily. Allocating and
+   dropping a big ArrayBuffer makes the JS engine run a full collection and hand the memory back (measured: 410 -> 193 MB in 15 s). */
+window.__ebbReclaim = function () { try { var a = new ArrayBuffer(96 * 1024 * 1024); a = null; } catch (e) {} };
+window.__ebbScreen = function (on) {
+  document.documentElement.classList.toggle('ebb-screenoff', !on);
+  clearTimeout(__ebbReclaimTimer); clearInterval(__ebbReclaimTimer);
+  if (!on) {   // screen off: clean up now, then every 4 minutes while it stays off (a phone with 2.8 GB RAM got this app killed at ~46 min)
+    __ebbReclaimTimer = setTimeout(function () { window.__ebbReclaim(); __ebbReclaimTimer = setInterval(window.__ebbReclaim, 4 * 60 * 1000); }, 2000);
+  }
+};
 /* Launched from the "EBBLESS was stopped" notice after the phone killed the app: act like a return from the background, so the
    queue resumes and the splash is skipped. */
 try {
