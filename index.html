@@ -16115,6 +16115,7 @@ if (weekUpParam === 'preview' || weekUpParam === 'demo'){
 const TESTER_BANNER_MIN_MS = 3 * 86400000;
 const testerBanner = $('testerBanner');
 function initTesterBanner(){
+  $('navFeedbackBtn').hidden = false;   // Geethub #580: the top-nav Feedback button is for everyone; only the tester banner stays gated
   let token = null;
   try { token = localStorage.getItem('ebbless:betaToken'); } catch(e){}
   if (!token || !/^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(token)) return;
@@ -16122,7 +16123,6 @@ function initTesterBanner(){
   const now = Date.now();
   if (now - (vibeState().first || now) < TESTER_BANNER_MIN_MS) return;
   testerBanner.hidden = false;
-  $('navFeedbackBtn').hidden = false;
 }
 $('testerBannerSend').addEventListener('click', () => { openFeedbackModal(); });
 $('navFeedbackBtn').addEventListener('click', () => { openFeedbackModal(); });
