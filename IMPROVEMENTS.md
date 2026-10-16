@@ -10290,7 +10290,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #501. Related to #354 (merged).
 
 ### on-air-thumb-wrong: On/off air thumb shows off air while music plays (Geethub #500)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub #500. On/off air thumb shows off air while music plays.
 - **Touches:**
@@ -10402,7 +10402,7 @@ Add entries in this shape:
 - **Notes:** Shipped 2026-10-15, cache v236-v237. The dodge also works with the YouTube card open. An ad held inside a song for 10s hands off to the next song; the held one plays next, from the top (once per video). "Ads playing?" turns into an "Ad playing. Skipping in Xs" countdown. A cover hides held ads in the card and in F fullscreen. Repeat-one restarts in place or crossfades into its preloaded copy instead of reloading. Verified in the local preview with faked ads; real F fullscreen and iPhone not yet checked. The real adblock (Mac app, #524) is parked.
 
 ### playlist-copy-prompt-spotify: Make a copy prompt for auto-updating Spotify playlists (Geethub #551)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #551. Part of #506. When a playlist is an imported Spotify one that auto-refreshes, offer a prompt to make a editable copy.
 - **Touches:** playlist import/refresh.
@@ -10410,7 +10410,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #551. Child of playlist-workspaces (#506). Built 2026-10-16: adding a song to an imported Spotify playlist asks "Make a copy" / "Add here anyway" / Cancel. Copy makes an editable custom playlist and adds the song there; "Add here anyway" is remembered per playlist (copyDeclined, survives refreshes) and the song survives refreshes via #550. Hooked into addTrackToPlaylistAsk. Verified in the local preview; sw.js cache not bumped (bump when merging).
 
 ### playlist-keep-added-songs: Keep songs added to imported playlists when they refresh (Geethub #550)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #550. Part of #506. Songs a user adds to an imported playlist must survive the refresh.
 - **Touches:** playlist refresh.
@@ -10690,7 +10690,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #554.
 
 ### bug-lp-mode-has-song-art-in: lp mode has song art in it but cassette is blank (Geethub #555)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #555. medium pasted this in https://youtu.be/vbBHMKt9fzk?si=ORnLTK384u-LBkmY
 - **Touches:** tbd.
@@ -10714,7 +10714,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #557.
 
 ### bug-what-do-we-do-about-ads: what do we do about ads in the middle of the song? (Geethub #558)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #558. high
 - **Touches:** tbd.
