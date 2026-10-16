@@ -10522,12 +10522,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #537. Related to link-match-accuracy.
 
 ### bug-tabs-close-while-browsing: Playlist, album and artist tabs close while I'm still going through them (Geethub #536)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Idea, Geethub #536. Bug #536. These windows close on their own while the user is browsing.
 - **Touches:** playlist/album/artist windows.
-- **Branch:** 
-- **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546).
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546). Root cause: the 60s idle auto-close (#409) only reset on click/key/wheel/touch/scroll, so reading or hovering through a playlist/album with the pointer moving counted as idle and shut the window. Pointer movement now resets it. Verified on localhost: with a pointermove at 45s the panel was still open at 75s (old code closes at ~60s) and closed after a true 60s idle. The reporter's device is unknown, so confirm it matches their report; the earlier #536 fix covered renderLibrary re-renders.
 
 ### smart-playlist-more-parameters: Smart playlist needs way more parameters (Geethub #535)
 - **Status:** draft

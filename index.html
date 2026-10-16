@@ -19085,9 +19085,11 @@ function closeQueuePanel(restoreView = true){
 queueScrim.addEventListener('click', closeQueuePanel);
 
 // library and queue panels close after 60s of no interaction (#409); any
-// touch, click, key or scroll resets the clock. Artist windows are exempt.
+// touch, click, key, scroll or pointer movement resets the clock (#536: moving
+// the pointer while reading a long list used to count as idle and shut the
+// window under the user). Artist windows are exempt.
 let panelIdleSince = Date.now();
-['pointerdown','keydown','wheel','touchstart','scroll'].forEach(ev =>
+['pointerdown','pointermove','keydown','wheel','touchstart','scroll'].forEach(ev =>
   document.addEventListener(ev, () => { panelIdleSince = Date.now(); }, { capture: true, passive: true }));
 setInterval(() => {
   const lib = openLibraryPanelId && !String(openLibraryPanelId).startsWith(ARTIST_INFO_PREFIX) && !isArtistEntry(getCachedPlaylist(openLibraryPanelId));
