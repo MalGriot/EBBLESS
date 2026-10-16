@@ -5051,6 +5051,7 @@ function downloadMacApp(setLabel){
   document.body.appendChild(a);
   a.click();
   a.remove();
+  showMacOpenAnywaySheet();
   setTimeout(() => setLabel('Check your Downloads', true), 4000);
   setTimeout(() => setLabel('Install', false), 20000);
 }
@@ -5176,6 +5177,34 @@ function showIOSInstallSheet(){
 // Desktop install steps (#593). A Mac browser with no native prompt (Safari,
 // or Chrome/Edge after the prompt was dismissed) used to get a one-line hint
 // or nothing at all. This shows the manual steps in the same sheet.
+// Shown when the Mac installer starts downloading: macOS blocks an installer from an
+// unidentified developer once, so spell out the way past it. A modal, not fine print.
+let macOpenAnywaySheet = null;
+function showMacOpenAnywaySheet(){
+  if (!macOpenAnywaySheet){
+    const el = document.createElement('div');
+    el.className = 'ios-install';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Finish installing EBBLESS');
+    el.innerHTML = '<div class="ii-card"><h3>Your download has started</h3>'
+      + '<p>macOS will block the installer the first time. That is normal. Do this once:</p>'
+      + '<ol style="text-align:left;margin:0 0 14px;padding-left:20px;line-height:1.5">'
+      + '<li>Open the <b>EBBLESS</b> installer from your Downloads</li>'
+      + '<li>When macOS says it can\u2019t verify it, click <b>Done</b> (not Move to Trash)</li>'
+      + '<li>Open <b>System Settings</b>, then <b>Privacy &amp; Security</b></li>'
+      + '<li>Scroll down to <b>Security</b> and click <b>Open Anyway</b> next to EBBLESS</li>'
+      + '<li>Enter your password or use Touch ID, then click <b>Open Anyway</b> again and finish the install</li>'
+      + '</ol>'
+      + '<p>On an older macOS, right-click the installer and choose <b>Open</b> instead.</p>'
+      + '<button type="button" class="ii-btn ii-close">Got it</button></div>';
+    const close = () => { el.hidden = true; };
+    el.addEventListener('click', (e) => { if (e.target === el) close(); });
+    el.querySelector('.ii-close').addEventListener('click', close);
+    document.body.appendChild(el);
+    macOpenAnywaySheet = el;
+  }
+  macOpenAnywaySheet.hidden = false;
+}
 let desktopInstallSheet = null;
 function showDesktopInstallSheet(){
   if (!desktopInstallSheet){
@@ -25172,7 +25201,6 @@ if (screen.orientation && screen.orientation.lock){
       }
       if (installsViaDownload()){
         downloadMacApp((t, busy) => { installBtn.textContent = t; installBtn.disabled = busy; });
-        if (installDesc) installDesc.textContent = 'Open the installer from your Downloads. If macOS blocks it, open System Settings, Privacy & Security, and choose Open Anyway.';
         return;
       }
       installBtn.disabled = true;
