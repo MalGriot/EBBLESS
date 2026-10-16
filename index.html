@@ -569,6 +569,8 @@ body.onb-active .paste-guide{display:none}
 @keyframes libBarSlide{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){#libBarLabel.is-swap{animation:none}}
 .section-label-row:first-of-type .section-label{margin-top:0}
+/* #495: the filter pills fold their sections, so each visible section gets a divider line to show where it starts and ends */
+.lib-sec:not(.is-first-sec)>.section-label-row:not(.hidden){margin-top:30px;border-top:2px solid var(--border-2)}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
 .lib-fold[aria-expanded="false"] svg{transform:rotate(-90deg)}
@@ -3725,10 +3727,9 @@ body.week-up-on{overflow:hidden}
           </button>
         </div>
         <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
-          <button type="button" class="lib-filter-btn" data-filter="all">All</button>
           <button type="button" class="lib-filter-btn" data-filter="playlists" id="libFilterPlaylists">Playlists</button>
-          <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
+          <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
           <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
@@ -8983,15 +8984,11 @@ const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts'];
 let libHasPodcasts = false, libHasArtists = false, libHasPlaylists = true, libHasAlbums = true;
 function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'artists' || libHasArtists) && (m !== 'playlists' || libHasPlaylists) && (m !== 'albums' || libHasAlbums)); }
 function getLibraryFilter(){
-  const mode = lsGet(LS_LIB_FILTER, 'all');
-  return libFilterCycleModes().includes(mode) ? mode : 'all';
+  return 'all';   // no All pill any more: the library is always the stacked sections, the pills fold them (#495)
 }
 function setLibraryFilter(mode){
   libShowCount = LIB_PAGE; // each filter starts at one page (#487)
   lsSet(LS_LIB_FILTER, mode);
-  libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
-    btn.classList.toggle('is-active', btn.dataset.filter === mode);
-  });
   renderLibrary();
 }
 // #366: when the filter row overflows, an inline arrow scrolls right to reveal
@@ -9014,23 +9011,16 @@ window.addEventListener('resize', updateLibFilterMore);
 libFilter.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-filter-btn');
   if (!btn) return;
-  const mode = btn.dataset.filter;
-  // #423/#424: pressing the already-active All / Albums chip collapses its dropdowns
-  if (mode === getLibraryFilter()){
-    if (mode === 'all'){
-      ['playlists', 'artists', 'albums', 'podcasts'].forEach(k => { libFolded[k] = true; });
-      renderLibrary();
-      return;
-    }
-    if (mode === 'albums'){
-      const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
-      libAlbumGroupKeys.forEach(k => { f[k] = true; });
-      lsSet(LS_ALBUM_ARTIST_FOLDED, f);
-      rerenderLibraryKeepPanel();
-      return;
-    }
+  const key = btn.dataset.filter;
+  // each pill extends or retracts its whole section, every sub-group included (#495)
+  const extend = !!libFolded[key];
+  libFolded[key] = !extend;
+  if (key === 'albums'){
+    const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+    libAlbumGroupKeys.forEach(k => { f[k] = !extend; });
+    lsSet(LS_ALBUM_ARTIST_FOLDED, f);
   }
-  setLibraryFilter(mode);
+  rerenderLibraryKeepPanel();
 });
 function applyLibSortUI(){
   const mode = getLibrarySort();
@@ -9063,9 +9053,6 @@ document.addEventListener('click', (e) => {
 });
 applyLibSortUI();
 setLibraryView(getLibraryView());
-libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => {
-  btn.classList.toggle('is-active', btn.dataset.filter === getLibraryFilter());
-});
 
 // library-search: case- and accent-insensitive match against the user's own
 // saved library only. The field is a drop-down behind #libSearchToggle (#218):
@@ -9186,7 +9173,7 @@ function renderLibrary(){
   // chips only help when there's more than one kind to pick between
   libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
-  libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', btn.dataset.filter === filter));
+  libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter]));
   updateLibFilterMore();
   const showPlaylists = (filter === 'all' || filter === 'playlists') && !advHide.includes('playlist');
   const showArtists = (filter === 'all' || filter === 'artists') && !advHide.includes('artist');
@@ -9595,6 +9582,7 @@ function renderLibrary(){
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
   // Section header fold/unfold: click entire header to toggle, All view only
+  let firstSecSeen = false;   // the first visible section gets no divider line above it
   [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
     // Attach click handler to the entire section-label-row if not already set
     if (!head.dataset.foldHandlerAttached) {
@@ -9603,6 +9591,7 @@ function renderLibrary(){
     }
     const folded = filter === 'all' && !!libFolded[key];
     head.classList.toggle('hidden', filter !== 'all');
+    head.parentElement.classList.toggle('is-first-sec', !firstSecSeen && !head.classList.contains('hidden') && (firstSecSeen = true));
     head.setAttribute('aria-expanded', String(!folded));
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
@@ -9610,10 +9599,7 @@ function renderLibrary(){
   // #487: All is an overview - each section shows its first two rows, with
   // "See all (N)" opening that section's own filter. Rendering every card
   // here made a big library's All view heavy enough to glitch the screen.
-  if (filter === 'all' && !searchQ){
-    const playlistCount = libraryGrid.querySelectorAll(':scope > .lib-card').length;
-    libraryAllOverview({ playlists: playlistCount, artists: artistCount, albums: albumCount, podcasts: podcastCount });
-  } else if (!searchQ) libraryCapSection(filter);
+  if (!searchQ) ['playlists', 'artists', 'albums', 'podcasts'].forEach(libraryCapSection);   // open sections show a page of cards, then Show more (#487)
   const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
   libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
@@ -9623,7 +9609,7 @@ function renderLibrary(){
 }
 // Single-section filters draw LIB_PAGE cards, then "Show N more" (#487).
 // var, not const: renderLibrary runs during startup, before these lines.
-var LIB_PAGE = 48, libShowCount = 48;
+var LIB_PAGE = 24, libShowCount = 24;
 function trimLibraryGrid(grid, keep){
   const cards = Array.from(grid.children).filter(c => c.classList.contains('lib-card'));
   if (cards.length <= keep) return cards.length;
