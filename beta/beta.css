@@ -34,6 +34,8 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .bg::after{content:'';position:absolute;inset:0;
   background:radial-gradient(ellipse 120% 80% at 50% 0%, var(--clock-tint, transparent) 0%, transparent 70%),
     linear-gradient(rgba(18,18,18,.35) 0%, rgba(18,18,18,.7) 45%, var(--bg) 100%)}
+.bg.is-verified .bg-tint{background:#e0b26a;transition-duration:600ms}
+.bg.is-missing .bg-tint{background:#d93a3a;transition-duration:600ms}
 .bg.quiet::after{background:linear-gradient(rgba(18,18,18,.5) 0%, rgba(18,18,18,.85) 50%, var(--bg) 100%)}
 
 .wrap{position:relative;isolation:isolate;max-width:560px;margin:0 auto;

@@ -398,6 +398,7 @@
     }
     $('submitBtn').disabled = true;
     Beta.status(st, 'Sending...');
+    Beta.bgState(body.idToken ? 'ok' : null);
     try {
       finish(await send(body));
     } catch(err){
@@ -409,6 +410,7 @@
       }
       // Expired or rejected Google sign-in: offer the button again.
       if (err.status === 401 && gCred){ gCred = ''; signupMode(); }
+      if (body.idToken && err.status) Beta.bgState('bad');
       Beta.status(st, err.message, 'err');
       $('submitBtn').disabled = false;
     }

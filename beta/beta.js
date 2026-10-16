@@ -178,6 +178,12 @@
     v.addEventListener('playing', () => v.classList.add('is-playing'));
     const p = v.play(); if (p && p.catch) p.catch(() => {});
   }
+  // Gold while a Google account checks out, red when it isn't found; null resets to the clock color.
+  function bgState(state){
+    const bg = document.querySelector('.bg'); if (!bg) return;
+    bg.classList.toggle('is-verified', state === 'ok');
+    bg.classList.toggle('is-missing', state === 'bad');
+  }
   if (document.body) background(); else document.addEventListener('DOMContentLoaded', background);
 
   // The app's splash sound: intro-theme.mp3 from 0.5s, a 3.5s beat, then a
@@ -268,5 +274,5 @@
   addEventListener('online', flush);
   setInterval(() => { if (outboxLoad().length) flush(); }, 30000);
 
-  window.Beta = { BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN, intro, introOnArrival, send, queue, retryable };
+  window.Beta = { bgState, BACKEND, api, token, detect, pills, radio, checked, setRadio, compressImage, status, LS_TOKEN, intro, introOnArrival, send, queue, retryable };
 })();
