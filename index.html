@@ -41,7 +41,7 @@ if (/EBBLESS-Android/.test(navigator.userAgent)) { var pl = document.createEleme
    black frames whose transparency is the picture's brightness, laid over a solid accent layer. That
    is the same result as the grayscale + color-blend look (accent x brightness) with plain compositing. */
 html.ebb-android #splash .splash-video, html.ebb-android #beta-lock .bl-video, html.ebb-android video.lib-bg-video{filter:none}
-html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
+html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint, html.ebb-android .lib-bg-tint{mix-blend-mode:normal;opacity:0;background:var(--clock-accent,#e0b26a)}
 html.ebb-android #beta-lock .bl-video{transition:none}
 /* splash: flat black + logo until the new video is really playing, then the normal reveal (no grey poster flash) */
 html.ebb-android #splash .splash-poster{display:none}
@@ -59,7 +59,8 @@ html.ebb-android #splash.is-choice .splash-choice{transition-delay:1000ms}
 html.ebb-android #splash.is-choice.is-return .splash-choice{transition-delay:250ms}
 /* a device already let in must not flash the lock page while the script decides: hide it until the lock script re-locks */
 html.ebb-unlocked:not(.ebb-relock) #beta-lock{display:none!important}
-html.ebb-android #splash .splash-tint{transition:background 600ms linear}
+/* the splash opens on the plain accent and eases into its final (lighter) colour over 3s */
+html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint{transition:background 3s ease-in-out}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
