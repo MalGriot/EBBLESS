@@ -22520,7 +22520,10 @@ function marqueeVisibilityObserve(el, win){
       // isVisible (Chrome IO v2) is false for visibility:hidden / opacity:0 / covered
       // elements, which plain isIntersecting ignores (a marquee kept running inside a
       // hidden overlay); undefined elsewhere, so those fall back to isIntersecting
-      const on = e.isIntersecting && e.isVisible !== false;
+      // Geethub #601: library thumb titles sit under transformed/composited cards that
+      // IO v2 reports as "not visible" forever, so they never scrolled; hidden library
+      // views are display:none, which isIntersecting already catches
+      const on = e.isIntersecting && (e.isVisible !== false || !!e.target.closest('.lib-card'));
       e.target._marqueeOnScreen = on;
       if (!a) return;
       if (on){ if (a.playState === 'paused') a.play(); }
