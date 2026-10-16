@@ -10954,7 +10954,10 @@ function handleLibCtxAction(action, id){
   else if (action === 'delete'){
     // delete right away with an Undo in the toast (no confirm box)
     const libBefore = getLibrary().slice(), pinnedBefore = isPinned(id), data = lsGet(LS_PL(id), null);
+    // Geethub #600: the list scrolls in .lib-body, which the re-render empties; put it back
+    const lb = document.querySelector('#libraryListWrap .lib-body'), keepTop = lb ? lb.scrollTop : 0;
     removeFromLibrary(id); renderLibrary();
+    if (lb && keepTop) lb.scrollTop = keepTop;
     showToast('Deleted "' + pl.name + '"', { label: 'Undo', run: () => restoreToLibrary(id, data, libBefore, pinnedBefore) });
   }
 }
