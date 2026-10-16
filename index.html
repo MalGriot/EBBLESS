@@ -5835,6 +5835,7 @@ const LS_VIZ_SPEED = 'ebbless:vizSpeed';
 const LS_VIZ_ROTATE = 'ebbless:vizRotate'; // true = slowly rotate the visualizer
 const LS_LIB_VIEW = 'ebbless:libraryView';   // 'grid' | 'list'
 const LS_LIB_SORT = 'ebbless:librarySort';   // 'custom' | 'alpha' | 'plays_desc' | 'tracks_desc'
+const LS_LIB_SORT_REV = 'ebbless:librarySortReversed'; // #569: true = the active sort runs the other way
 const LS_LIB_FILTER = 'ebbless:libraryFilter'; // 'all' | 'playlists' | 'artists' | 'albums' | 'podcasts'
 const LIKED_ID = 'liked';                    // fixed id for the built-in Liked Songs playlist
 const SWELL_ID = 'swell';                    // fixed id for the built-in daily-discovery playlist
@@ -7207,6 +7208,7 @@ function sortLibraryIds(ids, mode){
   } else if (mode === 'tracks_desc'){
     withPl.sort((a, b) => b.pl.tracks.length - a.pl.tracks.length);
   }
+  if (lsGet(LS_LIB_SORT_REV, false)) withPl.reverse();
   return withPl.map(x => x.id);
 }
 function orderedLibraryIds(){
@@ -8808,6 +8810,9 @@ libSortBtn.addEventListener('click', (e) => {
 libSortMenu.querySelectorAll('.art-style-opt[data-sort]').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Geethub #569: tapping the sort that is already active flips its direction
+    if (btn.dataset.sort === getLibrarySort() && btn.dataset.sort !== 'custom') lsSet(LS_LIB_SORT_REV, !lsGet(LS_LIB_SORT_REV, false));
+    else lsSet(LS_LIB_SORT_REV, false);
     setLibrarySort(btn.dataset.sort);
     applyLibSortUI();
     closeLibSortMenu();
