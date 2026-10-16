@@ -2124,20 +2124,19 @@ body.split-desktop .tester-banner .tb-send{width:30px;height:30px;padding:0;bord
   #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:570px}}
 @media (min-width:860px) and (max-width:1149.98px){#topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:300px}}
 body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
-/* stays obvious: soft accent pulse (not on reduced-motion) */
-/* pulse ring: opacity + transform on a pseudo-element (a box-shadow keyframe repaints the page every frame) */
-@keyframes tbRing{0%,100%{opacity:0;transform:scale(.94)}50%{opacity:1;transform:scale(1)}}
-.tester-banner:not([hidden])::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:tbRing 2s ease-in-out infinite}
+/* the tester banner (phone feedback icon) no longer pulses: it is a solid accent button and stays still */
 /* Geethub #445: the header Feedback button (desktop, since #432) lost the pulse the pill had; give it the same blink on its icon + ring */
 /* the ring is a pseudo-element animated by opacity + transform only (box-shadow/color keyframes repainted the page every frame, forever) */
 @keyframes navFbRing{0%,100%{opacity:0;transform:scale(.92)}50%{opacity:1;transform:scale(1)}}
-#navFeedbackBtn:not([hidden]),#helpBtn.is-unplayed{position:relative;border-radius:12px}
-#navFeedbackBtn:not([hidden])::after,#helpBtn.is-unplayed::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:navFbRing 1.6s ease-in-out infinite}
-#helpBtn.is-unplayed::after{animation-duration:3s}   /* the help button pulses once every 3s; the feedback button keeps the faster 1.6s */
+#navFeedbackBtn:not([hidden]){position:relative;border-radius:12px}
+#navFeedbackBtn:not([hidden])::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:navFbRing 1.6s ease-in-out infinite}
+/* the help button just changes colour, once every 3s, in coarse steps (a smooth colour keyframe restyles every frame) */
+@keyframes helpTint{0%,100%{color:var(--faint)}50%{color:var(--accent)}}
+#helpBtn.is-unplayed{animation:helpTint 3s steps(12) infinite;opacity:1}
 #navFeedbackBtn:not([hidden]) svg{color:var(--accent)}
 /* Geethub #461: header tutorial button blinks (same keyframes as Feedback) until the tutorial has been played once */
-@media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{box-shadow:0 0 0 2px var(--accent)}#helpBtn.is-unplayed::after,#navFeedbackBtn:not([hidden])::after{animation:none}}
-@media (prefers-reduced-motion:reduce){.tester-banner:not([hidden]){outline:2px solid var(--accent)}.tester-banner:not([hidden])::after{animation:none}
+@media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{animation:none;color:var(--accent)}#navFeedbackBtn:not([hidden])::after{animation:none}}
+@media (prefers-reduced-motion:reduce){
   #navFeedbackBtn:not([hidden]){animation:none;outline:2px solid var(--accent)}}
 .tester-banner .tb-send{flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
 /* icon-only form (phones, split desktop): the base padding above came later in the cascade and squeezed the icon to a sliver (Geethub #361) */
@@ -29428,8 +29427,7 @@ body.is-sample #sampleClock{display:inline-flex}
 @media (min-width:860px){body.is-sample #topbar{--tb-r:560px}}
 @media (min-width:860px) and (max-width:1149.98px){body.is-sample #topbar{--tb-r:360px}}
 body.is-sample.split-desktop #topbar{--tb-r:272px}
-#helpBtn.is-nudge{animation:sampleBlink 1.5s ease-in-out infinite;opacity:1;color:var(--accent)}
-@keyframes sampleBlink{0%,100%{box-shadow:0 0 0 0 rgba(224,178,106,0)}50%{box-shadow:0 0 0 7px rgba(224,178,106,.5)}}
+#helpBtn.is-nudge{animation:helpTint 3s steps(12) infinite;opacity:1}
 #sampleDim{position:fixed;inset:0;z-index:10005;cursor:default}
 #sampleSpot{position:fixed;z-index:10005;pointer-events:none;border-radius:50%;box-shadow:0 0 0 200vmax rgba(10,10,10,.78),0 0 0 2px var(--accent);transition:opacity 300ms}
 #sampleBubble{position:fixed;z-index:10006;width:min(280px,calc(100vw - 32px));padding:16px 18px;border-radius:16px;background:#1c1c1c;color:#f2f2f2;border:1px solid var(--accent-dim,rgba(224,178,106,.4));box-shadow:0 14px 40px rgba(0,0,0,.55);font-size:15px;line-height:1.45}
@@ -29439,7 +29437,7 @@ body.is-sample.split-desktop #topbar{--tb-r:272px}
 #sampleBubble button{font:inherit;font-size:13px;font-weight:600;letter-spacing:.8px;border-radius:999px;padding:9px 16px;cursor:pointer}
 #sampleBubble .sb-go{background:var(--accent);color:var(--on-accent,#151107);border:1px solid var(--accent)}
 #sampleBubble .sb-skip{background:none;color:#bdbdbd;border:0;padding:9px 4px;text-decoration:underline;text-underline-offset:3px}
-@media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{animation:none;box-shadow:0 0 0 3px var(--accent)}#sampleClock.is-warn{animation:none}}
+@media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{animation:none;color:var(--accent)}#sampleClock.is-warn{animation:none}}
 .sample-modal{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
 .sample-modal[hidden]{display:none}
 .sample-modal .se-card{width:min(520px,100%);padding:30px 26px 24px;border-radius:20px;background:#161616;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.6)}
