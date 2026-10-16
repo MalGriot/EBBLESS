@@ -47,3 +47,16 @@ play a long queue, lock, unplug, come back, `adb shell cat /sdcard/soak.log`.
 
 Rollback if playback ever stops in the field: the old TWA APK is saved at
 `android-webview/rollback/ebbless-twa-1.0.0.apk`.
+
+## Long soak (2026-10-16 12:55 -> 14:05, TECNO POP 9, app 2.8.2): FAILED at 46 min
+
+Screen off, unplugged from 13:00:57. Music played with audio streams active and the foreground service up for the first
+44 minutes (battery 100% -> 93%, about 8%/h). At 13:46:40 the phone came under heavy memory pressure (`am_low_memory`, `lmkd`
+killing Instagram, Facebook helper and several phone-maker processes one by one) and at 13:47:02 Android killed EBBLESS with
+SIGKILL (`ApplicationExitInfo`: reason SIGNALED, status 9, procState FGS, PSS 295 MB). No audio from 13:47 until a new process
+appeared at 13:51:38 (screen woke at 13:44:56 and 13:51:38 as well; whether a person caused them is unknown). Raw data:
+`test-data/soak-2026-10-16-long.log`.
+
+Why: the phone has 2.8 GB RAM (MemAvailable about 500 MB while playing). The app uses about 222 MB itself (158 MB of that is
+graphics memory) plus about 280 MB in the WebView renderer process, roughly 500 MB in total. A foreground service is not
+exempt from the low-memory killer. See the GitHub issue for next steps (screen-off lightweight mode to free graphics memory).
