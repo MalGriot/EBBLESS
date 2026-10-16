@@ -555,8 +555,13 @@ body.onb-active .paste-guide{display:none}
 .section-label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .section-label-row .section-label{margin:28px 0 2px}
 /* Geethub #552: the library's top controls (new playlist, search, sort) stay pinned while the list scrolls. Solid page-colour fill, so the content disappears under the fixed bar and the bar itself reads as transparent. Static, no blur, no animation */
-.lib-top{position:sticky;top:0;z-index:4;background:var(--bg);padding:6px 0 8px;margin-bottom:-8px}
-.lib-sec>.section-label-row{position:sticky;top:var(--lib-top-h,0px);z-index:3;background:var(--bg);padding:4px 0 8px;margin-bottom:-8px}
+.lib-top{flex:none;background:transparent;padding:6px 0 10px}
+/* Geethub #552: the library bar stays put and the list scrolls in its own box beneath it, so the bar can be transparent and content is cut off at the box edge. Section titles stick to the top of that box and push each other up */
+#view-library{overflow:hidden}
+#view-library>.view-scroll:has(#libraryListWrap:not(.hidden)){height:100%;padding-bottom:0;box-sizing:border-box;display:flex;flex-direction:column}
+#libraryListWrap:not(.hidden){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+#libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(140px + var(--safe-b))}
+.lib-sec>.section-label-row{position:sticky;top:0;z-index:3;background:transparent;padding:4px 0 8px;margin-bottom:-8px}
 .section-label-row:first-of-type .section-label{margin-top:0}
 .lib-fold{display:none}
 .lib-fold svg{width:14px;height:14px;transition:transform .15s}
@@ -3691,6 +3696,7 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
         </div>
+        <div class="lib-body">
         <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
           <div class="section-label">Playlists</div>
@@ -3720,6 +3726,7 @@ body.week-up-on{overflow:hidden}
           <div id="libSearchTracksList"></div>
         </div>
         <div class="empty-lib hidden" id="libraryFilterEmpty"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -7877,8 +7884,6 @@ const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('imp
 // whichever label is showing: "Find music", or "Go" on narrow phones
 function loadBtnLabel(){ return 'the magnifier'; }
 const libraryEmpty = $('libraryEmpty'), libraryListWrap = $('libraryListWrap'), libraryGrid = $('libraryGrid');
-// section titles stick just under the fixed top container; keep their offset equal to its height
-if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--lib-top-h', $('libTop').offsetHeight + 'px')).observe($('libTop'));
 const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
