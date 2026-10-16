@@ -4600,6 +4600,7 @@ body.week-up-on{overflow:hidden}
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 00-4 12.74V17a1 1 0 001 1h6a1 1 0 001-1v-2.26A7 7 0 0012 2zm-2 18h4v1a1 1 0 01-1 1h-2a1 1 0 01-1-1v-1z"/></svg>
         Discover
       </button>
+      <button class="re qh-icon" id="queueReverseBtn" title="Play this queue the other way" aria-label="Reverse queue direction"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg></button>
       <button class="re qh-icon" id="queueSaveBtn" title="Save this queue as a new playlist in your library" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg></button>
       <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
     </div>
@@ -18548,6 +18549,19 @@ $('queueHistLast').addEventListener('click', () => queueHistStep(1, true));
 updateQueueHistBtns();
 
 queueClearBtn.addEventListener('click', queueClearUpcoming);
+// Geethub #576: flip the whole queue so "next" goes the other way (podcasts can play toward the newest episode).
+// The song playing now stays put; works for any list, since every playlist, album and podcast plays through the queue.
+function queueReverseDirection(){
+  if (state.queuePos < 0 || state.queue.length < 2) return;
+  queueHistSnapshot();
+  state.queue.reverse();
+  state.queuePos = state.queue.length - 1 - state.queuePos;
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+  showToast('Queue reversed');
+}
+$('queueReverseBtn').addEventListener('click', queueReverseDirection);
+
 
 // Saves the whole queue (played + now + upcoming, in its current order) as a
 // new custom playlist - the way to keep a Discover-generated radio or an
