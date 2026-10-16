@@ -7,6 +7,24 @@ if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
   // the time-of-day accent is only worked out after the app boots; reuse the last one from the first frame so the splash never shifts colour
   var la = JSON.parse(localStorage.getItem('ebbless:lastAccent') || 'null');
   if (la) for (var k in la) document.documentElement.style.setProperty(k, la[k]);
+  // exact accent for this moment (same maths as vizRosicrucianColor + updateLibraryClockColor), so the splash starts in its final colour
+  try {
+    var LC = { A: '#e0b45c', B: '#d98aa3', C: '#a89aef', D: '#d68a63', E: '#9aa9bd', F: '#5fcabf', G: '#d17a72' }, LO = 'ABCDEFG', LS = [6, 2, 5, 1, 4, 0, 3];
+    var hx = function (c) { var n = parseInt(c.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+    var mixc = function (a, b, t) { a = hx(a); b = hx(b); return [0, 1, 2].map(function (i) { return Math.round(a[i] + (b[i] - a[i]) * t); }); };
+    var lt = function (w, p) { return LC[LO[(LS[w] + p) % 7]]; };
+    var nw = new Date(), wd = nw.getDay(), sc = nw.getHours() * 3600 + nw.getMinutes() * 60 + nw.getSeconds() + nw.getMilliseconds() / 1000;
+    var PP = 86400 / 7, pi = Math.min(6, Math.max(0, Math.floor(sc / PP))), pe = (pi + 1) * PP, ps = pi * PP, rgb;
+    if (pe - sc <= 300) rgb = mixc(lt(wd, pi), pi === 6 ? lt((wd + 1) % 7, 0) : lt(wd, pi + 1), (300 - (pe - sc)) / 600);
+    else if (sc - ps <= 300) rgb = mixc(pi === 0 ? lt((wd + 6) % 7, 6) : lt(wd, pi - 1), lt(wd, pi), 0.5 + (sc - ps) / 600);
+    else rgb = hx(lt(wd, pi));
+    var adv = JSON.parse(localStorage.getItem('ebbless:advanced') || 'null'), ac = adv && adv.accent, solid = 'rgb(' + rgb.join(',') + ')';
+    if (typeof ac === 'string') { rgb = ac.charAt(0) === '#' ? hx(ac) : ac.match(/\d+/g).map(Number); solid = ac; }
+    var rs = document.documentElement.style;
+    rs.setProperty('--clock-accent', solid);
+    rs.setProperty('--clock-tint', 'rgba(' + rgb.join(',') + ',0.22)');
+    rs.setProperty('--clock-tint-splash', 'rgba(' + rgb.join(',') + ',0.4)');
+  } catch (e) {}
   var lastSave = 0;
   new MutationObserver(function () {
     var n = Date.now(); if (n - lastSave < 4000) return; lastSave = n;
@@ -27129,7 +27147,11 @@ function startApp(){
       }, SPLASH_MUSIC_PREVIEW_MS - SPLASH_MUSIC_FADE_MS);
       };
       // Android app: silent until the visitor presses Enter, then the theme plays as the entrance cue
-      if (document.documentElement.classList.contains('ebb-android')) window.__ebbEnterMusic = startSplashMusic;
+      if (document.documentElement.classList.contains('ebb-android')) {
+        // trimmed and faded into brand/assets/enter-sound.mp3 (2.6s from the theme's first hit); preloaded so Enter answers at once
+        const enterSnd = new Audio('brand/assets/enter-sound.mp3'); enterSnd.preload = 'auto';
+        window.__ebbEnterMusic = () => { const p = enterSnd.play(); if (p && p.catch) p.catch(() => {}); };
+      }
       else startSplashMusic();
     }
 
