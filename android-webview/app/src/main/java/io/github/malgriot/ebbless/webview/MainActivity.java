@@ -87,10 +87,10 @@ public class MainActivity extends Activity {
         splash = null;
         splashHolding = false;
         if (web == null) return;
-        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString().replace(" NativeSplash", ""));
         // the library's background video can load now that nothing competes for the decoder. The web splash stays cloaked
         // (waking it here showed it fading out under a late-processed Enter); it wakes itself when the visitor returns to it.
-        web.evaluateJavascript("(function(){var v=document.querySelector('video.lib-bg-video');if(v&&!v.getAttribute('src'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');})()", null);
+        // Changing the user agent here would reload the page (it did, ~1s after every Enter), so the page remembers instead.
+        web.evaluateJavascript("(function(){try{sessionStorage.setItem('ebbless:nsplashDone','1');}catch(e){}var v=document.querySelector('video.lib-bg-video');if(v&&!v.getAttribute('src'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');})()", null);
     }
 
     private void initWeb(Bundle b) {

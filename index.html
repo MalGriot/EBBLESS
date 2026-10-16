@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
-if (/NativeSplash/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-nsplash');   // the app shows its own splash on a cold start
+try { if (/NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone')) document.documentElement.classList.add('ebb-nsplash'); } catch (e) {}   // the app shows its own splash on a cold start
 if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
   // the time-of-day accent is only worked out after the app boots; reuse the last one from the first frame so the splash never shifts colour
   var la = JSON.parse(localStorage.getItem('ebbless:lastAccent') || 'null');
