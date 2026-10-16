@@ -60,3 +60,10 @@ appeared at 13:51:38 (screen woke at 13:44:56 and 13:51:38 as well; whether a pe
 Why: the phone has 2.8 GB RAM (MemAvailable about 500 MB while playing). The app uses about 222 MB itself (158 MB of that is
 graphics memory) plus about 280 MB in the WebView renderer process, roughly 500 MB in total. A foreground service is not
 exempt from the low-memory killer. See the GitHub issue for next steps (screen-off lightweight mode to free graphics memory).
+
+### Follow-up in 2.9.0
+Screen-off lightweight mode (page hides all screens except the players when the app broadcasts ACTION_SCREEN_OFF; app process
+297 -> 228 MB, graphics 224 -> 162 MB, audio unaffected; the WebView renderer, ~320-400 MB, did not shrink) and a recovery
+notice after a kill (unverified against a real low-memory kill). 13:44:56 in the long soak was a phone call. Next: audio-only
+YouTube deck while the screen is off, and a tiny watchdog service process; then repeat the 70-minute soak.
+
