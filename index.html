@@ -6742,6 +6742,7 @@ function restoreSession(){
   if (!s || profileIdToken) return;
   profileIdToken = s.t; profileTokenExp = 0;
   renderAccountRow();
+  npSchedulePublish(2000);   // music already playing when the session comes back: go on air (#500)
   syncProfileNow({ force: true });
   const gate = window.ebblessBetaGate;
   if (gate && s.sub && ((gate.locked && gate.locked()) || (gate.renewing && gate.renewing()))) betaAccountLink(s.t, s.sub);
@@ -6783,6 +6784,7 @@ function handleGoogleCredential(response){
   } catch(e){}
   lsDel(LS_PROFILE_SIGNED_OUT);
   profileSyncStatus = '';
+  npSchedulePublish(2000);   // signed in mid-song: go on air (#500)
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
   mintSession(response.credential, sub);
@@ -11796,7 +11798,7 @@ function npPost(snap, keepalive){
   npLastSent = { t: snap.t, v: snap.v, pos: snap.pos, dur: snap.dur, playing: snap.playing, at: performance.now() };
   fetch(BACKEND + '/nowplaying', { method: 'POST', keepalive: !!keepalive, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
     body: JSON.stringify({ v: snap.v, t: snap.t.title || '', a: snap.t.artist || '', art: /^https:\/\//i.test(snap.t.art || '') ? snap.t.art : '', pos: snap.pos, dur: snap.dur, playing: snap.playing }) })
-    .then(r => { if (r.status === 403) npForbiddenToken = tok; else if (!r.ok) npPostFailed(snap); }).catch(() => npPostFailed(snap));
+    .then(r => { if (r.status === 403) npForbiddenToken = tok; else if (r.status === 401){ npPostFailed(snap); sessionRejected(); } else if (!r.ok) npPostFailed(snap); }).catch(() => npPostFailed(snap));
 }
 // #500: a post that never landed (offline, expired token, worker hiccup) must not
 // count as "already said", or the feed stays Off Air while this app plays
@@ -21643,11 +21645,24 @@ function cassetteSetLabelArt(track){
   const chain = artworkUrls(track);
   cassetteLabelArt.classList.remove('is-loaded');
   if (!chain.length){ cassetteLabelArt.removeAttribute('href'); cassetteLabelArt.removeAttribute('xlink:href'); return; }
+  // SVG <image> has no naturalWidth, so each candidate is probed with an Image
+  // first: skips failed loads and YouTube's 120x90 gray placeholder (#555).
+  const myTrack = track;
+  cassetteLabelArt._artFor = myTrack;
   let i = 0;
-  cassetteLabelArt.onload = () => cassetteLabelArt.classList.add('is-loaded');
-  cassetteLabelArt.onerror = function(){ i++; if (i < chain.length) setHref(chain[i]); else cassetteLabelArt.onerror = null; };
-  function setHref(url){ cassetteLabelArt.setAttribute('href', url); cassetteLabelArt.setAttribute('xlink:href', url); }
-  setHref(chain[0]);
+  function setHref(url){ cassetteLabelArt.setAttribute('href', url); cassetteLabelArt.setAttribute('xlink:href', url); cassetteLabelArt.classList.add('is-loaded'); }
+  function tryNext(){
+    if (cassetteLabelArt._artFor !== myTrack || i >= chain.length) return;
+    const url = chain[i++], probe = new Image();
+    probe.onload = () => {
+      if (cassetteLabelArt._artFor !== myTrack) return;
+      if (probe.naturalWidth === YT_PLACEHOLDER_SIZE.w && probe.naturalHeight === YT_PLACEHOLDER_SIZE.h && i < chain.length) tryNext();
+      else setHref(url);
+    };
+    probe.onerror = tryNext;
+    probe.src = url;
+  }
+  tryNext();
 }
 function cassetteUpdateTrack(t, pos, opts){
   csHasTrack = !!t;
