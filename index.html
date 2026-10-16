@@ -5018,10 +5018,12 @@ const isMobileUA = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 // Desktop Firefox can't install web apps at all (no install prompt, no Add to Dock).
 const isFirefoxDesktop = /Firefox\//.test(navigator.userAgent) && !isMobileUA;
 const isMacDesktop = /Macintosh/.test(navigator.userAgent) && !isMobileUA;
-// Unsigned Mac app for Firefox users (#593). Direct DMG downloads on the v1.0.4 release.
+// Mac app installer for browsers that can't install the web app (Firefox, #593).
+// A .pkg (no disk image to drag out of): files it installs are not quarantined, so
+// the app itself opens without the "damaged" prompt. Direct downloads on the v1.0.5 release.
 const MAC_APP_URLS = {
-  arm64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.4/EBBLESS-1.0.4-arm64.dmg',
-  x64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.4/EBBLESS-1.0.4.dmg'
+  arm64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.5/EBBLESS-1.0.5-arm64.pkg',
+  x64: 'https://github.com/MalGriot/EBBLESS/releases/download/v1.0.5/EBBLESS-1.0.5.pkg'
 };
 // Firefox and Safari don't expose the chip, but the WebGL GPU name does:
 // Apple Silicon reports "Apple ...", Intel Macs report Intel/AMD. Returns
@@ -5037,6 +5039,21 @@ const macAppUrl = () => {
   if (/Apple/i.test(renderer)) return MAC_APP_URLS.arm64;
   return null;
 };
+// Firefox on a Mac has no install API, so the one Install button downloads the Mac app
+// instead. GitHub takes a few seconds to answer, so show the button working right away.
+const installsViaDownload = () => isFirefoxDesktop && isMacDesktop;
+function downloadMacApp(setLabel){
+  setLabel('Starting download\u2026', true);
+  // unknown chip: the Intel build also runs on Apple silicon (Rosetta); the reverse is not true
+  const a = document.createElement('a');
+  a.href = macAppUrl() || MAC_APP_URLS.x64;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => setLabel('Check your Downloads', true), 4000);
+  setTimeout(() => setLabel('Install', false), 20000);
+}
 // iOS Safari never fires beforeinstallprompt (no programmatic install API at
 // all there) - includes iPadOS, which reports as "MacIntel" but is
 // touch-only, unlike a real Mac.
@@ -25144,21 +25161,6 @@ if (screen.orientation && screen.orientation.lock){
       installBtn.disabled = installed && !inTab;
       installBtn.textContent = inTab ? 'Open in app' : installed ? 'Installed' : 'Install';
       if (installDesc) installDesc.textContent = installed ? 'EBBLESS is installed on this device.' : DEFAULT_DESC;
-      if (isFirefoxDesktop && !installed){
-        // Firefox can't install web apps; point at the browsers that can, and the Mac app
-        installBtn.disabled = true;
-        installBtn.textContent = 'Not in Firefox';
-        if (installDesc){
-          installDesc.textContent = 'Firefox can\'t install EBBLESS. Open it in Chrome, Edge or Safari to install.';
-          if (isMacDesktop){
-            const link = (text, href) => { const a = document.createElement('a'); a.href = href; a.textContent = text; return a; };
-            const url = macAppUrl();
-            if (url) installDesc.append(' ', link('Download the Mac app', url));
-            else installDesc.append(' Which Mac is this? ', link('Apple silicon', MAC_APP_URLS.arm64), ' or ', link('Intel', MAC_APP_URLS.x64), '.');
-            installDesc.append(' If macOS blocks it, open System Settings, Privacy & Security, and choose Open Anyway.');
-          }
-        }
-      }
     };
     setInstalled(isStandaloneDisplay() || knownInstalled());
     document.addEventListener('ebbless:installed', () => setInstalled(true));
@@ -25166,6 +25168,11 @@ if (screen.orientation && screen.orientation.lock){
       if (knownInstalled() && !isStandaloneDisplay()){
         await openInApp();
         if (installDesc) installDesc.textContent = INSTALL_HINT_OPEN;
+        return;
+      }
+      if (installsViaDownload()){
+        downloadMacApp((t, busy) => { installBtn.textContent = t; installBtn.disabled = busy; });
+        if (installDesc) installDesc.textContent = 'Open the installer from your Downloads. If macOS blocks it, open System Settings, Privacy & Security, and choose Open Anyway.';
         return;
       }
       installBtn.disabled = true;
@@ -25204,7 +25211,6 @@ const INSTALL_BANNER_PITCH = installBannerText ? installBannerText.innerHTML : '
 let installBannerDone = false;
 function setInstallBanner(show){
   if (!installBanner) return;
-  if (isFirefoxDesktop) show = false; // nothing to install in Firefox (#593)
   installBanner.hidden = !show;
   document.body.classList.toggle('install-banner-on', show);
 }
@@ -25246,6 +25252,10 @@ if (installBanner){
       return;
     }
     if (isIOS){ showIOSInstallSheet(); return; }
+    if (installsViaDownload()){
+      downloadMacApp((t, busy) => { installBannerBtn.textContent = t; installBannerBtn.disabled = busy; });
+      return;
+    }
     installBannerBtn.disabled = true;
     const canPrompt = await waitForInstallPrompt(2000);
     installBannerBtn.disabled = false;
