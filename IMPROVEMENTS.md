@@ -10682,12 +10682,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #553.
 
 ### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #554. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #554.
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #554. Worker scoreCandidate: titles containing 'official audio' get OFFICIAL_AUDIO_BONUS (+7) on top of the audio hint, so they beat Topic channels; SEARCH_CACHE_VERSION v9 -> v10. Worker tests pass (106); needs a worker deploy to take effect, not browser-verifiable on localhost.
 
 ### bug-lp-mode-has-song-art-in: lp mode has song art in it but cassette is blank (Geethub #555)
 - **Status:** merged
