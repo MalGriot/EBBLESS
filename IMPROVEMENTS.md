@@ -10282,7 +10282,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #502. 
 
 ### button-text-color-consistency: Buttons mix white and black text when the UI color changes (Geethub #501)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #501. Buttons mix white and black text when the UI color changes.
 - **Touches:**
@@ -10306,7 +10306,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #499. Related to #416 (paid custom cursor).
 
 ### made-by-ebbless-section: Currents, Swirl and On Air belong in the 'Made by EBBLESS' section (Geethub #498)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Bug, Geethub #498. Currents, Swirl and On Air belong in the 'Made by EBBLESS' section.
 - **Touches:**
@@ -10330,7 +10330,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #496. Shipped 2026-10-14 (cache v232), unconfirmed: a list made only of podcast episodes (e.g. a copied show saved as custom) no longer fades between cover and 2x2 grid (canToggleThumbArt). Root cause was a guess; ask for repro steps if a normal podcast still loops.
 
 ### see-all-podcasts-pill-scroll: 'See all' on podcasts scrolls the category pills to the lit podcasts pill (Geethub #495)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #495. 'See all' on podcasts scrolls the category pills to the lit podcasts pill.
 - **Touches:**
@@ -10386,7 +10386,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #488. Big; likely post-MVP.
 
 ### podcast-episode-dates: Show the date on podcast episodes (Geethub #486)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #486. Show the date on podcast episodes.
 - **Touches:**
@@ -10522,7 +10522,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #537. Related to link-match-accuracy.
 
 ### bug-tabs-close-while-browsing: Playlist, album and artist tabs close while I'm still going through them (Geethub #536)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Idea, Geethub #536. Bug #536. These windows close on their own while the user is browsing.
 - **Touches:** playlist/album/artist windows.
@@ -10562,7 +10562,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #532. Related to artist-window-album-tracks.
 
 ### album-cover-opens-album: Clicking the album cover should open the album (Geethub #531)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #531. Tapping the album cover in the player opens that album.
 - **Touches:** player art.
@@ -10666,7 +10666,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #517. Related to autoadvance-stall-full-progress.
 
 ### the-controls-at-the-top-of: the controls at the top of library and queue should be fixed when scrolling (Geethub #552)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #552. medium
 - **Touches:** tbd.
@@ -10682,7 +10682,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #553.
 
 ### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #554. medium
 - **Touches:** tbd.
@@ -10786,7 +10786,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #566.
 
 ### bug-white-buttons-with-white-symbols-text: white buttons with white symbols/text are unreadable (Geethub #567)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #567. medium need a clever fix for this
 - **Touches:** tbd.
@@ -10802,7 +10802,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #568.
 
 ### library-view-button-hitting-a-button: library view button: hitting a button in the "sort by" list should reverse the list by that parameter (Geethub #569)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #569. medium
 - **Touches:** tbd.
@@ -10858,7 +10858,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #575.
 
 ### button-to-reverse-the-direction-of: button to reverse the direction of the queue (Geethub #576)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #576. medium podcasts play into the previous episode. i'd prefer to play toward the newest
 - **Touches:** tbd.
@@ -10882,7 +10882,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #578.
 
 ### on-mobile-status-bar-make-it: on mobile status bar: make it the ebbless logo (Geethub #579)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #579. medium
 - **Touches:** tbd.
@@ -10890,7 +10890,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #579.
 
 ### bug-the-feedback-button-is-missing-from: the feedback button is missing from top nav (Geethub #580)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #580. medium
 - **Touches:** tbd.
@@ -10912,3 +10912,59 @@ Add entries in this shape:
 - **Touches:** tbd.
 - **Branch:** 
 - **Notes:** Synced from Geethub #582.
+
+### bug-podcast-captions-not-loading: podcast captions are not loading (Geethub #603)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug Geethub #603. Repro: open ?import=https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF&track=3.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #603.
+
+### bug-library-thumb-titles-not-scrolling: library thumb titles are not scrolling (Geethub #601)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug Geethub #601. Long titles on library thumbs should scroll.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #601.
+
+### bug-delete-playlist-skips-to-top: when you delete a playlist, the library skips to the top (Geethub #600)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug Geethub #600. The list should stay in position after a delete.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #600.
+
+### bug-miniplayer-play-button-style: desktop: miniplayer play button should match the full app (Geethub #587)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug Geethub #587. Use the same play button as the full app.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #587.
+
+### queue-finish-nothing-playing: when a queue finishes and discovery is off, return to nothing playing yet (Geethub #599)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #599. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #599.
+
+### library-thumbs-1x1-2x2: library thumbs change between 1x1 and 2x2 art every 7 seconds (Geethub #602)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #602. Must follow the GPU budget (transform/opacity only, pause when hidden).
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #602.
+
+### hires-video-desktop: use the hi res video for desktop (Geethub #598)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #598. Source file: /Users/malcolm/Downloads/204888-925552628.mp4. Must follow the GPU budget.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #598.
