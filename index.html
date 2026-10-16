@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
-try { if (/NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone')) { document.documentElement.classList.add('ebb-nsplash'); if (!localStorage.getItem('ebbless:noStill')) document.documentElement.classList.add('ebb-nstill'); } } catch (e) {}   // the app shows its own splash on a cold start
+try { if (/NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone')) document.documentElement.classList.add('ebb-nsplash'); } catch (e) {}   // the app shows its own splash on a cold start
 if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
   // the time-of-day accent is only worked out after the app boots; reuse the last one from the first frame so the splash never shifts colour
   var la = JSON.parse(localStorage.getItem('ebbless:lastAccent') || 'null');
@@ -64,8 +64,6 @@ html.ebb-unlocked:not(.ebb-relock) #beta-lock{display:none!important}
 html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint{transition:background 3s ease-in-out}
 /* the app's native splash is up: the web one stays invisible (still wired up, so the app can press its Enter) and its videos stay unloaded */
 html.ebb-nsplash #splash{visibility:hidden!important}
-/* nobody can see the page while the native splash covers it: no animations or transitions until the splash is gone (the app removes this class) */
-html.ebb-nstill *, html.ebb-nstill *::before, html.ebb-nstill *::after{animation-play-state:paused!important;transition:none!important}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -4865,7 +4863,7 @@ setTimeout(() => {
         if (EbbNative.accentOverride) EbbNative.accentOverride(adv && typeof adv.accent === 'string' ? adv.accent : '');
       } catch (e) {}
       if (cvSplash && EbbNative.choiceReady) {
-        const chk = () => { if (cvSplash.classList.contains('is-choice')) { if (!window.__tChoice) window.__tChoice = Math.round(performance.now()); EbbNative.choiceReady(); } };
+        const chk = () => { if (cvSplash.classList.contains('is-choice')) EbbNative.choiceReady(); };
         new MutationObserver(chk).observe(cvSplash, { attributes: true, attributeFilter: ['class'] });
         chk();
       }
