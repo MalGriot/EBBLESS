@@ -3,6 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
+if (/EBBLESS-Android/.test(navigator.userAgent)) { try {
+  // the time-of-day accent is only worked out after the app boots; reuse the last one from the first frame so the splash never shifts colour
+  var la = JSON.parse(localStorage.getItem('ebbless:lastAccent') || 'null');
+  if (la) for (var k in la) document.documentElement.style.setProperty(k, la[k]);
+  var lastSave = 0;
+  new MutationObserver(function () {
+    var n = Date.now(); if (n - lastSave < 4000) return; lastSave = n;
+    var st = document.documentElement.style, o = {};
+    ['--clock-accent', '--on-accent', '--clock-tint', '--clock-tint-splash'].forEach(function (p) { var v = st.getPropertyValue(p); if (v) o[p] = v; });
+    if (o['--clock-accent']) localStorage.setItem('ebbless:lastAccent', JSON.stringify(o));
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+} catch (e) {} }
 if (/EBBLESS-Android/.test(navigator.userAgent)) { try { if (/^t[0-9a-f]{12}-[0-9a-f]{32}$/.test(localStorage.getItem('ebbless:betaToken') || '') && Date.now() - (+localStorage.getItem('ebbless:betaOk') || 0) < 7 * 24 * 3600 * 1000) document.documentElement.classList.add('ebb-unlocked'); } catch (e) {} }
 if (/EBBLESS-Android/.test(navigator.userAgent)) { var pl = document.createElement('link'); pl.rel = 'preload'; pl.as = 'video'; pl.href = 'brand/assets/splash-cymatics-alpha.webm'; document.head.appendChild(pl); }</script>
 <style>
@@ -29,6 +41,7 @@ html.ebb-android #splash.is-choice .splash-choice{transition-delay:1000ms}
 html.ebb-android #splash.is-choice.is-return .splash-choice{transition-delay:250ms}
 /* a device already let in must not flash the lock page while the script decides: hide it until the lock script re-locks */
 html.ebb-unlocked:not(.ebb-relock) #beta-lock{display:none!important}
+html.ebb-android #splash .splash-tint{transition:background 600ms linear}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -3187,7 +3200,7 @@ body.week-up-on{overflow:hidden}
 #beta-lock .bl-small{font-size:13px;color:#6c6c6c;margin:20px 0 0}
 </style>
 <div id="beta-lock" role="dialog" aria-modal="true" aria-labelledby="bl-title">
-  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" data-src="brand/assets/splash-cymatics.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); }); } })();</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
+  <div class="bl-bg" aria-hidden="true"><div class="bl-poster"></div><video class="bl-video" muted loop playsinline preload="none" data-src="brand/assets/splash-cymatics.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); if (v.classList.contains('splash-video') && window.EbbNative) EbbNative.ready(); }); } })();</script><div class="bl-tint"></div><div class="bl-fade"></div></div>
   <div class="bl-wrap">
     <div class="bl-top"><img src="brand/assets/wordmark-white.png" alt="EBBLESS"><span class="bl-tag">Private beta</span></div>
     <h1 id="bl-title">YOU’RE EARLY. THAT’S A GOOD THING.</h1>
@@ -3270,7 +3283,7 @@ body.week-up-on{overflow:hidden}
   const video = lock.querySelector('.bl-video');
   video.addEventListener('playing', () => video.classList.add('is-playing'));
   const unlock = () => { lock.hidden = true; video.pause(); };
-  const relock = () => { document.documentElement.classList.add('ebb-relock'); lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
+  const relock = () => { document.documentElement.classList.add('ebb-relock'); if (window.EbbNative) EbbNative.ready(); lock.hidden = false; fit(); const p = video.play(); if (p && p.catch) p.catch(() => {}); };
   const msg = (t) => { const m = document.getElementById('bl-msg'); m.textContent = t || ''; m.classList.toggle('bl-working', /\.\.\.$/.test(t || '')); };
   // iPhone/iPad home-screen app: its storage is apart from Safari's and the
   // invite link opens Safari, not this app, so Google sign-in is the way in.
@@ -3422,7 +3435,7 @@ body.week-up-on{overflow:hidden}
 
 <div id="splash">
   <div class="splash-poster"></div>
-  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" data-src="brand/assets/splash-cymatics.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); }); } })();</script>
+  <video class="splash-video" autoplay muted loop playsinline poster="brand/assets/splash-cymatics-poster.jpg" data-src="brand/assets/splash-cymatics.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); if (v.classList.contains('splash-video') && window.EbbNative) EbbNative.ready(); }); } })();</script>
   <div class="splash-tint"></div>
   <div class="splash-black"></div>
   <button id="splashLogoBtn" type="button" aria-label="Install EBBLESS">
@@ -3514,7 +3527,7 @@ body.week-up-on{overflow:hidden}
   <main class="view" id="view-library">
     <div class="lib-bg">
       <div class="lib-bg-video lib-bg-poster"></div>
-      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" data-src="brand/assets/library-bg.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); }); } })();</script>
+      <video class="lib-bg-video" autoplay muted loop playsinline poster="brand/assets/library-bg-poster.jpg" data-src="brand/assets/library-bg.mp4"></video><script>(function () { var v = document.currentScript.previousElementSibling, a = document.documentElement.classList.contains('ebb-android'), s = v.getAttribute('data-src'); v.src = a ? s.replace('.mp4', '-alpha.webm') : s; if (a) { v.removeAttribute('poster');  v.addEventListener('playing', function () { v.classList.add('ebb-ready'); var sp = document.getElementById('splash'); if (sp && v.classList.contains('splash-video') && !sp.classList.contains('is-hidden')) sp.classList.add('is-active'); if (v.classList.contains('splash-video') && window.EbbNative) EbbNative.ready(); }); } })();</script>
       <div class="lib-bg-tint"></div>
     </div>
     <div class="view-scroll">
@@ -27115,16 +27128,9 @@ function startApp(){
         step();
       }, SPLASH_MUSIC_PREVIEW_MS - SPLASH_MUSIC_FADE_MS);
       };
-      // Android app: the theme starts only once the splash video is on screen, so sound never leads the picture
-      const splashVidEl = splashEl.querySelector('video.splash-video');
-      if (document.documentElement.classList.contains('ebb-android') && splashVidEl && !splashVidEl.classList.contains('ebb-ready')){
-        let started = false;
-        const go = () => { if (started) return; started = true; startSplashMusic(); };
-        // ...and after the app has finished booting behind it (boot blocks the main thread and made the theme skip)
-        const waitBoot = (n) => { if (splashEl.classList.contains('is-choice') || n > 40) setTimeout(go, 1200); else setTimeout(() => waitBoot(n + 1), 200); };
-        splashVidEl.addEventListener('playing', () => waitBoot(0), { once: true });
-        setTimeout(go, 9000);
-      } else startSplashMusic();
+      // Android app: silent until the visitor presses Enter, then the theme plays as the entrance cue
+      if (document.documentElement.classList.contains('ebb-android')) window.__ebbEnterMusic = startSplashMusic;
+      else startSplashMusic();
     }
 
     // On mobile, if EBBLESS isn't installed yet, let the splash's own
@@ -27177,6 +27183,7 @@ function startApp(){
         splashEl.classList.remove('is-choice');
         hideSplash();
         if (t.id === 'splashPlayTutorial') replayTutorialBtn.click();
+        else if (window.__ebbEnterMusic) window.__ebbEnterMusic();
       };
       splashEl.addEventListener('click', onHold, true);
     } else {
