@@ -3191,8 +3191,8 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
   .ms-caret{width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);margin-right:3px;transition:transform .2s}
   .ms-card.is-open .ms-caret{transform:rotate(-135deg)}
   /* the player page has no spare height: its card stays one line (next step only) so the controls are never pushed off */
-  #msCard-player .ms-caret{display:none}
-  #msCard-player .ms-items{display:none!important}
+  #msCard-player .ms-caret,#msCard-queue .ms-caret{display:none}
+  #msCard-player .ms-items,#msCard-queue .ms-items{display:none!important}
   .ms-items{display:none;list-style:none;margin:0;padding:0 12px 8px}
   .ms-card.is-open .ms-items{display:block}
   .ms-items li{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13.5px;color:var(--faint)}
@@ -3216,6 +3216,7 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 .milestone-list li .ms-q{margin-left:auto}
 .milestone-list li .ms-pts{margin-left:8px}
 .milestone-list li .ms-hint{padding-left:26px}
+.milestone-list li.ms-grp{padding:12px 0 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 .milestone-total{font-weight:400;font-size:13px;color:var(--faint);margin-left:6px}
 .milestone-list{list-style:none;margin:0;padding:0}
 .milestone-list li{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;color:var(--faint)}
@@ -7002,7 +7003,6 @@ function handleGoogleCredential(response){
   } catch(e){}
   lsDel(LS_PROFILE_SIGNED_OUT);
   profileSyncStatus = '';
-  awardMilestone('signin');
   npSchedulePublish(2000);   // signed in mid-song: go on air (#500)
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
@@ -9038,6 +9038,8 @@ function setView(name){
     document.body.classList.remove('settings-solo');
   }
   state.currentView = name;
+  if (name === 'settings') awardMilestone('openset');
+  if (name === 'player' && state.queuePos >= 0) awardMilestone('progress');
   document.body.classList.toggle('view-settings-active', name === 'settings');
   if (state.deskFsOpen) csStackSync();
   if (restoreDeskFs && document.body.classList.contains('split-desktop')) toggleDesktopFs();
@@ -9891,6 +9893,7 @@ function normLibSearch(s){
 }
 const LIB_SEARCH_TRACK_LIMIT = 100;
 libSearch.addEventListener('input', () => {
+  if (libSearch.value.trim().length >= 2) awardMilestone('search');
   libSearchClear.classList.toggle('hidden', !libSearch.value);
   renderLibrary();
 });
@@ -10668,6 +10671,7 @@ function toggleLibraryPlaylistPanel(id){
   }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
+  awardMilestone(isArtistEntry(pl) || isAlbumEntry(pl) ? 'openpage' : 'revisit');
   libplReturnTo = null; libplResume = null; libplBackFn = null; syncLibplCloseBtn();
 
   if (id === NP_ID) refreshNowPlaying();
@@ -11472,6 +11476,7 @@ function loadArtistInfoInto(panelId, name, title, standalone){
   fetchArtistInfo(name, title).then(done, () => done(null));
 }
 function openArtistPage(rawName, title){
+  awardMilestone('openpage');
   const name = stripTopicSuffix(rawName).trim();
   if (!name) return;
   const key = artistNameKey(name), pkey = artistNameKey(primaryArtistKey(name));
@@ -13278,7 +13283,6 @@ function toggleLikeTrack(track){
     showToast('Removed from Liked Songs');
   } else {
     addTracksToPlaylist(LIKED_ID, [track]);
-    awardMilestone('like');
     recordListenSignal(track, 2);
     const streak = noteLikeStreak();
     showToast(streak.grew && streak.count >= 2 ? 'Added to Liked Songs · ' + streak.count + '-day streak' : 'Added to Liked Songs');
@@ -13427,7 +13431,6 @@ function openSmartPlaylistFlow(editId, name){
     closeImportOverlay();
     renderLibrary();
     showToast((editing ? 'Saved ' : 'Made ') + nm);
-    if (!editing) awardMilestone('smart');
     if (!editing) toggleLibraryPlaylistPanel(pl.id);
   });
   $('smCancel').addEventListener('click', closeImportOverlay);
@@ -14565,6 +14568,7 @@ function looksLikeUrl(input){
 // with the artist on top, but only if the overlay is still on this search.
 let vibeSearchSeq = 0;
 async function beginVibeSearch(query){
+  awardMilestone('search');
   statsFeature('vibe_search');
   openImportOverlay();
   stageSearching(query);
@@ -15620,6 +15624,7 @@ function vibeMoodWords(interp){
 
 let vibeResultsToken = 0;
 async function beginConversationalVibe(text){
+  awardMilestone('search');
   statsFeature('vibe_search');
   const token = ++vibeResultsToken;
   vibeSearchSeq++; // cancels any in-flight keyword search
@@ -16687,6 +16692,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 295, date: '2026-10-17', items: [
+    'The step lists are now five per page for Library, Player, Queue and Settings (search, open an artist or album, add a song, make a playlist, revisit a saved one; play, pause and resume, skip back and forth, volume, find what is playing; and so on). Tap the ? on any step for how to do it.'
+  ]},
   { version: 294, date: '2026-10-17', items: [
     'You can now drag to reorder songs in every playlist, including smart playlists, imported lists, very long lists and ones still matching.'
   ]},
@@ -16939,7 +16947,6 @@ feedbackModal.addEventListener('submit', async (e) => {
     if (vibe){ vibe.sent = true; if (!vibe.force) vibeCheckAnswered(); }
     const n = (typed || vibe ? 1 : 0) + extras.length;
     setFbStatus(n > 1 ? 'Sent ' + n + ' issues. Thank you, this really helps.' : 'Sent. Thank you, this really helps.', 'ok');
-    awardMilestone('feedback');
     setTimeout(() => { if (!fbMessage.value) closeFeedbackModal(); }, 1400);
     showToast(n > 1 ? 'Feedback sent (' + n + ' issues), thank you' : 'Feedback sent, thank you');
   } catch(err){
@@ -17757,6 +17764,7 @@ function renderLevelUI(){
   levelBtn.classList.toggle('is-active', levelOn);
 }
 levelBtn.addEventListener('click', () => {
+  awardMilestone('volume');
   levelOn = !levelOn;
   lsSet(LS_LEVEL, levelOn);
   renderLevelUI();
@@ -17884,6 +17892,7 @@ function shuffleTail(arr, keepFromStart){
 /* trackIndex/plId identify a track in ANY playlist (not just the one being
    viewed), so a track from playlist B can be queued while playlist A plays */
 function queuePlayNext(trackIndex, plId){
+  awardMilestone('qadd');
   plId = plId || (state.playlist && state.playlist.id);
   if (state.queuePos < 0) { buildQueueFrom(trackIndex, plId); loadIndex(state.queuePos, true); return; }
   // If this track is already sitting further down the queue, move it up
@@ -17897,6 +17906,7 @@ function queuePlayNext(trackIndex, plId){
   schedulePreload(state.queuePos);
 }
 function queueAddToEnd(trackIndex, plId){
+  awardMilestone('qadd');
   plId = plId || (state.playlist && state.playlist.id);
   if (state.queuePos < 0) { buildQueueFrom(trackIndex, plId); loadIndex(state.queuePos, true); return; }
   state.queue.push({ plId, idx: trackIndex });
@@ -17906,6 +17916,7 @@ function queueAddToEnd(trackIndex, plId){
 // Whole playlist/album/podcast onto the end of the queue, in order (or
 // shuffled when shuffle is on). Returns the number of tracks added.
 function queueAddCollection(plId){
+  awardMilestone('qadd');
   const pl = playlistById(plId);
   if (!pl) return 0;
   let order = validIndices(pl);
@@ -17924,12 +17935,14 @@ function queueAddCollection(plId){
   return order.length;
 }
 function queueRemoveAt(pos){
+  awardMilestone('qremove');
   if (pos <= state.queuePos) return;
   state.queue.splice(pos, 1);
   renderQueuePanel();
   schedulePreload(state.queuePos);
 }
 function queueJumpTo(pos){
+  awardMilestone('qplay');
   if (pos === state.queuePos) return;
   state.queuePos = pos;
   loadIndex(state.queuePos, true);
@@ -17948,6 +17961,7 @@ function queueClearUpcoming(){
   schedulePreload(state.queuePos);
 }
 function queueReorder(fromPos, toPos){
+  awardMilestone('qreorder');
   if (fromPos <= state.queuePos || toPos <= state.queuePos) return;
   const [item] = state.queue.splice(fromPos, 1);
   state.queue.splice(toPos, 0, item);
@@ -20270,7 +20284,6 @@ function wirePlaylistRowReorder(row, handle, plId){
     row.style.transform = ''; row.style.position = ''; row.style.zIndex = '';
     if (orderNow() === origOrder) return;
     setPlCustomOrder(plId, rowsNow().map(r => parseInt(r.dataset.idx, 10)));
-    awardMilestone('reorder');
     // redraw so the Custom chip lights up and the list matches what is saved
     const sc = scroller(), top = sc ? sc.scrollTop : 0;
     reopenLibraryPanel(plId);
@@ -22464,22 +22477,41 @@ function advRunGesture(k){
    in this browser only (not in the cloud profile), awarded once each, with
    a quiet toast. No levels, no streak pressure, nothing blocked behind them. */
 const MILESTONES = [
-  // [id, label, points, page, how-to hint]. 3-5 essential tasks per page; the phone shows
+  // [id, label, points, page, how-to hint]. 5 essential tasks per page; the phone shows
   // each page's own set as a small card at the top of that page.
-  ['load', 'Load a playlist or song', 10, 'library', 'Any one of these: paste a link to a playlist, album or song into the search bar and tap Load; open an artist and tap a song or add an album; or add a song to a playlist.'],
-  ['playlist', 'Make a playlist', 10, 'library', 'Tap + New playlist, type a name and tap Create.'],
-  ['reorder', 'Reorder a playlist', 10, 'library', 'Open one of your playlists and drag a song by its handle to a new spot.'],
-  ['smart', 'Make a smart playlist', 15, 'library', 'Tap + New playlist, then Make a smart playlist. Pick your rules and tap Create.'],
+  ['search', 'Search for a song, artist or album', 5, 'library', 'Type in the search bar at the top, or tap the magnifier to search your own library.'],
+  ['openpage', 'Open an artist or album', 5, 'library', 'Tap an artist or album in your library, or a name on the artist page.'],
+  ['load', 'Add a song to your library or a playlist', 5, 'library', 'Paste a link and tap Load, tap + beside a song, or play a song from an artist window.'],
+  ['playlist', 'Create a playlist', 5, 'library', 'Tap + New playlist, type a name and tap Create.'],
+  ['revisit', 'Revisit something you saved', 5, 'library', 'Tap one of your saved playlists in the library to open it again.'],
   ['play', 'Play a song', 5, 'player', 'Tap the big play button, or tap any song in your library.'],
-  ['like', 'Like a song', 5, 'player', 'While a song plays, tap the heart next to its title.'],
-  ['next', 'Skip to the next song', 5, 'player', 'Tap the skip arrow on the right of the play button.'],
-  ['queue', 'Open the queue', 5, 'player', 'Tap Queue at the bottom to see the songs coming up.'],
-  ['signin', 'Sign in', 20, 'settings', 'Tap Sign in with Google under Account to keep your library on every device.'],
-  ['setting', 'Change a setting', 5, 'settings', 'Flip any switch or pick any option in Settings, like Blend songs together.'],
-  ['tutorial', 'Watch the tutorial', 10, 'settings', 'Tap Replay under App and let the tutorial play, or tap the ? at the top.'],
-  ['feedback', 'Send feedback', 10, 'settings', 'Tap Send feedback at the top of Settings, write a few words and tap Send.']
+  ['pause', 'Pause and resume playback', 5, 'player', 'Tap the play button once to pause and again to resume.'],
+  ['skip', 'Skip to the next and previous songs', 5, 'player', 'Tap the skip arrow after play, then the one before it. Do both.'],
+  ['volume', 'Adjust the volume', 5, 'player', "Use the Even out volume switch in Settings, or the volume slider when casting. The app can't see your phone's own volume buttons."],
+  ['progress', 'Find the song playing and its progress', 5, 'player', 'Tap Player at the bottom while a song plays, or drag the progress bar.'],
+  ['queue', 'Open the queue', 5, 'queue', 'Tap Queue at the bottom.'],
+  ['qadd', 'Add a song to the queue', 5, 'queue', 'Tap the three dots on a song, then Play next or Add to queue.'],
+  ['qplay', 'Play a song from the queue', 5, 'queue', 'Tap any song in the queue list.'],
+  ['qreorder', 'Reorder upcoming songs', 5, 'queue', 'Drag a song in the queue by its handle to a new spot.'],
+  ['qremove', 'Remove a song from the queue', 5, 'queue', 'Swipe a song in the queue or tap its remove button.'],
+  ['openset', 'Open Settings', 5, 'settings', 'Tap Settings at the bottom.'],
+  ['explore', 'Explore the available settings', 5, 'settings', "Open Advanced, What's new, Credits or the keyboard shortcuts."],
+  ['setting', 'Change a setting', 5, 'settings', 'Flip any switch or pick any option, like Blend songs together.'],
+  ['customize', 'Customize the app to your preference', 5, 'settings', 'Under Advanced, pick an album art style, accent color or cursor.'],
+  ['restore', 'Restore a setting to its original value', 5, 'settings', 'Pick the Default choice again, or tap Reset in Advanced.']
 ];
-const MS_PAGES = ['library', 'player', 'settings'];
+const MS_PAGES = ['library', 'player', 'queue', 'settings'];
+const MS_ONE_LINE = ['player', 'queue'];   // no spare height: these cards stay one line (next step + ?)
+const MS_PAGE_NAMES = { library: 'Library', player: 'Player', queue: 'Queue', settings: 'Settings' };
+// two-part tasks (next AND previous): each half is saved, the task ticks when both are
+function msPart(task, part, need){
+  const done = milestonesDone();
+  const k = '_' + task;
+  const got = Object.assign({}, done[k] || {}); got[part] = 1;
+  done[k] = got;
+  try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){}
+  if (need.every(x => got[x])) awardMilestone(task);
+}
 const LS_MILESTONES = 'ebbless:milestones';
 const LS_MS_SOUND = 'ebbless:milestoneSound';
 function milestonesDone(){
@@ -22516,9 +22548,12 @@ function renderMilestones(justDone){
   const ul = document.getElementById('milestoneList');
   if (ul){
     let total = 0;
-    ul.innerHTML = MILESTONES.map(([id, label, pts, , hint]) => {
+    let lastPage = '';
+    ul.innerHTML = MILESTONES.map(([id, label, pts, pg, hint]) => {
       const on = !!done[id]; if (on) total += pts;
-      return '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><button type="button" class="ms-q" data-ms-q="list:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'list:' + id) + '">?</button><span class="ms-pts">' + pts + ' pts</span>' + (msHint === 'list:' + id ? '<div class="ms-hint">' + hint + '</div>' : '') + '</li>';
+      const head = pg !== lastPage ? '<li class="ms-grp" aria-hidden="true">' + MS_PAGE_NAMES[pg] + '</li>' : '';
+      lastPage = pg;
+      return head + '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><button type="button" class="ms-q" data-ms-q="list:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'list:' + id) + '">?</button><span class="ms-pts">' + pts + ' pts</span>' + (msHint === 'list:' + id ? '<div class="ms-hint">' + hint + '</div>' : '') + '</li>';
     }).join('');
     const t = document.getElementById('milestoneTotal');
     if (t) t.textContent = total + ' of ' + MILESTONES.reduce((a, m) => a + m[2], 0) + ' pts';
@@ -22542,7 +22577,7 @@ function renderMilestones(justDone){
     // collapsed (or the player's one-line card): the ? beside the headline shows the next task's how-to under it
     const nextT = left[0];
     const qTop = card.querySelector('.ms-qtop'), hTop = card.querySelector('.ms-hint-top');
-    qTop.hidden = !nextT || (open && page !== 'player');
+    qTop.hidden = !nextT || (open && !MS_ONE_LINE.includes(page));
     hTop.hidden = !nextT || qTop.hidden || msHint !== 'card:' + (nextT && nextT[0]);
     if (nextT){ qTop.dataset.msQ = 'card:' + nextT[0]; qTop.setAttribute('aria-expanded', String(!hTop.hidden)); hTop.textContent = nextT[4]; }
     card.classList.toggle('is-celebrate', id_in(justDone, tasks));
@@ -22564,7 +22599,8 @@ function awardMilestone(id){
   renderMilestones(cards ? id : null);
   if (cards){
     const card = document.getElementById('msCard-' + m[3]);
-    if (card && !card.hidden && card.offsetParent !== null){
+    const rc = card && !card.hidden && card.offsetParent !== null ? card.getBoundingClientRect() : null;
+    if (rc && rc.bottom > 0 && rc.top < innerHeight && rc.right > 0 && rc.left < innerWidth){
       if (msMotionOk()){
         const li = card.querySelector('li.is-new');
         if (li){ li.classList.remove('is-new'); void li.offsetWidth; li.classList.add('is-new'); }
@@ -22578,14 +22614,15 @@ function awardMilestone(id){
 }
 (function msInit(){
   MS_PAGES.forEach(page => {
-    const host = document.querySelector('#view-' + page + ' .view-scroll');
+    const host = page === 'queue' ? document.querySelector('#queue-panel') : document.querySelector('#view-' + page + ' .view-scroll');
     if (!host) return;
     const card = document.createElement('div');
     card.className = 'ms-card'; card.id = 'msCard-' + page; card.hidden = true;
     card.innerHTML = '<div class="ms-row"><button type="button" class="ms-head" aria-expanded="false"><span class="ms-ring" aria-hidden="true"></span><span class="ms-head-text"></span><span class="ms-caret" aria-hidden="true"></span></button><button type="button" class="ms-q ms-qtop" aria-label="How to do the next step">?</button></div><div class="ms-hint ms-hint-top" hidden></div><ul class="ms-items"></ul>';
-    card.querySelector('.ms-head').addEventListener('click', () => { if (page === 'player') return; msCardOpen[page] = !msCardOpen[page]; renderMilestones(); });
+    card.querySelector('.ms-head').addEventListener('click', () => { if (MS_ONE_LINE.includes(page)) return; msCardOpen[page] = !msCardOpen[page]; renderMilestones(); });
     const back = host.querySelector(':scope > .settings-back');
-    host.insertBefore(card, back ? back.nextSibling : host.firstChild);
+    if (page === 'queue') host.insertBefore(card, host.querySelector('.queue-scroll'));
+    else host.insertBefore(card, back ? back.nextSibling : host.firstChild);
   });
   document.addEventListener('click', (e) => {
     const q = e.target.closest('[data-ms-q]');
@@ -22594,6 +22631,21 @@ function awardMilestone(id){
     msHint = msHint === key ? '' : key;
     renderMilestones();
   });
+  // Settings: any switch counts as changing a setting; peeking into the extra sections counts as exploring
+  const setView_ = document.getElementById('view-settings');
+  if (setView_){
+    setView_.addEventListener('click', (e) => {
+      const sw = e.target.closest('.switch');
+      if (sw && sw.id !== 'msSoundBtn') awardMilestone('setting');
+      if (e.target.closest('#whatsNewBtn, #creditsBtn, #settingsKeysBlock button, #settingsKeysBlock summary')) awardMilestone('explore');
+    });
+    const adv = document.getElementById('settingsAdvancedBlock');
+    if (adv) adv.addEventListener('toggle', () => { if (adv.open) awardMilestone('explore'); });
+  }
+  const seek = document.getElementById('seekTrack');
+  if (seek) seek.addEventListener('pointerdown', () => awardMilestone('progress'));
+  const cv = document.getElementById('castVol');
+  if (cv) cv.addEventListener('input', () => awardMilestone('volume'));
   const snd = document.getElementById('msSoundBtn');
   if (snd) snd.addEventListener('click', () => { try { localStorage.setItem(LS_MS_SOUND, msSoundOn() ? 'off' : 'on'); } catch(e){} renderMilestones(); if (msSoundOn()) msChime(); });
 })();
@@ -22601,6 +22653,8 @@ renderMilestones();
 
 function advChoose(k, v){
   awardMilestone('setting');
+  if (k !== 'sort') awardMilestone('customize');
+  if ((k === 'art' && v === 'default') || (k === 'cursor' && v === 'drop') || (k === 'motion' && v === 'full') || (k === 'accent' && !v)) awardMilestone('restore');
   if (k === 'art') setArtStyle(v);
   else if (k === 'cursor'){ advSet('cursor', v === 'drop' ? null : v); if (window.ebbCursorStyle) window.ebbCursorStyle(v); }
   else if (k === 'motion'){ advSet('motion', v === 'reduced' ? 'reduced' : null); advApplyMotion(); }
@@ -22648,6 +22702,7 @@ advBlock.addEventListener('click', (e) => {
   if (b) advChoose(b.dataset.adv, b.dataset.val);
 });
 $('advResetBtn').addEventListener('click', () => {
+  awardMilestone('restore');
   advCache = {};
   lsSet(LS_ADV, {});
   advApplyMotion();
@@ -25045,9 +25100,11 @@ function lpSfxUnlock(){
 ['pointerdown', 'touchend', 'keydown'].forEach(t => document.addEventListener(t, lpSfxUnlock, true));
 // User-initiated toggle of the current track (play buttons, keyboard, art
 // tap, PiP mini player): playIndex(state.queuePos) plus the needle sfx.
+let msPausedOnce = false;
 function userTogglePlayback(){
   const ad = activeDeck();
   const s = ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() : -1;
+  if (s === 1) msPausedOnce = true; else if (msPausedOnce) awardMilestone('pause');
   playLpNeedle(s === 1 && !isFadingOut(ad) ? 'lift' : 'drop');
   playIndex(state.queuePos);
 }
@@ -25159,8 +25216,8 @@ playBtn.addEventListener('click', () => {
   const nudgeId = playNudgeActive() ? playNudgeTargetId() : null;
   if (nudgeId) playLibraryTrackInline(nudgeId, 0); else playRickrollFallback();
 });
-nextBtn.addEventListener('click', () => { awardMilestone('next'); playNext(false); });
-prevBtn.addEventListener('click', playPrev);
+nextBtn.addEventListener('click', () => { msPart('skip', 'next', ['next', 'prev']); playNext(false); });
+prevBtn.addEventListener('click', () => { msPart('skip', 'prev', ['next', 'prev']); playPrev(); });
 flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); });
 flowNextBtn.addEventListener('click', () => playNext(false));
 flowPrevBtn.addEventListener('click', playPrev);
@@ -29359,7 +29416,6 @@ function runIntro(preview){
   // Any real start (first-visit choice, Settings replay, the topbar "?")
   // counts as watched, which ends the daily Tutorial/Enter re-invite.
   try{ localStorage.setItem(TUTORIAL_WATCHED_KEY, 'true'); }catch(e){}
-  if (!preview) awardMilestone('tutorial');
   $('helpBtn').classList.remove('is-unplayed');
   // undo discardIntroChrome()'s display:none from a prior run/skip, plus
   // the inline opacity:0 and outro-blink classes finish() leaves behind on
