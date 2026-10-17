@@ -537,6 +537,13 @@ body.split-desktop #topbar{z-index:42}
 .import-row #loadBtn:hover,.import-row #loadBtn:focus-visible{color:var(--text)}
 .import-row #loadBtn svg{width:18px;height:18px}
 .import-field input{padding-right:42px}
+/* #609: browse button inside the field, left of the magnifier; desktop only (phones have the Search tab, #608) */
+.import-row #browseBtn{position:absolute;right:41px;top:0;bottom:0;margin:auto 0;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--faint);border-radius:50%}
+.import-row #browseBtn:hover,.import-row #browseBtn:focus-visible{color:var(--text)}
+.import-row #browseBtn svg{width:17px;height:17px}
+.import-field input{padding-right:78px}
+.import-field .paste-hint{right:82px}
+@media (max-width:859.98px){.import-row #browseBtn{display:none}.import-field input{padding-right:42px}.import-field .paste-hint{right:46px}}
 .import-err{font-size:12.5px;color:var(--bad);margin:0;min-height:0}
 /* the form lives in the top bar (#319): errors hang below it */
 .import-row .import-err:not(:empty){position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:22;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 12px}
@@ -3926,6 +3933,8 @@ body.week-up-on{overflow:hidden}
     <form class="import-row" id="importForm">
       <span class="import-field">
       <button type="submit" id="loadBtn" aria-label="Search" title="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
+      <!-- #609: desktop browse button, opens the Find music grid (genres, places, vibes, tempo) -->
+      <button type="button" id="browseBtn" class="browse-btn" aria-label="Browse music" title="Browse by genre, place or vibe"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg></button>
       <input id="urlInput" type="text" maxlength="250" placeholder="Paste a link, search, or describe your vibe" aria-label="Paste a link, search, or describe your vibe" autocomplete="off" spellcheck="false">
       <div class="paste-recents" id="pasteRecents" hidden></div>
       <span class="paste-hint" id="pasteHint" aria-hidden="true" hidden><span class="paste-hint-text" id="pasteHintText"></span><button type="button" class="paste-hint-try" id="pasteHintTry" tabindex="-1" title="Search this" hidden>tab</button></span>
@@ -8518,6 +8527,7 @@ const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearch
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 $('emptyFindBtn').addEventListener('click', () => openFindMusic());
+$('browseBtn').addEventListener('click', () => openFindMusic());
 
 /* =========================================================================
    FIND MUSIC SCREEN (Geethub #582)

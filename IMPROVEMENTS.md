@@ -11088,12 +11088,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #608. Built (phones, under 860px): the top-bar search field is gone and a Search button sits in the bottom nav (Library, Player, Search, Queue, Settings). It opens a full tab with the search bar on top, a "Picked for you" grid (artists you play most, plus one artist CuRRentSSsss surfaced that you have not played; tap opens the artist window), and "Right now: <time of day>" chips below: two mood prompts (time-of-day line and the Rosicrucian period's mood, from PERIOD_MOODS) and that period's genre tags. Chips and the bar hand their text to the existing top-bar form, so links, songs, artists, vibes and sentences use the one search path; the form's error line is mirrored in the tab. The top-bar field stays in the DOM (onboarding still shows it, and `focusSearchField` opens the tab for the "paste your X link" flow). Desktop is unchanged; growing the window past 860px leaves the tab. Not built: mic button in the tab, recent-searches dropdown, the first-run "Start here" bubble (anchored to the hidden bar on phones; the tab's help line carries the same text), and album-art tiles for artists with no art in the library (they show a letter). Grid is history-only (no network call). Verified in the 375px browser preview: nav button, tab, tiles, chips, link error, chip search into the results overlay, artist tile, desktop bounce, no [gpu-watchdog]. Not verified on a real phone or Android WebView. Cache v323.
 
 ### desktop-search-bar-browse-button: desktop: search bar: browse button (Geethub #609)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #609. it should open a grid of suggestions you make the list of the most satisfying parameters a user might prefer
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #609.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #609. Assumption: the existing Find music window already is the grid of suggestions (genres, regions, vibes with a tempo filter; each pick lists artists), so the browse button opens it instead of building a second one. Built (860px and wider): a four-square grid icon button inside the search bar, left of the magnifier, opens Find music in one click; phones keep the Search tab (#608) and hide it. Search field padding adjusted for the extra button. Verified in the 1400px browser preview: button placement, opens the grid with 12 genre tiles, back closes it. To change what the grid offers (the list of parameters), edit FM_GENRES / FM_REGIONS / FM_VIBES / FM_TEMPOS. Not built: a separate new list of 'most satisfying parameters'. Cache v330.
 
 ### desktop-h-screen-put-the-heart-button-on-t: desktop: h-screen: put the heart button on the album art in the bottom right corner - formatted like the fullscreen button (Geethub #610)
 - **Status:** merged
