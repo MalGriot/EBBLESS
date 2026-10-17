@@ -11248,12 +11248,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #628.
 
 ### when-you-play-an-album-or-playlist-and-the: when you play an album or playlist and the queue changes to a new queue, the queue list should snap to the top (Geethub #629)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #629. 
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #629.
+- **Touches:** `renderQueuePanel`.
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #629. Cause: `renderQueuePanel` rebuilt the list and kept the old scroll offset, so a freshly loaded album/playlist opened mid-list. Fix: it remembers the first queue entry (`lastQueueHead`); when that changes (a new queue was loaded) the queue scroller goes to the top, while edits to the same queue (next/previous, add, remove) keep the scroll. Verified in the preview on a mobile viewport: scrolled to 3000, played another playlist, scrollTop 0; skipping to the next song kept 3000. Cases not tried: radio start, restoring a saved queue, undo of a queue clear.
 
 ### pictures-icons-in-the-advance-settings-sec: pictures/ icons in the advance settings section (Geethub #630)
 - **Status:** draft
@@ -11296,7 +11296,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #634. Likely duplicate of #581 (lock screen controls); fold together when queued. Folded into #581 (same ask: lock screen and notification player, here with play, rewind, heart). Built there, see bug-mobile-lock-screen-controls-and-notifications.
 
 ### mobile-moves-really-slow-and-slows-down-th: mobile moves really slow and slows down the phone (Geethub #635)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Bug Geethub #635. when you close it it doesnt stop. it's still visible in the top bar. it says its playing in the bg. there needs to be an audit on how to make it move faster, smoother and play well with other apps
 - **Touches:** GPU budget items: help-icon blink, search-bar pulse ring, library thumbnail videos, library card buttons.
