@@ -2230,6 +2230,17 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .toast.has-action.is-open{pointer-events:auto}
 .toast-action{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
+/* tap-to-skip prompt (#575): sits above the toast; hidden = out of rendering */
+.skip-prompt{position:fixed;left:50%;bottom:calc(var(--nav-h) + 72px);transform:translate(-50%,10px);z-index:81;
+  display:flex;align-items:center;gap:10px;padding:6px 6px 6px 16px;border:0;border-radius:22px;
+  background:var(--panel-3);color:var(--text);font:inherit;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.4);
+  opacity:0;visibility:hidden;cursor:pointer;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out),visibility 0s linear var(--dur-ui)}
+.skip-prompt.is-open{opacity:1;visibility:visible;transform:translate(-50%,0);transition-delay:0s}
+.skip-prompt.on-art{bottom:auto;transform:translate(-50%,calc(-100% + 10px))}
+.skip-prompt.on-art.is-open{transform:translate(-50%,-100%)}
+.skip-prompt-left{color:var(--faint);font-variant-numeric:tabular-nums}
+.skip-prompt-go{background:var(--accent);color:var(--on-accent,#151107);border-radius:16px;padding:7px 14px;font-size:12px;font-weight:600}
 .load-ok{position:fixed;left:50%;top:42%;width:84px;height:84px;margin:-42px 0 0 -42px;z-index:79;pointer-events:none;
   display:grid;place-items:center;border-radius:50%;background:rgba(26,26,26,.72);
   box-shadow:0 0 0 1px var(--accent-dim),0 10px 32px rgba(0,0,0,.45);animation:loadOkPop 1.15s var(--ease-out) forwards}
@@ -5034,6 +5045,7 @@ body.week-up-on{overflow:hidden}
   </div>
 
   <div class="toast" id="toast"></div>
+  <button type="button" class="skip-prompt" id="skipPrompt" aria-live="polite" tabindex="-1"><span class="skip-prompt-what">Ad</span><span class="skip-prompt-left" id="skipPromptLeft"></span><span class="skip-prompt-go">Skip</span></button>
   <div class="sw-update-toast" id="swUpdateToast" hidden>
     <span>Update available</span>
     <button type="button" id="swUpdateBtn">Refresh</button>
@@ -23527,14 +23539,17 @@ function getPipe(model){
   return pipes[model];
 }
 onmessage = async (e) => {
-  const { id, model, audio, language } = e.data;
+  const { id, model, audio, language, words } = e.data;
   try {
     const asr = await getPipe(model);
     if (!audio){ postMessage({ type: 'result', id, chunks: [] }); return; } // load only (capPrefetchModel)
-    const opts = { return_timestamps: true, chunk_length_s: 30, stride_length_s: 5 };
+    // words: one short window (under 30 s) timed word by word (ad ends, #575)
+    const opts = words ? { return_timestamps: 'word' } : { return_timestamps: true, chunk_length_s: 30, stride_length_s: 5 };
     if (language){ opts.language = language; opts.task = 'transcribe'; }
     const out = await asr(audio, opts);
     postMessage({ type: 'result', id, chunks: (out && out.chunks) || [] });
+    // the word model is only needed now and then: free its memory
+    if (words){ delete pipes[model]; try { await asr.dispose(); } catch(err){} }
   } catch (err){ postMessage({ type: 'error', id, message: String((err && err.message) || err) }); }
 };`;
   capWorkerObj = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' });
@@ -23569,12 +23584,26 @@ function capModelPct(model){
   const tot = files.reduce((a, f) => a + f.total, 0), got = files.reduce((a, f) => a + Math.min(f.loaded, f.total), 0);
   return tot ? Math.round(got / tot * 100) : null;
 }
-function capRun(model, audio, language){
-  const id = ++capSeq;
+// One transcription at a time: caption slices and ad-end checks (#575)
+// share the worker, and two models running at once would double its memory.
+// An ad-end check goes first - the listener may be in that ad right now.
+var capQueue = [], capBusy = false;
+function capRun(model, audio, language, words){
   return new Promise((resolve, reject) => {
-    capPending.set(id, { resolve, reject });
-    capWorker().postMessage({ id, model, audio, language }, [audio.buffer]);
+    const j = { model, audio, language, words: !!words, resolve, reject };
+    if (j.words) capQueue.unshift(j); else capQueue.push(j);
+    capPump();
   });
+}
+function capPump(){
+  if (capBusy || !capQueue.length) return;
+  capBusy = true;
+  const j = capQueue.shift(), id = ++capSeq;
+  // (next one on a later tick: a failed worker rejects everything pending
+  // in one sweep, and is thrown away, before anything new may start)
+  const done = (fn) => (v) => { capBusy = false; fn(v); setTimeout(capPump, 0); };
+  capPending.set(id, { resolve: done(j.resolve), reject: done(j.reject) });
+  capWorker().postMessage({ id, model: j.model, audio: j.audio, language: j.language, words: j.words }, [j.audio.buffer]);
 }
 // One-time background download of the English model on app load (after the
 // splash, once idle), so the first podcast's captions don't wait on ~41 MB
@@ -23688,6 +23717,50 @@ async function capFetch(url, start, end){
   if (!res.ok) throw new Error('audio ' + res.status);
   return { buf: await res.arrayBuffer(), total: Number(res.headers.get('X-Total-Length')) || 0 };
 }
+// Where captions read an episode's audio (#575): the player's own copy when
+// the host allows cross-origin reads, else the worker's /podaudio (most
+// hosts send no CORS headers on audio). Hosts with dynamic ad insertion
+// stitch ads in per request, and the worker - another machine, sometimes a
+// different one each time - can be handed another copy than the player:
+// captions made from it then sit off the audio by the length of the ads.
+// read(s, e) -> { buf, total }. One source per episode per session.
+var capSources = new Map();
+function capSource(url){
+  if (!capSources.has(url)) capSources.set(url, capOpenSource(url));
+  return capSources.get(url);
+}
+async function capOpenSource(url){
+  try {
+    const p = await capPlayerReader(url);
+    return { kind: 'player', read: async (s, e) => ({ buf: (await p.read(s, e)).buffer, total: p.total }) };
+  } catch(e){
+    return { kind: 'worker', read: (s, e) => capFetch(url, s, e) };
+  }
+}
+// The player's copy, read directly. The redirect chain (download trackers)
+// is followed once, then ranges come from where it led; that address is
+// signed and expires, so a refused range follows the chain again (once).
+async function capPlayerReader(url){
+  let final = '', total = 0;
+  const resolve = async () => {
+    const r = await fetch(url, { headers: { Range: 'bytes=0-15' }, cache: 'no-store' });
+    await r.arrayBuffer();
+    if (r.status !== 206) throw new Error('no ranges');
+    const ac = new AbortController();
+    const r2 = await fetch(r.url, { headers: { Range: 'bytes=0-' }, signal: ac.signal, cache: 'no-store' });
+    const n = Number(r2.headers.get('content-length'));
+    ac.abort();
+    if (!(n > 0) || (total && n !== total)) throw new Error('no length');
+    final = r.url; total = n;
+  };
+  await resolve();
+  const get = async (s, e) => {
+    const x = await fetch(final, { headers: { Range: 'bytes=' + s + '-' + e }, cache: 'no-store' });
+    if (x.status !== 206) throw new Error('range ' + x.status);
+    return new Uint8Array(await x.arrayBuffer());
+  };
+  return { total, read: (s, e) => get(s, e).catch(() => resolve().then(() => get(s, e))) };
+}
 // Where the audio starts: most podcast mp3s open with an ID3 tag (often
 // carrying the cover art, easily 1 MB+). Mapping a slice's byte position to
 // time without skipping it put every slice's captions late - up to a minute
@@ -23699,6 +23772,9 @@ function capAudioStart(buf){
 }
 // episode seconds at a byte position (constant bitrate past the tag)
 function capOffset(rec, byte, dur){
+  // rec.bps: the first frame's byte rate - the player maps time to bytes
+  // at exactly that rate, so this matches it to the frame
+  if (rec.bps) return Math.max(0, (byte - rec.f0) / rec.bps);
   const a0 = rec.a0 || 0;
   // rec.spb: seconds per byte measured from a slice's decoded audio, which
   // is exact for constant bitrate; the player's duration is only an estimate
@@ -23718,11 +23794,20 @@ function capShiftCues(cues, d){
   return d ? cues.map(c => [Math.round((c[0] + d) * 100) / 100, Math.round((c[1] + d) * 100) / 100, c[2]]) : cues;
 }
 async function capReadHead(rec, url){
-  const h = await capFetch(url, 0, 9);
+  const src = await capSource(url);
+  const h = await src.read(0, 9);
   if (!rec.total) rec.total = h.total;
   if (!rec.total) return;
+  rec.src = src.kind;
   const a0 = capAudioStart(h.buf);
   rec.a0 = a0 < rec.total ? a0 : 0;
+  // constant bitrate (no Xing/VBRI header): time is bytes at the first
+  // frame's rate; a VBR file keeps the measured seconds-per-byte
+  try {
+    const head = new Uint8Array((await src.read(rec.a0, Math.min(rec.total, rec.a0 + 4096) - 1)).buf);
+    const fr = mp3Find(head, 0);
+    if (fr && !/Xing|VBRI/.test(String.fromCharCode.apply(null, head.subarray(fr.i, fr.i + 200)))){ rec.f0 = rec.a0 + fr.i; rec.bps = fr.f.bps; }
+  } catch(e){}
   Object.keys(rec.parts).forEach(i => { rec.parts[i] = capShiftCues(rec.parts[i], capLegacyShift(rec, +i)); });
 }
 // any slice of an mp3 decodes on its own; resampled to Whisper's 16 kHz mono
@@ -23769,9 +23854,21 @@ async function generateCaptions(t, onUpdate){
   // records saved before slices were timed by measured seconds-per-byte
   // (capV 2) carry the old timing baked in: drop their slices so they
   // regenerate with the new timing the next time the episode plays
-  if (rec.capV !== 2){
-    rec.parts = {}; rec.done = false; delete rec.spb; rec.capV = 2;
+  // (capV 3: read from the player's own copy where possible, timed at the
+  // exact byte rate, each slice's copy noted - #575)
+  const reset = () => { rec.parts = {}; rec.done = false; rec.total = 0; ['spb', 'a0', 'f0', 'bps', 'src', 'ptot', 'ads'].forEach(k => delete rec[k]); };
+  if (rec.capV !== 3){
+    reset(); rec.capV = 3;
     await capPut(id, rec);
+  }
+  // the player's copy changed since these captions were made (the ad server
+  // stitched in other ads): they'd sit off the audio - start over
+  if (rec.src === 'player' && rec.total){
+    try {
+      const src = await capSource(url);
+      const h = src.kind === 'player' ? await src.read(0, 9) : null;
+      if (h && h.total && h.total !== rec.total){ reset(); await capPut(id, rec); }
+    } catch(e){}
   }
   job.rec = rec; job.lang = lang;
   if (job.cancelled) return;
@@ -23779,7 +23876,7 @@ async function generateCaptions(t, onUpdate){
     try { await capReadHead(rec, url); if (rec.a0 != null) await capPut(id, rec); } catch(e){}
     if (job.cancelled) return;
   }
-  if (rec.done){ job.onUpdate(capLines(rec), 'done'); return; }
+  if (rec.done){ job.onUpdate(capLines(rec), 'done'); podAdScanSoon(t); return; }
   if (!english && !capMultiInstalled()){ job.onUpdate(capLines(rec), 'need-multi'); return; }
   const model = job.model = english ? CAP_MODEL_EN : CAP_MODEL_MULTI;
   job.onProgress = () => { job.lastActivity = Date.now(); if (!job.cancelled) job.onUpdate(capLines(rec), 'working', capModelPct(model)); };
@@ -23809,9 +23906,10 @@ async function generateCaptions(t, onUpdate){
     // the next slice downloads and decodes while the current one is being
     // transcribed, so the worker never waits on the network (one extra
     // decoded slice in memory, ~8 MB)
+    const src = await capSource(url);
     const load = (k) => {
       const s0 = k * CAP_CHUNK_BYTES, e0 = Math.min(rec.total, s0 + CAP_CHUNK_BYTES) - 1;
-      return capFetch(url, s0, e0).then(({ buf }) => capDecode(buf).then(audio => ({ audio }), err => ({ err })));
+      return src.read(s0, e0).then(({ buf, total }) => capDecode(buf).then(audio => ({ audio, total }), err => ({ err })));
     };
     for (let i = next(); i >= 0; i = next()){
       if (job.cancelled) return;
@@ -23835,9 +23933,13 @@ async function generateCaptions(t, onUpdate){
         // drop Whisper's sound tags ("[Music]", "(upbeat)") - not words
         .filter(c => c[2] && !/^[\[(][^\])]*[\])]$/.test(c[2]))
         .map(c => [Math.round(c[0] * 100) / 100, Math.round(c[1] * 100) / 100, c[2]]);
+      // which copy this slice came from (the worker can be handed another
+      // one per request); ad reads only trust slices from rec.total's copy
+      (rec.ptot = rec.ptot || {})[i] = got.total || 0;
       await capPut(id, rec);
       job.lastActivity = Date.now();
       if (!job.cancelled) job.onUpdate(capLines(rec), 'working');
+      podAdScanSoon(t); // ad reads in the new slice (#575)
     }
     rec.done = true;
     await capPut(id, rec);
@@ -27749,32 +27851,276 @@ function renderChapterList(t){
     markCurrentChapter(ad.player && ad.player.getCurrentTime ? ad.player.getCurrentTime() || 0 : 0, true);
   });
 }
-// Ad chapters (#575): a feed that labels a break as an ad/sponsor chapter
-// gets it skipped as playback enters it. Only explicit labels count - ads a
-// host stitches into the audio unmarked can't be told from the show.
-var podAdSegs = new Map();   // videoId -> [{ s, e }]
-var podAdSkipAt = 0;
-const POD_AD_TITLE = /^\W*(ads?|advertisements?|advert|sponsors?|sponsored( by| message)?|sponsor(ship)? break|ad break|commercials?)\W*$/i;
-function skipAdChapter(cur){
+// Tap-to-skip prompt: for any time range of the playing track, in the
+// player's own seconds (ad breaks below; SponsorBlock-style segments can
+// reuse it, #573). Nothing skips by itself - the listener taps.
+var skipSegs = new Map(), skipShown = null, skipLeftTxt = '';
+function setSkipSegs(id, segs){ skipSegs.set(id, segs); }
+function skipPromptTick(cur){
   const t = currentTrack();
-  if (!t || !t.videoId || !isPodcastTrack(t) || !(cur >= 0)) return;
-  let segs = podAdSegs.get(t.videoId);
-  if (!segs){
-    podAdSegs.set(t.videoId, segs = []);
-    if (!podHasText(t) || !(t.chapters || t.chaptersUrl)) return;
-    podText(t).then(pt => {
-      const ch = pt.chapters;
-      ch.forEach((c, i) => { if (ch[i + 1] && POD_AD_TITLE.test(c.title || '')) segs.push({ s: c.t, e: ch[i + 1].t }); });
-    });
-    return;
+  const segs = t && !seekDrag && cur >= 0 ? skipSegs.get(t.videoId) : null;
+  const seg = (segs && segs.find(g => cur >= g.s && cur < g.e - 0.5)) || null;
+  const el = document.getElementById('skipPrompt');
+  if (seg) skipPromptPlace(el);
+  if (seg !== skipShown){
+    skipShown = seg;
+    el.classList.toggle('is-open', !!seg);
+    el.tabIndex = seg ? 0 : -1;
+    if (seg){ el.querySelector('.skip-prompt-what').textContent = seg.label; el.setAttribute('aria-label', 'Skip ' + seg.label.toLowerCase()); }
   }
-  const seg = segs.find(g => cur >= g.s && cur < g.e - 1);
-  if (!seg || Date.now() - podAdSkipAt < 2000) return;
-  const ad = activeDeck();
-  if (!ad.player || !ad.player.seekTo) return;
-  podAdSkipAt = Date.now();
-  ad.player.seekTo(seg.e, true);
-  showToast('Skipped an ad break');
+  const left = seg ? formatTime(Math.max(0, Math.ceil(seg.e - cur))) : '';
+  if (left !== skipLeftTxt){ skipLeftTxt = left; document.getElementById('skipPromptLeft').textContent = left; }
+}
+// Over the foot of the artwork while the player's art is on screen (clear
+// of the seek bar and buttons); otherwise floating above the nav.
+var skipPlaceKey = '';
+function skipPromptPlace(el){
+  const r = document.getElementById('artworkWrap').getBoundingClientRect();
+  const on = r.width > 120 && r.top >= 0 && r.bottom <= innerHeight && !document.getElementById('flow-layer').classList.contains('is-open');
+  const key = on ? Math.round(r.left + r.width / 2) + ',' + Math.round(r.bottom - 14) : '';
+  if (key === skipPlaceKey) return;
+  skipPlaceKey = key;
+  el.classList.toggle('on-art', on);
+  el.style.left = on ? key.split(',')[0] + 'px' : '';
+  el.style.top = on ? key.split(',')[1] + 'px' : '';
+}
+document.getElementById('skipPrompt').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const seg = skipShown, ad = activeDeck();
+  if (!seg || !ad.player || !ad.player.seekTo) return;
+  const dur = (ad.player.getDuration && ad.player.getDuration()) || 0;
+  // a break that runs to the end (a post-roll) ends the episode
+  ad.player.seekTo(dur && seg.e > dur - 0.3 ? dur : seg.e, true);
+  skipPromptTick(seg.e);
+  updateSeekUI();
+});
+
+// Ad breaks in podcast episodes (#575). Ads a host stitches into the audio
+// carry no marker, so they're found two ways: a chapter the feed labels as
+// an ad, and sponsor wording in the episode's captions (made on this device
+// from the audio, see generateCaptions). Each becomes a tap-to-skip range
+// (above). Accuracy over coverage: a range is only offered when the audio
+// it was timed on is provably the audio playing (same copy - ad servers
+// hand out different ones), and an end that can't be pinned exactly lands
+// a little early (a moment of ad), never late (into the show).
+const POD_AD_TITLE = /^\W*(ads?|advertisements?|advert|sponsors?|sponsored( by| message)?|sponsor(ship)? break|ad break|commercials?)\W*$/i;
+// timed word by word, for pinning where an ad ends (same weights as the
+// captions model; loaded only when an ad is found, freed right after)
+var CAP_MODEL_WORDS = 'onnx-community/whisper-tiny.en_timestamped';
+var POD_AD_V = 1;
+// MP3 frame header at b[i]: { bps (bytes per second), sr } or null
+function mp3Frame(b, i){
+  if (i + 4 > b.length || b[i] !== 0xFF || (b[i + 1] & 0xE0) !== 0xE0) return null;
+  const ver = (b[i + 1] >> 3) & 3, layer = (b[i + 1] >> 1) & 3, bi = b[i + 2] >> 4, si = (b[i + 2] >> 2) & 3;
+  if (layer !== 1 || ver === 1 || !bi || bi === 15 || si === 3) return null;
+  const kbps = (ver === 3 ? [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320] : [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160])[bi];
+  const sr = [[11025, 12000, 8000], null, [22050, 24000, 16000], [44100, 48000, 32000]][ver][si];
+  return { bps: kbps * 125, sr, len: Math.floor((ver === 3 ? 144 : 72) * kbps * 1000 / sr) + ((b[i + 2] >> 1) & 1) };
+}
+// first frame at or after `from` that another frame follows (a stray 0xFF
+// pair in cover art isn't one)
+function mp3Find(b, from){
+  for (let i = from || 0; i + 4 <= b.length; i++){
+    const f = mp3Frame(b, i), g = f && mp3Frame(b, i + f.len);
+    if (g && g.sr === f.sr) return { i, f };
+  }
+  return null;
+}
+// Sponsor wording in a caption line: what a read says and a story doesn't
+// (a sponsor intro, a promo code, a web address to go to, the fine print).
+// ("brought to us by <author>" is a story credit, so only "to you" counts.)
+const POD_AD_STRONG = [
+  /\b(brought to you by|sponsored by|thanks to (our|today's) sponsors?|today's sponsor|support for (this|the|today's) (show|podcast|episode)|this (episode|podcast|show|portion|segment) is (sponsored|supported|brought to you|presented))\b/i,
+  /\b(promo|offer|discount|coupon|checkout) code\b|\b(use|enter) (the )?code\b/i,
+  /\b\d+ ?(%|percent) off\b|\bfree (trial|shipping)\b|\bmoney[- ]back guarantee\b/i,
+  /\b(terms|restrictions|conditions|exclusions) (and conditions )?(may )?apply\b|\b(taxes and fees|fees extra|plan required|for (full )?details|upfront payment|per month equivalent|subject to change|while supplies last|new customers only|void where prohibited)\b|\b(coverage|speeds?) (and \w+ )?var(y|ies)\b|\bmust be (an? )?(active |new |paying )?(subscriber|customer|member)s?\b|\boffer (valid|ends|expires)\b/i,
+  /\bwherever you (get|listen to) (your )?podcasts\b/i,
+  /\b[a-z0-9][a-z0-9-]* ?(\.|dot) ?(com|net|org|co|io)( ?\/ ?| slash )[a-z0-9-]+/i,
+  /\b(go to|visit|head (over )?to|check out|sign up at|at|see),? [a-z0-9][a-z0-9-]* ?(\.|dot) ?(com|net|org|co|io)\b/i,
+];
+const POD_AD_BRAND = /\b([a-z0-9][a-z0-9-]{3,}) ?(?:\.|dot) ?(?:com|net|org|co|io)\b/gi;
+function podAdStrong(text){ return POD_AD_STRONG.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0); }
+// caption cues from the slices read off the record's own copy
+function podAdCues(rec){
+  const out = [];
+  Object.keys(rec.parts || {}).forEach(k => {
+    if (!rec.ptot || rec.ptot[k] !== rec.total) return;
+    rec.parts[k].forEach(c => out.push({ s: c[0], e: c[1], text: c[2] }));
+  });
+  return out.sort((a, b) => a.s - b.s);
+}
+// Ad reads in the captions: lines with sponsor wording, joined when under
+// 45 s apart (a pitch can run that long between "brought to you by" and the
+// web address), kept when they add up to two strong signals. A sponsor
+// intro after a read that already gave its address or code starts a new
+// read, so two ads with the show between them never become one range.
+// The pitch before a read's first strong line counts too: s reaches back to
+// where the brand in its web address is first named (up to 75 s, never
+// into the read before). s: where the read starts; from: its last strong
+// line (its end is pinned from there).
+function podAdReads(cues){
+  const out = [];
+  let cur = null;
+  cues.forEach(c => {
+    const n = podAdStrong(c.text);
+    if (!n) return;
+    const intro = POD_AD_STRONG[0].test(c.text), cta = n > (intro ? 1 : 0);
+    // (a line's end is capped: Whisper sometimes runs one line on for half a minute of garble)
+    const last = Math.min(c.e, c.s + 15);
+    if (!(cur && c.s - cur.last <= 45 && !(intro && cur.cta))){ if (cur) out.push(cur); cur = { s: c.s, n: 0, cta: false, brands: [] }; }
+    cur.n += n; cur.last = last; cur.from = c.s; cur.cta = cur.cta || cta;
+    for (const m of c.text.matchAll(POD_AD_BRAND)) cur.brands.push(m[1].toLowerCase().replace(/-/g, ''));
+  });
+  if (cur) out.push(cur);
+  const reads = out.filter(r => r.n >= 2);
+  reads.forEach((r, i) => {
+    const floor = Math.max(r.s - 75, i ? reads[i - 1].last : 0);
+    const c = cues.find(c => c.s >= floor && c.s < r.s && r.brands.some(b => podAdNamed(c.text, b)));
+    if (c) r.s = c.s;
+  });
+  return reads;
+}
+// The brand named as a name: split ("Mint Mobile", "drip-drop") or
+// capitalised mid-sentence - not the plain word a story might use
+// ("how calmly I can tell you").
+function podAdNamed(text, brand){
+  const re = new RegExp('\\b' + brand.split('').join('[\\s-]?') + '\\b', 'i');
+  const m = re.exec(text);
+  if (!m) return false;
+  return /[\s-]/.test(m[0]) || (/^[A-Z]/.test(m[0]) && m.index > 0 && !/[.?!]\s*$/.test(text.slice(0, m.index)));
+}
+// Pin where an ad read ends. Its last stretch is read again word by word
+// (a short window); the last sentence with sponsor wording ends the ad and
+// the next sentence is the show. Whisper's word times run late (0.25-0.5 s
+// in testing, against audio with known boundaries), so the landing is the
+// quiet gap between those two in the audio itself; with no clear gap, a
+// margin before the ad's last word ends. Returns seconds, or null; throws
+// when the audio can't be had from the captions' copy right now.
+async function podAdPinEnd(url, rec, from){
+  const src = await capSource(url);
+  for (let span = 18; span <= 30; span += 12){
+    const t0 = Math.max(0, from - 1.5);
+    const b0 = rec.f0 + Math.floor(t0 * rec.bps), b1 = Math.min(rec.total, rec.f0 + Math.ceil((t0 + span) * rec.bps)) - 1;
+    const got = await src.read(b0, b1);
+    if (got.total !== rec.total) throw new Error('another copy');
+    const raw = new Uint8Array(got.buf), fr = mp3Find(raw, 0);
+    if (!fr) return null;
+    const start = (b0 + fr.i - rec.f0) / rec.bps, audio = await capDecode(raw.slice(fr.i).buffer);
+    const words = (await capRun(CAP_MODEL_WORDS, audio.slice(), null, true))
+      .map(w => ({ s: start + ((w.timestamp && w.timestamp[0]) || 0), e: start + ((w.timestamp && (w.timestamp[1] != null ? w.timestamp[1] : w.timestamp[0])) || 0), text: String(w.text || '').trim() }))
+      .filter(w => w.text);
+    const sents = [];
+    let cur = [];
+    words.forEach(w => { cur.push(w); if (/[.?!]["')\]]?$/.test(w.text)){ sents.push(cur); cur = []; } });
+    if (cur.length) sents.push(cur);
+    // the read's closing run of sponsor sentences: from the first one in the
+    // window, on through any that follow within 6 s (a later one past a
+    // stretch of other talk is something else, likely the next ad)
+    const strong = sents.map(s => podAdStrong(s.map(w => w.text).join(' ')) > 0);
+    let i = strong.indexOf(true);
+    if (i < 0) return null;
+    for (let k = i + 1; k < sents.length && sents[k][0].s - sents[i][sents[i].length - 1].e <= 6; k++) if (strong[k]) i = k;
+    const next = sents[i + 1];
+    // the read runs past the window (or the show's first sentence is cut
+    // off by it): look further
+    if (!next || next[next.length - 1].e > start + span - 1){ if (span < 30) continue; return null; }
+    return podAdGap(audio, start, sents[i][sents[i].length - 1], next[0]);
+  }
+  return null;
+}
+// The quiet moment between the ad's last word and the show's first: 20 ms
+// frames of the window, the earliest run of 120 ms or more at least 8 dB
+// under the speech around it, landing 40 ms into it. The show's first word
+// really starts up to ~0.5 s before Whisper says, so nothing lands later
+// than 0.55 s before that; past it, or with no clear gap (a music bed), the
+// landing is half a second before the ad's last word is said to end.
+function podAdGap(audio, start, last, next){
+  const db = [];
+  for (let i = 0; i + 320 <= audio.length; i += 320){
+    let s = 0;
+    for (let j = i; j < i + 320; j++) s += audio[j] * audio[j];
+    db.push(10 * Math.log10(s / 320 + 1e-10));
+  }
+  const fi = (sec) => Math.max(0, Math.min(db.length, Math.round((sec - start) * 50)));
+  const around = db.slice(fi(last.s - 2), fi(next.e + 2)).sort((a, b) => a - b);
+  const speech = around[Math.floor(around.length * 0.8)];
+  const lo = fi(last.s + 0.12), hi = fi(next.s - 0.3);
+  let run = 0;
+  for (let k = lo; k < hi; k++){
+    run = db[k] < speech - 8 ? run + 1 : 0;
+    if (run >= 6){
+      const land = start + (k - run + 3) / 50;
+      if (land <= next.s - 0.55) return land;
+      break;
+    }
+  }
+  return Math.max(last.s - 0.5, Math.min(last.e - 0.5, next.s - 0.6));
+}
+
+// Per episode: chapter breaks once it plays, caption reads as the captions
+// come in (re-run on every new slice), each read's end pinned once and kept
+// with the captions on this device.
+var podAdScans = new Map(); // videoId -> { busy, again, chap }
+function podAdScanSoon(t){
+  if (!t || !isAudioVideoId(t.videoId)) return;
+  const st = podAdScans.get(t.videoId) || { busy: false, again: false, chap: null };
+  podAdScans.set(t.videoId, st);
+  if (st.busy){ st.again = true; return; }
+  st.busy = true;
+  podAdScan(t, st).catch(e => console.warn('[ads]', e)).finally(() => {
+    st.busy = false;
+    if (st.again){ st.again = false; podAdScanSoon(t); }
+  });
+}
+async function podAdScan(t, st){
+  const id = t.videoId, url = audioUrlOf(id);
+  const ad = activeDeck(), ct = currentTrack();
+  const dur = ct && ct.videoId === id && ad.player && ad.player.getDuration ? ad.player.getDuration() || 0 : 0;
+  if (!dur){ podAdScans.delete(id); return; } // not playing yet: the next tick asks again
+  if (!st.chap){
+    st.chap = [];
+    if (t.chapters || t.chaptersUrl){
+      const ch = (await podText(t)).chapters;
+      ch.forEach((c, i) => { if (ch[i + 1] && POD_AD_TITLE.test(c.title || '')) st.chap.push({ s: c.t, e: ch[i + 1].t }); });
+    }
+  }
+  // a feed's chapter times are for its own file: they hold for the copy
+  // playing only when no audio was stitched in (the length the feed says)
+  const segs = t.duration && Math.abs(dur - t.duration) <= 1.5 ? st.chap.slice() : [];
+  const publish = () => podAdPublish(id, segs);
+  publish();
+  const rec = (capJob && capJob.id === id && capJob.rec) || await capGet(id);
+  // the captions must be timed on the copy playing: constant bitrate and
+  // the same length to the frame (the player times it at the same rate)
+  if (!rec || !rec.bps || !rec.total || Math.abs(dur - (rec.total - rec.f0) / rec.bps) > 0.1) return;
+  if (!rec.ads || rec.ads.v !== POD_AD_V) rec.ads = { v: POD_AD_V, ends: {} };
+  for (const r of podAdReads(podAdCues(rec))){
+    // keyed by where the read starts; pinned again only if its last line
+    // moved (a read that ran on into a slice not captioned yet)
+    const k = String(Math.round(r.s)), from = Math.round(r.from);
+    let got = rec.ads.ends[k];
+    if (!got || got.from !== from){
+      let e = null;
+      try { e = await podAdPinEnd(url, rec, r.from); } catch(err){ console.warn('[ads] pin', err); continue; } // next scan tries again
+      got = rec.ads.ends[k] = { from, e: e && e > r.s + 5 ? e : 0 };
+      capPut(id, rec);
+    }
+    if (got.e){ segs.push({ s: r.s, e: got.e }); publish(); }
+  }
+}
+// ranges that overlap or touch become one; under 3 s isn't worth a prompt
+function podAdPublish(id, segs){
+  const out = [];
+  segs.slice().sort((a, b) => a.s - b.s).forEach(g => {
+    const p = out[out.length - 1];
+    if (p && g.s <= p.e + 0.5) p.e = Math.max(p.e, g.e); else out.push({ s: g.s, e: g.e, label: 'Ad' });
+  });
+  setSkipSegs(id, out.filter(g => g.e - g.s >= 3));
+}
+// from the seek poll: start an episode's scan once it plays
+function podAdWatch(){
+  const t = currentTrack();
+  if (t && isAudioVideoId(t.videoId) && !podAdScans.has(t.videoId)) podAdScanSoon(t);
 }
 function markCurrentChapter(cur, scroll){
   if (!chapListItems.length || !chapPanelEl() || !chapPanelEl().classList.contains('is-open')) return;
@@ -27838,7 +28184,8 @@ function paintSeekUI(cur, dur){
   }
   paintChapterTicks(dur);
   markCurrentChapter(cur);
-  if (!seekDrag) skipAdChapter(cur);
+  podAdWatch();
+  skipPromptTick(cur);
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   if (!seekTrack.classList.contains('ad-fill')){ seekFill.style.width = pct + '%'; flowSeekFill.style.width = pct + '%'; miniLineFill.style.width = pct + '%'; }
   seekKnob.style.left = pct + '%'; flowSeekKnob.style.left = pct + '%';
