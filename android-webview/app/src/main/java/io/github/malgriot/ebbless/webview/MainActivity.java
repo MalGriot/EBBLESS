@@ -192,6 +192,10 @@ public class MainActivity extends Activity {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
                 tellWatchdog(on);
             }
+            /** Settings > Reload app: fetch the live page now (the saved copy is a launch behind), then load it. */
+            @android.webkit.JavascriptInterface public void reloadFresh() {
+                runOnUiThread(() -> refreshPageCopy(() -> { if (web != null) web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); }));
+            }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }
@@ -265,7 +269,9 @@ public class MainActivity extends Activity {
     }
 
     /** Pull the live index.html into filesDir for the next launch (written atomically, only if it looks whole). */
-    private void refreshPageCopy() {
+    private void refreshPageCopy() { refreshPageCopy(null); }
+
+    private void refreshPageCopy(Runnable done) {
         new Thread(() -> {
             try {
                 java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(HOME).openConnection();
@@ -278,7 +284,10 @@ public class MainActivity extends Activity {
                     while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
                 }
                 if (tmp.length() > 100000) tmp.renameTo(new java.io.File(getFilesDir(), "index.html")); else tmp.delete();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            } finally {
+                if (done != null) runOnUiThread(done);
+            }
         }, "ebb-page-refresh").start();
     }
 

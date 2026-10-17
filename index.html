@@ -4196,6 +4196,13 @@ body.week-up-on{overflow:hidden}
           </div>
           <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Reload app</div>
+            <div class="desc">Fetch the latest version now instead of on your next launch. Music stops while it reloads.</div>
+          </div>
+          <button class="btn-ghost" id="reloadAppBtn">Reload now</button>
+        </div>
         <div class="settings-row beta-hidden">
           <div>
             <div class="label">Report a bug</div>
@@ -15190,6 +15197,11 @@ fbThumbs.forEach(btn => btn.addEventListener('click', () => {
   setTimeout(() => fbMessage.focus(), 50);
 }));
 feedbackBtn.addEventListener('click', openFeedbackModal);
+$('reloadAppBtn').addEventListener('click', async () => {
+  if (window.EbbNative && EbbNative.reloadFresh){ EbbNative.reloadFresh(); return; }   // Android app: refreshes its saved page copy first
+  try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k); } catch(e){}
+  location.reload();
+});
 ['reportBugBtn', 'suggestIdeaBtn', 'testerFeedbackBtn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', openFeedbackModal); });
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);
