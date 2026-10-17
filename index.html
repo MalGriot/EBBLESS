@@ -22674,7 +22674,7 @@ function renderMilestones(justDone){
     // Right after a step is done its check shows for a moment, then the next step.
     const cel = justDone ? tasks.find(m => m[0] === justDone) : null;
     const nextT = left[0];
-    card.querySelector('.ms-head-text').textContent = !left.length && msComplete[page] ? MS_PAGE_NAMES[page] + ' complete! +' + msFmt(msComplete[page]) + ' bonus' : cel ? '\u2713 ' + cel[1] + ' +' + msFmt((done._pts || {})[cel[0]] || 0) : nextT ? (tasks.length - left.length) + ' of ' + tasks.length + ' \u00B7 ' + nextT[1] : 'All done on this page';
+    card.querySelector('.ms-head-text').textContent = !left.length && msComplete[page] ? MS_PAGE_NAMES[page] + ' complete! +' + msFmt(msComplete[page]) + ' bonus' : cel ? '\u2713 ' + cel[1] + ' +' + msFmt((done._pts || {})[cel[0]] || 0) : nextT ? (tasks.length - left.length + 1) + ' of ' + tasks.length + ' \u00B7 ' + nextT[1] : 'All done on this page';
     card.classList.toggle('is-celebrate', !!cel);
     card.classList.toggle('is-complete', !left.length && !!msComplete[page]);
     const qTop = card.querySelector('.ms-qtop'), hTop = card.querySelector('.ms-hint-top');
