@@ -3188,30 +3188,17 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
   .ms-head{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:40px;padding:6px 12px;background:none;border:0;color:var(--text);font-size:13px;text-align:left}
   .ms-head-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ms-ring{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent,var(--text));flex:none}
-  .ms-caret{width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);margin-right:3px;transition:transform .2s}
-  .ms-card.is-open .ms-caret{transform:rotate(-135deg)}
-  /* the player page has no spare height: its card stays one line (next step only) so the controls are never pushed off */
-  #msCard-player .ms-caret,#msCard-queue .ms-caret{display:none}
-  #msCard-player .ms-items,#msCard-queue .ms-items{display:none!important}
-  .ms-items{display:none;list-style:none;margin:0;padding:0 12px 8px}
-  .ms-card.is-open .ms-items{display:block}
-  .ms-items li{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13.5px;color:var(--faint)}
-  .ms-items li.is-done{color:var(--text)}
-  .ms-box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--faint);display:flex;align-items:center;justify-content:center;flex:none;color:transparent}
-  .ms-items li.is-done .ms-box{background:var(--accent,#e0b26a);border-color:var(--accent,#e0b26a);color:#111}
-  .ms-items li.is-new .ms-box{animation:msPop .45s cubic-bezier(.2,1.6,.4,1)}
+  .ms-card.is-celebrate .ms-ring{background:var(--accent,#e0b26a);animation:msPop .45s cubic-bezier(.2,1.6,.4,1)}
   .ms-card.ms-pulse::after{content:"";position:absolute;inset:0;border-radius:12px;border:2px solid var(--accent,#e0b26a);pointer-events:none;animation:msRing .7s ease-out forwards}
   @keyframes msPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
   @keyframes msRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
 }
-@media (prefers-reduced-motion:reduce){.ms-items li.is-new .ms-box,.ms-card.ms-pulse::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.ms-card.is-celebrate .ms-ring,.ms-card.ms-pulse::after{animation:none}}
 .ms-q{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--faint);font-size:12px;line-height:1;padding:0;margin-left:6px}
 .ms-q[aria-expanded=true]{color:var(--text);border-color:var(--text)}
 .ms-qtop{margin:0 10px 0 0}
 .ms-hint{flex-basis:100%;font-size:12.5px;line-height:1.4;color:var(--faint);padding:2px 0 4px 30px}
 .ms-hint-top{padding:0 14px 10px 32px}
-.ms-items li{flex-wrap:wrap}
-.ms-items li .ms-label{flex:1;min-width:0}
 .milestone-list li{flex-wrap:wrap}
 .milestone-list li .ms-q{margin-left:auto}
 .milestone-list li .ms-pts{margin-left:8px}
@@ -16692,6 +16679,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 296, date: '2026-10-17', items: [
+    'The step card on each page now shows one step at a time. Finish it and you see a check, then the next step. Tap the ? for how to do the current step.'
+  ]},
   { version: 295, date: '2026-10-17', items: [
     'The step lists are now five per page for Library, Player, Queue and Settings (search, open an artist or album, add a song, make a playlist, revisit a saved one; play, pause and resume, skip back and forth, volume, find what is playing; and so on). Tap the ? on any step for how to do it.'
   ]},
@@ -22501,7 +22491,6 @@ const MILESTONES = [
   ['restore', 'Restore a setting to its original value', 5, 'settings', 'Pick the Default choice again, or tap Reset in Advanced.']
 ];
 const MS_PAGES = ['library', 'player', 'queue', 'settings'];
-const MS_ONE_LINE = ['player', 'queue'];   // no spare height: these cards stay one line (next step + ?)
 const MS_PAGE_NAMES = { library: 'Library', player: 'Player', queue: 'Queue', settings: 'Settings' };
 // two-part tasks (next AND previous): each half is saved, the task ticks when both are
 function msPart(task, part, need){
@@ -22542,7 +22531,7 @@ function msChime(){
   } catch(e){}
 }
 let msHint = '';   // which task's how-to line is showing: 'card:<id>' or 'list:<id>'
-const msCardOpen = {};   // page -> user expanded the card
+let msCelebrateTimer = 0;
 function renderMilestones(justDone){
   const done = milestonesDone();
   const ul = document.getElementById('milestoneList');
@@ -22568,19 +22557,17 @@ function renderMilestones(justDone){
     if (card.dataset.gone === '1') return;
     if (!left.length && !justDone){ card.hidden = true; return; }
     card.hidden = false;
-    const open = !!msCardOpen[page];
-    card.classList.toggle('is-open', open);
-    card.querySelector('.ms-head-text').textContent = left.length ? (tasks.length - left.length) + ' of ' + tasks.length + ' \u00B7 ' + left[0][1] : 'All done on this page';
-    card.querySelector('.ms-head').setAttribute('aria-expanded', String(open));
-    card.querySelector('.ms-items').innerHTML = tasks.map(([id, label, , , hint]) =>
-      '<li class="' + (done[id] ? 'is-done' : '') + (id === justDone ? ' is-new' : '') + '"><span class="ms-box" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ms-label">' + label + '</span><button type="button" class="ms-q" data-ms-q="card:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'card:' + id) + '">?</button>' + (msHint === 'card:' + id ? '<div class="ms-hint">' + hint + '</div>' : '') + '</li>').join('');
-    // collapsed (or the player's one-line card): the ? beside the headline shows the next task's how-to under it
+    // one step at a time: the next step on one line, with a ? for how to do it.
+    // Right after a step is done its check shows for a moment, then the next step.
+    const cel = justDone ? tasks.find(m => m[0] === justDone) : null;
     const nextT = left[0];
+    card.querySelector('.ms-head-text').textContent = cel ? '\u2713 ' + cel[1] : nextT ? (tasks.length - left.length) + ' of ' + tasks.length + ' \u00B7 ' + nextT[1] : 'All done on this page';
+    card.classList.toggle('is-celebrate', !!cel);
     const qTop = card.querySelector('.ms-qtop'), hTop = card.querySelector('.ms-hint-top');
-    qTop.hidden = !nextT || (open && !MS_ONE_LINE.includes(page));
-    hTop.hidden = !nextT || qTop.hidden || msHint !== 'card:' + (nextT && nextT[0]);
+    qTop.hidden = !nextT || !!cel;
+    hTop.hidden = qTop.hidden || msHint !== 'card:' + nextT[0];
     if (nextT){ qTop.dataset.msQ = 'card:' + nextT[0]; qTop.setAttribute('aria-expanded', String(!hTop.hidden)); hTop.textContent = nextT[4]; }
-    card.classList.toggle('is-celebrate', id_in(justDone, tasks));
+    if (cel){ clearTimeout(msCelebrateTimer); msCelebrateTimer = setTimeout(() => renderMilestones(), 1600); }
     if (!left.length){
       // everything on this page is done: let the last check land, then tuck the card away
       setTimeout(() => { if (!MILESTONES.some(m => m[3] === page && !milestonesDone()[m[0]])){ card.dataset.gone = '1'; card.hidden = true; } }, 3200);
@@ -22602,8 +22589,6 @@ function awardMilestone(id){
     const rc = card && !card.hidden && card.offsetParent !== null ? card.getBoundingClientRect() : null;
     if (rc && rc.bottom > 0 && rc.top < innerHeight && rc.right > 0 && rc.left < innerWidth){
       if (msMotionOk()){
-        const li = card.querySelector('li.is-new');
-        if (li){ li.classList.remove('is-new'); void li.offsetWidth; li.classList.add('is-new'); }
         card.classList.remove('ms-pulse'); void card.offsetWidth; card.classList.add('ms-pulse');
       }
       msChime();
@@ -22618,8 +22603,7 @@ function awardMilestone(id){
     if (!host) return;
     const card = document.createElement('div');
     card.className = 'ms-card'; card.id = 'msCard-' + page; card.hidden = true;
-    card.innerHTML = '<div class="ms-row"><button type="button" class="ms-head" aria-expanded="false"><span class="ms-ring" aria-hidden="true"></span><span class="ms-head-text"></span><span class="ms-caret" aria-hidden="true"></span></button><button type="button" class="ms-q ms-qtop" aria-label="How to do the next step">?</button></div><div class="ms-hint ms-hint-top" hidden></div><ul class="ms-items"></ul>';
-    card.querySelector('.ms-head').addEventListener('click', () => { if (MS_ONE_LINE.includes(page)) return; msCardOpen[page] = !msCardOpen[page]; renderMilestones(); });
+    card.innerHTML = '<div class="ms-row"><div class="ms-head"><span class="ms-ring" aria-hidden="true"></span><span class="ms-head-text"></span></div><button type="button" class="ms-q ms-qtop" aria-label="How to do the next step">?</button></div><div class="ms-hint ms-hint-top" hidden></div>';
     const back = host.querySelector(':scope > .settings-back');
     if (page === 'queue') host.insertBefore(card, host.querySelector('.queue-scroll'));
     else host.insertBefore(card, back ? back.nextSibling : host.firstChild);
