@@ -71,12 +71,28 @@ function createMainWindow(){
 
   mainWin.webContents.on('did-create-window', (child, { frameName }) => {
     if (frameName !== MINI_NAME) return;
-    child.setAlwaysOnTop(true, 'floating');
-    // #510: without skipTransformProcessType, Electron turns the app into a
-    // background agent while this is on, which removes the Dock and Cmd+Tab icon
-    child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
-    // #512: re-assert the pin each time the window is shown, macOS can drop it
-    child.on('show', () => { try { child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true }); child.setAlwaysOnTop(true, 'floating'); } catch(e){} });
+    // #510/#564 Dock + Cmd+Tab icon, #512 pinned on every desktop. Electron's
+    // skipTransformProcessType keeps the app a regular app, but macOS can still
+    // drop the Dock icon or the all-desktops flag when windows hide/show or the
+    // Space changes, so pin once, then re-assert on every window event and on a
+    // slow check while the mini player exists.
+    const pin = () => {
+      try {
+        if (child.isDestroyed()) return;
+        child.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+        child.setAlwaysOnTop(true, 'floating');
+        if (app.dock && !app.dock.isVisible()) app.dock.show();
+      } catch(e){}
+    };
+    pin();
+    for (const ev of ['show', 'focus', 'blur', 'move']) child.on(ev, pin);
+    for (const ev of ['hide', 'show', 'restore']) mainWin.on(ev, pin);
+    app.on('activate', pin);
+    const check = setInterval(() => {
+      if (child.isDestroyed()) return;
+      if (!child.isVisibleOnAllWorkspaces() || (app.dock && !app.dock.isVisible())) pin();
+    }, 1500);
+    child.on('closed', () => { clearInterval(check); mainWin && mainWin.removeListener('hide', pin); mainWin && mainWin.removeListener('show', pin); mainWin && mainWin.removeListener('restore', pin); app.removeListener('activate', pin); });
     // #511: macOS keeps the old frame's opaque corners on a transparent window
     // after a resize (Card -> Disc/Pill); clear them each time the size changes
     const clearCorners = () => { try { child.setBackgroundColor('#00000000'); child.invalidateShadow(); } catch(e){} };

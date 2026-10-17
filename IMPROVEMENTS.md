@@ -10194,12 +10194,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #513. Probably leftover installed web-app shortcuts.
 
 ### mini-follow-desktops: Mini player doesn't follow you when you swipe to another desktop (Geethub #512)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub #512. Mini player doesn't follow you when you swipe to another desktop.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #512. Regression of the pinned-on-every-desktop goal in desktop/.
+- **Branch:** agent/mac-mini-fixes
+- **Notes:** Synced from Geethub #512. Regression of the pinned-on-every-desktop goal in desktop/. Built 2026-10-17 in desktop/main.js (Mac app 1.0.7): the 1.0.4 fix (skipTransformProcessType) did not hold, so the mini window now re-pins on every show/focus/blur/move, on main-window hide/show/restore, on app activate, and a 1.5s check restores the all-desktops flag and calls app.dock.show() if the Dock icon is hidden. Not run on a Mac; needs a new DMG release and user confirmation. index.html download links still point at v1.0.6.
 
 ### mini-corners-disc-pill: Disc and Pill mini player shapes have non-see-through corners (Geethub #511)
 - **Status:** merged
@@ -10210,12 +10210,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #511. Shipped 2026-10-14 (cache v235): the Mac mini player's body paints nothing itself; its dark fill is a clipped ::before layer, and html stays truly transparent. A body background propagating over a default-transparent html was painting the corners; a near-zero alpha html turned them black. Confirmed by user. Mac app v1.0.3.
 
 ### mac-dock-icon-mini: Dock and Cmd+Tab icon disappear while in mini player mode (Geethub #510)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub #510. Dock and Cmd+Tab icon disappear while in mini player mode.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #510. 
+- **Branch:** agent/mac-mini-fixes
+- **Notes:** Synced from Geethub #510.  Built 2026-10-17 in desktop/main.js (Mac app 1.0.7): the 1.0.4 fix (skipTransformProcessType) did not hold, so the mini window now re-pins on every show/focus/blur/move, on main-window hide/show/restore, on app activate, and a 1.5s check restores the all-desktops flag and calls app.dock.show() if the Dock icon is hidden. Not run on a Mac; needs a new DMG release and user confirmation. index.html download links still point at v1.0.6.
 
 ### mini-and-full-both-open: Mini player stays open while the full player is open (Geethub #509)
 - **Status:** merged
@@ -10762,12 +10762,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #563.
 
 ### bug-mac-app-going-into-miniplayer-removes: mac app: going into miniplayer removes app icon from dock (Geethub #564)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub #564. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #564.
+- **Branch:** agent/mac-mini-fixes
+- **Notes:** Synced from Geethub #564. Built 2026-10-17 in desktop/main.js (Mac app 1.0.7): the 1.0.4 fix (skipTransformProcessType) did not hold, so the mini window now re-pins on every show/focus/blur/move, on main-window hide/show/restore, on app activate, and a 1.5s check restores the all-desktops flag and calls app.dock.show() if the Dock icon is hidden. Not run on a Mac; needs a new DMG release and user confirmation. index.html download links still point at v1.0.6.
 
 ### there-should-be-a-desktop-download: there should be a desktop download for pc (Geethub #565)
 - **Status:** ready
