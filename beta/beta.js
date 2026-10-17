@@ -1,3 +1,17 @@
+/* Owner's developer-mode shortcut: Ctrl+Option+Cmd+M toggles ebbless:wrappedBypass (no 2-week gate, see TESTER WEEK UP).
+   Works on every screen, including the beta lock and beta/feedback.html (this same snippet is at the top of beta/beta.js). */
+window.addEventListener('keydown', function (e) {
+  if (!(e.ctrlKey && e.altKey && e.metaKey && e.code === 'KeyM')) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  var K = 'ebbless:wrappedBypass', on = false;
+  try { on = !localStorage.getItem(K); on ? localStorage.setItem(K, '1') : localStorage.removeItem(K); } catch (x) { return; }
+  var t = document.createElement('div');
+  t.textContent = on ? 'Developer mode on' : 'Developer mode off';
+  t.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:2147483647;background:#111;color:#fff;padding:10px 18px;border-radius:20px;font:600 14px system-ui,sans-serif';
+  (document.body || document.documentElement).appendChild(t);
+  var onFeedback = /\/beta\/feedback/.test(location.pathname);
+  setTimeout(function () { if (on && onFeedback) location.href = '../'; else location.reload(); }, 600);
+}, true);
 // Shared helpers for the EBBLESS beta pages (signup, tester, feedback, bug).
 // Talks to the same Worker as the app; see worker/src/beta.js.
 (function(){
