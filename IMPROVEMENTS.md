@@ -11248,12 +11248,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #628.
 
 ### when-you-play-an-album-or-playlist-and-the: when you play an album or playlist and the queue changes to a new queue, the queue list should snap to the top (Geethub #629)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #629. 
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #629.
+- **Touches:** `renderQueuePanel`.
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #629. Cause: `renderQueuePanel` rebuilt the list and kept the old scroll offset, so a freshly loaded album/playlist opened mid-list. Fix: it remembers the first queue entry (`lastQueueHead`); when that changes (a new queue was loaded) the queue scroller goes to the top, while edits to the same queue (next/previous, add, remove) keep the scroll. Verified in the preview on a mobile viewport: scrolled to 3000, played another playlist, scrollTop 0; skipping to the next song kept 3000. Cases not tried: radio start, restoring a saved queue, undo of a queue clear.
 
 ### pictures-icons-in-the-advance-settings-sec: pictures/ icons in the advance settings section (Geethub #630)
 - **Status:** draft
@@ -11296,12 +11296,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #634. Likely duplicate of #581 (lock screen controls); fold together when queued. Folded into #581 (same ask: lock screen and notification player, here with play, rewind, heart). Built there, see bug-mobile-lock-screen-controls-and-notifications.
 
 ### mobile-moves-really-slow-and-slows-down-th: mobile moves really slow and slows down the phone (Geethub #635)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Bug Geethub #635. when you close it it doesnt stop. it's still visible in the top bar. it says its playing in the bg. there needs to be an audit on how to make it move faster, smoother and play well with other apps
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #635. Related to #595, #584 (performance).
+- **Touches:** GPU budget items: help-icon blink, search-bar pulse ring, library thumbnail videos, library card buttons.
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #635. Related to #595, #584 (performance). **Partial: first slice shipped, issue stays open.** Method: headless Chrome driven over CDP (mobile 375x812 metrics, 4x CPU throttle, 10 to 15 s windows, main-thread task time and style recalcs, JS sampling profile); script is not in the repo. Software rendering and run-to-run noise are large (about 10 to 20 percent), so treat gains as indicative. Found and fixed: (1) `#helpBtn` blink animated `color` (stepped), restyling and repainting the top bar over moving video; now an accent copy of the glyph fades by opacity (biggest single idle cost on the splash: 1.43 s to 0.72 s task time per 8 s at 4x). (2) Search-bar pulse ring animated `box-shadow`; now an overlay's opacity. (3) Library thumbnail videos (Swell, Swirl, On Air) kept playing while the library was hidden or the app backgrounded; they now play only while the grid is on screen (`syncLibraryVideos`). (4) The On Air clip's cross-fade ran a `requestAnimationFrame` loop forever; now driven by `timeupdate`. (5) Library card menu/pin buttons used `backdrop-filter` over the moving thumbs (the watchdog warning); now solid fill; splash buttons likewise. Result, 15 s windows: library view 3.2 s to 2.4 to 2.8 s task time (about 15 to 25 percent less); player view no measurable change (2.35 s before, 2.25 to 2.43 s after; style recalc count was noisy and not tied to these animations). **Not done / not verified:** no song was played (needs YouTube and the worker), so playback-time costs (ambient canvases, visualizer, progress timers) were not profiled; no real phone; the "closing the app does not stop it / still in the top bar" part is Android native (media notification/foreground service), not touched here, see the Android lane. Next: profile with a song playing, and the 3 ambient canvases.
 
 ### hovering-the-miniplayer-should-show-the-ti: hovering the miniplayer should show the title and artist and heart and thumbs down (Geethub #636)
 - **Status:** ready

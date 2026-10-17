@@ -551,7 +551,10 @@ body.split-desktop #topbar{z-index:42}
   color:var(--faint);background:none;padding:0}
 .import-row .paste-guide-x:hover,.import-row .paste-guide-x:focus-visible{color:var(--text)}
 .import-row .paste-guide-ok{display:block;margin:12px 0 0 auto;padding:7px 16px;font-size:12.5px}
-.import-row.paste-guide-on input{border-color:var(--accent);animation:paste-guide-ring 2.2s var(--ease-in-out) infinite}
+.import-row.paste-guide-on input{border-color:var(--accent)}
+/* #635: the pulsing ring is a static shadow on an overlay whose opacity breathes, not a box-shadow keyframe (that repainted the top bar every frame) */
+.import-row.paste-guide-on .import-field::after{content:'';position:absolute;inset:0;border-radius:var(--r-md);box-shadow:0 0 0 6px var(--accent-dim);pointer-events:none;opacity:0;animation:paste-guide-glow 2.2s var(--ease-in-out) infinite}
+@keyframes paste-guide-glow{0%,100%{opacity:0}50%{opacity:1}}
 /* paste-recent-searches: recent searches/pastes under the empty, focused bar */
 .paste-recents{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:21;
   background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-lg);
@@ -592,7 +595,7 @@ body.onb-active .paste-guide{display:none}
 @keyframes paste-guide-ring{0%,100%{box-shadow:0 0 0 0 var(--accent-dim)}50%{box-shadow:0 0 0 6px var(--accent-dim)}}
 @media (prefers-reduced-motion:reduce){
   .paste-guide{animation:none}
-  .import-row.paste-guide-on input{animation:none;box-shadow:0 0 0 3px var(--accent-dim)}
+  .import-row.paste-guide-on .import-field::after{animation:none;opacity:1;box-shadow:0 0 0 3px var(--accent-dim)}
 }
 /* empty-state-play-nudge (#264): first-run "just press play" glow - see
    refreshPlayNudge(). A slow breathing ring, not a blink; static under
@@ -929,7 +932,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card.is-refreshing .count,.currents-status{animation:onb-load-pulse 1.4s ease-in-out infinite}
 .currents-status{padding:10px 14px;font-size:12.5px;color:var(--faint)}
 .lib-card .menu-btn{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;
-  background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;   /* #635: solid fill, no blur over the moving Swell/Air thumbs */
   opacity:0;z-index:4;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
 .lib-card:hover .menu-btn,.lib-card .menu-btn:active,.lib-card .menu-btn.is-active{opacity:1}
 .lib-card .menu-btn:hover{background:rgba(0,0,0,.75)}
@@ -946,7 +949,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 @media (hover: none), (pointer: coarse){ .lib-card .art .card-play{opacity:1} }
 
 .lib-card .pin{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;
-  background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;
   opacity:0;z-index:4;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
 .lib-card:hover .pin,.lib-card .pin:active,.lib-card .pin.is-active{opacity:1}
 .lib-card .pin svg{width:12px;height:12px;color:#fff}
@@ -2372,12 +2375,13 @@ body.split-desktop #topbar:has(#navFeedbackBtn:not([hidden])){--tb-r:280px}
 @keyframes navFbRing{0%,100%{opacity:0;transform:scale(.92)}50%{opacity:1;transform:scale(1)}}
 #navFeedbackBtn:not([hidden]){position:relative;border-radius:12px}
 #navFeedbackBtn:not([hidden])::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 5px rgba(224,178,106,.45);pointer-events:none;opacity:0;animation:navFbRing 1.6s ease-in-out infinite}
-/* the help button just changes colour, once every 3s, in coarse steps (a smooth colour keyframe restyles every frame) */
-@keyframes helpTint{0%,100%{color:var(--faint)}50%{color:var(--accent)}}
-#helpBtn.is-unplayed{animation:helpTint 3s steps(12) infinite;opacity:1}
+/* the help button just changes colour, once every 3s, in coarse steps. #635: animating `color` restyled and repainted the top bar (it sits over moving video) on every step, about half the idle main-thread cost on a phone. An accent copy of the icon (a mask of the same glyph) fades over the faint one instead: opacity only. */
+@keyframes helpGlow{0%,100%{opacity:0}50%{opacity:1}}
+#helpBtn.is-unplayed,#helpBtn.is-nudge{position:relative;opacity:1}
+#helpBtn.is-unplayed::after,#helpBtn.is-nudge::after{content:'';position:absolute;inset:8px;background:var(--accent);pointer-events:none;opacity:0;animation:helpGlow 3s steps(12) infinite;-webkit-mask:var(--help-glyph) center/contain no-repeat;mask:var(--help-glyph) center/contain no-repeat;--help-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4.1'/%3E%3Ccircle cx='12' cy='17.4' r='.4' fill='%23000'/%3E%3C/svg%3E")}
 #navFeedbackBtn:not([hidden]) svg{color:var(--accent)}
 /* Geethub #461: header tutorial button blinks (same keyframes as Feedback) until the tutorial has been played once */
-@media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{animation:none;color:var(--accent)}#navFeedbackBtn:not([hidden])::after{animation:none}}
+@media (prefers-reduced-motion:reduce){#helpBtn.is-unplayed{color:var(--accent)}#helpBtn.is-unplayed::after,#helpBtn.is-nudge::after{animation:none}#navFeedbackBtn:not([hidden])::after{animation:none}}
 @media (prefers-reduced-motion:reduce){
   #navFeedbackBtn:not([hidden]){animation:none;outline:2px solid var(--accent)}}
 .tester-banner .tb-send{flex:none;background:var(--accent);color:var(--on-accent,#151107);border-radius:14px;padding:6px 12px;font-size:12px;font-weight:600}
@@ -2955,7 +2959,6 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 #splash.is-choice .splash-choice{opacity:1;pointer-events:auto;transform:translateY(0)}
 .splash-choice-btn{font:inherit;font-size:14px;letter-spacing:.2px;padding:11px 22px;border-radius:22px;
   border:1px solid rgba(255,255,255,.34);background:rgba(18,18,18,.85);color:var(--text);cursor:pointer;
-  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   transition:background var(--dur-ui) var(--ease-out),border-color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .splash-choice-btn:hover,.splash-choice-btn:focus-visible{background:rgba(32,32,32,.92);border-color:rgba(255,255,255,.5)}
 .splash-choice-btn:active{transform:scale(.96)}
@@ -9161,16 +9164,9 @@ function setView(name){
   // call ever does. Some engines never grant an autoplaying video started
   // while hidden a second chance once it's actually shown, so re-kick it
   // here on every switch into library rather than only at creation time.
-  if (name === 'library'){
-    // same for SwiiiRrrLL's looping thumb
-    const teaserVideos = libraryGrid ? libraryGrid.querySelectorAll('.lib-card .video-face video, .lib-card .pl-art-video video') : [];
-    teaserVideos.forEach(v => {
-      if (!v.paused) return;
-      v.muted = true;
-      const playPromise = v.play();
-      if (playPromise && playPromise.catch) playPromise.catch(() => {});
-    });
-  }
+  // same for SwiiiRrrLL's looping thumb; and (#635) they stop again when the
+  // library is left, they only ran for nobody to see
+  syncLibraryVideos();
   syncHistoryBuffer();
 }
 
@@ -10072,6 +10068,21 @@ function albumVersionInfo(name){
   const key = s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   return { key: key.length >= 2 ? key : '', plain: !changed };
 }
+// #635: the library's looping thumbnail clips (Swell, On/Off Air) played on and
+// on while the library was hidden or the app backgrounded, decoding video on a
+// phone for nobody to see. Play them only while the grid is actually on screen.
+function syncLibraryVideos(){
+  if (!libraryGrid) return;
+  const show = !document.hidden && libraryGrid.getClientRects().length > 0;
+  libraryGrid.querySelectorAll('.lib-card .video-face video, .lib-card .pl-art-video video').forEach(v => {
+    if (!show){ if (!v.paused) v.pause(); return; }
+    if (!v.paused || v.style.opacity === '0') return;   // the standby copy of a cross-fading pair stays parked
+    v.muted = true;
+    const pp = v.play();
+    if (pp && pp.catch) pp.catch(() => {});
+  });
+}
+document.addEventListener('visibilitychange', syncLibraryVideos);
 function renderLibrary(){
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
@@ -10300,20 +10311,22 @@ function renderLibrary(){
             const t = cur; cur = nxt; nxt = t; fading = false;
             void cur.offsetWidth; nxt.style.transition = 'opacity ' + FADE + 's linear';
           };
+          // #635: driven by timeupdate (about 4 a second, only while a clip plays)
+          // instead of a requestAnimationFrame loop that ran 60 times a second
+          // forever, even with the clip paused or off screen
           const tick = () => {
             if (!face.isConnected) return;
             const d = cur.duration;
-            if (!fading && d && isFinite(d) && !cur.paused && d - cur.currentTime <= FADE){
+            if (!fading && d && isFinite(d) && !cur.paused && d - cur.currentTime <= FADE + 0.3){
               fading = true; nxt.currentTime = 0;
               const p2 = nxt.play(); if (p2 && p2.catch) p2.catch(() => {});
               nxt.style.opacity = '1';
               setTimeout(swap, FADE * 1000);
             }
-            requestAnimationFrame(tick);
           };
           const restart = () => { if (cur.ended && !fading){ cur.currentTime = 0; cur.play().catch(() => {}); } };
           v.addEventListener('ended', restart); v2.addEventListener('ended', restart);
-          requestAnimationFrame(tick);
+          v.addEventListener('timeupdate', tick); v2.addEventListener('timeupdate', tick);
         }
       }
       artDiv.appendChild(face);
@@ -10544,6 +10557,7 @@ function renderLibrary(){
   refreshLibraryMarquees();
   markNowPlaying();
   try{ refreshPlayNudge(); } catch(e){}
+  syncLibraryVideos();
 }
 // Single-section filters draw LIB_PAGE cards, then "Show N more" (#487).
 // var, not const: renderLibrary runs during startup, before these lines.
@@ -20177,9 +20191,20 @@ function refreshBlendIfStale(){
 window.ebblessTimeContext = function(d){ return getTimeContext(d ? new Date(d) : new Date()); };
 window.ebblessTimeContext.rank = function(ranked, candMetrics, d, scale){ return applyTimePreference(ranked, candMetrics || null, getTimeContext(d ? new Date(d) : new Date()), scale == null ? 1 : scale); };
 
+// #629: a new queue (an album or playlist played over the old one) shows from
+// its top; edits to the same queue (add, remove, reorder) keep the scroll.
+// The first entry tells them apart: edits keep what was queued before the song
+// that is playing, a fresh load starts a new list.
+let lastQueueHead = '';
 function renderQueuePanel(){
   renderDiscoverToggle();
   markNowPlaying();
+  const head = state.queue.length ? state.queue[0].plId + '|' + state.queue[0].idx : '';
+  if (head !== lastQueueHead){
+    lastQueueHead = head;
+    const sc = queueBody.closest('.queue-scroll');
+    if (sc) sc.scrollTop = 0;
+  }
   queueBody.innerHTML = '';
   if (state.queuePos < 0 || !state.queue.length){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; queueBody.appendChild(queueArrowsRow); return; }
 
@@ -32343,7 +32368,6 @@ body.is-sample #sampleClock{display:inline-flex}
 @media (min-width:860px){body.is-sample #topbar{--tb-r:560px}}
 @media (min-width:860px) and (max-width:1149.98px){body.is-sample #topbar{--tb-r:360px}}
 body.is-sample.split-desktop #topbar{--tb-r:272px}
-#helpBtn.is-nudge{animation:helpTint 3s steps(12) infinite;opacity:1}
 #sampleDim{position:fixed;inset:0;z-index:10005;cursor:default}
 #sampleSpot{position:fixed;z-index:10005;pointer-events:none;border-radius:50%;box-shadow:0 0 0 200vmax rgba(10,10,10,.78),0 0 0 2px var(--accent);transition:opacity 300ms}
 #sampleBubble{position:fixed;z-index:10006;width:min(280px,calc(100vw - 32px));padding:16px 18px;border-radius:16px;background:#1c1c1c;color:#f2f2f2;border:1px solid var(--accent-dim,rgba(224,178,106,.4));box-shadow:0 14px 40px rgba(0,0,0,.55);font-size:15px;line-height:1.45}
@@ -32353,7 +32377,7 @@ body.is-sample.split-desktop #topbar{--tb-r:272px}
 #sampleBubble button{font:inherit;font-size:13px;font-weight:600;letter-spacing:.8px;border-radius:999px;padding:9px 16px;cursor:pointer}
 #sampleBubble .sb-go{background:var(--accent);color:var(--on-accent,#151107);border:1px solid var(--accent)}
 #sampleBubble .sb-skip{background:none;color:#bdbdbd;border:0;padding:9px 4px;text-decoration:underline;text-underline-offset:3px}
-@media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{animation:none;color:var(--accent)}#sampleClock.is-warn{animation:none}}
+@media (prefers-reduced-motion:reduce){#helpBtn.is-nudge{color:var(--accent)}#sampleClock.is-warn{animation:none}}
 .sample-modal{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,14,.72);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f2f2f2}
 .sample-modal[hidden]{display:none}
 .sample-modal .se-card{width:min(520px,100%);padding:30px 26px 24px;border-radius:20px;background:#161616;border:1px solid rgba(255,255,255,.1);box-shadow:0 24px 70px rgba(0,0,0,.6)}
