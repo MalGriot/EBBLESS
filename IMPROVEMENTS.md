@@ -10162,12 +10162,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #487. Lane already active (see AGENTS.md); several commits on its branch.
 
 ### mac-warning-softener: Soften the Mac security warning so people don't get scared (Geethub #516)
-- **Status:** ready
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Idea, Geethub #516. Soften the Mac security warning so people don't get scared.
 - **Touches:**
 - **Branch:** agent/mac-download-flow
-- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a 3-step first-open guide under the button (drag to Applications; right-click, Open, Open; newer macOS: System Settings > Privacy & Security > Open Anyway). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Stays ready for that step.
+- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a 3-step first-open guide under the button (drag to Applications; right-click, Open, Open; newer macOS: System Settings > Privacy & Security > Open Anyway). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Parked 2026-10-17 by owner (needs an Apple account/signing); the first-open guide stays. Revisit when an Apple Developer account exists.
 
 ### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
 - **Status:** draft
