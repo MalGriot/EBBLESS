@@ -75,9 +75,57 @@ ads EBBLESS users hit between songs.
   the existing seek poll). Roughly a day with testing, mostly on the
   mismatch-cut edge cases.
 
-**Recommendation.** Do not build now. It does not address ad complaints (#523,
+**Recommendation (superseded, see Part 3).** Do not build now. It does not address ad complaints (#523,
 #575), the benefit for music is small and risky, and for podcasts it only covers
 the YouTube-fallback path. Revisit only as an opt-in "skip talking sections in
 YouTube-sourced podcasts" setting, restricted to `sponsor`/`selfpromo`, applied
 only when the matched video duration is within tolerance of the expected
 duration (reuse `AD_DUR_TOLERANCE_S`). Do not use it for songs.
+
+## Part 3: What was built (2026-10-17, cache v314)
+
+The owner decided to build it. `sbWatch` in index.html, next to the #575 ad
+code, feeding the same tap-to-skip prompt (`setSkipSegs` / `skipPromptTick`).
+
+**How SponsorBlock works, as used here.** Checked live on 2026-10-17:
+`GET https://sponsor.ajay.app/api/skipSegments/<first 4 hex of sha256(videoID)>`
+`?categories=[...]&actionTypes=["skip"]` returns every video under that hash
+prefix (100+), each `{ videoID, segments: [{ segment: [start, end], category,`
+`actionType, videoDuration, votes, locked, UUID }] }`; 404 when none. The
+server sends `Access-Control-Allow-Origin: *`, so the browser asks directly
+and the worker is untouched. Only the prefix leaves the device; the app picks
+its own video out of the reply, so SponsorBlock can't tell which one plays.
+Segments voted down are already hidden by the server.
+
+**Licence.** The segment database is CC BY-NC-SA 4.0 (attribution,
+non-commercial, share-alike); the server code is AGPL-3.0, which doesn't
+apply since EBBLESS only reads the public API. Attribution is the Settings
+row's link to sponsor.ajay.app. Non-commercial: fine while EBBLESS is free;
+revisit before any paid tier.
+
+**Scope decided.**
+- Podcast episodes playing from YouTube (the no-public-feed fallback):
+  always on, categories sponsor, selfpromo, interaction, intro, outro,
+  labelled Sponsor / Self-promo / Reminder / Intro / Outro.
+- Songs: off by default. Settings > Playback > "Skip talking in songs" turns
+  on `music_offtopic` only (label "Talking"). With it off, no request is made
+  for songs at all.
+- Feed-audio episodes (`au:` ids, like #575 NoSleep) are not covered: they
+  have no YouTube id.
+- Never a silent skip; the listener taps Skip. No auto-skip setting was
+  added (possible follow-up).
+
+**Accuracy guard.** Segments are keyed by the exact video playing, so the
+"different cut" risk from Part 2 only applies when the uploader re-trims a
+video: a segment whose recorded `videoDuration` differs from the player's
+duration by more than 2 s is dropped. Overlapping segments merge; under 3 s
+isn't offered. One request per video per session; a failed request is
+retried after 2 minutes. No new loop or animation: it rides the existing
+seek poll and prompt.
+
+**Verified** in a localhost preview: podcast episode `89uRpoPmR5U` showed
+"Sponsor 0:57 Skip" inside 0:31-1:31 and Skip landed after it; the same
+video as a song showed nothing; song `THscJf7O7bY` showed "Talking" only
+after turning the setting on and lost it when turned off; no console errors
+or new `[gpu-watchdog]` warnings. Not verified: Android native app, a real
+YouTube-fallback podcast imported end to end.

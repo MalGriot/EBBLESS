@@ -4442,6 +4442,13 @@ body.week-up-on{overflow:hidden}
           </div>
           <button type="button" class="switch is-active" id="levelBtn" role="switch" aria-checked="true" aria-label="Even out volume"><span class="switch-knob"></span></button>
         </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Skip talking in songs</div>
+            <div class="desc">Shows a Skip button when a song's video has talking before or after the music. Podcasts from YouTube always get one for sponsor reads and intros. Skip times from <a href="https://sponsor.ajay.app" target="_blank" rel="noopener">SponsorBlock</a>, marked by its users.</div>
+          </div>
+          <button type="button" class="switch" id="sbSongsBtn" role="switch" aria-checked="false" aria-label="Skip talking in songs"><span class="switch-knob"></span></button>
+        </div>
       </div>
       <div class="settings-block" id="settingsAppBlock">
         <h2>App</h2>
@@ -27852,8 +27859,8 @@ function renderChapterList(t){
   });
 }
 // Tap-to-skip prompt: for any time range of the playing track, in the
-// player's own seconds (ad breaks below; SponsorBlock-style segments can
-// reuse it, #573). Nothing skips by itself - the listener taps.
+// player's own seconds (ad breaks and SponsorBlock segments below, #575
+// #573). Nothing skips by itself - the listener taps.
 var skipSegs = new Map(), skipShown = null, skipLeftTxt = '';
 function setSkipSegs(id, segs){ skipSegs.set(id, segs); }
 function skipPromptTick(cur){
@@ -28122,6 +28129,75 @@ function podAdWatch(){
   const t = currentTrack();
   if (t && isAudioVideoId(t.videoId) && !podAdScans.has(t.videoId)) podAdScanSoon(t);
 }
+// SponsorBlock segments (#573) for what plays from YouTube: time ranges
+// SponsorBlock's users mark per video (a sponsor read, an intro, a "talking"
+// part before a song) become tap-to-skip ranges (above), never a silent skip.
+// Podcast episodes get sponsor/self-promo/reminder/intro/outro; songs only
+// get "talking" parts, and only with the setting on (off by default: a song
+// is meant to play whole). Asked straight from the browser (the API allows
+// any origin) by the first 4 hex of the video id's SHA-256, so SponsorBlock
+// never learns which video plays. Data: SponsorBlock, CC BY-NC-SA 4.0
+// (credited in Settings).
+const SB_API = 'https://sponsor.ajay.app/api/skipSegments/';
+const SB_POD_CATS = ['sponsor', 'selfpromo', 'interaction', 'intro', 'outro'];
+const SB_SONG_CATS = ['music_offtopic'];
+const SB_LABEL = { sponsor: 'Sponsor', selfpromo: 'Self-promo', interaction: 'Reminder', intro: 'Intro', outro: 'Outro', music_offtopic: 'Talking' };
+const LS_SB_SONGS = 'ebbless:sbSongs';
+var sbSongsOn = lsGet(LS_SB_SONGS, false) === true;
+var sbGot = new Map(); // videoId -> { segs: [{ s, e, cat, vd }] | null (asking), at }
+var sbShownFor = '';
+async function sbFetch(id){
+  const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(id))), b => b.toString(16).padStart(2, '0')).join('');
+  const q = '?categories=' + encodeURIComponent(JSON.stringify(SB_POD_CATS.concat(SB_SONG_CATS))) + '&actionTypes=' + encodeURIComponent('["skip"]');
+  const r = await fetch(SB_API + hash.slice(0, 4) + q);
+  if (r.status === 404) return []; // no video under that prefix has any
+  if (!r.ok) throw new Error('SponsorBlock ' + r.status);
+  const v = (await r.json()).find(x => x && x.videoID === id);
+  return v ? v.segments.filter(g => g.actionType === 'skip' && SB_LABEL[g.category])
+    .map(g => ({ s: +g.segment[0], e: +g.segment[1], cat: g.category, vd: +g.videoDuration || 0 })) : [];
+}
+// from the seek poll: ask once per video while it plays; offer what fits
+function sbWatch(dur){
+  const t = currentTrack();
+  if (!t || !t.videoId || isAudioVideoId(t.videoId) || !(dur > 0) || !crypto.subtle) return;
+  const pod = isPodcastTrack(t);
+  if (!pod && !sbSongsOn) return;
+  const id = t.videoId, got = sbGot.get(id);
+  if (!got || (!got.segs && Date.now() - got.at > 120000)){
+    sbGot.set(id, { segs: null, at: Date.now() });
+    sbFetch(id).then(segs => { sbGot.set(id, { segs, at: Date.now() }); sbShownFor = ''; })
+      .catch(e => console.warn('[sponsorblock]', e)); // asked again in 2 min
+    return;
+  }
+  if (!got.segs || sbShownFor === id) return;
+  sbShownFor = id;
+  const cats = pod ? SB_POD_CATS : SB_SONG_CATS, out = [];
+  got.segs
+    // marked on this video as it was then: skipped if it's been re-cut since
+    .filter(g => cats.includes(g.cat) && g.e > g.s && (!g.vd || Math.abs(g.vd - dur) <= 2))
+    .sort((a, b) => a.s - b.s)
+    .forEach(g => {
+      const p = out[out.length - 1];
+      if (p && g.s <= p.e + 0.5) p.e = Math.max(p.e, g.e); else out.push({ s: g.s, e: Math.min(g.e, dur), label: SB_LABEL[g.cat] });
+    });
+  // under 3 s isn't worth a prompt
+  setSkipSegs(id, out.filter(g => g.e - g.s >= 3));
+}
+const sbSongsBtn = document.getElementById('sbSongsBtn');
+function renderSbSongsUI(){
+  sbSongsBtn.setAttribute('aria-checked', String(sbSongsOn));
+  sbSongsBtn.classList.toggle('is-active', sbSongsOn);
+}
+sbSongsBtn.addEventListener('click', () => {
+  sbSongsOn = !sbSongsOn;
+  lsSet(LS_SB_SONGS, sbSongsOn);
+  renderSbSongsUI();
+  // withdrawn now; what still applies (podcasts, or songs when on) is
+  // offered again on the next tick
+  sbGot.forEach((g, id) => skipSegs.delete(id));
+  sbShownFor = '';
+});
+renderSbSongsUI();
 function markCurrentChapter(cur, scroll){
   if (!chapListItems.length || !chapPanelEl() || !chapPanelEl().classList.contains('is-open')) return;
   let idx = -1;
@@ -28185,6 +28261,7 @@ function paintSeekUI(cur, dur){
   paintChapterTicks(dur);
   markCurrentChapter(cur);
   podAdWatch();
+  sbWatch(dur);
   skipPromptTick(cur);
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   if (!seekTrack.classList.contains('ad-fill')){ seekFill.style.width = pct + '%'; flowSeekFill.style.width = pct + '%'; miniLineFill.style.width = pct + '%'; }
