@@ -9569,20 +9569,6 @@ function renderLibrary(){
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
   libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
-  // (#408) split playlists into EBBLESS-made (starter) and user-added, each
-  // under a small label; only when both groups exist and not searching
-  if (!searchQ && showPlaylists){
-    const made = new Set(starterLibraryIds().concat([SWELL_ID, BLEND_ID, NP_ID]));
-    const cards = Array.from(libraryGrid.querySelectorAll(':scope > .lib-card'));
-    const mine = cards.filter(c => !made.has(c.dataset.plId)), theirs = cards.filter(c => made.has(c.dataset.plId));
-    if (mine.length && theirs.length){
-      const lab = (t) => { const d = document.createElement('div'); d.className = 'lib-group-label'; d.textContent = t; return d; };
-      libraryGrid.appendChild(lab('Made by EBBLESS'));
-      theirs.forEach(c => libraryGrid.appendChild(c));
-      libraryGrid.insertBefore(lab('Your playlists'), libraryGrid.firstChild);
-      mine.forEach(c => libraryGrid.insertBefore(c, theirs[0].previousSibling));
-    }
-  }
   // Fold arrows on the section headers: All view only, so a single-type
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
