@@ -67,3 +67,11 @@ Screen-off lightweight mode (page hides all screens except the players when the 
 notice after a kill (unverified against a real low-memory kill). 13:44:56 in the long soak was a phone call. Next: audio-only
 YouTube deck while the screen is off, and a tiny watchdog service process; then repeat the 70-minute soak.
 
+
+## 2.11.0 (not yet tested on the phone)
+- **Lock screen / notification player (#581, #634):** `PlaybackService` owns a `MediaSession` and a media-style notification
+  (previous, play/pause, next, heart). The page mirrors `navigator.mediaSession` into `EbbNative.media(json)` (shim in `index.html`)
+  and button presses come back through `window.__ebbMediaAction`. Cover art is fetched and scaled in the service.
+- **First seconds of a song (#578):** the splash releases its video decoder at Enter; the library background video starts 6 s after the
+  splash and Google sign-in 12 s after, so the first song's player does not start in a burst of other work.
+- **Memory (#584):** `onTrimMemory` makes the page reclaim garbage right away. Still needs a 70-minute soak to know if it is enough.
