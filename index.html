@@ -755,10 +755,11 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card .art.cycle .face.cover-face{display:block}
 .lib-card .art.cycle .face.cover-face{opacity:1}
 .lib-card .art.cycle .face.grid-face{opacity:0}
-.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 17s ease-in-out infinite}
-.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 17s ease-in-out infinite}
-@keyframes thumb-cycle-cover{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}
-@keyframes thumb-cycle-grid{0%,41%{opacity:0}50%,91%{opacity:1}100%{opacity:0}}
+.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 42s ease-in-out infinite}
+.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 42s ease-in-out infinite}
+/* Geethub #602: 42s loop = the art flips between 1x1 and 2x2 every 21s (opacity only) */
+@keyframes thumb-cycle-cover{0%,43%{opacity:1}50%,93%{opacity:0}100%{opacity:1}}
+@keyframes thumb-cycle-grid{0%,43%{opacity:0}50%,93%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.lib-card .art.cycle .face{animation:none}.lib-card .art.cycle .face.grid-face{display:none}}
 /* #487: a big library had hundreds of these crossfades running off screen,
    each its own GPU layer. Off-screen cards (refreshLibraryMarquees' observer)
@@ -10956,7 +10957,10 @@ function handleLibCtxAction(action, id){
   else if (action === 'delete'){
     // delete right away with an Undo in the toast (no confirm box)
     const libBefore = getLibrary().slice(), pinnedBefore = isPinned(id), data = lsGet(LS_PL(id), null);
+    // Geethub #600: the list scrolls in .lib-body, which the re-render empties; put it back
+    const lb = document.querySelector('#libraryListWrap .lib-body'), keepTop = lb ? lb.scrollTop : 0;
     removeFromLibrary(id); renderLibrary();
+    if (lb && keepTop) lb.scrollTop = keepTop;
     showToast('Deleted "' + pl.name + '"', { label: 'Undo', run: () => restoreToLibrary(id, data, libBefore, pinnedBefore) });
   }
 }
@@ -22563,7 +22567,10 @@ function marqueeVisibilityObserve(el, win){
       // isVisible (Chrome IO v2) is false for visibility:hidden / opacity:0 / covered
       // elements, which plain isIntersecting ignores (a marquee kept running inside a
       // hidden overlay); undefined elsewhere, so those fall back to isIntersecting
-      const on = e.isIntersecting && e.isVisible !== false;
+      // Geethub #601: library thumb titles sit under transformed/composited cards that
+      // IO v2 reports as "not visible" forever, so they never scrolled; hidden library
+      // views are display:none, which isIntersecting already catches
+      const on = e.isIntersecting && (e.isVisible !== false || !!e.target.closest('.lib-card'));
       e.target._marqueeOnScreen = on;
       if (!a) return;
       if (on){ if (a.playState === 'paused') a.play(); }
@@ -23565,9 +23572,34 @@ function finishQueueAtEnd(opts){
   let pos = state.queuePos + 1;
   if (pos >= state.queue.length){
     if (state.repeat === 'all'){ pos = 0; if (state.shuffle) state.queue = shuffleTail(state.queue, 0); }
-    else { setPlayingUI(false); return; }
+    else {
+      setPlayingUI(false);
+      // Geethub #599: a queue that ran out on its own, with discovery off, goes back to nothing playing yet
+      const origin = discoverOriginId();
+      if (!opts && !(origin && isDiscoverOn(origin))) resetToNothingPlaying();
+      return;
+    }
   }
   playIndex(pos, opts);
+}
+function resetToNothingPlaying(){
+  state.queue = []; state.queuePos = -1;
+  lsDel(LS_RESUME);
+  $('trackMeta').classList.add('is-empty');
+  setMarqueeText(trackTitle, 'Nothing playing yet');
+  setMarqueeText(trackArtist, '');
+  setMarqueeText(flowTitle, '');
+  setMarqueeText(flowArtist, '');
+  setMarqueeText(miniTitle, '');
+  setMarqueeText(miniArtist, '');
+  [artA, artB].forEach(a => { a.classList.remove('is-active'); a.removeAttribute('src'); });
+  recordLabelImg.removeAttribute('src');
+  cassetteLabelArt.removeAttribute('href'); cassetteLabelArt.removeAttribute('xlink:href');
+  cassetteLabelArt.classList.remove('is-loaded');
+  seekFill.style.width = '0%';
+  timeCur.textContent = '0:00'; timeDur.textContent = '0:00';
+  renderQueuePanel();
+  updateMiniBarVisibility();
 }
 
 // Manual skips (next/prev) ask for a crossfade - startSkipCrossfade()
