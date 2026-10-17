@@ -4590,6 +4590,7 @@ body.week-up-on{overflow:hidden}
           <li><span><kbd>I</kbd></span>Visualizer: hold pattern on / off</li>
           <li><span><kbd>K</kbd></span>Shuffle</li>
           <li><span><kbd>O</kbd></span>Repeat</li>
+          <li><span><kbd>M</kbd></span>Mini player (desktop)</li>
         </ul>
         </div></div>
       </div>
@@ -25807,6 +25808,14 @@ document.addEventListener('keydown', (e) => {
     case 'o': case 'O':
       if (!e.repeat) cycleRepeat();
       break;
+    // #606: M opens the mini player (pressed again, or pressed inside it, goes back to the app)
+    case 'm': case 'M':
+      if (e.repeat || !miniPlayerSupported()) break;
+      if (miniPlayerWin && !miniPlayerWin.closed){
+        if (isDesktopApp) window.ebblessDesktop.focusMain();
+        else try { miniPlayerWin.close(); } catch(_){}
+      } else if (currentTrack()) openMiniPlayer();
+      break;
     // z/x/c/v: the visual tabs as one row - art, cymatics, lyrics, video
     case 'z': case 'Z': {
       // first press from cymatics/lyrics/video just shows the art; after that it
@@ -26029,6 +26038,8 @@ const MP_ICO = {
   repeat: '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>',
   like: '<path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/>',
   flag: '<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>',
+  decline: '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>',
+  shape: '<path d="M12 3l4 7H8zM4 14h7v7H4zm13.5 3.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7z" transform="translate(0 -2)"/>',
   queue: '<path d="M3 6h13v2H3zm0 5h13v2H3zm0 5h9v2H3zm15-1V9l5 4z"/>',
   style: '<path d="M12 3a9 9 0 000 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16a5 5 0 005-5c0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3-4a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm5 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm3 4a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/>',
   skipBack: '<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="15.6" text-anchor="middle">15</text>',
@@ -26202,28 +26213,47 @@ const MINI_PLAYER_STYLE = `
    below writes into it exactly as it does into a PiP window. Shapes (card,
    pill, disc, float) only exist there. */
 const isDesktopApp = !!(window.ebblessDesktop && window.ebblessDesktop.platform);
+// #604/#623: the mini player always sits in the bottom right corner of the screen's usable area (above the Dock)
+const MP_CORNER_GAP = 16;
+function mpCornerPos(w, h, scr){
+  scr = scr || window.screen;
+  const L = scr.availLeft || 0, T = scr.availTop || 0;
+  return { x: Math.max(L, Math.round(L + scr.availWidth - w - MP_CORNER_GAP)), y: Math.max(T, Math.round(T + scr.availHeight - h - MP_CORNER_GAP)) };
+}
+function mpMagnetize(win, w, h){
+  try { const c = mpCornerPos(w, h, win.screen); win.moveTo(c.x, c.y); } catch(e){}
+}
 function requestMiniWindow(width, height){
   if (!isDesktopApp) return documentPictureInPicture.requestWindow({ width, height });
-  const w = window.open('about:blank', 'ebbless-mini', 'width=' + width + ',height=' + height);
+  const c = mpCornerPos(width, height);
+  const w = window.open('about:blank', 'ebbless-mini', 'width=' + width + ',height=' + height + ',left=' + c.x + ',top=' + c.y);
   return w ? Promise.resolve(w) : Promise.reject(new Error('mini window blocked'));
 }
-const MP_SHAPES = ['card', 'pill', 'disc', 'tape', 'float'];
-const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'Disc', tape: 'Tape', float: 'Float (no frame)' };
+const MP_SHAPES = ['card', 'pill', 'disc', 'tape', 'square', 'cymatics', 'float'];
+const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'LP (disc)', tape: 'Cassette (tape)', square: 'Square', cymatics: 'Cymatics', float: 'Float (no frame)' };
 // #526: with no shape picked by hand the shape follows the art style (record = disc, cassette = tape, otherwise card)
 const MP_SHAPE_BY_ART = { record: 'disc', cassette: 'tape' };
 function mpSavedShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : null; }
 function mpDesktopShape(){ return mpSavedShape() || MP_SHAPE_BY_ART[artStyle] || 'card'; }
+// Cymatics is the disc's outline and hover controls with its own art (see mpCymSync), so it also carries mp-shape-disc
+function mpSetShapeClasses(body, shape){
+  MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape || (shape === 'cymatics' && x === 'disc')));
+  body.dataset.mpShape = shape;
+}
 function mpApplyShape(win){
   const shape = mpDesktopShape(), body = win.document.body;
-  if (body.classList.contains('mp-shape-' + shape)) return;
-  MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape));
+  if (body.dataset.mpShape === shape) return;
+  mpSetShapeClasses(body, shape);
   const sz = mpDesktopSize(shape);
   try { win.resizeTo(sz.w, sz.h); } catch(e){}
+  mpMagnetize(win, sz.w, sz.h); // #623: a new shape snaps to the bottom right corner
 }
 function mpDesktopSize(shape){
-  if (shape === 'pill') return { w: 420, h: 84 };
+  if (shape === 'pill') return { w: 420, h: 96 };
   if (shape === 'disc') return { w: 240, h: 240 };
   if (shape === 'tape') return { w: 300, h: 192 };
+  if (shape === 'square') return { w: 232, h: 232 };
+  if (shape === 'cymatics') return { w: 240, h: 240 };
   const p = miniPlayerPrefs();
   return { w: p.w, h: p.h };
 }
@@ -26238,30 +26268,62 @@ const MINI_DESKTOP_STYLE = `
   body.mp-desktop{-webkit-app-region:drag;border-radius:16px}
   body.mp-desktop button,body.mp-desktop #mpSeekTrack,body.mp-desktop #mpArtWrap,body.mp-desktop #mpLogo,
   body.mp-desktop #mpQueue,body.mp-desktop #mpEdge,#mpMenu{-webkit-app-region:no-drag}
+  /* #636: the compact shapes keep the head's heart + thumbs-down (#mpFav) and the title/artist, shown on hover */
+  #mpFav{display:flex;align-items:center;gap:2px}
+  .mp-tool[hidden]{display:none}
   body.mp-shape-pill{border-radius:999px;clip-path:inset(0 round 999px)}
   body.mp-shape-pill #mpCard{padding-right:24px}
   body.mp-shape-pill #mpArtWrap{border-radius:50%}
-  body.mp-shape-pill #mpEdge,body.mp-shape-pill #mpHead{display:none!important}
+  body.mp-shape-pill #mpEdge{display:none!important}
+  body.mp-shape-pill #mpHead>:not(#mpFav),body.mp-shape-disc #mpHead>:not(#mpFav),body.mp-shape-tape #mpHead>:not(#mpFav),body.mp-shape-square #mpHead>:not(#mpFav){display:none!important}
+  /* pill: art | title + artist, seek, controls; the heart and thumbs-down float in the top right on hover */
+  body.mp-desktop.mp-shape-pill #mpCard{grid-template-columns:calc(var(--card-h) - 16px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 10px 30px;
+    grid-template-areas:"art meta" "art seek" "art ctl";padding:8px 28px 8px 8px;gap:2px 10px}
+  body.mp-desktop.mp-shape-pill #mpArtist{display:block!important}
+  body.mp-shape-pill #mpHead{position:absolute;top:6px;right:34px;z-index:4;padding:0 4px;border-radius:999px;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s ease}
+  body.mp-shape-pill:hover #mpHead{opacity:1;pointer-events:auto}
+  /* disc, tape, square: just the art, everything else on hover */
   body.mp-shape-disc{border-radius:50%;clip-path:circle(50%)}
+  body.mp-shape-square{border-radius:22px;clip-path:inset(0 round 22px)}
   body.mp-shape-card{clip-path:inset(0 round 16px)}
-  body.mp-shape-disc #mpHead,body.mp-shape-disc #mpMeta,body.mp-shape-disc #mpSeek,body.mp-shape-disc #mpEdge,body.mp-shape-disc #mpArtPick{display:none!important}
-  body.mp-shape-disc #mpCard{display:block;padding:0;height:100vh}
+  body.mp-shape-disc #mpSeek,body.mp-shape-disc #mpEdge,body.mp-shape-disc #mpArtPick,
+  body.mp-shape-square #mpSeek,body.mp-shape-square #mpEdge,body.mp-shape-square #mpArtPick{display:none!important}
+  body.mp-shape-disc #mpCard,body.mp-shape-square #mpCard{display:block;padding:0;height:100vh}
   body.mp-shape-disc #mpArtWrap{position:absolute;inset:8px;width:auto;height:auto;border-radius:50%;box-shadow:none}
+  body.mp-shape-square #mpArtWrap{position:absolute;inset:8px;width:auto;height:auto;border-radius:16px;box-shadow:none}
   body.mp-shape-disc #mpArt,body.mp-shape-disc .mp-art-ghost{border-radius:50%}
-  body.mp-shape-disc #mpControls{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;padding:4px 8px;border-radius:999px;
+  body.mp-shape-disc #mpControls,body.mp-shape-square #mpControls,body.mp-shape-tape #mpControls{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;padding:4px 8px;border-radius:999px;
     background:rgba(0,0,0,.66);opacity:0;pointer-events:none;transition:opacity .2s ease}
-  body.mp-shape-disc:hover #mpControls{opacity:1;pointer-events:auto}
-  body.mp-shape-disc #mpShuffle,body.mp-shape-disc #mpRepeat,body.mp-shape-disc .mp-skip{display:none!important}
-  /* tape: just the cassette, controls on hover (same idea as the disc) */
+  body.mp-shape-disc:hover #mpControls,body.mp-shape-square:hover #mpControls,body.mp-shape-tape:hover #mpControls{opacity:1;pointer-events:auto}
+  body.mp-shape-disc #mpShuffle,body.mp-shape-disc #mpRepeat,body.mp-shape-disc .mp-skip,
+  body.mp-shape-square #mpShuffle,body.mp-shape-square #mpRepeat,body.mp-shape-square .mp-skip,
+  body.mp-shape-tape #mpShuffle,body.mp-shape-tape #mpRepeat,body.mp-shape-tape .mp-skip{display:none!important}
+  body.mp-shape-disc #mpHead,body.mp-shape-square #mpHead,body.mp-shape-tape #mpHead{position:absolute;left:50%;top:15%;transform:translateX(-50%);z-index:4;padding:2px 6px;border-radius:999px;
+    background:rgba(0,0,0,.66);opacity:0;pointer-events:none;transition:opacity .2s ease}
+  body.mp-shape-tape #mpHead,body.mp-shape-square #mpHead{top:10px}
+  body.mp-shape-disc #mpMeta,body.mp-shape-square #mpMeta,body.mp-shape-tape #mpMeta{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);z-index:4;width:70%;align-items:center;text-align:center;
+    padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.66);color:#fff;opacity:0;pointer-events:none;transition:opacity .2s ease}
+  body.mp-shape-tape #mpMeta,body.mp-shape-square #mpMeta{bottom:10px;width:calc(100% - 28px)}
+  body.mp-desktop.mp-shape-disc #mpArtist,body.mp-desktop.mp-shape-square #mpArtist,body.mp-desktop.mp-shape-tape #mpArtist{display:block!important}
+  body.mp-shape-disc #mpMeta .marquee,body.mp-shape-square #mpMeta .marquee,body.mp-shape-tape #mpMeta .marquee{max-width:100%}
+  body.mp-shape-disc:hover #mpHead,body.mp-shape-square:hover #mpHead,body.mp-shape-tape:hover #mpHead,
+  body.mp-shape-disc:hover #mpMeta,body.mp-shape-square:hover #mpMeta,body.mp-shape-tape:hover #mpMeta{opacity:1}
+  body.mp-shape-disc:hover #mpHead,body.mp-shape-square:hover #mpHead,body.mp-shape-tape:hover #mpHead{pointer-events:auto}
+  /* tape: just the cassette */
   body.mp-shape-tape{border-radius:0}
   body.mp-shape-tape::before{display:none}
-  body.mp-shape-tape #mpBg,body.mp-shape-tape #mpHead,body.mp-shape-tape #mpMeta,body.mp-shape-tape #mpSeek,body.mp-shape-tape #mpEdge,body.mp-shape-tape #mpArtPick{display:none!important}
+  body.mp-shape-tape #mpBg,body.mp-shape-tape #mpSeek,body.mp-shape-tape #mpEdge,body.mp-shape-tape #mpArtPick{display:none!important}
   body.mp-shape-tape #mpCard{display:block;padding:0;height:100vh;background:transparent}
   body.mp-shape-tape #mpArtWrap{position:absolute;inset:6px;width:auto;height:auto;box-shadow:none}
-  body.mp-shape-tape #mpControls{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;padding:4px 8px;border-radius:999px;
-    background:rgba(0,0,0,.66);opacity:0;pointer-events:none;transition:opacity .2s ease}
-  body.mp-shape-tape:hover #mpControls{opacity:1;pointer-events:auto}
-  body.mp-shape-tape #mpShuffle,body.mp-shape-tape #mpRepeat,body.mp-shape-tape .mp-skip{display:none!important}
+  /* #627 cymatics: the disc with a live sand-plate pattern behind a small cover. Drawn by mpCymSync, only while it is showing and playing. */
+  #mpCym{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  body.mp-shape-cymatics #mpCym{display:block}
+  body.mp-shape-cymatics::before{background:#000}
+  body.mp-shape-cymatics #mpBg{display:none}
+  body.mp-shape-cymatics #mpArtWrap{inset:31%;box-shadow:0 0 0 2px rgba(0,0,0,.7),0 0 0 3px rgba(255,255,255,.25)}
+  body.mp-shape-cymatics #mpArtWrap #mpRecord,body.mp-shape-cymatics #mpArtWrap #mpTape{display:none!important}
+  body.mp-shape-cymatics #mpArtWrap #mpArt,body.mp-shape-cymatics #mpArtWrap .mp-art-ghost{display:block!important}
+  body.mp-shape-cymatics #mpArtWrap[data-art-style]{background:#282828;overflow:hidden}
   body.mp-shape-float{background:transparent}
   body.mp-shape-float::before{display:none}
   body.mp-shape-float #mpBg{display:none}
@@ -26275,10 +26337,83 @@ const MINI_DESKTOP_STYLE = `
   #mpMenu button:hover{background:rgba(255,255,255,.1)}
   #mpMenu button.is-active{color:var(--accent)}
 `;
+// #627 Cymatics shape: the visualizer's own nodal-field patterns (VIZ_PATTERNS) and clock color, drawn on the mini window's
+// canvas. GPU budget: ~800 dots at 30 fps, runs only while this shape is showing, playing and the window is visible;
+// paused or any other shape = no frames requested, the last frame just stays.
+const MP_CYM_GRAINS = 1100, MP_CYM_FRAME_MS = 33, MP_CYM_SWITCH_MS = 9000, MP_CYM_XFADE_MS = 1600;
+let mpCym = null;
+function mpCymStop(){
+  if (!mpCym) return;
+  try { mpCym.win.cancelAnimationFrame(mpCym.raf); } catch(e){}
+  mpCym = null;
+}
+function mpCymSync(win){
+  if (!win || win.closed){ mpCymStop(); return; }
+  const doc = win.document, cv = doc.getElementById('mpCym');
+  const on = !!cv && doc.body.classList.contains('mp-shape-cymatics') && doc.body.classList.contains('mp-playing') && !doc.hidden;
+  if (!on){ mpCymStop(); return; }
+  if (mpCym && mpCym.win === win) return;
+  mpCymStop();
+  const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
+  const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
+    gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0 };
+  for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
+  // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
+  for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
+    let x = c.gx[i], y = c.gy[i];
+    const amp = Math.min(1, Math.abs(c.fa.field(x, y, c.pa, 0)) * 1.9);
+    x += (Math.random() - 0.5) * 0.04 * (0.04 + amp) + (Math.random() - 0.5) * 0.032 * amp * amp;
+    y += (Math.random() - 0.5) * 0.04 * (0.04 + amp) + (Math.random() - 0.5) * 0.032 * amp * amp;
+    c.gx[i] = x > 1 ? 1 : x < -1 ? -1 : x; c.gy[i] = y > 1 ? 1 : y < -1 ? -1 : y;
+  }
+  const frame = (now) => {
+    if (mpCym !== c) return;
+    c.raf = win.requestAnimationFrame(frame);
+    if (now - c.last < MP_CYM_FRAME_MS) return;
+    const dt = c.last ? Math.min(100, now - c.last) : MP_CYM_FRAME_MS;
+    c.last = now;
+    const dpr = Math.min(2, win.devicePixelRatio || 1), w = win.innerWidth, h = win.innerHeight;
+    if (c.cv.width !== Math.round(w * dpr) || c.cv.height !== Math.round(h * dpr)){
+      c.cv.width = Math.round(w * dpr); c.cv.height = Math.round(h * dpr); c.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    c.t += dt; c.since += dt;
+    if (!c.fb && c.since > MP_CYM_SWITCH_MS){
+      c.fb = VIZ_PATTERNS[(VIZ_PATTERNS.indexOf(c.fa) + 1) % VIZ_PATTERNS.length];
+      c.pb = c.fb.modes[Math.floor(Math.random() * c.fb.modes.length)];
+      c.mix = 0.0001;
+    }
+    if (c.fb){
+      c.mix += dt / MP_CYM_XFADE_MS;
+      if (c.mix >= 1){ c.fa = c.fb; c.pa = c.pb; c.fb = c.pb = null; c.mix = 0; c.since = 0; }
+    }
+    if (now - c.colorAt > 1000){ c.color = vizRosicrucianColor(); c.colorAt = now; }
+    const ctx = c.ctx, tSec = c.t / 1000, half = Math.min(w, h) / 2, k = dt / 16.7, jitter = 0.02 * k, step = 0.016 * k; // same drift per second as the full visualizer at 60 fps
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = c.color;
+    for (let i = 0; i < MP_CYM_GRAINS; i++){
+      let x = c.gx[i], y = c.gy[i];
+      const f = c.fb ? c.fa.field(x, y, c.pa, tSec) * (1 - c.mix) + c.fb.field(x, y, c.pb, tSec) * c.mix : c.fa.field(x, y, c.pa, tSec);
+      const amp = Math.min(1, Math.abs(f) * 1.9);
+      x += (Math.random() - 0.5) * jitter * (0.04 + amp) + (Math.random() - 0.5) * step * amp * amp;
+      y += (Math.random() - 0.5) * jitter * (0.04 + amp) + (Math.random() - 0.5) * step * amp * amp;
+      x = x > 1 ? 1 : x < -1 ? -1 : x; y = y > 1 ? 1 : y < -1 ? -1 : y;
+      c.gx[i] = x; c.gy[i] = y;
+      const settle = 1 - amp;
+      ctx.globalAlpha = 0.18 + 0.8 * settle * settle;
+      ctx.beginPath();
+      ctx.arc(w / 2 + x * half, h / 2 + y * half, 0.7 + 1.1 * settle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  };
+  c.raf = win.requestAnimationFrame(frame);
+}
 // Right-click menu in the Mac app's mini player: pick a shape, go back, close.
 function wireMiniDesktop(win){
   const doc = win.document;
-  doc.body.classList.add('mp-desktop', 'mp-shape-' + mpDesktopShape());
+  doc.body.classList.add('mp-desktop');
+  mpSetShapeClasses(doc.body, mpDesktopShape());
   const style = doc.createElement('style');
   style.textContent = MINI_DESKTOP_STYLE;
   doc.head.appendChild(style);
@@ -26290,8 +26425,7 @@ function wireMiniDesktop(win){
     saveMiniPlayerPrefs({ shape: shape === 'auto' ? null : shape });
     mpApplyShape(win);
   };
-  doc.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
+  const openMenu = (x, y) => {
     const cur = mpSavedShape() || 'auto';
     menu.innerHTML = '<div class="mpm-label">Shape</div>' +
       '<button type="button" data-shape="auto" class="' + (cur === 'auto' ? 'is-active' : '') + '">Follow art style</button>' +
@@ -26299,9 +26433,19 @@ function wireMiniDesktop(win){
       '<div class="mpm-label">Window</div><button type="button" data-act="app">Open EBBLESS</button><button type="button" data-act="close">Close mini player</button>';
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
-    menu.style.left = Math.max(4, Math.min(e.clientX, win.innerWidth - r.width - 4)) + 'px';
-    menu.style.top = Math.max(4, Math.min(e.clientY, win.innerHeight - r.height - 4)) + 'px';
-  });
+    menu.style.left = Math.max(4, Math.min(x, win.innerWidth - r.width - 4)) + 'px';
+    menu.style.top = Math.max(4, Math.min(y, win.innerHeight - r.height - 4)) + 'px';
+  };
+  doc.addEventListener('contextmenu', (e) => { e.preventDefault(); openMenu(e.clientX, e.clientY); });
+  // #612: the shape picker is also a button in the header (right-click works on every shape)
+  const shapeBtn = doc.createElement('button');
+  shapeBtn.id = 'mpShape'; shapeBtn.className = 'mp-tool'; shapeBtn.title = 'Shape: LP, cassette, card...'; shapeBtn.setAttribute('aria-label', 'Change shape');
+  shapeBtn.innerHTML = '<svg viewBox="0 0 24 24">' + MP_ICO.shape + '</svg>';
+  shapeBtn.addEventListener('click', (e) => { e.stopPropagation(); const r = shapeBtn.getBoundingClientRect(); openMenu(r.left, r.bottom + 2); });
+  const styleBtn = doc.getElementById('mpStyle');
+  styleBtn.parentNode.insertBefore(shapeBtn, styleBtn);
+  doc.head.appendChild(Object.assign(doc.createElement('style'), { textContent: '#mpShape{opacity:0}body:hover #mpShape,#mpShape:focus-visible{opacity:1}' }));
+  mpMagnetize(win, mpDesktopSize(mpDesktopShape()).w, mpDesktopSize(mpDesktopShape()).h);
   menu.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -26435,6 +26579,7 @@ function buildMiniPlayerDOM(win){
   const btn = (id, cls, label, ico) =>
     '<button id="' + id + '" class="' + cls + '" title="' + label + '" aria-label="' + label + '"><svg viewBox="0 0 24 24">' + ico + '</svg></button>';
   doc.body.innerHTML =
+    '<canvas id="mpCym"></canvas>' +
     '<div id="mpBg"><div class="mpl" id="mpLavaA"></div><div class="mpl" id="mpLavaB"></div></div>' +
     '<div id="mpEdge" title="Shrink" role="button" aria-label="Shrink"></div>' +
     '<div id="mpCard">' +
@@ -26447,7 +26592,10 @@ function buildMiniPlayerDOM(win){
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
         btn('mpStyle', 'mp-tool', 'Album color background', MP_ICO.style) +
         btn('mpReset', 'mp-tool', 'Reset shape', MP_ICO.reset) +
-        '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
+        '<div id="mpFav">' +
+          '<button id="mpDecline" class="mp-tool" title="Not for me: drop from CuRRentSSsss" aria-label="Not for me: drop from CuRRentSSsss" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">' + MP_ICO.decline + '</svg></button>' +
+          '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
+        '</div>' +
         btn('mpQueueBtn', 'mp-tool', 'Queue', MP_ICO.queue) +
       '</div>' +
       '<div id="mpMeta"><div id="mpTitle" class="marquee"></div><div id="mpArtist" class="marquee"></div></div>' +
@@ -26488,6 +26636,7 @@ function buildMiniPlayerDOM(win){
   forward('mpShuffle', shuffleBtn);
   forward('mpRepeat', repeatBtn);
   forward('mpLike', playerLikeBtn);
+  forward('mpDecline', playerDeclineBtn); // #636: only visible for CuRRentSSsss songs
   const seekEl = doc.getElementById('mpSeekTrack');
   seekEl.addEventListener('click', (e) => { seekFromClientX(seekEl, e.clientX); updateMiniPlayerUI(); });
   doc.getElementById('mpQueueBtn').addEventListener('click', toggleMiniQueue);
@@ -26499,7 +26648,10 @@ function buildMiniPlayerDOM(win){
   doc.getElementById('mpReset').addEventListener('click', resetMiniPlayerShape);
   // One tap sets the style for both players (shared setting), like the main picker
   [['mpArtDefault', 'default'], ['mpArtRecord', 'record'], ['mpArtCassette', 'cassette']].forEach(([id, st]) =>
-    doc.getElementById(id).addEventListener('click', () => { setArtStyle(st); updateMiniPlayerUI(); }));
+    doc.getElementById(id).addEventListener('click', () => {
+      if (isDesktopApp && mpSavedShape()) saveMiniPlayerPrefs({ shape: null }); // #612: a hand-picked shape would otherwise ignore the skin
+      setArtStyle(st); updateMiniPlayerUI();
+    }));
   // Shortcuts keep working with the mini player focused: replay the key on
   // the main document, where the app's one keydown handler lives, rather
   // than keeping a second copy of the keymap here. Q is the exception - it
@@ -26761,6 +26913,7 @@ function updateMiniPlayerUI(){
   if (isDesktopApp && doc.body.classList.contains('mp-desktop')) mpApplyShape(miniPlayerWin);
   const isPlaying = artworkWrap.classList.contains('is-playing');
   doc.body.classList.toggle('mp-playing', isPlaying);
+  if (isDesktopApp) mpCymSync(miniPlayerWin);
   doc.getElementById('mpArtWrap').dataset.artStyle = artStyle;
   if (artStyle === 'cassette'){
     // same wound-tape pack radii and tape path as the main cassette (cassetteSetProgress)
@@ -26783,6 +26936,7 @@ function updateMiniPlayerUI(){
   like.classList.toggle('is-liked', liked);
   like.title = playerLikeBtn.title; like.setAttribute('aria-label', playerLikeBtn.title);
   like.querySelector('svg').setAttribute('fill', liked ? 'currentColor' : 'none');
+  doc.getElementById('mpDecline').hidden = playerDeclineBtn.hidden;
   const ad = activeDeck();
   if (ad.player && ad.player.getCurrentTime && ad.player.getDuration){
     const cur = ad.player.getCurrentTime() || 0, dur = ad.player.getDuration() || 0;
@@ -26850,7 +27004,7 @@ async function openMiniPlayer(){
     if (isDesktopApp){ wireMiniDesktop(win); if (window.ebblessDesktop.hideMain) window.ebblessDesktop.hideMain(); }
     updateMiniPlayerUI();
     attachMiniPlayerSC(win);
-    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; rehostSCDecks(); } }, { once: true });
+    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; mpCymStop(); rehostSCDecks(); } }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,

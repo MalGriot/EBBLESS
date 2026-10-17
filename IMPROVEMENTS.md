@@ -11048,28 +11048,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #597.
 
 ### miniplayer-should-open-always-in-the-botto: miniplayer should open always in the bottom right corner (Geethub #604)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #604. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #604. Related to #605, #623.
+- **Branch:** agent/mini-batch-2
+- **Notes:** Synced from Geethub #604. Related to #605, #623. Opens with left/top set to the bottom right of the screen's usable area (16px gap, above the Dock) and moves there once more after the window exists. Not verified in real Electron.
 
 ### the-miniplayer-should-stay-in-position-acr: the miniplayer should stay in position across desktops (Geethub #605)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #605. 
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #605. Related to #512 (merged, app 1.0.7/1.0.8); check if it still fails.
+- **Notes:** Synced from Geethub #605. Related to #512 (merged, app 1.0.7/1.0.8); check if it still fails. No code change. desktop/main.js 1.0.7/1.0.8 pinning (setVisibleOnAllWorkspaces + visibleOnFullScreen, floating always-on-top, re-asserted on show/focus/blur/move, main show/hide/restore, activate, and every 1.5s) is intact and was not touched, so no desktop version bump. Could not reproduce without a real Mac with multiple Spaces: needs the owner to re-test on app 1.0.8. If it still fails, next suspects are macOS collection behavior reset by setAlwaysOnTop and the 1.0.8 minimize-on-open of the main window.
 
 ### m-should-activate-miniplayer: m should activate miniplayer (Geethub #606)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #606. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #606.
+- **Branch:** agent/mini-batch-2
+- **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows.
 
 ### library-changes: library changes (Geethub #607)
 - **Status:** draft
@@ -11112,12 +11112,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #611.
 
 ### the-miniplayer-has-changed-back-to-a-recta: the miniplayer has changed back to a rectangle. there should be options (Geethub #612)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #612. it was lp shaped and working toward cassette shaped and more shapes to come. bring them back
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #612. Overlaps #527-style mini shapes: shipped #526 (shape per skin) and Tape shape in app 1.0.8; check what regressed. Related to #623, #627.
+- **Branch:** agent/mini-batch-2
+- **Notes:** Synced from Geethub #612. Overlaps #527-style mini shapes: shipped #526 (shape per skin) and Tape shape in app 1.0.8; check what regressed. Related to #623, #627. Mac mini player shapes are selectable again and easy to find: a new shape button in the header (and right-click) lists Card, Pill, LP (disc), Cassette (tape), Square and Cymatics. Picking an art skin (LP or cassette) in the mini player now clears a hand-picked shape so the skin's shape follows again; a stuck hand-picked Card was the likely reason it stayed a rectangle. Added Square. Pill now fits its title and artist (96px tall). Web is live on the next deploy; Electron not verified (tested in an iframe harness with a stubbed desktop bridge).
 
 ### on-the-nothing-playing-yet-screen-have-a-e: on the "nothing playing yet" screen, have a ebbless logo bounce around inside the album art like the dvd logo used to (Geethub #613)
 - **Status:** draft
@@ -11200,12 +11200,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #622.
 
 ### when-the-miniplayer-switches-shapes-it-sho: when the miniplayer switches shapes, it should always magnetize to the bottom right corner (Geethub #623)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #623. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #623. Related to #604, #605, #612.
+- **Branch:** agent/mini-batch-2
+- **Notes:** Synced from Geethub #623. Related to #604, #605, #612. Every shape change (menu, art skin follow, cymatics) resizes then moves the window to the bottom right corner via mpMagnetize. Not verified in real Electron.
 
 ### when-it-plays-an-ad-try-switching-the-link: when it plays an ad, try switching the link to a less popular song or a soundcloud link if it's close to 100% match (Geethub #624)
 - **Status:** draft
@@ -11232,12 +11232,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #626.
 
 ### cymatics-miniplayer-get-creative-something: cymatics miniplayer - get creative. something new and on brand (Geethub #627)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #627. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #627. Related to #612.
+- **Branch:** agent/mini-batch-2
+- **Notes:** Synced from Geethub #627. Related to #612. New Cymatics shape: a round window with the visualizer's own sand-plate patterns (VIZ_PATTERNS) in the daily Rosicrucian color, the cover as a small center label, controls and info on hover. Own canvas in the mini window: 1100 dots at 30 fps, runs only while the shape is showing, playing and visible, no blur or filter, no extra assets. Pick it from the shape button or right-click menu.
 
 ### 3-dot-menu-start-a-radio-based-on-this-son: 3 dot menu: start a radio based on this song (Geethub #628)
 - **Status:** draft
@@ -11304,9 +11304,9 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #635. Related to #595, #584 (performance). **Partial: first slice shipped, issue stays open.** Method: headless Chrome driven over CDP (mobile 375x812 metrics, 4x CPU throttle, 10 to 15 s windows, main-thread task time and style recalcs, JS sampling profile); script is not in the repo. Software rendering and run-to-run noise are large (about 10 to 20 percent), so treat gains as indicative. Found and fixed: (1) `#helpBtn` blink animated `color` (stepped), restyling and repainting the top bar over moving video; now an accent copy of the glyph fades by opacity (biggest single idle cost on the splash: 1.43 s to 0.72 s task time per 8 s at 4x). (2) Search-bar pulse ring animated `box-shadow`; now an overlay's opacity. (3) Library thumbnail videos (Swell, Swirl, On Air) kept playing while the library was hidden or the app backgrounded; they now play only while the grid is on screen (`syncLibraryVideos`). (4) The On Air clip's cross-fade ran a `requestAnimationFrame` loop forever; now driven by `timeupdate`. (5) Library card menu/pin buttons used `backdrop-filter` over the moving thumbs (the watchdog warning); now solid fill; splash buttons likewise. Result, 15 s windows: library view 3.2 s to 2.4 to 2.8 s task time (about 15 to 25 percent less); player view no measurable change (2.35 s before, 2.25 to 2.43 s after; style recalc count was noisy and not tied to these animations). **Not done / not verified:** no song was played (needs YouTube and the worker), so playback-time costs (ambient canvases, visualizer, progress timers) were not profiled; no real phone; the "closing the app does not stop it / still in the top bar" part is Android native (media notification/foreground service), not touched here, see the Android lane. Next: profile with a song playing, and the 3 ambient canvases.
 
 ### hovering-the-miniplayer-should-show-the-ti: hovering the miniplayer should show the title and artist and heart and thumbs down (Geethub #636)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #636. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #636.
+- **Branch:** agent/mini-batch-2
+- **Notes:** Synced from Geethub #636. Hover now shows title, artist, heart and thumbs-down on every shape (LP, cassette, square, cymatics: overlay on hover; pill: heart row on hover; card/float: in the header). The thumbs-down appears only for CuRRentSSsss songs, same as the main player. Web PiP also gets the thumbs-down.
