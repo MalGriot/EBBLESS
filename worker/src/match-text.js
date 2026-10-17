@@ -290,3 +290,17 @@ export function channelNamesArtist(channel, keys) {
   const hay = ' ' + matchKey(String(channel || '').replace(/vevo$/i, ' vevo')) + ' ';
   return keys.some(k => hay.includes(' ' + k + ' '));
 }
+
+// A "clean" upload title is nothing but the artist, the song title and
+// harmless filler ("Thundercat - 'Lava Lamp'", "Adele - Hello (Official
+// Audio)"). Label and artist uploads look like this; fan uploads carry
+// extras ("[Lyrics+Vietsub]", "Sub Espanol", "Mree Cover"). Any leftover
+// word means it isn't clean.
+const CLEAN_FILLER = new Set(['official', 'audio', 'video', 'music', 'hd', 'hq', '4k', '1080p', 'remaster', 'remastered',
+  'single', 'version', 'topic', 'ft', 'feat', 'featuring', 'the', 'a', 'an', 'of', 'and', 'vevo', 'album', 'art', 'track', 'visualizer']);
+export function isCleanArtistTitle(candidateTitle, sourceTitle, keys) {
+  let hay = ' ' + matchKey(candidateTitle) + ' ';
+  for (const k of keys) hay = hay.split(' ' + k + ' ').join('  ');
+  const known = new Set(matchKey(sourceTitle).split(' ').filter(Boolean));
+  return hay.split(' ').filter(Boolean).every(w => known.has(w) || CLEAN_FILLER.has(w));
+}

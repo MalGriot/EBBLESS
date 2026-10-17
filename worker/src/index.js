@@ -11,7 +11,7 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist,
+  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -68,7 +68,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v13';
+const SEARCH_CACHE_VERSION = 'v14';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -323,6 +323,7 @@ function parseDurationText(text) {
 // a modest audio-only upload rather than a popularity contest deciding.
 const VIEW_COUNT_WEIGHT = 2;
 const ARTIST_CHANNEL_WEIGHT = 5;
+const CLEAN_TITLE_WEIGHT = 3;
 
 // A report (see handleReport) once turned up a match that was a totally
 // different song by the same artist - a highly-viewed "Official Video" on
@@ -493,6 +494,9 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   // The artist's own page (channel named after them) beats a third-party
   // upload that only mentions them in the video title.
   if (c.artistChannel) score += ARTIST_CHANNEL_WEIGHT;
+  // Title is just "Artist - Song" (+filler): label/artist-style upload, not a
+  // fan re-upload with extras (lyrics/subs/cover tags).
+  if (c.cleanTitle) score += CLEAN_TITLE_WEIGHT;
   return score;
 }
 
@@ -663,6 +667,7 @@ async function handleSearch(url, ctx) {
   pool.forEach(c => {
     c.artistNamed = candidateNamesArtist(c, artistKeyList);
     c.artistChannel = channelNamesArtist(c.channel, artistKeyList);
+    c.cleanTitle = artistKeyList.length > 0 && c.artistNamed && isCleanArtistTitle(c.title, searchTitle, artistKeyList);
   });
   const artistMatched = pool.filter(c => c.artistNamed);
   pool = artistMatched.length ? artistMatched : pool;

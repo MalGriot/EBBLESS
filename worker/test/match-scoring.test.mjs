@@ -208,3 +208,13 @@ test('channelNamesArtist: artist page vs title-only mention', () => {
   assert.ok(!channelNamesArtist('Lyrics Fan Channel', k));
   assert.ok(!channelNamesArtist('Adele', []));
 });
+
+import { isCleanArtistTitle } from '../src/match-text.js';
+test('isCleanArtistTitle: label upload clean, fan upload not', () => {
+  const k = artistKeys('Thundercat');
+  assert.ok(isCleanArtistTitle("Thundercat - 'Lava Lamp'", 'Lava Lamp', k));
+  assert.ok(isCleanArtistTitle('Thundercat - Lava Lamp [single].', 'Lava Lamp', k));
+  assert.ok(!isCleanArtistTitle('[Lyrics+Vietsub] Thundercat - Lava lamp', 'Lava Lamp', k));
+  assert.ok(!isCleanArtistTitle('Lava Lamp - Thundercat (Sub Español)', 'Lava Lamp', k));
+  assert.ok(!isCleanArtistTitle('"Lava Lamp" (Thundercat) - Mree Cover', 'Lava Lamp', k));
+});
