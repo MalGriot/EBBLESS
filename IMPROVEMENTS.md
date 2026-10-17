@@ -10467,7 +10467,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #544. Child of playlist-workspaces (#506).
 
 ### research-soundiiz: Reverse engineer Soundiiz (Geethub #543)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #543. Research how Soundiiz works and what EBBLESS can learn for playlist import/transfer.
 - **Touches:** research only.
@@ -10475,7 +10475,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #543. Group with #520, #521, #522 as one playlist-transfer-tools research lane.
 
 ### research-tidal-uvp: Research Tidal's unique selling points and try to incorporate them (Geethub #542)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #542. Research Tidal's USPs and propose which fit EBBLESS.
 - **Touches:** research only.
@@ -10622,7 +10622,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #525. Check mini-player-polish; may already exist. **Built:** the Mac mini player was already draggable by its background (OS drag area), but the art is a click target (back to app) so it was excluded, and the disc is almost all art, so it could barely be moved. The art now drags by hand (5px threshold, a drag never counts as a click). Position memory not added (Chrome PiP manages its own). Electron/Mac drag not run here, needs a check on the Mac.
 
 ### research-songshift: Reverse engineer SongShift (Geethub #522)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #522. Research songshift.com for playlist transfer.
 - **Touches:** research only.
@@ -10630,7 +10630,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #522. Playlist-transfer research lane with #520, #521, #543.
 
 ### research-freeyourmusic: Research FreeYourMusic (Geethub #521)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #521. Research freeyourmusic.com.
 - **Touches:** research only.
@@ -10638,7 +10638,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #521. Playlist-transfer research lane.
 
 ### research-tunemymusic: Reverse engineer TuneMyMusic (Geethub #520)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #520. Research tunemymusic.com.
 - **Touches:** research only.
@@ -11088,7 +11088,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #608. Built (phones, under 860px): the top-bar search field is gone and a Search button sits in the bottom nav (Library, Player, Search, Queue, Settings). It opens a full tab with the search bar on top, a "Picked for you" grid (artists you play most, plus one artist CuRRentSSsss surfaced that you have not played; tap opens the artist window), and "Right now: <time of day>" chips below: two mood prompts (time-of-day line and the Rosicrucian period's mood, from PERIOD_MOODS) and that period's genre tags. Chips and the bar hand their text to the existing top-bar form, so links, songs, artists, vibes and sentences use the one search path; the form's error line is mirrored in the tab. The top-bar field stays in the DOM (onboarding still shows it, and `focusSearchField` opens the tab for the "paste your X link" flow). Desktop is unchanged; growing the window past 860px leaves the tab. Not built: mic button in the tab, recent-searches dropdown, the first-run "Start here" bubble (anchored to the hidden bar on phones; the tab's help line carries the same text), and album-art tiles for artists with no art in the library (they show a letter). Grid is history-only (no network call). Verified in the 375px browser preview: nav button, tab, tiles, chips, link error, chip search into the results overlay, artist tile, desktop bounce, no [gpu-watchdog]. Not verified on a real phone or Android WebView. Cache v323.
 
 ### desktop-search-bar-browse-button: desktop: search bar: browse button (Geethub #609)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #609. it should open a grid of suggestions you make the list of the most satisfying parameters a user might prefer
 - **Touches:** tbd.
@@ -11096,7 +11096,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #609.
 
 ### desktop-h-screen-put-the-heart-button-on-t: desktop: h-screen: put the heart button on the album art in the bottom right corner - formatted like the fullscreen button (Geethub #610)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #610. leave the 3 dot button where it is
 - **Touches:** tbd.
@@ -11104,7 +11104,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #610.
 
 ### mobile-player-stretch-the-title-to-the-wid: mobile: player: stretch the title to the width of the album art (Geethub #611)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #611. put the heart button and three dots inline with player controls - one on each side
 - **Touches:** tbd.
@@ -11120,7 +11120,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #612. Overlaps #527-style mini shapes: shipped #526 (shape per skin) and Tape shape in app 1.0.8; check what regressed. Related to #623, #627. Mac mini player shapes are selectable again and easy to find: a new shape button in the header (and right-click) lists Card, Pill, LP (disc), Cassette (tape), Square and Cymatics. Picking an art skin (LP or cassette) in the mini player now clears a hand-picked shape so the skin's shape follows again; a stuck hand-picked Card was the likely reason it stayed a rectangle. Added Square. Pill now fits its title and artist (96px tall). Web is live on the next deploy; Electron not verified (tested in an iframe harness with a stubbed desktop bridge).
 
 ### on-the-nothing-playing-yet-screen-have-a-e: on the "nothing playing yet" screen, have a ebbless logo bounce around inside the album art like the dvd logo used to (Geethub #613)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #613. 
 - **Touches:** tbd.
@@ -11144,7 +11144,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #615. Cause: #558 deliberately resumed a mid-song-ad bounced song at `adResumeAt` (where the ad cut in, if 5s or more in), so it came back "several seconds in" after the ad; the issue was filed hours after #558 shipped. Fix: removed `adResumeAt` / `AD_RESUME_MIN_S`; a song an ad bounced, and every promoted deck, now starts at 0:00 (`onDeckConfirmed` seeks 0, `rewindPromotedDeck` rewinds anything past 1s); only a real resume (`pendingResume`) keeps its position. **Not reproduced live** (needs a real YouTube ad; code path read and syntax-checked only). If songs still start late after an ad with this build, the cause is elsewhere (e.g. YouTube resuming its own watch position); log it on the issue.
 
 ### library-pills-when-only-one-is-active-hitt: library pills: when only one is active, hitting it again activates all pills (Geethub #616)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #616. 
 - **Touches:** tbd.
@@ -11160,7 +11160,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #617.
 
 ### reverse-engineer-mp3juice: reverse engineer mp3juice (Geethub #618)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #618. https://service-et-reception.fr/ they have an incredible index of music with near flawless matching and they play songs from a source we should tap into
 - **Touches:** tbd.
@@ -11168,7 +11168,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #618.
 
 ### desktop-a-button-that-expands-the-library: desktop: a button that expands the library to the right (Geethub #619)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #619. it should make the player the same size of the queue and sit between the library and queue
 - **Touches:** tbd.
@@ -11176,7 +11176,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #619.
 
 ### sliding-on-list-items: sliding on list items (Geethub #620)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #620. sliding left/right on library and queue list items should be animated the list item should move over 28% and stay there til cancelled after swipe left should reveal red underneath with a trashcan icon. if they tap the icon, it prompts them to ensure they want to delete. when they tap yes, it deletes. when they hit no, the list item returns to origi
 - **Touches:** tbd.
@@ -11224,7 +11224,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #625. My reading of the issue (it gives little): typing a song name should list what youtube.com would list, in youtube.com's order. Reproduced: "hotline bling" on YouTube lists Drake first; the app's /search is a track matcher (drops long uploads, re-ranks by score, expects a known artist) and ranked a Kehlani cover first with Drake fourth. The main search also showed only 2 YouTube songs. Built: worker `/search?raw=1` returns YouTube's results in YouTube's own order (new `handleRawSearch`, 6h cache, `raw:true` in the payload); the client asks for it in `searchSongCandidates` (used by the main search and Add songs), and the main search lists 4 YouTube songs (was 2) above the 2 SoundCloud songs. **Needs a worker deploy** (`cd worker && npx wrangler deploy`, owner's call); until then the old worker ignores `raw` and search behaves as before. Verified: the worker handler against a real saved YouTube results page in node (Drake first, YouTube order), and the client with a mocked `raw` response in the browser (order, 4+2 rows, no [gpu-watchdog] warnings). Not verified: live with the deployed worker. Cache v322.
 
 ### the-top-corners-of-the-windows-should-have: the top corners of the windows should have a subtle swoop or wave. it's will be classy and on brand (Geethub #626)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #626. 
 - **Touches:** tbd.
@@ -11256,7 +11256,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #629. Cause: `renderQueuePanel` rebuilt the list and kept the old scroll offset, so a freshly loaded album/playlist opened mid-list. Fix: it remembers the first queue entry (`lastQueueHead`); when that changes (a new queue was loaded) the queue scroller goes to the top, while edits to the same queue (next/previous, add, remove) keep the scroll. Verified in the preview on a mobile viewport: scrolled to 3000, played another playlist, scrollTop 0; skipping to the next song kept 3000. Cases not tried: radio start, restoring a saved queue, undo of a queue clear.
 
 ### pictures-icons-in-the-advance-settings-sec: pictures/ icons in the advance settings section (Geethub #630)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #630. 
 - **Touches:** tbd.
