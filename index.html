@@ -592,14 +592,14 @@ body.onb-active .paste-guide{display:none}
    their own row under the toolbar on every width, one tap each (replaced
    the phone-only button that silently cycled filters). Chips for kinds the
    library doesn't hold are hidden by renderLibrary. */
-.lib-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding:4px 0}   /* #495: pills wrap onto a second row instead of scrolling, so Podcasts is never off-screen */
+.lib-filter{display:flex;flex-wrap:nowrap;container-type:inline-size;align-items:center;gap:6px;margin-top:12px;padding:4px 0}   /* #495: pills wrap onto a second row instead of scrolling, so Podcasts is never off-screen */
 .lib-filter::-webkit-scrollbar{display:none}
 .lib-filter-more{position:sticky;right:0;flex:none;width:32px;height:32px;margin-left:auto;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border-2);color:var(--faint)}
 .lib-filter-more:hover{color:var(--text)}
 .lib-filter-more svg{width:20px;height:20px}
 .lib-filter-more.is-back svg{transform:rotate(180deg)}
-.lib-filter-btn{position:relative;flex:none;height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--border-2);
-  font-size:12.5px;font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.lib-filter-btn{position:relative;flex:1 1 auto;min-width:0;white-space:nowrap;height:32px;padding:0 clamp(4px,2.4cqw,12px);border-radius:16px;border:1px solid var(--border-2);
+  font-size:clamp(10px,4.2cqw,12.5px);font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .lib-filter-btn:hover{color:var(--text)}
 .lib-filter-btn.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}   /* lit pills follow the UI color (#495) */
 .lib-head-actions{flex:1;min-width:0}
@@ -615,7 +615,7 @@ body.onb-active .paste-guide{display:none}
   .lib-tb-btn{min-height:44px}
   #libSearchToggle{width:44px;height:44px;border-radius:12px}
   #libSearchToggle svg{width:18px;height:18px}
-  .lib-filter-btn{height:36px;font-size:12.5px;padding:0 7px;flex:1 1 auto;text-align:center}   /* #495: tighter pills so all five share one row; they wrap only on very narrow screens */
+  .lib-filter-btn{height:36px;text-align:center}   /* #495: tighter pills so all five share one row; they wrap only on very narrow screens */
   .lib-filter-btn::after{content:"";position:absolute;inset:-5px 0}
   .lib-filter{padding:5px 0;gap:6px}
   .lib-sort-menu .art-style-opt{min-height:44px}
