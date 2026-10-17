@@ -957,6 +957,15 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .fm-tempo.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .fm-artist-name small{font-weight:400;opacity:.6}
 .fm-tempos{margin-bottom:12px}
+.fm-picks{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fm-pick{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;text-align:left}
+.fm-pick .fm-box{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid var(--border-2);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.fm-pick.is-on .fm-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.fm-pick-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14.5px}
+.fm-pick-sub{flex:none;color:var(--faint);font-size:12.5px}
+.fm-go{position:sticky;bottom:0;background:var(--accent);color:var(--on-accent,#151107);border-color:var(--accent)}
+.fm-go:disabled{opacity:.5}
+.fm-disc{display:block;margin:14px auto 0;color:var(--faint);font:inherit;font-size:13px;text-decoration:underline}
 .fm-note{padding:40px 10px;text-align:center;color:var(--faint)}
 .fm-artist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 10px}
 .fm-artist{position:relative}
@@ -8232,7 +8241,7 @@ const FM_GENRE_RE = { 'Hip-Hop': /hip|rap/i, 'R&B / Soul': /r&b|soul/i, 'Funk': 
   'Latin': /latin|reggaet|salsa|urbano/i, 'Classical': /classical|opera/i, 'Country & Folk': /country|folk|americana|bluegrass/i };
 const FM_SERVICES = ['Spotify', 'Apple Music', 'YouTube', 'SoundCloud'];
 const FM_TEMPOS = [['', 'Any tempo', null], ['slow', 'Slow', [60, 90]], ['mid', 'Mid', [90, 115]], ['up', 'Upbeat', [115, 135]], ['fast', 'Fast', [135, 200]]];
-let fmEl = null, fmTab = 'genres', fmOpenGenre = null, fmArtists = null, fmTempo = '';
+let fmEl = null, fmTab = 'genres', fmOpenGenre = null, fmArtists = null, fmTempo = '', fmPicker = null;
 
 function fmBuild(){
   fmEl = document.createElement('div');
@@ -8244,7 +8253,7 @@ function fmBuild(){
     '<div class="fm-head"><button type="button" class="fm-back" id="fmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title" id="fmTitle">Find music</div></div>' +
     '<div class="fm-scroll" id="fmScroll"></div>';
   document.body.appendChild(fmEl);
-  $('fmBack').addEventListener('click', () => { if (fmArtists){ fmArtists = null; fmRender(); } else closeFindMusic(); });
+  $('fmBack').addEventListener('click', () => { if (fmPicker && !fmPicker.busy){ fmPicker = null; fmRender(); } else if (fmArtists){ fmArtists = null; fmRender(); } else if (!fmPicker) closeFindMusic(); });
   fmEl.addEventListener('click', (e) => {
     const t = e.target.closest('[data-fm]');
     if (!t) return;
@@ -8254,6 +8263,10 @@ function fmBuild(){
     else if (k === 'pick') fmShowArtists(v, t.dataset.t, t.dataset.g, fmTab === 'vibe' ? (FM_TEMPOS.find(x => x[0] === fmTempo) || [])[2] : null);
     else if (k === 'tempo'){ fmTempo = v; fmRender(); }
     else if (k === 'services'){ const l = $('fmServices'); l.hidden = !l.hidden; }
+    else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; fmRender(); } }
+    else if (k === 'import') spotifyImportSelected();
+    else if (k === 'spdisc'){ spotifyDisconnect(); fmPicker = null; fmRender(); showToast('Disconnected from Spotify'); }
+    else if (k === 'service' && v === 'Spotify') spotifyLoadMusic();
     else if (k === 'service'){
       closeFindMusic();
       urlInput.placeholder = 'Paste your ' + v + ' playlist, album or profile link';
@@ -8274,7 +8287,16 @@ function fmTile(kind, label, v, extra){
 }
 function fmRender(){
   const sc = $('fmScroll');
-  $('fmTitle').textContent = fmArtists ? fmArtists.title : 'Find music';
+  $('fmTitle').textContent = fmPicker ? 'Your Spotify music' : fmArtists ? fmArtists.title : 'Find music';
+  if (fmPicker){
+    if (fmPicker.loading){ sc.innerHTML = '<div class="fm-note">' + escapeHtml(fmPicker.note || 'Loading') + '&hellip;</div>'; return; }
+    const n = fmPicker.items.filter(x => x.on).length;
+    sc.innerHTML = '<div class="fm-picks">' + fmPicker.items.map(x =>
+      '<button type="button" class="fm-pick' + (x.on ? ' is-on' : '') + '" role="checkbox" aria-checked="' + !!x.on + '" data-fm="ck" data-v="' + escapeHtml(x.key) + '"' + (fmPicker.busy ? ' disabled' : '') + '><span class="fm-box">' + (x.on ? '\u2713' : '') + '</span><span class="fm-pick-name">' + escapeHtml(x.label) + '</span><span class="fm-pick-sub">' + escapeHtml(x.sub) + '</span></button>').join('') + '</div>' +
+      '<button type="button" class="fm-load fm-go" data-fm="import"' + (n && !fmPicker.busy ? '' : ' disabled') + '>' + (fmPicker.busy ? escapeHtml(fmPicker.note || 'Importing') + '&hellip;' : 'Import ' + n + (n === 1 ? ' item' : ' items')) + '</button>' +
+      '<button type="button" class="fm-disc" data-fm="spdisc">Disconnect Spotify</button>';
+    return;
+  }
   if (fmArtists){
     if (fmArtists.loading){ sc.innerHTML = '<div class="fm-note">' + (fmArtists.note || 'Finding artists') + '&hellip;</div>'; return; }
     if (!fmArtists.list.length){ sc.innerHTML = '<div class="fm-note">No artists found. Try another pick.</div>'; return; }
@@ -8360,6 +8382,142 @@ function openFindMusic(){
   statsFeature('find_music');
 }
 function closeFindMusic(){ if (fmEl) fmEl.hidden = true; }
+
+/* =========================================================================
+   SPOTIFY SIGN-IN (Geethub #582, "Load your music")
+   Authorization-code flow with PKCE, all in the browser (no secret). The
+   client ID is public: set SPOTIFY_CLIENT_ID, and register the redirect URI
+   (this page's address, see spotifyRedirectUri) in the Spotify dashboard.
+   Brings in Liked Songs and the user's playlists as editable playlists whose
+   songs are matched in the background like any saved list.
+   ========================================================================= */
+const SPOTIFY_CLIENT_ID = '';
+const SPOTIFY_SCOPES = 'user-library-read playlist-read-private playlist-read-collaborative';
+const LS_SPOTIFY_AUTH = 'ebbless:spotifyAuth';
+const spotifyRedirectUri = () => location.origin + location.pathname;
+function b64url(buf){ return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+async function spotifyConnect(){
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  const state = b64url(crypto.getRandomValues(new Uint8Array(12)));
+  try { sessionStorage.setItem('ebbless:spPkce', JSON.stringify({ verifier, state })); } catch(e){}
+  location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+    client_id: SPOTIFY_CLIENT_ID, response_type: 'code', redirect_uri: spotifyRedirectUri(),
+    code_challenge_method: 'S256', code_challenge: challenge, state, scope: SPOTIFY_SCOPES });
+}
+function spotifyDisconnect(){ try { localStorage.removeItem(LS_SPOTIFY_AUTH); } catch(e){} }
+async function spotifyTokenCall(params){
+  const r = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(Object.assign({ client_id: SPOTIFY_CLIENT_ID }, params)) });
+  if (!r.ok) throw new Error('spotify token ' + r.status);
+  const d = await r.json();
+  const prev = lsGet(LS_SPOTIFY_AUTH, null) || {};
+  const auth = { access: d.access_token, refresh: d.refresh_token || prev.refresh, exp: Date.now() + (d.expires_in - 60) * 1000 };
+  lsSet(LS_SPOTIFY_AUTH, auth);
+  return auth;
+}
+// back from Spotify: ?code=...&state=... in the address
+async function spotifyHandleReturn(){
+  const q = new URLSearchParams(location.search);
+  if (!q.get('state')) return false;
+  let saved = null; try { saved = JSON.parse(sessionStorage.getItem('ebbless:spPkce') || 'null'); } catch(e){}
+  if (!saved || saved.state !== q.get('state')) return false;
+  try { sessionStorage.removeItem('ebbless:spPkce'); } catch(e){}
+  const code = q.get('code');
+  history.replaceState(null, '', location.pathname);
+  if (!code){ showToast('Spotify sign-in was cancelled'); return true; }
+  try {
+    await spotifyTokenCall({ grant_type: 'authorization_code', code, redirect_uri: spotifyRedirectUri(), code_verifier: saved.verifier });
+    openFindMusic();
+    spotifyLoadMusic();
+  } catch(e){ showToast('Spotify sign-in failed. Try again.'); }
+  return true;
+}
+async function spotifyAccessToken(){
+  let a = lsGet(LS_SPOTIFY_AUTH, null);
+  if (!a || !a.access) return null;
+  if (Date.now() < a.exp) return a.access;
+  if (!a.refresh) return null;
+  try { a = await spotifyTokenCall({ grant_type: 'refresh_token', refresh_token: a.refresh }); return a.access; } catch(e){ spotifyDisconnect(); return null; }
+}
+async function spotifyApi(path){
+  const tok = await spotifyAccessToken();
+  if (!tok) throw new Error('signed out');
+  const r = await fetch(path.startsWith('http') ? path : 'https://api.spotify.com/v1' + path, { headers: { Authorization: 'Bearer ' + tok } });
+  if (r.status === 401){ spotifyDisconnect(); throw new Error('signed out'); }
+  if (!r.ok) throw new Error('spotify ' + r.status);
+  return r.json();
+}
+async function spotifyPages(path, cap){
+  const out = []; let next = path;
+  while (next && out.length < cap){
+    const d = await spotifyApi(next);
+    (d.items || []).forEach(x => out.push(x));
+    next = d.next;
+  }
+  return out;
+}
+async function spotifyLoadMusic(){
+  if (!SPOTIFY_CLIENT_ID){ showToast('Spotify sign-in is not set up yet'); return; }
+  if (!(await spotifyAccessToken())){ spotifyConnect(); return; }
+  fmPicker = { loading: true, note: 'Reading your Spotify library', items: [] };
+  fmRender();
+  try {
+    const [liked, lists] = await Promise.all([
+      spotifyApi('/me/tracks?limit=1'),
+      spotifyPages('/me/playlists?limit=50', 300),
+    ]);
+    const items = [];
+    if (liked.total) items.push({ key: 'liked', label: 'Liked Songs', sub: liked.total + (liked.total === 1 ? ' song' : ' songs'), on: true, kind: 'liked' });
+    lists.filter(p => p && p.id).forEach(p => items.push({ key: 'pl:' + p.id, label: p.name || 'Playlist', sub: (((p.tracks && p.tracks.total) || 0) === 1 ? '1 song' : ((p.tracks && p.tracks.total) || 0) + ' songs'), on: true, kind: 'playlist', id: p.id, image: p.images && p.images[0] && p.images[0].url }));
+    fmPicker = { loading: false, items };
+    if (!items.length) fmPicker = { loading: true, note: 'Nothing found in your Spotify library', items: [] };
+  } catch(e){
+    fmPicker = null;
+    showToast(String(e.message) === 'signed out' ? 'Spotify signed you out. Sign in again.' : 'Could not read your Spotify library');
+  }
+  fmRender();
+}
+function spotifyTrackRow(t){
+  if (!t || t.is_local || !t.name) return null;
+  const art = t.album && t.album.images && (t.album.images[1] || t.album.images[0]);
+  return { title: t.name, artist: (t.artists || []).map(a => a.name).join(', '), art: art ? art.url : null, srcDuration: Math.round((t.duration_ms || 0) / 1000), videoId: null, plays: 0 };
+}
+async function spotifyImportSelected(){
+  if (!fmPicker || fmPicker.busy) return;
+  const chosen = fmPicker.items.filter(x => x.on);
+  if (!chosen.length) return;
+  fmPicker.busy = true;
+  let made = 0;
+  const ids = [];
+  try {
+    for (let i = 0; i < chosen.length; i++){
+      const it = chosen[i];
+      fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label;
+      fmRender();
+      const rows = it.kind === 'liked'
+        ? (await spotifyPages('/me/tracks?limit=50', 2000)).map(x => spotifyTrackRow(x.track))
+        : (await spotifyPages('/playlists/' + it.id + '/tracks?limit=100&fields=items(track(name,is_local,duration_ms,artists(name),album(images))),next', 2000)).map(x => spotifyTrackRow(x.track));
+      const tracks = rows.filter(Boolean);
+      if (!tracks.length) continue;
+      const id = 'custom-sp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const name = it.kind === 'liked' ? 'Spotify Liked Songs' : it.label;
+      persistPlaylistObj({ id, type: 'custom', name, image: it.image || tracks.find(t => t.art)?.art || null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'spotify' });
+      saveToLibrary(id);
+      ids.push(id); made++;
+    }
+  } catch(e){
+    showToast(String(e.message) === 'signed out' ? 'Spotify signed you out. Sign in again.' : 'Import stopped early');
+  }
+  fmPicker = null;
+  closeFindMusic();
+  renderLibrary();
+  if (made){
+    showToast('Added ' + made + (made === 1 ? ' playlist' : ' playlists') + ' from Spotify. Matching songs in the background.');
+    (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
+  }
+}
+setTimeout(() => { spotifyHandleReturn(); }, 1200);
 
 /* Geethub #574 (phones): swipe left/right to move between Library, Player, Queue and Settings.
    Ignores swipes that start on something with its own horizontal gesture (album art, sliders,
