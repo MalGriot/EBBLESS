@@ -1093,7 +1093,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .visual-tabs .v-tab svg{width:16px;height:16px}
 .v-tab-label{font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .visual-tabs .v-tab:hover{color:var(--text)}
-.visual-tabs .v-tab.is-active{background:var(--player-accent);color:var(--on-player-accent,#151107)}
+.visual-tabs .v-tab.is-active{background:var(--accent);color:var(--on-accent,#151107)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
 /* visualizer tab icon: three cymatics plate figures crossfading, one full
    3-shape cycle every 20s (3 cycles/min). each phase holds ~5s, fades ~1.7s.
@@ -1358,7 +1358,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .viz-ctl-btn.viz-auto-btn{font-size:16px;font-weight:700;line-height:1}
 .viz-ctl-btn.viz-speed-btn{width:auto;padding:0 9px;border-radius:15px;font-size:12px;font-weight:700;letter-spacing:.02em}
 .viz-ctl-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
-.viz-ctl-btn.is-active{background:var(--player-accent);color:var(--on-player-accent,#151107)}
+.viz-ctl-btn.is-active{background:var(--accent);color:var(--on-accent,#151107)}
 .art-fs-btn{position:absolute;top:10px;right:10px;z-index:6;width:32px;height:32px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.6);color:var(--faint);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
@@ -1492,8 +1492,8 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .ctl-btn:active{transform:scale(.92)}
 .ctl-btn svg{width:16px;height:16px}
 .ctl-btn.is-active{color:var(--player-accent)}
-.ctl-btn.main{width:52px;height:52px;background:var(--player-accent);color:var(--on-player-accent,#151107)}
-.ctl-btn.main:hover{background:var(--player-accent)}
+.ctl-btn.main{width:52px;height:52px;background:var(--accent);color:var(--on-accent,#151107)}
+.ctl-btn.main:hover{background:var(--accent)}
 .ctl-btn.main svg{width:19px;height:19px}
 .ctl-btn.small{width:32px;height:32px}
 .ctl-btn.small svg{width:14px;height:14px}
@@ -1742,7 +1742,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .q-now .meta{min-width:0;flex:1}
 .q-now .title{font-size:13.5px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q-now .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--player-accent);color:var(--on-player-accent,#151107);
+.q-now .play-btn{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent,#151107);
   display:flex;align-items:center;justify-content:center;transition:transform var(--dur-ui) var(--ease-out)}
 .q-now .play-btn:active{transform:scale(.92)}
 .q-now .play-btn svg{width:15px;height:15px}
@@ -25848,9 +25848,9 @@ function updateMiniPlayerUI(){
     if (tint && doc.body.style.getPropertyValue('--mp-tint') !== tint){
       doc.body.style.setProperty('--mp-tint', tint);
       // play button follows the full app's play button (#587): same fill and the same readable glyph color
-      const onTint = getComputedStyle(document.documentElement).getPropertyValue('--on-player-accent').trim() || getComputedStyle(document.documentElement).getPropertyValue('--on-accent').trim();
-      doc.body.style.setProperty('--mp-play-bg', tint);
-      if (onTint) doc.body.style.setProperty('--mp-play-fg', onTint);
+      const rootCS = getComputedStyle(document.documentElement);
+      doc.body.style.setProperty('--mp-play-bg', rootCS.getPropertyValue('--accent').trim() || tint);
+      doc.body.style.setProperty('--mp-play-fg', rootCS.getPropertyValue('--on-accent').trim() || '#151107');
       // Queue text must contrast with the tinted background (50% tint over #0b0b0b)
       const probe = doc.createElement('span'); probe.style.color = tint; doc.body.appendChild(probe);
       const m = doc.defaultView.getComputedStyle(probe).color.match(/[\d.]+/g); probe.remove();
