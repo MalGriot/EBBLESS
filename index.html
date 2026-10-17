@@ -2702,6 +2702,27 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   .ctl-btn.small{width:26px;height:26px}
   .ctl-btn.small svg{width:12px;height:12px}
 }
+/* Geethub #502: landscape phones - slimmer top bar and footer nav (icon and label side by side), no install banner, more songs per row */
+@media (orientation:landscape) and (max-height:480px) and (max-width:859.98px){
+  :root{--nav-h:42px;--topbar-h:46px}
+  body.install-banner-on{--ib-h:0px}
+  .install-banner{display:none!important}
+  #bottom-nav button{flex-direction:row;gap:8px}
+  .view-scroll{padding-bottom:calc(64px + var(--safe-b))}
+  .lib-grid:not(.is-list){grid-template-columns:repeat(4,minmax(0,1fr))}
+  .lib-grid.is-compact{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .lib-filter-btn{height:30px}
+  .lib-tb-btn{min-height:36px}
+  #libSearchToggle{width:36px;height:36px}
+  .lib-ctx-menu{max-height:88vh}
+  .lib-ctx-item{padding:8px 12px}
+  /* player: art on the left, title and controls on the right */
+  #view-player .player-stage{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:22px;row-gap:2px;align-items:center;justify-content:center;max-width:720px;margin:0 auto}
+  #view-player .visual-tabs{grid-column:1;grid-row:1;justify-self:center}
+  #view-player .artwork-wrap{grid-column:1;grid-row:2;width:min(max(72px,calc(100dvh - 60px - var(--nav-h) - 92px)),40vw)!important;margin:0}
+  #view-player .track-meta{grid-column:2;grid-row:1;width:auto;align-self:end;margin-top:0;text-align:left}
+  #view-player .transport-full{grid-column:2;grid-row:2;align-self:start;max-width:none;margin-top:6px}
+}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
 }
@@ -2720,9 +2741,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 }
 #rotate-lock svg{width:48px;height:48px;opacity:.85}
 #rotate-lock p{font-size:14px;letter-spacing:.3px;opacity:.75;max-width:260px}
-@media (orientation:landscape) and (pointer:coarse) and (max-height:500px){
-  #rotate-lock{display:flex}
-}
+/* Geethub #502: landscape is allowed now; the blocking screen stays defined but never shows */
 
 /* ---------- splash screen ---------- */
 #splash{
@@ -25698,9 +25717,7 @@ if ('serviceWorker' in navigator){
 /* Best-effort native lock (Android/installed PWA support this without
    fullscreen; iOS Safari has no such API - the #rotate-lock overlay above
    is what actually enforces portrait-only there). */
-if (screen.orientation && screen.orientation.lock){
-  screen.orientation.lock('portrait').catch(() => {});
-}
+/* Geethub #502: no orientation lock any more; landscape is supported. */
 
 /* ---- install prompt (Settings fallback for anyone who dismissed the splash) ----
    Always shown, on every platform (issue #268). Three states:

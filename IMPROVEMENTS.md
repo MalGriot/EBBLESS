@@ -10274,12 +10274,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #503. Fix: the results / add-playlist / add-songs window is `#import-overlay` (z 60), which covered the mini bar (z 42), and the mini bar was also hidden on the Player view. Now `openImportOverlay`/`closeImportOverlay` call `updateMiniBarVisibility`, the mini bar sits above the window (z 61) and the window stops 57px above it (mobile: above the nav + mini bar). Not changed in split-desktop (mini bar is hidden there by design). Verified in the local preview at 375px: window open with a track loaded showed the mini bar below it; the 57px offset was corrected after measuring a 3px overlap and not re-measured. Desktop width and a real add-playlist window untested. Cache v266.
 
 ### landscape-view: Enable and optimize landscape view (Geethub #502)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #502. Enable and optimize landscape view.
-- **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #502. 
+- **Touches:** index.html, manifest.json, android (twa-manifest, LauncherActivity, web_app_manifest)
+- **Branch:** agent/mobile-ui-pass
+- **Notes:** Synced from Geethub #502. Built: portrait lock removed everywhere (web manifest any, JS orientation lock and the Rotate-your-device screen gone, Android launcher and TWA manifest unlocked). Short landscape phones (under 480px tall) get a slimmer footer nav with icon and label side by side, no install banner, 4 songs per row in the library, and the player puts art on the left with title and controls on the right. Seen in an 800x370 browser preview (library, empty player); queue, settings and a playing song not checked. The Android app needs a rebuild and reinstall to rotate. 
 
 ### button-text-color-consistency: Buttons mix white and black text when the UI color changes (Geethub #501)
 - **Status:** merged

@@ -44,7 +44,7 @@
       "url": "share_url"
     }
   },
-  "orientation": "portrait",
+  "orientation": "default",
   "fingerprints": [
     {
       "name": "upload key",
