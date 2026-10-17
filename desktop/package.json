@@ -37,7 +37,7 @@
       "identity": null
     },
     "directories": {
-      "output": "dist"
+      "output": "dist.noindex"
     },
     "protocols": [
       {

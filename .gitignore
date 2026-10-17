@@ -5,3 +5,4 @@ AGENTS.md
 .claude/settings.local.json
 worker/.dev.vars
 worker/node_modules/
+desktop/dist*/

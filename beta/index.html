@@ -31,8 +31,7 @@
         <p class="path-q">Want to try EBBLESS?</p>
         <button class="btn primary join" id="joinBtn" type="button">JOIN THE BETA</button>
         <p class="join-hint">Takes about two minutes.</p>
-        <p class="join-hint">Prefer a Mac app? <a href="https://github.com/MalGriot/EBBLESS/releases/latest">Download EBBLESS for Mac</a></p>
-        <p class="join-hint">On Android? <a href="https://github.com/MalGriot/EBBLESS/releases/download/android/ebbless.apk">Download the Android app</a></p>
+        <p class="join-hint"><a data-app-download href="https://github.com/MalGriot/EBBLESS/releases/latest">Download the EBBLESS app</a></p>
         <div id="meter" hidden>
           <div class="meter"><b class="tnum" id="meterCount">0 / 50</b><span id="meterLeft"></span></div>
           <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
@@ -234,6 +233,7 @@
 </div>
 
 <script src="beta.js"></script>
+<script src="../welcome/download.js" defer></script>
 <script>
 (async function(){
   const $ = (id) => document.getElementById(id);

@@ -10166,8 +10166,8 @@ Add entries in this shape:
 - **Priority:** medium
 - **Description:** Idea, Geethub #516. Soften the Mac security warning so people don't get scared.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry.
+- **Branch:** agent/mac-download-flow
+- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a friendly "first open" note (right-click, Open). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Stays ready for that step.
 
 ### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
 - **Status:** draft
@@ -10178,20 +10178,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #515. 
 
 ### app-download-link: Download link for the Mac app (GitHub Release linked from the site) (Geethub #514)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #514. Download link for the Mac app (GitHub Release linked from the site).
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #514. 
+- **Branch:** agent/mac-download-flow
+- **Notes:** Synced from Geethub #514.  welcome/download.js: pages link straight to the latest Mac DMG from GitHub Releases (API lookup, falls back to the releases page). Live when the pages deploy.
 
 ### mac-chrome-duplicate-spotlight: Mac app shows 3 entries in Cmd+Space after removing the Chrome install (Geethub #513)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Bug, Geethub #513. Mac app shows 3 entries in Cmd+Space after removing the Chrome install.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #513. Probably leftover installed web-app shortcuts.
+- **Branch:** agent/mac-download-flow
+- **Notes:** Synced from Geethub #513. Probably leftover installed web-app shortcuts. Cause: electron-builder output folders (desktop/dist, dist6, with .app and .dmg) were indexed by Spotlight as extra EBBLESS entries. Fix: build output now goes to desktop/dist.noindex (Spotlight skips *.noindex) and desktop/dist*/ is gitignored. Existing old dist folders on disk stay indexed until deleted or renamed to *.noindex (user step).
 
 ### mini-follow-desktops: Mini player doesn't follow you when you swipe to another desktop (Geethub #512)
 - **Status:** review
@@ -10774,16 +10774,16 @@ Add entries in this shape:
 - **Priority:** low
 - **Description:** Idea, Geethub #565. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #565.
+- **Branch:** agent/mac-download-flow
+- **Notes:** Synced from Geethub #565. Download button side is done (Windows shows "coming soon"). Blocked: no Windows build. Needs electron-builder win target plus a Windows machine or CI to build and publish the installer; then add the .exe case in welcome/download.js.
 
 ### bug-when-you-try-to-install-the: when you try to install the app from the welcome/beta page, the link takes you to github. that's too complicated. one click, detect the OS and processor, download and install the appropriate app (Geethub #566)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #566. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #566.
+- **Branch:** agent/mac-download-flow
+- **Notes:** Synced from Geethub #566. welcome/ and beta/ now show one "Download EBBLESS for Mac" link (welcome/download.js). Detects Android (APK), Mac (Apple Silicon vs Intel via userAgentData; Safari defaults to Apple Silicon with an "Intel Mac?" link), Windows (placeholder until a build exists). Tested on beta page locally.
 
 ### bug-white-buttons-with-white-symbols-text: white buttons with white symbols/text are unreadable (Geethub #567)
 - **Status:** merged
