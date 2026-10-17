@@ -10834,7 +10834,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #572.
 
 ### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** low
 - **Description:** Idea, Geethub #573. medium
 - **Touches:** tbd.
