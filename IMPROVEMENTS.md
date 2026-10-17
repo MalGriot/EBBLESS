@@ -11032,12 +11032,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #584. Related to #578; Android native.
 
 ### the-entire-app-freezes-lags-and-becomes-un: the entire app freezes lags and becomes unresponsive when you try to drag a song over a playlist thumb (Geethub #595)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #595. 
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #595. Related to #635 (performance).
+- **Touches:** desktop song-to-playlist drag (the `dragover` handler near `setDragChip`).
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #595. Related to #635 (performance). Cause: every `dragover` (many a second while a song is held over a library card) called `addablePlaylists()` two or three times, and that JSON-parses every saved playlist from localStorage. It also removed and re-added the highlight class on every event. Fix: the addable id set is built once per drag (reset on dragstart/dragend) and the highlight only changes when the card under the pointer changes. Measured in the preview on a synthetic library (60 playlists x 400 songs, dispatched dragover events): 5.96 ms per event before, 0.25 ms after (~24x); a real library with art and matched metadata parses slower, so the real-world gain is larger. A real mouse drag with the OS drag image was not tried (synthetic events only).
 
 ### music-map: music map (Geethub #597)
 - **Status:** draft
@@ -11136,12 +11136,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #614.
 
 ### after-loading-the-song-after-the-ad-the-so: after loading the song after the ad, the song is starting several seconds in. it should start at 0:00 if it's not a resume play (Geethub #615)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #615. 
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #615.
+- **Touches:** ad dodge / held-ad handoff (`skipHeldAd`, `onDeckConfirmed`, `rewindPromotedDeck`).
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #615. Cause: #558 deliberately resumed a mid-song-ad bounced song at `adResumeAt` (where the ad cut in, if 5s or more in), so it came back "several seconds in" after the ad; the issue was filed hours after #558 shipped. Fix: removed `adResumeAt` / `AD_RESUME_MIN_S`; a song an ad bounced, and every promoted deck, now starts at 0:00 (`onDeckConfirmed` seeks 0, `rewindPromotedDeck` rewinds anything past 1s); only a real resume (`pendingResume`) keeps its position. **Not reproduced live** (needs a real YouTube ad; code path read and syntax-checked only). If songs still start late after an ad with this build, the cause is elsewhere (e.g. YouTube resuming its own watch position); log it on the issue.
 
 ### library-pills-when-only-one-is-active-hitt: library pills: when only one is active, hitting it again activates all pills (Geethub #616)
 - **Status:** draft

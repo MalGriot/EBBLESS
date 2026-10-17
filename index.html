@@ -13728,12 +13728,26 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   const rowOf = (el) => el && el.closest && el.closest('.track-row, .q-row');
   const inLibrary = (el) => !!(el && el.closest && el.closest('#view-library'));
   const cardOf = (el) => el && el.closest && el.closest('.lib-card[data-pl-id]');
-  const okTarget = (card) => !!card && addablePlaylists().some(p => p.id === card.dataset.plId);
-  function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); libplPanel.classList.remove('is-drop-target'); }
+  // #595: addablePlaylists() parses every saved playlist, so asking it on each
+  // dragover (many a second) froze the app on a big library. Ask once per drag.
+  let addableIds = null;
+  const addableSet = () => addableIds || (addableIds = new Set(addablePlaylists().map(p => p.id)));
+  const okTarget = (card) => !!card && addableSet().has(card.dataset.plId);
+  let hiCard = null, hiPanel = false;
+  function clearHi(){
+    if (hiCard){ hiCard.classList.remove('is-drop-target'); hiCard = null; }
+    if (hiPanel){ libplPanel.classList.remove('is-drop-target'); hiPanel = false; }
+  }
+  function setHi(card, panel){
+    if (card === hiCard && panel === hiPanel) return;
+    clearHi();
+    if (card){ card.classList.add('is-drop-target'); hiCard = card; }
+    if (panel){ libplPanel.classList.add('is-drop-target'); hiPanel = true; }
+  }
   // #548: the open playlist is itself a drop target (not the one the song is already dragged out of)
   function panelDropId(el){
     if (!el || !el.closest || !el.closest('#libpl-panel') || !openLibraryPanelId) return null;
-    if (!addablePlaylists().some(p => p.id === openLibraryPanelId)) return null;
+    if (!addableSet().has(openLibraryPanelId)) return null;
     if (dragFromLib && dragSrcPl === openLibraryPanelId) return null;
     return openLibraryPanelId;
   }
@@ -13748,6 +13762,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     row.draggable = true;
   });
   document.addEventListener('dragstart', (e) => {
+    addableIds = null;
     const art = e.target.closest && e.target.closest('#artworkWrap');
     if (art){
       // album art of the playing song drags as that song
@@ -13807,15 +13822,15 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   document.addEventListener('dragover', (e) => {
     if (!dragTrack) return;
     const card = cardOf(e.target);
-    clearHi();
-    if (panelDropId(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; libplPanel.classList.add('is-drop-target'); return; }
+    if (panelDropId(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setHi(null, true); return; }
     if (!okTarget(card)){
+      setHi(null, false);
       // a song from outside the library dropped anywhere else in it asks which playlist
       if (!dragFromLib && inLibrary(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
       return;
     }
     e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-    card.classList.add('is-drop-target');
+    setHi(card, false);
   });
   document.addEventListener('drop', (e) => {
     if (!dragTrack) return;
@@ -13854,7 +13869,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     if (openLibraryPanelId !== card.dataset.plId) toggleLibraryPlaylistPanel(card.dataset.plId);
   });
   document.addEventListener('dragend', () => {
-    dragTrack = null; dragFromLib = false; relinkDrag = false; dragSrcPl = null; clearHi();
+    dragTrack = null; dragFromLib = false; relinkDrag = false; dragSrcPl = null; addableIds = null; clearHi();
     document.body.classList.remove('relink-dragging');
     document.querySelectorAll('.is-song-drag').forEach(r => r.classList.remove('is-song-drag'));
     document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable], .search-pick[draggable]').forEach(r => r.removeAttribute('draggable'));
@@ -20774,7 +20789,6 @@ function resetDeck(deck){
   deck.adDodge = null;
   deck.adSeen = '';
   deck.songTime = 0;
-  deck.adResumeAt = 0;
   deck.resumeSeeked = false;
   deck.pos = -1;
   deck.pendingVideoId = null;
@@ -20966,9 +20980,8 @@ function onDeckConfirmed(deck){
     // The video plays muted (silently) through the whole pre-ad wait, so by the
     // time it's confirmed clean it has already drifted past the intro — snap
     // back to the start so the listener hears the song from 0:00.
-    // (#558: a song a mid-song ad bounced picks up where the ad cut in)
-    if (!resumed && deck.player.seekTo) deck.player.seekTo(deck.adResumeAt || 0, true);
-    deck.adResumeAt = 0;
+    // (#615: a song an ad bounced also starts here, not where the ad cut in)
+    if (!resumed && deck.player.seekTo) deck.player.seekTo(0, true);
     // Confirmed only because the wait cap ran out with an ad still playing:
     // stay muted and let guardActiveDeckAd unmute once the real video starts.
     const reason = deckAdReason(deck, true);
@@ -24806,13 +24819,9 @@ function cancelCrossfade(){
 // (prewarmResumeDeck). An unconfirmed deck gets the snap on confirm.
 // Shared by every promotion of the standby deck - the instant swap and
 // both crossfades (crossfade-start-and-preload) - so a song always starts
-// from the top. A song a mid-song ad bounced (skipHeldAd) picks up where the
-// ad cut in instead (#558).
+// from the top, a song an ad bounced (skipHeldAd) included (#615).
 function rewindPromotedDeck(nd){
-  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo && nd.adResumeAt){
-    nd.player.seekTo(nd.adResumeAt, true);
-    nd.adResumeAt = 0;
-  } else if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
+  if (nd.confirmed && !nd.resumeSeeked && nd.player.seekTo){
     const cur = nd.player.getCurrentTime ? (nd.player.getCurrentTime() || 0) : 0;
     const st = nd.player.getPlayerState ? nd.player.getPlayerState() : -1;
     if (cur > 1 || st === YT.PlayerState.ENDED) nd.player.seekTo(0, true);
@@ -27685,20 +27694,18 @@ function maybeDodgeAd(){
 // outlasted the load wait) used to be held silent for up to AD_MUTE_MAX_MS.
 // After AD_SKIP_AFTER_MS the next song takes over instead, the same way as
 // the pre-roll dodge: the held song waits out its ad muted on the other deck
-// and plays right after, picking up where the ad cut in (#558, adResumeAt;
-// from the top if that was in its first seconds, or on repeat-one). Once per
+// and plays right after, from 0:00 (#615; #558 first had it pick up where
+// the ad cut in, which read as starting several seconds in). Once per
 // video, so a false alarm (e.g. a bad duration from search) can't keep
 // bouncing a real song - the second time it is just held, as before.
 // #558: 10s of held silence felt broken; hand off after 2.5s.
 const AD_SKIP_AFTER_MS = 2500;
-const AD_RESUME_MIN_S = 5;
 const adSkippedVids = new Set();
 function skipHeldAd(ad, reason){
   const nd = standbyDeck(), n = adDodgeTarget(ad, nd);
   if (ad.kind !== 'yt' || n < 0 || adSkippedVids.has(ad.videoId)) return;
   adSkippedVids.add(ad.videoId);
   const p = state.queuePos, q = state.queue;
-  ad.adResumeAt = n !== p && ad.songTime >= AD_RESUME_MIN_S ? ad.songTime : 0;
   [q[p], q[n]] = [q[n], q[p]];
   if (ad.unmuteTimer) clearTimeout(ad.unmuteTimer);
   // drop the gate's "wants sound" too, or releaseSoundGates would unmute it
