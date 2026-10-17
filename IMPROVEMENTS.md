@@ -10542,7 +10542,7 @@ Add entries in this shape:
   Fix (2026-10-17, cache v293, not deployed): the window was too tall to reach Create on a phone. Now the main choices (name, Played, Liked, Order, How many) are on top, Length / Artist / Title or artist has / Leave out artist / Leave out words are under a More options fold (opens by itself when editing a playlist that uses them), the rules area scrolls, and the match count with Create and Cancel stay fixed at the bottom. Checked at 360x600 in the preview.
 
 ### shared-playlists: Shared playlists that multiple users can build together (Geethub #534)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #534. Several users build one playlist together.
 - **Touches:** playlists, accounts.
@@ -11040,7 +11040,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #595. Related to #635 (performance). Cause: every `dragover` (many a second while a song is held over a library card) called `addablePlaylists()` two or three times, and that JSON-parses every saved playlist from localStorage. It also removed and re-added the highlight class on every event. Fix: the addable id set is built once per drag (reset on dragstart/dragend) and the highlight only changes when the card under the pointer changes. Measured in the preview on a synthetic library (60 playlists x 400 songs, dispatched dragover events): 5.96 ms per event before, 0.25 ms after (~24x); a real library with art and matched metadata parses slower, so the real-world gain is larger. A real mouse drag with the OS drag image was not tried (synthetic events only).
 
 ### music-map: music map (Geethub #597)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #597. utilize this music map to connect users with their vibe https://www.music-map.com/ reverse engineer it and use it
 - **Touches:** tbd.
@@ -11128,7 +11128,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #613. Built: while nothing is playing and the art is in its default style, the white EBBLESS wordmark (40% of the art wide, 85% opacity) bounces around inside the art box like the DVD logo, edge to edge, at two different speeds so the path wanders. Pure CSS, two nested transform keyframes (translateY on the box, translateX on the image, percentages of the logo's own size so no JS and no rAF), no filter/blur. It only exists (display:block) while the empty art is showing in art mode; hidden in visualizer/lyrics, under other tabs, and paused under the fullscreen player and Find music. Reduced motion shows it still. Not built: no color change on corner hits; the record and cassette art styles don't show it. Verified in the 375px browser preview by forcing the empty state: positions sampled over time stay inside the art, pauses when Find music opens, no new [gpu-watchdog]. Not checked on a real phone or in the fullscreen player. Cache v329.
 
 ### don-t-count-rick-astley-s-never-gonna-give: don't count rick astley's never gonna give you up in the listener's play history or analytics (Geethub #614)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #614. don't put it in on air either. just treat it like nothing is playing and it never played
 - **Touches:** tbd.
@@ -11152,7 +11152,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #616. Built: tapping the only lit pill (which used to do nothing) now lights every visible pill and unfolds every section, albums' artist groups included. Only the one early return in the pill click handler changed; overflow/search code untouched. Verified in the 375px browser preview: one lit pill then tap lights all, normal toggles unchanged. Cache v328.
 
 ### a-chatbot-that-users-can-air-their-grievan: a chatbot that users can air their grievances to and train their own algorithm (Geethub #617)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #617. 
 - **Touches:** tbd.
@@ -11184,7 +11184,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #620. Most literal reading, built in part. DONE: sliding a queue row or a library row in the list layout (touch/pen) animates it over by 28% of its width and it stays until cancelled (tap elsewhere, tap the row, Escape, scroll, or a swipe back). Left uncovers red with a trash can; tapping it turns the strip into 'Delete this song/playlist/album/artist/podcast? Yes | No' (No puts the row back, Yes deletes: queueRemoveAt for the queue, the library's existing delete with its Undo toast for library rows). Right uncovers green with a share icon; tapping it opens the share sheet (navigator.share, copy-link fallback) with the existing EBBLESS ?import= link, per song for the queue and per playlist for the library. The old queue swipe-to-remove (fling past 90px, no prompt) was replaced. Helper: attachSwipeReveal; strip is a sibling behind the row only while open, row moves by transform only. ASSUMPTIONS: library list items = rows of the library's List layout (not the grid cards, not the song rows inside an opened playlist); touch/pen only, mouse keeps the 3-dot menu; system playlists (Liked, CuRRentSSsss, SwiiiRrrLL, On/Off Air) don't swipe; playlists with no source link (custom ones) can't swipe right. NOT BUILT: the share landing page (opening an EBBLESS link shows a preview of the album/song/artist/playlist/podcast with a try-it/join-the-beta button), the 'opens EBBLESS automatically if installed' app link, and a custom share window with social targets (the phone's own share sheet is used); these belong with the song-page-share work. Verified in the 375px browser preview with synthetic touch pointer events: left and right swipe snap to 28%, short swipe snaps back, outside tap closes, No restores, Yes removes, share calls navigator.share with the song link, library list row swipe and grid mode disabled. Not tried on a real phone (real touch scrolling vs horizontal swipe, long-press menu interplay). Cache v334.
 
 ### you-should-be-able-to-upload-music-from-yo: you should be able to upload music from your local device or google cloud to your library (Geethub #621)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #621. 
 - **Touches:** tbd.
@@ -11192,7 +11192,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #621.
 
 ### when-on-air-is-on-air-the-thumb-should-swi: when on air is "on air", the thumb should switch between the thumb video art and a 1x1 of the song that's currently playing (Geethub #622)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #622. when it's off air, it should switch between the thumb video art and the 2x2 grid thumb art
 - **Touches:** tbd.
@@ -11208,7 +11208,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #623. Related to #604, #605, #612. Every shape change (menu, art skin follow, cymatics) resizes then moves the window to the bottom right corner via mpMagnetize. Not verified in real Electron.
 
 ### when-it-plays-an-ad-try-switching-the-link: when it plays an ad, try switching the link to a less popular song or a soundcloud link if it's close to 100% match (Geethub #624)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #624. 
 - **Touches:** tbd.
@@ -11240,7 +11240,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #627. Related to #612. New Cymatics shape: a round window with the visualizer's own sand-plate patterns (VIZ_PATTERNS) in the daily Rosicrucian color, the cover as a small center label, controls and info on hover. Own canvas in the mini window: 1100 dots at 30 fps, runs only while the shape is showing, playing and visible, no blur or filter, no extra assets. Pick it from the shape button or right-click menu.
 
 ### 3-dot-menu-start-a-radio-based-on-this-son: 3 dot menu: start a radio based on this song (Geethub #628)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #628. 
 - **Touches:** tbd.
@@ -11280,7 +11280,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #632. **Could not reproduce** the exact symptom: in the preview the pills stayed the same size (and no scrollbar or arrow appeared) when toggled off and on at 320, 360, 375 px and the 340 px desktop sidebar. Reproduced one related fault: in a very narrow row (about 200 px) a label slips out of its pill. Likely mechanism for the report: `updateLibFilterMore` judged overflow with `libFilter.scrollWidth`, which also counts a label slipping out of its pill; Podcasts is the last and longest pill, so it lit the arrow button, which takes 38 px from the row, shrinking every pill and making the row scrollable. Defensive fix (not confirmed on the owner's phone): overflow is now judged from the last pill's own box, and the pill font and padding can shrink a little further (8.5px / 3px minimums) before a label slips. If it still happens, get the phone width, font size setting and which pill was turned off.
 
 ### is-there-a-way-to-change-the-dock-icon-bas: is there a way to change the dock icon based on what album art mode is active? (Geethub #633)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #633. like make it a record or an lp or out the cymatics behind the logo? obvs the logo must always be there but maybe put things behind it
 - **Touches:** tbd.
