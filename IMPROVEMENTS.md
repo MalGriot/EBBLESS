@@ -11144,12 +11144,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #615. Cause: #558 deliberately resumed a mid-song-ad bounced song at `adResumeAt` (where the ad cut in, if 5s or more in), so it came back "several seconds in" after the ad; the issue was filed hours after #558 shipped. Fix: removed `adResumeAt` / `AD_RESUME_MIN_S`; a song an ad bounced, and every promoted deck, now starts at 0:00 (`onDeckConfirmed` seeks 0, `rewindPromotedDeck` rewinds anything past 1s); only a real resume (`pendingResume`) keeps its position. **Not reproduced live** (needs a real YouTube ad; code path read and syntax-checked only). If songs still start late after an ad with this build, the cause is elsewhere (e.g. YouTube resuming its own watch position); log it on the issue.
 
 ### library-pills-when-only-one-is-active-hitt: library pills: when only one is active, hitting it again activates all pills (Geethub #616)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #616. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #616.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #616. Built: tapping the only lit pill (which used to do nothing) now lights every visible pill and unfolds every section, albums' artist groups included. Only the one early return in the pill click handler changed; overflow/search code untouched. Verified in the 375px browser preview: one lit pill then tap lights all, normal toggles unchanged. Cache v328.
 
 ### a-chatbot-that-users-can-air-their-grievan: a chatbot that users can air their grievances to and train their own algorithm (Geethub #617)
 - **Status:** draft

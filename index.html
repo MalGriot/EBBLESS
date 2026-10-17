@@ -10018,8 +10018,15 @@ libFilter.addEventListener('click', (e) => {
   if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); rerenderLibraryKeepPanel(); return; }
   // each pill extends or retracts its whole section, every sub-group included (#495)
   const extend = !!libFolded[key];
-  // the last open pill can't be switched off: the library is never empty (#495)
-  if (!extend && [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].filter(b => !libFolded[b.dataset.filter]).length <= 1) return;
+  // the last open pill can't be switched off (the library is never empty, #495): tapping it again opens every pill instead (#616)
+  if (!extend && [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].filter(b => !libFolded[b.dataset.filter]).length <= 1){
+    libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)').forEach(b => { libFolded[b.dataset.filter] = false; });
+    const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+    libAlbumGroupKeys.forEach(k => { f[k] = false; });
+    lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+    rerenderLibraryKeepPanel();
+    return;
+  }
   libFolded[key] = !extend;
   if (key === 'albums'){
     const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
