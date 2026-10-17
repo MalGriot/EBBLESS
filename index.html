@@ -1017,6 +1017,9 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
    same row height, and the track's current link is outlined rather than
    filled so its text stays readable */
 .search-pick.is-video img{width:78px}
+.search-pick.is-video{position:relative}
+.search-pick .hover-clip{position:absolute;border:0;border-radius:6px;overflow:hidden;background:#000;pointer-events:none;z-index:1;opacity:0;transition:opacity .2s ease}
+.search-pick .hover-clip.is-on{opacity:1}
 .search-pick.is-current{border-color:var(--accent)}
 .search-pick .s .cur{color:var(--accent)}
 .search-pick .s.m{margin-top:1px;font-variant-numeric:tabular-nums}
@@ -2175,6 +2178,15 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .hidden{display:none!important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 #yt-host{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}
+.share-burst{position:fixed;inset:0;z-index:25000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .25s ease}
+.share-burst[hidden]{display:none}
+.share-burst.is-on{opacity:1}
+.share-burst img{width:min(56vw,260px);height:auto;transform:scale(.7);opacity:0;transition:transform .6s cubic-bezier(.2,.9,.3,1.2),opacity .35s ease}
+.share-burst.is-on img{transform:scale(1);opacity:1}
+.song-page-acts{display:flex;gap:8px;margin:0 0 12px}
+.song-page-acts .btn-ghost{flex:1 1 0;min-width:0;padding:10px 6px;font-size:13px}
+.song-page-link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media (prefers-reduced-motion:reduce){.share-burst img{transition:opacity .2s ease;transform:none}}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translate(-50%,10px);z-index:80;
   background:var(--panel-3);color:var(--text);font-size:12.5px;padding:10px 16px;border-radius:20px;
   box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
@@ -11234,6 +11246,58 @@ async function openAlbumPreview(a, name, backFn){
     status.textContent = "Couldn't load songs for that album.";
   }
 }
+// #533: a song's own page in the library panel. Only data the app already
+// holds (the track, its album in the library, the cached year lookup); the
+// artist name opens the artist page, the album opens the album.
+function openSongPage(t, plId, trackIdx){
+  if (!t) return;
+  const id = 'songpage:' + (t.videoId || t.title);
+  if (openLibraryPanelId === id) return;
+  const split = document.body.classList.contains('split-desktop');
+  if (!split && state.currentView !== 'library') setView('library');
+  const prevId = openLibraryPanelId && !String(openLibraryPanelId).startsWith('songpage:') && !String(openLibraryPanelId).startsWith(ARTIST_INFO_PREFIX) && getCachedPlaylist(openLibraryPanelId) ? openLibraryPanelId : null;
+  if (state.queueOpen) closeQueuePanel();
+  openLibraryPanelId = id;
+  libplAddBar.hidden = true;
+  libplPanel.classList.add('is-artist-info');
+  libplTitle.textContent = t.title;
+  if (t.art){ attachArtworkFallback(libplArt, { art: t.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
+  libplBody.innerHTML = '';
+  const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0;
+  libplReturnTo = null; libplResume = null;
+  libplBackFn = () => { if (prevId) toggleLibraryPlaylistPanel(prevId); else closeLibraryPlaylistPanel(); };
+  syncLibplCloseBtn();
+  const pl = plId ? playlistById(plId) : null;
+  const album = pl ? albumForTrack(pl, t) : null;
+  const dur = t.srcDuration || t.duration || 0;
+  const info = document.createElement('div'); info.className = 'currents-hint album-info';
+  const addLink = (txt, fn) => {
+    const a = document.createElement('span'); a.className = 'song-page-link'; a.textContent = txt;
+    a.addEventListener('click', fn); return a;
+  };
+  const parts = [];
+  if (t.artist) parts.push(addLink(t.artist, () => openArtistPage(t.artist, t.title)));
+  if (album) parts.push(addLink(album.name, () => { if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id); }));
+  const yearSpan = document.createElement('span');
+  if (dur) parts.push(document.createTextNode(formatTime(dur)));
+  if (t.plays) parts.push(document.createTextNode(t.plays + (t.plays === 1 ? ' play' : ' plays')));
+  parts.push(yearSpan);
+  parts.forEach((n, i) => { if (i && n !== yearSpan) info.append(' · '); info.append(n); });
+  const acts = document.createElement('div'); acts.className = 'song-page-acts';
+  const mk = (label, fn, primary) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost' + (primary ? ' is-active' : '');
+    b.textContent = label; b.addEventListener('click', fn); acts.appendChild(b); return b;
+  };
+  if (pl && trackIdx != null && t.videoId && getCachedPlaylist(pl.id)) mk('Play', () => { const i = pl.tracks.indexOf(t); playLibraryTrackInline(pl.id, i >= 0 ? i : trackIdx); }, true);
+  mk('Add to playlist', () => openAddToPlaylistPicker(t));
+  if (pl && trackIdx != null && canonicalLinkForPlaylist(pl)) mk('Share', () => shareTrackAt(pl.id, trackIdx));
+  libplBody.appendChild(info); libplBody.appendChild(acts);
+  libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  syncHistoryBuffer();
+  fetchTrackYear(t.title, t.artist).then(y => {
+    if (y && openLibraryPanelId === id){ yearSpan.textContent = (info.textContent ? ' · ' : '') + y; }
+  }).catch(() => {});
+}
 async function loadArtistAlbumsInto(panelId, name, standalone){
   const lib = getCachedPlaylist(panelId);
   const src = lib && isArtistEntry(lib) ? lib : { type: 'artist', id: '', name };
@@ -11414,6 +11478,13 @@ function openArtistPick(names, title, anchor){
 }
 document.addEventListener('click', (e) => { if (artistPickMenu && !artistPickMenu.contains(e.target)) closeArtistPick(); });
 let lastArtistClickAt = 0;
+// #533: tap the playing song's title to open its song page
+trackTitle.addEventListener('click', (e) => {
+  const t = currentTrack(), q = state.queue[state.queuePos];
+  if (!t || !q || !t.videoId) return;
+  e.stopPropagation();
+  openSongPage(t, q.plId, q.idx);
+});
 trackArtist.addEventListener('click', (e) => {
   const t = currentTrack();
   if (!t || !t.artist) return;
@@ -11826,6 +11897,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     if (!(opts && opts.isNow)) items.push({ action: 'playnext', label: 'Play next', icon: CTX_ICON_PLAY_NEXT });
     items.push({ action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE });
     items.push({ action: 'addplaylist', label: 'Add to playlist', icon: CTX_ICON_ADD_PLAYLIST });
+    items.push({ action: 'songpage', label: 'Song page', icon: CTX_ICON_ART });
     // A track has no canonical source link of its own (see
     // canonicalLinkForPlaylist's comment) - sharing it re-shares the parent
     // playlist/album's link plus this track's position within it, so only
@@ -11883,6 +11955,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'addqueue'){ queueAddToEnd(trackIdx, plId); showToast('Added to queue'); }
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
+  else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
   else if (action === 'refresh'){ openRefreshLinkPicker(plId, trackIdx); }
   else if (action === 'wrongsong'){ reportMatchBtn.click(); }
@@ -12281,8 +12354,27 @@ function buildShareUrl(sourceLink, trackIndex){
 // Fires the Web Share API when available; otherwise falls back to copying
 // just the link, mirroring copyPlaylistLink/shareAppBtn's existing
 // clipboard-fallback pattern (see the Settings "Share EBBLESS" row).
-function shareEbblessLink(shareData){
+// #489: a short EBBLESS wordmark flash while a song share opens. Hidden by
+// display:none when done (transform/opacity only, no looping animation).
+let shareBurstEl = null, shareBurstTimer = 0;
+function playShareBurst(){
+  if (!shareBurstEl){
+    shareBurstEl = document.createElement('div'); shareBurstEl.className = 'share-burst'; shareBurstEl.hidden = true;
+    shareBurstEl.innerHTML = '<img src="brand/assets/wordmark-white.png" alt="EBBLESS">';
+    document.body.appendChild(shareBurstEl);
+  }
+  clearTimeout(shareBurstTimer);
+  shareBurstEl.hidden = false;
+  void shareBurstEl.offsetWidth;
+  shareBurstEl.classList.add('is-on');
+  shareBurstTimer = setTimeout(() => {
+    shareBurstEl.classList.remove('is-on');
+    shareBurstTimer = setTimeout(() => { shareBurstEl.hidden = true; }, 300);
+  }, 1300);
+}
+function shareEbblessLink(shareData, opts){
   statsFeature('share');
+  if (opts && opts.burst) playShareBurst();
   if (navigator.share){
     navigator.share(shareData).catch(() => { /* user cancelled the share sheet - nothing to do */ });
     return;
@@ -12322,7 +12414,7 @@ function shareTrackAt(plId, trackIdx){
     title: 'EBBLESS',
     text: 'Listen to "' + t.title + '" by ' + t.artist + ' on EBBLESS',
     url: buildShareUrl(link, trackIdx)
-  });
+ }, { burst: true });
 }
 
 // Re-points a library entry at a different source link entirely, keeping
@@ -12515,6 +12607,43 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
   });
   $('relinkBackBtn').addEventListener('click', closeImportOverlay);
 }
+
+// #491: hovering a YouTube candidate in the link-fix grid plays a muted looping
+// clip over its thumbnail. One iframe at a time, created on hover (after a short
+// delay) and removed on leave, tab hide or when the grid goes away, so nothing
+// plays or sits in memory while not hovered.
+(function(){
+  if (!window.matchMedia || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  let clip = null, hoverTimer = 0, host = null;
+  function stopClip(){
+    clearTimeout(hoverTimer);
+    if (clip){ clip.remove(); clip = null; }
+    host = null;
+  }
+  function startClip(btn){
+    const c = relinkDragCtx && relinkDragCtx.list[parseInt(btn.dataset.i, 10)];
+    const img = btn.querySelector('img');
+    if (!c || !img || (c.source || 'youtube') !== 'youtube' || !/^[\w-]{11}$/.test(c.videoId)) return;
+    const f = document.createElement('iframe');
+    f.className = 'hover-clip';
+    f.tabIndex = -1; f.setAttribute('aria-hidden', 'true'); f.allow = 'autoplay';
+    f.style.cssText = 'left:' + img.offsetLeft + 'px;top:' + img.offsetTop + 'px;width:' + img.offsetWidth + 'px;height:' + img.offsetHeight + 'px';
+    const start = c.duration > 90 ? Math.floor(c.duration * 0.3) : 0;
+    f.src = 'https://www.youtube-nocookie.com/embed/' + c.videoId + '?autoplay=1&mute=1&controls=0&loop=1&playlist=' + c.videoId + '&playsinline=1&disablekb=1&modestbranding=1&start=' + start;
+    f.addEventListener('load', () => f.classList.add('is-on'));
+    btn.appendChild(f); clip = f; host = btn;
+  }
+  document.addEventListener('mouseover', (e) => {
+    const btn = e.target.closest && e.target.closest('#relinkCandidates .search-pick.is-video');
+    if (btn === host) return;
+    stopClip();
+    if (btn) hoverTimer = setTimeout(() => startClip(btn), 400);
+  });
+  document.addEventListener('mouseout', (e) => {
+    if (host && !(e.relatedTarget && host.contains(e.relatedTarget))) stopClip();
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopClip(); });
+})();
 
 // Geethub #596: anonymous record of a manual link fix (matcher's pick vs the
 // listener's) so scoring misses can be analysed later. Track title/artist and
