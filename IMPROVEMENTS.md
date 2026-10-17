@@ -10282,7 +10282,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #502. 
 
 ### button-text-color-consistency: Buttons mix white and black text when the UI color changes (Geethub #501)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #501. Buttons mix white and black text when the UI color changes.
 - **Touches:**
@@ -10306,7 +10306,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #499. Related to #416 (paid custom cursor).
 
 ### made-by-ebbless-section: Currents, Swirl and On Air belong in the 'Made by EBBLESS' section (Geethub #498)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Bug, Geethub #498. Currents, Swirl and On Air belong in the 'Made by EBBLESS' section.
 - **Touches:**
@@ -10330,7 +10330,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #496. Shipped 2026-10-14 (cache v232), unconfirmed: a list made only of podcast episodes (e.g. a copied show saved as custom) no longer fades between cover and 2x2 grid (canToggleThumbArt). Root cause was a guess; ask for repro steps if a normal podcast still loops.
 
 ### see-all-podcasts-pill-scroll: 'See all' on podcasts scrolls the category pills to the lit podcasts pill (Geethub #495)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #495. 'See all' on podcasts scrolls the category pills to the lit podcasts pill.
 - **Touches:**
@@ -10562,7 +10562,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #532. Related to artist-window-album-tracks.
 
 ### album-cover-opens-album: Clicking the album cover should open the album (Geethub #531)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #531. Tapping the album cover in the player opens that album.
 - **Touches:** player art.
@@ -10786,7 +10786,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #566.
 
 ### bug-white-buttons-with-white-symbols-text: white buttons with white symbols/text are unreadable (Geethub #567)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #567. medium need a clever fix for this
 - **Touches:** tbd.
@@ -10882,7 +10882,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #578.
 
 ### on-mobile-status-bar-make-it: on mobile status bar: make it the ebbless logo (Geethub #579)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #579. medium
 - **Touches:** tbd.
@@ -10890,7 +10890,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #579. Android notification small icon (status bar) is now the EBBLESS mark (drawable ic_stat_ebbless, Playback and Watchdog services) instead of the generic play icon. Not built or seen on a device.
 
 ### bug-the-feedback-button-is-missing-from: the feedback button is missing from top nav (Geethub #580)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #580. medium
 - **Touches:** tbd.
@@ -10938,7 +10938,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #600. Fixed: delete handler restores .lib-body scrollTop after the re-render.
 
 ### bug-miniplayer-play-button-style: desktop: miniplayer play button should match the full app (Geethub #587)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #587. Use the same play button as the full app.
 - **Touches:** tbd.
@@ -10962,7 +10962,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #602. Cover/2x2 crossfade already existed (#384, 17s loop); now a 42s loop so it flips every 21s. Opacity only; still pauses off-screen (.lib-offscreen) and when the view is hidden.
 
 ### hires-video-desktop: use the hi res video for desktop (Geethub #598)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #598. Source file: /Users/malcolm/Downloads/204888-925552628.mp4. Must follow the GPU budget.
 - **Touches:** tbd.
