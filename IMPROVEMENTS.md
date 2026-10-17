@@ -10424,6 +10424,7 @@ Add entries in this shape:
 - **Touches:** playlist panel.
 - **Branch:** 
 - **Notes:** Synced from Geethub #549. Child of playlist-workspaces (#506).
+  Follow-up (2026-10-17, cache v294, not deployed): every playlist can now be reordered. Removed the exclusions for smart playlists, lists over 300 songs, lists still matching, CuRRentSSsss/Swell, ON AIR, artist and podcast entries. The order is a saved view over the songs (not a change to them), so smart playlists keep it as they rebuild (new songs land at the end) and a song matched later keeps its place (falls back to its title|artist key). Checked in the preview: a drag on a smart playlist swapped rows 1 and 2 and awarded the Reorder milestone. NOT checked: a 10,000-song list, touch dragging on a real phone, and the system lists with real songs (they were empty in the fresh preview).
 
 ### playlist-drag-songs-in: Drag songs into the open playlist (Geethub #548)
 - **Status:** merged

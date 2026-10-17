@@ -10777,7 +10777,8 @@ function toggleLibraryPlaylistPanel(id){
     libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
     // #549: drag handles on the rows of a playlist whose songs can be put in your own order
-    const canReorder = pl.tracks.length > 1 && pl.tracks.length <= PL_ROWS_FIRST && !pl.smart && !pl.resolving && id !== NP_ID && id !== SWELL_ID && !isArtistEntry(pl) && !isPodcastEntry(pl);
+    // every playlist can be reordered (smart, imported, huge, still-matching, system ones): the order is a saved view over the songs, not a change to them
+    const canReorder = pl.tracks.length > 1;
     if (libplBody._rowObs){ libplBody._rowObs.disconnect(); libplBody._rowObs = null; }
     let rowSink = (el) => libplBody.appendChild(el);
     const addRow = (i) => {
@@ -16686,6 +16687,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 294, date: '2026-10-17', items: [
+    'You can now drag to reorder songs in every playlist, including smart playlists, imported lists, very long lists and ones still matching.'
+  ]},
   { version: 293, date: '2026-10-17', items: [
     'The smart playlist window is shorter: the main choices are up top, the rest (length, artist, words, leave-outs) sit under More options, and Create stays in view on small screens.'
   ]},
@@ -17829,7 +17833,13 @@ function setPlCustomOrder(id, idxOrder){
 function plCustomIndices(pl, keys){
   const buckets = new Map();
   (keys || []).forEach((k, p) => { if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(p); });
-  const pos = pl.tracks.map(t => { const b = buckets.get(profTrackKey(t)); return b && b.length ? b.shift() : Infinity; });
+  // a song that was still matching when you ordered it was saved under its
+  // title|artist placeholder key; once it has a link, fall back to that key
+  const pos = pl.tracks.map(t => {
+    let b = buckets.get(profTrackKey(t));
+    if ((!b || !b.length) && t && t.videoId) b = buckets.get('?' + (t.title || '') + '|' + (t.artist || ''));
+    return b && b.length ? b.shift() : Infinity;
+  });
   return pl.tracks.map((t, i) => i).sort((a, b) => (pos[a] === pos[b] ? 0 : pos[a] < pos[b] ? -1 : 1) || (a - b));
 }
 function plTrackOrder(pl){
