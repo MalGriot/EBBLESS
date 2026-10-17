@@ -626,10 +626,7 @@ body.onb-active .paste-guide{display:none}
   body:not(.onb-stage-library) #libraryListWrap .lib-top .queue-head{display:none}
   #libraryListWrap .lib-top{display:flex;flex-direction:column}
   #libraryListWrap .lib-top .lib-filter{order:-1;margin-top:0}
-  .lib-grid.is-list{margin-right:-14px}
-  .lib-grid.is-list .lib-card{padding-right:0}
   .lib-grid.is-list .lib-card .row-actions .row-play,.lib-grid.is-list .lib-card .row-actions .row-pin{display:none}
-  .lib-grid.is-list .lib-card .row-actions .row-menu{width:40px;height:40px;margin-right:-4px}
   /* footer player: play/pause only */
   #mini-bar .mini-ctl>button:not(#miniPlayBtn){display:none!important}
 }
@@ -957,6 +954,9 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .fm-tile[data-open]{border-color:var(--accent)}
 .fm-subs{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 6px}
 .fm-subs .fm-tile{min-height:38px;padding:8px 14px;border-radius:19px;font-size:13.5px;font-weight:600}
+.fm-tempo.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.fm-artist-name small{font-weight:400;opacity:.6}
+.fm-tempos{margin-bottom:12px}
 .fm-note{padding:40px 10px;text-align:center;color:var(--faint)}
 .fm-artist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 10px}
 .fm-artist{position:relative}
@@ -2359,7 +2359,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #bottom-nav{display:flex}
   #mini-bar,#match-status{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
-  .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 308px)))}
+  .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 332px)))}
+  /* nothing playing: the Find music button takes a row, so the art gives that room back */
+  body:not(.onb-active) .player-stage:has(.track-meta.is-empty) .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 392px)))}
   .track-meta{width:min(340px,84vw)}
   .lib-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ctl-btn{width:44px;height:44px}
@@ -2745,12 +2747,12 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #libSearchToggle{width:36px;height:36px}
   .lib-ctx-menu{max-height:88vh}
   .lib-ctx-item{padding:8px 12px}
-  /* player: art on the left, title and controls on the right */
-  #view-player .player-stage{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:22px;row-gap:2px;align-items:center;justify-content:center;max-width:720px;margin:0 auto}
-  #view-player .visual-tabs{grid-column:1;grid-row:1;justify-self:center}
-  #view-player .artwork-wrap{grid-column:1;grid-row:2;width:min(max(72px,calc(100dvh - 60px - var(--nav-h) - 92px)),40vw)!important;margin:0}
-  #view-player .track-meta{grid-column:2;grid-row:1;width:auto;align-self:end;margin-top:0;text-align:left}
-  #view-player .transport-full{grid-column:2;grid-row:2;align-self:start;max-width:none;margin-top:6px}
+  /* player: art on the left, tabs, title and controls stacked on the right */
+  #view-player .player-stage{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:22px;row-gap:2px;align-content:center;align-items:center;justify-content:center;max-width:720px;margin:0 auto}
+  #view-player .artwork-wrap{grid-column:1;grid-row:1/4;width:min(max(72px,calc(100dvh - 60px - var(--nav-h) - 24px)),40vw)!important;margin:0}
+  #view-player .visual-tabs{grid-column:2;grid-row:1;justify-self:start}
+  #view-player .track-meta{grid-column:2;grid-row:2;width:auto;margin-top:0;text-align:left}
+  #view-player .transport-full{grid-column:2;grid-row:3;max-width:none;margin-top:4px}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
@@ -8229,7 +8231,8 @@ const FM_GENRE_RE = { 'Hip-Hop': /hip|rap/i, 'R&B / Soul': /r&b|soul/i, 'Funk': 
   'Jazz': /jazz/i, 'Rock': /rock|alternative|punk|blues/i, 'Pop': /pop|singer/i, 'Reggae': /reggae|dancehall/i, 'Afro': /afro|african|world|dance/i,
   'Latin': /latin|reggaet|salsa|urbano/i, 'Classical': /classical|opera/i, 'Country & Folk': /country|folk|americana|bluegrass/i };
 const FM_SERVICES = ['Spotify', 'Apple Music', 'YouTube', 'SoundCloud'];
-let fmEl = null, fmTab = 'genres', fmOpenGenre = null, fmArtists = null;
+const FM_TEMPOS = [['', 'Any tempo', null], ['slow', 'Slow', [60, 90]], ['mid', 'Mid', [90, 115]], ['up', 'Upbeat', [115, 135]], ['fast', 'Fast', [135, 200]]];
+let fmEl = null, fmTab = 'genres', fmOpenGenre = null, fmArtists = null, fmTempo = '';
 
 function fmBuild(){
   fmEl = document.createElement('div');
@@ -8248,7 +8251,8 @@ function fmBuild(){
     const k = t.dataset.fm, v = t.dataset.v;
     if (k === 'tab'){ fmTab = v; fmOpenGenre = null; fmRender(); }
     else if (k === 'genre'){ fmOpenGenre = fmOpenGenre === v ? null : v; fmRender(); }
-    else if (k === 'pick') fmShowArtists(v, t.dataset.t, t.dataset.g);
+    else if (k === 'pick') fmShowArtists(v, t.dataset.t, t.dataset.g, fmTab === 'vibe' ? (FM_TEMPOS.find(x => x[0] === fmTempo) || [])[2] : null);
+    else if (k === 'tempo'){ fmTempo = v; fmRender(); }
     else if (k === 'services'){ const l = $('fmServices'); l.hidden = !l.hidden; }
     else if (k === 'service'){
       closeFindMusic();
@@ -8272,11 +8276,11 @@ function fmRender(){
   const sc = $('fmScroll');
   $('fmTitle').textContent = fmArtists ? fmArtists.title : 'Find music';
   if (fmArtists){
-    if (fmArtists.loading){ sc.innerHTML = '<div class="fm-note">Finding artists&hellip;</div>'; return; }
+    if (fmArtists.loading){ sc.innerHTML = '<div class="fm-note">' + (fmArtists.note || 'Finding artists') + '&hellip;</div>'; return; }
     if (!fmArtists.list.length){ sc.innerHTML = '<div class="fm-note">No artists found. Try another pick.</div>'; return; }
     sc.innerHTML = '<div class="fm-artist-grid">' + fmArtists.list.map(a =>
       '<div class="fm-artist"><button type="button" class="fm-artist-open" data-fm="artist" data-v="' + escapeHtml(a.name) + '">' +
-      '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + '</span></button>' +
+      '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + (a.bpm ? ' <small>' + a.bpm + '</small>' : '') + '</span></button>' +
       '<button type="button" class="fm-add" data-fm="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>';
     return;
   }
@@ -8289,7 +8293,9 @@ function fmRender(){
     }).join('') + '</div>';
   } else {
     const src = fmTab === 'region' ? FM_REGIONS : FM_VIBES;
-    body = '<div class="fm-grid">' + Object.keys(src).map(k => fmTile('pick', k, src[k], ' data-t="' + escapeHtml(k) + '"')).join('') + '</div>';
+    if (fmTab === 'vibe') body = '<div class="fm-subs fm-tempos" role="group" aria-label="Tempo">' + FM_TEMPOS.map(([k, l, r]) =>
+      '<button type="button" class="fm-tile fm-tempo' + (fmTempo === k ? ' is-active' : '') + '" data-fm="tempo" data-v="' + k + '">' + l + (r ? ' ' + r[0] + (r[1] > 150 ? '+' : '-' + r[1]) : '') + '</button>').join('') + '</div>';
+    body += '<div class="fm-grid">' + Object.keys(src).map(k => fmTile('pick', k, src[k], ' data-t="' + escapeHtml(k) + '"')).join('') + '</div>';
   }
   sc.innerHTML =
     '<button type="button" class="fm-load" data-fm="services">Load your music</button>' +
@@ -8297,8 +8303,8 @@ function fmRender(){
     '<div class="fm-tabs" role="tablist">' + [['genres', 'Genres'], ['region', 'Region'], ['vibe', 'Vibe']].map(([k, l]) =>
       '<button type="button" role="tab" class="fm-tab' + (fmTab === k ? ' is-active' : '') + '" aria-selected="' + (fmTab === k) + '" data-fm="tab" data-v="' + k + '">' + l + '</button>').join('') + '</div>' + body;
 }
-async function fmShowArtists(term, title, genre){
-  const token = fmArtists = { title, loading: true, list: [] };
+async function fmShowArtists(term, title, genre, bpmRange){
+  const token = fmArtists = { title: bpmRange ? title + ' \u00b7 ' + bpmRange[0] + (bpmRange[1] > 150 ? '+' : '-' + bpmRange[1]) + ' bpm' : title, loading: true, list: [], note: bpmRange ? 'Matching tempo' : '' };
   fmRender();
   try{
     const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term, entity: 'song', limit: '120' }));
@@ -8309,10 +8315,40 @@ async function fmShowArtists(term, title, genre){
       if (genre && FM_GENRE_RE[genre] && !FM_GENRE_RE[genre].test(t.primaryGenreName || '')) return;
       if (genre && normalizeArtistQuery(t.artistName).includes(normalizeArtistQuery(title))) return;
       seen.add(t.artistId);
-      list.push({ id: String(t.artistId), name: t.artistName, image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' });
+      list.push({ song: t.trackName, id: String(t.artistId), name: t.artistName, image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' });
     });
     if (fmArtists !== token) return;
-    token.list = list.slice(0, 30);
+    if (bpmRange){
+      // one song per artist goes to the tempo lookup (12 at a time); only songs inside the range stay
+      const songs = list.slice(0, 48).map(a => ({ title: a.song, artist: a.name, a }));
+      const batches = [];
+      for (let i = 0; i < songs.length; i += 12) batches.push(songs.slice(i, i + 12));
+      const hit = [];
+      const pending = [];
+      const take = (b, ms) => b.forEach((x, i) => {
+        const m = ms[i];
+        if (!m) pending.push(x);
+        else if (m.bpm >= bpmRange[0] && m.bpm <= bpmRange[1]){ x.a.bpm = Math.round(m.bpm); hit.push(x.a); }
+      });
+      for (const b of batches){
+        const ms = await fetchTrackMetrics(b);
+        if (fmArtists !== token) return;
+        take(b, ms);
+        if (hit.length >= 24) break;
+      }
+      // the tempo service answers late for songs it hasn't seen: give it a moment, then ask once more
+      if (hit.length < 12 && pending.length){
+        await new Promise(r => setTimeout(r, 2500));
+        const again = pending.splice(0);
+        for (let i = 0; i < again.length && hit.length < 24; i += 12){
+          const b = again.slice(i, i + 12);
+          const ms = await fetchTrackMetrics(b);
+          if (fmArtists !== token) return;
+          take(b, ms);
+        }
+      }
+      token.list = hit;
+    } else token.list = list.slice(0, 30);
   } catch(e){ if (fmArtists !== token) return; token.list = []; }
   token.loading = false;
   fmRender();
@@ -8352,6 +8388,11 @@ function closeFindMusic(){ if (fmEl) fmEl.hidden = true; }
     if (!next) return;
     const btn = document.querySelector(next === 'queue' ? '#bottom-nav [data-action="toggle-queue"]' : '#bottom-nav [data-view="' + next + '"]');
     if (btn) btn.click();
+    // the new screen slides in from the side you swiped toward (translate + opacity only)
+    const el = next === 'queue' ? $('queue-panel') : views[next];
+    if (btn && el && el.animate && !window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+      el.animate([{ translate: (dx < 0 ? '56px' : '-56px') + ' 0', opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
   });
 })();
 $('playerMoreBtn').addEventListener('click', (e) => {
@@ -9665,7 +9706,7 @@ function renderLibrary(){
       }
       artDiv.appendChild(face);
     }
-    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
+    if (!isSystemPl || isLiked || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       const menuBtn = document.createElement('button');
       menuBtn.className = 'menu-btn'; menuBtn.setAttribute('aria-label','Playlist options'); menuBtn.setAttribute('aria-haspopup','true'); menuBtn.setAttribute('aria-expanded','false');
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
@@ -9741,7 +9782,7 @@ function renderLibrary(){
     rowPlayBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     rowPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); playPlaylistNow(id); });
     rowActions.appendChild(rowPlayBtn);
-    if (!isLiked){
+    {
       const rowPinBtn = document.createElement('button');
       rowPinBtn.className = 'row-pin' + (pinned ? ' is-active' : '');
       rowPinBtn.setAttribute('aria-label', pinned ? 'Unpin playlist' : 'Pin playlist to top');
@@ -9751,13 +9792,14 @@ function renderLibrary(){
       rowMenuBtn.className = 'row-menu'; rowMenuBtn.setAttribute('aria-label','Playlist options'); rowMenuBtn.setAttribute('aria-haspopup','true'); rowMenuBtn.setAttribute('aria-expanded','false');
       rowMenuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
       rowMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibCtxMenu(id, rowMenuBtn); });
-      rowActions.appendChild(rowPinBtn); rowActions.appendChild(rowMenuBtn);
+      if (!isLiked) rowActions.appendChild(rowPinBtn);
+      rowActions.appendChild(rowMenuBtn);
     }
 
     if (isAlbum){ const disc = document.createElement('div'); disc.className = 'cd-disc'; disc.setAttribute('aria-hidden', 'true'); card.appendChild(disc); }
     card.appendChild(artDiv); card.appendChild(info); card.appendChild(rowActions);
     card.addEventListener('click', () => toggleLibraryPlaylistPanel(id));   // ON AIR opens like any playlist; tuning in is the first song or the menu
-    if (!isSystemPl || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
+    if (!isSystemPl || isLiked || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       attachLongPress(card, () => {
         const anchorBtn = card.querySelector('.menu-btn') || card.querySelector('.row-menu');
         if (anchorBtn) toggleLibCtxMenu(id, anchorBtn);
@@ -10967,6 +11009,58 @@ function addArtistMixButton(name){
   b.textContent = 'Make a mix of songs';
   b.addEventListener('click', () => makeArtistMix(name, b));
   libplBody.prepend(b);
+  addArtistRecommendations(name);
+}
+
+/* Geethub #582: "Recommended artists" at the foot of an artist panel. Seeds /similar
+   with one of the artist's songs (found through iTunes' keyless search), keeps the
+   artists behind the similar songs, and looks up a photo and an iTunes id for each
+   so a card can open their page or add them straight to the library. */
+const recArtistsMemo = new Map();
+async function fetchRecommendedArtists(name){
+  const key = artistNameKey(name);
+  if (recArtistsMemo.has(key)) return recArtistsMemo.get(key);
+  const itunes = (term, limit) => fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term, entity: 'song', limit: String(limit) }))
+    .then(r => r.ok ? r.json() : null).then(d => (d && d.results) || []).catch(() => []);
+  const want = normalizeArtistQuery(name);
+  const seeds = (await itunes(name, 10)).filter(t => songCreditsArtist(t.artistName, want));
+  let out = [];
+  if (seeds.length){
+    const sim = await fetchSimilar(seeds[0].trackName, name, 40);
+    const seen = new Set([want]), picks = [];
+    (sim.candidates || []).forEach(c => {
+      const a = stripTopicSuffix(c.artist || '').trim(), k = normalizeArtistQuery(a);
+      if (!a || !k || seen.has(k)) return;
+      seen.add(k); picks.push(a);
+    });
+    const found = await Promise.all(picks.slice(0, 10).map(async a => {
+      const hit = (await itunes(a, 5)).find(t => songCreditsArtist(t.artistName, normalizeArtistQuery(a)));
+      return hit ? { id: String(hit.artistId), name: hit.artistName, image: hit.artworkUrl100 ? hit.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' } : null;
+    }));
+    out = found.filter(Boolean).slice(0, 8);
+  }
+  recArtistsMemo.set(key, out);
+  return out;
+}
+function addArtistRecommendations(name){
+  if (libplBody.querySelector('.rec-artists')) return;
+  const panelId = openLibraryPanelId;
+  fetchRecommendedArtists(name).then(list => {
+    if (!list.length || openLibraryPanelId !== panelId || libplBody.querySelector('.rec-artists')) return;
+    const box = document.createElement('div');
+    box.className = 'rec-artists';
+    box.innerHTML = '<div class="section-label">Recommended artists</div><div class="fm-artist-grid">' + list.map(a =>
+      '<div class="fm-artist"><button type="button" class="fm-artist-open" data-rec="open" data-v="' + escapeHtml(a.name) + '">' +
+      '<img src="' + escapeHtml(a.image) + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + '</span></button>' +
+      '<button type="button" class="fm-add" data-rec="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>';
+    box.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-rec]');
+      if (!t) return;
+      if (t.dataset.rec === 'open') openArtistPage(t.dataset.v);
+      else { t.disabled = true; t.textContent = '\u2713'; beginImportFromParsedLink({ source: 'applemusic', type: 'artist', id: t.dataset.v, storefront: 'us' }); }
+    });
+    libplBody.appendChild(box);
+  });
 }
 
 /* =========================================================================
@@ -11044,7 +11138,10 @@ function openLibCtxMenu(id, btn){
   // CuRRentSSsss is generated, not saved: its menu is just its two refresh
   // actions (rename/art/delete don't apply to a system playlist).
   // SwiiiRrrLL is generated too - its only action is a fresh reblend.
-  const items = id === SWELL_ID ? [
+  const items = id === LIKED_ID ? [
+    { action: 'play', label: 'Play', icon: CTX_ICON_PLAY },
+    { action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE },
+  ] : id === SWELL_ID ? [
     { action: 'currents-more', label: currentsBusy === 'more' ? 'Adding more songs...' : 'Add more songs', icon: CTX_ICON_ADD_MORE },
     { action: 'currents-reset', label: currentsBusy === 'reset' ? 'Finding new picks...' : currentsRerollsLeft() ? 'New picks' : 'No more new picks today', icon: CTX_ICON_REFRESH, off: !currentsRerollsLeft() },
   ] : id === BLEND_ID ? [
@@ -19190,6 +19287,7 @@ function renderQueuePanel(){
   nowMenuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
   nowMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(nowEntry.plId, nowEntry.idx, nowMenuBtn, { inQueue: true, isNow: true }); });
   nowRow.appendChild(nowImg); nowRow.appendChild(nowMeta); nowRow.appendChild(nowMenuBtn); nowRow.appendChild(nowPlayBtn);
+  attachLongPress(nowMeta, () => toggleTrackCtxMenu(nowEntry.plId, nowEntry.idx, nowMenuBtn, { inQueue: true, isNow: true }));
   queueBody.appendChild(nowLabel); queueBody.appendChild(nowRow); queueBody.appendChild(queueArrowsRow);
 
   const upcoming = state.queue.slice(state.queuePos + 1);
