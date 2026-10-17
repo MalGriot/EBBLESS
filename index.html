@@ -11235,6 +11235,7 @@ function artistSongRow(song, album, n, year){
 async function addArtistAlbumToLibrary(a, name){
   showToast('Adding ' + a.name + '...');
   if (await queueBackgroundLoad(a.id, a.type || 'am_album')){
+    awardMilestone('load');
     const added = getCachedPlaylist(a.id);
     if (added){ added.importedUnder = name; if (a.releaseDate) added.releaseDate = a.releaseDate; lsSet(LS_PL(a.id), added); }
     saveToLibrary(a.id);
@@ -13440,6 +13441,7 @@ function createCustomPlaylist(name){
 function addTracksToPlaylist(playlistId, tracks, allowDup){
   const pl = getCachedPlaylist(playlistId);
   if (!pl) return 0;
+  if (playlistId !== LIKED_ID && !PROFILE_REGENERATED_IDS.includes(playlistId) && !document.body.classList.contains('onb-active') && tracks && tracks.length) awardMilestone('load');
   const known = new Set(pl.tracks.filter(t => t.videoId).map(t => t.videoId));
   let added = 0;
   tracks.forEach(t => {
@@ -14596,6 +14598,7 @@ function isSingleTrackType(type){
 // one-tap choices, no confirmation step. Shared ?import=&track= links
 // (targetIndex) keep the old play-now behaviour.
 function playSingleSongLink(pl, targetIndex){
+  awardMilestone('load');
   const track = pl.tracks[0];
   const playNow = (offerSave) => {
     loadPlaylistIntoPlayer(pl);
@@ -16673,6 +16676,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 292, date: '2026-10-17', items: [
+    'The Load step in the checklist now also ticks when you play a song or add an album from an artist window, or add a song to a playlist.'
+  ]},
   { version: 291, date: '2026-10-17', items: [
     'On phones, each page (Library, Player, Settings) has a small checklist card at the top with 3 or 4 first steps. Tap the ? beside any step to see how to do it. Finished steps get a check, a soft pulse and a quiet chime (turn the chime off in Settings > Milestones).'
   ]},
@@ -22437,7 +22443,7 @@ function advRunGesture(k){
 const MILESTONES = [
   // [id, label, points, page, how-to hint]. 3-5 essential tasks per page; the phone shows
   // each page's own set as a small card at the top of that page.
-  ['load', 'Load a playlist or song', 10, 'library', 'Paste a link to a playlist, album or song from Spotify, YouTube, SoundCloud or Apple Music into the search bar at the top, then tap Load.'],
+  ['load', 'Load a playlist or song', 10, 'library', 'Any one of these: paste a link to a playlist, album or song into the search bar and tap Load; open an artist and tap a song or add an album; or add a song to a playlist.'],
   ['playlist', 'Make a playlist', 10, 'library', 'Tap + New playlist, type a name and tap Create.'],
   ['reorder', 'Reorder a playlist', 10, 'library', 'Open one of your playlists and drag a song by its handle to a new spot.'],
   ['smart', 'Make a smart playlist', 15, 'library', 'Tap + New playlist, then Make a smart playlist. Pick your rules and tap Create.'],
