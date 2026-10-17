@@ -10846,12 +10846,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #572.
 
 ### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #573. medium
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #573.
+- **Touches:** docs/SPONSORBLOCK-AND-PODCAST-ADS.md (research only)
+- **Branch:** agent/ads-podcast
+- **Notes:** Synced from Geethub #573. Research written 2026-10-17: [docs/SPONSORBLOCK-AND-PODCAST-ADS.md](docs/SPONSORBLOCK-AND-PODCAST-ADS.md). SponsorBlock skips sponsor reads inside a video, not YouTube's own player ads (#523), so it would not cut the ads users complain about. Recommendation: do not build now; possible later as an opt-in for YouTube-sourced podcasts only, never songs.
 
 ### mobile-you-should-be-able-to: mobile: you should be able to swipe left and right to switch between library to player to queue to settings (Geethub #574)
 - **Status:** merged
@@ -10862,12 +10862,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #574. Built: on phones, a horizontal swipe (70px+, mostly sideways) moves Library, Player, Queue, Settings in that order by pressing the footer button. Ignored when the swipe starts on album art, sliders, buttons, transport, queue and song rows, filter pills, inputs, mini bar, or while a sheet/window/menu is open, and during the tutorial. Checked with simulated touch events in a 375px preview, not on a real phone. No slide animation. Round 2: the new screen now slides in from the swipe side (translate and opacity, 280ms, off under reduce-motion).
 
 ### bug-ads-playing-on-podcast: ads playing on podcast (Geethub #575)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** medium
 - **Description:** Bug, Geethub #575. medium [nosleep](https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF)
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #575.
+- **Touches:** none (diagnosis only)
+- **Branch:** agent/ads-podcast
+- **Notes:** Synced from Geethub #575. Diagnosed 2026-10-17: NoSleep has a public feed (audioboom), so episodes play as the feed's own audio, never YouTube. The ads are inside the mp3 (dynamic insertion by the host plus host-read spots) and no chapter or marker flags them, so the #523 ad detection cannot apply and no safe app-side fix exists. Details in [docs/SPONSORBLOCK-AND-PODCAST-ADS.md](docs/SPONSORBLOCK-AND-PODCAST-ADS.md). Not fixed; needs a decision (see doc: honour explicit ad chapters where feeds have them). Mobile swipe between sections (#574) was already merged, nothing to add.
 
 ### button-to-reverse-the-direction-of: button to reverse the direction of the queue (Geethub #576)
 - **Status:** merged
