@@ -10868,12 +10868,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #576. Already on main (102aa33): reverse button in the queue head. Verified present, no new change.
 
 ### mobile-ui-changes: mobile ui changes (Geethub #577)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #577. medium library needs no "library" title library filter buttons should be at the top list mode: 3 dots button on the items should be more right - as right as possible holding a button in library or queue brings the menu u
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #577.
+- **Touches:** index.html (library CSS, ctx menus, queue rows, mini-bar)
+- **Branch:** agent/mobile-ui-pass
+- **Notes:** Synced from Geethub #577. Built (phones, under 860px only): no Library title; filter pills above the New playlist/search row; list rows show only the 3-dot button, pushed to the right edge (Play and Pin removed from the row, a Play item added to the card menu next to Pin); the card and song menus (library, playlist songs, queue) are now a bottom sheet over the current screen with a dim backdrop, swipe down or tap outside to close; holding a queue song opens its menu; footer player shows only play/pause. Assumptions: "holding a button" read as holding a row; the Liked Songs list row has no 3-dot menu so it now has no row button (tap opens it). Checked in a 375px browser preview with a test playlist; no real touch device.
 
 ### bug-critical-android-first-seconds-of-each: [CRITICAL] Android: first seconds of each song skip, then catch up (Geethub #578)
 - **Status:** draft
