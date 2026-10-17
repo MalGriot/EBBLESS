@@ -10886,12 +10886,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #577. Built (phones, under 860px only): no Library title; filter pills above the New playlist/search row; list rows show only the 3-dot button, pushed to the right edge (Play and Pin removed from the row, a Play item added to the card menu next to Pin); the card and song menus (library, playlist songs, queue) are now a bottom sheet over the current screen with a dim backdrop, swipe down or tap outside to close; holding a queue song opens its menu; footer player shows only play/pause. Assumptions: "holding a button" read as holding a row; the Liked Songs list row has no 3-dot menu so it now has no row button (tap opens it). Checked in a 375px browser preview with a test playlist; no real touch device. Round 2: the 3-dot button is back at its original position; Liked Songs has a 3-dot menu again (Play, Add to queue); holding now opens the menu on library cards (incl. Liked), playlist songs, queue songs and the now-playing queue row (touch only, a move cancels it, so dragging is untouched).
 
 ### bug-critical-android-first-seconds-of-each: [CRITICAL] Android: first seconds of each song skip, then catch up (Geethub #578)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub #578. ## Summary In the Android app (v2.7.1, TECNO POP 9, Android 14), the first seconds of a song skip and then catch up. Reported on both songs played in the soak test (the first and the second track of a queue), with the sc
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #578.
+- **Branch:** agent/android-critical
+- **Notes:** Synced from Geethub #578. Android app 2.11.0 (lane android-critical). Root cause found in the code, not just hypothesised: the moment Enter is pressed the native splash still held the phone's H.264 decoder for ~550 ms (the NO_MEMORY in the log), and when the splash ended `__ebbSplashDone` woke everything at once on the budget SoC: animation frames back to 60/s, the YouTube and SoundCloud scripts, the Google sign-in script plus One Tap, held videos, and the app starting the library background video (VP9 alpha decode). The first song's player started in that burst. Fixes: the splash gives its decoder back at Enter (last frame stays on screen during the fade), the library background video starts 6 s after the splash (was at once), Google sign-in loads 12 s after (was at once); the YouTube/SoundCloud scripts still load right away. Native part needs the 2.11.0 APK; the sign-in delay is page-only (cache v317). NOT verified on the phone: look at the first 5 s of the first song after Enter (cold start), and of the second song (screen off); the library background video should fade in about 6 s after Enter. If it still skips, take the trace in the issue body (logcat chromium/MediaCodec/AudioTrack).
 
 ### on-mobile-status-bar-make-it: on mobile status bar: make it the ebbless logo (Geethub #579)
 - **Status:** merged
@@ -10910,12 +10910,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #580. Already shipped in ea9ecd8 (nav Feedback button shows for everyone); verified on localhost desktop, no code change here.
 
 ### bug-mobile-lock-screen-controls-and-notifications: mobile lock screen controls and notifications bar controls missing (Geethub #581)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #581. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #581.
+- **Branch:** agent/android-critical
+- **Notes:** Synced from Geethub #581. Android app 2.11.0 (lane android-critical), folded with #634. Cause: a WebView has no media notification of its own, so navigator.mediaSession (which the page already fed) never reached the phone. Built: PlaybackService owns a MediaSession and a media-style notification (previous, play/pause, next, heart; compact view shows previous, play/pause, heart; cover art, seek bar), shown on the lock screen and in the shade; Android 13+ draws the lock screen player from the session so heart is a custom action there. Headset/Bluetooth buttons also route through it. The page mirrors title/artist/art/play state/position/liked into the app (shim in index.html, only when running inside the app) and the buttons call the page's own mediaSession handlers and the heart button. 'Rewind' (#634) is read as previous song, not a 10 s skip. NOT verified on a phone (no Android SDK here, so not even compiled): lock the phone while a song plays and check the lock screen player, the shade player, pause/next/previous/heart from both, the heart filling when liked in the app, the seek bar, and that the cover shows. A compile error would show in the GitHub Actions build of android-webview/.
 
 ### find-music-button-should-activate-a: "find music" button should activate a screen (Geethub #582)
 - **Status:** merged
@@ -11024,12 +11024,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #583.
 
 ### android-app-killed-by-low-memory-killer-af: Android: app killed by low-memory killer after ~46 min of screen-off playback (Geethub #584)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug Geethub #584. ## Summary Android app 2.8.2 on the TECNO POP 9 (Android 14, 2.8 GB RAM). In a 70-minute screen-off, unplugged soak, music played cleanly for 44 minutes, then Android's low-memory killer SIGKILLed the EBBLESS process at 13:47:02 (while it held its foreground playback service). Music stopped; a new process appeared at 13:51:38 (screen wake; whether 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #584. Related to #578; Android native.
+- **Branch:** agent/android-critical
+- **Notes:** Synced from Geethub #584. Related to #578; Android native. Android app 2.11.0 (lane android-critical). Already in earlier releases: screen-off lightweight page (2.9.0), recovery notice, watchdog process (2.9.1/2.9.2). Added now: the app answers the system's memory trim requests (onTrimMemory, from 'running low' up) by making the page hand back its garbage at once instead of on the 4-minute timer, at most every 20 s. Honest status: this is a mitigation, not a cure. Remaining cause is the RAM budget on a 2.8 GB phone: the WebView renderer (320-400 MB, mostly the page heap and the YouTube iframe) and ~160 MB of graphics; nothing in the app's own service code holds memory or leaks (checked PlaybackService, WatchdogService, Updater: no growing buffers, wake lock capped at 8 h). The two bigger ideas were not done because they cannot be checked without the phone and touch the audio path: telling Chromium the page is hidden at screen off (would let it drop the video track, but the WebView is deliberately kept 'visible' because hiding it risked stopping audio) and a YouTube audio-only mode (the API has none; the 1 px deck already asks for the smallest picture). NEXT, needs the phone: install 2.11.0, repeat the 70-minute screen-off soak (soak.sh) and compare `dumpsys meminfo` and whether a kill still happens; if it does, try the hidden-WebView experiment on the phone first while watching that audio keeps playing. Keep the issue open until a soak passes.
 
 ### the-entire-app-freezes-lags-and-becomes-un: the entire app freezes lags and becomes unresponsive when you try to drag a song over a playlist thumb (Geethub #595)
 - **Status:** merged
@@ -11288,12 +11288,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #633.
 
 ### mobile-needs-a-lock-screen-and-notif-playe: mobile needs a lock screen and notif player with play rewind and heart (Geethub #634)
-- **Status:** ready
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** Bug Geethub #634. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #634. Likely duplicate of #581 (lock screen controls); fold together when queued.
+- **Branch:** agent/android-critical
+- **Notes:** Synced from Geethub #634. Likely duplicate of #581 (lock screen controls); fold together when queued. Folded into #581 (same ask: lock screen and notification player, here with play, rewind, heart). Built there, see bug-mobile-lock-screen-controls-and-notifications.
 
 ### mobile-moves-really-slow-and-slows-down-th: mobile moves really slow and slows down the phone (Geethub #635)
 - **Status:** ready

@@ -6,20 +6,61 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
-import android.os.Build;
-import android.os.IBinder;
-import android.os.PowerManager;
 import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.Icon;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
+import android.os.Build;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
+import android.os.SystemClock;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 /**
  * Keeps the process (and the WebView's audio) alive with the screen off. A
  * foreground service of type mediaPlayback plus a partial wake lock so page
  * timers keep running. Started by MainActivity, stopped with the app.
+ *
+ * It also owns the lock screen / notification shade player. A WebView has no media notification of its own, so the page
+ * (index.html, which already keeps navigator.mediaSession up to date) mirrors its title, artist, art, play state, position
+ * and liked state into media(); this service shows them through a MediaSession with previous / play-pause / next / heart,
+ * and sends button presses back to the page through sink.
  */
 public class PlaybackService extends Service {
     private static final String CHANNEL = "playback";
+    private static final String ACT = "io.github.malgriot.ebbless.MEDIA_";   // + play / pause / prev / next / like
+
+    /** Where lock screen and notification button presses go (the page). MainActivity sets it while it is alive. */
+    interface Sink { void send(String action); }
+    static volatile Sink sink;
+
+    private static volatile PlaybackService live;
+    private static volatile JSONObject latest;   // the page's last report: {t, a, al, art, pl, pos, dur, rate, liked}
+
     private PowerManager.WakeLock wakeLock;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private MediaSession session;
+    private String artUrl = "";
+    private Bitmap art;
+
+    /** Called from the page (a JS bridge thread) with the current player state as JSON. */
+    static void media(String json) {
+        try { latest = new JSONObject(json); } catch (Exception e) { return; }
+        final PlaybackService s = live;
+        if (s != null) s.handler.post(s::render);
+    }
 
     @Override public void onCreate() {
         super.onCreate();
@@ -27,15 +68,7 @@ public class PlaybackService extends Service {
         if (Build.VERSION.SDK_INT >= 26) {
             nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Playback", NotificationManager.IMPORTANCE_LOW));
         }
-        Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE);
-        Notification n = new Notification.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat_ebbless)
-                .setContentTitle("EBBLESS")
-                .setContentText("Playing in the background")
-                .setContentIntent(pi)
-                .setOngoing(true)
-                .build();
+        Notification n = plainNotification();
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         } else {
@@ -44,6 +77,23 @@ public class PlaybackService extends Service {
         PowerManager pm = getSystemService(PowerManager.class);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ebbless:playback");
         wakeLock.acquire(8 * 60 * 60 * 1000L);
+
+        try {
+            session = new MediaSession(this, "EBBLESS");
+            session.setCallback(new MediaSession.Callback() {
+                @Override public void onPlay() { dispatch("play"); }
+                @Override public void onPause() { dispatch("pause"); }
+                @Override public void onStop() { dispatch("pause"); }
+                @Override public void onSkipToNext() { dispatch("next"); }
+                @Override public void onSkipToPrevious() { dispatch("prev"); }
+                @Override public void onSeekTo(long posMs) { dispatch("seekto:" + (posMs / 1000.0)); }
+                @Override public void onCustomAction(String action, android.os.Bundle extras) { if ("like".equals(action)) dispatch("like"); }
+            }, handler);
+        } catch (Throwable t) {
+            session = null;   // never let the player widget stop the music
+        }
+        live = this;
+        if (latest != null) handler.post(this::render);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -59,7 +109,128 @@ public class PlaybackService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        String a = intent.getAction();
+        if (a != null && a.startsWith(ACT)) dispatch(a.substring(ACT.length()));   // a notification button
         return START_STICKY;
+    }
+
+    private void dispatch(String action) {
+        Sink s = sink;
+        if (s != null) s.send(action);
+    }
+
+    /** The foreground notification when nothing is loaded in the player. */
+    private Notification plainNotification() {
+        Notification.Builder b = new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_ebbless)
+                .setContentTitle("EBBLESS")
+                .setContentText("Playing in the background")
+                .setContentIntent(openApp())
+                .setOngoing(true);
+        return b.build();
+    }
+
+    private PendingIntent openApp() {
+        Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private Notification.Action button(int code, String name, int icon, String label) {
+        Intent i = new Intent(this, PlaybackService.class).setAction(ACT + name);
+        PendingIntent pi = PendingIntent.getService(this, code, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return new Notification.Action.Builder(Icon.createWithResource(this, icon), label, pi).build();
+    }
+
+    /** Push the page's latest state into the session (lock screen, headset buttons, Android 13+ media controls) and the notification. */
+    private void render() {
+        if (live != this) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        JSONObject j = latest;
+        String title = j == null ? "" : j.optString("t");
+        if (session == null || title.isEmpty()) {
+            if (session != null) session.setActive(false);
+            nm.notify(1, plainNotification());
+            return;
+        }
+        boolean playing = j.optBoolean("pl");
+        boolean liked = j.optBoolean("liked");
+        long dur = Math.max(0, j.optLong("dur"));
+        long pos = Math.max(0, j.optLong("pos"));
+        float rate = (float) j.optDouble("rate", 1.0);
+        String want = j.optString("art");
+        if (!want.equals(artUrl)) { artUrl = want; art = null; loadArt(want); }
+
+        MediaMetadata.Builder mb = new MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, j.optString("a"))
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, j.optString("al"));
+        if (dur > 0) mb.putLong(MediaMetadata.METADATA_KEY_DURATION, dur);
+        if (art != null) mb.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art);
+        session.setMetadata(mb.build());
+
+        long actions = PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE
+                | PlaybackState.ACTION_STOP | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS;
+        if (dur > 0) actions |= PlaybackState.ACTION_SEEK_TO;
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(actions)
+                .addCustomAction(new PlaybackState.CustomAction.Builder("like",
+                        liked ? "Remove from Liked Songs" : "Add to Liked Songs",
+                        liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart).build())
+                .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, pos, playing ? rate : 0f, SystemClock.elapsedRealtime())
+                .build());
+        session.setActive(true);
+
+        Notification.Builder b = new Notification.Builder(this, CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_ebbless)
+                .setContentTitle(title)
+                .setContentText(j.optString("a"))
+                .setContentIntent(openApp())
+                .setCategory(Notification.CATEGORY_TRANSPORT)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .setOngoing(true)
+                .addAction(button(10, "prev", R.drawable.ic_media_prev, "Previous"))
+                .addAction(playing ? button(11, "pause", R.drawable.ic_media_pause, "Pause") : button(11, "play", R.drawable.ic_media_play, "Play"))
+                .addAction(button(12, "next", R.drawable.ic_media_next, "Next"))
+                .addAction(button(13, "like", liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart, liked ? "Remove from Liked Songs" : "Add to Liked Songs"))
+                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 3));
+        if (art != null) b.setLargeIcon(art);
+        nm.notify(1, b.build());
+    }
+
+    /** Fetch the cover for the notification and lock screen (scaled to about 300-600 px, so it stays around a megabyte). */
+    private void loadArt(final String url) {
+        if (!url.startsWith("https://")) return;
+        new Thread(() -> {
+            try {
+                HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                c.setConnectTimeout(8000); c.setReadTimeout(10000);
+                byte[] data;
+                try (InputStream in = c.getInputStream()) {
+                    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                    byte[] buf = new byte[16384]; int n, total = 0;
+                    while ((n = in.read(buf)) > 0) {
+                        total += n;
+                        if (total > 3_000_000) return;
+                        bo.write(buf, 0, n);
+                    }
+                    data = bo.toByteArray();
+                } finally { c.disconnect(); }
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(data, 0, data.length, o);
+                int s = 1;
+                while (o.outWidth / (s * 2) >= 300 && o.outHeight / (s * 2) >= 300) s *= 2;
+                BitmapFactory.Options d = new BitmapFactory.Options();
+                d.inSampleSize = s;
+                final Bitmap bm = BitmapFactory.decodeByteArray(data, 0, data.length, d);
+                if (bm == null) return;
+                handler.post(() -> {
+                    if (url.equals(artUrl)) { art = bm; render(); }   // ignore a cover for a song that is already over
+                });
+            } catch (Exception ignored) {
+            }
+        }, "ebb-art").start();
     }
 
     private void postRecoveryNotice() {
@@ -80,6 +251,9 @@ public class PlaybackService extends Service {
     }
 
     @Override public void onDestroy() {
+        live = null;
+        if (session != null) { try { session.release(); } catch (Exception ignored) {} session = null; }
+        art = null;
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         super.onDestroy();
     }

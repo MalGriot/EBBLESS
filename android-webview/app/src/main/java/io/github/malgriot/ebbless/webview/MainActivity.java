@@ -156,8 +156,23 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        PlaybackService.sink = null;
         try { unregisterReceiver(screenReceiver); } catch (Exception ignored) {}
         super.onDestroy();
+    }
+
+    private long lastReclaimAt;
+
+    /**
+     * The phone is short on memory (the low-memory killer took this app after 46 min of screen-off playback, #584): have the page
+     * hand back whatever garbage it is holding now rather than on its 4-minute timer. At most once every 20 s.
+     */
+    @Override public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (web == null || level < TRIM_MEMORY_RUNNING_LOW || now - lastReclaimAt < 20000) return;
+        lastReclaimAt = now;
+        web.evaluateJavascript("window.__ebbReclaim&&__ebbReclaim()", null);
     }
 
     private void splashDone() {
@@ -165,10 +180,11 @@ public class MainActivity extends Activity {
         splashHolding = false;
         Updater.holdForEnter = false;
         if (web == null) return;
-        // the library's background video can load now that nothing competes for the decoder. The web splash stays cloaked
+        // the library's background video loads 6 s later, not now: this is the moment the first song's player starts, and decoding a video
+        // on a budget phone at the same time is what made the first seconds of a song skip (#578). The web splash stays cloaked
         // (waking it here showed it fading out under a late-processed Enter); it wakes itself when the visitor returns to it.
         // Changing the user agent here would reload the page (it did, ~1s after every Enter), so the page remembers instead.
-        web.evaluateJavascript("(function(){try{sessionStorage.setItem('ebbless:nsplashDone','1');}catch(e){}if(window.__ebbSplashDone)__ebbSplashDone();var v=document.querySelector('video.lib-bg-video');if(v&&!v.getAttribute('src'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');})()", null);
+        web.evaluateJavascript("(function(){try{sessionStorage.setItem('ebbless:nsplashDone','1');}catch(e){}if(window.__ebbSplashDone)__ebbSplashDone();setTimeout(function(){var v=document.querySelector('video.lib-bg-video');if(v&&!v.getAttribute('src'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');},6000);})()", null);
     }
 
     private void initWeb(Bundle b) {
@@ -192,6 +208,8 @@ public class MainActivity extends Activity {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
                 tellWatchdog(on);
             }
+            /** The page's player state (title, artist, art, play state, position, liked) for the lock screen and notification player. */
+            @android.webkit.JavascriptInterface public void media(String json) { PlaybackService.media(json); }
             /** Settings > Reload app: fetch the live page now (the saved copy is a launch behind), then load it. */
             @android.webkit.JavascriptInterface public void reloadFresh() {
                 runOnUiThread(() -> refreshPageCopy(() -> { if (web != null) web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); }));
@@ -242,6 +260,9 @@ public class MainActivity extends Activity {
             }
         });
 
+        PlaybackService.sink = action -> runOnUiThread(() -> {
+            if (web != null) web.evaluateJavascript("window.__ebbMediaAction&&__ebbMediaAction(" + JSONObject.quote(action) + ")", null);
+        });
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         startForegroundService(new Intent(this, PlaybackService.class));
 
