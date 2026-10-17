@@ -10234,12 +10234,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #508. 
 
 ### logo-hold-opens-mini: Hold the logo to open the mini player (optional in advanced settings) (Geethub #507)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #507. Hold the logo to open the mini player (optional in advanced settings).
-- **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #507. 
+- **Touches:** E logo hold (index.html), advanced settings.
+- **Branch:** agent/mini-player-polish
+- **Notes:** Synced from Geethub #507.  **Built:** Advanced settings > Hold the E logo: Splash screen (default) or Mini player. With Mini player and a song playing, the 1s hold opens it; otherwise it falls back to the splash. Setting row tested in browser; the actual PiP open needs a real desktop Chrome / Mac app check.
 
 ### playlist-workspaces: Playlist workspaces (Geethub #506)
 - **Status:** merged
@@ -10604,20 +10604,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #527. Ad group, see #541.
 
 ### miniplayer-shape-per-skin: Mini-player shape changes with different skins (Geethub #526)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #526. The mini-player shape should follow the skin, not always a circle.
 - **Touches:** mini-player.
-- **Branch:** 
-- **Notes:** Synced from Geethub #526. Related to miniplayer-inherits-art-style.
+- **Branch:** agent/mini-player-polish
+- **Notes:** Synced from Geethub #526. Related to miniplayer-inherits-art-style. **Built:** with no shape picked by hand, the Mac mini player follows the art style (record = disc, default and cassette = card) and resizes live when the style changes. Right-click menu has a new "Follow art style" option; picking a shape by hand still pins it (existing saved shapes unchanged). Cassette uses the card because the pill would crop it. Not run in Electron.
 
 ### miniplayer-moveable: Desktop mini-player should be moveable (Geethub #525)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #525. Let the user drag the mini-player.
 - **Touches:** mini-player.
-- **Branch:** 
-- **Notes:** Synced from Geethub #525. Check mini-player-polish; may already exist.
+- **Branch:** agent/mini-player-polish
+- **Notes:** Synced from Geethub #525. Check mini-player-polish; may already exist. **Built:** the Mac mini player was already draggable by its background (OS drag area), but the art is a click target (back to app) so it was excluded, and the disc is almost all art, so it could barely be moved. The art now drags by hand (5px threshold, a drag never counts as a click). Position memory not added (Chrome PiP manages its own). Electron/Mac drag not run here, needs a check on the Mac.
 
 ### research-songshift: Reverse engineer SongShift (Geethub #522)
 - **Status:** draft

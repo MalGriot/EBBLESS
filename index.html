@@ -4493,6 +4493,13 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Double-tap the Library tab"><button type="button" class="btn-ghost" data-adv="glib" data-val="none">Nothing</button><button type="button" class="btn-ghost" data-adv="glib" data-val="top">Back to top</button><button type="button" class="btn-ghost" data-adv="glib" data-val="search">Search library</button></div>
         </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Hold the E logo</div>
+            <div class="desc">Goes back to the splash screen by default. Mini player opens it when a song is playing.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Hold the E logo"><button type="button" class="btn-ghost" data-adv="lhold" data-val="splash">Splash screen</button><button type="button" class="btn-ghost" data-adv="lhold" data-val="mini">Mini player</button></div>
+        </div>
         <div class="adv-group">Backup</div>
         <div class="settings-row">
           <div>
@@ -8422,7 +8429,8 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
       // the release that ends this hold may land on the splash instead, in
       // which case no click reaches the button - don't let the flag linger
       setTimeout(() => { swallowClick = false; }, 1500);
-      returnToSplash();
+      if (advPrefs().lhold === 'mini' && miniPlayerSupported() && currentTrack()) openMiniPlayer();
+      else returnToSplash();
     }, HOLD_MS);
   });
   btn.addEventListener('pointermove', (e) => {
@@ -21271,7 +21279,7 @@ function advRender(){
     art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '', cursor: ['dot','ring','cross','native'].includes(p.cursor) ? p.cursor : 'drop',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet',
-    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none',
+    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none', lhold: p.lhold === 'mini' ? 'mini' : 'splash',
     albsec: p.albsec === 'flat' ? 'flat' : 'sections', shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
   const hide = p.hide || [];
@@ -21356,6 +21364,7 @@ function advChoose(k, v){
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
   else if ((k === 'gdt' || k === 'glp' || k === 'gtt') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
   else if (k === 'glib') advSet('glib', v === 'none' ? null : v);
+  else if (k === 'lhold') advSet('lhold', v === 'mini' ? 'mini' : null);
   else if (k === 'secorder' && ADV_SECS[v]){
     const o = advSecOrder().filter(x => x !== v);
     o.unshift(v);
@@ -24453,7 +24462,17 @@ function requestMiniWindow(width, height){
 }
 const MP_SHAPES = ['card', 'pill', 'disc', 'float'];
 const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'Disc', float: 'Float (no frame)' };
-function mpDesktopShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : 'card'; }
+// #526: with no shape picked by hand the shape follows the art style (record = disc, otherwise card)
+const MP_SHAPE_BY_ART = { record: 'disc' };
+function mpSavedShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : null; }
+function mpDesktopShape(){ return mpSavedShape() || MP_SHAPE_BY_ART[artStyle] || 'card'; }
+function mpApplyShape(win){
+  const shape = mpDesktopShape(), body = win.document.body;
+  if (body.classList.contains('mp-shape-' + shape)) return;
+  MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape));
+  const sz = mpDesktopSize(shape);
+  try { win.resizeTo(sz.w, sz.h); } catch(e){}
+}
 function mpDesktopSize(shape){
   if (shape === 'pill') return { w: 420, h: 84 };
   if (shape === 'disc') return { w: 240, h: 240 };
@@ -24510,15 +24529,14 @@ function wireMiniDesktop(win){
   doc.documentElement.appendChild(menu); // outside body so the shape's clip never cuts the menu
   const close = () => { menu.hidden = true; };
   const setShape = (shape) => {
-    MP_SHAPES.forEach(x => doc.body.classList.toggle('mp-shape-' + x, x === shape));
-    saveMiniPlayerPrefs({ shape });
-    const sz = mpDesktopSize(shape);
-    try { win.resizeTo(sz.w, sz.h); } catch(e){}
+    saveMiniPlayerPrefs({ shape: shape === 'auto' ? null : shape });
+    mpApplyShape(win);
   };
   doc.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    const cur = mpDesktopShape();
+    const cur = mpSavedShape() || 'auto';
     menu.innerHTML = '<div class="mpm-label">Shape</div>' +
+      '<button type="button" data-shape="auto" class="' + (cur === 'auto' ? 'is-active' : '') + '">Follow art style</button>' +
       MP_SHAPES.map(x => '<button type="button" data-shape="' + x + '" class="' + (x === cur ? 'is-active' : '') + '">' + MP_SHAPE_LABEL[x] + '</button>').join('') +
       '<div class="mpm-label">Window</div><button type="button" data-act="app">Open EBBLESS</button><button type="button" data-act="close">Close mini player</button>';
     menu.hidden = false;
@@ -24536,6 +24554,25 @@ function wireMiniDesktop(win){
   });
   doc.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) close(); }, true);
   doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  // #525: the art is a click target (back to the app), so it can't be an OS drag area; drag it by hand instead.
+  // Matters most for the disc, where the art is nearly the whole window. A drag never counts as a click.
+  const art = doc.getElementById('mpArtWrap');
+  let drag = null, dragged = false;
+  art.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('#mpArtPick')) return;
+    drag = { x: e.screenX, y: e.screenY, wx: win.screenX, wy: win.screenY };
+    dragged = false;
+    try { art.setPointerCapture(e.pointerId); } catch(_){}
+  });
+  art.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.screenX - drag.x, dy = e.screenY - drag.y;
+    if (!dragged && Math.hypot(dx, dy) < 5) return;
+    dragged = true;
+    try { win.moveTo(drag.wx + dx, drag.wy + dy); } catch(_){}
+  });
+  ['pointerup', 'pointercancel'].forEach(t => art.addEventListener(t, () => { drag = null; }));
+  art.addEventListener('click', (e) => { if (dragged){ dragged = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 }
 // Closing or minimizing the Mac app's window floats the mini player
 if (isDesktopApp) window.ebblessDesktop.onAway(() => { if (currentTrack()) openMiniPlayer(); });
@@ -24963,6 +25000,7 @@ function updateMiniPlayerUI(){
     if (titleEl._marqueeText !== (t.title || '')) setMarqueeText(titleEl, t.title || '');
     if (artistEl._marqueeText !== (t.artist || '')) setMarqueeText(artistEl, t.artist || '');
   }
+  if (isDesktopApp && doc.body.classList.contains('mp-desktop')) mpApplyShape(miniPlayerWin);
   const isPlaying = artworkWrap.classList.contains('is-playing');
   doc.body.classList.toggle('mp-playing', isPlaying);
   doc.getElementById('mpArtWrap').dataset.artStyle = artStyle;
