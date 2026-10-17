@@ -7075,7 +7075,13 @@ function renderBetaGateSignIn(){
 // connected without finding the Settings row. Once per device, never when
 // signed in, signed out on purpose, or while the beta lock is up.
 const LS_SIGNIN_NUDGED = 'ebbless:signinNudged';
+// Quiet first run: nobody is asked to sign in or install before their first
+// song has played. The sign-in card waits (without using up its once per
+// device) and lands a few seconds after that first song starts.
+function hasEverPlayed(){ return (lsGet(LS_PLAY_HISTORY, []) || []).length > 0; }
+let signInNudgeWaiting = false;
 function showSignInNudge(){
+  if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }
   const gate = window.ebblessBetaGate;
   if (profileIdToken || document.getElementById('signinNudge') || lsGet(LS_SIGNIN_NUDGED, false)) return;
   if (lsGet(LS_PROFILE_SIGNED_OUT, false) === true || (gate && gate.locked())) return;
@@ -16032,6 +16038,8 @@ if (pasteGuideEl){
     dismissPasteGuide();
   }));
   urlInput.addEventListener('input', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
+  // Tapping anywhere else counts as "got it": the tap still does its job, no extra dismiss tap.
+  document.addEventListener('pointerdown', (e) => { if (!pasteGuideEl.hidden && !pasteGuideEl.contains(e.target) && e.target !== urlInput) dismissPasteGuide(); }, true);
   importForm.addEventListener('submit', () => { if (!pasteGuideEl.hidden) dismissPasteGuide(); });
   window.addEventListener('resize', () => { if (!pasteGuideEl.hidden) refreshPasteGuide(); });
 }
@@ -24528,6 +24536,7 @@ function recordLatestPlayed(t){
   const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.v !== t.videoId);
   hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
   lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
+  if (signInNudgeWaiting){ signInNudgeWaiting = false; setTimeout(showSignInNudge, 6000); }
 }
 
 function reflectCurrentTrackUI(pos, opts){
@@ -27176,6 +27185,7 @@ function installBannerBlocked(){
   const splashEl = $('splash');
   if (splashEl && !splashEl.classList.contains('is-hidden')) return true;
   if (document.body.classList.contains('onb-active')) return true;
+  if (!hasEverPlayed()) return true; // quiet first run: after the first song, not before
   return !!(pasteGuideEl && !pasteGuideEl.hidden);
 }
 function scheduleInstallBanner(){
