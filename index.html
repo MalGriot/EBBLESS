@@ -10513,7 +10513,7 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
     const renderSingles = () => {
       sBox.innerHTML = '';
       (showAll ? todoSingles : todoSingles.slice(0, 5)).forEach(a => {
-        const song = { title: a.name, artist: name, art: a.art, dur: 0 };
+        const song = { title: a.name, artist: a.credit || name, art: a.art, dur: 0 };
         sBox.appendChild(artistSongRow(song, null, 0, albumYearOf(a.releaseDate)));
       });
       if (todoSingles.length > 5){
@@ -13727,6 +13727,16 @@ async function soundCloudArtistAlbums(pl){
   return (data.albums || []).slice(0, ARTIST_ALBUMS_MAX).reverse()
     .map(a => ({ id: 'sc:' + encodeURIComponent(a.url), key: normalizeArtistQuery(a.title), type: 'sc_album', name: String(a.title || ''), art: a.image || a.artwork || null }));
 }
+// A single's release name often leads with its credit ("Michael Jackson x Mark
+// Ronson: Diamonds are Invincible"). When that prefix names every credited
+// artist, the song title is what follows it.
+function singleTitle(name, credit){
+  const m = /^(.+?):\s+(.+)$/.exec(name);
+  if (!m || !credit) return name;
+  const pre = artistNameKey(m[1]);
+  const names = splitArtistNames(credit).map(artistNameKey).filter(Boolean);
+  return names.length && names.every(k => pre.includes(k)) ? m[2] : name;
+}
 async function itunesArtistAlbums(pl, opts){
   let artistId, storefront = 'us';
   if (pl.type === 'am_artist'){
@@ -13761,8 +13771,8 @@ async function itunesArtistAlbums(pl, opts){
     const prev = byName.get(key);
     if (!prev || (prev.collectionExplicitness === 'cleaned' && r.collectionExplicitness !== 'cleaned')) byName.set(key, r);
   });
-  const mapRow = (r) => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName), releaseDate: String(r.releaseDate || '') || undefined, name: String(r.collectionName || ''), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : null, rank: r.rank });
-  if (opts && opts.sections) return { albums: [...byName.values()].map(mapRow), singles: [...singlesByName.values()].map(r => Object.assign(mapRow(r), { name: String(r.collectionName || '').replace(/ - Single$/i, '') })) };
+  const mapRow = (r) => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName), releaseDate: String(r.releaseDate || '') || undefined, name: String(r.collectionName || ''), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : null, rank: r.rank, credit: String(r.artistName || '') });
+  if (opts && opts.sections) return { albums: [...byName.values()].map(mapRow), singles: [...singlesByName.values()].map(r => Object.assign(mapRow(r), { name: singleTitle(String(r.collectionName || '').replace(/ - Single$/i, ''), String(r.artistName || '')) })) };
   // Newest first, then saved oldest-first so the newest lands on top.
   return [...byName.values()]
     .sort((a, b) => (COMPILATION_RE.test(String(a.collectionName)) - COMPILATION_RE.test(String(b.collectionName))) || String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
