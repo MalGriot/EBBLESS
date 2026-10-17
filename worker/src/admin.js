@@ -2,6 +2,7 @@
 //
 //   GET  /admin/testers   every admin tab of the Sheet (Testers, Applicants,
 //                         Analytics, Feedback, Bug Reports) + what's editable
+//   GET  /admin/linkfixes  recent manual link fixes (#596) + summary counts
 //   POST /admin/update    { tab, id, column, value, prev } -> one cell
 //
 // Every route needs `Authorization: Bearer <ADMIN_TOKEN>` (worker secret,
@@ -13,6 +14,7 @@
 // which never returns tester link tokens.
 
 import { sheet as sheetCall } from './beta.js';
+import { summarizeLinkFixes } from './linkfix.js';
 
 // What the admin page may change. Keep in sync with ADMIN_EDITABLE in
 // tools/beta-sheet.gs (the script checks again before writing).
@@ -91,7 +93,8 @@ async function route(request, url, env, ctx, deps) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { Vary: 'Origin', ...cors } });
 
   if (!env.ADMIN_TOKEN || env.ADMIN_TOKEN.length < MIN_TOKEN_LEN) return json({ error: 'Admin isn\'t set up on the worker (ADMIN_TOKEN).' }, 503);
-  if (!env.SHEET_URL || !env.SHEET_SECRET) return json({ error: 'beta not configured' }, 500);
+  const isLinkFixes = url.pathname === '/admin/linkfixes';
+  if (!isLinkFixes && (!env.SHEET_URL || !env.SHEET_SECRET)) return json({ error: 'beta not configured' }, 500);
 
   const { envCache } = deps;
   const fails = await failCount(request, envCache);
@@ -105,6 +108,16 @@ async function route(request, url, env, ctx, deps) {
   const sheet = deps.sheet || sheetCall;
   const p = url.pathname;
   try {
+    if (isLinkFixes) {
+      if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
+      if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
+      const limit = Math.min(500, parseInt(url.searchParams.get('limit'), 10) || 200);
+      const list = await env.MATCH_REPORTS.list({ prefix: 'linkfix:', limit });
+      const entries = (await Promise.all(list.keys.map(async (k) => {
+        try { return JSON.parse(await env.MATCH_REPORTS.get(k.name)); } catch (e) { return null; }
+      }))).filter(Boolean);
+      return json({ summary: summarizeLinkFixes(entries), entries, truncated: !list.list_complete });
+    }
     if (p === '/admin/testers') {
       if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
       const out = await sheet(env, 'admin_list', {});

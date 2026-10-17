@@ -11495,10 +11495,39 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
     btn.addEventListener('click', () => {
       const c = list[parseInt(btn.dataset.i, 10)];
       const chk = $('relinkAlbumChk');
-      if (c) applyRelinkChoice(plId, trackIdx, c, !!(chk && chk.checked));
+      if (c){
+        if (c.videoId !== currentVideoId) logLinkFix(plId, t, list, c, currentVideoId);
+        applyRelinkChoice(plId, trackIdx, c, !!(chk && chk.checked));
+      }
     });
   });
   $('relinkBackBtn').addEventListener('click', closeImportOverlay);
+}
+
+// Geethub #596: anonymous record of a manual link fix (matcher's pick vs the
+// listener's) so scoring misses can be analysed later. Track title/artist and
+// public video info only: no user id, playlist name or link. Fire and forget;
+// owner reviews via GET /admin/linkfixes on the worker.
+function logLinkFix(plId, t, list, chosen, currentVideoId){
+  if (EBB_SAMPLE || !t || !t.title || isSoundCloudVideoId(chosen.videoId)) return;
+  try{
+    const pl = playlistById(plId) || getCachedPlaylist(plId);
+    const kind = sourceKindForType(pl && pl.type);
+    const rank = (id) => list.findIndex(c => c.videoId === id) + 1;
+    const slim = (c) => ({ videoId: c.videoId, title: c.title || '', channel: c.channel || '', duration: c.duration || 0 });
+    fetch(BACKEND + '/linkfix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: t.title, artist: t.artist || '', source: kind === 'applemusic' ? 'apple' : kind,
+        srcDuration: t.srcDuration || 0,
+        from: { videoId: currentVideoId || '', title: t.matchedTitle || '', channel: t.channel || '', duration: t.duration || 0 },
+        to: slim(chosen), pickedRank: rank(chosen.videoId), fromRank: rank(currentVideoId),
+        candidates: list.filter(c => (c.source || 'youtube') === 'youtube').slice(0, 15).map(slim),
+        resolveVersion: String(RESOLVE_LOGIC_VERSION),
+      }),
+    }).catch(() => {});
+  } catch(e){}
 }
 
 function applyRelinkChoice(plId, trackIdx, candidate, allAlbum){

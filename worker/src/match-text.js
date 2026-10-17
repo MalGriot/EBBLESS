@@ -247,3 +247,15 @@ export function crossScriptIncomparable(a, b) {
 export function nonAsciiCacheTag(...parts) {
   return parts.some(p => /[^\x00-\x7f]/.test(String(p || ''))) ? '/u1' : '';
 }
+
+// Geethub #537: for popular songs the most-viewed upload is usually the
+// right link. Absolute (log-scaled) view count, not relative to the pool, so
+// a 200M-view upload beats a 5k-view re-upload even when the pool's top is
+// the only popular one. Only earned by a full title match, so a viral
+// wrong-song video never gets lifted; capped below the audio/topic bonuses.
+export const POPULARITY_MIN_VIEWS = 50000;
+export const POPULARITY_MAX_BONUS = 3;
+export function popularityBonus(views, titleOverlap) {
+  if (!(titleOverlap >= 0.99) || !(views > POPULARITY_MIN_VIEWS)) return 0;
+  return Math.min(POPULARITY_MAX_BONUS, Math.log10(views / POPULARITY_MIN_VIEWS) * 1.2);
+}

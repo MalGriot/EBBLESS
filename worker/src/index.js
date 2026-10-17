@@ -11,11 +11,12 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, foldMatchText, matchKey,
+  titleOverlapRatio, foldMatchText, matchKey, popularityBonus,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
 import { handleAdmin } from './admin.js';
+import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
@@ -67,7 +68,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v10';
+const SEARCH_CACHE_VERSION = 'v11';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -486,6 +487,7 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   if (DEMOTE_HINTS.some(h => title.includes(h))) score -= 2;
   score += durationScore(c.duration, sourceDurationSeconds);
   if (maxViews > 0) score += (c.views / maxViews) * VIEW_COUNT_WEIGHT;
+  score += popularityBonus(c.views, c.titleOverlap);
   return score;
 }
 
@@ -4232,6 +4234,29 @@ async function handleReport(request, env, ctx) {
   return json({ ok: true });
 }
 
+// ---------- POST /linkfix ----------
+// Geethub #596: anonymous log of a manual link fix (see linkfix.js). Same
+// MATCH_REPORTS namespace as /report, `linkfix:` prefix; reviewed through the
+// owner-only GET /admin/linkfixes. Throttled per IP via the Cache API.
+const LINKFIX_LIMIT = 30;
+const LINKFIX_WINDOW_S = 600;
+async function handleLinkFix(request, env, ctx) {
+  if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+  if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
+  const entry = sanitizeLinkFix(body);
+  if (!entry) return json({ error: 'missing title or chosen videoId' }, 400);
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const rlKey = new Request('https://ratelimit.internal/linkfix/' + encodeURIComponent(ip));
+  const hit = await envCache.match(rlKey);
+  const count = hit ? (parseInt(await hit.text(), 10) || 0) : 0;
+  if (count >= LINKFIX_LIMIT) return json({ error: 'too many, try later' }, 429);
+  ctx.waitUntil(envCache.put(rlKey, new Response(String(count + 1), { headers: { 'Cache-Control': 'max-age=' + LINKFIX_WINDOW_S } })));
+  await env.MATCH_REPORTS.put('linkfix:' + entry.ts + ':' + crypto.randomUUID(), JSON.stringify(entry));
+  return json({ ok: true });
+}
+
 // ---------- POST /tester-report ----------
 // Bug reports / ideas from beta testers, sent from the in-app "Send
 // feedback" form (Settings). No login and no GitHub on purpose: testers
@@ -4749,12 +4774,13 @@ export default {
       if (url.pathname === '/pool/signal') return await handlePoolSignal(request, env, ctx);
       if (url.pathname === '/pool/affinity') return await handlePoolAffinity(url, env, ctx);
       if (url.pathname === '/report') return await handleReport(request, env, ctx);
+      if (url.pathname === '/linkfix') return await handleLinkFix(request, env, ctx);
       if (url.pathname === '/tester-report') return await handleTesterReport(request, env, ctx);
       if (url.pathname === '/auth/session' || url.pathname === '/auth/signout') return await handleSession(request, url, env, ctx, { json, verifyGoogleJwt });
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }

@@ -10514,12 +10514,14 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #538. Check overlap with existing swipe entries. No overlap with album-art-swipe-nav / swipe-track-animation (horizontal, on the art). Reused `attachSwipeToDismiss` (queue, history and library/artist playlist sheets), which only worked on the 4px grab handle; it now starts from the handle, the header, or the list while scrolled to the top, ignores horizontal moves, inputs and draggable rows, follows the finger without a transition and closes past 90px (snaps back otherwise). Verified in the local preview with synthetic touch events: header swipe closed the sheet, a list swipe while scrolled did nothing, at scrollTop 0 it closed. Real touch hardware, the queue/history sheets and track-row reorder untested. The results/add-playlist window (`#import-overlay`) does not swipe-close yet. Cache v266.
 
 ### popular-youtube-first: For popular music, prioritize popular YouTube videos (Geethub #537)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #537. When matching popular songs, rank the most-viewed YouTube videos first; they are most likely the right link.
 - **Touches:** link matching.
-- **Branch:** 
+- **Branch:** agent/match-quality
 - **Notes:** Synced from Geethub #537. Related to link-match-accuracy.
+
+  View count was already a signal, but only relative to the pool's top and capped at 2 points, so it rarely decided anything. Added `popularityBonus` (`worker/src/match-text.js`): an absolute, log-scaled bonus (0 under 50k views, ~1.5 at 1M, capped at 3) that only a candidate with a full title match can earn, so a viral wrong-song video is never lifted and the bonus stays below the Topic/audio bonuses. `SEARCH_CACHE_VERSION` v10 -> v11. Unit-tested. `RESOLVE_LOGIC_VERSION` NOT bumped (mild change; avoids a mass re-resolve before the worker is deployed): already-matched playlists keep their links, new resolves and manual searches get the new ranking. **Needs worker deploy.** Not verified against live YouTube (no `wrangler dev` run this session).
 
 ### bug-tabs-close-while-browsing: Playlist, album and artist tabs close while I'm still going through them (Geethub #536)
 - **Status:** merged
@@ -10970,9 +10972,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #598. Desktop splash (min-width 1280, hover + fine pointer, not Android) plays brand/assets/splash-cymatics-hd.mp4 (1080p, 6.3MB re-encode of the source; original is 25MB). Everything else keeps the 720p or alpha clips. Existing splash pause-when-hidden path unchanged; no new gpu-watchdog warnings.
 
 ### log-link-fixes-improve-matching: Log every link fix and use it to improve the matching algorithm (Geethub #596)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #596. Log every time someone fixes a link, then analyze the fixes and improve the matching algorithm.
-- **Touches:** tbd.
-- **Branch:** 
+- **Touches:** Refresh-link picker, worker /linkfix, /admin/linkfixes.
+- **Branch:** agent/match-quality
 - **Notes:** Synced from Geethub #596. Related to link-match-accuracy and popular-youtube-first.
+
+  **Collecting:** when a listener picks a different video in the Refresh-link picker (`logLinkFix` in `index.html`), the app POSTs `/linkfix`: track title/artist, source kind, source duration, the matcher's pick vs the chosen video (id/title/channel/duration), both ranks in a fresh search, the top 15 candidates and the resolve version. No user id, IP, playlist name or link is sent or stored; skipped in sample mode and for SoundCloud picks. Stored in the `MATCH_REPORTS` KV under `linkfix:<ts>:<uuid>` (same pattern as `/report`), throttled 30 per IP per 10 min (`worker/src/linkfix.js`, `handleLinkFix`). Auto-repairs of broken links and "use for the rest of the album" siblings are not logged (not a listener judgment on the match).
+
+  **Reviewing:** owner-only `GET /admin/linkfixes?limit=200` with `Authorization: Bearer <ADMIN_TOKEN>` returns `summary` (rank the chosen video had, how often the chosen one was a Topic channel or closer in duration, keywords like live/remix in the replaced vs chosen titles, repeat-offender tracks) plus raw `entries`. Example: `curl -H "Authorization: Bearer $ADMIN_TOKEN" https://spotify-youtube-search.malgriot.workers.dev/admin/linkfixes`. Enables: if chosen videos are mostly rank 2-3 and Topic or duration-closer, raise those weights; if mostly not in the ranking, the search query is the problem. The algorithm was NOT changed from this log (no data yet). Tests: `worker/test/linkfix.test.mjs`. **Needs worker deploy** (ADMIN_TOKEN is already the existing secret). Client side is live on push; until the worker is deployed `/linkfix` 404s silently.

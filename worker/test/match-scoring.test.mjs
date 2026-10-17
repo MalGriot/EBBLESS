@@ -175,3 +175,12 @@ test('Latin: randomised ASCII titles score exactly as before', () => {
     assert.equal(titleOverlapRatio(s, c), oldRatio(s, c), JSON.stringify([s, c]));
   }
 });
+
+import { popularityBonus } from '../src/match-text.js';
+test('popularityBonus: log-scaled, needs full title match, capped', () => {
+  assert.equal(popularityBonus(1e9, 0.5), 0);
+  assert.equal(popularityBonus(10000, 1), 0);
+  assert.ok(popularityBonus(1e6, 1) > popularityBonus(2e5, 1));
+  assert.ok(popularityBonus(1e6, 1) > 1 && popularityBonus(1e6, 1) < 3);
+  assert.equal(popularityBonus(5e9, 1), 3);
+});
