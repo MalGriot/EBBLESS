@@ -10194,7 +10194,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #513. Probably leftover installed web-app shortcuts. Cause: electron-builder output folders (desktop/dist, dist6, with .app and .dmg) were indexed by Spotlight as extra EBBLESS entries. Fix: build output now goes to desktop/dist.noindex (Spotlight skips *.noindex) and desktop/dist*/ is gitignored. Existing old dist folders on disk stay indexed until deleted or renamed to *.noindex (user step).
 
 ### mini-follow-desktops: Mini player doesn't follow you when you swipe to another desktop (Geethub #512)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #512. Mini player doesn't follow you when you swipe to another desktop.
 - **Touches:**
@@ -10210,7 +10210,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #511. Shipped 2026-10-14 (cache v235): the Mac mini player's body paints nothing itself; its dark fill is a clipped ::before layer, and html stays truly transparent. A body background propagating over a default-transparent html was painting the corners; a near-zero alpha html turned them black. Confirmed by user. Mac app v1.0.3.
 
 ### mac-dock-icon-mini: Dock and Cmd+Tab icon disappear while in mini player mode (Geethub #510)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #510. Dock and Cmd+Tab icon disappear while in mini player mode.
 - **Touches:**
@@ -10764,7 +10764,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #563.
 
 ### bug-mac-app-going-into-miniplayer-removes: mac app: going into miniplayer removes app icon from dock (Geethub #564)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug, Geethub #564. medium
 - **Touches:** tbd.
