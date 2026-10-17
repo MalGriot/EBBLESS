@@ -11136,12 +11136,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #614.
 
 ### after-loading-the-song-after-the-ad-the-so: after loading the song after the ad, the song is starting several seconds in. it should start at 0:00 if it's not a resume play (Geethub #615)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #615. 
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #615.
+- **Touches:** ad dodge / held-ad handoff (`skipHeldAd`, `onDeckConfirmed`, `rewindPromotedDeck`).
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #615. Cause: #558 deliberately resumed a mid-song-ad bounced song at `adResumeAt` (where the ad cut in, if 5s or more in), so it came back "several seconds in" after the ad; the issue was filed hours after #558 shipped. Fix: removed `adResumeAt` / `AD_RESUME_MIN_S`; a song an ad bounced, and every promoted deck, now starts at 0:00 (`onDeckConfirmed` seeks 0, `rewindPromotedDeck` rewinds anything past 1s); only a real resume (`pendingResume`) keeps its position. **Not reproduced live** (needs a real YouTube ad; code path read and syntax-checked only). If songs still start late after an ad with this build, the cause is elsewhere (e.g. YouTube resuming its own watch position); log it on the issue.
 
 ### library-pills-when-only-one-is-active-hitt: library pills: when only one is active, hitting it again activates all pills (Geethub #616)
 - **Status:** draft
