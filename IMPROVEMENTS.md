@@ -10908,12 +10908,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #581.
 
 ### find-music-button-should-activate-a: "find music" button should activate a screen (Geethub #582)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #582. medium The screen should first give them the option to search for music by different genres, artists, region, vibe. There should be a list of genres, like a grid of genres, and those genres should open up when you select
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #582.
+- **Touches:** index.html (Find music screen)
+- **Branch:** agent/mobile-ui-pass
+- **Notes:** Synced from Geethub #582. First slice built: the player's Find music button opens a full screen with Genres (grid, tap drops down subgenres), Region (my suggestions: West Africa, South Africa, East Africa, Caribbean, Latin America, Brazil, India, Korea, Japan, UK, France, Middle East) and Vibe (moods, no BPM split yet). Any pick opens an artist grid (iTunes song search, artists deduped, genre-checked); tap an artist for the usual bio and albums panel, + adds the artist to the library. "Load your music" lists Spotify, Apple Music, YouTube, SoundCloud, but only closes the screen and points at the link box: real account sign-in and bulk import (liked songs, playlists) is NOT built and needs per-service OAuth. Not built: recommended artists in the bio panel, BPM/indexed-metadata vibes, a "Load your music" button above Find music in the app (it sits inside the screen). Artist ranking is raw search order, so lesser-known artists can lead. Checked in a 375px preview only.
 
 ### bug-podcast-captions-not-loading: podcast captions are not loading (Geethub #603)
 - **Status:** merged
