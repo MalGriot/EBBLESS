@@ -22713,11 +22713,12 @@ function awardMilestone(id){
       if (msMotionOk()){
         card.classList.remove('ms-pulse'); void card.offsetWidth; card.classList.add('ms-pulse');
       }
-      msChime(pageDone);
       if (pageDone) msConfetti(card);
+      msChime(pageDone);
       return;
     }
   }
+  msChime(pageDone);   // card off screen (scrolled away / other page): the toast still gets its sound
   showToast('+' + msFmt(pts) + ' pts \u00B7 ' + m[1] + (bonus ? ' \u00B7 ' + MS_PAGE_NAMES[m[3]] + ' complete! +' + msFmt(bonus) + ' bonus' : ''));
 }
 (function msInit(){
