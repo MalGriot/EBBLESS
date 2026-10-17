@@ -9089,7 +9089,8 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
     e.stopImmediatePropagation();
   });
 })();
-$('wordmarkBtn').addEventListener('click', () => returnToSplash());
+// desktop only (where the mini player exists); on phones the logo still goes to the player
+$('wordmarkBtn').addEventListener('click', () => { if (miniPlayerSupported()) returnToSplash(); else setView('player'); });
 
 // Bring the splash back over the already-running app (wordmark hold above).
 // Reuses the first-visit Tutorial/Enter choice: Enter just hides the splash
