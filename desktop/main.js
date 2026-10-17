@@ -3,7 +3,7 @@
 // 'ebbless-mini' (see the desktop shim in index.html); this gives it a real
 // frameless, see-through window that stays above every app, on every desktop
 // (Space) and over full-screen apps - which Chrome's Picture-in-Picture can't.
-const { app, BrowserWindow, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, nativeImage } = require('electron');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -146,6 +146,17 @@ ipcMain.on('ebbless:focus-main', () => {
 
 ipcMain.on('ebbless:hide-main', () => {
   if (mainWin && mainWin.isVisible() && !mainWin.isMinimized()) mainWin.minimize();
+});
+
+// #633: the page draws the dock icon for its active art mode (logo over a
+// record, cassette or cymatics) and sends it as a PNG data URL. Only the main
+// window may set it; anything else is ignored. Runtime only: the bundle icon
+// stays the plain logo, and the page sends the current one on every load.
+ipcMain.on('ebbless:dock-icon', (e, dataUrl) => {
+  if (!app.dock || !mainWin || e.sender !== mainWin.webContents) return;
+  if (typeof dataUrl !== 'string' || dataUrl.length > 3e6 || !dataUrl.startsWith('data:image/png;base64,')) return;
+  const img = nativeImage.createFromDataURL(dataUrl);
+  if (!img.isEmpty()) app.dock.setIcon(img);
 });
 
 app.on('before-quit', () => { quitting = true; });

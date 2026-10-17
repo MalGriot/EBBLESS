@@ -11128,12 +11128,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #613. Built: while nothing is playing and the art is in its default style, the white EBBLESS wordmark (40% of the art wide, 85% opacity) bounces around inside the art box like the DVD logo, edge to edge, at two different speeds so the path wanders. Pure CSS, two nested transform keyframes (translateY on the box, translateX on the image, percentages of the logo's own size so no JS and no rAF), no filter/blur. It only exists (display:block) while the empty art is showing in art mode; hidden in visualizer/lyrics, under other tabs, and paused under the fullscreen player and Find music. Reduced motion shows it still. Not built: no color change on corner hits; the record and cassette art styles don't show it. Verified in the 375px browser preview by forcing the empty state: positions sampled over time stay inside the art, pauses when Find music opens, no new [gpu-watchdog]. Not checked on a real phone or in the fullscreen player. Cache v329.
 
 ### don-t-count-rick-astley-s-never-gonna-give: don't count rick astley's never gonna give you up in the listener's play history or analytics (Geethub #614)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #614. don't put it in on air either. just treat it like nothing is playing and it never played
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #614.
+- **Branch:** agent/small-features
+- **Notes:** Synced from Geethub #614. Built: isRickroll(t) (normalized artist contains 'rickastley' and title starts with 'nevergonnagiveyouup', so remaster/official-video suffixes and '- Topic' still match). The song stays playable. Skipped for: play history (recordPlayHistory and recordLatestPlayed, which feeds Currents' seeds and its already-heard filter), the per-song play count and taste graph (bumpPlayCount), the listening log and Wrapped (playLogTick, playLogCompleted), beta activity stats (statsTick), and ON AIR: npSnapshot treats it like a podcast, so the feed shows what was last sent (or nothing) as if the song never played. ASSUMPTIONS: other artists' covers of the song are not skipped (artist must be Rick Astley); history already recorded before this change is left alone; nothing is shown to the listener. Verified: the matcher on real-shaped titles and artists in node; the page loads clean. Not verified end to end (playing it on a device and checking history/ON AIR). Cache v335.
 
 ### after-loading-the-song-after-the-ad-the-so: after loading the song after the ad, the song is starting several seconds in. it should start at 0:00 if it's not a resume play (Geethub #615)
 - **Status:** merged
@@ -11192,12 +11192,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #621.
 
 ### when-on-air-is-on-air-the-thumb-should-swi: when on air is "on air", the thumb should switch between the thumb video art and a 1x1 of the song that's currently playing (Geethub #622)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #622. when it's off air, it should switch between the thumb video art and the 2x2 grid thumb art
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #622.
+- **Branch:** agent/small-features
+- **Notes:** Synced from Geethub #622. Built: the ON AIR library tile alternates every 21s between its looping clip and the song art under it. On air that is a 1x1 of the song playing now; off air it is the 2x2 of the latest songs (it was always covered by the clip before). The clip fades by opacity only and is PAUSED while faded out and resumed when it fades back (GPU budget); reduced motion keeps the clip; the timer chain ends when the card is re-rendered. ASSUMPTION: the title says on air gets a 1x1 and the description says off air gets the 2x2, so both were built. Verified in the browser preview with a mocked /nowplaying feed: on air = single art of the live song, flipped to alt with the clip at opacity 0 and both videos paused, flipped back with the clip playing; off air = 3-4 image grid. Checked at the pane's phone width only (the pane would not hold a desktop width); no [gpu-watchdog] warnings seen. Cache v335.
 
 ### when-the-miniplayer-switches-shapes-it-sho: when the miniplayer switches shapes, it should always magnetize to the bottom right corner (Geethub #623)
 - **Status:** merged
@@ -11208,12 +11208,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #623. Related to #604, #605, #612. Every shape change (menu, art skin follow, cymatics) resizes then moves the window to the bottom right corner via mpMagnetize. Not verified in real Electron.
 
 ### when-it-plays-an-ad-try-switching-the-link: when it plays an ad, try switching the link to a less popular song or a soundcloud link if it's close to 100% match (Geethub #624)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #624. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #624.
+- **Branch:** agent/small-features
+- **Notes:** Synced from Geethub #624. Built: when the existing ad detection (#523: skipHeldAd for a mid-song/gated ad, and the pre-roll dodge in maybeDodgeAd) fires on a YouTube track, adTryAlternate looks through the worker /search candidates for another link that is a near-certain match: title overlap 1.0, the artist named in channel or title, length within 2s of the song's own length, and a score within 4 of the best candidate. If none, it asks /sctracksearch and takes a SoundCloud upload only when the title (artist prefix removed) is identical, the artist is named, and the length is within 2s. No match means nothing changes. A swap rewrites that song's link in its playlist (no toast) and, if the song is still the one on the player, reloads it on the new link. Loop guard: one try per song per session (and the new link is marked tried), so a swap that shows its own ad is never swapped again. ASSUMPTIONS: 'less popular' is not available to the client (the worker does not send view counts), so it is whichever alternate passes the strict gate, best score first; the swap is saved to the playlist, not session-only; a slow load that gets read as an ad can also trigger a swap, but only to a near-identical link; a song with no known length is never swapped. Verified: 9 scenarios in node with stubbed search results (good alt swaps, wrong length/low score/partial title/other artist/no length do not, SoundCloud exact match swaps, no loop on the second call). NOT verified: a real YouTube ad on a real song in the browser, and whether the swapped link really plays ad-free. Cache v335.
 
 ### youtube-search: youtube search (Geethub #625)
 - **Status:** merged
@@ -11240,12 +11240,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #627. Related to #612. New Cymatics shape: a round window with the visualizer's own sand-plate patterns (VIZ_PATTERNS) in the daily Rosicrucian color, the cover as a small center label, controls and info on hover. Own canvas in the mini window: 1100 dots at 30 fps, runs only while the shape is showing, playing and visible, no blur or filter, no extra assets. Pick it from the shape button or right-click menu.
 
 ### 3-dot-menu-start-a-radio-based-on-this-son: 3 dot menu: start a radio based on this song (Geethub #628)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #628. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #628.
+- **Branch:** agent/small-features
+- **Notes:** Synced from Geethub #628. Built: the song 3-dot menu (library rows, queue, Now row; not podcast episodes) has 'Start a radio' (Radio icon, after Add to playlist). One tap, no confirm, reuses startRadio (the #471 song radio: Discover's /similar candidates, no new backend). If that song is the one playing it keeps playing and everything after it is replaced by similar songs; if it is another song the radio replaces the queue and starts it. Radio never goes in the library and keeps extending itself (Discover origin). ASSUMPTIONS: a song that is not playing replaces the whole queue (matches the drag-a-song radio); the name is '<song> Radio'. Verified in the browser preview (menu item shows, a radio of 1 + similar songs was built and started from a library song). Not verified: the Currents-style 'Not for me' interplay, real playback of every picked song. Cache v335.
 
 ### when-you-play-an-album-or-playlist-and-the: when you play an album or playlist and the queue changes to a new queue, the queue list should snap to the top (Geethub #629)
 - **Status:** merged
@@ -11280,12 +11280,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #632. **Could not reproduce** the exact symptom: in the preview the pills stayed the same size (and no scrollbar or arrow appeared) when toggled off and on at 320, 360, 375 px and the 340 px desktop sidebar. Reproduced one related fault: in a very narrow row (about 200 px) a label slips out of its pill. Likely mechanism for the report: `updateLibFilterMore` judged overflow with `libFilter.scrollWidth`, which also counts a label slipping out of its pill; Podcasts is the last and longest pill, so it lit the arrow button, which takes 38 px from the row, shrinking every pill and making the row scrollable. Defensive fix (not confirmed on the owner's phone): overflow is now judged from the last pill's own box, and the pill font and padding can shrink a little further (8.5px / 3px minimums) before a label slips. If it still happens, get the phone width, font size setting and which pill was turned off.
 
 ### is-there-a-way-to-change-the-dock-icon-bas: is there a way to change the dock icon based on what album art mode is active? (Geethub #633)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #633. like make it a record or an lp or out the cymatics behind the logo? obvs the logo must always be there but maybe put things behind it
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #633.
+- **Branch:** agent/small-features
+- **Notes:** Synced from Geethub #633. Built: the Mac app's dock icon follows the art mode, logo always on top: plain art and lyrics = the plain logo, Record = logo over a vinyl record, Cassette = logo over a cassette, Cymatics (visualizer) = logo over cymatics rings in the current accent. index.html draws the icon on a canvas only when the mode changes (and once on load), no animation, and sends a PNG data URL through a new ebblessDesktop.setDockIcon in desktop/preload.js; desktop/main.js ('ebbless:dock-icon') accepts it only from the main window, only as a small PNG data URL, and calls app.dock.setIcon. On web, Android and older Mac builds there is no setDockIcon so it silently does nothing. The icon is runtime only: the app on disk keeps the plain logo and the page sends the right one on every launch. Desktop version bumped 1.0.8 to 1.0.9. NOT built or released: someone must run the Mac build to ship this. ASSUMPTIONS: 'album art mode' = art style (default/record/cassette) plus the Cymatics visualizer; art is not per-song; accent is read when the mode changes, not as it shifts through the day. Verified: the four icons render (looked at them in the browser preview). NOT verified: the Electron side (no Mac build was run, setIcon never actually called in the real app). Cache v335.
 
 ### mobile-needs-a-lock-screen-and-notif-playe: mobile needs a lock screen and notif player with play rewind and heart (Geethub #634)
 - **Status:** dropped

@@ -912,6 +912,8 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 /* ON AIR / SwiiiRrrLL looping art, laid over the normal tile (#444) */
 .lib-card .art .pl-art-video{position:absolute;inset:0;z-index:1;background:#121212}
 .lib-card .art .pl-art-video img,.lib-card .art .pl-art-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.lib-card .art .pl-art-video.np-cycle{transition:opacity .8s ease-in-out}
+.lib-card .art .pl-art-video.np-cycle.is-alt{opacity:0}
 .lib-card[data-pl-id="swell"] .art .pl-art-video video{transform:scale(1.06) translate(-4.4%,1.8%)}
 /* Liked Songs always gets a heart glyph instead of a track-art grid -
    it's the one playlist whose identity is the "liked" action itself,
@@ -10442,14 +10444,16 @@ function renderLibrary(){
       const img = document.createElement('img'); img.loading = 'lazy'; attachCardArt(img, pl.tracks.find(t => t.art) || withArt[0]);
       artDiv.appendChild(img);
     } else {
+      // #622: on air, the tile under the looping clip is a 1x1 of the song playing now; off air, the 2x2 of the latest songs
+      const gridArt = (id === NP_ID && npFeed.onAir) ? withArt.slice(0, 1) : withArt;
       const gridFace = document.createElement('div');
-      gridFace.className = 'face grid-face' + (withArt.length <= 1 ? ' single' : '');
-      if (withArt.length === 1){
-        const img = document.createElement('img'); attachCardArt(img, withArt[0]); gridFace.appendChild(img);
+      gridFace.className = 'face grid-face' + (gridArt.length <= 1 ? ' single' : '');
+      if (gridArt.length === 1){
+        const img = document.createElement('img'); attachCardArt(img, gridArt[0]); gridFace.appendChild(img);
       } else {
-        withArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachCardArt(img, t); gridFace.appendChild(img); });
+        gridArt.slice(0,4).forEach(t => { const img = document.createElement('img'); attachCardArt(img, t); gridFace.appendChild(img); });
       }
-      if (withArt.length <= 1) artDiv.classList.add('single');
+      if (gridArt.length <= 1) artDiv.classList.add('single');
       while (gridFace.firstChild) artDiv.appendChild(gridFace.firstChild);
     }
     if (PL_ART_VIDEO[id] && !artDiv.querySelector('.video-face')){
@@ -10501,6 +10505,7 @@ function renderLibrary(){
         }
       }
       artDiv.appendChild(face);
+      if (id === NP_ID && withArt.length) startNpArtCycle(face);
     }
     if (!isSystemPl || isLiked || id === SWELL_ID || id === BLEND_ID || id === NP_ID){
       const menuBtn = document.createElement('button');
@@ -10838,7 +10843,7 @@ const PLAYHIST_MAX = 500, PLAYHIST_MIN_SEC = 10;
 let playHistKey = '', playHistSecs = 0, playHistLogged = false;
 
 function recordPlayHistory(t, plId){
-  if (!t || !t.title) return;
+  if (!t || !t.title || isRickroll(t)) return;
   const list = lsGet(LS_PLAYHIST, []);
   const top = list[0];
   if (top && top.plId === plId && top.videoId === (t.videoId || '') && top.title === t.title) return;  // consecutive repeat
@@ -11309,6 +11314,13 @@ attachSwipeToDismiss(libplPanel, dismissLibraryPlaylistPanel);
 const ARTIST_INFO_PREFIX = 'artistinfo:';
 const MB_API = 'https://musicbrainz.org/ws/2/';
 const artistInfoCache = new Map();
+// #614: Rick Astley's "Never Gonna Give You Up" is a rickroll prank target. It stays
+// playable but never counts: no history, stats, plays, taste, Currents or ON AIR.
+function isRickroll(t){
+  if (!t) return false;
+  const a = artistNameKey(t.artist || t.channel), n = artistNameKey(t.title || t.matchedTitle);
+  return a.includes('rickastley') && n.startsWith('nevergonnagiveyouup');
+}
 function artistNameKey(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
 async function artistInfoJson(url){
   const res = await fetch(url);
@@ -12337,6 +12349,7 @@ let openTrackCtxMenu = null; // { plId, trackIdx, btn }
 const CTX_ICON_LIKE_ON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
 const CTX_ICON_LIKE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
 const CTX_ICON_PLAY_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
+const CTX_ICON_RADIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7M5.6 5.6a9 9 0 000 12.8M18.4 5.6a9 9 0 010 12.8"/></svg>';
 const CTX_ICON_ADD_PLAYLIST = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zM3 16h8v-2H3v2zm0-5h12v-2H3v2zm15 5v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>';
 const CTX_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
 const CTX_ICON_SLEEP = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.3 3a9 9 0 1 0 8.7 11.3A7 7 0 0 1 12.3 3z"/></svg>';
@@ -12389,6 +12402,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     if (!(opts && opts.isNow)) items.push({ action: 'playnext', label: 'Play next', icon: CTX_ICON_PLAY_NEXT });
     items.push({ action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE });
     items.push({ action: 'addplaylist', label: 'Add to playlist', icon: CTX_ICON_ADD_PLAYLIST });
+    if (!isPodcastTrack(t)) items.push({ action: 'radio', label: 'Start a radio', icon: CTX_ICON_RADIO });   // #628
     if (opts && opts.isNow) items.push({ action: 'sleep', label: sleepTimer ? 'Sleep timer: ' + sleepTimerLabel() : 'Sleep timer', icon: CTX_ICON_SLEEP });
     items.push({ action: 'songpage', label: 'Song page', icon: CTX_ICON_ART });
     // A track has no canonical source link of its own (see
@@ -12448,6 +12462,9 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'addqueue'){ queueAddToEnd(trackIdx, plId); showToast('Added to queue'); }
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
   else if (action === 'sleep'){ openSleepTimerChooser(); }
+  else if (action === 'radio'){   // #628: one tap, no confirm. The playing song keeps playing and the radio follows it
+    if (t && t.videoId){ const ct = currentTrack(); startRadio(t.title + ' Radio', [t], !!(ct && ct.videoId === t.videoId)); }
+  }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
@@ -12595,6 +12612,29 @@ function openRenamePlaylistFlow(id, pl){
   }
   $('plRenameBtn').addEventListener('click', submit);
   [input, artistInput].forEach(el => { if (el) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); }); });
+}
+
+// #622: the ON AIR tile flips between its looping clip and the song art under it
+// (1x1 of the song playing now when on air, 2x2 of the latest songs when off).
+// Every NP_ART_CYCLE_MS the clip fades out (opacity only) and is paused while
+// hidden; it fades back in and plays again on the next flip. The timer chain
+// ends on its own when the card is re-rendered away.
+const NP_ART_CYCLE_MS = 21000;
+function startNpArtCycle(face){
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  face.classList.add('np-cycle');
+  const vids = () => Array.from(face.querySelectorAll('video'));
+  const flip = () => {
+    if (!face.isConnected) return;
+    const alt = face.classList.toggle('is-alt');
+    if (alt){
+      setTimeout(() => { if (face.classList.contains('is-alt')) vids().forEach(v => v.pause()); }, 900);
+    } else {
+      vids().forEach(v => { if (v.style.opacity !== '0'){ const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } });
+    }
+    setTimeout(flip, NP_ART_CYCLE_MS);
+  };
+  setTimeout(flip, NP_ART_CYCLE_MS);
 }
 
 // Playlist (not album/podcast/artist) with its own cover and 2+ playable
@@ -13480,7 +13520,7 @@ function npSchedulePublish(ms){
 function npSnapshot(forceOff){
   const l = npLocal(), isPlaying = artworkWrap.classList.contains('is-playing') && !forceOff;
   let t = l && l.t, pos = l ? l.pos : 0, playing = isPlaying;
-  if (!t || !t.videoId || isPodcastTrack(t)){ if (!npLastSent) return null; t = npLastSent.t; pos = npLastSent.pos; playing = false; }   // podcast or nothing: off air
+  if (!t || !t.videoId || isPodcastTrack(t) || isRickroll(t)){ if (!npLastSent) return null; t = npLastSent.t; pos = npLastSent.pos; playing = false; }   // podcast or nothing: off air
   if (!playing && !npLastSent) return null;   // never broadcast a paused song nobody has heard from us
   const ad = activeDeck(), dur = ad && ad.player && ad.player.getDuration ? Math.round(+ad.player.getDuration() || 0) : 0;
   return { t, v: t.videoId, pos: Math.max(0, Math.round(pos * 10) / 10), dur: l && l.t === t ? dur : (npLastSent ? npLastSent.dur : 0), playing };
@@ -17702,7 +17742,7 @@ let statsLastTick = 0;
 function statsTick(){
   const now = Date.now(), prev = statsLastTick;
   statsLastTick = 0;
-  if (!statsEnabled() || document.body.classList.contains('onb-active')) return;
+  if (!statsEnabled() || document.body.classList.contains('onb-active') || isRickroll(currentTrack())) return;   // #614
   if (!artworkWrap.classList.contains('is-playing')) return;
   statsLastTick = now;
   statsTouch();
@@ -17836,7 +17876,7 @@ function playLogFeature(name){
 function playLogTick(){
   const now = Date.now(), prev = playLogLastTick;
   playLogLastTick = 0;
-  if (weekUp.frozen || document.body.classList.contains('onb-active')) return;
+  if (weekUp.frozen || document.body.classList.contains('onb-active') || isRickroll(currentTrack())) return;   // #614
   if (!artworkWrap.classList.contains('is-playing')) return;
   const q = state.queue[state.queuePos], t = currentTrack();
   if (!q || !t) return;
@@ -17885,7 +17925,7 @@ function playLogTick(){
 // tester week-up gate waits for.
 function playLogCompleted(pos){
   const t = trackAt(pos), q = state.queue[pos];
-  if (!t || !q || isPodcastPlaylistId(q.plId)) return;
+  if (!t || !q || isPodcastPlaylistId(q.plId) || isRickroll(t)) return;   // #614
   const e = playLog.tr[playLogTrackKey(t)];
   if (e) e.c = (+e.c || 0) + 1;
   playLog.c++;
@@ -22990,6 +23030,7 @@ function setVisualMode(mode){
   capSyncWakeLock();
   if (state.flowOpen) flowRemountVisual();
   csStackSync();
+  dockIconSync();
 }
 
 /* ---------- album art display style: default / spinning record / cassette ---------- */
@@ -23008,6 +23049,72 @@ function setArtStyle(style){
   closeArtStyleMenu();
   if (typeof syncFlowArtStyle === 'function') syncFlowArtStyle();
   csStackSync();
+  dockIconSync();
+}
+/* #633: the Mac app's dock icon follows the art mode. The logo is always on
+   top; behind it sits a record (Record), a cassette (Cassette), cymatics rings
+   (Cymatics) or nothing (plain art / lyrics). Drawn on a canvas only when the
+   mode changes (the accent is read at that moment), no animation, and sent through the desktop bridge.
+   On the web, Android and older Mac builds there is no bridge, so it does
+   nothing. */
+let dockIconKey = '', dockMarkImg = null;
+function dockIconMode(){ return visualMode === 'viz' ? 'cymatics' : visualMode === 'art' && artStyle !== 'default' ? artStyle : 'default'; }
+function dockIconDraw(mark, mode, accent){
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  if (mode === 'record'){
+    x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = '#101012'; x.fill();
+    x.strokeStyle = 'rgba(255,255,255,.08)'; x.lineWidth = 2;
+    for (let r = 130; r < 232; r += 8){ x.beginPath(); x.arc(256, 256, r, 0, 7); x.stroke(); }
+    if (x.createConicGradient){
+      const g = x.createConicGradient(0.6, 256, 256);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.08, 'rgba(255,255,255,.16)'); g.addColorStop(.16, 'rgba(255,255,255,0)');
+      g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(.58, 'rgba(255,255,255,.16)'); g.addColorStop(.66, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = g; x.fill();
+    }
+    x.beginPath(); x.arc(256, 256, 118, 0, 7); x.fillStyle = '#1b1b1f'; x.fill();
+    x.beginPath(); x.arc(256, 256, 118, 0, 7); x.strokeStyle = accent; x.lineWidth = 5; x.stroke();
+  } else if (mode === 'cassette'){
+    x.beginPath(); x.roundRect(30, 104, 452, 304, 34); x.fillStyle = '#18181b'; x.fill();
+    x.strokeStyle = 'rgba(255,255,255,.14)'; x.lineWidth = 3; x.stroke();
+    x.beginPath(); x.roundRect(70, 136, 372, 150, 16); x.fillStyle = '#26262b'; x.fill();
+    x.beginPath(); x.roundRect(70, 136, 372, 22, 10); x.fillStyle = accent; x.fill();
+    [172, 340].forEach(cx => {
+      x.beginPath(); x.arc(cx, 336, 38, 0, 7); x.fillStyle = '#0b0b0d'; x.fill();
+      x.beginPath(); x.arc(cx, 336, 38, 0, 7); x.strokeStyle = 'rgba(255,255,255,.28)'; x.lineWidth = 4; x.stroke();
+      x.beginPath(); x.arc(cx, 336, 14, 0, 7); x.fillStyle = '#d9d9de'; x.fill();
+    });
+  } else if (mode === 'cymatics'){
+    x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = '#0c0c10'; x.fill();
+    x.lineWidth = 4;
+    for (let k = 1; k <= 9; k++){
+      x.beginPath();
+      for (let a = 0; a <= 64; a++){
+        const t = a / 64 * Math.PI * 2, r = k * 25 * (1 + 0.07 * Math.cos(6 * t + k * 0.9) + 0.03 * Math.cos(12 * t));
+        const px = 256 + Math.cos(t) * r, py = 256 + Math.sin(t) * r;
+        if (a) x.lineTo(px, py); else x.moveTo(px, py);
+      }
+      x.closePath(); x.globalAlpha = 1.05 - k * 0.1; x.strokeStyle = accent; x.stroke();
+    }
+    x.globalAlpha = 1;
+  }
+  x.drawImage(mark, 0, 0, S, S);
+  return c.toDataURL('image/png');
+}
+function dockIconSync(){
+  const bridge = window.ebblessDesktop;
+  if (!bridge || typeof bridge.setDockIcon !== 'function') return;
+  try {
+    const mode = dockIconMode();
+    const accent = (getComputedStyle(document.documentElement).getPropertyValue('--clock-accent') || '').trim() || '#e0b26a';
+    const key = mode + '|' + (mode === 'default' ? '' : accent);
+    if (key === dockIconKey) return;
+    const go = () => { dockIconKey = key; bridge.setDockIcon(dockIconDraw(dockMarkImg, mode, accent)); };
+    if (dockMarkImg) return go();
+    const im = new Image();
+    im.onload = () => { dockMarkImg = im; if (dockIconMode() === mode) go(); else dockIconSync(); };
+    im.src = 'brand/assets/icons/icon-512.png';
+  } catch(e){}
 }
 /* ---------- Advanced settings (phase 1) ----------
    Look / Library / Playback chips. Art style, grid size, sort and blend length
@@ -25200,7 +25307,7 @@ function bumpPlayCount(entry){
   if (!entry) return;
   const pl = playlistById(entry.plId);
   const t = pl && pl.tracks[entry.idx];
-  if (!t) return;
+  if (!t || isRickroll(t)) return;   // #614
   t.plays = (t.plays || 0) + 1;
   persistPlaylistObj(pl);
   recordLatestPlayed(t);
@@ -25212,7 +25319,7 @@ function bumpPlayCount(entry){
 // the latest song" seed and to never serve something already heard.
 const PLAY_HISTORY_MAX = 400;
 function recordLatestPlayed(t){
-  if (!t || !t.videoId) return;
+  if (!t || !t.videoId || isRickroll(t)) return;
   const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.v !== t.videoId);
   hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
   lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
@@ -25973,6 +26080,7 @@ function playLpNeedle(kind){
 // pointerdown/keydown that precedes the play/pause click - so the context is
 // already running and both buffers decoded by the time the toggle fires.
 if (artStyle === 'record') lpNeedlePrefetch();
+dockIconSync();   // #633: tell the Mac app which dock icon to wear on load
 if (artStyle === 'cassette') lpNeedlePrefetch(['rewind']);
 function lpSfxUnlock(){
   if (artStyle !== 'record' && artStyle !== 'cassette') return;
@@ -28290,6 +28398,56 @@ function adDodgeTarget(ad, nd){
   if (nd.pos !== n || !nd.player || !nd.ready || !nd.confirmed || nd.videoId !== tb.videoId) return -1;
   return n;
 }
+// #624: a YouTube link that ran an ad is swapped for a near-identical alternate
+// when the /search candidates (or SoundCloud) hold one that is a close to
+// certain match: same title (overlap 1), artist named, length within 2s of the
+// song's own, and a score near the top. Without such a match nothing changes.
+// One try per song per session (so a swap that also shows an ad can't loop),
+// and never for a link the song was already swapped away from.
+const AD_ALT_DUR_TOL_S = 2;
+const AD_ALT_SCORE_MARGIN = 4;
+const adAltTried = new Set();
+function adAltTitleKey(s, artistKey){
+  const k = artistNameKey(s);
+  return artistKey && k.startsWith(artistKey) ? k.slice(artistKey.length) : k;
+}
+async function adTryAlternate(entry, ad){
+  try{
+    const pl = entry && getCachedPlaylist(entry.plId), t = pl && pl.tracks[entry.idx];
+    if (!t || !ad || t.videoId !== ad.videoId || isNativeVideoId(t.videoId) || isPodcastTrack(t) || isRickroll(t)) return;
+    const key = trackMatchKey(t.title, t.artist);
+    if (adAltTried.has(key)) return;
+    adAltTried.add(key);
+    const ref = +t.srcDuration || +t.duration || 0;
+    if (!ref) return;   // no length to compare: not a sure match
+    const artistKey = artistNameKey(String(t.artist || '').split(/\s*(?:,|&|feat\.?|ft\.?|\bx\b)\s*/i)[0]);
+    const durOk = (c) => c.duration && Math.abs(c.duration - ref) <= AD_ALT_DUR_TOL_S;
+    const namesArtist = (c) => !artistKey || artistNameKey((c.channel || '') + ' ' + (c.title || '')).includes(artistKey);
+    let pick = null;
+    // 1. another YouTube upload, best score first
+    const data = await searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT);
+    const list = ((data.candidates && data.candidates.length) ? data.candidates : []).filter(c => c && c.videoId && typeof c.score === 'number');
+    const top = list.reduce((m, c) => Math.max(m, c.score), -Infinity);
+    pick = list.find(c => c.videoId !== ad.videoId && !isSoundCloudVideoId(c.videoId) && c.titleOverlap === 1 && c.score >= top - AD_ALT_SCORE_MARGIN && durOk(c) && namesArtist(c)) || null;
+    // 2. otherwise a SoundCloud upload with the same title and length
+    if (!pick){
+      const sc = await searchSoundCloudTracks([t.title, t.artist].filter(Boolean).join(' '), RELINK_SC_CANDIDATE_COUNT);
+      pick = sc.find(c => c.videoId && adAltTitleKey(c.title, artistKey) === adAltTitleKey(t.title, artistKey) && durOk(c) && namesArtist(c)) || null;
+    }
+    adLog(ad, 'alt', pick ? 'swap to ' + pick.videoId : 'no sure match');
+    if (!pick) return;
+    // the song may have been edited or relinked while searching
+    const pl2 = getCachedPlaylist(entry.plId), t2 = pl2 && pl2.tracks[entry.idx];
+    if (!t2 || t2.videoId !== ad.videoId) return;
+    adAltTried.add(pick.videoId);
+    t2.videoId = pick.videoId; t2.matchedTitle = pick.title || ''; t2.channel = pick.channel || ''; t2.duration = pick.duration || 0;
+    if (isSoundCloudVideoId(pick.videoId) && !t2.art && pick.image) t2.art = pick.image;
+    persistPlaylistObj(pl2);
+    if (state.playlist && state.playlist.id === entry.plId) state.playlist = pl2;
+    // still the song on the player (no other song took over): move it onto the new link now
+    if (state.queue[state.queuePos] === entry) loadIndex(state.queuePos, true);
+  } catch(e){}
+}
 function maybeDodgeAd(){
   const ad = activeDeck(), nd = standbyDeck();
   // a confirmed song the zero-ads gate has kept silent this long gets the
@@ -28308,6 +28466,7 @@ function maybeDodgeAd(){
   // dodged by mistake just plays right after, from the top.
   ad.adSeen = deckAdReason(ad, true);
   if (elapsed < AD_DODGE_AFTER_MS || !ad.adSeen) return;
+  adTryAlternate(state.queue[state.queuePos], ad);   // #624
   const p = state.queuePos, n = adDodgeTarget(ad, nd);
   if (n < 0) return;
   const q = state.queue;
@@ -28330,6 +28489,7 @@ function maybeDodgeAd(){
 const AD_SKIP_AFTER_MS = 2500;
 const adSkippedVids = new Set();
 function skipHeldAd(ad, reason){
+  if (ad.kind === 'yt') adTryAlternate(state.queue[state.queuePos], ad);   // #624
   const nd = standbyDeck(), n = adDodgeTarget(ad, nd);
   if (ad.kind !== 'yt' || n < 0 || adSkippedVids.has(ad.videoId)) return;
   adSkippedVids.add(ad.videoId);
