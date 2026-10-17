@@ -11264,20 +11264,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #630.
 
 ### searching-in-the-library-should-show-only: searching in the library should show only what you're searching for (Geethub #631)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #631. if it's a song, deactivate all pills
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #631.
+- **Touches:** `renderLibrary` search branch, library pills.
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #631. Built: a search now shows only what matches (song rows, plus cards whose own name matches); the old exception that kept every custom playlist visible while searching (so songs could be dragged onto them) is removed. While searching, a pill is lit only if its section has a matching card, so a song-only search leaves all pills off. Tapping a pill during a search clears the search and shows the library again (my reading of "least clicks"; the issue did not ask for it). Verified in the preview (mobile viewport, 60 test playlists, 60 test albums/podcasts): "Song 3-1" gave 100 song rows, 0 cards, 4 pills off; an album-name search gave 1 card with only its pill lit; tapping a pill restored all 51 cards. Side effect: songs found by search can no longer be dragged onto a playlist card that is not itself a match (the add-to-playlist menu still works).
 
 ### when-you-deactivate-a-pill-in-library-main: when you deactivate a pill in library (mainly podcasts), it resizes them and it becomes scrollable. this shouldn't happen (Geethub #632)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #632. the word kind of slips out of the border also
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #632.
+- **Touches:** `.lib-filter-btn` CSS, `updateLibFilterMore`.
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #632. **Could not reproduce** the exact symptom: in the preview the pills stayed the same size (and no scrollbar or arrow appeared) when toggled off and on at 320, 360, 375 px and the 340 px desktop sidebar. Reproduced one related fault: in a very narrow row (about 200 px) a label slips out of its pill. Likely mechanism for the report: `updateLibFilterMore` judged overflow with `libFilter.scrollWidth`, which also counts a label slipping out of its pill; Podcasts is the last and longest pill, so it lit the arrow button, which takes 38 px from the row, shrinking every pill and making the row scrollable. Defensive fix (not confirmed on the owner's phone): overflow is now judged from the last pill's own box, and the pill font and padding can shrink a little further (8.5px / 3px minimums) before a label slips. If it still happens, get the phone width, font size setting and which pill was turned off.
 
 ### is-there-a-way-to-change-the-dock-icon-bas: is there a way to change the dock icon based on what album art mode is active? (Geethub #633)
 - **Status:** draft

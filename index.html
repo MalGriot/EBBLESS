@@ -681,8 +681,8 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-more:hover{color:var(--text)}
 .lib-filter-more svg{width:20px;height:20px}
 .lib-filter-more.is-back svg{transform:rotate(180deg)}
-.lib-filter-btn{position:relative;flex:1 1 auto;min-width:0;white-space:nowrap;height:32px;padding:0 clamp(4px,2.4cqw,12px);border-radius:16px;border:1px solid var(--border-2);
-  font-size:clamp(10px,4.2cqw,12.5px);font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.lib-filter-btn{position:relative;flex:1 1 auto;min-width:0;white-space:nowrap;height:32px;padding:0 clamp(3px,2.4cqw,12px);border-radius:16px;border:1px solid var(--border-2);
+  font-size:clamp(8.5px,4.2cqw,12.5px);font-weight:600;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
 .lib-filter-btn:hover{color:var(--text)}
 .lib-filter-btn.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}   /* lit pills follow the UI color (#495) */
 .lib-head-actions{flex:1;min-width:0}
@@ -9918,7 +9918,9 @@ function setLibraryFilter(mode){
 // the last chip (Podcasts); at the end it flips to scroll all the way back.
 const libFilterMore = $('libFilterMore');
 function updateLibFilterMore(){
-  const over = libFilter.scrollWidth > libFilter.clientWidth + 2 && !libFilter.classList.contains('hidden');
+  // #632: judge by the pills' own boxes. libFilter.scrollWidth also counts a label slipping out of its pill, which (Podcasts, the last and longest, first) lit this arrow, took 38px from the row, shrank every pill and made the row scrollable
+  const lastPill = Array.from(libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')).pop();
+  const over = !libFilter.classList.contains('hidden') && !!lastPill && lastPill.getBoundingClientRect().right > libFilter.getBoundingClientRect().right + 2;
   libFilterMore.classList.toggle('hidden', !over);
   if (!over) return;
   const atEnd = libFilter.scrollLeft + libFilter.clientWidth >= libFilter.scrollWidth - 2;
@@ -9935,6 +9937,8 @@ libFilter.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-filter-btn');
   if (!btn) return;
   const key = btn.dataset.filter;
+  // #631: while searching the pills mirror the matches; tapping one leaves the search and shows the library again
+  if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); rerenderLibraryKeepPanel(); return; }
   // each pill extends or retracts its whole section, every sub-group included (#495)
   const extend = !!libFolded[key];
   // the last open pill can't be switched off: the library is never empty (#495)
@@ -10169,8 +10173,8 @@ function renderLibrary(){
           libSearchTracksList.appendChild(row);
         });
       } catch(e){ /* a malformed entry is handled (and purged) by the card pass below */ }
-      // custom playlists stay visible while searching so songs found can be dragged into them
-      if (pl.type !== 'custom' && !normLibSearch(pl.name).includes(searchQ)) return;
+      // #631: a search shows only what matches it (songs, and cards whose name matches)
+      if (!normLibSearch(pl.name).includes(searchQ)) return;
     }
     // A single malformed/partial cache entry (e.g. a "resolving: true"
     // snapshot left behind by a resolve call that errored out or hit an
@@ -10511,6 +10515,12 @@ function renderLibrary(){
         }
       });
     });
+  }
+  // #631: while searching, a pill is lit only if its section has a match, so a
+  // song-only search leaves every pill off
+  if (searchQ){
+    const hits = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount };
+    libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter] && hits[btn.dataset.filter] > 0));
   }
   libraryArtistsHead.classList.toggle('hidden', artistCount === 0);
   libraryArtistsGrid.classList.toggle('hidden', artistCount === 0);
