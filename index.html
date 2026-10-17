@@ -10392,20 +10392,25 @@ async function artistSongAct(song, album, el, act){
   } catch(err){ showToast("Couldn't load that song."); }
   finally { delete el.dataset.busy; el.style.opacity = ''; }
 }
-function artistSongRow(song, album, n){
-  const r = document.createElement('div');
-  r.style.cssText = 'display:flex;align-items:center;gap:4px';
-  const d = document.createElement('button'); d.type = 'button';
-  d.style.cssText = 'flex:1;min-width:0;text-align:left;padding:6px 0;background:none;border:0;color:inherit;font:inherit;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer';
-  d.textContent = (n ? n + '. ' : '') + song.title;
-  d.addEventListener('click', (e) => { e.stopPropagation(); artistSongAct(song, album, d, 'play'); });
+function artistSongRow(song, album, n, year){
+  const row = document.createElement('div'); row.className = 'track-row';
+  row.style.cursor = 'pointer';
+  const img = document.createElement('img');
+  if (song.art) attachArtworkFallback(img, { art: song.art });
+  const meta = document.createElement('div'); meta.className = 'meta';
+  const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = song.title;
+  meta.appendChild(ttl);
+  const subTxt = [song.artist, year].filter(Boolean).join(' · ');
+  if (subTxt){ const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = subTxt; meta.appendChild(sub); }
+  const acts = document.createElement('div'); acts.className = 'row-actions';
   const plus = document.createElement('button'); plus.type = 'button';
   plus.setAttribute('aria-label', 'Add ' + song.title + ' to playlist'); plus.title = 'Add to playlist';
-  plus.style.cssText = 'flex:none;width:32px;height:32px;padding:7px;background:none;border:0;color:inherit;cursor:pointer';
   plus.innerHTML = CTX_ICON_PLUS;
   plus.addEventListener('click', (e) => { e.stopPropagation(); artistSongAct(song, album, plus, 'add'); });
-  r.appendChild(d); r.appendChild(plus);
-  return r;
+  acts.appendChild(plus);
+  row.addEventListener('click', () => artistSongAct(song, album, row, 'play'));
+  row.appendChild(img); row.appendChild(meta); row.appendChild(acts);
+  return row;
 }
 async function addArtistAlbumToLibrary(a, name){
   showToast('Adding ' + a.name + '...');
@@ -10465,7 +10470,7 @@ async function openAlbumPreview(a, name, backFn){
     const mins = Math.round(songs.reduce((n, x) => n + x.dur, 0) / 60000);
     info.textContent = [name, albumYearOf(a.releaseDate), songs.length ? songs.length + (songs.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean).join(' · ');
     if (!songs.length) libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
-    const list = document.createElement('div'); list.style.cssText = 'font-size:14px';
+    const list = document.createElement('div');
     songs.forEach((song, n) => list.appendChild(artistSongRow(song, a, n + 1)));
     libplBody.appendChild(list);
   } catch(err){
@@ -10509,10 +10514,7 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
       sBox.innerHTML = '';
       (showAll ? todoSingles : todoSingles.slice(0, 5)).forEach(a => {
         const song = { title: a.name, artist: name, art: a.art, dur: 0 };
-        const r = artistSongRow(song, null, 0);
-        const yr = albumYearOf(a.releaseDate);
-        if (yr){ const y = document.createElement('span'); y.style.cssText = 'flex:none;font-size:12px;opacity:.55;padding-right:4px'; y.textContent = yr; r.insertBefore(y, r.lastChild); }
-        sBox.appendChild(r);
+        sBox.appendChild(artistSongRow(song, null, 0, albumYearOf(a.releaseDate)));
       });
       if (todoSingles.length > 5){
         const more = document.createElement('button'); more.type = 'button'; more.className = 'btn-ghost';
