@@ -870,6 +870,16 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card:hover .menu-btn,.lib-card .menu-btn:active,.lib-card .menu-btn.is-active{opacity:1}
 .lib-card .menu-btn:hover{background:rgba(0,0,0,.75)}
 .lib-card .menu-btn svg{width:12px;height:12px;color:#fff}
+/* one-tap play on the grid card (Spotify study): bottom corner of the art,
+   solid fill (no blur over moving art), shown on hover or always on touch */
+.lib-card .art .card-play{position:absolute;right:8px;bottom:8px;width:38px;height:38px;border-radius:50%;
+  background:var(--accent);color:var(--on-accent,#151107);display:flex;align-items:center;justify-content:center;
+  opacity:0;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.45);transition:opacity var(--dur-ui) var(--ease-out)}
+.lib-card .art .card-play svg{width:18px;height:18px;margin-left:2px}
+.lib-card:hover .art .card-play,.lib-card .art .card-play:focus-visible{opacity:1}
+.lib-card .art .card-play:active{transform:scale(.94)}
+.lib-grid.is-list .lib-card .art .card-play{display:none}
+@media (hover: none), (pointer: coarse){ .lib-card .art .card-play{opacity:1} }
 
 .lib-card .pin{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;
@@ -10230,6 +10240,13 @@ function renderLibrary(){
       menuBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
       menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLibCtxMenu(id, menuBtn); });
       artDiv.appendChild(menuBtn);
+    }
+    if (!isArtist){
+      const cardPlay = document.createElement('button');
+      cardPlay.className = 'card-play'; cardPlay.setAttribute('aria-label', 'Play ' + pl.name);
+      cardPlay.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      cardPlay.addEventListener('click', (e) => { e.stopPropagation(); playPlaylistNow(id); });
+      artDiv.appendChild(cardPlay);
     }
 
     if (!isSystemPl){
