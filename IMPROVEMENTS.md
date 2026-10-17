@@ -10722,7 +10722,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #558.
 
 ### what-happens-if-too-many-people: what happens if too many people are using the app (Geethub #559)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #559. medium what are the thresholds especially consider the thresholds of the adblocker part that's yet to be installed
 - **Touches:** tbd.
@@ -10746,12 +10746,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #561.
 
 ### we-should-make-an-apk-for: we should make an apk for google play store asap to get more testers (Geethub #562)
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** low
 - **Description:** Idea, Geethub #562. high
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #562.
+- **Notes:** Synced from Geethub #562. Dropped 2026-10-17: native Android ships by sideload only, no Google Play.
 
 ### reverse-engineer-caffeiene-to-implement-is: reverse engineer caffeiene to implement is in ebbless - possibly to cure iphone pausing issue (Geethub #563)
 - **Status:** draft
@@ -10770,7 +10770,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #564.
 
 ### there-should-be-a-desktop-download: there should be a desktop download for pc (Geethub #565)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #565. medium
 - **Touches:** tbd.
@@ -10834,7 +10834,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #572.
 
 ### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #573. medium
 - **Touches:** tbd.
@@ -10850,7 +10850,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #574.
 
 ### bug-ads-playing-on-podcast: ads playing on podcast (Geethub #575)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #575. medium [nosleep](https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF)
 - **Touches:** tbd.
@@ -10968,3 +10968,11 @@ Add entries in this shape:
 - **Touches:** tbd.
 - **Branch:** agent/t1-buttons-nav
 - **Notes:** Synced from Geethub #598. Desktop splash (min-width 1280, hover + fine pointer, not Android) plays brand/assets/splash-cymatics-hd.mp4 (1080p, 6.3MB re-encode of the source; original is 25MB). Everything else keeps the 720p or alpha clips. Existing splash pause-when-hidden path unchanged; no new gpu-watchdog warnings.
+
+### log-link-fixes-improve-matching: Log every link fix and use it to improve the matching algorithm (Geethub #596)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #596. Log every time someone fixes a link, then analyze the fixes and improve the matching algorithm.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #596. Related to link-match-accuracy and popular-youtube-first.
