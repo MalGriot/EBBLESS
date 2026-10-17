@@ -10386,7 +10386,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #488. Big; likely post-MVP.
 
 ### podcast-episode-dates: Show the date on podcast episodes (Geethub #486)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #486. Show the date on podcast episodes.
 - **Touches:**
@@ -10522,7 +10522,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #537. Related to link-match-accuracy.
 
 ### bug-tabs-close-while-browsing: Playlist, album and artist tabs close while I'm still going through them (Geethub #536)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Idea, Geethub #536. Bug #536. These windows close on their own while the user is browsing.
 - **Touches:** playlist/album/artist windows.
@@ -10682,7 +10682,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #553.
 
 ### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #554. medium
 - **Touches:** tbd.
@@ -10914,7 +10914,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #582.
 
 ### bug-podcast-captions-not-loading: podcast captions are not loading (Geethub #603)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #603. Repro: open ?import=https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF&track=3.
 - **Touches:** tbd.
