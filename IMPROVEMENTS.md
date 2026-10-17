@@ -11256,12 +11256,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #629. Cause: `renderQueuePanel` rebuilt the list and kept the old scroll offset, so a freshly loaded album/playlist opened mid-list. Fix: it remembers the first queue entry (`lastQueueHead`); when that changes (a new queue was loaded) the queue scroller goes to the top, while edits to the same queue (next/previous, add, remove) keep the scroll. Verified in the preview on a mobile viewport: scrolled to 3000, played another playlist, scrollTop 0; skipping to the next song kept 3000. Cases not tried: radio start, restoring a saved queue, undo of a queue clear.
 
 ### pictures-icons-in-the-advance-settings-sec: pictures/ icons in the advance settings section (Geethub #630)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #630. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #630.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #630. Assumption: 'pictures/icons' read as small line icons (inline SVG, 16px) on every group heading (accent color) and every setting row label in Advanced, with each row's description lined up under its text; no photos or preview thumbnails. Markup and CSS only, no JS. Verified in the 375px browser preview: Look group rows. Not checked: the lower groups on screen (same markup pattern), desktop width, light themes. Cache v332.
 
 ### searching-in-the-library-should-show-only: searching in the library should show only what you're searching for (Geethub #631)
 - **Status:** merged

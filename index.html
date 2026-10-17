@@ -2307,6 +2307,12 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .adv-block>summary svg{transition:transform var(--dur-ui) var(--ease-out)}
 .adv-block[open]>summary svg{transform:rotate(180deg)}
 .adv-group{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:18px 0 2px}
+/* #630: small line icons on the group headings and setting rows (the descriptions line up under the text) */
+.adv-ico{width:16px;height:16px;flex:none;color:var(--faint)}
+.adv-group{display:flex;align-items:center;gap:8px}
+.adv-group .adv-ico{width:15px;height:15px;color:var(--accent)}
+.adv-block .settings-row .label{display:flex;align-items:center;gap:8px}
+.adv-block .settings-row .desc{padding-left:24px}
 .adv-chips{display:flex;flex-wrap:wrap;gap:8px}
 .pl-sort-bar{margin:0 0 10px;gap:6px}
 .adv-chips.pl-sort-bar .btn-ghost{padding:4px 11px;font-size:12px}
@@ -4728,157 +4734,157 @@ body.week-up-on{overflow:hidden}
       </div>
       <details class="settings-block adv-block" id="settingsAdvancedBlock">
         <summary>Advanced<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
-        <div class="adv-group">Look</div>
+        <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Look</div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Album art style</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M21 16l-5-5-9 9"/></svg>Album art style</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Album art style"><button type="button" class="btn-ghost" data-adv="art" data-val="default">Default</button><button type="button" class="btn-ghost" data-adv="art" data-val="record">Record</button><button type="button" class="btn-ghost" data-adv="art" data-val="cassette">Cassette</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Accent color</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 6.2 6 10.5a6 6 0 0 1-12 0C6 9.2 12 3 12 3z"/></svg>Accent color</div>
             <div class="desc">Auto follows the time of day.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Accent color"><button type="button" class="btn-ghost adv-swatch adv-swatch-auto" data-adv="accent" data-val="" aria-label="Accent: auto (follows the time of day)"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#e0b26a" style="--sw:#e0b26a" aria-label="Accent: gold"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#1db954" style="--sw:#1db954" aria-label="Accent: green"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#4aa3ff" style="--sw:#4aa3ff" aria-label="Accent: blue"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#ff5c8a" style="--sw:#ff5c8a" aria-label="Accent: pink"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#a97cff" style="--sw:#a97cff" aria-label="Accent: violet"></button></div>
         </div>
         <div class="settings-row settings-row-slider" id="cursorStyleRow" hidden>
           <div>
-            <div class="label">Cursor</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 7-6 2-2 6z"/></svg>Cursor</div>
             <div class="desc">Mouse pointer style. Every style has a light and dark edge so it shows on any color.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Cursor"><button type="button" class="btn-ghost" data-adv="cursor" data-val="drop">Droplet</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="dot">Dot</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="ring">Ring</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="cross">Crosshair</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="native">Standard</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Motion</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3-4 5-3"/></svg>Motion</div>
             <div class="desc">Reduced stills most animations.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Motion"><button type="button" class="btn-ghost" data-adv="motion" data-val="full">Full</button><button type="button" class="btn-ghost" data-adv="motion" data-val="reduced">Reduced</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Art shape</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><circle cx="17" cy="7" r="4"/><path d="M7 14l4 7H3z"/></svg>Art shape</div>
             <div class="desc">Library covers and song thumbnails.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Art shape"><button type="button" class="btn-ghost" data-adv="shape" data-val="rounded">Rounded</button><button type="button" class="btn-ghost" data-adv="shape" data-val="square">Square</button><button type="button" class="btn-ghost" data-adv="shape" data-val="circle">Circle</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Song thumbnails</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="6" height="6" rx="1"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/></svg>Song thumbnails</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Song thumbnails"><button type="button" class="btn-ghost" data-adv="thumbs" data-val="show">Show</button><button type="button" class="btn-ghost" data-adv="thumbs" data-val="hide">Hide</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Spacing</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 19h16M12 8v8M9 10l3-3 3 3M9 14l3 3 3-3"/></svg>Spacing</div>
             <div class="desc">Tight fits more on screen.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Spacing"><button type="button" class="btn-ghost" data-adv="dense" data-val="regular">Regular</button><button type="button" class="btn-ghost" data-adv="dense" data-val="tight">Tight</button></div>
         </div>
-        <div class="adv-group">Library</div>
+        <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16M9 4v16M14 6l5-1 2 14-5 1z"/></svg>Library</div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Grid size</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Grid size</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Grid size"><button type="button" class="btn-ghost" data-adv="grid" data-val="grid">2x2</button><button type="button" class="btn-ghost" data-adv="grid" data-val="compact">3x3</button><button type="button" class="btn-ghost" data-adv="grid" data-val="list">List</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Albums</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>Albums</div>
             <div class="desc">Group albums under artist names, or show one grid.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Albums"><button type="button" class="btn-ghost" data-adv="albsec" data-val="sections">By artist</button><button type="button" class="btn-ghost" data-adv="albsec" data-val="flat">One grid</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Sort</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg>Sort</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Sort"><button type="button" class="btn-ghost" data-adv="sort" data-val="custom">My order</button><button type="button" class="btn-ghost" data-adv="sort" data-val="alpha">A to Z</button><button type="button" class="btn-ghost" data-adv="sort" data-val="plays_desc">Most played</button><button type="button" class="btn-ghost" data-adv="sort" data-val="tracks_desc">Most songs</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Sections to show</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Sections to show</div>
             <div class="desc">Tap to hide or show a section in your library.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Sections to show"><button type="button" class="btn-ghost" data-adv="sec" data-val="playlist">Playlists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="album">Albums</button><button type="button" class="btn-ghost" data-adv="sec" data-val="artist">Artists</button><button type="button" class="btn-ghost" data-adv="sec" data-val="podcast">Podcasts</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Section order</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>Section order</div>
             <div class="desc">Tap a section to move it to the top.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Section order" id="advSecOrder"></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Section names</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg>Section names</div>
             <div class="desc">Tap to rename. Leave it empty to go back to the original name.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Section names" id="advSecNames"></div>
         </div>
-        <div class="adv-group">Playback</div>
+        <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z"/></svg>Playback</div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Blend length</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 15c4 0 6-9 10-9s4 9 10 9M2 9c4 0 6 9 10 9s4-9 10-9"/></svg>Blend length</div>
             <div class="desc">Same setting as Playback above.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Blend length"><button type="button" class="btn-ghost" data-adv="blend" data-val="2000">2s</button><button type="button" class="btn-ghost" data-adv="blend" data-val="4000">4s</button><button type="button" class="btn-ghost" data-adv="blend" data-val="6000">6s</button><button type="button" class="btn-ghost" data-adv="blend" data-val="8000">8s</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Start volume</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>Start volume</div>
             <div class="desc">Loud leaves less headroom. Works with Even out volume.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Start volume"><button type="button" class="btn-ghost" data-adv="start" data-val="quiet">Quiet</button><button type="button" class="btn-ghost" data-adv="start" data-val="loud">Loud</button></div>
         </div>
-        <div class="adv-group">Player</div>
+        <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Player</div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Player buttons and info</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="2.5"/></svg>Player buttons and info</div>
             <div class="desc">Tap to show or hide. Play, skip and the song menu always stay.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Player buttons and info"><button type="button" class="btn-ghost" data-adv="ph" data-val="shuffle">Shuffle</button><button type="button" class="btn-ghost" data-adv="ph" data-val="repeat">Repeat</button><button type="button" class="btn-ghost" data-adv="ph" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="ph" data-val="artist">Artist name</button><button type="button" class="btn-ghost" data-adv="ph" data-val="times">Times</button><button type="button" class="btn-ghost" data-adv="pshow" data-val="addpl">Add to playlist</button><button type="button" class="btn-ghost" data-adv="pshow" data-val="speed">Speed</button></div>
         </div>
-        <div class="adv-group">Gestures</div>
+        <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/></svg>Gestures</div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Double-tap album art</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6"/></svg>Double-tap album art</div>
             <div class="desc">Fullscreen is the default. Double-tap in fullscreen cymatics still closes it.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Double-tap album art"><button type="button" class="btn-ghost" data-adv="gdt" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="gdt" data-val="none">Nothing</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Long-press album art</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Long-press album art</div>
             <div class="desc">Nothing by default. Hold the art for half a second.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Long-press album art"><button type="button" class="btn-ghost" data-adv="glp" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="glp" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="glp" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="glp" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="glp" data-val="none">Nothing</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Triple-tap album art</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9"/></svg>Triple-tap album art</div>
             <div class="desc">Nothing by default. When set, double-tap waits a moment to tell the two apart.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Triple-tap album art"><button type="button" class="btn-ghost" data-adv="gtt" data-val="fullscreen">Fullscreen</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="like">Like</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="artist">Open artist</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="playlist">Add to playlist</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="play">Play/pause</button><button type="button" class="btn-ghost" data-adv="gtt" data-val="none">Nothing</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Double-tap the Library tab</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16M9 4v16M14 6l5-1 2 14-5 1z"/></svg>Double-tap the Library tab</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Double-tap the Library tab"><button type="button" class="btn-ghost" data-adv="glib" data-val="none">Nothing</button><button type="button" class="btn-ghost" data-adv="glib" data-val="top">Back to top</button><button type="button" class="btn-ghost" data-adv="glib" data-val="search">Search library</button></div>
         </div>
         <div class="settings-row settings-row-slider">
           <div>
-            <div class="label">Hold the E logo</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9c4-3 10-3 14 0M5 13c4-3 10-3 14 0M5 17c4-3 10-3 14 0"/></svg>Hold the E logo</div>
             <div class="desc">Tapping the logo shows the splash screen. Holding opens the mini player when a song is playing.</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Hold the E logo"><button type="button" class="btn-ghost" data-adv="lhold" data-val="mini">Mini player</button><button type="button" class="btn-ghost" data-adv="lhold" data-val="splash">Splash screen</button></div>
         </div>
-        <div class="adv-group">Backup</div>
+        <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>Backup</div>
         <div class="settings-row">
           <div>
-            <div class="label">Back up settings</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>Back up settings</div>
             <div class="desc">Saves your settings to a file. Open it on another device to bring them over.</div>
           </div>
           <div class="adv-chips"><button type="button" class="btn-ghost" id="advBackupBtn">Save</button><button type="button" class="btn-ghost" id="advRestoreBtn">Open</button></div>
@@ -4886,7 +4892,7 @@ body.week-up-on{overflow:hidden}
         </div>
         <div class="settings-row">
           <div>
-            <div class="label">Reset advanced settings</div>
+            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>Reset advanced settings</div>
             <div class="desc">Puts everything in this block back to its default.</div>
           </div>
           <button type="button" class="btn-ghost" id="advResetBtn">Reset</button>
