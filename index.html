@@ -25199,10 +25199,10 @@ function requestMiniWindow(width, height){
   const w = window.open('about:blank', 'ebbless-mini', 'width=' + width + ',height=' + height);
   return w ? Promise.resolve(w) : Promise.reject(new Error('mini window blocked'));
 }
-const MP_SHAPES = ['card', 'pill', 'disc', 'float'];
-const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'Disc', float: 'Float (no frame)' };
-// #526: with no shape picked by hand the shape follows the art style (record = disc, otherwise card)
-const MP_SHAPE_BY_ART = { record: 'disc' };
+const MP_SHAPES = ['card', 'pill', 'disc', 'tape', 'float'];
+const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'Disc', tape: 'Tape', float: 'Float (no frame)' };
+// #526: with no shape picked by hand the shape follows the art style (record = disc, cassette = tape, otherwise card)
+const MP_SHAPE_BY_ART = { record: 'disc', cassette: 'tape' };
 function mpSavedShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : null; }
 function mpDesktopShape(){ return mpSavedShape() || MP_SHAPE_BY_ART[artStyle] || 'card'; }
 function mpApplyShape(win){
@@ -25215,6 +25215,7 @@ function mpApplyShape(win){
 function mpDesktopSize(shape){
   if (shape === 'pill') return { w: 420, h: 84 };
   if (shape === 'disc') return { w: 240, h: 240 };
+  if (shape === 'tape') return { w: 300, h: 192 };
   const p = miniPlayerPrefs();
   return { w: p.w, h: p.h };
 }
@@ -25243,6 +25244,16 @@ const MINI_DESKTOP_STYLE = `
     background:rgba(0,0,0,.66);opacity:0;pointer-events:none;transition:opacity .2s ease}
   body.mp-shape-disc:hover #mpControls{opacity:1;pointer-events:auto}
   body.mp-shape-disc #mpShuffle,body.mp-shape-disc #mpRepeat,body.mp-shape-disc .mp-skip{display:none!important}
+  /* tape: just the cassette, controls on hover (same idea as the disc) */
+  body.mp-shape-tape{border-radius:0}
+  body.mp-shape-tape::before{display:none}
+  body.mp-shape-tape #mpBg,body.mp-shape-tape #mpHead,body.mp-shape-tape #mpMeta,body.mp-shape-tape #mpSeek,body.mp-shape-tape #mpEdge,body.mp-shape-tape #mpArtPick{display:none!important}
+  body.mp-shape-tape #mpCard{display:block;padding:0;height:100vh;background:transparent}
+  body.mp-shape-tape #mpArtWrap{position:absolute;inset:6px;width:auto;height:auto;box-shadow:none}
+  body.mp-shape-tape #mpControls{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;padding:4px 8px;border-radius:999px;
+    background:rgba(0,0,0,.66);opacity:0;pointer-events:none;transition:opacity .2s ease}
+  body.mp-shape-tape:hover #mpControls{opacity:1;pointer-events:auto}
+  body.mp-shape-tape #mpShuffle,body.mp-shape-tape #mpRepeat,body.mp-shape-tape .mp-skip{display:none!important}
   body.mp-shape-float{background:transparent}
   body.mp-shape-float::before{display:none}
   body.mp-shape-float #mpBg{display:none}
