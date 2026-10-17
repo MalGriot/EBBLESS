@@ -14219,6 +14219,14 @@ function playAddSongsCandidate(c){
   buildQueueFrom(0, pl.id);
   loadIndex(state.queuePos, true);
 }
+function playSearchedSong(c){
+  addSongsSnap = null;
+  addSongsSnapshot();          // null when nothing was playing
+  const hadQueue = !!addSongsSnap;
+  playAddSongsCandidate(c);
+  setView('player');
+  if (hadQueue) showToast('Playing ' + (c.title || 'song'), { label: 'Undo', run: () => { addSongsRestore(); addSongsSnap = null; } });
+}
 function openAddSongsView(plId){
   const pl0 = getCachedPlaylist(plId);
   if (!pl0) return;
@@ -14480,7 +14488,7 @@ function escapeHtml(s){
 // looksLikeUrl/beginVibeSearch below).
 function stageSearching(query){
   importStage.innerHTML =
-    '<div class="step">Searching for &ldquo;' + escapeHtml(query) + '&rdquo;&hellip;</div>' +
+    '<div class="step" data-searching="1">Searching for &ldquo;' + escapeHtml(query) + '&rdquo;&hellip;</div>' +
     '<div class="flow-line indeterminate"><div class="fill"></div></div>';
 }
 
@@ -14536,6 +14544,13 @@ function stageSearchResults(results, query, seq){
   const rows = results.map((r, i) => {
     // Artist profile row (searchArtistProfile): round photo, "Artist" label.
     if (r.isArtist) return searchPickRowHtml(i, r.image, r.name, 'Artist', 'artist');
+    // Song row (searchSongCandidates): one exact source, plays on one tap.
+    if (r.isSong){
+      const sl = SEARCH_SOURCE_LABEL[r.source] || r.source;
+      const ssub = [r.channel, r.duration ? formatTime(r.duration) : '', sl].filter(Boolean).join(' \u00b7 ');
+      const sim = r.image || (r.source === 'youtube' ? refreshLinkCandidateThumb(r.videoId) : '');
+      return searchPickRowHtml(i, sim, r.title || '(untitled)', escapeHtml(ssub), r.source === 'youtube' ? 'is-video' : '');
+    }
     const label = SEARCH_SOURCE_LABEL[r.source] || r.source;
     const sub = [r.subtitle, label].filter(Boolean).join(' · ');
     return searchPickRowHtml(i, r.image, r.name, escapeHtml(sub), '', searchResultMeta(r));
@@ -14552,6 +14567,9 @@ function stageSearchResults(results, query, seq){
       // An artist pick opens the same artist window as tapping the name in
       // the player (#504), not an import that can fail offline-looking (#505).
       if (r.isArtist){ closeImportOverlay(); openArtistPage(r.name); return; }
+      // A song pick plays right now (one tap). If a queue was going, the toast
+      // carries an Undo that puts the queue, song and position back.
+      if (r.isSong){ closeImportOverlay(); playSearchedSong(r); return; }
       // Same {source,type,id[,storefront]} shape parseImportLink() produces
       // for a pasted link - runs through the exact same resolve pipeline,
       // no new import logic for a search-picked candidate.
@@ -14583,18 +14601,23 @@ async function beginVibeSearch(query){
   stageSearching(query);
   const seq = ++vibeSearchSeq;
   vibeResultsToken++; // a newer search wins over any in-flight sentence search
-  let artist = null, shown = null;
-  const artistP = searchArtistProfile(query).then(a => {
-    artist = a;
-    if (a && shown && importStage.querySelector('[data-search-seq="' + seq + '"]')) stageSearchResults([a].concat(shown), query, seq);
-    return a;
-  });
+  let artist = null, shown = null, songs = [];
+  // Song rows sit under the artist and above playlists. They never hold the
+  // list up: a late arrival re-renders it, like the artist match does.
+  const compose = () => (artist ? [artist] : []).concat(songs, shown || []);
+  const repaint = () => { if (seq === vibeSearchSeq && importStage.querySelector('[data-search-seq="' + seq + '"], [data-searching]')) stageSearchResults(compose(), query, seq); };
+  const artistP = searchArtistProfile(query).then(a => { artist = a; if (a) repaint(); return a; });
+  if (query.trim().split(/\s+/).length <= 8){
+    searchSongCandidates(query).then(c => { const yt = (c || []).filter(x => x.source === 'youtube').slice(0, 2), sc = (c || []).filter(x => x.source !== 'youtube').slice(0, 2);
+      songs = yt.concat(sc).map(x => Object.assign({ isSong: true }, x)); // official uploads tend to lead on YouTube
+      if (songs.length) repaint(); }).catch(() => {});
+  }
   try{
     const results = await searchPlaylistsByVibe(query);
     if (seq !== vibeSearchSeq) return; // a newer search replaced this one
     shown = results;
-    stageSearchResults(artist ? [artist].concat(results) : results, query, seq);
-    if (!artist && !results.length){
+    stageSearchResults(compose(), query, seq);
+    if (!artist && !songs.length && !results.length){
       const guess = await suggestSpelling(query);
       if (guess && seq === vibeSearchSeq && importStage.querySelector('[data-search-seq="' + seq + '"]') && !artist){
         importStage.insertAdjacentHTML('afterbegin', '<button class="btn-ghost" id="didYouMeanBtn" style="width:100%;margin-bottom:12px">Did you mean &ldquo;' + escapeHtml(guess) + '&rdquo;?</button>');
@@ -14604,7 +14627,7 @@ async function beginVibeSearch(query){
   } catch(e){
     const a = await artistP;
     if (seq !== vibeSearchSeq) return;
-    if (a && seq === vibeSearchSeq){ shown = []; stageSearchResults([a], query, seq); return; }
+    if ((a || songs.length) && seq === vibeSearchSeq){ shown = []; stageSearchResults(compose(), query, seq); return; }
     stageError(plainError(e), () => beginVibeSearch(query), "Couldn’t search for that.");
   }
 }
