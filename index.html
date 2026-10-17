@@ -2188,7 +2188,7 @@ html.adv-hide-repeat #repeatBtn,html.adv-hide-repeat #miniRepeatBtn,html.adv-hid
 html.adv-hide-like #playerLikeBtn,html.adv-hide-like #miniLikeBtn,html.adv-hide-like #flowLikeBtn,
 html.adv-hide-artist #trackArtist,html.adv-hide-artist #miniArtist,html.adv-hide-artist #flowArtist,
 html.adv-hide-times #timeCur,html.adv-hide-times #timeDur,html.adv-hide-times #flowTimeCur,html.adv-hide-times #flowTimeDur{display:none!important}
-html:not(.adv-show-addpl) #playerAddPlBtn,html:not(.adv-show-speed) #playerSpeedBtn{display:none!important}
+html:not(.adv-show-addpl) #playerAddPlBtn,html:not(.adv-show-speed):not(.now-podcast) #playerSpeedBtn{display:none!important}
 .player-speed-btn{width:auto;min-width:22px;padding:0 4px;border-radius:11px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
 html.adv-shape-square .lib-card:not(.is-artist-card) .art,html.adv-shape-square .lib-card:not(.is-artist-card) .art img,html.adv-shape-square .track-row img,html.adv-shape-square .q-row img{border-radius:0}
 html.adv-shape-circle .lib-card .art,html.adv-shape-circle .lib-card .art img,html.adv-shape-circle .track-row img,html.adv-shape-circle .q-row img{border-radius:50%}
@@ -22504,7 +22504,9 @@ function advApplyLook(){
    tick re-applies it to each new song once its ads are past (advApplySpeed). */
 const ADV_PSHOW = ['addpl','speed'];
 const ADV_SPEEDS = [1, 1.25, 1.5, 0.75];
-function advSpeed(){ const v = +advPrefs().speed; return ADV_SPEEDS.includes(v) && advPrefs().pshow && advPrefs().pshow.includes('speed') ? v : 1; }
+// Speed shows by default while a podcast plays (spoken word is where it matters); music only if turned on in Settings.
+function nowIsPodcast(){ const e = state.queue[state.queuePos]; return !!(e && isPodcastPlaylistId(e.plId)); }
+function advSpeed(){ const v = +advPrefs().speed; return ADV_SPEEDS.includes(v) && ((advPrefs().pshow && advPrefs().pshow.includes('speed')) || nowIsPodcast()) ? v : 1; }
 function advApplySpeed(ad){
   if (!ad || !ad.player || !ad.player.setPlaybackRate || !ad.player.getPlaybackRate || ad.kind === 'cast' || ad.adMutedAt > 0) return;
   const want = advSpeed();
@@ -24561,6 +24563,8 @@ function recordLatestPlayed(t){
 
 function reflectCurrentTrackUI(pos, opts){
   const entry = state.queue[pos];
+  document.documentElement.classList.toggle('now-podcast', !!(entry && isPodcastPlaylistId(entry.plId)));
+  try { advRenderSpeed(); } catch(e){}
   const t = trackAt(pos);
   if (!t) return;
   // finishCrossfade() already started (and by now finished) the player/flow
