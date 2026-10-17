@@ -10654,12 +10654,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #519. Related to currents-playlist-algorithm.
 
 ### bug-ads-since-install: Getting ads since installing the app (Geethub #518)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Idea, Geethub #518. Bug #518. Ads appear after the app was installed.
-- **Touches:** ads.
-- **Branch:** 
-- **Notes:** Synced from Geethub #518. Related to #523 (shipped) and ad group; needs repro platform.
+- **Touches:** ads; the "Ads playing?" report (`adsReportBtn`).
+- **Branch:** agent/web-bugs-2
+- **Notes:** Synced from Geethub #518. Related to #523 (shipped) and ad group; needs repro platform. Investigated 2026-10-18 (agent/web-bugs-2). The issue says only "ads appear after the app was installed", with no platform, so nothing was reproduced (real YouTube ads need an installed app and a popular song; the owner's own catalog gets none). What the code shows: the ad guard (#523: deckAdReason, gateDeckSound, ad dodge) is the same page code in every install path, and no branch tests standalone, Android or Mac mode, so an installed app is not handled differently by EBBLESS. What does differ is the environment around YouTube's embed: the Android app (android-webview/) is a WebView with its own cookie jar (no YouTube sign-in, so no Premium; no browser extensions), the Mac app is Electron (same, plus a stripped user agent), and an installed web app on Android shares Chrome's cookies. Most likely reading: the browser the owner compared against had an ad blocker or a YouTube Premium sign-in, which silently removed ads in the embed, and the installed app, a clean profile, shows what YouTube serves everyone. That cannot be fixed inside the app without blocking ads in the embed (#524, parked: breaks the YouTube API terms). Second possibility not ruled out: in the installed app the page is often hidden (screen off), where the iframe clock updates once a second, so the guard (adFrozenMs 2000 ms when hidden) can let the first second or two of an ad through. Built (cache v324): the "Ads playing?" report now says in its message what it ran as (Android app, Mac app, installed web app, browser tab) and whether the page was hidden, next to the existing ad log and user agent, so the next report answers which path it came from. Not built: any change to the guard or an adblock. Needs from the owner: which app (Android, Mac, installed web app), which song, screen on or off, and whether the browser used for comparison had an ad blocker or Premium; or tap "Ads playing?" while it happens. Not verified live: the report payload (syntax only).
 
 ### bug-progress-full-frozen: Song loads, progress bar is full and frozen, no play (Geethub #517)
 - **Status:** merged

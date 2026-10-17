@@ -17320,7 +17320,11 @@ adsReportBtn.addEventListener('click', async () => {
   try { appVersion = ((await caches.keys()).find(k => k.startsWith('ebbless-shell-')) || ''); } catch(err){}
   const payload = {
     category: 'bug', source: 'ads-button',
-    message: '[Ads playing?] Listener tapped the ads button.',
+    // run context rides in the message (the worker keeps only known fields): #518
+    // asks whether ads differ once the app is installed
+    message: '[Ads playing?] Listener tapped the ads button. Running as: ' +
+      (/EBBLESS-Android/.test(navigator.userAgent) ? 'Android app' : isDesktopApp ? 'Mac app' : isStandaloneDisplay() ? 'installed web app' : 'browser tab') +
+      '; page ' + (document.hidden ? 'hidden' : 'visible') + '.',
     appVersion, userAgent: navigator.userAgent,
     viewport: window.innerWidth + 'x' + window.innerHeight,
     view: state.currentView || '',
