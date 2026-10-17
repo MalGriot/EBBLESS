@@ -4410,6 +4410,13 @@ body.week-up-on{overflow:hidden}
         </div>
         <div class="settings-row settings-row-slider">
           <div>
+            <div class="label">Albums</div>
+            <div class="desc">Group albums under artist names, or show one grid.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Albums"><button type="button" class="btn-ghost" data-adv="albsec" data-val="sections">By artist</button><button type="button" class="btn-ghost" data-adv="albsec" data-val="flat">One grid</button></div>
+        </div>
+        <div class="settings-row settings-row-slider">
+          <div>
             <div class="label">Sort</div>
           </div>
           <div class="adv-chips" role="group" aria-label="Sort"><button type="button" class="btn-ghost" data-adv="sort" data-val="custom">My order</button><button type="button" class="btn-ghost" data-adv="sort" data-val="alpha">A to Z</button><button type="button" class="btn-ghost" data-adv="sort" data-val="plays_desc">Most played</button><button type="button" class="btn-ghost" data-adv="sort" data-val="tracks_desc">Most songs</button></div>
@@ -9529,7 +9536,11 @@ function renderLibrary(){
     // (album cards inside each group are already in that order from orderedLibraryIds)
     const albumSortMode = getLibrarySort();
     const grpScore = (g) => g.cards.reduce((n, c) => n + (albumSortMode === 'plays_desc' ? c._sortPlays : c._sortTracks), 0);
-    [...albumGroups.entries()].sort((a, b) => (albumSortMode === 'plays_desc' || albumSortMode === 'tracks_desc') ? (grpScore(b[1]) - grpScore(a[1])) || a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' }) : a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
+    const flatAlbums = advPrefs().albsec === 'flat';
+    if (flatAlbums){
+      // #494: no artist sections, one album grid in the chosen order
+      albumGroups.forEach(g => g.cards.forEach(c => libraryAlbumsGrid.appendChild(c)));
+    } else [...albumGroups.entries()].sort((a, b) => (albumSortMode === 'plays_desc' || albumSortMode === 'tracks_desc') ? (grpScore(b[1]) - grpScore(a[1])) || a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' }) : a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
       // while searching, matching albums always show
       const open = !!searchQ || !folded[gk];
       const div = document.createElement('button');
@@ -9884,6 +9895,13 @@ function toggleLibraryPlaylistPanel(id){
     libplArtWrap.hidden = true;
   }
   libplBody.innerHTML = '';
+  // #532: album details from what the library already holds (artist, year, song count, length)
+  if (isAlbumEntry(pl) && !isArtistEntry(pl)){
+    const secs = pl.tracks.reduce((n, t) => n + ((t && t.duration) || 0), 0);
+    const mins = Math.round(secs / 60);
+    const bits = [albumArtistName(pl), albumYearOf(pl.releaseDate), pl.tracks.length ? pl.tracks.length + (pl.tracks.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean);
+    if (bits.length){ const info = document.createElement('div'); info.className = 'currents-hint album-info'; info.textContent = bits.join(' · '); libplBody.appendChild(info); }
+  }
   // encourage-liking-songs (#40): say plainly what tunes these picks, and
   // show a live like streak on Liked Songs (never mentions a broken one).
   if (id === SWELL_ID){
@@ -10069,7 +10087,9 @@ function toggleLibraryPlaylistPanel(id){
           if (a.image) attachArtworkFallback(img, { art: a.image }); else if (first) attachArtworkFallback(img, first);
           const meta = document.createElement('div'); meta.className = 'meta';
           const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = a.name;
-          const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = albumArtistName(a);
+          const sub = document.createElement('div'); sub.className = 'artist';
+          const subYear = albumYearOf(a.releaseDate), subN = (a.tracks || []).length;
+          sub.textContent = [subYear, subN ? subN + (subN === 1 ? ' song' : ' songs') : ''].filter(Boolean).join(' · ') || albumArtistName(a);
           meta.appendChild(ttl); meta.appendChild(sub);
           row.appendChild(img); row.appendChild(meta);
           row.addEventListener('click', () => { toggleLibraryPlaylistPanel(aid); if (openLibraryPanelId === aid){ libplReturnTo = id; syncLibplCloseBtn(); } });
@@ -10342,6 +10362,7 @@ function buildArtistInfoEl(info){
 // #482: the artist window lists the artist's albums that aren't in the
 // library yet (title + art), each with an add-to-library button. Same album
 // lookup and add path as the artist import (itunesArtistAlbums + queueBackgroundLoad).
+function albumYearOf(d){ return (/^(\d{4})/.exec(String(d || '')) || [])[1] || ''; }
 const CTX_ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 async function loadArtistAlbumsInto(panelId, name, standalone){
   const lib = getCachedPlaylist(panelId);
@@ -10367,6 +10388,8 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
     const meta = document.createElement('div'); meta.className = 'meta';
     const ttl = document.createElement('div'); ttl.className = 'title'; ttl.textContent = a.name;
     meta.appendChild(ttl);
+    const yr = albumYearOf(a.releaseDate);
+    if (yr){ const sub = document.createElement('div'); sub.className = 'artist'; sub.textContent = yr; meta.appendChild(sub); }
     const acts = document.createElement('div'); acts.className = 'row-actions';
     const btn = document.createElement('button'); btn.type = 'button';
     btn.setAttribute('aria-label', 'Add ' + a.name + ' to library'); btn.title = 'Add to library';
@@ -10388,6 +10411,31 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
     acts.appendChild(btn);
     row.appendChild(img); row.appendChild(meta); row.appendChild(acts);
     box.appendChild(row);
+    // #490: tap an album to see its songs (iTunes albums only; same lookup the artist fill uses)
+    const cut = a.id.indexOf(':');
+    if (a.type !== 'sc_album' && cut > 0){
+      row.style.cursor = 'pointer';
+      row.setAttribute('aria-expanded', 'false');
+      let list = null, loading = false;
+      row.addEventListener('click', async () => {
+        if (list){ const open = list.hidden; list.hidden = !open; row.setAttribute('aria-expanded', String(open)); return; }
+        if (loading) return;
+        loading = true;
+        try{
+          const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: a.id.slice(cut + 1), entity: 'song', limit: '200', country: a.id.slice(0, cut) }));
+          if (!res.ok) throw new Error('iTunes lookup ' + res.status);
+          const songs = ((await res.json()).results || []).filter(r => r && r.wrapperType === 'track').sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0));
+          if (!row.isConnected) return;
+          list = document.createElement('div'); list.className = 'artist-album-songs';
+          list.style.cssText = 'padding:0 12px 8px 64px;font-size:13px;opacity:.8';
+          if (!songs.length) list.textContent = 'No songs found.';
+          songs.forEach((r, n) => { const d = document.createElement('div'); d.style.cssText = 'padding:3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'; d.textContent = (n + 1) + '. ' + String(r.trackName || ''); list.appendChild(d); });
+          row.after(list);
+          row.setAttribute('aria-expanded', 'true');
+        } catch(err){ showToast("Couldn't load songs for that album."); }
+        loading = false;
+      });
+    }
   });
   libplBody.appendChild(box);
 }
@@ -15414,6 +15462,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 267, date: '2026-10-17', items: [
+    'Artist window: tap an album to see its songs, and each album shows its year.',
+    'Album windows show the artist, year, number of songs and total length at the top.',
+    'New in Advanced settings: show your albums as one grid instead of grouped under artist names.'
+  ]},
   { version: 93, date: '2026-10-06', items: [
     'Join the beta with Sign up with Google. Once you\'re in, that Google account gets you into EBBLESS on any device.'
   ]},
@@ -21079,7 +21132,7 @@ function advRender(){
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet',
     gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none',
-    shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
+    albsec: p.albsec === 'flat' ? 'flat' : 'sections', shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
   const hide = p.hide || [];
   advBlock.querySelectorAll('[data-adv]').forEach(b => {
@@ -21172,6 +21225,7 @@ function advChoose(k, v){
   else if (k === 'secname' && ADV_SECS[v]){ advRenameSection(v); return; }
   else if (k === 'shape'){ advSet('shape', v === 'rounded' ? null : v); advApplyLook(); }
   else if (k === 'thumbs'){ advSet('thumbs', v === 'hide' ? 'hide' : null); advApplyLook(); }
+  else if (k === 'albsec'){ advSet('albsec', v === 'flat' ? 'flat' : null); renderLibrary(); }
   else if (k === 'dense'){ advSet('dense', v === 'tight' ? 'tight' : null); advApplyLook(); }
   else if (k === 'pshow' && ADV_PSHOW.includes(v)){
     const s2 = (advPrefs().pshow || []).slice(), i = s2.indexOf(v);

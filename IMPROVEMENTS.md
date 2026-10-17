@@ -10338,12 +10338,12 @@ Add entries in this shape:
 - **Notes:** Reworked per owner: All pill removed; the library is always the stacked sections. Playlists/Artists/Albums/Podcasts pills each fold or unfold their whole section (album artist groups too) and stay lit while open, so nothing scrolls and nothing is hidden. Sections get a divider line; a section whose pill is off shows no title at all; lit pills use the UI accent color; the last open pill cannot be switched off. Cards per section start at 24 with Show more. Verified at 390px. Old See-all code is now unused.
 
 ### albums-no-artist-sections: Album grid views without artist sections, toggle in advanced settings (Geethub #494)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #494. Album grid views without artist sections, toggle in advanced settings.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #494. 
+- **Branch:** agent/artist-album-pages
+- **Notes:** Synced from Geethub #494.  Shipped cache v267: Advanced settings > Library > Albums: By artist / One grid. One grid skips artist dividers and the more-versions folding. Verified in preview.
 
 ### tutorial-button-first-fullscreen: Can't click the tutorial button on first fullscreen (Geethub #492)
 - **Status:** merged
@@ -10362,12 +10362,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #491. 
 
 ### artist-window-album-tracks: In the artist window, show album tracks, add them to library, show album year (Geethub #490)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #490. In the artist window, show album tracks, add them to library, show album year.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #490. Related to #497.
+- **Branch:** agent/artist-album-pages
+- **Notes:** Synced from Geethub #490. Related to #497. Shipped cache v267: artist window albums not yet in the library show their year and expand on tap to list their songs (existing iTunes lookup, no new source); add-to-library button was already there (#482); albums already in the library show year and song count. Songs in the expanded list are not playable until the album is added. Verified in browser preview (desktop + 375px); iTunes expand checked on Michael Jackson.
 
 ### share-song-animation: Sharing a song to socials shows an animated EBBLESS logo with a link back (Geethub #489)
 - **Status:** ready
@@ -10556,12 +10556,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #533. Related to #531 and #532.
 
 ### album-info: Album info (Geethub #532)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #532. Show info about an album (details, year, etc.).
 - **Touches:** album window.
-- **Branch:** 
-- **Notes:** Synced from Geethub #532. Related to artist-window-album-tracks.
+- **Branch:** agent/artist-album-pages
+- **Notes:** Synced from Geethub #532. Related to artist-window-album-tracks. Shipped cache v267: album window shows a line at the top with artist, year, song count and total length, from library data only (year appears only for albums added with a release date, older albums may lack it). Verified in preview.
 
 ### album-cover-opens-album: Clicking the album cover should open the album (Geethub #531)
 - **Status:** merged
