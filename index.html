@@ -1007,6 +1007,15 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 #import-overlay.is-open{opacity:1;pointer-events:auto}
 .import-stage{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:24px 20px}
 .import-stage:empty{display:none}
+/* result pickers (search, vibe): fit the window, the list scrolls, Cancel stays in reach, the X sits inside the window */
+.import-stage{position:relative}
+.import-stage:has(.search-results){max-height:100%;overflow:hidden}
+.import-stage:has(.search-results)>:not(.search-results){flex:none}
+.import-stage:has(.search-results) .search-results{flex:1 1 auto;min-height:0;max-height:none}
+.import-stage:has(.search-results) .step{padding:0 30px}
+#import-overlay:has(.pick-x) .close{display:none}
+.pick-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--faint);display:flex;align-items:center;justify-content:center;z-index:2}
+.pick-x svg{width:18px;height:18px}
 .import-stage .step{font-size:15px;color:var(--faint);margin:0 0 20px;transition:color var(--dur-ui) var(--ease-out)}
 .import-stage .flow-line{margin-bottom:14px}
 .import-stage .counter{font-size:12px;color:var(--faint-2)}
@@ -3182,6 +3191,7 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 #smWrap .sm-foot{flex:none;padding-top:10px}
 .sm-more summary{cursor:pointer;color:var(--faint);font-size:13px;padding:8px 0 12px}
 .ms-glow{outline:2px solid var(--accent,#e0b26a)!important;outline-offset:3px;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent,#e0b26a) 28%,transparent),0 0 22px 6px color-mix(in srgb,var(--accent,#e0b26a) 55%,transparent)!important;border-radius:12px}
+.ms-hint .ms-or{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint-2);padding:3px 0 3px 12px}
 .ms-card{display:none}
 @media (max-width:859.98px){
   body:not(.split-desktop) .ms-card:not([hidden]){display:block;flex:none;width:calc(100% - 24px);max-width:420px;margin:6px auto 4px;border:1px solid color-mix(in srgb,var(--accent,#e0b26a) 55%,var(--border));box-shadow:0 0 14px color-mix(in srgb,var(--accent,#e0b26a) 28%,transparent);border-radius:12px;background:rgba(18,18,18,.82);position:relative;z-index:2}
@@ -3192,6 +3202,8 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
   .ms-ring{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent,var(--text));flex:none;animation:msBreathe 2.4s ease-in-out infinite}
   @keyframes msBreathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.55}}
   .ms-card.is-celebrate .ms-ring{background:var(--accent,#e0b26a);animation:msPop .45s cubic-bezier(.2,1.6,.4,1)}
+  body:not(.split-desktop) .ms-card.is-complete:not([hidden]){border-color:#e0b26a;background:linear-gradient(135deg,rgba(224,178,106,.32),rgba(18,18,18,.92) 70%);box-shadow:0 0 26px 4px rgba(224,178,106,.55)}
+  .ms-card.is-complete .ms-head-text{font-weight:700;color:#f4d9a0}
   .ms-card.ms-pulse::after{content:"";position:absolute;inset:0;border-radius:12px;border:2px solid var(--accent,#e0b26a);pointer-events:none;animation:msRing .7s ease-out forwards}
   @keyframes msPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
   @keyframes msRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
@@ -14380,6 +14392,7 @@ function closeImportOverlay(){
   updateMiniBarVisibility();
 }
 $('importClose').addEventListener('click', closeImportOverlay);
+importStage.addEventListener('click', (e) => { if (e.target.closest('.pick-x')) closeImportOverlay(); });
 
 function stageFinding(){
   importStage.innerHTML =
@@ -14524,6 +14537,7 @@ function stageSearchResults(results, query, seq){
     return searchPickRowHtml(i, r.image, r.name, escapeHtml(sub), '', searchResultMeta(r));
   }).join('');
   importStage.innerHTML =
+    '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
     '<div class="step"' + seqAttr + '>Results for &ldquo;' + escapeHtml(query) + '&rdquo;</div>' +
     '<div class="search-results">' + rows + '</div>' +
     '<button class="btn-ghost" id="searchBackBtn" style="width:100%">Cancel</button>';
@@ -14637,6 +14651,7 @@ let importChain = Promise.resolve();
 let importsPending = 0;
 function queuedImportsLabel(){ return importsPending > 1 ? ' (+' + (importsPending - 1) + ' queued)' : ''; }
 function beginImport(id, force, type, targetIndex){
+  if (!document.body.classList.contains('onb-active')) awardMilestone('load');
   const waited = importsPending > 0;
   if (waited){
     closeImportOverlay();
@@ -15659,6 +15674,7 @@ function stageVibeResults(text, interp, tracks){
   if (heardN) mood.push(heardN + ' you know · ' + (tracks.length - heardN) + ' new');
   const chips = mood.map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join('');
   importStage.innerHTML =
+    '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
     '<div class="step">' + escapeHtml(interp.title || 'Your vibe') + '</div>' +
     '<div class="vibe-heard">&ldquo;' + escapeHtml(text) + '&rdquo;</div>' +
     '<div class="vibe-chips">' + chips + '</div>' +
@@ -16683,6 +16699,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 298, date: '2026-10-17', items: [
+    'Steps now pay out big, random points, and finishing every step on a page gives a huge bonus with confetti and the long EBBLESS sound. A single step plays a short hit of the same sound.',
+    'Adjust the volume moved to Settings. Pasting any link (song, playlist, album, artist, podcast) now counts as adding a song.',
+    'Search results windows fit the screen: the list scrolls, Cancel stays in reach and the X sits inside the window.'
+  ]},
   { version: 297, date: '2026-10-17', items: [
     'The step card glows. Tap it (or its ?) and the real button for that step lights up and scrolls into view, with a line saying where it is. Settings steps point at the exact switch or button.'
   ]},
@@ -22478,13 +22499,12 @@ const MILESTONES = [
   // each page's own set as a small card at the top of that page.
   ['search', 'Search for a song, artist or album', 5, 'library', 'Type in the search bar at the top, or tap the magnifier to search your own library.'],
   ['openpage', 'Open an artist or album', 5, 'library', 'Tap an artist or album in your library, or a name on the artist page.'],
-  ['load', 'Add a song to your library or a playlist', 5, 'library', 'Paste a link and tap Load, tap + beside a song, or play a song from an artist window.'],
+  ['load', 'Add a song to your library or a playlist', 5, 'library', 'Paste a link (song, playlist, album, artist or podcast) in the search bar and tap Load | Open an artist and tap a song, or add an album | Tap the + beside a song to add it to a playlist'],
   ['playlist', 'Create a playlist', 5, 'library', 'Tap + New playlist, type a name and tap Create.'],
   ['revisit', 'Revisit something you saved', 5, 'library', 'Tap one of your saved playlists in the library to open it again.'],
   ['play', 'Play a song', 5, 'player', 'Tap the big play button, or tap any song in your library.'],
   ['pause', 'Pause and resume playback', 5, 'player', 'Tap the play button once to pause and again to resume.'],
   ['skip', 'Skip to the next and previous songs', 5, 'player', 'Tap the skip arrow after play, then the one before it. Do both.'],
-  ['volume', 'Adjust the volume', 5, 'player', "Use the Even out volume switch in Settings, or the volume slider when casting. The app can't see your phone's own volume buttons."],
   ['progress', 'Find the song playing and its progress', 5, 'player', 'Tap Player at the bottom while a song plays, or drag the progress bar.'],
   ['queue', 'Open the queue', 5, 'queue', 'Tap Queue at the bottom.'],
   ['qadd', 'Add a song to the queue', 5, 'queue', 'Tap the three dots on a song, then Play next or Add to queue.'],
@@ -22495,7 +22515,8 @@ const MILESTONES = [
   ['explore', 'Explore the available settings', 5, 'settings', "Scroll down in Settings and tap Advanced to open it, or tap View next to What's new."],
   ['setting', 'Change a setting', 5, 'settings', 'Under Playback, tap the Blend songs together switch (or any other switch).'],
   ['customize', 'Customize the app to your preference', 5, 'settings', 'Scroll to the bottom of Settings, open Advanced, then pick an accent color, album art style or cursor.'],
-  ['restore', 'Restore a setting to its original value', 5, 'settings', 'In Advanced (bottom of Settings), tap Reset at the end, or pick the Default choice again.']
+  ['restore', 'Restore a setting to its original value', 5, 'settings', 'In Advanced (bottom of Settings), tap Reset at the end, or pick the Default choice again.'],
+  ['volume', 'Adjust the volume', 5, 'settings', 'Under Playback, tap the Even out volume switch. | When casting, drag the volume slider. | The app cannot see your phone volume buttons.']
 ];
 const MS_PAGES = ['library', 'player', 'queue', 'settings'];
 const MS_PAGE_NAMES = { library: 'Library', player: 'Player', queue: 'Queue', settings: 'Settings' };
@@ -22518,24 +22539,71 @@ function msSoundOn(){ try { return localStorage.getItem(LS_MS_SOUND) !== 'off'; 
 // the plain list in Settings.
 function msCardsShown(){ return window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('split-desktop'); }
 function msMotionOk(){ try { return advPrefs().motion !== 'reduced' && !window.matchMedia('(prefers-reduced-motion:reduce)').matches; } catch(e){ return true; } }
-// Two soft rising notes; one short-lived context per chime so nothing idles.
-function msChime(){
+// The EBBLESS sound: the same intro-theme snippet the splash plays on Enter
+// (#onbMusic), on a clone so the splash's own audio is untouched. A step gets a
+// short hit; finishing a whole page gets a long one.
+let msAudio = null;
+function msChime(long){
   if (!msSoundOn()) return;
   try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    const ac = new AC(), t0 = ac.currentTime;
-    [[660, 0], [880, 0.09]].forEach(([f, d]) => {
-      const o = ac.createOscillator(), g = ac.createGain();
-      o.type = 'sine'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t0 + d);
-      g.gain.exponentialRampToValueAtTime(0.05, t0 + d + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.28);
-      o.connect(g); g.connect(ac.destination);
-      o.start(t0 + d); o.stop(t0 + d + 0.3);
-    });
-    setTimeout(() => { try { ac.close(); } catch(e){} }, 700);
+    const src = document.getElementById('onbMusic');
+    if (!src) return;
+    if (msAudio){ try { msAudio.pause(); } catch(e){} }
+    const a = msAudio = src.cloneNode(true), VOL = long ? 0.8 : 0.55, hold = long ? 2800 : 700, fade = long ? 1800 : 700;
+    a.removeAttribute('id');
+    a.volume = VOL;
+    const trim = () => { try { a.currentTime = 0.5; } catch(e){} };
+    if (a.readyState >= 1) trim(); else a.addEventListener('loadedmetadata', trim, { once: true });
+    const pr = a.play();
+    if (pr && pr.catch) pr.catch(() => {});
+    setTimeout(() => {
+      const t0 = Date.now();
+      const step = () => {
+        try {
+          const k2 = Math.min(1, (Date.now() - t0) / fade);
+          a.volume = VOL * (1 - k2);
+          if (msAudio !== a) return;
+          if (k2 < 1) setTimeout(step, 40); else a.pause();
+        } catch(e){}
+      };
+      step();
+    }, hold);
   } catch(e){}
+}
+// Points are big and random: rolled once per step (and a huge bonus per finished page), kept in the saved list under _pts
+function msRoll(bonus){
+  const r = Math.random();
+  const v = bonus ? 100000 + Math.random() * 900000 : r < .6 ? 200 + Math.random() * 4800 : r < .9 ? 5000 + Math.random() * 20000 : 25000 + Math.random() * 75000;
+  return Math.round(v / (bonus ? 100 : 10)) * (bonus ? 100 : 10);
+}
+function msFmt(n){ return Number(n).toLocaleString('en-US'); }
+function msTotal(done){ return Object.values((done || milestonesDone())._pts || {}).reduce((a, b) => a + (+b || 0), 0); }
+const msComplete = {};   // page -> bonus won this session (shows the finished line until the card tucks away)
+// confetti from the card: finite, transform + opacity only, removed when done
+function msConfetti(card){
+  if (!msMotionOk()) return;
+  const r = card.getBoundingClientRect();
+  const cols = ['#e0b26a', '#ffffff', '#ff5c8a', '#4aa3ff', '#1db954', '#a97cff'];
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:0;pointer-events:none;z-index:9999';
+  for (let i = 0; i < 36; i++){
+    const d = document.createElement('i');
+    const sz = 5 + Math.random() * 6;
+    d.style.cssText = 'position:absolute;left:' + (r.left + r.width / 2) + 'px;top:' + (r.top + r.height / 2) + 'px;width:' + sz + 'px;height:' + (sz * 1.5) + 'px;border-radius:2px;background:' + cols[i % cols.length];
+    box.appendChild(d);
+    const dx = (Math.random() - .5) * Math.min(innerWidth, 420), up = 90 + Math.random() * 160, fall = 140 + Math.random() * 260, rot = (Math.random() - .5) * 900;
+    d.animate([
+      { transform: 'translate(0,0) rotate(0)', opacity: 1 },
+      { transform: 'translate(' + dx * .6 + 'px,' + (-up) + 'px) rotate(' + rot * .5 + 'deg)', opacity: 1, offset: .4 },
+      { transform: 'translate(' + dx + 'px,' + fall + 'px) rotate(' + rot + 'deg)', opacity: 0 }
+    ], { duration: 1500 + Math.random() * 900, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards' });
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 2600);
+}
+function msHintHtml(h){
+  const parts = String(h || '').split(' | ');
+  return parts.length < 2 ? h : parts.map(x => '<div>' + x + '</div>').join('<div class="ms-or">or</div>');
 }
 let msHint = '';   // which task's how-to line is showing: 'card:<id>' or 'list:<id>'
 let msCelebrateTimer = 0;
@@ -22554,7 +22622,7 @@ function msTarget(id){
     case 'revisit': return first('#libraryListWrap .lib-card');
     case 'play': case 'pause': return q('#playBtn');
     case 'skip': return (milestonesDone()._skip || {}).next ? q('#prevBtn') : q('#nextBtn');
-    case 'volume': return q('#castBtn') && q('#castBtn').offsetParent ? q('#castBtn') : nav('settings');
+    case 'volume': return q('#levelBtn');
     case 'progress': return q('#seekTrack');
     case 'queue': return nav('queue');
     case 'qplay': return first('#queueBody .q-row');
@@ -22579,18 +22647,22 @@ function msShowMe(id){
 }
 function renderMilestones(justDone){
   const done = milestonesDone();
+  // steps ticked before points existed get theirs now
+  const bf = done._pts || {}; let bfChanged = false;
+  MILESTONES.forEach(m => { if (done[m[0]] && !bf[m[0]]){ bf[m[0]] = msRoll(); bfChanged = true; } });
+  if (bfChanged){ done._pts = bf; try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){} }
   const ul = document.getElementById('milestoneList');
   if (ul){
     let total = 0;
     let lastPage = '';
-    ul.innerHTML = MILESTONES.map(([id, label, pts, pg, hint]) => {
-      const on = !!done[id]; if (on) total += pts;
+    ul.innerHTML = MILESTONES.filter(m => m[3] !== 'library').map(([id, label, pts, pg, hint]) => {
+      const on = !!done[id];
       const head = pg !== lastPage ? '<li class="ms-grp" aria-hidden="true">' + MS_PAGE_NAMES[pg] + '</li>' : '';
       lastPage = pg;
-      return head + '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><button type="button" class="ms-q" data-ms-q="list:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'list:' + id) + '">?</button><span class="ms-pts">' + pts + ' pts</span>' + (msHint === 'list:' + id ? '<div class="ms-hint">' + hint + '</div>' : '') + '</li>';
+      return head + '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><button type="button" class="ms-q" data-ms-q="list:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'list:' + id) + '">?</button><span class="ms-pts">' + (on ? msFmt(((done._pts || {})[id]) || 0) + ' pts' : '? pts') + '</span>' + (msHint === 'list:' + id ? '<div class="ms-hint">' + msHintHtml(hint) + '</div>' : '') + '</li>';
     }).join('');
     const t = document.getElementById('milestoneTotal');
-    if (t) t.textContent = total + ' of ' + MILESTONES.reduce((a, m) => a + m[2], 0) + ' pts';
+    if (t) t.textContent = msFmt(msTotal(done)) + ' pts';
   }
   const snd = document.getElementById('msSoundBtn');
   if (snd){ snd.classList.toggle('is-active', msSoundOn()); snd.setAttribute('aria-checked', String(msSoundOn())); }
@@ -22606,17 +22678,18 @@ function renderMilestones(justDone){
     // Right after a step is done its check shows for a moment, then the next step.
     const cel = justDone ? tasks.find(m => m[0] === justDone) : null;
     const nextT = left[0];
-    card.querySelector('.ms-head-text').textContent = cel ? '\u2713 ' + cel[1] : nextT ? (tasks.length - left.length) + ' of ' + tasks.length + ' \u00B7 ' + nextT[1] : 'All done on this page';
+    card.querySelector('.ms-head-text').textContent = !left.length && msComplete[page] ? MS_PAGE_NAMES[page] + ' complete! +' + msFmt(msComplete[page]) + ' bonus' : cel ? '\u2713 ' + cel[1] + ' +' + msFmt((done._pts || {})[cel[0]] || 0) : nextT ? (tasks.length - left.length) + ' of ' + tasks.length + ' \u00B7 ' + nextT[1] : 'All done on this page';
     card.classList.toggle('is-celebrate', !!cel);
+    card.classList.toggle('is-complete', !left.length && !!msComplete[page]);
     const qTop = card.querySelector('.ms-qtop'), hTop = card.querySelector('.ms-hint-top');
     qTop.hidden = !nextT || !!cel;
     hTop.hidden = qTop.hidden || msHint !== 'card:' + nextT[0];
     card.classList.toggle('is-showing', !hTop.hidden);
-    if (nextT){ qTop.dataset.msQ = 'card:' + nextT[0]; qTop.setAttribute('aria-expanded', String(!hTop.hidden)); hTop.textContent = nextT[4]; }
-    if (cel){ clearTimeout(msCelebrateTimer); msCelebrateTimer = setTimeout(() => renderMilestones(), 1600); }
+    if (nextT){ qTop.dataset.msQ = 'card:' + nextT[0]; qTop.setAttribute('aria-expanded', String(!hTop.hidden)); hTop.innerHTML = msHintHtml(nextT[4]); }
+    if (cel){ clearTimeout(msCelebrateTimer); msCelebrateTimer = setTimeout(() => renderMilestones(), left.length ? 1800 : 9e9); }
     if (!left.length){
       // everything on this page is done: let the last check land, then tuck the card away
-      setTimeout(() => { if (!MILESTONES.some(m => m[3] === page && !milestonesDone()[m[0]])){ card.dataset.gone = '1'; card.hidden = true; } }, 3200);
+      setTimeout(() => { if (!MILESTONES.some(m => m[3] === page && !milestonesDone()[m[0]])){ card.dataset.gone = '1'; card.hidden = true; } }, 6500);
     }
   });
 }
@@ -22627,6 +22700,12 @@ function awardMilestone(id){
   const done = milestonesDone();
   if (done[id]) return;
   done[id] = Date.now();
+  const pts = msRoll();
+  done._pts = Object.assign({}, done._pts, { [id]: pts });
+  // last step on its page: a huge bonus
+  const pageDone = MILESTONES.filter(x => x[3] === m[3]).every(x => done[x[0]]);
+  let bonus = 0;
+  if (pageDone){ bonus = msRoll(true); done._pts['bonus:' + m[3]] = bonus; msComplete[m[3]] = bonus; }
   try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){ return; }
   msClearGlow();
   const cards = msCardsShown();
@@ -22638,11 +22717,12 @@ function awardMilestone(id){
       if (msMotionOk()){
         card.classList.remove('ms-pulse'); void card.offsetWidth; card.classList.add('ms-pulse');
       }
-      msChime();
+      msChime(pageDone);
+      if (pageDone) msConfetti(card);
       return;
     }
   }
-  showToast('+' + m[2] + ' pts \u00B7 ' + m[1]);
+  showToast('+' + msFmt(pts) + ' pts \u00B7 ' + m[1] + (bonus ? ' \u00B7 ' + MS_PAGE_NAMES[m[3]] + ' complete! +' + msFmt(bonus) + ' bonus' : ''));
 }
 (function msInit(){
   MS_PAGES.forEach(page => {
