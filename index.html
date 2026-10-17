@@ -8324,6 +8324,36 @@ function openFindMusic(){
   statsFeature('find_music');
 }
 function closeFindMusic(){ if (fmEl) fmEl.hidden = true; }
+
+/* Geethub #574 (phones): swipe left/right to move between Library, Player, Queue and Settings.
+   Ignores swipes that start on something with its own horizontal gesture (album art, sliders,
+   queue rows, tracks, filter pills, inputs) and anything while a sheet, window or menu is open. */
+(function(){
+  const order = ['library', 'player', 'queue', 'settings'];
+  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row';
+  let x0 = 0, y0 = 0, ok = false;
+  const phone = () => window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('onb-active');
+  document.addEventListener('touchstart', (e) => {
+    ok = false;
+    if (!phone() || e.touches.length !== 1) return;
+    if (e.target.closest(SKIP)) return;
+    if (document.querySelector('.lib-ctx-menu.is-open,#libpl-panel.is-open,#import-overlay.is-open,#flow-layer.is-open')) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; ok = true;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!ok) return;
+    ok = false;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+    const cur = document.body.classList.contains('queue-open') ? 'queue' : state.currentView;
+    const i = order.indexOf(cur);
+    if (i < 0) return;
+    const next = order[i + (dx < 0 ? 1 : -1)];
+    if (!next) return;
+    const btn = document.querySelector(next === 'queue' ? '#bottom-nav [data-action="toggle-queue"]' : '#bottom-nav [data-view="' + next + '"]');
+    if (btn) btn.click();
+  });
+})();
 $('playerMoreBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const q = state.queue[state.queuePos];

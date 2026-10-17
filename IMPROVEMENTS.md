@@ -10844,12 +10844,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #573.
 
 ### mobile-you-should-be-able-to: mobile: you should be able to swipe left and right to switch between library to player to queue to settings (Geethub #574)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #574. medium
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #574.
+- **Touches:** index.html (swipe handler after Find music)
+- **Branch:** agent/mobile-ui-pass
+- **Notes:** Synced from Geethub #574. Built: on phones, a horizontal swipe (70px+, mostly sideways) moves Library, Player, Queue, Settings in that order by pressing the footer button. Ignored when the swipe starts on album art, sliders, buttons, transport, queue and song rows, filter pills, inputs, mini bar, or while a sheet/window/menu is open, and during the tutorial. Checked with simulated touch events in a 375px preview, not on a real phone. No slide animation.
 
 ### bug-ads-playing-on-podcast: ads playing on podcast (Geethub #575)
 - **Status:** ready
