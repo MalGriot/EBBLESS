@@ -9991,15 +9991,15 @@ function renderLibrary(){
   libraryAlbumsGrid.innerHTML = '';
   libraryPodcastsGrid.innerHTML = '';
   const advHide = advPrefs().hide || [];
-  libHasPodcasts = !advHide.includes('podcast') && ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'podcast'; });
+  libHasPodcasts = !advHide.includes('podcast');   // chips always show (unless hidden in Advanced), even with nothing of that kind yet
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
-  libHasArtists = !advHide.includes('artist') && ids.some(id => isArtistEntry(getCachedPlaylist(id)));
+  libHasArtists = !advHide.includes('artist');
   libArtistNames = new Map();
   ids.forEach(id => { const p = getCachedPlaylist(id); if (p && isArtistEntry(p) && p.name) libArtistNames.set(artistNameKey(p.name), p.name); });
   libFilterArtists.classList.toggle('hidden', !libHasArtists);
-  libHasAlbums = !advHide.includes('album') && ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'album'; });
+  libHasAlbums = !advHide.includes('album');
   libFilterAlbums.classList.toggle('hidden', !libHasAlbums);
-  libHasPlaylists = !advHide.includes('playlist') && ids.some(id => { const p = getCachedPlaylist(id); return !!p && libSectionOf(p) === 'playlist'; });
+  libHasPlaylists = !advHide.includes('playlist');
   libFilterPlaylists.classList.toggle('hidden', !libHasPlaylists);
   // chips only help when there's more than one kind to pick between
   libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
