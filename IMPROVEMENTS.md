@@ -11168,12 +11168,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #618. Research written, see docs/research/MP3JUICE.md. Not building the download-site idea (YouTube terms and copyright). Real goal (better matching) goes to match scoring and one-tap alternate version.
 
 ### desktop-a-button-that-expands-the-library: desktop: a button that expands the library to the right (Geethub #619)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #619. it should make the player the same size of the queue and sit between the library and queue
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #619.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #619. Built (1150px and wider, the 3-pane desktop layout): a double-chevron button at the right end of the library toolbar toggles a wide library. Wide = grid columns 1fr 340px 340px, so the library takes all the slack, the player pane shrinks to the queue's width (340px) and sits between them; art and title scale to the narrower pane (300px art, 20px title). Chevron flips and the choice is remembered (localStorage ebbless:libraryWide, body.lib-wide). Snaps, no grid animation (GPU budget). Hidden below 1150px and in desktop fullscreen where the library is a drawer. Verified in the 1400px browser preview: pane widths 720/340/340 and back to 340/720/340, no new [gpu-watchdog]. Not checked: between 1150 and 1300px widths, Settings or search overlay in the narrow center pane. Cache v331.
 
 ### sliding-on-list-items: sliding on list items (Geethub #620)
 - **Status:** ready

@@ -677,6 +677,7 @@ body.onb-active .paste-guide{display:none}
 .lib-top{flex:none;background:transparent;padding:6px 0 10px}
 /* Geethub #552: the library bar stays put and the list scrolls in its own box beneath it, so the bar can be transparent and content is cut off at the box edge. Section titles stick to the top of that box and push each other up */
 #view-library{overflow:hidden}
+#libWideBtn{display:none}
 #view-library>.view-scroll:has(#libraryListWrap:not(.hidden)){height:100%;padding-bottom:0;box-sizing:border-box;display:flex;flex-direction:column}
 #libraryListWrap:not(.hidden){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 #libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(var(--nav-h) + 12px + var(--safe-b))}
@@ -2655,6 +2656,15 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     grid-template-columns:minmax(280px,340px) 1fr minmax(280px,340px);
   }
   body.split-desktop #topbar{grid-column:1/-1;grid-row:1}
+  /* #619: library expanded to the right - it takes the slack, the player pane shrinks to the queue's width and sits between them.
+     Snaps (no grid-template animation, GPU budget). The art and title follow the narrower pane. */
+  body.split-desktop.lib-wide:not(.desktop-fs) #app{grid-template-columns:1fr 340px 340px}
+  body.split-desktop.lib-wide:not(.desktop-fs) .artwork-wrap{width:min(300px,max(72px,calc(100dvh - var(--topbar-h) - 345px)))}
+  body.split-desktop.lib-wide:not(.desktop-fs) .track-meta{width:min(300px,100%)}
+  body.split-desktop.lib-wide:not(.desktop-fs) .track-meta .title{font-size:20px}
+  body.split-desktop:not(.desktop-fs) #libWideBtn{display:flex}
+  body.split-desktop.lib-wide #libWideBtn svg{transform:scaleX(-1)}
+  body.split-desktop #libWideBtn.is-active{color:var(--accent)}
   /* issue #151: the 60px bar with no edge read as floating above the panes.
      A shorter row (still room for the 32px nav pills) with the same hairline
      the panes use as dividers ties it into the grid; the logo sits on the
@@ -4052,6 +4062,10 @@ body.week-up-on{overflow:hidden}
                 </div>
               </div>
             </div>
+            <!-- #619: desktop only - widens the library to the right; the player shrinks to the queue's width -->
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libWideBtn" title="Expand the library" aria-label="Expand the library" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg>
+            </button>
           </div>
         </div>
         <div class="lib-search hidden" id="libSearchBox" role="search">
@@ -8528,6 +8542,18 @@ const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 $('emptyFindBtn').addEventListener('click', () => openFindMusic());
 $('browseBtn').addEventListener('click', () => openFindMusic());
+// #619: desktop library width toggle, remembered across visits (CSS only acts on the 3-pane desktop layout)
+const LS_LIB_WIDE = 'ebbless:libraryWide';
+function applyLibWide(on){
+  document.body.classList.toggle('lib-wide', on);
+  const b = $('libWideBtn');
+  b.classList.toggle('is-active', on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  const t = on ? 'Shrink the library' : 'Expand the library';
+  b.title = t; b.setAttribute('aria-label', t);
+}
+$('libWideBtn').addEventListener('click', () => { const on = !document.body.classList.contains('lib-wide'); lsSet(LS_LIB_WIDE, on); applyLibWide(on); });
+applyLibWide(!!lsGet(LS_LIB_WIDE, false));
 
 /* =========================================================================
    FIND MUSIC SCREEN (Geethub #582)
