@@ -25828,7 +25828,7 @@ async function openMiniPlayer(){
     mpQueue = null;
     mpShrunk = null;
     buildMiniPlayerDOM(win);
-    if (isDesktopApp) wireMiniDesktop(win);
+    if (isDesktopApp){ wireMiniDesktop(win); if (window.ebblessDesktop.hideMain) window.ebblessDesktop.hideMain(); }
     updateMiniPlayerUI();
     attachMiniPlayerSC(win);
     win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; rehostSCDecks(); } }, { once: true });

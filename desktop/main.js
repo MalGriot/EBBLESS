@@ -144,6 +144,10 @@ ipcMain.on('ebbless:focus-main', () => {
   mainWin.focus();
 });
 
+ipcMain.on('ebbless:hide-main', () => {
+  if (mainWin && mainWin.isVisible() && !mainWin.isMinimized()) mainWin.minimize();
+});
+
 app.on('before-quit', () => { quitting = true; });
 app.on('activate', () => { if (mainWin){ mainWin.show(); mainWin.focus(); } });
 app.whenReady().then(createMainWindow);

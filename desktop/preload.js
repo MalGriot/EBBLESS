@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('ebblessDesktop', {
   platform: process.platform,
   // bring the main window back (mini player art / logo click)
   focusMain: () => ipcRenderer.send('ebbless:focus-main'),
+  // the mini player opened: tuck the main window away (it comes back via focusMain / Dock)
+  hideMain: () => ipcRenderer.send('ebbless:hide-main'),
   // the main window was closed or minimized: the page floats the mini player
   onAway: (fn) => ipcRenderer.on('ebbless:away', () => fn()),
   // the main window is back on screen: the page closes the mini player
