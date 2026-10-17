@@ -551,6 +551,29 @@ function snippetNamesAlbum(snippet, album) {
     .some(a => a.length > 1 && hay.includes(' ' + a + ' '));
 }
 
+async function handleRawSearch(query, count, ctx) {
+  const cache = envCache;
+  const cacheKey = new Request('https://cache.internal/search-raw/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(query) + '/' + count);
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+  let found;
+  try {
+    found = await fetchYouTubeSearchCandidates(query);
+  } catch (e) {
+    return json({ error: e.message }, e instanceof YouTubeBlockedError ? 503 : 502);
+  }
+  if (!found.length) return json({ error: 'no video results' }, 404);
+  const candidates = found.slice(0, count).map(c => ({ videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0 }));
+  const top = candidates[0];
+  const response = json({ raw: true, videoId: top.videoId, title: top.title, channel: top.channel, duration: top.duration, candidates });
+  const toCache = response.clone();
+  // Short TTL: this is a live search, unlike the pinned track matches.
+  ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
+  })));
+  return response;
+}
+
 async function handleSearch(url, ctx, env) {
   const title = url.searchParams.get('title');
   const artist = url.searchParams.get('artist') || '';
@@ -570,6 +593,12 @@ async function handleSearch(url, ctx, env) {
   // Album name when this track comes from an album link - see the album-
   // track mode notes above ALBUM_EXCLUDE_WORDS.
   const album = (url.searchParams.get('album') || '').trim().slice(0, 200);
+
+  // ?raw=1 (free-text song search, Geethub #625): hand back YouTube's own
+  // results in YouTube's own order, none of the song-matcher filtering or
+  // re-ranking below - a person typing a song name wants what youtube.com
+  // would show, not the best auto-match for a known track.
+  if (url.searchParams.get('raw') === '1') return await handleRawSearch(title, altCount, ctx);
 
   const firstArtist = artist.split(',')[0].trim().toLowerCase();
   const cache = envCache;

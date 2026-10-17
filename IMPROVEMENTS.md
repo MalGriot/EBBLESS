@@ -11216,12 +11216,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #624.
 
 ### youtube-search: youtube search (Geethub #625)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #625. sometimes i'm just searching for a specific song the same way i would on youtube. it should use the common search engine that people are used to
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #625.
+- **Touches:** song rows in the main search results (`beginVibeSearch`, `searchSongCandidates`, `searchYouTube`); worker `/search?raw=1`.
+- **Branch:** agent/web-bugs-2
+- **Notes:** Synced from Geethub #625. My reading of the issue (it gives little): typing a song name should list what youtube.com would list, in youtube.com's order. Reproduced: "hotline bling" on YouTube lists Drake first; the app's /search is a track matcher (drops long uploads, re-ranks by score, expects a known artist) and ranked a Kehlani cover first with Drake fourth. The main search also showed only 2 YouTube songs. Built: worker `/search?raw=1` returns YouTube's results in YouTube's own order (new `handleRawSearch`, 6h cache, `raw:true` in the payload); the client asks for it in `searchSongCandidates` (used by the main search and Add songs), and the main search lists 4 YouTube songs (was 2) above the 2 SoundCloud songs. **Needs a worker deploy** (`cd worker && npx wrangler deploy`, owner's call); until then the old worker ignores `raw` and search behaves as before. Verified: the worker handler against a real saved YouTube results page in node (Drake first, YouTube order), and the client with a mocked `raw` response in the browser (order, 4+2 rows, no [gpu-watchdog] warnings). Not verified: live with the deployed worker. Cache v322.
 
 ### the-top-corners-of-the-windows-should-have: the top corners of the windows should have a subtle swoop or wave. it's will be classy and on brand (Geethub #626)
 - **Status:** draft

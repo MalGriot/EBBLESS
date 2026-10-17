@@ -5924,8 +5924,12 @@ const SEARCH_MAX_ATTEMPTS = 3;
 // link - switches the worker to album-track mode (prefer the artist's own
 // "<Artist> - Topic" upload, hard-exclude remix/sped-up/live/cover cuts the
 // source title doesn't ask for; see ALBUM_EXCLUDE_WORDS in the worker).
-async function searchYouTube(title, artist, sourceDurationMs, altCount, album){
+async function searchYouTube(title, artist, sourceDurationMs, altCount, album, raw){
   const params = new URLSearchParams({ title, artist });
+  // raw: YouTube's own results in YouTube's own order, no song-matcher
+  // re-ranking (free-text song search, #625). A worker that predates it
+  // ignores the flag and answers the usual way.
+  if (raw) params.set('raw', '1');
   if (sourceDurationMs) params.set('durationMs', String(sourceDurationMs));
   if (altCount) params.set('alts', String(altCount));
   if (album) params.set('album', String(album));
@@ -14330,7 +14334,7 @@ function addSongsCandidateToTrack(c){
     duration: c.duration || 0, art: c.image || (sc ? null : refreshLinkCandidateThumb(c.videoId)), plays: 0 };
 }
 async function searchSongCandidates(q){
-  const yt = searchYouTube(q, '', 0, 8).then(d =>
+  const yt = searchYouTube(q, '', 0, 8, undefined, true).then(d =>
     (d.candidates && d.candidates.length) ? d.candidates : (d.videoId ? [{ videoId: d.videoId, title: d.title, channel: d.channel, duration: d.duration }] : []));
   const sc = searchSoundCloudTracks(q, 6);
   const [a, b] = await Promise.allSettled([sc, yt]);
@@ -14757,8 +14761,8 @@ async function beginVibeSearch(query){
   const repaint = () => { if (seq === vibeSearchSeq && importStage.querySelector('[data-search-seq="' + seq + '"], [data-searching]')) stageSearchResults(compose(), query, seq); };
   const artistP = searchArtistProfile(query).then(a => { artist = a; if (a) repaint(); return a; });
   if (query.trim().split(/\s+/).length <= 8){
-    searchSongCandidates(query).then(c => { const yt = (c || []).filter(x => x.source === 'youtube').slice(0, 2), sc = (c || []).filter(x => x.source !== 'youtube').slice(0, 2);
-      songs = yt.concat(sc).map(x => Object.assign({ isSong: true }, x)); // official uploads tend to lead on YouTube
+    searchSongCandidates(query).then(c => { const yt = (c || []).filter(x => x.source === 'youtube').slice(0, 4), sc = (c || []).filter(x => x.source !== 'youtube').slice(0, 2);
+      songs = yt.concat(sc).map(x => Object.assign({ isSong: true }, x)); // YouTube's own order leads, like youtube.com (#625)
       if (songs.length) repaint(); }).catch(() => {});
   }
   try{
