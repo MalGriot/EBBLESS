@@ -1510,6 +1510,10 @@ body:has(#mini-bar:not([hidden])) #match-status{margin-bottom:56px}
   padding:8px 14px;background:var(--panel);border-top:1px solid var(--border);cursor:pointer;
   transform:translateY(0);transition:transform var(--dur-surface) var(--ease-in-out),bottom var(--dur-surface) var(--ease-in-out)}
 #mini-bar[hidden]{display:none}
+/* #503: results / add-playlist windows (#import-overlay, z 60) leave the footer player visible: it sits above the window, and the window stops above it */
+body:not(.split-desktop):has(#mini-bar:not([hidden])) #import-overlay.is-open{bottom:57px}
+@media (max-width:859.98px){body:not(.split-desktop):has(#mini-bar:not([hidden])) #import-overlay.is-open{bottom:calc(57px + var(--nav-h) + var(--safe-b))}}
+body:not(.split-desktop):has(#import-overlay.is-open) #mini-bar{z-index:61}
 #mini-bar img{width:38px;height:38px;border-radius:5px;object-fit:cover;flex:none;background:var(--panel-2)}
 #mini-bar .meta{min-width:0;flex:1}
 #mini-bar .title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -8332,7 +8336,7 @@ window.addEventListener('popstate', () => {
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
   if (!hasTrack){ document.body.classList.remove('pod-playing'); syncIosPodSkip(false); }
-  const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen);
+  const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen || importOverlay.classList.contains('is-open'));
   miniBar.hidden = !showMini;
   if (showMini) miniBar.setAttribute('data-shown', '1'); else miniBar.removeAttribute('data-shown');
 }
@@ -13091,11 +13095,13 @@ function setImportHint(){ /* static text; kept for future contextual tips */ }
 function openImportOverlay(){
   importOverlay.classList.add('is-open');
   if (loadBtn) loadBtn.classList.add('onb-loading');
+  updateMiniBarVisibility();
 }
 function closeImportOverlay(){
   importOverlay.classList.remove('is-open');
   importStage.innerHTML = '';
   if (loadBtn){ loadBtn.disabled = false; loadBtn.classList.remove('onb-loading'); }
+  updateMiniBarVisibility();
 }
 $('importClose').addEventListener('click', closeImportOverlay);
 
@@ -19104,26 +19110,43 @@ setInterval(() => {
 /* mobile: swipe down on a sheet's drag handle to dismiss it (used by both
    the queue panel and the library playlist panel) */
 function attachSwipeToDismiss(panelEl, closeFn){
-  let startY = null;
-  const handleEl = panelEl.querySelector('.queue-drag-handle');
-  function down(e){ startY = (e.touches ? e.touches[0].clientY : e.clientY); }
+  // #538: a downward swipe from anywhere in the sheet closes it: the grab
+  // handle and header always, the list only while scrolled to the top (so
+  // normal scrolling and track drag/reorder keep working).
+  let startY = null, startX = 0, dragging = false;
+  const scrollEl = panelEl.querySelector('.queue-scroll');
+  function down(e){
+    const t = e.target;
+    if (t.closest && t.closest('input,textarea,select,[draggable="true"],.drag-handle,.q-drag')) return;
+    const inScroll = scrollEl && scrollEl.contains(t);
+    if (inScroll && scrollEl.scrollTop > 0) return;
+    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dragging = false;
+  }
   function move(e){
     if (startY === null) return;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY);
-    const dy = y - startY;
+    const dy = e.touches[0].clientY - startY, dx = e.touches[0].clientX - startX;
+    if (!dragging){
+      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)){ startY = null; return; }
+      if (dy < -8){ startY = null; return; }
+      if (dy < 12) return;
+      dragging = true;
+      panelEl.style.transition = 'none';
+    }
     if (dy > 0) panelEl.style.transform = 'translateY(' + dy + 'px)';
   }
   function up(e){
     if (startY === null) return;
-    const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
-    const dy = y - startY;
+    const dy = (e.changedTouches ? e.changedTouches[0].clientY : startY) - startY;
+    const was = dragging;
+    startY = null; dragging = false;
+    panelEl.style.transition = '';
     panelEl.style.transform = '';
-    if (dy > 90) closeFn();
-    startY = null;
+    if (was && dy > 90) closeFn();
   }
-  handleEl.addEventListener('touchstart', down, {passive:true});
-  handleEl.addEventListener('touchmove', move, {passive:true});
-  handleEl.addEventListener('touchend', up);
+  panelEl.addEventListener('touchstart', down, {passive:true});
+  panelEl.addEventListener('touchmove', move, {passive:true});
+  panelEl.addEventListener('touchend', up);
+  panelEl.addEventListener('touchcancel', up);
 }
 attachSwipeToDismiss(queuePanel, closeQueuePanel);
 

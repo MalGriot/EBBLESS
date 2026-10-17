@@ -10266,12 +10266,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #504. Pair with #505. Shipped 2026-10-14 (cache v232): an artist pick in search closes the overlay and calls openArtistPage, the same window the player's artist name opens.
 
 ### footer-player-with-overlays: Show the footer player when results or add-playlist windows hide the player (Geethub #503)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #503. Show the footer player when results or add-playlist windows hide the player.
-- **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #503. 
+- **Touches:** `#import-overlay`, `#mini-bar`, `updateMiniBarVisibility`
+- **Branch:** agent/window-footer-swipe
+- **Notes:** Synced from Geethub #503. Fix: the results / add-playlist / add-songs window is `#import-overlay` (z 60), which covered the mini bar (z 42), and the mini bar was also hidden on the Player view. Now `openImportOverlay`/`closeImportOverlay` call `updateMiniBarVisibility`, the mini bar sits above the window (z 61) and the window stops 57px above it (mobile: above the nav + mini bar). Not changed in split-desktop (mini bar is hidden there by design). Verified in the local preview at 375px: window open with a track loaded showed the mini bar below it; the 57px offset was corrected after measuring a 3px overlap and not re-measured. Desktop width and a real add-playlist window untested. Cache v266.
 
 ### landscape-view: Enable and optimize landscape view (Geethub #502)
 - **Status:** ready
@@ -10506,12 +10506,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #539. Ad group, see #541.
 
 ### mobile-swipe-down-close: Mobile: swiping down from a window should close it (Geethub #538)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #538. On mobile, swiping down on a window/panel closes it.
 - **Touches:** mobile panels.
-- **Branch:** 
-- **Notes:** Synced from Geethub #538. Check overlap with existing swipe entries.
+- **Branch:** agent/window-footer-swipe
+- **Notes:** Synced from Geethub #538. Check overlap with existing swipe entries. No overlap with album-art-swipe-nav / swipe-track-animation (horizontal, on the art). Reused `attachSwipeToDismiss` (queue, history and library/artist playlist sheets), which only worked on the 4px grab handle; it now starts from the handle, the header, or the list while scrolled to the top, ignores horizontal moves, inputs and draggable rows, follows the finger without a transition and closes past 90px (snaps back otherwise). Verified in the local preview with synthetic touch events: header swipe closed the sheet, a list swipe while scrolled did nothing, at scrollTop 0 it closed. Real touch hardware, the queue/history sheets and track-row reorder untested. The results/add-playlist window (`#import-overlay`) does not swipe-close yet. Cache v266.
 
 ### popular-youtube-first: For popular music, prioritize popular YouTube videos (Geethub #537)
 - **Status:** ready
