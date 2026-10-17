@@ -11096,12 +11096,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #609.
 
 ### desktop-h-screen-put-the-heart-button-on-t: desktop: h-screen: put the heart button on the album art in the bottom right corner - formatted like the fullscreen button (Geethub #610)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #610. leave the 3 dot button where it is
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #610.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #610. Assumption: 'h-screen' read as the desktop main player screen (home screen); the same heart also sits on the art in desktop fullscreen. Built (860px and wider): the heart moves onto the art's bottom-right corner, 32px round and styled like the fullscreen button (semi-opaque fill, no blur); the three dots stay beside the title. On phones it stays in the controls row (#611). While the visualizer shows its controls bottom-right the heart steps to the bottom-left. In desktop fullscreen it fades out with the other chrome. Verified in the 1400px and 375px browser preview: placement, like toggles and turns accent, moves back and forth on resize, fullscreen layout. No new [gpu-watchdog] warnings (helpGlow/navFbRing hidden-animation warnings already existed). Not checked: podcast chapters button (also bottom-left). Cache v327.
 
 ### mobile-player-stretch-the-title-to-the-wid: mobile: player: stretch the title to the width of the album art (Geethub #611)
 - **Status:** merged

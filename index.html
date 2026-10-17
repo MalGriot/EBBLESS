@@ -1537,9 +1537,9 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
 .track-meta .title-row .title{flex:1;min-width:0}
 /* balances the like + options buttons on the right so the title stays centered */
-.track-meta .title-row::before{content:'';flex:none;width:50px}
+.track-meta .title-row::before{content:'';flex:none;width:28px}
 /* the CuRRentSSsss thumbs-down adds a third right-side button (22px + 6px gap): widen the spacer to match (Geethub #358) */
-.track-meta .title-row:has(.player-decline-btn:not([hidden]))::before{width:78px}
+.track-meta .title-row:has(.player-decline-btn:not([hidden]))::before{width:56px}
 
 .marquee{overflow:hidden;white-space:nowrap;position:relative}
 .marquee>span{display:inline-block;white-space:nowrap}
@@ -1587,6 +1587,13 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .player-like-btn:hover{background:var(--panel-3);color:var(--text)}
 .player-like-btn.is-liked{color:var(--player-accent)}
 .player-decline-btn[hidden]{display:none}
+/* desktop (#610): the heart lives on the art's bottom-right corner, styled like #fsBtn (moved there by playerControlsPlace) */
+.art-fs-btn.art-like-btn{top:auto;bottom:10px;width:32px;height:32px;background:rgba(10,10,10,.6);color:var(--faint)}
+.art-fs-btn.art-like-btn svg{width:15px;height:15px}
+.art-fs-btn.art-like-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
+.art-fs-btn.art-like-btn.is-liked,.art-fs-btn.art-like-btn.is-liked:hover{color:var(--player-accent)}
+/* the visualizer's controls own the bottom-right: the heart steps over to the bottom-left while they show */
+.artwork-wrap.mode-viz .art-fs-btn.art-like-btn{right:auto;left:10px}
 .track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
@@ -1597,7 +1604,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .empty-find-btn:active{transform:scale(.96)}
 .track-meta.is-empty .empty-find-btn{display:inline-block}
 .track-meta.is-empty .title-row .player-like-btn{visibility:hidden}
-.player-stage:has(.track-meta.is-empty) .controls-row .player-like-btn{visibility:hidden}
+.player-stage:has(.track-meta.is-empty) #playerLikeBtn{visibility:hidden}
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
@@ -2865,11 +2872,11 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn,#castBtn){top:calc(var(--topbar-h) + 10px)}
   /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
      #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
-  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn){
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
     /* background/color kept for #fsBtn's own .art-fs-btn hover transition */
     transition:opacity 600ms var(--ease-in-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out);
   }
-  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn){
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
     opacity:0;pointer-events:none;
   }
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active),
@@ -23779,15 +23786,20 @@ function vizControlsPlace(){
 vizControlsMQ.addEventListener('change', vizControlsPlace);
 vizControlsPlace();
 // phones/narrow screens: the heart and the song options button sit in the
-// controls row, one on each side, so the title above gets the full art width (#611)
+// controls row, one on each side, so the title above gets the full art width (#611).
+// Desktop: the heart sits on the art's bottom-right corner like the fullscreen
+// button (#610); the options button stays beside the title.
 const playerCtlMQ = window.matchMedia('(max-width:859.98px)');
 const playerLikeEl = $('playerLikeBtn'), playerMoreEl = $('playerMoreBtn'), playerAddPlEl = $('playerAddPlBtn');
 function playerControlsPlace(){
-  if (playerCtlMQ.matches){
+  const phone = playerCtlMQ.matches;
+  playerLikeEl.classList.toggle('art-fs-btn', !phone);
+  playerLikeEl.classList.toggle('art-like-btn', !phone);
+  if (phone){
     $('shuffleBtn').before(playerLikeEl);
     $('repeatBtn').after(playerMoreEl);
   } else {
-    $('playerSpeedBtn').before(playerLikeEl);
+    $('fsBtn').parentElement.appendChild(playerLikeEl);
     playerAddPlEl.after(playerMoreEl);
   }
 }
