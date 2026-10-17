@@ -10467,20 +10467,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #544. Child of playlist-workspaces (#506).
 
 ### research-soundiiz: Reverse engineer Soundiiz (Geethub #543)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #543. Research how Soundiiz works and what EBBLESS can learn for playlist import/transfer.
 - **Touches:** research only.
 - **Branch:** 
-- **Notes:** Synced from Geethub #543. Group with #520, #521, #522 as one playlist-transfer-tools research lane.
+- **Notes:** Synced from Geethub #543. Group with #520, #521, #522 as one playlist-transfer-tools research lane. Research written, see docs/research/TRANSFER-APPS.md (all four transfer apps compared, ranked recommendations at the end). Top picks: found-X-of-Y result with missing list, one-tap fix for a wrong match, paste a list of song names.
 
 ### research-tidal-uvp: Research Tidal's unique selling points and try to incorporate them (Geethub #542)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #542. Research Tidal's USPs and propose which fit EBBLESS.
 - **Touches:** research only.
 - **Branch:** 
-- **Notes:** Synced from Geethub #542. Check against the mission statement.
+- **Notes:** Synced from Geethub #542. Check against the mission statement. Research written, see docs/research/TIDAL-USPS.md. Top picks: song credits, listening recap card, quiet support-this-artist link. Hi-res audio does not fit (source is YouTube/SoundCloud).
 
 ### electron-spoof-user-agent: Spoof the User-Agent dynamically in Electron (Geethub #541)
 - **Status:** draft
@@ -10622,28 +10622,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #525. Check mini-player-polish; may already exist. **Built:** the Mac mini player was already draggable by its background (OS drag area), but the art is a click target (back to app) so it was excluded, and the disc is almost all art, so it could barely be moved. The art now drags by hand (5px threshold, a drag never counts as a click). Position memory not added (Chrome PiP manages its own). Electron/Mac drag not run here, needs a check on the Mac.
 
 ### research-songshift: Reverse engineer SongShift (Geethub #522)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #522. Research songshift.com for playlist transfer.
 - **Touches:** research only.
 - **Branch:** 
-- **Notes:** Synced from Geethub #522. Playlist-transfer research lane with #520, #521, #543.
+- **Notes:** Synced from Geethub #522. Playlist-transfer research lane with #520, #521, #543. Research written, see docs/research/TRANSFER-APPS.md (all four transfer apps compared, ranked recommendations at the end). Top picks: found-X-of-Y result with missing list, one-tap fix for a wrong match, paste a list of song names.
 
 ### research-freeyourmusic: Research FreeYourMusic (Geethub #521)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #521. Research freeyourmusic.com.
 - **Touches:** research only.
 - **Branch:** 
-- **Notes:** Synced from Geethub #521. Playlist-transfer research lane.
+- **Notes:** Synced from Geethub #521. Playlist-transfer research lane. Research written, see docs/research/TRANSFER-APPS.md (all four transfer apps compared, ranked recommendations at the end). Top picks: found-X-of-Y result with missing list, one-tap fix for a wrong match, paste a list of song names.
 
 ### research-tunemymusic: Reverse engineer TuneMyMusic (Geethub #520)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #520. Research tunemymusic.com.
 - **Touches:** research only.
 - **Branch:** 
-- **Notes:** Synced from Geethub #520. Playlist-transfer research lane.
+- **Notes:** Synced from Geethub #520. Playlist-transfer research lane. Research written, see docs/research/TRANSFER-APPS.md (all four transfer apps compared, ranked recommendations at the end). Top picks: found-X-of-Y result with missing list, one-tap fix for a wrong match, paste a list of song names.
 
 ### vibe-cnn-research: Research convolutional neural networks to catch a listener's vibe 95% accurately (Geethub #519)
 - **Status:** draft
@@ -11160,12 +11160,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #617.
 
 ### reverse-engineer-mp3juice: reverse engineer mp3juice (Geethub #618)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #618. https://service-et-reception.fr/ they have an incredible index of music with near flawless matching and they play songs from a source we should tap into
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #618.
+- **Notes:** Synced from Geethub #618. Research written, see docs/research/MP3JUICE.md. Not building the download-site idea (YouTube terms and copyright). Real goal (better matching) goes to match scoring and one-tap alternate version.
 
 ### desktop-a-button-that-expands-the-library: desktop: a button that expands the library to the right (Geethub #619)
 - **Status:** ready
