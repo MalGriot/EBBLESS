@@ -3159,6 +3159,41 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;transform:scale(1)}
 body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
+.ms-card{display:none}
+@media (max-width:859.98px){
+  body:not(.split-desktop) .ms-card:not([hidden]){display:block;flex:none;width:calc(100% - 24px);max-width:420px;margin:6px auto 4px;border:1px solid var(--border);border-radius:12px;background:rgba(18,18,18,.82);position:relative;z-index:2}
+  .ms-row{display:flex;align-items:center}
+  .ms-head{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:40px;padding:6px 12px;background:none;border:0;color:var(--text);font-size:13px;text-align:left}
+  .ms-head-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ms-ring{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent,var(--text));flex:none}
+  .ms-caret{width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);margin-right:3px;transition:transform .2s}
+  .ms-card.is-open .ms-caret{transform:rotate(-135deg)}
+  /* the player page has no spare height: its card stays one line (next step only) so the controls are never pushed off */
+  #msCard-player .ms-caret{display:none}
+  #msCard-player .ms-items{display:none!important}
+  .ms-items{display:none;list-style:none;margin:0;padding:0 12px 8px}
+  .ms-card.is-open .ms-items{display:block}
+  .ms-items li{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13.5px;color:var(--faint)}
+  .ms-items li.is-done{color:var(--text)}
+  .ms-box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--faint);display:flex;align-items:center;justify-content:center;flex:none;color:transparent}
+  .ms-items li.is-done .ms-box{background:var(--accent,#e0b26a);border-color:var(--accent,#e0b26a);color:#111}
+  .ms-items li.is-new .ms-box{animation:msPop .45s cubic-bezier(.2,1.6,.4,1)}
+  .ms-card.ms-pulse::after{content:"";position:absolute;inset:0;border-radius:12px;border:2px solid var(--accent,#e0b26a);pointer-events:none;animation:msRing .7s ease-out forwards}
+  @keyframes msPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+  @keyframes msRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+}
+@media (prefers-reduced-motion:reduce){.ms-items li.is-new .ms-box,.ms-card.ms-pulse::after{animation:none}}
+.ms-q{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--faint);font-size:12px;line-height:1;padding:0;margin-left:6px}
+.ms-q[aria-expanded=true]{color:var(--text);border-color:var(--text)}
+.ms-qtop{margin:0 10px 0 0}
+.ms-hint{flex-basis:100%;font-size:12.5px;line-height:1.4;color:var(--faint);padding:2px 0 4px 30px}
+.ms-hint-top{padding:0 14px 10px 32px}
+.ms-items li{flex-wrap:wrap}
+.ms-items li .ms-label{flex:1;min-width:0}
+.milestone-list li{flex-wrap:wrap}
+.milestone-list li .ms-q{margin-left:auto}
+.milestone-list li .ms-pts{margin-left:8px}
+.milestone-list li .ms-hint{padding-left:26px}
 .milestone-total{font-weight:400;font-size:13px;color:var(--faint);margin-left:6px}
 .milestone-list{list-style:none;margin:0;padding:0}
 .milestone-list li{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;color:var(--faint)}
@@ -4440,6 +4475,7 @@ body.week-up-on{overflow:hidden}
       <div class="settings-block" id="settingsMilestonesBlock">
         <h2>Milestones <span id="milestoneTotal" class="milestone-total"></span></h2>
         <ul class="milestone-list" id="milestoneList"></ul>
+        <div class="settings-row"><div><div class="label">Milestone sound</div><div class="desc">A soft chime when you finish a step on a phone.</div></div><button type="button" class="switch is-active" id="msSoundBtn" role="switch" aria-checked="true" aria-label="Milestone sound"><span class="switch-knob"></span></button></div>
       </div>
       <div class="settings-block" id="settingsAboutBlock">
         <h2>About</h2>
@@ -13218,6 +13254,7 @@ function toggleLikeTrack(track){
     showToast('Removed from Liked Songs');
   } else {
     addTracksToPlaylist(LIKED_ID, [track]);
+    awardMilestone('like');
     recordListenSignal(track, 2);
     const streak = noteLikeStreak();
     showToast(streak.grew && streak.count >= 2 ? 'Added to Liked Songs · ' + streak.count + '-day streak' : 'Added to Liked Songs');
@@ -13374,6 +13411,7 @@ function createCustomPlaylist(name){
   const pl = { id, type: 'custom', name, image: null, tracks: [], ts: Date.now() };
   lsSet(LS_PL(id), pl);
   saveToLibrary(id);
+  awardMilestone('playlist');
   renderLibrary();
   return pl;
 }
@@ -16619,6 +16657,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 291, date: '2026-10-17', items: [
+    'On phones, each page (Library, Player, Settings) has a small checklist card at the top with 3 or 4 first steps. Tap the ? beside any step to see how to do it. Finished steps get a check, a soft pulse and a quiet chime (turn the chime off in Settings > Milestones).'
+  ]},
   { version: 288, date: '2026-10-17', items: [
     'Smart playlists have more choices: songs not played yet, not liked, a length (under 3 minutes, 3 to 5, over 5), artists or words to leave out, and shortest or longest first.',
     'New Milestones in Settings: small points for things like signing in, watching the tutorial, reordering a playlist or making a smart playlist.'
@@ -16859,6 +16900,7 @@ feedbackModal.addEventListener('submit', async (e) => {
     if (vibe){ vibe.sent = true; if (!vibe.force) vibeCheckAnswered(); }
     const n = (typed || vibe ? 1 : 0) + extras.length;
     setFbStatus(n > 1 ? 'Sent ' + n + ' issues. Thank you, this really helps.' : 'Sent. Thank you, this really helps.', 'ok');
+    awardMilestone('feedback');
     setTimeout(() => { if (!fbMessage.value) closeFeedbackModal(); }, 1400);
     showToast(n > 1 ? 'Feedback sent (' + n + ' issues), thank you' : 'Feedback sent, thank you');
   } catch(err){
@@ -17026,7 +17068,7 @@ function statsFeature(name){
   statsSave();
 }
 // A playlist newly added to the library (not a refresh of one already there).
-function statsImport(id){ if (statsEnabled() && !getLibrary().includes(id)){ statsTouch(); stats.pend.imports++; statsSave(); } }
+function statsImport(id){ if (!getLibrary().includes(id) && !document.body.classList.contains('onb-active')) awardMilestone('load'); if (statsEnabled() && !getLibrary().includes(id)){ statsTouch(); stats.pend.imports++; statsSave(); } }
 let statsLastTick = 0;
 function statsTick(){
   const now = Date.now(), prev = statsLastTick;
@@ -20308,6 +20350,7 @@ function wireQueueRowGestures(row, handle){
    ========================================================================= */
 function toggleQueuePanel(){ state.queueOpen ? closeQueuePanel() : openQueuePanel(); }
 function openQueuePanel(){
+  awardMilestone('queue');
   closeLibraryPlaylistPanel();
   closePlayHistory();
   state.preQueueView = state.currentView;
@@ -22376,28 +22419,95 @@ function advRunGesture(k){
    in this browser only (not in the cloud profile), awarded once each, with
    a quiet toast. No levels, no streak pressure, nothing blocked behind them. */
 const MILESTONES = [
-  ['signin', 'Sign in', 20],
-  ['tutorial', 'Watch the tutorial', 10],
-  ['reorder', 'Reorder a playlist', 10],
-  ['setting', 'Change a setting', 5],
-  ['smart', 'Make a smart playlist', 15]
+  // [id, label, points, page, how-to hint]. 3-5 essential tasks per page; the phone shows
+  // each page's own set as a small card at the top of that page.
+  ['load', 'Load a playlist or song', 10, 'library', 'Paste a link to a playlist, album or song from Spotify, YouTube, SoundCloud or Apple Music into the search bar at the top, then tap Load.'],
+  ['playlist', 'Make a playlist', 10, 'library', 'Tap + New playlist, type a name and tap Create.'],
+  ['reorder', 'Reorder a playlist', 10, 'library', 'Open one of your playlists and drag a song by its handle to a new spot.'],
+  ['smart', 'Make a smart playlist', 15, 'library', 'Tap + New playlist, then Make a smart playlist. Pick your rules and tap Create.'],
+  ['play', 'Play a song', 5, 'player', 'Tap the big play button, or tap any song in your library.'],
+  ['like', 'Like a song', 5, 'player', 'While a song plays, tap the heart next to its title.'],
+  ['next', 'Skip to the next song', 5, 'player', 'Tap the skip arrow on the right of the play button.'],
+  ['queue', 'Open the queue', 5, 'player', 'Tap Queue at the bottom to see the songs coming up.'],
+  ['signin', 'Sign in', 20, 'settings', 'Tap Sign in with Google under Account to keep your library on every device.'],
+  ['setting', 'Change a setting', 5, 'settings', 'Flip any switch or pick any option in Settings, like Blend songs together.'],
+  ['tutorial', 'Watch the tutorial', 10, 'settings', 'Tap Replay under App and let the tutorial play, or tap the ? at the top.'],
+  ['feedback', 'Send feedback', 10, 'settings', 'Tap Send feedback at the top of Settings, write a few words and tap Send.']
 ];
+const MS_PAGES = ['library', 'player', 'settings'];
 const LS_MILESTONES = 'ebbless:milestones';
+const LS_MS_SOUND = 'ebbless:milestoneSound';
 function milestonesDone(){
   try { const v = JSON.parse(localStorage.getItem(LS_MILESTONES)); return v && typeof v === 'object' ? v : {}; } catch(e){ return {}; }
 }
-function renderMilestones(){
-  const ul = document.getElementById('milestoneList');
-  if (!ul) return;
-  const done = milestonesDone();
-  let total = 0;
-  ul.innerHTML = MILESTONES.map(([id, label, pts]) => {
-    const on = !!done[id]; if (on) total += pts;
-    return '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><span class="ms-pts">' + pts + ' pts</span></li>';
-  }).join('');
-  const t = document.getElementById('milestoneTotal');
-  if (t) t.textContent = total + ' of ' + MILESTONES.reduce((a, m) => a + m[2], 0) + ' pts';
+function msSoundOn(){ try { return localStorage.getItem(LS_MS_SOUND) !== 'off'; } catch(e){ return true; } }
+// The per-page cards are phone-only (CSS hides them elsewhere); desktop keeps
+// the plain list in Settings.
+function msCardsShown(){ return window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('split-desktop'); }
+function msMotionOk(){ try { return advPrefs().motion !== 'reduced' && !window.matchMedia('(prefers-reduced-motion:reduce)').matches; } catch(e){ return true; } }
+// Two soft rising notes; one short-lived context per chime so nothing idles.
+function msChime(){
+  if (!msSoundOn()) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ac = new AC(), t0 = ac.currentTime;
+    [[660, 0], [880, 0.09]].forEach(([f, d]) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + d);
+      g.gain.exponentialRampToValueAtTime(0.05, t0 + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.28);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t0 + d); o.stop(t0 + d + 0.3);
+    });
+    setTimeout(() => { try { ac.close(); } catch(e){} }, 700);
+  } catch(e){}
 }
+let msHint = '';   // which task's how-to line is showing: 'card:<id>' or 'list:<id>'
+const msCardOpen = {};   // page -> user expanded the card
+function renderMilestones(justDone){
+  const done = milestonesDone();
+  const ul = document.getElementById('milestoneList');
+  if (ul){
+    let total = 0;
+    ul.innerHTML = MILESTONES.map(([id, label, pts, , hint]) => {
+      const on = !!done[id]; if (on) total += pts;
+      return '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><button type="button" class="ms-q" data-ms-q="list:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'list:' + id) + '">?</button><span class="ms-pts">' + pts + ' pts</span>' + (msHint === 'list:' + id ? '<div class="ms-hint">' + hint + '</div>' : '') + '</li>';
+    }).join('');
+    const t = document.getElementById('milestoneTotal');
+    if (t) t.textContent = total + ' of ' + MILESTONES.reduce((a, m) => a + m[2], 0) + ' pts';
+  }
+  const snd = document.getElementById('msSoundBtn');
+  if (snd){ snd.classList.toggle('is-active', msSoundOn()); snd.setAttribute('aria-checked', String(msSoundOn())); }
+  MS_PAGES.forEach(page => {
+    const card = document.getElementById('msCard-' + page);
+    if (!card) return;
+    const tasks = MILESTONES.filter(m => m[3] === page);
+    const left = tasks.filter(m => !done[m[0]]);
+    if (card.dataset.gone === '1') return;
+    if (!left.length && !justDone){ card.hidden = true; return; }
+    card.hidden = false;
+    const open = !!msCardOpen[page];
+    card.classList.toggle('is-open', open);
+    card.querySelector('.ms-head-text').textContent = left.length ? (tasks.length - left.length) + ' of ' + tasks.length + ' \u00B7 ' + left[0][1] : 'All done on this page';
+    card.querySelector('.ms-head').setAttribute('aria-expanded', String(open));
+    card.querySelector('.ms-items').innerHTML = tasks.map(([id, label, , , hint]) =>
+      '<li class="' + (done[id] ? 'is-done' : '') + (id === justDone ? ' is-new' : '') + '"><span class="ms-box" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ms-label">' + label + '</span><button type="button" class="ms-q" data-ms-q="card:' + id + '" aria-label="How: ' + label + '" aria-expanded="' + (msHint === 'card:' + id) + '">?</button>' + (msHint === 'card:' + id ? '<div class="ms-hint">' + hint + '</div>' : '') + '</li>').join('');
+    // collapsed (or the player's one-line card): the ? beside the headline shows the next task's how-to under it
+    const nextT = left[0];
+    const qTop = card.querySelector('.ms-qtop'), hTop = card.querySelector('.ms-hint-top');
+    qTop.hidden = !nextT || (open && page !== 'player');
+    hTop.hidden = !nextT || qTop.hidden || msHint !== 'card:' + (nextT && nextT[0]);
+    if (nextT){ qTop.dataset.msQ = 'card:' + nextT[0]; qTop.setAttribute('aria-expanded', String(!hTop.hidden)); hTop.textContent = nextT[4]; }
+    card.classList.toggle('is-celebrate', id_in(justDone, tasks));
+    if (!left.length){
+      // everything on this page is done: let the last check land, then tuck the card away
+      setTimeout(() => { if (!MILESTONES.some(m => m[3] === page && !milestonesDone()[m[0]])){ card.dataset.gone = '1'; card.hidden = true; } }, 3200);
+    }
+  });
+}
+function id_in(id, tasks){ return !!id && tasks.some(m => m[0] === id); }
 function awardMilestone(id){
   const m = MILESTONES.find(x => x[0] === id);
   if (!m) return;
@@ -22405,9 +22515,43 @@ function awardMilestone(id){
   if (done[id]) return;
   done[id] = Date.now();
   try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){ return; }
-  renderMilestones();
+  const cards = msCardsShown();
+  renderMilestones(cards ? id : null);
+  if (cards){
+    const card = document.getElementById('msCard-' + m[3]);
+    if (card && !card.hidden && card.offsetParent !== null){
+      if (msMotionOk()){
+        const li = card.querySelector('li.is-new');
+        if (li){ li.classList.remove('is-new'); void li.offsetWidth; li.classList.add('is-new'); }
+        card.classList.remove('ms-pulse'); void card.offsetWidth; card.classList.add('ms-pulse');
+      }
+      msChime();
+      return;
+    }
+  }
   showToast('+' + m[2] + ' pts \u00B7 ' + m[1]);
 }
+(function msInit(){
+  MS_PAGES.forEach(page => {
+    const host = document.querySelector('#view-' + page + ' .view-scroll');
+    if (!host) return;
+    const card = document.createElement('div');
+    card.className = 'ms-card'; card.id = 'msCard-' + page; card.hidden = true;
+    card.innerHTML = '<div class="ms-row"><button type="button" class="ms-head" aria-expanded="false"><span class="ms-ring" aria-hidden="true"></span><span class="ms-head-text"></span><span class="ms-caret" aria-hidden="true"></span></button><button type="button" class="ms-q ms-qtop" aria-label="How to do the next step">?</button></div><div class="ms-hint ms-hint-top" hidden></div><ul class="ms-items"></ul>';
+    card.querySelector('.ms-head').addEventListener('click', () => { if (page === 'player') return; msCardOpen[page] = !msCardOpen[page]; renderMilestones(); });
+    const back = host.querySelector(':scope > .settings-back');
+    host.insertBefore(card, back ? back.nextSibling : host.firstChild);
+  });
+  document.addEventListener('click', (e) => {
+    const q = e.target.closest('[data-ms-q]');
+    if (!q) return;
+    const key = q.dataset.msQ;
+    msHint = msHint === key ? '' : key;
+    renderMilestones();
+  });
+  const snd = document.getElementById('msSoundBtn');
+  if (snd) snd.addEventListener('click', () => { try { localStorage.setItem(LS_MS_SOUND, msSoundOn() ? 'off' : 'on'); } catch(e){} renderMilestones(); if (msSoundOn()) msChime(); });
+})();
 renderMilestones();
 
 function advChoose(k, v){
@@ -24700,6 +24844,7 @@ function pausePlayback(){
 }
 
 function playIndex(pos, opts){
+  awardMilestone('play');
   const ad = activeDeck();
   if (!ad.player){ loadIndex(pos, true); return; }
   if (pos === state.queuePos){
@@ -24969,7 +25114,7 @@ playBtn.addEventListener('click', () => {
   const nudgeId = playNudgeActive() ? playNudgeTargetId() : null;
   if (nudgeId) playLibraryTrackInline(nudgeId, 0); else playRickrollFallback();
 });
-nextBtn.addEventListener('click', () => playNext(false));
+nextBtn.addEventListener('click', () => { awardMilestone('next'); playNext(false); });
 prevBtn.addEventListener('click', playPrev);
 flowPlayBtn.addEventListener('click', () => { if (state.queuePos >= 0) userTogglePlayback(); });
 flowNextBtn.addEventListener('click', () => playNext(false));
