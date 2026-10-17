@@ -11014,3 +11014,299 @@ Add entries in this shape:
 - **Touches:** index.html (player), worker/ (segment lookup or own store), docs/SPONSORBLOCK-AND-PODCAST-ADS.md
 - **Branch:** agent/sponsorblock-build
 - **Notes:** Start from the research doc [docs/SPONSORBLOCK-AND-PODCAST-ADS.md](docs/SPONSORBLOCK-AND-PODCAST-ADS.md); its earlier recommendation was not to build, the owner has now decided to. Check SponsorBlock's public API and licence/attribution terms before depending on it. Must respect ad avoidance (#523) and the GPU budget, and decide songs vs podcasts scope (doc suggested podcasts only, never songs). Shares the skip-prompt UI with #575, so build that prompt once and reuse it. Recommended model: Opus (design-heavy, reverse engineering). **Shipped 2026-10-17 (cache v314):** browser asks SponsorBlock directly (CORS open, hash prefix only, no worker change) and feeds the #575 tap-to-skip prompt. Podcasts from YouTube: sponsor/self-promo/reminder/intro/outro, always on. Songs: "Skip talking in songs" setting (non-music parts only), off by default. No silent auto-skip. Details and what was verified in docs/SPONSORBLOCK-AND-PODCAST-ADS.md Part 3.
+
+### app-should-feel-like-home: app should feel like home (Geethub #583)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #583. unlinke most apps, spotify feels like a place. but what kind of place? a shop? a room? your room? ebbless should feel like it's YOURS. and it's actively helping you stay in feng shui. think cozy, spacious, warm, not claustrophobic, not so open you get lost, not too busy but attention grabbing, knowing exactly where to go and what to do. comfortable
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #583.
+
+### android-app-killed-by-low-memory-killer-af: Android: app killed by low-memory killer after ~46 min of screen-off playback (Geethub #584)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Bug Geethub #584. ## Summary Android app 2.8.2 on the TECNO POP 9 (Android 14, 2.8 GB RAM). In a 70-minute screen-off, unplugged soak, music played cleanly for 44 minutes, then Android's low-memory killer SIGKILLed the EBBLESS process at 13:47:02 (while it held its foreground playback service). Music stopped; a new process appeared at 13:51:38 (screen wake; whether 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #584. Related to #578; Android native.
+
+### the-entire-app-freezes-lags-and-becomes-un: the entire app freezes lags and becomes unresponsive when you try to drag a song over a playlist thumb (Geethub #595)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #595. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #595. Related to #635 (performance).
+
+### music-map: music map (Geethub #597)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #597. utilize this music map to connect users with their vibe https://www.music-map.com/ reverse engineer it and use it
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #597.
+
+### miniplayer-should-open-always-in-the-botto: miniplayer should open always in the bottom right corner (Geethub #604)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #604. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #604. Related to #605, #623.
+
+### the-miniplayer-should-stay-in-position-acr: the miniplayer should stay in position across desktops (Geethub #605)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #605. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #605. Related to #512 (merged, app 1.0.7/1.0.8); check if it still fails.
+
+### m-should-activate-miniplayer: m should activate miniplayer (Geethub #606)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #606. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #606.
+
+### library-changes: library changes (Geethub #607)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #607. default order should be "most recent" "new playlist" should just be a plus sign "view" should just be an icon inline with the section pills (resize the pills to be more compact) search and new playlist should be in line with library title thumbs should be moved up closer to section title section title should be moved down further away from pills
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #607.
+
+### mobile-seacrh-bar-should-become-a-button-i: mobile: seacrh bar should become a button in the bottom nav (Geethub #608)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #608. it should open a full tab like queue or library the tab should have a search bar at the top below the search bar should be a grid of suggestions based on the user's listening history and what they will most likely like below those suggestions should be genres and/or keywords and/or prompts for playlists that fit the current mood based on rosicrusia
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #608.
+
+### desktop-search-bar-browse-button: desktop: search bar: browse button (Geethub #609)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #609. it should open a grid of suggestions you make the list of the most satisfying parameters a user might prefer
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #609.
+
+### desktop-h-screen-put-the-heart-button-on-t: desktop: h-screen: put the heart button on the album art in the bottom right corner - formatted like the fullscreen button (Geethub #610)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #610. leave the 3 dot button where it is
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #610.
+
+### mobile-player-stretch-the-title-to-the-wid: mobile: player: stretch the title to the width of the album art (Geethub #611)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #611. put the heart button and three dots inline with player controls - one on each side
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #611.
+
+### the-miniplayer-has-changed-back-to-a-recta: the miniplayer has changed back to a rectangle. there should be options (Geethub #612)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #612. it was lp shaped and working toward cassette shaped and more shapes to come. bring them back
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #612. Overlaps #527-style mini shapes: shipped #526 (shape per skin) and Tape shape in app 1.0.8; check what regressed. Related to #623, #627.
+
+### on-the-nothing-playing-yet-screen-have-a-e: on the "nothing playing yet" screen, have a ebbless logo bounce around inside the album art like the dvd logo used to (Geethub #613)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #613. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #613.
+
+### don-t-count-rick-astley-s-never-gonna-give: don't count rick astley's never gonna give you up in the listener's play history or analytics (Geethub #614)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #614. don't put it in on air either. just treat it like nothing is playing and it never played
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #614.
+
+### after-loading-the-song-after-the-ad-the-so: after loading the song after the ad, the song is starting several seconds in. it should start at 0:00 if it's not a resume play (Geethub #615)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #615. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #615.
+
+### library-pills-when-only-one-is-active-hitt: library pills: when only one is active, hitting it again activates all pills (Geethub #616)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #616. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #616.
+
+### a-chatbot-that-users-can-air-their-grievan: a chatbot that users can air their grievances to and train their own algorithm (Geethub #617)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #617. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #617.
+
+### reverse-engineer-mp3juice: reverse engineer mp3juice (Geethub #618)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #618. https://service-et-reception.fr/ they have an incredible index of music with near flawless matching and they play songs from a source we should tap into
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #618.
+
+### desktop-a-button-that-expands-the-library: desktop: a button that expands the library to the right (Geethub #619)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #619. it should make the player the same size of the queue and sit between the library and queue
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #619.
+
+### sliding-on-list-items: sliding on list items (Geethub #620)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #620. sliding left/right on library and queue list items should be animated the list item should move over 28% and stay there til cancelled after swipe left should reveal red underneath with a trashcan icon. if they tap the icon, it prompts them to ensure they want to delete. when they tap yes, it deletes. when they hit no, the list item returns to origi
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #620.
+
+### you-should-be-able-to-upload-music-from-yo: you should be able to upload music from your local device or google cloud to your library (Geethub #621)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #621. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #621.
+
+### when-on-air-is-on-air-the-thumb-should-swi: when on air is "on air", the thumb should switch between the thumb video art and a 1x1 of the song that's currently playing (Geethub #622)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #622. when it's off air, it should switch between the thumb video art and the 2x2 grid thumb art
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #622.
+
+### when-the-miniplayer-switches-shapes-it-sho: when the miniplayer switches shapes, it should always magnetize to the bottom right corner (Geethub #623)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #623. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #623. Related to #604, #605, #612.
+
+### when-it-plays-an-ad-try-switching-the-link: when it plays an ad, try switching the link to a less popular song or a soundcloud link if it's close to 100% match (Geethub #624)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #624. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #624.
+
+### youtube-search: youtube search (Geethub #625)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #625. sometimes i'm just searching for a specific song the same way i would on youtube. it should use the common search engine that people are used to
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #625.
+
+### the-top-corners-of-the-windows-should-have: the top corners of the windows should have a subtle swoop or wave. it's will be classy and on brand (Geethub #626)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #626. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #626.
+
+### cymatics-miniplayer-get-creative-something: cymatics miniplayer - get creative. something new and on brand (Geethub #627)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #627. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #627. Related to #612.
+
+### 3-dot-menu-start-a-radio-based-on-this-son: 3 dot menu: start a radio based on this song (Geethub #628)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #628. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #628.
+
+### when-you-play-an-album-or-playlist-and-the: when you play an album or playlist and the queue changes to a new queue, the queue list should snap to the top (Geethub #629)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #629. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #629.
+
+### pictures-icons-in-the-advance-settings-sec: pictures/ icons in the advance settings section (Geethub #630)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #630. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #630.
+
+### searching-in-the-library-should-show-only: searching in the library should show only what you're searching for (Geethub #631)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #631. if it's a song, deactivate all pills
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #631.
+
+### when-you-deactivate-a-pill-in-library-main: when you deactivate a pill in library (mainly podcasts), it resizes them and it becomes scrollable. this shouldn't happen (Geethub #632)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #632. the word kind of slips out of the border also
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #632.
+
+### is-there-a-way-to-change-the-dock-icon-bas: is there a way to change the dock icon based on what album art mode is active? (Geethub #633)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #633. like make it a record or an lp or out the cymatics behind the logo? obvs the logo must always be there but maybe put things behind it
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #633.
+
+### mobile-needs-a-lock-screen-and-notif-playe: mobile needs a lock screen and notif player with play rewind and heart (Geethub #634)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #634. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #634. Likely duplicate of #581 (lock screen controls); fold together when queued.
+
+### mobile-moves-really-slow-and-slows-down-th: mobile moves really slow and slows down the phone (Geethub #635)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #635. when you close it it doesnt stop. it's still visible in the top bar. it says its playing in the bg. there needs to be an audit on how to make it move faster, smoother and play well with other apps
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #635. Related to #595, #584 (performance).
+
+### hovering-the-miniplayer-should-show-the-ti: hovering the miniplayer should show the title and artist and heart and thumbs down (Geethub #636)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #636. 
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #636.
