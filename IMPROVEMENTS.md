@@ -10167,7 +10167,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #516. Soften the Mac security warning so people don't get scared.
 - **Touches:**
 - **Branch:** agent/mac-download-flow
-- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a friendly "first open" note (right-click, Open). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Stays ready for that step.
+- **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a 3-step first-open guide under the button (drag to Applications; right-click, Open, Open; newer macOS: System Settings > Privacy & Security > Open Anyway). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Stays ready for that step.
 
 ### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
 - **Status:** draft
