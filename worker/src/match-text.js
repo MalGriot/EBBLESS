@@ -280,3 +280,13 @@ export function candidateNamesArtist(c, keys) {
   const hay = ' ' + matchKey([c.title, c.channel, c.snippet].filter(Boolean).join(' ')) + ' ';
   return keys.some(k => hay.includes(' ' + k + ' '));
 }
+
+// True if the candidate's channel (the "page" that posted it) names a credited
+// artist: "The Weeknd", "Adele - Topic", "AdeleVEVO", "Gnarls Barkley Official".
+// Whole-word on the channel only, so a title mention doesn't count. VEVO is
+// split off the end first since it's glued to the name.
+export function channelNamesArtist(channel, keys) {
+  if (!keys.length) return false;
+  const hay = ' ' + matchKey(String(channel || '').replace(/vevo$/i, ' vevo')) + ' ';
+  return keys.some(k => hay.includes(' ' + k + ' '));
+}

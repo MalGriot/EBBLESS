@@ -198,3 +198,13 @@ test('artist guard: right title by wrong artist is rejected', () => {
   assert.deepEqual(artistKeys(''), []);
   assert.ok(candidateNamesArtist({ title: 'x', channel: 'y' }, []));
 });
+
+import { channelNamesArtist } from '../src/match-text.js';
+test('channelNamesArtist: artist page vs title-only mention', () => {
+  const k = artistKeys('Adele');
+  assert.ok(channelNamesArtist('Adele - Topic', k));
+  assert.ok(channelNamesArtist('AdeleVEVO', k));
+  assert.ok(channelNamesArtist('Adele', k));
+  assert.ok(!channelNamesArtist('Lyrics Fan Channel', k));
+  assert.ok(!channelNamesArtist('Adele', []));
+});

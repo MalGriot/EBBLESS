@@ -11,7 +11,7 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist,
+  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -68,7 +68,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v12';
+const SEARCH_CACHE_VERSION = 'v13';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -322,6 +322,7 @@ function parseDurationText(text) {
 // audio/topic bonuses above, so a viral official music video still loses to
 // a modest audio-only upload rather than a popularity contest deciding.
 const VIEW_COUNT_WEIGHT = 2;
+const ARTIST_CHANNEL_WEIGHT = 5;
 
 // A report (see handleReport) once turned up a match that was a totally
 // different song by the same artist - a highly-viewed "Official Video" on
@@ -489,6 +490,9 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   if (maxViews > 0) score += (c.views / maxViews) * VIEW_COUNT_WEIGHT;
   score += popularityBonus(c.views, c.titleOverlap);
   if (c.artistNamed === false) score -= 6;
+  // The artist's own page (channel named after them) beats a third-party
+  // upload that only mentions them in the video title.
+  if (c.artistChannel) score += ARTIST_CHANNEL_WEIGHT;
   return score;
 }
 
@@ -656,7 +660,10 @@ async function handleSearch(url, ctx) {
   // description. Same filter-with-fallback pattern; stands down when the
   // credit is missing or non-Latin (see artistKeys).
   const artistKeyList = artistKeys(artist);
-  pool.forEach(c => { c.artistNamed = candidateNamesArtist(c, artistKeyList); });
+  pool.forEach(c => {
+    c.artistNamed = candidateNamesArtist(c, artistKeyList);
+    c.artistChannel = channelNamesArtist(c.channel, artistKeyList);
+  });
   const artistMatched = pool.filter(c => c.artistNamed);
   pool = artistMatched.length ? artistMatched : pool;
 
