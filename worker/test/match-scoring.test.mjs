@@ -218,3 +218,14 @@ test('isCleanArtistTitle: label upload clean, fan upload not', () => {
   assert.ok(!isCleanArtistTitle('Lava Lamp - Thundercat (Sub Español)', 'Lava Lamp', k));
   assert.ok(!isCleanArtistTitle('"Lava Lamp" (Thundercat) - Mree Cover', 'Lava Lamp', k));
 });
+
+import { genreConflict } from '../src/match-text.js';
+test('genreConflict: other-genre candidate flagged, own-genre and unrelated not', () => {
+  const tags = ['soul', 'funk', 'r&b'];
+  assert.ok(genreConflict('Hello - Country Music Cover', tags, 'Hello', 'Adele'));
+  assert.ok(!genreConflict('Hello (Official Audio)', tags, 'Hello', 'Adele'));
+  assert.ok(!genreConflict('Hello neo soul version', tags, 'Hello', 'Adele'));
+  assert.ok(!genreConflict('Country Roads - John Denver', tags, 'Country Roads', 'John Denver'));
+  assert.ok(!genreConflict('Hello country', [], 'Hello', 'Adele'));
+  assert.ok(!genreConflict('Hello hip-hop rap', ['trap'], 'Hello', 'Adele'));
+});

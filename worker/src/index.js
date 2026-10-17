@@ -11,7 +11,7 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle,
+  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -68,7 +68,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v14';
+const SEARCH_CACHE_VERSION = 'v15';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -491,6 +491,7 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   if (maxViews > 0) score += (c.views / maxViews) * VIEW_COUNT_WEIGHT;
   score += popularityBonus(c.views, c.titleOverlap);
   if (c.artistNamed === false) score -= 6;
+  if (c.genreConflict) score -= 6;
   // The artist's own page (channel named after them) beats a third-party
   // upload that only mentions them in the video title.
   if (c.artistChannel) score += ARTIST_CHANNEL_WEIGHT;
@@ -550,7 +551,7 @@ function snippetNamesAlbum(snippet, album) {
     .some(a => a.length > 1 && hay.includes(' ' + a + ' '));
 }
 
-async function handleSearch(url, ctx) {
+async function handleSearch(url, ctx, env) {
   const title = url.searchParams.get('title');
   const artist = url.searchParams.get('artist') || '';
   // Source track's duration in milliseconds (as Spotify returns it), if the
@@ -671,6 +672,20 @@ async function handleSearch(url, ctx) {
   });
   const artistMatched = pool.filter(c => c.artistNamed);
   pool = artistMatched.length ? artistMatched : pool;
+
+  // Genre guard: the source track's Last.fm tags say what genre it is; a
+  // candidate whose title/channel/description advertises a different genre
+  // (and none of the source's) is dropped, same filter-with-fallback pattern.
+  // Skipped when there are no tags or no Last.fm key; never blocks a search.
+  let sourceTags = [];
+  if (env && env.LASTFM_API_KEY) {
+    try { sourceTags = (await getLastfmTopTags(title, artist, env)).slice(0, 8).map(t => t.name); } catch (e) {}
+  }
+  if (sourceTags.length) {
+    pool.forEach(c => { c.genreConflict = genreConflict([c.title, c.channel, c.snippet].join(' '), sourceTags, title, artist); });
+    const genreOk = pool.filter(c => !c.genreConflict);
+    pool = genreOk.length ? genreOk : pool;
+  }
 
   // Same hard-filter-with-fallback pattern again: a candidate running far
   // longer/shorter than the source track is very likely an instrumental,
@@ -4766,7 +4781,7 @@ export default {
     try {
       if (url.pathname === '/playlist') return await handleEmbed('playlist', url, ctx);
       if (url.pathname === '/album') return await handleEmbed('album', url, ctx);
-      if (url.pathname === '/search') return await handleSearch(url, ctx);
+      if (url.pathname === '/search') return await handleSearch(url, ctx, env);
       if (url.pathname === '/track') return await handleTrack(url, ctx);
       if (url.pathname === '/ytplaylist') return await handleYtPlaylist(url, ctx);
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);

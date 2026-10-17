@@ -304,3 +304,31 @@ export function isCleanArtistTitle(candidateTitle, sourceTitle, keys) {
   const known = new Set(matchKey(sourceTitle).split(' ').filter(Boolean));
   return hay.split(' ').filter(Boolean).every(w => known.has(w) || CLEAN_FILLER.has(w));
 }
+
+// Genre guard: a candidate that advertises a genre ("country", "metal"...)
+// the source track isn't tagged with is probably a different song. Groups
+// fold near-synonyms together so "rap" and "hip hop" don't conflict.
+const GENRE_GROUPS = [
+  ['country', 'bluegrass', 'honky tonk'], ['metal', 'heavy metal', 'death metal', 'black metal'], ['punk', 'hardcore'],
+  ['rock', 'hard rock', 'indie rock', 'alt rock', 'alternative'], ['pop', 'synthpop', 'k pop', 'kpop'],
+  ['hip hop', 'rap', 'trap', 'drill', 'boom bap'], ['rnb', 'r b', 'soul', 'neo soul'], ['funk', 'disco'],
+  ['jazz', 'bebop', 'swing'], ['blues'], ['folk', 'acoustic'], ['house', 'techno', 'edm', 'trance', 'dubstep', 'electronic', 'electro'],
+  ['reggae', 'dancehall', 'dub'], ['gospel', 'christian'], ['classical', 'orchestral', 'piano'], ['latin', 'reggaeton', 'salsa', 'bachata'],
+  ['afrobeats', 'afrobeat', 'amapiano'], ['lofi', 'lo fi'], ['ambient'], ['indie'],
+];
+function genreGroupsIn(text) {
+  const hay = ' ' + matchKey(text) + ' ';
+  const out = new Set();
+  GENRE_GROUPS.forEach((g, i) => { if (g.some(w => hay.includes(' ' + w + ' '))) out.add(i); });
+  return out;
+}
+// tags: Last.fm tag names for the source track. Genre words that are part of
+// the source title/artist ("Country Roads") never count against a candidate.
+export function genreConflict(candidateText, tags, sourceTitle, artist) {
+  const source = genreGroupsIn((tags || []).join(' '));
+  if (!source.size) return false;
+  const own = genreGroupsIn(sourceTitle + ' ' + artist);
+  const cand = genreGroupsIn(candidateText);
+  const named = [...cand].filter(i => !own.has(i));
+  return named.length > 0 && named.every(i => !source.has(i));
+}
