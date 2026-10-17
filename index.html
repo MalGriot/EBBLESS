@@ -7920,41 +7920,67 @@ function needsUnmatchedRematch(pl){
   return !!pl.rematchUnmatched && pl.tracks.some(t => t && !t.videoId && t.rematchTried !== RESOLVE_LOGIC_VERSION);
 }
 const unmatchedRematchInFlight = new Set();
-async function rematchUnmatchedInBackground(id){
-  if (unmatchedRematchInFlight.has(id)) return;
+// Works through the unmatched rows in batches of 100: each batch is applied and saved before the
+// next starts, so a 5,000-song import fills in steadily (and survives closing the tab: what is
+// left is picked up again by the next natural trigger) instead of saving only at the very end.
+const REMATCH_BATCH = 100;
+// Keeps the matching service and the page unbothered: one background search at a time across ALL
+// playlists (a shared queue), at most about 40 a minute, and it stands down while the device is
+// offline. Songs you play or search for yourself never wait on this.
+const REMATCH_GAP_MS = 1500;
+let rematchChain = Promise.resolve();
+function rematchUnmatchedInBackground(id){
+  if (unmatchedRematchInFlight.has(id)) return rematchChain;
   unmatchedRematchInFlight.add(id);
-  try {
-    const snap = getCachedPlaylist(id);
-    if (!snap || !needsUnmatchedRematch(snap)) return;
-    const results = new Map();
-    for (let i = 0; i < snap.tracks.length; i++){
-      const t = snap.tracks[i];
-      if (!t || t.videoId || t.rematchTried === RESOLVE_LOGIC_VERSION) continue;
-      // A thrown search (offline, backend down) isn't stamped, so it's
-      // retried on the next natural trigger rather than burned; stop here.
-      try { results.set(i, await searchYouTubeCached(t.title, t.artist, (t.srcDuration || 0) * 1000 || undefined)); }
-      catch(e){ break; }
-    }
-    if (!results.size) return;
-    // Re-read so edits made while searching aren't clobbered; only apply to
-    // a row that's still the same unmatched track.
-    const pl = getCachedPlaylist(id);
-    if (!pl) return;
-    results.forEach((m, i) => {
-      const t = pl.tracks[i], o = snap.tracks[i];
-      if (!t || t.videoId || t.title !== o.title || t.artist !== o.artist) return;
-      if (m && m.videoId){
-        t.videoId = m.videoId; t.matchedTitle = m.title || ''; t.channel = m.channel || ''; t.duration = m.duration || 0;
-        delete t.rematchTried;
-      } else {
-        t.rematchTried = RESOLVE_LOGIC_VERSION;
+  rematchChain = rematchChain.then(() => rematchRun(id)).catch((e) => { console.warn('[ebbless] background matching stopped', e); }).then(() => { unmatchedRematchInFlight.delete(id); });
+  return rematchChain;
+}
+async function rematchRun(id){
+  {
+    for (;;){
+      const snap = getCachedPlaylist(id);
+      if (!snap || !needsUnmatchedRematch(snap)) return;
+      const todo = [];
+      for (let i = 0; i < snap.tracks.length && todo.length < REMATCH_BATCH; i++){
+        const t = snap.tracks[i];
+        if (t && !t.videoId && t.rematchTried !== RESOLVE_LOGIC_VERSION) todo.push(i);
       }
-    });
-    persistPlaylistObj(pl);
-    if (state.playlist && state.playlist.id === id) state.playlist = pl;
-    renderLibrary();
-  } finally {
-    unmatchedRematchInFlight.delete(id);
+      if (!todo.length) return;
+      const results = new Map();
+      let thrown = false;
+      for (const i of todo){
+        const t = snap.tracks[i];
+        // A thrown search (offline, backend down) isn't stamped, so it's
+        // retried on the next natural trigger rather than burned; stop here.
+        try { results.set(i, await searchYouTubeCached(t.title, t.artist, (t.srcDuration || 0) * 1000 || undefined)); }
+        catch(e){ thrown = true; break; }
+        await sleep(REMATCH_GAP_MS);
+        while (navigator.onLine === false) await sleep(5000);
+      }
+      if (results.size){
+        // saving a huge playlist (profile bookkeeping, library repaint) can hitch the page for a moment,
+        // so it waits for an idle slot rather than landing mid-tap or mid-scroll
+        await new Promise(r => (window.requestIdleCallback ? requestIdleCallback(r, { timeout: 5000 }) : setTimeout(r, 0)));
+        // Re-read so edits made while searching aren't clobbered; only apply to
+        // a row that's still the same unmatched track.
+        const pl = getCachedPlaylist(id);
+        if (!pl) return;
+        results.forEach((m, i) => {
+          const t = pl.tracks[i], o = snap.tracks[i];
+          if (!t || t.videoId || t.title !== o.title || t.artist !== o.artist) return;
+          if (m && m.videoId){
+            t.videoId = m.videoId; t.matchedTitle = m.title || ''; t.channel = m.channel || ''; t.duration = m.duration || 0;
+            delete t.rematchTried;
+          } else {
+            t.rematchTried = RESOLVE_LOGIC_VERSION;
+          }
+        });
+        persistPlaylistObj(pl);
+        if (state.playlist && state.playlist.id === id) state.playlist = pl;
+        renderLibrary();
+      }
+      if (thrown || !results.size) return;
+    }
   }
 }
 // Quietly re-resolves a playlist whose cached links predate the current
@@ -8405,6 +8431,29 @@ function closeFindMusic(){ if (fmEl) fmEl.hidden = true; }
    ========================================================================= */
 const SPOTIFY_CLIENT_ID = '';
 const SPOTIFY_SCOPES = 'user-library-read playlist-read-private playlist-read-collaborative';
+// one imported list holds at most this many songs; the browser's storage (a few MB) and the
+// cloud profile (5 MB for everything) are the real limits, so saves are checked (importSave)
+const IMPORT_MAX_SONGS = 10000;
+// saves an imported playlist and says so if the browser had no room for it
+// a fetch that gives up after 15 s and tries again (up to 3 times), so one stalled request can't freeze a long import
+async function importFetch(url, opts){
+  let last;
+  for (let i = 0; i < 3; i++){
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+    try { const r = await fetch(url, Object.assign({}, opts, { signal: ctl.signal })); if (r.status < 500 && r.status !== 429) return r; last = new Error('http ' + r.status); }
+    catch(e){ last = e; }
+    finally { clearTimeout(timer); }
+    await sleep(800 * (i + 1));
+  }
+  throw last;
+}
+function importSave(pl){
+  persistPlaylistObj(pl);
+  let ok = false;
+  try { ok = !!localStorage.getItem(LS_PL(pl.id)); } catch(e){}
+  if (!ok) showToast('Not enough storage for "' + pl.name + '". Remove some playlists and try again.');
+  return ok;
+}
 const LS_SPOTIFY_AUTH = 'ebbless:spotifyAuth';
 const spotifyRedirectUri = () => location.origin + location.pathname;
 function b64url(buf){ return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
@@ -8455,7 +8504,7 @@ async function spotifyAccessToken(){
 async function spotifyApi(path){
   const tok = await spotifyAccessToken();
   if (!tok) throw new Error('signed out');
-  const r = await fetch(path.startsWith('http') ? path : 'https://api.spotify.com/v1' + path, { headers: { Authorization: 'Bearer ' + tok } });
+  const r = await importFetch(path.startsWith('http') ? path : 'https://api.spotify.com/v1' + path, { headers: { Authorization: 'Bearer ' + tok } });
   if (r.status === 401){ spotifyDisconnect(); throw new Error('signed out'); }
   if (!r.ok) throw new Error('spotify ' + r.status);
   return r.json();
@@ -8508,13 +8557,13 @@ async function spotifyImportSelected(){
       fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label;
       fmRender();
       const rows = it.kind === 'liked'
-        ? (await spotifyPages('/me/tracks?limit=50', 2000)).map(x => spotifyTrackRow(x.track))
-        : (await spotifyPages('/playlists/' + it.id + '/tracks?limit=100&fields=items(track(name,is_local,duration_ms,artists(name),album(images))),next', 2000)).map(x => spotifyTrackRow(x.track));
+        ? (await spotifyPages('/me/tracks?limit=50', IMPORT_MAX_SONGS)).map(x => spotifyTrackRow(x.track))
+        : (await spotifyPages('/playlists/' + it.id + '/tracks?limit=100&fields=items(track(name,is_local,duration_ms,artists(name),album(images))),next', IMPORT_MAX_SONGS)).map(x => spotifyTrackRow(x.track));
       const tracks = rows.filter(Boolean);
       if (!tracks.length) continue;
       const id = 'custom-sp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
       const name = it.kind === 'liked' ? 'Spotify Liked Songs' : it.label;
-      persistPlaylistObj({ id, type: 'custom', name, image: it.image || tracks.find(t => t.art)?.art || null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'spotify' });
+      if (!importSave({ id, type: 'custom', name, image: it.image || tracks.find(t => t.art)?.art || null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'spotify' })) continue;
       saveToLibrary(id);
       ids.push(id); made++;
     }
@@ -8563,7 +8612,7 @@ function ytAskToken(){
 }
 async function ytApi(path){
   if (!ytToken || Date.now() > ytTokenExp) await ytAskToken();
-  const r = await fetch('https://www.googleapis.com/youtube/v3/' + path, { headers: { Authorization: 'Bearer ' + ytToken } });
+  const r = await importFetch('https://www.googleapis.com/youtube/v3/' + path, { headers: { Authorization: 'Bearer ' + ytToken } });
   if (r.status === 401){ ytToken = null; throw new Error('signed out'); }
   if (!r.ok) throw new Error('youtube ' + r.status);
   return r.json();
@@ -8625,12 +8674,12 @@ async function youtubeImportSelected(){
       const it = chosen[i];
       fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label;
       fmRender();
-      const rows = await ytPages('playlistItems?part=snippet&maxResults=50&playlistId=' + encodeURIComponent(it.id), 2000);
+      const rows = await ytPages('playlistItems?part=snippet&maxResults=50&playlistId=' + encodeURIComponent(it.id), IMPORT_MAX_SONGS);
       const seen = new Set();
       const tracks = rows.map(ytTrackRow).filter(t => t && !seen.has(t.videoId) && seen.add(t.videoId));
       if (!tracks.length) continue;
       const id = 'custom-yt-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-      persistPlaylistObj({ id, type: 'custom', name: it.liked ? 'YouTube Liked' : it.label, image: it.image || tracks.find(t => t.art)?.art || null, tracks, ts: Date.now(), importedFrom: 'youtube' });
+      if (!importSave({ id, type: 'custom', name: it.liked ? 'YouTube Liked' : it.label, image: it.image || tracks.find(t => t.art)?.art || null, tracks, ts: Date.now(), importedFrom: 'youtube' })) continue;
       saveToLibrary(id);
       made++;
     }
@@ -8651,7 +8700,7 @@ async function youtubeImportSelected(){
 const LASTFM_API_KEY = '335dabf29e7efbd8b20d12bcf652b7fb';
 const LS_LASTFM_USER = 'ebbless:lastfmUser';
 async function lastfmApi(method, user, extra){
-  const r = await fetch('https://ws.audioscrobbler.com/2.0/?' + new URLSearchParams(Object.assign({ method, user, api_key: LASTFM_API_KEY, format: 'json' }, extra || {})));
+  const r = await importFetch('https://ws.audioscrobbler.com/2.0/?' + new URLSearchParams(Object.assign({ method, user, api_key: LASTFM_API_KEY, format: 'json' }, extra || {})));
   const d = await r.json().catch(() => ({}));
   if (d && d.error) throw new Error(d.error === 6 ? 'nouser' : 'lastfm ' + d.error);
   if (!r.ok) throw new Error('lastfm ' + r.status);
@@ -8675,7 +8724,7 @@ async function lastfmLoad(name){
     const nt = parseInt(top.toptracks && top.toptracks['@attr'] && top.toptracks['@attr'].total, 10) || 0;
     const items = [];
     if (nl) items.push({ key: 'lf:loved', label: 'Loved tracks', sub: nl === 1 ? '1 song' : nl + ' songs', on: true, method: 'user.getLovedTracks', root: 'lovedtracks', name: 'Last.fm Loved' });
-    if (nt) items.push({ key: 'lf:top', label: 'Most played songs', sub: 'top ' + Math.min(nt, 500), on: true, method: 'user.getTopTracks', root: 'toptracks', name: 'Last.fm Top Songs', extra: { period: 'overall' } });
+    if (nt) items.push({ key: 'lf:top', label: 'Most played songs', sub: nt === 1 ? '1 song' : Math.min(nt, IMPORT_MAX_SONGS) + ' songs', on: true, method: 'user.getTopTracks', root: 'toptracks', name: 'Last.fm Top Songs', extra: { period: 'overall' } });
     if (!items.length){ fmPicker = { svc: 'lastfm', ask: true, items: [], user }; showToast('Nothing found for ' + user); }
     else { fmPicker = { svc: 'lastfm', loading: false, items, user }; try { localStorage.setItem(LS_LASTFM_USER, JSON.stringify(user)); } catch(e){} }
   } catch(e){
@@ -8697,9 +8746,10 @@ async function lastfmImportSelected(){
       fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label;
       fmRender();
       const tracks = []; const seen = new Set();
-      for (let page = 1; page <= 10 && tracks.length < 500; page++){
+      for (let page = 1; page <= 100 && tracks.length < IMPORT_MAX_SONGS; page++){
         const d = await lastfmApi(it.method, user, Object.assign({ limit: '100', page: String(page) }, it.extra || {}));
         const list = (d[it.root] && d[it.root].track) || [];
+        fmPicker.note = 'Importing ' + (i + 1) + ' of ' + chosen.length + ': ' + it.label + ' (' + tracks.length + ' so far)'; fmRender();
         list.forEach(t => {
           const artist = t.artist && (t.artist.name || t.artist['#text']) || '';
           const k = (artist + '|' + t.name).toLowerCase();
@@ -8712,7 +8762,7 @@ async function lastfmImportSelected(){
       }
       if (!tracks.length) continue;
       const id = 'custom-lf-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-      persistPlaylistObj({ id, type: 'custom', name: it.name, image: null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'lastfm' });
+      if (!importSave({ id, type: 'custom', name: it.name, image: null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'lastfm' })) continue;
       saveToLibrary(id); ids.push(id);
     }
   } catch(e){ showToast('Import stopped early'); }
