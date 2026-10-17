@@ -10162,7 +10162,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #487. Lane already active (see AGENTS.md); several commits on its branch.
 
 ### mac-warning-softener: Soften the Mac security warning so people don't get scared (Geethub #516)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #516. Soften the Mac security warning so people don't get scared.
 - **Touches:**
@@ -10178,7 +10178,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #515. 
 
 ### app-download-link: Download link for the Mac app (GitHub Release linked from the site) (Geethub #514)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #514. Download link for the Mac app (GitHub Release linked from the site).
 - **Touches:**
@@ -10186,7 +10186,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #514. 
 
 ### mac-chrome-duplicate-spotlight: Mac app shows 3 entries in Cmd+Space after removing the Chrome install (Geethub #513)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Bug, Geethub #513. Mac app shows 3 entries in Cmd+Space after removing the Chrome install.
 - **Touches:**
@@ -10194,7 +10194,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #513. Probably leftover installed web-app shortcuts.
 
 ### mini-follow-desktops: Mini player doesn't follow you when you swipe to another desktop (Geethub #512)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #512. Mini player doesn't follow you when you swipe to another desktop.
 - **Touches:**
@@ -10210,7 +10210,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #511. Shipped 2026-10-14 (cache v235): the Mac mini player's body paints nothing itself; its dark fill is a clipped ::before layer, and html stays truly transparent. A body background propagating over a default-transparent html was painting the corners; a near-zero alpha html turned them black. Confirmed by user. Mac app v1.0.3.
 
 ### mac-dock-icon-mini: Dock and Cmd+Tab icon disappear while in mini player mode (Geethub #510)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #510. Dock and Cmd+Tab icon disappear while in mini player mode.
 - **Touches:**
@@ -10234,7 +10234,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #508. 
 
 ### logo-hold-opens-mini: Hold the logo to open the mini player (optional in advanced settings) (Geethub #507)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #507. Hold the logo to open the mini player (optional in advanced settings).
 - **Touches:**
@@ -10266,7 +10266,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #504. Pair with #505. Shipped 2026-10-14 (cache v232): an artist pick in search closes the overlay and calls openArtistPage, the same window the player's artist name opens.
 
 ### footer-player-with-overlays: Show the footer player when results or add-playlist windows hide the player (Geethub #503)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #503. Show the footer player when results or add-playlist windows hide the player.
 - **Touches:**
@@ -10274,7 +10274,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #503. 
 
 ### landscape-view: Enable and optimize landscape view (Geethub #502)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #502. Enable and optimize landscape view.
 - **Touches:**
@@ -10298,7 +10298,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #500. 
 
 ### cursor-brainstorm: Show different custom cursor options (Geethub #499)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #499. Show different custom cursor options.
 - **Touches:**
@@ -10338,7 +10338,7 @@ Add entries in this shape:
 - **Notes:** Reworked per owner: All pill removed; the library is always the stacked sections. Playlists/Artists/Albums/Podcasts pills each fold or unfold their whole section (album artist groups too) and stay lit while open, so nothing scrolls and nothing is hidden. Sections get a divider line; a section whose pill is off shows no title at all; lit pills use the UI accent color; the last open pill cannot be switched off. Cards per section start at 24 with Show more. Verified at 390px. Old See-all code is now unused.
 
 ### albums-no-artist-sections: Album grid views without artist sections, toggle in advanced settings (Geethub #494)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #494. Album grid views without artist sections, toggle in advanced settings.
 - **Touches:**
@@ -10354,7 +10354,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #492. 
 
 ### link-grid-hover-clip: Link-matching grid plays a looping video clip on hover (Geethub #491)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #491. Link-matching grid plays a looping video clip on hover.
 - **Touches:**
@@ -10362,7 +10362,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #491. 
 
 ### artist-window-album-tracks: In the artist window, show album tracks, add them to library, show album year (Geethub #490)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #490. In the artist window, show album tracks, add them to library, show album year.
 - **Touches:**
@@ -10370,7 +10370,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #490. Related to #497.
 
 ### share-song-animation: Sharing a song to socials shows an animated EBBLESS logo with a link back (Geethub #489)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #489. Sharing a song to socials shows an animated EBBLESS logo with a link back.
 - **Touches:**
@@ -10506,7 +10506,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #539. Ad group, see #541.
 
 ### mobile-swipe-down-close: Mobile: swiping down from a window should close it (Geethub #538)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #538. On mobile, swiping down on a window/panel closes it.
 - **Touches:** mobile panels.
@@ -10514,7 +10514,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #538. Check overlap with existing swipe entries.
 
 ### popular-youtube-first: For popular music, prioritize popular YouTube videos (Geethub #537)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #537. When matching popular songs, rank the most-viewed YouTube videos first; they are most likely the right link.
 - **Touches:** link matching.
@@ -10530,7 +10530,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546). Root cause: the 60s idle auto-close (#409) only reset on click/key/wheel/touch/scroll, so reading or hovering through a playlist/album with the pointer moving counted as idle and shut the window. Pointer movement now resets it. Verified on localhost: with a pointermove at 45s the panel was still open at 75s (old code closes at ~60s) and closed after a true 60s idle. The reporter's device is unknown, so confirm it matches their report; the earlier #536 fix covered renderLibrary re-renders.
 
 ### smart-playlist-more-parameters: Smart playlist needs way more parameters (Geethub #535)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #535. Add many more parameters to smart playlists.
 - **Touches:** smart playlist.
@@ -10546,7 +10546,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #534. Depends on accounts-profiles.
 
 ### go-into-songs: Go into songs instead of them just playing (Geethub #533)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #533. Tapping a song should be able to open a song page, not only play.
 - **Touches:** song rows, song page.
@@ -10554,7 +10554,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #533. Related to #531 and #532.
 
 ### album-info: Album info (Geethub #532)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #532. Show info about an album (details, year, etc.).
 - **Touches:** album window.
@@ -10570,7 +10570,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #531. Check overlap with logo-tap/art tap entries. A single tap on the player's cover opens that song's album (waits out the double/triple-tap window so those gestures still win; ignores taps on buttons inside the art). Verified on localhost.
 
 ### bug-cursor-invisible-same-color: Cursor is impossible to see when it matches the art and UI (Geethub #530)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Idea, Geethub #530. Bug #530. Need a clever, stylish fix so the custom cursor stays visible on same-color backgrounds.
 - **Touches:** custom cursor.
@@ -10602,7 +10602,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #527. Ad group, see #541.
 
 ### miniplayer-shape-per-skin: Mini-player shape changes with different skins (Geethub #526)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #526. The mini-player shape should follow the skin, not always a circle.
 - **Touches:** mini-player.
@@ -10610,7 +10610,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #526. Related to miniplayer-inherits-art-style.
 
 ### miniplayer-moveable: Desktop mini-player should be moveable (Geethub #525)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #525. Let the user drag the mini-player.
 - **Touches:** mini-player.
@@ -10730,7 +10730,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #559.
 
 ### achievement-points-for-doing-some-tasks: achievement points for doing some tasks in the app (Geethub #560)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #560. medium adding playlist re-organizing changing a setting signing in using some secret features watching tutorial etc
 - **Touches:** tbd.
@@ -10762,7 +10762,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #563.
 
 ### bug-mac-app-going-into-miniplayer-removes: mac app: going into miniplayer removes app icon from dock (Geethub #564)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #564. medium
 - **Touches:** tbd.
@@ -10778,7 +10778,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #565.
 
 ### bug-when-you-try-to-install-the: when you try to install the app from the welcome/beta page, the link takes you to github. that's too complicated. one click, detect the OS and processor, download and install the appropriate app (Geethub #566)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #566. medium
 - **Touches:** tbd.
@@ -10834,7 +10834,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #572.
 
 ### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #573. medium
 - **Touches:** tbd.
@@ -10842,7 +10842,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #573.
 
 ### mobile-you-should-be-able-to: mobile: you should be able to swipe left and right to switch between library to player to queue to settings (Geethub #574)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #574. medium
 - **Touches:** tbd.
@@ -10866,7 +10866,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #576. Already on main (102aa33): reverse button in the queue head. Verified present, no new change.
 
 ### mobile-ui-changes: mobile ui changes (Geethub #577)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #577. medium library needs no "library" title library filter buttons should be at the top list mode: 3 dots button on the items should be more right - as right as possible holding a button in library or queue brings the menu u
 - **Touches:** tbd.
@@ -10906,7 +10906,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #581.
 
 ### find-music-button-should-activate-a: "find music" button should activate a screen (Geethub #582)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #582. medium The screen should first give them the option to search for music by different genres, artists, region, vibe. There should be a list of genres, like a grid of genres, and those genres should open up when you select
 - **Touches:** tbd.
