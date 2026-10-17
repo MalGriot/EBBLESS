@@ -3935,6 +3935,7 @@ body.week-up-on{overflow:hidden}
           <div class="section-label">Podcasts</div>
         </div>
         <div class="lib-grid" id="libraryPodcastsGrid"></div>
+        <div class="currents-hint hidden" id="libFilterEmpty" style="text-align:center;padding:36px 0"></div>
         </div>
         <div class="hidden" id="libSearchTracks">
           <div class="section-label">Songs</div>
@@ -10400,6 +10401,13 @@ function renderLibrary(){
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
   libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
+  // a single-kind filter with none of that kind yet says so instead of showing a blank page
+  const fe = document.getElementById('libFilterEmpty');
+  if (fe){
+    const none = { playlists: !libraryGrid.children.length, artists: !artistCount, albums: !albumCount, podcasts: !podcastCount }[filter];
+    fe.classList.toggle('hidden', !(none && !searchQ));
+    if (none) fe.textContent = 'No ' + filter + ' yet.';
+  }
   // Fold arrows on the section headers: All view only, so a single-type
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
