@@ -11224,12 +11224,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #625. My reading of the issue (it gives little): typing a song name should list what youtube.com would list, in youtube.com's order. Reproduced: "hotline bling" on YouTube lists Drake first; the app's /search is a track matcher (drops long uploads, re-ranks by score, expects a known artist) and ranked a Kehlani cover first with Drake fourth. The main search also showed only 2 YouTube songs. Built: worker `/search?raw=1` returns YouTube's results in YouTube's own order (new `handleRawSearch`, 6h cache, `raw:true` in the payload); the client asks for it in `searchSongCandidates` (used by the main search and Add songs), and the main search lists 4 YouTube songs (was 2) above the 2 SoundCloud songs. **Needs a worker deploy** (`cd worker && npx wrangler deploy`, owner's call); until then the old worker ignores `raw` and search behaves as before. Verified: the worker handler against a real saved YouTube results page in node (Drake first, YouTube order), and the client with a mocked `raw` response in the browser (order, 4+2 rows, no [gpu-watchdog] warnings). Not verified: live with the deployed worker. Cache v322.
 
 ### the-top-corners-of-the-windows-should-have: the top corners of the windows should have a subtle swoop or wave. it's will be classy and on brand (Geethub #626)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #626. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #626.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #626. Assumption: 'the windows' = the app's panes and panels: the queue, library playlist and history panels, and the desktop library pane (phones get it on the queue, playlist and history panels). Built: a faint wave-shaped wedge with a thin curved line hugs each top corner (120x40px, white at 6% fill and 16% line, two inline SVG backgrounds on a ::before). Static, no animation or blur, nothing to pause. The queue pane on desktop became position:relative with isolation so the corners anchor to it. Verified in the 1160px browser preview that the corners render and the layout did not move, no new [gpu-watchdog]. Not done: pop-up dialogs (album picker, import, menus) and the center player/settings pane; the swoop is very subtle and was only judged on a small downscaled screenshot, so tune opacity by eye. Cache v333.
 
 ### cymatics-miniplayer-get-creative-something: cymatics miniplayer - get creative. something new and on brand (Geethub #627)
 - **Status:** merged

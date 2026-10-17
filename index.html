@@ -1787,6 +1787,17 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #queue-scrim,#libpl-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #queue-scrim.is-open,#libpl-scrim.is-open{opacity:1;pointer-events:auto}
+/* #626: a faint swoop in each top corner of the windows (queue, playlist, history panels and the desktop library pane).
+   Static art, two inline SVGs on a pseudo-element: no animation, no blur, nothing to pause. White at a few percent so it
+   reads on any accent. The panels are stacking contexts, so z-index:-1 puts it above their fill and under their content;
+   #view-library scrolls, so there it is a zero-height sticky strip at the top of the pane. */
+#queue-panel::before,#libpl-panel::before,#hist-panel::before,#view-library::before{
+  content:'';position:absolute;left:0;right:0;top:0;height:40px;pointer-events:none;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cpath d='M0 0H120C96 2 78 12 58 22 38 32 18 34 0 40Z' fill='%23fff' fill-opacity='.06'/%3E%3Cpath d='M120 0C96 2 78 12 58 22 38 32 18 34 0 40' fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='1.2'/%3E%3C/svg%3E") left top/120px 40px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cpath d='M120 0H0C24 2 42 12 62 22 82 32 102 34 120 40Z' fill='%23fff' fill-opacity='.06'/%3E%3Cpath d='M0 0C24 2 42 12 62 22 82 32 102 34 120 40' fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='1.2'/%3E%3C/svg%3E") right top/120px 40px no-repeat}
+#view-library::before{position:sticky;top:0;margin-bottom:-40px}
+@media (max-width:859.98px){#view-library::before{display:none}}
 #queue-panel,#libpl-panel{position:fixed;z-index:41;background:var(--panel);display:flex;flex-direction:column;
   box-shadow:0 0 60px rgba(0,0,0,.5)}
 .queue-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px;flex:none}
@@ -2702,7 +2713,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.settings-solo.view-settings-active :is(#view-library,#queue-panel,#libpl-panel){display:none!important}
   body.split-desktop.settings-solo.view-settings-active #view-settings{grid-column:1/-1}
   body.split-desktop #queue-panel{
-    position:static;grid-column:3;grid-row:2;width:auto;height:auto;top:auto;right:auto;bottom:auto;
+    position:relative;z-index:auto;isolation:isolate;grid-column:3;grid-row:2;width:auto;height:auto;top:auto;right:auto;bottom:auto;
     min-height:0;transform:none!important;border-left:1px solid var(--border);
   }
   body.split-desktop #queue-scrim{display:none!important}
