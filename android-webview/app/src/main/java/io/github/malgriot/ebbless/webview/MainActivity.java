@@ -64,6 +64,8 @@ public class MainActivity extends Activity {
             String override = getSharedPreferences("ebb", MODE_PRIVATE).getString("accentOverride", "");
             splash = new NativeSplash(this, new NativeSplash.Listener() {
                 @Override public void onChoose(boolean tutorial) {
+                    Updater.holdForEnter = false;
+                    Updater.runPending(MainActivity.this);   // an update that needs a tap installs with this Enter press
                     if (web == null) return;
                     web.evaluateJavascript("window.__ebbNativeChose=true;(function(){var x=document.getElementById('" + (tutorial ? "splashPlayTutorial" : "splashSkipTutorial") + "');if(x)x.click();})()", null);
                 }
@@ -71,6 +73,7 @@ public class MainActivity extends Activity {
                 @Override public void onFinished() { splashDone(); }
             }, override);
             splashHolding = true;
+            Updater.holdForEnter = true;
             root.addView(splash, new FrameLayout.LayoutParams(-1, -1));
             root.postDelayed(() -> {   // never trap the user behind a splash whose page never came up (a ready page waits for the visitor as long as it takes)
                 if (splash != null && splash.dropIfStuck() && web != null)
@@ -148,14 +151,8 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        Updater.foreground = true;
         root.postDelayed(() -> Updater.check(this), 15000);   // self-update: looks for a newer app at most once an hour, after the app has settled
         if (web != null) web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(true)", null);   // never leave the page in lightweight mode while it is on screen
-    }
-
-    @Override protected void onPause() {
-        Updater.foreground = false;
-        super.onPause();
     }
 
     @Override protected void onDestroy() {
@@ -166,6 +163,7 @@ public class MainActivity extends Activity {
     private void splashDone() {
         splash = null;
         splashHolding = false;
+        Updater.holdForEnter = false;
         if (web == null) return;
         // the library's background video can load now that nothing competes for the decoder. The web splash stays cloaked
         // (waking it here showed it fading out under a late-processed Enter); it wakes itself when the visitor returns to it.

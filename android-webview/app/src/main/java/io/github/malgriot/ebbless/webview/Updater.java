@@ -1,8 +1,5 @@
 package io.github.malgriot.ebbless.webview;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -30,15 +27,13 @@ import java.util.regex.Pattern;
  * asking for no confirmation screen. Android only honors that for an app that installed the package itself
  * (Android 12+), so the first update may still show the system's Install button; after that this app is the
  * installer and later updates go through quietly. When Android does want a tap, the confirm screen is shown
- * straight away if the app is on screen, else a notification carries it.
+ * straight away if the app is past the splash; while the splash is up it waits for the Enter press.
  */
 final class Updater {
     static final String ACTION = "io.github.malgriot.ebbless.UPDATE_STATUS";
     private static final String RELEASE_API = "https://api.github.com/repos/MalGriot/EBBLESS/releases/tags/android";
     private static final String APK_URL = "https://github.com/MalGriot/EBBLESS/releases/download/android/ebbless.apk";
     private static final long CHECK_EVERY_MS = 60 * 60 * 1000;
-    private static final String CHANNEL = "ebbless_update";
-    static volatile boolean foreground;
     private static volatile boolean running;
 
     private Updater() {}
@@ -126,18 +121,23 @@ final class Updater {
         }
     }
 
-    /** Android wants a tap (first update, or an install-from-this-app permission): show it now or leave a notification. */
+    /** The splash is up: a confirm screen waits here and opens with the visitor's Enter press, so it never ambushes them. */
+    static volatile boolean holdForEnter;
+    private static volatile Intent pending;
+
+    /** Android wants a tap (first update, or the install-from-this-app permission). */
     static void needsUser(Context app, Intent confirm) {
         confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (foreground) {
-            try { app.startActivity(confirm); return; } catch (Throwable ignored) {}
-        }
-        NotificationManager nm = (NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new NotificationChannel(CHANNEL, "App updates", NotificationManager.IMPORTANCE_DEFAULT));
-        PendingIntent pi = PendingIntent.getActivity(app, 0, confirm, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(app, CHANNEL) : new Notification.Builder(app);
-        nm.notify(7001, b.setSmallIcon(R.drawable.ic_stat_ebbless).setContentTitle("EBBLESS update ready")
-            .setContentText("Tap to install").setContentIntent(pi).setAutoCancel(true).build());
+        if (holdForEnter) { pending = confirm; return; }
+        try { app.startActivity(confirm); } catch (Throwable ignored) { pending = confirm; }   // not allowed from here: keep it for the next Enter
+    }
+
+    /** Enter was pressed: open the waiting confirm screen, if any. */
+    static void runPending(Context ctx) {
+        Intent i = pending;
+        if (i == null) return;
+        pending = null;
+        try { ctx.startActivity(i); } catch (Throwable ignored) {}
     }
 
     static void done(Context app) {
