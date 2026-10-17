@@ -757,10 +757,11 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card .art.cycle .face.cover-face{display:block}
 .lib-card .art.cycle .face.cover-face{opacity:1}
 .lib-card .art.cycle .face.grid-face{opacity:0}
-.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 17s ease-in-out infinite}
-.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 17s ease-in-out infinite}
-@keyframes thumb-cycle-cover{0%,41%{opacity:1}50%,91%{opacity:0}100%{opacity:1}}
-@keyframes thumb-cycle-grid{0%,41%{opacity:0}50%,91%{opacity:1}100%{opacity:0}}
+.lib-card .art.cycle .face.cover-face{animation:thumb-cycle-cover 42s ease-in-out infinite}
+.lib-card .art.cycle .face.grid-face{animation:thumb-cycle-grid 42s ease-in-out infinite}
+/* Geethub #602: 42s loop = the art flips between 1x1 and 2x2 every 21s (opacity only) */
+@keyframes thumb-cycle-cover{0%,43%{opacity:1}50%,93%{opacity:0}100%{opacity:1}}
+@keyframes thumb-cycle-grid{0%,43%{opacity:0}50%,93%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.lib-card .art.cycle .face{animation:none}.lib-card .art.cycle .face.grid-face{display:none}}
 /* #487: a big library had hundreds of these crossfades running off screen,
    each its own GPU layer. Off-screen cards (refreshLibraryMarquees' observer)
@@ -1261,6 +1262,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
   text-shadow:0 0 12px color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 35%),transparent)}
 @media (prefers-reduced-motion: reduce){.lyric-line{transition:none}}
 .lyrics-empty{padding:0 24px;color:var(--faint);font-size:13.5px;text-align:center;line-height:1.6}
+/* caption status stays in view over a chapters-only list (#603) */
+.lyrics-empty.cap-status{position:sticky;bottom:0;padding:8px 24px;background:rgba(20,20,20,.88);border-radius:10px}
 /* podcast captions (#241): chapter titles sit in the line list as small
    caps headings, still clickable to jump there */
 .lyric-line.is-chapter{margin-top:14px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
@@ -9974,7 +9977,7 @@ function toggleLibraryPlaylistPanel(id){
       const artist = document.createElement('div'); artist.className = 'artist';
       if (t.podcast){
         // (#486) episode date from the feed's pubDate (ms), then length, then listened state
-        const date = t.published ? new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const date = podDateLabel(t);
         const left = podProgressLabel((lsGet(LS_POD_PROGRESS, {}) || {})[t.videoId]);
         artist.textContent = [date, t.duration ? formatTime(t.duration) : '', left].filter(Boolean).join(' · ');
       } else artist.textContent = t.artist;
@@ -10947,7 +10950,10 @@ function handleLibCtxAction(action, id){
   else if (action === 'delete'){
     // delete right away with an Undo in the toast (no confirm box)
     const libBefore = getLibrary().slice(), pinnedBefore = isPinned(id), data = lsGet(LS_PL(id), null);
+    // Geethub #600: the list scrolls in .lib-body, which the re-render empties; put it back
+    const lb = document.querySelector('#libraryListWrap .lib-body'), keepTop = lb ? lb.scrollTop : 0;
     removeFromLibrary(id); renderLibrary();
+    if (lb && keepTop) lb.scrollTop = keepTop;
     showToast('Deleted "' + pl.name + '"', { label: 'Undo', run: () => restoreToLibrary(id, data, libBefore, pinnedBefore) });
   }
 }
@@ -18657,7 +18663,7 @@ function renderQueuePanel(){
   const nowMeta = document.createElement('div'); nowMeta.className = 'meta';
   nowMeta.innerHTML = '<div class="title"></div><div class="artist"></div>';
   nowMeta.querySelector('.title').textContent = now.title;
-  nowMeta.querySelector('.artist').textContent = now.artist;
+  nowMeta.querySelector('.artist').textContent = [podDateLabel(now), now.artist].filter(Boolean).join(' · ');
   const nowPlayBtn = document.createElement('button'); nowPlayBtn.className = 'play-btn';
   nowPlayBtn.setAttribute('aria-label', 'Play or pause');
   const isPlaying = artworkWrap.classList.contains('is-playing');
@@ -18710,7 +18716,7 @@ function renderQueuePanel(){
     /* show which playlist a track came from when it's not the one being viewed,
        so it's clear the queue is mixing sources */
     const showSource = !state.playlist || entry.plId !== state.playlist.id;
-    meta.querySelector('.artist').textContent = t.artist + (showSource ? ' · ' + pl.name : '');
+    meta.querySelector('.artist').textContent = [podDateLabel(t), t.artist].filter(Boolean).join(' · ') + (showSource ? ' · ' + pl.name : '');
     const remove = document.createElement('button'); remove.className = 'remove'; remove.setAttribute('aria-label','Remove from queue');
     remove.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 
@@ -19076,9 +19082,11 @@ function closeQueuePanel(restoreView = true){
 queueScrim.addEventListener('click', closeQueuePanel);
 
 // library and queue panels close after 60s of no interaction (#409); any
-// touch, click, key or scroll resets the clock. Artist windows are exempt.
+// touch, click, key, scroll or pointer movement resets the clock (#536: moving
+// the pointer while reading a long list used to count as idle and shut the
+// window under the user). Artist windows are exempt.
 let panelIdleSince = Date.now();
-['pointerdown','keydown','wheel','touchstart','scroll'].forEach(ev =>
+['pointerdown','pointermove','keydown','wheel','touchstart','scroll'].forEach(ev =>
   document.addEventListener(ev, () => { panelIdleSince = Date.now(); }, { capture: true, passive: true }));
 setInterval(() => {
   const lib = openLibraryPanelId && !String(openLibraryPanelId).startsWith(ARTIST_INFO_PREFIX) && !isArtistEntry(getCachedPlaylist(openLibraryPanelId));
@@ -21749,7 +21757,7 @@ function podTextLines(pt){
 // in a Web Worker) - free, no limits, nothing stored on any server. Audio
 // comes through the worker's /podaudio a slice at a time, starting at the
 // playhead so the part being listened to comes first. Results are kept on
-// this device only, for 7 days, then made fresh.
+// this device only, for 3 days (a month once the episode is well listened to), then made fresh.
 // Models: English-only tiny (~41 MB, one-time download) by default. A
 // non-English show needs the multilingual base model (~77 MB), which the
 // captions view offers to install - the small one can't do those at all.
@@ -21757,7 +21765,15 @@ var CAP_MODEL_EN = 'onnx-community/whisper-tiny.en';
 var CAP_MODEL_MULTI = 'onnx-community/whisper-base';
 var CAP_LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0';
 var CAP_CHUNK_BYTES = 2 * 1024 * 1024;
-var CAP_TTL_MS = 7 * 24 * 3600 * 1000;
+var CAP_TTL_MS = 3 * 24 * 3600 * 1000;
+// an episode listened to a good way through is likely to be come back to:
+// its captions are kept a month instead of 3 days
+var CAP_TTL_LONG_MS = 30 * 24 * 3600 * 1000;
+function capKeepMs(id){
+  let p = null;
+  try { p = (lsGet(LS_POD_PROGRESS, {}) || {})[id]; } catch(e){}
+  return p && p.pos > 0 && (p.pos >= 600 || (p.dur && p.pos / p.dur >= 0.25)) ? CAP_TTL_LONG_MS : CAP_TTL_MS;
+}
 var LS_CAP_MULTI = 'ebbless_caption_multilingual';
 var capJob = null, capWorkerObj = null, capSeq = 0, capPending = new Map(), capModelProgress = {};
 function capLang(t){ return String((t && t.lang) || 'en').toLowerCase().split(/[-_]/)[0]; }
@@ -21893,7 +21909,7 @@ async function capGet(id){
   try {
     const db = await capDb();
     const rec = await new Promise((res, rej) => { const r = db.transaction('caps').objectStore('caps').get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-    if (rec && Date.now() - rec.ts > CAP_TTL_MS){ capDel(id); return null; }
+    if (rec && Date.now() - rec.ts > capKeepMs(id)){ capDel(id); return null; }
     return rec || null;
   } catch(e){ return null; }
 }
@@ -21903,14 +21919,34 @@ async function capPut(id, rec){
 async function capDel(id){
   try { const db = await capDb(); db.transaction('caps', 'readwrite').objectStore('caps').delete(id); } catch(e){}
 }
-// drop anything past its 7 days, once per session
+// failsafe: never more than CAP_MAX_SAVED episodes' captions on the device.
+// When a new one starts, the surplus goes oldest first, short-keep (barely
+// listened) records before well-listened ones; the episode in hand is safe.
+var CAP_MAX_SAVED = 12;
+async function capEnforceMax(keepId){
+  try {
+    const db = await capDb();
+    const rows = await new Promise((res, rej) => {
+      const out = [], cur = db.transaction('caps').objectStore('caps').openCursor();
+      cur.onsuccess = () => { const c = cur.result; if (!c){ res(out); return; } out.push({ id: c.key, ts: (c.value && c.value.ts) || 0 }); c.continue(); };
+      cur.onerror = () => rej(cur.error);
+    });
+    // the episode in hand counts even if its record isn't written yet
+    const extra = rows.length + (rows.some(r => r.id === keepId) ? 0 : 1) - CAP_MAX_SAVED;
+    if (extra <= 0) return;
+    rows.filter(r => r.id !== keepId)
+      .sort((x, y) => (capKeepMs(x.id) - capKeepMs(y.id)) || (x.ts - y.ts))
+      .slice(0, extra).forEach(r => capDel(r.id));
+  } catch(e){}
+}
+// drop anything past its keep time, once per session
 var capPruned = false;
 async function capPrune(){
   if (capPruned) return; capPruned = true;
   try {
     const db = await capDb();
     const cur = db.transaction('caps', 'readwrite').objectStore('caps').openCursor();
-    cur.onsuccess = () => { const c = cur.result; if (!c) return; if (!c.value || Date.now() - c.value.ts > CAP_TTL_MS) c.delete(); c.continue(); };
+    cur.onsuccess = () => { const c = cur.result; if (!c) return; if (!c.value || Date.now() - c.value.ts > capKeepMs(c.key)) c.delete(); c.continue(); };
   } catch(e){}
 }
 async function capFetch(url, start, end){
@@ -21993,6 +22029,7 @@ async function generateCaptions(t, onUpdate){
   const job = capJob = { id, t, cancelled: false, onUpdate, onProgress: null, lastActivity: Date.now(), rec: null, dur: 0, next: null };
   capSyncWakeLock();
   capPrune();
+  capEnforceMax(id);
   const lang = capLang(t), english = lang === 'en';
   const rec = (await capGet(id)) || { ts: Date.now(), total: 0, parts: {}, done: false };
   // records saved before slices were timed by measured seconds-per-byte
@@ -22025,28 +22062,38 @@ async function generateCaptions(t, onUpdate){
     const n = Math.ceil(rec.total / CAP_CHUNK_BYTES);
     // next slice to do: the first missing one at or after the playhead,
     // re-read every round so a seek or chapter jump pulls generation along
-    const next = () => {
+    const next = (skip) => {
       const p = activeDeck().player;
       const at = (p && p.getCurrentTime && p.getCurrentTime()) || 0;
       const a0 = rec.a0 || 0;
       const here = Math.min(n - 1, Math.max(0, Math.floor((a0 + at / dur * (rec.total - a0)) / CAP_CHUNK_BYTES)));
-      for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i]) return i; }
+      for (let k = 0; k < n; k++){ const i = (here + k) % n; if (!rec.parts[i] && i !== skip) return i; }
       return -1;
     };
     job.dur = dur; job.next = next;
-    let decoded = 0, first = true;
+    let decoded = 0, first = true, pre = null;
+    // the next slice downloads and decodes while the current one is being
+    // transcribed, so the worker never waits on the network (one extra
+    // decoded slice in memory, ~8 MB)
+    const load = (k) => {
+      const s0 = k * CAP_CHUNK_BYTES, e0 = Math.min(rec.total, s0 + CAP_CHUNK_BYTES) - 1;
+      return capFetch(url, s0, e0).then(({ buf }) => capDecode(buf).then(audio => ({ audio }), err => ({ err })));
+    };
     for (let i = next(); i >= 0; i = next()){
       if (job.cancelled) return;
       const start = i * CAP_CHUNK_BYTES, end = Math.min(rec.total, start + CAP_CHUNK_BYTES) - 1;
-      const { buf } = await capFetch(url, start, end);
-      let audio;
-      try { audio = await capDecode(buf); decoded++; }
-      catch(e){ if (!decoded && first) throw e; rec.parts[i] = []; continue; }
-      finally { first = false; }
+      const got = await (pre && pre.i === i ? pre.p : load(i));
+      pre = null;
+      const wasFirst = first; first = false;
+      if (got.err){ if (!decoded && wasFirst) throw got.err; rec.parts[i] = []; continue; }
+      decoded++;
+      const audio = got.audio;
       if (!rec.spb){
         const bytes = end - start + 1 - (i === 0 ? rec.a0 || 0 : 0), spb = audio.length / 16000 / bytes;
         if (end - start + 1 === CAP_CHUNK_BYTES && audio.length >= 16000 * 20 && spb > 1 / 64000 && spb < 1 / 1000) rec.spb = spb;
       }
+      const after = next(i);
+      if (after >= 0){ pre = { i: after, p: load(after) }; pre.p.catch(() => {}); }
       const chunks = await capRun(model, audio, english ? null : lang);
       const offset = capOffset(rec, start, dur);
       rec.parts[i] = chunks
@@ -22513,7 +22560,10 @@ function marqueeVisibilityObserve(el, win){
       // isVisible (Chrome IO v2) is false for visibility:hidden / opacity:0 / covered
       // elements, which plain isIntersecting ignores (a marquee kept running inside a
       // hidden overlay); undefined elsewhere, so those fall back to isIntersecting
-      const on = e.isIntersecting && e.isVisible !== false;
+      // Geethub #601: library thumb titles sit under transformed/composited cards that
+      // IO v2 reports as "not visible" forever, so they never scrolled; hidden library
+      // views are display:none, which isIntersecting already catches
+      const on = e.isIntersecting && (e.isVisible !== false || !!e.target.closest('.lib-card'));
       e.target._marqueeOnScreen = on;
       if (!a) return;
       if (on){ if (a.playState === 'paused') a.play(); }
@@ -23515,9 +23565,34 @@ function finishQueueAtEnd(opts){
   let pos = state.queuePos + 1;
   if (pos >= state.queue.length){
     if (state.repeat === 'all'){ pos = 0; if (state.shuffle) state.queue = shuffleTail(state.queue, 0); }
-    else { setPlayingUI(false); return; }
+    else {
+      setPlayingUI(false);
+      // Geethub #599: a queue that ran out on its own, with discovery off, goes back to nothing playing yet
+      const origin = discoverOriginId();
+      if (!opts && !(origin && isDiscoverOn(origin))) resetToNothingPlaying();
+      return;
+    }
   }
   playIndex(pos, opts);
+}
+function resetToNothingPlaying(){
+  state.queue = []; state.queuePos = -1;
+  lsDel(LS_RESUME);
+  $('trackMeta').classList.add('is-empty');
+  setMarqueeText(trackTitle, 'Nothing playing yet');
+  setMarqueeText(trackArtist, '');
+  setMarqueeText(flowTitle, '');
+  setMarqueeText(flowArtist, '');
+  setMarqueeText(miniTitle, '');
+  setMarqueeText(miniArtist, '');
+  [artA, artB].forEach(a => { a.classList.remove('is-active'); a.removeAttribute('src'); });
+  recordLabelImg.removeAttribute('src');
+  cassetteLabelArt.removeAttribute('href'); cassetteLabelArt.removeAttribute('xlink:href');
+  cassetteLabelArt.classList.remove('is-loaded');
+  seekFill.style.width = '0%';
+  timeCur.textContent = '0:00'; timeDur.textContent = '0:00';
+  renderQueuePanel();
+  updateMiniBarVisibility();
 }
 
 // Manual skips (next/prev) ask for a crossfade - startSkipCrossfade()
@@ -25889,6 +25964,10 @@ function notePodProgress(cur, dur){
   lsSet(LS_POD_PROGRESS, map);
 }
 // "Played" when nearly finished, "12:30 left" when partway, '' when never started
+// (#486) an episode's feed date as 'Oct 14, 2026' ('' when the feed gave none)
+function podDateLabel(t){
+  return t && t.podcast && t.published ? new Date(t.published).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+}
 function podProgressLabel(p){
   if (!p || !(p.pos > 5)) return '';
   if (p.dur && p.pos >= p.dur - 15) return 'Played';

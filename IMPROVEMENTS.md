@@ -10386,12 +10386,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #488. Big; likely post-MVP.
 
 ### podcast-episode-dates: Show the date on podcast episodes (Geethub #486)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #486. Show the date on podcast episodes.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #486. 
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #486.  Playlist rows already showed the date; the queue (now-playing row and upcoming rows) now shows it too via podDateLabel().
 
 ### ad-autoskip-523: Ads play for minutes with no indication; the app should skip them (Geethub #523)
 - **Status:** merged
@@ -10522,12 +10522,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #537. Related to link-match-accuracy.
 
 ### bug-tabs-close-while-browsing: Playlist, album and artist tabs close while I'm still going through them (Geethub #536)
-- **Status:** ready
+- **Status:** review
 - **Priority:** high
 - **Description:** Idea, Geethub #536. Bug #536. These windows close on their own while the user is browsing.
 - **Touches:** playlist/album/artist windows.
-- **Branch:** 
-- **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546).
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546). Root cause: the 60s idle auto-close (#409) only reset on click/key/wheel/touch/scroll, so reading or hovering through a playlist/album with the pointer moving counted as idle and shut the window. Pointer movement now resets it. Verified on localhost: with a pointermove at 45s the panel was still open at 75s (old code closes at ~60s) and closed after a true 60s idle. The reporter's device is unknown, so confirm it matches their report; the earlier #536 fix covered renderLibrary re-renders.
 
 ### smart-playlist-more-parameters: Smart playlist needs way more parameters (Geethub #535)
 - **Status:** draft
@@ -10666,12 +10666,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #517. Related to autoadvance-stall-full-progress.
 
 ### the-controls-at-the-top-of: the controls at the top of library and queue should be fixed when scrolling (Geethub #552)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #552. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #552.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #552. Already on main (#586/#594): library bar fixed, list scrolls in .lib-body; queue head sits above .queue-scroll. Verified in browser, no new change.
 
 ### feedback-tester-s-wishes: feedback tester's wishes (Geethub #553)
 - **Status:** draft
@@ -10682,12 +10682,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #553.
 
 ### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #554. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #554.
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #554. Worker scoreCandidate: titles containing 'official audio' get OFFICIAL_AUDIO_BONUS (+7) on top of the audio hint, so they beat Topic channels; SEARCH_CACHE_VERSION v9 -> v10. Worker tests pass (106); needs a worker deploy to take effect, not browser-verifiable on localhost.
 
 ### bug-lp-mode-has-song-art-in: lp mode has song art in it but cassette is blank (Geethub #555)
 - **Status:** merged
@@ -10802,12 +10802,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #568.
 
 ### library-view-button-hitting-a-button: library view button: hitting a button in the "sort by" list should reverse the list by that parameter (Geethub #569)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #569. medium
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #569.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #569. Already on main (0826165): tapping the active sort flips it. Verified present, no new change.
 
 ### soundcloud-links-only-play-on-my: soundcloud links only play on my phone and machine because i'm logged in (Geethub #570)
 - **Status:** draft
@@ -10858,12 +10858,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #575.
 
 ### button-to-reverse-the-direction-of: button to reverse the direction of the queue (Geethub #576)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #576. medium podcasts play into the previous episode. i'd prefer to play toward the newest
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #576.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #576. Already on main (102aa33): reverse button in the queue head. Verified present, no new change.
 
 ### mobile-ui-changes: mobile ui changes (Geethub #577)
 - **Status:** draft
@@ -10914,28 +10914,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #582.
 
 ### bug-podcast-captions-not-loading: podcast captions are not loading (Geethub #603)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #603. Repro: open ?import=https://open.spotify.com/show/5XhS5WBxLYgN3S9KhEyrrF&track=3.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #603.
+- **Branch:** agent/t1-podcasts-match
+- **Notes:** Synced from Geethub #603. Cause: on an episode with chapters but no feed transcript, only the chapter titles show while the first captions slice generates on device (model download plus first slice, about a minute), and the "Generating captions" note sat at the bottom of the list, out of view. The note is now pinned in view.
 
 ### bug-library-thumb-titles-not-scrolling: library thumb titles are not scrolling (Geethub #601)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #601. Long titles on library thumbs should scroll.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #601.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #601. Fixed: marquee visibility observer (IO v2 isVisible) kept library-card titles paused; library cards now use isIntersecting only.
 
 ### bug-delete-playlist-skips-to-top: when you delete a playlist, the library skips to the top (Geethub #600)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #600. The list should stay in position after a delete.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #600.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #600. Fixed: delete handler restores .lib-body scrollTop after the re-render.
 
 ### bug-miniplayer-play-button-style: desktop: miniplayer play button should match the full app (Geethub #587)
 - **Status:** review
@@ -10946,20 +10946,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #587. Mini-player play button now uses the full app's play fill (player accent) and its readable glyph color. Document PiP window not exercised in the browser pane.
 
 ### queue-finish-nothing-playing: when a queue finishes and discovery is off, return to nothing playing yet (Geethub #599)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #599. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #599.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #599. Fixed: finishQueueAtEnd calls resetToNothingPlaying() when the queue ends on its own, repeat off, discovery off. Manual next at the end is unchanged.
 
 ### library-thumbs-1x1-2x2: library thumbs change between 1x1 and 2x2 art every 7 seconds (Geethub #602)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #602. Must follow the GPU budget (transform/opacity only, pause when hidden).
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #602.
+- **Branch:** agent/t1-library-queue
+- **Notes:** Synced from Geethub #602. Cover/2x2 crossfade already existed (#384, 17s loop); now a 42s loop so it flips every 21s. Opacity only; still pauses off-screen (.lib-offscreen) and when the view is hidden.
 
 ### hires-video-desktop: use the hi res video for desktop (Geethub #598)
 - **Status:** review

@@ -67,7 +67,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v9';
+const SEARCH_CACHE_VERSION = 'v10';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -270,6 +270,10 @@ async function handleEmbed(kind, url, ctx) {
 // splice in spoken intros, skits, or other non-music audio that a pure
 // music player shouldn't play.
 const AUDIO_HINTS = ['official audio', 'lyric video', 'lyrics', 'audio)', '(audio'];
+// Geethub #554: an upload titled "official audio" is the best possible match,
+// ahead of a Topic channel (+5) or any other signal, so it gets a bonus on
+// top of the generic audio hint. Still below a title mismatch (TITLE_MATCH_WEIGHT).
+const OFFICIAL_AUDIO_BONUS = 7;
 const MUSIC_VIDEO_HINTS = ['official music video', 'official video', 'music video'];
 const DEMOTE_HINTS = ['reaction', 'sped up', 'slowed', 'clean version', 'clean edit', 'radio edit'];
 
@@ -468,6 +472,7 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   score += c.titleOverlap * TITLE_MATCH_WEIGHT;
   if (channel.endsWith('- topic')) score += 5;
   if (AUDIO_HINTS.some(h => title.includes(h))) score += 4;
+  if (title.includes('official audio')) score += OFFICIAL_AUDIO_BONUS;
   if (channel.includes(firstArtist)) score += 3;
   // Geethub #389: prefer the artist's own YouTube channel (name matches
   // exactly, or "<artist> official") and lyric videos over third-party uploads.
