@@ -3147,6 +3147,13 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;transform:scale(1)}
 body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
+.milestone-total{font-weight:400;font-size:13px;color:var(--faint);margin-left:6px}
+.milestone-list{list-style:none;margin:0;padding:0}
+.milestone-list li{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;color:var(--faint)}
+.milestone-list li.is-done{color:var(--text)}
+.milestone-list li .ms-mark{width:16px;text-align:center;opacity:.5}
+.milestone-list li.is-done .ms-mark{opacity:1;color:var(--accent,var(--text))}
+.milestone-list li .ms-pts{margin-left:auto;font-variant-numeric:tabular-nums;font-size:12.5px}
 /* hidden during beta (everyone reports through Send feedback); Shift+B / Shift+S
    still click the hidden bug / idea links */
 .settings-row.beta-hidden{display:none}
@@ -4417,6 +4424,10 @@ body.week-up-on{overflow:hidden}
           <li><span><kbd>O</kbd></span>Repeat</li>
         </ul>
         </div></div>
+      </div>
+      <div class="settings-block" id="settingsMilestonesBlock">
+        <h2>Milestones <span id="milestoneTotal" class="milestone-total"></span></h2>
+        <ul class="milestone-list" id="milestoneList"></ul>
       </div>
       <div class="settings-block" id="settingsAboutBlock">
         <h2>About</h2>
@@ -6921,6 +6932,7 @@ function handleGoogleCredential(response){
   } catch(e){}
   lsDel(LS_PROFILE_SIGNED_OUT);
   profileSyncStatus = '';
+  awardMilestone('signin');
   npSchedulePublish(2000);   // signed in mid-song: go on air (#500)
   syncProfileNow({ force: true, announce: true });
   betaAccountLink(response.credential, sub);
@@ -13086,10 +13098,12 @@ function toggleLikeTrack(track){
 }
 
 /* Smart playlists (#469 phase 4, Marvis "smart rules"): a custom playlist with
-   pl.smart = { plays, liked, artist, q, sort, limit } whose songs are picked
+   pl.smart = { plays (-1 = not played yet), liked (true | 'no'), artist, notArtist, q, notQ, len ('short' | 'mid' | 'long'), sort, limit } whose songs are picked
    from the whole library and rebuilt when it's opened or played. Hand-adding
    is off for them (addablePlaylists) since a rebuild would drop the song. */
-const SMART_DEF = { plays: 0, liked: false, artist: '', q: '', sort: 'plays', limit: 50 };
+const SMART_DEF = { plays: 0, liked: false, artist: '', notArtist: '', q: '', notQ: '', len: '', sort: 'plays', limit: 50 };
+// Song length bands in seconds (tracks carry duration in seconds; 0 = unknown, kept out of any band)
+const SMART_LEN = { short: [1, 180], mid: [180, 300], long: [300, Infinity] };
 function smartMatches(rules, selfId){
   const r = Object.assign({}, SMART_DEF, rules || {});
   const liked = new Set(((getCachedPlaylist(LIKED_ID) || {}).tracks || []).map(t => t && t.videoId).filter(Boolean));
@@ -13110,15 +13124,21 @@ function smartMatches(rules, selfId){
   // plays counted on the smart playlist's own copies carry over
   if (self && self.tracks) self.tracks.forEach(t => { const x = t && byV.get(t.videoId); if (x) x.plays = Math.max(x.plays, t.plays || 0); });
   const norm = (x) => normLibSearch(x || '');
-  const art = norm(r.artist), q = norm(r.q);
+  const art = norm(r.artist), notArt = norm(r.notArtist), q = norm(r.q), notQ = norm(r.notQ);
+  const band = SMART_LEN[r.len];
   let out = Array.from(byV.values()).filter(t =>
-    (t.plays || 0) >= (r.plays || 0) &&
-    (!r.liked || liked.has(t.videoId)) &&
+    (r.plays < 0 ? !(t.plays || 0) : (t.plays || 0) >= (r.plays || 0)) &&
+    (!r.liked || (r.liked === 'no' ? !liked.has(t.videoId) : liked.has(t.videoId))) &&
     (!art || norm(t.artist).includes(art)) &&
-    (!q || norm(t.title).includes(q) || norm(t.artist).includes(q)));
+    (!notArt || !norm(t.artist).includes(notArt)) &&
+    (!q || norm(t.title).includes(q) || norm(t.artist).includes(q)) &&
+    (!notQ || !(norm(t.title).includes(notQ) || norm(t.artist).includes(notQ))) &&
+    (!band || ((t.duration || 0) >= band[0] && (t.duration || 0) < band[1])));
   const cmp = (a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
   if (r.sort === 'alpha') out.sort((a, b) => cmp(a.title, b.title));
   else if (r.sort === 'artist') out.sort((a, b) => cmp(a.artist, b.artist) || cmp(a.title, b.title));
+  else if (r.sort === 'short') out.sort((a, b) => (a.duration || 1e9) - (b.duration || 1e9));
+  else if (r.sort === 'long') out.sort((a, b) => (b.duration || 0) - (a.duration || 0));
   else if (r.sort === 'random') out = shuffleTail(out, 0);
   else out.sort((a, b) => (b.plays || 0) - (a.plays || 0));
   return r.limit > 0 ? out.slice(0, r.limit) : out;
@@ -13139,11 +13159,15 @@ function refreshSmartPlaylist(id){
 function smartSummary(r){
   r = Object.assign({}, SMART_DEF, r || {});
   const bits = [];
-  if (r.liked) bits.push('liked');
-  if (r.plays) bits.push('played ' + r.plays + '+ times');
+  if (r.liked) bits.push(r.liked === 'no' ? 'not liked' : 'liked');
+  if (r.plays < 0) bits.push('not played yet');
+  else if (r.plays) bits.push('played ' + r.plays + '+ times');
   if (r.artist) bits.push('by ' + r.artist);
+  if (r.notArtist) bits.push('not by ' + r.notArtist);
   if (r.q) bits.push('with "' + r.q + '"');
-  const order = { plays: 'most played first', alpha: 'A to Z', artist: 'by artist', random: 'shuffled' }[r.sort] || '';
+  if (r.notQ) bits.push('without "' + r.notQ + '"');
+  if (r.len) bits.push({ short: 'under 3 min', mid: '3 to 5 min', long: 'over 5 min' }[r.len]);
+  const order = { plays: 'most played first', alpha: 'A to Z', artist: 'by artist', random: 'shuffled', short: 'shortest first', long: 'longest first' }[r.sort] || '';
   return (bits.length ? 'Songs ' + bits.join(', ') : 'All your songs') + ', ' + order + (r.limit ? ', up to ' + r.limit : '');
 }
 function openSmartPlaylistFlow(editId, name){
@@ -13156,29 +13180,34 @@ function openSmartPlaylistFlow(editId, name){
   importStage.innerHTML = '<div id="smWrap">' +
     '<div class="step">' + (editing ? 'Edit smart playlist' : 'Smart playlist') + '</div>' +
     '<input id="smName" type="text" placeholder="Name" autocomplete="off" spellcheck="false" style="' + field + '">' +
-    group('Played at least', 'plays', [[0, 'Any'], [3, '3 times'], [10, '10 times'], [25, '25 times']]) +
-    group('Only liked songs', 'liked', [['', 'No'], ['1', 'Yes']]) +
+    group('Played', 'plays', [[0, 'Any'], [-1, 'Not yet'], [3, '3+ times'], [10, '10+ times'], [25, '25+ times']]) +
+    group('Liked songs', 'liked', [['', 'Any'], ['1', 'Only liked'], ['no', 'Not liked']]) +
+    group('Length', 'len', [['', 'Any'], ['short', 'Under 3 min'], ['mid', '3 to 5 min'], ['long', 'Over 5 min']]) +
     '<div class="adv-group" style="margin-top:6px">Artist (optional)</div>' +
     '<input id="smArtist" type="text" placeholder="Any artist" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
     '<div class="adv-group" style="margin-top:6px">Title or artist has (optional)</div>' +
     '<input id="smQ" type="text" placeholder="Any words" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
-    group('Order', 'sort', [['plays', 'Most played'], ['alpha', 'A to Z'], ['artist', 'Artist'], ['random', 'Shuffle']]) +
+    '<div class="adv-group" style="margin-top:6px">Leave out artist (optional)</div>' +
+    '<input id="smNotArtist" type="text" placeholder="No artist left out" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    '<div class="adv-group" style="margin-top:6px">Leave out words (optional)</div>' +
+    '<input id="smNotQ" type="text" placeholder="No words left out" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    group('Order', 'sort', [['plays', 'Most played'], ['alpha', 'A to Z'], ['artist', 'Artist'], ['short', 'Shortest'], ['long', 'Longest'], ['random', 'Shuffle']]) +
     group('How many', 'limit', [[25, '25'], [50, '50'], [100, '100'], [0, 'All']]) +
     '<div id="smCount" style="color:var(--faint);font-size:13px;margin:4px 0 12px"></div>' +
     '<button class="btn-ghost is-active" id="smSave" style="width:100%;margin-bottom:8px">' + (editing ? 'Save' : 'Create') + '</button>' +
     '<button class="btn-ghost" id="smCancel" style="width:100%">Cancel</button></div>';
-  const nameIn = $('smName'), artIn = $('smArtist'), qIn = $('smQ');
+  const nameIn = $('smName'), artIn = $('smArtist'), qIn = $('smQ'), nArtIn = $('smNotArtist'), nQIn = $('smNotQ');
   nameIn.value = editing ? editing.name : (name || '');
-  artIn.value = r.artist; qIn.value = r.q;
+  artIn.value = r.artist; qIn.value = r.q; nArtIn.value = r.notArtist; nQIn.value = r.notQ;
   function paint(){
     $('smWrap').querySelectorAll('[data-smart]').forEach(g => {
       const k = g.dataset.smart;
       g.querySelectorAll('[data-v]').forEach(b => {
-        const on = k === 'liked' ? (b.dataset.v === '1') === !!r.liked : String(r[k]) === b.dataset.v;
+        const on = k === 'liked' ? b.dataset.v === (r.liked === 'no' ? 'no' : r.liked ? '1' : '') : String(r[k]) === b.dataset.v;
         b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on));
       });
     });
-    r.artist = artIn.value.trim(); r.q = qIn.value.trim();
+    r.artist = artIn.value.trim(); r.q = qIn.value.trim(); r.notArtist = nArtIn.value.trim(); r.notQ = nQIn.value.trim();
     const n = smartMatches(r, editId).length;
     $('smCount').textContent = n + (n === 1 ? ' song matches' : ' songs match') + ' right now.';
   }
@@ -13186,15 +13215,15 @@ function openSmartPlaylistFlow(editId, name){
     const b = e.target.closest('[data-smart] [data-v]');
     if (!b) return;
     const k = b.closest('[data-smart]').dataset.smart, v = b.dataset.v;
-    r[k] = k === 'liked' ? v === '1' : (k === 'plays' || k === 'limit') ? +v : v;
+    r[k] = k === 'liked' ? (v === 'no' ? 'no' : v === '1') : (k === 'plays' || k === 'limit') ? +v : v;
     paint();
   });
-  artIn.addEventListener('input', paint); qIn.addEventListener('input', paint);
+  [artIn, qIn, nArtIn, nQIn].forEach(el => el.addEventListener('input', paint));
   paint();
   $('smSave').addEventListener('click', () => {
     paint();
     const nm = nameIn.value.trim() || 'Smart playlist';
-    const rules = { plays: r.plays, liked: r.liked, artist: r.artist, q: r.q, sort: r.sort, limit: r.limit };
+    const rules = { plays: r.plays, liked: r.liked, artist: r.artist, notArtist: r.notArtist, q: r.q, notQ: r.notQ, len: r.len, sort: r.sort, limit: r.limit };
     let pl = editing;
     if (!pl) pl = createCustomPlaylist(nm);
     pl = getCachedPlaylist(pl.id);
@@ -13204,6 +13233,7 @@ function openSmartPlaylistFlow(editId, name){
     closeImportOverlay();
     renderLibrary();
     showToast((editing ? 'Saved ' : 'Made ') + nm);
+    if (!editing) awardMilestone('smart');
     if (!editing) toggleLibraryPlaylistPanel(pl.id);
   });
   $('smCancel').addEventListener('click', closeImportOverlay);
@@ -16460,6 +16490,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 288, date: '2026-10-17', items: [
+    'Smart playlists have more choices: songs not played yet, not liked, a length (under 3 minutes, 3 to 5, over 5), artists or words to leave out, and shortest or longest first.',
+    'New Milestones in Settings: small points for things like signing in, watching the tutorial, reordering a playlist or making a smart playlist.'
+  ]},
   { version: 269, date: '2026-10-17', items: [
     'Artist window: Singles at the top (5 shown, tap to see all), then Albums and Collections, most popular first. Releases over 20 years old come after, oldest first.',
     'Tap an album to open its own window with its songs. Tap a song to play it, or the plus next to it to add it to a playlist.',
@@ -20020,6 +20054,7 @@ function wirePlaylistRowReorder(row, handle, plId){
     row.style.transform = ''; row.style.position = ''; row.style.zIndex = '';
     if (orderNow() === origOrder) return;
     setPlCustomOrder(plId, rowsNow().map(r => parseInt(r.dataset.idx, 10)));
+    awardMilestone('reorder');
     // redraw so the Custom chip lights up and the list matches what is saved
     const sc = scroller(), top = sc ? sc.scrollTop : 0;
     reopenLibraryPanel(plId);
@@ -22208,7 +22243,46 @@ function advRunGesture(k){
     if (names.length > 1) openArtistPick(names, t.title, trackArtist); else openArtistPage(t.artist, t.title);
   }
 }
+/* Milestones (#560): small local points for things worth doing once. Kept
+   in this browser only (not in the cloud profile), awarded once each, with
+   a quiet toast. No levels, no streak pressure, nothing blocked behind them. */
+const MILESTONES = [
+  ['signin', 'Sign in', 20],
+  ['tutorial', 'Watch the tutorial', 10],
+  ['reorder', 'Reorder a playlist', 10],
+  ['setting', 'Change a setting', 5],
+  ['smart', 'Make a smart playlist', 15]
+];
+const LS_MILESTONES = 'ebbless:milestones';
+function milestonesDone(){
+  try { const v = JSON.parse(localStorage.getItem(LS_MILESTONES)); return v && typeof v === 'object' ? v : {}; } catch(e){ return {}; }
+}
+function renderMilestones(){
+  const ul = document.getElementById('milestoneList');
+  if (!ul) return;
+  const done = milestonesDone();
+  let total = 0;
+  ul.innerHTML = MILESTONES.map(([id, label, pts]) => {
+    const on = !!done[id]; if (on) total += pts;
+    return '<li class="' + (on ? 'is-done' : '') + '"><span class="ms-mark" aria-hidden="true">' + (on ? '\u2713' : '\u25CB') + '</span><span>' + label + '</span><span class="ms-pts">' + pts + ' pts</span></li>';
+  }).join('');
+  const t = document.getElementById('milestoneTotal');
+  if (t) t.textContent = total + ' of ' + MILESTONES.reduce((a, m) => a + m[2], 0) + ' pts';
+}
+function awardMilestone(id){
+  const m = MILESTONES.find(x => x[0] === id);
+  if (!m) return;
+  const done = milestonesDone();
+  if (done[id]) return;
+  done[id] = Date.now();
+  try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){ return; }
+  renderMilestones();
+  showToast('+' + m[2] + ' pts \u00B7 ' + m[1]);
+}
+renderMilestones();
+
 function advChoose(k, v){
+  awardMilestone('setting');
   if (k === 'art') setArtStyle(v);
   else if (k === 'cursor'){ advSet('cursor', v === 'drop' ? null : v); if (window.ebbCursorStyle) window.ebbCursorStyle(v); }
   else if (k === 'motion'){ advSet('motion', v === 'reduced' ? 'reduced' : null); advApplyMotion(); }
@@ -28966,6 +29040,7 @@ function runIntro(preview){
   // Any real start (first-visit choice, Settings replay, the topbar "?")
   // counts as watched, which ends the daily Tutorial/Enter re-invite.
   try{ localStorage.setItem(TUTORIAL_WATCHED_KEY, 'true'); }catch(e){}
+  if (!preview) awardMilestone('tutorial');
   $('helpBtn').classList.remove('is-unplayed');
   // undo discardIntroChrome()'s display:none from a prior run/skip, plus
   // the inline opacity:0 and outro-blink classes finish() leaves behind on

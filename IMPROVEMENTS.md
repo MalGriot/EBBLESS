@@ -10532,12 +10532,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #536. Likely related to playlist-stays-open-browsing (#546). Root cause: the 60s idle auto-close (#409) only reset on click/key/wheel/touch/scroll, so reading or hovering through a playlist/album with the pointer moving counted as idle and shut the window. Pointer movement now resets it. Verified on localhost: with a pointermove at 45s the panel was still open at 75s (old code closes at ~60s) and closed after a true 60s idle. The reporter's device is unknown, so confirm it matches their report; the earlier #536 fix covered renderLibrary re-renders.
 
 ### smart-playlist-more-parameters: Smart playlist needs way more parameters (Geethub #535)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #535. Add many more parameters to smart playlists.
 - **Touches:** smart playlist.
-- **Branch:** 
-- **Notes:** Synced from Geethub #535. Related to currents-playlist-algorithm.
+- **Branch:** agent/smart-achievements (merged), then main
+- **Notes:** Synced from Geethub #535. Related to currents-playlist-algorithm. Built 2026-10-17, cache v288 (not deployed). Smart playlist rules now also cover: Played (Any / Not yet / 3+ / 10+ / 25+), Liked (Any / Only liked / Not liked), Length (under 3 min, 3 to 5, over 5; songs with no known length stay out of any band), Leave out artist, Leave out words, and Order Shortest / Longest besides the old ones. Old saved rules keep working (new keys default off; `liked: true` still means only liked). Rules stay inside `pl.smart` so profile sync needs no change. Checked in the local preview: chips, live match count, saved summary line, Milestones award. Matching logic was checked through the UI only, not against a hand-built library. Not added: album/year/genre/date-added (tracks do not carry them yet), last-played time (not stored), so recency rules need data first.
 
 ### shared-playlists: Shared playlists that multiple users can build together (Geethub #534)
 - **Status:** draft
@@ -10724,20 +10724,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #558.
 
 ### what-happens-if-too-many-people: what happens if too many people are using the app (Geethub #559)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #559. medium what are the thresholds especially consider the thresholds of the adblocker part that's yet to be installed
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #559.
+- **Branch:** agent/smart-achievements (merged), then main
+- **Notes:** Synced from Geethub #559. Analysis written 2026-10-17: [docs/LOAD-THRESHOLDS.md](docs/LOAD-THRESHOLDS.md). No code. Headline: Cloudflare KV writes (about 1,000 puts a day on the free tier, shared by profiles, sessions, reports) break first, around 150 to 300 daily-active signed-in users; then Worker requests (100,000 a day), then YouTube page matching being throttled from Cloudflare IPs; Spotify dev mode caps that import path at about 25 users. Listening to already-matched songs keeps working through all of it. Airtable is not in the app's path. The parked Mac adblock (#524) adds no server load; its risk is YouTube policy, not scale. Vendor numbers were not re-checked today and nothing was load-tested.
 
 ### achievement-points-for-doing-some-tasks: achievement points for doing some tasks in the app (Geethub #560)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #560. medium adding playlist re-organizing changing a setting signing in using some secret features watching tutorial etc
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #560.
+- **Branch:** agent/smart-achievements (merged), then main
+- **Notes:** Synced from Geethub #560. Built 2026-10-17, cache v288 (not deployed). Local-first, no backend: a Milestones list in Settings (above About) with points per item, each awarded once with a quiet toast like "+10 pts · Reorder a playlist". Items and points: Sign in 20, Watch the tutorial 10, Reorder a playlist 10, Change a setting 5, Make a smart playlist 15 (total 60). Stored in this browser only (`ebbless:milestones`), not in the cloud profile, so it does not sync across devices and signing in on a new device starts a fresh list. No levels, streaks, popups or locked features. The "secret feature" slot is the smart playlist maker for now. Fits the mission (small acknowledgement of using the app, nothing pushes more listening or blocks anything). Checked: setting, smart playlist awards and the Settings list in the preview. Not exercised live: the Sign in award (needs real Google sign-in), the Reorder award (drag), and the Tutorial award (fires when the tutorial starts, same moment it is marked watched). Open for the owner: more items (liking a song, importing a playlist, installing the app) and whether points should sync to the profile.
 
 ### playing-the-next-song-in-the: playing the next song in the queue in the background to make sure the ad is played out could work also for preventing users from waiting (Geethub #561)
 - **Status:** draft
