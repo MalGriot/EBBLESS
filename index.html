@@ -37,7 +37,9 @@ window.addEventListener('keydown', function (e) {
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('video').forEach(function (v) { if (!v.classList.contains('bl-video')) { v.autoplay = false; try { v.pause(); } catch (e) {} } });
   });
-  after.push(function () { window.__ebbLoadGsi(function () { try { initGoogleOneTap(); } catch (e) {} }); });
+  /* Google sign-in is not needed to play anything: it waits 12 s after the splash, so the first song's player (YouTube / SoundCloud) has the
+     phone to itself while it starts (#578: the first seconds of a song skipped when all of these woke at once on a budget phone). */
+  after.push(function () { setTimeout(function () { window.__ebbLoadGsi(function () { try { initGoogleOneTap(); } catch (e) {} }); }, 12000); });
   window.__ebbSplashDone = function () {
     if (!window.__ebbNs) return;
     window.__ebbNs = false;
@@ -73,6 +75,68 @@ try {
     localStorage.setItem('ebbless:wasPlayingAtBackground', 'true');
   }
 } catch (e) {}
+</script>
+<script>
+/* Android app: a WebView has no media notification of its own, so mirror navigator.mediaSession (which the page already keeps current
+   for the lock screen and car displays) into the app. The app shows it on the lock screen and in the notification shade with
+   previous / play-pause / next / heart (#581, #634) and sends the button presses back through __ebbMediaAction. */
+(function () {
+  try {
+    if (!window.EbbNative || !EbbNative.media || !window.MediaSession || !('mediaSession' in navigator)) return;
+    var ms = navigator.mediaSession, proto = MediaSession.prototype, handlers = {}, md = null, ps = 'none', pos = null, timer = 0;
+    var dMeta = Object.getOwnPropertyDescriptor(proto, 'metadata'), dState = Object.getOwnPropertyDescriptor(proto, 'playbackState');
+    var origHandler = ms.setActionHandler.bind(ms), origPos = ms.setPositionState ? ms.setPositionState.bind(ms) : null;
+    function artUrl() {
+      var list = (md && md.artwork) || [], best = '', bestW = 0;
+      for (var i = 0; i < list.length; i++) {
+        var w = parseInt(String(list[i].sizes || '').split('x')[0], 10) || 0, src = list[i].src || '';
+        if (!/^https:/.test(src)) continue;
+        // smallest cover of at least 300 px, else the biggest there is
+        var better = !best || (bestW >= 300 ? (w >= 300 && w < bestW) : (w > bestW));
+        if (better) { best = src; bestW = w; }
+      }
+      return best;
+    }
+    function push() {
+      if (timer) return;
+      timer = setTimeout(function () {
+        timer = 0;
+        try {
+          var lb = document.getElementById('playerLikeBtn'), now = ps === 'playing' && pos ? pos.position + (Date.now() - pos.at) / 1000 * pos.rate : (pos ? pos.position : 0);
+          EbbNative.media(JSON.stringify({
+            t: md ? md.title || '' : '', a: md ? md.artist || '' : '', al: md ? md.album || '' : '', art: artUrl(),
+            pl: ps === 'playing', pos: Math.round(now * 1000), dur: pos ? Math.round(pos.duration * 1000) : 0, rate: pos ? pos.rate : 1,
+            liked: !!(lb && lb.classList.contains('is-liked'))
+          }));
+        } catch (e) {}
+      }, 150);
+    }
+    if (dMeta && dState) {
+      Object.defineProperty(ms, 'metadata', { configurable: true, get: function () { return md; }, set: function (v) { md = v; try { dMeta.set.call(ms, v); } catch (e) {} push(); } });
+      Object.defineProperty(ms, 'playbackState', { configurable: true, get: function () { return ps; }, set: function (v) { ps = v; try { dState.set.call(ms, v); } catch (e) {} push(); } });
+    }
+    ms.setActionHandler = function (a, fn) { handlers[a] = fn; return origHandler(a, fn); };
+    ms.setPositionState = function (st) {
+      var r = origPos ? origPos.apply(null, arguments) : undefined;
+      pos = st && st.duration > 0 ? { duration: st.duration, position: st.position || 0, rate: st.playbackRate || 1, at: Date.now() } : null;
+      push();
+      return r;
+    };
+    window.__ebbMediaAction = function (a) {
+      try {
+        if (a === 'like') { var lb = document.getElementById('playerLikeBtn'); if (lb) lb.click(); return; }
+        var map = { play: 'play', pause: 'pause', next: 'nexttrack', prev: 'previoustrack' }, m = /^seekto:(.+)$/.exec(a);
+        if (m) { if (handlers.seekto) handlers.seekto({ action: 'seekto', seekTime: parseFloat(m[1]) }); return; }
+        var h = handlers[map[a]];
+        if (h) h({ action: map[a] });
+      } catch (e) {}
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+      var lb = document.getElementById('playerLikeBtn');
+      if (lb) new MutationObserver(push).observe(lb, { attributes: true, attributeFilter: ['class'] });
+    });
+  } catch (e) {}
+})();
 </script>
 <script>if (/EBBLESS-Android/.test(navigator.userAgent)) document.documentElement.classList.add('ebb-android');
 try { if (/NativeSplash/.test(navigator.userAgent) && !sessionStorage.getItem('ebbless:nsplashDone')) document.documentElement.classList.add('ebb-nsplash'); } catch (e) {}   // the app shows its own splash on a cold start

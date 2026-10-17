@@ -230,6 +230,7 @@ class NativeSplash extends FrameLayout {
         if (chosen || finished) return;
         chosen = true;
         chosenTutorial = tutorial;
+        releaseVideo();   // the phone has very few H.264 decoders: give ours back now so the first song's player can have it
         if (!tutorial && enterSound != null && soundReady) enterSound.start();
         buttons.animate().cancel();
         buttons.animate().alpha(0f).setStartDelay(0).setDuration(200).withEndAction(() -> buttons.setVisibility(View.INVISIBLE)).start();
@@ -278,8 +279,13 @@ class NativeSplash extends FrameLayout {
         }).start();
     }
 
-    void release() {
+    /** The last frame stays on the texture while the splash fades, so freeing the decoder early is invisible. */
+    private void releaseVideo() {
         try { if (video != null) { video.release(); video = null; } } catch (Exception ignored) {}
+    }
+
+    void release() {
+        releaseVideo();
         // let a playing enter sound ring out on its own
         final MediaPlayer es = enterSound;
         enterSound = null;
