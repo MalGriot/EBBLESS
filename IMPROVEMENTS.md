@@ -10359,7 +10359,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #491. Link-matching grid plays a looping video clip on hover.
 - **Touches:**
 - **Branch:** agent/song-page-share
-- **Notes:** Synced from Geethub #491.  Interpreted 'link matching grid' as the Fix this song link picker (#relinkCandidates). Shipped cache v288: on mouse devices only, hovering a YouTube candidate for 0.4s plays a muted looping clip (youtube-nocookie embed) over its thumbnail; one iframe at a time, removed on mouse leave or tab hide. SoundCloud candidates and touch devices have no clip. Verified the iframe is created on hover and removed on leave; the clip image itself was not seen playing (embed did not finish loading in the preview pane). If this meant a different grid, say which.
+- **Notes:** Synced from Geethub #491.  Interpreted 'link matching grid' as the Fix this song link picker (#relinkCandidates). Shipped cache v289: on mouse devices only, hovering a YouTube candidate for 0.4s plays a muted looping clip (youtube-nocookie embed) over its thumbnail; one iframe at a time, removed on mouse leave or tab hide. SoundCloud candidates and touch devices have no clip. Verified the iframe is created on hover and removed on leave; the clip image itself was not seen playing (embed did not finish loading in the preview pane). If this meant a different grid, say which.
 
 ### artist-window-album-tracks: In the artist window, show album tracks, add them to library, show album year (Geethub #490)
 - **Status:** merged
@@ -10375,7 +10375,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #489. Sharing a song to socials shows an animated EBBLESS logo with a link back.
 - **Touches:**
 - **Branch:** agent/song-page-share
-- **Notes:** Synced from Geethub #489.  Shipped cache v288: sharing a song (song menu or song page) flashes the EBBLESS wordmark over the screen for about 1.3s (opacity/transform only, display:none after, reduced-motion safe) while the share sheet opens or the link is copied. The link back is the existing share URL. Overlay render verified by forcing it on; its fade timing not watched live (preview pane throttles animations). Playlist shares are unchanged.
+- **Notes:** Synced from Geethub #489.  Shipped cache v289: sharing a song (song menu or song page) flashes the EBBLESS wordmark over the screen for about 1.3s (opacity/transform only, display:none after, reduced-motion safe) while the share sheet opens or the link is copied. The link back is the existing share URL. Overlay render verified by forcing it on; its fade timing not watched live (preview pane throttles animations). Playlist shares are unchanged.
 
 ### stem-isolation-dj: Isolate stems with UVR as a DJ feature (Geethub #488)
 - **Status:** archived
@@ -10553,7 +10553,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #533. Tapping a song should be able to open a song page, not only play.
 - **Touches:** song rows, song page.
 - **Branch:** agent/song-page-share
-- **Notes:** Synced from Geethub #533. Related to #531 and #532. Shipped cache v288: a song page (openSongPage) opens in the library panel from tapping the playing song's title in the player, or 'Song page' in a song's menu. Shows art, title, artist (tap opens artist page), album (tap opens it, only when in the library), length, plays, year (existing cached year lookup), plus Play, Add to playlist, Share. Back arrow returns to the open playlist. Row tap still just plays. Verified in preview (desktop panel + 375px); only songs with a library playlist get Play/Share.
+- **Notes:** Synced from Geethub #533. Related to #531 and #532. Shipped cache v289: a song page (openSongPage) opens in the library panel from tapping the playing song's title in the player, or 'Song page' in a song's menu. Shows art, title, artist (tap opens artist page), album (tap opens it, only when in the library), length, plays, year (existing cached year lookup), plus Play, Add to playlist, Share. Back arrow returns to the open playlist. Row tap still just plays. Verified in preview (desktop panel + 375px); only songs with a library playlist get Play/Share.
 
 ### album-info: Album info (Geethub #532)
 - **Status:** merged
