@@ -10538,6 +10538,7 @@ Add entries in this shape:
 - **Touches:** smart playlist.
 - **Branch:** agent/smart-achievements (merged), then main
 - **Notes:** Synced from Geethub #535. Related to currents-playlist-algorithm. Built 2026-10-17, cache v288 (not deployed). Smart playlist rules now also cover: Played (Any / Not yet / 3+ / 10+ / 25+), Liked (Any / Only liked / Not liked), Length (under 3 min, 3 to 5, over 5; songs with no known length stay out of any band), Leave out artist, Leave out words, and Order Shortest / Longest besides the old ones. Old saved rules keep working (new keys default off; `liked: true` still means only liked). Rules stay inside `pl.smart` so profile sync needs no change. Checked in the local preview: chips, live match count, saved summary line, Milestones award. Matching logic was checked through the UI only, not against a hand-built library. Not added: album/year/genre/date-added (tracks do not carry them yet), last-played time (not stored), so recency rules need data first.
+  Fix (2026-10-17, cache v293, not deployed): the window was too tall to reach Create on a phone. Now the main choices (name, Played, Liked, Order, How many) are on top, Length / Artist / Title or artist has / Leave out artist / Leave out words are under a More options fold (opens by itself when editing a playlist that uses them), the rules area scrolls, and the match count with Create and Cancel stay fixed at the bottom. Checked at 360x600 in the preview.
 
 ### shared-playlists: Shared playlists that multiple users can build together (Geethub #534)
 - **Status:** draft

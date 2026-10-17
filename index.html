@@ -3175,6 +3175,12 @@ body.onb-active:not(.split-desktop) #view-library,body.onb-active:not(.split-des
   transition:opacity 900ms var(--ease-in-out),transform 900ms var(--ease-in-out)}
 body.onb-active.onb-stage-input #view-library,body.onb-active.onb-stage-player #view-player,body.onb-active.onb-stage-settings #view-settings{opacity:1;transform:scale(1)}
 body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
+/* smart playlist window: the rules scroll, Create / Cancel stay put at the bottom */
+#smWrap{display:flex;flex-direction:column;width:100%;max-width:420px;max-height:calc(100vh - var(--topbar-h) - 64px);max-height:calc(100dvh - var(--topbar-h) - 64px)}
+#smWrap .sm-body{flex:1;min-height:0;overflow-y:auto;padding-right:2px}
+#smWrap .step{margin-bottom:12px}
+#smWrap .sm-foot{flex:none;padding-top:10px}
+.sm-more summary{cursor:pointer;color:var(--faint);font-size:13px;padding:8px 0 12px}
 .ms-card{display:none}
 @media (max-width:859.98px){
   body:not(.split-desktop) .ms-card:not([hidden]){display:block;flex:none;width:calc(100% - 24px);max-width:420px;margin:6px auto 4px;border:1px solid var(--border);border-radius:12px;background:rgba(18,18,18,.82);position:relative;z-index:2}
@@ -13360,25 +13366,29 @@ function openSmartPlaylistFlow(editId, name){
   const group = (label, key, opts) => '<div class="adv-group" style="margin-top:6px">' + label + '</div><div class="adv-chips" style="margin:6px 0 12px" data-smart="' + key + '">' +
     opts.map(([v, l]) => '<button type="button" class="btn-ghost" data-v="' + v + '">' + l + '</button>').join('') + '</div>';
   openImportOverlay();
+  const moreOpen = !!(editing && (r.len || r.artist || r.q || r.notArtist || r.notQ));
   importStage.innerHTML = '<div id="smWrap">' +
     '<div class="step">' + (editing ? 'Edit smart playlist' : 'Smart playlist') + '</div>' +
+    '<div class="sm-body">' +
     '<input id="smName" type="text" placeholder="Name" autocomplete="off" spellcheck="false" style="' + field + '">' +
     group('Played', 'plays', [[0, 'Any'], [-1, 'Not yet'], [3, '3+ times'], [10, '10+ times'], [25, '25+ times']]) +
     group('Liked songs', 'liked', [['', 'Any'], ['1', 'Only liked'], ['no', 'Not liked']]) +
-    group('Length', 'len', [['', 'Any'], ['short', 'Under 3 min'], ['mid', '3 to 5 min'], ['long', 'Over 5 min']]) +
-    '<div class="adv-group" style="margin-top:6px">Artist (optional)</div>' +
-    '<input id="smArtist" type="text" placeholder="Any artist" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
-    '<div class="adv-group" style="margin-top:6px">Title or artist has (optional)</div>' +
-    '<input id="smQ" type="text" placeholder="Any words" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
-    '<div class="adv-group" style="margin-top:6px">Leave out artist (optional)</div>' +
-    '<input id="smNotArtist" type="text" placeholder="No artist left out" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
-    '<div class="adv-group" style="margin-top:6px">Leave out words (optional)</div>' +
-    '<input id="smNotQ" type="text" placeholder="No words left out" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
     group('Order', 'sort', [['plays', 'Most played'], ['alpha', 'A to Z'], ['artist', 'Artist'], ['short', 'Shortest'], ['long', 'Longest'], ['random', 'Shuffle']]) +
     group('How many', 'limit', [[25, '25'], [50, '50'], [100, '100'], [0, 'All']]) +
-    '<div id="smCount" style="color:var(--faint);font-size:13px;margin:4px 0 12px"></div>' +
+    '<details class="sm-more"' + (moreOpen ? ' open' : '') + '><summary>More options</summary>' +
+    group('Length', 'len', [['', 'Any'], ['short', 'Under 3 min'], ['mid', '3 to 5 min'], ['long', 'Over 5 min']]) +
+    '<div class="adv-group" style="margin-top:6px">Artist</div>' +
+    '<input id="smArtist" type="text" placeholder="Any artist" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    '<div class="adv-group" style="margin-top:6px">Title or artist has</div>' +
+    '<input id="smQ" type="text" placeholder="Any words" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    '<div class="adv-group" style="margin-top:6px">Leave out artist</div>' +
+    '<input id="smNotArtist" type="text" placeholder="No artist left out" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    '<div class="adv-group" style="margin-top:6px">Leave out words</div>' +
+    '<input id="smNotQ" type="text" placeholder="No words left out" autocomplete="off" spellcheck="false" style="' + field + ';margin-top:6px">' +
+    '</details></div>' +
+    '<div class="sm-foot"><div id="smCount" style="color:var(--faint);font-size:13px;margin:0 0 10px"></div>' +
     '<button class="btn-ghost is-active" id="smSave" style="width:100%;margin-bottom:8px">' + (editing ? 'Save' : 'Create') + '</button>' +
-    '<button class="btn-ghost" id="smCancel" style="width:100%">Cancel</button></div>';
+    '<button class="btn-ghost" id="smCancel" style="width:100%">Cancel</button></div></div>';
   const nameIn = $('smName'), artIn = $('smArtist'), qIn = $('smQ'), nArtIn = $('smNotArtist'), nQIn = $('smNotQ');
   nameIn.value = editing ? editing.name : (name || '');
   artIn.value = r.artist; qIn.value = r.q; nArtIn.value = r.notArtist; nQIn.value = r.notQ;
@@ -16676,6 +16686,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 293, date: '2026-10-17', items: [
+    'The smart playlist window is shorter: the main choices are up top, the rest (length, artist, words, leave-outs) sit under More options, and Create stays in view on small screens.'
+  ]},
   { version: 292, date: '2026-10-17', items: [
     'The Load step in the checklist now also ticks when you play a song or add an album from an artist window, or add a song to a playlist.'
   ]},
