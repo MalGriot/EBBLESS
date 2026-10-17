@@ -4584,9 +4584,9 @@ body.week-up-on{overflow:hidden}
         <div class="settings-row settings-row-slider">
           <div>
             <div class="label">Hold the E logo</div>
-            <div class="desc">Goes back to the splash screen by default. Mini player opens it when a song is playing.</div>
+            <div class="desc">Tapping the logo shows the splash screen. Holding opens the mini player when a song is playing.</div>
           </div>
-          <div class="adv-chips" role="group" aria-label="Hold the E logo"><button type="button" class="btn-ghost" data-adv="lhold" data-val="splash">Splash screen</button><button type="button" class="btn-ghost" data-adv="lhold" data-val="mini">Mini player</button></div>
+          <div class="adv-chips" role="group" aria-label="Hold the E logo"><button type="button" class="btn-ghost" data-adv="lhold" data-val="mini">Mini player</button><button type="button" class="btn-ghost" data-adv="lhold" data-val="splash">Splash screen</button></div>
         </div>
         <div class="adv-group">Backup</div>
         <div class="settings-row">
@@ -9074,7 +9074,7 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
       // the release that ends this hold may land on the splash instead, in
       // which case no click reaches the button - don't let the flag linger
       setTimeout(() => { swallowClick = false; }, 1500);
-      if (advPrefs().lhold === 'mini' && miniPlayerSupported() && currentTrack()) openMiniPlayer();
+      if (advPrefs().lhold !== 'splash' && miniPlayerSupported() && currentTrack()) openMiniPlayer();
       else returnToSplash();
     }, HOLD_MS);
   });
@@ -9089,7 +9089,7 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
     e.stopImmediatePropagation();
   });
 })();
-$('wordmarkBtn').addEventListener('click', () => setView('player'));
+$('wordmarkBtn').addEventListener('click', () => returnToSplash());
 
 // Bring the splash back over the already-running app (wordmark hold above).
 // Reuses the first-visit Tutorial/Enter choice: Enter just hides the splash
@@ -22017,7 +22017,7 @@ function advRender(){
     art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '', cursor: ['dot','ring','cross','native'].includes(p.cursor) ? p.cursor : 'drop',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet',
-    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none', lhold: p.lhold === 'mini' ? 'mini' : 'splash',
+    gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none', lhold: p.lhold === 'splash' ? 'splash' : 'mini',
     albsec: p.albsec === 'flat' ? 'flat' : 'sections', shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
   const hide = p.hide || [];
@@ -22102,7 +22102,7 @@ function advChoose(k, v){
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
   else if ((k === 'gdt' || k === 'glp' || k === 'gtt') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
   else if (k === 'glib') advSet('glib', v === 'none' ? null : v);
-  else if (k === 'lhold') advSet('lhold', v === 'mini' ? 'mini' : null);
+  else if (k === 'lhold') advSet('lhold', v === 'splash' ? 'splash' : null);
   else if (k === 'secorder' && ADV_SECS[v]){
     const o = advSecOrder().filter(x => x !== v);
     o.unshift(v);
