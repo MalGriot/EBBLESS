@@ -11244,8 +11244,8 @@ function artistSongRow(song, album, n, year){
 }
 async function addArtistAlbumToLibrary(a, name){
   showToast('Adding ' + a.name + '...');
+  awardMilestone('load');   // on the tap: the load below waits behind every other background load
   if (await queueBackgroundLoad(a.id, a.type || 'am_album')){
-    awardMilestone('load');
     const added = getCachedPlaylist(a.id);
     if (added){ added.importedUnder = name; if (a.releaseDate) added.releaseDate = a.releaseDate; lsSet(LS_PL(a.id), added); }
     saveToLibrary(a.id);
