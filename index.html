@@ -3935,7 +3935,6 @@ body.week-up-on{overflow:hidden}
           <div class="section-label">Podcasts</div>
         </div>
         <div class="lib-grid" id="libraryPodcastsGrid"></div>
-        <div class="currents-hint hidden" id="libFilterEmpty" style="text-align:center;padding:36px 0"></div>
         </div>
         <div class="hidden" id="libSearchTracks">
           <div class="section-label">Songs</div>
@@ -10401,13 +10400,6 @@ function renderLibrary(){
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
   libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
-  // a single-kind filter with none of that kind yet says so instead of showing a blank page
-  const fe = document.getElementById('libFilterEmpty');
-  if (fe){
-    const none = { playlists: !libraryGrid.children.length, artists: !artistCount, albums: !albumCount, podcasts: !podcastCount }[filter];
-    fe.classList.toggle('hidden', !(none && !searchQ));
-    if (none) fe.textContent = 'No ' + filter + ' yet.';
-  }
   // Fold arrows on the section headers: All view only, so a single-type
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
@@ -10426,6 +10418,14 @@ function renderLibrary(){
     head.setAttribute('aria-expanded', String(!folded));
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
+    // an empty kind keeps its title and says so (the pills are always there now)
+    const cnt = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount }[key];
+    let none = grid.nextElementSibling && grid.nextElementSibling.classList.contains('lib-none') ? grid.nextElementSibling : null;
+    if (!none){ none = document.createElement('div'); none.className = 'currents-hint lib-none'; none.style.cssText = 'padding:6px 2px 14px'; grid.after(none); }
+    const empty = !cnt && !folded && !searchQ && filter === 'all' && !advHide.includes(key.slice(0, -1));
+    none.hidden = !empty;
+    none.textContent = 'No ' + key + ' yet.';
+    if (empty) head.classList.remove('hidden');
   });
   // #487: All is an overview - each section shows its first two rows, with
   // "See all (N)" opening that section's own filter. Rendering every card
