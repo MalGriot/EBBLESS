@@ -11943,6 +11943,7 @@ const CTX_ICON_LIKE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentC
 const CTX_ICON_PLAY_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
 const CTX_ICON_ADD_PLAYLIST = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zM3 16h8v-2H3v2zm0-5h12v-2H3v2zm15 5v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>';
 const CTX_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const CTX_ICON_SLEEP = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.3 3a9 9 0 1 0 8.7 11.3A7 7 0 0 1 12.3 3z"/></svg>';
 const CTX_ICON_ADD_QUEUE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h13v2H3V6zm0 5h13v2H3v-2zm0 5h9v2H3v-2zm15-9v4h4v2h-4v4h-2v-4h-4v-2h4V7h2z"/></svg>';
 
 function closeTrackCtxMenu(){
@@ -11992,6 +11993,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     if (!(opts && opts.isNow)) items.push({ action: 'playnext', label: 'Play next', icon: CTX_ICON_PLAY_NEXT });
     items.push({ action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE });
     items.push({ action: 'addplaylist', label: 'Add to playlist', icon: CTX_ICON_ADD_PLAYLIST });
+    if (opts && opts.isNow) items.push({ action: 'sleep', label: sleepTimer ? 'Sleep timer: ' + sleepTimerLabel() : 'Sleep timer', icon: CTX_ICON_SLEEP });
     items.push({ action: 'songpage', label: 'Song page', icon: CTX_ICON_ART });
     // A track has no canonical source link of its own (see
     // canonicalLinkForPlaylist's comment) - sharing it re-shares the parent
@@ -12049,6 +12051,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'playnext'){ queuePlayNext(trackIdx, plId); showToast('Playing next'); }
   else if (action === 'addqueue'){ queueAddToEnd(trackIdx, plId); showToast('Added to queue'); }
   else if (action === 'addplaylist'){ if (t) openAddToPlaylistPicker(t); }
+  else if (action === 'sleep'){ openSleepTimerChooser(); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
@@ -25108,6 +25111,57 @@ function pausePlayback(){
   const ad = activeDeck();
   if (!ad.player || !ad.player.pauseVideo || isFadingOut(ad)) return;
   fadeOutAndPause(ad);
+}
+
+/* ---------- Sleep timer (Spotify study) ----------
+   Player More menu -> Sleep timer -> 15 / 30 / 60 min or "end of this song".
+   One 1s interval that only exists while a timer is set. When it fires the
+   music fades out and pauses (pausePlayback), nothing else changes. */
+let sleepTimer = null;   // { kind: 'min', endAt } | { kind: 'song', pos }
+let sleepTimerIv = 0;
+function sleepTimerLabel(){
+  if (!sleepTimer) return '';
+  if (sleepTimer.kind === 'song') return 'end of this song';
+  const m = Math.max(1, Math.ceil((sleepTimer.endAt - Date.now()) / 60000));
+  return m + ' min left';
+}
+function clearSleepTimer(){
+  sleepTimer = null;
+  if (sleepTimerIv){ clearInterval(sleepTimerIv); sleepTimerIv = 0; }
+}
+function fireSleepTimer(){
+  clearSleepTimer();
+  pausePlayback();
+  showToast('Sleep timer: paused. Good night.');
+}
+function sleepTimerTick(){
+  if (!sleepTimer) return;
+  if (sleepTimer.kind === 'min'){ if (Date.now() >= sleepTimer.endAt) fireSleepTimer(); return; }
+  // end of this song: the last 1.5s of it, or (if that was missed) as soon as the queue moves on
+  const ad = activeDeck();
+  let left = Infinity;
+  try { if (ad && ad.player && ad.player.getDuration && ad.player.getCurrentTime){ const d = ad.player.getDuration(); if (d > 0) left = d - ad.player.getCurrentTime(); } } catch(e){}
+  if (state.queuePos !== sleepTimer.pos || left < 1.5) fireSleepTimer();
+}
+function setSleepTimer(kind, minutes){
+  clearSleepTimer();
+  sleepTimer = kind === 'song' ? { kind: 'song', pos: state.queuePos } : { kind: 'min', endAt: Date.now() + minutes * 60000 };
+  sleepTimerIv = setInterval(sleepTimerTick, 1000);
+  showToast(kind === 'song' ? 'Sleep timer: stops after this song' : 'Sleep timer: ' + minutes + ' min');
+}
+function openSleepTimerChooser(){
+  openImportOverlay();
+  const btn = (id, label) => '<button class="btn-ghost" id="' + id + '" style="width:100%;text-align:left;margin-bottom:8px;display:block">' + label + '</button>';
+  importStage.innerHTML =
+    '<div class="step">Sleep timer' + (sleepTimer ? ' &middot; ' + sleepTimerLabel() : '') + '</div>' +
+    btn('stm15', '15 minutes') + btn('stm30', '30 minutes') + btn('stm60', '60 minutes') + btn('stmSong', 'End of this song') +
+    (sleepTimer ? btn('stmOff', 'Turn off') : '');
+  const pick = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', () => { closeImportOverlay(); fn(); }); };
+  pick('stm15', () => setSleepTimer('min', 15));
+  pick('stm30', () => setSleepTimer('min', 30));
+  pick('stm60', () => setSleepTimer('min', 60));
+  pick('stmSong', () => setSleepTimer('song'));
+  pick('stmOff', () => { clearSleepTimer(); showToast('Sleep timer off'); });
 }
 
 function playIndex(pos, opts){
