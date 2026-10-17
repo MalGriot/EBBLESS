@@ -1597,6 +1597,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .empty-find-btn:active{transform:scale(.96)}
 .track-meta.is-empty .empty-find-btn{display:inline-block}
 .track-meta.is-empty .title-row .player-like-btn{visibility:hidden}
+.player-stage:has(.track-meta.is-empty) .controls-row .player-like-btn{visibility:hidden}
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
 .seek-row{display:flex;align-items:center;gap:10px}
 .seek-row .t{font-size:11px;color:var(--faint-2);width:34px;flex:none;text-align:center}
@@ -2527,10 +2528,19 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #bottom-nav{display:flex}
   #mini-bar,#match-status{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
-  .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 332px)))}
+  /* one width for the art and the title block under it, so the title runs the full width of the art (#611) */
+  .player-stage{--art-w:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 332px)))}
   /* nothing playing: the Find music button takes a row, so the art gives that room back */
-  body:not(.onb-active) .player-stage:has(.track-meta.is-empty) .artwork-wrap{width:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 392px)))}
-  .track-meta{width:min(340px,84vw)}
+  body:not(.onb-active) .player-stage:has(.track-meta.is-empty){--art-w:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 392px)))}
+  .artwork-wrap{width:var(--art-w)}
+  .track-meta{width:var(--art-w)}
+  /* heart and options sit in the controls row on phones (playerControlsPlace), so the title row only keeps the opt-in extras */
+  .track-meta .title-row::before{display:none}
+  .track-meta .title-row:has(.player-decline-btn:not([hidden]))::before{display:block;width:22px}
+  .controls-row .player-like-btn{width:36px;height:36px}
+  .controls-row .player-like-btn svg{width:18px;height:18px}
+  .controls-row .player-like-btn:hover{background:var(--panel-2);color:var(--text)}
+  .controls-row .player-like-btn.is-liked:hover{color:var(--player-accent)}
   .lib-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ctl-btn{width:44px;height:44px}
   .ctl-btn svg{width:18px;height:18px}
@@ -2889,7 +2899,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   .player-stage{padding-top:2px}
   .visual-tabs{transform:scale(.78);margin-bottom:0}
   .artwork-wrap{width:min(20vh,100px)!important}
-  .track-meta{margin-top:6px}
+  .track-meta{margin-top:6px;width:min(340px,84vw)}
   .track-meta .title{font-size:14px;line-height:1.15}
   .track-meta .artist{font-size:10px;margin-top:2px}
   .transport-full{margin-top:8px}
@@ -23768,6 +23778,21 @@ function vizControlsPlace(){
 }
 vizControlsMQ.addEventListener('change', vizControlsPlace);
 vizControlsPlace();
+// phones/narrow screens: the heart and the song options button sit in the
+// controls row, one on each side, so the title above gets the full art width (#611)
+const playerCtlMQ = window.matchMedia('(max-width:859.98px)');
+const playerLikeEl = $('playerLikeBtn'), playerMoreEl = $('playerMoreBtn'), playerAddPlEl = $('playerAddPlBtn');
+function playerControlsPlace(){
+  if (playerCtlMQ.matches){
+    $('shuffleBtn').before(playerLikeEl);
+    $('repeatBtn').after(playerMoreEl);
+  } else {
+    $('playerSpeedBtn').before(playerLikeEl);
+    playerAddPlEl.after(playerMoreEl);
+  }
+}
+playerCtlMQ.addEventListener('change', playerControlsPlace);
+playerControlsPlace();
 applyVisualMode();
 
 /* =========================================================================

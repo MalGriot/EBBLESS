@@ -11104,12 +11104,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #610.
 
 ### mobile-player-stretch-the-title-to-the-wid: mobile: player: stretch the title to the width of the album art (Geethub #611)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #611. put the heart button and three dots inline with player controls - one on each side
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #611.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #611. Built (phones, under 860px): the title block now uses the same width as the album art (shared --art-w), and the heart and the song options (three dots) buttons move into the controls row, heart on the left of shuffle, dots on the right of repeat (playerControlsPlace, same move-by-media-query pattern as the visualizer controls); desktop keeps them beside the title. Opt-in extras (speed, add to playlist, CuRRentSSsss thumbs-down) stay beside the title. Verified in the 375px and 1400px browser preview: widths match, heart toggles, options menu opens, no [gpu-watchdog]. Not checked on a real phone; podcast layout with the two skip buttons not checked. Cache v326.
 
 ### the-miniplayer-has-changed-back-to-a-recta: the miniplayer has changed back to a rectangle. there should be options (Geethub #612)
 - **Status:** merged
