@@ -21379,7 +21379,7 @@ function makeSCPlayerAdapter(deck, widget, myGen){
       const mySeq = ++loadSeq;
       const onLoad = typeof opts === 'object' && opts.onLoad;
       const live = () => deck.gen === myGen && mySeq === loadSeq;
-      const loaded = () => { loading = false; widget.setVolume(muted ? 0 : vol); if (onLoad) onLoad(); warmSCStandby(deck); };
+      const loaded = () => { loading = false; widget.setVolume(muted ? 0 : vol); if (onLoad) onLoad(); warmSCStandby(deck); scCheckPolicy(deck, widget, myGen, v); };
       const loadSingle = () => {
         deck.scSet = null;
         widget.load(soundCloudTrackApiUrl(v), {
@@ -21431,6 +21431,46 @@ function makeSCPlayerAdapter(deck, widget, myGen){
       widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
     },
   };
+}
+// #570: SoundCloud decides per listener whether a song plays: "not available in
+// your country" (widget sound policy BLOCK), a 30 s preview (SNIP), or an
+// ERROR. A signed-in account with the right country, like the owner's, never
+// sees it; everyone else gets a silent deck. When the active song is one of
+// those, it is re-matched to a YouTube copy once, with no login anywhere.
+// A song loaded ahead on a standby deck is only noted (deck._scBlocked) and
+// handled when it is promoted (promoteDeckDirect).
+const scBlockedTried = new Set();
+function scCheckPolicy(deck, widget, myGen, videoId){
+  widget.getCurrentSound(function(s){
+    if (deck.gen !== myGen || !s || String(s.id) !== soundCloudTrackId(videoId)) return;
+    if (s.policy === 'BLOCK' || s.policy === 'SNIP') scUnplayable(deck, videoId, s.policy);
+  });
+}
+function scPromoted(nd){ if (nd._scBlocked && nd._scBlocked.vid === nd.videoId) scUnplayable(nd, nd._scBlocked.vid, nd._scBlocked.why); }
+function scUnplayable(deck, vid, why){
+  if (!vid || scBlockedTried.has(vid)) return;
+  if (deck !== activeDeck()){ deck._scBlocked = { vid, why }; return; }
+  deck._scBlocked = null;
+  const entry = state.queue[state.queuePos], t = trackAt(state.queuePos);
+  if (!entry || !t || t.videoId !== vid || t.podcast) return;
+  scBlockedTried.add(vid);
+  (async () => {
+    let best = null;
+    try{
+      const data = await searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT);
+      const list = (data.candidates && data.candidates.length) ? data.candidates : (data.videoId ? [data] : []);
+      best = list.find(c => c && c.videoId && !isSoundCloudVideoId(c.videoId)) || null;
+    } catch(e){}
+    const cur = state.queue[state.queuePos];
+    if (!cur || cur.plId !== entry.plId || cur.idx !== entry.idx || t.videoId !== vid) return;   // moved on meanwhile
+    if (best){
+      applyRelinkChoice(entry.plId, entry.idx, best);
+      showToast(why === 'SNIP' ? 'SoundCloud only gives a 30 second preview here. Playing a YouTube copy.' : 'SoundCloud won\u2019t play this song here. Playing a YouTube copy.');
+    } else {
+      showToast('SoundCloud won\u2019t play this song here, and there is no other copy. Skipping.');
+      playNext(true);
+    }
+  })();
 }
 function soundCloudTrackApiUrl(videoId){ return 'https://api.soundcloud.com/tracks/' + soundCloudTrackId(videoId); }
 // #458: SoundCloud's widget can't start a NEW sound via load()/play() while the
@@ -21676,8 +21716,10 @@ function createSCDeckPlayer(deck, videoId, opts){
     if (deck.gen !== myGen) return;
     if (mainFrame && mainFrame.getAttribute('src')) mainFrame.src = 'about:blank';
     deck.ready = true;
+    deck._scBlocked = null;
     widget.getDuration(function(d){ if (deck.gen === myGen) deck._scDur = (d || 0) / 1000; });
     deck.player.setVolume(deck === activeDeck() ? effectiveVolume(deck) : 0);
+    if (!deck.pendingVideoId || deck.pendingVideoId === videoId) scCheckPolicy(deck, widget, myGen, videoId);
     // The iframe was built with this exact track already (loadIntoDeck sets
     // pendingVideoId to the same id it passes createDeckPlayer) - reloading
     // it here would just restart/delay the same sound, so only load a
@@ -21799,6 +21841,7 @@ function createSCDeckPlayer(deck, videoId, opts){
     }
     onDeckStateChange(deck, { data: YT.PlayerState.PAUSED });
   });
+  widget.bind(SC.Widget.Events.ERROR, function(){ if (deck.gen === myGen) scUnplayable(deck, deck.videoId, 'ERROR'); });
   widget.bind(SC.Widget.Events.FINISH, function(){
     if (deck.gen !== myGen) return;
     // #458: a widget holding a set starts the set's next sound on its own the
@@ -25034,6 +25077,7 @@ function promoteDeckDirect(nd, pos, shouldPlay, keepOld){
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
   reflectCurrentTrackUI(pos);
+  scPromoted(nd);
 
   nd.player.setVolume(effectiveVolume(nd));
   rewindPromotedDeck(nd);
@@ -25113,6 +25157,7 @@ function finishCrossfade(old, nd, nextPos){
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
   reflectCurrentTrackUI(nextPos, { skipArtSwap: true });
+  scPromoted(nd);
   setPlayingUI(true);
   // the incoming deck is already seconds in - repaint straight away rather
   // than leave reflectCurrentTrackUI's 0:00 up until the next poll tick
@@ -25168,6 +25213,7 @@ function startSkipCrossfade(pos, t){
   state.queuePos = pos;
   lastTrackStartTs = Date.now();
   crossfadeTriggered = false;
+  scPromoted(nd);
   if (nd.player && nd.player.setVolume) nd.player.setVolume(0);
   if (nd.player) rewindPromotedDeck(nd);
   if (nd.confirmed && nd.player){
