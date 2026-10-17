@@ -3181,19 +3181,22 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
 #smWrap .step{margin-bottom:12px}
 #smWrap .sm-foot{flex:none;padding-top:10px}
 .sm-more summary{cursor:pointer;color:var(--faint);font-size:13px;padding:8px 0 12px}
+.ms-glow{outline:2px solid var(--accent,#e0b26a)!important;outline-offset:3px;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent,#e0b26a) 28%,transparent),0 0 22px 6px color-mix(in srgb,var(--accent,#e0b26a) 55%,transparent)!important;border-radius:12px}
 .ms-card{display:none}
 @media (max-width:859.98px){
-  body:not(.split-desktop) .ms-card:not([hidden]){display:block;flex:none;width:calc(100% - 24px);max-width:420px;margin:6px auto 4px;border:1px solid var(--border);border-radius:12px;background:rgba(18,18,18,.82);position:relative;z-index:2}
+  body:not(.split-desktop) .ms-card:not([hidden]){display:block;flex:none;width:calc(100% - 24px);max-width:420px;margin:6px auto 4px;border:1px solid color-mix(in srgb,var(--accent,#e0b26a) 55%,var(--border));box-shadow:0 0 14px color-mix(in srgb,var(--accent,#e0b26a) 28%,transparent);border-radius:12px;background:rgba(18,18,18,.82);position:relative;z-index:2}
+  body:not(.split-desktop) .ms-card.is-showing:not([hidden]){position:sticky;top:6px;z-index:5;background:rgba(18,18,18,.96)}
   .ms-row{display:flex;align-items:center}
   .ms-head{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:40px;padding:6px 12px;background:none;border:0;color:var(--text);font-size:13px;text-align:left}
   .ms-head-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ms-ring{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent,var(--text));flex:none}
+  .ms-ring{width:10px;height:10px;border-radius:50%;border:2px solid var(--accent,var(--text));flex:none;animation:msBreathe 2.4s ease-in-out infinite}
+  @keyframes msBreathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.55}}
   .ms-card.is-celebrate .ms-ring{background:var(--accent,#e0b26a);animation:msPop .45s cubic-bezier(.2,1.6,.4,1)}
   .ms-card.ms-pulse::after{content:"";position:absolute;inset:0;border-radius:12px;border:2px solid var(--accent,#e0b26a);pointer-events:none;animation:msRing .7s ease-out forwards}
   @keyframes msPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
   @keyframes msRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
 }
-@media (prefers-reduced-motion:reduce){.ms-card.is-celebrate .ms-ring,.ms-card.ms-pulse::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.ms-ring,.ms-card.is-celebrate .ms-ring,.ms-card.ms-pulse::after{animation:none}}
 .ms-q{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--faint);font-size:12px;line-height:1;padding:0;margin-left:6px}
 .ms-q[aria-expanded=true]{color:var(--text);border-color:var(--text)}
 .ms-qtop{margin:0 10px 0 0}
@@ -9025,6 +9028,7 @@ function setView(name){
     document.body.classList.remove('settings-solo');
   }
   state.currentView = name;
+  if (typeof msClearGlow === 'function') msClearGlow();
   if (name === 'settings') awardMilestone('openset');
   if (name === 'player' && state.queuePos >= 0) awardMilestone('progress');
   document.body.classList.toggle('view-settings-active', name === 'settings');
@@ -16679,6 +16683,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 297, date: '2026-10-17', items: [
+    'The step card glows. Tap it (or its ?) and the real button for that step lights up and scrolls into view, with a line saying where it is. Settings steps point at the exact switch or button.'
+  ]},
   { version: 296, date: '2026-10-17', items: [
     'The step card on each page now shows one step at a time. Finish it and you see a check, then the next step. Tap the ? for how to do the current step.'
   ]},
@@ -22484,11 +22491,11 @@ const MILESTONES = [
   ['qplay', 'Play a song from the queue', 5, 'queue', 'Tap any song in the queue list.'],
   ['qreorder', 'Reorder upcoming songs', 5, 'queue', 'Drag a song in the queue by its handle to a new spot.'],
   ['qremove', 'Remove a song from the queue', 5, 'queue', 'Swipe a song in the queue or tap its remove button.'],
-  ['openset', 'Open Settings', 5, 'settings', 'Tap Settings at the bottom.'],
-  ['explore', 'Explore the available settings', 5, 'settings', "Open Advanced, What's new, Credits or the keyboard shortcuts."],
-  ['setting', 'Change a setting', 5, 'settings', 'Flip any switch or pick any option, like Blend songs together.'],
-  ['customize', 'Customize the app to your preference', 5, 'settings', 'Under Advanced, pick an album art style, accent color or cursor.'],
-  ['restore', 'Restore a setting to its original value', 5, 'settings', 'Pick the Default choice again, or tap Reset in Advanced.']
+  ['openset', 'Open Settings', 5, 'settings', 'Tap Settings, the gear at the bottom right.'],
+  ['explore', 'Explore the available settings', 5, 'settings', "Scroll down in Settings and tap Advanced to open it, or tap View next to What's new."],
+  ['setting', 'Change a setting', 5, 'settings', 'Under Playback, tap the Blend songs together switch (or any other switch).'],
+  ['customize', 'Customize the app to your preference', 5, 'settings', 'Scroll to the bottom of Settings, open Advanced, then pick an accent color, album art style or cursor.'],
+  ['restore', 'Restore a setting to its original value', 5, 'settings', 'In Advanced (bottom of Settings), tap Reset at the end, or pick the Default choice again.']
 ];
 const MS_PAGES = ['library', 'player', 'queue', 'settings'];
 const MS_PAGE_NAMES = { library: 'Library', player: 'Player', queue: 'Queue', settings: 'Settings' };
@@ -22532,6 +22539,44 @@ function msChime(){
 }
 let msHint = '';   // which task's how-to line is showing: 'card:<id>' or 'list:<id>'
 let msCelebrateTimer = 0;
+// "Show me": the ? on a step also lights up the real button for it and scrolls it into view
+let msGlowEl = null, msGlowTimer = 0;
+function msClearGlow(){ clearTimeout(msGlowTimer); if (msGlowEl){ msGlowEl.classList.remove('ms-glow'); msGlowEl = null; } }
+function msTarget(id){
+  const q = (sel) => document.querySelector(sel);
+  const nav = (v) => q(v === 'queue' ? '#bottom-nav button[data-action="toggle-queue"]' : '#bottom-nav button[data-view="' + v + '"]');
+  const first = (sel) => [...document.querySelectorAll(sel)].find(e => e.offsetParent !== null);
+  const adv = (sel) => { const d = q('#settingsAdvancedBlock'); if (d && !d.open) d.open = true; return q(sel); };
+  switch (id){
+    case 'search': case 'load': return q('#urlInput');
+    case 'openpage': return q('#libFilterArtists:not(.hidden)') || first('#libraryListWrap .lib-card');
+    case 'playlist': return q('#newPlaylistBtn');
+    case 'revisit': return first('#libraryListWrap .lib-card');
+    case 'play': case 'pause': return q('#playBtn');
+    case 'skip': return (milestonesDone()._skip || {}).next ? q('#prevBtn') : q('#nextBtn');
+    case 'volume': return q('#castBtn') && q('#castBtn').offsetParent ? q('#castBtn') : nav('settings');
+    case 'progress': return q('#seekTrack');
+    case 'queue': return nav('queue');
+    case 'qplay': return first('#queueBody .q-row');
+    case 'qreorder': return first('#queueBody .q-row .handle');
+    case 'qremove': return first('#queueBody .q-row .remove');
+    case 'openset': return nav('settings');
+    case 'explore': return q('#settingsAdvancedBlock > summary');
+    case 'setting': return q('#crossfadeBtn');
+    case 'customize': return adv('#settingsAdvancedBlock [data-adv=accent]') && q('#settingsAdvancedBlock .adv-chips');
+    case 'restore': return adv('#advResetBtn');
+  }
+  return null;
+}
+function msShowMe(id){
+  msClearGlow();
+  const el = msTarget(id);
+  if (!el || el.offsetParent === null) return;
+  msGlowEl = el;
+  el.classList.add('ms-glow');
+  try { el.scrollIntoView({ block: 'center', behavior: msMotionOk() ? 'smooth' : 'auto' }); } catch(e){}
+  msGlowTimer = setTimeout(msClearGlow, 12000);
+}
 function renderMilestones(justDone){
   const done = milestonesDone();
   const ul = document.getElementById('milestoneList');
@@ -22566,6 +22611,7 @@ function renderMilestones(justDone){
     const qTop = card.querySelector('.ms-qtop'), hTop = card.querySelector('.ms-hint-top');
     qTop.hidden = !nextT || !!cel;
     hTop.hidden = qTop.hidden || msHint !== 'card:' + nextT[0];
+    card.classList.toggle('is-showing', !hTop.hidden);
     if (nextT){ qTop.dataset.msQ = 'card:' + nextT[0]; qTop.setAttribute('aria-expanded', String(!hTop.hidden)); hTop.textContent = nextT[4]; }
     if (cel){ clearTimeout(msCelebrateTimer); msCelebrateTimer = setTimeout(() => renderMilestones(), 1600); }
     if (!left.length){
@@ -22582,6 +22628,7 @@ function awardMilestone(id){
   if (done[id]) return;
   done[id] = Date.now();
   try { localStorage.setItem(LS_MILESTONES, JSON.stringify(done)); } catch(e){ return; }
+  msClearGlow();
   const cards = msCardsShown();
   renderMilestones(cards ? id : null);
   if (cards){
@@ -22605,6 +22652,7 @@ function awardMilestone(id){
     card.className = 'ms-card'; card.id = 'msCard-' + page; card.hidden = true;
     card.innerHTML = '<div class="ms-row"><div class="ms-head"><span class="ms-ring" aria-hidden="true"></span><span class="ms-head-text"></span></div><button type="button" class="ms-q ms-qtop" aria-label="How to do the next step">?</button></div><div class="ms-hint ms-hint-top" hidden></div>';
     const back = host.querySelector(':scope > .settings-back');
+    card.querySelector('.ms-head').addEventListener('click', () => { const t = card.querySelector('.ms-qtop'); if (!t.hidden) t.click(); });
     if (page === 'queue') host.insertBefore(card, host.querySelector('.queue-scroll'));
     else host.insertBefore(card, back ? back.nextSibling : host.firstChild);
   });
@@ -22614,6 +22662,7 @@ function awardMilestone(id){
     const key = q.dataset.msQ;
     msHint = msHint === key ? '' : key;
     renderMilestones();
+    if (key.startsWith('card:')){ if (msHint === key) msShowMe(key.slice(5)); else msClearGlow(); }
   });
   // Settings: any switch counts as changing a setting; peeking into the extra sections counts as exploring
   const setView_ = document.getElementById('view-settings');
