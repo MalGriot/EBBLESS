@@ -482,6 +482,35 @@ video.lib-bg-video.is-playing{opacity:1}
   #helpBtn{order:2;margin-left:auto}
   #testerBanner{order:3;position:static;margin:0 0 0 2px;flex:none}
 }
+/* Search tab (#608): on phones the top-bar search field becomes a button in the
+   bottom nav that opens #view-search. The field stays in the DOM (every search
+   path still reads #urlInput) and is only shown during onboarding. */
+@media (max-width:859.98px){body:not(.onb-active) #importForm.import-row{display:none}}
+@media (min-width:860px){#view-search{display:none!important}}
+#view-search .st-form{position:relative;margin:8px 0 18px}
+#view-search .st-field{display:flex;position:relative}
+#view-search .st-field input{flex:1;min-width:0;width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:12px 14px 12px 46px;color:var(--text);font-size:16px;transition:border-color var(--dur-ui) var(--ease-out)}
+#view-search .st-field input::placeholder{color:var(--faint-2)}
+#view-search .st-field input:focus{outline:none;border-color:var(--accent)}
+#view-search .st-go{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;
+  background:transparent;border:0;color:var(--faint);cursor:pointer}
+#view-search .st-go svg{width:20px;height:20px}
+#view-search .st-err{font-size:12.5px;color:var(--bad);margin:6px 2px 0;min-height:0}
+#view-search .st-sec{margin:0 0 22px}
+#view-search .st-sec h2{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 10px}
+#view-search .st-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#view-search .st-tile{display:flex;align-items:center;gap:10px;min-width:0;padding:8px;text-align:left;cursor:pointer;
+  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text)}
+#view-search .st-tile .st-art{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--panel-3)}
+#view-search .st-tile .st-ph{flex:none;width:44px;height:44px;border-radius:8px;background:var(--panel-3);color:var(--faint);display:flex;align-items:center;justify-content:center;font-weight:700}
+#view-search .st-tile .st-t{min-width:0;display:flex;flex-direction:column;gap:2px}
+#view-search .st-tile .st-n{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view-search .st-tile .st-s{font-size:11.5px;color:var(--faint-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view-search .st-chips{display:flex;flex-wrap:wrap;gap:8px}
+#view-search .st-chip{padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer}
+#view-search .st-chip.is-prompt{border-color:var(--accent)}
+#view-search .st-help{font-size:12.5px;color:var(--faint-2);line-height:1.5;margin:0}
 @media (min-width:860px){#topbar{--tb-l:68px;--tb-r:460px;--tb-min:260px}}
 /* 860-1149px, no split layout: the nav goes icons-only (labels stay for screen
    readers) so the search field has room to sit on the page center */
@@ -2038,7 +2067,7 @@ body.queue-over-fs #queue-scrim{bottom:0}
    desktop screen, where library/queue (bg video, blend layer, marquees) are
    all still up; the button path slides them away first. Visible again the
    moment flow closes (their own transitions don't include visibility). */
-body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-library,#view-player,#queue-panel,#hist-panel,#libpl-panel){
+body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-library,#view-search,#view-player,#queue-panel,#hist-panel,#libpl-panel){
   visibility:hidden;transition:visibility 0s var(--dur-surface)}
 /* own lava-lamp ambient (mirrors #ambient, driven by the same artwork) so the
    fullscreen view blooms/fades/shifts with the album art's colors instead of
@@ -4437,6 +4466,28 @@ body.week-up-on{overflow:hidden}
   </main>
 
   <!-- ===== SETTINGS ===== -->
+  <!-- ===== SEARCH (phones: the bottom-nav Search tab, #608) ===== -->
+  <main class="view" id="view-search" hidden>
+    <div class="view-scroll">
+      <form class="st-form" id="searchTabForm" autocomplete="off">
+        <span class="st-field">
+          <button type="submit" class="st-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
+          <input id="searchTabInput" type="text" maxlength="250" placeholder="Search or paste a link" aria-label="Search, paste a link, or describe your vibe" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        </span>
+        <div class="st-err" id="searchTabErr" role="alert"></div>
+      </form>
+      <section class="st-sec" id="stPicks" hidden>
+        <h2>Picked for you</h2>
+        <div class="st-grid" id="stGrid"></div>
+      </section>
+      <section class="st-sec">
+        <h2 id="stMoodTitle">Right now</h2>
+        <div class="st-chips" id="stChips"></div>
+      </section>
+      <p class="st-help">Paste a link to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud. Or search a song, an artist or a genre, or describe a mood.</p>
+    </div>
+  </main>
+
   <main class="view" id="view-settings" hidden>
     <div class="view-scroll">
       <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
@@ -4967,6 +5018,10 @@ body.week-up-on{overflow:hidden}
     <button data-view="player">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 100-6 3 3 0 000 6zm12-3a3 3 0 100-6 3 3 0 000 6z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       Player
+    </button>
+    <button data-view="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      Search
     </button>
     <button data-action="toggle-queue">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
@@ -8377,7 +8432,7 @@ function formatTotalDuration(totalSec){
    DOM REFS
    ========================================================================= */
 const $ = (id) => document.getElementById(id);
-const views = { library: $('view-library'), player: $('view-player'), settings: $('view-settings') };
+const views = { library: $('view-library'), player: $('view-player'), search: $('view-search'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 // whichever label is showing: "Find music", or "Go" on narrow phones
 function loadBtnLabel(){ return 'the magnifier'; }
@@ -8500,8 +8555,7 @@ function fmBuild(){
     else if (k === 'lfgo'){ const u = ($('lfUser') || {}).value; lastfmLoad(u); }
     else if (k === 'service'){
       closeFindMusic();
-      urlInput.placeholder = 'Paste your ' + v + ' playlist, album or profile link';
-      urlInput.focus();
+      focusSearchField('Paste your ' + v + ' playlist, album or profile link');
       showToast('Paste a ' + v + ' link to bring your songs in');
     }
     else if (k === 'artist'){ closeFindMusic(); openArtistPage(v); }
@@ -9145,6 +9199,7 @@ function setView(name){
   state.currentView = name;
   if (typeof msClearGlow === 'function') msClearGlow();
   if (name === 'settings') awardMilestone('openset');
+  if (name === 'search') renderSearchTab();
   if (name === 'player' && state.queuePos >= 0) awardMilestone('progress');
   document.body.classList.toggle('view-settings-active', name === 'settings');
   if (state.deskFsOpen) csStackSync();
@@ -15556,6 +15611,101 @@ importForm.addEventListener('submit', (e) => {
   if (looksConversational(val)) beginConversationalVibe(val);
   else beginVibeSearch(val);
 });
+
+/* ---------- Search tab (#608) ----------
+   Phones: the top-bar search field is replaced by a Search button in the
+   bottom nav that opens #view-search - a search bar on top, "Picked for you"
+   tiles from what the listener plays, and mood chips (genres, keywords and
+   prompts) for the current Rosicrucian daily period. The tab's field hands
+   its text to the top-bar form (#urlInput / #importForm, hidden on phones),
+   so links, songs, artists, vibes and sentences all go through the one
+   existing search path. */
+const phoneMq = (() => { try { return window.matchMedia('(max-width:859.98px)'); } catch(e){ return null; } })();
+const searchTabInput = $('searchTabInput'), searchTabErr = $('searchTabErr');
+// Moods per daily period (same letters as PERIOD_MOODS): a sentence the
+// interpreter turns into a playlist.
+const PERIOD_PROMPTS = {
+  A: 'confident and regal, something anthemic', B: 'warm and romantic, something social',
+  C: 'focused and thoughtful, something lyrical', D: 'a steady working groove',
+  E: 'deep and patient, a slow burn', F: 'bright, open and uplifting', G: 'driving, high energy',
+};
+function searchTabSubmit(text){
+  const val = String(text == null ? searchTabInput.value : text).trim();
+  if (!val) return;
+  urlInput.value = val;
+  try{ importForm.requestSubmit(); } catch(e){ importForm.dispatchEvent(new Event('submit', { cancelable: true })); }
+  // the form's own error line is hidden on phones, so show it here
+  searchTabErr.textContent = importErr.textContent;
+  if (!importErr.textContent){ searchTabInput.value = ''; searchTabInput.blur(); }
+  else urlInput.value = '';
+}
+function searchTabArtistTiles(){
+  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.t && h.a);
+  const n = new Map(), name = new Map();
+  hist.slice(0, 150).forEach((h, i) => {
+    const k = primaryArtistKey(h.a);
+    if (!k) return;
+    n.set(k, (n.get(k) || 0) + (i < 50 ? 1 : 0.5));
+    if (!name.has(k)) name.set(k, String(h.a).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim());
+  });
+  const top = Array.from(n.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]);
+  const art = new Map();
+  const grab = (t) => { const k = t && primaryArtistKey(t.artist); if (k && t.art && typeof t.art === 'string' && !art.has(k)) art.set(k, t.art); };
+  getLibrary().forEach(id => { const pl = getCachedPlaylist(id); (pl && Array.isArray(pl.tracks) ? pl.tracks : []).forEach(grab); });
+  const tiles = top.map(k => ({ name: name.get(k), sub: 'You play this', art: art.get(k) || '' }));
+  // an artist CuRRentSSsss surfaced that they have not played yet
+  const swell = getCachedPlaylist(SWELL_ID);
+  if (swell && Array.isArray(swell.tracks)){
+    const seen = new Set(n.keys());
+    const fresh = swell.tracks.find(t => t && t.artist && !seen.has(primaryArtistKey(t.artist)));
+    if (fresh) tiles.push({ name: String(fresh.artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim(), sub: 'You might love', art: fresh.art || '' });
+  }
+  return tiles.filter(t => t.name).slice(0, 6);
+}
+function renderSearchTab(){
+  const grid = $('stGrid'), picks = $('stPicks'), chips = $('stChips');
+  searchTabInput.placeholder = 'Search or paste a link';
+  searchTabErr.textContent = '';
+  let tiles = [];
+  try{ tiles = searchTabArtistTiles(); } catch(e){}
+  picks.hidden = !tiles.length;
+  grid.innerHTML = tiles.map((t, i) =>
+    '<button type="button" class="st-tile" data-i="' + i + '">' +
+      (t.art ? '<img class="st-art" src="' + escapeHtml(t.art) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+             : '<span class="st-ph" aria-hidden="true">' + escapeHtml(t.name.charAt(0).toUpperCase()) + '</span>') +
+      '<span class="st-t"><span class="st-n">' + escapeHtml(t.name) + '</span><span class="st-s">' + escapeHtml(t.sub) + '</span></span>' +
+    '</button>').join('');
+  grid.querySelectorAll('.st-tile').forEach(b => b.addEventListener('click', () => openArtistPage(tiles[+b.dataset.i].name)));
+  const letter = rosicrucianPeriod().letter;
+  const mood = PERIOD_MOODS[letter];
+  const ctx = getTimeContext();
+  const when = PASTE_HINT_WHEN[ctx.block] || 'tonight';
+  const seen = new Set(), tags = [];
+  (mood ? mood.tags : []).forEach(t => { const k = t.replace(/[\s-]/g, ''); if (!seen.has(k) && tags.length < 6){ seen.add(k); tags.push(t); } });
+  const prompts = [pasteHintCap(when) + ', ' + (PASTE_HINT_MOOD[ctx.block] || 'something that fits'), PERIOD_PROMPTS[letter]].filter(Boolean);
+  $('stMoodTitle').textContent = 'Right now: ' + when;
+  chips.innerHTML = prompts.map((t, i) => '<button type="button" class="st-chip is-prompt" data-q="p' + i + '">' + escapeHtml(t) + '</button>').join('') +
+    tags.map((t, i) => '<button type="button" class="st-chip" data-q="t' + i + '">' + escapeHtml(t) + '</button>').join('');
+  chips.querySelectorAll('.st-chip').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.q;
+    searchTabSubmit(k.charAt(0) === 'p' ? prompts[+k.slice(1)] : tags[+k.slice(1)]);
+  }));
+}
+$('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
+searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
+// The tab only exists on phones: growing past the breakpoint leaves it.
+if (phoneMq) phoneMq.addEventListener('change', () => { if (!phoneMq.matches && state.currentView === 'search') setView('library'); });
+// Paste-a-link flows that used to focus the top-bar field: open the tab on phones.
+function focusSearchField(placeholder){
+  if (phoneMq && phoneMq.matches && !document.body.classList.contains('onb-active')){
+    setView('search');
+    if (placeholder) searchTabInput.placeholder = placeholder;
+    searchTabInput.focus();
+    return;
+  }
+  if (placeholder) urlInput.placeholder = placeholder;
+  urlInput.focus();
+}
 
 /* ---------- conversational-vibe-search ----------
    A sentence typed (or spoken, see the mic button below) into the input
@@ -22809,7 +22959,7 @@ function msTarget(id){
   const first = (sel) => [...document.querySelectorAll(sel)].find(e => e.offsetParent !== null);
   const adv = (sel) => { const d = q('#settingsAdvancedBlock'); if (d && !d.open) d.open = true; return q(sel); };
   switch (id){
-    case 'search': case 'load': return q('#urlInput');
+    case 'search': case 'load': return importForm.offsetParent ? q('#urlInput') : nav('search');
     case 'openpage': return q('#libFilterArtists:not(.hidden)') || first('#libraryListWrap .lib-card');
     case 'playlist': return q('#newPlaylistBtn');
     case 'revisit': return first('#libraryListWrap .lib-card');

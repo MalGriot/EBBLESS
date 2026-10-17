@@ -11080,12 +11080,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #607.
 
 ### mobile-seacrh-bar-should-become-a-button-i: mobile: seacrh bar should become a button in the bottom nav (Geethub #608)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #608. it should open a full tab like queue or library the tab should have a search bar at the top below the search bar should be a grid of suggestions based on the user's listening history and what they will most likely like below those suggestions should be genres and/or keywords and/or prompts for playlists that fit the current mood based on rosicrusia
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #608.
+- **Touches:** `#bottom-nav`, new `#view-search` (Search tab), `setView`, top-bar `#importForm` (hidden on phones).
+- **Branch:** agent/web-bugs-2
+- **Notes:** Synced from Geethub #608. Built (phones, under 860px): the top-bar search field is gone and a Search button sits in the bottom nav (Library, Player, Search, Queue, Settings). It opens a full tab with the search bar on top, a "Picked for you" grid (artists you play most, plus one artist CuRRentSSsss surfaced that you have not played; tap opens the artist window), and "Right now: <time of day>" chips below: two mood prompts (time-of-day line and the Rosicrucian period's mood, from PERIOD_MOODS) and that period's genre tags. Chips and the bar hand their text to the existing top-bar form, so links, songs, artists, vibes and sentences use the one search path; the form's error line is mirrored in the tab. The top-bar field stays in the DOM (onboarding still shows it, and `focusSearchField` opens the tab for the "paste your X link" flow). Desktop is unchanged; growing the window past 860px leaves the tab. Not built: mic button in the tab, recent-searches dropdown, the first-run "Start here" bubble (anchored to the hidden bar on phones; the tab's help line carries the same text), and album-art tiles for artists with no art in the library (they show a letter). Grid is history-only (no network call). Verified in the 375px browser preview: nav button, tab, tiles, chips, link error, chip search into the results overlay, artist tile, desktop bounce, no [gpu-watchdog]. Not verified on a real phone or Android WebView. Cache v323.
 
 ### desktop-search-bar-browse-button: desktop: search bar: browse button (Geethub #609)
 - **Status:** draft
