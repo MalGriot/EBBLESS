@@ -1522,6 +1522,8 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 .track-row.is-current .title{color:var(--accent)}
 .track-row .artist{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .track-row.is-missing{opacity:.42}
+.track-row.is-missing[class]:not(.is-matching){cursor:pointer}
+.track-row.is-matching{opacity:.7}
 .track-row.is-missing .title{text-decoration:none}
 .row-spinner{width:16px;height:16px;margin:6px;border-radius:50%;border:2px solid var(--faint);border-top-color:transparent;animation:row-spin .8s linear infinite;box-sizing:border-box}
 @keyframes row-spin{to{transform:rotate(360deg)}}
@@ -6181,13 +6183,13 @@ function lsGet(key, fallback){
   try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
   catch(e){ return fallback; }
 }
-function lsSet(key, val){
+function lsSet(key, val, knownChange){
   // Profile sync: stamp the change (what, when) before the write so a
   // library/pin diff can see the old value, then queue a debounced push to
   // the signed-in visitor's cloud profile (see PROFILE SYNC below). Stamping
   // happens signed in or not, so changes made while signed out still merge
   // correctly later; the push itself is a no-op until a Google session exists.
-  const synced = isProfileSyncedKey(key) && noteProfileWrite(key, val);
+  const synced = isProfileSyncedKey(key) && noteProfileWrite(key, val, knownChange);
   try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
   if (synced) scheduleProfileSync();
 }
@@ -6507,7 +6509,7 @@ function playlistSyncShape(pl){
 // Records a local change to a synced key: its stamp, plus which library /
 // pin ids or custom-playlist tracks came and went. Returns false when the
 // write changed nothing sync cares about (so lsSet skips the push).
-function noteProfileWrite(key, val){
+function noteProfileWrite(key, val, knownChange){
   if (applyingRemoteProfile) return false;
   const now = Date.now();
   const meta = profileMeta();
@@ -6522,7 +6524,7 @@ function noteProfileWrite(key, val){
     const id = key.slice('ebbless:playlist:'.length);
     const before = lsGet(key, null);
     // (Mid-resolve writes are real changes anyway - skip the compare.)
-    if (val !== undefined && before && !val.resolving && !before.resolving &&
+    if (!knownChange && val !== undefined && before && !val.resolving && !before.resolving &&
         profStable(playlistSyncShape(before)) === profStable(playlistSyncShape(val))) return false;
     if (val !== undefined && isPerTrackPlaylist(id, val)){
       const tr = meta.tr[id] = profObj(meta.tr[id]);
@@ -6571,6 +6573,17 @@ function localProfileForSync(){
       prof.pl[id] = { at: k[key], del: 1 };
     }
   });
+  // The cloud profile has a size cap. When the library is huge (big imports), imported lists are
+  // sent without their cover links and match details; the songs and their playable links stay.
+  let estBytes = 0;
+  Object.values(prof.pl).forEach(e => { if (e && e.d && e.d.tracks) estBytes += e.d.tracks.length * 170; });
+  if (estBytes > 4 * 1024 * 1024){
+    Object.values(prof.pl).forEach(e => {
+      if (e && e.d && e.d.importedFrom && e.d.tracks && e.d.tracks.length > 300){
+        e.d = Object.assign({}, e.d, { tracks: e.d.tracks.map(t => ({ title: t.title, artist: t.artist, videoId: t.videoId, srcDuration: t.srcDuration, duration: t.duration, plays: t.plays })) });
+      }
+    });
+  }
   const settingKeys = new Set(PROFILE_SETTING_KEYS);
   try {
     for (let i = 0; i < localStorage.length; i++){
@@ -7975,7 +7988,7 @@ async function rematchRun(id){
             t.rematchTried = RESOLVE_LOGIC_VERSION;
           }
         });
-        persistPlaylistObj(pl);
+        persistPlaylistObj(pl, true);   // matches always change the list: skip the costly "did anything change" compare
         if (state.playlist && state.playlist.id === id) state.playlist = pl;
         renderLibrary();
       }
@@ -8024,8 +8037,8 @@ function playlistById(id){
   if (state.playlist && state.playlist.id === id) return state.playlist;
   return getCachedPlaylist(id);
 }
-function persistPlaylistObj(pl){
-  if (pl) lsSet(LS_PL(pl.id), pl);
+function persistPlaylistObj(pl, knownChange){
+  if (pl) lsSet(LS_PL(pl.id), pl, knownChange);
 }
 
 // Tracks playlists that are playing on their first resolved track while the
@@ -10682,8 +10695,10 @@ function toggleLibraryPlaylistPanel(id){
     libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
   } else {
     // #549: drag handles on the rows of a playlist whose songs can be put in your own order
-    const canReorder = pl.tracks.length > 1 && !pl.smart && !pl.resolving && id !== NP_ID && id !== SWELL_ID && !isArtistEntry(pl) && !isPodcastEntry(pl);
-    plTrackOrder(pl).forEach((i) => {
+    const canReorder = pl.tracks.length > 1 && pl.tracks.length <= PL_ROWS_FIRST && !pl.smart && !pl.resolving && id !== NP_ID && id !== SWELL_ID && !isArtistEntry(pl) && !isPodcastEntry(pl);
+    if (libplBody._rowObs){ libplBody._rowObs.disconnect(); libplBody._rowObs = null; }
+    let rowSink = (el) => libplBody.appendChild(el);
+    const addRow = (i) => {
       const t = pl.tracks[i];
       const dup = onAlbum.get(songKey(t.title));
       if (dup){
@@ -10745,16 +10760,40 @@ function toggleLibraryPlaylistPanel(id){
       row.appendChild(rowActions);
       if (t.videoId){
         row.addEventListener('click', () => playLibraryTrackInline(id, i));
+      } else if (pl.rematchUnmatched && t.title && t.artist){
+        // an imported song the background matcher hasn't reached yet: find it now, then play it
+        row.addEventListener('click', () => matchTrackNow(id, i, row));
       }
       // track-relink-menu: same menu used elsewhere (Refresh link, Remove
       // from playlist, etc.) - the kebab button above opens it on click,
       // and long-press/hold still opens the same menu on touch, missing
       // tracks included.
       attachLongPress(row, () => toggleTrackCtxMenu(id, i, row));
-      libplBody.appendChild(row);
-    });
+      rowSink(row);
+    };
+    // a huge list (an import can hold 10,000 songs) draws its first rows now and the rest as you scroll
+    const order = plTrackOrder(pl);
+    order.slice(0, PL_ROWS_FIRST).forEach(addRow);
+    if (order.length > PL_ROWS_FIRST && typeof IntersectionObserver === 'function'){
+      let next = PL_ROWS_FIRST;
+      const sentinel = document.createElement('div');
+      sentinel.className = 'pl-rows-more';
+      sentinel.style.cssText = 'height:1px';
+      libplBody.appendChild(sentinel);
+      rowSink = (el) => libplBody.insertBefore(el, sentinel);
+      const obs = new IntersectionObserver((es) => {
+        if (!es.some(e => e.isIntersecting)) return;
+        if (openLibraryPanelId !== id || !sentinel.isConnected){ obs.disconnect(); return; }
+        order.slice(next, next + PL_ROWS_CHUNK).forEach(addRow);
+        next += PL_ROWS_CHUNK;
+        markNowPlaying();
+        if (next >= order.length){ obs.disconnect(); sentinel.remove(); libplBody._rowObs = null; }
+      }, { root: libplPanel.querySelector('.queue-scroll'), rootMargin: '1200px 0px' });
+      obs.observe(sentinel);
+      libplBody._rowObs = obs;
+    } else order.slice(PL_ROWS_FIRST).forEach(addRow);
   }
-  adoptedInto.forEach(persistPlaylistObj);
+  adoptedInto.forEach(p => persistPlaylistObj(p));
   // a podcast's page: the host under the show thumb, with their info and links like an artist page,
   // then the show's own blurb and website (prepends run bottom-up, so this is built in reverse)
   if (isPodcastEntry(pl)){
@@ -12637,6 +12676,33 @@ function fillLibRowLive(plId, idx, t){
   }
 }
 
+const PL_ROWS_FIRST = 300, PL_ROWS_CHUNK = 300;
+// tap on an imported song that has no link yet: search for it right now (ahead of the slow
+// background queue), save the match, and play it
+const matchNowBusy = new Set();
+async function matchTrackNow(plId, idx, row){
+  const key = plId + ':' + idx;
+  if (matchNowBusy.has(key)) return;
+  const pl = getCachedPlaylist(plId), t = pl && pl.tracks[idx];
+  if (!t) return;
+  if (t.videoId){ playLibraryTrackInline(plId, idx); return; }
+  matchNowBusy.add(key);
+  row.classList.add('is-matching');
+  try {
+    const m = await searchYouTubeCached(t.title, t.artist, (t.srcDuration || 0) * 1000 || undefined);
+    const cur = getCachedPlaylist(plId);
+    const ct = cur && cur.tracks[idx];
+    if (m && m.videoId && ct && ct.title === t.title && !ct.videoId){
+      ct.videoId = m.videoId; ct.matchedTitle = m.title || ''; ct.channel = m.channel || ''; ct.duration = m.duration || 0;
+      delete ct.rematchTried;
+      persistPlaylistObj(cur, true);
+      if (state.playlist && state.playlist.id === plId) state.playlist = cur;
+      row.classList.remove('is-missing');
+      playLibraryTrackInline(plId, idx);
+    } else if (!m || !m.videoId) showToast('Could not find that song right now');
+  } catch(e){ showToast('Could not reach the song search. Try again.'); }
+  finally { matchNowBusy.delete(key); row.classList.remove('is-matching'); }
+}
 function repaintOpenLibPanelTrack(plId, trackIdx, pl){
   if (openLibraryPanelId !== plId || !pl) return;
   const t = pl.tracks[trackIdx];

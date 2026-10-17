@@ -4657,7 +4657,7 @@ function profileKey(sub) { return 'profile:' + sub; }
 // Serialized profile cap - KV values top out at 25MB and nothing legitimate
 // should ever approach this. The raw request body gets a little slack on
 // top for the token and envelope.
-const PROFILE_MAX_BYTES = 5 * 1024 * 1024;
+const PROFILE_MAX_BYTES = 20 * 1024 * 1024;   // KV values go to 25 MB; big imports (10,000-song lists) need room
 
 // A stored record is either the pre-v2 { email, library, ts } (library =
 // { lib, pinned, playlists }, no stamps) or v2 { v: 2, email, profile, ts }.
