@@ -11,7 +11,7 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, foldMatchText, matchKey, popularityBonus,
+  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -68,7 +68,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v11';
+const SEARCH_CACHE_VERSION = 'v12';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -488,6 +488,7 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   score += durationScore(c.duration, sourceDurationSeconds);
   if (maxViews > 0) score += (c.views / maxViews) * VIEW_COUNT_WEIGHT;
   score += popularityBonus(c.views, c.titleOverlap);
+  if (c.artistNamed === false) score -= 6;
   return score;
 }
 
@@ -649,6 +650,15 @@ async function handleSearch(url, ctx) {
   pool.forEach(c => { c.titleOverlap = titleOverlapRatio(searchTitle, c.title); });
   const titleMatched = pool.filter(c => c.titleOverlap > 0);
   pool = titleMatched.length ? titleMatched : pool;
+
+  // Wrong artist is a critical miss (right title, different artist): keep
+  // only candidates that name a credited artist in title, channel or
+  // description. Same filter-with-fallback pattern; stands down when the
+  // credit is missing or non-Latin (see artistKeys).
+  const artistKeyList = artistKeys(artist);
+  pool.forEach(c => { c.artistNamed = candidateNamesArtist(c, artistKeyList); });
+  const artistMatched = pool.filter(c => c.artistNamed);
+  pool = artistMatched.length ? artistMatched : pool;
 
   // Same hard-filter-with-fallback pattern again: a candidate running far
   // longer/shorter than the source track is very likely an instrumental,

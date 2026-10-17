@@ -259,3 +259,24 @@ export function popularityBonus(views, titleOverlap) {
   if (!(titleOverlap >= 0.99) || !(views > POPULARITY_MIN_VIEWS)) return 0;
   return Math.min(POPULARITY_MAX_BONUS, Math.log10(views / POPULARITY_MIN_VIEWS) * 1.2);
 }
+
+// Wrong-artist guard: a song with the right title by a different artist is a
+// critical miss. Credited artists from the source ("A, B", "A & B", "A feat.
+// B", "A x B"), as matchKey strings, plus the whole credit and a "the"-less
+// form. Empty when the credit is missing or non-Latin/unspaced (can't be
+// compared reliably against a romanised upload title) so the guard stands down.
+export function artistKeys(artist) {
+  const whole = matchKey(artist);
+  if (!whole || /[^a-z0-9 ]/.test(whole)) return [];
+  const parts = String(artist).split(/\s*(?:,|&|\band\b|\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b|\bx\b|;|\/)\s*/i).map(matchKey).filter(Boolean);
+  const out = new Set([whole, ...parts]);
+  for (const k of [...out]) if (k.startsWith('the ') && k.length > 6) out.add(k.slice(4));
+  return [...out].filter(k => k.length > 1);
+}
+// True if any credited artist appears (whole words) in the candidate's
+// title, channel or description snippet ("Provided to YouTube by ... · Artist").
+export function candidateNamesArtist(c, keys) {
+  if (!keys.length) return true;
+  const hay = ' ' + matchKey([c.title, c.channel, c.snippet].filter(Boolean).join(' ')) + ' ';
+  return keys.some(k => hay.includes(' ' + k + ' '));
+}

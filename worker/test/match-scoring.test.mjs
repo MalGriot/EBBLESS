@@ -184,3 +184,17 @@ test('popularityBonus: log-scaled, needs full title match, capped', () => {
   assert.ok(popularityBonus(1e6, 1) > 1 && popularityBonus(1e6, 1) < 3);
   assert.equal(popularityBonus(5e9, 1), 3);
 });
+
+import { artistKeys, candidateNamesArtist } from '../src/match-text.js';
+test('artist guard: right title by wrong artist is rejected', () => {
+  const k = artistKeys('The Weeknd');
+  assert.ok(candidateNamesArtist({ title: 'Blinding Lights', channel: 'The Weeknd - Topic' }, k));
+  assert.ok(candidateNamesArtist({ title: 'Weeknd - Blinding Lights (Official Audio)', channel: 'x' }, k));
+  assert.ok(!candidateNamesArtist({ title: 'Blinding Lights (cover)', channel: 'Some Singer' }, k));
+  assert.ok(candidateNamesArtist({ title: 'Song', channel: 'c', snippet: 'Provided to YouTube by X · Song · Beyoncé' }, artistKeys('Beyonce, Jay-Z')));
+  assert.ok(candidateNamesArtist({ title: 'Song', channel: 'Jay Z' }, artistKeys('Beyonce & Jay Z')));
+  assert.ok(!candidateNamesArtist({ title: 'Song', channel: 'Other' }, artistKeys('Beyonce & Jay Z')));
+  assert.deepEqual(artistKeys('米津玄師'), []);
+  assert.deepEqual(artistKeys(''), []);
+  assert.ok(candidateNamesArtist({ title: 'x', channel: 'y' }, []));
+});
