@@ -11120,12 +11120,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #612. Overlaps #527-style mini shapes: shipped #526 (shape per skin) and Tape shape in app 1.0.8; check what regressed. Related to #623, #627. Mac mini player shapes are selectable again and easy to find: a new shape button in the header (and right-click) lists Card, Pill, LP (disc), Cassette (tape), Square and Cymatics. Picking an art skin (LP or cassette) in the mini player now clears a hand-picked shape so the skin's shape follows again; a stuck hand-picked Card was the likely reason it stayed a rectangle. Added Square. Pill now fits its title and artist (96px tall). Web is live on the next deploy; Electron not verified (tested in an iframe harness with a stubbed desktop bridge).
 
 ### on-the-nothing-playing-yet-screen-have-a-e: on the "nothing playing yet" screen, have a ebbless logo bounce around inside the album art like the dvd logo used to (Geethub #613)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #613. 
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #613.
+- **Branch:** agent/screen-tweaks
+- **Notes:** Synced from Geethub #613. Built: while nothing is playing and the art is in its default style, the white EBBLESS wordmark (40% of the art wide, 85% opacity) bounces around inside the art box like the DVD logo, edge to edge, at two different speeds so the path wanders. Pure CSS, two nested transform keyframes (translateY on the box, translateX on the image, percentages of the logo's own size so no JS and no rAF), no filter/blur. It only exists (display:block) while the empty art is showing in art mode; hidden in visualizer/lyrics, under other tabs, and paused under the fullscreen player and Find music. Reduced motion shows it still. Not built: no color change on corner hits; the record and cassette art styles don't show it. Verified in the 375px browser preview by forcing the empty state: positions sampled over time stay inside the art, pauses when Find music opens, no new [gpu-watchdog]. Not checked on a real phone or in the fullscreen player. Cache v329.
 
 ### don-t-count-rick-astley-s-never-gonna-give: don't count rick astley's never gonna give you up in the listener's play history or analytics (Geethub #614)
 - **Status:** draft

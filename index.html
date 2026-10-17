@@ -1272,6 +1272,22 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
    default overflow:hidden sliced it into a hard rectangular edge */
 .artwork-wrap[data-mode="art"][data-art-style="record"]{overflow:visible}
 .artwork-wrap[data-mode="art"]{aspect-ratio:1!important;height:auto!important;flex-shrink:0}
+/* #613: DVD-logo bounce on the empty player. The logo is 40% of the art wide (wordmark is 5:1, so 8% tall):
+   the outer box slides down the art's height (1150% of its own height = 92% of the art) and the image across
+   its width (150% of its own width = 60% of the art), at different speeds so the path wanders. Transform only;
+   shown (and so running) only while the empty art is on screen, paused under the fullscreen player / Find music. */
+.art-dvd{display:none;position:absolute;left:0;top:0;width:40%;aspect-ratio:5/1;pointer-events:none;z-index:1}
+.art-dvd img{display:block;width:100%;height:100%;opacity:.85}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{display:block;animation:dvd-y 13.8s linear infinite alternate;will-change:transform}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:dvd-x 9s linear infinite alternate;will-change:transform}
+body:has(#flow-layer.is-open) .art-dvd,body:has(#flow-layer.is-open) .art-dvd img,body:has(#findMusic:not([hidden])) .art-dvd,body:has(#findMusic:not([hidden])) .art-dvd img{animation-play-state:paused}
+@keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(1150%)}}
+@keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(150%)}}
+@media (prefers-reduced-motion:reduce){
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd,
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:none!important;will-change:auto}
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{left:30%;top:46%}
+}
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
 .artwork-wrap[data-mode="art"]:not([data-art-style="default"]) .art{opacity:0!important}
@@ -4127,6 +4143,8 @@ body.week-up-on{overflow:hidden}
         <div class="artwork-wrap" id="artworkWrap">
           <img class="art" id="artA" alt="">
           <img class="art" id="artB" alt="">
+          <!-- #613: nothing playing yet - the wordmark bounces around the art like the old DVD logo (CSS transform only, see .art-dvd) -->
+          <div class="art-dvd" aria-hidden="true"><img src="brand/assets/wordmark-white.png" alt="" draggable="false"></div>
           <div class="art-record" id="artRecord">
             <div class="record-shadow"></div>
             <div class="record-disc">
