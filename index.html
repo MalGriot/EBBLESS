@@ -27632,6 +27632,33 @@ function renderChapterList(t){
     markCurrentChapter(ad.player && ad.player.getCurrentTime ? ad.player.getCurrentTime() || 0 : 0, true);
   });
 }
+// Ad chapters (#575): a feed that labels a break as an ad/sponsor chapter
+// gets it skipped as playback enters it. Only explicit labels count - ads a
+// host stitches into the audio unmarked can't be told from the show.
+var podAdSegs = new Map();   // videoId -> [{ s, e }]
+var podAdSkipAt = 0;
+const POD_AD_TITLE = /^\W*(ads?|advertisements?|advert|sponsors?|sponsored( by| message)?|sponsor(ship)? break|ad break|commercials?)\W*$/i;
+function skipAdChapter(cur){
+  const t = currentTrack();
+  if (!t || !t.videoId || !isPodcastTrack(t) || !(cur >= 0)) return;
+  let segs = podAdSegs.get(t.videoId);
+  if (!segs){
+    podAdSegs.set(t.videoId, segs = []);
+    if (!podHasText(t) || !(t.chapters || t.chaptersUrl)) return;
+    podText(t).then(pt => {
+      const ch = pt.chapters;
+      ch.forEach((c, i) => { if (ch[i + 1] && POD_AD_TITLE.test(c.title || '')) segs.push({ s: c.t, e: ch[i + 1].t }); });
+    });
+    return;
+  }
+  const seg = segs.find(g => cur >= g.s && cur < g.e - 1);
+  if (!seg || Date.now() - podAdSkipAt < 2000) return;
+  const ad = activeDeck();
+  if (!ad.player || !ad.player.seekTo) return;
+  podAdSkipAt = Date.now();
+  ad.player.seekTo(seg.e, true);
+  showToast('Skipped an ad break');
+}
 function markCurrentChapter(cur, scroll){
   if (!chapListItems.length || !chapPanelEl() || !chapPanelEl().classList.contains('is-open')) return;
   let idx = -1;
@@ -27694,6 +27721,7 @@ function paintSeekUI(cur, dur){
   }
   paintChapterTicks(dur);
   markCurrentChapter(cur);
+  if (!seekDrag) skipAdChapter(cur);
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   if (!seekTrack.classList.contains('ad-fill')){ seekFill.style.width = pct + '%'; flowSeekFill.style.width = pct + '%'; miniLineFill.style.width = pct + '%'; }
   seekKnob.style.left = pct + '%'; flowSeekKnob.style.left = pct + '%';
