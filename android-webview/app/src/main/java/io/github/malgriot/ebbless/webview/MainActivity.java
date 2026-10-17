@@ -148,7 +148,14 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        Updater.foreground = true;
+        root.postDelayed(() -> Updater.check(this), 15000);   // self-update: looks for a newer app at most once an hour, after the app has settled
         if (web != null) web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(true)", null);   // never leave the page in lightweight mode while it is on screen
+    }
+
+    @Override protected void onPause() {
+        Updater.foreground = false;
+        super.onPause();
     }
 
     @Override protected void onDestroy() {
