@@ -9807,12 +9807,13 @@ attachSwipeToDismiss(histPanel, closePlayHistory);
    ========================================================================= */
 let openLibraryPanelId = null;
 let libplReturnTo = null;  // artist panel id to go back to when an album opened from it is closed (#369)
+let libplBackFn = null;    // a preview window (album not in the library) goes back to the artist page through this
 let libplResume = null;    // #546: { id, scroll } of the playlist an artist page replaced; closing the page brings it back
 // #391: an album opened from an artist's page shows a back "<" instead of the "x"
 const LIBPL_X_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>';
 const LIBPL_BACK_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/></svg>';
 function syncLibplCloseBtn(){
-  const back = !!((libplReturnTo && openLibraryPanelId && openLibraryPanelId !== libplReturnTo) || libplResume);
+  const back = !!((libplReturnTo && openLibraryPanelId && openLibraryPanelId !== libplReturnTo) || libplResume || libplBackFn);
   libplCloseBtn.setAttribute('aria-label', back ? 'Back' : 'Close');
   libplCloseBtn.innerHTML = back ? LIBPL_BACK_ICON : LIBPL_X_ICON;
 }
@@ -9821,7 +9822,7 @@ function syncLibplCloseBtn(){
 function reopenLibraryPanel(id){ openLibraryPanelId = null; toggleLibraryPlaylistPanel(id); }
 
 function closeLibraryPlaylistPanel(){
-  libplReturnTo = null; libplResume = null; syncLibplCloseBtn();
+  libplReturnTo = null; libplResume = null; libplBackFn = null; syncLibplCloseBtn();
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
   libplAddBar.hidden = true;
@@ -9853,7 +9854,11 @@ function sortArtistAlbumIds(ids, mode){
     return dated.concat(base.filter(id => !pl(id).releaseDate));
   }
   const plays = (id) => totalPlaylistPlays(pl(id));
-  return base.map((id, i) => ({ id, i })).sort((x, y) => (plays(y.id) - plays(x.id)) || (x.i - y.i)).map(x => x.id);
+  // most played first; albums older than 20 years go last, oldest first
+  const oldCut = new Date().getFullYear() - 20;
+  const oldYear = (id) => { const y = +String(pl(id).releaseDate || '').slice(0, 4); return y && y <= oldCut ? y : 0; };
+  const newer = base.filter(id => !oldYear(id)).map((id, i) => ({ id, i })).sort((x, y) => (plays(y.id) - plays(x.id)) || (x.i - y.i)).map(x => x.id);
+  return newer.concat(base.filter(oldYear).sort((x, y) => String(pl(x).releaseDate).localeCompare(String(pl(y).releaseDate))));
 }
 
 function toggleLibraryPlaylistPanel(id){
@@ -9863,7 +9868,7 @@ function toggleLibraryPlaylistPanel(id){
   }
   const pl = getCachedPlaylist(id);
   if (!pl){ showToast("Couldn't find that playlist."); return; }
-  libplReturnTo = null; libplResume = null; syncLibplCloseBtn();
+  libplReturnTo = null; libplResume = null; libplBackFn = null; syncLibplCloseBtn();
 
   if (id === NP_ID) refreshNowPlaying();
   if (id === SWELL_ID){
@@ -10124,6 +10129,7 @@ libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLib
 libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
 // closing an album that was opened from inside an artist's page goes back to that artist (#369)
 function dismissLibraryPlaylistPanel(){
+  if (libplBackFn){ const f = libplBackFn; libplBackFn = null; f(); syncLibplCloseBtn(); return; }
   const resume = libplResume;
   if (resume && getCachedPlaylist(resume.id)){
     toggleLibraryPlaylistPanel(resume.id);
@@ -10364,24 +10370,161 @@ function buildArtistInfoEl(info){
 // lookup and add path as the artist import (itunesArtistAlbums + queueBackgroundLoad).
 function albumYearOf(d){ return (/^(\d{4})/.exec(String(d || '')) || [])[1] || ''; }
 const CTX_ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+// a song from an artist-window album or singles list -> a playable track
+// (SoundCloud songs play natively, iTunes songs are matched to a video on tap)
+async function artistSongTrack(song, album){
+  let m;
+  if (song.scId) m = { videoId: soundCloudVideoId(song.scId), title: song.title, channel: song.artist, duration: Math.round(song.dur / 1000) };
+  else m = await matchLinkTrack({ title: song.title, artist: song.artist, duration: song.dur }, album ? { album: album.name, albumArt: album.art || null } : null);
+  if (!m || !m.videoId) return null;
+  return { title: song.title, artist: song.artist, videoId: m.videoId, matchedTitle: m.title || '', channel: m.channel || '', plays: 0, art: song.art || null, duration: m.duration || 0, srcDuration: Math.round(song.dur / 1000) || null };
+}
+async function artistSongAct(song, album, el, act){
+  if (el.dataset.busy) return;
+  el.dataset.busy = '1'; el.style.opacity = '.5';
+  try{
+    const track = await artistSongTrack(song, album);
+    if (!track){ showToast("Couldn't find that song."); return; }
+    if (act === 'add'){ openAddToPlaylistPicker(track); return; }
+    const pl = { id: 'addprev:' + track.videoId, type: 'track', name: track.title, image: null, tracks: [track], ts: Date.now() };
+    persistPlaylistObj(pl);
+    playSingleSongLink(pl);
+  } catch(err){ showToast("Couldn't load that song."); }
+  finally { delete el.dataset.busy; el.style.opacity = ''; }
+}
+function artistSongRow(song, album, n){
+  const r = document.createElement('div');
+  r.style.cssText = 'display:flex;align-items:center;gap:4px';
+  const d = document.createElement('button'); d.type = 'button';
+  d.style.cssText = 'flex:1;min-width:0;text-align:left;padding:6px 0;background:none;border:0;color:inherit;font:inherit;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer';
+  d.textContent = (n ? n + '. ' : '') + song.title;
+  d.addEventListener('click', (e) => { e.stopPropagation(); artistSongAct(song, album, d, 'play'); });
+  const plus = document.createElement('button'); plus.type = 'button';
+  plus.setAttribute('aria-label', 'Add ' + song.title + ' to playlist'); plus.title = 'Add to playlist';
+  plus.style.cssText = 'flex:none;width:32px;height:32px;padding:7px;background:none;border:0;color:inherit;cursor:pointer';
+  plus.innerHTML = CTX_ICON_PLUS;
+  plus.addEventListener('click', (e) => { e.stopPropagation(); artistSongAct(song, album, plus, 'add'); });
+  r.appendChild(d); r.appendChild(plus);
+  return r;
+}
+async function addArtistAlbumToLibrary(a, name){
+  showToast('Adding ' + a.name + '...');
+  if (await queueBackgroundLoad(a.id, a.type || 'am_album')){
+    const added = getCachedPlaylist(a.id);
+    if (added){ added.importedUnder = name; if (a.releaseDate) added.releaseDate = a.releaseDate; lsSet(LS_PL(a.id), added); }
+    saveToLibrary(a.id);
+    const sc = views.library, top = sc ? sc.scrollTop : 0;
+    renderLibrary(); if (sc) sc.scrollTop = top;
+    showToast('Added ' + a.name);
+    return true;
+  }
+  showToast("Couldn't add that album.");
+  return false;
+}
+async function loadArtistAlbumSongs(a, name){
+  if (a.type === 'sc_album'){
+    const sc = await fetchSoundCloudLink(decodeURIComponent(a.id.slice(3)));
+    return (sc.tracks || []).map(t => ({ title: String(t.title || ''), artist: t.artist || name, art: t.image || a.art || null, scId: t.scId, dur: t.duration || 0 }));
+  }
+  const cut = a.id.indexOf(':');
+  const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: a.id.slice(cut + 1), entity: 'song', limit: '200', country: a.id.slice(0, cut) }));
+  if (!res.ok) throw new Error('iTunes lookup ' + res.status);
+  return ((await res.json()).results || []).filter(r => r && r.wrapperType === 'track').sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0))
+    .map(r => ({ title: String(r.trackName || ''), artist: String(r.artistName || name), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : a.art, dur: r.trackTimeMillis || 0 }));
+}
+// an album that isn't in the library gets its own window: cover, details, an
+// Add to library button and its songs (tap to play, + to add to a playlist)
+async function openAlbumPreview(a, name, backFn){
+  const id = 'albumprev:' + a.id;
+  if (openLibraryPanelId === id) return;
+  if (state.queueOpen) closeQueuePanel();
+  openLibraryPanelId = id;
+  libplAddBar.hidden = true;
+  libplPanel.classList.add('is-artist-info');
+  libplTitle.textContent = a.name;
+  if (a.art){ attachArtworkFallback(libplArt, { art: a.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
+  libplBody.innerHTML = '';
+  const sc = libplPanel.querySelector('.queue-scroll'); if (sc) sc.scrollTop = 0;
+  libplReturnTo = null; libplResume = null; libplBackFn = backFn; syncLibplCloseBtn();
+  const info = document.createElement('div'); info.className = 'currents-hint album-info';
+  info.textContent = [name, albumYearOf(a.releaseDate)].filter(Boolean).join(' · ');
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'btn-ghost is-active';
+  add.style.cssText = 'width:100%;margin-bottom:12px'; add.textContent = 'Add to library';
+  add.addEventListener('click', async () => {
+    add.disabled = true;
+    if (await addArtistAlbumToLibrary(a, name)){ if (openLibraryPanelId === id) dismissLibraryPlaylistPanel(); } else add.disabled = false;
+  });
+  const status = document.createElement('div'); status.className = 'currents-status'; status.textContent = 'Loading songs...';
+  libplBody.appendChild(info); libplBody.appendChild(add); libplBody.appendChild(status);
+  libplPanel.classList.add('is-open'); libplScrim.classList.add('is-open');
+  syncHistoryBuffer();
+  try{
+    const songs = await loadArtistAlbumSongs(a, name);
+    if (openLibraryPanelId !== id) return;
+    status.remove();
+    const mins = Math.round(songs.reduce((n, x) => n + x.dur, 0) / 60000);
+    info.textContent = [name, albumYearOf(a.releaseDate), songs.length ? songs.length + (songs.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean).join(' · ');
+    if (!songs.length) libplBody.insertAdjacentHTML('beforeend', '<div class="empty-lib">No songs found.</div>');
+    const list = document.createElement('div'); list.style.cssText = 'font-size:14px';
+    songs.forEach((song, n) => list.appendChild(artistSongRow(song, a, n + 1)));
+    libplBody.appendChild(list);
+  } catch(err){
+    if (openLibraryPanelId !== id) return;
+    status.textContent = "Couldn't load songs for that album.";
+  }
+}
 async function loadArtistAlbumsInto(panelId, name, standalone){
   const lib = getCachedPlaylist(panelId);
   const src = lib && isArtistEntry(lib) ? lib : { type: 'artist', id: '', name };
-  let albums;
-  try{ albums = await (src.type === 'sc_artist' ? soundCloudArtistAlbums(src) : itunesArtistAlbums(src)); } catch(e){ return; }
-  if (openLibraryPanelId !== panelId || !albums || !albums.length) return;
+  let albums, singles = [];
+  try{
+    if (src.type === 'sc_artist'){ albums = await soundCloudArtistAlbums(src); albums.reverse().forEach((a, i) => { a.rank = i; }); }
+    else { const res = await itunesArtistAlbums(src, { sections: true }); albums = res.albums || res; singles = res.singles || []; }
+  } catch(e){ return; }
+  if (openLibraryPanelId !== panelId || !albums || !(albums.length || singles.length)) return;
   const want = normalizeArtistQuery(name);
   const have = (a) => getLibrary().some(id => {
     if (id === a.id) return true;
     const p = getCachedPlaylist(id);
     return !!p && isAlbumEntry(p) && normalizeArtistQuery(p.name) === a.key && (p.tracks || []).some(t => songCreditsArtist(t && t.artist, want));
   });
-  const todo = albums.filter(a => !have(a) && !PERIODYSSIUS_RE.test(a.key)).reverse(); // newest first
-  if (!todo.length) return;
+  // popularity (iTunes' own order for the artist) first; releases older than
+  // 20 years follow, oldest first
+  const oldCut = new Date().getFullYear() - 20;
+  const isOld = (a) => { const y = +albumYearOf(a.releaseDate); return !!y && y <= oldCut; };
+  const orderReleases = (list) => list.filter(a => !isOld(a)).sort((x, y) => (x.rank || 0) - (y.rank || 0))
+    .concat(list.filter(isOld).sort((x, y) => String(x.releaseDate).localeCompare(String(y.releaseDate))));
+  const todoAll = albums.filter(a => !have(a) && !PERIODYSSIUS_RE.test(a.key));
+  const todoAlbums = orderReleases(todoAll.filter(a => !COMPILATION_RE.test(a.name)));
+  const todoCollections = orderReleases(todoAll.filter(a => COMPILATION_RE.test(a.name)));
+  const todoSingles = standalone ? orderReleases(singles.filter(a => !PERIODYSSIUS_RE.test(a.key))) : [];
+  if (!todoAlbums.length && !todoCollections.length && !todoSingles.length) return;
   const box = document.createElement('div');
-  const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = standalone ? 'Albums' : 'More albums';
-  box.appendChild(lbl);
-  todo.forEach(a => {
+  const sectionLabel = (txt) => { const l = document.createElement('div'); l.className = 'section-label'; l.textContent = txt; box.appendChild(l); };
+  if (todoSingles.length){
+    sectionLabel('Singles');
+    const sBox = document.createElement('div'); box.appendChild(sBox);
+    let showAll = false;
+    const renderSingles = () => {
+      sBox.innerHTML = '';
+      (showAll ? todoSingles : todoSingles.slice(0, 5)).forEach(a => {
+        const song = { title: a.name, artist: name, art: a.art, dur: 0 };
+        const r = artistSongRow(song, null, 0);
+        const yr = albumYearOf(a.releaseDate);
+        if (yr){ const y = document.createElement('span'); y.style.cssText = 'flex:none;font-size:12px;opacity:.55;padding-right:4px'; y.textContent = yr; r.insertBefore(y, r.lastChild); }
+        sBox.appendChild(r);
+      });
+      if (todoSingles.length > 5){
+        const more = document.createElement('button'); more.type = 'button'; more.className = 'btn-ghost';
+        more.style.cssText = 'width:100%;margin:6px 0 10px';
+        more.textContent = showAll ? 'Show fewer' : 'Show all ' + todoSingles.length + ' songs';
+        more.addEventListener('click', () => { showAll = !showAll; renderSingles(); });
+        sBox.appendChild(more);
+      }
+    };
+    renderSingles();
+  }
+  const addAlbumRow = (a) => {
     const row = document.createElement('div'); row.className = 'track-row';
     const img = document.createElement('img');
     if (a.art) attachArtworkFallback(img, { art: a.art });
@@ -10397,77 +10540,18 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       btn.disabled = true; btn.style.opacity = '.4';
-      showToast('Adding ' + a.name + '...');
-      if (await queueBackgroundLoad(a.id, a.type || 'am_album')){
-        const added = getCachedPlaylist(a.id);
-        if (added){ added.importedUnder = name; if (a.releaseDate) added.releaseDate = a.releaseDate; lsSet(LS_PL(a.id), added); }
-        saveToLibrary(a.id);
-        row.remove();
-        const sc = views.library, top = sc ? sc.scrollTop : 0;
-        renderLibrary(); if (sc) sc.scrollTop = top;
-        showToast('Added ' + a.name);
-      } else { btn.disabled = false; btn.style.opacity = ''; showToast("Couldn't add that album."); }
+      if (await addArtistAlbumToLibrary(a, name)) row.remove();
+      else { btn.disabled = false; btn.style.opacity = ''; }
     });
     acts.appendChild(btn);
     row.appendChild(img); row.appendChild(meta); row.appendChild(acts);
     box.appendChild(row);
-    // #490: tap an album to see its songs; tap a song to play it. iTunes songs are
-    // matched to a video when tapped; SoundCloud songs play straight from SoundCloud.
-    const cut = a.id.indexOf(':');
-    const isSc = a.type === 'sc_album';
-    if (isSc || cut > 0){
-      row.style.cursor = 'pointer';
-      row.setAttribute('aria-expanded', 'false');
-      let list = null, loading = false;
-      const loadSongs = async () => {
-        if (isSc){
-          const sc = await fetchSoundCloudLink(decodeURIComponent(a.id.slice(3)));
-          return (sc.tracks || []).map(t => ({ title: String(t.title || ''), artist: t.artist || name, art: t.image || a.art || null, scId: t.scId, dur: t.duration || 0 }));
-        }
-        const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: a.id.slice(cut + 1), entity: 'song', limit: '200', country: a.id.slice(0, cut) }));
-        if (!res.ok) throw new Error('iTunes lookup ' + res.status);
-        return ((await res.json()).results || []).filter(r => r && r.wrapperType === 'track').sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0))
-          .map(r => ({ title: String(r.trackName || ''), artist: String(r.artistName || name), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : a.art, dur: r.trackTimeMillis || 0 }));
-      };
-      const playSong = async (song, el) => {
-        if (el.dataset.busy) return;
-        el.dataset.busy = '1'; el.style.opacity = '.5';
-        try{
-          let m;
-          if (song.scId) m = { videoId: soundCloudVideoId(song.scId), title: song.title, channel: song.artist, duration: Math.round(song.dur / 1000) };
-          else m = await matchLinkTrack({ title: song.title, artist: song.artist, duration: song.dur }, { album: a.name, albumArt: a.art || null });
-          if (!m || !m.videoId){ showToast("Couldn't find that song."); return; }
-          const track = { title: song.title, artist: song.artist, videoId: m.videoId, matchedTitle: m.title || '', channel: m.channel || '', plays: 0, art: song.art || null, duration: m.duration || 0, srcDuration: Math.round(song.dur / 1000) || null };
-          const pl = { id: 'addprev:' + m.videoId, type: 'track', name: track.title, image: null, tracks: [track], ts: Date.now() };
-          persistPlaylistObj(pl);
-          playSingleSongLink(pl);
-        } catch(err){ showToast("Couldn't play that song."); }
-        finally { delete el.dataset.busy; el.style.opacity = ''; }
-      };
-      row.addEventListener('click', async () => {
-        if (list){ const open = list.hidden; list.hidden = !open; row.setAttribute('aria-expanded', String(open)); return; }
-        if (loading) return;
-        loading = true;
-        try{
-          const songs = await loadSongs();
-          if (!row.isConnected) return;
-          list = document.createElement('div'); list.className = 'artist-album-songs';
-          list.style.cssText = 'padding:0 12px 8px 64px;font-size:13px';
-          if (!songs.length) list.textContent = 'No songs found.';
-          songs.forEach((song, n) => {
-            const d = document.createElement('button'); d.type = 'button';
-            d.style.cssText = 'display:block;width:100%;text-align:left;padding:6px 0;background:none;border:0;color:inherit;font:inherit;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer';
-            d.textContent = (n + 1) + '. ' + song.title;
-            d.addEventListener('click', (e) => { e.stopPropagation(); playSong(song, d); });
-            list.appendChild(d);
-          });
-          row.after(list);
-          row.setAttribute('aria-expanded', 'true');
-        } catch(err){ showToast("Couldn't load songs for that album."); }
-        loading = false;
-      });
-    }
-  });
+    // #490: tap an album to open its own window with its songs
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => openAlbumPreview(a, name, standalone ? () => openArtistPage(name) : () => toggleLibraryPlaylistPanel(panelId)));
+  };
+  if (todoAlbums.length){ sectionLabel(standalone || todoSingles.length ? 'Albums' : 'More albums'); todoAlbums.forEach(addAlbumRow); }
+  if (todoCollections.length){ sectionLabel('Collections and compilations'); todoCollections.forEach(addAlbumRow); }
   libplBody.appendChild(box);
 }
 function loadArtistInfoInto(panelId, name, title, standalone){
@@ -10530,6 +10614,7 @@ function openArtistPage(rawName, title){
   if (openLibraryPanelId === id) return;
   if (state.queueOpen) closeQueuePanel();
   openLibraryPanelId = id;
+  libplBackFn = null; syncLibplCloseBtn();
   libplAddBar.hidden = true;
   libplPanel.classList.add('is-artist-info');
   // a multi-artist credit opens on the first-named artist
@@ -13640,7 +13725,7 @@ async function soundCloudArtistAlbums(pl){
   return (data.albums || []).slice(0, ARTIST_ALBUMS_MAX).reverse()
     .map(a => ({ id: 'sc:' + encodeURIComponent(a.url), key: normalizeArtistQuery(a.title), type: 'sc_album', name: String(a.title || ''), art: a.image || a.artwork || null }));
 }
-async function itunesArtistAlbums(pl){
+async function itunesArtistAlbums(pl, opts){
   let artistId, storefront = 'us';
   if (pl.type === 'am_artist'){
     const idx = pl.id.indexOf(':');
@@ -13658,15 +13743,24 @@ async function itunesArtistAlbums(pl){
   const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: artistId, entity: 'album', limit: '200', country: storefront }));
   if (!res.ok) throw new Error('iTunes lookup ' + res.status);
   const rows = (await res.json()).results || [];
-  const byName = new Map();
+  const byName = new Map(), singlesByName = new Map();
+  let rank = 0;
   rows.forEach(r => {
     if (!r || r.wrapperType !== 'collection' || String(r.artistId) !== artistId || !r.collectionId) return;
+    r.rank = rank++; // iTunes lists an artist's releases most popular first
     const name = String(r.collectionName || '');
+    if (opts && opts.sections && (/ - Single$/i.test(name) || (r.trackCount || 0) < 3) && !/\binstrumentals?\b/i.test(name)){
+      const sk = normalizeArtistQuery(name.replace(/ - Single$/i, ''));
+      if (!singlesByName.has(sk)) singlesByName.set(sk, r);
+      return;
+    }
     if (/ - Single$/i.test(name) || /\binstrumentals?\b/i.test(name) || (r.trackCount || 0) < 3) return;
     const key = normalizeArtistQuery(name);
     const prev = byName.get(key);
     if (!prev || (prev.collectionExplicitness === 'cleaned' && r.collectionExplicitness !== 'cleaned')) byName.set(key, r);
   });
+  const mapRow = (r) => ({ id: storefront + ':' + r.collectionId, key: normalizeArtistQuery(r.collectionName), releaseDate: String(r.releaseDate || '') || undefined, name: String(r.collectionName || ''), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : null, rank: r.rank });
+  if (opts && opts.sections) return { albums: [...byName.values()].map(mapRow), singles: [...singlesByName.values()].map(r => Object.assign(mapRow(r), { name: String(r.collectionName || '').replace(/ - Single$/i, '') })) };
   // Newest first, then saved oldest-first so the newest lands on top.
   return [...byName.values()]
     .sort((a, b) => (COMPILATION_RE.test(String(a.collectionName)) - COMPILATION_RE.test(String(b.collectionName))) || String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
@@ -15493,7 +15587,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 268, date: '2026-10-17', items: [
+  { version: 269, date: '2026-10-17', items: [
+    'Artist window: Singles at the top (5 shown, tap to see all), then Albums and Collections, most popular first. Releases over 20 years old come after, oldest first.',
+    'Tap an album to open its own window with its songs. Tap a song to play it, or the plus next to it to add it to a playlist.',
     'Artist window: tap a song inside an album to play it. SoundCloud albums open the same way.',
     'Artist window: tap an album to see its songs, and each album shows its year.',
     'Album windows show the artist, year, number of songs and total length at the top.',
