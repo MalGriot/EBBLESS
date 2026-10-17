@@ -10298,12 +10298,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #500. 
 
 ### cursor-brainstorm: Show different custom cursor options (Geethub #499)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #499. Show different custom cursor options.
 - **Touches:**
-- **Branch:** 
-- **Notes:** Synced from Geethub #499. Related to #416 (paid custom cursor).
+- **Branch:** agent/cursor-visibility
+- **Notes:** Synced from Geethub #499. Related to #416 (paid custom cursor). Shipped: Settings > Advanced > Cursor picks Droplet, Dot, Ring, Crosshair or Standard (native). Free, desktop only; paid skins stay with #416.
 
 ### made-by-ebbless-section: Currents, Swirl and On Air belong in the 'Made by EBBLESS' section (Geethub #498)
 - **Status:** merged
@@ -10570,12 +10570,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #531. Check overlap with logo-tap/art tap entries. A single tap on the player's cover opens that song's album (waits out the double/triple-tap window so those gestures still win; ignores taps on buttons inside the art). Verified on localhost.
 
 ### bug-cursor-invisible-same-color: Cursor is impossible to see when it matches the art and UI (Geethub #530)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** high
 - **Description:** Idea, Geethub #530. Bug #530. Need a clever, stylish fix so the custom cursor stays visible on same-color backgrounds.
 - **Touches:** custom cursor.
-- **Branch:** 
-- **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499).
+- **Branch:** agent/cursor-visibility
+- **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499). Fixed: every cursor shape now has a dark outer edge and light inner edge, so it shows on any color. Cache v265.
 
 ### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
 - **Status:** draft
