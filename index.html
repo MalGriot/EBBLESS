@@ -4363,6 +4363,13 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Accent color"><button type="button" class="btn-ghost adv-swatch adv-swatch-auto" data-adv="accent" data-val="" aria-label="Accent: auto (follows the time of day)"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#e0b26a" style="--sw:#e0b26a" aria-label="Accent: gold"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#1db954" style="--sw:#1db954" aria-label="Accent: green"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#4aa3ff" style="--sw:#4aa3ff" aria-label="Accent: blue"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#ff5c8a" style="--sw:#ff5c8a" aria-label="Accent: pink"></button><button type="button" class="btn-ghost adv-swatch" data-adv="accent" data-val="#a97cff" style="--sw:#a97cff" aria-label="Accent: violet"></button></div>
         </div>
+        <div class="settings-row settings-row-slider" id="cursorStyleRow" hidden>
+          <div>
+            <div class="label">Cursor</div>
+            <div class="desc">Mouse pointer style. Every style has a light and dark edge so it shows on any color.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Cursor"><button type="button" class="btn-ghost" data-adv="cursor" data-val="drop">Droplet</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="dot">Dot</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="ring">Ring</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="cross">Crosshair</button><button type="button" class="btn-ghost" data-adv="cursor" data-val="native">Standard</button></div>
+        </div>
         <div class="settings-row settings-row-slider">
           <div>
             <div class="label">Motion</div>
@@ -21016,7 +21023,7 @@ const advBlock = $('settingsAdvancedBlock');
 function advRender(){
   const p = advPrefs();
   const active = {
-    art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '',
+    art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '', cursor: ['dot','ring','cross','native'].includes(p.cursor) ? p.cursor : 'drop',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet',
     gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none',
@@ -21095,6 +21102,7 @@ function advRunGesture(k){
 }
 function advChoose(k, v){
   if (k === 'art') setArtStyle(v);
+  else if (k === 'cursor'){ advSet('cursor', v === 'drop' ? null : v); if (window.ebbCursorStyle) window.ebbCursorStyle(v); }
   else if (k === 'motion'){ advSet('motion', v === 'reduced' ? 'reduced' : null); advApplyMotion(); }
   else if (k === 'accent'){ advSet('accent', v || null); updateLibraryClockColor(); }
   else if (k === 'grid') setLibraryView(v);
@@ -29915,6 +29923,8 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
   st.textContent = 'html.cc-on,html.cc-on *:not(input):not(textarea):not(select):not([contenteditable=""]):not([contenteditable="true"]){cursor:none!important}';
   var ctx = cv.getContext('2d'), dpr = 1, W = 0, H = 0;
   var mx = 0, my = 0, x = 0, y = 0, vx = 0, vy = 0, r = 5, tr = 5;
+  var style = 'drop';
+  try { var ap = JSON.parse(localStorage.getItem('ebbless:advanced') || '{}'); if (ap && ['dot','ring','cross','native'].indexOf(ap.cursor) >= 0) style = ap.cursor; } catch (e) {}
   var trail = [], raf = 0, color = '#e0b26a', lastCol = 0, seen = false, textMode = false;
   var root = document.documentElement;
   function size(){
@@ -29945,21 +29955,41 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = color; ctx.strokeStyle = color;
     // watery trail: shrinking, fading beads along the path
-    for (var i = 0; i < trail.length; i++) {
+    for (var i = 0; style === 'drop' && i < trail.length; i++) {
       var p = trail[i], k = i / trail.length;
       ctx.globalAlpha = k * .35 * Math.min(1, sp / 3);
       ctx.beginPath(); ctx.arc(p.x, p.y, r * k * .8, 0, 6.2832); ctx.fill();
     }
-    if (!textMode) {
-      // droplet: stretched along velocity, squashed across it
-      var ang = Math.atan2(vy, vx), s = Math.min(sp / 14, .6);
-      ctx.globalAlpha = 1;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-      ctx.beginPath(); ctx.ellipse(0, 0, r * (1 + s), r * (1 - s * .4), 0, 0, 6.2832); ctx.fill();
+    if (!textMode && style !== 'native') {
+      // every shape gets a dark outer edge and a light inner edge (#530), so it
+      // reads on art that matches its own color. Strokes are drawn under the fill.
+      var ang = Math.atan2(vy, vx), s = style === 'drop' ? Math.min(sp / 14, .6) : 0;
+      var hot = tr > 6, rr = style === 'dot' ? r * .8 : r;
+      function edge(path){
+        ctx.globalAlpha = .85; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.75)'; path(); ctx.stroke();
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.95)'; path(); ctx.stroke();
+        ctx.strokeStyle = color;
+      }
+      ctx.save(); ctx.translate(x, y); ctx.rotate(style === 'drop' ? ang : 0);
+      if (style === 'drop' || style === 'dot') {
+        var body = function(){ ctx.beginPath(); ctx.ellipse(0, 0, rr * (1 + s), rr * (1 - s * .4), 0, 0, 6.2832); };
+        edge(body); ctx.globalAlpha = 1; body(); ctx.fill();
+      } else if (style === 'ring') {
+        var rg = function(){ ctx.beginPath(); ctx.arc(0, 0, r + 4, 0, 6.2832); };
+        edge(rg); ctx.globalAlpha = 1; ctx.lineWidth = 2; rg(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 1.6, 0, 6.2832); ctx.fill();
+      } else {
+        var L = r + 8, g = 3;
+        var cr = function(){ ctx.beginPath(); ctx.moveTo(-L, 0); ctx.lineTo(-g, 0); ctx.moveTo(g, 0); ctx.lineTo(L, 0); ctx.moveTo(0, -L); ctx.lineTo(0, -g); ctx.moveTo(0, g); ctx.lineTo(0, L); };
+        edge(cr); ctx.globalAlpha = 1; ctx.lineWidth = 2; cr(); ctx.stroke();
+      }
       ctx.restore();
-      // soft ring that breathes wider over clickable things
-      ctx.globalAlpha = .45; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(mx, my, r + 5 + (tr > 6 ? 3 : 0), 0, 6.2832); ctx.stroke();
+      if (style === 'drop') {
+        // soft ring that breathes wider over clickable things
+        ctx.beginPath(); ctx.arc(mx, my, r + 5 + (hot ? 3 : 0), 0, 6.2832);
+        ctx.globalAlpha = .5; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.stroke();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = color; ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
     var moving = sp > .05 || Math.abs(dx) + Math.abs(dy) > .3 || Math.abs(tr - r) > .05;
@@ -29967,6 +29997,9 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     if (moving || trail.length) raf = requestAnimationFrame(frame);
   }
   function kick(){ if (!raf) raf = requestAnimationFrame(frame); }
+  function applyStyle(){ root.classList.toggle('cc-on', seen && style !== 'native'); cv.style.opacity = style === 'native' ? '0' : (seen ? '1' : '0'); }
+  window.ebbCursorStyle = function(v){ style = ['dot','ring','cross','native'].indexOf(v) >= 0 ? v : 'drop'; applyStyle(); trail.length = 0; kick(); };
+  var csRow = document.getElementById('cursorStyleRow'); if (csRow) csRow.hidden = false;
   function start(){
     document.head.appendChild(st);
     document.body.appendChild(cv);
@@ -29975,7 +30008,7 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     addEventListener('pointermove', function(e){
       if (e.pointerType !== 'mouse') return;
       mx = e.clientX; my = e.clientY;
-      if (!seen) { seen = true; x = mx; y = my; root.classList.add('cc-on'); cv.style.opacity = '1'; }
+      if (!seen) { seen = true; x = mx; y = my; applyStyle(); }
       var el = e.target, hot = false;
       textMode = !!(el && el.closest && el.closest('input,textarea,select,[contenteditable="true"],[contenteditable=""]'));
       if (!textMode && el && el.closest) hot = !!el.closest('a,button,[role="button"],[onclick],label,summary,[tabindex]:not([tabindex="-1"])');
@@ -29983,9 +30016,9 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
       kick();
     }, {passive: true});
     document.addEventListener('pointerleave', function(){ cv.style.opacity = '0'; });
-    document.addEventListener('pointerenter', function(){ if (seen) cv.style.opacity = '1'; });
+    document.addEventListener('pointerenter', function(){ if (seen && style !== 'native') cv.style.opacity = '1'; });
     addEventListener('blur', function(){ cv.style.opacity = '0'; });
-    addEventListener('focus', function(){ if (seen) cv.style.opacity = '1'; });
+    addEventListener('focus', function(){ if (seen && style !== 'native') cv.style.opacity = '1'; });
   }
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
 })();
