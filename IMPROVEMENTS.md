@@ -10654,7 +10654,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #519. Related to currents-playlist-algorithm.
 
 ### bug-ads-since-install: Getting ads since installing the app (Geethub #518)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Idea, Geethub #518. Bug #518. Ads appear after the app was installed.
 - **Touches:** ads.
@@ -10822,7 +10822,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #569. Already on main (0826165): tapping the active sort flips it. Verified present, no new change.
 
 ### soundcloud-links-only-play-on-my: soundcloud links only play on my phone and machine because i'm logged in (Geethub #570)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #570. medium we need a workaround or an easy smooth way to log people in who don't have an account. would be nice if a google login logged in to all music player accounts or something
 - **Touches:** tbd.
@@ -10886,7 +10886,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #577. Built (phones, under 860px only): no Library title; filter pills above the New playlist/search row; list rows show only the 3-dot button, pushed to the right edge (Play and Pin removed from the row, a Play item added to the card menu next to Pin); the card and song menus (library, playlist songs, queue) are now a bottom sheet over the current screen with a dim backdrop, swipe down or tap outside to close; holding a queue song opens its menu; footer player shows only play/pause. Assumptions: "holding a button" read as holding a row; the Liked Songs list row has no 3-dot menu so it now has no row button (tap opens it). Checked in a 375px browser preview with a test playlist; no real touch device. Round 2: the 3-dot button is back at its original position; Liked Songs has a 3-dot menu again (Play, Add to queue); holding now opens the menu on library cards (incl. Liked), playlist songs, queue songs and the now-playing queue row (touch only, a move cancels it, so dragging is untouched).
 
 ### bug-critical-android-first-seconds-of-each: [CRITICAL] Android: first seconds of each song skip, then catch up (Geethub #578)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug, Geethub #578. ## Summary In the Android app (v2.7.1, TECNO POP 9, Android 14), the first seconds of a song skip and then catch up. Reported on both songs played in the soak test (the first and the second track of a queue), with the sc
 - **Touches:** tbd.
@@ -10910,7 +10910,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #580. Already shipped in ea9ecd8 (nav Feedback button shows for everyone); verified on localhost desktop, no code change here.
 
 ### bug-mobile-lock-screen-controls-and-notifications: mobile lock screen controls and notifications bar controls missing (Geethub #581)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug, Geethub #581. medium
 - **Touches:** tbd.
@@ -11024,7 +11024,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #583.
 
 ### android-app-killed-by-low-memory-killer-af: Android: app killed by low-memory killer after ~46 min of screen-off playback (Geethub #584)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** high
 - **Description:** Bug Geethub #584. ## Summary Android app 2.8.2 on the TECNO POP 9 (Android 14, 2.8 GB RAM). In a 70-minute screen-off, unplugged soak, music played cleanly for 44 minutes, then Android's low-memory killer SIGKILLed the EBBLESS process at 13:47:02 (while it held its foreground playback service). Music stopped; a new process appeared at 13:51:38 (screen wake; whether 
 - **Touches:** tbd.
@@ -11032,7 +11032,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #584. Related to #578; Android native.
 
 ### the-entire-app-freezes-lags-and-becomes-un: the entire app freezes lags and becomes unresponsive when you try to drag a song over a playlist thumb (Geethub #595)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #595. 
 - **Touches:** tbd.
@@ -11048,7 +11048,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #597.
 
 ### miniplayer-should-open-always-in-the-botto: miniplayer should open always in the bottom right corner (Geethub #604)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #604. 
 - **Touches:** tbd.
@@ -11056,7 +11056,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #604. Related to #605, #623.
 
 ### the-miniplayer-should-stay-in-position-acr: the miniplayer should stay in position across desktops (Geethub #605)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #605. 
 - **Touches:** tbd.
@@ -11064,7 +11064,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #605. Related to #512 (merged, app 1.0.7/1.0.8); check if it still fails.
 
 ### m-should-activate-miniplayer: m should activate miniplayer (Geethub #606)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #606. 
 - **Touches:** tbd.
@@ -11080,7 +11080,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #607.
 
 ### mobile-seacrh-bar-should-become-a-button-i: mobile: seacrh bar should become a button in the bottom nav (Geethub #608)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #608. it should open a full tab like queue or library the tab should have a search bar at the top below the search bar should be a grid of suggestions based on the user's listening history and what they will most likely like below those suggestions should be genres and/or keywords and/or prompts for playlists that fit the current mood based on rosicrusia
 - **Touches:** tbd.
@@ -11112,7 +11112,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #611.
 
 ### the-miniplayer-has-changed-back-to-a-recta: the miniplayer has changed back to a rectangle. there should be options (Geethub #612)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #612. it was lp shaped and working toward cassette shaped and more shapes to come. bring them back
 - **Touches:** tbd.
@@ -11136,7 +11136,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #614.
 
 ### after-loading-the-song-after-the-ad-the-so: after loading the song after the ad, the song is starting several seconds in. it should start at 0:00 if it's not a resume play (Geethub #615)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #615. 
 - **Touches:** tbd.
@@ -11200,7 +11200,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #622.
 
 ### when-the-miniplayer-switches-shapes-it-sho: when the miniplayer switches shapes, it should always magnetize to the bottom right corner (Geethub #623)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #623. 
 - **Touches:** tbd.
@@ -11216,7 +11216,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #624.
 
 ### youtube-search: youtube search (Geethub #625)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #625. sometimes i'm just searching for a specific song the same way i would on youtube. it should use the common search engine that people are used to
 - **Touches:** tbd.
@@ -11232,7 +11232,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #626.
 
 ### cymatics-miniplayer-get-creative-something: cymatics miniplayer - get creative. something new and on brand (Geethub #627)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #627. 
 - **Touches:** tbd.
@@ -11248,7 +11248,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #628.
 
 ### when-you-play-an-album-or-playlist-and-the: when you play an album or playlist and the queue changes to a new queue, the queue list should snap to the top (Geethub #629)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #629. 
 - **Touches:** tbd.
@@ -11264,7 +11264,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #630.
 
 ### searching-in-the-library-should-show-only: searching in the library should show only what you're searching for (Geethub #631)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #631. if it's a song, deactivate all pills
 - **Touches:** tbd.
@@ -11272,7 +11272,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #631.
 
 ### when-you-deactivate-a-pill-in-library-main: when you deactivate a pill in library (mainly podcasts), it resizes them and it becomes scrollable. this shouldn't happen (Geethub #632)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #632. the word kind of slips out of the border also
 - **Touches:** tbd.
@@ -11288,7 +11288,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #633.
 
 ### mobile-needs-a-lock-screen-and-notif-playe: mobile needs a lock screen and notif player with play rewind and heart (Geethub #634)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #634. 
 - **Touches:** tbd.
@@ -11296,7 +11296,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #634. Likely duplicate of #581 (lock screen controls); fold together when queued.
 
 ### mobile-moves-really-slow-and-slows-down-th: mobile moves really slow and slows down the phone (Geethub #635)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Bug Geethub #635. when you close it it doesnt stop. it's still visible in the top bar. it says its playing in the bg. there needs to be an audit on how to make it move faster, smoother and play well with other apps
 - **Touches:** tbd.
@@ -11304,7 +11304,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #635. Related to #595, #584 (performance).
 
 ### hovering-the-miniplayer-should-show-the-ti: hovering the miniplayer should show the title and artist and heart and thumbs down (Geethub #636)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #636. 
 - **Touches:** tbd.
