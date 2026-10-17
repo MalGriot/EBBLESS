@@ -10367,7 +10367,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #490. In the artist window, show album tracks, add them to library, show album year.
 - **Touches:**
 - **Branch:** agent/artist-album-pages
-- **Notes:** Synced from Geethub #490. Related to #497. Shipped cache v267: artist window albums not yet in the library show their year and expand on tap to list their songs (existing iTunes lookup, no new source); add-to-library button was already there (#482); albums already in the library show year and song count. Songs in the expanded list are not playable until the album is added. Verified in browser preview (desktop + 375px); iTunes expand checked on Michael Jackson.
+- **Notes:** Synced from Geethub #490. Related to #497. Shipped cache v267: artist window albums not yet in the library show their year and expand on tap to list their songs (existing iTunes lookup, no new source); add-to-library button was already there (#482); albums already in the library show year and song count. Songs in the expanded list are not playable until the album is added. Verified in browser preview (desktop + 375px); iTunes expand checked on Michael Jackson. Follow-up cache v268: songs in the expanded album list are tappable. iTunes songs are matched (matchLinkTrack, album mode) on tap and play as a one-song queue via playSingleSongLink; SoundCloud albums now expand too and play straight from SoundCloud (scId, no matching). Verified iTunes tap plays (Michael Jackson); SoundCloud play path not exercised end to end (needs an sc_artist in the library), only the worker /soundcloud track shape was checked.
 
 ### share-song-animation: Sharing a song to socials shows an animated EBBLESS logo with a link back (Geethub #489)
 - **Status:** ready

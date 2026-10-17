@@ -10411,25 +10411,56 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
     acts.appendChild(btn);
     row.appendChild(img); row.appendChild(meta); row.appendChild(acts);
     box.appendChild(row);
-    // #490: tap an album to see its songs (iTunes albums only; same lookup the artist fill uses)
+    // #490: tap an album to see its songs; tap a song to play it. iTunes songs are
+    // matched to a video when tapped; SoundCloud songs play straight from SoundCloud.
     const cut = a.id.indexOf(':');
-    if (a.type !== 'sc_album' && cut > 0){
+    const isSc = a.type === 'sc_album';
+    if (isSc || cut > 0){
       row.style.cursor = 'pointer';
       row.setAttribute('aria-expanded', 'false');
       let list = null, loading = false;
+      const loadSongs = async () => {
+        if (isSc){
+          const sc = await fetchSoundCloudLink(decodeURIComponent(a.id.slice(3)));
+          return (sc.tracks || []).map(t => ({ title: String(t.title || ''), artist: t.artist || name, art: t.image || a.art || null, scId: t.scId, dur: t.duration || 0 }));
+        }
+        const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: a.id.slice(cut + 1), entity: 'song', limit: '200', country: a.id.slice(0, cut) }));
+        if (!res.ok) throw new Error('iTunes lookup ' + res.status);
+        return ((await res.json()).results || []).filter(r => r && r.wrapperType === 'track').sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0))
+          .map(r => ({ title: String(r.trackName || ''), artist: String(r.artistName || name), art: r.artworkUrl100 ? r.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : a.art, dur: r.trackTimeMillis || 0 }));
+      };
+      const playSong = async (song, el) => {
+        if (el.dataset.busy) return;
+        el.dataset.busy = '1'; el.style.opacity = '.5';
+        try{
+          let m;
+          if (song.scId) m = { videoId: soundCloudVideoId(song.scId), title: song.title, channel: song.artist, duration: Math.round(song.dur / 1000) };
+          else m = await matchLinkTrack({ title: song.title, artist: song.artist, duration: song.dur }, { album: a.name, albumArt: a.art || null });
+          if (!m || !m.videoId){ showToast("Couldn't find that song."); return; }
+          const track = { title: song.title, artist: song.artist, videoId: m.videoId, matchedTitle: m.title || '', channel: m.channel || '', plays: 0, art: song.art || null, duration: m.duration || 0, srcDuration: Math.round(song.dur / 1000) || null };
+          const pl = { id: 'addprev:' + m.videoId, type: 'track', name: track.title, image: null, tracks: [track], ts: Date.now() };
+          persistPlaylistObj(pl);
+          playSingleSongLink(pl);
+        } catch(err){ showToast("Couldn't play that song."); }
+        finally { delete el.dataset.busy; el.style.opacity = ''; }
+      };
       row.addEventListener('click', async () => {
         if (list){ const open = list.hidden; list.hidden = !open; row.setAttribute('aria-expanded', String(open)); return; }
         if (loading) return;
         loading = true;
         try{
-          const res = await fetch('https://itunes.apple.com/lookup?' + new URLSearchParams({ id: a.id.slice(cut + 1), entity: 'song', limit: '200', country: a.id.slice(0, cut) }));
-          if (!res.ok) throw new Error('iTunes lookup ' + res.status);
-          const songs = ((await res.json()).results || []).filter(r => r && r.wrapperType === 'track').sort((x, y) => (x.discNumber || 1) - (y.discNumber || 1) || (x.trackNumber || 0) - (y.trackNumber || 0));
+          const songs = await loadSongs();
           if (!row.isConnected) return;
           list = document.createElement('div'); list.className = 'artist-album-songs';
-          list.style.cssText = 'padding:0 12px 8px 64px;font-size:13px;opacity:.8';
+          list.style.cssText = 'padding:0 12px 8px 64px;font-size:13px';
           if (!songs.length) list.textContent = 'No songs found.';
-          songs.forEach((r, n) => { const d = document.createElement('div'); d.style.cssText = 'padding:3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'; d.textContent = (n + 1) + '. ' + String(r.trackName || ''); list.appendChild(d); });
+          songs.forEach((song, n) => {
+            const d = document.createElement('button'); d.type = 'button';
+            d.style.cssText = 'display:block;width:100%;text-align:left;padding:6px 0;background:none;border:0;color:inherit;font:inherit;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer';
+            d.textContent = (n + 1) + '. ' + song.title;
+            d.addEventListener('click', (e) => { e.stopPropagation(); playSong(song, d); });
+            list.appendChild(d);
+          });
           row.after(list);
           row.setAttribute('aria-expanded', 'true');
         } catch(err){ showToast("Couldn't load songs for that album."); }
@@ -15462,7 +15493,8 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 267, date: '2026-10-17', items: [
+  { version: 268, date: '2026-10-17', items: [
+    'Artist window: tap a song inside an album to play it. SoundCloud albums open the same way.',
     'Artist window: tap an album to see its songs, and each album shows its year.',
     'Album windows show the artist, year, number of songs and total length at the top.',
     'New in Advanced settings: show your albums as one grid instead of grouped under artist names.'
