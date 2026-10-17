@@ -13664,12 +13664,26 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   const rowOf = (el) => el && el.closest && el.closest('.track-row, .q-row');
   const inLibrary = (el) => !!(el && el.closest && el.closest('#view-library'));
   const cardOf = (el) => el && el.closest && el.closest('.lib-card[data-pl-id]');
-  const okTarget = (card) => !!card && addablePlaylists().some(p => p.id === card.dataset.plId);
-  function clearHi(){ document.querySelectorAll('.lib-card.is-drop-target').forEach(c => c.classList.remove('is-drop-target')); libplPanel.classList.remove('is-drop-target'); }
+  // #595: addablePlaylists() parses every saved playlist, so asking it on each
+  // dragover (many a second) froze the app on a big library. Ask once per drag.
+  let addableIds = null;
+  const addableSet = () => addableIds || (addableIds = new Set(addablePlaylists().map(p => p.id)));
+  const okTarget = (card) => !!card && addableSet().has(card.dataset.plId);
+  let hiCard = null, hiPanel = false;
+  function clearHi(){
+    if (hiCard){ hiCard.classList.remove('is-drop-target'); hiCard = null; }
+    if (hiPanel){ libplPanel.classList.remove('is-drop-target'); hiPanel = false; }
+  }
+  function setHi(card, panel){
+    if (card === hiCard && panel === hiPanel) return;
+    clearHi();
+    if (card){ card.classList.add('is-drop-target'); hiCard = card; }
+    if (panel){ libplPanel.classList.add('is-drop-target'); hiPanel = true; }
+  }
   // #548: the open playlist is itself a drop target (not the one the song is already dragged out of)
   function panelDropId(el){
     if (!el || !el.closest || !el.closest('#libpl-panel') || !openLibraryPanelId) return null;
-    if (!addablePlaylists().some(p => p.id === openLibraryPanelId)) return null;
+    if (!addableSet().has(openLibraryPanelId)) return null;
     if (dragFromLib && dragSrcPl === openLibraryPanelId) return null;
     return openLibraryPanelId;
   }
@@ -13684,6 +13698,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     row.draggable = true;
   });
   document.addEventListener('dragstart', (e) => {
+    addableIds = null;
     const art = e.target.closest && e.target.closest('#artworkWrap');
     if (art){
       // album art of the playing song drags as that song
@@ -13743,15 +13758,15 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
   document.addEventListener('dragover', (e) => {
     if (!dragTrack) return;
     const card = cardOf(e.target);
-    clearHi();
-    if (panelDropId(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; libplPanel.classList.add('is-drop-target'); return; }
+    if (panelDropId(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setHi(null, true); return; }
     if (!okTarget(card)){
+      setHi(null, false);
       // a song from outside the library dropped anywhere else in it asks which playlist
       if (!dragFromLib && inLibrary(e.target)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
       return;
     }
     e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
-    card.classList.add('is-drop-target');
+    setHi(card, false);
   });
   document.addEventListener('drop', (e) => {
     if (!dragTrack) return;
@@ -13790,7 +13805,7 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     if (openLibraryPanelId !== card.dataset.plId) toggleLibraryPlaylistPanel(card.dataset.plId);
   });
   document.addEventListener('dragend', () => {
-    dragTrack = null; dragFromLib = false; relinkDrag = false; dragSrcPl = null; clearHi();
+    dragTrack = null; dragFromLib = false; relinkDrag = false; dragSrcPl = null; addableIds = null; clearHi();
     document.body.classList.remove('relink-dragging');
     document.querySelectorAll('.is-song-drag').forEach(r => r.classList.remove('is-song-drag'));
     document.querySelectorAll('.track-row[draggable], .q-row[draggable], #artworkWrap[draggable], .search-pick[draggable]').forEach(r => r.removeAttribute('draggable'));

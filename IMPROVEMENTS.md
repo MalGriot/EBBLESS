@@ -11032,12 +11032,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #584. Related to #578; Android native.
 
 ### the-entire-app-freezes-lags-and-becomes-un: the entire app freezes lags and becomes unresponsive when you try to drag a song over a playlist thumb (Geethub #595)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #595. 
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #595. Related to #635 (performance).
+- **Touches:** desktop song-to-playlist drag (the `dragover` handler near `setDragChip`).
+- **Branch:** agent/web-bugs-1
+- **Notes:** Synced from Geethub #595. Related to #635 (performance). Cause: every `dragover` (many a second while a song is held over a library card) called `addablePlaylists()` two or three times, and that JSON-parses every saved playlist from localStorage. It also removed and re-added the highlight class on every event. Fix: the addable id set is built once per drag (reset on dragstart/dragend) and the highlight only changes when the card under the pointer changes. Measured in the preview on a synthetic library (60 playlists x 400 songs, dispatched dragover events): 5.96 ms per event before, 0.25 ms after (~24x); a real library with art and matched metadata parses slower, so the real-world gain is larger. A real mouse drag with the OS drag image was not tried (synthetic events only).
 
 ### music-map: music map (Geethub #597)
 - **Status:** draft
