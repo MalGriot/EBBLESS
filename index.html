@@ -28241,8 +28241,8 @@ function buildMiniPlayerDOM(win){
   };
   // a click on the cover steps the art mode like the Z key: Art, LP, cassette, Visualizer (Cymatics here), then Art again
   doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')){ mpCycleArtMode(); updateMiniPlayerUI(); } });
-  // the expand button: the app goes fullscreen (its in-app fullscreen player) and the mini closes
-  doc.getElementById('mpFull').addEventListener('click', () => { try { if (currentTrack() && !state.flowOpen) openFlow(); } catch(err){} backToApp(); });
+  // the expand button: the app opens on its main player (like the H key, no fullscreen) and the mini closes
+  doc.getElementById('mpFull').addEventListener('click', () => { try { leaveFullscreen(true); state.settingsFromDeskFs = false; setView('player'); } catch(err){} backToApp(); });
   doc.getElementById('mpLogo').addEventListener('click', backToApp);
   const forward = (id, target) => doc.getElementById(id).addEventListener('click', () => { target.click(); updateMiniPlayerUI(); });
   forward('mpPrev', prevBtn);
