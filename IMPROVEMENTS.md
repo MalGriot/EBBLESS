@@ -11127,7 +11127,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #647. nothing playing yet: the bouncing ebbless logo should just be the E, slowly spinning counter-clockwise.
 - **Touches:** `.art-dvd` CSS and markup (#613).
 - **Branch:** agent/q-ui-polish
-- **Notes:** Synced from Geethub #647. The bouncing wordmark is now the E mark (`brand/assets/mark-white.png`, a 16%-wide square), spinning counter-clockwise once per 30s via the `rotate` property (transform and opacity budget kept, paused under the fullscreen player as before). Bounce travel recomputed for the square box. Reduced motion shows it still. Assumption: mark-white.png is the E.
+- **Notes:** Synced from Geethub #647. The bouncing wordmark is now the E mark (`brand/assets/mark-white.png`, a 16%-wide square), spinning counter-clockwise once per 30s. It travels in straight lines at a constant speed and bounces off the art's edges (x and y both linear, alternating, 9s and 13.8s), with a subtle up-and-down wave (about 9% of its size, 2.6s) and the spin on the image a level inside the path so they never bend it. Path checked by sampling positions: straight diagonals, reflects at the edges. Paused under the fullscreen player as before. Reduced motion shows it still. Assumption: mark-white.png is the E.
 
 ### expanded-library-more-per-row: expanded library: same thumb size, more per row (Geethub #649)
 - **Status:** review
