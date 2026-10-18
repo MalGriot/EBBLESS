@@ -27196,7 +27196,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flow: 0, hov: 0, ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flow: 0, hov: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark.png', location.href).href }), ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27276,6 +27276,12 @@ function mpCymSync(win){
       }
     }
     const sandA = 1 - 0.55 * c.hov;
+    // not hovered: the colorful EBBLESS mark in the middle (it gives a small pulse on each kick)
+    if (c.hov < 1 && c.logo.complete && c.logo.naturalWidth){
+      const lw = Math.min(w, h) * 0.24 * (1 + 0.05 * kick), lh = lw * c.logo.naturalHeight / c.logo.naturalWidth;
+      ctx.globalAlpha = 0.95 * (1 - c.hov);
+      ctx.drawImage(c.logo, cx - lw / 2, cy - lh / 2, lw, lh);
+    }
     // ripples from the middle out past the edge
     ctx.lineWidth = 1.4;
     for (let r = 0; r < c.ripples.length; r++){
