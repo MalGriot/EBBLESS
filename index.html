@@ -27498,6 +27498,10 @@ const MINI_PLAYER_STYLE = `
   body.mp-playing #mpRecord{animation-play-state:running}
   #mpRecord::before{content:"";position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
     background:var(--mp-art) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c}
+  /* the previous label art, faded out over the new one when the song changes (LP and cassette) */
+  #mpRecord .mp-lbl-ghost{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+    background:var(--ghost-art,none) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c;opacity:0;pointer-events:none}
+  .mp-cs-ghost{transform-box:fill-box;transform-origin:center;pointer-events:none}
   #mpRecord::after{content:"";position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#121212}
   #mpTape{width:min(100cqw,156cqh);aspect-ratio:1.5625}
   #mpTape .cassette-svg{width:100%;height:100%;display:block;overflow:visible;fill:#000}
@@ -27818,7 +27822,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, st: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, slideF: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, st: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, cover: null, coverFrom: null, coverSrc: '', coverFade: 1, slideF: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27920,13 +27924,19 @@ function mpCymSync(win){
     if (hovering !== c.hovering){ c.hovering = hovering; doc.body.classList.toggle('cym-hover', hovering); } // the DOM controls follow the same hover as the cover
     c.hov += ((hovering ? 1 : 0) - c.hov) * 0.25;
     if (c.hov < 0.01) c.hov = 0;
-    if (c.hov > 0){
-      const im = doc.getElementById('mpArt');
-      if (im && im.complete && im.naturalWidth){
-        const m = Math.min(im.naturalWidth, im.naturalHeight);
-        ctx.globalAlpha = c.hov;
-        ctx.drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, cx - R, cy - R, 2 * R, 2 * R);
-      }
+    // the cover is kept as a small square snapshot; when the song changes the old snapshot fades out over the new one
+    const im = doc.getElementById('mpArt');
+    if (im && im.complete && im.naturalWidth && (im.currentSrc || im.src) !== c.coverSrc){
+      const nc = doc.createElement('canvas'), m = Math.min(im.naturalWidth, im.naturalHeight);
+      nc.width = nc.height = 256;
+      nc.getContext('2d').drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, 0, 0, 256, 256);
+      c.coverFrom = c.cover; c.cover = nc; c.coverSrc = im.currentSrc || im.src; c.coverFade = c.coverFrom ? 0 : 1;
+    }
+    if (c.coverFade < 1) c.coverFade = Math.min(1, c.coverFade + dt / MP_ART_FADE_MS);
+    if (c.hov > 0 && c.cover){
+      if (c.coverFade < 1 && c.coverFrom){ ctx.globalAlpha = c.hov; ctx.drawImage(c.coverFrom, cx - R, cy - R, 2 * R, 2 * R); }
+      ctx.globalAlpha = c.hov * (c.coverFrom ? c.coverFade : 1);
+      ctx.drawImage(c.cover, cx - R, cy - R, 2 * R, 2 * R);
     }
     const sandA = 1 - 0.55 * c.hov;
     // ripples from the middle out past the edge
@@ -28143,6 +28153,28 @@ function miniPlayerLeadArt(track, durationMs){
   if (!miniPlayerWin || miniPlayerWin.closed) return;
   mpArtLead = { url: artworkUrls(track)[0] || '', ms: durationMs, pos: state.queuePos, until: Date.now() + durationMs + 2000 };
   updateMiniPlayerUI();
+}
+// LP and cassette: the label art would swap instantly, so a copy of the old one is laid over it and faded out
+function mpFadeLabelArt(doc, ms){
+  const win = doc.defaultView;
+  const prev = doc.getElementById('mpArtWrap').style.getPropertyValue('--mp-art');
+  const rec = doc.getElementById('mpRecord');
+  if (rec && prev && prev !== 'none'){
+    let g = rec.querySelector('.mp-lbl-ghost');
+    if (!g){ g = doc.createElement('div'); g.className = 'mp-lbl-ghost'; rec.appendChild(g); }
+    g.style.transition = 'none'; g.style.setProperty('--ghost-art', prev); g.style.opacity = '1';
+    void g.offsetWidth;
+    g.style.transition = 'opacity ' + ms + 'ms ' + MP_ART_EASE; g.style.opacity = '0';
+  }
+  const cs = doc.getElementById('cassetteLabelArt');
+  if (cs && cs.classList.contains('is-loaded') && cs.getAttribute('href')){
+    const g = cs.cloneNode(false);
+    g.removeAttribute('id'); g.classList.remove('cs-label-art'); g.classList.add('mp-cs-ghost');
+    g.style.animation = 'none'; g.style.transform = win.getComputedStyle(cs).transform; g.style.opacity = '1';
+    cs.parentNode.insertBefore(g, cs.nextSibling);
+    win.requestAnimationFrame(() => win.requestAnimationFrame(() => { g.style.transition = 'opacity ' + ms + 'ms ' + MP_ART_EASE; g.style.opacity = '0'; }));
+    win.setTimeout(() => g.remove(), ms + 120);
+  }
 }
 function setMiniPlayerArt(artEl, art, ms){
   const win = artEl.ownerDocument.defaultView;
@@ -28504,6 +28536,7 @@ function updateMiniPlayerUI(){
     if (!lead) mpArtLead = null;
     const art = lead ? lead.url : (artworkUrls(t)[0] || '');
     if (artEl.getAttribute('src') !== art){
+      mpFadeLabelArt(doc, lead ? lead.ms : MP_ART_FADE_MS);
       setMiniPlayerArt(artEl, art, lead ? lead.ms : MP_ART_FADE_MS);
       const lavaA = doc.getElementById('mpLavaA'), lavaB = doc.getElementById('mpLavaB');
       if (lavaA && lavaB){
