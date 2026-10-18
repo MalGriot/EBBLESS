@@ -27371,8 +27371,12 @@ const MP_SHAPES = ['card', 'pill', 'disc', 'tape', 'square', 'cymatics', 'float'
 const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'LP (disc)', tape: 'Cassette (tape)', square: 'Square', cymatics: 'Cymatics', float: 'Float (no frame)' };
 // #526: with no shape picked by hand the shape follows the art style (record = disc, cassette = tape, otherwise card)
 const MP_SHAPE_BY_ART = { record: 'disc', cassette: 'tape' };
-function mpSavedShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : null; }
-function mpDesktopShape(){ return mpSavedShape() || MP_SHAPE_BY_ART[artStyle] || 'card'; }
+// The mini player is in whatever mode the main player is in: Visualizer = Cymatics, Art = the art style's shape (default card,
+// LP disc, cassette tape). A shape picked by hand holds only while the main player's mode stays what it was when picked.
+function mpModeSig(){ return visualMode + ':' + artStyle; }
+function mpSavedShape(){ const p = lsGet(LS_MINI_PLAYER, null) || {}; return MP_SHAPES.includes(p.shape) && p.shapeFor === mpModeSig() ? p.shape : null; }
+function mpPickShape(shape){ saveMiniPlayerPrefs({ shape, shapeFor: shape ? mpModeSig() : null }); }
+function mpDesktopShape(){ return mpSavedShape() || (visualMode === 'viz' ? 'cymatics' : MP_SHAPE_BY_ART[artStyle]) || 'card'; }
 // Cymatics is the square's outline and hover controls with its own art (see mpCymSync), so it also carries mp-shape-disc
 function mpSetShapeClasses(body, shape){
   MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape || (shape === 'cymatics' && x === 'square')));
@@ -27779,7 +27783,7 @@ function wireMiniDesktop(win){
   doc.documentElement.appendChild(menu); // outside body so the shape's clip never cuts the menu
   const close = () => { menu.hidden = true; };
   const setShape = (shape) => {
-    saveMiniPlayerPrefs({ shape: shape === 'auto' ? null : shape });
+    mpPickShape(shape === 'auto' ? null : shape);
     mpApplyShape(win);
   };
   const openMenu = (x, y) => {
@@ -27803,7 +27807,7 @@ function wireMiniDesktop(win){
   const cymBtn = doc.createElement('button');
   cymBtn.id = 'mpArtCymatics'; cymBtn.title = 'Cymatics'; cymBtn.setAttribute('aria-label', 'Cymatics');
   cymBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9"/></svg>';
-  cymBtn.addEventListener('click', () => { saveMiniPlayerPrefs({ shape: 'cymatics' }); mpApplyShape(win); updateMiniPlayerUI(); });
+  cymBtn.addEventListener('click', () => { mpPickShape('cymatics'); mpApplyShape(win); updateMiniPlayerUI(); });
   doc.getElementById('mpArtPick').appendChild(cymBtn);
   const styleBtn = doc.getElementById('mpStyle');
   styleBtn.parentNode.insertBefore(shapeBtn, styleBtn);
@@ -28014,7 +28018,7 @@ function buildMiniPlayerDOM(win){
   // One tap sets the style for both players (shared setting), like the main picker
   [['mpArtDefault', 'default'], ['mpArtRecord', 'record'], ['mpArtCassette', 'cassette']].forEach(([id, st]) =>
     doc.getElementById(id).addEventListener('click', () => {
-      if (isDesktopApp && mpSavedShape()) saveMiniPlayerPrefs({ shape: null }); // #612: a hand-picked shape would otherwise ignore the skin
+      if (isDesktopApp && mpSavedShape()) mpPickShape(null); // #612: a hand-picked shape would otherwise ignore the skin
       setArtStyle(st); updateMiniPlayerUI();
     }));
   // Shortcuts keep working with the mini player focused: replay the key on
