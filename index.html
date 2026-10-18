@@ -27130,6 +27130,10 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics:hover #mpCard{background:none} /* the plate is not a rectangle: no hover wash over the corners */
   body.mp-shape-cymatics::before{display:none}
   body.mp-shape-cymatics #mpHead{top:15%}
+  /* no pills behind the hover controls and info: they sit straight on the cover, with a soft shadow to stay readable */
+  body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{background:none}
+  body.mp-shape-cymatics #mpMeta{text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5)}
+  body.mp-shape-cymatics #mpHead svg,body.mp-shape-cymatics #mpControls button:not(#mpPlay) svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
   body.mp-shape-cymatics #mpMeta{bottom:13%;width:62%}
   body.mp-shape-cymatics #mpBg{display:none}
   /* the cover is painted into the plate's outline on hover by mpCymSync; this invisible box in the middle only keeps the click (back to the app) */
@@ -27236,7 +27240,12 @@ function mpCymSync(win){
     const jitter = 0.02 * k * (1 + 2.4 * kick), step = 0.016 * k * (1 + 1.6 * kick); // calm drift equals the full visualizer at 60 fps
     if (now - c.colorAt > 1000){
       c.color = vizRosicrucianColor();
-      c.color2 = songAccent || c.color;
+      // the app's own UI color (song color, a picked accent or the daily clock): the rim, ripples, half the sand and the mini's play button and heart
+      const rootCS = getComputedStyle(document.documentElement), acc = rootCS.getPropertyValue('--accent').trim() || songAccent || c.color;
+      c.color2 = acc;
+      doc.body.style.setProperty('--accent', acc);
+      doc.body.style.setProperty('--mp-play-bg', acc);
+      doc.body.style.setProperty('--mp-play-fg', rootCS.getPropertyValue('--on-accent').trim() || '#151107');
       c.prog = (() => { const ad = activeDeck(); const d = ad.player && ad.player.getDuration ? ad.player.getDuration() || 0 : 0; return d ? Math.min(1, (ad.player.getCurrentTime() || 0) / d) : 0; })();
       c.colorAt = now;
     }
