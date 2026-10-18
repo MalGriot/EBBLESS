@@ -27163,6 +27163,12 @@ function wireMiniDesktop(win){
   shapeBtn.id = 'mpShape'; shapeBtn.className = 'mp-tool'; shapeBtn.title = 'Shape: LP, cassette, card...'; shapeBtn.setAttribute('aria-label', 'Change shape');
   shapeBtn.innerHTML = '<svg viewBox="0 0 24 24">' + MP_ICO.shape + '</svg>';
   shapeBtn.addEventListener('click', (e) => { e.stopPropagation(); const r = shapeBtn.getBoundingClientRect(); openMenu(r.left, r.bottom + 2); });
+  // #627: Cymatics sits in the art picker (hover the cover) next to default, LP and cassette
+  const cymBtn = doc.createElement('button');
+  cymBtn.id = 'mpArtCymatics'; cymBtn.title = 'Cymatics'; cymBtn.setAttribute('aria-label', 'Cymatics');
+  cymBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9"/></svg>';
+  cymBtn.addEventListener('click', () => { saveMiniPlayerPrefs({ shape: 'cymatics' }); mpApplyShape(win); updateMiniPlayerUI(); });
+  doc.getElementById('mpArtPick').appendChild(cymBtn);
   const styleBtn = doc.getElementById('mpStyle');
   styleBtn.parentNode.insertBefore(shapeBtn, styleBtn);
   doc.head.appendChild(Object.assign(doc.createElement('style'), { textContent: '#mpShape{opacity:0}body:hover #mpShape,#mpShape:focus-visible{opacity:1}' }));
