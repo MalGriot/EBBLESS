@@ -27132,6 +27132,8 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics #mpHead{top:15%}
   /* no pills behind the hover controls and info: they sit straight on the cover, with a soft shadow to stay readable */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{background:none}
+  body.mp-shape-cymatics:not(.cym-hover) #mpControls,body.mp-shape-cymatics:not(.cym-hover) #mpHead,body.mp-shape-cymatics:not(.cym-hover) #mpMeta{opacity:0;pointer-events:none}
+  body.mp-shape-cymatics.cym-hover #mpControls,body.mp-shape-cymatics.cym-hover #mpHead,body.mp-shape-cymatics.cym-hover #mpMeta{opacity:1;pointer-events:auto}
   body.mp-shape-cymatics #mpMeta{text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5)}
   body.mp-shape-cymatics #mpHead svg,body.mp-shape-cymatics #mpControls button:not(#mpPlay) svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
   body.mp-shape-cymatics #mpMeta{bottom:13%;width:62%}
@@ -27161,7 +27163,7 @@ const MINI_DESKTOP_STYLE = `
 // GPU budget: ~1700 dots at 30 fps on a canvas of the window's size, plain 2D (no blur or filter), runs only while this
 // shape is showing and the window is visible (paused keeps the sand, ripples and rim moving; only the turn and the morph
 // hold still); any other shape or a hidden window = no frames requested.
-const MP_CYM_PULSE_MS = 2100, MP_CYM_SHAPE_MS = 9000, MP_CYM_HOLD_MS = 5000, MP_CYM_N = 120;
+const MP_CYM_HOVER_IDLE_MS = 12000, MP_CYM_PULSE_MS = 2100, MP_CYM_SHAPE_MS = 9000, MP_CYM_HOLD_MS = 5000, MP_CYM_N = 120;
 // radius by angle from the top (clockwise), each shape scaled so its farthest point is 1
 const MP_CYM_SHAPES = (() => {
   const poly = (n, a) => { const w = 2 * Math.PI / n; return Math.cos(Math.PI / n) / Math.cos((a % w + w) % w - Math.PI / n); };
@@ -27187,6 +27189,7 @@ const MP_CYM_GRAINS = 1700, MP_CYM_FRAME_MS = 33, MP_CYM_SWITCH_MS = 9000, MP_CY
 let mpCym = null;
 function mpCymStop(){
   if (!mpCym) return;
+  try { mpCym.off(); } catch(e){}
   try { mpCym.win.cancelAnimationFrame(mpCym.raf); } catch(e){}
   mpCym = null;
 }
@@ -27200,7 +27203,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flow: 0, hov: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark.png', location.href).href }), ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flow: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark.png', location.href).href }), ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27210,6 +27213,21 @@ function mpCymSync(win){
     y += (Math.random() - 0.5) * 0.04 * (0.04 + amp) + (Math.random() - 0.5) * 0.032 * amp * amp;
     c.gx[i] = x > 1 ? 1 : x < -1 ? -1 : x; c.gy[i] = y > 1 ? 1 : y < -1 ? -1 : y;
   }
+  // The cover must only show while the pointer is over the plate. A frameless see-through window does not always clear :hover
+  // when the pointer leaves (and the drag area swallows some events), so hover here is tracked from the events themselves:
+  // any pointer movement over the window turns it on, leaving the window or a moment of no movement turns it off.
+  const enter = () => { c.over = true; c.lastMove = win.performance.now(); };
+  const leave = () => { c.over = false; };
+  const de = doc.documentElement;
+  ['pointermove', 'pointerenter', 'mouseover', 'mousemove'].forEach(t => doc.addEventListener(t, enter, true));
+  ['pointerleave', 'mouseleave'].forEach(t => { de.addEventListener(t, leave); doc.addEventListener(t, leave); });
+  doc.addEventListener('mouseout', (e) => { if (!e.relatedTarget) leave(); }, true);
+  win.addEventListener('blur', leave);
+  c.off = () => {
+    ['pointermove', 'pointerenter', 'mouseover', 'mousemove'].forEach(t => doc.removeEventListener(t, enter, true));
+    ['pointerleave', 'mouseleave'].forEach(t => { de.removeEventListener(t, leave); doc.removeEventListener(t, leave); });
+    win.removeEventListener('blur', leave);
+  };
   const frame = (now) => {
     if (mpCym !== c) return;
     c.raf = win.requestAnimationFrame(frame);
@@ -27273,7 +27291,9 @@ function mpCymSync(win){
     ctx.save();
     ctx.clip(plate);
     // hover: the cover fills the outline (cropped square), a little dimmed so the controls read, the sand fainter on top
-    c.hov += ((doc.body.matches(':hover') ? 1 : 0) - c.hov) * 0.25;
+    const hovering = c.over && now - c.lastMove < MP_CYM_HOVER_IDLE_MS;
+    if (hovering !== c.hovering){ c.hovering = hovering; doc.body.classList.toggle('cym-hover', hovering); } // the DOM controls follow the same hover as the cover
+    c.hov += ((hovering ? 1 : 0) - c.hov) * 0.25;
     if (c.hov < 0.01) c.hov = 0;
     if (c.hov > 0){
       const im = doc.getElementById('mpArt');
