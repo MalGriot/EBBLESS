@@ -2381,6 +2381,13 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-page-acts{display:flex;gap:8px;margin:0 0 12px}
 .song-page-acts .btn-ghost{flex:1 1 0;min-width:0;padding:10px 6px;font-size:13px}
 .song-page-link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.song-credits{padding:2px 14px 12px}
+.song-credits .section-label{margin:6px 0 6px}
+.song-credits-line{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 0;font-size:13px;border-top:1px solid var(--border);line-height:1.45}
+.section-label + .song-credits-line{border-top:0}
+.song-credits-role{flex:0 0 96px;color:var(--faint);font-size:12px;padding-top:1px}
+.song-credits-names{flex:1;min-width:0;color:var(--text)}
+.song-credits-source{margin-top:6px;font-size:11.5px;color:var(--faint)}
 @media (prefers-reduced-motion:reduce){.share-burst img{transition:opacity .2s ease;transform:none}}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translate(-50%,10px);z-index:80;
   background:var(--panel-3);color:var(--text);font-size:12.5px;padding:10px 16px;border-radius:20px;
@@ -2534,6 +2541,16 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .like-streak-line{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
 .like-streak-line b{color:var(--accent);font-weight:600}
 .currents-hint{padding:10px 14px 2px;font-size:12.5px;color:var(--faint)}
+.match-summary{padding:10px 14px 4px}
+.match-summary-head{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--faint)}
+.match-summary-head b{color:var(--text);font-weight:600}
+.match-summary-toggle{margin-left:auto;font-size:12.5px;padding:6px 10px;border-radius:var(--r-sm,8px)}
+.match-summary-list{margin-top:6px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--panel);overflow:hidden}
+.match-summary-row{display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:13px}
+.match-summary-row+.match-summary-row{border-top:1px solid var(--border)}
+.match-summary-row .ms-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.match-summary-row .ms-name span{color:var(--faint)}
+.match-summary-row button{flex:none;font-size:12.5px;padding:6px 10px}
 /* artist page (#299): tap the player's artist name -> bio, facts and links
    at the top of the library panel (see openArtistPage) */
 /* #478: bigger tap target around the artist name (the text alone was too small to hit reliably);
@@ -10943,6 +10960,85 @@ function syncLibplCloseBtn(){
 }
 
 // rebuild the open window's contents in place (after a re-render, a removal, a re-sort)
+// "47 of 50 songs found" strip at the top of an imported list's window, with the
+// songs that weren't found listed below it and a Find button on each (opens the
+// same "other versions" picker as the player's wrong-song flag). Hidden when
+// everything matched; while the list is still matching it only counts.
+const matchSummaryOpen = new Set();
+function matchSummaryEligible(id, pl){
+  if (!pl || !Array.isArray(pl.tracks) || pl.tracks.length < 2) return false;
+  if (id === LIKED_ID || id === SWELL_ID || id === NP_ID) return false;
+  if (isArtistEntry(pl) || String(pl.type || '').indexOf('pod') === 0) return false;
+  return true;
+}
+function buildMatchSummary(id, pl){
+  if (!matchSummaryEligible(id, pl)) return null;
+  const total = pl.tracks.length;
+  const missing = [];
+  pl.tracks.forEach((t, i) => { if (t && !t.videoId) missing.push(i); });
+  if (!missing.length) return null;
+  const found = total - missing.length;
+  const pending = !!pl.resolving || needsUnmatchedRematch(pl);
+  const box = document.createElement('div');
+  box.className = 'match-summary';
+  box.id = 'matchSummary';
+  const head = document.createElement('div');
+  head.className = 'match-summary-head';
+  const label = document.createElement('span');
+  label.innerHTML = '<b>' + found + ' of ' + total + '</b> songs found' + (pending ? ', still matching' : '');
+  head.appendChild(label);
+  if (!pending){
+    const open = matchSummaryOpen.has(id);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-ghost match-summary-toggle';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = open ? 'Hide' : 'Show the ' + missing.length;
+    btn.addEventListener('click', () => {
+      if (matchSummaryOpen.has(id)) matchSummaryOpen.delete(id); else matchSummaryOpen.add(id);
+      refreshMatchSummary(id);
+    });
+    head.appendChild(btn);
+  }
+  box.appendChild(head);
+  if (!pending && matchSummaryOpen.has(id)){
+    const list = document.createElement('div');
+    list.className = 'match-summary-list';
+    missing.forEach(i => {
+      const t = pl.tracks[i];
+      const row = document.createElement('div');
+      row.className = 'match-summary-row';
+      const name = document.createElement('div');
+      name.className = 'ms-name';
+      name.textContent = t.title || 'Unknown song';
+      if (t.artist){ const a = document.createElement('span'); a.textContent = ' - ' + t.artist; name.appendChild(a); }
+      const find = document.createElement('button');
+      find.type = 'button';
+      find.className = 'btn-ghost';
+      find.textContent = 'Find';
+      find.setAttribute('aria-label', 'Find another version of ' + (t.title || 'this song'));
+      find.addEventListener('click', () => openRefreshLinkPicker(id, i));
+      row.appendChild(name); row.appendChild(find);
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+  }
+  return box;
+}
+// Redraws the strip in place (a song was fixed, or Show/Hide was tapped)
+// without rebuilding the whole window.
+function refreshMatchSummary(id){
+  if (openLibraryPanelId !== id) return;
+  const pl = getCachedPlaylist(id);
+  const old = $('matchSummary');
+  const fresh = buildMatchSummary(id, pl);
+  if (old && fresh) old.replaceWith(fresh);
+  else if (old) old.remove();
+  else if (fresh){
+    const first = libplBody.firstChild;
+    libplBody.insertBefore(fresh, first);
+  }
+}
 function reopenLibraryPanel(id){ openLibraryPanelId = null; toggleLibraryPlaylistPanel(id); }
 
 function closeLibraryPlaylistPanel(){
@@ -11054,6 +11150,7 @@ function toggleLibraryPlaylistPanel(id){
     bar.textContent = npFeed.onAir ? 'ON AIR now. Tap the first song to tune in, or any song to rewind.' : 'Off air right now. These are the latest songs.';
     libplBody.appendChild(bar);
   }
+  { const ms = buildMatchSummary(id, pl); if (ms) libplBody.appendChild(ms); }
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
     status.className = 'currents-status';
@@ -11638,6 +11735,76 @@ async function openAlbumPreview(a, name, backFn){
     status.textContent = "Couldn't load songs for that album.";
   }
 }
+// Song credits (who wrote, produced, mixed it), from MusicBrainz only: the same
+// keyless, CORS-open source the artist page uses. Nothing is guessed. A role with
+// no names, or a song MusicBrainz doesn't know, is left out entirely.
+const songCreditsCache = new Map();
+const SONG_CREDIT_ROLES = [
+  { label: 'Written by', types: ['composer', 'lyricist', 'writer', 'librettist'] },
+  { label: 'Produced by', types: ['producer'] },
+  { label: 'Arranged by', types: ['arranger', 'orchestrator'] },
+  { label: 'Mixed by', types: ['mix', 'mix-DJ'] },
+  { label: 'Engineered by', types: ['engineer', 'recording', 'sound'] },
+  { label: 'Mastered by', types: ['mastering'] },
+];
+async function fetchSongCredits(title, artist){
+  const key = artistNameKey(title) + '|' + artistNameKey(artist);
+  if (songCreditsCache.has(key)) return songCreditsCache.get(key);
+  const job = (async () => {
+    const tkey = artistNameKey(title), akey = artistNameKey(artist);
+    if (!tkey) return null;
+    const q = 'recording:' + mbQuoted(title) + (artist ? ' AND artist:' + mbQuoted(artist) : '');
+    const d = await artistInfoJson(MB_API + 'recording/?fmt=json&limit=10&query=' + encodeURIComponent(q));
+    const hit = (d.recordings || []).find(r => artistNameKey(r.title) === tkey &&
+      (!akey || (r['artist-credit'] || []).some(c => artistNameKey(c.name) === akey || (c.artist && artistNameKey(c.artist.name) === akey))));
+    if (!hit) return null;
+    const r = await artistInfoJson(MB_API + 'recording/' + hit.id + '?fmt=json&inc=artist-rels+work-rels+work-level-rels');
+    const roles = new Map();
+    const add = (type, name) => {
+      if (!name) return;
+      const role = SONG_CREDIT_ROLES.find(x => x.types.includes(type));
+      if (!role) return;
+      if (!roles.has(role.label)) roles.set(role.label, []);
+      const list = roles.get(role.label);
+      if (!list.some(n => artistNameKey(n) === artistNameKey(name))) list.push(name);
+    };
+    (r.relations || []).forEach(rel => {
+      if (rel.artist) add(rel.type, rel.artist.name);
+      if (rel.work) (rel.work.relations || []).forEach(wr => { if (wr.artist) add(wr.type, wr.artist.name); });
+    });
+    const out = SONG_CREDIT_ROLES.filter(x => roles.has(x.label)).map(x => ({ label: x.label, names: roles.get(x.label) }));
+    return out.length ? { mbUrl: 'https://musicbrainz.org/recording/' + hit.id, roles: out } : null;
+  })().catch(() => null);
+  songCreditsCache.set(key, job);
+  // a failed or empty lookup shouldn't stick for the whole session
+  job.then(v => { if (!v) songCreditsCache.delete(key); });
+  return job;
+}
+function buildSongCreditsEl(c){
+  const box = document.createElement('div');
+  box.className = 'song-credits';
+  const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Credits';
+  box.appendChild(lbl);
+  c.roles.forEach(role => {
+    const line = document.createElement('div'); line.className = 'song-credits-line';
+    const r = document.createElement('div'); r.className = 'song-credits-role'; r.textContent = role.label;
+    const names = document.createElement('div'); names.className = 'song-credits-names';
+    role.names.forEach((n, i) => {
+      if (i) names.append(', ');
+      const a = document.createElement('span'); a.className = 'song-page-link'; a.textContent = n;
+      a.addEventListener('click', () => openArtistPage(n));
+      names.appendChild(a);
+    });
+    line.appendChild(r); line.appendChild(names);
+    box.appendChild(line);
+  });
+  const src = document.createElement('div'); src.className = 'song-credits-source';
+  src.append('From ');
+  const l = document.createElement('a'); l.href = c.mbUrl; l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'MusicBrainz';
+  src.appendChild(l);
+  box.appendChild(src);
+  return box;
+}
 // #533: a song's own page in the library panel. Only data the app already
 // holds (the track, its album in the library, the cached year lookup); the
 // artist name opens the artist page, the album opens the album.
@@ -11689,6 +11856,9 @@ function openSongPage(t, plId, trackIdx){
   fetchTrackYear(t.title, t.artist).then(y => {
     if (y && openLibraryPanelId === id){ yearSpan.textContent = (info.textContent ? ' · ' : '') + y; }
   }).catch(() => {});
+  fetchSongCredits(t.title, t.artist).then(c => {
+    if (c && openLibraryPanelId === id) libplBody.appendChild(buildSongCreditsEl(c));
+  });
 }
 async function loadArtistAlbumsInto(panelId, name, standalone){
   const lib = getCachedPlaylist(panelId);
@@ -13242,6 +13412,7 @@ function applyRelinkChoice(plId, trackIdx, candidate, allAlbum){
   recordWrongTrackCorrection(t, candidate);
   renderLibrary();
   repaintOpenLibPanelTrack(plId, trackIdx, pl);
+  refreshMatchSummary(plId);
   closeImportOverlay();
   showToast('Link updated');
   // Relinking the track that's playing right now: swap the audio over
@@ -13385,6 +13556,7 @@ function repaintOpenLibPanelTrack(plId, trackIdx, pl){
   const t = pl.tracks[trackIdx];
   const row = libplBody.querySelectorAll('.track-row')[trackIdx];
   const img = row && row.querySelector('img');
+  if (row && t && t.videoId) row.classList.remove('is-missing');
   if (img && t) attachArtworkFallback(img, t);
   if (!pl.image){
     const artTrack = pl.tracks.find(x => x.videoId || x.art);
