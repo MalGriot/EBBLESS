@@ -27059,8 +27059,10 @@ function mpDesktopSize(shape){
   if (shape === 'tape') return { w: 300, h: 192 };
   if (shape === 'square') return { w: 232, h: 232 };
   if (shape === 'cymatics') return { w: 240, h: 240 };
+  // The Mac window can't be resized by hand, so a squarish saved size (left behind by a Disc or Square pass) is never a
+  // choice: card and float go back to the art-on-the-left bar (#627)
   const p = miniPlayerPrefs();
-  return { w: p.w, h: p.h };
+  return p.h < p.w * 0.75 ? { w: p.w, h: p.h } : { w: MP_DEFAULT.w, h: MP_DEFAULT.h };
 }
 const MINI_DESKTOP_STYLE = `
   /* a dark color-scheme makes Chromium paint a dark backdrop behind the page, which hides the see-through corners */
@@ -27551,7 +27553,7 @@ function onMiniPlayerResize(){
   if (isDesktopApp && mpDesktopShape() !== 'card') return; // pill/disc sizes are fixed
   // (the PiP window's own timers - the hidden main tab's are throttled)
   mpSaveTimer = win.setTimeout(() => {
-    if (miniPlayerWin === win && !mpQueue && !mpShrunk && !win.document.body.classList.contains('mp-small')) saveMiniPlayerPrefs({ w: win.innerWidth, h: win.innerHeight });
+    if (miniPlayerWin === win && !mpQueue && !mpShrunk && !win.document.body.classList.contains('mp-small') && !(isDesktopApp && mpDesktopShape() !== 'card')) saveMiniPlayerPrefs({ w: win.innerWidth, h: win.innerHeight });
   }, 400);
 }
 function resetMiniPlayerShape(){
