@@ -27203,7 +27203,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, slideF: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27332,11 +27332,11 @@ function mpCymSync(win){
       ctx.fill();
     }
     ctx.restore();
-    // rim: the song's progress as a line along the outline from the top. It grows with the song, light pulses run along it
-    // toward a glowing head that throws sparks (nothing at all for the part still to play)
+    // rim: the song's progress as a line that slides around the outline for good (a lap every ~16s) and grows as the song
+    // plays, from a short streak to the full ring at the end. Light pulses run along it toward a glowing head that throws sparks
     c.progShow += (c.prog - c.progShow) * 0.12;
-    const stop = len * c.progShow;
-    if (stop > 4){
+    const stop = Math.max(len * 0.05, len * c.progShow);
+    if (c.progShow > 0.0005 || c.prog > 0){
       const at = (sd) => { // point at arc length sd along the outline, into c.px / c.py; returns the next vertex
         let j = 1;
         while (j < N && per[j] < sd) j++;
@@ -27350,23 +27350,31 @@ function mpCymSync(win){
         while (j < N && per[j] < s1){ ctx.lineTo(pts[j * 2], pts[j * 2 + 1]); j++; }
         at(s1); ctx.lineTo(c.px, c.py); ctx.stroke();
       };
+      c.slideF = (c.slideF + dt / 16000) % 1;
+      const full = stop >= len * 0.995, base = full ? 0 : c.slideF * len;
+      const arc = (u0, u1) => { // u0..u1 measured along the line from its tail; wraps past the end of the outline
+        const a = base + u0, b = base + u1;
+        if (b <= len) along(a, b); else if (a >= len) along(a - len, b - len); else { along(a, len); along(0, b - len); }
+      };
       ctx.lineCap = 'round'; ctx.strokeStyle = c.color2; ctx.lineWidth = 2.4;
-      ctx.globalAlpha = 0.5; along(0, stop);
-      // pulses: a short bright streak with a fading tail every PULSE_GAP px, running tail to head
+      // the tail fades in over the first stretch of the line (the full ring at the very end has no tail)
+      const fade = full ? [0, 1] : [0, 0.18, 0.34, 0.55, 1], fa = full ? [0.5] : [0.1, 0.22, 0.36, 0.5];
+      for (let q = 0; q < fa.length; q++){ ctx.globalAlpha = fa[q]; arc(stop * fade[q], stop * fade[q + 1]); }
+      // pulses: a short bright streak with a fading tail every `gap` px, running tail to head
       const gap = 80, tail = 27;
       c.flowD = (c.flowD + dt / 1000 * 62) % gap;
       ctx.lineWidth = 3.2;
       for (let hp = c.flowD; hp - tail < stop; hp += gap){
         for (let q = 0; q < 3; q++){
-          const s0 = Math.max(0, hp - tail + q * 9), s1 = Math.min(stop, hp - tail + (q + 1) * 9);
-          if (s1 <= s0) continue;
+          const u0 = Math.max(0, hp - tail + q * 9), u1 = Math.min(stop, hp - tail + (q + 1) * 9);
+          if (u1 <= u0) continue;
           ctx.globalAlpha = 0.28 + 0.34 * q * q / 2 + (q === 2 ? 0.2 : 0);
-          along(s0, s1);
+          arc(u0, u1);
         }
       }
       ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = c.color2;
-      at(stop);
+      at((base + stop) % len);
       const hx = c.px, hy = c.py, beat = 1 + 0.5 * kick;
       ctx.globalAlpha = 0.14; ctx.beginPath(); ctx.arc(hx, hy, 8 * beat, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 0.32; ctx.beginPath(); ctx.arc(hx, hy, 4.6 * beat, 0, Math.PI * 2); ctx.fill();
