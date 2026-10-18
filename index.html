@@ -3812,6 +3812,7 @@ body.week-up-on{overflow:hidden}
       <div class="bl-gbtn" id="bl-gbtn"></div>
     </div>
     <p class="bl-small" id="bl-ios" hidden>Signed up without Google? Delete this app, tap the link in your invite email, then add EBBLESS to your Home Screen again from Safari.</p>
+    <p class="bl-small"><a href="privacy.html" style="color:inherit">Privacy Policy</a> &middot; <a href="terms.html" style="color:inherit">Terms of Use</a></p>
   </div>
 </div>
 <script>
@@ -4763,6 +4764,30 @@ body.week-up-on{overflow:hidden}
             <div class="desc">Shows a Skip button when a song's video has talking before or after the music. Podcasts from YouTube always get one for sponsor reads and intros. Skip times from <a href="https://sponsor.ajay.app" target="_blank" rel="noopener">SponsorBlock</a>, marked by its users.</div>
           </div>
           <button type="button" class="switch" id="sbSongsBtn" role="switch" aria-checked="false" aria-label="Skip talking in songs"><span class="switch-knob"></span></button>
+        </div>
+      </div>
+      <div class="settings-block" id="settingsPrivacyBlock">
+        <h2>Privacy &amp; data</h2>
+        <div class="settings-row">
+          <div>
+            <div class="label">Personalized listening</div>
+            <div class="desc">EBBLESS uses what you play, finish, skip and like to shape Discover and your picks. Turn it off and new plays stop teaching it anything and nothing is sent to the shared tag pool. What it already learned is kept but not used. It comes back if you turn this on again, or you can erase it with Reset below.</div>
+          </div>
+          <button type="button" class="switch is-active" id="personalizeBtn" role="switch" aria-checked="true" aria-label="Personalized listening"><span class="switch-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Reset listening profile</div>
+            <div class="desc">Erases what EBBLESS learned about your taste on this device: skips and finishes, genre links, thumbs-downs, and the recent-plays list that seeds your picks. Your playlists, liked songs and library stay. Your listening recap and play history are separate and stay too. Other devices keep their own taste data.</div>
+          </div>
+          <button type="button" class="btn-ghost" id="resetProfileBtn">Reset</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="label">Privacy Policy and Terms of Use</div>
+            <div class="desc">What EBBLESS stores and sends, and the rules for using it. Plain English.</div>
+          </div>
+          <span style="display:flex;gap:8px;flex:none;flex-wrap:wrap;justify-content:flex-end"><a class="btn-ghost" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none">Privacy</a><a class="btn-ghost" href="terms.html" target="_blank" rel="noopener" style="text-decoration:none">Terms</a></span>
         </div>
       </div>
       <div class="settings-block" id="settingsAppBlock">
@@ -6601,6 +6626,10 @@ const PL_ART_VIDEO = {
   [NP_ID]:    { src: 'brand/assets/onair-art.mp4',  poster: 'brand/assets/onair-art-poster.jpg', xfade: true }  // xfade: two stacked clips fade into each other at the end instead of a hard restart (#455)
 };
 const LS_DISCOVER = (id) => 'ebbless:discover:' + id;  // per-playlist "keep playing similar songs" flag
+const LS_PERSONALIZE = 'ebbless:personalize';  // false = "Personalized listening" is off: nothing new is learned from plays, and what was learned is not used (profile-synced; default on)
+function personalizeOn(){ return lsGet(LS_PERSONALIZE, true) !== false; }
+// Recent plays the seed/"already heard" logic may read: nothing while personalization is off (the list is kept, just unused)
+function listenSeedHistory(){ return personalizeOn() ? (lsGet(LS_PLAY_HISTORY, []) || []) : []; }
 const LS_GRAPH = 'ebbless:graph';            // local tag-pair affinity, built from this listener's own plays
 const LS_DISCOVER_RECENT = 'ebbless:discoverRecent'; // per-seed title|artist keys Discover served recently, so reruns vary
 const LS_TAG_CACHE = 'ebbless:tagcache';      // Last.fm tags per title|artist, looked up once so any played track can feed the graph
@@ -6680,7 +6709,7 @@ const LS_SYNC_META = 'ebbless:syncMeta'; // { k: { lsKey: at }, lib/pin: { id: {
 // Durable preferences worth following a person between devices. String
 // literals, not the LS_* constants, where the constant is declared further
 // down the file (lsSet can run before those lines have).
-const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog'];
+const PROFILE_SETTING_KEYS = [LS_CROSSFADE, LS_LEVEL, LS_VIZ, LS_VIZ_HOLD, LS_VIZ_SPEED, LS_VIZ_ROTATE, 'ebbless:artstyle', LS_LIB_VIEW, LS_LIB_SORT, LS_LIB_FILTER, 'ebbless:likeStreak', 'ebbless:declined', 'ebbless:playLog', 'ebbless:personalize'];
 const LS_PLAY_LOG = 'ebbless:playLog';   // see PLAY LOG
 const PROFILE_SETTING_PREFIXES = ['ebbless:discover:'];   // per-playlist, only for ids in the library
 const PROFILE_PUSH_DEBOUNCE_MS = 20000;  // bursts of edits (a playlist resolving) become one push - KV's free tier caps daily writes
@@ -7170,6 +7199,7 @@ function refreshSyncedSettings(){
   const steps = [
     () => { crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {})); if (!crossfadePrefs.on && cancelCrossfade()) schedulePreload(state.queuePos); renderCrossfadeUI(); },
     () => { levelOn = lsGet(LS_LEVEL, true) !== false; renderLevelUI(); reapplyLevel(); },
+    () => { tasteMemo = null; renderPersonalizeUI(); },
     () => vizSetHoldMode(lsGet(LS_VIZ_HOLD, false) === true),
     () => vizSetRotate(lsGet(LS_VIZ_ROTATE, false) === true),
     () => { const v = lsGet(LS_VIZ_SPEED, 1); vizSetSpeed(VIZ_SPEEDS.includes(v) ? v : 1); },
@@ -7431,7 +7461,7 @@ const LS_SIGNIN_NUDGED = 'ebbless:signinNudged';
 // Quiet first run: nobody is asked to sign in or install before their first
 // song has played. The sign-in card waits (without using up its once per
 // device) and lands a few seconds after that first song starts.
-function hasEverPlayed(){ return (lsGet(LS_PLAY_HISTORY, []) || []).length > 0; }
+function hasEverPlayed(){ return !personalizeOn() || (lsGet(LS_PLAY_HISTORY, []) || []).length > 0; }   // with personalization off no plays are recorded, so don't wait on one
 let signInNudgeWaiting = false;
 function showSignInNudge(){
   if (!hasEverPlayed()){ signInNudgeWaiting = true; return; }
@@ -7441,7 +7471,7 @@ function showSignInNudge(){
   lsSet(LS_SIGNIN_NUDGED, true);
   const card = document.createElement('div');
   card.className = 'signin-nudge'; card.id = 'signinNudge';
-  card.innerHTML = '<div>Sign in once and your library syncs automatically on every device.</div><div id="signinNudgeBtn"></div><button type="button" class="link-btn">Not now</button>';
+  card.innerHTML = '<div>Sign in once and your library syncs automatically on every device.</div><div id="signinNudgeBtn"></div><button type="button" class="link-btn">Not now</button><div style="font-size:11px;opacity:.7;margin-top:6px"><a href="privacy.html" target="_blank" rel="noopener" style="color:inherit">Privacy Policy</a> &middot; <a href="terms.html" target="_blank" rel="noopener" style="color:inherit">Terms of Use</a></div>';
   try{
     const holder = card.querySelector('#signinNudgeBtn');
     google.accounts.id.renderButton(holder, { type: 'standard', theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin_with' });
@@ -7456,6 +7486,30 @@ window.addEventListener('ebbless:betarelock', () => { if (gsiReady) renderBetaGa
 // do as well, so anything done while signed out still merges correctly on
 // the next sign-in. disableAutoSelect + LS_PROFILE_SIGNED_OUT keep One Tap
 // from quietly signing them straight back in on the next load.
+// Erases the copy of the library, settings and play log the Worker keeps for
+// this Google account (POST /profile/delete), then signs out here. Nothing on
+// this device is touched, and other signed-in devices keep their own copies
+// (and would upload them again if they sign in and sync). Two taps.
+let deleteCloudArm = null;
+async function deleteCloudData(btn){
+  if (!deleteCloudArm){
+    btn.textContent = 'Tap again to delete';
+    deleteCloudArm = setTimeout(() => { deleteCloudArm = null; if (btn.isConnected) btn.textContent = 'Delete cloud data'; }, 5000);
+    return;
+  }
+  clearTimeout(deleteCloudArm); deleteCloudArm = null;
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    const res = await fetch(BACKEND + '/profile/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: profileIdToken }) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+  } catch(e){
+    btn.disabled = false; btn.textContent = 'Delete cloud data';
+    showToast("Couldn't delete your cloud data. Check your connection and try again.");
+    return;
+  }
+  signOutProfile();
+  showToast('Cloud data deleted and signed out. Your library is still on this device.');
+}
 function signOutProfile(){
   clearTimeout(profileSyncTimer); profileSyncTimer = null;
   const sess = sessionRaw(); sessionDrop();
@@ -7789,6 +7843,7 @@ function ensureAccountBlock(){
     if (!btn) return;
     if (btn.dataset.act === 'sync') syncProfileNow({ force: true, announce: true });
     else if (btn.dataset.act === 'signout') signOutProfile();
+    else if (btn.dataset.act === 'deletecloud') deleteCloudData(btn);
     else if (btn.dataset.act === 'signin'){
       lsDel(LS_PROFILE_SIGNED_OUT);
       try { google.accounts.id.prompt(); } catch(e){ showToast("Google sign-in didn't load - try again in a moment"); }
@@ -7817,7 +7872,7 @@ function renderAccountRow(){
     const key = 'in:' + (profileSyncStatus === 'syncing');
     if (actions.dataset.state !== key){
       actions.dataset.state = key;
-      actions.innerHTML = '<button class="link-btn" data-act="sync"' + (profileSyncStatus === 'syncing' ? ' disabled' : '') + '>Sync now</button><button class="btn-ghost" data-act="signout">Sign out</button>';
+      actions.innerHTML = '<button class="link-btn" data-act="sync"' + (profileSyncStatus === 'syncing' ? ' disabled' : '') + '>Sync now</button><button class="link-btn" data-act="deletecloud">Delete cloud data</button><button class="btn-ghost" data-act="signout">Sign out</button>';
     }
     return;
   }
@@ -16709,7 +16764,7 @@ function searchTabSubmit(text){
   else urlInput.value = '';
 }
 function searchTabArtistTiles(){
-  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.t && h.a);
+  const hist = listenSeedHistory().filter(h => h && h.t && h.a);
   const n = new Map(), name = new Map();
   hist.slice(0, 150).forEach((h, i) => {
     const k = primaryArtistKey(h.a);
@@ -16979,7 +17034,7 @@ function vibeKnownTracks(){
   };
   const liked = getCachedPlaylist(LIKED_ID);
   (liked ? liked.tracks : []).forEach(t => add(t, 1));
-  (lsGet(LS_PLAY_HISTORY, []) || []).slice(0, 150).forEach((h, i) => { if (h && h.v) add({ title: h.t, artist: h.a, videoId: h.v }, i < 50 ? 0.6 : 0.3); });
+  listenSeedHistory().slice(0, 150).forEach((h, i) => { if (h && h.v) add({ title: h.t, artist: h.a, videoId: h.v }, i < 50 ? 0.6 : 0.3); });
   getLibrary().forEach(id => {
     if (id === LIKED_ID || id === VIBE_SESSION_ID || isPodcastPlaylistId(id)) return;
     const pl = getCachedPlaylist(id);
@@ -17504,7 +17559,8 @@ if (pasteGuideEl){
 const LS_PLAY_NUDGE_DONE = 'ebbless:playNudgeDone';
 function playNudgeActive(){
   if (lsGet(LS_PLAY_NUDGE_DONE, false)) return false;
-  if ((lsGet(LS_PLAY_HISTORY, []) || []).length){ lsSet(LS_PLAY_NUDGE_DONE, true); return false; }
+  if (!personalizeOn()) return false;   // no plays are recorded while it's off
+  if (hasEverPlayed()){ lsSet(LS_PLAY_NUDGE_DONE, true); return false; }
   const splashEl = $('splash');
   if (splashEl && !splashEl.classList.contains('is-hidden')) return false;
   if (document.body.classList.contains('onb-active')) return false;
@@ -17597,7 +17653,7 @@ function pasteHintCity(){
   } catch(e){ return ''; }
 }
 function personalPasteHints(){
-  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.t && h.a);
+  const hist = listenSeedHistory().filter(h => h && h.t && h.a);
   if (hist.length < 5) return [];
   const out = [];
   const add = (text, fill) => out.push({ text, fill: fill || text });
@@ -19285,6 +19341,41 @@ levelBtn.addEventListener('click', () => {
   reapplyLevel();
 });
 renderLevelUI();
+/* ---------- personalized listening + listening profile reset ----------
+   personalizeOn() (near LS_GRAPH) gates every place a play teaches EBBLESS
+   something (recordListenSignal, noteTaste, recordLatestPlayed) and every
+   place that learning is read back (graph score, taste profile, seed
+   history, pool affinity). Off keeps the stored data, unused; Reset erases it. */
+const personalizeBtn = $('personalizeBtn'), resetProfileBtn = $('resetProfileBtn');
+function renderPersonalizeUI(){
+  const on = personalizeOn();
+  personalizeBtn.setAttribute('aria-checked', String(on));
+  personalizeBtn.classList.toggle('is-active', on);
+}
+personalizeBtn.addEventListener('click', () => {
+  const on = !personalizeOn();
+  lsSet(LS_PERSONALIZE, on);
+  tasteMemo = null;
+  renderPersonalizeUI();
+  showToast(on ? 'Personalized listening is on' : 'Personalized listening is off. What EBBLESS learned is kept but not used.');
+});
+renderPersonalizeUI();
+let resetProfileArm = null;
+function resetListeningProfile(){
+  [LS_GRAPH, LS_TASTE, LS_DECLINED, LS_TAG_CACHE, LS_DISCOVER_RECENT, LS_PLAY_HISTORY].forEach(lsDel);
+  tasteMemo = null;
+}
+resetProfileBtn.addEventListener('click', () => {
+  if (!resetProfileArm){   // two taps: the first arms it, so it can't happen by accident
+    resetProfileBtn.textContent = 'Tap again to erase';
+    resetProfileArm = setTimeout(() => { resetProfileArm = null; resetProfileBtn.textContent = 'Reset'; }, 5000);
+    return;
+  }
+  clearTimeout(resetProfileArm); resetProfileArm = null;
+  resetProfileBtn.textContent = 'Reset';
+  resetListeningProfile();
+  showToast('Listening profile reset. Your playlists are untouched.');
+});
 crossfadeDurSlider.addEventListener('input', () => {
   crossfadePrefs.ms = parseInt(crossfadeDurSlider.value, 10) || 4000;
   crossfadeDurVal.textContent = fmtCrossfadeMs(crossfadePrefs.ms);
@@ -20142,6 +20233,7 @@ function postPoolSignal(tags, weight){
 // local graph) a crowd-informed starting point. Capped wait, empty on any
 // failure - a slow pool must never hold up the next Discover pick.
 async function fetchPoolAffinity(seedTagNames){
+  if (!personalizeOn()) return null;
   const tags = seedTagNames.slice(0, 8);
   if (!tags.length) return null;
   try{
@@ -20198,8 +20290,9 @@ function bumpGraphPair(tagA, tagB, weight){
   graph[key] = (graph[key] || 0) + weight;
   lsSet(LS_GRAPH, graph);
 }
-function graphPairScore(tagA, tagB){ return getGraph()[graphPairKey(tagA, tagB)] || 0; }
+function graphPairScore(tagA, tagB){ return personalizeOn() ? (getGraph()[graphPairKey(tagA, tagB)] || 0) : 0; }
 function graphConfidence(){
+  if (!personalizeOn()) return 0;
   const size = Object.keys(getGraph()).length;
   return Math.min(0.4, size / (size + 20));
 }
@@ -20418,7 +20511,7 @@ function applyListenSignal(tags, weight, poolTagLimit){
   postPoolSignal(tags.slice(0, poolTagLimit), weight);
 }
 function recordListenSignal(track, weight){
-  if (!track || !weight) return;
+  if (!track || !weight || !personalizeOn()) return;
   if (track.tags && track.tags.length){ applyListenSignal(track.tags, weight, 8); return; }
   // Looked-up tracks send only their top 4 tags to the shared pool (6 pairs
   // instead of up to 28): every pair is two KV writes on the worker, and
@@ -20446,7 +20539,7 @@ let tasteMemo = null;
 
 // kind: 'play' (once per local day counts toward returns) | 'finish' | 'skip'
 function noteTaste(t, kind){
-  if (!t || !t.videoId) return;
+  if (!t || !t.videoId || !personalizeOn()) return;
   try {
     const all = lsGet(LS_TASTE, {}) || {};
     const e = all[t.videoId] || { t: t.title || '', a: t.artist || '', d: 0, f: 0, k: 0 };
@@ -20490,7 +20583,7 @@ function tasteProfile(){
     const a = primaryArtistKey(artist);
     if (a) artists.set(a, (artists.get(a) || 0) + w);
   };
-  const taste = lsGet(LS_TASTE, {}) || {};
+  const taste = personalizeOn() ? (lsGet(LS_TASTE, {}) || {}) : {};
   Object.keys(taste).forEach(v => { const e = taste[v]; if (e) add(v, e.a, tasteTrackScore(e, now)); });
   const tagCache = lsGet(LS_TAG_CACHE, {}) || {};
   const liked = getCachedPlaylist(LIKED_ID);
@@ -20959,7 +21052,7 @@ function primaryArtistKey(artist){
 function currentsShuffled(arr){ return shuffleTail(arr.slice(), 0); }
 function currentsPlayable(pl){ return pl ? pl.tracks.filter(t => t && t.videoId) : []; }
 function latestPlayedTrack(){
-  const hist = lsGet(LS_PLAY_HISTORY, []) || [];
+  const hist = listenSeedHistory();
   if (hist[0] && hist[0].v) return { title: hist[0].t, artist: hist[0].a, videoId: hist[0].v };
   const now = state.queuePos >= 0 ? trackAt(state.queuePos) : null;
   if (now && now.videoId) return now;
@@ -20972,7 +21065,7 @@ function latestPlayedTrack(){
 // bail on - skipping back past early skips, thumbs-downs and artists they
 // keep skipping, so one wrong-genre play doesn't steer the next drop.
 function currentsLatestSeed(prof){
-  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).slice(0, 15);
+  const hist = listenSeedHistory().slice(0, 15);
   for (const h of hist){
     if (!h || !h.v) continue;
     const t = { title: h.t, artist: h.a, videoId: h.v };
@@ -21081,7 +21174,7 @@ async function currentsFillSlot(slot, ctx, count){
 async function buildCurrentsPicks(mode, timeCtx, block, avoid){
   const exclude = libraryVideoIdSet();
   if (avoid) avoid.forEach(v => exclude.add(v));
-  (lsGet(LS_PLAY_HISTORY, []) || []).forEach(h => { if (h && h.v) exclude.add(h.v); });
+  listenSeedHistory().forEach(h => { if (h && h.v) exclude.add(h.v); });
   const declined = declinedStore();
   Object.keys(declined.v).forEach(v => exclude.add(v));
   const current = playlistById(SWELL_ID);
@@ -26234,9 +26327,11 @@ function bumpPlayCount(entry){
 const PLAY_HISTORY_MAX = 400;
 function recordLatestPlayed(t){
   if (!t || !t.videoId || isRickroll(t)) return;
-  const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.v !== t.videoId);
-  hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
-  lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
+  if (personalizeOn()){
+    const hist = (lsGet(LS_PLAY_HISTORY, []) || []).filter(h => h && h.v !== t.videoId);
+    hist.unshift({ v: t.videoId, t: t.title || '', a: t.artist || '', ts: Date.now() });
+    lsSet(LS_PLAY_HISTORY, hist.slice(0, PLAY_HISTORY_MAX));
+  }
   if (signInNudgeWaiting){ signInNudgeWaiting = false; setTimeout(showSignInNudge, 6000); }
 }
 
