@@ -9461,6 +9461,9 @@ function setView(name){
    Manually navigating back to Player/closing panels via the UI (not the
    back button) collapses the buffered entry with replaceState instead, so
    it never lingers as an orphaned no-op back press.
+   #638 supersedes the "falls through" part: back must never leave the app,
+   so one entry stays buffered at all times, at rest too. At rest a back press
+   is swallowed and the entry re-pushed; the user leaves via the OS (home).
    ========================================================================= */
 let historyBuffered = false;
 let inPopStateNav = false;
@@ -9474,17 +9477,20 @@ function isFullscreenOpen(){
 }
 function syncHistoryBuffer(){
   if (inPopStateNav) return;
-  const away = isAwayFromRest();
-  if (away && !historyBuffered){
+  if (!historyBuffered){
     try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
     historyBuffered = true;
-  } else if (!away && historyBuffered){
-    try { history.replaceState({ ebblessNav: false }, ''); } catch(e){}
-    historyBuffered = false;
   }
 }
+// #638: keep one entry buffered from the start so the very first back press is caught too
+try { history.pushState({ ebblessNav: true }, ''); historyBuffered = true; } catch(e){}
 window.addEventListener('popstate', () => {
-  if (!isAwayFromRest()) return; // already at rest: let the default back navigation proceed
+  if (!isAwayFromRest()){
+    // #638: at rest a back press must never leave the app: swallow it and put the buffer back
+    try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
+    historyBuffered = true;
+    return;
+  }
   inPopStateNav = true;
   try {
     if (musicMapOpen()){
@@ -30218,6 +30224,11 @@ async function podAdScan(t, st){
   // a feed's chapter times are for its own file: they hold for the copy
   // playing only when no audio was stitched in (the length the feed says)
   const segs = t.duration && Math.abs(dur - t.duration) <= 1.5 ? st.chap.slice() : [];
+  // #648: a host that stitches an ad on the front (dynamic insertion, in any
+  // language) makes the audio longer than the feed says by about the ad's
+  // length: offer a skip over that much at the start. Tap only, like the rest.
+  const extra = t.duration ? dur - t.duration : 0;
+  if (extra >= 8 && extra <= 75) segs.push({ s: 0, e: Math.round(extra) });
   const publish = () => podAdPublish(id, segs);
   publish();
   const rec = (capJob && capJob.id === id && capJob.rec) || await capGet(id);
