@@ -66,6 +66,16 @@ public class WatchdogService extends Service {
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
 
+    /** The user swiped the app away: that is a quit, not a crash. No "was stopped" notice, and this process ends too. */
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        playing = false;
+        if (watched != null) { try { watched.unlinkToDeath(onMainDied, 0); } catch (Exception ignored) {} watched = null; }
+        getSystemService(NotificationManager.class).cancel(2);
+        stopForeground(Service.STOP_FOREGROUND_REMOVE);
+        stopSelf();
+        android.os.Process.killProcess(android.os.Process.myPid());
+    }
+
     @Override public IBinder onBind(Intent intent) { return messenger.getBinder(); }
 
     private void postRecoveryNotice() {

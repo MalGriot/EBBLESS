@@ -258,5 +258,15 @@ public class PlaybackService extends Service {
         super.onDestroy();
     }
 
+    /** The user swiped the app away: stop the music and every notification, then end the process so nothing keeps running. */
+    @Override public void onTaskRemoved(Intent rootIntent) {
+        getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", false).apply();   // a quit is not a crash, no recovery notice
+        stopService(new Intent(this, WatchdogService.class));
+        stopForeground(Service.STOP_FOREGROUND_REMOVE);
+        getSystemService(android.app.NotificationManager.class).cancelAll();
+        stopSelf();
+        handler.postDelayed(() -> android.os.Process.killProcess(android.os.Process.myPid()), 400);   // the WebView lives in this process
+    }
+
     @Override public IBinder onBind(Intent intent) { return null; }
 }
