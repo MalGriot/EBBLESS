@@ -27150,13 +27150,34 @@ const MINI_DESKTOP_STYLE = `
   #mpMenu button:hover{background:rgba(255,255,255,.1)}
   #mpMenu button.is-active{color:var(--accent)}
 `;
-// #627 Cymatics shape: a sand plate whose outline slowly changes shape. The visualizer's own nodal-field patterns (VIZ_PATTERNS) drawn in two
+// #627 Cymatics shape: a sand plate whose outline slowly changes through seven shapes. The visualizer's own nodal-field patterns (VIZ_PATTERNS) drawn in two
 // colors (the daily clock color and the song's own color) that glow where they pile up, a kick every ~2s that scatters
 // the sand and sends a ripple out from the middle (water cymatics), and the song's progress around the outline. The cover
 // only appears on hover.
 // GPU budget: ~1700 dots at 30 fps on a canvas of the window's size, plain 2D (no blur or filter), runs only while this
 // shape is showing, playing and the window is visible; paused or any other shape = no frames requested.
-const MP_CYM_PULSE_MS = 2100;
+const MP_CYM_PULSE_MS = 2100, MP_CYM_SHAPE_MS = 9000, MP_CYM_HOLD_MS = 5000, MP_CYM_N = 120;
+// radius by angle from the top (clockwise), each shape scaled so its farthest point is 1
+const MP_CYM_SHAPES = (() => {
+  const poly = (n, a) => { const w = 2 * Math.PI / n; return Math.cos(Math.PI / n) / Math.cos((a % w + w) % w - Math.PI / n); };
+  const sup = (n, a) => Math.pow(Math.pow(Math.abs(Math.sin(a)), n) + Math.pow(Math.abs(Math.cos(a)), n), -1 / n);
+  const fns = [
+    () => 1,
+    (a) => sup(5, a),
+    (a) => 0.35 + 0.65 * poly(6, a),
+    (a) => 0.76 + 0.24 * Math.cos(6 * a),
+    (a) => 0.70 + 0.30 * Math.cos(5 * a),
+    (a) => 0.4 + 0.6 * poly(3, a),
+    (a) => sup(1.5, a)
+  ];
+  return fns.map(f => {
+    const r = new Float32Array(MP_CYM_N + 1);
+    let mx = 0;
+    for (let i = 0; i <= MP_CYM_N; i++){ r[i] = f(i / MP_CYM_N * Math.PI * 2); if (r[i] > mx) mx = r[i]; }
+    for (let i = 0; i <= MP_CYM_N; i++) r[i] /= mx;
+    return r;
+  });
+})();
 const MP_CYM_GRAINS = 1700, MP_CYM_FRAME_MS = 33, MP_CYM_SWITCH_MS = 9000, MP_CYM_XFADE_MS = 1600;
 let mpCym = null;
 function mpCymStop(){
@@ -27174,7 +27195,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, pulseAt: 0, ripples: [], pts: new Float32Array(2 * 121), per: new Float32Array(121), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, ripples: [], pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27207,7 +27228,7 @@ function mpCymSync(win){
     const ctx = c.ctx, tSec = c.t / 1000, cx = w / 2, cy = h / 2, k = dt / 16.7;
     // the kick: every MP_CYM_PULSE_MS the sand jumps, settles back, and a ripple leaves the cover
     if (c.t - c.pulseAt > MP_CYM_PULSE_MS){ c.pulseAt = c.t; c.ripples.push(c.t); if (c.ripples.length > 3) c.ripples.shift(); }
-    const kick = Math.exp(-(c.t - c.pulseAt) / 380);
+    const kick = Math.exp(-Math.max(0, c.t - c.pulseAt) / 380);
     const jitter = 0.02 * k * (1 + 2.4 * kick), step = 0.016 * k * (1 + 1.6 * kick); // calm drift equals the full visualizer at 60 fps
     if (now - c.colorAt > 1000){
       c.color = vizRosicrucianColor();
@@ -27216,14 +27237,16 @@ function mpCymSync(win){
       c.colorAt = now;
     }
     ctx.clearRect(0, 0, w, h);
-    // the plate's outline drifts slowly: a superellipse between circle and squircle, with a soft four-lobed swell that comes and goes
-    const nExp = 4.6 + 2.4 * Math.sin(c.t / 7000), lobe = 0.05 * (0.5 + 0.5 * Math.sin(c.t / 11000 + 1)), lobeRot = c.t / 9000;
-    const R = (Math.min(w, h) / 2 - 4) / 1.05, N = 120, pts = c.pts, per = c.per;
+    // the plate's outline drifts through seven shapes (circle, squircle, hexagon, flower, star, rounded triangle, diamond):
+    // each is held a while, then the radii blend into the next
+    const hold = MP_CYM_HOLD_MS, tIn = c.t % MP_CYM_SHAPE_MS, idx = Math.floor(c.t / MP_CYM_SHAPE_MS) % MP_CYM_SHAPES.length;
+    const u0 = tIn < hold ? 0 : (tIn - hold) / (MP_CYM_SHAPE_MS - hold), u = u0 * u0 * (3 - 2 * u0);
+    const sa = MP_CYM_SHAPES[idx], sb = MP_CYM_SHAPES[(idx + 1) % MP_CYM_SHAPES.length];
+    const R = (Math.min(w, h) / 2 - 4) * (1 + 0.012 * kick), N = MP_CYM_N, pts = c.pts, per = c.per;
     let len = 0;
     for (let i = 0; i <= N; i++){
-      const th = -Math.PI / 2 + i / N * Math.PI * 2, co = Math.cos(th), si = Math.sin(th);
-      const r = R * Math.pow(Math.pow(Math.abs(co), nExp) + Math.pow(Math.abs(si), nExp), -1 / nExp) * (1 + lobe * Math.cos(4 * th + lobeRot));
-      pts[i * 2] = cx + co * r; pts[i * 2 + 1] = cy + si * r;
+      const ph = i / N * Math.PI * 2, r = R * (sa[i] + (sb[i] - sa[i]) * u);
+      pts[i * 2] = cx + Math.sin(ph) * r; pts[i * 2 + 1] = cy - Math.cos(ph) * r;
       if (i) len += Math.hypot(pts[i * 2] - pts[i * 2 - 2], pts[i * 2 + 1] - pts[i * 2 - 1]);
       per[i] = len;
     }
