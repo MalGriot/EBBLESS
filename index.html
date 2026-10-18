@@ -1135,6 +1135,22 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .mm-sep{flex:none;color:var(--faint-2);font-size:12px}
 .mm-credit{flex:none;color:var(--faint-2);font-size:11.5px}
 .mm-credit a{color:inherit}
+.mm-search{margin-left:auto;width:min(240px,46vw);height:38px;padding:0 14px;border-radius:19px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font:inherit;font-size:14px}
+.mm-search:focus{outline:none;border-color:var(--accent)}
+.mm-search::-webkit-search-cancel-button{display:none}
+.mm-more{flex:none;width:26px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint);opacity:0;transition:opacity .15s}
+.mm-more svg{width:16px;height:16px}
+.mm-node:hover .mm-more,.mm-more:focus-visible{opacity:1}
+@media (hover:none){.mm-more{display:none}}
+.mm-center-row .mm-center-more{padding:9px 12px;display:flex;align-items:center}
+.mm-center-more svg{width:16px;height:16px}
+.mm-menu{min-width:220px}
+.mm-menu-head{padding:8px 12px 6px;font-size:12.5px;font-weight:700;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+/* the player bar stays on top of the map, at the very bottom (the nav is covered) */
+body:has(#musicMap:not([hidden])) #mini-bar{z-index:56;bottom:0}
+body.split-desktop:has(#musicMap:not([hidden])) #mini-bar:not([hidden]){display:flex!important}   /* the map covers the desktop player column */
+body:has(#musicMap:not([hidden])) #match-status{z-index:56;bottom:0}   /* song-matching progress from the map's actions stays visible */
+body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-bottom:calc(64px + var(--safe-b))}
 @media (prefers-reduced-motion:reduce){.mm-node,.mm-center{transition:none}}
 @media (orientation:landscape) and (max-height:480px){.fm-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.fm-artist-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 /* ---------- continuity loading line ---------- */
@@ -9447,7 +9463,7 @@ window.addEventListener('popstate', () => {
 function updateMiniBarVisibility(){
   const hasTrack = currentTrack() !== null;
   if (!hasTrack){ document.body.classList.remove('pod-playing'); syncIosPodSkip(false); }
-  const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen || importOverlay.classList.contains('is-open'));
+  const showMini = hasTrack && (state.currentView !== 'player' || state.queueOpen || importOverlay.classList.contains('is-open') || musicMapOpen());
   miniBar.hidden = !showMini;
   if (showMini) miniBar.setAttribute('data-shown', '1'); else miniBar.removeAttribute('data-shown');
 }
@@ -12210,8 +12226,11 @@ function addArtistRecommendations(name){
    transform/opacity glide, and the visuals underneath stop while it's open.
    ========================================================================= */
 const MM_PLAY_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const MM_MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+const MM_ICON_PERSON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>';
+const MM_ICON_FOLLOW = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 12a4 4 0 100-8 4 4 0 000 8zm0 2c-3.3 0-8 1.7-8 5v1h12.5a6 6 0 01-.5-2.4c0-1.3.4-2.5 1.1-3.5-1.8-.7-3.7-1.1-5.1-1.1zm9 0v3h3v2h-3v3h-2v-3h-3v-2h3v-3h2z"/></svg>';
 const mmMemo = new Map(), mmSongsMemo = new Map();
-let mmEl = null, mmTrail = [], mmToken = 0, mmData = null, mmResizeT = 0;
+let mmEl = null, mmTrail = [], mmLastTrail = [], mmToken = 0, mmData = null, mmResizeT = 0, mmMenu = null;
 
 function musicMapOpen(){ return !!(mmEl && !mmEl.hidden); }
 
@@ -12233,8 +12252,9 @@ async function mmArtistSongs(name){
     if (r.ok) res = ((await r.json()) || {}).results || [];
   } catch(e){}
   res.forEach(t => {
-    if (t && t.trackName && songCreditsArtist(t.artistName, want))
-      add({ title: t.trackName, artist: t.artistName, image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' });
+    if (!t || !t.trackName || !songCreditsArtist(t.artistName, want)) return;
+    if (!out.artistId && t.artistId && normalizeArtistQuery(t.artistName) === want){ out.artistId = String(t.artistId); out.artistName = t.artistName; }
+    add({ title: t.trackName, artist: t.artistName, image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' });
   });
   if (out.length) mmSongsMemo.set(key, out);
   return out;
@@ -12279,6 +12299,8 @@ async function mmFetch(name){
     if (fb.length){ artists = fb; reached = true; }
   }
   if (!reached && !artists.length) return null;
+  // typed or lower-case names get the catalog's spelling when Last.fm didn't correct them
+  if (center === name){ const s = await mmArtistSongs(name).catch(() => []); if (s.artistName) center = s.artistName; }
   const out = { artist: center, artists };
   mmMemo.set(key, out);
   return out;
@@ -12291,20 +12313,46 @@ function mmBuild(){
   mmEl.setAttribute('role', 'dialog');
   mmEl.setAttribute('aria-label', 'Music map');
   mmEl.innerHTML =
-    '<div class="fm-head"><button type="button" class="fm-back" id="mmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title">Music map</div></div>' +
+    '<div class="fm-head"><button type="button" class="fm-back" id="mmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title">Music map</div>' +
+      '<input id="mmSearch" class="mm-search" type="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="Go to an artist" aria-label="Go to an artist"></div>' +
     '<div class="mm-stage" id="mmStage"></div>' +
     '<div class="mm-foot"><div class="mm-trail" id="mmTrail"></div><div class="mm-credit">Data from <a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a></div></div>';
   document.body.appendChild(mmEl);
   $('mmBack').addEventListener('click', () => closeMusicMap());
+  $('mmSearch').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (!v) return;
+    e.target.value = ''; e.target.blur();
+    mmGo(v, null);
+  });
   mmEl.addEventListener('click', (e) => {
     const t = e.target.closest('[data-mm]');
     if (!t) return;
     const k = t.dataset.mm, v = t.dataset.v;
     if (k === 'go') mmGo(v, t.closest('.mm-node'));
     else if (k === 'play') mmPlay(v, t);
-    else if (k === 'page'){ closeMusicMap(); openArtistPage(v); }
+    else if (k === 'radio') mmRadio(v);
+    else if (k === 'more'){ e.stopPropagation(); mmOpenMenu(v, t, !!t.closest('.mm-center')); }
     else if (k === 'retry'){ mmMemo.delete(artistNameKey(v)); mmGo(v, null, true); }
     else if (k === 'trail'){ const i = +t.dataset.i; mmTrail = mmTrail.slice(0, i); mmGo(v, null); }
+  });
+  // everything an artist can do: right-click (mouse) or hold (touch) any name
+  const menuFor = (target) => {
+    const node = target && target.closest && target.closest('.mm-node,.mm-center');
+    const b = node && node.querySelector('[data-mm="go"],[data-mm="play"]');
+    return b ? { name: b.dataset.v, node, center: node.classList.contains('mm-center') } : null;
+  };
+  mmEl.addEventListener('contextmenu', (e) => {
+    const m = menuFor(e.target);
+    if (!m) return;
+    e.preventDefault();
+    mmOpenMenu(m.name, m.node, m.center, { x: e.clientX, y: e.clientY });
+  });
+  attachLongPress($('mmStage'), (e) => {
+    const m = menuFor(e.target);
+    if (m) mmOpenMenu(m.name, m.node, m.center);
   });
 }
 
@@ -12314,7 +12362,9 @@ function openMusicMap(rawName){
   if (!mmEl) mmBuild();
   closeTrackCtxMenu();
   leaveFullscreen(true);
-  mmTrail = [];
+  // back on the artist the map was last left on: the trail picks up where it was
+  const last = mmLastTrail[mmLastTrail.length - 1];
+  mmTrail = last && artistNameKey(last) === artistNameKey(name) ? mmLastTrail.slice(0, -1) : [];
   mmData = null;
   $('mmStage').innerHTML = '';
   mmEl.hidden = false;
@@ -12322,21 +12372,36 @@ function openMusicMap(rawName){
   // scroll pause while the map covers them; CSS pauses the ambient and art
   vizStop(); lyricsAutoScrollStop();
   window.addEventListener('resize', mmOnResize);
+  document.addEventListener('keydown', mmOnKey);
   statsFeature('music_map');
   mmGo(name, null);
+  updateMiniBarVisibility();   // the player bar stays on top of the map
   syncHistoryBuffer();
 }
 function closeMusicMap(){
   if (!musicMapOpen()) return;
+  mmCloseMenu();
   mmToken++;
+  mmLastTrail = mmTrail.slice();
   mmEl.hidden = true;
   $('mmStage').innerHTML = '';
   window.removeEventListener('resize', mmOnResize);
+  document.removeEventListener('keydown', mmOnKey);
   applyVisualMode();
+  updateMiniBarVisibility();
   syncHistoryBuffer();
+}
+function mmOnKey(e){
+  if (e.key !== 'Escape') return;
+  if (mmMenu){ e.preventDefault(); mmCloseMenu(); return; }
+  if (e.target && e.target.id === 'mmSearch' && e.target.value){ e.target.value = ''; return; }
+  if (document.querySelector('.lib-ctx-menu.is-open:not(.mm-menu)') || importOverlay.classList.contains('is-open')) return;
+  e.preventDefault();
+  closeMusicMap();
 }
 function mmOnResize(){
   clearTimeout(mmResizeT);
+  mmCloseMenu();
   mmResizeT = setTimeout(() => {
     if (!musicMapOpen()) return;
     if (mmData) mmLayout(false);
@@ -12357,7 +12422,8 @@ function mmCenterHtml(name, note, retry){
     '<div class="mm-center-row">' +
       (retry ? '<button type="button" class="btn-ghost" data-mm="retry" data-v="' + escapeHtml(name) + '">Try again</button>' : '') +
       '<button type="button" class="btn-ghost is-active" data-mm="play" data-v="' + escapeHtml(name) + '">Play songs</button>' +
-      (retry ? '' : '<button type="button" class="btn-ghost" data-mm="page" data-v="' + escapeHtml(name) + '">Artist page</button>') +
+      (retry ? '' : '<button type="button" class="btn-ghost" data-mm="radio" data-v="' + escapeHtml(name) + '">Radio</button>') +
+      '<button type="button" class="btn-ghost mm-center-more" data-mm="more" data-v="' + escapeHtml(name) + '" aria-label="More for ' + escapeHtml(name) + '">' + MM_MORE_ICON + '</button>' +
     '</div>';
 }
 function mmPlaceCenter(c){
@@ -12369,6 +12435,7 @@ function mmPlaceCenter(c){
 // grows out of the center. fromNode null = a plain jump (open, trail, retry).
 async function mmGo(name, fromNode, keepTrail){
   const token = ++mmToken, st = $('mmStage');
+  mmCloseMenu();
   mmData = null;   // a resize mid-load must not redraw the previous map
   if (!keepTrail && mmTrail[mmTrail.length - 1] !== name) mmTrail.push(name);
   mmRenderTrail();
@@ -12416,7 +12483,8 @@ function mmLayout(animate){
     const el = document.createElement('div');
     el.className = 'mm-node';
     el.innerHTML = '<button type="button" class="mm-name" data-mm="go" data-v="' + escapeHtml(a.name) + '" style="font-size:' + ((narrow ? 13 : 14) + Math.round(rel * (narrow ? 5 : 8))) + 'px">' + escapeHtml(a.name) + '</button>' +
-      '<button type="button" class="mm-play" data-mm="play" data-v="' + escapeHtml(a.name) + '" aria-label="Play songs by ' + escapeHtml(a.name) + '">' + MM_PLAY_ICON + '</button>';
+      '<button type="button" class="mm-play" data-mm="play" data-v="' + escapeHtml(a.name) + '" aria-label="Play songs by ' + escapeHtml(a.name) + '">' + MM_PLAY_ICON + '</button>' +
+      '<button type="button" class="mm-more" data-mm="more" data-v="' + escapeHtml(a.name) + '" aria-label="More for ' + escapeHtml(a.name) + '">' + MM_MORE_ICON + '</button>';
     el.style.setProperty('--o', (0.62 + 0.38 * rel).toFixed(2));
     st.appendChild(el);
     return { el, rel, i, w: el.offsetWidth, h: el.offsetHeight, x: 0, y: 0 };
@@ -12488,6 +12556,177 @@ async function mmPlay(name, btn){
     mmPlayBusy = false;
     if (btn) btn.disabled = false;
   }
+}
+
+/* Everything else an artist can do, same as the rest of the app: radio, play
+   next, add to queue, save as a playlist, add to the library, their page. One
+   menu for the center (its ... button) and every name (right-click, hold, or
+   the ... that shows on hover). */
+function mmInLibrary(name){
+  const key = artistNameKey(name);
+  return orderedLibraryIds().some(id => { const p = getCachedPlaylist(id); return isArtistEntry(p) && artistNameKey(stripTopicSuffix(p.name)) === key; });
+}
+function mmCloseMenu(){
+  if (!mmMenu) return;
+  const m = mmMenu;
+  mmMenu = null;
+  m.classList.remove('is-open');   // slides/fades out, then goes
+  setTimeout(() => m.remove(), 260);
+  const scrim = $('ctxSheetScrim'); if (scrim) scrim.classList.remove('is-open');
+  document.removeEventListener('click', mmMenuOutside, true);
+}
+function mmMenuOutside(e){ if (mmMenu && !mmMenu.contains(e.target)){ e.stopPropagation(); e.preventDefault(); mmCloseMenu(); } }
+function mmOpenMenu(name, anchor, isCenter, at){
+  mmCloseMenu();
+  const items = [
+    ['play', 'Play songs', CTX_ICON_PLAY],
+    ['radio', 'Start a radio', CTX_ICON_RADIO],
+    ['next', 'Play next', CTX_ICON_PLAY_NEXT],
+    ['queue', 'Add to queue', CTX_ICON_ADD_QUEUE],
+    null,
+    ['save', 'Save songs as a playlist', CTX_ICON_ADD_PLAYLIST],
+  ];
+  if (!mmInLibrary(name)) items.push(['follow', 'Add artist to library', MM_ICON_FOLLOW]);
+  items.push(null);
+  if (!isCenter) items.push(['go', 'Map around ' + name, CTX_ICON_MAP]);
+  items.push(['page', 'Artist page', MM_ICON_PERSON]);
+  const m = document.createElement('div');
+  m.className = 'lib-ctx-menu mm-menu';
+  m.setAttribute('role', 'menu');
+  m.innerHTML = '<div class="mm-menu-head">' + escapeHtml(name) + '</div>' + items.map(it => it
+    ? '<button type="button" class="lib-ctx-item" role="menuitem" data-act="' + it[0] + '">' + it[2] + '<span>' + escapeHtml(it[1]) + '</span></button>'
+    : '<div class="lib-ctx-sep"></div>').join('');
+  m.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    e.stopPropagation();
+    mmCloseMenu();
+    mmAction(b.dataset.act, name, anchor);
+  });
+  document.body.appendChild(m);
+  mmMenu = m;
+  // beside the name (or the pointer), flipped to stay on screen
+  const r = at ? { left: at.x, right: at.x, top: at.y, bottom: at.y } : anchor.getBoundingClientRect();
+  const mw = m.offsetWidth, mh = m.offsetHeight, pad = 8;
+  let left = at ? r.left : r.left + (r.right - r.left) / 2 - mw / 2;
+  let top = r.bottom + 6;
+  if (top + mh > innerHeight - pad) top = Math.max(pad, r.top - mh - 6);
+  left = Math.max(pad, Math.min(left, innerWidth - mw - pad));
+  m.style.left = Math.round(left) + 'px'; m.style.top = Math.round(top) + 'px';
+  m.offsetWidth;   // start closed so it slides in (a bottom sheet on phones)
+  m.classList.add('is-open');
+  const scrim = $('ctxSheetScrim'); if (scrim) scrim.classList.add('is-open');
+  // phones: swipe the sheet down to close, like the app's other menus
+  let y0 = null, dy = 0;
+  m.addEventListener('touchstart', (e) => { y0 = matchMedia('(max-width:859.98px)').matches && m.scrollTop <= 0 ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+  m.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); m.style.transition = 'none'; m.style.transform = 'translateY(' + dy + 'px)'; }, { passive: true });
+  const end = () => { if (y0 === null) return; y0 = null; m.style.transition = ''; m.style.transform = ''; if (dy > 70) mmCloseMenu(); };
+  m.addEventListener('touchend', end); m.addEventListener('touchcancel', end);
+  if (matchMedia('(hover:hover)').matches){ const first = m.querySelector('[data-act]'); if (first) first.focus({ preventScroll: true }); }
+  setTimeout(() => { if (mmMenu === m) document.addEventListener('click', mmMenuOutside, true); }, 0);
+}
+function mmAction(act, name, anchor){
+  if (act === 'play') mmPlay(name, null);
+  else if (act === 'radio') mmRadio(name);
+  else if (act === 'next' || act === 'queue') mmQueue(name, act === 'next');
+  else if (act === 'save') mmSave(name);
+  else if (act === 'follow') mmFollow(name);
+  else if (act === 'go') mmGo(name, anchor && anchor.classList && anchor.classList.contains('mm-node') ? anchor : null);
+  else if (act === 'page') mmOpenPage(name);
+}
+
+// The first few of their songs matched to playable videos, for the queue and
+// radio (both need real videos up front). Three lookups at a time, a short
+// pause between rounds, so it's quick without flooding the search.
+const mmReadyMemo = new Map();
+async function mmReadySongs(name, n){
+  const key = artistNameKey(name), have = mmReadyMemo.get(key);
+  if (have && have.length >= n) return have.slice(0, n);
+  const pool = (await mmArtistSongs(name)).slice(0, n + 4), out = [];
+  for (let i = 0; i < pool.length && out.length < n; i += 3){
+    const got = await Promise.all(pool.slice(i, i + 3).map(async t => {
+      if (t.videoId) return t;
+      const m = await searchYouTubeCached(t.title, t.artist).catch(() => null);
+      return m && m.videoId ? { title: t.title, artist: t.artist, videoId: m.videoId, matchedTitle: m.title || '', channel: m.channel || '', duration: m.duration || 0, art: t.image || null } : null;
+    }));
+    got.forEach(t => { if (t && out.length < n) out.push(t); });
+    if (out.length < n) await sleep(150);
+  }
+  if (out.length && (!have || out.length > have.length)) mmReadyMemo.set(key, out);
+  return out;
+}
+let mmBusy = false;
+// One at a time; a slow one says it's still going rather than going quiet.
+async function mmBusyRun(msg, fn, slowMsg){
+  if (mmBusy){ showToast('One moment, still on the last one'); return; }
+  mmBusy = true;
+  showToast(msg);
+  const slow = slowMsg ? setTimeout(() => { if (mmBusy) showToast(slowMsg); }, 7000) : 0;
+  try { await fn(); } finally { mmBusy = false; clearTimeout(slow); }
+}
+function mmRadio(name){
+  const n = stripTopicSuffix(name);
+  // the center's Radio button shows it's working until the radio plays
+  const btn = mmEl && Array.from(mmEl.querySelectorAll('.mm-center [data-mm="radio"]')).find(b => b.dataset.v === name);
+  if (btn){ btn.disabled = true; btn.textContent = 'Starting...'; }
+  mmBusyRun('Starting ' + n + ' Radio...', async () => {
+    const own = await mmReadySongs(name, 3);
+    if (!own.length){ showToast('Couldn’t find songs by ' + n + ' right now'); return; }
+    await startRadio(n + ' Radio', own, false);
+  }, 'Still building ' + n + ' Radio, finding similar songs...').finally(() => { if (btn && btn.isConnected){ btn.disabled = false; btn.textContent = 'Radio'; } });
+}
+function mmQueue(name, next){
+  const n = stripTopicSuffix(name);
+  mmBusyRun('Getting songs by ' + n + ' ready...', async () => {
+    const songs = await mmReadySongs(name, 8);
+    if (!songs.length){ showToast('Couldn’t find songs by ' + n + ' right now'); return; }
+    // one quiet, reused list per artist that the queue entries point into
+    const id = 'mmq:' + artistNameKey(name);
+    let pl = playlistById(id);
+    if (!pl || !pl.tracks || !pl.tracks.length){
+      pl = { id, type: 'custom', name: n + ' songs', image: songs[0].art || null, tracks: songs.map(t => Object.assign({}, t, { plays: 0 })), ts: Date.now() };
+      persistPlaylistObj(pl);
+    }
+    const entries = pl.tracks.map((t, idx) => ({ plId: id, idx })).filter(e => pl.tracks[e.idx].videoId);
+    awardMilestone('qadd');
+    if (state.queuePos < 0){
+      loadPlaylistIntoPlayer(pl);
+      buildQueueFrom(0, id);
+      loadIndex(state.queuePos, true);
+      showToast('Playing ' + n + ' songs');
+      return;
+    }
+    if (next) state.queue.splice(state.queuePos + 1, 0, ...entries);
+    else state.queue.push(...entries);
+    renderQueuePanel();
+    schedulePreload(state.queuePos);
+    showToast((next ? 'Playing next: ' : 'Added to queue: ') + entries.length + ' songs by ' + n);
+  }, 'Still matching songs by ' + n + '...');
+}
+async function mmSave(name){
+  const n = stripTopicSuffix(name);
+  const songs = await mmArtistSongs(name);
+  if (!songs.length){ showToast('Couldn’t find songs by ' + n + ' right now'); return; }
+  const pl = createCustomPlaylist('Mix: ' + n);
+  pl.rematchUnmatched = true;
+  lsSet(LS_PL(pl.id), pl);
+  addTracksToPlaylist(pl.id, songs.slice(0, 20).map(t => ({ title: t.title, artist: t.artist, videoId: t.videoId || null, matchedTitle: t.matchedTitle || '', channel: t.channel || '', art: t.image || t.art || null })));
+  rematchUnmatchedInBackground(pl.id);
+  showToast('Saved “' + pl.name + '” to your library');
+}
+async function mmFollow(name){
+  const n = stripTopicSuffix(name);
+  const songs = await mmArtistSongs(name);
+  if (!songs.artistId){ showToast('Couldn’t find ' + n + ' to add right now'); return; }
+  showToast('Adding ' + n + ' to your library...');
+  beginImportFromParsedLink({ source: 'applemusic', type: 'artist', id: songs.artistId, storefront: 'us' });
+}
+// Their page; its back arrow comes straight back to the map, trail and all.
+function mmOpenPage(name){
+  closeMusicMap();
+  openArtistPage(name);
+  libplBackFn = () => { closeLibraryPlaylistPanel(); openMusicMap(name); };
+  syncLibplCloseBtn();
 }
 
 /* =========================================================================
@@ -31397,7 +31636,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
 /* =========================================================================
    MINI BAR TAP -> OPEN PLAYER
    ========================================================================= */
-miniBar.addEventListener('click', () => setView('player'));
+miniBar.addEventListener('click', () => { closeMusicMap(); setView('player'); });
 
 /* =========================================================================
    INIT
