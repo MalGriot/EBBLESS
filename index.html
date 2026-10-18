@@ -27133,13 +27133,16 @@ const MINI_DESKTOP_STYLE = `
   /* no pills behind the hover controls and info: they sit straight on the cover, with a soft shadow to stay readable */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{background:none}
   body.mp-shape-cymatics:not(.cym-hover) #mpControls,body.mp-shape-cymatics:not(.cym-hover) #mpHead,body.mp-shape-cymatics:not(.cym-hover) #mpMeta{opacity:0;pointer-events:none}
-  body.mp-shape-cymatics.cym-hover #mpControls,body.mp-shape-cymatics.cym-hover #mpHead,body.mp-shape-cymatics.cym-hover #mpMeta{opacity:1;pointer-events:auto}
+  body.mp-shape-cymatics.cym-hover #mpControls,body.mp-shape-cymatics.cym-hover #mpHead,body.mp-shape-cymatics.cym-hover #mpMeta{opacity:1}
+  /* only the buttons take clicks; everything else on the plate (title included) lets the click through to open the app */
+  body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{pointer-events:none}
+  body.mp-shape-cymatics.cym-hover #mpControls button,body.mp-shape-cymatics.cym-hover #mpHead button{pointer-events:auto}
   body.mp-shape-cymatics #mpMeta{text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5)}
   body.mp-shape-cymatics #mpHead svg,body.mp-shape-cymatics #mpControls button:not(#mpPlay) svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
   body.mp-shape-cymatics #mpMeta{bottom:13%;width:62%}
   body.mp-shape-cymatics #mpBg{display:none}
-  /* the cover is painted into the plate's outline on hover by mpCymSync; this invisible box in the middle only keeps the click (back to the app) */
-  body.mp-shape-cymatics #mpArtWrap{inset:31%;border-radius:50%;opacity:0;box-shadow:none}
+  /* the cover is painted into the plate's outline on hover by mpCymSync; this invisible box over the whole window takes the click (back to the app, only inside the outline) and the hand-drag */
+  body.mp-shape-cymatics #mpArtWrap{inset:0;border-radius:0;opacity:0;box-shadow:none}
   body.mp-shape-cymatics #mpArtWrap #mpRecord,body.mp-shape-cymatics #mpArtWrap #mpTape{display:none!important}
   body.mp-shape-cymatics #mpArtWrap #mpArt,body.mp-shape-cymatics #mpArtWrap .mp-art-ghost{display:block!important}
   body.mp-shape-cymatics #mpArtWrap[data-art-style]{background:#282828;overflow:hidden}
@@ -27193,6 +27196,17 @@ function mpCymStop(){
   try { mpCym.win.cancelAnimationFrame(mpCym.raf); } catch(e){}
   mpCym = null;
 }
+function mpCymHit(x, y){ // is the point (window px) inside the plate's current outline?
+  const c = mpCym;
+  if (!c) return true;
+  const p = c.pts, n = MP_CYM_N;
+  let inside = false;
+  for (let i = 0, j = n; i <= n; j = i++){
+    const xi = p[i * 2], yi = p[i * 2 + 1], xj = p[j * 2], yj = p[j * 2 + 1];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
 function mpCymSync(win){
   if (!win || win.closed){ mpCymStop(); return; }
   const doc = win.document, cv = doc.getElementById('mpCym');
@@ -27203,7 +27217,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, slideF: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, st: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, slideF: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27239,19 +27253,26 @@ function mpCymSync(win){
       c.cv.width = Math.round(w * dpr); c.cv.height = Math.round(h * dpr); c.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     // paused: the sand, ripples and rim keep moving, but the outline's morph (mt) and the turn (rot) hold still, so play resumes on the same shape
-    const playing = doc.body.classList.contains('mp-playing');
-    c.t += dt; c.since += dt;
+    // The main visualizer's controls apply here too: speed scales the sand's clock (dts), the infinity button holds the
+    // pattern family (only its variants change) instead of cycling families, and the sand only turns while Rotate is on.
+    const playing = doc.body.classList.contains('mp-playing'), dts = dt * vizSpeed;
+    c.t += dt; c.st += dts; c.since += dts;
     if (playing) c.mt += dt;
-    if (!c.fb && c.since > MP_CYM_SWITCH_MS){
-      c.fb = VIZ_PATTERNS[(VIZ_PATTERNS.indexOf(c.fa) + 1) % VIZ_PATTERNS.length];
-      c.pb = c.fb.modes[Math.floor(Math.random() * c.fb.modes.length)];
+    if (!c.fb && c.since > (vizHoldMode ? 6500 : MP_CYM_SWITCH_MS)){
+      if (vizHoldMode){
+        const ms = c.fa.modes;
+        c.fb = c.fa; c.pb = ms[(Math.max(0, ms.indexOf(c.pa)) + 1 + Math.floor(Math.random() * Math.max(1, ms.length - 1))) % ms.length];
+      } else {
+        c.fb = VIZ_PATTERNS[(VIZ_PATTERNS.indexOf(c.fa) + 1) % VIZ_PATTERNS.length];
+        c.pb = c.fb.modes[Math.floor(Math.random() * c.fb.modes.length)];
+      }
       c.mix = 0.0001;
     }
     if (c.fb){
-      c.mix += dt / MP_CYM_XFADE_MS;
+      c.mix += dts / MP_CYM_XFADE_MS;
       if (c.mix >= 1){ c.fa = c.fb; c.pa = c.pb; c.fb = c.pb = null; c.mix = 0; c.since = 0; }
     }
-    const ctx = c.ctx, tSec = c.t / 1000, cx = w / 2, cy = h / 2, k = dt / 16.7;
+    const ctx = c.ctx, tSec = c.st / 1000, cx = w / 2, cy = h / 2, k = dts / 16.7;
     // the kick: every MP_CYM_PULSE_MS the sand jumps, settles back, and a ripple leaves the cover
     if (c.t - c.pulseAt > MP_CYM_PULSE_MS){ c.pulseAt = c.t; c.ripples.push(c.t); if (c.ripples.length > 3) c.ripples.shift(); }
     const kick = Math.exp(-Math.max(0, c.t - c.pulseAt) / 380);
@@ -27281,8 +27302,8 @@ function mpCymSync(win){
       if (i) len += Math.hypot(pts[i * 2] - pts[i * 2 - 2], pts[i * 2 + 1] - pts[i * 2 - 1]);
       per[i] = len;
     }
-    // the sand pattern turns slowly inside the outline (the square field always covers the plate, whatever the angle)
-    if (playing) c.rot = (c.rot + dt / 70000 * Math.PI * 2) % (Math.PI * 2);
+    // the sand pattern turns inside the outline when Rotate is on in the main visualizer (the square field always covers the plate, whatever the angle)
+    if (playing && vizRotateOn) c.rot = (c.rot + dts / VIZ_ROTATE_MS_PER_TURN * Math.PI * 2) % (Math.PI * 2);
     const rc = Math.cos(c.rot), rs = Math.sin(c.rot);
     const plate = new win.Path2D();
     plate.moveTo(pts[0], pts[1]);
@@ -27475,6 +27496,8 @@ function wireMiniDesktop(win){
   });
   ['pointerup', 'pointercancel'].forEach(t => art.addEventListener(t, () => { drag = null; }));
   art.addEventListener('click', (e) => { if (dragged){ dragged = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  // Cymatics: the box covers the whole window, but only a click inside the plate's outline opens the app
+  art.addEventListener('click', (e) => { if (doc.body.classList.contains('mp-shape-cymatics') && !mpCymHit(e.clientX, e.clientY)){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 }
 // Closing or minimizing the Mac app's window floats the mini player
 if (isDesktopApp) window.ebblessDesktop.onAway(() => { if (currentTrack()) openMiniPlayer(); });
