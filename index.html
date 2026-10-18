@@ -27195,7 +27195,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, ripples: [], pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27250,11 +27250,13 @@ function mpCymSync(win){
       if (i) len += Math.hypot(pts[i * 2] - pts[i * 2 - 2], pts[i * 2 + 1] - pts[i * 2 - 1]);
       per[i] = len;
     }
+    // the sand pattern turns slowly inside the outline (the square field always covers the plate, whatever the angle)
+    c.rot = (c.rot + dt / 70000 * Math.PI * 2) % (Math.PI * 2);
+    const rc = Math.cos(c.rot), rs = Math.sin(c.rot);
     const plate = new win.Path2D();
     plate.moveTo(pts[0], pts[1]);
     for (let i = 1; i <= N; i++) plate.lineTo(pts[i * 2], pts[i * 2 + 1]);
     plate.closePath();
-    ctx.fillStyle = 'rgba(0,0,0,.97)'; ctx.fill(plate);
     ctx.save();
     ctx.clip(plate);
     // ripples from the middle out past the edge
@@ -27280,7 +27282,7 @@ function mpCymSync(win){
       ctx.globalAlpha = 0.12 + 0.6 * settle * settle;
       ctx.fillStyle = i & 1 ? c.color2 : c.color;
       ctx.beginPath();
-      ctx.arc(cx + x * R, cy + y * R, 0.6 + 1.0 * settle, 0, Math.PI * 2);
+      ctx.arc(cx + (x * rc - y * rs) * R, cy + (x * rs + y * rc) * R, 0.6 + 1.0 * settle, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
