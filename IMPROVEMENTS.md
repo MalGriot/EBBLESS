@@ -11310,3 +11310,11 @@ Add entries in this shape:
 - **Touches:** tbd.
 - **Branch:** agent/mini-batch-2
 - **Notes:** Synced from Geethub #636. Hover now shows title, artist, heart and thumbs-down on every shape (LP, cassette, square, cymatics: overlay on hover; pill: heart row on hover; card/float: in the header). The thumbs-down appears only for CuRRentSSsss songs, same as the main player. Web PiP also gets the thumbs-down.
+
+### match-summary-and-credits: Found X of Y strip and song credits (from research, Geethub #520-#522, #543, #542)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** From the research docs (docs/research/TRANSFER-APPS.md, TIDAL-USPS.md). An imported list's window now says "4 of 6 songs found" and, when some are missing, "Show the 2" lists them with a Find button each (the existing other-versions picker); the strip updates as songs are fixed. A song's page now shows Credits (written, produced, arranged, mixed, engineered, mastered by) from MusicBrainz, names tappable to the artist page; nothing shown when MusicBrainz has none.
+- **Touches:** index.html (library panel, song page), sw.js cache v338.
+- **Branch:** agent/match-credits
+- **Notes:** Built on request after the research. Credits need MusicBrainz to know the recording; coverage varies.
