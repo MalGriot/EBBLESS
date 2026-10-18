@@ -22229,7 +22229,12 @@ function checkDeckReady(deck){
   // on, and after a few seconds of ad try one plain reload of the video (a new
   // load can come without the ad) before sitting the ad out.
   const standby = deck !== activeDeck() && !deck.adDodge;
-  if (reason && standby && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
+  // a player that never started (autoplay blocked, still buffering) reads like
+  // an ad on the clock signals but is a stall: only act on a playing player,
+  // or on a signal that is about the video itself
+  let adLike = false;
+  try { adLike = /^(duration|short|video-id)$/.test(reason) || (!!deck.player.getPlayerState && deck.player.getPlayerState() === YT.PlayerState.PLAYING); } catch(e){}
+  if (reason && standby && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
     deck.adReloaded = true; deck.adReloadedAt = Date.now();
     adLog(deck, 'standby-reload', reason);
     deck.adClock = null;
@@ -22239,7 +22244,7 @@ function checkDeckReady(deck){
   }
   // still an ad after the reload: move the song onto the closest-to-identical
   // other link (adTryAlternate: another YouTube upload, else SoundCloud), once
-  if (reason && standby && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= STANDBY_AD_ALT_MS){
+  if (reason && standby && adLike && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= STANDBY_AD_ALT_MS){
     deck.adAltTried = true;
     adLog(deck, 'standby-alt', reason);
     adTryAlternate(state.queue[deck.pos], deck);
