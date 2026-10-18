@@ -11114,12 +11114,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #644. Assumption: the Mac/PiP mini window. The cursor is a grab hand over the mini (grabbing while pressed) and a pointer over the title/artist (which open the app). Electron may keep the system arrow over window-drag regions; if so the mini needs `-webkit-app-region:no-drag` on more areas. Not verified in the Mac app.
 
 ### window-corner-swoops-raised: window corner swoops raised (Geethub #645)
-- **Status:** review
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** Idea Geethub #645. the window corner swoops: it should be a raised swoop, the shape of the window should swoop up (same color, no line). Library: only the right corner. Queue: only the left corner.
 - **Touches:** `#queue-panel`, `#libpl-panel`, `#hist-panel`, `#view-library` `::before`.
-- **Branch:** agent/q-ui-polish
-- **Notes:** Synced from Geethub #645. Replaced the faint two-corner swoop (#626) with a raised one on desktop split view: a small masked box above the window's top edge, filled with the window's own color, no stroke. Library and the playlist view: right corner; queue and history: left. The library pane is a see-through tint, so its swoop is the same tint and is barely visible (the library window has no solid fill to match). `#view-library` now has `overflow:visible` on desktop so the swoop can rise above it. Phones lose the swoop (it was already off for the library). Static, no animation.
+- **Branch:** 
+- **Notes:** Synced from Geethub #645. Dropped by the owner (2026-10-18): the raised swoop read as spikes and is off brand (EBBLESS is smooth and flowy). The build was reverted; the original faint swoops (#626) are untouched.
 
 ### nothing-playing-logo-just-the-e: nothing playing: bouncing logo is just the E, spinning (Geethub #647)
 - **Status:** review
@@ -11135,7 +11135,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #649. when the library expands, the thumbs should stay the same size and fill more into the row; list view gets 2 columns.
 - **Touches:** `body.split-desktop.lib-wide` grid CSS.
 - **Branch:** agent/q-ui-polish
-- **Notes:** Synced from Geethub #649. Expanded (lib-wide) library: grid and small grid use `auto-fill` with the narrow pane's thumb size (130px / 84px minimum) so more fit per row; list view is 2 columns. Filter pills stop stretching across the wide pane. Verified at 1500px.
+- **Notes:** Synced from Geethub #649. Responsive: any single-column library (phone, tablet, narrow desktop window, under the 3-column split layout) uses `auto-fill` with 140px thumbs (92px in small grid), so it is 2 per row on a 375px phone, 4 at 768px, 5 at 1100px. The split-desktop library pane is a fixed 340px column, so it stays 2/3 per row until the expand button widens it; expanded it also uses `auto-fill` (130px / 84px minimum): 6 per row at 1900px. List view is 2 columns when expanded. Filter pills stop stretching when expanded. Verified at 375, 768, 1100, 1300 and 1900px.
 
 ### cymatics-controls-hover-center-heart-corner: cymatics controls: hover only, centered, heart bottom right (Geethub #650)
 - **Status:** review

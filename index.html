@@ -801,6 +801,9 @@ body.onb-active .paste-guide{display:none}
   transition:background var(--dur-ui) var(--ease-out)}
 .lib-see-all:hover{background:var(--panel-2)}
 .lib-grid.is-compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
+/* #649: any single-column library (phone, tablet, narrow desktop window) fits as many thumbs as the width allows: 2 / 3 on a phone, more as it gets wider */
+body:not(.split-desktop) .lib-grid:not(.is-list):not(.is-compact){grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+body:not(.split-desktop) .lib-grid.is-compact{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
 .lib-artist-divider{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;margin-top:6px;background:none;border:0;border-bottom:1px solid var(--line, rgba(255,255,255,.1));color:var(--text);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .lib-artist-divider:first-child{margin-top:0}
 .lib-artist-divider .chev{flex:none;width:14px;height:14px;transition:transform .15s}
@@ -1849,22 +1852,17 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 #queue-scrim,#libpl-scrim{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #queue-scrim.is-open,#libpl-scrim.is-open{opacity:1;pointer-events:auto}
-/* #645 (was #626): a raised swoop in one top corner of each desktop window - the window's own shape curves up into the corner, same color as
-   the window, no line. Library (and its playlist view) on its right corner, queue (and history) on its left corner. Static: a small
-   masked box above the window's top edge, no animation, nothing to pause. */
-@media (min-width:860px){
-  body.split-desktop #queue-panel::before,body.split-desktop #libpl-panel::before,body.split-desktop #hist-panel::before,body.split-desktop #view-library::before{
-    content:'';position:absolute;top:-30px;width:96px;height:30px;pointer-events:none;z-index:1;
-    background:var(--swoop-fill,var(--panel));
-    -webkit-mask:var(--swoop-mask) 0 0/100% 100% no-repeat;mask:var(--swoop-mask) 0 0/100% 100% no-repeat}
-  body.split-desktop #queue-panel::before,body.split-desktop #hist-panel::before{left:0;
-    --swoop-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 30' preserveAspectRatio='none'%3E%3Cpath d='M96 30C52 30 26 22 0 0V30Z'/%3E%3C/svg%3E")}
-  body.split-desktop #libpl-panel::before,body.split-desktop #view-library::before{right:0;
-    --swoop-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 30' preserveAspectRatio='none'%3E%3Cpath d='M0 30C44 30 70 22 96 0V30Z'/%3E%3C/svg%3E")}
-  /* the library pane is a see-through tint over the ambient art, so its swoop is that same tint */
-  body.split-desktop #view-library::before{--swoop-fill:color-mix(in srgb,var(--clock-tint,transparent) 60%,transparent)}
-  body.split-desktop #view-library{overflow:visible}
-}
+/* #626: a faint swoop in each top corner of the windows (queue, playlist, history panels and the desktop library pane).
+   Static art, two inline SVGs on a pseudo-element: no animation, no blur, nothing to pause. White at a few percent so it
+   reads on any accent. The panels are stacking contexts, so z-index:-1 puts it above their fill and under their content;
+   #view-library scrolls, so there it is a zero-height sticky strip at the top of the pane. */
+#queue-panel::before,#libpl-panel::before,#hist-panel::before,#view-library::before{
+  content:'';position:absolute;left:0;right:0;top:0;height:40px;pointer-events:none;z-index:-1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cpath d='M0 0H120C96 2 78 12 58 22 38 32 18 34 0 40Z' fill='%23fff' fill-opacity='.06'/%3E%3Cpath d='M120 0C96 2 78 12 58 22 38 32 18 34 0 40' fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='1.2'/%3E%3C/svg%3E") left top/120px 40px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cpath d='M120 0H0C24 2 42 12 62 22 82 32 102 34 120 40Z' fill='%23fff' fill-opacity='.06'/%3E%3Cpath d='M0 0C24 2 42 12 62 22 82 32 102 34 120 40' fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='1.2'/%3E%3C/svg%3E") right top/120px 40px no-repeat}
+#view-library::before{position:sticky;top:0;margin-bottom:-40px}
+@media (max-width:859.98px){#view-library::before{display:none}}
 #queue-panel,#libpl-panel{position:fixed;z-index:41;background:var(--panel);display:flex;flex-direction:column;
   box-shadow:0 0 60px rgba(0,0,0,.5)}
 .queue-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px;flex:none}
