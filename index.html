@@ -27732,6 +27732,11 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics #mpArtWrap #mpRecord,body.mp-shape-cymatics #mpArtWrap #mpTape{display:none!important}
   body.mp-shape-cymatics #mpArtWrap #mpArt,body.mp-shape-cymatics #mpArtWrap .mp-art-ghost{display:block!important}
   body.mp-shape-cymatics #mpArtWrap[data-art-style]{background:#282828;overflow:hidden}
+  /* title and artist in the art-only shapes (LP, cassette, Cymatics, Square): one size and spot for all of them (centered, near the
+     bottom); the text shows while the mini is hovered, and its black box only while the pointer is on the box itself */
+  body.mp-shape-disc #mpMeta,body.mp-shape-tape #mpMeta,body.mp-shape-square #mpMeta{bottom:34px;width:168px;background:transparent;pointer-events:auto;-webkit-app-region:no-drag;
+    text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5);transition:opacity .2s ease,background-color .15s ease}
+  body.mp-shape-disc #mpMeta:hover,body.mp-shape-tape #mpMeta:hover,body.mp-shape-square #mpMeta:hover{background:rgba(0,0,0,.66)}
   body.mp-shape-float{background:transparent}
   body.mp-shape-float::before{display:none}
   body.mp-shape-float #mpBg{display:none}
@@ -28079,6 +28084,10 @@ function wireMiniDesktop(win){
   });
   ['pointerup', 'pointercancel'].forEach(t => art.addEventListener(t, () => { drag = null; }));
   art.addEventListener('click', (e) => { if (dragged){ dragged = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  // the title box sits over the cover in the art-only shapes: a click on it counts as a click on the cover
+  doc.getElementById('mpMeta').addEventListener('click', (e) => {
+    if (/mp-shape-(disc|tape|square)/.test(doc.body.className)) art.dispatchEvent(new win.MouseEvent('click', { bubbles: true, clientX: e.clientX, clientY: e.clientY }));
+  });
   // Cymatics: the box covers the whole window, but only a click inside the plate's outline opens the app
   art.addEventListener('click', (e) => { if (doc.body.classList.contains('mp-shape-cymatics') && !mpCymHit(e.clientX, e.clientY)){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 }
