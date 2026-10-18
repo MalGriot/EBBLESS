@@ -18488,9 +18488,11 @@ function openVibeCheck(force){
   feedbackModal.classList.add('is-open');
   setTimeout(() => fbThumbs[0].focus(), 50);
 }
+const VIBE_OFF_KEY = 'ebbless:vibeOff';   // owner opt-out, per browser/device; set from the console: ebblessVibeCheck.off()
 function scheduleVibeCheck(){
   let force = false;
   try{ force = new URLSearchParams(location.search).has('vibecheck'); }catch(e){}
+  try{ if (!force && localStorage.getItem(VIBE_OFF_KEY) === '1') return; }catch(e){}
   if (!force){
     const v = vibeState();
     const today = new Date().toDateString();
@@ -18516,6 +18518,8 @@ function scheduleVibeCheck(){
 window.ebblessVibeCheck = function(){ openVibeCheck(true); };
 window.ebblessVibeCheck.state = function(){ return lsGet(VIBE_KEY, null); };
 window.ebblessVibeCheck.reset = function(){ lsDel(VIBE_KEY); };
+window.ebblessVibeCheck.off = function(){ try{ localStorage.setItem(VIBE_OFF_KEY, '1'); }catch(e){} };
+window.ebblessVibeCheck.on = function(){ try{ localStorage.removeItem(VIBE_OFF_KEY); }catch(e){} };
 
 /* ---------- BETA ANALYTICS ----------
    Anonymous usage counts for beta testers (README "Beta analytics"): sessions,
