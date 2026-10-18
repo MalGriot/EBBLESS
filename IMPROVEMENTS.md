@@ -10170,12 +10170,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a 3-step first-open guide under the button (drag to Applications; right-click, Open, Open; newer macOS: System Settings > Privacy & Security > Open Anyway). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Parked 2026-10-17 by owner (needs an Apple account/signing); the first-open guide stays. Revisit when an Apple Developer account exists.
 
 ### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #515. Build the desktop app for Intel Macs and Windows PC.
 - **Touches:**
 - **Branch:** 
-- **Notes:** Synced from Geethub #515. 
+- **Notes:** Synced from Geethub #515.  Intel Mac already covered: desktop/package.json mac dmg target has arch arm64 and x64, and download.js picks the Intel dmg for Chromium Macs reporting x86 (Safari defaults to Apple Silicon, with an 'Intel Mac?' link). Windows half: see #565 (target configured, installer not built). Not verified on an Intel Mac or Windows.
 
 ### app-download-link: Download link for the Mac app (GitHub Release linked from the site) (Geethub #514)
 - **Status:** merged
@@ -10491,20 +10491,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #541. Ad-related group with #527-#529, #539, #540. Ad avoidance is core (#523 shipped); must stay within terms the user accepts.
 
 ### yt-ad-blocking-more: More on ad blocking YouTube (compliantly) (Geethub #540)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** medium
 - **Description:** Idea, Geethub #540. Further YouTube ad handling, compliantly.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #540. Ad group, see #541.
+- **Notes:** Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** medium
 - **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #539. Ad group, see #541.
+- **Notes:** Synced from Geethub #539. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
 
 ### mobile-swipe-down-close: Mobile: swiping down from a window should close it (Geethub #538)
 - **Status:** merged
@@ -10582,28 +10582,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499). Fixed: every cursor shape now has a dark outer edge and light inner edge, so it shows on any color. Cache v265.
 
 ### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** medium
 - **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #529. Ad group, see #541.
+- **Notes:** Synced from Geethub #529. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
 
 ### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** medium
 - **Description:** Idea, Geethub #528. Investigate and implement.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #528. Ad group, see #541.
+- **Notes:** Synced from Geethub #528. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
 
 ### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** medium
 - **Description:** Idea, Geethub #527. Investigate and implement.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #527. Ad group, see #541.
+- **Notes:** Synced from Geethub #527. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
 
 ### miniplayer-shape-per-skin: Mini-player shape changes with different skins (Geethub #526)
 - **Status:** merged
@@ -10710,12 +10710,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #556.
 
 ### youtube-ads-tip-when-the-skip: youtube ads tip: when the skip button appears, you don't have to click it, all you have to do is refresh the page and it plays (Geethub #557)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** low
 - **Description:** Idea, Geethub #557. medium
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #557.
+- **Notes:** Synced from Geethub #557. Investigated, not built: refresh-instead-of-skip means reloading the video (loadVideoById at the same spot) when an ad is detected, hoping YouTube serves no ad the second time. It is compliant (a normal reload, nothing blocked or hidden) but cannot be shown to work without real ads on a real device, and the existing dodge (swap to preloaded next track) is already faster than a reload. Possible safe experiment: in skipHeldAd/maybeDodgeAd when adDodgeTarget is -1 (no standby to swap to), try one reload of the same video before holding. Needs owner testing with the ad test playlist (reference_ad_test_playlist) to see whether the second load is ad-free.
 
 ### bug-what-do-we-do-about-ads: what do we do about ads in the middle of the song? (Geethub #558)
 - **Status:** merged
@@ -10750,12 +10750,12 @@ Add entries in this shape:
   Round 9 (2026-10-17, cache v300, not deployed): Settings steps reordered so Restore a setting to its original value (Reset) is last: open Settings, explore, change a setting, customize, adjust the volume, restore. The card still shows the first unfinished step, so doing Reset early does not skip the others. Syntax-checked only, not opened in the preview.
 
 ### playing-the-next-song-in-the: playing the next song in the queue in the background to make sure the ad is played out could work also for preventing users from waiting (Geethub #561)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #561. medium
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #561.
+- **Notes:** Synced from Geethub #561. Already implemented by the standby-deck system, no new code: schedulePreload loads the next queue track into the second deck (muted, ready), and the ad dodge (#523/#558, AD_DODGE_AFTER_MS 8s for pre-roll, AD_SKIP_AFTER_MS 2.5s for mid-roll) swaps it in while the skipped song sits out its ad muted on the other deck, then plays right after, ad-free. The listener does not wait on the ad. Gaps not addressed: dodge is off when routeLocked (cast), when there is no next track, and when the next track is not yet confirmed. Proposed to close as covered unless the owner saw a case that waits; ask for the repro.
 
 ### we-should-make-an-apk-for: we should make an apk for google play store asap to get more testers (Geethub #562)
 - **Status:** dropped
@@ -10782,12 +10782,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #564. Built 2026-10-17 in desktop/main.js (Mac app 1.0.7): the 1.0.4 fix (skipTransformProcessType) did not hold, so the mini window now re-pins on every show/focus/blur/move, on main-window hide/show/restore, on app activate, and a 1.5s check restores the all-desktops flag and calls app.dock.show() if the Dock icon is hidden. Not run on a Mac; needs a new DMG release and user confirmation. index.html download links still point at v1.0.6.
 
 ### there-should-be-a-desktop-download: there should be a desktop download for pc (Geethub #565)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #565. medium
 - **Touches:** tbd.
 - **Branch:** agent/mac-download-flow
-- **Notes:** Synced from Geethub #565. Download button side is done (Windows shows "coming soon"). Blocked: no Windows build. Needs electron-builder win target plus a Windows machine or CI to build and publish the installer; then add the .exe case in welcome/download.js.
+- **Notes:** Synced from Geethub #565. Download button side is done (Windows shows "coming soon"). Blocked: no Windows build. Needs electron-builder win target plus a Windows machine or CI to build and publish the installer; then add the .exe case in welcome/download.js. Built (agent/q-desktop-ads, 2026-10-18): desktop/package.json gets a `win` target (NSIS, x64, one-click per-user, icon from brand) and `npm run dist:win`; welcome/download.js now looks through the newest releases for an .exe and, if found, shows 'Download EBBLESS for Windows' with a SmartScreen note (More info, Run anyway); with no .exe it keeps 'Windows app: coming soon'. Verified: JSON and JS parse. NOT verified: no Windows installer built or run (needs a Windows machine or CI; cross-building NSIS from a Mac is possible with electron-builder but untested here), desktop/main.js untested on Windows (mini window pinning code is Mac-only but guarded by app.dock checks; the transparent frameless mini window behaves differently on Windows). To ship: build on Windows, attach EBBLESS-Setup-<version>.exe to a GitHub release. Not code-signed, so SmartScreen warns.
 
 ### bug-when-you-try-to-install-the: when you try to install the app from the welcome/beta page, the link takes you to github. that's too complicated. one click, detect the OS and processor, download and install the appropriate app (Geethub #566)
 - **Status:** merged
@@ -10838,12 +10838,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #571.
 
 ### reverse-engineer-youtube-and-find-out: reverse engineer youtube and find out where the ads are coming from so we can stop them (Geethub #572)
-- **Status:** ready
+- **Status:** draft
 - **Priority:** low
 - **Description:** Idea, Geethub #572. medium
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #572.
+- **Notes:** Synced from Geethub #572. Findings: ads come from YouTube's embedded player (cross-origin iframe, ad pods injected server side into the same stream: pre-roll, mid-roll, and a per-video ad flag), so the page cannot see or remove them. Only observable signals (no duration, clock not moving, frozen) are used by deckAdReason today. Removing or blocking them would break YouTube API terms; stay with detect and route around (dodge, alt-link #624, SoundCloud/other sources).
 
 ### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
 - **Status:** merged

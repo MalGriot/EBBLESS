@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "start:local": "EBBLESS_URL=http://localhost:8934/?mal electron .",
-    "dist": "electron-builder --mac"
+    "dist": "electron-builder --mac",
+    "dist:win": "electron-builder --win --x64"
   },
   "devDependencies": {
     "electron": "33.2.1",
@@ -35,6 +36,22 @@
         }
       ],
       "identity": null
+    },
+    "win": {
+      "icon": "../brand/assets/icons/icon-512.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "EBBLESS-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
     },
     "directories": {
       "output": "dist.noindex"

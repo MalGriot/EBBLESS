@@ -29,7 +29,21 @@
   }
 
   if (os === 'android') return set(APK, 'Download the Android app');
-  if (os === 'windows') return set('https://github.com/' + REPO + '/releases', 'Windows app: coming soon');
+  if (os === 'windows') {
+    // #565: use the newest release that has a Windows installer; until one is published, keep "coming soon"
+    var winNote = '<strong>Windows may warn you the first time (the app is not code-signed yet):</strong> click <em>More info</em>, then <em>Run anyway</em>.';
+    set('https://github.com/' + REPO + '/releases', 'Windows app: coming soon');
+    fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=10').then(function (r) { return r.json(); }).then(function (rels) {
+      var exe;
+      rels.some(function (r) {
+        if (r.draft) return false;
+        exe = r.assets.filter(function (a) { return /\.exe$/.test(a.name); })[0];
+        return !!exe;
+      });
+      if (exe) set(exe.browser_download_url, 'Download EBBLESS for Windows', winNote);
+    }).catch(function () {});
+    return;
+  }
 
   // Mac: Apple Silicon or Intel? Chromium can say; Safari cannot, so assume Apple Silicon.
   var archP = (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues)
