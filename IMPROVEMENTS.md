@@ -11072,7 +11072,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up (reverted): an attempt to close the main window on apps without hideMain QUIT the whole app for the owner, so it was removed. M only opens the mini; the main window minimizes only on app 1.0.8+ (hideMain). Needs the 1.0.8/1.0.9 Mac app to be built and released. Released in Mac app 1.0.10 (GitHub release v1.0.10, 2026-10-18); closed.
 
 ### library-changes: library changes (Geethub #607)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #607. default order should be "most recent" "new playlist" should just be a plus sign "view" should just be an icon inline with the section pills (resize the pills to be more compact) search and new playlist should be in line with library title thumbs should be moved up closer to section title section title should be moved down further away from pills
 - **Touches:** `index.html` library toolbar (`#newPlaylistBtn`, `.lib-pillrow`, `#libSortBtn`), `sortLibraryIds`, `getLibrarySort`.
@@ -11090,7 +11090,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #639. No code change: on phones (under 860px) the top-bar search field no longer exists since #608 (it is the Search button in the bottom nav, and the Search tab's bar already spans the full width, checked at 375px). Only onboarding still shows the top-bar field, at its own size. If the owner meant something else (e.g. the field on a tablet or the onboarding step), say so.
 
 ### flip-swirl-video-vertically: swirl video flipped vertically (Geethub #642)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #642. swirl video should be flipped vertically.
 - **Touches:** `.lib-card[data-pl-id="blend"]` video transform.
@@ -11098,7 +11098,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #642. SwiiiRrrLL's looping clip (library tile) is flipped vertically with `scale(1.06,-1.06)`, keeping the existing centering nudge. Applies to the tile only (it is the only place the clip plays). Verified visually in the browser preview.
 
 ### miniplayer-thumb-left-heart-right: miniplayer: thumb on left, heart on right (Geethub #643)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #643. miniplayer: thumb on left and heart on right, and remove black box from behind the title and artist.
 - **Touches:** `MINI_PLAYER_STYLE` (pill shape, LP/cassette/square meta).
@@ -11106,7 +11106,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #643. Assumption: the Mac/PiP mini player (the footer bar on phones already has art left). Pill shape: art stays on the left, the heart (and thumbs-down) is always on the right, vertically centered, with no dark box (text area padded so nothing overlaps); fullscreen button hidden there. LP, cassette and square: the dark box that appeared behind title and artist on hover is removed (text keeps its soft shadow). Not verified: needs the Electron/PiP window, which the browser preview cannot open.
 
 ### cursor-change-over-miniplayer: cursor change over the miniplayer (Geethub #644)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #644. cursor change over the miniplayer.
 - **Touches:** `MINI_PLAYER_STYLE`.
@@ -11122,7 +11122,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #645. Dropped by the owner (2026-10-18): the raised swoop read as spikes and is off brand (EBBLESS is smooth and flowy). The build was reverted; the original faint swoops (#626) are untouched.
 
 ### nothing-playing-logo-just-the-e: nothing playing: bouncing logo is just the E, spinning (Geethub #647)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #647. nothing playing yet: the bouncing ebbless logo should just be the E, slowly spinning counter-clockwise.
 - **Touches:** `.art-dvd` CSS and markup (#613).
@@ -11130,7 +11130,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #647. The bouncing wordmark is now the E mark (`brand/assets/mark-white.png`, a 16%-wide square), no spin (removed at the owner's request). The box is cropped to the E's own outline (the PNG has a 6px transparent margin; the image is offset inside the box) so the glyph itself touches the art's walls. It travels in straight lines at a constant speed and bounces off the art's edges (x and y both linear, alternating, 9s and 13.8s), no wave (removed at the owner's request). Trail: six ghost E's follow the same path 1s apart each, in the color logo's colors (blue, cyan, mint, gold, orange, rose) fading out; they are the same E shape as a CSS mask, run on the same two transform animations with staggered delays, hidden (not running) under reduced motion and paused with the lead E. Also plays in the fullscreen player (`#flow-layer`, phone/tablet and desktop immersive): the same E markup is cloned into `#flowArtWrap` at startup and runs only while that layer is open (hidden means stopped). The desktop panel fullscreen (`desktop-fs`) reuses the main player art, so it already plays. Not covered: the spinning-record and cassette art styles, which don't show the E in the normal player either. Measured over a full cycle: the glyph reaches all four walls (within 0.3px) and never overlaps. Path checked by sampling positions: straight diagonals, reflects at the edges. Paused under the fullscreen player as before. Reduced motion shows it still. Assumption: mark-white.png is the E.
 
 ### expanded-library-more-per-row: expanded library: same thumb size, more per row (Geethub #649)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #649. when the library expands, the thumbs should stay the same size and fill more into the row; list view gets 2 columns.
 - **Touches:** `body.split-desktop.lib-wide` grid CSS.
@@ -11138,7 +11138,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #649. Responsive: any single-column library (phone, tablet, narrow desktop window, under the 3-column split layout) uses `auto-fill` with 140px thumbs (92px in small grid), so it is 2 per row on a 375px phone, 4 at 768px, 5 at 1100px. The split-desktop library pane is a fixed 340px column, so it stays 2/3 per row until the expand button widens it; expanded it also uses `auto-fill` (130px / 84px minimum): 6 per row at 1900px. List view is 2 columns when expanded. Filter pills stop stretching when expanded. Verified at 375, 768, 1100, 1300 and 1900px.
 
 ### cymatics-controls-hover-center-heart-corner: cymatics controls: hover only, centered, heart bottom right (Geethub #650)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #650. cymatics controls show on hover only; they should be centered; the heart should be in the bottom right corner.
 - **Touches:** `MINI_PLAYER_STYLE` cymatics rules.
