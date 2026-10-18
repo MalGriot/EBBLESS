@@ -27248,6 +27248,8 @@ const MINI_PLAYER_STYLE = `
   #mpLogo{cursor:pointer}
   #mpArt{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
   #mpArt[src=""],.mpq-row img[src=""]{visibility:hidden}
+  /* the cover is an image: dragging it starts the browser's own image drag, which cancels the pointer and kills the hand-drag of the window */
+  img{-webkit-user-drag:none;user-select:none}
   /* art styles (#330/#331): same three looks as the main player, kept light */
   #mpArtWrap{container-type:size}
   #mpRecord,#mpTape{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
@@ -28038,6 +28040,7 @@ function buildMiniPlayerDOM(win){
     if (fwd.defaultPrevented) e.preventDefault();
     updateMiniPlayerUI();
   });
+  doc.addEventListener('dragstart', (e) => e.preventDefault());
   win.addEventListener('resize', onMiniPlayerResize);
   // Top-edge click shrinks/grows the whole window (#269). Chrome only lets
   // script resize a PiP window during a gesture, so it has to be a click.
