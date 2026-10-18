@@ -11069,7 +11069,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #606. 
 - **Touches:** tbd.
 - **Branch:** agent/mini-batch-2
-- **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up (reverted): an attempt to close the main window on apps without hideMain QUIT the whole app for the owner, so it was removed. M only opens the mini; the main window minimizes only on app 1.0.8+ (hideMain). Needs the 1.0.8/1.0.9 Mac app to be built and released.
+- **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up (reverted): an attempt to close the main window on apps without hideMain QUIT the whole app for the owner, so it was removed. M only opens the mini; the main window minimizes only on app 1.0.8+ (hideMain). Needs the 1.0.8/1.0.9 Mac app to be built and released. Released in Mac app 1.0.10 (GitHub release v1.0.10, 2026-10-18); closed.
 
 ### library-changes: library changes (Geethub #607)
 - **Status:** draft
