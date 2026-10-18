@@ -27137,7 +27137,12 @@ const MINI_DESKTOP_STYLE = `
   /* only the buttons take clicks; everything else on the plate (title included) lets the click through to open the app */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{pointer-events:none}
   body.mp-shape-cymatics.cym-hover #mpControls button,body.mp-shape-cymatics.cym-hover #mpHead button{pointer-events:auto}
-  body.mp-shape-cymatics #mpControls button:not(#mpPlay),body.mp-shape-cymatics #mpHead .mp-tool{color:var(--accent)!important} /* previous/next (and the 15s skips) in the app's UI color */
+  /* previous/next (and the 15s skips) are round like play: the app's UI color with its readable glyph color */
+  body.mp-shape-cymatics #mpControls button:not(#mpPlay){background:var(--mp-play-bg,var(--accent))!important;color:var(--mp-play-fg,#151107)!important;width:30px;height:30px}
+  body.mp-shape-cymatics #mpControls button:not(#mpPlay) svg{filter:none}
+  /* heart and thumbs-down: a round white button until pressed, then the UI color like play */
+  body.mp-shape-cymatics #mpHead .mp-tool{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.22);color:#fff}
+  body.mp-shape-cymatics #mpHead .mp-tool.is-liked{background:var(--mp-play-bg,var(--accent));color:var(--mp-play-fg,#151107)}
   body.mp-shape-cymatics #mpMeta{text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5)}
   body.mp-shape-cymatics #mpHead svg,body.mp-shape-cymatics #mpControls button:not(#mpPlay) svg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
   body.mp-shape-cymatics #mpMeta{bottom:13%;width:62%}
