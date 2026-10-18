@@ -27619,14 +27619,13 @@ function requestMiniWindow(width, height){
 }
 const MP_SHAPES = ['card', 'pill', 'disc', 'tape', 'square', 'cymatics', 'float'];
 const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'LP (disc)', tape: 'Cassette (tape)', square: 'Square', cymatics: 'Cymatics', float: 'Float (no frame)' };
-// #526: with no shape picked by hand the shape follows the art style (record = disc, cassette = tape, otherwise card)
-const MP_SHAPE_BY_ART = { record: 'disc', cassette: 'tape' };
-// The mini player is in whatever mode the main player is in: Visualizer = Cymatics, Art = the art style's shape (default card,
-// LP disc, cassette tape). A shape picked by hand holds only while the main player's mode stays what it was when picked.
+// The mini player is in whatever mode the main player is in: Visualizer = Cymatics, Art = the card (its thumbnail is the cover, the
+// spinning LP or the cassette, per the art style). Disc and Tape are only picked by hand (right-click menu), and a pick holds only
+// while the main player's mode and art style stay what they were when picked.
 function mpModeSig(){ return visualMode + ':' + artStyle; }
 function mpSavedShape(){ const p = lsGet(LS_MINI_PLAYER, null) || {}; return MP_SHAPES.includes(p.shape) && p.shapeFor === mpModeSig() ? p.shape : null; }
 function mpPickShape(shape){ saveMiniPlayerPrefs({ shape, shapeFor: shape ? mpModeSig() : null }); }
-function mpDesktopShape(){ return mpSavedShape() || (visualMode === 'viz' ? 'cymatics' : MP_SHAPE_BY_ART[artStyle]) || 'card'; }
+function mpDesktopShape(){ return mpSavedShape() || (visualMode === 'viz' ? 'cymatics' : 'card'); }
 // Cymatics is the square's outline and hover controls with its own art (see mpCymSync), so it also carries mp-shape-disc
 function mpSetShapeClasses(body, shape){
   MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape || (shape === 'cymatics' && x === 'square')));
@@ -28057,7 +28056,7 @@ function wireMiniDesktop(win){
   const openMenu = (x, y) => {
     const cur = mpSavedShape() || 'auto';
     menu.innerHTML = '<div class="mpm-label">Shape</div>' +
-      '<button type="button" data-shape="auto" class="' + (cur === 'auto' ? 'is-active' : '') + '">Follow art style</button>' +
+      '<button type="button" data-shape="auto" class="' + (cur === 'auto' ? 'is-active' : '') + '">Follow player mode</button>' +
       MP_SHAPES.map(x => '<button type="button" data-shape="' + x + '" class="' + (x === cur ? 'is-active' : '') + '">' + MP_SHAPE_LABEL[x] + '</button>').join('') +
       '<div class="mpm-label">Window</div><button type="button" data-act="app">Open EBBLESS</button><button type="button" data-act="close">Close mini player</button>';
     menu.hidden = false;
