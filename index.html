@@ -1348,18 +1348,17 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
    the outer box slides down the art's height (1150% of its own height = 92% of the art) and the image across
    its width (150% of its own width = 60% of the art), at different speeds so the path wanders. Transform only;
    shown (and so running) only while the empty art is on screen, paused under the fullscreen player / Find music. */
-.art-dvd{display:none;position:absolute;left:2%;top:2%;width:16%;aspect-ratio:1;pointer-events:none;z-index:1}   /* #647: just the E mark (square), 16% of the art */
-.art-dvd-x{display:block;width:100%;height:100%}
-.art-dvd img{display:block;width:100%;height:100%;opacity:.85}
+.art-dvd{display:none;position:absolute;left:0;top:1.4%;width:16%;aspect-ratio:207/188;pointer-events:none;z-index:1}   /* #647: the box is the E's own outline (the PNG has a 6px margin all round, the image is shifted so the glyph fills the box edge to edge), so it touches the art's walls; top 1.4% leaves room for the wave */
+.art-dvd-x{display:block;position:relative;width:100%;height:100%}
+.art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{display:block;animation:dvd-y 13.8s linear infinite alternate;will-change:transform}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x{animation:dvd-x 9s linear infinite alternate;will-change:transform}
-.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:dvd-spin 30s linear infinite,dvd-bob 2.6s ease-in-out infinite alternate;will-change:rotate,translate}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:dvd-bob 2.6s ease-in-out infinite alternate;will-change:translate}
 body:has(#flow-layer.is-open) .art-dvd,body:has(#flow-layer.is-open) .art-dvd-x,body:has(#flow-layer.is-open) .art-dvd img,body:has(#findMusic:not([hidden])) .art-dvd,body:has(#findMusic:not([hidden])) .art-dvd-x,body:has(#findMusic:not([hidden])) .art-dvd img,body:has(#musicMap:not([hidden])) .art-dvd,body:has(#musicMap:not([hidden])) .art-dvd-x,body:has(#musicMap:not([hidden])) .art-dvd img{animation-play-state:paused}
 /* #647: x and y both move at a steady speed (linear, alternate), so the E travels in straight lines and bounces off the art's edges at a constant pace.
-   The spin and the gentle up-and-down wave sit on the image itself, a level inside, so they never bend the path (individual rotate/translate properties). */
-@keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(500%)}}
-@keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(500%)}}
-@keyframes dvd-spin{to{rotate:-360deg}}   /* slowly counter-clockwise */
+   The gentle up-and-down wave sits on the image itself, a level inside, so it never bends the path (individual translate property). Travel = 100% of the art minus the box (and, vertically, minus the wave's room). */
+@keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(569%)}}
+@keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(525%)}}
 @keyframes dvd-bob{from{translate:0 -9%}to{translate:0 9%}}
 @media (prefers-reduced-motion:reduce){
   .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd,
