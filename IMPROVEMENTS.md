@@ -11327,4 +11327,20 @@ Add entries in this shape:
 - **Branch:** agent/paste-song-list
 - **Notes:** Matcher returns something for almost any text, so nonsense lines still get a video; the strip only lists lines with no result at all.
 
+### podcast-intro-ad: podcasts play a ~20s ad at the start (Geethub #648)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #648. Some podcasts (No Sleep) play an ad of about 20 seconds before the episode, in Hindi for the owner. EBBLESS should skip it.
+- **Touches:** index.html (podAdScan, tap-to-skip ranges).
+- **Branch:** agent/q-bugs
+- **Notes:** Built: when an episode's audio is 8 to 75 seconds longer than the length its feed lists, the extra is treated as a stitched-in ad on the front and the existing "Ad" skip button is offered over 0:00 to that length. Assumptions: the ad sits at the start (as reported) and the feed length excludes it; the button is tap-to-skip like the other ad ranges, not silent. Works in any language since it uses length, not captions. Verified: page loads with no script errors. Not verified: a real No Sleep episode (needs the owner's phone or location to be served the ad); sw.js cache not bumped (do at deploy).
+
+### back-never-leaves-app: back button must never let you leave the app (Geethub #638)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #638. Back from the player used to exit the app; it should only ever step back inside it.
+- **Touches:** index.html (history buffer and popstate handler, near isAwayFromRest).
+- **Branch:** agent/q-bugs
+- **Notes:** Built: one history entry stays buffered at all times, including at rest, so a back press at the player is swallowed and the entry re-pushed. Steps inside the app (artist page to playlist, library/settings/queue to player) are unchanged, one layer per press. Verified in a desktop browser: back at rest twice stays on the app and keeps the buffered state. Not verified: Android hardware/gesture back in the native app (it may want back-at-player to minimise; users leave via home), iPhone out of scope.
+
 <!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->
