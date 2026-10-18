@@ -11072,12 +11072,78 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up (reverted): an attempt to close the main window on apps without hideMain QUIT the whole app for the owner, so it was removed. M only opens the mini; the main window minimizes only on app 1.0.8+ (hideMain). Needs the 1.0.8/1.0.9 Mac app to be built and released. Released in Mac app 1.0.10 (GitHub release v1.0.10, 2026-10-18); closed.
 
 ### library-changes: library changes (Geethub #607)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #607. default order should be "most recent" "new playlist" should just be a plus sign "view" should just be an icon inline with the section pills (resize the pills to be more compact) search and new playlist should be in line with library title thumbs should be moved up closer to section title section title should be moved down further away from pills
-- **Touches:** tbd.
+- **Touches:** `index.html` library toolbar (`#newPlaylistBtn`, `.lib-pillrow`, `#libSortBtn`), `sortLibraryIds`, `getLibrarySort`.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #607. Built: default sort is a new "Most recent" (last played, never-played keep their order; saved sorts are kept; it is the first item in View). "+ New playlist" is a plus icon button. "View" is a sliders icon at the end of the pill row (`.lib-pillrow`, beside the pills, so it stays when pills are hidden); pills are 28px tall (32px on phones, hit area still 44px). Desktop: search, plus and expand sit on the same line as the "Library" title (grid on `.lib-top`; phones hide the title, unchanged). Section title sits 18px below the pills; the grid is 8px under it (was 14px). Assumption: "most recent" = last played, not date added (no added-date is stored). Verified at 1280/1500px desktop and 375px phone in the browser preview, no console errors or [gpu-watchdog]. Not verified: a real phone or the Android WebView.
+
+
+
+### mobile-search-bar-fills-top-row: mobile search bar fills the whole top row (Geethub #639)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #639. the search bar on mobile needs to take up the whole top that's left to take.
+- **Touches:** none (no code change).
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #639. No code change: on phones (under 860px) the top-bar search field no longer exists since #608 (it is the Search button in the bottom nav, and the Search tab's bar already spans the full width, checked at 375px). Only onboarding still shows the top-bar field, at its own size. If the owner meant something else (e.g. the field on a tablet or the onboarding step), say so.
+
+### flip-swirl-video-vertically: swirl video flipped vertically (Geethub #642)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea Geethub #642. swirl video should be flipped vertically.
+- **Touches:** `.lib-card[data-pl-id="blend"]` video transform.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #642. SwiiiRrrLL's looping clip (library tile) is flipped vertically with `scale(1.06,-1.06)`, keeping the existing centering nudge. Applies to the tile only (it is the only place the clip plays). Verified visually in the browser preview.
+
+### miniplayer-thumb-left-heart-right: miniplayer: thumb on left, heart on right (Geethub #643)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea Geethub #643. miniplayer: thumb on left and heart on right, and remove black box from behind the title and artist.
+- **Touches:** `MINI_PLAYER_STYLE` (pill shape, LP/cassette/square meta).
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #643. Assumption: the Mac/PiP mini player (the footer bar on phones already has art left). Pill shape: art stays on the left, the heart (and thumbs-down) is always on the right, vertically centered, with no dark box (text area padded so nothing overlaps); fullscreen button hidden there. LP, cassette and square: the dark box that appeared behind title and artist on hover is removed (text keeps its soft shadow). Not verified: needs the Electron/PiP window, which the browser preview cannot open.
+
+### cursor-change-over-miniplayer: cursor change over the miniplayer (Geethub #644)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea Geethub #644. cursor change over the miniplayer.
+- **Touches:** `MINI_PLAYER_STYLE`.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #644. Assumption: the Mac/PiP mini window. The cursor is a grab hand over the mini (grabbing while pressed) and a pointer over the title/artist (which open the app). Electron may keep the system arrow over window-drag regions; if so the mini needs `-webkit-app-region:no-drag` on more areas. Not verified in the Mac app.
+
+### window-corner-swoops-raised: window corner swoops raised (Geethub #645)
+- **Status:** dropped
+- **Priority:** medium
+- **Description:** Idea Geethub #645. the window corner swoops: it should be a raised swoop, the shape of the window should swoop up (same color, no line). Library: only the right corner. Queue: only the left corner.
+- **Touches:** `#queue-panel`, `#libpl-panel`, `#hist-panel`, `#view-library` `::before`.
 - **Branch:** 
-- **Notes:** Synced from Geethub #607.
+- **Notes:** Synced from Geethub #645. Dropped by the owner (2026-10-18): the raised swoop read as spikes and is off brand (EBBLESS is smooth and flowy). The build was reverted; the original faint swoops (#626) are untouched.
+
+### nothing-playing-logo-just-the-e: nothing playing: bouncing logo is just the E, spinning (Geethub #647)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea Geethub #647. nothing playing yet: the bouncing ebbless logo should just be the E, slowly spinning counter-clockwise.
+- **Touches:** `.art-dvd` CSS and markup (#613).
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #647. The bouncing wordmark is now the E mark (`brand/assets/mark-white.png`, a 16%-wide square), no spin (removed at the owner's request). The box is cropped to the E's own outline (the PNG has a 6px transparent margin; the image is offset inside the box) so the glyph itself touches the art's walls. It travels in straight lines at a constant speed and bounces off the art's edges (x and y both linear, alternating, 9s and 13.8s), no wave (removed at the owner's request). Trail: six ghost E's follow the same path 1s apart each, in the color logo's colors (blue, cyan, mint, gold, orange, rose) fading out; they are the same E shape as a CSS mask, run on the same two transform animations with staggered delays, hidden (not running) under reduced motion and paused with the lead E. Also plays in the fullscreen player (`#flow-layer`, phone/tablet and desktop immersive): the same E markup is cloned into `#flowArtWrap` at startup and runs only while that layer is open (hidden means stopped). The desktop panel fullscreen (`desktop-fs`) reuses the main player art, so it already plays. Not covered: the spinning-record and cassette art styles, which don't show the E in the normal player either. Measured over a full cycle: the glyph reaches all four walls (within 0.3px) and never overlaps. Path checked by sampling positions: straight diagonals, reflects at the edges. Paused under the fullscreen player as before. Reduced motion shows it still. Assumption: mark-white.png is the E.
+
+### expanded-library-more-per-row: expanded library: same thumb size, more per row (Geethub #649)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea Geethub #649. when the library expands, the thumbs should stay the same size and fill more into the row; list view gets 2 columns.
+- **Touches:** `body.split-desktop.lib-wide` grid CSS.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #649. Responsive: any single-column library (phone, tablet, narrow desktop window, under the 3-column split layout) uses `auto-fill` with 140px thumbs (92px in small grid), so it is 2 per row on a 375px phone, 4 at 768px, 5 at 1100px. The split-desktop library pane is a fixed 340px column, so it stays 2/3 per row until the expand button widens it; expanded it also uses `auto-fill` (130px / 84px minimum): 6 per row at 1900px. List view is 2 columns when expanded. Filter pills stop stretching when expanded. Verified at 375, 768, 1100, 1300 and 1900px.
+
+### cymatics-controls-hover-center-heart-corner: cymatics controls: hover only, centered, heart bottom right (Geethub #650)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea Geethub #650. cymatics controls show on hover only; they should be centered; the heart should be in the bottom right corner.
+- **Touches:** `MINI_PLAYER_STYLE` cymatics rules.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #650. The controls were already hover-only (`cym-hover`) and centered, so those are unchanged. The heart (and thumbs-down) moved from the top center to the bottom right corner of the plate (9% in); the fullscreen button is hidden in this shape. Checked by rendering the real mini-player markup and styles in a test page; not verified in the Mac window itself.
 
 ### mobile-seacrh-bar-should-become-a-button-i: mobile: seacrh bar should become a button in the bottom nav (Geethub #608)
 - **Status:** merged
@@ -11334,5 +11400,20 @@ Add entries in this shape:
 - **Touches:** index.html (maybeDodgeAd, skipHeldAd, adTryAlternate, deckAdReason 'not-moving').
 - **Branch:** 
 - **Notes:** Likely cause: the strict 'not-moving' signal (clock not yet proven moving) reads as an ad on a slow phone start, and maybeDodgeAd counts any doubt after 8s (AD_DODGE_AFTER_MS). Suggested fix: only run adTryAlternate on video-level signals (duration, short, video-id) or when the song is still not moving after a longer wait; keep the dodge. Playback issue: needs area/type/platform labels and a classification comment when a GitHub issue is opened (none opened yet). Related #561, #557, #624.
+### podcast-intro-ad: podcasts play a ~20s ad at the start (Geethub #648)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #648. Some podcasts (No Sleep) play an ad of about 20 seconds before the episode, in Hindi for the owner. EBBLESS should skip it.
+- **Touches:** index.html (podAdScan, tap-to-skip ranges).
+- **Branch:** agent/q-bugs
+- **Notes:** Built: when an episode's audio is 8 to 75 seconds longer than the length its feed lists, the extra is treated as a stitched-in ad on the front and the existing "Ad" skip button is offered over 0:00 to that length. Assumptions: the ad sits at the start (as reported) and the feed length excludes it; the button is tap-to-skip like the other ad ranges, not silent. Works in any language since it uses length, not captions. Verified: page loads with no script errors. Not verified: a real No Sleep episode (needs the owner's phone or location to be served the ad); sw.js cache not bumped (do at deploy).
+
+### back-never-leaves-app: back button must never let you leave the app (Geethub #638)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #638. Back from the player used to exit the app; it should only ever step back inside it.
+- **Touches:** index.html (history buffer and popstate handler, near isAwayFromRest).
+- **Branch:** agent/q-bugs
+- **Notes:** Built: one history entry stays buffered at all times, including at rest, so a back press at the player is swallowed and the entry re-pushed. Steps inside the app (artist page to playlist, library/settings/queue to player) are unchanged, one layer per press. Verified in a desktop browser: back at rest twice stays on the app and keeps the buffered state. Not verified: Android hardware/gesture back in the native app (it may want back-at-player to minimise; users leave via home), iPhone out of scope.
 
 <!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->

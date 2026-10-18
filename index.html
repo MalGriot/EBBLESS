@@ -724,8 +724,20 @@ body.onb-active .paste-guide{display:none}
 .lib-filter-btn.is-active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}   /* lit pills follow the UI color (#495) */
 .lib-head-actions{flex:1;min-width:0}
 .lib-head-actions #libSearchToggle{margin-left:auto}
-.lib-view-btn{display:inline-flex;align-items:center;gap:2px}
-.lib-view-btn svg{width:16px;height:16px;margin-right:-4px}
+.lib-view-btn svg{width:16px;height:16px}
+/* #607: pills and the View icon share one row; compact pills; title sits lower, thumbs tighter under it */
+.lib-pillrow{display:flex;align-items:center;gap:6px;margin-top:12px}
+.lib-pillrow .lib-filter{flex:1 1 auto;min-width:0;margin-top:0}
+.lib-pillrow .lib-sort{flex:none}
+.lib-filter-btn{height:28px;padding:0 clamp(3px,1.8cqw,9px)}
+#libBarLabel{margin-top:18px;margin-bottom:2px}
+#libraryGrid{margin-top:8px}
+@media (min-width:860px){
+  .lib-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .lib-top>*{grid-column:1/-1}
+  .lib-top>.queue-head{grid-column:1;grid-row:1;padding-bottom:0}
+  .lib-top>.section-label-row{grid-column:2;grid-row:1;align-self:center}
+}
 .lib-menu-head{padding:8px 10px 4px;font-size:11px;font-weight:600;color:var(--faint-2);letter-spacing:.02em}
 .lib-menu-head ~ .lib-menu-head{margin-top:4px;border-top:1px solid var(--border);padding-top:10px}
 .lib-view-ico{width:15px;height:15px;flex:none}
@@ -735,9 +747,10 @@ body.onb-active .paste-guide{display:none}
   .lib-tb-btn{min-height:44px}
   #libSearchToggle{width:44px;height:44px;border-radius:12px}
   #libSearchToggle svg{width:18px;height:18px}
-  .lib-filter-btn{height:36px;text-align:center}   /* #495: tighter pills so all five share one row; they wrap only on very narrow screens */
-  .lib-filter-btn::after{content:"";position:absolute;inset:-5px 0}
+  .lib-filter-btn{height:32px;text-align:center}   /* #495: tighter pills so all five share one row; they wrap only on very narrow screens */
+  .lib-filter-btn::after{content:"";position:absolute;inset:-6px 0}
   .lib-filter{padding:5px 0;gap:6px}
+  .lib-pillrow .lib-sort-btn{width:36px;height:36px}
   .lib-sort-menu .art-style-opt{min-height:44px}
 }
 /* Geethub #577 (phones): no "Library" title, filter pills on top, list rows show
@@ -745,7 +758,7 @@ body.onb-active .paste-guide{display:none}
 @media (max-width:859.98px){
   body:not(.onb-stage-library) #libraryListWrap .lib-top .queue-head{display:none}
   #libraryListWrap .lib-top{display:flex;flex-direction:column}
-  #libraryListWrap .lib-top .lib-filter{order:-1;margin-top:0}
+  #libraryListWrap .lib-top .lib-pillrow{order:-1;margin-top:0}
   .lib-grid.is-list .lib-card .row-actions .row-play,.lib-grid.is-list .lib-card .row-actions .row-pin{display:none}
   /* footer player: play/pause only */
   #mini-bar .mini-ctl>button:not(#miniPlayBtn){display:none!important}
@@ -755,7 +768,7 @@ body.onb-active .paste-guide{display:none}
 .empty-lib .line{width:64px;height:2px;margin:0 auto 18px;background:none}
 
 .lib-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 16px}
-#libraryGrid{margin-top:14px}
+#libraryGrid{margin-top:8px}
 .lib-group-label{grid-column:1/-1;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 /* library-search: live filter over the user's own saved playlists/albums
    and their tracks (see renderLibrary()). Styled like .import-row's input.
@@ -788,6 +801,9 @@ body.onb-active .paste-guide{display:none}
   transition:background var(--dur-ui) var(--ease-out)}
 .lib-see-all:hover{background:var(--panel-2)}
 .lib-grid.is-compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
+/* #649: any single-column library (phone, tablet, narrow desktop window) fits as many thumbs as the width allows: 2 / 3 on a phone, more as it gets wider */
+body:not(.split-desktop) .lib-grid:not(.is-list):not(.is-compact){grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+body:not(.split-desktop) .lib-grid.is-compact{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
 .lib-artist-divider{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;margin-top:6px;background:none;border:0;border-bottom:1px solid var(--line, rgba(255,255,255,.1));color:var(--text);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .lib-artist-divider:first-child{margin-top:0}
 .lib-artist-divider .chev{flex:none;width:14px;height:14px;transition:transform .15s}
@@ -915,6 +931,8 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card .art .pl-art-video.np-cycle{transition:opacity .8s ease-in-out}
 .lib-card .art .pl-art-video.np-cycle.is-alt{opacity:0}
 .lib-card[data-pl-id="swell"] .art .pl-art-video video{transform:scale(1.06) translate(-4.4%,1.8%)}
+/* #642: the swirl clip plays upside down vertically (flipped) */
+.lib-card[data-pl-id="blend"] .art .pl-art-video video,.lib-card[data-pl-id="blend"] .art .video-face video{transform:scale(1.06,-1.06) translate(-4.4%,1.8%)}
 /* Liked Songs always gets a heart glyph instead of a track-art grid -
    it's the one playlist whose identity is the "liked" action itself,
    not its contents. */
@@ -1330,17 +1348,28 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
    the outer box slides down the art's height (1150% of its own height = 92% of the art) and the image across
    its width (150% of its own width = 60% of the art), at different speeds so the path wanders. Transform only;
    shown (and so running) only while the empty art is on screen, paused under the fullscreen player / Find music. */
-.art-dvd{display:none;position:absolute;left:0;top:0;width:40%;aspect-ratio:5/1;pointer-events:none;z-index:1}
-.art-dvd img{display:block;width:100%;height:100%;opacity:.85}
-.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{display:block;animation:dvd-y 13.8s linear infinite alternate;will-change:transform}
-.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:dvd-x 9s linear infinite alternate;will-change:transform}
-body:has(#flow-layer.is-open) .art-dvd,body:has(#flow-layer.is-open) .art-dvd img,body:has(#findMusic:not([hidden])) .art-dvd,body:has(#findMusic:not([hidden])) .art-dvd img,body:has(#musicMap:not([hidden])) .art-dvd,body:has(#musicMap:not([hidden])) .art-dvd img{animation-play-state:paused}
-@keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(1150%)}}
-@keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(150%)}}
+.art-dvd{display:none;position:absolute;left:0;top:0;width:16%;aspect-ratio:207/188;pointer-events:none;z-index:1}   /* #647: the box is the E's own outline (the PNG has a 6px margin all round, the image is shifted so the glyph fills the box edge to edge), so it touches the art's walls */
+.art-dvd-x{display:block;position:relative;width:100%;height:100%}
+.art-dvd-e{position:absolute;inset:0;display:block;background:var(--c);opacity:var(--o);
+  -webkit-mask:url(brand/assets/mark-white.png) 60.04% 54.5%/104.83% 105.85% no-repeat;mask:url(brand/assets/mark-white.png) 60.04% 54.5%/104.83% 105.85% no-repeat}
+/* the trail: six ghosts of the E, each following the same path 1s behind the one before, in the colors of the color logo, fading out */
+.art-dvd.trail{z-index:0}
+.art-dvd.t1{--i:1;--c:#5aa6f0;--o:.85}.art-dvd.t2{--i:2;--c:#7ee3ee;--o:.75}.art-dvd.t3{--i:3;--c:#b5ebc0;--o:.65}
+.art-dvd.t4{--i:4;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--c:#ba687b;--o:.35}
+.art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
+body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-x,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd img,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd img,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd img{animation-play-state:paused}
+/* #647: x and y both move at a steady speed (linear, alternate), so the E travels in straight lines and bounces off the art's edges at a constant pace.
+   Travel = 100% of the art minus the box. */
+@keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(588%)}}
+@keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(525%)}}
 @media (prefers-reduced-motion:reduce){
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd,
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:none!important;will-change:auto}
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{left:30%;top:46%}
+  .art-dvd.trail{display:none!important}
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd,
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x,
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd img{animation:none!important;will-change:auto}
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{left:42%;top:42%}
 }
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
@@ -2754,6 +2783,11 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.lib-wide:not(.desktop-fs) #app{grid-template-columns:1fr 340px 340px}
   body.split-desktop.lib-wide:not(.desktop-fs) .artwork-wrap{width:min(300px,max(72px,calc(100dvh - var(--topbar-h) - 345px)))}
   body.split-desktop.lib-wide:not(.desktop-fs) .track-meta{width:min(300px,100%)}
+  /* #649: an expanded library keeps the thumbs the size they are in the narrow pane and fits more per row; list view runs in 2 columns */
+  body.split-desktop.lib-wide:not(.desktop-fs) .lib-grid:not(.is-list):not(.is-compact){grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  body.split-desktop.lib-wide:not(.desktop-fs) .lib-grid.is-compact{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+  body.split-desktop.lib-wide:not(.desktop-fs) .lib-filter-btn{flex:0 1 auto;padding:0 16px}
+  body.split-desktop.lib-wide:not(.desktop-fs) .lib-grid.is-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px}
   body.split-desktop.lib-wide:not(.desktop-fs) .track-meta .title{font-size:20px}
   body.split-desktop:not(.desktop-fs) #libWideBtn{display:flex}
   body.split-desktop.lib-wide #libWideBtn svg{transform:scaleX(-1)}
@@ -4109,16 +4143,41 @@ body.week-up-on{overflow:hidden}
         <div class="queue-head"><h2>Library</h2></div>
         <div class="section-label-row">
           <div class="lib-head-actions">
-            <button class="btn-ghost lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" style="padding:5px 14px;font-size:12.5px">+ New<span class="lib-new-word"> playlist</span></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" title="New playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             </button>
             <!-- one "View" menu holds sort order and layout (was a sort icon
                  plus three tiny layout icons) -->
-            <div class="lib-sort">
-              <button type="button" class="btn-ghost lib-tb-btn lib-view-btn" id="libSortBtn" aria-label="View: sort and layout" aria-haspopup="true" aria-expanded="false" style="padding:5px 12px;font-size:12.5px">View<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button>
+            <!-- #619: desktop only - widens the library to the right; the player shrinks to the queue's width -->
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libWideBtn" title="Expand the library" aria-label="Expand the library" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="lib-search hidden" id="libSearchBox" role="search">
+          <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+          <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="lib-pillrow">
+        <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
+          <button type="button" class="lib-filter-btn" data-filter="playlists" id="libFilterPlaylists">Playlists</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
+          <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
+          <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
+        </div>
+        <div class="lib-sort">
+              <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn lib-view-btn" id="libSortBtn" title="View: sort and layout" aria-label="View: sort and layout" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2" fill="var(--bg,#000)"/><circle cx="15" cy="12" r="2" fill="var(--bg,#000)"/><circle cx="8" cy="17" r="2" fill="var(--bg,#000)"/></svg></button>
               <div class="art-style-menu lib-sort-menu" id="libSortMenu">
                 <div class="lib-menu-head">Sort by</div>
+                <button class="art-style-opt" data-sort="recent">
+                  <span class="art-style-label">Most recent</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
                 <button class="art-style-opt" data-sort="custom">
                   <span class="art-style-label">Manual order</span>
                   <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
@@ -4155,25 +4214,6 @@ body.week-up-on{overflow:hidden}
                 </div>
               </div>
             </div>
-            <!-- #619: desktop only - widens the library to the right; the player shrinks to the queue's width -->
-            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libWideBtn" title="Expand the library" aria-label="Expand the library" aria-pressed="false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="lib-search hidden" id="libSearchBox" role="search">
-          <svg class="lib-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-          <input type="search" id="libSearch" placeholder="Search your library" aria-label="Search your library" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-          <button type="button" class="lib-search-clear hidden" id="libSearchClear" aria-label="Clear search">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-          </button>
-        </div>
-        <div class="lib-filter" id="libFilter" role="group" aria-label="Show">
-          <button type="button" class="lib-filter-btn" data-filter="playlists" id="libFilterPlaylists">Playlists</button>
-          <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
-          <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
-          <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
-          <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
         <div class="section-label lib-bar-label hidden" id="libBarLabel" role="button" tabindex="0"></div>
         </div>
@@ -4260,7 +4300,13 @@ body.week-up-on{overflow:hidden}
           <img class="art" id="artA" alt="">
           <img class="art" id="artB" alt="">
           <!-- #613: nothing playing yet - the wordmark bounces around the art like the old DVD logo (CSS transform only, see .art-dvd) -->
-          <div class="art-dvd" aria-hidden="true"><img src="brand/assets/wordmark-white.png" alt="" draggable="false"></div>
+          <div class="art-dvd trail t6" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
+          <div class="art-dvd trail t5" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
+          <div class="art-dvd trail t4" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
+          <div class="art-dvd trail t3" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
+          <div class="art-dvd trail t2" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
+          <div class="art-dvd trail t1" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
+          <div class="art-dvd" aria-hidden="true"><span class="art-dvd-x"><img src="brand/assets/mark-white.png" alt="" draggable="false"></span></div>
           <div class="art-record" id="artRecord">
             <div class="record-shadow"></div>
             <div class="record-disc">
@@ -7913,7 +7959,7 @@ function togglePin(id){
   if (!isPinned(id)) pinned.unshift(id);
   lsSet(LS_PINNED, pinned);
 }
-function getLibrarySort(){ return lsGet(LS_LIB_SORT, 'custom'); }
+function getLibrarySort(){ return lsGet(LS_LIB_SORT, 'recent'); }
 function setLibrarySort(mode){ lsSet(LS_LIB_SORT, mode); }
 
 function totalPlaylistPlays(pl){
@@ -7922,7 +7968,10 @@ function totalPlaylistPlays(pl){
 function sortLibraryIds(ids, mode){
   if (mode === 'custom') return ids;
   const withPl = ids.map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl);
-  if (mode === 'alpha'){
+  if (mode === 'recent'){
+    // #607: most recently played first; never-played keep their order (stable sort)
+    withPl.sort((a, b) => (getLastPlayed(b.id) || 0) - (getLastPlayed(a.id) || 0));
+  } else if (mode === 'alpha'){
     withPl.sort((a, b) => a.pl.name.localeCompare(b.pl.name, undefined, { sensitivity: 'base' }));
   } else if (mode === 'plays_desc'){
     withPl.sort((a, b) => totalPlaylistPlays(b.pl) - totalPlaylistPlays(a.pl));
@@ -9279,6 +9328,8 @@ const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle =
 const libCtxMenu = $('libCtxMenu');
 const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
+// #647: the nothing-playing E and its trail also play in the fullscreen player, so give its art the same markup
+document.querySelectorAll('.artwork-wrap > .art-dvd').forEach(n => flowArtWrap.appendChild(n.cloneNode(true)));
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
 const flowShuffleBtn = $('flowShuffleBtn'), flowRepeatBtn = $('flowRepeatBtn'), flowRepeatOneBadge = $('flowRepeatOneBadge');
@@ -9410,6 +9461,9 @@ function setView(name){
    Manually navigating back to Player/closing panels via the UI (not the
    back button) collapses the buffered entry with replaceState instead, so
    it never lingers as an orphaned no-op back press.
+   #638 supersedes the "falls through" part: back must never leave the app,
+   so one entry stays buffered at all times, at rest too. At rest a back press
+   is swallowed and the entry re-pushed; the user leaves via the OS (home).
    ========================================================================= */
 let historyBuffered = false;
 let inPopStateNav = false;
@@ -9423,17 +9477,20 @@ function isFullscreenOpen(){
 }
 function syncHistoryBuffer(){
   if (inPopStateNav) return;
-  const away = isAwayFromRest();
-  if (away && !historyBuffered){
+  if (!historyBuffered){
     try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
     historyBuffered = true;
-  } else if (!away && historyBuffered){
-    try { history.replaceState({ ebblessNav: false }, ''); } catch(e){}
-    historyBuffered = false;
   }
 }
+// #638: keep one entry buffered from the start so the very first back press is caught too
+try { history.pushState({ ebblessNav: true }, ''); historyBuffered = true; } catch(e){}
 window.addEventListener('popstate', () => {
-  if (!isAwayFromRest()) return; // already at rest: let the default back navigation proceed
+  if (!isAwayFromRest()){
+    // #638: at rest a back press must never leave the app: swallow it and put the buffer back
+    try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
+    historyBuffered = true;
+    return;
+  }
   inPopStateNav = true;
   try {
     if (musicMapOpen()){
@@ -10188,7 +10245,7 @@ libFilter.addEventListener('click', (e) => {
 function applyLibSortUI(){
   const mode = getLibrarySort();
   libSortMenu.querySelectorAll('.art-style-opt[data-sort]').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
-  libSortBtn.classList.toggle('is-active', mode !== 'custom');
+  libSortBtn.classList.toggle('is-active', mode !== 'recent');
 }
 function openLibSortMenu(){ libSortMenu.classList.add('is-open'); libSortBtn.setAttribute('aria-expanded', 'true'); }
 function closeLibSortMenu(){ libSortMenu.classList.remove('is-open'); libSortBtn.setAttribute('aria-expanded', 'false'); }
@@ -27503,6 +27560,10 @@ const MINI_PLAYER_STYLE = `
   body{margin:0;background:#121212;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     display:flex;flex-direction:column;overflow:hidden;position:relative;user-select:none}
   button{font:inherit;color:inherit}
+  /* #644: the mini is draggable by its body (grab) and clicks on the art / title go back to the app (pointer) */
+  body{cursor:grab}
+  body:active{cursor:grabbing}
+  #mpMeta{cursor:pointer}
   svg{width:18px;height:18px;fill:currentColor}
   #mpBg{position:absolute;inset:0;background:color-mix(in srgb,var(--mp-tint,#e0b26a) 50%,#0b0b0b);
     opacity:0;transition:opacity .4s ease,background-color .6s ease;pointer-events:none}
@@ -27748,10 +27809,11 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-pill #mpHead>:not(#mpFav),body.mp-shape-disc #mpHead>:not(#mpFav),body.mp-shape-tape #mpHead>:not(#mpFav),body.mp-shape-square #mpHead>:not(#mpFav){display:none!important}
   /* pill: art | title + artist, seek, controls; the heart and thumbs-down float in the top right on hover */
   body.mp-desktop.mp-shape-pill #mpCard{grid-template-columns:calc(var(--card-h) - 16px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 10px 30px;
-    grid-template-areas:"art meta" "art seek" "art ctl";padding:8px 28px 8px 8px;gap:2px 10px}
+    grid-template-areas:"art meta" "art seek" "art ctl";padding:8px 60px 8px 8px;gap:2px 10px}
   body.mp-desktop.mp-shape-pill #mpArtist{display:block!important}
-  body.mp-shape-pill #mpHead{position:absolute;top:6px;right:34px;z-index:4;padding:0 4px;border-radius:999px;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s ease}
-  body.mp-shape-pill:hover #mpHead{opacity:1;pointer-events:auto}
+  /* #643: art on the left, the heart (and thumbs-down) always on the right, no dark box behind them */
+  body.mp-shape-pill #mpHead{position:absolute;top:50%;right:22px;transform:translateY(-50%);z-index:4;padding:0;background:none;-webkit-app-region:no-drag}
+  body.mp-shape-pill #mpFull{display:none}
   /* disc, tape, square: just the art, everything else on hover */
   body.mp-shape-disc{border-radius:50%;clip-path:circle(50%)}
   body.mp-shape-square{border-radius:22px;clip-path:inset(0 round 22px)}
@@ -27791,7 +27853,10 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics{clip-path:none;border-radius:0}
   body.mp-shape-cymatics:hover #mpCard{background:none} /* the plate is not a rectangle: no hover wash over the corners */
   body.mp-shape-cymatics::before{display:none}
-  body.mp-shape-cymatics #mpHead{top:15%}
+  /* #650: hover-only (cym-hover), controls centered, heart + friends in the bottom right corner of the plate */
+  body.mp-shape-cymatics #mpHead{left:0;top:0;width:100%;height:100%;transform:none;padding:0}
+  body.mp-shape-cymatics #mpFav{position:absolute;right:9%;bottom:9%}
+  body.mp-shape-cymatics #mpFull{display:none}
   /* no pills behind the hover controls and info: they sit straight on the cover, with a soft shadow to stay readable */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{background:none}
   body.mp-shape-cymatics:not(.cym-hover) #mpControls,body.mp-shape-cymatics:not(.cym-hover) #mpHead,body.mp-shape-cymatics:not(.cym-hover) #mpMeta{opacity:0;pointer-events:none}
@@ -27818,7 +27883,6 @@ const MINI_DESKTOP_STYLE = `
      bottom); the text shows while the mini is hovered, and its black box only while the pointer is on the box itself */
   body.mp-shape-disc #mpMeta,body.mp-shape-tape #mpMeta,body.mp-shape-square #mpMeta{bottom:34px;width:168px;background:transparent;pointer-events:auto;-webkit-app-region:no-drag;
     text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5);transition:opacity .2s ease,background-color .15s ease}
-  body.mp-shape-disc #mpMeta:hover,body.mp-shape-tape #mpMeta:hover,body.mp-shape-square #mpMeta:hover{background:rgba(0,0,0,.66)}
   body.mp-shape-float{background:transparent}
   body.mp-shape-float::before{display:none}
   body.mp-shape-float #mpBg{display:none}
@@ -30192,6 +30256,11 @@ async function podAdScan(t, st){
   // a feed's chapter times are for its own file: they hold for the copy
   // playing only when no audio was stitched in (the length the feed says)
   const segs = t.duration && Math.abs(dur - t.duration) <= 1.5 ? st.chap.slice() : [];
+  // #648: a host that stitches an ad on the front (dynamic insertion, in any
+  // language) makes the audio longer than the feed says by about the ad's
+  // length: offer a skip over that much at the start. Tap only, like the rest.
+  const extra = t.duration ? dur - t.duration : 0;
+  if (extra >= 8 && extra <= 75) segs.push({ s: 0, e: Math.round(extra) });
   const publish = () => podAdPublish(id, segs);
   publish();
   const rec = (capJob && capJob.id === id && capJob.rec) || await capGet(id);
