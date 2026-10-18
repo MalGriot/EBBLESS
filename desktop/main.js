@@ -145,7 +145,14 @@ ipcMain.on('ebbless:focus-main', () => {
 });
 
 ipcMain.on('ebbless:hide-main', () => {
-  if (mainWin && mainWin.isVisible() && !mainWin.isMinimized()) mainWin.minimize();
+  if (!mainWin || !mainWin.isVisible() || mainWin.isMinimized()) return;
+  // macOS will not minimize a fullscreen window: leave fullscreen first, then minimize once the transition is done
+  if (mainWin.isFullScreen()){
+    mainWin.once('leave-full-screen', () => setTimeout(() => { if (mainWin && !mainWin.isMinimized()) mainWin.minimize(); }, 200));
+    mainWin.setFullScreen(false);
+    return;
+  }
+  mainWin.minimize();
 });
 
 // #633: the page draws the dock icon for its active art mode (logo over a

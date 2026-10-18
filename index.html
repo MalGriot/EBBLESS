@@ -27633,8 +27633,18 @@ function mpApplyShape(win){
   if (body.dataset.mpShape === shape) return;
   mpSetShapeClasses(body, shape);
   const sz = mpDesktopSize(shape);
+  // A new shape keeps the window where it is: one sitting in the bottom right corner stays in it, one the user moved keeps
+  // its center. Only opening the mini puts it in the corner (#604, #623 refined).
+  const ow = win.outerWidth, oh = win.outerHeight, ox = win.screenX, oy = win.screenY, scr = win.screen;
+  const oc = mpCornerPos(ow, oh, scr), inCorner = Math.abs(ox - oc.x) <= 24 && Math.abs(oy - oc.y) <= 24;
   try { win.resizeTo(sz.w, sz.h); } catch(e){}
-  mpMagnetize(win, sz.w, sz.h); // #623: a new shape snaps to the bottom right corner
+  if (inCorner) mpMagnetize(win, sz.w, sz.h);
+  else {
+    const L = scr.availLeft || 0, T = scr.availTop || 0;
+    const nx = Math.max(L, Math.min(Math.round(ox + (ow - sz.w) / 2), L + scr.availWidth - sz.w));
+    const ny = Math.max(T, Math.min(Math.round(oy + (oh - sz.h) / 2), T + scr.availHeight - sz.h));
+    try { win.moveTo(nx, ny); } catch(e){}
+  }
 }
 function mpDesktopSize(shape){
   if (shape === 'pill') return { w: 420, h: 96 };
@@ -28628,7 +28638,17 @@ async function openMiniPlayer(){
     mpQueue = null;
     mpShrunk = null;
     buildMiniPlayerDOM(win);
-    if (isDesktopApp){ wireMiniDesktop(win); if (window.ebblessDesktop.hideMain) window.ebblessDesktop.hideMain(); }
+    if (isDesktopApp){
+      wireMiniDesktop(win);
+      if (window.ebblessDesktop.hideMain) window.ebblessDesktop.hideMain();
+      // Opening from the Mac window's fullscreen: leaving it changes the usable screen area (menu bar, Dock), so once that has
+      // settled, put the mini in the corner again - unless it has been moved since.
+      const spot = { x: win.screenX, y: win.screenY };
+      [900, 1800].forEach(ms => win.setTimeout(() => {
+        if (miniPlayerWin !== win || win.closed || Math.abs(win.screenX - spot.x) > 3 || Math.abs(win.screenY - spot.y) > 3) return;
+        mpMagnetize(win, win.outerWidth, win.outerHeight); spot.x = win.screenX; spot.y = win.screenY;
+      }, ms));
+    }
     updateMiniPlayerUI();
     attachMiniPlayerSC(win);
     win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; mpCymStop(); rehostSCDecks(); } }, { once: true });
