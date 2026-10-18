@@ -27756,12 +27756,11 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-pill #mpHead>:not(#mpFav),body.mp-shape-disc #mpHead>:not(#mpFav),body.mp-shape-tape #mpHead>:not(#mpFav),body.mp-shape-square #mpHead>:not(#mpFav){display:none!important}
   /* pill: art | title + artist, seek, controls; the heart and thumbs-down float in the top right on hover */
   body.mp-desktop.mp-shape-pill #mpCard{grid-template-columns:calc(var(--card-h) - 16px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 10px 30px;
-    grid-template-areas:"art meta" "art seek" "art ctl";padding:8px 28px 8px 8px;gap:2px 10px}
+    grid-template-areas:"art meta" "art seek" "art ctl";padding:8px 60px 8px 8px;gap:2px 10px}
   body.mp-desktop.mp-shape-pill #mpArtist{display:block!important}
   /* #643: art on the left, the heart (and thumbs-down) always on the right, no dark box behind them */
-  body.mp-shape-pill #mpHead{position:absolute;top:50%;right:30px;transform:translateY(-50%);z-index:4;padding:0;background:none;-webkit-app-region:no-drag}
+  body.mp-shape-pill #mpHead{position:absolute;top:50%;right:22px;transform:translateY(-50%);z-index:4;padding:0;background:none;-webkit-app-region:no-drag}
   body.mp-shape-pill #mpFull{display:none}
-  body.mp-shape-pill #mpMeta{padding-right:30px}
   /* disc, tape, square: just the art, everything else on hover */
   body.mp-shape-disc{border-radius:50%;clip-path:circle(50%)}
   body.mp-shape-square{border-radius:22px;clip-path:inset(0 round 22px)}
@@ -27803,7 +27802,8 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics::before{display:none}
   /* #650: hover-only (cym-hover), controls centered, heart + friends in the bottom right corner of the plate */
   body.mp-shape-cymatics #mpHead{left:0;top:0;width:100%;height:100%;transform:none;padding:0}
-  body.mp-shape-cymatics #mpFav{position:absolute;right:17%;bottom:17%}
+  body.mp-shape-cymatics #mpFav{position:absolute;right:9%;bottom:9%}
+  body.mp-shape-cymatics #mpFull{display:none}
   /* no pills behind the hover controls and info: they sit straight on the cover, with a soft shadow to stay readable */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{background:none}
   body.mp-shape-cymatics:not(.cym-hover) #mpControls,body.mp-shape-cymatics:not(.cym-hover) #mpHead,body.mp-shape-cymatics:not(.cym-hover) #mpMeta{opacity:0;pointer-events:none}

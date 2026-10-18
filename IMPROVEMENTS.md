@@ -11103,7 +11103,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #643. miniplayer: thumb on left and heart on right, and remove black box from behind the title and artist.
 - **Touches:** `MINI_PLAYER_STYLE` (pill shape, LP/cassette/square meta).
 - **Branch:** agent/q-ui-polish
-- **Notes:** Synced from Geethub #643. Assumption: the Mac/PiP mini player (the footer bar on phones already has art left). Pill shape: art stays on the left, the heart (and thumbs-down) is always on the right, vertically centered, with no dark box; fullscreen button hidden there. LP, cassette and square: the dark box that appeared behind title and artist on hover is removed (text keeps its soft shadow). Not verified: needs the Electron/PiP window, which the browser preview cannot open.
+- **Notes:** Synced from Geethub #643. Assumption: the Mac/PiP mini player (the footer bar on phones already has art left). Pill shape: art stays on the left, the heart (and thumbs-down) is always on the right, vertically centered, with no dark box (text area padded so nothing overlaps); fullscreen button hidden there. LP, cassette and square: the dark box that appeared behind title and artist on hover is removed (text keeps its soft shadow). Not verified: needs the Electron/PiP window, which the browser preview cannot open.
 
 ### cursor-change-over-miniplayer: cursor change over the miniplayer (Geethub #644)
 - **Status:** review
@@ -11143,7 +11143,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #650. cymatics controls show on hover only; they should be centered; the heart should be in the bottom right corner.
 - **Touches:** `MINI_PLAYER_STYLE` cymatics rules.
 - **Branch:** agent/q-ui-polish
-- **Notes:** Synced from Geethub #650. The controls were already hover-only (`cym-hover`) and centered, so those are unchanged. The heart group (`#mpFav`: fullscreen, thumbs-down, heart) moved from the top center to the bottom right of the plate (17% in). Not verified: needs the Mac mini window.
+- **Notes:** Synced from Geethub #650. The controls were already hover-only (`cym-hover`) and centered, so those are unchanged. The heart (and thumbs-down) moved from the top center to the bottom right corner of the plate (9% in); the fullscreen button is hidden in this shape. Checked by rendering the real mini-player markup and styles in a test page; not verified in the Mac window itself.
 
 ### mobile-seacrh-bar-should-become-a-button-i: mobile: seacrh bar should become a button in the bottom nav (Geethub #608)
 - **Status:** merged
