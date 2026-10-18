@@ -26874,7 +26874,17 @@ function lpSfxContext(){
 }
 // only when the record is actually showing: the fullscreen flow view's
 // record, or the player's record (not viz/lyrics, not a hidden player pane)
+// The mini player shows the LP / cassette too (the full LP or cassette window, or the card's thumbnail), so the needle and
+// tape sounds play for it as well, not only for the main window
+function miniShowsSkin(skin){
+  const w = miniPlayerWin;
+  if (!w || w.closed || w.document.hidden) return false;
+  const shape = w.document.body.dataset.mpShape;
+  if (shape === 'cymatics') return false;
+  return (shape === 'disc' ? 'record' : shape === 'tape' ? 'cassette' : artStyle) === skin;
+}
 function lpRecordOnScreen(){
+  if (miniShowsSkin('record')) return true;
   if (artStyle !== 'record' || document.visibilityState !== 'visible') return false;
   if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'record';
   const rec = document.getElementById('artRecord');
@@ -26882,6 +26892,7 @@ function lpRecordOnScreen(){
 }
 // same idea for the cassette: fullscreen flow cassette or the player's cassette
 function cassetteOnScreen(){
+  if (miniShowsSkin('cassette')) return true;
   if (artStyle !== 'cassette' || document.visibilityState !== 'visible') return false;
   if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'cassette';
   const cs = document.getElementById('artCassette');
@@ -26913,7 +26924,7 @@ if (artStyle === 'record') lpNeedlePrefetch();
 dockIconSync();   // #633: tell the Mac app which dock icon to wear on load
 if (artStyle === 'cassette') lpNeedlePrefetch(['rewind']);
 function lpSfxUnlock(){
-  if (artStyle !== 'record' && artStyle !== 'cassette') return;
+  if (artStyle !== 'record' && artStyle !== 'cassette' && !miniShowsSkin('record') && !miniShowsSkin('cassette')) return;
   try { if (!lpSfxContext()) return; } catch(e){ return; }
   ['pointerdown', 'touchend', 'keydown'].forEach(t => document.removeEventListener(t, lpSfxUnlock, true));
 }
@@ -27494,8 +27505,7 @@ const MINI_PLAYER_STYLE = `
   #mpArtWrap[data-art-style="record"] #mpRecord,#mpArtWrap[data-art-style="cassette"] #mpTape{display:block}
   /* centred with margins, not translate: the spin keyframe sets transform, which replaced the translate and made the LP slide off-centre (#337) */
   #mpRecord{width:min(100cqw,100cqh);aspect-ratio:1;border-radius:50%;box-shadow:0 8px 20px -6px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.32);
-    background:conic-gradient(from 20deg,rgba(255,255,255,.16),rgba(255,255,255,0) 18%,rgba(255,255,255,0) 50%,rgba(255,255,255,.16) 68%,rgba(255,255,255,0) 86%,rgba(255,255,255,.16)),repeating-radial-gradient(circle at center,#2a2a2a 0 2px,#161616 2px 4px);margin:calc(min(100cqw,100cqh) / -2) 0 0 calc(min(100cqw,100cqh) / -2);transform:none;animation:mpSpin 3.6s linear infinite paused}
-  body.mp-playing #mpRecord{animation-play-state:running}
+    background:conic-gradient(from 20deg,rgba(255,255,255,.16),rgba(255,255,255,0) 18%,rgba(255,255,255,0) 50%,rgba(255,255,255,.16) 68%,rgba(255,255,255,0) 86%,rgba(255,255,255,.16)),repeating-radial-gradient(circle at center,#2a2a2a 0 2px,#161616 2px 4px);margin:calc(min(100cqw,100cqh) / -2) 0 0 calc(min(100cqw,100cqh) / -2);transform:none;will-change:transform}
   #mpRecord::before{content:"";position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
     background:var(--mp-art) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c}
   /* the previous label art, faded out over the new one when the song changes (LP and cassette) */
@@ -27519,7 +27529,7 @@ const MINI_PLAYER_STYLE = `
   #mpArtPick button.is-active{color:var(--accent);background:rgba(255,255,255,.1)}
   #mpArtPick svg{width:15px;height:15px}
   body.mp-small #mpArtPick{display:none}
-  @media (prefers-reduced-motion:reduce){#mpRecord,#mpTape .cs-hub{animation:none}}
+  @media (prefers-reduced-motion:reduce){#mpTape .cs-hub{animation:none}}
   body:hover #mpArt{transform:scale(1.04)}
   #mpHead{grid-area:head;display:flex;align-items:center;gap:2px;min-width:0}
   #mpLogo{width:18px;height:17px;object-fit:contain;margin-right:auto;opacity:.9}
@@ -28225,6 +28235,28 @@ function miniCassetteCss(){
 // Mac: a click on the cover (or the LP, the cassette, the plate - not a button) steps the whole mini player through its four
 // modes: card, full LP, full cassette, Cymatics, then the card again. The mode is held until the main player's mode changes.
 const MP_CLICK_ORDER = ['card', 'disc', 'tape', 'cymatics'];
+// The mini's LP turns like the main player's: its own rAF eases the platter up to speed (0.9s) on play and coasts it down (0.7s) on
+// pause, same 120deg/s pace and tiny wobble. It only runs while the speed is changing or the record is turning.
+const mpRec = { angle: 0, speed: 0, target: 0, raf: 0, last: 0, win: null };
+function mpRecTick(ts){
+  const win = mpRec.win;
+  if (!win || win.closed){ mpRec.raf = 0; return; }
+  if (!mpRec.last) mpRec.last = ts;
+  const dt = Math.min(64, ts - mpRec.last); mpRec.last = ts;
+  if (mpRec.speed < mpRec.target) mpRec.speed = Math.min(mpRec.target, mpRec.speed + dt / 900);
+  else if (mpRec.speed > mpRec.target) mpRec.speed = Math.max(mpRec.target, mpRec.speed - dt / 700);
+  mpRec.angle += (dt / 1000) * REC_DEG_PER_S * mpRec.speed * (1 + 0.004 * Math.sin(mpRec.angle * Math.PI / 180));
+  const el = win.document.getElementById('mpRecord');
+  if (el) el.style.transform = 'rotate(' + (mpRec.angle % 360).toFixed(2) + 'deg)';
+  if (mpRec.speed <= 0 && mpRec.target === 0){ mpRec.raf = 0; return; }
+  mpRec.raf = win.requestAnimationFrame(mpRecTick);
+}
+function mpRecordSync(win, playing){
+  if (recReducedMotion) return;
+  if (mpRec.win !== win){ mpRec.win = win; mpRec.raf = 0; mpRec.last = 0; }
+  mpRec.target = playing ? 1 : 0;
+  if (!mpRec.raf && mpRec.speed !== mpRec.target){ mpRec.last = 0; mpRec.raf = win.requestAnimationFrame(mpRecTick); }
+}
 function mpCycleShape(){
   const i = MP_CLICK_ORDER.indexOf(mpDesktopShape());
   mpPickShape(MP_CLICK_ORDER[(i + 1) % MP_CLICK_ORDER.length]);
@@ -28345,6 +28377,9 @@ function buildMiniPlayerDOM(win){
     updateMiniPlayerUI();
   });
   doc.addEventListener('dragstart', (e) => e.preventDefault());
+  // the needle and tape sounds need their audio context awake: wake it on a press or key in the mini, like the main window does
+  ['pointerdown', 'keydown'].forEach(t => doc.addEventListener(t, () => lpSfxUnlock(), true));
+  lpNeedlePrefetch(); lpNeedlePrefetch(['rewind']);
   win.addEventListener('resize', onMiniPlayerResize);
   // Top-edge click shrinks/grows the whole window (#269). Chrome only lets
   // script resize a PiP window during a gesture, so it has to be a click.
@@ -28589,6 +28624,7 @@ function updateMiniPlayerUI(){
   if (isDesktopApp && doc.body.classList.contains('mp-desktop')) mpApplyShape(miniPlayerWin);
   const isPlaying = artworkWrap.classList.contains('is-playing');
   doc.body.classList.toggle('mp-playing', isPlaying);
+  mpRecordSync(miniPlayerWin, isPlaying);
   if (isDesktopApp) mpCymSync(miniPlayerWin);
   // the full LP and full cassette windows always show the LP and the cassette, whatever the art style behind the card's thumbnail
   const shownSkin = doc.body.dataset.mpShape === 'disc' ? 'record' : doc.body.dataset.mpShape === 'tape' ? 'cassette' : artStyle;
