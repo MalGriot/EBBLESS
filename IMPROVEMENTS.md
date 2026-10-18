@@ -11326,3 +11326,5 @@ Add entries in this shape:
 - **Touches:** index.html (paste handler near the Search tab code), sw.js cache v339, What's New 299.
 - **Branch:** agent/paste-song-list
 - **Notes:** Matcher returns something for almost any text, so nonsense lines still get a video; the strip only lists lines with no result at all.
+
+<!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->
