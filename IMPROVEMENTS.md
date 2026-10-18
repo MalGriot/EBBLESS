@@ -11040,12 +11040,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #595. Related to #635 (performance). Cause: every `dragover` (many a second while a song is held over a library card) called `addablePlaylists()` two or three times, and that JSON-parses every saved playlist from localStorage. It also removed and re-added the highlight class on every event. Fix: the addable id set is built once per drag (reset on dragstart/dragend) and the highlight only changes when the card under the pointer changes. Measured in the preview on a synthetic library (60 playlists x 400 songs, dispatched dragover events): 5.96 ms per event before, 0.25 ms after (~24x); a real library with art and matched metadata parses slower, so the real-world gain is larger. A real mouse drag with the OS drag image was not tried (synthetic events only).
 
 ### music-map: music map (Geethub #597)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #597. utilize this music map to connect users with their vibe https://www.music-map.com/ reverse engineer it and use it
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #597. Design proposal written, owner to choose: [docs/PROPOSAL-music-map.md](docs/PROPOSAL-music-map.md) (ranking in [docs/PROPOSALS-SUMMARY.md](docs/PROPOSALS-SUMMARY.md)).
+- **Touches:** index.html (Music map layer, song menu item, artist page button, playVibePlaylist `stay` option), worker/src/artistmap.js, worker/src/index.js (`/artistmap`), worker/test/artistmap.test.mjs, sw.js.
+- **Branch:** agent/music-map
+- **Notes:** Synced from Geethub #597. Design proposal: [docs/PROPOSAL-music-map.md](docs/PROPOSAL-music-map.md). Built the MVP only: "Music map" in the song menu (now-playing card included) and on the artist page opens a full-screen map, the artist in the middle and up to 20 related artists around them (15 on phones), nearer = more alike. Tap a name to glide it to the center; tap its play button for a mix of their songs right away (their library songs plus iTunes catalog, matched like a vibe playlist) while the map stays open; trail of past centers at the bottom; Back closes it. Own data only, never music-map.com: new worker route `/artistmap?artist=` (Last.fm artist.getSimilar, cached a week, unknown artists a day, outages never). Until that route is deployed, or when it is empty or down, the map is built from the artists behind live `/similar`; worker and iTunes both unreachable shows "Couldn't load the map right now" with Try again. GPU: laid out once per artist, one finite transform/opacity glide per recenter, no loop; ambient and art pause and the visualizer/lyrics loops stop while it is open. **Needs worker deploy** for the full 20-artist map. Verified in the browser preview (desktop 1280 and phone 375) against the live worker's `/similar` fallback, plus the `/artistmap` payload and error state with a stubbed fetch; the route itself only with stubbed Last.fm in Node (no Last.fm key locally). No `[gpu-watchdog]` warnings. Not tried on a real Android phone or the Mac app. Cache v361.
 
 ### miniplayer-should-open-always-in-the-botto: miniplayer should open always in the bottom right corner (Geethub #604)
 - **Status:** merged

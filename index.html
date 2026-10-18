@@ -349,7 +349,7 @@ svg{display:block}
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
 #ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite;will-change:transform}
 /* #487: fullscreen covers this completely, so stop animating it underneath */
-body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden])) #ambient .layer{animation-play-state:paused}
+body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden])) #ambient .layer,body:has(#musicMap:not([hidden])) #ambient .layer{animation-play-state:paused}
 #ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
 @keyframes ambient-drift{
   0%{transform:translate(0,0) scale(1.2)}
@@ -1108,6 +1108,34 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .fm-artist-name{display:block;margin-top:6px;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fm-add{position:absolute;right:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent,#151107);font-size:20px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
 @media (min-width:860px){.fm-scroll{max-width:760px;width:100%;margin:0 auto}.fm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.fm-artist-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
+   finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
+#musicMap{position:fixed;inset:0;z-index:55;background:radial-gradient(circle at 50% 50%,var(--panel-2) 0,transparent 62%),var(--bg);display:flex;flex-direction:column}
+#musicMap[hidden]{display:none}
+.mm-stage{position:relative;flex:1;min-height:0;overflow:hidden;margin:0 8px}
+.mm-node,.mm-center{position:absolute;left:0;top:0;display:flex;align-items:center;transition:transform .55s var(--ease-out),opacity .35s var(--ease-out)}
+.mm-node{gap:2px;border-radius:999px;opacity:var(--o,1)}
+.mm-node.is-out,.mm-center.is-out{opacity:0;pointer-events:none}
+.mm-name{max-width:52vw;padding:8px 4px 8px 10px;color:var(--text);font:inherit;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.mm-play{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--accent);opacity:.75}
+.mm-play svg{width:15px;height:15px}
+.mm-node:hover .mm-play,.mm-play:focus-visible{opacity:1}
+.mm-name:hover,.mm-name:focus-visible{color:var(--accent)}
+.mm-center{flex-direction:column;gap:10px;text-align:center;max-width:min(300px,80vw)}
+.mm-center-name{font-size:26px;font-weight:800;line-height:1.1;color:var(--text);overflow-wrap:anywhere}
+.mm-center-row{display:flex;gap:8px;justify-content:center}
+.mm-center-row .btn-ghost{padding:9px 16px;font-size:14px}
+.mm-note{color:var(--faint);font-size:13.5px;line-height:1.4}
+.mm-foot{flex:none;display:flex;align-items:center;gap:12px;padding:8px 16px calc(12px + var(--safe-b))}
+.mm-trail{flex:1;min-width:0;display:flex;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+.mm-trail::-webkit-scrollbar{display:none}
+.mm-step{flex:none;padding:8px 6px;color:var(--faint);font:inherit;font-size:13px}
+.mm-step:not([disabled]):hover{color:var(--text)}
+.mm-step[disabled]{color:var(--text);font-weight:600}
+.mm-sep{flex:none;color:var(--faint-2);font-size:12px}
+.mm-credit{flex:none;color:var(--faint-2);font-size:11.5px}
+.mm-credit a{color:inherit}
+@media (prefers-reduced-motion:reduce){.mm-node,.mm-center{transition:none}}
 @media (orientation:landscape) and (max-height:480px){.fm-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.fm-artist-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 /* ---------- continuity loading line ---------- */
 .flow-line{width:100%;height:2px;background:var(--border);border-radius:2px;overflow:hidden;position:relative}
@@ -1290,7 +1318,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .art-dvd img{display:block;width:100%;height:100%;opacity:.85}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{display:block;animation:dvd-y 13.8s linear infinite alternate;will-change:transform}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:dvd-x 9s linear infinite alternate;will-change:transform}
-body:has(#flow-layer.is-open) .art-dvd,body:has(#flow-layer.is-open) .art-dvd img,body:has(#findMusic:not([hidden])) .art-dvd,body:has(#findMusic:not([hidden])) .art-dvd img{animation-play-state:paused}
+body:has(#flow-layer.is-open) .art-dvd,body:has(#flow-layer.is-open) .art-dvd img,body:has(#findMusic:not([hidden])) .art-dvd,body:has(#findMusic:not([hidden])) .art-dvd img,body:has(#musicMap:not([hidden])) .art-dvd,body:has(#musicMap:not([hidden])) .art-dvd img{animation-play-state:paused}
 @keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(1150%)}}
 @keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(150%)}}
 @media (prefers-reduced-motion:reduce){
@@ -9154,7 +9182,7 @@ async function lastfmImportSelected(){
    queue rows, tracks, filter pills, inputs) and anything while a sheet, window or menu is open. */
 (function(){
   const order = ['library', 'player', 'queue', 'settings'];
-  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row';
+  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,#musicMap,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row';
   let x0 = 0, y0 = 0, ok = false;
   const phone = () => window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('onb-active');
   document.addEventListener('touchstart', (e) => {
@@ -9370,7 +9398,7 @@ function setView(name){
 let historyBuffered = false;
 let inPopStateNav = false;
 function isAwayFromRest(){
-  return state.currentView !== 'player' || state.queueOpen || !!openLibraryPanelId || isFullscreenOpen();
+  return state.currentView !== 'player' || state.queueOpen || !!openLibraryPanelId || isFullscreenOpen() || musicMapOpen();
 }
 // Any fullscreen visual layer (flow overlay, lyrics fullscreen, split-desktop
 // panel-slide fullscreen). lyricsFsLayer is declared later; only called after load.
@@ -9392,7 +9420,10 @@ window.addEventListener('popstate', () => {
   if (!isAwayFromRest()) return; // already at rest: let the default back navigation proceed
   inPopStateNav = true;
   try {
-    if (state.queueOpen){
+    if (musicMapOpen()){
+      // #597: the map sits above everything else, so back closes it first
+      closeMusicMap();
+    } else if (state.queueOpen){
       closeQueuePanel(false);
       if (openLibraryPanelId) closeLibraryPlaylistPanel();
       if (state.currentView !== 'player') setView('player');
@@ -12109,6 +12140,12 @@ function addArtistMixButton(name){
   b.textContent = 'Make a mix of songs';
   b.addEventListener('click', () => makeArtistMix(name, b));
   libplBody.prepend(b);
+  const m = document.createElement('button');   // #597
+  m.className = 'btn-ghost artist-map-btn';
+  m.style.cssText = 'width:100%;margin-bottom:12px';
+  m.textContent = 'Music map';
+  m.addEventListener('click', () => openMusicMap(name));
+  b.after(m);
   addArtistRecommendations(name);
 }
 
@@ -12161,6 +12198,296 @@ function addArtistRecommendations(name){
     });
     libplBody.appendChild(box);
   });
+}
+
+/* =========================================================================
+   MUSIC MAP (Geethub #597): one artist in the middle, related artists around
+   them, nearer = more alike. Tap a name to make it the center, tap its play
+   button to hear that artist's songs right away while the map stays open.
+   Our own map from Last.fm's similar artists (worker /artistmap); when that
+   is missing or empty it is built from the artists behind /similar's songs
+   instead. Laid out once per artist (no loop); a recenter is one finite
+   transform/opacity glide, and the visuals underneath stop while it's open.
+   ========================================================================= */
+const MM_PLAY_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const mmMemo = new Map(), mmSongsMemo = new Map();
+let mmEl = null, mmTrail = [], mmToken = 0, mmData = null, mmResizeT = 0;
+
+function musicMapOpen(){ return !!(mmEl && !mmEl.hidden); }
+
+// Songs by one artist: the listener's own first (already matched), then the
+// iTunes catalog's for that artist. Also the seed for the /similar fallback.
+async function mmArtistSongs(name){
+  const key = artistNameKey(name);
+  if (mmSongsMemo.has(key)) return mmSongsMemo.get(key);
+  const want = normalizeArtistQuery(name), seen = new Set(), out = [];
+  const add = (t) => {
+    const k = String(t.title || '').toLowerCase().replace(/\s*[(\[].*$/, '').trim();
+    if (!k || seen.has(k)) return;
+    seen.add(k); out.push(t);
+  };
+  artistLibrarySongs(name).forEach(add);
+  let res = [];
+  try {
+    const r = await fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: name, media: 'music', entity: 'song', attribute: 'artistTerm', limit: '50' }));
+    if (r.ok) res = ((await r.json()) || {}).results || [];
+  } catch(e){}
+  res.forEach(t => {
+    if (t && t.trackName && songCreditsArtist(t.artistName, want))
+      add({ title: t.trackName, artist: t.artistName, image: t.artworkUrl100 ? t.artworkUrl100.replace(/\/\d+x\d+bb\./, '/300x300bb.') : '' });
+  });
+  if (out.length) mmSongsMemo.set(key, out);
+  return out;
+}
+
+// Fallback map: the artists behind /similar's songs for one of theirs.
+async function mmFromSimilar(name){
+  const key = artistNameKey(name), cur = currentTrack();
+  // two seed songs: one song's neighbors tend to bunch under a few artists
+  const seeds = cur && cur.title && cur.artist && splitArtistNames(cur.artist).some(n => artistNameKey(n) === key) ? [cur] : [];
+  (await mmArtistSongs(name)).forEach(t => { if (seeds.length < 2 && !seeds.some(s => tagCacheKey(s) === tagCacheKey(t))) seeds.push(t); });
+  if (!seeds.length) return [];
+  const sims = await Promise.all(seeds.map(s => fetchSimilar(s.title, name, 30)));
+  const by = new Map();
+  sims.flatMap(sim => sim.candidates || []).forEach(c => {
+    const a = splitArtistNames(c.artist || '')[0], k = artistNameKey(a);
+    if (!a || !k || k === key) return;
+    const e = by.get(k) || { name: a, match: 0, n: 0 };
+    e.match = Math.max(e.match, Number(c.matchScore) || 0); e.n++;
+    by.set(k, e);
+  });
+  return Array.from(by.values()).map(e => ({ name: e.name, match: Math.min(1, e.match + 0.05 * (e.n - 1)) }))
+    .sort((a, b) => b.match - a.match).slice(0, 20);
+}
+
+// null = couldn't reach anything (worth a retry); artists [] = nothing mapped yet
+async function mmFetch(name){
+  const key = artistNameKey(name);
+  if (mmMemo.has(key)) return mmMemo.get(key);
+  let reached = false, center = name, artists = [];
+  try {
+    const r = await fetch(BACKEND + '/artistmap?' + new URLSearchParams({ artist: name }));
+    reached = true;
+    const d = r.ok ? await r.json() : null;
+    if (d && d.source !== 'error'){
+      if (d.artist) center = d.artist;
+      artists = (Array.isArray(d.artists) ? d.artists : []).filter(a => a && a.name);
+    }
+  } catch(e){}
+  if (!artists.length){
+    const fb = await mmFromSimilar(center).catch(() => []);
+    if (fb.length){ artists = fb; reached = true; }
+  }
+  if (!reached && !artists.length) return null;
+  const out = { artist: center, artists };
+  mmMemo.set(key, out);
+  return out;
+}
+
+function mmBuild(){
+  mmEl = document.createElement('div');
+  mmEl.id = 'musicMap';
+  mmEl.hidden = true;
+  mmEl.setAttribute('role', 'dialog');
+  mmEl.setAttribute('aria-label', 'Music map');
+  mmEl.innerHTML =
+    '<div class="fm-head"><button type="button" class="fm-back" id="mmBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></svg></button><div class="fm-title">Music map</div></div>' +
+    '<div class="mm-stage" id="mmStage"></div>' +
+    '<div class="mm-foot"><div class="mm-trail" id="mmTrail"></div><div class="mm-credit">Data from <a href="https://www.last.fm" target="_blank" rel="noopener">Last.fm</a></div></div>';
+  document.body.appendChild(mmEl);
+  $('mmBack').addEventListener('click', () => closeMusicMap());
+  mmEl.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-mm]');
+    if (!t) return;
+    const k = t.dataset.mm, v = t.dataset.v;
+    if (k === 'go') mmGo(v, t.closest('.mm-node'));
+    else if (k === 'play') mmPlay(v, t);
+    else if (k === 'page'){ closeMusicMap(); openArtistPage(v); }
+    else if (k === 'retry'){ mmMemo.delete(artistNameKey(v)); mmGo(v, null, true); }
+    else if (k === 'trail'){ const i = +t.dataset.i; mmTrail = mmTrail.slice(0, i); mmGo(v, null); }
+  });
+}
+
+function openMusicMap(rawName){
+  const name = splitArtistNames(rawName || '')[0];
+  if (!name) return;
+  if (!mmEl) mmBuild();
+  closeTrackCtxMenu();
+  leaveFullscreen(true);
+  mmTrail = [];
+  mmData = null;
+  $('mmStage').innerHTML = '';
+  mmEl.hidden = false;
+  // covered means stopped (#487): the visualizer's canvas loop and the lyrics
+  // scroll pause while the map covers them; CSS pauses the ambient and art
+  vizStop(); lyricsAutoScrollStop();
+  window.addEventListener('resize', mmOnResize);
+  statsFeature('music_map');
+  mmGo(name, null);
+  syncHistoryBuffer();
+}
+function closeMusicMap(){
+  if (!musicMapOpen()) return;
+  mmToken++;
+  mmEl.hidden = true;
+  $('mmStage').innerHTML = '';
+  window.removeEventListener('resize', mmOnResize);
+  applyVisualMode();
+  syncHistoryBuffer();
+}
+function mmOnResize(){
+  clearTimeout(mmResizeT);
+  mmResizeT = setTimeout(() => {
+    if (!musicMapOpen()) return;
+    if (mmData) mmLayout(false);
+    else { const c = $('mmStage').querySelector('.mm-center'); if (c) mmPlaceCenter(c); }   // loading or couldn't load
+  }, 150);
+}
+
+function mmRenderTrail(){
+  const shown = mmTrail.slice(-6), off = mmTrail.length - shown.length;
+  $('mmTrail').innerHTML = shown.map((n, i) => (i ? '<span class="mm-sep">&rsaquo;</span>' : '') +
+    '<button type="button" class="mm-step" data-mm="trail" data-i="' + (off + i) + '" data-v="' + escapeHtml(n) + '"' + (off + i === mmTrail.length - 1 ? ' disabled' : '') + '>' + escapeHtml(n) + '</button>').join('');
+  const tr = $('mmTrail'); tr.scrollLeft = tr.scrollWidth;
+}
+
+function mmCenterHtml(name, note, retry){
+  return '<div class="mm-center-name">' + escapeHtml(name) + '</div>' +
+    (note ? '<div class="mm-note">' + note + '</div>' : '') +
+    '<div class="mm-center-row">' +
+      (retry ? '<button type="button" class="btn-ghost" data-mm="retry" data-v="' + escapeHtml(name) + '">Try again</button>' : '') +
+      '<button type="button" class="btn-ghost is-active" data-mm="play" data-v="' + escapeHtml(name) + '">Play songs</button>' +
+      (retry ? '' : '<button type="button" class="btn-ghost" data-mm="page" data-v="' + escapeHtml(name) + '">Artist page</button>') +
+    '</div>';
+}
+function mmPlaceCenter(c){
+  const st = $('mmStage');
+  c.style.transform = 'translate(' + Math.round((st.clientWidth - c.offsetWidth) / 2) + 'px,' + Math.round((st.clientHeight - c.offsetHeight) / 2) + 'px)';
+}
+
+// Tapped node glides into the middle while the rest fade, then the new ring
+// grows out of the center. fromNode null = a plain jump (open, trail, retry).
+async function mmGo(name, fromNode, keepTrail){
+  const token = ++mmToken, st = $('mmStage');
+  mmData = null;   // a resize mid-load must not redraw the previous map
+  if (!keepTrail && mmTrail[mmTrail.length - 1] !== name) mmTrail.push(name);
+  mmRenderTrail();
+  st.querySelectorAll('.mm-node,.mm-center').forEach(el => { if (el !== fromNode) el.classList.add('is-out'); });
+  if (fromNode){
+    const r = fromNode.getBoundingClientRect(), sr = st.getBoundingClientRect();
+    fromNode.style.transform = 'translate(' + Math.round((sr.width - r.width) / 2) + 'px,' + Math.round((sr.height - r.height) / 2) + 'px) scale(1.25)';
+  }
+  const wait = new Promise(r => setTimeout(r, fromNode ? 420 : 0));
+  // a plain jump shows the name at once while the map loads
+  if (!fromNode){
+    st.innerHTML = '';
+    const c = document.createElement('div');
+    c.className = 'mm-center';
+    c.innerHTML = mmCenterHtml(name, 'Finding artists near ' + escapeHtml(name) + '&hellip;');
+    st.appendChild(c); mmPlaceCenter(c);
+  }
+  const [data] = await Promise.all([mmFetch(name), wait]);
+  if (token !== mmToken || !musicMapOpen()) return;
+  if (!data){
+    mmData = null;
+    st.innerHTML = '<div class="mm-center">' + mmCenterHtml(name, 'Couldn&rsquo;t load the map right now.', true) + '</div>';
+    mmPlaceCenter(st.firstChild);
+    return;
+  }
+  // Last.fm's spelling for the trail too
+  if (data.artist && artistNameKey(data.artist) === artistNameKey(name) && data.artist !== name){ mmTrail[mmTrail.length - 1] = data.artist; mmRenderTrail(); }
+  const narrow = st.clientWidth < 600;
+  mmData = { artist: data.artist || name, artists: data.artists.slice(0, narrow ? 15 : 20) };
+  mmLayout(true);
+}
+
+function mmLayout(animate){
+  const st = $('mmStage'), d = mmData;
+  const W = st.clientWidth, H = st.clientHeight;
+  st.innerHTML = '';
+  const c = document.createElement('div');
+  c.className = 'mm-center';
+  c.innerHTML = mmCenterHtml(d.artist, d.artists.length ? '' : 'Not much mapped around ' + escapeHtml(d.artist) + ' yet. Their songs still play.');
+  st.appendChild(c);
+  const top = d.artists.length ? Math.max(...d.artists.map(a => a.match)) || 1 : 1;
+  const narrow = W < 600;
+  const nodes = d.artists.map((a, i) => {
+    const rel = Math.max(0, Math.min(1, a.match / top));
+    const el = document.createElement('div');
+    el.className = 'mm-node';
+    el.innerHTML = '<button type="button" class="mm-name" data-mm="go" data-v="' + escapeHtml(a.name) + '" style="font-size:' + ((narrow ? 13 : 14) + Math.round(rel * (narrow ? 5 : 8))) + 'px">' + escapeHtml(a.name) + '</button>' +
+      '<button type="button" class="mm-play" data-mm="play" data-v="' + escapeHtml(a.name) + '" aria-label="Play songs by ' + escapeHtml(a.name) + '">' + MM_PLAY_ICON + '</button>';
+    el.style.setProperty('--o', (0.62 + 0.38 * rel).toFixed(2));
+    st.appendChild(el);
+    return { el, rel, i, w: el.offsetWidth, h: el.offsetHeight, x: 0, y: 0 };
+  });
+  const cw = c.offsetWidth, ch = c.offsetHeight, cx = W / 2, cy = H / 2;
+  // nearer = closer to the middle: half match score, half rank, so a flat
+  // run of similar scores still spreads out. Golden-angle spin, seeded by
+  // the name so the same artist always draws the same map.
+  let seed = 0; for (const ch2 of d.artist) seed = (seed * 31 + ch2.charCodeAt(0)) % 3600;
+  const n = nodes.length;
+  nodes.forEach(p => {
+    const dist = 0.38 + 0.6 * (0.5 * (1 - p.rel) + 0.5 * (n > 1 ? p.i / (n - 1) : 0));
+    const ang = seed / 10 * Math.PI / 180 + p.i * 2.39996;
+    p.x = cx + Math.cos(ang) * dist * (W / 2 - p.w / 2 - 6);
+    p.y = cy + Math.sin(ang) * dist * (H / 2 - p.h / 2 - 6);
+  });
+  // push overlapping names apart (and off the center block); a fixed number
+  // of passes, run once here, never per frame
+  const pad = 4, clamp = (p) => {
+    p.x = Math.max(p.w / 2 + 4, Math.min(W - p.w / 2 - 4, p.x));
+    p.y = Math.max(p.h / 2 + 4, Math.min(H - p.h / 2 - 4, p.y));
+  };
+  const cBox = { x: cx, y: cy, w: cw + 16, h: ch + 12, fixed: true };
+  for (let it = 0; it < 140; it++){
+    let moved = false;
+    for (let a = 0; a < n; a++){
+      const p = nodes[a];
+      for (let b = a + 1; b <= n; b++){
+        const q = b === n ? cBox : nodes[b];
+        const dx = q.x - p.x, dy = q.y - p.y;
+        const ox = (p.w + q.w) / 2 + pad - Math.abs(dx), oy = (p.h + q.h) / 2 + pad - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        moved = true;
+        const share = q.fixed ? 1 : 0.5;
+        if (ox < oy){ const s = (dx >= 0 ? -1 : 1) * ox; p.x += s * share; if (!q.fixed) q.x -= s * share; }
+        else { const s = (dy >= 0 ? -1 : 1) * oy; p.y += s * share; if (!q.fixed) q.y -= s * share; }
+      }
+      clamp(p);
+    }
+    if (!moved) break;
+  }
+  const at = (p, scale) => 'translate(' + Math.round(p.x - p.w / 2) + 'px,' + Math.round(p.y - p.h / 2) + 'px)' + (scale ? ' scale(' + scale + ')' : '');
+  mmPlaceCenter(c);
+  if (!animate){ nodes.forEach(p => { p.el.style.transform = at(p); }); return; }
+  // start every name at the center, invisible, then let them glide out
+  nodes.forEach(p => { p.el.style.transform = at({ x: cx, y: cy, w: p.w, h: p.h }, 0.6); p.el.classList.add('is-out'); });
+  c.classList.add('is-out');
+  st.offsetWidth; // commit the start positions before the glide
+  c.classList.remove('is-out');
+  nodes.forEach(p => { p.el.style.transform = at(p); p.el.classList.remove('is-out'); });
+}
+
+// Play an artist's songs right away; the map stays open to keep wandering.
+let mmPlayBusy = false;
+async function mmPlay(name, btn){
+  if (mmPlayBusy) return;
+  mmPlayBusy = true;
+  if (btn) btn.disabled = true;
+  showToast('Finding songs by ' + name + '...');
+  try {
+    const songs = await mmArtistSongs(name);
+    if (!songs.length){ showToast('Couldn’t find songs by ' + name + ' right now'); return; }
+    const list = shuffleTail(songs.slice(0, 20), 0);
+    // one the listener already has goes first so playback starts at once
+    const own = list.findIndex(t => t.videoId);
+    if (own > 0) list.unshift(list.splice(own, 1)[0]);
+    playVibePlaylist({ title: 'Mix: ' + stripTopicSuffix(name) }, list, 0, false, '', { stay: true, onFail: () => showToast('Couldn’t find playable songs by ' + name + ' right now') });
+  } finally {
+    mmPlayBusy = false;
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* =========================================================================
@@ -12519,6 +12846,7 @@ let openTrackCtxMenu = null; // { plId, trackIdx, btn }
 const CTX_ICON_LIKE_ON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
 const CTX_ICON_LIKE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>';
 const CTX_ICON_PLAY_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5v14l9-7zM15 5v14h2V5z"/></svg>';
+const CTX_ICON_MAP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/><circle cx="5" cy="6" r="1.6"/><circle cx="19" cy="7" r="1.6"/><circle cx="18" cy="18" r="1.6"/><circle cx="6" cy="18" r="1.6"/><path d="M6.3 7.1l3.7 3.2M17.6 8l-3.4 2.6M16.8 16.8l-2.9-2.9M7.2 16.9l3-2.8"/></svg>';
 const CTX_ICON_RADIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><path d="M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7M5.6 5.6a9 9 0 000 12.8M18.4 5.6a9 9 0 010 12.8"/></svg>';
 const CTX_ICON_ADD_PLAYLIST = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zM3 16h8v-2H3v2zm0-5h12v-2H3v2zm15 5v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>';
 const CTX_ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
@@ -12573,6 +12901,7 @@ function openTrackCtxMenuFor(plId, trackIdx, anchorEl, opts){
     items.push({ action: 'addqueue', label: 'Add to queue', icon: CTX_ICON_ADD_QUEUE });
     items.push({ action: 'addplaylist', label: 'Add to playlist', icon: CTX_ICON_ADD_PLAYLIST });
     if (!isPodcastTrack(t)) items.push({ action: 'radio', label: 'Start a radio', icon: CTX_ICON_RADIO });   // #628
+    if (!isPodcastTrack(t) && t.artist) items.push({ action: 'map', label: 'Music map', icon: CTX_ICON_MAP });   // #597
     if (opts && opts.isNow) items.push({ action: 'sleep', label: sleepTimer ? 'Sleep timer: ' + sleepTimerLabel() : 'Sleep timer', icon: CTX_ICON_SLEEP });
     items.push({ action: 'songpage', label: 'Song page', icon: CTX_ICON_ART });
     // A track has no canonical source link of its own (see
@@ -12635,6 +12964,7 @@ function handleTrackCtxAction(action, plId, trackIdx){
   else if (action === 'radio'){   // #628: one tap, no confirm. The playing song keeps playing and the radio follows it
     if (t && t.videoId){ const ct = currentTrack(); startRadio(t.title + ' Radio', [t], !!(ct && ct.videoId === t.videoId)); }
   }
+  else if (action === 'map'){ if (t && t.artist) openMusicMap(t.artist); }
   else if (action === 'share'){ if (t) shareTrackAt(plId, trackIdx); }
   else if (action === 'songpage'){ if (t) openSongPage(t, plId, trackIdx); }
   else if (action === 'decline'){ declineCurrentsTrack(trackIdx); }
@@ -16568,7 +16898,9 @@ function stageVibeResults(text, interp, tracks){
 // early start. Unsaved plays reuse one fixed id (the queue's Save button can
 // still keep it); "Save to library" gets its own custom playlist.
 let vibeSessionGen = 0;
-async function playVibePlaylist(interp, list, startIdx, save, text){
+// opts.stay (#597 music map): leave the current view and any open layer alone, and
+// report a failure with opts.onFail instead of the full-screen error.
+async function playVibePlaylist(interp, list, startIdx, save, text, opts){
   // A newer unsaved play reuses VIBE_SESSION_ID - stop an older loop still
   // resolving under that id so the two don't write over each other.
   const gen = save ? null : ++vibeSessionGen;
@@ -16604,7 +16936,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
       loadPlaylistIntoPlayer(pl);
       buildQueueFrom(pl.tracks.length - 1, id);
       loadIndex(state.queuePos, true);
-      setView('player');
+      if (!(opts && opts.stay)) setView('player');
       showToast(save ? 'Saved “' + pl.name + '” to your library' : 'Playing “' + pl.name + '”');
     }
     if (i < order.length - 1 && !own) await sleep(350);
@@ -16612,6 +16944,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text){
   bgResolveProgress.delete(id);
   if (!started){
     hideMatchStatus();
+    if (opts && opts.onFail){ opts.onFail(); return; }
     stageError("Couldn't find playable versions of those songs right now.", () => playVibePlaylist(interp, list, startIdx, save, text), 'Couldn’t build that playlist.');
     return;
   }

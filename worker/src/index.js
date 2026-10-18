@@ -21,6 +21,7 @@ import { handleNowPlaying } from './nowplaying.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
+import { ARTISTMAP_LIMIT, classifyLastfmSimilar, shapeArtistMap, artistMapCacheControl } from './artistmap.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
 export { PodCaptioner, PodCaptionBudget };
 
@@ -80,6 +81,7 @@ const SEARCH_MAX_ALTS = 20;
 // cached under production's keys before CACHE_NAMESPACE existed.
 const SIMILAR_CACHE_VERSION = 'v2';
 const TAGS_CACHE_VERSION = 'v1';
+const ARTISTMAP_CACHE_VERSION = 'v1';
 const YTMIX_CACHE_VERSION = 'v1';
 const THISIS_CACHE_VERSION = 'v1';
 // Bumped independently of ART_CACHE_VERSION - see the /soundcloud cache key
@@ -3844,6 +3846,41 @@ async function handleSimilar(url, env, ctx) {
   return response;
 }
 
+// ---------- GET /artistmap?artist= ----------
+// Geethub #597 music map: the artists around one artist, nearer = higher
+// Last.fm match. One Last.fm call per artist, cached a week (see
+// artistmap.js). source is 'lastfm', 'none' (nothing mapped yet) or 'error'
+// (Last.fm unreachable - not cached, so the client's retry tries again).
+async function handleArtistMap(url, env, ctx) {
+  const artist = (url.searchParams.get('artist') || '').trim().slice(0, 200);
+  if (!artist) return json({ error: 'missing artist' }, 400);
+
+  const cache = envCache;
+  const cacheKey = new Request('https://cache.internal/' + ARTISTMAP_CACHE_VERSION + '/artistmap/' + encodeURIComponent(artist.toLowerCase()));
+  const cached = await cache.match(cacheKey);
+  if (cached) return applyCors(cached);
+
+  let status = 0, body = null;
+  if (env.LASTFM_API_KEY) {
+    const qs = new URLSearchParams({ method: 'artist.getSimilar', api_key: env.LASTFM_API_KEY, format: 'json', artist, autocorrect: '1', limit: String(ARTISTMAP_LIMIT + 5) });
+    try {
+      const res = await fetch('https://ws.audioscrobbler.com/2.0/?' + qs.toString(), { headers: { 'User-Agent': APP_UA } });
+      status = res.status;
+      body = await res.json().catch(() => null);
+    } catch (e) {}
+  }
+  const kind = classifyLastfmSimilar(status, body);
+  const shaped = shapeArtistMap(kind === 'ok' ? body : null, artist);
+  const source = kind === 'failed' ? 'error' : (shaped.artists.length ? 'lastfm' : 'none');
+  const response = json({ source, artist: shaped.artist, artists: shaped.artists });
+  const cc = artistMapCacheControl(source);
+  if (cc) {
+    const toCache = response.clone();
+    ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': cc } })));
+  }
+  return response;
+}
+
 // ---------- GET /vibe-interpret?q= ----------
 // conversational-vibe-search: turns a free-text sentence typed (or spoken)
 // into the playlist-input bar - "rainy sunday morning, making coffee, want
@@ -4829,6 +4866,7 @@ export default {
       if (url.pathname === '/playlistsearch') return await handlePlaylistSearch(url, ctx);
       if (url.pathname === '/sctracksearch') return await handleSoundCloudTrackSearch(url, ctx);
       if (url.pathname === '/similar') return await handleSimilar(url, env, ctx);
+      if (url.pathname === '/artistmap') return await handleArtistMap(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
       if (url.pathname === '/vibe-interpret') return await handleVibeInterpret(url, env, ctx);
       if (url.pathname === '/metrics') return await handleMetrics(request, env, ctx);
