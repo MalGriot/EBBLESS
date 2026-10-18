@@ -26952,7 +26952,11 @@ document.addEventListener('keydown', (e) => {
       if (miniPlayerWin && !miniPlayerWin.closed){
         if (isDesktopApp) window.ebblessDesktop.focusMain();
         else try { miniPlayerWin.close(); } catch(_){}
-      } else if (currentTrack()) openMiniPlayer();
+      } else if (currentTrack()){
+        // The Mac app minimizes its window when the mini opens (app 1.0.8+, hideMain). On an older app, closing the window does the
+        // same job: it hides the window and floats the mini player, and the shortcut still works without an app update.
+        openMiniPlayer().then(() => { if (isDesktopApp && !window.ebblessDesktop.hideMain) try { window.close(); } catch(_){} });
+      }
       break;
     // z/x/c/v: the visual tabs as one row - art, cymatics, lyrics, video
     case 'z': case 'Z': {

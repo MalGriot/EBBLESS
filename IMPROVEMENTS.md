@@ -11069,7 +11069,7 @@ Add entries in this shape:
 - **Description:** Idea Geethub #606. 
 - **Touches:** tbd.
 - **Branch:** agent/mini-batch-2
-- **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows.
+- **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up: on a Mac app older than 1.0.8 (no hideMain) M now also closes the main window, which that app turns into 'hide the window and float the mini', so M minimizes the main window and opens the mini on any app version. Not verifiable without the Mac app.
 
 ### library-changes: library changes (Geethub #607)
 - **Status:** draft
