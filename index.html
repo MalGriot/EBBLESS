@@ -27127,6 +27127,7 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics #mpCym{display:block}
   /* the canvas draws the plate's outline itself (it slowly changes shape), so the window adds no clip or fill of its own */
   body.mp-shape-cymatics{clip-path:none;border-radius:0}
+  body.mp-shape-cymatics:hover #mpCard{background:none} /* the plate is not a rectangle: no hover wash over the corners */
   body.mp-shape-cymatics::before{display:none}
   body.mp-shape-cymatics #mpHead{top:15%}
   body.mp-shape-cymatics #mpMeta{bottom:13%;width:62%}
@@ -27290,7 +27291,7 @@ function mpCymSync(win){
     ctx.globalAlpha = 1;
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(plate);
     if (c.prog > 0){
-      ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = c.color;
+      ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = c.color2; // the song's color, like the rest of the UI
       const stop = len * c.prog;
       ctx.beginPath(); ctx.moveTo(pts[0], pts[1]);
       for (let i = 1; i <= N && per[i] <= stop; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
