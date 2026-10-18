@@ -22243,8 +22243,11 @@ function checkDeckReady(deck){
     forceLowestQuality(deck);
   }
   // still an ad after the reload: move the song onto the closest-to-identical
-  // other link (adTryAlternate: another YouTube upload, else SoundCloud), once
-  if (reason && standby && adLike && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= STANDBY_AD_ALT_MS){
+  // other link (adTryAlternate: another YouTube upload, else SoundCloud), once.
+  // Only for signals about the video itself: 'not-moving' / 'no-duration' also
+  // read on a healthy slow start (seen on a phone), and a good link must not be
+  // swapped for that
+  if (reason && standby && /^(duration|short|video-id)$/.test(reason) && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= STANDBY_AD_ALT_MS){
     deck.adAltTried = true;
     adLog(deck, 'standby-alt', reason);
     adTryAlternate(state.queue[deck.pos], deck);
