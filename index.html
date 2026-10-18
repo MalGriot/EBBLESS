@@ -27203,7 +27203,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark.png', location.href).href }), ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flowD: 0, hov: 0, over: false, hovering: false, lastMove: 0, logo: Object.assign(new win.Image(), { src: new URL('brand/assets/mark-white.png', location.href).href }), tint: null, tintFor: '', ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27377,12 +27377,19 @@ function mpCymSync(win){
         ctx.beginPath(); ctx.arc(hx + Math.cos(ang) * d, hy + Math.sin(ang) * d, 0.5 + Math.random() * 0.9, 0, Math.PI * 2); ctx.fill();
       }
     }
-    // not hovered: the colorful EBBLESS mark in the middle, in front of everything (a small pulse on each kick)
+    // not hovered: the EBBLESS mark in the UI color in the middle, in front of everything (a small pulse on each kick)
     if (c.hov < 1 && c.logo.complete && c.logo.naturalWidth){
+      if (c.tintFor !== c.color2){ // the white mark recolored to the UI color whenever that changes
+        const oc = c.tint || (c.tint = doc.createElement('canvas')), ox = oc.getContext('2d');
+        oc.width = c.logo.naturalWidth; oc.height = c.logo.naturalHeight;
+        ox.drawImage(c.logo, 0, 0);
+        ox.globalCompositeOperation = 'source-in'; ox.fillStyle = c.color2; ox.fillRect(0, 0, oc.width, oc.height);
+        c.tintFor = c.color2;
+      }
       ctx.globalCompositeOperation = 'source-over';
-      const lw = Math.min(w, h) * 0.15 * (1 + 0.05 * kick), lh = lw * c.logo.naturalHeight / c.logo.naturalWidth;
+      const lw = Math.min(w, h) * 0.15 * (1 + 0.05 * kick), lh = lw * c.tint.height / c.tint.width;
       ctx.globalAlpha = 0.95 * (1 - c.hov);
-      ctx.drawImage(c.logo, cx - lw / 2, cy - lh / 2, lw, lh);
+      ctx.drawImage(c.tint, cx - lw / 2, cy - lh / 2, lw, lh);
     }
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
