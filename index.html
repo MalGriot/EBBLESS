@@ -28222,6 +28222,13 @@ function miniCassetteCss(){
   try { Array.from(document.styleSheets).forEach(ss => { try { css += pick(ss.cssRules); } catch (e) {} }); } catch (e) {}
   return css;
 }
+// Mac: a click on the cover (or the LP, the cassette, the plate - not a button) steps the whole mini player through its four
+// modes: card, full LP, full cassette, Cymatics, then the card again. The mode is held until the main player's mode changes.
+const MP_CLICK_ORDER = ['card', 'disc', 'tape', 'cymatics'];
+function mpCycleShape(){
+  const i = MP_CLICK_ORDER.indexOf(mpDesktopShape());
+  mpPickShape(MP_CLICK_ORDER[(i + 1) % MP_CLICK_ORDER.length]);
+}
 function mpCycleArtMode(){
   if (visualMode === 'viz'){ kbSetVisual('art'); setArtStyle('default'); return; }
   if (visualMode !== 'art'){ kbSetVisual('art'); return; }
@@ -28290,7 +28297,7 @@ function buildMiniPlayerDOM(win){
     try { window.focus(); } catch(e){} try { win.close(); } catch(e){}
   };
   // a click on the cover steps the art mode like the Z key: Art, LP, cassette, Visualizer (Cymatics here), then Art again
-  doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')){ mpCycleArtMode(); updateMiniPlayerUI(); } });
+  doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')){ if (isDesktopApp) mpCycleShape(); else mpCycleArtMode(); updateMiniPlayerUI(); } });
   // the expand button: the app opens on its main player (like the H key, no fullscreen) and the mini closes
   doc.getElementById('mpFull').addEventListener('click', () => { try { leaveFullscreen(true); state.settingsFromDeskFs = false; setView('player'); } catch(err){} backToApp(); });
   doc.getElementById('mpLogo').addEventListener('click', backToApp);
@@ -28583,8 +28590,10 @@ function updateMiniPlayerUI(){
   const isPlaying = artworkWrap.classList.contains('is-playing');
   doc.body.classList.toggle('mp-playing', isPlaying);
   if (isDesktopApp) mpCymSync(miniPlayerWin);
-  doc.getElementById('mpArtWrap').dataset.artStyle = artStyle;
-  if (artStyle === 'cassette'){
+  // the full LP and full cassette windows always show the LP and the cassette, whatever the art style behind the card's thumbnail
+  const shownSkin = doc.body.dataset.mpShape === 'disc' ? 'record' : doc.body.dataset.mpShape === 'tape' ? 'cassette' : artStyle;
+  doc.getElementById('mpArtWrap').dataset.artStyle = shownSkin;
+  if (shownSkin === 'cassette'){
     // same wound-tape pack radii and tape path as the main cassette (cassetteSetProgress)
     doc.getElementById('mpTape').dataset.state = isPlaying ? 'playing' : 'paused';
     [['reelMassL', reelMassL], ['reelLineL', reelLineL], ['reelMassR', reelMassR], ['reelLineR', reelLineR]].forEach(([id, src]) => {
