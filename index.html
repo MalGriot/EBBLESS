@@ -27414,6 +27414,7 @@ const MP_ICO = {
   next: '<path d="M16 6h2v12h-2zM6 6v12l8.5-6z"/>',
   repeat: '<path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>',
   like: '<path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/>',
+  full: '<path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/>',
   flag: '<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>',
   decline: '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>',
   shape: '<path d="M12 3l4 7H8zM4 14h7v7H4zm13.5 3.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7z" transform="translate(0 -2)"/>',
@@ -28171,6 +28172,13 @@ function miniCassetteCss(){
   try { Array.from(document.styleSheets).forEach(ss => { try { css += pick(ss.cssRules); } catch (e) {} }); } catch (e) {}
   return css;
 }
+function mpCycleArtMode(){
+  if (visualMode === 'viz'){ kbSetVisual('art'); setArtStyle('default'); return; }
+  if (visualMode !== 'art'){ kbSetVisual('art'); return; }
+  if (artStyle === 'default') setArtStyle('record');
+  else if (artStyle === 'record') setArtStyle('cassette');
+  else kbSetVisual('viz');
+}
 function buildMiniPlayerDOM(win){
   const doc = win.document;
   const brandUrl = (p) => new URL(p, location.href).href;  // PiP doc is about:blank - resolve against the app
@@ -28198,6 +28206,7 @@ function buildMiniPlayerDOM(win){
         btn('mpStyle', 'mp-tool', 'Album color background', MP_ICO.style) +
         btn('mpReset', 'mp-tool', 'Reset shape', MP_ICO.reset) +
         '<div id="mpFav">' +
+          btn('mpFull', 'mp-tool', 'Fullscreen', MP_ICO.full) +
           '<button id="mpDecline" class="mp-tool" title="Not for me: drop from CuRRentSSsss" aria-label="Not for me: drop from CuRRentSSsss" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">' + MP_ICO.decline + '</svg></button>' +
           '<button id="mpLike" class="mp-tool" title="Add to Liked Songs" aria-label="Add to Liked Songs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + MP_ICO.like + '</svg></button>' +
         '</div>' +
@@ -28230,7 +28239,10 @@ function buildMiniPlayerDOM(win){
     if (isDesktopApp){ window.ebblessDesktop.focusMain(); return; } // the Mac app keeps it floating
     try { window.focus(); } catch(e){} try { win.close(); } catch(e){}
   };
-  doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')) backToApp(); });
+  // a click on the cover steps the art mode like the Z key: Art, LP, cassette, Visualizer (Cymatics here), then Art again
+  doc.getElementById('mpArtWrap').addEventListener('click', (e) => { if (!e.target.closest('#mpArtPick')){ mpCycleArtMode(); updateMiniPlayerUI(); } });
+  // the expand button: the app goes fullscreen (its in-app fullscreen player) and the mini closes
+  doc.getElementById('mpFull').addEventListener('click', () => { try { if (currentTrack() && !state.flowOpen) openFlow(); } catch(err){} backToApp(); });
   doc.getElementById('mpLogo').addEventListener('click', backToApp);
   const forward = (id, target) => doc.getElementById(id).addEventListener('click', () => { target.click(); updateMiniPlayerUI(); });
   forward('mpPrev', prevBtn);
