@@ -11318,3 +11318,11 @@ Add entries in this shape:
 - **Touches:** index.html (library panel, song page), sw.js cache v338.
 - **Branch:** agent/match-credits
 - **Notes:** Built on request after the research. Credits need MusicBrainz to know the recording; coverage varies.
+
+### paste-song-list: Paste a list of songs into the search bar (from research, docs/research/TRANSFER-APPS.md)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Pasting several lines (Artist - Title, or Title by Artist, numbers and bullets ignored) into the search bar or the phone Search tab makes a "Pasted songs" playlist, up to 100 songs, matched one by one with the found-X-of-Y strip. Single-line pastes and anything with a link behave as before.
+- **Touches:** index.html (paste handler near the Search tab code), sw.js cache v339, What's New 299.
+- **Branch:** agent/paste-song-list
+- **Notes:** Matcher returns something for almost any text, so nonsense lines still get a video; the strip only lists lines with no result at all.
