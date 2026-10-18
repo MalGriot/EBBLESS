@@ -27342,6 +27342,10 @@ const MINI_PLAYER_STYLE = `
   #mpHint{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);z-index:3;max-width:calc(100% - 16px);padding:2px 8px;border-radius:999px;
     background:rgba(0,0,0,.55);color:rgba(255,255,255,.8);font-size:10px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
   #mpHint[hidden]{display:none}
+  /* shared by the Chrome PiP window and the Mac window: the heart + thumbs-down group, a hidden tool button, and the Cymatics canvas (Mac only, hidden until that shape) */
+  #mpFav{display:flex;align-items:center;gap:2px}
+  .mp-tool[hidden]{display:none}
+  #mpCym{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .mpq-empty{font-size:12px;color:var(--mp-fg2,#888);padding:14px 6px;text-align:center}
 `;
 /* EBBLESS for Mac (desktop/, #480 #481): instead of a Picture-in-Picture
@@ -27413,8 +27417,6 @@ const MINI_DESKTOP_STYLE = `
   body.mp-desktop button,body.mp-desktop #mpSeekTrack,body.mp-desktop #mpArtWrap,body.mp-desktop #mpLogo,
   body.mp-desktop #mpQueue,body.mp-desktop #mpEdge,#mpMenu{-webkit-app-region:no-drag}
   /* #636: the compact shapes keep the head's heart + thumbs-down (#mpFav) and the title/artist, shown on hover */
-  #mpFav{display:flex;align-items:center;gap:2px}
-  .mp-tool[hidden]{display:none}
   body.mp-shape-pill{border-radius:999px;clip-path:inset(0 round 999px)}
   body.mp-shape-pill #mpCard{padding-right:24px}
   body.mp-shape-pill #mpArtWrap{border-radius:50%}
@@ -27460,7 +27462,6 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-tape #mpCard{display:block;padding:0;height:100vh;background:transparent}
   body.mp-shape-tape #mpArtWrap{position:absolute;inset:6px;width:auto;height:auto;box-shadow:none}
   /* #627 cymatics: the disc with a live sand-plate pattern behind a small cover. Drawn by mpCymSync, only while it is showing and playing. */
-  #mpCym{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   body.mp-shape-cymatics #mpCym{display:block}
   /* the canvas draws the plate's outline itself (it slowly changes shape), so the window adds no clip or fill of its own */
   body.mp-shape-cymatics{clip-path:none;border-radius:0}
@@ -27803,12 +27804,6 @@ function wireMiniDesktop(win){
   shapeBtn.id = 'mpShape'; shapeBtn.className = 'mp-tool'; shapeBtn.title = 'Shape: LP, cassette, card...'; shapeBtn.setAttribute('aria-label', 'Change shape');
   shapeBtn.innerHTML = '<svg viewBox="0 0 24 24">' + MP_ICO.shape + '</svg>';
   shapeBtn.addEventListener('click', (e) => { e.stopPropagation(); const r = shapeBtn.getBoundingClientRect(); openMenu(r.left, r.bottom + 2); });
-  // #627: Cymatics sits in the art picker (hover the cover) next to default, LP and cassette
-  const cymBtn = doc.createElement('button');
-  cymBtn.id = 'mpArtCymatics'; cymBtn.title = 'Cymatics'; cymBtn.setAttribute('aria-label', 'Cymatics');
-  cymBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9"/></svg>';
-  cymBtn.addEventListener('click', () => { mpPickShape('cymatics'); mpApplyShape(win); updateMiniPlayerUI(); });
-  doc.getElementById('mpArtPick').appendChild(cymBtn);
   const styleBtn = doc.getElementById('mpStyle');
   styleBtn.parentNode.insertBefore(shapeBtn, styleBtn);
   doc.head.appendChild(Object.assign(doc.createElement('style'), { textContent: '#mpShape{opacity:0}body:hover #mpShape,#mpShape:focus-visible{opacity:1}' }));
