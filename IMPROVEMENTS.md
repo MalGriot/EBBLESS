@@ -10170,7 +10170,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #516. Likely needs app signing/notarizing; overlaps download-link entry. Partial (agent/mac-download-flow): download shows a 3-step first-open guide under the button (drag to Applications; right-click, Open, Open; newer macOS: System Settings > Privacy & Security > Open Anyway). The real fix is Developer ID signing + notarization (Apple Developer account, $99/yr), blocked on the user; app is ad-hoc signed today. Parked 2026-10-17 by owner (needs an Apple account/signing); the first-open guide stays. Revisit when an Apple Developer account exists.
 
 ### mac-intel-and-pc: Build the desktop app for Intel Macs and Windows PC (Geethub #515)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #515. Build the desktop app for Intel Macs and Windows PC.
 - **Touches:**
@@ -10491,7 +10491,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #541. Ad-related group with #527-#529, #539, #540. Ad avoidance is core (#523 shipped); must stay within terms the user accepts.
 
 ### yt-ad-blocking-more: More on ad blocking YouTube (compliantly) (Geethub #540)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #540. Further YouTube ad handling, compliantly.
 - **Touches:** ad handling.
@@ -10499,7 +10499,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #540. Ad group, see #541.
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10542,7 +10542,7 @@ Add entries in this shape:
   Fix (2026-10-17, cache v293, not deployed): the window was too tall to reach Create on a phone. Now the main choices (name, Played, Liked, Order, How many) are on top, Length / Artist / Title or artist has / Leave out artist / Leave out words are under a More options fold (opens by itself when editing a playlist that uses them), the rules area scrolls, and the match count with Create and Cancel stay fixed at the bottom. Checked at 360x600 in the preview.
 
 ### shared-playlists: Shared playlists that multiple users can build together (Geethub #534)
-- **Status:** review
+- **Status:** archived
 - **Priority:** low
 - **Description:** Idea, Geethub #534. Several users build one playlist together.
 - **Touches:** playlists, accounts.
@@ -10582,7 +10582,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499). Fixed: every cursor shape now has a dark outer edge and light inner edge, so it shows on any color. Cache v265.
 
 ### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10590,7 +10590,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #529. Ad group, see #541.
 
 ### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #528. Investigate and implement.
 - **Touches:** ad handling.
@@ -10598,7 +10598,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #528. Ad group, see #541.
 
 ### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #527. Investigate and implement.
 - **Touches:** ad handling.
@@ -10710,7 +10710,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #556.
 
 ### youtube-ads-tip-when-the-skip: youtube ads tip: when the skip button appears, you don't have to click it, all you have to do is refresh the page and it plays (Geethub #557)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #557. medium
 - **Touches:** tbd.
@@ -10750,7 +10750,7 @@ Add entries in this shape:
   Round 9 (2026-10-17, cache v300, not deployed): Settings steps reordered so Restore a setting to its original value (Reset) is last: open Settings, explore, change a setting, customize, adjust the volume, restore. The card still shows the first unfinished step, so doing Reset early does not skip the others. Syntax-checked only, not opened in the preview.
 
 ### playing-the-next-song-in-the: playing the next song in the queue in the background to make sure the ad is played out could work also for preventing users from waiting (Geethub #561)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #561. medium
 - **Touches:** tbd.
@@ -10838,7 +10838,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #571.
 
 ### reverse-engineer-youtube-and-find-out: reverse engineer youtube and find out where the ads are coming from so we can stop them (Geethub #572)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #572. medium
 - **Touches:** tbd.
@@ -11072,7 +11072,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up (reverted): an attempt to close the main window on apps without hideMain QUIT the whole app for the owner, so it was removed. M only opens the mini; the main window minimizes only on app 1.0.8+ (hideMain). Needs the 1.0.8/1.0.9 Mac app to be built and released. Released in Mac app 1.0.10 (GitHub release v1.0.10, 2026-10-18); closed.
 
 ### library-changes: library changes (Geethub #607)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #607. default order should be "most recent" "new playlist" should just be a plus sign "view" should just be an icon inline with the section pills (resize the pills to be more compact) search and new playlist should be in line with library title thumbs should be moved up closer to section title section title should be moved down further away from pills
 - **Touches:** tbd.
@@ -11128,7 +11128,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #613. Built: while nothing is playing and the art is in its default style, the white EBBLESS wordmark (40% of the art wide, 85% opacity) bounces around inside the art box like the DVD logo, edge to edge, at two different speeds so the path wanders. Pure CSS, two nested transform keyframes (translateY on the box, translateX on the image, percentages of the logo's own size so no JS and no rAF), no filter/blur. It only exists (display:block) while the empty art is showing in art mode; hidden in visualizer/lyrics, under other tabs, and paused under the fullscreen player and Find music. Reduced motion shows it still. Not built: no color change on corner hits; the record and cassette art styles don't show it. Verified in the 375px browser preview by forcing the empty state: positions sampled over time stay inside the art, pauses when Find music opens, no new [gpu-watchdog]. Not checked on a real phone or in the fullscreen player. Cache v329.
 
 ### don-t-count-rick-astley-s-never-gonna-give: don't count rick astley's never gonna give you up in the listener's play history or analytics (Geethub #614)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #614. don't put it in on air either. just treat it like nothing is playing and it never played
 - **Touches:** tbd.
@@ -11152,7 +11152,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #616. Built: tapping the only lit pill (which used to do nothing) now lights every visible pill and unfolds every section, albums' artist groups included. Only the one early return in the pill click handler changed; overflow/search code untouched. Verified in the 375px browser preview: one lit pill then tap lights all, normal toggles unchanged. Cache v328.
 
 ### a-chatbot-that-users-can-air-their-grievan: a chatbot that users can air their grievances to and train their own algorithm (Geethub #617)
-- **Status:** review
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Idea Geethub #617. 
 - **Touches:** tbd.
@@ -11280,7 +11280,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #632. **Could not reproduce** the exact symptom: in the preview the pills stayed the same size (and no scrollbar or arrow appeared) when toggled off and on at 320, 360, 375 px and the 340 px desktop sidebar. Reproduced one related fault: in a very narrow row (about 200 px) a label slips out of its pill. Likely mechanism for the report: `updateLibFilterMore` judged overflow with `libFilter.scrollWidth`, which also counts a label slipping out of its pill; Podcasts is the last and longest pill, so it lit the arrow button, which takes 38 px from the row, shrinking every pill and making the row scrollable. Defensive fix (not confirmed on the owner's phone): overflow is now judged from the last pill's own box, and the pill font and padding can shrink a little further (8.5px / 3px minimums) before a label slips. If it still happens, get the phone width, font size setting and which pill was turned off.
 
 ### is-there-a-way-to-change-the-dock-icon-bas: is there a way to change the dock icon based on what album art mode is active? (Geethub #633)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #633. like make it a record or an lp or out the cymatics behind the logo? obvs the logo must always be there but maybe put things behind it
 - **Touches:** tbd.
