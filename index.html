@@ -27040,9 +27040,9 @@ const MP_SHAPE_LABEL = { card: 'Card', pill: 'Pill', disc: 'LP (disc)', tape: 'C
 const MP_SHAPE_BY_ART = { record: 'disc', cassette: 'tape' };
 function mpSavedShape(){ const s = (lsGet(LS_MINI_PLAYER, null) || {}).shape; return MP_SHAPES.includes(s) ? s : null; }
 function mpDesktopShape(){ return mpSavedShape() || MP_SHAPE_BY_ART[artStyle] || 'card'; }
-// Cymatics is the disc's outline and hover controls with its own art (see mpCymSync), so it also carries mp-shape-disc
+// Cymatics is the square's outline and hover controls with its own art (see mpCymSync), so it also carries mp-shape-disc
 function mpSetShapeClasses(body, shape){
-  MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape || (shape === 'cymatics' && x === 'disc')));
+  MP_SHAPES.forEach(x => body.classList.toggle('mp-shape-' + x, x === shape || (shape === 'cymatics' && x === 'square')));
   body.dataset.mpShape = shape;
 }
 function mpApplyShape(win){
@@ -27127,7 +27127,9 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics #mpCym{display:block}
   body.mp-shape-cymatics::before{background:#000}
   body.mp-shape-cymatics #mpBg{display:none}
-  body.mp-shape-cymatics #mpArtWrap{inset:31%;box-shadow:0 0 0 2px rgba(0,0,0,.7),0 0 0 3px rgba(255,255,255,.25)}
+  /* the cover only shows on hover, as a medallion under the controls */
+  body.mp-shape-cymatics #mpArtWrap{inset:31%;border-radius:50%;opacity:0;transition:opacity .25s ease;box-shadow:0 0 0 2px rgba(0,0,0,.7),0 0 0 3px rgba(255,255,255,.25)}
+  body.mp-shape-cymatics:hover #mpArtWrap{opacity:1}
   body.mp-shape-cymatics #mpArtWrap #mpRecord,body.mp-shape-cymatics #mpArtWrap #mpTape{display:none!important}
   body.mp-shape-cymatics #mpArtWrap #mpArt,body.mp-shape-cymatics #mpArtWrap .mp-art-ghost{display:block!important}
   body.mp-shape-cymatics #mpArtWrap[data-art-style]{background:#282828;overflow:hidden}
@@ -27144,9 +27146,10 @@ const MINI_DESKTOP_STYLE = `
   #mpMenu button:hover{background:rgba(255,255,255,.1)}
   #mpMenu button.is-active{color:var(--accent)}
 `;
-// #627 Cymatics shape: a sand plate on a record. The visualizer's own nodal-field patterns (VIZ_PATTERNS) drawn in two
-// colors (the daily clock color and the song's own color) that glow where they pile up, a slow turn, a kick every ~2s
-// that scatters the sand and sends a ripple out from the cover (water cymatics), and the song's progress as the rim.
+// #627 Cymatics shape: a square sand plate. The visualizer's own nodal-field patterns (VIZ_PATTERNS) drawn in two
+// colors (the daily clock color and the song's own color) that glow where they pile up, a kick every ~2s that scatters
+// the sand and sends a ripple out from the middle (water cymatics), and the song's progress around the frame. The cover
+// only appears on hover.
 // GPU budget: ~1700 dots at 30 fps on a canvas of the window's size, plain 2D (no blur or filter), runs only while this
 // shape is showing, playing and the window is visible; paused or any other shape = no frames requested.
 const MP_CYM_PULSE_MS = 2100;
@@ -27167,7 +27170,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, pulseAt: 0, ripples: [], rot: 0, color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, pulseAt: 0, ripples: [], color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27198,13 +27201,11 @@ function mpCymSync(win){
       if (c.mix >= 1){ c.fa = c.fb; c.pa = c.pb; c.fb = c.pb = null; c.mix = 0; c.since = 0; }
     }
     if (now - c.colorAt > 1000){ c.color = vizRosicrucianColor(); c.colorAt = now; }
-    const ctx = c.ctx, tSec = c.t / 1000, half = Math.min(w, h) / 2 - 6, cx = w / 2, cy = h / 2, k = dt / 16.7;
+    const ctx = c.ctx, tSec = c.t / 1000, half = Math.min(w, h) / 2 - 10, cx = w / 2, cy = h / 2, k = dt / 16.7;
     // the kick: every MP_CYM_PULSE_MS the sand jumps, settles back, and a ripple leaves the cover
     if (c.t - c.pulseAt > MP_CYM_PULSE_MS){ c.pulseAt = c.t; c.ripples.push(c.t); if (c.ripples.length > 3) c.ripples.shift(); }
     const kick = Math.exp(-(c.t - c.pulseAt) / 380);
     const jitter = 0.02 * k * (1 + 2.4 * kick), step = 0.016 * k * (1 + 1.6 * kick); // calm drift equals the full visualizer at 60 fps
-    c.rot = (c.rot + dt / 90000 * Math.PI * 2) % (Math.PI * 2);
-    const rc = Math.cos(c.rot), rs = Math.sin(c.rot);
     if (now - c.colorAt > 1000){
       c.color = vizRosicrucianColor();
       c.color2 = songAccent || c.color;
@@ -27212,21 +27213,24 @@ function mpCymSync(win){
       c.colorAt = now;
     }
     ctx.clearRect(0, 0, w, h);
-    // rim: a faint groove ring, the song's progress laid over it
+    // rim: a faint frame around the plate, the song's progress laid over it from the top middle
+    const rim = 5, rr = 17, rw = w - rim * 2, rh = h - rim * 2, per = 2 * (rw - 2 * rr) + 2 * (rh - 2 * rr) + 2 * Math.PI * rr;
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.14)';
-    ctx.beginPath(); ctx.arc(cx, cy, half + 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(rim, rim, rw, rh, rr); ctx.stroke();
     if (c.prog > 0){
       ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = c.color;
-      ctx.beginPath(); ctx.arc(cx, cy, half + 2, -Math.PI / 2, -Math.PI / 2 + c.prog * Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([per * c.prog, per]); ctx.lineDashOffset = -(rw - 2 * rr) / 2;
+      ctx.beginPath(); ctx.roundRect(rim, rim, rw, rh, rr); ctx.stroke();
+      ctx.setLineDash([]);
     }
-    // ripples from the cover's edge out to the rim
+    // ripples from the middle out past the corners
     ctx.lineWidth = 1.4;
     for (let r = 0; r < c.ripples.length; r++){
       const age = (c.t - c.ripples[r]) / 1700;
       if (age >= 1) continue;
       ctx.globalAlpha = 0.5 * (1 - age) * (1 - age);
       ctx.strokeStyle = c.color2;
-      ctx.beginPath(); ctx.arc(cx, cy, half * (0.32 + 0.66 * age), 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, half * 1.45 * age, 0, Math.PI * 2); ctx.stroke();
     }
     // the sand, drawn additively so where it piles up it glows
     ctx.globalCompositeOperation = 'lighter';
@@ -27242,7 +27246,7 @@ function mpCymSync(win){
       ctx.globalAlpha = 0.12 + 0.6 * settle * settle;
       ctx.fillStyle = i & 1 ? c.color2 : c.color;
       ctx.beginPath();
-      ctx.arc(cx + (x * rc - y * rs) * half, cy + (x * rs + y * rc) * half, 0.6 + 1.0 * settle, 0, Math.PI * 2);
+      ctx.arc(cx + x * half, cy + y * half, 0.6 + 1.0 * settle, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalCompositeOperation = 'source-over';
