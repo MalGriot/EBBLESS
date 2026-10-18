@@ -27290,7 +27290,7 @@ function mpCymSync(win){
     plate.closePath();
     ctx.save();
     ctx.clip(plate);
-    // hover: the cover fills the outline (cropped square), a little dimmed so the controls read, the sand fainter on top
+    // hover: the cover fills the outline (cropped square) at full brightness, the sand fainter on top
     const hovering = c.over && now - c.lastMove < MP_CYM_HOVER_IDLE_MS;
     if (hovering !== c.hovering){ c.hovering = hovering; doc.body.classList.toggle('cym-hover', hovering); } // the DOM controls follow the same hover as the cover
     c.hov += ((hovering ? 1 : 0) - c.hov) * 0.25;
@@ -27301,7 +27301,6 @@ function mpCymSync(win){
         const m = Math.min(im.naturalWidth, im.naturalHeight);
         ctx.globalAlpha = c.hov;
         ctx.drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, cx - R, cy - R, 2 * R, 2 * R);
-        ctx.globalAlpha = 0.34 * c.hov; ctx.fillStyle = '#000'; ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
       }
     }
     const sandA = 1 - 0.55 * c.hov;
