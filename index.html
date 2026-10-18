@@ -22217,7 +22217,7 @@ function adLog(deck, what, reason){
   if (window.ebblessAdLog.length > AD_LOG_MAX) window.ebblessAdLog.shift();
   try { console.info('[ad]', what, row); } catch(e){}
 }
-const STANDBY_AD_RELOAD_MS = 8000, STANDBY_AD_ALT_MS = 8000, STANDBY_AD_WAIT_MS = 60000;
+const STANDBY_AD_RELOAD_MS = 8000, STANDBY_AD_ALT_MS = 8000, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
 function checkDeckReady(deck){
   if (!deck.player) return;
   const elapsed = Date.now() - deck.muteStartTs;
@@ -22244,10 +22244,11 @@ function checkDeckReady(deck){
   }
   // still an ad after the reload: move the song onto the closest-to-identical
   // other link (adTryAlternate: another YouTube upload, else SoundCloud), once.
-  // Only for signals about the video itself: 'not-moving' / 'no-duration' also
-  // read on a healthy slow start (seen on a phone), and a good link must not be
-  // swapped for that
-  if (reason && standby && /^(duration|short|video-id)$/.test(reason) && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= STANDBY_AD_ALT_MS){
+  // Signals about the video itself act 8s after the reload; the clock signals
+  // ('not-moving', 'frozen', 'no-duration') also read on a healthy slow start
+  // (seen on a phone), so they get the longer STANDBY_AD_ALT_SLOW_MS: a link
+  // still frozen that long after a reload is moved too, not left frozen
+  if (reason && standby && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= (/^(duration|short|video-id)$/.test(reason) ? STANDBY_AD_ALT_MS : STANDBY_AD_ALT_SLOW_MS)){
     deck.adAltTried = true;
     adLog(deck, 'standby-alt', reason);
     adTryAlternate(state.queue[deck.pos], deck);

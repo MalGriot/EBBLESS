@@ -11327,4 +11327,12 @@ Add entries in this shape:
 - **Branch:** agent/paste-song-list
 - **Notes:** Matcher returns something for almost any text, so nonsense lines still get a video; the strip only lists lines with no result at all.
 
+### active-deck-alt-swaps-healthy-songs: Healthy songs get swapped to other links after a quick skip (found on the phone while testing #561)
+- **Status:** draft
+- **Priority:** high
+- **Description:** Found 2026-10-18 on the TECNO POP 9 (phone Chrome, ad test playlist): about 3 of 6 songs were moved to a different link (once to SoundCloud) although they were not showing an ad, right after skipping with Next. The log shows 'status' (the "Ad playing" note), 'unstick muted', then 'alt swap to ...' from adTryAlternate (#624) on the active deck, with the player reporting the song's true length each time. A good link should not be replaced.
+- **Touches:** index.html (maybeDodgeAd, skipHeldAd, adTryAlternate, deckAdReason 'not-moving').
+- **Branch:** 
+- **Notes:** Likely cause: the strict 'not-moving' signal (clock not yet proven moving) reads as an ad on a slow phone start, and maybeDodgeAd counts any doubt after 8s (AD_DODGE_AFTER_MS). Suggested fix: only run adTryAlternate on video-level signals (duration, short, video-id) or when the song is still not moving after a longer wait; keep the dodge. Playback issue: needs area/type/platform labels and a classification comment when a GitHub issue is opened (none opened yet). Related #561, #557, #624.
+
 <!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->
