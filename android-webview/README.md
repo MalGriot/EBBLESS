@@ -68,6 +68,15 @@ notice after a kill (unverified against a real low-memory kill). 13:44:56 in the
 YouTube deck while the screen is off, and a tiny watchdog service process; then repeat the 70-minute soak.
 
 
+## Long soak 2 (2026-10-18, TECNO POP 9, app 2.11.1): PASSED on survival, no continuous log
+
+Checked at 17:52: one app process (pid 17885) up 1h29m since 16:24, foreground service up 1h25m, no kill in that window,
+audio streams active at the check. The owner left the phone alone (no calls, no other apps). Not covered: the 30s logger died at
+16:24 (a cleanup command of mine killed it), so there is no data on audio gaps or memory headroom for this run. Exit-info also
+lists three SIGNALED kills of the app at 16:27 to 16:28 that do not match the single running pid; unexplained. A first attempt
+earlier that day was invalid: the tester week-up screen (`ebblessWrapped.bypass()` fixes it) stopped playback after one song.
+Rerun with a working logger only if a kill shows up in normal use.
+
 ## 2.11.0 (not yet tested on the phone)
 - **Lock screen / notification player (#581, #634):** `PlaybackService` owns a `MediaSession` and a media-style notification
   (previous, play/pause, next, heart). The page mirrors `navigator.mediaSession` into `EbbNative.media(json)` (shim in `index.html`)
