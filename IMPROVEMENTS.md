@@ -10542,12 +10542,12 @@ Add entries in this shape:
   Fix (2026-10-17, cache v293, not deployed): the window was too tall to reach Create on a phone. Now the main choices (name, Played, Liked, Order, How many) are on top, Length / Artist / Title or artist has / Leave out artist / Leave out words are under a More options fold (opens by itself when editing a playlist that uses them), the rules area scrolls, and the match count with Create and Cancel stay fixed at the bottom. Checked at 360x600 in the preview.
 
 ### shared-playlists: Shared playlists that multiple users can build together (Geethub #534)
-- **Status:** ready
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #534. Several users build one playlist together.
 - **Touches:** playlists, accounts.
 - **Branch:** 
-- **Notes:** Synced from Geethub #534. Depends on accounts-profiles.
+- **Notes:** Synced from Geethub #534. Depends on accounts-profiles. Design proposal written, owner to choose: [docs/PROPOSAL-shared-playlists.md](docs/PROPOSAL-shared-playlists.md) (ranking in [docs/PROPOSALS-SUMMARY.md](docs/PROPOSALS-SUMMARY.md)).
 
 ### go-into-songs: Go into songs instead of them just playing (Geethub #533)
 - **Status:** merged
@@ -11040,12 +11040,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #595. Related to #635 (performance). Cause: every `dragover` (many a second while a song is held over a library card) called `addablePlaylists()` two or three times, and that JSON-parses every saved playlist from localStorage. It also removed and re-added the highlight class on every event. Fix: the addable id set is built once per drag (reset on dragstart/dragend) and the highlight only changes when the card under the pointer changes. Measured in the preview on a synthetic library (60 playlists x 400 songs, dispatched dragover events): 5.96 ms per event before, 0.25 ms after (~24x); a real library with art and matched metadata parses slower, so the real-world gain is larger. A real mouse drag with the OS drag image was not tried (synthetic events only).
 
 ### music-map: music map (Geethub #597)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #597. utilize this music map to connect users with their vibe https://www.music-map.com/ reverse engineer it and use it
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #597.
+- **Notes:** Synced from Geethub #597. Design proposal written, owner to choose: [docs/PROPOSAL-music-map.md](docs/PROPOSAL-music-map.md) (ranking in [docs/PROPOSALS-SUMMARY.md](docs/PROPOSALS-SUMMARY.md)).
 
 ### miniplayer-should-open-always-in-the-botto: miniplayer should open always in the bottom right corner (Geethub #604)
 - **Status:** merged
@@ -11152,12 +11152,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #616. Built: tapping the only lit pill (which used to do nothing) now lights every visible pill and unfolds every section, albums' artist groups included. Only the one early return in the pill click handler changed; overflow/search code untouched. Verified in the 375px browser preview: one lit pill then tap lights all, normal toggles unchanged. Cache v328.
 
 ### a-chatbot-that-users-can-air-their-grievan: a chatbot that users can air their grievances to and train their own algorithm (Geethub #617)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #617. 
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #617.
+- **Notes:** Synced from Geethub #617. Design proposal written, owner to choose: [docs/PROPOSAL-grievance-chat.md](docs/PROPOSAL-grievance-chat.md) (ranking in [docs/PROPOSALS-SUMMARY.md](docs/PROPOSALS-SUMMARY.md)).
 
 ### reverse-engineer-mp3juice: reverse engineer mp3juice (Geethub #618)
 - **Status:** merged
@@ -11184,12 +11184,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #620. Most literal reading, built in part. DONE: sliding a queue row or a library row in the list layout (touch/pen) animates it over by 28% of its width and it stays until cancelled (tap elsewhere, tap the row, Escape, scroll, or a swipe back). Left uncovers red with a trash can; tapping it turns the strip into 'Delete this song/playlist/album/artist/podcast? Yes | No' (No puts the row back, Yes deletes: queueRemoveAt for the queue, the library's existing delete with its Undo toast for library rows). Right uncovers green with a share icon; tapping it opens the share sheet (navigator.share, copy-link fallback) with the existing EBBLESS ?import= link, per song for the queue and per playlist for the library. The old queue swipe-to-remove (fling past 90px, no prompt) was replaced. Helper: attachSwipeReveal; strip is a sibling behind the row only while open, row moves by transform only. ASSUMPTIONS: library list items = rows of the library's List layout (not the grid cards, not the song rows inside an opened playlist); touch/pen only, mouse keeps the 3-dot menu; system playlists (Liked, CuRRentSSsss, SwiiiRrrLL, On/Off Air) don't swipe; playlists with no source link (custom ones) can't swipe right. NOT BUILT: the share landing page (opening an EBBLESS link shows a preview of the album/song/artist/playlist/podcast with a try-it/join-the-beta button), the 'opens EBBLESS automatically if installed' app link, and a custom share window with social targets (the phone's own share sheet is used); these belong with the song-page-share work. Verified in the 375px browser preview with synthetic touch pointer events: left and right swipe snap to 28%, short swipe snaps back, outside tap closes, No restores, Yes removes, share calls navigator.share with the song link, library list row swipe and grid mode disabled. Not tried on a real phone (real touch scrolling vs horizontal swipe, long-press menu interplay). Cache v334.
 
 ### you-should-be-able-to-upload-music-from-yo: you should be able to upload music from your local device or google cloud to your library (Geethub #621)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #621. 
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #621.
+- **Notes:** Synced from Geethub #621. Design proposal written, owner to choose: [docs/PROPOSAL-upload-songs.md](docs/PROPOSAL-upload-songs.md) (ranking in [docs/PROPOSALS-SUMMARY.md](docs/PROPOSALS-SUMMARY.md)).
 
 ### when-on-air-is-on-air-the-thumb-should-swi: when on air is "on air", the thumb should switch between the thumb video art and a 1x1 of the song that's currently playing (Geethub #622)
 - **Status:** review
