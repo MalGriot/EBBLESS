@@ -11072,12 +11072,78 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #606. M opens the mini player when a song is loaded (desktop app and Chrome PiP); M again, or M inside the mini player, goes back to the app. Listed in Settings keyboard shortcuts. Chrome PiP needs the keypress to count as a user gesture, which Chrome allows. Follow-up (reverted): an attempt to close the main window on apps without hideMain QUIT the whole app for the owner, so it was removed. M only opens the mini; the main window minimizes only on app 1.0.8+ (hideMain). Needs the 1.0.8/1.0.9 Mac app to be built and released. Released in Mac app 1.0.10 (GitHub release v1.0.10, 2026-10-18); closed.
 
 ### library-changes: library changes (Geethub #607)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #607. default order should be "most recent" "new playlist" should just be a plus sign "view" should just be an icon inline with the section pills (resize the pills to be more compact) search and new playlist should be in line with library title thumbs should be moved up closer to section title section title should be moved down further away from pills
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #607.
+- **Touches:** `index.html` library toolbar (`#newPlaylistBtn`, `.lib-pillrow`, `#libSortBtn`), `sortLibraryIds`, `getLibrarySort`.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #607. Built: default sort is a new "Most recent" (last played, never-played keep their order; saved sorts are kept; it is the first item in View). "+ New playlist" is a plus icon button. "View" is a sliders icon at the end of the pill row (`.lib-pillrow`, beside the pills, so it stays when pills are hidden); pills are 28px tall (32px on phones, hit area still 44px). Desktop: search, plus and expand sit on the same line as the "Library" title (grid on `.lib-top`; phones hide the title, unchanged). Section title sits 18px below the pills; the grid is 8px under it (was 14px). Assumption: "most recent" = last played, not date added (no added-date is stored). Verified at 1280/1500px desktop and 375px phone in the browser preview, no console errors or [gpu-watchdog]. Not verified: a real phone or the Android WebView.
+
+
+
+### mobile-search-bar-fills-top-row: mobile search bar fills the whole top row (Geethub #639)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #639. the search bar on mobile needs to take up the whole top that's left to take.
+- **Touches:** none (no code change).
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #639. No code change: on phones (under 860px) the top-bar search field no longer exists since #608 (it is the Search button in the bottom nav, and the Search tab's bar already spans the full width, checked at 375px). Only onboarding still shows the top-bar field, at its own size. If the owner meant something else (e.g. the field on a tablet or the onboarding step), say so.
+
+### flip-swirl-video-vertically: swirl video flipped vertically (Geethub #642)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #642. swirl video should be flipped vertically.
+- **Touches:** `.lib-card[data-pl-id="blend"]` video transform.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #642. SwiiiRrrLL's looping clip (library tile) is flipped vertically with `scale(1.06,-1.06)`, keeping the existing centering nudge. Applies to the tile only (it is the only place the clip plays). Verified visually in the browser preview.
+
+### miniplayer-thumb-left-heart-right: miniplayer: thumb on left, heart on right (Geethub #643)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #643. miniplayer: thumb on left and heart on right, and remove black box from behind the title and artist.
+- **Touches:** `MINI_PLAYER_STYLE` (pill shape, LP/cassette/square meta).
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #643. Assumption: the Mac/PiP mini player (the footer bar on phones already has art left). Pill shape: art stays on the left, the heart (and thumbs-down) is always on the right, vertically centered, with no dark box; fullscreen button hidden there. LP, cassette and square: the dark box that appeared behind title and artist on hover is removed (text keeps its soft shadow). Not verified: needs the Electron/PiP window, which the browser preview cannot open.
+
+### cursor-change-over-miniplayer: cursor change over the miniplayer (Geethub #644)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #644. cursor change over the miniplayer.
+- **Touches:** `MINI_PLAYER_STYLE`.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #644. Assumption: the Mac/PiP mini window. The cursor is a grab hand over the mini (grabbing while pressed) and a pointer over the title/artist (which open the app). Electron may keep the system arrow over window-drag regions; if so the mini needs `-webkit-app-region:no-drag` on more areas. Not verified in the Mac app.
+
+### window-corner-swoops-raised: window corner swoops raised (Geethub #645)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #645. the window corner swoops: it should be a raised swoop, the shape of the window should swoop up (same color, no line). Library: only the right corner. Queue: only the left corner.
+- **Touches:** `#queue-panel`, `#libpl-panel`, `#hist-panel`, `#view-library` `::before`.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #645. Replaced the faint two-corner swoop (#626) with a raised one on desktop split view: a small masked box above the window's top edge, filled with the window's own color, no stroke. Library and the playlist view: right corner; queue and history: left. The library pane is a see-through tint, so its swoop is the same tint and is barely visible (the library window has no solid fill to match). `#view-library` now has `overflow:visible` on desktop so the swoop can rise above it. Phones lose the swoop (it was already off for the library). Static, no animation.
+
+### nothing-playing-logo-just-the-e: nothing playing: bouncing logo is just the E, spinning (Geethub #647)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #647. nothing playing yet: the bouncing ebbless logo should just be the E, slowly spinning counter-clockwise.
+- **Touches:** `.art-dvd` CSS and markup (#613).
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #647. The bouncing wordmark is now the E mark (`brand/assets/mark-white.png`, a 16%-wide square), spinning counter-clockwise once per 30s via the `rotate` property (transform and opacity budget kept, paused under the fullscreen player as before). Bounce travel recomputed for the square box. Reduced motion shows it still. Assumption: mark-white.png is the E.
+
+### expanded-library-more-per-row: expanded library: same thumb size, more per row (Geethub #649)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #649. when the library expands, the thumbs should stay the same size and fill more into the row; list view gets 2 columns.
+- **Touches:** `body.split-desktop.lib-wide` grid CSS.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #649. Expanded (lib-wide) library: grid and small grid use `auto-fill` with the narrow pane's thumb size (130px / 84px minimum) so more fit per row; list view is 2 columns. Filter pills stop stretching across the wide pane. Verified at 1500px.
+
+### cymatics-controls-hover-center-heart-corner: cymatics controls: hover only, centered, heart bottom right (Geethub #650)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #650. cymatics controls show on hover only; they should be centered; the heart should be in the bottom right corner.
+- **Touches:** `MINI_PLAYER_STYLE` cymatics rules.
+- **Branch:** agent/q-ui-polish
+- **Notes:** Synced from Geethub #650. The controls were already hover-only (`cym-hover`) and centered, so those are unchanged. The heart group (`#mpFav`: fullscreen, thumbs-down, heart) moved from the top center to the bottom right of the plate (17% in). Not verified: needs the Mac mini window.
 
 ### mobile-seacrh-bar-should-become-a-button-i: mobile: seacrh bar should become a button in the bottom nav (Geethub #608)
 - **Status:** merged
