@@ -27132,9 +27132,8 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics #mpHead{top:15%}
   body.mp-shape-cymatics #mpMeta{bottom:13%;width:62%}
   body.mp-shape-cymatics #mpBg{display:none}
-  /* the cover only shows on hover, as a medallion under the controls */
-  body.mp-shape-cymatics #mpArtWrap{inset:31%;border-radius:50%;opacity:0;transition:opacity .25s ease;box-shadow:0 0 0 2px rgba(0,0,0,.7),0 0 0 3px rgba(255,255,255,.25)}
-  body.mp-shape-cymatics:hover #mpArtWrap{opacity:1}
+  /* the cover is painted into the plate's outline on hover by mpCymSync; this invisible box in the middle only keeps the click (back to the app) */
+  body.mp-shape-cymatics #mpArtWrap{inset:31%;border-radius:50%;opacity:0;box-shadow:none}
   body.mp-shape-cymatics #mpArtWrap #mpRecord,body.mp-shape-cymatics #mpArtWrap #mpTape{display:none!important}
   body.mp-shape-cymatics #mpArtWrap #mpArt,body.mp-shape-cymatics #mpArtWrap .mp-art-ghost{display:block!important}
   body.mp-shape-cymatics #mpArtWrap[data-art-style]{background:#282828;overflow:hidden}
@@ -27197,7 +27196,7 @@ function mpCymSync(win){
   const fam = Math.floor(Math.random() * VIZ_PATTERNS.length);
   const c = mpCym = { win, cv, ctx: cv.getContext('2d'), raf: 0, last: 0, since: 0, mix: 0, color: vizRosicrucianColor(), colorAt: 0,
     gx: new Float32Array(MP_CYM_GRAINS), gy: new Float32Array(MP_CYM_GRAINS),
-    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flow: 0, ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
+    fa: VIZ_PATTERNS[fam], pa: VIZ_PATTERNS[fam].modes[0], fb: null, pb: null, t: 0, mt: Math.floor(Math.random() * MP_CYM_SHAPES.length) * MP_CYM_SHAPE_MS, pulseAt: 0, progShow: 0, flow: 0, hov: 0, ripples: [], rot: 0, pts: new Float32Array(2 * (MP_CYM_N + 1)), per: new Float32Array(MP_CYM_N + 1), color2: songAccent || vizRosicrucianColor(), prog: 0 };
   for (let i = 0; i < MP_CYM_GRAINS; i++){ c.gx[i] = Math.random() * 2 - 1; c.gy[i] = Math.random() * 2 - 1; }
   // let the dots find the plate's lines before the first frame, so it opens already formed instead of as static
   for (let n = 0; n < 160; n++) for (let i = 0; i < MP_CYM_GRAINS; i++){
@@ -27264,12 +27263,25 @@ function mpCymSync(win){
     plate.closePath();
     ctx.save();
     ctx.clip(plate);
+    // hover: the cover fills the outline (cropped square), a little dimmed so the controls read, the sand fainter on top
+    c.hov += ((doc.body.matches(':hover') ? 1 : 0) - c.hov) * 0.25;
+    if (c.hov < 0.01) c.hov = 0;
+    if (c.hov > 0){
+      const im = doc.getElementById('mpArt');
+      if (im && im.complete && im.naturalWidth){
+        const m = Math.min(im.naturalWidth, im.naturalHeight);
+        ctx.globalAlpha = c.hov;
+        ctx.drawImage(im, (im.naturalWidth - m) / 2, (im.naturalHeight - m) / 2, m, m, cx - R, cy - R, 2 * R, 2 * R);
+        ctx.globalAlpha = 0.34 * c.hov; ctx.fillStyle = '#000'; ctx.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+      }
+    }
+    const sandA = 1 - 0.55 * c.hov;
     // ripples from the middle out past the edge
     ctx.lineWidth = 1.4;
     for (let r = 0; r < c.ripples.length; r++){
       const age = (c.t - c.ripples[r]) / 1700;
       if (age >= 1) continue;
-      ctx.globalAlpha = 0.5 * (1 - age) * (1 - age);
+      ctx.globalAlpha = 0.5 * (1 - age) * (1 - age) * sandA;
       ctx.strokeStyle = c.color2;
       ctx.beginPath(); ctx.arc(cx, cy, R * 1.45 * age, 0, Math.PI * 2); ctx.stroke();
     }
@@ -27284,7 +27296,7 @@ function mpCymSync(win){
       x = x > 1 ? 1 : x < -1 ? -1 : x; y = y > 1 ? 1 : y < -1 ? -1 : y;
       c.gx[i] = x; c.gy[i] = y;
       const settle = 1 - amp;
-      ctx.globalAlpha = 0.12 + 0.6 * settle * settle;
+      ctx.globalAlpha = (0.12 + 0.6 * settle * settle) * sandA;
       ctx.fillStyle = i & 1 ? c.color2 : c.color;
       ctx.beginPath();
       ctx.arc(cx + (x * rc - y * rs) * R, cy + (x * rs + y * rc) * R, 0.6 + 1.0 * settle, 0, Math.PI * 2);
