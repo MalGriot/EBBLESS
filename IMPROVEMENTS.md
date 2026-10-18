@@ -10496,7 +10496,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #540. Further YouTube ad handling, compliantly.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
+- **Notes:** Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
 - **Status:** draft
@@ -10504,7 +10504,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #539. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
+- **Notes:** Synced from Geethub #539. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### mobile-swipe-down-close: Mobile: swiping down from a window should close it (Geethub #538)
 - **Status:** merged
@@ -10587,7 +10587,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #529. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
+- **Notes:** Synced from Geethub #529. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
 - **Status:** draft
@@ -10595,7 +10595,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #528. Investigate and implement.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #528. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
+- **Notes:** Synced from Geethub #528. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
 - **Status:** draft
@@ -10603,7 +10603,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #527. Investigate and implement.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #527. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked).
+- **Notes:** Synced from Geethub #527. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions for owner: what exactly did you see or try for this one (a link, a setting, a site)? Which device and app (Mac app, Android, web)? Is the goal fewer ads heard, or ads skipped faster?
 
 ### miniplayer-shape-per-skin: Mini-player shape changes with different skins (Geethub #526)
 - **Status:** merged
@@ -10710,12 +10710,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #556.
 
 ### youtube-ads-tip-when-the-skip: youtube ads tip: when the skip button appears, you don't have to click it, all you have to do is refresh the page and it plays (Geethub #557)
-- **Status:** draft
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #557. medium
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #557. Investigated, not built: refresh-instead-of-skip means reloading the video (loadVideoById at the same spot) when an ad is detected, hoping YouTube serves no ad the second time. It is compliant (a normal reload, nothing blocked or hidden) but cannot be shown to work without real ads on a real device, and the existing dodge (swap to preloaded next track) is already faster than a reload. Possible safe experiment: in skipHeldAd/maybeDodgeAd when adDodgeTarget is -1 (no standby to swap to), try one reload of the same video before holding. Needs owner testing with the ad test playlist (reference_ad_test_playlist) to see whether the second load is ad-free.
+- **Notes:** Synced from Geethub #557. Investigated, not built: refresh-instead-of-skip means reloading the video (loadVideoById at the same spot) when an ad is detected, hoping YouTube serves no ad the second time. It is compliant (a normal reload, nothing blocked or hidden) but cannot be shown to work without real ads on a real device, and the existing dodge (swap to preloaded next track) is already faster than a reload. Possible safe experiment: in skipHeldAd/maybeDodgeAd when adDodgeTarget is -1 (no standby to swap to), try one reload of the same video before holding. Needs owner testing with the ad test playlist (reference_ad_test_playlist) to see whether the second load is ad-free. Owner asked to test 2026-10-18. Implemented as the standby 'skip' attempt in #561 (one reload of the same video after 8s of ad, on the background deck only; the song the listener is waiting on is untouched). Tested: tried the ad test playlist in the in-app browser, 8 songs, no ad ever served, so whether a reload comes back ad-free is UNKNOWN. Needs a profile or device that actually gets ads (the owner's phone or Mac app); watch window.ebblessAdLog for 'standby-reload' followed by 'unmute' or 'gate-release' (worked) versus another 'wait-cap'/'dodge' (did not).
 
 ### bug-what-do-we-do-about-ads: what do we do about ads in the middle of the song? (Geethub #558)
 - **Status:** merged
@@ -10755,7 +10755,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #561. medium
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #561. Already implemented by the standby-deck system, no new code: schedulePreload loads the next queue track into the second deck (muted, ready), and the ad dodge (#523/#558, AD_DODGE_AFTER_MS 8s for pre-roll, AD_SKIP_AFTER_MS 2.5s for mid-roll) swaps it in while the skipped song sits out its ad muted on the other deck, then plays right after, ad-free. The listener does not wait on the ad. Gaps not addressed: dodge is off when routeLocked (cast), when there is no next track, and when the next track is not yet confirmed. Proposed to close as covered unless the owner saw a case that waits; ask for the repro.
+- **Notes:** Synced from Geethub #561. Already implemented by the standby-deck system, no new code: schedulePreload loads the next queue track into the second deck (muted, ready), and the ad dodge (#523/#558, AD_DODGE_AFTER_MS 8s for pre-roll, AD_SKIP_AFTER_MS 2.5s for mid-roll) swaps it in while the skipped song sits out its ad muted on the other deck, then plays right after, ad-free. The listener does not wait on the ad. Gaps not addressed: dodge is off when routeLocked (cast), when there is no next track, and when the next track is not yet confirmed. Proposed to close as covered unless the owner saw a case that waits; ask for the repro. Owner clarified 2026-10-18: while a song plays, the next one should load in the background, detect an ad, try to skip it, else play it out so it is done by the time it is due; with no next track, Discover (if on) loads one and does the same; Discover off, nothing at queue end. Status: the background load + ad wait-out + Discover top-up already existed (schedulePreload, checkDeckReady, maybeExtendDiscoverQueue). Built (agent/q-desktop-ads): the standby deck now waits up to 60s (was 20s) for its ad to finish, and after 8s of ad does one reload of the same video as the 'skip' attempt (standby-reload in ebblessAdLog). Verified: app loads and plays 8 songs back to back on localhost with no console-visible errors, normal gapless path unchanged. NOT verified: the new branch never ran, because this browser got no ads at all on the Apple Music test playlist (8 songs, zero ad signals), so neither the reload nor the longer wait has been seen against a real ad. Discover top-up path not re-tested.
 
 ### we-should-make-an-apk-for: we should make an apk for google play store asap to get more testers (Geethub #562)
 - **Status:** dropped
@@ -10843,7 +10843,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub #572. medium
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #572. Findings: ads come from YouTube's embedded player (cross-origin iframe, ad pods injected server side into the same stream: pre-roll, mid-roll, and a per-video ad flag), so the page cannot see or remove them. Only observable signals (no duration, clock not moving, frozen) are used by deckAdReason today. Removing or blocking them would break YouTube API terms; stay with detect and route around (dodge, alt-link #624, SoundCloud/other sources).
+- **Notes:** Synced from Geethub #572. Findings: ads come from YouTube's embedded player (cross-origin iframe, ad pods injected server side into the same stream: pre-roll, mid-roll, and a per-video ad flag), so the page cannot see or remove them. Only observable signals (no duration, clock not moving, frozen) are used by deckAdReason today. Removing or blocking them would break YouTube API terms; stay with detect and route around (dodge, alt-link #624, SoundCloud/other sources). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### reverse-engineer-sponsor-block-and-see: reverse engineer sponsor block and see if it helps with ads on youtube (Geethub #573)
 - **Status:** merged
