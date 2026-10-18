@@ -23911,13 +23911,12 @@ function dockSkin(x, mode, accent){
       g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(.58, 'rgba(255,255,255,.16)'); g.addColorStop(.66, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,0)');
       x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = g; x.fill();
     }
-    x.beginPath(); x.arc(256, 256, 118, 0, 7); x.fillStyle = '#1b1b1f'; x.fill();
-    x.beginPath(); x.arc(256, 256, 118, 0, 7); x.strokeStyle = accent; x.lineWidth = 5; x.stroke();
+    x.beginPath(); x.arc(256, 256, 118, 0, 7); x.fillStyle = accent; x.fill(); // the label is the UI color
   } else if (mode === 'cassette'){
     x.beginPath(); x.roundRect(30, 104, 452, 304, 34); x.fillStyle = '#18181b'; x.fill();
     x.strokeStyle = 'rgba(255,255,255,.14)'; x.lineWidth = 3; x.stroke();
-    x.beginPath(); x.roundRect(70, 136, 372, 150, 16); x.fillStyle = '#26262b'; x.fill();
-    x.beginPath(); x.roundRect(70, 136, 372, 22, 10); x.fillStyle = accent; x.fill();
+    x.beginPath(); x.roundRect(70, 136, 372, 150, 16); x.fillStyle = accent; x.fill(); // the label window is the UI color
+    x.beginPath(); x.roundRect(70, 136, 372, 22, 10); x.fillStyle = 'rgba(255,255,255,.3)'; x.fill();
     [172, 340].forEach(cx => {
       x.beginPath(); x.arc(cx, 336, 38, 0, 7); x.fillStyle = '#0b0b0d'; x.fill();
       x.beginPath(); x.arc(cx, 336, 38, 0, 7); x.strokeStyle = 'rgba(255,255,255,.28)'; x.lineWidth = 4; x.stroke();
