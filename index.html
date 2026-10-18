@@ -23888,10 +23888,19 @@ function setArtStyle(style){
    On the web, Android and older Mac builds there is no bridge, so it does
    nothing. */
 let dockIconKey = '', dockMarkImg = null;
-function dockIconMode(){ return visualMode === 'viz' ? 'cymatics' : visualMode === 'art' && artStyle !== 'default' ? artStyle : 'default'; }
-function dockIconDraw(mark, mode, accent){
-  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
-  const x = c.getContext('2d');
+// With the Mac mini player up the dock icon follows ITS mode (card = the regular icon, full LP / cassette = that skin as a small badge,
+// Cymatics = the rings); with no mini it follows the main player's mode.
+function dockIconMode(){
+  let w = null;
+  try { w = miniPlayerWin; } catch(e){}
+  if (w && !w.closed && w.document && w.document.body){
+    const sh = w.document.body.dataset.mpShape;
+    return sh === 'disc' ? 'record' : sh === 'tape' ? 'cassette' : sh === 'cymatics' ? 'cymatics' : 'default';
+  }
+  return visualMode === 'viz' ? 'cymatics' : visualMode === 'art' && artStyle !== 'default' ? artStyle : 'default';
+}
+// the LP or cassette art, drawn on a 512 grid (used scaled down as the corner badge)
+function dockSkin(x, mode, accent){
   if (mode === 'record'){
     x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = '#101012'; x.fill();
     x.strokeStyle = 'rgba(255,255,255,.08)'; x.lineWidth = 2;
@@ -23914,7 +23923,12 @@ function dockIconDraw(mark, mode, accent){
       x.beginPath(); x.arc(cx, 336, 38, 0, 7); x.strokeStyle = 'rgba(255,255,255,.28)'; x.lineWidth = 4; x.stroke();
       x.beginPath(); x.arc(cx, 336, 14, 0, 7); x.fillStyle = '#d9d9de'; x.fill();
     });
-  } else if (mode === 'cymatics'){
+  }
+}
+function dockIconDraw(mark, mode, accent){
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const x = c.getContext('2d');
+  if (mode === 'cymatics'){
     x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = '#0c0c10'; x.fill();
     x.lineWidth = 4;
     for (let k = 1; k <= 9; k++){
@@ -23927,8 +23941,18 @@ function dockIconDraw(mark, mode, accent){
       x.closePath(); x.globalAlpha = 1.05 - k * 0.1; x.strokeStyle = accent; x.stroke();
     }
     x.globalAlpha = 1;
+  
+    x.drawImage(mark, 0, 0, S, S);
+  } else {
+    x.drawImage(mark, 0, 0, S, S);
+    if (mode === 'record' || mode === 'cassette'){
+      // the regular icon with the LP / cassette small in the bottom right corner, in front of it
+      const k = 0.4, o = S - S * k - 14;
+      x.save(); x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 22; x.shadowOffsetY = 6;
+      x.translate(o, o); x.scale(k, k); dockSkin(x, mode, accent);
+      x.restore();
+    }
   }
-  x.drawImage(mark, 0, 0, S, S);
   return c.toDataURL('image/png');
 }
 function dockIconSync(){
@@ -23936,7 +23960,7 @@ function dockIconSync(){
   if (!bridge || typeof bridge.setDockIcon !== 'function') return;
   try {
     const mode = dockIconMode();
-    const accent = (getComputedStyle(document.documentElement).getPropertyValue('--clock-accent') || '').trim() || '#e0b26a';
+    const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#e0b26a'; // the UI's own accent
     const key = mode + '|' + (mode === 'default' ? '' : accent);
     if (key === dockIconKey) return;
     const go = () => { dockIconKey = key; bridge.setDockIcon(dockIconDraw(dockMarkImg, mode, accent)); };
@@ -27645,6 +27669,7 @@ function mpApplyShape(win){
   const shape = mpDesktopShape(), body = win.document.body;
   if (body.dataset.mpShape === shape) return;
   mpSetShapeClasses(body, shape);
+  dockIconSync();
   const sz = mpDesktopSize(shape);
   // A new shape keeps the window where it is: one sitting in the bottom right corner stays in it, one the user moved keeps
   // its center. Only opening the mini puts it in the corner (#604, #623 refined).
@@ -28625,6 +28650,7 @@ function updateMiniPlayerUI(){
   const isPlaying = artworkWrap.classList.contains('is-playing');
   doc.body.classList.toggle('mp-playing', isPlaying);
   mpRecordSync(miniPlayerWin, isPlaying);
+  dockIconSync();
   if (isDesktopApp) mpCymSync(miniPlayerWin);
   // the full LP and full cassette windows always show the LP and the cassette, whatever the art style behind the card's thumbnail
   const shownSkin = doc.body.dataset.mpShape === 'disc' ? 'record' : doc.body.dataset.mpShape === 'tape' ? 'cassette' : artStyle;
@@ -28717,6 +28743,7 @@ async function openMiniPlayer(){
     buildMiniPlayerDOM(win);
     if (isDesktopApp){
       wireMiniDesktop(win);
+      dockIconSync();
       if (window.ebblessDesktop.hideMain) window.ebblessDesktop.hideMain();
       // Opening from the Mac window's fullscreen: leaving it changes the usable screen area (menu bar, Dock), so once that has
       // settled, put the mini in the corner again - unless it has been moved since.
@@ -28728,7 +28755,7 @@ async function openMiniPlayer(){
     }
     updateMiniPlayerUI();
     attachMiniPlayerSC(win);
-    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; mpCymStop(); rehostSCDecks(); } }, { once: true });
+    win.addEventListener('pagehide', () => { if (miniPlayerWin === win){ miniPlayerWin = null; mpQueue = null; mpShrunk = null; mpCymStop(); dockIconSync(); rehostSCDecks(); } }, { once: true });
   } catch (err) {
     // Not eligible (no recent audio, declined permission, another PiP
     // window already open, etc.) or unsupported entirely — no-op fallback,
