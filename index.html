@@ -1357,19 +1357,19 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .art-dvd.t1{--i:1;--c:#5aa6f0;--o:.85}.art-dvd.t2{--i:2;--c:#7ee3ee;--o:.75}.art-dvd.t3{--i:3;--c:#b5ebc0;--o:.65}
 .art-dvd.t4{--i:4;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--c:#ba687b;--o:.35}
 .art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
-.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
-.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
-body:has(#flow-layer.is-open) .art-dvd,body:has(#flow-layer.is-open) .art-dvd-x,body:has(#flow-layer.is-open) .art-dvd img,body:has(#findMusic:not([hidden])) .art-dvd,body:has(#findMusic:not([hidden])) .art-dvd-x,body:has(#findMusic:not([hidden])) .art-dvd img,body:has(#musicMap:not([hidden])) .art-dvd,body:has(#musicMap:not([hidden])) .art-dvd-x,body:has(#musicMap:not([hidden])) .art-dvd img{animation-play-state:paused}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
+body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-x,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd img,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd img,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd img{animation-play-state:paused}
 /* #647: x and y both move at a steady speed (linear, alternate), so the E travels in straight lines and bounces off the art's edges at a constant pace.
    Travel = 100% of the art minus the box. */
 @keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(588%)}}
 @keyframes dvd-x{from{transform:translateX(0)}to{transform:translateX(525%)}}
 @media (prefers-reduced-motion:reduce){
   .art-dvd.trail{display:none!important}
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd,
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x,
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img{animation:none!important;will-change:auto}
-  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd{left:42%;top:42%}
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd,
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x,
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd img, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd img{animation:none!important;will-change:auto}
+  .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{left:42%;top:42%}
 }
 .artwork-wrap .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
   transition:opacity var(--dur-surface) var(--ease-in-out);}
@@ -9328,6 +9328,8 @@ const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle =
 const libCtxMenu = $('libCtxMenu');
 const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
+// #647: the nothing-playing E and its trail also play in the fullscreen player, so give its art the same markup
+document.querySelectorAll('.artwork-wrap > .art-dvd').forEach(n => flowArtWrap.appendChild(n.cloneNode(true)));
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
 const flowShuffleBtn = $('flowShuffleBtn'), flowRepeatBtn = $('flowRepeatBtn'), flowRepeatOneBadge = $('flowRepeatOneBadge');
