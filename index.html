@@ -16136,6 +16136,85 @@ function renderSearchTab(){
 }
 $('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
 searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
+
+/* ---------- Paste a list of songs ----------
+   Several lines pasted into the search bar ("Artist - Title" per line, also
+   "Title by Artist", with or without 1. / - / bullets) become a playlist:
+   no link, no sign-in, no extra tap. A text field flattens newlines, so this
+   reads the clipboard itself. Songs are matched one by one with a count on
+   screen (the found-X-of-Y strip); anything not found stays listed there with
+   a Find button. */
+const PASTE_LIST_MAX = 100;
+function parsePastedSongList(text){
+  const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2 || lines.length > 300) return null;
+  if (lines.some(l => l.length > 110 || looksLikeUrl(l))) return null;
+  const seen = new Set(), songs = [];
+  lines.forEach(raw => {
+    let l = raw.replace(/^\s*(?:\d{1,3}\s*[.)]|[-*•])\s+/, '').replace(/^["'“‘]+|["'”’]+$/g, '').trim();
+    if (!l) return;
+    let artist = '', title = l, m;
+    if ((m = /^(.+?)\s+[-–—]\s+(.+)$/.exec(l))){ artist = m[1].trim(); title = m[2].trim(); }
+    else if ((m = /^(.+?)\s+by\s+(.+)$/i.exec(l))){ title = m[1].trim(); artist = m[2].trim(); }
+    const k = (title + '|' + artist).toLowerCase();
+    if (!title || seen.has(k)) return;
+    seen.add(k); songs.push({ title, artist });
+  });
+  return songs.length >= 2 ? songs : null;
+}
+function beginPastedSongList(songs){
+  const capped = songs.slice(0, PASTE_LIST_MAX);
+  const mkTrack = (s) => ({ title: s.title, artist: s.artist, videoId: null, matchedTitle: '', channel: '', plays: 0, art: null, duration: 0, srcDuration: 0 });
+  const pl = createCustomPlaylist('Pasted songs');
+  pl.tracks = capped.map(mkTrack);
+  pl.rematchUnmatched = true;
+  persistPlaylistObj(pl);
+  renderLibrary();
+  const split = document.body.classList.contains('split-desktop');
+  if (!split && state.currentView !== 'library') setView('library');
+  toggleLibraryPlaylistPanel(pl.id);
+  showToast(songs.length > capped.length ? 'Matching the first ' + PASTE_LIST_MAX + ' songs' : 'Matching ' + capped.length + ' songs');
+  matchPastedSongs(pl.id);
+}
+async function matchPastedSongs(id){
+  for (let i = 0; ; i++){
+    const pl = getCachedPlaylist(id);
+    if (!pl || i >= pl.tracks.length) break;
+    const t = pl.tracks[i];
+    if (!t || t.videoId) continue;
+    let m = null, failed = false;
+    try { m = await searchYouTubeCached(t.title, t.artist, undefined); } catch(e){ failed = true; }
+    const cur = getCachedPlaylist(id);
+    const ct = cur && cur.tracks[i];
+    if (!ct || ct.title !== t.title) continue;
+    if (m && m.videoId){
+      ct.videoId = m.videoId; ct.matchedTitle = m.title || ''; ct.channel = m.channel || ''; ct.duration = m.duration || 0;
+      delete ct.rematchTried;
+    } else if (!failed) ct.rematchTried = RESOLVE_LOGIC_VERSION;
+    persistPlaylistObj(cur, true);
+    if (state.playlist && state.playlist.id === id) state.playlist = cur;
+    repaintOpenLibPanelTrack(id, i, cur);
+    refreshMatchSummary(id);
+    await sleep(600);
+  }
+  renderLibrary();
+  refreshMatchSummary(id);
+}
+[urlInput, searchTabInput].forEach(inp => {
+  if (!inp) return;
+  inp.addEventListener('paste', (e) => {
+    const text = e.clipboardData && e.clipboardData.getData('text');
+    if (!text || text.indexOf('\n') < 0) return;
+    const songs = parsePastedSongList(text);
+    if (!songs) return;
+    e.preventDefault();
+    inp.value = '';
+    importErr.textContent = '';
+    if (searchTabErr) searchTabErr.textContent = '';
+    beginPastedSongList(songs);
+  });
+});
+
 // The tab only exists on phones: growing past the breakpoint leaves it.
 if (phoneMq) phoneMq.addEventListener('change', () => { if (!phoneMq.matches && state.currentView === 'search') setView('library'); });
 // Paste-a-link flows that used to focus the top-bar field: open the tab on phones.
