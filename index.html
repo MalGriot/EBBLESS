@@ -12630,7 +12630,9 @@ function startNpArtCycle(face){
     if (alt){
       setTimeout(() => { if (face.classList.contains('is-alt')) vids().forEach(v => v.pause()); }, 900);
     } else {
-      vids().forEach(v => { if (v.style.opacity !== '0'){ const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } });
+      // hidden means stopped: only restart the clip while the card is on screen (offscreen cards and hidden tabs keep it paused)
+      const card = face.closest('.lib-card');
+      if (!document.hidden && !(card && card.classList.contains('lib-offscreen'))) vids().forEach(v => { if (v.style.opacity !== '0'){ const pp = v.play(); if (pp && pp.catch) pp.catch(() => {}); } });
     }
     setTimeout(flip, NP_ART_CYCLE_MS);
   };
