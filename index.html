@@ -27287,9 +27287,8 @@ function mpCymSync(win){
       ctx.fill();
     }
     ctx.restore();
-    // rim: a faint line along the outline, the song's progress laid over it from the top
+    // rim: the song's progress along the outline from the top (no line at all for the part still to play)
     ctx.globalAlpha = 1;
-    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.stroke(plate);
     if (c.prog > 0){
       ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = c.color2; // the song's color, like the rest of the UI
       const stop = len * c.prog;
