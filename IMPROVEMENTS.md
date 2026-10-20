@@ -11394,12 +11394,15 @@ Add entries in this shape:
 - **Notes:** Matcher returns something for almost any text, so nonsense lines still get a video; the strip only lists lines with no result at all.
 
 ### active-deck-alt-swaps-healthy-songs: Healthy songs get swapped to other links after a quick skip (found on the phone while testing #561)
-- **Status:** draft
+- **Status:** review
 - **Priority:** high
 - **Description:** Found 2026-10-18 on the TECNO POP 9 (phone Chrome, ad test playlist): about 3 of 6 songs were moved to a different link (once to SoundCloud) although they were not showing an ad, right after skipping with Next. The log shows 'status' (the "Ad playing" note), 'unstick muted', then 'alt swap to ...' from adTryAlternate (#624) on the active deck, with the player reporting the song's true length each time. A good link should not be replaced.
 - **Touches:** index.html (maybeDodgeAd, skipHeldAd, adTryAlternate, deckAdReason 'not-moving').
-- **Branch:** 
+- **Branch:** agent/alt-swap
 - **Notes:** Likely cause: the strict 'not-moving' signal (clock not yet proven moving) reads as an ad on a slow phone start, and maybeDodgeAd counts any doubt after 8s (AD_DODGE_AFTER_MS). Suggested fix: only run adTryAlternate on video-level signals (duration, short, video-id) or when the song is still not moving after a longer wait; keep the dodge. Playback issue: needs area/type/platform labels and a classification comment when a GitHub issue is opened (none opened yet). Related #561, #557, #624.
+- **Issue:** GitHub #659 (area:playback, type:bug, bug:general, platform:android, classification comment added).
+- **Review notes:** Built: new adAltReady(reason, sinceTs) gates adTryAlternate on the active deck. Video-level signals (duration, short, video-id) still swap right away; the clock signals (not-moving, frozen, no-duration) must hold AD_ALT_SOFT_WAIT_MS (20s) first. Applied in maybeDodgeAd (since muteStartTs) and skipHeldAd (since adMutedAt or gateHeld). The dodge itself is unchanged. Same rule the standby deck already used. Cache bump v388. Side effect: a real ad that only shows clock signals no longer triggers the swap if the dodge hand-off happens first (the dodged deck still gets the standby-alt path after its reload). Verified: inline script syntax check only. NOT verified: real device (TECNO POP 9), quick-skip repro, a real ad.
+
 ### podcast-intro-ad: podcasts play a ~20s ad at the start (Geethub #648)
 - **Status:** review
 - **Priority:** medium

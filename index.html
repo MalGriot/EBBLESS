@@ -29858,6 +29858,19 @@ function adAltTitleKey(s, artistKey){
   const k = artistNameKey(s);
   return artistKey && k.startsWith(artistKey) ? k.slice(artistKey.length) : k;
 }
+// Active-deck gate: only the signals about the video itself ('duration',
+// 'short', 'video-id') justify moving a song off its link right away. The
+// clock signals ('not-moving', 'frozen', 'no-duration') also read on a healthy
+// slow start right after a quick Next (TECNO POP 9), so they must hold
+// AD_ALT_SOFT_WAIT_MS before the link is given up. The dodge itself is not
+// gated by this.
+const AD_ALT_SOFT_WAIT_MS = 20000;
+function adAltReady(reason, sinceTs){
+  const r = String(reason || '').split(' ').pop();
+  if (!r) return false;
+  if (/^(duration|short|video-id)$/.test(r)) return true;
+  return !!sinceTs && Date.now() - sinceTs >= AD_ALT_SOFT_WAIT_MS;
+}
 async function adTryAlternate(entry, ad){
   try{
     const pl = entry && getCachedPlaylist(entry.plId), t = pl && pl.tracks[entry.idx];
@@ -29914,7 +29927,7 @@ function maybeDodgeAd(){
   // dodged by mistake just plays right after, from the top.
   ad.adSeen = deckAdReason(ad, true);
   if (elapsed < AD_DODGE_AFTER_MS || !ad.adSeen) return;
-  adTryAlternate(state.queue[state.queuePos], ad);   // #624
+  if (adAltReady(ad.adSeen, ad.muteStartTs)) adTryAlternate(state.queue[state.queuePos], ad);   // #624
   const p = state.queuePos, n = adDodgeTarget(ad, nd);
   if (n < 0) return;
   const q = state.queue;
@@ -29937,7 +29950,7 @@ function maybeDodgeAd(){
 const AD_SKIP_AFTER_MS = 2500;
 const adSkippedVids = new Set();
 function skipHeldAd(ad, reason){
-  if (ad.kind === 'yt') adTryAlternate(state.queue[state.queuePos], ad);   // #624
+  if (ad.kind === 'yt' && adAltReady(reason, ad.adMutedAt || ad.gateHeld)) adTryAlternate(state.queue[state.queuePos], ad);   // #624
   const nd = standbyDeck(), n = adDodgeTarget(ad, nd);
   if (ad.kind !== 'yt' || n < 0 || adSkippedVids.has(ad.videoId)) return;
   adSkippedVids.add(ad.videoId);
