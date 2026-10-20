@@ -27958,6 +27958,8 @@ const MINI_DESKTOP_STYLE = `
   body.mp-shape-cymatics.cym-hover #mpControls,body.mp-shape-cymatics.cym-hover #mpHead,body.mp-shape-cymatics.cym-hover #mpMeta{opacity:1}
   /* only the buttons take clicks; everything else on the plate (title included) lets the click through to open the app */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{pointer-events:none}
+  /* the Square rules (class also carried by cymatics) give #mpHead/#mpMeta pointer-events:auto on hover; #mpHead is the whole window here, so it ate every click and drag meant for the plate */
+  body.mp-shape-cymatics.mp-shape-square #mpHead,body.mp-shape-cymatics.mp-shape-square:hover #mpHead,body.mp-shape-cymatics.mp-shape-square #mpMeta,body.mp-shape-cymatics.mp-shape-square:hover #mpMeta{pointer-events:none}
   body.mp-shape-cymatics.cym-hover #mpControls button,body.mp-shape-cymatics.cym-hover #mpHead button{pointer-events:auto}
   /* previous/next (and the 15s skips) are round like play: the app's UI color with its readable glyph color */
   body.mp-shape-cymatics #mpControls button:not(#mpPlay){background:var(--mp-play-bg,var(--accent))!important;color:var(--mp-play-fg,#151107)!important;width:30px;height:30px}
@@ -28316,12 +28318,15 @@ function wireMiniDesktop(win){
   // Matters most for the disc, where the art is nearly the whole window. A drag never counts as a click.
   const art = doc.getElementById('mpArtWrap');
   let drag = null, dragged = false;
-  art.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || e.target.closest('#mpArtPick')) return;
+  // the title box (pointer-events:auto in the art-only shapes) sits over the cover, so a press on it starts the hand-drag too
+  const startDrag = (e) => {
+    if (e.button !== 0 || e.target.closest('#mpArtPick, button')) return;
     drag = { x: e.screenX, y: e.screenY, wx: win.screenX, wy: win.screenY };
     dragged = false;
     try { art.setPointerCapture(e.pointerId); } catch(_){}
-  });
+  };
+  art.addEventListener('pointerdown', startDrag);
+  doc.getElementById('mpMeta').addEventListener('pointerdown', (e) => { if (!doc.body.classList.contains('mp-shape-card')) startDrag(e); });
   art.addEventListener('pointermove', (e) => {
     if (!drag) return;
     const dx = e.screenX - drag.x, dy = e.screenY - drag.y;
