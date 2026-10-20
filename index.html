@@ -30606,6 +30606,35 @@ function resetSeekUI(t){
   paintSeekUI(0, dur);
   cassetteSetProgress(0, dur);
 }
+// A song that should be playing but whose clock hasn't moved for
+// STALL_SKIP_MS gets a prompt (toast with Cancel); if left alone it moves on
+// to the next song after STALL_SKIP_GRACE_MS. Cancel, or the clock moving
+// again, stops it. Cancel is remembered for that song only.
+const STALL_SKIP_MS = 10000, STALL_SKIP_GRACE_MS = 5000;
+let stallKey = '', stallPos = -1, stallSince = 0, stallTimer = null, stallCancelled = '';
+function stallClear(){ clearTimeout(stallTimer); stallTimer = null; }
+function stallWatch(ad){
+  const key = state.queuePos + ':' + (ad.videoId || '');
+  const cur = ad.player.getCurrentTime ? (+ad.player.getCurrentTime() || 0) : 0;
+  const now = Date.now();
+  if (key !== stallKey || Math.abs(cur - stallPos) > 0.05){
+    stallKey = key; stallPos = cur; stallSince = now;
+    if (stallTimer){ stallClear(); toastEl.classList.remove('is-open'); }
+    return;
+  }
+  // only while the listener expects sound: playing state, visible page, no
+  // scrub in progress or hand-off under way
+  if (stallTimer || stallCancelled === key || now - stallSince < STALL_SKIP_MS) return;
+  if (!artworkWrap.classList.contains('is-playing') || document.hidden || seekDrag || swapInProgress) { stallSince = now; return; }
+  showToast('Song not playing. Skipping to the next in ' + Math.round(STALL_SKIP_GRACE_MS / 1000) + 's', { label: 'Cancel', run: () => { stallCancelled = key; stallClear(); } });
+  stallTimer = setTimeout(() => {
+    stallTimer = null;
+    if (stallKey !== key || stallCancelled === key) return;
+    toastEl.classList.remove('is-open');
+    adLog(ad, 'stall-skip', '');
+    playNext(true);
+  }, STALL_SKIP_GRACE_MS);
+}
 function updateSeekUI(){
   releaseSoundGates();
   updateAdLoadingIcon();
@@ -30613,6 +30642,7 @@ function updateSeekUI(){
   iosLockedStallCheck();
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
+  stallWatch(ad);
   const held = guardActiveDeckAd();
   unstickActiveDeck(held);
   if (held) return;

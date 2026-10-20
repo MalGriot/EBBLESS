@@ -11403,6 +11403,14 @@ Add entries in this shape:
 - **Issue:** GitHub #659 (area:playback, type:bug, bug:general, platform:android, classification comment added).
 - **Review notes:** Built: new adAltReady(reason, sinceTs) gates adTryAlternate on the active deck. Video-level signals (duration, short, video-id) still swap right away; the clock signals (not-moving, frozen, no-duration) must hold AD_ALT_SOFT_WAIT_MS (20s) first. Applied in maybeDodgeAd (since muteStartTs) and skipHeldAd (since adMutedAt or gateHeld). The dodge itself is unchanged. Same rule the standby deck already used. Cache bump v388. Side effect: a real ad that only shows clock signals no longer triggers the swap if the dodge hand-off happens first (the dodged deck still gets the standby-alt path after its reload). Verified: inline script syntax check only. NOT verified: real device (TECNO POP 9), quick-skip repro, a real ad.
 
+### stalled-song-auto-skip: a song not playing after 10s skips to the next, with a Cancel prompt
+- **Status:** review
+- **Priority:** medium
+- **Description:** Owner request: if a song is ever not playing after 10s, skip to the next in the queue, but show a prompt to cancel and wait.
+- **Touches:** index.html (stallWatch, called from updateSeekUI), sw.js.
+- **Branch:** agent/alt-swap
+- **Notes:** Built: while the app is in its playing state, the page is visible and the active deck's clock has not moved for 10s, a toast "Song not playing. Skipping to the next in 5s" with a Cancel button appears; after 5s it calls playNext(true). Cancel stops it for that song; the clock moving again also stops it. Pause, hidden page, scrubbing and deck swaps never count. With repeat-one it retries the same song. Cache v389. Verified: script syntax check only. NOT verified: in a browser or on the phone; the 10s counts from the last clock movement, so a slow ad-wait start with a frozen clock can trigger it.
+
 ### podcast-intro-ad: podcasts play a ~20s ad at the start (Geethub #648)
 - **Status:** review
 - **Priority:** medium
