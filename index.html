@@ -28483,15 +28483,16 @@ function mpRecordSync(win, playing){
 // Mac: the full player and the mini follow each other's LP / cassette / Cymatics mode. Opening the mini starts it in the main
 // player's mode (a hand-picked shape that still matches is kept); going back to the full player puts it in the mini's mode.
 function mpStartShapeFromMain(){
-  if (!isDesktopApp || mpSavedShape() || visualMode !== 'art') return;
-  if (artStyle === 'record') mpPickShape('disc');
-  else if (artStyle === 'cassette') mpPickShape('tape');
+  if (!isDesktopApp) return;
+  if (visualMode === 'viz') mpPickShape('cymatics');
+  else if (visualMode === 'art') mpPickShape(artStyle === 'record' ? 'disc' : artStyle === 'cassette' ? 'tape' : 'card');
 }
 function mpSyncMainFromMini(){
   const w = miniPlayerWin;
   if (!isDesktopApp || !w || w.closed || !w.document.body) return;
   const sh = w.document.body.dataset.mpShape;
   if (sh === 'cymatics') kbSetVisual('viz');
+  else if (sh === 'card') kbSetVisual('art'); // the card keeps whatever art style its thumb shows
   else if (sh === 'disc' || sh === 'tape'){ kbSetVisual('art'); setArtStyle(sh === 'disc' ? 'record' : 'cassette'); }
 }
 function mpCycleShape(){
