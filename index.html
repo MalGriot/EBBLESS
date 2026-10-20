@@ -680,7 +680,7 @@ body.onb-active .paste-guide{display:none}
 #libWideBtn{display:none}
 #view-library>.view-scroll:has(#libraryListWrap:not(.hidden)){height:100%;padding-bottom:0;box-sizing:border-box;display:flex;flex-direction:column}
 #libraryListWrap:not(.hidden){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
-#libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(var(--nav-h) + 12px + var(--safe-b))}
+#libraryListWrap .lib-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;margin:0 calc(-1 * var(--vs-pad,24px));padding-left:var(--vs-pad,24px);padding-right:var(--vs-pad,24px);padding-bottom:calc(var(--nav-h) + 12px + var(--safe-b))}
 .lib-sec>.section-label-row{position:static;background:none;padding:0;margin:0}
 /* Geethub #552: the bar shows the section at the top of the list; it swaps names as the next section header reaches it */
 #libBarLabel{margin:6px 0 10px;cursor:pointer;overflow:hidden}
@@ -825,6 +825,8 @@ body:not(.split-desktop) .lib-grid.is-compact{grid-template-columns:repeat(auto-
 .is-song-drag{opacity:.5}
 .drag-chip{position:fixed;top:-200px;left:0;z-index:-1;display:flex;align-items:center;gap:10px;max-width:280px;padding:6px 16px 6px 6px;border-radius:999px;background:var(--panel-3);border:1px solid var(--border-2);color:var(--text);font-size:13px;font-weight:600;line-height:1.25;box-shadow:0 8px 20px rgba(0,0,0,.45)}
 .drag-chip img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none}
+.drag-chip .dc-grid{width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}   /* #656 */
+.drag-chip .dc-grid img{width:100%;height:100%;border-radius:0}
 .drag-chip .txt{min-width:0}
 .drag-chip .t,.drag-chip .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drag-chip .s{font-weight:400;font-size:12px;color:var(--faint)}
@@ -1014,7 +1016,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 
 
 .lib-card .row-actions{display:none}
-.lib-grid.is-list .lib-card{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:var(--r-md);overflow:visible}
+.lib-grid.is-list .lib-card{display:flex;align-items:center;gap:12px;padding:6px calc(var(--vs-pad,24px) + 8px);margin:0 calc(-1 * var(--vs-pad,24px));border-radius:0;overflow:visible}   /* #655: hover box spans the whole window */
 .lib-grid.is-list .lib-card:hover{background:var(--panel-2)}
 .lib-grid.is-list .lib-card .art{width:44px;height:44px;flex:none;aspect-ratio:unset}
 .lib-grid.is-list .lib-card .pin,
@@ -1754,6 +1756,7 @@ svg.load-spin{animation:load-spin .9s linear infinite}
 
 .track-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:var(--r-md);cursor:pointer;position:relative}
 .track-row:hover{background:var(--panel)}
+#libplBody .track-row{padding-left:22px;padding-right:22px;border-radius:0}   /* #655: edge to edge hover */
 .track-row.is-current{background:var(--panel-2)}
 .track-row .num{width:20px;flex:none;font-size:12px;color:var(--faint-2);text-align:center}
 .track-row.is-current .num{color:var(--accent)}
@@ -1866,7 +1869,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
    Static art, two inline SVGs on a pseudo-element: no animation, no blur, nothing to pause. White at a few percent so it
    reads on any accent. The panels are stacking contexts, so z-index:-1 puts it above their fill and under their content;
    #view-library scrolls, so there it is a zero-height sticky strip at the top of the pane. */
-#queue-panel::before,#libpl-panel::before,#hist-panel::before,#view-library::before{
+#libpl-panel::before,#hist-panel::before,#view-library::before{
   content:'';position:absolute;left:0;right:0;top:0;height:40px;pointer-events:none;z-index:-1;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'%3E%3Cpath d='M0 0H120C96 2 78 12 58 22 38 32 18 34 0 40Z' fill='%23fff' fill-opacity='.06'/%3E%3Cpath d='M120 0C96 2 78 12 58 22 38 32 18 34 0 40' fill='none' stroke='%23fff' stroke-opacity='.16' stroke-width='1.2'/%3E%3C/svg%3E") left top/120px 40px no-repeat,
@@ -1938,7 +1941,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   #libpl-panel .queue-head .close-btn svg{width:20px;height:20px}
 }
 .queue-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.queue-body{padding:4px 12px 24px}
+.queue-body{padding:4px 0 24px}   /* #655: rows run edge to edge so the hover box does too */
 .libpl-addbar{padding:0 12px 8px;flex:none}
 #libplBody .track-row .handle{flex:none;width:18px;height:28px;margin-right:2px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);cursor:grab;touch-action:none}
 #libplBody .track-row .handle svg{width:12px;height:16px}
@@ -1988,8 +1991,8 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head .libpl-play:active{transform:scale(.96)}
 .queue-drag-handle{display:none}
 .q-section-label{font-size:10.5px;font-weight:700;letter-spacing:.6px;color:var(--faint-2);text-transform:uppercase;
-  margin:18px 8px 6px}
-.q-now{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:var(--r-md);background:var(--panel-2)}
+  margin:18px 20px 6px}
+.q-now{display:flex;align-items:center;gap:12px;padding:10px 20px;border-radius:0;background:var(--panel-2)}
 .q-now img{width:46px;height:46px;border-radius:6px;object-fit:cover;background:var(--panel-3)}
 .q-now .meta{min-width:0;flex:1}
 .q-now .title{font-size:13.5px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1998,7 +2001,7 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   display:flex;align-items:center;justify-content:center;transition:transform var(--dur-ui) var(--ease-out)}
 .q-now .play-btn:active{transform:scale(.92)}
 .q-now .play-btn svg{width:15px;height:15px}
-.q-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--r-md);position:relative;
+.q-row{display:flex;align-items:center;gap:10px;padding:8px 20px;border-radius:0;position:relative;
   background:var(--panel);touch-action:pan-y}
 /* #620 swipe-reveal: the strip sits behind the moving row, green (share) left, red (delete) right; a row is opaque while it is swiped */
 .swipe-under{position:absolute;z-index:0;display:flex;justify-content:space-between;overflow:hidden;pointer-events:auto}
@@ -2677,7 +2680,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   #topbar{padding:0 18px}
   #topnav{display:none}
   .view,#import-overlay{bottom:calc(var(--nav-h) + var(--safe-b))}
-  .view-scroll{padding:4px 18px calc(120px + var(--safe-b))}
+  .view-scroll{--vs-pad:18px;padding:4px 18px calc(120px + var(--safe-b))}
   #bottom-nav{display:flex}
   #mini-bar,#match-status{bottom:calc(var(--nav-h) + var(--safe-b))}
   #mini-bar[data-shown]{display:flex}
@@ -14919,7 +14922,11 @@ function setDragChip(e, title, sub, art){
   if (!e.dataTransfer || !e.dataTransfer.setDragImage) return;
   const chip = document.createElement('div');
   chip.className = 'drag-chip';
-  chip.innerHTML = (art ? '<img alt="" src="' + escapeHtml(art) + '">' : '') + '<div class="txt"><div class="t"></div><div class="s"></div></div>';
+  // art is one URL, or a list of up to 4 (#656: a collection with no cover of its own shows its 2x2 thumb in the circle)
+  const arts = (Array.isArray(art) ? art : [art]).filter(Boolean).slice(0, 4);
+  const artHtml = arts.length > 1 ? '<span class="dc-grid">' + arts.map(a => '<img alt="" src="' + escapeHtml(a) + '">').join('') + '</span>'
+    : arts.length ? '<img alt="" src="' + escapeHtml(arts[0]) + '">' : '';
+  chip.innerHTML = artHtml + '<div class="txt"><div class="t"></div><div class="s"></div></div>';
   chip.querySelector('.t').textContent = title || '';
   chip.querySelector('.s').textContent = sub || '';
   document.body.appendChild(chip);
@@ -15009,11 +15016,12 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     }
     const row = rowOf(e.target);
     if (!row || !row.draggable) return;
-    let t = null;
+    let t = null, pl0 = null;
     dragSrcPl = null;
     if (row.classList.contains('q-row')){
       const en = state.queue[parseInt(row.dataset.pos, 10)];
       const pl = en && playlistById(en.plId);
+      pl0 = pl;
       t = pl && pl.tracks[en.idx];
     } else {
       const pl = getCachedPlaylist(row.dataset.plId);
@@ -15024,7 +15032,9 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
     dragTrack = t; dragFromLib = !row.classList.contains('q-row');
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', t.title + ' - ' + t.artist);
-    setDragChip(e, t.title, t.artist, t.art);
+    // #657: a song with no art of its own still shows what the row shows (its list's cover)
+    const rowImg = row.querySelector('img');
+    setDragChip(e, t.title, t.artist, t.art || (rowImg && (rowImg.currentSrc || rowImg.src)) || (pl0 && pl0.image) || null);
     row.classList.add('is-song-drag');
   });
   document.addEventListener('dragover', (e) => {
@@ -15166,7 +15176,9 @@ let relinkDragCtx = null; // { list, t } of the open matching-links window
       // the card's name is what a drop on a browser tab searches
       const by = artist ? '' : (pl.artist || pl.owner || '');
       try { e.dataTransfer.setData('text/plain', pl.name + (by ? ' - ' + by : '')); } catch(_){}
-      setDragChip(e, pl.name, artist ? 'Artist' : by, pl.image);
+      // #656: cover when there is one, else the first song's art (albums), else the 2x2 of its songs' art
+      const tArts = (pl.tracks || []).map(x => x && x.art).filter(Boolean);
+      setDragChip(e, pl.name, artist ? 'Artist' : by, pl.image || (isAlbumEntry(pl) ? tArts[0] : tArts.slice(0, 4)));
     } else if (e.target.closest && e.target.closest('#artworkWrap')){
       drag = { kind: 'np' };
     } else {

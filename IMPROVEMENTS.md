@@ -11435,36 +11435,36 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #658.
 
 ### queue-drag-pill-art: The pill a queue song turns into when dragged shows the song art (Geethub #657)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #657.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #657.
+- **Branch:** claude/sad-lichterman-f66fe8
+- **Notes:** Drag chip falls back to the row's own art, then the list cover, when the song has no art. Reviewed in browser: loads clean, no console errors or [gpu-watchdog] warnings. Real drag not exercised (needs a library with songs).
 
 ### library-drag-pill-art: The pill a dragged library item turns into always has art (Geethub #656)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #656. Pill shows a circle with the art when there is art; when the playlist or album has none, use the 2x2 thumb.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #656.
+- **Branch:** claude/sad-lichterman-f66fe8
+- **Notes:** Drag chip circle: cover if present, else first song's art for albums, else 2x2 of up to 4 songs' art (setDragChip accepts a list). Reviewed in browser: loads clean, no console errors.
 
 ### hover-boxes-full-width: Queue and library hover boxes stretch edge to edge instead of pills (Geethub #655)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #655.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #655.
+- **Branch:** claude/sad-lichterman-f66fe8
+- **Notes:** Queue and playlist panels: .queue-body side padding 0, rows carry it, radius 0. Library list rows: negative margin by --vs-pad (24px, 18px on phones) with .lib-body padding to match. Hover fills edge to edge. Unchecked visually with real data.
 
 ### queue-remove-swoop: Remove the swoop/wave from the top of the queue window so it matches library (Geethub #654)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #654.
 - **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #654.
+- **Branch:** claude/sad-lichterman-f66fe8
+- **Notes:** Removed #queue-panel from the #626 swoop selector. Left on the playlist, history panels and desktop library pane (those were not asked for). Verified ::before is none on the queue.
 
 ### cymatics-tap-loop: Cymatics: tap toggles loop, double tap toggles rotation (Geethub #653)
 - **Status:** ready
