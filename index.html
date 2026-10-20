@@ -23925,8 +23925,17 @@ function vizResize(){
   vizCtx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+// #635: the grain field is ~1600 arcs a frame (3200 fullscreen). Off screen it
+// draws nothing; paused it ticks at ~10 fps; on a phone (coarse pointer) it
+// plays at ~30 fps. dt below is capped higher to match so speed stays true.
+let vizOnScreen = true;
+if ('IntersectionObserver' in window) new IntersectionObserver(es => { vizOnScreen = es[es.length - 1].isIntersecting; }).observe(vizCanvas);
+const vizCoarse = window.matchMedia && matchMedia('(pointer:coarse)').matches;
 function vizDraw(t){
-  const dt = (vizLastT ? Math.min(48, t - vizLastT) : 16) * vizSpeed;
+  const minGap = !vizOnScreen ? 250 : !vizPlaying ? 100 : vizCoarse ? 33 : 0;
+  if (vizLastT && t - vizLastT < minGap - 4){ vizRAF = requestAnimationFrame(vizDraw); return; }
+  if (!vizOnScreen){ vizLastT = t; vizRAF = requestAnimationFrame(vizDraw); return; }
+  const dt = (vizLastT ? Math.min(Math.max(48, minGap + 16), t - vizLastT) : 16) * vizSpeed;
   vizLastT = t;
   const w = vizCanvas.width / Math.min(2, window.devicePixelRatio || 1);
   const h = vizCanvas.height / Math.min(2, window.devicePixelRatio || 1);
@@ -26200,6 +26209,7 @@ function mqVisible(el){
   return r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
 }
 function mqSweep(){
+  if (document.hidden) return; // #635: backgrounded, nothing to measure; the visibilitychange/next tick catches up
   mqRunning.forEach(el => {
     if (!el.isConnected || !el._mqInner || el._mqInner.parentNode !== el || !mqVisible(el)){ mqStop(el); return; }
     if (el._mqKey !== mqKey(el)){ mqStop(el); mqStart(el); }
@@ -30578,12 +30588,16 @@ function paintSeekUI(cur, dur){
   podAdWatch();
   sbWatch(dur);
   skipPromptTick(cur);
+  // #635: this runs 4x a second; write the DOM only when the shown value moved
+  // (time text changes once a second, the bar a few px), not every tick.
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
-  if (!seekTrack.classList.contains('ad-fill')){ seekFill.style.width = pct + '%'; flowSeekFill.style.width = pct + '%'; miniLineFill.style.width = pct + '%'; }
-  seekKnob.style.left = pct + '%'; flowSeekKnob.style.left = pct + '%';
+  const pctStr = (+pct.toFixed(2)) + '%';
+  if (!seekTrack.classList.contains('ad-fill') && seekFill.style.width !== pctStr){ seekFill.style.width = pctStr; flowSeekFill.style.width = pctStr; miniLineFill.style.width = pctStr; }
+  if (seekKnob.style.left !== pctStr){ seekKnob.style.left = pctStr; flowSeekKnob.style.left = pctStr; }
   if (!seekDrag) notePodProgress(cur, dur);
-  timeCur.textContent = formatTime(cur); timeDur.textContent = formatTime(dur);
-  flowTimeCur.textContent = formatTime(cur); flowTimeDur.textContent = formatTime(dur);
+  const tc = formatTime(cur), td = formatTime(dur);
+  if (timeCur.textContent !== tc){ timeCur.textContent = tc; flowTimeCur.textContent = tc; }
+  if (timeDur.textContent !== td){ timeDur.textContent = td; flowTimeDur.textContent = td; }
 }
 // Back to 0:00 for a track change (reflectCurrentTrackUI), showing the new
 // track's known length until its deck reports its own.
