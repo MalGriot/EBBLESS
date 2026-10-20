@@ -23246,6 +23246,10 @@ function loadIntoDeck(deck, videoId, isActive){
       if (deck === activeDeck() && deck.player.playVideo) deck.player.playVideo();
     } });
   } else {
+    // #651: a deck reused for a different video (Fix this song on the playing
+    // track) must not carry the last video's ad state: a stale adDodge /
+    // adMutedAt / adIgnore left the fixed song held or never confirmed
+    deck.adMutedAt = 0; deck.adIgnore = null; deck.adClock = null; deck.adDodge = null; deck.adSeen = '';
     deck.player.loadVideoById({ videoId: videoId, suggestedQuality: LOWEST_QUALITY });
     forceLowestQuality(deck);
     deck.muteStartTs = Date.now();
@@ -29998,7 +30002,10 @@ function returnFromAdDodge(deck){
   [q[p], q[n]] = [q[n], q[p]];
   deck.pos = p;
   adLog(deck, 'dodge-return', '');
-  promoteDeckDirect(deck, p, artworkWrap.classList.contains('is-playing'));
+  const resuming = artworkWrap.classList.contains('is-playing');
+  promoteDeckDirect(deck, p, resuming);
+  // #658: the first song comes back in with a fade, not a hard cut
+  if (resuming && !isIOS && deck.player && deck.player.setVolume){ deck.player.setVolume(0); runPlayFade(deck, 'in'); }
   renderQueuePanel();
 }
 // Stuck-deck recovery (#261, iPhone): after an ad the active deck can sit

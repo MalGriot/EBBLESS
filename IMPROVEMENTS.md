@@ -11419,20 +11419,20 @@ Add entries in this shape:
 <!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->
 
 ### fix-song-needs-play-tap: "Fix this song" needs a play tap to reload (Geethub #651)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #651. After hitting fix this song (seen on 40 Winks by Jon Wayne) it finished the ad, froze, and needed a play tap to reload.
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #651.
+- **Touches:** index.html (loadIntoDeck, returnFromAdDodge), sw.js.
+- **Branch:** agent/playback-651-658
+- **Notes:** INFERRED fix, not reproduced (needs a real ad): loadIntoDeck reused a deck for the fixed video without clearing the old video's ad state (adDodge, adMutedAt, adIgnore, adClock, adSeen), so a stale dodge/mute flag could leave the fixed song held and never started. Now cleared on every YouTube load, as resetDeck does. Syntax-checked only; verify on a phone with a song that serves a pre-roll after Fix this song.
 
 ### ad-switch-fade-back: After an ad-triggered switch to the next song and back, fade back to the first song (Geethub #658)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #658. When a song loads an ad and playback switches to the next song then back to the first, it should fade back in.
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #658.
+- **Touches:** index.html (loadIntoDeck, returnFromAdDodge), sw.js.
+- **Branch:** agent/playback-651-658
+- **Notes:** Built: returnFromAdDodge now starts the returning first song at volume 0 and runs the existing pause/resume fade-in (runPlayFade) instead of a hard cut at full volume; skipped on iOS (out of scope, setVolume ignored there). Syntax-checked only; the dodge-return path needs a real ad to exercise, so verify on a phone. Cache bump v386.
 
 ### queue-drag-pill-art: The pill a queue song turns into when dragged shows the song art (Geethub #657)
 - **Status:** review
