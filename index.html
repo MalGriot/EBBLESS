@@ -13998,36 +13998,32 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
   $('relinkBackBtn').addEventListener('click', closeImportOverlay);
 }
 
-// #491: hovering a YouTube candidate in the link-fix grid plays a muted looping
-// clip over its thumbnail. One iframe at a time, created on hover (after a short
-// delay) and removed on leave, tab hide or when the grid goes away, so nothing
-// plays or sits in memory while not hovered.
+// #491: hovering a YouTube candidate in the link-fix grid previews it. It used
+// to embed the real player, which counted as a play and burned the video's
+// ad, so re-hovering showed a different ad state than the real play would.
+// Now it only cycles YouTube's own still frames (25/50/75%) over the thumbnail:
+// plain images, no player, no view, no ad touched.
 (function(){
   if (!window.matchMedia || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  let clip = null, hoverTimer = 0, host = null;
+  let hoverTimer = 0, host = null, img = null, orig = '', tick = 0, n = 0;
   function stopClip(){
-    clearTimeout(hoverTimer);
-    if (clip){ clip.remove(); clip = null; }
-    host = null;
+    clearTimeout(hoverTimer); clearInterval(tick);
+    if (img && orig) img.src = orig;
+    host = img = null; orig = '';
   }
   function startClip(btn){
     const c = relinkDragCtx && relinkDragCtx.list[parseInt(btn.dataset.i, 10)];
-    const img = btn.querySelector('img');
-    if (!c || !img || (c.source || 'youtube') !== 'youtube' || !/^[\w-]{11}$/.test(c.videoId)) return;
-    const f = document.createElement('iframe');
-    f.className = 'hover-clip';
-    f.tabIndex = -1; f.setAttribute('aria-hidden', 'true'); f.allow = 'autoplay';
-    f.style.cssText = 'left:' + img.offsetLeft + 'px;top:' + img.offsetTop + 'px;width:' + img.offsetWidth + 'px;height:' + img.offsetHeight + 'px';
-    const start = c.duration > 90 ? Math.floor(c.duration * 0.3) : 0;
-    f.src = 'https://www.youtube-nocookie.com/embed/' + c.videoId + '?autoplay=1&mute=1&controls=0&loop=1&playlist=' + c.videoId + '&playsinline=1&disablekb=1&modestbranding=1&start=' + start;
-    f.addEventListener('load', () => f.classList.add('is-on'));
-    btn.appendChild(f); clip = f; host = btn;
+    const im = btn.querySelector('img');
+    if (!c || !im || (c.source || 'youtube') !== 'youtube' || !/^[\w-]{11}$/.test(c.videoId)) return;
+    host = btn; img = im; orig = im.src; n = 0;
+    const step = () => { n = n % 3 + 1; im.src = 'https://i.ytimg.com/vi/' + c.videoId + '/hq' + n + '.jpg'; };
+    step(); tick = setInterval(step, 800);
   }
   document.addEventListener('mouseover', (e) => {
     const btn = e.target.closest && e.target.closest('#relinkCandidates .search-pick.is-video');
     if (btn === host) return;
     stopClip();
-    if (btn) hoverTimer = setTimeout(() => startClip(btn), 400);
+    if (btn) hoverTimer = setTimeout(() => startClip(btn), 300);
   });
   document.addEventListener('mouseout', (e) => {
     if (host && !(e.relatedTarget && host.contains(e.relatedTarget))) stopClip();
@@ -22379,7 +22375,8 @@ function adLog(deck, what, reason){
   if (window.ebblessAdLog.length > AD_LOG_MAX) window.ebblessAdLog.shift();
   try { console.info('[ad]', what, row); } catch(e){}
 }
-const STANDBY_AD_RELOAD_MS = 8000, STANDBY_AD_ALT_MS = 8000, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
+// A short first play usually spends the ad: reload after 2.5s (was 8s), then move to the closest alternate 3s later (was 8s).
+const STANDBY_AD_RELOAD_MS = 2500, STANDBY_AD_ALT_MS = 3000, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
 function checkDeckReady(deck){
   if (!deck.player) return;
   const elapsed = Date.now() - deck.muteStartTs;
