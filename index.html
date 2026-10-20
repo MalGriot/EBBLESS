@@ -27951,7 +27951,7 @@ const MINI_DESKTOP_STYLE = `
   /* #650: hover-only (cym-hover), controls centered, heart + friends in the bottom right corner of the plate */
   body.mp-shape-cymatics #mpHead{left:0;top:0;width:100%;height:100%;transform:none;padding:0}
   body.mp-shape-cymatics #mpFav{position:absolute;right:9%;bottom:9%}
-  body.mp-shape-cymatics #mpFull{display:none}
+  body.mp-desktop.mp-shape-cymatics{-webkit-app-region:no-drag} /* the OS drag area swallowed the hand-drag on the plate; the cover box drags it by hand */
   /* no pills behind the hover controls and info: they sit straight on the cover, with a soft shadow to stay readable */
   body.mp-shape-cymatics #mpControls,body.mp-shape-cymatics #mpHead,body.mp-shape-cymatics #mpMeta{background:none}
   body.mp-shape-cymatics:not(.cym-hover) #mpControls,body.mp-shape-cymatics:not(.cym-hover) #mpHead,body.mp-shape-cymatics:not(.cym-hover) #mpMeta{opacity:0;pointer-events:none}
@@ -28585,6 +28585,16 @@ function buildMiniPlayerDOM(win){
     const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
     if (plain && (e.key === 'q' || e.key === 'Q')){ e.preventDefault(); if (!e.repeat) toggleMiniQueue(); return; }
     if (plain && e.key === 'Escape' && mpQueue){ e.preventDefault(); closeMiniQueue(); return; }
+    // Z steps the mini through its modes (default, LP, cassette, Cymatics, default); X jumps to Cymatics. The mini thumb's own buttons are the only way to pick a default-mode art style.
+    if (plain && !e.shiftKey && 'zZxX'.includes(e.key) && e.key.length === 1){
+      e.preventDefault();
+      if (!e.repeat){
+        if (/[zZ]/.test(e.key)){ if (isDesktopApp) mpCycleShape(); else mpCycleArtMode(); }
+        else if (isDesktopApp) mpPickShape('cymatics'); else kbSetVisual('viz');
+        updateMiniPlayerUI();
+      }
+      return;
+    }
     const fwd = new KeyboardEvent('keydown', {
       key: e.key, code: e.code, repeat: e.repeat, bubbles: true, cancelable: true,
       shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, altKey: e.altKey
