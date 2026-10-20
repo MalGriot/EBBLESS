@@ -27410,7 +27410,7 @@ document.addEventListener('keydown', (e) => {
     case 'm': case 'M':
       if (e.repeat || !miniPlayerSupported()) break;
       if (miniPlayerWin && !miniPlayerWin.closed){
-        if (isDesktopApp) window.ebblessDesktop.focusMain();
+        if (isDesktopApp){ mpSyncMainFromMini(); window.ebblessDesktop.focusMain(); }
         else try { miniPlayerWin.close(); } catch(_){}
       } else if (currentTrack()) openMiniPlayer(); // the Mac app minimizes its own window once the mini is up (app 1.0.8+, hideMain)
       break;
@@ -28346,7 +28346,7 @@ function wireMiniDesktop(win){
 // Closing or minimizing the Mac app's window floats the mini player
 if (isDesktopApp) window.ebblessDesktop.onAway(() => { if (currentTrack()) openMiniPlayer(); });
 // #509: the full player is open again, so the mini player closes
-if (isDesktopApp && window.ebblessDesktop.onBack) window.ebblessDesktop.onBack(() => { if (miniPlayerWin && !miniPlayerWin.closed) try { miniPlayerWin.close(); } catch(_){} });
+if (isDesktopApp && window.ebblessDesktop.onBack) window.ebblessDesktop.onBack(() => { if (miniPlayerWin && !miniPlayerWin.closed) try { mpSyncMainFromMini();  miniPlayerWin.close(); } catch(_){} });
 // Mac app sign-in comes back from the browser (desktop/signin.html) as a Google credential
 if (isDesktopApp && window.ebblessDesktop.onSignin) window.ebblessDesktop.onSignin((cred) => {
   if (typeof cred === 'string' && cred.split('.').length === 3) handleGoogleCredential({ credential: cred });
@@ -28480,6 +28480,20 @@ function mpRecordSync(win, playing){
   mpRec.target = playing ? 1 : 0;
   if (!mpRec.raf && mpRec.speed !== mpRec.target){ mpRec.last = 0; mpRec.raf = win.requestAnimationFrame(mpRecTick); }
 }
+// Mac: the full player and the mini follow each other's LP / cassette / Cymatics mode. Opening the mini starts it in the main
+// player's mode (a hand-picked shape that still matches is kept); going back to the full player puts it in the mini's mode.
+function mpStartShapeFromMain(){
+  if (!isDesktopApp || mpSavedShape() || visualMode !== 'art') return;
+  if (artStyle === 'record') mpPickShape('disc');
+  else if (artStyle === 'cassette') mpPickShape('tape');
+}
+function mpSyncMainFromMini(){
+  const w = miniPlayerWin;
+  if (!isDesktopApp || !w || w.closed || !w.document.body) return;
+  const sh = w.document.body.dataset.mpShape;
+  if (sh === 'cymatics') kbSetVisual('viz');
+  else if (sh === 'disc' || sh === 'tape'){ kbSetVisual('art'); setArtStyle(sh === 'disc' ? 'record' : 'cassette'); }
+}
 function mpCycleShape(){
   const i = MP_CLICK_ORDER.indexOf(mpDesktopShape());
   mpPickShape(MP_CLICK_ORDER[(i + 1) % MP_CLICK_ORDER.length]);
@@ -28548,7 +28562,7 @@ function buildMiniPlayerDOM(win){
   // like/flag bookkeeping) as a click on the real thing.
   // Art or logo click: back to the main app (focus the opener tab, close the mini window)
   const backToApp = () => {
-    if (isDesktopApp){ window.ebblessDesktop.focusMain(); return; } // the Mac app keeps it floating
+    if (isDesktopApp){ mpSyncMainFromMini(); window.ebblessDesktop.focusMain(); return; } // the Mac app keeps it floating
     try { window.focus(); } catch(e){} try { win.close(); } catch(e){}
   };
   // a click on the cover steps the art mode like the Z key: Art, LP, cassette, Visualizer (Cymatics here), then Art again
@@ -28939,6 +28953,7 @@ async function openMiniPlayer(){
   if (!miniPlayerSupported() || !currentTrack()) return;
   if (miniPlayerWin && !miniPlayerWin.closed){ updateMiniPlayerUI(); return; }
   try {
+    mpStartShapeFromMain();
     const prefs = isDesktopApp ? mpDesktopSize(mpDesktopShape()) : miniPlayerPrefs();
     const win = await requestMiniWindow(prefs.w, prefs.h);
     miniPlayerWin = win;
