@@ -11417,3 +11417,67 @@ Add entries in this shape:
 - **Notes:** Built: one history entry stays buffered at all times, including at rest, so a back press at the player is swallowed and the entry re-pushed. Steps inside the app (artist page to playlist, library/settings/queue to player) are unchanged, one layer per press. Verified in a desktop browser: back at rest twice stays on the app and keeps the buffered state. Not verified: Android hardware/gesture back in the native app (it may want back-at-player to minimise; users leave via home), iPhone out of scope.
 
 <!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->
+
+### fix-song-needs-play-tap: "Fix this song" needs a play tap to reload (Geethub #651)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug Geethub #651. After hitting fix this song (seen on 40 Winks by Jon Wayne) it finished the ad, froze, and needed a play tap to reload.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #651.
+
+### ad-switch-fade-back: After an ad-triggered switch to the next song and back, fade back to the first song (Geethub #658)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #658. When a song loads an ad and playback switches to the next song then back to the first, it should fade back in.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #658.
+
+### queue-drag-pill-art: The pill a queue song turns into when dragged shows the song art (Geethub #657)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #657.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #657.
+
+### library-drag-pill-art: The pill a dragged library item turns into always has art (Geethub #656)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #656. Pill shows a circle with the art when there is art; when the playlist or album has none, use the 2x2 thumb.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #656.
+
+### hover-boxes-full-width: Queue and library hover boxes stretch edge to edge instead of pills (Geethub #655)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #655.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #655.
+
+### queue-remove-swoop: Remove the swoop/wave from the top of the queue window so it matches library (Geethub #654)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #654.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #654.
+
+### cymatics-tap-loop: Cymatics: tap toggles loop, double tap toggles rotation (Geethub #653)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #653.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #653.
+
+### lp-game-click-space: LP game: once started, click or space plays; space only pauses the song before the game and after the high score leaves (Geethub #652)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea Geethub #652.
+- **Touches:** tbd.
+- **Branch:** 
+- **Notes:** Synced from Geethub #652.
