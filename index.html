@@ -28579,6 +28579,7 @@ function buildMiniPlayerDOM(win){
   [['mpArtDefault', 'default'], ['mpArtRecord', 'record'], ['mpArtCassette', 'cassette']].forEach(([id, st]) =>
     doc.getElementById(id).addEventListener('click', () => {
       if (isDesktopApp && mpSavedShape()) mpPickShape(null); // #612: a hand-picked shape would otherwise ignore the skin
+      if (visualMode !== 'art') kbSetVisual('art'); // the card was reached from Cymatics by Z/click with the main player still in Visualizer: without this the mini falls straight back to Cymatics
       setArtStyle(st); updateMiniPlayerUI();
     }));
   // Shortcuts keep working with the mini player focused: replay the key on
