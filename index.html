@@ -27376,6 +27376,8 @@ document.addEventListener('keydown', (e) => {
   switch (e.key){
     case ' ':
       e.preventDefault();
+      // LP game (#652): from the first tap of a run until its score leaves the screen, Space is a tap on the record, not pause
+      if (recordGameInFlow() && (recGame.on || recGameHud.dataset.phase === 'over')){ if (!e.repeat) recordGameTap(); break; }
       if (state.queuePos >= 0) userTogglePlayback();
       break;
     // Podcasts swap the two (Geethub #234): plain arrows skip -/+15s,
@@ -31860,7 +31862,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
 })();
 
 /* double-tap (or double-click) album art -> enter fullscreen; fullscreen
-   cymatics view -> exit. The fullscreen art view has no double-tap exit
+   cymatics view: tap = loop, double tap = rotation (#653). The fullscreen art view has no double-tap exit
    (there a double-tap on the record starts the tap game, see RECORD TAP
    GAME; exit is the X button or swipe-down). A single tap on the art never
    plays/pauses. Listening on 'click' (fired for both a touch tap and a
@@ -31890,8 +31892,19 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     if (!document.body.classList.contains('split-desktop') && state.currentView !== 'library') setView('library');
     if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id);
   }
+  // Cymatics (#653): a tap toggles the loop (the infinity "hold this pattern" button), a double tap toggles rotation.
+  // The first tap acts at once; if a second lands inside the window it is put back and rotation toggles instead.
+  let cymLastTap = 0;
+  function cymaticsTap(ev){
+    if (ev.target.closest && ev.target.closest('button, a')) return;
+    const now = Date.now();
+    if (now - cymLastTap < DOUBLE_TAP_MS){ cymLastTap = 0; vizSetHoldMode(!vizHoldMode); vizSetRotate(!vizRotateOn); }
+    else { cymLastTap = now; vizSetHoldMode(!vizHoldMode); }
+  }
+  flowVizWrap.addEventListener('click', cymaticsTap);
   artworkWrap.addEventListener('click', (ev) => {
     if (ev.target.closest && ev.target.closest('button, a')) return;
+    if (artworkWrap.dataset.mode === 'viz'){ cymaticsTap(ev); return; }
     const now = Date.now();
     taps = now - lastArtTap < DOUBLE_TAP_MS ? taps + 1 : 1;
     lastArtTap = now;
@@ -31908,7 +31921,6 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     if (a === 'top'){ const sc = document.querySelector('#view-library .view-scroll') || $('view-library'); sc.scrollTo({ top: 0, behavior: 'smooth' }); }
     else if (a === 'search'){ setView('library'); if (libSearchBox.classList.contains('hidden')) $('libSearchToggle').click(); libSearch.focus(); }
   }));
-  onDoubleTap(flowVizWrap, closeFlow);
 })();
 
 /* long-press on the player's album art -> the action chosen under Advanced >

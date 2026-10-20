@@ -11467,17 +11467,17 @@ Add entries in this shape:
 - **Notes:** Removed #queue-panel from the #626 swoop selector. Left on the playlist, history panels and desktop library pane (those were not asked for). Verified ::before is none on the queue.
 
 ### cymatics-tap-loop: Cymatics: tap toggles loop, double tap toggles rotation (Geethub #653)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #653.
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #653.
+- **Touches:** index.html, sw.js (v386).
+- **Branch:** agent/cymatics-lp
+- **Notes:** Cymatics (inline player and fullscreen): a tap toggles the loop (the infinity hold-pattern button), a double tap toggles rotation (first tap is put back). Replaces the old double tap to fullscreen and double tap to close on cymatics only. Verified in browser; not yet verified on a real phone. Synced from Geethub #653.
 
 ### lp-game-click-space: LP game: once started, click or space plays; space only pauses the song before the game and after the high score leaves (Geethub #652)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #652.
-- **Touches:** tbd.
-- **Branch:** 
-- **Notes:** Synced from Geethub #652.
+- **Touches:** index.html, sw.js (v386).
+- **Branch:** agent/cymatics-lp
+- **Notes:** Space is a tap on the record from the first tap of a run until the score leaves the screen (HUD phase run/over), otherwise it still pauses. Clicks already played the game. Logic-checked only, a live run needs a playing song in fullscreen LP. Synced from Geethub #652.
