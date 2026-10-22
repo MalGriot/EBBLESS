@@ -8639,6 +8639,9 @@ function artworkUrls(track){
     chain.push('https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg');
     chain.push('https://img.youtube.com/vi/' + videoId + '/mqdefault.jpg');
   }
+  // #621: an uploaded song with no cover in its tags shows the EBBLESS mark,
+  // never the previous song's art left on screen
+  if (!chain.length && isLocalVideoId(videoId)) chain.push(new URL('brand/assets/mark-white.png', location.href).href);
   return chain;
 }
 // A missing maxresdefault/hqdefault thumbnail doesn't always 404 - YouTube
