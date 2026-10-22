@@ -11327,6 +11327,7 @@ function toggleLibraryPlaylistPanel(id){
     bar.textContent = npFeed.onAir ? 'ON AIR now. Tap the first song to tune in, or any song to rewind.' : 'Off air right now. These are the latest songs.';
     libplBody.appendChild(bar);
   }
+  if (id === UPLOADS_ID){ const ub = buildUploadsBar(); if (ub) libplBody.appendChild(ub); }
   { const ms = buildMatchSummary(id, pl); if (ms) libplBody.appendChild(ms); }
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
@@ -18263,7 +18264,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 393, date: '2026-10-22', items: [
-    'Add your own songs: tap the upload button in the Library, or drag song files or a folder onto the window. They go in an Uploads playlist, play with no ads and no matching, and stay on your device.'
+    'Add your own songs: tap the upload button in the Library, or drag song files or a folder onto the window. They go in an Uploads playlist, play with no ads and no matching, and stay on your device. On your other devices, open Uploads to get them straight from the first device (EBBLESS open on both) or through your own Google Drive.'
   ]},
   { version: 299, date: '2026-10-18', items: [
     'Paste a list of songs into the search bar (one per line, like Artist - Title) and EBBLESS makes a playlist from it. No link needed.',
@@ -23473,6 +23474,269 @@ async function filesFromDrop(dt){
     filesFromDrop(e.dataTransfer).then(addLocalFiles);
   });
 })();
+
+/* ---- Uploads on a second device (#621) ----------------------------------
+   The Uploads playlist syncs with the account (titles, artists, covers), but
+   the files stay on the device that added them. Two ways to bring them to
+   another device, both without EBBLESS ever storing a file:
+   1. Direct: this device and the other connect peer to peer (WebRTC); the
+      worker /transfer only passes the two connection descriptions along.
+      The other device has to have EBBLESS open.
+   2. Google Drive: the files go to a folder in the listener's own Drive
+      (drive.file permission: only files EBBLESS made) and come back from it. */
+const XFER_CHUNK = 16 * 1024;
+const XFER_ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
+let xferBusy = false;
+const xferSleep = (ms) => new Promise(r => setTimeout(r, ms));
+function missingUploadIds(){
+  const pl = getCachedPlaylist(UPLOADS_ID);
+  return pl ? pl.tracks.map(t => t && t.videoId).filter(id => isLocalVideoId(id) && !localFileKeys.has(id)) : [];
+}
+function haveUploadIds(){ return Array.from(localFileKeys); }
+function refreshUploadsPanel(){ if (openLibraryPanelId === UPLOADS_ID) reopenLibraryPanel(UPLOADS_ID); }
+async function saveLocalFile(id, blob, name, type){
+  const ok = await uploadsTx('readwrite', st => st.put({ id: id, blob: blob, name: name || id, size: blob.size, type: type || blob.type || '', ts: Date.now() }));
+  if (ok) localFileKeys.add(id);
+  return !!ok;
+}
+function xferSignedIn(){ return profileTokenUsable(); }
+async function xferPost(body){
+  const res = await fetch(BACKEND + '/transfer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ idToken: profileIdToken }, body)) });
+  if (!res.ok) throw new Error('transfer ' + res.status);
+  return res.json();
+}
+function xferIceDone(pc){
+  return new Promise((resolve) => {
+    if (pc.iceGatheringState === 'complete') return resolve();
+    const t = setTimeout(resolve, 4000);
+    pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete'){ clearTimeout(t); resolve(); } });
+  });
+}
+function xferWaitOpen(ch, ms){
+  return new Promise((resolve, reject) => {
+    if (ch.readyState === 'open') return resolve();
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    ch.addEventListener('open', () => { clearTimeout(t); resolve(); });
+    ch.addEventListener('close', () => { clearTimeout(t); reject(new Error('closed')); });
+  });
+}
+
+// Sending side: while EBBLESS is open and signed in here, with files on this
+// device, look every 8s for another device asking for them.
+async function xferSendTo(offer){
+  if (xferBusy) return;
+  xferBusy = true;
+  let pc = null;
+  try {
+    pc = new RTCPeerConnection({ iceServers: XFER_ICE });
+    pc.ondatachannel = (ev) => serveUploads(ev.channel, pc);
+    await pc.setRemoteDescription({ type: 'offer', sdp: offer.sdp });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await xferIceDone(pc);
+    await xferPost({ op: 'answer', room: offer.room, sdp: pc.localDescription.sdp });
+    // give the other side a minute to connect, then let go
+    setTimeout(() => { if (pc && pc.connectionState !== 'connected'){ try { pc.close(); } catch(e){} xferBusy = false; } }, 60000);
+  } catch(e){ try { pc && pc.close(); } catch(_){} xferBusy = false; }
+}
+function serveUploads(ch, pc){
+  ch.binaryType = 'arraybuffer';
+  ch.onmessage = async (ev) => {
+    if (typeof ev.data !== 'string') return;
+    let msg; try { msg = JSON.parse(ev.data); } catch(e){ return; }
+    if (!msg || msg.t !== 'want' || !Array.isArray(msg.ids)) return;
+    const ids = msg.ids.filter(id => localFileKeys.has(id));
+    showToast('Sending ' + ids.length + (ids.length === 1 ? ' song' : ' songs') + ' to your other device...');
+    for (const id of ids){
+      const rec = await uploadsTx('readonly', st => st.get(id));
+      if (!rec || !rec.blob) continue;
+      ch.send(JSON.stringify({ t: 'file', id: id, name: rec.name, size: rec.blob.size, type: rec.type }));
+      for (let o = 0; o < rec.blob.size; o += XFER_CHUNK){
+        while (ch.bufferedAmount > 1024 * 1024) await xferSleep(40);
+        ch.send(await rec.blob.slice(o, o + XFER_CHUNK).arrayBuffer());
+      }
+      ch.send(JSON.stringify({ t: 'end', id: id }));
+    }
+    ch.send(JSON.stringify({ t: 'done' }));
+    setTimeout(() => { try { pc.close(); } catch(e){} xferBusy = false; }, 3000);
+  };
+  ch.onclose = () => { xferBusy = false; };
+}
+setInterval(async () => {
+  if (document.hidden || xferBusy || !xferSignedIn() || !localFileKeys.size || typeof RTCPeerConnection !== 'function') return;
+  try {
+    const r = await xferPost({ op: 'poll' });
+    if (r && r.offer) xferSendTo(r.offer);
+  } catch(e){}
+}, 8000);
+
+// Receiving side: ask for every Uploads song whose file isn't here.
+async function getUploadsFromOtherDevice(){
+  if (xferBusy) return;
+  const want = missingUploadIds();
+  if (!want.length){ showToast('Everything in Uploads is already on this device.'); return; }
+  if (!xferSignedIn()){ showToast('Sign in first, then try again.'); return; }
+  if (typeof RTCPeerConnection !== 'function'){ showToast("This browser can't connect devices directly. Try Google Drive."); return; }
+  xferBusy = true;
+  const room = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  let pc = null, got = 0;
+  try {
+    showToast('Looking for your other device. EBBLESS needs to be open on it...');
+    pc = new RTCPeerConnection({ iceServers: XFER_ICE });
+    const ch = pc.createDataChannel('uploads');
+    ch.binaryType = 'arraybuffer';
+    await pc.setLocalDescription(await pc.createOffer());
+    await xferIceDone(pc);
+    await xferPost({ op: 'offer', room: room, sdp: pc.localDescription.sdp });
+    let answer = null;
+    for (let i = 0; i < 45 && !answer; i++){
+      await xferSleep(1500);
+      const r = await xferPost({ op: 'getanswer', room: room });
+      answer = r && r.answer;
+    }
+    if (!answer){ try { await xferPost({ op: 'cancel' }); } catch(e){} throw new Error('no answer'); }
+    await pc.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
+    await xferWaitOpen(ch, 20000);
+    let cur = null, parts = [];
+    const finished = new Promise((resolve) => {
+      ch.onclose = resolve;
+      ch.onmessage = async (ev) => {
+        if (typeof ev.data !== 'string'){ parts.push(ev.data); return; }
+        let m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+        if (m.t === 'file'){ cur = m; parts = []; }
+        else if (m.t === 'end' && cur && cur.id === m.id){
+          if (await saveLocalFile(cur.id, new Blob(parts, { type: cur.type }), cur.name, cur.type)){ got++; showToast('Received ' + got + ' of ' + want.length + '...'); }
+          cur = null; parts = [];
+        } else if (m.t === 'done') resolve();
+      };
+    });
+    ch.send(JSON.stringify({ t: 'want', ids: want }));
+    await finished;
+    showToast(got ? 'Got ' + got + (got === 1 ? ' song' : ' songs') + ' from your other device.' : 'Your other device had none of them.');
+  } catch(e){
+    showToast("Couldn't reach your other device. Open EBBLESS there and try again, or use Google Drive.");
+  } finally {
+    try { pc && pc.close(); } catch(e){}
+    xferBusy = false;
+    refreshUploadsPanel();
+  }
+}
+
+// Google Drive route
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FOLDER = 'EBBLESS Uploads';
+let driveTokenCache = null;
+function driveToken(){
+  if (driveTokenCache && Date.now() < driveTokenCache.exp - 30000) return Promise.resolve(driveTokenCache.token);
+  return new Promise((resolve, reject) => {
+    const go = () => {
+      try {
+        const tc = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE,
+          callback: (r) => {
+            if (!r || r.error || !r.access_token) return reject(new Error((r && r.error) || 'no token'));
+            driveTokenCache = { token: r.access_token, exp: Date.now() + (r.expires_in || 3000) * 1000 };
+            resolve(r.access_token);
+          },
+          error_callback: (e) => reject(new Error((e && e.type) || 'popup')),
+        });
+        tc.requestAccessToken({ prompt: driveTokenCache ? '' : 'consent' });
+      } catch(e){ reject(e); }
+    };
+    if (window.google && google.accounts && google.accounts.oauth2) go();
+    else if (window.__ebbLoadGsi) window.__ebbLoadGsi(go);
+    else reject(new Error('no google script'));
+  });
+}
+async function driveApi(token, path, opts){
+  const res = await fetch('https://www.googleapis.com' + path, Object.assign({}, opts, { headers: Object.assign({ Authorization: 'Bearer ' + token }, (opts && opts.headers) || {}) }));
+  if (!res.ok) throw new Error('drive ' + res.status);
+  return res;
+}
+async function driveFolderId(token, create){
+  const q = encodeURIComponent("name='" + DRIVE_FOLDER + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const found = await (await driveApi(token, '/drive/v3/files?q=' + q + '&fields=files(id)&pageSize=1')).json();
+  if (found.files && found.files[0]) return found.files[0].id;
+  if (!create) return null;
+  const made = await (await driveApi(token, '/drive/v3/files?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' }) })).json();
+  return made.id;
+}
+async function driveList(token, folder){
+  const out = []; let page = '';
+  do {
+    const q = encodeURIComponent("'" + folder + "' in parents and trashed=false");
+    const r = await (await driveApi(token, '/drive/v3/files?q=' + q + '&fields=nextPageToken,files(id,name,mimeType,appProperties)&pageSize=1000' + (page ? '&pageToken=' + page : ''))).json();
+    out.push(...(r.files || [])); page = r.nextPageToken || '';
+  } while (page);
+  return out;
+}
+async function backUpUploadsToDrive(){
+  if (xferBusy) return;
+  const mine = haveUploadIds();
+  if (!mine.length){ showToast('No songs on this device to back up.'); return; }
+  xferBusy = true;
+  try {
+    const token = await driveToken();
+    const folder = await driveFolderId(token, true);
+    const have = new Set((await driveList(token, folder)).map(f => f.name));
+    let n = 0;
+    for (const id of mine){
+      if (have.has(id)) continue;
+      const rec = await uploadsTx('readonly', st => st.get(id));
+      if (!rec || !rec.blob) continue;
+      showToast('Backing up ' + (n + 1) + '...');
+      const init = await driveApi(token, '/upload/drive/v3/files?uploadType=resumable&fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify({ name: id, parents: [folder], appProperties: { filename: rec.name || '', mime: rec.type || '' } }) });
+      const up = init.headers.get('Location');
+      const put = await fetch(up, { method: 'PUT', body: rec.blob });
+      if (!put.ok) throw new Error('upload ' + put.status);
+      n++;
+    }
+    showToast(n ? 'Backed up ' + n + (n === 1 ? ' song' : ' songs') + ' to your Google Drive.' : 'Everything is already in your Google Drive.');
+  } catch(e){
+    showToast("Couldn't reach Google Drive" + (e && /popup|access_denied|closed/.test(String(e.message)) ? ' (not allowed)' : '') + '.');
+  } finally { xferBusy = false; }
+}
+async function getUploadsFromDrive(){
+  if (xferBusy) return;
+  const want = new Set(missingUploadIds());
+  if (!want.size){ showToast('Everything in Uploads is already on this device.'); return; }
+  xferBusy = true;
+  let got = 0;
+  try {
+    const token = await driveToken();
+    const folder = await driveFolderId(token, false);
+    if (!folder){ showToast('No EBBLESS songs in your Google Drive yet. Back them up from your other device.'); return; }
+    for (const f of await driveList(token, folder)){
+      if (!want.has(f.name)) continue;
+      showToast('Downloading ' + (got + 1) + ' of ' + want.size + '...');
+      const blob = await (await driveApi(token, '/drive/v3/files/' + f.id + '?alt=media')).blob();
+      const ap = f.appProperties || {};
+      if (await saveLocalFile(f.name, blob, ap.filename, ap.mime)) got++;
+    }
+    showToast(got ? 'Got ' + got + (got === 1 ? ' song' : ' songs') + ' from your Google Drive.' : 'None of those songs are in your Google Drive yet.');
+  } catch(e){
+    showToast("Couldn't reach Google Drive" + (e && /popup|access_denied|closed/.test(String(e.message)) ? ' (not allowed)' : '') + '.');
+  } finally { xferBusy = false; refreshUploadsPanel(); }
+}
+
+// The bar at the top of the Uploads playlist.
+function buildUploadsBar(){
+  const miss = missingUploadIds().length, here = haveUploadIds().length;
+  if (!miss && !here) return null;
+  const bar = document.createElement('div');
+  bar.className = 'currents-hint';
+  const txt = document.createElement('div');
+  txt.textContent = miss
+    ? miss + (miss === 1 ? ' song is' : ' songs are') + ' on your other device. Songs you add stay on the device they were added from.'
+    : 'Your songs stay on this device. Your other devices can get them from here.';
+  bar.appendChild(txt);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+  const mk = (label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost'; b.style.cssText = 'padding:5px 14px;font-size:12.5px'; b.textContent = label; b.addEventListener('click', fn); row.appendChild(b); };
+  if (miss){ mk('Get them from my other device', getUploadsFromOtherDevice); mk('Get them from Google Drive', getUploadsFromDrive); }
+  if (here) mk('Back up to Google Drive', backUpUploadsToDrive);
+  bar.appendChild(row);
+  return bar;
+}
 
 function loadIntoDeck(deck, videoId, isActive){
   // Casting: the "deck" is the receiver - send it there instead (castLoad
