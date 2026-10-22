@@ -18114,6 +18114,22 @@ fbThumbs.forEach(btn => btn.addEventListener('click', () => {
   setTimeout(() => fbMessage.focus(), 50);
 }));
 feedbackBtn.addEventListener('click', openFeedbackModal);
+/* Android app: it shows the page copy saved on the last launch and fetches the live one in the background. When that differs,
+   offer the update right away instead of waiting for the next launch. Asked a few seconds after load (the fetch is quick) and
+   every time the app comes back to the front; tapping Refresh loads the fresh page. */
+{
+  const swToast = $('swUpdateToast'), swBtn = $('swUpdateBtn');
+  if (window.EbbNative && EbbNative.pageUpdated && swToast && swBtn){
+    const ask = () => {
+      try { if (!EbbNative.pageUpdated() || !swToast.hidden) return; } catch(e){ return; }
+      swToast.hidden = false;
+      requestAnimationFrame(() => swToast.classList.add('is-open'));
+    };
+    swBtn.addEventListener('click', () => { swBtn.disabled = true; EbbNative.reloadFresh(); });
+    [6000, 20000].forEach(ms => setTimeout(ask, ms));
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ask(); });
+  }
+}
 $('reloadAppBtn').addEventListener('click', async () => {
   if (window.EbbNative && EbbNative.reloadFresh){ EbbNative.reloadFresh(); return; }   // Android app: refreshes its saved page copy first
   try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k); } catch(e){}

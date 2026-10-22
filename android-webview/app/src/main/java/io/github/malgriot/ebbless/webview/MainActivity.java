@@ -34,6 +34,8 @@ public class MainActivity extends Activity {
     private static final long SIGNIN_TTL_MS = 10 * 60 * 1000;
 
     private WebView web;
+    /** True once the live page differs from the copy this launch is showing; the page asks (pageUpdated) and offers a Refresh. */
+    private volatile boolean pageStale;
     private String pendingState;
     private long pendingAt;
 
@@ -211,6 +213,7 @@ public class MainActivity extends Activity {
             /** The page's player state (title, artist, art, play state, position, liked) for the lock screen and notification player. */
             @android.webkit.JavascriptInterface public void media(String json) { PlaybackService.media(json); }
             /** Settings > Reload app: fetch the live page now (the saved copy is a launch behind), then load it. */
+            @android.webkit.JavascriptInterface public boolean pageUpdated() { return pageStale; }
             @android.webkit.JavascriptInterface public void reloadFresh() {
                 runOnUiThread(() -> refreshPageCopy(() -> { if (web != null) web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); }));
             }
@@ -292,6 +295,15 @@ public class MainActivity extends Activity {
     /** Pull the live index.html into filesDir for the next launch (written atomically, only if it looks whole). */
     private void refreshPageCopy() { refreshPageCopy(null); }
 
+    private static byte[] digest(java.io.File f) throws Exception {
+        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+        try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+            byte[] buf = new byte[65536]; int n;
+            while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+        }
+        return md.digest();
+    }
+
     private void refreshPageCopy(Runnable done) {
         new Thread(() -> {
             try {
@@ -304,7 +316,13 @@ public class MainActivity extends Activity {
                     byte[] buf = new byte[65536]; int n;
                     while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
                 }
-                if (tmp.length() > 100000) tmp.renameTo(new java.io.File(getFilesDir(), "index.html")); else tmp.delete();
+                java.io.File live = new java.io.File(getFilesDir(), "index.html");
+                if (tmp.length() > 100000) {
+                    // the copy this launch showed was the saved one; a different live page means an update the user hasn't seen yet
+                    if (done == null && live.isFile() && !java.util.Arrays.equals(digest(live), digest(tmp))) pageStale = true;
+                    if (done != null) pageStale = false;
+                    tmp.renameTo(live);
+                } else tmp.delete();
             } catch (Exception ignored) {
             } finally {
                 if (done != null) runOnUiThread(done);
