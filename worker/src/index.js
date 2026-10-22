@@ -21,7 +21,6 @@ import { handleNowPlaying } from './nowplaying.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { handleProfileDelete } from './profile-delete.js';
-import { handleTransfer } from './transfer.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { ARTISTMAP_LIMIT, classifyLastfmSimilar, shapeArtistMap, artistMapCacheControl } from './artistmap.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
@@ -4886,9 +4885,8 @@ export default {
       if (url.pathname === '/profile/sync') return await handleProfileSync(request, env, ctx);
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname === '/profile/delete') return await handleProfileDelete(request, env, ctx, { json, verifyGoogleIdToken, profileKey });
-      if (url.pathname === '/transfer') return await handleTransfer(request, env, ctx, { json, verifyGoogleIdToken });
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/transfer (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
