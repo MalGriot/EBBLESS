@@ -9410,6 +9410,25 @@ function showToast(msg, action){
   toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), action ? 6000 : 2200);
 }
 
+// Shown while the song the listener picked is sitting out a YouTube ad (it
+// plays on its own the moment the ad is cleared). Stays up until then, with a
+// cap so it can never get stuck.
+let adWaitShown = false;
+function showAdWait(){
+  adWaitShown = true;
+  toastEl.classList.remove('has-action');
+  toastEl.textContent = 'One sec, clearing a YouTube ad so your song starts clean. It will play on its own.';
+  toastEl.classList.add('is-open');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(clearAdWait, 30000);
+}
+function clearAdWait(){
+  if (!adWaitShown) return;
+  adWaitShown = false;
+  clearTimeout(toastTimer);
+  toastEl.classList.remove('is-open');
+}
+
 // Geethub #398: brief accent check-mark pulse when a playlist/link loads.
 // Non-blocking (pointer-events none), self-removing, and a plain fade under
 // prefers-reduced-motion.
@@ -13987,36 +14006,32 @@ function stageRelinkCandidates(candidates, plId, trackIdx, t){
   $('relinkBackBtn').addEventListener('click', closeImportOverlay);
 }
 
-// #491: hovering a YouTube candidate in the link-fix grid plays a muted looping
-// clip over its thumbnail. One iframe at a time, created on hover (after a short
-// delay) and removed on leave, tab hide or when the grid goes away, so nothing
-// plays or sits in memory while not hovered.
+// #491: hovering a YouTube candidate in the link-fix grid previews it. It used
+// to embed the real player, which counted as a play and burned the video's
+// ad, so re-hovering showed a different ad state than the real play would.
+// Now it only cycles YouTube's own still frames (25/50/75%) over the thumbnail:
+// plain images, no player, no view, no ad touched.
 (function(){
   if (!window.matchMedia || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  let clip = null, hoverTimer = 0, host = null;
+  let hoverTimer = 0, host = null, img = null, orig = '', tick = 0, n = 0;
   function stopClip(){
-    clearTimeout(hoverTimer);
-    if (clip){ clip.remove(); clip = null; }
-    host = null;
+    clearTimeout(hoverTimer); clearInterval(tick);
+    if (img && orig) img.src = orig;
+    host = img = null; orig = '';
   }
   function startClip(btn){
     const c = relinkDragCtx && relinkDragCtx.list[parseInt(btn.dataset.i, 10)];
-    const img = btn.querySelector('img');
-    if (!c || !img || (c.source || 'youtube') !== 'youtube' || !/^[\w-]{11}$/.test(c.videoId)) return;
-    const f = document.createElement('iframe');
-    f.className = 'hover-clip';
-    f.tabIndex = -1; f.setAttribute('aria-hidden', 'true'); f.allow = 'autoplay';
-    f.style.cssText = 'left:' + img.offsetLeft + 'px;top:' + img.offsetTop + 'px;width:' + img.offsetWidth + 'px;height:' + img.offsetHeight + 'px';
-    const start = c.duration > 90 ? Math.floor(c.duration * 0.3) : 0;
-    f.src = 'https://www.youtube-nocookie.com/embed/' + c.videoId + '?autoplay=1&mute=1&controls=0&loop=1&playlist=' + c.videoId + '&playsinline=1&disablekb=1&modestbranding=1&start=' + start;
-    f.addEventListener('load', () => f.classList.add('is-on'));
-    btn.appendChild(f); clip = f; host = btn;
+    const im = btn.querySelector('img');
+    if (!c || !im || (c.source || 'youtube') !== 'youtube' || !/^[\w-]{11}$/.test(c.videoId)) return;
+    host = btn; img = im; orig = im.src; n = 0;
+    const step = () => { n = n % 3 + 1; im.src = 'https://i.ytimg.com/vi/' + c.videoId + '/hq' + n + '.jpg'; };
+    step(); tick = setInterval(step, 800);
   }
   document.addEventListener('mouseover', (e) => {
     const btn = e.target.closest && e.target.closest('#relinkCandidates .search-pick.is-video');
     if (btn === host) return;
     stopClip();
-    if (btn) hoverTimer = setTimeout(() => startClip(btn), 400);
+    if (btn) hoverTimer = setTimeout(() => startClip(btn), 300);
   });
   document.addEventListener('mouseout', (e) => {
     if (host && !(e.relatedTarget && host.contains(e.relatedTarget))) stopClip();
@@ -22197,6 +22212,7 @@ let crossfadeTriggered = false;
 let trackStartAuto = false;
 let pendingAutoStart = false;
 let swapInProgress = false;
+let standIn = null;   // see adStandIn
 
 function trackAt(pos){
   if (pos < 0 || pos >= state.queue.length) return null;
@@ -22240,6 +22256,18 @@ function scheduleAdCheck(deck){
   // content with (the strict 'not-moving' rule) instead of waiting a recheck
   setTimeout(() => { if (deck.player && !deck.confirmed) deckAdReason(deck, false); }, UNMUTE_DELAY_MS - 1000);
   deck.unmuteTimer = setTimeout(() => checkDeckReady(deck), UNMUTE_DELAY_MS);
+  // The flat wait above is the worst case. The song the listener is waiting on
+  // is also checked early and often: a clean start (strict proof of real
+  // content) plays the moment it is proven, and an ad is acted on within ~1s
+  // instead of at the 5s mark. Every probe goes through checkDeckReady.
+  if (deck.kind === 'yt'){
+    const ts = deck.muteStartTs;
+    [1200, 2000, 2800, 3600, 4400].forEach(ms => setTimeout(() => {
+      if (!deck.player || deck.confirmed || deck.muteStartTs !== ts || deck !== activeDeck() || deck.adDodge) return;
+      clearTimeout(deck.unmuteTimer);
+      checkDeckReady(deck);
+    }, ms));
+  }
 }
 // Why a YouTube deck looks like it's showing an ad right now, or '' if it
 // doesn't. Duration alone misses ads (the player can report 0, or the real
@@ -22368,7 +22396,8 @@ function adLog(deck, what, reason){
   if (window.ebblessAdLog.length > AD_LOG_MAX) window.ebblessAdLog.shift();
   try { console.info('[ad]', what, row); } catch(e){}
 }
-const STANDBY_AD_RELOAD_MS = 8000, STANDBY_AD_ALT_MS = 8000, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
+// A short first play usually spends the ad: reload after 1s (was 8s), then move to the closest alternate 1.5s later (was 8s).
+const STANDBY_AD_RELOAD_MS = 1000, STANDBY_AD_ALT_MS = 1500, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
 function checkDeckReady(deck){
   if (!deck.player) return;
   const elapsed = Date.now() - deck.muteStartTs;
@@ -22385,7 +22414,12 @@ function checkDeckReady(deck){
   // or on a signal that is about the video itself
   let adLike = false;
   try { adLike = /^(duration|short|video-id)$/.test(reason) || (!!deck.player.getPlayerState && deck.player.getPlayerState() === YT.PlayerState.PLAYING); } catch(e){}
-  if (reason && standby && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
+  if (reason && deck === activeDeck() && deck.kind === 'yt' && !deck.adDodge && !adWaitShown && adLike){
+    showAdWait();
+    // play a 90%+ match right now while the original clears its ad off-screen, then fade back to it
+    adStandIn(state.queue[state.queuePos], deck);
+  }
+  if (reason && !deck.adDodge && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
     deck.adReloaded = true; deck.adReloadedAt = Date.now();
     adLog(deck, 'standby-reload', reason);
     deck.adClock = null;
@@ -22393,13 +22427,14 @@ function checkDeckReady(deck){
     deck.player.loadVideoById({ videoId: deck.videoId, suggestedQuality: LOWEST_QUALITY });
     forceLowestQuality(deck);
   }
+  // a song picked directly (no preload) gets the same quick reload and alternate while it is still muted, so the ad is cleared before the 8s dodge to the next song
   // still an ad after the reload: move the song onto the closest-to-identical
   // other link (adTryAlternate: another YouTube upload, else SoundCloud), once.
   // Signals about the video itself act 8s after the reload; the clock signals
   // ('not-moving', 'frozen', 'no-duration') also read on a healthy slow start
   // (seen on a phone), so they get the longer STANDBY_AD_ALT_SLOW_MS: a link
   // still frozen that long after a reload is moved too, not left frozen
-  if (reason && standby && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= (/^(duration|short|video-id)$/.test(reason) ? STANDBY_AD_ALT_MS : STANDBY_AD_ALT_SLOW_MS)){
+  if (reason && !deck.adDodge && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= (/^(duration|short|video-id)$/.test(reason) ? STANDBY_AD_ALT_MS : STANDBY_AD_ALT_SLOW_MS)){
     deck.adAltTried = true;
     adLog(deck, 'standby-alt', reason);
     adTryAlternate(state.queue[deck.pos], deck);
@@ -22409,10 +22444,12 @@ function checkDeckReady(deck){
     return;
   }
   if (reason) adLog(deck, 'wait-cap', reason);
+  deck.confirmedClean = !reason;
   onDeckConfirmed(deck);
 }
 
 function onDeckConfirmed(deck){
+  if (deck === activeDeck()) clearAdWait();
   deck.loadStartTs = 0;
   if (deck.confirmed) return;
   deck.confirmed = true;
@@ -22456,6 +22493,7 @@ function onDeckConfirmed(deck){
   } else if (deck.player.pauseVideo){
     deck.player.pauseVideo();
     if (deck.adDodge === 'return') returnFromAdDodge(deck);
+    if (deck.standInFor) onStandInReady(deck);
   }
 }
 
@@ -23275,7 +23313,7 @@ function schedulePrevWarm(pos){
   clearTimeout(prevWarmTimer);
   if (routeLocked()) return;
   prevWarmTimer = setTimeout(() => {
-    if (state.queuePos !== pos || routeLocked() || swapInProgress) return;
+    if (state.queuePos !== pos || routeLocked() || swapInProgress || standIn) return;
     const pp = computePrevPos(pos), deck = prevDeck();
     if (pp < 0 || pp === pos){ if (deck.pos !== -1) resetDeck(deck); return; }
     const t = trackAt(pp);
@@ -26665,6 +26703,7 @@ function loadIndex(pos, autoplay, opts){
   const t = trackAt(pos);
   if (!t || !t.videoId) return;
   if (isSoundCloudVideoId(t.videoId) && !(window.SC && SC.Widget)){ setTimeout(() => loadIndex(pos, autoplay, opts), 300); return; }
+  if (standIn && !standIn.loading) endStandIn(standIn);   // a different song was picked: drop the stand-in
   recordLastPlayed(state.queue[pos].plId);
   if (autoplay) try{ endPlayNudge(); } catch(e){}
   trackStartAuto = pendingAutoStart;
@@ -29871,6 +29910,7 @@ function adAltReady(reason, sinceTs){
   return !!sinceTs && Date.now() - sinceTs >= AD_ALT_SOFT_WAIT_MS;
 }
 async function adTryAlternate(entry, ad){
+  if (standIn) return;   // the stand-in owns this song's link until it fades back
   try{
     const pl = entry && getCachedPlaylist(entry.plId), t = pl && pl.tracks[entry.idx];
     if (!t || !ad || t.videoId !== ad.videoId || isNativeVideoId(t.videoId) || isPodcastTrack(t) || isRickroll(t)) return;
@@ -29908,6 +29948,127 @@ async function adTryAlternate(entry, ad){
     else schedulePreload(state.queuePos);   // the next song, on the standby deck (#561): reloads it on the new link
   } catch(e){}
 }
+// Ad stand-in: the song picked directly hits an ad. A 90%+ match (title,
+// length and artist each >= 0.9; the app has no genre data, so the artist
+// or channel match stands in for it) starts playing at once on the active
+// deck while the original link clears its ad, muted, on the spare (prev)
+// deck. When the original is clean it is seeked to the same moment and the
+// two cross-fade, so the listener ends up on the original link. Nothing is
+// saved: the song's link is only swapped in memory and put back after.
+const STAND_IN_MIN = 0.9, STAND_IN_FADE_MS = 1800, STAND_IN_MAX_MS = 120000;
+const standInTried = new Set();
+async function adStandIn(entry, deck){
+  try{
+    if (standIn || swapInProgress || routeLocked() || castActive() || deck !== activeDeck() || deck.kind !== 'yt') return;
+    const pl = entry && getCachedPlaylist(entry.plId), t = pl && pl.tracks[entry.idx];
+    if (!t || t.videoId !== deck.videoId || isNativeVideoId(t.videoId) || isPodcastTrack(t) || isRickroll(t)) return;
+    const key = trackMatchKey(t.title, t.artist);
+    if (standInTried.has(key)) return;
+    standInTried.add(key);
+    const ref = +t.srcDuration || +t.duration || 0;
+    if (!ref) return;
+    const artistKey = artistNameKey(String(t.artist || '').split(/\s*(?:,|&|feat\.?|ft\.?|\bx\b)\s*/i)[0]);
+    const namesArtist = (c) => !artistKey || artistNameKey((c.channel || '') + ' ' + (c.title || '')).includes(artistKey);
+    const titleKey = adAltTitleKey(t.title, artistKey);
+    const grade = (c) => {
+      const titleS = typeof c.titleOverlap === 'number' ? c.titleOverlap : (adAltTitleKey(c.title, artistKey) === titleKey ? 1 : 0);
+      const durS = c.duration ? Math.max(0, 1 - Math.abs(c.duration - ref) / ref) : 0;
+      const artS = namesArtist(c) ? 1 : 0;
+      return { ok: titleS >= STAND_IN_MIN && durS >= STAND_IN_MIN && artS >= STAND_IN_MIN, sum: titleS + durS + artS };
+    };
+    const data = await searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT);
+    let cands = ((data.candidates && data.candidates.length) ? data.candidates : []).filter(c => c && c.videoId && !isSoundCloudVideoId(c.videoId));
+    if (!cands.some(c => c.videoId !== deck.videoId && grade(c).ok)){
+      const sc = await searchSoundCloudTracks([t.title, t.artist].filter(Boolean).join(' '), RELINK_SC_CANDIDATE_COUNT);
+      cands = cands.concat(sc.filter(c => c && c.videoId));
+    }
+    let pick = null, best = -1;
+    cands.forEach(c => { if (c.videoId === deck.videoId) return; const g = grade(c); if (g.ok && g.sum > best){ best = g.sum; pick = c; } });
+    adLog(deck, 'stand-in', pick ? 'play ' + pick.videoId : 'no 90% match');
+    if (!pick) return;
+    // the world may have moved on while searching
+    const od = prevDeck();
+    if (standIn || swapInProgress || routeLocked() || deck !== activeDeck() || deck.confirmed || od === deck ||
+        state.queue[state.queuePos] !== entry || t.videoId !== deck.videoId) return;
+    const si = standIn = { entry, t, pick, od, orig: { videoId: t.videoId, matchedTitle: t.matchedTitle, channel: t.channel, duration: t.duration },
+      loading: true, fading: false, timer: null, expire: null };
+    si.expire = setTimeout(() => endStandIn(si), STAND_IN_MAX_MS);
+    // the original clears its ad on the spare deck
+    resetDeck(od);
+    od.standInFor = si; od.confirmedClean = false;
+    loadIntoDeck(od, si.orig.videoId, false);
+    // the stand-in plays now (in memory only, never saved)
+    t.videoId = pick.videoId; t.matchedTitle = pick.title || ''; t.channel = pick.channel || ''; t.duration = pick.duration || 0;
+    loadIndex(state.queuePos, true);
+    si.loading = false;
+  } catch(e){ if (standIn) endStandIn(standIn); }
+}
+function endStandIn(si){
+  if (!si || standIn !== si) return;
+  standIn = null;
+  clearTimeout(si.expire); clearInterval(si.timer);
+  const o = si.od;
+  if (o && o.standInFor === si){
+    o.standInFor = null;
+    if (o !== activeDeck()) resetDeck(o);
+  }
+  if (si.t.videoId === si.pick.videoId) Object.assign(si.t, si.orig);
+  if (si.fading){ si.fading = false; swapInProgress = false; const a = activeDeck(); if (a.player && a.player.setVolume) a.player.setVolume(effectiveVolume(a)); }
+}
+// The original link is out of its ad, parked at the top on the spare deck.
+function onStandInReady(od){
+  const si = od.standInFor;
+  if (!si || standIn !== si) return;
+  if (!od.confirmedClean) return endStandIn(si);   // it never cleared: keep the stand-in as is
+  const t0 = Date.now();
+  const go = () => {
+    if (standIn !== si) return;
+    const a = activeDeck();
+    if (a === od || swapInProgress || routeLocked() || state.queue[state.queuePos] !== si.entry || !a.player || !od.player) return endStandIn(si);
+    if (Date.now() - t0 > 15000) return endStandIn(si);
+    // wait until the stand-in is really playing (past its own ad check)
+    if (!a.confirmed || !a.player.getPlayerState || a.player.getPlayerState() !== 1){ setTimeout(go, 400); return; }
+    const aDur = +a.player.getDuration() || 0, oDur = +od.player.getDuration() || 0;
+    const ratio = aDur && oDur ? oDur / aDur : 1;
+    od.player.setVolume(0);
+    od.player.seekTo((+a.player.getCurrentTime() || 0) * ratio + 0.4, true);
+    od.player.unMute();
+    od.player.playVideo();
+    si.fading = true;
+    swapInProgress = true;
+    const waitStart = Date.now();
+    let start = 0;
+    si.timer = setInterval(() => {
+      const cur = activeDeck();
+      if (standIn !== si || cur !== a || !a.player || !od.player) return endStandIn(si);
+      const now = Date.now();
+      if (!start){
+        // the original has to be playing before the fade starts
+        if (od.player.getPlayerState && od.player.getPlayerState() === 1) start = now;
+        else if (now - waitStart > 4000) return endStandIn(si);
+        else return;
+      }
+      const p = Math.min(1, (now - start) / STAND_IN_FADE_MS);
+      od.player.setVolume(Math.round(effectiveVolume(od) * p));
+      a.player.setVolume(Math.round(effectiveVolume(a) * (1 - p)));
+      if (p < 1) return;
+      clearInterval(si.timer);
+      // the original takes the active slot; the stand-in is dropped
+      od.standInFor = null;
+      swapDeckSlots(decks.indexOf(a), decks.indexOf(od));
+      od.pos = -1;
+      resetDeck(a);
+      si.fading = false;
+      swapInProgress = false;
+      endStandIn(si);
+      od.player.setVolume(effectiveVolume(od));
+      updateSeekUI();
+      setPlayingUI(true);
+      schedulePreload(state.queuePos);
+    }, 100);
+  };
+  go();
+}
 function maybeDodgeAd(){
   const ad = activeDeck(), nd = standbyDeck();
   // a confirmed song the zero-ads gate has kept silent this long gets the
@@ -29934,6 +30095,7 @@ function maybeDodgeAd(){
   ad.adDodge = trackStartAuto || n === p ? 'swap' : 'return';
   ad.pos = n;
   adLog(ad, 'dodge', ad.adDodge + ' ' + ad.adSeen);
+  clearAdWait();
   promoteDeckDirect(nd, p, true, true);
   renderQueuePanel();
 }
@@ -29965,6 +30127,7 @@ function skipHeldAd(ad, reason){
   ad.adDodge = 'swap';
   ad.pos = n;
   adLog(ad, 'dodge', 'swap held ' + reason);
+  clearAdWait();
   promoteDeckDirect(nd, p, true, true);
   // checkDeckReady waits the ad out (up to AD_MUTE_MAX_MS for a dodged deck),
   // then onDeckConfirmed parks it paused for its turn
