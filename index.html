@@ -4137,6 +4137,8 @@ body.week-up-on{overflow:hidden}
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" title="New playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="uploadSongsBtn" aria-label="Add your songs" title="Add your songs from this device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
+            <input type="file" id="uploadFileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus" multiple hidden>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             </button>
@@ -6492,7 +6494,12 @@ function isAudioVideoId(id){ return typeof id === 'string' && id.indexOf('au:') 
 function audioUrlOf(id){ return id.slice(3); }
 // Anything that isn't a real YouTube video id (SoundCloud-native or a
 // podcast file) - no YouTube thumbnails, lyrics, loudness, or re-matching.
-function isNativeVideoId(id){ return isSoundCloudVideoId(id) || isAudioVideoId(id); }
+// #621: a song file the listener added from their own device is 'lf:<hash>'.
+// The file lives in this browser's IndexedDB (see the Uploads block), plays
+// through the same <audio> deck as a podcast, and is never matched to
+// YouTube or SoundCloud.
+function isLocalVideoId(id){ return typeof id === 'string' && id.indexOf('lf:') === 0; }
+function isNativeVideoId(id){ return isSoundCloudVideoId(id) || isAudioVideoId(id) || isLocalVideoId(id); }
 function isPodcastPlaylistId(id){ return typeof id === 'string' && id.indexOf('pod:') === 0; }
 function soundCloudVideoId(scId){ return 'sc:' + scId; }
 function soundCloudTrackId(videoId){ return videoId.slice(3); }
@@ -11320,6 +11327,7 @@ function toggleLibraryPlaylistPanel(id){
     bar.textContent = npFeed.onAir ? 'ON AIR now. Tap the first song to tune in, or any song to rewind.' : 'Off air right now. These are the latest songs.';
     libplBody.appendChild(bar);
   }
+  if (id === UPLOADS_ID){ const ub = buildUploadsBar(); if (ub) libplBody.appendChild(ub); }
   { const ms = buildMatchSummary(id, pl); if (ms) libplBody.appendChild(ms); }
   if (id === SWELL_ID && currentsBusy){
     const status = document.createElement('div');
@@ -14569,8 +14577,9 @@ function isTrackLiked(videoId){
 function removeTrackFromPlaylistAt(playlistId, idx){
   const pl = getCachedPlaylist(playlistId);
   if (!pl || idx < 0 || idx >= pl.tracks.length) return;
-  pl.tracks.splice(idx, 1);
+  const gone = pl.tracks.splice(idx, 1)[0];
   lsSet(LS_PL(playlistId), pl);
+  if (playlistId === UPLOADS_ID && gone) dropLocalFileSoon(gone.videoId);
   if (state.playlist && state.playlist.id === playlistId){
     state.queue = state.queue
       .filter(e => !(e.plId === playlistId && e.idx === idx))
@@ -18254,6 +18263,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 393, date: '2026-10-22', items: [
+    'Add your own songs: tap the upload button in the Library, or drag song files or a folder onto the window. They go in an Uploads playlist, play with no ads and no matching, and stay on your device. On your other devices, open Uploads to get them straight from the first device (EBBLESS open on both) or through your own Google Drive.'
+  ]},
   { version: 299, date: '2026-10-18', items: [
     'Paste a list of songs into the search bar (one per line, like Artist - Title) and EBBLESS makes a playlist from it. No link needed.',
     'Imported playlists now say how many songs were found, like 4 of 6. Tap Show to see the ones that were not found and tap Find to pick a version.',
@@ -20528,6 +20540,7 @@ function applyListenSignal(tags, weight, poolTagLimit){
 }
 function recordListenSignal(track, weight){
   if (!track || !weight || !personalizeOn()) return;
+  if (isLocalVideoId(track.videoId)) return;   // #621: a listener's own file names never go to the shared taste pool
   if (track.tags && track.tags.length){ applyListenSignal(track.tags, weight, 8); return; }
   // Looked-up tracks send only their top 4 tags to the shared pool (6 pairs
   // instead of up to 28): every pair is two KV writes on the worker, and
@@ -22564,7 +22577,7 @@ function createDeckPlayer(deck, videoId){
   deck.loadStartTs = Date.now();
   if (deck === activeDeck()) startLoadIconTicker();
   if (isSoundCloudVideoId(videoId)){ createSCDeckPlayer(deck, videoId); return; }
-  if (isAudioVideoId(videoId)){ createAudioDeckPlayer(deck, videoId); return; }
+  if (isAudioVideoId(videoId) || isLocalVideoId(videoId)){ createAudioDeckPlayer(deck, videoId); return; }
   deck.kind = 'yt';
   // See the matching comment in createSCDeckPlayer: this deck's player is
   // about to be (re)built, so any callback bound to the player this call
@@ -23196,7 +23209,7 @@ function createAudioDeckPlayer(deck, videoId){
   el.onended = () => emit(YT.PlayerState.ENDED);
   el.onerror = () => {
     if (deck.gen !== myGen || deck !== activeDeck() || deck.kind !== 'au') return;
-    showToast("Couldn't play this episode - skipping.");
+    showToast(isLocalVideoId(deck.videoId) ? "Couldn't play this song - skipping." : "Couldn't play this episode - skipping.");
     playNext(true);
   };
   deck.player = {
@@ -23222,6 +23235,19 @@ function createAudioDeckPlayer(deck, videoId){
         if (onLoad) onLoad();
         if (deck === activeDeck()) deck.player.playVideo();
       };
+      if (isLocalVideoId(v)){
+        // the file is in this browser's storage, not at a URL
+        localFileUrl(v).then(url => {
+          if (deck.gen !== myGen || mySeq !== loadSeq) return;
+          if (!url){
+            if (deck === activeDeck()){ showToast('That song is on your other device - skipping.'); playNext(true); }
+            return;
+          }
+          el.src = url;
+          el.load();
+        });
+        return;
+      }
       el.src = audioUrlOf(v);
       el.load();
     },
@@ -23232,6 +23258,486 @@ function createAudioDeckPlayer(deck, videoId){
   deck.pendingVideoId = null;
 }
 
+/* =========================================================================
+   UPLOADS (#621): songs the listener adds from their own device.
+   The files stay in this browser's IndexedDB; nothing is uploaded to
+   EBBLESS, so EBBLESS is a player here, not a host. Each song is a track
+   with videoId 'lf:<hash>' in the built-in "Uploads" playlist. They play
+   through the <audio> deck (createAudioDeckPlayer), are never matched to
+   YouTube or SoundCloud, and their names never reach the shared taste pool.
+   ========================================================================= */
+const UPLOADS_ID = 'uploads';
+const UPLOAD_EXT = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|weba|webm|mp4)$/i;
+let uploadsDbP = null;
+const localUrls = new Map();        // 'lf:..' -> blob: URL for the playing session
+const localFileKeys = new Set();    // 'lf:..' ids whose file is on THIS device
+function uploadsDb(){
+  if (uploadsDbP) return uploadsDbP;
+  uploadsDbP = new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('ebbless-uploads', 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore('files', { keyPath: 'id' }); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch(e){ resolve(null); }
+  });
+  return uploadsDbP;
+}
+function uploadsTx(mode, fn){
+  return uploadsDb().then(db => !db ? null : new Promise((resolve) => {
+    try {
+      const tx = db.transaction('files', mode), st = tx.objectStore('files');
+      const r = fn(st);
+      tx.oncomplete = () => resolve(r && 'result' in r ? r.result : true);
+      tx.onerror = tx.onabort = () => resolve(null);
+    } catch(e){ resolve(null); }
+  }));
+}
+function localFileUrl(id){
+  if (localUrls.has(id)) return Promise.resolve(localUrls.get(id));
+  return uploadsTx('readonly', st => st.get(id)).then(rec => {
+    if (!rec || !rec.blob) return null;
+    const u = URL.createObjectURL(rec.blob);
+    localUrls.set(id, u);
+    return u;
+  });
+}
+uploadsDb().then(db => {
+  if (!db) return;
+  try { db.transaction('files').objectStore('files').getAllKeys().onsuccess = (e) => (e.target.result || []).forEach(k => localFileKeys.add(k)); } catch(e){}
+});
+// Removing a song from Uploads deletes its file too, after a grace period so
+// Undo (which puts the track back) still finds it.
+function dropLocalFileSoon(id){
+  if (!isLocalVideoId(id)) return;
+  setTimeout(() => {
+    const pl = getCachedPlaylist(UPLOADS_ID);
+    if (pl && pl.tracks.some(t => t && t.videoId === id)) return;
+    uploadsTx('readwrite', st => st.delete(id));
+    localFileKeys.delete(id);
+    const u = localUrls.get(id);
+    if (u){ try { URL.revokeObjectURL(u); } catch(e){} localUrls.delete(id); }
+  }, 30000);
+}
+function ensureUploadsPlaylist(){
+  if (getCachedPlaylist(UPLOADS_ID)) return;
+  lsSet(LS_PL(UPLOADS_ID), { id: UPLOADS_ID, type: 'custom', name: 'Uploads', image: null, tracks: [], ts: Date.now() });
+  saveToLibrary(UPLOADS_ID);
+}
+
+// ---- reading the song's own tags (ID3 for MP3, MP4 atoms for M4A/AAC) ----
+function uploadText(bytes, enc){
+  try {
+    const label = enc === 1 ? 'utf-16' : enc === 2 ? 'utf-16be' : enc === 3 ? 'utf-8' : 'iso-8859-1';
+    return new TextDecoder(label).decode(bytes).replace(/\0+$/, '').replace(/^﻿/, '').trim();
+  } catch(e){ return ''; }
+}
+function readId3(buf){
+  const b = new Uint8Array(buf);
+  if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return null;
+  const ver = b[3], syncsafe = (o) => (b[o] << 21) | (b[o + 1] << 14) | (b[o + 2] << 7) | b[o + 3];
+  const end = Math.min(b.length, 10 + syncsafe(6));
+  const out = {};
+  let o = 10;
+  while (ver >= 3 && o + 10 <= end){
+    const id = String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+    const size = ver === 4 ? syncsafe(o + 4) : ((b[o + 4] << 24) | (b[o + 5] << 16) | (b[o + 6] << 8) | b[o + 7]) >>> 0;
+    if (!size || !/^[A-Z0-9]{4}$/.test(id) || o + 10 + size > b.length) break;
+    const f = b.subarray(o + 10, o + 10 + size);
+    if (id === 'TIT2') out.title = uploadText(f.subarray(1), f[0]);
+    else if (id === 'TPE1') out.artist = uploadText(f.subarray(1), f[0]);
+    else if (id === 'APIC' && !out.cover){
+      let i = 1; while (i < f.length && f[i]) i++;
+      const mime = uploadText(f.subarray(1, i), 0) || 'image/jpeg';
+      i += 2;                                    // past the NUL and the picture-type byte
+      const wide = f[0] === 1 || f[0] === 2;
+      while (i < f.length && (wide ? (f[i] || f[i + 1]) : f[i])) i += wide ? 2 : 1;
+      i += wide ? 2 : 1;
+      if (i < f.length) out.cover = new Blob([f.subarray(i)], { type: mime });
+    }
+    o += 10 + size;
+  }
+  return out;
+}
+function readMp4(buf){
+  const b = new Uint8Array(buf), dv = new DataView(buf), out = {};
+  const kind = (o) => String.fromCharCode(b[o + 4], b[o + 5], b[o + 6], b[o + 7]);
+  function walk(start, end, depth){
+    let o = start;
+    while (o + 8 <= end){
+      let size = dv.getUint32(o);
+      if (size < 8) break;
+      if (o + size > end) size = end - o;
+      const t = kind(o);
+      if (t === 'moov' || t === 'udta' || t === 'ilst') walk(o + 8, o + size, depth + 1);
+      else if (t === 'meta') walk(o + 12, o + size, depth + 1);
+      else if (t === '\xa9nam' || t === '\xa9ART' || t === 'covr'){
+        // one 'data' atom: 8 header + 4 type + 4 locale, then the payload
+        if (o + 24 <= o + size && kind(o + 8) === 'data'){
+          const payload = b.subarray(o + 24, o + size);
+          if (t === 'covr') out.cover = new Blob([payload], { type: dv.getUint32(o + 16) === 14 ? 'image/png' : 'image/jpeg' });
+          else out[t === '\xa9nam' ? 'title' : 'artist'] = uploadText(payload, 3);
+        }
+      }
+      o += size;
+    }
+  }
+  walk(0, b.length, 0);
+  return out;
+}
+async function uploadCoverThumb(blob){
+  try {
+    const bmp = await createImageBitmap(blob);
+    const s = 128, c = document.createElement('canvas');
+    c.width = c.height = s;
+    const m = Math.min(bmp.width, bmp.height);
+    c.getContext('2d').drawImage(bmp, (bmp.width - m) / 2, (bmp.height - m) / 2, m, m, 0, 0, s, s);
+    return c.toDataURL('image/jpeg', 0.7);
+  } catch(e){ return null; }
+}
+async function uploadTags(file){
+  let tags = null;
+  try {
+    if (/\.mp3$/i.test(file.name) || file.type === 'audio/mpeg') tags = readId3(await file.slice(0, 3 * 1024 * 1024).arrayBuffer());
+    else if (/\.(m4a|aac|mp4)$/i.test(file.name) && file.size < 120 * 1024 * 1024) tags = readMp4(await file.arrayBuffer());
+  } catch(e){}
+  return tags || {};
+}
+function uploadNameParts(name){
+  const base = name.replace(UPLOAD_EXT, '').replace(/[_]+/g, ' ').replace(/^\s*\d{1,3}\s*[-.)]\s*/, '').trim();
+  const m = base.match(/^(.+?)\s+-\s+(.+)$/);
+  return m ? { artist: m[1].trim(), title: m[2].trim() } : { artist: '', title: base || name };
+}
+async function uploadFileId(file){
+  const raw = file.name + '|' + file.size + '|' + file.lastModified;
+  try {
+    const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(raw));
+    return 'lf:' + Array.from(new Uint8Array(h)).slice(0, 8).map(x => x.toString(16).padStart(2, '0')).join('');
+  } catch(e){
+    let n = 5381; for (let i = 0; i < raw.length; i++) n = ((n << 5) + n + raw.charCodeAt(i)) >>> 0;
+    return 'lf:' + n.toString(16);
+  }
+}
+function isUploadAudio(f){ return !!f && ((f.type && f.type.indexOf('audio/') === 0) || UPLOAD_EXT.test(f.name || '')); }
+
+async function addLocalFiles(files){
+  const list = Array.from(files || []).filter(isUploadAudio);
+  if (!list.length){ if (files && files.length) showToast('Those aren\'t song files.'); return; }
+  ensureUploadsPlaylist();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+  const tracks = [];
+  let failed = 0;
+  for (const f of list){
+    const id = await uploadFileId(f);
+    const tags = await uploadTags(f);
+    const guess = uploadNameParts(f.name);
+    const art = tags.cover ? await uploadCoverThumb(tags.cover) : null;
+    const ok = await uploadsTx('readwrite', st => st.put({ id: id, blob: f, name: f.name, size: f.size, type: f.type, ts: Date.now() }));
+    if (!ok){ failed++; continue; }
+    localFileKeys.add(id);
+    tracks.push({ title: tags.title || guess.title, artist: tags.artist || guess.artist, videoId: id, art: art });
+  }
+  const added = tracks.length ? addTracksToPlaylist(UPLOADS_ID, tracks) : 0;
+  if (failed && !added) showToast("Couldn't save those songs on this device (storage is full or blocked).");
+  else showToast(added ? (added === 1 ? 'Added 1 song to Uploads' : 'Added ' + added + ' songs to Uploads') + (failed ? ' (' + failed + ' couldn\'t be saved)' : '') : 'Already in Uploads');
+}
+
+// A dropped folder arrives as directory entries - walk them for song files.
+async function filesFromDrop(dt){
+  const out = [];
+  const walk = (entry) => new Promise((resolve) => {
+    if (!entry) return resolve();
+    if (entry.isFile){ entry.file(f => { out.push(f); resolve(); }, () => resolve()); return; }
+    if (!entry.isDirectory) return resolve();
+    const reader = entry.createReader(), all = [];
+    const next = () => reader.readEntries(async (batch) => {
+      if (!batch.length){ for (const e of all) await walk(e); return resolve(); }
+      all.push(...batch); next();
+    }, () => resolve());
+    next();
+  });
+  const items = dt.items ? Array.from(dt.items).map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean) : [];
+  if (items.length){ for (const e of items) await walk(e); } else Array.from(dt.files || []).forEach(f => out.push(f));
+  return out;
+}
+(function wireUploads(){
+  const input = document.getElementById('uploadFileInput'), btn = document.getElementById('uploadSongsBtn');
+  if (btn && input){
+    btn.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => { const fs = Array.from(input.files || []); input.value = ''; addLocalFiles(fs); });
+  }
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') !== -1;
+  document.addEventListener('dragover', (e) => { if (hasFiles(e)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  document.addEventListener('drop', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    filesFromDrop(e.dataTransfer).then(addLocalFiles);
+  });
+})();
+
+/* ---- Uploads on a second device (#621) ----------------------------------
+   The Uploads playlist syncs with the account (titles, artists, covers), but
+   the files stay on the device that added them. Two ways to bring them to
+   another device, both without EBBLESS ever storing a file:
+   1. Direct: this device and the other connect peer to peer (WebRTC); the
+      worker /transfer only passes the two connection descriptions along.
+      The other device has to have EBBLESS open.
+   2. Google Drive: the files go to a folder in the listener's own Drive
+      (drive.file permission: only files EBBLESS made) and come back from it. */
+const XFER_CHUNK = 16 * 1024;
+const XFER_ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
+let xferBusy = false;
+const xferSleep = (ms) => new Promise(r => setTimeout(r, ms));
+function missingUploadIds(){
+  const pl = getCachedPlaylist(UPLOADS_ID);
+  return pl ? pl.tracks.map(t => t && t.videoId).filter(id => isLocalVideoId(id) && !localFileKeys.has(id)) : [];
+}
+function haveUploadIds(){ return Array.from(localFileKeys); }
+function refreshUploadsPanel(){ if (openLibraryPanelId === UPLOADS_ID) reopenLibraryPanel(UPLOADS_ID); }
+async function saveLocalFile(id, blob, name, type){
+  const ok = await uploadsTx('readwrite', st => st.put({ id: id, blob: blob, name: name || id, size: blob.size, type: type || blob.type || '', ts: Date.now() }));
+  if (ok) localFileKeys.add(id);
+  return !!ok;
+}
+function xferSignedIn(){ return profileTokenUsable(); }
+async function xferPost(body){
+  const res = await fetch(BACKEND + '/transfer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ idToken: profileIdToken }, body)) });
+  if (!res.ok) throw new Error('transfer ' + res.status);
+  return res.json();
+}
+function xferIceDone(pc){
+  return new Promise((resolve) => {
+    if (pc.iceGatheringState === 'complete') return resolve();
+    const t = setTimeout(resolve, 4000);
+    pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete'){ clearTimeout(t); resolve(); } });
+  });
+}
+function xferWaitOpen(ch, ms){
+  return new Promise((resolve, reject) => {
+    if (ch.readyState === 'open') return resolve();
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    ch.addEventListener('open', () => { clearTimeout(t); resolve(); });
+    ch.addEventListener('close', () => { clearTimeout(t); reject(new Error('closed')); });
+  });
+}
+
+// Sending side: while EBBLESS is open and signed in here, with files on this
+// device, look every 8s for another device asking for them.
+async function xferSendTo(offer){
+  if (xferBusy) return;
+  xferBusy = true;
+  let pc = null;
+  try {
+    pc = new RTCPeerConnection({ iceServers: XFER_ICE });
+    pc.ondatachannel = (ev) => serveUploads(ev.channel, pc);
+    await pc.setRemoteDescription({ type: 'offer', sdp: offer.sdp });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await xferIceDone(pc);
+    await xferPost({ op: 'answer', room: offer.room, sdp: pc.localDescription.sdp });
+    // give the other side a minute to connect, then let go
+    setTimeout(() => { if (pc && pc.connectionState !== 'connected'){ try { pc.close(); } catch(e){} xferBusy = false; } }, 60000);
+  } catch(e){ try { pc && pc.close(); } catch(_){} xferBusy = false; }
+}
+function serveUploads(ch, pc){
+  ch.binaryType = 'arraybuffer';
+  ch.onmessage = async (ev) => {
+    if (typeof ev.data !== 'string') return;
+    let msg; try { msg = JSON.parse(ev.data); } catch(e){ return; }
+    if (!msg || msg.t !== 'want' || !Array.isArray(msg.ids)) return;
+    const ids = msg.ids.filter(id => localFileKeys.has(id));
+    showToast('Sending ' + ids.length + (ids.length === 1 ? ' song' : ' songs') + ' to your other device...');
+    for (const id of ids){
+      const rec = await uploadsTx('readonly', st => st.get(id));
+      if (!rec || !rec.blob) continue;
+      ch.send(JSON.stringify({ t: 'file', id: id, name: rec.name, size: rec.blob.size, type: rec.type }));
+      for (let o = 0; o < rec.blob.size; o += XFER_CHUNK){
+        while (ch.bufferedAmount > 1024 * 1024) await xferSleep(40);
+        ch.send(await rec.blob.slice(o, o + XFER_CHUNK).arrayBuffer());
+      }
+      ch.send(JSON.stringify({ t: 'end', id: id }));
+    }
+    ch.send(JSON.stringify({ t: 'done' }));
+    setTimeout(() => { try { pc.close(); } catch(e){} xferBusy = false; }, 3000);
+  };
+  ch.onclose = () => { xferBusy = false; };
+}
+setInterval(async () => {
+  if (document.hidden || xferBusy || !xferSignedIn() || !localFileKeys.size || typeof RTCPeerConnection !== 'function') return;
+  try {
+    const r = await xferPost({ op: 'poll' });
+    if (r && r.offer) xferSendTo(r.offer);
+  } catch(e){}
+}, 8000);
+
+// Receiving side: ask for every Uploads song whose file isn't here.
+async function getUploadsFromOtherDevice(){
+  if (xferBusy) return;
+  const want = missingUploadIds();
+  if (!want.length){ showToast('Everything in Uploads is already on this device.'); return; }
+  if (!xferSignedIn()){ showToast('Sign in first, then try again.'); return; }
+  if (typeof RTCPeerConnection !== 'function'){ showToast("This browser can't connect devices directly. Try Google Drive."); return; }
+  xferBusy = true;
+  const room = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  let pc = null, got = 0;
+  try {
+    showToast('Looking for your other device. EBBLESS needs to be open on it...');
+    pc = new RTCPeerConnection({ iceServers: XFER_ICE });
+    const ch = pc.createDataChannel('uploads');
+    ch.binaryType = 'arraybuffer';
+    await pc.setLocalDescription(await pc.createOffer());
+    await xferIceDone(pc);
+    await xferPost({ op: 'offer', room: room, sdp: pc.localDescription.sdp });
+    let answer = null;
+    for (let i = 0; i < 45 && !answer; i++){
+      await xferSleep(1500);
+      const r = await xferPost({ op: 'getanswer', room: room });
+      answer = r && r.answer;
+    }
+    if (!answer){ try { await xferPost({ op: 'cancel' }); } catch(e){} throw new Error('no answer'); }
+    await pc.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
+    await xferWaitOpen(ch, 20000);
+    let cur = null, parts = [];
+    const finished = new Promise((resolve) => {
+      ch.onclose = resolve;
+      ch.onmessage = async (ev) => {
+        if (typeof ev.data !== 'string'){ parts.push(ev.data); return; }
+        let m; try { m = JSON.parse(ev.data); } catch(e){ return; }
+        if (m.t === 'file'){ cur = m; parts = []; }
+        else if (m.t === 'end' && cur && cur.id === m.id){
+          if (await saveLocalFile(cur.id, new Blob(parts, { type: cur.type }), cur.name, cur.type)){ got++; showToast('Received ' + got + ' of ' + want.length + '...'); }
+          cur = null; parts = [];
+        } else if (m.t === 'done') resolve();
+      };
+    });
+    ch.send(JSON.stringify({ t: 'want', ids: want }));
+    await finished;
+    showToast(got ? 'Got ' + got + (got === 1 ? ' song' : ' songs') + ' from your other device.' : 'Your other device had none of them.');
+  } catch(e){
+    showToast("Couldn't reach your other device. Open EBBLESS there and try again, or use Google Drive.");
+  } finally {
+    try { pc && pc.close(); } catch(e){}
+    xferBusy = false;
+    refreshUploadsPanel();
+  }
+}
+
+// Google Drive route
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FOLDER = 'EBBLESS Uploads';
+let driveTokenCache = null;
+function driveToken(){
+  if (driveTokenCache && Date.now() < driveTokenCache.exp - 30000) return Promise.resolve(driveTokenCache.token);
+  return new Promise((resolve, reject) => {
+    const go = () => {
+      try {
+        const tc = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE,
+          callback: (r) => {
+            if (!r || r.error || !r.access_token) return reject(new Error((r && r.error) || 'no token'));
+            driveTokenCache = { token: r.access_token, exp: Date.now() + (r.expires_in || 3000) * 1000 };
+            resolve(r.access_token);
+          },
+          error_callback: (e) => reject(new Error((e && e.type) || 'popup')),
+        });
+        tc.requestAccessToken({ prompt: driveTokenCache ? '' : 'consent' });
+      } catch(e){ reject(e); }
+    };
+    if (window.google && google.accounts && google.accounts.oauth2) go();
+    else if (window.__ebbLoadGsi) window.__ebbLoadGsi(go);
+    else reject(new Error('no google script'));
+  });
+}
+async function driveApi(token, path, opts){
+  const res = await fetch('https://www.googleapis.com' + path, Object.assign({}, opts, { headers: Object.assign({ Authorization: 'Bearer ' + token }, (opts && opts.headers) || {}) }));
+  if (!res.ok) throw new Error('drive ' + res.status);
+  return res;
+}
+async function driveFolderId(token, create){
+  const q = encodeURIComponent("name='" + DRIVE_FOLDER + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const found = await (await driveApi(token, '/drive/v3/files?q=' + q + '&fields=files(id)&pageSize=1')).json();
+  if (found.files && found.files[0]) return found.files[0].id;
+  if (!create) return null;
+  const made = await (await driveApi(token, '/drive/v3/files?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' }) })).json();
+  return made.id;
+}
+async function driveList(token, folder){
+  const out = []; let page = '';
+  do {
+    const q = encodeURIComponent("'" + folder + "' in parents and trashed=false");
+    const r = await (await driveApi(token, '/drive/v3/files?q=' + q + '&fields=nextPageToken,files(id,name,mimeType,appProperties)&pageSize=1000' + (page ? '&pageToken=' + page : ''))).json();
+    out.push(...(r.files || [])); page = r.nextPageToken || '';
+  } while (page);
+  return out;
+}
+async function backUpUploadsToDrive(){
+  if (xferBusy) return;
+  const mine = haveUploadIds();
+  if (!mine.length){ showToast('No songs on this device to back up.'); return; }
+  xferBusy = true;
+  try {
+    const token = await driveToken();
+    const folder = await driveFolderId(token, true);
+    const have = new Set((await driveList(token, folder)).map(f => f.name));
+    let n = 0;
+    for (const id of mine){
+      if (have.has(id)) continue;
+      const rec = await uploadsTx('readonly', st => st.get(id));
+      if (!rec || !rec.blob) continue;
+      showToast('Backing up ' + (n + 1) + '...');
+      const init = await driveApi(token, '/upload/drive/v3/files?uploadType=resumable&fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify({ name: id, parents: [folder], appProperties: { filename: rec.name || '', mime: rec.type || '' } }) });
+      const up = init.headers.get('Location');
+      const put = await fetch(up, { method: 'PUT', body: rec.blob });
+      if (!put.ok) throw new Error('upload ' + put.status);
+      n++;
+    }
+    showToast(n ? 'Backed up ' + n + (n === 1 ? ' song' : ' songs') + ' to your Google Drive.' : 'Everything is already in your Google Drive.');
+  } catch(e){
+    showToast("Couldn't reach Google Drive" + (e && /popup|access_denied|closed/.test(String(e.message)) ? ' (not allowed)' : '') + '.');
+  } finally { xferBusy = false; }
+}
+async function getUploadsFromDrive(){
+  if (xferBusy) return;
+  const want = new Set(missingUploadIds());
+  if (!want.size){ showToast('Everything in Uploads is already on this device.'); return; }
+  xferBusy = true;
+  let got = 0;
+  try {
+    const token = await driveToken();
+    const folder = await driveFolderId(token, false);
+    if (!folder){ showToast('No EBBLESS songs in your Google Drive yet. Back them up from your other device.'); return; }
+    for (const f of await driveList(token, folder)){
+      if (!want.has(f.name)) continue;
+      showToast('Downloading ' + (got + 1) + ' of ' + want.size + '...');
+      const blob = await (await driveApi(token, '/drive/v3/files/' + f.id + '?alt=media')).blob();
+      const ap = f.appProperties || {};
+      if (await saveLocalFile(f.name, blob, ap.filename, ap.mime)) got++;
+    }
+    showToast(got ? 'Got ' + got + (got === 1 ? ' song' : ' songs') + ' from your Google Drive.' : 'None of those songs are in your Google Drive yet.');
+  } catch(e){
+    showToast("Couldn't reach Google Drive" + (e && /popup|access_denied|closed/.test(String(e.message)) ? ' (not allowed)' : '') + '.');
+  } finally { xferBusy = false; refreshUploadsPanel(); }
+}
+
+// The bar at the top of the Uploads playlist.
+function buildUploadsBar(){
+  const miss = missingUploadIds().length, here = haveUploadIds().length;
+  if (!miss && !here) return null;
+  const bar = document.createElement('div');
+  bar.className = 'currents-hint';
+  const txt = document.createElement('div');
+  txt.textContent = miss
+    ? miss + (miss === 1 ? ' song is' : ' songs are') + ' on your other device. Songs you add stay on the device they were added from.'
+    : 'Your songs stay on this device. Your other devices can get them from here.';
+  bar.appendChild(txt);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+  const mk = (label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost'; b.style.cssText = 'padding:5px 14px;font-size:12.5px'; b.textContent = label; b.addEventListener('click', fn); row.appendChild(b); };
+  if (miss){ mk('Get them from my other device', getUploadsFromOtherDevice); mk('Get them from Google Drive', getUploadsFromDrive); }
+  if (here) mk('Back up to Google Drive', backUpUploadsToDrive);
+  bar.appendChild(row);
+  return bar;
+}
+
 function loadIntoDeck(deck, videoId, isActive){
   // Casting: the "deck" is the receiver - send it there instead (castLoad
   // hands playback back here if this receiver can't play this track).
@@ -23240,7 +23746,7 @@ function loadIntoDeck(deck, videoId, isActive){
   deck.adReloaded = false; deck.adAltTried = false;
   ensureLoudness(videoId);
   deck.loadStartTs = Date.now();
-  const kind = isSoundCloudVideoId(videoId) ? 'sc' : isAudioVideoId(videoId) ? 'au' : 'yt';
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId)) ? 'au' : 'yt';
   if (!deck.player || deck.kind !== kind){
     // Switching a deck between a YouTube and a SoundCloud track (a mixed-
     // source queue/crossfade) - the existing player is the wrong kind to
@@ -29254,6 +29760,10 @@ function castBegin(session, appId, opts){
 
 function castLoad(videoId, startAt){
   if (!castActive()) return;
+  if (isLocalVideoId(videoId)){
+    castEnd({ stop: true, position: 0, play: true, msg: "Your own songs can't play on " + castDeviceName() + ' - playing here.' });
+    return;
+  }
   const appId = castAppFor(videoId);
   if (appId !== cast.appId){
     const name = castDeviceName();
@@ -29762,7 +30272,7 @@ function iosColdDeck(deck){ return isIOS && !deck.iosWarm; }
 // kind) for this track, so advancing in place keeps the unlocked player.
 function iosCanAdvanceInPlace(videoId){
   const ad = activeDeck();
-  const kind = isSoundCloudVideoId(videoId) ? 'sc' : isAudioVideoId(videoId) ? 'au' : 'yt';
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId)) ? 'au' : 'yt';
   return !!(ad.iosWarm && ad.player && ad.kind === kind);
 }
 // A play/pause pressed on the lock screen (or headset) while hidden is what
