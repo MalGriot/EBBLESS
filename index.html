@@ -9421,6 +9421,25 @@ function showToast(msg, action){
   toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), action ? 6000 : 2200);
 }
 
+// Shown while the song the listener picked is sitting out a YouTube ad (it
+// plays on its own the moment the ad is cleared). Stays up until then, with a
+// cap so it can never get stuck.
+let adWaitShown = false;
+function showAdWait(){
+  adWaitShown = true;
+  toastEl.classList.remove('has-action');
+  toastEl.textContent = 'One sec, clearing a YouTube ad so your song starts clean. It will play on its own.';
+  toastEl.classList.add('is-open');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(clearAdWait, 30000);
+}
+function clearAdWait(){
+  if (!adWaitShown) return;
+  adWaitShown = false;
+  clearTimeout(toastTimer);
+  toastEl.classList.remove('is-open');
+}
+
 // Geethub #398: brief accent check-mark pulse when a playlist/link loads.
 // Non-blocking (pointer-events none), self-removing, and a plain fade under
 // prefers-reduced-motion.
@@ -22393,6 +22412,7 @@ function checkDeckReady(deck){
   // or on a signal that is about the video itself
   let adLike = false;
   try { adLike = /^(duration|short|video-id)$/.test(reason) || (!!deck.player.getPlayerState && deck.player.getPlayerState() === YT.PlayerState.PLAYING); } catch(e){}
+  if (reason && deck === activeDeck() && deck.kind === 'yt' && !deck.adDodge && !adWaitShown && adLike) showAdWait();
   if (reason && !deck.adDodge && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
     deck.adReloaded = true; deck.adReloadedAt = Date.now();
     adLog(deck, 'standby-reload', reason);
@@ -22422,6 +22442,7 @@ function checkDeckReady(deck){
 }
 
 function onDeckConfirmed(deck){
+  if (deck === activeDeck()) clearAdWait();
   deck.loadStartTs = 0;
   if (deck.confirmed) return;
   deck.confirmed = true;
@@ -29920,6 +29941,7 @@ function maybeDodgeAd(){
   ad.adDodge = trackStartAuto || n === p ? 'swap' : 'return';
   ad.pos = n;
   adLog(ad, 'dodge', ad.adDodge + ' ' + ad.adSeen);
+  clearAdWait();
   promoteDeckDirect(nd, p, true, true);
   renderQueuePanel();
 }
@@ -29951,6 +29973,7 @@ function skipHeldAd(ad, reason){
   ad.adDodge = 'swap';
   ad.pos = n;
   adLog(ad, 'dodge', 'swap held ' + reason);
+  clearAdWait();
   promoteDeckDirect(nd, p, true, true);
   // checkDeckReady waits the ad out (up to AD_MUTE_MAX_MS for a dodged deck),
   // then onDeckConfirmed parks it paused for its turn
