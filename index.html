@@ -4137,6 +4137,8 @@ body.week-up-on{overflow:hidden}
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" title="New playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="uploadSongsBtn" aria-label="Add your songs" title="Add your songs from this device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
+            <input type="file" id="uploadFileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus" multiple hidden>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             </button>
@@ -6492,7 +6494,12 @@ function isAudioVideoId(id){ return typeof id === 'string' && id.indexOf('au:') 
 function audioUrlOf(id){ return id.slice(3); }
 // Anything that isn't a real YouTube video id (SoundCloud-native or a
 // podcast file) - no YouTube thumbnails, lyrics, loudness, or re-matching.
-function isNativeVideoId(id){ return isSoundCloudVideoId(id) || isAudioVideoId(id); }
+// #621: a song file the listener added from their own device is 'lf:<hash>'.
+// The file lives in this browser's IndexedDB (see the Uploads block), plays
+// through the same <audio> deck as a podcast, and is never matched to
+// YouTube or SoundCloud.
+function isLocalVideoId(id){ return typeof id === 'string' && id.indexOf('lf:') === 0; }
+function isNativeVideoId(id){ return isSoundCloudVideoId(id) || isAudioVideoId(id) || isLocalVideoId(id); }
 function isPodcastPlaylistId(id){ return typeof id === 'string' && id.indexOf('pod:') === 0; }
 function soundCloudVideoId(scId){ return 'sc:' + scId; }
 function soundCloudTrackId(videoId){ return videoId.slice(3); }
@@ -14569,8 +14576,9 @@ function isTrackLiked(videoId){
 function removeTrackFromPlaylistAt(playlistId, idx){
   const pl = getCachedPlaylist(playlistId);
   if (!pl || idx < 0 || idx >= pl.tracks.length) return;
-  pl.tracks.splice(idx, 1);
+  const gone = pl.tracks.splice(idx, 1)[0];
   lsSet(LS_PL(playlistId), pl);
+  if (playlistId === UPLOADS_ID && gone) dropLocalFileSoon(gone.videoId);
   if (state.playlist && state.playlist.id === playlistId){
     state.queue = state.queue
       .filter(e => !(e.plId === playlistId && e.idx === idx))
@@ -18254,6 +18262,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 393, date: '2026-10-22', items: [
+    'Add your own songs: tap the upload button in the Library, or drag song files or a folder onto the window. They go in an Uploads playlist, play with no ads and no matching, and stay on your device.'
+  ]},
   { version: 299, date: '2026-10-18', items: [
     'Paste a list of songs into the search bar (one per line, like Artist - Title) and EBBLESS makes a playlist from it. No link needed.',
     'Imported playlists now say how many songs were found, like 4 of 6. Tap Show to see the ones that were not found and tap Find to pick a version.',
@@ -20528,6 +20539,7 @@ function applyListenSignal(tags, weight, poolTagLimit){
 }
 function recordListenSignal(track, weight){
   if (!track || !weight || !personalizeOn()) return;
+  if (isLocalVideoId(track.videoId)) return;   // #621: a listener's own file names never go to the shared taste pool
   if (track.tags && track.tags.length){ applyListenSignal(track.tags, weight, 8); return; }
   // Looked-up tracks send only their top 4 tags to the shared pool (6 pairs
   // instead of up to 28): every pair is two KV writes on the worker, and
@@ -22564,7 +22576,7 @@ function createDeckPlayer(deck, videoId){
   deck.loadStartTs = Date.now();
   if (deck === activeDeck()) startLoadIconTicker();
   if (isSoundCloudVideoId(videoId)){ createSCDeckPlayer(deck, videoId); return; }
-  if (isAudioVideoId(videoId)){ createAudioDeckPlayer(deck, videoId); return; }
+  if (isAudioVideoId(videoId) || isLocalVideoId(videoId)){ createAudioDeckPlayer(deck, videoId); return; }
   deck.kind = 'yt';
   // See the matching comment in createSCDeckPlayer: this deck's player is
   // about to be (re)built, so any callback bound to the player this call
@@ -23196,7 +23208,7 @@ function createAudioDeckPlayer(deck, videoId){
   el.onended = () => emit(YT.PlayerState.ENDED);
   el.onerror = () => {
     if (deck.gen !== myGen || deck !== activeDeck() || deck.kind !== 'au') return;
-    showToast("Couldn't play this episode - skipping.");
+    showToast(isLocalVideoId(deck.videoId) ? "Couldn't play this song - skipping." : "Couldn't play this episode - skipping.");
     playNext(true);
   };
   deck.player = {
@@ -23222,6 +23234,19 @@ function createAudioDeckPlayer(deck, videoId){
         if (onLoad) onLoad();
         if (deck === activeDeck()) deck.player.playVideo();
       };
+      if (isLocalVideoId(v)){
+        // the file is in this browser's storage, not at a URL
+        localFileUrl(v).then(url => {
+          if (deck.gen !== myGen || mySeq !== loadSeq) return;
+          if (!url){
+            if (deck === activeDeck()){ showToast('That song is on your other device - skipping.'); playNext(true); }
+            return;
+          }
+          el.src = url;
+          el.load();
+        });
+        return;
+      }
       el.src = audioUrlOf(v);
       el.load();
     },
@@ -23232,6 +23257,223 @@ function createAudioDeckPlayer(deck, videoId){
   deck.pendingVideoId = null;
 }
 
+/* =========================================================================
+   UPLOADS (#621): songs the listener adds from their own device.
+   The files stay in this browser's IndexedDB; nothing is uploaded to
+   EBBLESS, so EBBLESS is a player here, not a host. Each song is a track
+   with videoId 'lf:<hash>' in the built-in "Uploads" playlist. They play
+   through the <audio> deck (createAudioDeckPlayer), are never matched to
+   YouTube or SoundCloud, and their names never reach the shared taste pool.
+   ========================================================================= */
+const UPLOADS_ID = 'uploads';
+const UPLOAD_EXT = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|weba|webm|mp4)$/i;
+let uploadsDbP = null;
+const localUrls = new Map();        // 'lf:..' -> blob: URL for the playing session
+const localFileKeys = new Set();    // 'lf:..' ids whose file is on THIS device
+function uploadsDb(){
+  if (uploadsDbP) return uploadsDbP;
+  uploadsDbP = new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('ebbless-uploads', 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore('files', { keyPath: 'id' }); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch(e){ resolve(null); }
+  });
+  return uploadsDbP;
+}
+function uploadsTx(mode, fn){
+  return uploadsDb().then(db => !db ? null : new Promise((resolve) => {
+    try {
+      const tx = db.transaction('files', mode), st = tx.objectStore('files');
+      const r = fn(st);
+      tx.oncomplete = () => resolve(r && 'result' in r ? r.result : true);
+      tx.onerror = tx.onabort = () => resolve(null);
+    } catch(e){ resolve(null); }
+  }));
+}
+function localFileUrl(id){
+  if (localUrls.has(id)) return Promise.resolve(localUrls.get(id));
+  return uploadsTx('readonly', st => st.get(id)).then(rec => {
+    if (!rec || !rec.blob) return null;
+    const u = URL.createObjectURL(rec.blob);
+    localUrls.set(id, u);
+    return u;
+  });
+}
+uploadsDb().then(db => {
+  if (!db) return;
+  try { db.transaction('files').objectStore('files').getAllKeys().onsuccess = (e) => (e.target.result || []).forEach(k => localFileKeys.add(k)); } catch(e){}
+});
+// Removing a song from Uploads deletes its file too, after a grace period so
+// Undo (which puts the track back) still finds it.
+function dropLocalFileSoon(id){
+  if (!isLocalVideoId(id)) return;
+  setTimeout(() => {
+    const pl = getCachedPlaylist(UPLOADS_ID);
+    if (pl && pl.tracks.some(t => t && t.videoId === id)) return;
+    uploadsTx('readwrite', st => st.delete(id));
+    localFileKeys.delete(id);
+    const u = localUrls.get(id);
+    if (u){ try { URL.revokeObjectURL(u); } catch(e){} localUrls.delete(id); }
+  }, 30000);
+}
+function ensureUploadsPlaylist(){
+  if (getCachedPlaylist(UPLOADS_ID)) return;
+  lsSet(LS_PL(UPLOADS_ID), { id: UPLOADS_ID, type: 'custom', name: 'Uploads', image: null, tracks: [], ts: Date.now() });
+  saveToLibrary(UPLOADS_ID);
+}
+
+// ---- reading the song's own tags (ID3 for MP3, MP4 atoms for M4A/AAC) ----
+function uploadText(bytes, enc){
+  try {
+    const label = enc === 1 ? 'utf-16' : enc === 2 ? 'utf-16be' : enc === 3 ? 'utf-8' : 'iso-8859-1';
+    return new TextDecoder(label).decode(bytes).replace(/\0+$/, '').replace(/^﻿/, '').trim();
+  } catch(e){ return ''; }
+}
+function readId3(buf){
+  const b = new Uint8Array(buf);
+  if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return null;
+  const ver = b[3], syncsafe = (o) => (b[o] << 21) | (b[o + 1] << 14) | (b[o + 2] << 7) | b[o + 3];
+  const end = Math.min(b.length, 10 + syncsafe(6));
+  const out = {};
+  let o = 10;
+  while (ver >= 3 && o + 10 <= end){
+    const id = String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+    const size = ver === 4 ? syncsafe(o + 4) : ((b[o + 4] << 24) | (b[o + 5] << 16) | (b[o + 6] << 8) | b[o + 7]) >>> 0;
+    if (!size || !/^[A-Z0-9]{4}$/.test(id) || o + 10 + size > b.length) break;
+    const f = b.subarray(o + 10, o + 10 + size);
+    if (id === 'TIT2') out.title = uploadText(f.subarray(1), f[0]);
+    else if (id === 'TPE1') out.artist = uploadText(f.subarray(1), f[0]);
+    else if (id === 'APIC' && !out.cover){
+      let i = 1; while (i < f.length && f[i]) i++;
+      const mime = uploadText(f.subarray(1, i), 0) || 'image/jpeg';
+      i += 2;                                    // past the NUL and the picture-type byte
+      const wide = f[0] === 1 || f[0] === 2;
+      while (i < f.length && (wide ? (f[i] || f[i + 1]) : f[i])) i += wide ? 2 : 1;
+      i += wide ? 2 : 1;
+      if (i < f.length) out.cover = new Blob([f.subarray(i)], { type: mime });
+    }
+    o += 10 + size;
+  }
+  return out;
+}
+function readMp4(buf){
+  const b = new Uint8Array(buf), dv = new DataView(buf), out = {};
+  const kind = (o) => String.fromCharCode(b[o + 4], b[o + 5], b[o + 6], b[o + 7]);
+  function walk(start, end, depth){
+    let o = start;
+    while (o + 8 <= end){
+      let size = dv.getUint32(o);
+      if (size < 8) break;
+      if (o + size > end) size = end - o;
+      const t = kind(o);
+      if (t === 'moov' || t === 'udta' || t === 'ilst') walk(o + 8, o + size, depth + 1);
+      else if (t === 'meta') walk(o + 12, o + size, depth + 1);
+      else if (t === '\xa9nam' || t === '\xa9ART' || t === 'covr'){
+        // one 'data' atom: 8 header + 4 type + 4 locale, then the payload
+        if (o + 24 <= o + size && kind(o + 8) === 'data'){
+          const payload = b.subarray(o + 24, o + size);
+          if (t === 'covr') out.cover = new Blob([payload], { type: dv.getUint32(o + 16) === 14 ? 'image/png' : 'image/jpeg' });
+          else out[t === '\xa9nam' ? 'title' : 'artist'] = uploadText(payload, 3);
+        }
+      }
+      o += size;
+    }
+  }
+  walk(0, b.length, 0);
+  return out;
+}
+async function uploadCoverThumb(blob){
+  try {
+    const bmp = await createImageBitmap(blob);
+    const s = 128, c = document.createElement('canvas');
+    c.width = c.height = s;
+    const m = Math.min(bmp.width, bmp.height);
+    c.getContext('2d').drawImage(bmp, (bmp.width - m) / 2, (bmp.height - m) / 2, m, m, 0, 0, s, s);
+    return c.toDataURL('image/jpeg', 0.7);
+  } catch(e){ return null; }
+}
+async function uploadTags(file){
+  let tags = null;
+  try {
+    if (/\.mp3$/i.test(file.name) || file.type === 'audio/mpeg') tags = readId3(await file.slice(0, 3 * 1024 * 1024).arrayBuffer());
+    else if (/\.(m4a|aac|mp4)$/i.test(file.name) && file.size < 120 * 1024 * 1024) tags = readMp4(await file.arrayBuffer());
+  } catch(e){}
+  return tags || {};
+}
+function uploadNameParts(name){
+  const base = name.replace(UPLOAD_EXT, '').replace(/[_]+/g, ' ').replace(/^\s*\d{1,3}\s*[-.)]\s*/, '').trim();
+  const m = base.match(/^(.+?)\s+-\s+(.+)$/);
+  return m ? { artist: m[1].trim(), title: m[2].trim() } : { artist: '', title: base || name };
+}
+async function uploadFileId(file){
+  const raw = file.name + '|' + file.size + '|' + file.lastModified;
+  try {
+    const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(raw));
+    return 'lf:' + Array.from(new Uint8Array(h)).slice(0, 8).map(x => x.toString(16).padStart(2, '0')).join('');
+  } catch(e){
+    let n = 5381; for (let i = 0; i < raw.length; i++) n = ((n << 5) + n + raw.charCodeAt(i)) >>> 0;
+    return 'lf:' + n.toString(16);
+  }
+}
+function isUploadAudio(f){ return !!f && ((f.type && f.type.indexOf('audio/') === 0) || UPLOAD_EXT.test(f.name || '')); }
+
+async function addLocalFiles(files){
+  const list = Array.from(files || []).filter(isUploadAudio);
+  if (!list.length){ if (files && files.length) showToast('Those aren\'t song files.'); return; }
+  ensureUploadsPlaylist();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+  const tracks = [];
+  let failed = 0;
+  for (const f of list){
+    const id = await uploadFileId(f);
+    const tags = await uploadTags(f);
+    const guess = uploadNameParts(f.name);
+    const art = tags.cover ? await uploadCoverThumb(tags.cover) : null;
+    const ok = await uploadsTx('readwrite', st => st.put({ id: id, blob: f, name: f.name, size: f.size, type: f.type, ts: Date.now() }));
+    if (!ok){ failed++; continue; }
+    localFileKeys.add(id);
+    tracks.push({ title: tags.title || guess.title, artist: tags.artist || guess.artist, videoId: id, art: art });
+  }
+  const added = tracks.length ? addTracksToPlaylist(UPLOADS_ID, tracks) : 0;
+  if (failed && !added) showToast("Couldn't save those songs on this device (storage is full or blocked).");
+  else showToast(added ? (added === 1 ? 'Added 1 song to Uploads' : 'Added ' + added + ' songs to Uploads') + (failed ? ' (' + failed + ' couldn\'t be saved)' : '') : 'Already in Uploads');
+}
+
+// A dropped folder arrives as directory entries - walk them for song files.
+async function filesFromDrop(dt){
+  const out = [];
+  const walk = (entry) => new Promise((resolve) => {
+    if (!entry) return resolve();
+    if (entry.isFile){ entry.file(f => { out.push(f); resolve(); }, () => resolve()); return; }
+    if (!entry.isDirectory) return resolve();
+    const reader = entry.createReader(), all = [];
+    const next = () => reader.readEntries(async (batch) => {
+      if (!batch.length){ for (const e of all) await walk(e); return resolve(); }
+      all.push(...batch); next();
+    }, () => resolve());
+    next();
+  });
+  const items = dt.items ? Array.from(dt.items).map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean) : [];
+  if (items.length){ for (const e of items) await walk(e); } else Array.from(dt.files || []).forEach(f => out.push(f));
+  return out;
+}
+(function wireUploads(){
+  const input = document.getElementById('uploadFileInput'), btn = document.getElementById('uploadSongsBtn');
+  if (btn && input){
+    btn.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => { const fs = Array.from(input.files || []); input.value = ''; addLocalFiles(fs); });
+  }
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') !== -1;
+  document.addEventListener('dragover', (e) => { if (hasFiles(e)){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  document.addEventListener('drop', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    filesFromDrop(e.dataTransfer).then(addLocalFiles);
+  });
+})();
+
 function loadIntoDeck(deck, videoId, isActive){
   // Casting: the "deck" is the receiver - send it there instead (castLoad
   // hands playback back here if this receiver can't play this track).
@@ -23240,7 +23482,7 @@ function loadIntoDeck(deck, videoId, isActive){
   deck.adReloaded = false; deck.adAltTried = false;
   ensureLoudness(videoId);
   deck.loadStartTs = Date.now();
-  const kind = isSoundCloudVideoId(videoId) ? 'sc' : isAudioVideoId(videoId) ? 'au' : 'yt';
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId)) ? 'au' : 'yt';
   if (!deck.player || deck.kind !== kind){
     // Switching a deck between a YouTube and a SoundCloud track (a mixed-
     // source queue/crossfade) - the existing player is the wrong kind to
@@ -29254,6 +29496,10 @@ function castBegin(session, appId, opts){
 
 function castLoad(videoId, startAt){
   if (!castActive()) return;
+  if (isLocalVideoId(videoId)){
+    castEnd({ stop: true, position: 0, play: true, msg: "Your own songs can't play on " + castDeviceName() + ' - playing here.' });
+    return;
+  }
   const appId = castAppFor(videoId);
   if (appId !== cast.appId){
     const name = castDeviceName();
@@ -29762,7 +30008,7 @@ function iosColdDeck(deck){ return isIOS && !deck.iosWarm; }
 // kind) for this track, so advancing in place keeps the unlocked player.
 function iosCanAdvanceInPlace(videoId){
   const ad = activeDeck();
-  const kind = isSoundCloudVideoId(videoId) ? 'sc' : isAudioVideoId(videoId) ? 'au' : 'yt';
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId)) ? 'au' : 'yt';
   return !!(ad.iosWarm && ad.player && ad.kind === kind);
 }
 // A play/pause pressed on the lock screen (or headset) while hidden is what
