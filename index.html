@@ -22394,8 +22394,8 @@ function adLog(deck, what, reason){
   if (window.ebblessAdLog.length > AD_LOG_MAX) window.ebblessAdLog.shift();
   try { console.info('[ad]', what, row); } catch(e){}
 }
-// A short first play usually spends the ad: reload after 2.5s (was 8s), then move to the closest alternate 3s later (was 8s).
-const STANDBY_AD_RELOAD_MS = 2500, STANDBY_AD_ALT_MS = 3000, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
+// A short first play usually spends the ad: reload after 1s (was 8s), then move to the closest alternate 1.5s later (was 8s).
+const STANDBY_AD_RELOAD_MS = 1000, STANDBY_AD_ALT_MS = 1500, STANDBY_AD_ALT_SLOW_MS = 25000, STANDBY_AD_WAIT_MS = 60000;
 function checkDeckReady(deck){
   if (!deck.player) return;
   const elapsed = Date.now() - deck.muteStartTs;
@@ -22412,7 +22412,11 @@ function checkDeckReady(deck){
   // or on a signal that is about the video itself
   let adLike = false;
   try { adLike = /^(duration|short|video-id)$/.test(reason) || (!!deck.player.getPlayerState && deck.player.getPlayerState() === YT.PlayerState.PLAYING); } catch(e){}
-  if (reason && deck === activeDeck() && deck.kind === 'yt' && !deck.adDodge && !adWaitShown && adLike) showAdWait();
+  if (reason && deck === activeDeck() && deck.kind === 'yt' && !deck.adDodge && !adWaitShown && adLike){
+    showAdWait();
+    // look for the closest ad-free upload right now, in parallel with the reload below, so whichever clears first plays
+    adTryAlternate(state.queue[state.queuePos], deck);
+  }
   if (reason && !deck.adDodge && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
     deck.adReloaded = true; deck.adReloadedAt = Date.now();
     adLog(deck, 'standby-reload', reason);
