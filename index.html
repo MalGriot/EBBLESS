@@ -82,9 +82,19 @@ try {
    previous / play-pause / next / heart (#581, #634) and sends the button presses back through __ebbMediaAction. */
 (function () {
   try {
-    if (!window.EbbNative || !EbbNative.media || !window.MediaSession || !('mediaSession' in navigator)) return;
-    var ms = navigator.mediaSession, proto = MediaSession.prototype, handlers = {}, md = null, ps = 'none', pos = null, timer = 0;
-    var dMeta = Object.getOwnPropertyDescriptor(proto, 'metadata'), dState = Object.getOwnPropertyDescriptor(proto, 'playbackState');
+    if (!window.EbbNative || !EbbNative.media) return;
+    var dMeta, dState;
+    if (window.MediaSession && 'mediaSession' in navigator) {
+      dMeta = Object.getOwnPropertyDescriptor(MediaSession.prototype, 'metadata'); dState = Object.getOwnPropertyDescriptor(MediaSession.prototype, 'playbackState');
+    } else {
+      // Android WebView ships without the Media Session API (navigator.mediaSession is undefined, confirmed on a TECNO / WebView 155),
+      // so the page's own calls would go nowhere. Stand in a minimal one; the hooks below then forward it to the app.
+      if (!window.MediaMetadata) window.MediaMetadata = function (init) { init = init || {}; this.title = init.title || ''; this.artist = init.artist || ''; this.album = init.album || ''; this.artwork = init.artwork || []; };
+      var stub = { metadata: null, playbackState: 'none', setActionHandler: function () {}, setPositionState: function () {} };
+      try { Object.defineProperty(navigator, 'mediaSession', { configurable: true, value: stub }); } catch (e) { return; }
+      dMeta = dState = { set: function () {} };
+    }
+    var ms = navigator.mediaSession, handlers = {}, md = null, ps = 'none', pos = null, timer = 0;
     var origHandler = ms.setActionHandler.bind(ms), origPos = ms.setPositionState ? ms.setPositionState.bind(ms) : null;
     function artUrl() {
       var list = (md && md.artwork) || [], best = '', bestW = 0;
