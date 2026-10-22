@@ -11492,3 +11492,11 @@ Add entries in this shape:
 - **Touches:** index.html, sw.js (v386).
 - **Branch:** agent/cymatics-lp
 - **Notes:** Space is a tap on the record from the first tap of a run until the score leaves the screen (HUD phase run/over), otherwise it still pauses. Clicks already played the game. Logic-checked only, a live run needs a playing song in fullscreen LP. Synced from Geethub #652.
+
+### remove-swoop-all-windows: remove swoop from all windows (Geethub #660)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub #660. The faint corner swoop (#626) still showed on the artist and album windows. Removed it from every window.
+- **Touches:** window panel CSS (libpl-panel, hist-panel, view-library).
+- **Branch:** main
+- **Notes:** Synced from Geethub #660. Deleted the #626 pseudo-element block; cache v391.
