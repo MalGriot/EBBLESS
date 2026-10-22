@@ -22393,7 +22393,7 @@ function checkDeckReady(deck){
   // or on a signal that is about the video itself
   let adLike = false;
   try { adLike = /^(duration|short|video-id)$/.test(reason) || (!!deck.player.getPlayerState && deck.player.getPlayerState() === YT.PlayerState.PLAYING); } catch(e){}
-  if (reason && standby && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
+  if (reason && !deck.adDodge && adLike && !deck.adReloaded && elapsed >= STANDBY_AD_RELOAD_MS && deck.player.loadVideoById && deck.videoId){
     deck.adReloaded = true; deck.adReloadedAt = Date.now();
     adLog(deck, 'standby-reload', reason);
     deck.adClock = null;
@@ -22401,13 +22401,14 @@ function checkDeckReady(deck){
     deck.player.loadVideoById({ videoId: deck.videoId, suggestedQuality: LOWEST_QUALITY });
     forceLowestQuality(deck);
   }
+  // a song picked directly (no preload) gets the same quick reload and alternate while it is still muted, so the ad is cleared before the 8s dodge to the next song
   // still an ad after the reload: move the song onto the closest-to-identical
   // other link (adTryAlternate: another YouTube upload, else SoundCloud), once.
   // Signals about the video itself act 8s after the reload; the clock signals
   // ('not-moving', 'frozen', 'no-duration') also read on a healthy slow start
   // (seen on a phone), so they get the longer STANDBY_AD_ALT_SLOW_MS: a link
   // still frozen that long after a reload is moved too, not left frozen
-  if (reason && standby && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= (/^(duration|short|video-id)$/.test(reason) ? STANDBY_AD_ALT_MS : STANDBY_AD_ALT_SLOW_MS)){
+  if (reason && !deck.adDodge && deck.adReloaded && !deck.adAltTried && Date.now() - deck.adReloadedAt >= (/^(duration|short|video-id)$/.test(reason) ? STANDBY_AD_ALT_MS : STANDBY_AD_ALT_SLOW_MS)){
     deck.adAltTried = true;
     adLog(deck, 'standby-alt', reason);
     adTryAlternate(state.queue[deck.pos], deck);
