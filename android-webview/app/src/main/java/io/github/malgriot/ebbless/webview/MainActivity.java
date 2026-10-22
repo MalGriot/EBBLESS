@@ -165,15 +165,19 @@ public class MainActivity extends Activity {
 
     /**
      * OnePlus / OxygenOS (and most other Chinese-OEM Android builds) stop a backgrounded app's audio and kill it, notification and all,
-     * unless it is exempt from battery optimization. Ask once, the first time music plays: the system's own "Allow EBBLESS to always
-     * run in the background?" dialog, one tap. Asked only once so a "Deny" is not nagged about.
+     * unless it is exempt from battery optimization. Ask the first time music plays in a launch: the system's own "Allow EBBLESS to always
+     * run in the background?" dialog, one tap. Up to 3 launches in total, so a tap that missed (or a Deny) gets a second chance but is not nagged.
      */
+    private boolean batteryAskedThisRun;
+
     private void askBatteryExemption() {
         try {
             android.content.SharedPreferences prefs = getSharedPreferences("ebb", MODE_PRIVATE);
-            if (prefs.getBoolean("batteryAsked", false)) return;
+            int asked = prefs.getInt("batteryAsks", 0);
+            if (asked >= 3 || batteryAskedThisRun) return;
             if (getSystemService(android.os.PowerManager.class).isIgnoringBatteryOptimizations(getPackageName())) return;
-            prefs.edit().putBoolean("batteryAsked", true).apply();
+            batteryAskedThisRun = true;
+            prefs.edit().putInt("batteryAsks", asked + 1).apply();
             startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
         } catch (Exception ignored) {}
     }
