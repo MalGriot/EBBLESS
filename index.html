@@ -27668,7 +27668,8 @@ function resetToNothingPlaying(){
   setMarqueeText(flowArtist, '');
   setMarqueeText(miniTitle, '');
   setMarqueeText(miniArtist, '');
-  [artA, artB].forEach(a => { a.classList.remove('is-active'); a.removeAttribute('src'); });
+  // the fullscreen player has its own art pair; leave it holding the last cover and it hides the bouncing E
+  [artA, artB, flowArtA, flowArtB].forEach(a => { a.onload = a.onerror = null; a.classList.remove('is-active'); a.removeAttribute('src'); });
   recordLabelImg.removeAttribute('src');
   cassetteLabelArt.removeAttribute('href'); cassetteLabelArt.removeAttribute('xlink:href');
   cassetteLabelArt.classList.remove('is-loaded');
