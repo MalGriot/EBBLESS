@@ -1436,6 +1436,7 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
    fixed cue tick above the rim and a dot on the disc at 0deg - both only
    while a run is active, so the record stays restrained otherwise - plus a
    score / best readout that doesn't turn with the disc */
+.rec-game-cue{position:absolute;inset:0;pointer-events:none}
 .rec-game-mark{position:absolute;top:2%;left:50%;width:2px;height:9px;margin:-12px 0 0 -1px;border-radius:1px;
   background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out);pointer-events:none}
 .rec-game-dot{position:absolute;top:3.5%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;
@@ -4320,8 +4321,7 @@ body.week-up-on{overflow:hidden}
               <div class="record-spindle"></div>
               <div class="rec-game-dot"></div>
             </div>
-            <div class="rec-game-mark"></div>
-            <div class="rec-game-ring"></div>
+            <div class="rec-game-cue"><div class="rec-game-mark"></div><div class="rec-game-ring"></div></div>
             <div class="rec-game-flare" aria-hidden="true">New best</div>
             <div class="rec-game-hud" aria-hidden="true"><span class="rec-game-score"></span><span class="rec-game-best"></span></div>
           </div>
@@ -23486,7 +23486,10 @@ async function addLocalFiles(files){
   }
   const added = tracks.length ? addTracksToPlaylist(UPLOADS_ID, tracks) : 0;
   if (failed && !added) showToast("Couldn't save those songs on this device (storage is full or blocked).");
-  else showToast(added ? (added === 1 ? 'Added 1 song to Uploads' : 'Added ' + added + ' songs to Uploads') + (failed ? ' (' + failed + ' couldn\'t be saved)' : '') : 'Already in Uploads');
+  else showToast(added ? (added === 1 ? 'Added 1 song to Uploads' : 'Added ' + added + ' songs to Uploads') + (failed ? ' (' + failed + ' couldn\'t be saved)' : '') : 'Already in Uploads',
+    added && !driveLinked() ? { label: 'Back up', run: () => backUpUploadsToDrive() } : null);
+  // once Drive has been allowed on this device, new songs back up on their own
+  if (added && driveLinked()) backUpUploadsToDrive({ auto: true });
 }
 
 // A dropped folder arrives as directory entries - walk them for song files.
@@ -23540,7 +23543,11 @@ async function saveLocalFile(id, blob, name, type){
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const DRIVE_FOLDER = 'EBBLESS Uploads';
 let driveTokenCache = null;
-function driveToken(){
+// Set once the listener has allowed Drive on this device; from then on new
+// Uploads back up automatically. Per device, never synced.
+const LS_DRIVE_LINKED = 'ebbless:drive-linked';
+function driveLinked(){ try { return localStorage.getItem(LS_DRIVE_LINKED) === '1'; } catch(e){ return false; } }
+function driveToken(silent){
   if (driveTokenCache && Date.now() < driveTokenCache.exp - 30000) return Promise.resolve(driveTokenCache.token);
   return new Promise((resolve, reject) => {
     const go = () => {
@@ -23550,11 +23557,12 @@ function driveToken(){
           callback: (r) => {
             if (!r || r.error || !r.access_token) return reject(new Error((r && r.error) || 'no token'));
             driveTokenCache = { token: r.access_token, exp: Date.now() + (r.expires_in || 3000) * 1000 };
+            try { localStorage.setItem(LS_DRIVE_LINKED, '1'); } catch(e){}
             resolve(r.access_token);
           },
           error_callback: (e) => reject(new Error((e && e.type) || 'popup')),
         });
-        tc.requestAccessToken({ prompt: driveTokenCache ? '' : 'consent' });
+        tc.requestAccessToken({ prompt: (silent || driveTokenCache) ? '' : 'consent' });
       } catch(e){ reject(e); }
     };
     if (window.google && google.accounts && google.accounts.oauth2) go();
@@ -23585,13 +23593,14 @@ async function driveList(token, folder){
   return out;
 }
 const driveFail = (e) => showToast("Couldn't reach Google Drive" + (e && /popup|access_denied|closed/.test(String(e.message)) ? ' (not allowed)' : '') + '.');
-async function backUpUploadsToDrive(){
+async function backUpUploadsToDrive(opts){
+  const auto = !!(opts && opts.auto);
   if (xferBusy) return;
   const mine = haveUploadIds();
-  if (!mine.length){ showToast('No songs on this device to back up.'); return; }
+  if (!mine.length){ if (!auto) showToast('No songs on this device to back up.'); return; }
   xferBusy = true;
   try {
-    const token = await driveToken();
+    const token = await driveToken(auto);
     const folder = await driveFolderId(token, true);
     const have = new Set((await driveList(token, folder)).map(f => f.name));
     let n = 0;
@@ -23606,7 +23615,11 @@ async function backUpUploadsToDrive(){
       n++;
     }
     showToast(n ? 'Backed up ' + n + (n === 1 ? ' song' : ' songs') + ' to your Google Drive.' : 'Everything is already in your Google Drive.');
-  } catch(e){ driveFail(e); } finally { xferBusy = false; }
+  } catch(e){
+    // an automatic backup that Google wouldn't allow without a tap falls back to a button
+    if (auto) showToast('Added to Uploads. Back up to your Google Drive?', { label: 'Back up', run: () => backUpUploadsToDrive() });
+    else driveFail(e);
+  } finally { xferBusy = false; }
 }
 // Adds every backed-up song this device doesn't have to Uploads. Title, artist
 // and cover are read from the file's own tags again, same as a fresh add.
@@ -23617,7 +23630,7 @@ async function getUploadsFromDrive(){
     const token = await driveToken();
     const folder = await driveFolderId(token, false);
     const files = folder ? (await driveList(token, folder)).filter(f => isLocalVideoId(f.name) && !localFileKeys.has(f.name)) : [];
-    if (!files.length){ showToast(folder ? 'Nothing new in your Google Drive.' : 'No EBBLESS songs in your Google Drive yet. Back them up first.'); return; }
+    if (!files.length){ showToast(folder ? 'Nothing new in your Google Drive.' : 'Nothing backed up yet. On the device with your songs, open Uploads and tap Back up to Google Drive.'); return; }
     ensureUploadsPlaylist();
     const tracks = [];
     for (const f of files){
@@ -23643,7 +23656,7 @@ function buildUploadsBar(){
   const bar = document.createElement('div');
   bar.className = 'currents-hint';
   const txt = document.createElement('div');
-  txt.textContent = 'Uploads stay on this device. Back them up to your Google Drive to keep a copy or add them to another device.';
+  txt.textContent = driveLinked() ? 'Uploads stay on this device. New songs back up to your Google Drive on their own, so you can add them to another device.' : 'Uploads stay on this device. Back them up to your Google Drive to keep a copy or add them to another device.';
   bar.appendChild(txt);
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
@@ -25197,10 +25210,12 @@ function recordTick(ts){
   recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * recGameMul * wow;
   recordApplyRotation();
   if (recGame.on){
+    recGame.line -= (dt / 1000) * REC_GAME_LINE_DEG_S;
+    recGameCue.style.transform = 'rotate(' + (recGame.line % 360).toFixed(2) + 'deg)';
     // the game only lives in fullscreen: leaving it (or the record style) drops the run quietly
     if (!recordGameInFlow()) recordGameCancel();
     // let the required 0deg pass go by untapped and the run is over
-    else if (recAngle > (recGame.rev + (recGame.grace ? 2 : 1)) * 360 + REC_GAME_HIT_DEG) recordGameEnd();
+    else if (recAngle - recGame.line > (recGame.rev + (recGame.grace ? 2 : 1)) * 360 + REC_GAME_HIT_DEG) recordGameEnd();
   }
   if (recSpeedMul <= 0 && recTargetMul === 0){ recRafId = null; recLastTs = 0; return; }
   recRafId = requestAnimationFrame(recordTick);
@@ -25237,7 +25252,9 @@ const recGameScoreEl = recGameHud.querySelector('.rec-game-score'), recGameBestE
 const recGameDot = recGameEl.querySelector('.rec-game-dot');
 const recGameMark = recGameEl.querySelector('.rec-game-mark'), recGameRing = recGameEl.querySelector('.rec-game-ring');
 const recGameFlare = recGameEl.querySelector('.rec-game-flare');
-const recGame = { on: false, score: 0, best: 0, startBest: 0, newBest: false, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
+const recGameCue = recGameEl.querySelector('.rec-game-cue');
+const REC_GAME_LINE_DEG_S = 10; /* the cue line creeps round this fast, against the platter's spin */
+const recGame = { line: 0, on: false, score: 0, best: 0, startBest: 0, newBest: false, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
 /* same window as DOUBLE_TAP_MS in the art double-tap handler */
 const REC_GAME_DBL_MS = 300;
 function recordGameReadBest(){ try { return parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){ return 0; } }
@@ -25248,6 +25265,7 @@ function recordGameCancel(){
   clearTimeout(recGame.overT);
   recGameEl.classList.remove('is-game');
   recGameDot.style.top = '';
+  recGame.line = 0; recGameCue.style.transform = '';
   // fade back in the visual tabs (issue #296)
   document.getElementById('visualTabs')?.classList.remove('rec-game-active');
   recGameHud.dataset.phase = '';
@@ -25256,20 +25274,26 @@ function recordGameCancel(){
 let recGameMul = 1;
 function recordGameAngleNow(){
   const rate = REC_DEG_PER_S * recSpeedMul * recGameMul / 1000;
-  return recAngle + (recLastTs ? Math.max(0, Math.min(64, performance.now() - recLastTs)) * rate : 0);
+  const dtMs = recLastTs ? Math.max(0, Math.min(64, performance.now() - recLastTs)) : 0;
+  /* relative to the cue line, which turns the other way */
+  return recAngle - recGame.line + dtMs * (rate + (recGame.on ? REC_GAME_LINE_DEG_S / 1000 : 0));
 }
 function recordGameRender(){
   recGameScoreEl.textContent = recGame.score;
   recGameBestEl.textContent = 'Best ' + recGame.best;
-  recGameDot.style.top = Math.min(REC_GAME_DOT_MAX, REC_GAME_DOT_TOP + Math.max(0, recGame.score - 1) * REC_GAME_DOT_STEP) + '%';
+  /* once the dot has reached its closest point, the next point sends it back to the rim */
+  const lanes = Math.floor((REC_GAME_DOT_MAX - REC_GAME_DOT_TOP) / REC_GAME_DOT_STEP) + 1;
+  recGameDot.style.top = (REC_GAME_DOT_TOP + (Math.max(0, recGame.score - 1) % lanes) * REC_GAME_DOT_STEP) + '%';
 }
 function recordGameStart(){
   clearTimeout(recGame.overT);
   // grace: the next 0deg pass may be tapped but needn't be, so a run armed
   // just before 0deg isn't lost on a pass the player had no time for
   const best = recordGameReadBest();
+  recGame.line = 0; recGameCue.style.transform = '';
   Object.assign(recGame, { on: true, score: 0, best, startBest: best, newBest: false, rev: Math.floor(recordGameAngleNow() / 360), grace: true });
   recGameMul = 1;
+  recGame.line = 0; recGameCue.style.transform = '';
   recGameHud.classList.remove('is-new');
   recGameEl.classList.add('is-game');
   closeArtStyleMenu(); // issue #235: no art-style menu over a run
@@ -25282,6 +25306,7 @@ function recordGameEnd(){
   recGame.on = false;
   recGameEl.classList.remove('is-game');
   recGameDot.style.top = '';
+  recGame.line = 0; recGameCue.style.transform = '';
   // fade back in the visual tabs (issue #296)
   document.getElementById('visualTabs')?.classList.remove('rec-game-active');
   recGameHud.dataset.phase = 'over';
@@ -26526,7 +26551,7 @@ function marqueeFlush(win){
     it.overflow = (!reduced && it.cw) ? it.span.scrollWidth - it.cw : 0;
   });
   // ...then build every scrolling track...
-  const moving = items.filter(it => it.overflow > 4);
+  const moving = items.filter(it => it.overflow > 1);
   moving.forEach(it => {
     const el = it.el, doc = el.ownerDocument, gap = 48;
     const track = doc.createElement('span');
@@ -26563,26 +26588,32 @@ function marqueeFlush(win){
 // while it's actually on screen.
 function marqueeVisibilityObserve(el, win){
   if (typeof win.IntersectionObserver !== 'function') return;
-  if (!win._marqueeVisObs){
-    win._marqueeVisObs = new win.IntersectionObserver(entries => entries.forEach(e => {
+  // Library thumbs get a plain observer (no IO v2 visibility tracking): that
+  // mode is unreliable for the transformed/composited cards and never
+  // re-reported after the Mac app's window was hidden and shown (Geethub #601).
+  const lib = !!el.closest('.lib-card'), key = lib ? '_marqueeVisObsLib' : '_marqueeVisObs';
+  if (!win[key]){
+    win[key] = new win.IntersectionObserver(entries => entries.forEach(e => {
       // removed from the page (library re-render): stop watching it
-      if (!e.target.isConnected){ win._marqueeVisObs.unobserve(e.target); e.target._marqueeVisObserved = false; return; }
+      if (!e.target.isConnected){ win[key].unobserve(e.target); e.target._marqueeVisObserved = false; return; }
       const a = e.target._marqueeAnim;
       // isVisible (Chrome IO v2) is false for visibility:hidden / opacity:0 / covered
       // elements, which plain isIntersecting ignores (a marquee kept running inside a
-      // hidden overlay); undefined elsewhere, so those fall back to isIntersecting
-      // Geethub #601: library thumb titles sit under transformed/composited cards that
-      // IO v2 reports as "not visible" forever, so they never scrolled; hidden library
-      // views are display:none, which isIntersecting already catches
-      const on = e.isIntersecting && (e.isVisible !== false || !!e.target.closest('.lib-card'));
+      // hidden overlay). Library cards use isIntersecting alone: a plain observer
+      // reports isVisible false for everything, and hidden library views are
+      // display:none, which isIntersecting already catches.
+      const on = e.isIntersecting && (lib || e.isVisible !== false);
       e.target._marqueeOnScreen = on;
       if (!a) return;
       if (on){ if (a.playState === 'paused') a.play(); }
       else if (a.playState === 'running') a.pause();
-    }), { rootMargin: '64px', trackVisibility: true, delay: 200 });
+    }), lib ? { rootMargin: '64px' } : { rootMargin: '64px', trackVisibility: true, delay: 200 });
   }
-  if (el._marqueeOnScreen === false && el._marqueeAnim) el._marqueeAnim.pause();
-  if (!el._marqueeVisObserved){ win._marqueeVisObs.observe(el); el._marqueeVisObserved = true; }
+  // observe afresh on every (re)build so a stale on/off flag can't keep a new
+  // animation paused: observe() always delivers a new initial entry
+  if (el._marqueeVisObserved) win[key].unobserve(el);
+  el._marqueeVisObserved = true;
+  win[key].observe(el);
 }
 
 // Shared overflow marquee for every other ellipsis line (lists, queue, cards,
