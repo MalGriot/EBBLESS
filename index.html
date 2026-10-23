@@ -1442,6 +1442,12 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 .rec-game-dot{position:absolute;top:3.5%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;
   background:var(--accent);opacity:0;transition:opacity var(--dur-ui) var(--ease-out),top var(--dur-surface) var(--ease-out);pointer-events:none}
 .art-record.is-game .rec-game-mark,.art-record.is-game .rec-game-dot{opacity:.9}
+.rec-game-intro{position:absolute;top:50%;left:50%;width:62%;transform:translate(-50%,-50%);box-sizing:border-box;padding:14px 16px;border-radius:14px;
+  background:rgba(0,0,0,.78);color:var(--text);text-align:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity var(--dur-ui) var(--ease-out),visibility 0s linear var(--dur-ui)}
+.rec-game-intro.is-on{opacity:1;visibility:visible;transition:opacity var(--dur-ui) var(--ease-out)}
+.rec-game-intro-title{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+.rec-game-intro-rules{margin-top:8px;font-size:12px;line-height:1.45;color:var(--text);opacity:.8}
+.rec-game-count{margin-top:8px;font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
 .rec-game-hud{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);display:flex;align-items:baseline;gap:10px;
   padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.55);color:var(--text);font-variant-numeric:tabular-nums;
   white-space:nowrap;pointer-events:none;opacity:0}
@@ -4322,6 +4328,7 @@ body.week-up-on{overflow:hidden}
               <div class="rec-game-dot"></div>
             </div>
             <div class="rec-game-cue"><div class="rec-game-mark"></div><div class="rec-game-ring"></div></div>
+            <div class="rec-game-intro" aria-hidden="true"><div class="rec-game-intro-title">LP game</div><div class="rec-game-intro-rules">Tap the record when the dot meets the line.<br>Every hit speeds it up and pulls the dot toward the label.<br>One miss and it's over.</div><div class="rec-game-count"></div></div>
             <div class="rec-game-flare" aria-hidden="true">New best</div>
             <div class="rec-game-hud" aria-hidden="true"><span class="rec-game-score"></span><span class="rec-game-best"></span></div>
           </div>
@@ -25223,7 +25230,7 @@ function recordTick(ts){
 function recordSetPlaying(isPlaying){
   if (recReducedMotion){ recTargetMul = 0; recSpeedMul = 0; recAngle = 0; recordApplyRotation(); return; }
   recTargetMul = isPlaying ? 1 : 0;
-  if (!isPlaying){ if (recGame.on) recordGameEnd(); recGameMul = 1; }
+  if (!isPlaying){ recordGameIntroStop(); if (recGame.on) recordGameEnd(); recGameMul = 1; }
   if (!recRafId){ recLastTs = 0; recRafId = requestAnimationFrame(recordTick); }
 }
 recordApplyRotation();
@@ -25253,8 +25260,9 @@ const recGameDot = recGameEl.querySelector('.rec-game-dot');
 const recGameMark = recGameEl.querySelector('.rec-game-mark'), recGameRing = recGameEl.querySelector('.rec-game-ring');
 const recGameFlare = recGameEl.querySelector('.rec-game-flare');
 const recGameCue = recGameEl.querySelector('.rec-game-cue');
+const recGameIntro = recGameEl.querySelector('.rec-game-intro'), recGameCount = recGameIntro.querySelector('.rec-game-count');
 const REC_GAME_LINE_DEG_S = 10; /* the cue line creeps round this fast, against the platter's spin */
-const recGame = { line: 0, on: false, score: 0, best: 0, startBest: 0, newBest: false, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
+const recGame = { intro: false, introT: 0, line: 0, on: false, score: 0, best: 0, startBest: 0, newBest: false, rev: 0, grace: false, downAt: 0, downAngle: 0, overT: 0, lastTap: 0, stored: null };
 /* same window as DOUBLE_TAP_MS in the art double-tap handler */
 const REC_GAME_DBL_MS = 300;
 function recordGameReadBest(){ try { return parseInt(localStorage.getItem(LS_REC_GAME_BEST), 10) || 0; } catch(err){ return 0; } }
@@ -25284,6 +25292,30 @@ function recordGameRender(){
   /* once the dot has reached its closest point, the next point sends it back to the rim */
   const lanes = Math.floor((REC_GAME_DOT_MAX - REC_GAME_DOT_TOP) / REC_GAME_DOT_STEP) + 1;
   recGameDot.style.top = (REC_GAME_DOT_TOP + (Math.max(0, recGame.score - 1) % lanes) * REC_GAME_DOT_STEP) + '%';
+}
+/* rules card + 3-2-1 before every run; taps are ignored until it hands over to recordGameStart */
+function recordGameIntroStop(){
+  clearTimeout(recGame.introT);
+  recGame.intro = false;
+  recGameIntro.classList.remove('is-on');
+}
+function recordGameIntro(){
+  if (recGame.on) recordGameCancel();
+  clearTimeout(recGame.overT);
+  recGameHud.dataset.phase = '';
+  closeArtStyleMenu();
+  recGame.intro = true;
+  recGameIntro.classList.add('is-on');
+  let n = 3;
+  const step = () => {
+    if (!recGame.intro) return;
+    if (!recordGameInFlow() || recTargetMul !== 1){ recordGameIntroStop(); return; }
+    if (n === 0){ recordGameIntroStop(); recordGameStart(); return; }
+    recGameCount.textContent = n--;
+    if (!recReducedMotion && recGameCount.animate) recGameCount.animate([{ transform: 'scale(1.5)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.16,1,.3,1)' });
+    recGame.introT = setTimeout(step, 1000);
+  };
+  step();
 }
 function recordGameStart(){
   clearTimeout(recGame.overT);
@@ -25422,6 +25454,7 @@ recGameEl.addEventListener('pointerdown', () => {
 });
 function recordGameTap(){
   if (!recordGameInFlow()) return;
+  if (recGame.intro) return;
   const now = Date.now();
   const a = performance.now() - recGame.downAt < 1000 ? recGame.downAngle : recordGameAngleNow();
   recGame.downAt = 0;
@@ -25433,7 +25466,7 @@ function recordGameTap(){
       try { if (recGame.stored) localStorage.setItem(LS_REC_GAME_BEST, String(recGame.stored)); else localStorage.removeItem(LS_REC_GAME_BEST); } catch(err){}
     }
     recGame.stored = null;
-    if (!recReducedMotion && recTargetMul === 1) recordGameStart();
+    if (!recReducedMotion && recTargetMul === 1) recordGameIntro();
     return;
   }
   recGame.lastTap = now;
