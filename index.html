@@ -27991,13 +27991,13 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'h': case 'H':
       // home (Geethub #245): back to the main player view from anywhere -
-      // every fullscreen layer closed, then the wordmark's own setView('player')
+      // every fullscreen layer closed, then setView('player')
       // (closes the queue / playlist panel, steps out of Settings). Settings
       // opened from desktop fullscreen would otherwise restore it.
       if (e.repeat) break;
       leaveFullscreen(true);
       state.settingsFromDeskFs = false;
-      $('wordmarkBtn').click();
+      setView('player'); // not the wordmark click: that returns to the splash where the mini player is supported (#661)
       break;
     case 'Escape':
       // The YouTube video card first (Geethub #249: it sits over everything,
