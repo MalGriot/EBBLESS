@@ -70,7 +70,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v18';
+const SEARCH_CACHE_VERSION = 'v21';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -603,8 +603,15 @@ async function fetchYouTubeMusicSongs(query) {
     // unrelated popular songs. Keep a result only if it shares the start of a
     // query word with its title, artist or album ('kendrik' still finds
     // Kendrick); if none do, there is no match and the list is empty.
-    const words = query.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 3);
-    const relevant = words.length ? kept.filter(c => words.some(w => c.hay.includes(w.slice(0, 3)))) : kept;
+    // A longer phrase needs most of its words to show up, so "walking the
+    // dogs in the park" doesn't return every song called "Park".
+    const words = query.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 3 && !/^(the|and|for|with|from|that|this|you|are|was)$/.test(w));
+    const need = words.length >= 3 ? Math.ceil(words.length * 2 / 3) : 1;
+    const stems = words.map(w => { const s = w.replace(/(ing|ed|es|s)$/, '') || w; return s.length <= 4 ? s : s.slice(0, s.length - 1); });
+    const relevant = words.length ? kept.filter(c => {
+      const hw = c.hay.split(/[^\p{L}\p{N}]+/u);
+      return stems.filter(s => hw.some(h => h.startsWith(s))).length >= need;
+    }) : kept;
     return relevant.map(({ playCount, hay, ...c }) => c);
   } catch (e) {
     return null;
@@ -620,7 +627,7 @@ async function handleRawSearch(query, count, ctx) {
   // null = YouTube Music unreachable; [] = reachable and nothing matched.
   if (found && !found.length) return json({ raw: true, candidates: [] });
   let fellBack = false;
-  if (!found || found.length < 2) {
+  if (!found) {
     fellBack = true;
     try {
       found = await fetchYouTubeSearchCandidates(query);
