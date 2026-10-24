@@ -10499,7 +10499,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10582,7 +10582,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499). Fixed: every cursor shape now has a dark outer edge and light inner edge, so it shows on any color. Cache v265.
 
 ### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10590,7 +10590,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #529. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #528. Investigate and implement.
 - **Touches:** ad handling.
@@ -10598,7 +10598,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #528. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub #527. Investigate and implement.
 - **Touches:** ad handling.
@@ -10646,7 +10646,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #520. Playlist-transfer research lane. Research written, see docs/research/TRANSFER-APPS.md (all four transfer apps compared, ranked recommendations at the end). Top picks: found-X-of-Y result with missing list, one-tap fix for a wrong match, paste a list of song names.
 
 ### vibe-cnn-research: Research convolutional neural networks to catch a listener's vibe 95% accurately (Geethub #519)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #519. Research whether CNNs could make vibe matching far more accurate.
 - **Touches:** research only.
@@ -10830,7 +10830,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #570. Diagnosed 2026-10-18 (agent/web-bugs-2). Reproduced in a browser with no SoundCloud sign-in: SoundCloud's own player reports a per-song `policy` and for some songs it is BLOCK, the player shows "This track is not available in your country" and never plays; the app did not notice, so the deck just sat silent (no ERROR/policy handling existed for SoundCloud). So "plays only for me because I'm logged in" is really SoundCloud's per-listener rights check (country and account), not a login wall: the owner's account passes it, others get BLOCK (or SNIP, a 30 second preview, for Go+ songs). Checked: Kaytranada "Glowed Up" = BLOCK (silent), Flume "Never Be Like You" and the owner's own sets = ALLOW (play fine, no change). Built (cache v325): the deck adapter reads the sound's policy once it loads (and listens for the widget's ERROR); on BLOCK, SNIP or ERROR for the song that is playing, it re-matches the song on YouTube (same search as the broken-link repair) and swaps to the best copy, with a toast ("SoundCloud won't play this song here. Playing a YouTube copy."); if there is no other copy it says so and skips. A song loaded ahead on a standby deck is noted and handled when it is promoted (hard cut and crossfade). Each song is tried once per session. Verified in the browser preview (logged out, India): the blocked song swapped to a YouTube copy and played, an allowed SoundCloud song still played natively with no swap, no [gpu-watchdog] warnings. Not verified: SNIP (no 30 s preview song at hand), the crossfade-promotion path, the skip-when-no-copy path, Android WebView. Side effect to know: the swap goes through the same relink as the broken-link repair, so it rewrites that saved song to the YouTube link, and with profile sync that follows the account to other devices (a user in a blocked country relinks their own saved copy). Not built, on purpose: any login flow. A "log people in to SoundCloud" or one Google sign-in that logs into every music service would mean handling other people's credentials or tokens for services that do not offer that (SoundCloud has no Google single sign-on for embeds and its widget cannot be signed in from outside). Safe future options if wanted: (1) keep the SoundCloud link and add a second, per-device playback source instead of rewriting the saved song; (2) an "Open on SoundCloud" row for songs with no YouTube copy; (3) a small setting "Prefer YouTube for SoundCloud songs".
 
 ### since-soundcloud-needs-a-login-to: since soundcloud needs a login to play, are there any other apps we could get into the list of music links? (Geethub #571)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #571. medium we can log the person in at the start and the world of music will be wide open to them. make a list of free music apps that have the least redundancy that would be useful to have in this app. it may be that some m
 - **Touches:** tbd.
@@ -10838,7 +10838,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #571.
 
 ### reverse-engineer-youtube-and-find-out: reverse engineer youtube and find out where the ads are coming from so we can stop them (Geethub #572)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** low
 - **Description:** Idea, Geethub #572. medium
 - **Touches:** tbd.
@@ -11503,3 +11503,59 @@ Add entries in this shape:
 - **Touches:** window panel CSS (libpl-panel, hist-panel, view-library).
 - **Branch:** main
 - **Notes:** Synced from Geethub #660. Deleted the #626 pseudo-element block; cache v391.
+
+### lyrics-not-working-664: Lyrics not working for almost any song (Geethub #664)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Lyrics fail to load for almost any song. No details given. Related to the merged lyrics-accuracy entry, but this reports a broad failure, so check the lyrics source/fetch first for an outage or a regression.
+- **Touches:** lyrics fetch/matching
+- **Branch:**
+- **Notes:** Synced from GitHub issue #664 (bug); issue body was empty beyond the title.
+
+### beta-rejoin-extension-663: Beta testers who rejoin after the 2-week window get another 2 weeks, repeating until stopped (Geethub #663)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Once a tester rejoins the beta after their 2-week window ends, give them another 2 weeks. Repeat indefinitely until the owner says stop.
+- **Touches:** beta access / tester window
+- **Branch:**
+- **Notes:** Synced from GitHub issue #663 (idea); issue body was empty beyond the title.
+
+### search-music-only-662: Search shows random YouTube videos, not just music (Geethub #662)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Search returns everything on YouTube (random videos etc.). Find a way to tell music from other content and favor/limit to music.
+- **Touches:** search results
+- **Branch:**
+- **Notes:** Synced from GitHub issue #662 (bug); issue body was empty beyond the title.
+
+### h-key-goes-to-main-view-661: Pressing h should go to the main view (player, library, queue), not the splash (Geethub #661)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** The h shortcut sends you to the splash. It should go to the main view with player, library and queue.
+- **Touches:** keyboard shortcuts / navigation
+- **Branch:**
+- **Notes:** Synced from GitHub issue #661 (bug); issue body was empty beyond the title.
+
+### cool-visualizer-zoomquilt-641: Visualizer idea: zoomquilt-style infinite zoom (Geethub #641)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea link: https://zoomquilt.org/ (endless zooming artwork). Consider an art/visualizer mode in that spirit. Follow the GPU budget rules in CLAUDE.md.
+- **Touches:** visualizer / art modes
+- **Branch:**
+- **Notes:** Synced from GitHub issue #641 (idea); issue body was empty beyond the title.
+
+### donate-button-640: Donate button (Geethub #640)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Add a donate button. No details given. Ask owner where it should live and what it links to before building.
+- **Touches:** settings/about
+- **Branch:**
+- **Notes:** Synced from GitHub issue #640 (idea); issue body was empty beyond the title.
+
+### natural-visuals-ambient-sounds-637: Big natural visuals with ambient sounds alongside (Geethub #637)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Big beautiful natural visuals with ambient sounds alongside. Related to ambient-soundscapes and echo-ambient-library entries; probably should be folded into them.
+- **Touches:** art modes / ambient
+- **Branch:**
+- **Notes:** Synced from GitHub issue #637 (idea); issue body was empty beyond the title.
