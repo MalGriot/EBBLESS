@@ -593,8 +593,13 @@ async function fetchYouTubeMusicSongs(query) {
     }
     // Audiobook chapters and uploads nobody plays sit in the Songs shelf for
     // odd queries; drop them when real songs remain.
-    const popular = out.filter(c => c.playCount >= 1000);
-    return (popular.length >= 2 ? popular : out).map(({ playCount, ...c }) => c);
+    // Talks and sermons also land here: nothing over 10 minutes is a song.
+    let kept = out.filter(c => !c.duration || c.duration <= 600);
+    for (const min of [100000, 1000]) {
+      const popular = kept.filter(c => c.playCount >= min);
+      if (popular.length >= 3) { kept = popular; break; }
+    }
+    return kept.map(({ playCount, ...c }) => c);
   } catch (e) {
     return [];
   }
