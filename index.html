@@ -25705,6 +25705,43 @@ applyVisualMode();
    switching tabs back and forth doesn't re-fetch.
    ========================================================================= */
 
+async function lrclibDirect(title, artist, dur){
+  const fold = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/\s*[\(\[][^\)\]]*[\)\]]/g, ' ').replace(/\s+-\s+.*$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const tn = fold(title);
+  const an = fold(String(artist || '').split(/\s*(?:,|&|\sfeat\.?\s|\sft\.?\s|\sx\s)\s*/i)[0]);
+  if (!tn) return null;
+  const q = new URLSearchParams({ track_name: String(title || '').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+-\s+.*$/, '').trim() });
+  if (an) q.set('artist_name', String(artist).split(/\s*(?:,|&|\sfeat\.?\s|\sft\.?\s|\sx\s)\s*/i)[0]);
+  const res = await fetch('https://lrclib.net/api/search?' + q.toString());
+  if (!res.ok) return null;
+  const list = await res.json();
+  let best = null, bestScore = -1;
+  (Array.isArray(list) ? list : []).forEach(r => {
+    if (r.instrumental || !(r.syncedLyrics || r.plainLyrics)) return;
+    if (fold(r.trackName) !== tn) return;
+    const ra = fold(r.artistName);
+    const artistOk = !an || ra.includes(an) || an.includes(ra);
+    const diff = dur && r.duration ? Math.abs(r.duration - dur) : null;
+    if (!artistOk && !(diff != null && diff <= 10)) return;
+    let sc = (artistOk ? 3 : 0) + (r.syncedLyrics ? 2 : 0);
+    if (diff != null) sc += diff <= 3 ? 3 : diff <= 10 ? 2 : diff > 20 ? -4 : 0;
+    if (sc > bestScore){ best = r; bestScore = sc; }
+  });
+  if (!best) return null;
+  if (best.syncedLyrics){
+    const lines = [];
+    best.syncedLyrics.split('\n').forEach(raw => {
+      const m = raw.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+      const text = m && m[3].trim();
+      if (text) lines.push({ t: parseInt(m[1], 10) * 60 + parseFloat(m[2]), text });
+    });
+    if (lines.length) return { synced: true, source: 'lrclib', lines };
+  }
+  const lines = String(best.plainLyrics || '').split('\n').map(l => l.trim()).filter(Boolean).map(text => ({ t: null, text }));
+  return lines.length ? { synced: false, source: 'lrclib', lines } : null;
+}
+
 async function fetchLyrics(t){
   if (lyricsCache.has(t.videoId)) return lyricsCache.get(t.videoId);
   const params = new URLSearchParams({ videoId: t.videoId, title: t.title || '', artist: t.artist || '' });
@@ -25712,9 +25749,19 @@ async function fetchLyrics(t){
   // cut vs live/acoustic) - prefer the source's own length, else the video's.
   const dur = t.srcDuration || t.duration || 0;
   if (dur) params.set('duration', String(Math.round(dur)));
-  const res = await fetch(BACKEND + '/lyrics?' + params.toString());
-  if (!res.ok) throw new Error('lyrics fetch failed');
-  const data = await res.json();
+  let data = null;
+  try {
+    const res = await fetch(BACKEND + '/lyrics?' + params.toString());
+    if (res.ok) data = await res.json();
+  } catch (e) { /* fall through to the direct lookup */ }
+  // The worker's lrclib lookup comes back empty for almost everything when
+  // lrclib refuses the worker's shared server address (#664). lrclib allows
+  // browsers (CORS *), so ask it directly from this device instead.
+  if (!data || !(data.lines && data.lines.length)){
+    const direct = await lrclibDirect(t.title, t.artist, dur).catch(() => null);
+    if (direct) data = direct;
+  }
+  if (!data) throw new Error('lyrics fetch failed');
   lyricsCache.set(t.videoId, data);
   if (lyricsCache.size > 60) lyricsCache.delete(lyricsCache.keys().next().value);
   return data;
