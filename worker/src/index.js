@@ -571,7 +571,7 @@ async function fetchYouTubeMusicSongs(query) {
         params: 'EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D', // Songs filter
       }),
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const data = await res.json();
     const items = [];
     deepFindKey(data, 'musicResponsiveListItemRenderer', items);
@@ -589,7 +589,7 @@ async function fetchYouTubeMusicSongs(query) {
       const duration = dm ? (+(dm[1] || 0)) * 3600 + (+dm[2]) * 60 + (+dm[3]) : 0;
       const plays = /^([\d.]+)([KMB]?) plays?$/.exec(cols[2] || '');
       const playCount = plays ? parseFloat(plays[1]) * ({ K: 1e3, M: 1e6, B: 1e9 }[plays[2]] || 1) : 0;
-      if (title && videoId) out.push({ videoId, title, channel: (parts[0] || '').trim(), duration, playCount });
+      if (title && videoId) out.push({ videoId, title, channel: (parts[0] || '').trim(), duration, playCount, hay: (title + ' ' + (cols[1] || '')).toLowerCase() });
     }
     // Audiobook chapters and uploads nobody plays sit in the Songs shelf for
     // odd queries; drop them when real songs remain.
@@ -599,9 +599,15 @@ async function fetchYouTubeMusicSongs(query) {
       const popular = kept.filter(c => c.playCount >= min);
       if (popular.length >= 3) { kept = popular; break; }
     }
-    return kept.map(({ playCount, ...c }) => c);
+    // YouTube Music pads a query with no real match ("writing a book") with
+    // unrelated popular songs. Keep a result only if it shares the start of a
+    // query word with its title, artist or album ('kendrik' still finds
+    // Kendrick); if none do, there is no match and the list is empty.
+    const words = query.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 3);
+    const relevant = words.length ? kept.filter(c => words.some(w => c.hay.includes(w.slice(0, 3)))) : kept;
+    return relevant.map(({ playCount, hay, ...c }) => c);
   } catch (e) {
-    return [];
+    return null;
   }
 }
 
@@ -611,7 +617,9 @@ async function handleRawSearch(query, count, ctx) {
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
   let found = await fetchYouTubeMusicSongs(query);
-  if (found.length < 2) {
+  // null = YouTube Music unreachable; [] = reachable and nothing matched.
+  if (found && !found.length) return json({ raw: true, candidates: [] });
+  if (!found || found.length < 2) {
     try {
       found = await fetchYouTubeSearchCandidates(query);
     } catch (e) {
