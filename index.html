@@ -19338,6 +19338,13 @@ function weekUpJoinInit(el, preview){
       note.textContent = (d && d.error) || 'Couldn\'t reach EBBLESS. Check your connection and try again.';
       return;
     }
+    if (d.rejoined && Number(d.windowEndsAt) > Date.now()){
+      // Auto-accepted: a fresh window is already running. Save it and reload out of the recap.
+      weekUpJoinSave(Object.assign(weekUpMe(), { windowEndsAt: Number(d.windowEndsAt), rejoin: '', feedbackGiven: null }));
+      btn.textContent = 'YOU\'RE BACK IN'; note.textContent = 'Fresh 2 weeks, starting now.';
+      setTimeout(() => location.reload(), 1200);
+      return;
+    }
     const me = Object.assign(weekUpMe(), { rejoin: 'requested', feedbackGiven: true, nextRoundAt: Number(d.nextRoundAt) || null, nextRoundLabel: String(d.nextRoundLabel || '') });
     if (Number(d.nextRound) > 0) me.nextRound = Number(d.nextRound);
     weekUpJoinSet(btn, note, weekUpJoinSave(me));

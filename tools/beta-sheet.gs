@@ -34,6 +34,11 @@
 // later, which sets the window like a new tester's). Same token, so their
 // history is untouched.
 //
+// Auto rejoin (issue #663): by default the rejoin is accepted on the spot, so
+// a tester who sends feedback and taps "Join the next beta" gets a fresh 2
+// weeks starting now, again and again. Settings auto_rejoin = off stops it
+// (rejoins queue as Pending for you to accept by hand, as described above).
+//
 // Testers.round is the beta round each tester is in (blank = 1, and setup
 // fills blanks with 1). New acceptances get the current round: next_round
 // once its start date has passed, else the one before it.
@@ -549,10 +554,20 @@ function tokenByEmail_(email, wantPlaylist, wantMusic) {
 
 // Settings tab: next_round (number, blank = 2) and next_round_start (the
 // date it opens, blank = no date yet). {number, at, label}.
-function nextRound_() {
+function settingVal_(k) {
   const sh = sheet_(SETTINGS);
-  const recs = sh ? records_(sh) : [];
-  const val = function (k) { const r = recs.filter(function (x) { return String(x.setting).trim() === k; })[0]; return r ? r.value : ''; };
+  const r = (sh ? records_(sh) : []).filter(function (x) { return String(x.setting).trim() === k; })[0];
+  return r ? r.value : '';
+}
+// Settings auto_rejoin (issue #663): anything but off/no/false/stop/0 (a
+// blank or missing row too) means a tester whose rejoin passes the feedback
+// check is accepted on the spot with a fresh 2 weeks, every round, until the
+// owner sets it to off.
+function autoRejoin_() {
+  return ['off', 'no', 'false', 'stop', '0'].indexOf(String(settingVal_('auto_rejoin')).trim().toLowerCase()) < 0;
+}
+function nextRound_() {
+  const val = settingVal_;
   const at = ms_(val('next_round_start'));
   return { number: parseInt(val('next_round'), 10) || 2, at: at, label: at ? Utilities.formatDate(new Date(at), Session.getScriptTimeZone(), 'MMM d') : '' };
 }
@@ -618,6 +633,17 @@ function rejoin_(token) {
   if (res.gone) return { ok: true, tester: null };
   const round = nextRound_();
   if (res.needsFeedback) return { ok: true, needs_feedback: true, tester: { id: res.t.tester_id }, next_round: nextRoundFor_(res.t, round) };
+  if (!res.already && autoRejoin_()) {
+    // Auto-accept: same path as setting the applicant to Accepted by hand.
+    const t = records_(tsh).filter(function (x) { return x.tester_id === res.t.tester_id; })[0];
+    const a = t && records_(ash).filter(function (x) { return x.applicant_id && x.applicant_id === t.applicant_id; })[0];
+    if (a) {
+      setCell_(ash, a._row, 'applicant_status', 'Accepted');
+      acceptRow_(a._row, 'Pending', true);
+      const me = me_(token, false, false);
+      return { ok: true, already: false, rejoined: true, tester: me.tester || { id: res.t.tester_id }, next_round_start: round.at || null, next_round_label: round.label, next_round: nextRoundFor_(res.t, round) };
+    }
+  }
   if (!res.already) {
     const first = String(res.t.name || '').split(/\s+/)[0];
     sendMail_(res.t.email, 'EBBLESS BETA: you\'re on the list for the next round', 'Peace ' + first + ',\n\nThanks for the feedback. Got it, you want in on the next EBBLESS beta round' +
@@ -800,7 +826,7 @@ function activity_(b) {
 
 // Applicant row -> Tester row. Called when applicant_status becomes Accepted.
 // The cap only closes public signups; accepting by hand can go over it.
-function acceptRow_(rowNum, previous) {
+function acceptRow_(rowNum, previous, auto) {
   const ash = sheet_(APPLICANTS), tsh = sheet_(TESTERS);
   const result = withLock_(function () {
     const a = records_(ash).filter(function (r) { return r._row === rowNum; })[0];
@@ -811,7 +837,8 @@ function acceptRow_(rowNum, previous) {
       // A rejoin: same tester row, number and token (history stays), fresh 7
       // days from window_start, never before the next round opens.
       const round = nextRound_();
-      const start = new Date(Math.max(Date.now(), round.at));
+      // auto (auto_rejoin): the window opens now, not at next_round_start.
+      const start = new Date(auto ? Date.now() : Math.max(Date.now(), round.at));
       setCell_(tsh, existing._row, 'window_start', start);
       // Never backwards, in case next_round wasn't bumped after a round opened.
       setCell_(tsh, existing._row, 'round', Math.max(round.number, (parseInt(existing.round, 10) || 1) + 1));
@@ -1030,7 +1057,8 @@ function setup() {
   ensureHeaders_(set, ['setting', 'value', 'about']);
   set.setFrozenRows(1);
   [['next_round', 2, 'Round number accepted rejoins move into (Testers.round). Bump it once that round has opened, before the next one.'],
-   ['next_round_start', '', 'Date that round opens. Accepted rejoins get a fresh 2 weeks from this date (or from when you accept, if later). Testers see it on the Join the next beta button.']]
+   ['next_round_start', '', 'Date that round opens. Accepted rejoins get a fresh 2 weeks from this date (or from when you accept, if later). Testers see it on the Join the next beta button.'],
+   ['auto_rejoin', 'on', 'on = a tester who rejoins (after sending feedback) is accepted automatically with a fresh 2 weeks, every round, until you stop it. Set to off to go back to accepting rejoins by hand.']]
     .forEach(function (d) {
       if (!records_(set).some(function (r) { return String(r.setting).trim() === d[0]; })) append_(set, { setting: d[0], value: d[1], about: d[2] });
     });

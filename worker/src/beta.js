@@ -262,6 +262,8 @@ async function handleRejoin(request, env, ctx, h) {
   const round = Number(r.next_round) > 0 ? Number(r.next_round) : 0;
   // No beta feedback form from them this round: the Sheet refused, say why.
   if (r.needs_feedback) return h.json({ error: 'Share your feedback for this round first. It unlocks ' + (round ? 'Round ' + round : 'the next round') + '.', needsFeedback: true, feedbackGiven: false, ...(round ? { nextRound: round } : {}) }, 409);
+  // Auto-accepted (Settings auto_rejoin on): the fresh window is already running.
+  if (r.rejoined) return h.json({ ok: true, rejoined: true, rejoin: 'accepted', feedbackGiven: true, windowEndsAt: windowEndsAt(r.tester), ...rejoinFields(r.tester) });
   return h.json({ ok: true, already: !!r.already, rejoin: 'requested', feedbackGiven: true, ...rejoinFields({ next_round_start: r.next_round_start, next_round_label: r.next_round_label, next_round: r.next_round }) });
 }
 
