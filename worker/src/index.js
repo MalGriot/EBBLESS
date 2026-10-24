@@ -70,7 +70,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v15';
+const SEARCH_CACHE_VERSION = 'v16';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -554,16 +554,64 @@ function snippetNamesAlbum(snippet, album) {
     .some(a => a.length > 1 && hay.includes(' ' + a + ' '));
 }
 
+// Songs-only search (#662): YouTube Music's own "Songs" filter, so a
+// free-text search never mixes in interviews, tutorials, mixes or podcasts.
+// Returns the same { videoId, title, channel, duration } shape as the
+// YouTube scrape, or [] when YouTube Music can't be reached so the caller
+// falls back to the plain YouTube results.
+async function fetchYouTubeMusicSongs(query) {
+  try {
+    const res = await fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://music.youtube.com',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36' },
+      body: JSON.stringify({
+        context: { client: { clientName: 'WEB_REMIX', clientVersion: '1.20240918.01.00', hl: 'en', gl: 'US' } },
+        query,
+        params: 'EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D', // Songs filter
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = [];
+    deepFindKey(data, 'musicResponsiveListItemRenderer', items);
+    const out = [];
+    for (const r of items) {
+      const videoId = r.playlistItemData && r.playlistItemData.videoId;
+      if (!videoId) continue;
+      const cols = (r.flexColumns || []).map(c => {
+        try { return c.musicResponsiveListItemFlexColumnRenderer.text.runs.map(x => x.text).join(''); } catch (e) { return ''; }
+      });
+      const title = cols[0] || '';
+      // "Artist • Album • 3:39" (or "Artist • 3:39")
+      const parts = (cols[1] || '').split(' \u2022 ');
+      const dm = /^(?:(\d+):)?(\d{1,2}):(\d{2})$/.exec(parts[parts.length - 1] || '');
+      const duration = dm ? (+(dm[1] || 0)) * 3600 + (+dm[2]) * 60 + (+dm[3]) : 0;
+      const plays = /^([\d.]+)([KMB]?) plays?$/.exec(cols[2] || '');
+      const playCount = plays ? parseFloat(plays[1]) * ({ K: 1e3, M: 1e6, B: 1e9 }[plays[2]] || 1) : 0;
+      if (title && videoId) out.push({ videoId, title, channel: (parts[0] || '').trim(), duration, playCount });
+    }
+    // Audiobook chapters and uploads nobody plays sit in the Songs shelf for
+    // odd queries; drop them when real songs remain.
+    const popular = out.filter(c => c.playCount >= 1000);
+    return (popular.length >= 2 ? popular : out).map(({ playCount, ...c }) => c);
+  } catch (e) {
+    return [];
+  }
+}
+
 async function handleRawSearch(query, count, ctx) {
   const cache = envCache;
   const cacheKey = new Request('https://cache.internal/search-raw/' + SEARCH_CACHE_VERSION + '/' + encodeURIComponent(query) + '/' + count);
   const cached = await cache.match(cacheKey);
   if (cached) return applyCors(cached);
-  let found;
-  try {
-    found = await fetchYouTubeSearchCandidates(query);
-  } catch (e) {
-    return json({ error: e.message }, e instanceof YouTubeBlockedError ? 503 : 502);
+  let found = await fetchYouTubeMusicSongs(query);
+  if (found.length < 2) {
+    try {
+      found = await fetchYouTubeSearchCandidates(query);
+    } catch (e) {
+      return json({ error: e.message }, e instanceof YouTubeBlockedError ? 503 : 502);
+    }
   }
   if (!found.length) return json({ error: 'no video results' }, 404);
   const candidates = found.slice(0, count).map(c => ({ videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0 }));
