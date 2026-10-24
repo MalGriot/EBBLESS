@@ -15576,9 +15576,24 @@ function addSongsCandidateToTrack(c){
   return { title: c.title || '', artist: c.channel || '', videoId: c.videoId, matchedTitle: c.title || '', channel: c.channel || '',
     duration: c.duration || 0, art: c.image || (sc ? null : refreshLinkCandidateThumb(c.videoId)), plays: 0 };
 }
+// Song search is for music (#662): YouTube's raw results mix in interviews,
+// tutorials, reactions, trailers, podcasts and hour-long streams. Drop
+// results that are clearly not a song (length outside ~30s-15min, or a
+// title that names a non-music format), keeping YouTube's order. Unknown
+// length passes. If filtering would leave fewer than 2 results, the
+// unfiltered list is kept so a rare/odd query never comes back empty.
+const NON_MUSIC_TITLE_RE = /\b(podcast|full episode|episode \d|interview|reaction|reacts? to|tutorial|how to|trailer|gameplay|walkthrough|unboxing|vlog|lecture|documentary|livestream|live stream)\b/i;
+function favorMusicCandidates(list){
+  const music = list.filter(c => {
+    const d = c.duration || 0;
+    if (d && (d < 30 || d > 900)) return false;
+    return !NON_MUSIC_TITLE_RE.test(c.title || '');
+  });
+  return music.length >= 2 ? music : list;
+}
 async function searchSongCandidates(q){
-  const yt = searchYouTube(q, '', 0, 8, undefined, true).then(d =>
-    (d.candidates && d.candidates.length) ? d.candidates : (d.videoId ? [{ videoId: d.videoId, title: d.title, channel: d.channel, duration: d.duration }] : []));
+  const yt = searchYouTube(q, '', 0, 16, undefined, true).then(d =>
+    favorMusicCandidates((d.candidates && d.candidates.length) ? d.candidates : (d.videoId ? [{ videoId: d.videoId, title: d.title, channel: d.channel, duration: d.duration }] : [])).slice(0, 8));
   const sc = searchSoundCloudTracks(q, 6);
   const [a, b] = await Promise.allSettled([sc, yt]);
   if (a.status === 'rejected' && b.status === 'rejected') throw (b.reason || a.reason || new Error('search failed'));
