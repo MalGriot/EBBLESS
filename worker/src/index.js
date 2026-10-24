@@ -70,7 +70,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v17';
+const SEARCH_CACHE_VERSION = 'v18';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -619,7 +619,9 @@ async function handleRawSearch(query, count, ctx) {
   let found = await fetchYouTubeMusicSongs(query);
   // null = YouTube Music unreachable; [] = reachable and nothing matched.
   if (found && !found.length) return json({ raw: true, candidates: [] });
+  let fellBack = false;
   if (!found || found.length < 2) {
+    fellBack = true;
     try {
       found = await fetchYouTubeSearchCandidates(query);
     } catch (e) {
@@ -630,6 +632,9 @@ async function handleRawSearch(query, count, ctx) {
   const candidates = found.slice(0, count).map(c => ({ videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0 }));
   const top = candidates[0];
   const response = json({ raw: true, videoId: top.videoId, title: top.title, channel: top.channel, duration: top.duration, candidates });
+  // A fallback answer (YouTube Music unreachable) is not cached, so one bad
+  // moment never pins unfiltered videos for hours.
+  if (fellBack) return response;
   const toCache = response.clone();
   // Short TTL: this is a live search, unlike the pinned track matches.
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
