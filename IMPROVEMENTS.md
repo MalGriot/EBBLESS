@@ -10646,7 +10646,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #520. Playlist-transfer research lane. Research written, see docs/research/TRANSFER-APPS.md (all four transfer apps compared, ranked recommendations at the end). Top picks: found-X-of-Y result with missing list, one-tap fix for a wrong match, paste a list of song names.
 
 ### vibe-cnn-research: Research convolutional neural networks to catch a listener's vibe 95% accurately (Geethub #519)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #519. Research whether CNNs could make vibe matching far more accurate.
 - **Touches:** research only.
@@ -10830,7 +10830,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #570. Diagnosed 2026-10-18 (agent/web-bugs-2). Reproduced in a browser with no SoundCloud sign-in: SoundCloud's own player reports a per-song `policy` and for some songs it is BLOCK, the player shows "This track is not available in your country" and never plays; the app did not notice, so the deck just sat silent (no ERROR/policy handling existed for SoundCloud). So "plays only for me because I'm logged in" is really SoundCloud's per-listener rights check (country and account), not a login wall: the owner's account passes it, others get BLOCK (or SNIP, a 30 second preview, for Go+ songs). Checked: Kaytranada "Glowed Up" = BLOCK (silent), Flume "Never Be Like You" and the owner's own sets = ALLOW (play fine, no change). Built (cache v325): the deck adapter reads the sound's policy once it loads (and listens for the widget's ERROR); on BLOCK, SNIP or ERROR for the song that is playing, it re-matches the song on YouTube (same search as the broken-link repair) and swaps to the best copy, with a toast ("SoundCloud won't play this song here. Playing a YouTube copy."); if there is no other copy it says so and skips. A song loaded ahead on a standby deck is noted and handled when it is promoted (hard cut and crossfade). Each song is tried once per session. Verified in the browser preview (logged out, India): the blocked song swapped to a YouTube copy and played, an allowed SoundCloud song still played natively with no swap, no [gpu-watchdog] warnings. Not verified: SNIP (no 30 s preview song at hand), the crossfade-promotion path, the skip-when-no-copy path, Android WebView. Side effect to know: the swap goes through the same relink as the broken-link repair, so it rewrites that saved song to the YouTube link, and with profile sync that follows the account to other devices (a user in a blocked country relinks their own saved copy). Not built, on purpose: any login flow. A "log people in to SoundCloud" or one Google sign-in that logs into every music service would mean handling other people's credentials or tokens for services that do not offer that (SoundCloud has no Google single sign-on for embeds and its widget cannot be signed in from outside). Safe future options if wanted: (1) keep the SoundCloud link and add a second, per-device playback source instead of rewriting the saved song; (2) an "Open on SoundCloud" row for songs with no YouTube copy; (3) a small setting "Prefer YouTube for SoundCloud songs".
 
 ### since-soundcloud-needs-a-login-to: since soundcloud needs a login to play, are there any other apps we could get into the list of music links? (Geethub #571)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #571. medium we can log the person in at the start and the world of music will be wide open to them. make a list of free music apps that have the least redundancy that would be useful to have in this app. it may be that some m
 - **Touches:** tbd.
@@ -11513,7 +11513,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #664 (bug); issue body was empty beyond the title.
 
 ### beta-rejoin-extension-663: Beta testers who rejoin after the 2-week window get another 2 weeks, repeating until stopped (Geethub #663)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Once a tester rejoins the beta after their 2-week window ends, give them another 2 weeks. Repeat indefinitely until the owner says stop.
 - **Touches:** beta access / tester window
