@@ -4919,6 +4919,14 @@ export default {
     // Owner's now-playing feed: public GET, owner-token POST, own CORS.
     if (url.pathname === '/nowplaying') return await handleNowPlaying(request, url, env, ctx, { envCache, verifyGoogleIdToken });
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
+    // Remote kill switch for the Mac app's adblock (#524). ADBLOCK_FLAG = "false"/"0"/"off" turns it off; default on.
+    if (url.pathname === '/flags' && request.method === 'GET') {
+      const raw = env.ADBLOCK_FLAG;
+      const adblock = raw === undefined || raw === null || !/^(false|0|off|no)$/i.test(String(raw).trim());
+      return new Response(JSON.stringify({ adblock }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...CORS_HEADERS },
+      });
+    }
     try {
       if (url.pathname === '/playlist') return await handleEmbed('playlist', url, ctx);
       if (url.pathname === '/album') return await handleEmbed('album', url, ctx);

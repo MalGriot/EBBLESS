@@ -45,6 +45,7 @@ class_name = "PodCaptionBudget"
 tag = "v1"
 new_sqlite_classes = ["PodCaptioner", "PodCaptionBudget"]
 
+# Remote kill switch for the Mac app adblock (#524): set ADBLOCK_FLAG = "false" to turn it off (GET /flags). Unset = on.
 [vars]
 GOOGLE_CLIENT_ID = "1081676829821-i60knuf71qvmooas84jr3b22ji19ehur.apps.googleusercontent.com"
 

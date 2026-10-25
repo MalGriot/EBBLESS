@@ -20,6 +20,8 @@
     "productName": "EBBLESS",
     "files": [
       "main.js",
+      "adblock.js",
+      "adblock-rules.js",
       "preload.js",
       "package.json"
     ],
