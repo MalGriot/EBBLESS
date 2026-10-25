@@ -420,6 +420,42 @@ just plays after the fill-in. A track the listener picked cuts back in as
 soon as its ad clears (`returnFromAdDodge`), and the fill-in goes back behind
 it to play in full.
 
+## Mac app adblock (#524)
+
+The Mac app (`desktop/`) blocks YouTube ads. **This violates YouTube's embed
+and API terms of service.** It is an owner decision (2026-10-25) for the native
+apps only; the web app and the Android app are untouched. It has a kill switch
+(below), so it can be turned off for everyone without shipping a new build.
+
+What it does (`desktop/adblock.js`, rules in `desktop/adblock-rules.js`):
+
+1. Cancels requests to ad hosts (doubleclick, googlesyndication, googleads,
+   googleadservices, 2mdn, adservice.google.*) and YouTube ad paths
+   (`/pagead/`, `/api/stats/ads`, `/ptracking`, ad break and ad placement
+   endpoints, `get_midroll_info`). The app's own origin, the worker, and
+   Google sign-in are never blocked.
+2. Hides ad overlays and ad UI inside the YouTube embed frame with injected CSS.
+3. Inside the embed frame, clicks Skip as soon as it exists, and mutes,
+   plays at 16x and seeks to the end of unskippable ads, then hands the player
+   back as the page had it.
+
+Turn it off:
+
+- **Everyone, remotely:** set the worker var `ADBLOCK_FLAG` to `false` (or `0`,
+  `off`, `no`) and deploy. `GET /flags` returns `{"adblock": false}`; the app
+  checks at launch and every 30 minutes and switches off live. If the check
+  fails the app keeps its last value (starts on).
+- **One machine:** launch with `EBBLESS_ADBLOCK=0`. `EBBLESS_ADBLOCK=1` forces
+  it on in a dev run (`npm start` runs with it off by default; the packaged app
+  runs with it on).
+- Debugging: blocked-request counts print to the console every 30s when they
+  change; `EBBLESS_ADBLOCK_LOG=1` also prints each blocked URL.
+
+Tests: `node --test desktop/adblock.test.js` checks the URL rules. YouTube
+changes its player class names and ad endpoints without notice, so the
+selectors and path list will need upkeep; a real ad has not been run against
+this yet.
+
 ## Speakers, TVs and cars
 
 - **Cars / lock screen / Bluetooth / headsets** run off the Media Session

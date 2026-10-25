@@ -6,6 +6,7 @@
 const { app, BrowserWindow, shell, ipcMain, nativeImage } = require('electron');
 const path = require('path');
 const crypto = require('crypto');
+const adblock = require('./adblock');
 
 const APP_URL = process.env.EBBLESS_URL || 'https://malgriot.github.io/EBBLESS/';
 const APP_ORIGIN = new URL(APP_URL).origin;
@@ -70,6 +71,7 @@ function createMainWindow(){
   });
 
   mainWin.webContents.on('did-create-window', (child, { frameName }) => {
+    adblock.attach(child.webContents); // #524: same ad handling in child windows
     if (frameName !== MINI_NAME) return;
     // #510/#564 Dock + Cmd+Tab icon, #512 pinned on every desktop. Electron's
     // skipTransformProcessType keeps the app a regular app, but macOS can still
@@ -118,6 +120,7 @@ function createMainWindow(){
   mainWin.on('show', () => mainWin.webContents.send('ebbless:back'));
   mainWin.on('restore', () => mainWin.webContents.send('ebbless:back'));
 
+  adblock.install(mainWin); // #524
   mainWin.loadURL(APP_URL);
 }
 
