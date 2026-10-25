@@ -11015,6 +11015,14 @@ Add entries in this shape:
 - **Branch:** agent/sponsorblock-build
 - **Notes:** Start from the research doc [docs/SPONSORBLOCK-AND-PODCAST-ADS.md](docs/SPONSORBLOCK-AND-PODCAST-ADS.md); its earlier recommendation was not to build, the owner has now decided to. Check SponsorBlock's public API and licence/attribution terms before depending on it. Must respect ad avoidance (#523) and the GPU budget, and decide songs vs podcasts scope (doc suggested podcasts only, never songs). Shares the skip-prompt UI with #575, so build that prompt once and reuse it. Recommended model: Opus (design-heavy, reverse engineering). **Shipped 2026-10-17 (cache v314):** browser asks SponsorBlock directly (CORS open, hash prefix only, no worker change) and feeds the #575 tap-to-skip prompt. Podcasts from YouTube: sponsor/self-promo/reminder/intro/outro, always on. Songs: "Skip talking in songs" setting (non-music parts only), off by default. No silent auto-skip. Details and what was verified in docs/SPONSORBLOCK-AND-PODCAST-ADS.md Part 3.
 
+### podcast-ad-strip: Strip ads from podcasts and long YouTube audio automatically
+- **Status:** review
+- **Priority:** high
+- **Description:** Owner decision 2026-10-25: skip ad reads automatically, with a toast and one-tap Undo, on podcasts and long YouTube audio. Setting "Skip ads automatically" (default on).
+- **Touches:** index.html (skipPromptTick, podAdScan, sbWatch, Settings), worker/src/pod-ads.js, worker/src/index.js (`/podads`), worker/test/pod-ads.test.mjs, docs/SPONSORBLOCK-AND-PODCAST-ADS.md Part 4, sw.js.
+- **Branch:** agent/podcast-ad-strip
+- **Notes:** Details, guards and accuracy limits in the doc, Part 4. Needs worker deploy for the shared per-episode cache. Cache v407. Not run against a real episode; Android native not tried.
+
 ### app-should-feel-like-home: app should feel like home (Geethub #583)
 - **Status:** draft
 - **Priority:** medium

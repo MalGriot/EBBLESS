@@ -4816,6 +4816,13 @@ body.week-up-on{overflow:hidden}
         </div>
         <div class="settings-row">
           <div>
+            <div class="label">Skip ads automatically</div>
+            <div class="desc">Podcast episodes and long YouTube audio: ad reads, sponsor plugs, reminders, intros and outros are skipped as they begin, with a note and Undo. Ads are found from the episode's captions, so it is a good guess, not a promise: when it skips something real, tap Undo. Off, you get a Skip button instead.</div>
+          </div>
+          <button type="button" class="switch is-active" id="autoSkipBtn" role="switch" aria-checked="true" aria-label="Skip ads automatically"><span class="switch-knob"></span></button>
+        </div>
+        <div class="settings-row">
+          <div>
             <div class="label">Skip talking in songs</div>
             <div class="desc">Shows a Skip button when a song's video has talking before or after the music. Podcasts from YouTube always get one for sponsor reads and intros. Skip times from <a href="https://sponsor.ajay.app" target="_blank" rel="noopener">SponsorBlock</a>, marked by its users.</div>
           </div>
@@ -30999,10 +31006,52 @@ function renderChapterList(t){
 // #573). Nothing skips by itself - the listener taps.
 var skipSegs = new Map(), skipShown = null, skipLeftTxt = '';
 function setSkipSegs(id, segs){ skipSegs.set(id, segs); }
+// Automatic skipping (owner decision 2026-10-25), Settings > Playback > "Skip
+// ads automatically", on by default. Only ranges marked auto (ad reads found
+// in captions or labelled by the feed, SponsorBlock sponsor/plug/reminder/
+// intro/outro on podcasts and long YouTube audio) and only when playback
+// arrives at the start of one by itself: scrubbing into the middle of a range
+// never jumps, it just offers the Skip button. Every automatic skip says so
+// in a toast with a one-tap Undo that seeks back to where the range began,
+// and a range is never auto-skipped twice (undo, rewind: the listener has
+// decided). Each skip and undo is kept (last 40, localStorage) for tuning.
+const LS_AUTO_SKIP = 'ebbless:autoSkipAds', LS_AD_SKIP_LOG = 'ebbless:adSkipLog';
+var autoSkipOn = lsGet(LS_AUTO_SKIP, true) !== false;
+var autoSkipDone = new Set(); // 'videoId|start'
+const SKIP_TOAST = { Ad: 'Skipped an ad', Sponsor: 'Skipped an ad', 'Self-promo': 'Skipped a plug', Reminder: 'Skipped a reminder', Intro: 'Skipped the intro', Outro: 'Skipped the outro' };
+function adSkipLog(t, seg, undone){
+  try {
+    const log = lsGet(LS_AD_SKIP_LOG, []) || [];
+    if (undone){ const last = log[log.length - 1]; if (last && last.id === t.videoId && last.s === Math.round(seg.s)) last.undone = true; }
+    else log.push({ id: t.videoId, s: Math.round(seg.s), e: Math.round(seg.e), label: seg.label, at: Date.now() });
+    lsSet(LS_AD_SKIP_LOG, log.slice(-40));
+    console.info('[ads] ' + (undone ? 'undone' : 'skipped'), t.videoId, Math.round(seg.s) + '-' + Math.round(seg.e), seg.label);
+  } catch(e){}
+}
+function autoSkipSeg(t, seg){
+  const ad = activeDeck();
+  if (!ad.player || !ad.player.seekTo) return;
+  autoSkipDone.add(t.videoId + '|' + Math.round(seg.s));
+  const dur = (ad.player.getDuration && ad.player.getDuration()) || 0;
+  ad.player.seekTo(dur && seg.e > dur - 0.3 ? dur : seg.e, true);
+  adSkipLog(t, seg, false);
+  showToast(SKIP_TOAST[seg.label] || 'Skipped a section', { label: 'Undo', run: () => {
+    const d = activeDeck(), now = currentTrack();
+    if (!now || now.videoId !== t.videoId || !d.player || !d.player.seekTo) return;
+    d.player.seekTo(Math.max(0, seg.s), true);
+    adSkipLog(t, seg, true);
+    updateSeekUI();
+  } });
+  updateSeekUI();
+}
 function skipPromptTick(cur){
   const t = currentTrack();
   const segs = t && !seekDrag && cur >= 0 ? skipSegs.get(t.videoId) : null;
   const seg = (segs && segs.find(g => cur >= g.s && cur < g.e - 0.5)) || null;
+  if (seg && seg.auto && autoSkipOn && cur - seg.s <= 2.5 && !autoSkipDone.has(t.videoId + '|' + Math.round(seg.s))){
+    autoSkipSeg(t, seg);
+    return;
+  }
   const el = document.getElementById('skipPrompt');
   if (seg) skipPromptPlace(el);
   if (seg !== skipShown){
@@ -31080,6 +31129,8 @@ const POD_AD_STRONG = [
   /\bwherever you (get|listen to) (your )?podcasts\b/i,
   /\b[a-z0-9][a-z0-9-]* ?(\.|dot) ?(com|net|org|co|io)( ?\/ ?| slash )[a-z0-9-]+/i,
   /\b(go to|visit|head (over )?to|check out|sign up at|at|see),? [a-z0-9][a-z0-9-]* ?(\.|dot) ?(com|net|org|co|io)\b/i,
+  // softer wording, only ever counts as one more signal next to the above (same list in worker/src/pod-ads.js)
+  /\b(a word from our|our (friends|partners) at|special offer|exclusive (offer|deal)|listeners (get|receive|can get)|(link|details) (is |are )?(in|on) (the )?(show ?notes|description))\b/i,
 ];
 const POD_AD_BRAND = /\b([a-z0-9][a-z0-9-]{3,}) ?(?:\.|dot) ?(?:com|net|org|co|io)\b/gi;
 function podAdStrong(text){ return POD_AD_STRONG.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0); }
@@ -31234,14 +31285,20 @@ async function podAdScan(t, st){
   // language) makes the audio longer than the feed says by about the ad's
   // length: offer a skip over that much at the start. Tap only, like the rest.
   const extra = t.duration ? dur - t.duration : 0;
-  if (extra >= 8 && extra <= 75) segs.push({ s: 0, e: Math.round(extra) });
+  if (extra >= 8 && extra <= 75) segs.push({ s: 0, e: Math.round(extra), auto: false }); // a length guess: tap only, never automatic
   const publish = () => podAdPublish(id, segs);
+  // what an earlier listener's device already found for this same episode
+  // copy (only when the length matches to half a second: ad servers hand out
+  // different copies)
+  if (st.cloud === undefined) st.cloud = await podAdCloudGet(url);
+  if (st.cloud && Math.abs(st.cloud.dur - dur) <= 0.5) st.cloud.segs.forEach(g => segs.push({ s: g.s, e: g.e }));
   publish();
   const rec = (capJob && capJob.id === id && capJob.rec) || await capGet(id);
   // the captions must be timed on the copy playing: constant bitrate and
   // the same length to the frame (the player times it at the same rate)
   if (!rec || !rec.bps || !rec.total || Math.abs(dur - (rec.total - rec.f0) / rec.bps) > 0.1) return;
   if (!rec.ads || rec.ads.v !== POD_AD_V) rec.ads = { v: POD_AD_V, ends: {} };
+  const mine = [];
   for (const r of podAdReads(podAdCues(rec))){
     // keyed by where the read starts; pinned again only if its last line
     // moved (a read that ran on into a slice not captioned yet)
@@ -31253,15 +31310,48 @@ async function podAdScan(t, st){
       got = rec.ads.ends[k] = { from, e: e && e > r.s + 5 ? e : 0 };
       capPut(id, rec);
     }
-    if (got.e){ segs.push({ s: r.s, e: got.e }); publish(); }
+    if (got.e){ segs.push({ s: r.s, e: got.e }); publish(); mine.push({ s: r.s, e: got.e }); }
   }
+  podAdCloudPut(url, st, dur, mine, rec);
+}
+// Shared per-episode ad ranges (worker /podads). Failure is silent: the
+// device's own detection carries on either way.
+async function podAdKey(url){
+  if (!crypto.subtle) return '';
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(url))), b => b.toString(16).padStart(2, '0')).join('');
+}
+async function podAdCloudGet(url){
+  try {
+    const key = await podAdKey(url);
+    if (!key) return null;
+    const r = await fetch(BACKEND + '/podads?key=' + key);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.dur > 0 && Array.isArray(j.segs) && j.segs.length ? { dur: +j.dur, segs: j.segs.filter(g => g.e > g.s) } : null;
+  } catch(e){ return null; }
+}
+// Ships the ranges this device found with the caption lines around them (the
+// worker re-checks those lines for sponsor wording before keeping anything).
+// Once per episode per change; never for a range that came from the cache.
+async function podAdCloudPut(url, st, dur, mine, rec){
+  try {
+    if (!mine.length || (st.cloud && Math.abs(st.cloud.dur - dur) <= 0.5)) return;
+    const sig = mine.map(g => Math.round(g.s) + '-' + Math.round(g.e)).join(',');
+    if (st.putSig === sig) return;
+    st.putSig = sig;
+    const key = await podAdKey(url);
+    if (!key) return;
+    const cues = podAdCues(rec).filter(c => mine.some(g => c.e >= g.s - 80 && c.s <= g.e + 5)).slice(0, 400).map(c => [c.s, c.e, c.text.slice(0, 300)]);
+    fetch(BACKEND + '/podads', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ key, dur, segs: mine, cues }) }).catch(() => {});
+  } catch(e){}
 }
 // ranges that overlap or touch become one; under 3 s isn't worth a prompt
 function podAdPublish(id, segs){
   const out = [];
   segs.slice().sort((a, b) => a.s - b.s).forEach(g => {
     const p = out[out.length - 1];
-    if (p && g.s <= p.e + 0.5) p.e = Math.max(p.e, g.e); else out.push({ s: g.s, e: g.e, label: 'Ad' });
+    if (p && g.s <= p.e + 0.5){ p.e = Math.max(p.e, g.e); p.auto = p.auto && g.auto !== false; }
+    else out.push({ s: g.s, e: g.e, label: 'Ad', auto: g.auto !== false });
   });
   setSkipSegs(id, out.filter(g => g.e - g.s >= 3));
 }
@@ -31282,6 +31372,7 @@ function podAdWatch(){
 const SB_API = 'https://sponsor.ajay.app/api/skipSegments/';
 const SB_POD_CATS = ['sponsor', 'selfpromo', 'interaction', 'intro', 'outro'];
 const SB_SONG_CATS = ['music_offtopic'];
+const SB_LONG_S = 1200; // 20 min
 const SB_LABEL = { sponsor: 'Sponsor', selfpromo: 'Self-promo', interaction: 'Reminder', intro: 'Intro', outro: 'Outro', music_offtopic: 'Talking' };
 const LS_SB_SONGS = 'ebbless:sbSongs';
 var sbSongsOn = lsGet(LS_SB_SONGS, false) === true;
@@ -31301,7 +31392,9 @@ async function sbFetch(id){
 function sbWatch(dur){
   const t = currentTrack();
   if (!t || !t.videoId || isAudioVideoId(t.videoId) || !(dur > 0) || !crypto.subtle) return;
-  const pod = isPodcastTrack(t);
+  // long audio (a talk, a mix, an interview) is treated like an episode; a
+  // song-length video is a song
+  const pod = isPodcastTrack(t) || dur >= SB_LONG_S;
   if (!pod && !sbSongsOn) return;
   const id = t.videoId, got = sbGot.get(id);
   if (!got || (!got.segs && Date.now() - got.at > 120000)){
@@ -31319,11 +31412,22 @@ function sbWatch(dur){
     .sort((a, b) => a.s - b.s)
     .forEach(g => {
       const p = out[out.length - 1];
-      if (p && g.s <= p.e + 0.5) p.e = Math.max(p.e, g.e); else out.push({ s: g.s, e: Math.min(g.e, dur), label: SB_LABEL[g.cat] });
+      if (p && g.s <= p.e + 0.5) p.e = Math.max(p.e, g.e); else out.push({ s: g.s, e: Math.min(g.e, dur), label: SB_LABEL[g.cat], auto: pod });
     });
   // under 3 s isn't worth a prompt
   setSkipSegs(id, out.filter(g => g.e - g.s >= 3));
 }
+const autoSkipBtn = document.getElementById('autoSkipBtn');
+function renderAutoSkipUI(){
+  autoSkipBtn.setAttribute('aria-checked', String(autoSkipOn));
+  autoSkipBtn.classList.toggle('is-active', autoSkipOn);
+}
+autoSkipBtn.addEventListener('click', () => {
+  autoSkipOn = !autoSkipOn;
+  lsSet(LS_AUTO_SKIP, autoSkipOn);
+  renderAutoSkipUI();
+});
+renderAutoSkipUI();
 const sbSongsBtn = document.getElementById('sbSongsBtn');
 function renderSbSongsUI(){
   sbSongsBtn.setAttribute('aria-checked', String(sbSongsOn));

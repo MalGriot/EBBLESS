@@ -129,3 +129,45 @@ video as a song showed nothing; song `THscJf7O7bY` showed "Talking" only
 after turning the setting on and lost it when turned off; no console errors
 or new `[gpu-watchdog]` warnings. Not verified: Android native app, a real
 YouTube-fallback podcast imported end to end.
+
+## Part 4: Automatic ad skipping (owner decision 2026-10-25, cache v407)
+
+**What changed.** Ranges the app already found (Part 3 and the #575 caption
+reads) now skip by themselves, with a toast ("Skipped an ad", "Skipped the
+intro" ...) and a one-tap Undo that seeks back to where the range began.
+Settings > Playback > "Skip ads automatically", on by default; off gives
+back the tap-to-skip button only. Code: `autoSkipSeg` / `skipPromptTick`.
+
+**Which ranges skip automatically** (`auto: true`): ad reads found in
+captions, feed chapters titled as ads, and SponsorBlock sponsor, self-promo,
+reminder, intro and outro on podcast episodes and on any YouTube audio of
+20 minutes or more (`SB_LONG_S`). Never automatic: the "extra length at the
+start" guess (#648), and "talking" in songs (still tap only, opt-in).
+
+**Guards.** Only when playback arrives at the start of a range by itself
+(within 2.5 s of it): scrubbing into the middle shows the Skip button, it
+never jumps. A range is never auto-skipped twice (undo and rewind are the
+listener's decision). Each skip and undo is kept in `localStorage`
+`ebbless:adSkipLog` (last 40) and logged as `[ads] skipped|undone` for tuning;
+an `undone` flag is a false positive.
+
+**Shared per-episode cache.** Worker `/podads` (`worker/src/pod-ads.js`),
+KV `TASTE_POOL` key `podads:<sha256 of the episode audio url>`, 90 days.
+A device that finishes detecting reads POSTs the ranges plus the caption lines
+around them; the worker re-runs the sponsor-wording check on those lines and
+stores the range only if the wording is there (first report wins, so the free
+KV put limit is safe). Other listeners GET it on opening the episode and use
+it only when their copy's length matches the stored one to 0.5 s (ad servers
+hand out different copies). No Workers AI call anywhere in this path: text
+matching only, so it adds nothing to the neuron budget. Skipped on purpose:
+a Workers AI confirm pass and a speech-rate/caption-density signal; the
+existing rule (two or more sponsor signals, end pinned from the audio) is
+conservative, and the new ones would add cost and tuning risk without data.
+
+**Accuracy limits.** False positives skip real content: a host plugging their
+own site with a path ("go to ourshow.com/photos") reads as two signals. Reads
+that avoid the stock phrases, or ads with no address, are missed. A lying
+report could poison one episode (bounded to a few ranges, Undo works, and
+copies of a different length ignore it). Not run against a real episode.
+Needs a worker deploy for the shared cache; without it the app falls back to
+its own detection (the `/podads` call just fails quietly).

@@ -24,6 +24,7 @@ import { handleProfileDelete } from './profile-delete.js';
 import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { ARTISTMAP_LIMIT, classifyLastfmSimilar, shapeArtistMap, artistMapCacheControl } from './artistmap.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
+import { handlePodAds } from './pod-ads.js';
 export { PodCaptioner, PodCaptionBudget };
 
 const CORS_HEADERS = {
@@ -4928,6 +4929,7 @@ export default {
       if (url.pathname === '/podcast') return await handlePodcast(url, ctx);
       if (url.pathname === '/podcastmatch') return await handlePodcastMatch(url, ctx);
       if (url.pathname === '/podtext') return await handlePodText(url, ctx);
+      if (url.pathname === '/podads') return await handlePodAds(request, url, env, json);
       if (url.pathname === '/podaudio') return await handlePodAudio(url);
       if (url.pathname === '/podepisode') return await handlePodEpisode(url, ctx);
       if (url.pathname === '/podcaption/start' || url.pathname === '/podcaption/collect') return await handlePodCaption(request, url, env);
