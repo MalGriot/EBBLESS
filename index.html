@@ -2898,8 +2898,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      bottom padding (38px art + 8px*2 padding + 1px border) only while it's
      actually shown, so the 1fr pane row shrinks to sit above it instead of
      being overlapped - and normal (non-Settings) desktop view is untouched. */
-  body.split-desktop:not(.view-settings-active) #mini-bar{display:none!important}
-  body.split-desktop.view-settings-active:has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
+  body.split-desktop:not(.view-settings-active):not(:has(#import-overlay.is-open)) #mini-bar{display:none!important}
+  body.split-desktop:is(.view-settings-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
+  body.split-desktop:has(#import-overlay.is-open) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
      margin:0 auto centering .view-scroll gets from its base rule (line
@@ -24398,7 +24399,8 @@ function vizAdvanceWithinFamily(){
   vizStartTransition(vizFamilyIdx, fam.modes[nextIdx]);
 }
 function vizAdvancePattern(){
-  const nextFam = (vizFamilyIdx + 1) % VIZ_PATTERNS.length;
+  // #666: random family each time (never the one already showing)
+  const nextFam = (vizFamilyIdx + 1 + Math.floor(Math.random() * (VIZ_PATTERNS.length - 1))) % VIZ_PATTERNS.length;
   const fam = VIZ_PATTERNS[nextFam];
   vizStartTransition(nextFam, fam.modes[Math.floor(Math.random() * fam.modes.length)]);
 }
@@ -28710,7 +28712,7 @@ function mpCymSync(win){
         const ms = c.fa.modes;
         c.fb = c.fa; c.pb = ms[(Math.max(0, ms.indexOf(c.pa)) + 1 + Math.floor(Math.random() * Math.max(1, ms.length - 1))) % ms.length];
       } else {
-        c.fb = VIZ_PATTERNS[(VIZ_PATTERNS.indexOf(c.fa) + 1) % VIZ_PATTERNS.length];
+        c.fb = VIZ_PATTERNS[(VIZ_PATTERNS.indexOf(c.fa) + 1 + Math.floor(Math.random() * (VIZ_PATTERNS.length - 1))) % VIZ_PATTERNS.length];
         c.pb = c.fb.modes[Math.floor(Math.random() * c.fb.modes.length)];
       }
       c.mix = 0.0001;
