@@ -11577,7 +11577,7 @@ Add entries in this shape:
 - **Notes:** Known risk, accepted by the owner: YouTube's API terms forbid blocking ads in embeds, so enforcement could cut off the embed or API access for every user. Ship behind an on/off switch so it can be killed instantly (remote flag from the worker) without a release.
 
 ### podcast-ad-strip: Strip ads from podcasts and long YouTube audio (owner decision 2026-10-25)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Owner (2026-10-25): strip ads from podcasts and long YouTube audio. Detect ad and sponsor reads and skip them automatically. SponsorBlock-style skipping for YouTube already ships; extend it, and build podcast ad detection (EBBLESS already generates captions on device and has Workers AI), so detected ad segments are skipped or cut automatically, with a one-tap undo.
 - **Touches:** podcast player, pod-captioner / captions, worker (segment detection), SponsorBlock skip code, docs/SPONSORBLOCK-AND-PODCAST-ADS.md
