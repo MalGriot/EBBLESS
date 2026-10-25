@@ -4,6 +4,10 @@
 // frameless, see-through window that stays above every app, on every desktop
 // (Space) and over full-screen apps - which Chrome's Picture-in-Picture can't.
 const { app, BrowserWindow, shell, ipcMain, nativeImage } = require('electron');
+const fs = require('fs');
+const os = require('os');
+const { spawn } = require('child_process');
+const upd = require('./updater');
 const path = require('path');
 const crypto = require('crypto');
 const adblock = require('./adblock');
@@ -167,6 +171,69 @@ ipcMain.on('ebbless:dock-icon', (e, dataUrl) => {
   if (typeof dataUrl !== 'string' || dataUrl.length > 3e6 || !dataUrl.startsWith('data:image/png;base64,')) return;
   const img = nativeImage.createFromDataURL(dataUrl);
   if (!img.isEmpty()) app.dock.setIcon(img);
+});
+
+// Settings > Update app. Unsigned app, so no Squirrel: find the newest GitHub
+// release, download the dmg for this CPU, and only after the page's confirm tap
+// quit and let a detached script swap the bundle and reopen it. Env overrides
+// are for testing (a fake release JSON, a copy of the app, a fake version).
+const RELEASE_URL = process.env.EBBLESS_RELEASE_URL || 'https://api.github.com/repos/MalGriot/EBBLESS/releases/latest';
+const UPDATE_DIR = path.join(os.tmpdir(), 'ebbless-update-' + (process.getuid ? process.getuid() : 'u'));
+let updateAsset = null; // the asset main.js itself found in the last check (never one the page names)
+let updateDmg = null;   // set only by a finished download
+let updateBusy = false;
+const myVersion = () => process.env.EBBLESS_FAKE_VERSION || app.getVersion();
+// the .app bundle that is running: .../EBBLESS.app/Contents/MacOS/EBBLESS
+const appBundle = () => process.env.EBBLESS_APP_PATH || path.resolve(app.getPath('exe'), '..', '..', '..');
+const fromMain = (e) => mainWin && e.sender === mainWin.webContents;
+
+ipcMain.handle('ebbless:version', () => myVersion());
+// Settings > Reload now / debug line: live ad-blocking rules
+ipcMain.handle('ebbless:adblock-info', (e) => fromMain(e) ? adblock.info() : null);
+ipcMain.handle('ebbless:adblock-refresh', async (e) => {
+  if (!fromMain(e)) return null;
+  try { return await adblock.refresh(); } catch(err){ return { message: 'Could not update ad blocking', info: adblock.info() }; }
+});
+ipcMain.handle('ebbless:update-check', async (e) => {
+  if (!fromMain(e)) return { error: 'Not allowed' };
+  try {
+    const r = upd.evaluateRelease(await upd.fetchJson(RELEASE_URL), myVersion(), process.arch);
+    updateDmg = null; updateAsset = r.asset;
+    return r;
+  } catch(err){ return { error: String(err.message || err) }; }
+});
+ipcMain.handle('ebbless:update-download', async (e) => {
+  if (!fromMain(e)) return { error: 'Not allowed' };
+  if (updateBusy) return { error: 'Already updating' };
+  const asset = updateAsset;
+  if (!asset || !/^[\w.-]+\.dmg$/.test(asset.name)) return { error: 'Check for an update first' };
+  updateBusy = true; updateDmg = null;
+  try {
+    fs.rmSync(UPDATE_DIR, { recursive: true, force: true });
+    fs.mkdirSync(UPDATE_DIR, { recursive: true, mode: 0o700 });
+    const dest = path.join(UPDATE_DIR, asset.name);
+    let last = -1;
+    await upd.download(asset.url, dest, (f) => {
+      const pct = Math.floor(f * 100);
+      if (pct !== last && mainWin){ last = pct; mainWin.webContents.send('ebbless:update-progress', pct); }
+    });
+    updateDmg = dest;
+    return { ok: true };
+  } catch(err){
+    return { error: String(err.message || err) };
+  } finally { updateBusy = false; }
+});
+// the page calls this only from its confirm button
+ipcMain.handle('ebbless:update-install', (e) => {
+  if (!fromMain(e)) return { error: 'Not allowed' };
+  if (!updateDmg || !fs.existsSync(updateDmg)) return { error: 'Download first' };
+  try {
+    const script = path.join(UPDATE_DIR, 'install.sh');
+    fs.writeFileSync(script, upd.SCRIPT, { mode: 0o700 });
+    spawn('/bin/sh', [script, String(process.pid), updateDmg, appBundle()], { detached: true, stdio: 'ignore' }).unref();
+    setTimeout(() => { quitting = true; app.quit(); }, 150);
+    return { ok: true };
+  } catch(err){ return { error: String(err.message || err) }; }
 });
 
 app.on('before-quit', () => { quitting = true; });

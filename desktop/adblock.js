@@ -9,14 +9,54 @@
 //     packaged app, off in `npm start` dev runs.
 //   - Remote kill switch: GET <worker>/flags -> {"adblock": true|false}. A
 //     failed fetch keeps the last value (starts true). Re-checked every 30 min.
+// The request rules and the in-frame script are NOT compiled in: they are
+// adblock/rules.json and adblock/inject.js, fetched from the site at launch and
+// on refresh() (Settings > Reload now), cached in userData, with the copy that
+// ships in the app as the fallback (adblock-live.js has the validation).
 const { app, session, net, webFrameMain } = require('electron');
-const { isAdUrl } = require('./adblock-rules');
+const path = require('path');
+const { makeMatcher, bundledDir } = require('./adblock-rules');
+const { createLoader, DEFAULT_BASE } = require('./adblock-live');
 
 const FLAGS_URL = process.env.EBBLESS_FLAGS_URL || 'https://spotify-youtube-search.malgriot.workers.dev/flags';
 const FLAG_POLL_MS = 30 * 60 * 1000;
 const STATS_LOG_MS = 30 * 1000;
 
 const state = { remote: true, blocked: 0, loggedBlocked: 0, installed: false };
+const attached = new Set(); // every WebContents we watch, for re-injection after a refresh
+
+// Test hook: EBBLESS_ADBLOCK_BASE points the fetch at a local server. Only honored in unpackaged runs.
+const liveBase = () => (!app.isPackaged && process.env.EBBLESS_ADBLOCK_BASE) || DEFAULT_BASE;
+let loader = null, isAdUrl = () => false;
+function ensureLoader(){
+  if (loader) return loader;
+  loader = createLoader({
+    cacheDir: path.join(app.getPath('userData'), 'adblock'),
+    bundledDir: bundledDir(),
+    base: liveBase(),
+    fetchBytes,
+    skipUrlCheck: !app.isPackaged && !!process.env.EBBLESS_ADBLOCK_BASE   // test runs only
+  });
+  try { applyRules(loader.load()); } catch(e){ console.log('[adblock] no rules:', e.message); }
+  return loader;
+}
+function applyRules(cur){ isAdUrl = makeMatcher(cur.rules); }
+
+// capped read of an https response; redirects are refused so the host pin holds
+async function fetchBytes(url, max){
+  const res = await net.fetch(url, { signal: AbortSignal.timeout(10000), redirect: 'error', cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const chunks = []; let n = 0;
+  const reader = res.body.getReader();
+  for (;;){
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.length;
+    if (n > max){ try { await reader.cancel(); } catch(e){} throw new Error('response too large'); }
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks);
+}
 
 function localAllowed(){
   const v = process.env.EBBLESS_ADBLOCK;
@@ -26,44 +66,14 @@ function localAllowed(){
 }
 function enabled(){ return localAllowed() && state.remote; }
 
-// Runs inside the YouTube embed frame. Idempotent. Honors window.__ebblessAdblockOn
-// so the kill switch can turn it off without reloading the frame.
-const FRAME_SCRIPT = `(() => {
-  if (window.__ebblessAdblock || !document.documentElement) return;
-  window.__ebblessAdblock = true;
-  window.__ebblessAdblockOn = true;
-  const stats = window.__ebblessAdblockStats = { skipped: 0, sped: 0 };
-  const css = document.createElement('style');
-  css.id = 'ebbless-adblock-css';
-  css.textContent = '.ytp-ad-overlay-container,.ytp-ad-text-overlay,.ytp-ad-image-overlay,.ytp-paid-content-overlay,.ytp-ad-module,.ytp-ad-player-overlay,.ytp-ad-player-overlay-layout,.ytp-ad-message-container,.ytp-ad-persistent-progress-bar-container,.video-ads,.ytp-pause-overlay-container,.ytp-featured-product{display:none!important}';
-  (document.head || document.documentElement).appendChild(css);
-  let sped = null; // { muted, rate } the page had before we touched an ad
-  const SKIP = '.ytp-ad-skip-button,.ytp-ad-skip-button-modern,.ytp-skip-ad-button,.ytp-ad-skip-button-container button';
-  const tick = () => {
-    css.disabled = !window.__ebblessAdblockOn;
-    const player = document.querySelector('.html5-video-player');
-    const video = document.querySelector('video.html5-main-video') || document.querySelector('video');
-    if (!player || !video) return;
-    const isAd = window.__ebblessAdblockOn && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'));
-    if (isAd){
-      const skip = document.querySelector(SKIP);
-      if (skip){ skip.click(); stats.skipped++; }
-      if (!sped) sped = { muted: video.muted, rate: video.playbackRate };
-      video.muted = true;
-      video.playbackRate = 16;
-      const d = video.duration;
-      if (isFinite(d) && d > 0 && d < 180 && video.currentTime < d - 0.3){ try { video.currentTime = d; } catch(e){} }
-      stats.sped++;
-    } else if (sped){
-      // ad over: hand the player back the way the page had it
-      video.playbackRate = sped.rate || 1;
-      if (!sped.muted) video.muted = false;
-      sped = null;
-    }
-  };
-  setInterval(tick, 200);
-  try { new MutationObserver(tick).observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true }); } catch(e){}
-})();`;
+// What runs inside a YouTube embed frame: the kill-switch value, the selector
+// config from rules.json, then adblock/inject.js (which replaces any earlier run).
+function frameSource(){
+  const cur = ensureLoader().current();
+  if (!cur) return null;
+  return 'window.__ebblessAdblockOn=' + enabled() + ';window.__ebblessAdblockCfg=' +
+    JSON.stringify({ v: cur.rules.version, sel: cur.rules.selectors }) + ';' + cur.script;
+}
 
 function isYouTubeFrame(frame){
   try { return /(^|\.)(youtube|youtube-nocookie)\.com$/.test(new URL(frame.url).hostname); } catch(e){ return false; }
@@ -73,7 +83,9 @@ function injectIntoFrame(frame){
   try {
     if (process.env.EBBLESS_ADBLOCK_LOG && frame) console.log('[adblock] frame', frame.url.slice(0, 80));
     if (!frame || frame.detached || !isYouTubeFrame(frame)) return;
-    frame.executeJavaScript(FRAME_SCRIPT + ';window.__ebblessAdblockOn=' + enabled() + ';').then(() => {
+    const src = frameSource();
+    if (!src) return;
+    frame.executeJavaScript(src).then(() => {
       if (process.env.EBBLESS_ADBLOCK_LOG) console.log('[adblock] injected');
     }).catch((e) => {
       if (process.env.EBBLESS_ADBLOCK_LOG) console.log('[adblock] frame inject failed', e.message);
@@ -113,6 +125,8 @@ async function fetchFlag(){
 // go (each song change reloads the embed), so inject on every frame load.
 function attach(wc){
   if (!state.installed) return;
+  attached.add(wc);
+  wc.once('destroyed', () => attached.delete(wc));
   const onFrame = (frame) => injectIntoFrame(frame);
   wc.on('did-frame-navigate', (e, url, code, status, isMain, pid, rid) => {
     if (isMain) return;
@@ -132,6 +146,7 @@ function install(mainWin){
     return;
   }
   state.installed = true;
+  ensureLoader();
   const wcs = [mainWin.webContents];
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, cb) => {
     const block = enabled() && isAdUrl(details.url);
@@ -142,6 +157,7 @@ function install(mainWin){
     cb({ cancel: block });
   });
   attach(mainWin.webContents);
+  loader.refresh().then((r) => { if (r.ok && r.changed){ applyRules(loader.current()); reinjectAll(); } });
   fetchFlag().then(() => pushFlag(wcs));
   setInterval(() => fetchFlag().then(() => pushFlag(wcs)), FLAG_POLL_MS).unref?.();
   // blocked-request count (and what the frames did) in the console, only when something changed
@@ -163,4 +179,39 @@ function install(mainWin){
   console.log('[adblock] on; flags at', FLAGS_URL);
 }
 
-module.exports = { install, attach, isAdUrl, enabled };
+// Re-run the (possibly new) script in every YouTube frame that is already loaded.
+function reinjectAll(){
+  for (const wc of attached) for (const f of allFrames(wc)) injectIntoFrame(f);
+}
+
+function info(){
+  const cur = ensureLoader().current();
+  return {
+    version: cur ? cur.rules.version : 0,
+    source: cur ? cur.source : 'none',
+    blocking: enabled(),
+    killSwitch: !state.remote,   // true = the remote flag has switched blocking off
+    localAllowed: localAllowed()
+  };
+}
+
+// Settings > Reload now: refetch the kill switch, the rules and the script, apply
+// them to requests, re-inject into every live embed frame. Resolves { message, info }.
+async function refresh(){
+  if (!state.installed) return { message: 'Ad blocking is off in this run', info: info() };
+  const before = info().version;
+  await fetchFlag();
+  const r = await ensureLoader().refresh();
+  if (r.ok){ applyRules(loader.current()); }
+  reinjectAll();
+  pushFlag(attached);
+  const v = info().version;
+  let message;
+  if (!r.ok) console.log('[adblock] rules refresh failed:', r.error);
+  if (!r.ok) message = 'Could not update ad rules, using rules v' + v + ' (' + info().source + ')';
+  else if (v !== before || r.changed) message = 'Ad blocking updated to rules v' + v;
+  else message = 'Ad blocking is current (rules v' + v + ')';
+  return { message, info: info() };
+}
+
+module.exports = { install, attach, enabled, refresh, info, reinjectAll };

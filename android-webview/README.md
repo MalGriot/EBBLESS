@@ -25,6 +25,31 @@ use `.debug` and install beside the real app.
   can be reinstalled when needed, then `./gradlew assembleDebug` and `adb install -r app/build/outputs/apk/debug/app-debug.apk`
   (adb itself comes from Homebrew: `brew install android-platform-tools`).
 
+## Ad blocking (YouTube embed)
+
+**This violates YouTube's embed terms of service.** Owner decision 2026-10-25: the native apps are sideloaded (no Google Play),
+so store compliance is not a constraint. Code: `AdBlock.java` plus hooks in `MainActivity`.
+The rules and the in-frame script are live files, `adblock/rules.json` and `adblock/inject.js` at the repo root, served from
+`https://malgriot.github.io/EBBLESS/adblock/` and shared with the Mac app (see "Live ad rules" in the root README). `AdBlock` loads
+the newest valid of the cached copy (`filesDir/adblock`) and the bundled copy (Gradle `bundleAdblock` copies `../adblock` into the
+assets), fetches the live pair at launch/resume (hourly) and on Settings > Reload now (`EbbNative.adblockRefresh()` then
+`adblockStatus()`), and rebuilds the registered script handler when the version changes. `EbbNative.adblockInfo()` feeds the Settings debug line.
+
+- **Requests:** `shouldInterceptRequest` answers ad requests with an empty 200: ad hosts (doubleclick, googlesyndication,
+  googleadservices, adservice.google.com, ads.youtube.com) and, on youtube.com/google.com only, paths such as `/pagead/`,
+  `/api/stats/ads`, `/ptracking`, ad break and ad placement URLs. The app's own requests (page, Updater, worker) never match.
+- **In the embed frame:** `WebViewCompat.addDocumentStartJavaScript` (androidx.webkit 1.12.1) injects a script at document start
+  into `https://www.youtube.com` and `www.youtube-nocookie.com` frames only (subframes included, which `evaluateJavascript` cannot reach).
+  It hides ad UI, clicks Skip when it appears, and mutes plus seeks through unskippable ads (restores sound after). Needs a WebView
+  with the DOCUMENT_START_SCRIPT feature; without it only the request rules apply.
+- **On/off:** blocking runs only if the user switch AND the remote flag are both on. Both default to on.
+  - User switch: stored in the `ebb` prefs (`adblockUser`); page code can call `EbbNative.setAdblock(bool)` and read `EbbNative.adblockOn()`. No settings UI yet.
+  - Remote kill switch: the app fetches `https://spotify-youtube-search.malgriot.workers.dev/flags` (JSON `{"adblock": true|false}`)
+    at launch and on resume (hourly at most). `false` turns blocking off (script removed live, request rules stop at once).
+    On any fetch failure the last stored value is kept (first run: on).
+- Selectors and class names (`ad-showing`, `ad-interrupting`, skip button classes) are YouTube internals and may change; turn it off remotely if it breaks playback.
+- Not yet tested on a device (see the PR notes).
+
 ## Screen-off soak (measured 2026-10-16, TECNO POP 9, app 2.7.1)
 
 33 minutes with the screen off and the phone unplugged (10:07 -> 10:40, 65 samples every 30s; the logger ran on to 11:06, raw data in `test-data/soak-2026-10-16.log`,

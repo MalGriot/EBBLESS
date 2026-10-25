@@ -2412,7 +2412,7 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .settings-row[hidden]:first-of-type+.settings-row{border-top:none}
 .settings-row .label{font-size:14px}
 .settings-row .desc{font-size:12px;color:var(--faint);margin-top:2px;max-width:420px;line-height:1.5}
-.settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
+.settings-row[hidden],#updateAppCancel[hidden]{display:none}.settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
 .about-copy{font-size:13px;color:var(--faint);line-height:1.7;max-width:520px}
 .about-copy strong{color:var(--text);font-weight:600}
 .kbd-list{list-style:none;margin:0;padding:0;max-width:520px}
@@ -4768,6 +4768,22 @@ body.week-up-on{overflow:hidden}
             <div class="desc">Fetch the latest version now instead of on your next launch. Music stops while it reloads.</div>
           </div>
           <button class="btn-ghost" id="reloadAppBtn">Reload now</button>
+        </div>
+        <div class="settings-row" id="adblockRow" hidden>
+          <div>
+            <div class="label">Ad blocking</div>
+            <div class="desc" id="adblockDesc" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="settings-row" id="updateAppRow" hidden>
+          <div>
+            <div class="label">Update app</div>
+            <div class="desc" id="updateAppDesc" role="status" aria-live="polite">Install the newest build of the app. It restarts and music stops.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn-ghost" id="updateAppCancel" type="button" hidden aria-label="Cancel the update">Not now</button>
+            <button class="btn-ghost" id="updateAppBtn" type="button" aria-label="Update app: check for the newest build">Update app</button>
+          </div>
         </div>
         <div class="settings-row beta-hidden">
           <div>
@@ -18230,11 +18246,111 @@ feedbackBtn.addEventListener('click', openFeedbackModal);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ask(); });
   }
 }
+// Ad blocking rules and the in-frame script are live files the native apps fetch (adblock/rules.json, adblock/inject.js).
+// Settings shows the rules version and kill-switch state; Reload now refetches them first and says what happened.
+const adblockNative = (() => {
+  const droid = window.EbbNative && typeof EbbNative.adblockRefresh === 'function';
+  const mac = !droid && window.ebblessDesktop && typeof ebblessDesktop.adblockRefresh === 'function';
+  if (!droid && !mac) return null;
+  const row = $('adblockRow'), desc = $('adblockDesc');
+  const line = (i) => !i ? '' : 'Rules v' + i.version + ' (' + i.source + '), blocking ' + (i.blocking ? 'on' : 'off') + ', kill switch ' + (i.killSwitch ? 'ON' : 'off');
+  const showInfo = async () => {
+    try { desc.textContent = line(droid ? JSON.parse(EbbNative.adblockInfo()) : await ebblessDesktop.adblockInfo()); row.hidden = !desc.textContent; } catch(e){}
+  };
+  showInfo();
+  return {
+    // resolves to the one-line result (also shown in Settings); never rejects
+    async refresh(){
+      row.hidden = false; desc.textContent = 'Updating ad blocking...';
+      let msg = '';
+      try {
+        if (droid){
+          EbbNative.adblockRefresh();
+          for (let i = 0; i < 70; i++){
+            await new Promise(r => setTimeout(r, 300));
+            const st = String(EbbNative.adblockStatus()); if (st.startsWith('done|')){ msg = st.slice(5); break; }
+          }
+        } else {
+          const r = await ebblessDesktop.adblockRefresh(); msg = r && r.message || '';
+        }
+      } catch(e){}
+      desc.textContent = msg || 'Could not update ad blocking';
+      return msg;
+    },
+    showInfo
+  };
+})();
 $('reloadAppBtn').addEventListener('click', async () => {
+  if (adblockNative){ $('reloadAppBtn').disabled = true; await adblockNative.refresh(); await new Promise(r => setTimeout(r, 1500)); }   // let the one-line result be read before the page reloads
   if (window.EbbNative && EbbNative.reloadFresh){ EbbNative.reloadFresh(); return; }   // Android app: refreshes its saved page copy first
   try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k); } catch(e){}
   location.reload();
 });
+// Settings > Update app: only inside the native apps (Android EbbNative.updateNow,
+// Mac ebblessDesktop.updateCheck); the plain web build keeps the row hidden.
+// Nothing restarts or stops music without the person's tap.
+(() => {
+  const row = $('updateAppRow'), desc = $('updateAppDesc'), btn = $('updateAppBtn'), cancel = $('updateAppCancel');
+  const droid = window.EbbNative && typeof EbbNative.updateNow === 'function';
+  const mac = !droid && window.ebblessDesktop && typeof ebblessDesktop.updateCheck === 'function';
+  if (!row || !(droid || mac)) return;
+  row.hidden = false;
+  const say = (t) => { desc.textContent = t; };
+  const label = (t, aria) => { btn.textContent = t; btn.setAttribute('aria-label', aria || t); };
+  if (droid){
+    let timer = null;
+    const poll = () => {
+      let st = 'idle|'; try { st = String(EbbNative.updateStatus()); } catch(e){}
+      const i = st.indexOf('|'), state = st.slice(0, i), text = st.slice(i + 1);
+      if (text) say(text);
+      if (state === 'checking' || state === 'installing' || state === 'confirm') return;
+      clearInterval(timer); timer = null; btn.disabled = false;
+      if (state === 'error') label('Try again');
+    };
+    btn.addEventListener('click', () => {
+      if (timer) return;
+      btn.disabled = true; say('Checking...');
+      try { EbbNative.updateNow(); } catch(e){ say('Could not start the update'); btn.disabled = false; return; }
+      timer = setInterval(poll, 700);
+    });
+    return;
+  }
+  // Mac
+  let found = null, mode = 'check', ver = '';
+  const idle = () => { mode = 'check'; cancel.hidden = true; btn.disabled = false; };
+  const check = async (quiet) => {
+    btn.disabled = true; if (!quiet) say('Checking...');
+    let r; try { r = await ebblessDesktop.updateCheck(); } catch(e){ r = { error: 'Could not check' }; }
+    idle();
+    if (r.error){ if (!quiet) say(r.error); label('Check again'); return; }
+    ver = r.current; found = r;
+    if (r.available){ mode = 'download'; say(r.latest + ' available'); label('Update now', 'Update now: download ' + r.latest); }
+    else { say('EBBLESS ' + r.current + ', latest'); label('Check again'); }
+  };
+  btn.addEventListener('click', async () => {
+    if (mode === 'check') return check(false);
+    if (mode === 'download'){
+      btn.disabled = true; say('Downloading ' + found.latest + ' 0%');
+      ebblessDesktop.onUpdateProgress(p => { if (mode === 'download') say('Downloading ' + found.latest + ' ' + p + '%'); });
+      const r = await ebblessDesktop.updateDownload();
+      if (r.error){ idle(); mode = 'download'; say(r.error); label('Try again'); return; }
+      mode = 'confirm'; btn.disabled = false; cancel.hidden = false;
+      say(found.latest + ' is ready. EBBLESS will restart and the music will stop.');
+      label('Restart and update', 'Restart EBBLESS now and install ' + found.latest);
+      btn.focus();
+      return;
+    }
+    if (mode === 'confirm'){
+      btn.disabled = true; cancel.hidden = true; say('Restarting...');
+      const r = await ebblessDesktop.updateInstall();
+      if (r.error){ idle(); mode = 'download'; say(r.error); label('Try again'); }
+    }
+  });
+  cancel.addEventListener('click', () => { mode = 'download'; cancel.hidden = true; say(found.latest + ' available'); label('Update now', 'Update now: download ' + found.latest); });
+  say('EBBLESS ...');
+  ebblessDesktop.version().then(v => { ver = v; say('EBBLESS ' + v); });
+  setTimeout(() => check(true), 4000);
+})();
 ['reportBugBtn', 'suggestIdeaBtn', 'testerFeedbackBtn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', openFeedbackModal); });
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
 dangerScrim.addEventListener('click', closeFeedbackModal);

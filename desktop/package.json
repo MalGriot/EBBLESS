@@ -1,7 +1,7 @@
 {
   "name": "ebbless-desktop",
   "productName": "EBBLESS",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "EBBLESS for Mac: the web app in its own window, with a mini player that floats over every app and desktop.",
   "main": "main.js",
   "private": true,
@@ -22,8 +22,16 @@
       "main.js",
       "adblock.js",
       "adblock-rules.js",
+      "adblock-live.js",
+      "updater.js",
       "preload.js",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../adblock",
+        "to": "adblock"
+      }
     ],
     "mac": {
       "category": "public.app-category.music",

@@ -8,8 +8,8 @@ android {
         applicationId "io.github.malgriot.ebbless"
         minSdkVersion 24
         targetSdkVersion 35
-        versionCode 25
-        versionName "2.12.3"
+        versionCode 27
+        versionName "2.12.5"
     }
     buildTypes {
         // debug builds install next to the real app instead of over it
@@ -17,7 +17,7 @@ android {
         release { minifyEnabled false }
     }
     // the splash/library background videos ship inside the app (copied from the site folder, so one source of truth)
-    sourceSets.main.assets.srcDirs += "$buildDir/generated/videoAssets"
+    sourceSets.main.assets.srcDirs += ["$buildDir/generated/videoAssets", "$buildDir/generated/adblockAssets"]
     androidResources { noCompress 'webm', 'mp3', 'mp4' }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -30,3 +30,15 @@ tasks.register('bundleVideos', Copy) {
     into "$buildDir/generated/videoAssets/brand/assets"
 }
 preBuild.dependsOn 'bundleVideos'
+
+// the fallback ad rules + script: the same adblock/ files the site serves live (one source of truth, nothing to keep in sync)
+tasks.register('bundleAdblock', Copy) {
+    from("$rootDir/../adblock") { include 'rules.json', 'inject.js' }
+    into "$buildDir/generated/adblockAssets/adblock"
+}
+preBuild.dependsOn 'bundleAdblock'
+
+dependencies {
+    // WebViewCompat.addDocumentStartJavaScript: the only way to reach the cross-origin YouTube embed frame (ad skipper)
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
