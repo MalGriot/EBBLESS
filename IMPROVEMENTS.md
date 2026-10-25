@@ -11545,7 +11545,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #641 (idea); issue body was empty beyond the title.
 
 ### donate-button-640: Donate button (Geethub #640)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner decided (2026-10-25): link is https://www.patreon.com/cw/EBBLESS. Three places: (1) a heart icon in the top bar, one tap, opens a small card with a one-line reason and one button to Patreon; (2) a donate link on the splash; (3) one shown-once line on the 2-weeks-up recap. Always reachable, never pushy: no pop-up, badge, red dot or repeat prompt. Accessible: aria-label, keyboard reachable, visible focus, no looping animation.
 - **Touches:** settings/about
