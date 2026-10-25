@@ -19276,10 +19276,11 @@ function weekUpJoinSet(btn, note, me){
   const now = Date.now();
   const date = Number(me.nextRoundAt) > now && me.nextRoundLabel ? String(me.nextRoundLabel) : '';
   const round = Number(me.nextRound) > 0 ? 'Round ' + me.nextRound : 'the next round';
-  btn.dataset.gate = '';
+  btn.dataset.gate = ''; note.style.cssText = '';
   if (me.feedbackGiven === false && !me.rejoin){
-    btn.disabled = false; btn.dataset.gate = '1'; btn.textContent = 'SHARE YOUR FEEDBACK TO UNLOCK ' + round.toUpperCase();
-    note.textContent = 'Feedback for this round unlocks ' + round + '. Send it, come back here, and join in one tap.';
+    btn.disabled = false; btn.dataset.gate = '1'; btn.textContent = 'SEND FEEDBACK NOW TO REJOIN';
+    note.textContent = 'Required: you can only rejoin ' + round + ' after you send feedback for this round. Tap the button, send it, then come back here and join in one tap.';
+    note.style.cssText = 'font-weight:700;opacity:1;color:inherit';
   } else if (me.rejoin === 'approved'){
     btn.disabled = true; btn.textContent = 'YOU\'RE IN FOR THE NEXT ROUND';
     note.textContent = date ? 'It opens ' + date + '. Your fresh 2 weeks start then.' : 'Your fresh 2 weeks start when the round opens.';
