@@ -11602,7 +11602,7 @@ Add entries in this shape:
 - **Notes:** Mac app is unsigned (identity null), so Squirrel autoUpdater will not work; use a download, hdiutil attach, ditto, relaunch script. Never interrupt playback without a clear tap, confirm before restarting.
 
 ### adblock-live-rules: Reload now puts the newest adblock in full effect (owner request 2026-10-25)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Owner: the "Reload now" button should put all the adblocks in full effect. Today the rules and the in-frame skip script are compiled into the Mac and Android apps, so a web reload cannot change them. Move the rule list and the injected script out to live files served by the site (adblock/rules.json, adblock/inject.js), have both native shells fetch them (cached, with a bundled fallback and the remote kill flag), and make Reload now (and launch) refetch and reinject so a selector fix reaches every installed app with a normal push to main, no reinstall.
 - **Touches:** desktop/adblock.js, android-webview AdBlock.java/MainActivity, new adblock/ folder, Settings reload row in index.html.
