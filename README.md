@@ -242,6 +242,15 @@ the library. It never goes to the Sheet. It rides along with profile sync
 (a `set` key, merged per entry on the way in), so a tester who signs in with
 Google gets it back on a new device or in the next beta.
 
+Auto rejoin (#663): a tester who sends feedback and taps "Join the next
+beta" is accepted on the spot with a fresh 2 weeks starting now (same token,
+next `round`), every time their window runs out. The Sheet's Settings tab
+has `auto_rejoin` (default `on`; a missing row also counts as on). Set it to
+`off` to stop: rejoins go back to queuing as Pending for you to accept by
+hand (window then starts at `next_round_start` or acceptance). Needs the
+updated `tools/beta-sheet.gs` pasted into Apps Script and a new web app
+deployment version; the worker change alone does nothing.
+
 Owner: `?wrapped=preview` shows the screen now with this browser's own log
 (demo data if empty), `?wrapped=demo` always uses demo data; both have a
 Close button and freeze nothing. `?wrapped=gate` makes this tab session

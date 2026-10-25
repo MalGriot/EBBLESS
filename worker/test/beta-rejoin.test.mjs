@@ -99,3 +99,16 @@ test('in-app reports: only real Send feedback is tagged "in-app feedback"', asyn
   }
   assert.deepEqual(sources, { 'feedback-form': 'in-app feedback', 'vibe-check': 'in-app', 'ads-button': 'in-app', undefined: 'in-app' });
 });
+
+test('/beta/rejoin: auto-accepted rejoin returns the fresh window', async () => {
+  const now = Date.now();
+  const tester = { id: 'x', feedback_request_sent: now - 20 * DAY, window_anchor: now - 1000, window_start: now - 1000, window_days: 14, round: 3 };
+  const r = await call('/beta/rejoin', { token: TOKEN }, { rejoined: true, tester, next_round: 4 }).res;
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.rejoined, true);
+  assert.equal(d.rejoin, 'accepted');
+  assert.equal(d.windowEndsAt, now - 1000 + BETA_WINDOW_MS);
+  assert.ok(d.windowEndsAt > now + 13 * DAY);
+  assert.equal(d.round, 3);
+});
