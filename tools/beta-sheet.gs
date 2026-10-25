@@ -349,6 +349,7 @@ function roundOverText_(first, link, gave, span) {
     (gave
       ? 'I\u2019ve got your feedback. If you want in on the next round, open EBBLESS and tap the join-next-round button. I go through every request by hand.\n\n'
       : 'Want in on the next round? It starts with your feedback. Tell me what you made of it here:\n\n' + link + '\n\nThen open EBBLESS and tap the join-next-round button. I go through every request by hand.\n\n') +
+    'If EBBLESS earned a spot in your day, you can help keep it ad-free: https://www.patreon.com/cw/EBBLESS\n\n' +
     'Mal';
 }
 function roundOverHtml_(first, link, gave, span) {
@@ -360,6 +361,7 @@ function roundOverHtml_(first, link, gave, span) {
     (gave
       ? p('I\u2019ve got your feedback. If you want in on the next round, open EBBLESS and tap the join-next-round button. I go through every request by hand.')
       : p('Want in on the next round? It starts with your feedback. Tell me what you made of it here:') + p('<a href="' + esc(link) + '">' + esc(link) + '</a>') + p('Then open EBBLESS and tap the join-next-round button. I go through every request by hand.')) +
+    p('If EBBLESS earned a spot in your day, you can help keep it ad-free: <a href="https://www.patreon.com/cw/EBBLESS">patreon.com/cw/EBBLESS</a>') +
     p('Mal') + '</div>';
 }
 function sendFeedbackRequests() {

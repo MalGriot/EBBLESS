@@ -416,13 +416,24 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
 #supportBtn svg{width:18px;height:18px}
 #supportBtn.is-thanks{animation:supportThanks 900ms var(--ease-out) 1}
 @keyframes supportThanks{0%{opacity:.7;transform:scale(1)}40%{opacity:1;transform:scale(1.25)}100%{opacity:.7;transform:scale(1)}}
-#supportBtn:focus-visible,.support-pop a:focus-visible,.support-pop button:focus-visible,.splash-support:focus-visible,#weekUp .wu-support a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#supportBtn:focus-visible,.support-pop a:focus-visible,.fb-support a:focus-visible,.support-pop button:focus-visible,.splash-support:focus-visible,#weekUp .wu-support a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .support-pop{position:fixed;z-index:10050;width:min(260px,calc(100vw - 24px));background:var(--panel-2);border:1px solid var(--accent);border-radius:var(--r-lg);
   box-shadow:0 14px 40px rgba(0,0,0,.5);padding:14px 16px;color:var(--text)}
 .support-pop[hidden]{display:none}
 .support-pop p{margin:0 0 12px;font-size:14px;line-height:1.4;color:var(--text)}
+.support-pop .support-opts{display:flex;flex-direction:column;gap:8px}
+.support-note{font-weight:400;opacity:.75;margin-left:6px}
 .support-pop .support-go{display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:20px;background:var(--accent);color:var(--on-accent,#151107);font-size:13.5px;font-weight:600;text-decoration:none}
 .support-pop .support-go:hover{filter:brightness(1.08)}
+.support-pop .support-go + .support-go{background:transparent;color:var(--text);border:1px solid var(--border-2,var(--accent))}
+/* vibe check support line (#640): only after a thumbs up */
+.fb-support{margin:10px 0 0;font-size:13px;color:var(--faint)}
+.fb-support[hidden]{display:none}
+.fb-support p{margin:0 0 8px}
+.fb-support .support-opts{display:flex;gap:8px;flex-wrap:wrap}
+.fb-support .support-go{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--border-2,var(--accent));color:var(--text);text-decoration:none;font-size:13px;font-weight:600}
+.fb-support .support-go:hover,.fb-support .support-go:focus-visible{border-color:var(--accent)}
+.fb-support a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* ---------- views ---------- */
 .view{position:absolute;inset:0;top:var(--topbar-h);bottom:0;overflow-y:auto;overflow-x:hidden;
@@ -3719,7 +3730,10 @@ body.week-up-on{overflow:hidden}
 #weekUp .wu-saved p{margin:0 0 8px;color:#c9c9c9}
 #weekUp .wu-faint,#weekUp .wu-saved .wu-faint{color:var(--faint);font-size:13px;margin:0}
 #weekUp .wu-support{margin:0 0 14px;text-align:center}
-#weekUp .wu-support a{color:var(--text);text-decoration:underline;text-underline-offset:3px;padding:8px 0;display:inline-block}
+#weekUp .wu-support p{margin:0 0 8px}
+#weekUp .wu-support-opts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#weekUp .wu-support .support-go{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--border-2,var(--accent));color:var(--text);text-decoration:none;font-size:13px;font-weight:600}
+#weekUp .wu-support .support-go:hover{border-color:var(--accent)}
 #weekUp button.wu-btn{background:transparent;font-family:inherit;cursor:pointer;margin:16px 0 10px}
 #weekUp button.wu-btn:disabled{cursor:default;filter:none;transform:none;border-color:var(--accent);color:var(--accent)}
 #weekUp .wu-quiet{margin:0;color:#c9c9c9}
@@ -4137,7 +4151,7 @@ body.week-up-on{overflow:hidden}
     </button>
     <div class="support-pop" id="supportPop" role="dialog" aria-label="Support EBBLESS" hidden>
       <p>Keep EBBLESS ad-free.</p>
-      <a class="support-go" id="supportGo" href="https://www.patreon.com/cw/EBBLESS" target="_blank" rel="noopener">Support on Patreon</a>
+      <div class="support-opts" id="supportOpts"></div>
     </div>
     <nav id="topnav">
       <button class="nav-btn" data-view="library">
@@ -5217,6 +5231,7 @@ body.week-up-on{overflow:hidden}
         <input id="fbContact" type="text" maxlength="200" autocomplete="email" placeholder="So we can follow up">
       </div>
     </div>
+    <div class="fb-support" id="fbSupport" hidden><p>Feeling it? Keep EBBLESS ad-free.</p><div class="support-opts" id="fbSupportOpts"></div></div>
     <div class="fb-status" id="fbStatus" role="status" aria-live="polite"></div>
     <div class="danger-modal-actions">
       <button type="button" class="btn-ghost" id="fbCancelBtn">Cancel</button>
@@ -9468,6 +9483,24 @@ const crossfadeBtn = $('crossfadeBtn'), crossfadeDurSlider = $('crossfadeDurSlid
 let toastTimer = null;
 // action (optional): { label, run } adds a button (e.g. Undo) and keeps the
 // toast up a little longer so there's time to reach it.
+// Support options (#640). One line per option; add more here when the owner supplies real links.
+const SUPPORT_LINKS = [
+  { id: 'patreon', label: 'Support monthly', note: 'Patreon', url: 'https://www.patreon.com/cw/EBBLESS' },
+  { id: 'paypal', label: 'Tip once', note: 'PayPal', url: 'https://paypal.me/malgriot' }
+];
+function supportLinksHtml(cls){
+  return SUPPORT_LINKS.map(l => '<a class="' + cls + '" data-support="' + l.id + '" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.label) + ' <span class="support-note">' + escapeHtml(l.note) + '</span></a>').join('');
+}
+// tapping any support link: thank-you toast and one glow on the heart (skipped for reduced motion)
+document.addEventListener('click', (e) => {
+  if (!e.target.closest || !e.target.closest('a[data-support]')) return;
+  try { showToast('Peace and love'); } catch(_){}
+  const btn = document.getElementById('supportBtn');
+  if (btn && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
+    btn.classList.remove('is-thanks'); void btn.offsetWidth; btn.classList.add('is-thanks');
+    btn.addEventListener('animationend', () => btn.classList.remove('is-thanks'), { once: true });
+  }
+});
 function showToast(msg, action){
   toastEl.textContent = msg;
   toastEl.classList.toggle('has-action', !!action);
@@ -18141,6 +18174,7 @@ function setFbMode(vibe){
   fbMessageLabel.textContent = FB_STD_COPY.label;
   fbMessage.placeholder = FB_STD_COPY.placeholder;
   fbCancelBtn.textContent = vibe ? 'Not now' : 'Cancel';
+  $('fbSupport').hidden = true;
 }
 function openFeedbackModal(){
   setFbMode(null);
@@ -18165,6 +18199,7 @@ fbThumbs.forEach(btn => btn.addEventListener('click', () => {
   fbVibe.sentiment = up ? 'up' : 'down';
   fbThumbs.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
   feedbackModal.classList.add('has-thumb');
+  const sup = $('fbSupport'); if (up && !$('fbSupportOpts').firstChild) $('fbSupportOpts').innerHTML = supportLinksHtml('support-go'); sup.hidden = !up;
   fbIntro.textContent = up ? 'Love that. Tell us a little more, if you want.' : 'Fair. Tell us a little more so we can fix it.';
   fbMessageLabel.textContent = up ? 'What\'s hitting for you?' : 'What\'s not landing?';
   fbMessage.placeholder = up ? 'Favorite part, what keeps you coming back, anything.' : 'What felt off, what\'s missing, what would make it click.';
@@ -19209,7 +19244,7 @@ function weekUpHtml(r, opts){
   html += '<section class="wu-card wu-saved wu-reveal"><h3 class="wu-eyebrow">Your history is saved</h3><p>Your library, liked songs and everything in this recap stay put. Join the next beta and it all loads back in, right where you left off.</p>' +
     '<p class="wu-faint">' + (synced ? 'It\'s synced to your Google account, so any device you sign in on picks it up.' : 'It\'s saved on this device. Sign in with Google in the next beta to carry it anywhere.') + '</p>' +
     '<button type="button" class="wu-btn" id="wuJoin"></button><p class="wu-faint" id="wuJoinNote" aria-live="polite"></p></section>' +
-    (showSupport ? '<p class="wu-faint wu-support wu-reveal">EBBLESS stays ad-free because of people like you. <a href="https://www.patreon.com/cw/EBBLESS" target="_blank" rel="noopener">Support it on Patreon</a>.</p>' : '') +
+    (showSupport ? '<div class="wu-faint wu-support wu-reveal"><p>Feeling it? Keep EBBLESS ad-free.</p><div class="wu-support-opts">' + supportLinksHtml('support-go') + '</div></div>' : '') +
     '<a class="wu-btn primary wu-reveal" href="' + escapeHtml(fbHref) + '"' + (opts.preview ? ' target="_blank" rel="noopener"' : '') + '>GIVE FEEDBACK</a>' +
     '<p class="wu-signoff wu-reveal">That\'s a wrap on this chapter. Peace, and thank you for listening.</p>' +
     '</div>';
@@ -19440,20 +19475,13 @@ $('helpBtn').addEventListener('click', () => replayTutorialBtn.click());
   btn.addEventListener('click', () => {
     if (!pop.hidden){ close(true); return; }
     pop.hidden = false; btn.setAttribute('aria-expanded', 'true'); place();
-    const go = $('supportGo'); if (go) go.focus();
+    const go = pop.querySelector('a'); if (go) go.focus();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden){ e.stopPropagation(); close(true); } }, true);
   document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pop.contains(e.target) && !btn.contains(e.target)) close(false); }, true);
   window.addEventListener('resize', () => { if (!pop.hidden) place(); });
-  pop.addEventListener('click', (e) => {
-    if (!e.target.closest('a')) return;
-    close(false);
-    try { showToast('Peace and love'); } catch(_){}
-    if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
-      btn.classList.remove('is-thanks'); void btn.offsetWidth; btn.classList.add('is-thanks');
-      btn.addEventListener('animationend', () => btn.classList.remove('is-thanks'), { once: true });
-    }
-  });
+  $('supportOpts').innerHTML = supportLinksHtml('support-go');
+  pop.addEventListener('click', (e) => { if (e.target.closest('a')) close(false); });
 })();
 try{ if (localStorage.getItem(TUTORIAL_WATCHED_KEY) !== 'true') $('helpBtn').classList.add('is-unplayed'); }catch(e){}
 
