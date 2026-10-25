@@ -11600,3 +11600,11 @@ Add entries in this shape:
 - **Touches:** index.html (Settings row), desktop/ (main.js, preload.js), android-webview/ (Updater.java, MainActivity bridge), README.
 - **Branch:** agent/app-update-button
 - **Notes:** Mac app is unsigned (identity null), so Squirrel autoUpdater will not work; use a download, hdiutil attach, ditto, relaunch script. Never interrupt playback without a clear tap, confirm before restarting.
+
+### adblock-live-rules: Reload now puts the newest adblock in full effect (owner request 2026-10-25)
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Owner: the "Reload now" button should put all the adblocks in full effect. Today the rules and the in-frame skip script are compiled into the Mac and Android apps, so a web reload cannot change them. Move the rule list and the injected script out to live files served by the site (adblock/rules.json, adblock/inject.js), have both native shells fetch them (cached, with a bundled fallback and the remote kill flag), and make Reload now (and launch) refetch and reinject so a selector fix reaches every installed app with a normal push to main, no reinstall.
+- **Touches:** desktop/adblock.js, android-webview AdBlock.java/MainActivity, new adblock/ folder, Settings reload row in index.html.
+- **Branch:** agent/adblock-live-rules (integrates agent/adblock-android and agent/app-update-button)
+- **Notes:** One manual install of the new native builds is still needed once per device. Security: fetch only from the site's own https host, size and JSON checks, inject only into youtube embed frames, honor the /flags kill switch.
