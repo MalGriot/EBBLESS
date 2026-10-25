@@ -64,6 +64,38 @@ final class Updater {
         }, "ebb-updater").start();
     }
 
+    /** Settings > Update app: what the page shows. "state|text", states: idle, checking, uptodate, installing, confirm, error. */
+    static volatile String status = "idle|";
+
+    /** Settings > Update app: check right now (no hourly throttle) and install when newer. Never throws. */
+    static void checkNow(final Context ctx) {
+        final Context app = ctx.getApplicationContext();
+        if (running) return;
+        if (app.getPackageName().endsWith(".debug")) { status = "error|Debug builds do not self-update"; return; }
+        running = true;
+        status = "checking|Checking...";
+        new Thread(() -> {
+            try {
+                String latest = latestVersion();
+                String mine = app.getPackageManager().getPackageInfo(app.getPackageName(), 0).versionName;
+                if (latest == null) {
+                    status = "error|Could not read the latest version";
+                    running = false;
+                } else if (newer(latest, mine)) {
+                    status = "installing|Installing " + latest + ", the app will restart";
+                    File apk = download(app);
+                    install(app, apk);   // PackageInstaller answers through UpdateReceiver; success replaces this process
+                } else {
+                    status = "uptodate|Up to date (" + mine + ")";
+                    running = false;
+                }
+            } catch (Throwable t) {
+                status = "error|" + (t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
+                running = false;
+            }
+        }, "ebb-updater-now").start();
+    }
+
     private static String latestVersion() throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(RELEASE_API).openConnection();
         c.setConnectTimeout(10000); c.setReadTimeout(10000);
@@ -127,6 +159,7 @@ final class Updater {
 
     /** Android wants a tap (first update, or the install-from-this-app permission). */
     static void needsUser(Context app, Intent confirm) {
+        if (status.startsWith("installing")) status = "confirm|Android needs one tap: press Install on the next screen";
         confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (holdForEnter) { pending = confirm; return; }
         try { app.startActivity(confirm); } catch (Throwable ignored) { pending = confirm; }   // not allowed from here: keep it for the next Enter
@@ -138,6 +171,11 @@ final class Updater {
         if (i == null) return;
         pending = null;
         try { ctx.startActivity(i); } catch (Throwable ignored) {}
+    }
+
+    static void done(Context app, int code, String msg) {
+        if (status.startsWith("installing") || status.startsWith("confirm")) status = "error|Install failed" + (msg == null || msg.isEmpty() ? " (" + code + ")" : ": " + msg);
+        done(app);
     }
 
     static void done(Context app) {

@@ -15,6 +15,6 @@ public class UpdateReceiver extends BroadcastReceiver {
             if (confirm != null) Updater.needsUser(c.getApplicationContext(), confirm);
             return;
         }
-        Updater.done(c.getApplicationContext());   // success replaces this process anyway; on failure the next check retries
+        Updater.done(c.getApplicationContext(), status, i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE));   // success replaces this process anyway; on failure the next check retries
     }
 }
