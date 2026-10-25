@@ -11594,7 +11594,7 @@ Add entries in this shape:
 - **Notes:** Earlier research (docs/SPONSORBLOCK-AND-PODCAST-ADS.md) recommended against stripping podcast ads; owner has now decided. Mind the free-tier Workers AI budget (PodCaptionBudget).
 
 ### update-app-button: Update-the-app button for the Mac and Android apps (owner request 2026-10-25)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Description:** Owner: "make it a button that I and testers can push in the apps that reinstalls." A Settings row (shown only inside the native apps) that checks for a newer app build and installs it now. Android: trigger the existing Updater.java check immediately instead of waiting for the hourly check, then install. Mac: no updater exists; download the latest release dmg, replace /Applications/EBBLESS.app, relaunch. Plain web: row hidden.
 - **Touches:** index.html (Settings row), desktop/ (main.js, preload.js), android-webview/ (Updater.java, MainActivity bridge), README.
