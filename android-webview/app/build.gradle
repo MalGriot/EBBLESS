@@ -30,3 +30,8 @@ tasks.register('bundleVideos', Copy) {
     into "$buildDir/generated/videoAssets/brand/assets"
 }
 preBuild.dependsOn 'bundleVideos'
+
+dependencies {
+    // WebViewCompat.addDocumentStartJavaScript: the only way to reach the cross-origin YouTube embed frame (ad skipper)
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

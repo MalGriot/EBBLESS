@@ -34,6 +34,8 @@ public class MainActivity extends Activity {
     private static final long SIGNIN_TTL_MS = 10 * 60 * 1000;
 
     private WebView web;
+    /** Handle of the registered ad-skip document-start script, so a kill-switch flip can remove or re-add it. */
+    private androidx.webkit.ScriptHandler adScript;
     /** True once the live page differs from the copy this launch is showing; the page asks (pageUpdated) and offers a Refresh. */
     private volatile boolean pageStale;
     private String pendingState;
@@ -153,6 +155,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (web != null) AdBlock.refreshRemote(this, () -> runOnUiThread(() -> syncAdScript())); // hourly at most
         root.postDelayed(() -> Updater.check(this), 15000);   // self-update: looks for a newer app at most once an hour, after the app has settled
         if (web != null) web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(true)", null);   // never leave the page in lightweight mode while it is on screen
     }
@@ -208,6 +211,20 @@ public class MainActivity extends Activity {
         web.evaluateJavascript("(function(){try{sessionStorage.setItem('ebbless:nsplashDone','1');}catch(e){}if(window.__ebbSplashDone)__ebbSplashDone();setTimeout(function(){var v=document.querySelector('video.lib-bg-video');if(v&&!v.getAttribute('src'))v.src=v.getAttribute('data-src').replace('.mp4','-alpha.webm');},6000);})()", null);
     }
 
+    /** Register (or remove) the ad-skip script for the YouTube embed frames to match the current on/off state. */
+    private void syncAdScript() {
+        if (web == null) return;
+        try {
+            boolean want = AdBlock.enabled(this);
+            if (!want && adScript != null) { adScript.remove(); adScript = null; }
+            if (want && adScript == null
+                    && androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                adScript = androidx.webkit.WebViewCompat.addDocumentStartJavaScript(web, AdBlock.SCRIPT,
+                        new java.util.HashSet<>(java.util.Arrays.asList(AdBlock.ORIGINS)));
+            }
+        } catch (Throwable t) { /* never break playback over ad blocking */ }
+    }
+
     private void initWeb(Bundle b) {
         web = new KeepAliveWebView(this);
         web.setBackgroundColor(0xFF000000);
@@ -237,6 +254,9 @@ public class MainActivity extends Activity {
             @android.webkit.JavascriptInterface public void reloadFresh() {
                 runOnUiThread(() -> refreshPageCopy(() -> { if (web != null) web.loadUrl(HOME, java.util.Collections.singletonMap("Cache-Control", "no-cache")); }));
             }
+            /** Ad blocking user switch (default on). Applies to the next page load; the remote kill switch can still force it off. */
+            @android.webkit.JavascriptInterface public boolean adblockOn() { return AdBlock.enabled(MainActivity.this); }
+            @android.webkit.JavascriptInterface public void setAdblock(boolean on) { AdBlock.setUser(MainActivity.this, on); runOnUiThread(() -> syncAdScript()); }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }
@@ -256,6 +276,7 @@ public class MainActivity extends Activity {
 
         web.setWebViewClient(new WebViewClient() {
             @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                if (AdBlock.enabled(MainActivity.this) && AdBlock.isAd(r.getUrl())) return AdBlock.empty();
                 android.webkit.WebResourceResponse bundled = bundledVideo(r);
                 if (bundled == null) bundled = cachedPage(r);
                 return bundled != null ? bundled : super.shouldInterceptRequest(v, r);
@@ -265,6 +286,8 @@ public class MainActivity extends Activity {
                 return route(r.getUrl());
             }
         });
+        syncAdScript();
+        AdBlock.refreshRemote(this, () -> runOnUiThread(() -> syncAdScript()));
         web.setWebChromeClient(new WebChromeClient() {
             // window.open (Google's sign-in popup, outbound links): catch the URL, never show a second window
             @Override public boolean onCreateWindow(WebView v, boolean dialog, boolean gesture, Message msg) {
