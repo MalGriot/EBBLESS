@@ -22,9 +22,16 @@
       "main.js",
       "adblock.js",
       "adblock-rules.js",
+      "adblock-live.js",
       "updater.js",
       "preload.js",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../adblock",
+        "to": "adblock"
+      }
     ],
     "mac": {
       "category": "public.app-category.music",

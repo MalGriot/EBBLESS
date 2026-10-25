@@ -188,6 +188,12 @@ const appBundle = () => process.env.EBBLESS_APP_PATH || path.resolve(app.getPath
 const fromMain = (e) => mainWin && e.sender === mainWin.webContents;
 
 ipcMain.handle('ebbless:version', () => myVersion());
+// Settings > Reload now / debug line: live ad-blocking rules
+ipcMain.handle('ebbless:adblock-info', (e) => fromMain(e) ? adblock.info() : null);
+ipcMain.handle('ebbless:adblock-refresh', async (e) => {
+  if (!fromMain(e)) return null;
+  try { return await adblock.refresh(); } catch(err){ return { message: 'Could not update ad blocking', info: adblock.info() }; }
+});
 ipcMain.handle('ebbless:update-check', async (e) => {
   if (!fromMain(e)) return { error: 'Not allowed' };
   try {

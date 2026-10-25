@@ -433,10 +433,12 @@ it to play in full.
 
 The Mac app (`desktop/`) blocks YouTube ads. **This violates YouTube's embed
 and API terms of service.** It is an owner decision (2026-10-25) for the native
-apps only; the web app and the Android app are untouched. It has a kill switch
+apps only; the web app is untouched (Android has the same blocking, see
+`android-webview/README.md`). It has a kill switch
 (below), so it can be turned off for everyone without shipping a new build.
 
-What it does (`desktop/adblock.js`, rules in `desktop/adblock-rules.js`):
+What it does (`desktop/adblock.js`; the rules and the in-frame script are the
+live files `adblock/rules.json` and `adblock/inject.js`, see "Live ad rules"):
 
 1. Cancels requests to ad hosts (doubleclick, googlesyndication, googleads,
    googleadservices, 2mdn, adservice.google.*) and YouTube ad paths
@@ -460,7 +462,35 @@ Turn it off:
 - Debugging: blocked-request counts print to the console every 30s when they
   change; `EBBLESS_ADBLOCK_LOG=1` also prints each blocked URL.
 
-Tests: `node --test desktop/adblock.test.js` checks the URL rules. YouTube
+### Live ad rules (Mac and Android)
+
+The rule list, selector list and the in-frame script are not compiled into the
+apps. They are `adblock/rules.json` and `adblock/inject.js`, served by GitHub
+Pages at `https://malgriot.github.io/EBBLESS/adblock/`. Both native apps fetch
+them at launch and on Settings > Reload now, keep the last good copy on disk
+(Mac: userData/adblock, Android: filesDir/adblock), and fall back to the copy
+bundled in the app (the same files: the Mac build ships `../adblock` via
+`extraResources`, the Android Gradle build copies it into the assets). Offline
+or failed fetches therefore still block.
+
+To change the rules: edit the files, bump `version` in `rules.json`, run
+`node scripts/sync-adblock.js` (writes the script's SHA-256 into `rules.json`;
+`--check` for CI), merge to main. Apps pick it up on the next launch or Reload now.
+A fetched pair is used only if: https, host `malgriot.github.io`, no redirects,
+each file at most 64 KB, valid JSON of the expected shape, `version` not lower
+than the running one, and the script hash equals `scriptSha256`. The in-frame
+script is injected only into youtube.com / youtube-nocookie.com embed frames.
+**The script executes inside YouTube frames, so anyone who can push to main can
+change what runs there.** These checks stop accidents and other hosts, not that.
+The `/flags` kill switch still applies and still wins.
+
+Settings shows a debug line in the native apps (rules version, where it came
+from, blocking on/off, kill switch). Reload now refetches, re-injects into every
+live embed frame (Mac) or rebuilds the Android document-start script and reloads
+the page, and says "Ad blocking updated to rules v7".
+
+Tests: `node --test desktop/adblock.test.js` checks the URL rules and the
+loader validation. YouTube
 changes its player class names and ad endpoints without notice, so the
 selectors and path list will need upkeep; a real ad has not been run against
 this yet.

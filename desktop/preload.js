@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('ebblessDesktop', {
   setDockIcon: (dataUrl) => ipcRenderer.send('ebbless:dock-icon', dataUrl),
   // a Google credential from the browser sign-in (desktop/signin.html)
   // Settings > Update app
+  adblockInfo: () => ipcRenderer.invoke('ebbless:adblock-info'),
+  adblockRefresh: () => ipcRenderer.invoke('ebbless:adblock-refresh'),
   version: () => ipcRenderer.invoke('ebbless:version'),
   updateCheck: () => ipcRenderer.invoke('ebbless:update-check'),
   updateDownload: () => ipcRenderer.invoke('ebbless:update-download'),

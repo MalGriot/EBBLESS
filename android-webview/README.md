@@ -28,7 +28,12 @@ use `.debug` and install beside the real app.
 ## Ad blocking (YouTube embed)
 
 **This violates YouTube's embed terms of service.** Owner decision 2026-10-25: the native apps are sideloaded (no Google Play),
-so store compliance is not a constraint. Code: `AdBlock.java` plus two hooks in `MainActivity`.
+so store compliance is not a constraint. Code: `AdBlock.java` plus hooks in `MainActivity`.
+The rules and the in-frame script are live files, `adblock/rules.json` and `adblock/inject.js` at the repo root, served from
+`https://malgriot.github.io/EBBLESS/adblock/` and shared with the Mac app (see "Live ad rules" in the root README). `AdBlock` loads
+the newest valid of the cached copy (`filesDir/adblock`) and the bundled copy (Gradle `bundleAdblock` copies `../adblock` into the
+assets), fetches the live pair at launch/resume (hourly) and on Settings > Reload now (`EbbNative.adblockRefresh()` then
+`adblockStatus()`), and rebuilds the registered script handler when the version changes. `EbbNative.adblockInfo()` feeds the Settings debug line.
 
 - **Requests:** `shouldInterceptRequest` answers ad requests with an empty 200: ad hosts (doubleclick, googlesyndication,
   googleadservices, adservice.google.com, ads.youtube.com) and, on youtube.com/google.com only, paths such as `/pagead/`,

@@ -4769,6 +4769,12 @@ body.week-up-on{overflow:hidden}
           </div>
           <button class="btn-ghost" id="reloadAppBtn">Reload now</button>
         </div>
+        <div class="settings-row" id="adblockRow" hidden>
+          <div>
+            <div class="label">Ad blocking</div>
+            <div class="desc" id="adblockDesc" role="status" aria-live="polite"></div>
+          </div>
+        </div>
         <div class="settings-row" id="updateAppRow" hidden>
           <div>
             <div class="label">Update app</div>
@@ -18240,7 +18246,42 @@ feedbackBtn.addEventListener('click', openFeedbackModal);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ask(); });
   }
 }
+// Ad blocking rules and the in-frame script are live files the native apps fetch (adblock/rules.json, adblock/inject.js).
+// Settings shows the rules version and kill-switch state; Reload now refetches them first and says what happened.
+const adblockNative = (() => {
+  const droid = window.EbbNative && typeof EbbNative.adblockRefresh === 'function';
+  const mac = !droid && window.ebblessDesktop && typeof ebblessDesktop.adblockRefresh === 'function';
+  if (!droid && !mac) return null;
+  const row = $('adblockRow'), desc = $('adblockDesc');
+  const line = (i) => !i ? '' : 'Rules v' + i.version + ' (' + i.source + '), blocking ' + (i.blocking ? 'on' : 'off') + ', kill switch ' + (i.killSwitch ? 'ON' : 'off');
+  const showInfo = async () => {
+    try { desc.textContent = line(droid ? JSON.parse(EbbNative.adblockInfo()) : await ebblessDesktop.adblockInfo()); row.hidden = !desc.textContent; } catch(e){}
+  };
+  showInfo();
+  return {
+    // resolves to the one-line result (also shown in Settings); never rejects
+    async refresh(){
+      row.hidden = false; desc.textContent = 'Updating ad blocking...';
+      let msg = '';
+      try {
+        if (droid){
+          EbbNative.adblockRefresh();
+          for (let i = 0; i < 70; i++){
+            await new Promise(r => setTimeout(r, 300));
+            const st = String(EbbNative.adblockStatus()); if (st.startsWith('done|')){ msg = st.slice(5); break; }
+          }
+        } else {
+          const r = await ebblessDesktop.adblockRefresh(); msg = r && r.message || '';
+        }
+      } catch(e){}
+      desc.textContent = msg || 'Could not update ad blocking';
+      return msg;
+    },
+    showInfo
+  };
+})();
 $('reloadAppBtn').addEventListener('click', async () => {
+  if (adblockNative){ $('reloadAppBtn').disabled = true; await adblockNative.refresh(); await new Promise(r => setTimeout(r, 1500)); }   // let the one-line result be read before the page reloads
   if (window.EbbNative && EbbNative.reloadFresh){ EbbNative.reloadFresh(); return; }   // Android app: refreshes its saved page copy first
   try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k); } catch(e){}
   location.reload();

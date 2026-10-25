@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "scriptSha256": "44a4036b8704d68e3e1a384c4ec8c68ce24ba5405e2e380a2dee46500cfcea38",
+  "adHosts": [
+    "doubleclick.net", "googlesyndication.com", "googleadservices.com",
+    "googleads.com", "adservice.google.com", "imasdk.googleapis.com",
+    "2mdn.net", "moatads.com", "adsafeprotected.com", "ads.youtube.com"
+  ],
+  "adHostPrefixes": ["adservice.google."],
+  "youtubeHosts": ["youtube.com", "youtube-nocookie.com"],
+  "youtubeAdPaths": [
+    "/pagead/", "/api/stats/ads", "/ptracking",
+    "/get_midroll_info", "/get_ad_tags", "/ad_data_204",
+    "/youtubei/v1/player/ad_break", "/youtubei/v1/ad_break",
+    "/youtubei/v1/ad_placement", "/youtubei/v1/player/ad_placement",
+    "/pcs/activeview", "/generate_204_ads", "/ad_break", "ad_placement"
+  ],
+  "googleHostPrefixes": ["google.", "www.google."],
+  "googleAdPaths": ["/pagead/", "/ads/"],
+  "neverBlockHosts": [
+    "malgriot.github.io", "spotify-youtube-search.malgriot.workers.dev",
+    "spotify-youtube-search-staging.malgriot.workers.dev", "accounts.google.com",
+    "localhost", "127.0.0.1"
+  ],
+  "selectors": {
+    "hide": [
+      ".ytp-ad-overlay-container", ".ytp-ad-text-overlay", ".ytp-ad-image-overlay",
+      ".ytp-paid-content-overlay", ".ytp-ad-module", ".ytp-ad-player-overlay",
+      ".ytp-ad-player-overlay-layout", ".ytp-ad-message-container",
+      ".ytp-ad-persistent-progress-bar-container", ".video-ads",
+      ".ytp-pause-overlay-container", ".ytp-featured-product",
+      ".ytp-ce-element", ".ytp-suggested-action"
+    ],
+    "skip": [
+      ".ytp-ad-skip-button", ".ytp-ad-skip-button-modern", ".ytp-skip-ad-button",
+      ".ytp-ad-skip-button-container button", ".ytp-ad-skip-button-slot button"
+    ]
+  }
+}
