@@ -11577,11 +11577,12 @@ Add entries in this shape:
 - **Notes:** Unconfirmed: what app_name is for and Audius terms of use for apps; check before shipping. Follow the GPU budget rules in CLAUDE.md.
 
 ### adblock-mac-android-real: Real ad blocking: block ad requests, hide ads, auto-skip ads (owner decision 2026-10-25, ends compliant-only)
-- **Status:** merged
+- **Status:** review
 - **Priority:** high
 - **Description:** Owner (2026-10-25): block ad requests, hide ads, auto-skip ads, no more compliance. Builds the parked #524 plan for the native apps, where the app controls the browser engine: Mac (Electron, session.webRequest plus injection into the YouTube player frame) and Android (WebView request interception and frame injection). A plain web page cannot do this (YouTube's player is a cross-origin iframe), so the web build keeps the existing avoidance logic.
 - **Touches:** desktop/ (adblock.js, main.js), android-webview/, README.
 - **Branch:** agent/adblock-mac (Mac, existing lane), agent/adblock-android
+- **Progress:** Mac merged to main 2026-10-25; Android branch agent/adblock-android is written but not compiled or merged.
 - **Notes:** Known risk, accepted by the owner: YouTube's API terms forbid blocking ads in embeds, so enforcement could cut off the embed or API access for every user. Ship behind an on/off switch so it can be killed instantly (remote flag from the worker) without a release.
 
 ### podcast-ad-strip: Strip ads from podcasts and long YouTube audio (owner decision 2026-10-25)
