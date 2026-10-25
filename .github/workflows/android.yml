@@ -58,6 +58,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Publish sideload APK
+        if: github.ref == 'refs/heads/main'
         working-directory: android-webview
         env:
           GH_TOKEN: ${{ github.token }}
