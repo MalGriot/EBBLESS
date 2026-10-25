@@ -257,6 +257,12 @@ public class MainActivity extends Activity {
             /** Ad blocking user switch (default on). Applies to the next page load; the remote kill switch can still force it off. */
             @android.webkit.JavascriptInterface public boolean adblockOn() { return AdBlock.enabled(MainActivity.this); }
             @android.webkit.JavascriptInterface public void setAdblock(boolean on) { AdBlock.setUser(MainActivity.this, on); runOnUiThread(() -> syncAdScript()); }
+            /** Settings > Update app: check now, install if newer. The page polls updateStatus() ("state|text"). */
+            @android.webkit.JavascriptInterface public void updateNow() { Updater.checkNow(MainActivity.this); }
+            @android.webkit.JavascriptInterface public String updateStatus() { return Updater.status; }
+            @android.webkit.JavascriptInterface public String appVersion() {
+                try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Throwable t) { return ""; }
+            }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }

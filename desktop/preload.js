@@ -14,5 +14,11 @@ contextBridge.exposeInMainWorld('ebblessDesktop', {
   // the page draws a dock icon for the active art mode (#633); a PNG data URL
   setDockIcon: (dataUrl) => ipcRenderer.send('ebbless:dock-icon', dataUrl),
   // a Google credential from the browser sign-in (desktop/signin.html)
+  // Settings > Update app
+  version: () => ipcRenderer.invoke('ebbless:version'),
+  updateCheck: () => ipcRenderer.invoke('ebbless:update-check'),
+  updateDownload: () => ipcRenderer.invoke('ebbless:update-download'),
+  updateInstall: () => ipcRenderer.invoke('ebbless:update-install'),
+  onUpdateProgress: (fn) => ipcRenderer.on('ebbless:update-progress', (e, pct) => fn(pct)),
   onSignin: (fn) => ipcRenderer.on('ebbless:signin', (e, credential) => fn(credential))
 });
