@@ -10499,7 +10499,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10582,7 +10582,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499). Fixed: every cursor shape now has a dark outer edge and light inner edge, so it shows on any color. Cache v265.
 
 ### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10590,7 +10590,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #529. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #528. Investigate and implement.
 - **Touches:** ad handling.
@@ -10598,7 +10598,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #528. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub #527. Investigate and implement.
 - **Touches:** ad handling.
@@ -10838,7 +10838,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #571.
 
 ### reverse-engineer-youtube-and-find-out: reverse engineer youtube and find out where the ads are coming from so we can stop them (Geethub #572)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #572. medium
 - **Touches:** tbd.
