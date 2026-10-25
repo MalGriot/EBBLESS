@@ -11561,7 +11561,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #637 (idea); issue body was empty beyond the title.
 
 ### audius-fallback-source: Play songs from Audius when SoundCloud blocks or only previews them (from #571 research)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** From docs/MORE-MUSIC-SOURCES.md (branch agent/more-music-sources-571) and the owner's Audius API check: Audius streams full songs with no listener login, the API needs no key for reads (free plan: 10 req/s, 500k/month), and `/v1/tracks/{id}/stream` redirects to audio with CORS open. Add an `au:` source modelled on the `sc:` one. First prototype it on a scratch page (search, play one track in an audio element, seek, skip tracks whose access.stream is false), then wire it as a fallback when SoundCloud reports BLOCK or SNIP, before the YouTube swap.
 - **Touches:** deck adapters (sc: pattern), SoundCloud BLOCK/SNIP handling, link-swap order.
