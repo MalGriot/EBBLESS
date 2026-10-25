@@ -11016,7 +11016,7 @@ Add entries in this shape:
 - **Notes:** Start from the research doc [docs/SPONSORBLOCK-AND-PODCAST-ADS.md](docs/SPONSORBLOCK-AND-PODCAST-ADS.md); its earlier recommendation was not to build, the owner has now decided to. Check SponsorBlock's public API and licence/attribution terms before depending on it. Must respect ad avoidance (#523) and the GPU budget, and decide songs vs podcasts scope (doc suggested podcasts only, never songs). Shares the skip-prompt UI with #575, so build that prompt once and reuse it. Recommended model: Opus (design-heavy, reverse engineering). **Shipped 2026-10-17 (cache v314):** browser asks SponsorBlock directly (CORS open, hash prefix only, no worker change) and feeds the #575 tap-to-skip prompt. Podcasts from YouTube: sponsor/self-promo/reminder/intro/outro, always on. Songs: "Skip talking in songs" setting (non-music parts only), off by default. No silent auto-skip. Details and what was verified in docs/SPONSORBLOCK-AND-PODCAST-ADS.md Part 3.
 
 ### podcast-ad-strip: Strip ads from podcasts and long YouTube audio automatically
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Owner decision 2026-10-25: skip ad reads automatically, with a toast and one-tap Undo, on podcasts and long YouTube audio. Setting "Skip ads automatically" (default on).
 - **Touches:** index.html (skipPromptTick, podAdScan, sbWatch, Settings), worker/src/pod-ads.js, worker/src/index.js (`/podads`), worker/test/pod-ads.test.mjs, docs/SPONSORBLOCK-AND-PODCAST-ADS.md Part 4, sw.js.
@@ -11577,7 +11577,7 @@ Add entries in this shape:
 - **Notes:** Unconfirmed: what app_name is for and Audius terms of use for apps; check before shipping. Follow the GPU budget rules in CLAUDE.md.
 
 ### adblock-mac-android-real: Real ad blocking: block ad requests, hide ads, auto-skip ads (owner decision 2026-10-25, ends compliant-only)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Owner (2026-10-25): block ad requests, hide ads, auto-skip ads, no more compliance. Builds the parked #524 plan for the native apps, where the app controls the browser engine: Mac (Electron, session.webRequest plus injection into the YouTube player frame) and Android (WebView request interception and frame injection). A plain web page cannot do this (YouTube's player is a cross-origin iframe), so the web build keeps the existing avoidance logic.
 - **Touches:** desktop/ (adblock.js, main.js), android-webview/, README.
@@ -11585,7 +11585,7 @@ Add entries in this shape:
 - **Notes:** Known risk, accepted by the owner: YouTube's API terms forbid blocking ads in embeds, so enforcement could cut off the embed or API access for every user. Ship behind an on/off switch so it can be killed instantly (remote flag from the worker) without a release.
 
 ### podcast-ad-strip: Strip ads from podcasts and long YouTube audio (owner decision 2026-10-25)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Owner (2026-10-25): strip ads from podcasts and long YouTube audio. Detect ad and sponsor reads and skip them automatically. SponsorBlock-style skipping for YouTube already ships; extend it, and build podcast ad detection (EBBLESS already generates captions on device and has Workers AI), so detected ad segments are skipped or cut automatically, with a one-tap undo.
 - **Touches:** podcast player, pod-captioner / captions, worker (segment detection), SponsorBlock skip code, docs/SPONSORBLOCK-AND-PODCAST-ADS.md
