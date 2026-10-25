@@ -6517,7 +6517,14 @@ function audioUrlOf(id){ return id.slice(3); }
 // through the same <audio> deck as a podcast, and is never matched to
 // YouTube or SoundCloud.
 function isLocalVideoId(id){ return typeof id === 'string' && id.indexOf('lf:') === 0; }
-function isNativeVideoId(id){ return isSoundCloudVideoId(id) || isAudioVideoId(id) || isLocalVideoId(id); }
+// An Audius song is 'aud:<Audius track id>' (not 'au:', which is a podcast file
+// URL). It plays through the same <audio> deck as a podcast, from
+// api.audius.co's stream endpoint (a 302 to the audio file, CORS open, no key,
+// no ads). It is only ever a fallback for a SoundCloud song that is blocked or
+// previews 30 s (see scUnplayable); never matched to YouTube.
+function isAudiusVideoId(id){ return typeof id === 'string' && id.indexOf('aud:') === 0; }
+function audiusStreamUrl(id){ return 'https://api.audius.co/v1/tracks/' + encodeURIComponent(id.slice(4)) + '/stream?app_name=EBBLESS'; }
+function isNativeVideoId(id){ return isSoundCloudVideoId(id) || isAudioVideoId(id) || isLocalVideoId(id) || isAudiusVideoId(id); }
 function isPodcastPlaylistId(id){ return typeof id === 'string' && id.indexOf('pod:') === 0; }
 function soundCloudVideoId(scId){ return 'sc:' + scId; }
 function soundCloudTrackId(videoId){ return videoId.slice(3); }
@@ -14143,7 +14150,7 @@ function applyRelinkChoice(plId, trackIdx, candidate, allAlbum){
   // A SoundCloud pick stays out of that cache, though: it's keyed by
   // title/artist alone, so it would otherwise swap a same-named song in
   // some Spotify/Apple Music playlist over to this SoundCloud upload too.
-  if (!isSoundCloudVideoId(candidate.videoId)) cacheTrackMatch(t.title, t.artist, candidate);
+  if (!isSoundCloudVideoId(candidate.videoId) && !isAudiusVideoId(candidate.videoId)) cacheTrackMatch(t.title, t.artist, candidate);
   recordWrongTrackCorrection(t, candidate);
   renderLibrary();
   repaintOpenLibPanelTrack(plId, trackIdx, pl);
@@ -22647,7 +22654,7 @@ function createDeckPlayer(deck, videoId){
   deck.loadStartTs = Date.now();
   if (deck === activeDeck()) startLoadIconTicker();
   if (isSoundCloudVideoId(videoId)){ createSCDeckPlayer(deck, videoId); return; }
-  if (isAudioVideoId(videoId) || isLocalVideoId(videoId)){ createAudioDeckPlayer(deck, videoId); return; }
+  if (isAudioVideoId(videoId) || isLocalVideoId(videoId) || isAudiusVideoId(videoId)){ createAudioDeckPlayer(deck, videoId); return; }
   deck.kind = 'yt';
   // See the matching comment in createSCDeckPlayer: this deck's player is
   // about to be (re)built, so any callback bound to the player this call
@@ -22846,8 +22853,8 @@ function scUnplayable(deck, vid, why){
   if (!entry || !t || t.videoId !== vid || t.podcast) return;
   scBlockedTried.add(vid);
   (async () => {
-    let best = null;
-    try{
+    let best = await audiusFindCopy(t), viaAudius = !!best;
+    if (!best) try{
       const data = await searchYouTube(t.title, t.artist, t.srcDuration ? t.srcDuration * 1000 : 0, RELINK_CANDIDATE_COUNT);
       const list = (data.candidates && data.candidates.length) ? data.candidates : (data.videoId ? [data] : []);
       best = list.find(c => c && c.videoId && !isSoundCloudVideoId(c.videoId)) || null;
@@ -22856,12 +22863,37 @@ function scUnplayable(deck, vid, why){
     if (!cur || cur.plId !== entry.plId || cur.idx !== entry.idx || t.videoId !== vid) return;   // moved on meanwhile
     if (best){
       applyRelinkChoice(entry.plId, entry.idx, best);
-      showToast(why === 'SNIP' ? 'SoundCloud only gives a 30 second preview here. Playing a YouTube copy.' : 'SoundCloud won\u2019t play this song here. Playing a YouTube copy.');
+      const copy = viaAudius ? 'an Audius copy' : 'a YouTube copy';
+      showToast(why === 'SNIP' ? 'SoundCloud only gives a 30 second preview here. Playing ' + copy + '.' : 'SoundCloud won\u2019t play this song here. Playing ' + copy + '.');
     } else {
       showToast('SoundCloud won\u2019t play this song here, and there is no other copy. Skipping.');
       playNext(true);
     }
   })();
+}
+// Audius copy of a blocked/previewed SoundCloud song, or null. Sure matches
+// only (same bar as adTryAlternate's SoundCloud step): the title equals once
+// the artist prefix is dropped, the length is within AD_ALT_DUR_TOL_S, and the
+// artist is named by the uploader or the title. A song with no known length is
+// never matched. Tracks the listener can't stream (access.stream false) are
+// skipped. Any failure returns null so the YouTube swap still runs.
+async function audiusFindCopy(t){
+  try{
+    const ref = +t.srcDuration || +t.duration || 0;
+    if (!ref || !t.title) return null;
+    const artistKey = artistNameKey(String(t.artist || '').split(/\s*(?:,|&|feat\.?|ft\.?|\bx\b)\s*/i)[0]);
+    const q = [t.title, t.artist].filter(Boolean).join(' ');
+    const res = await fetch('https://api.audius.co/v1/tracks/search?app_name=EBBLESS&limit=15&query=' + encodeURIComponent(q));
+    if (!res.ok) return null;
+    const list = (await res.json()).data || [];
+    const want = adAltTitleKey(t.title, artistKey);
+    const c = list.find(x => x && x.id && !x.is_unlisted && x.access && x.access.stream &&
+      adAltTitleKey(x.title, artistKey) === want && Math.abs((x.duration || 0) - ref) <= AD_ALT_DUR_TOL_S &&
+      (!artistKey || artistNameKey(((x.user && x.user.name) || '') + ' ' + (x.title || '')).includes(artistKey)));
+    if (!c) return null;
+    const art = c.artwork && (c.artwork['480x480'] || c.artwork['150x150']);
+    return { videoId: 'aud:' + c.id, title: c.title || '', channel: (c.user && c.user.name) || '', duration: c.duration || 0, image: art || '' };
+  } catch(e){ return null; }
 }
 function soundCloudTrackApiUrl(videoId){ return 'https://api.soundcloud.com/tracks/' + soundCloudTrackId(videoId); }
 // #458: SoundCloud's widget can't start a NEW sound via load()/play() while the
@@ -23279,7 +23311,7 @@ function createAudioDeckPlayer(deck, videoId){
   el.onended = () => emit(YT.PlayerState.ENDED);
   el.onerror = () => {
     if (deck.gen !== myGen || deck !== activeDeck() || deck.kind !== 'au') return;
-    showToast(isLocalVideoId(deck.videoId) ? "Couldn't play this song - skipping." : "Couldn't play this episode - skipping.");
+    showToast(isLocalVideoId(deck.videoId) || isAudiusVideoId(deck.videoId) ? "Couldn't play this song - skipping." : "Couldn't play this episode - skipping.");
     playNext(true);
   };
   deck.player = {
@@ -23318,7 +23350,7 @@ function createAudioDeckPlayer(deck, videoId){
         });
         return;
       }
-      el.src = audioUrlOf(v);
+      el.src = isAudiusVideoId(v) ? audiusStreamUrl(v) : audioUrlOf(v);
       el.load();
     },
   };
@@ -23697,7 +23729,7 @@ function loadIntoDeck(deck, videoId, isActive){
   deck.adReloaded = false; deck.adAltTried = false;
   ensureLoudness(videoId);
   deck.loadStartTs = Date.now();
-  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId)) ? 'au' : 'yt';
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId) || isAudiusVideoId(videoId)) ? 'au' : 'yt';
   if (!deck.player || deck.kind !== kind){
     // Switching a deck between a YouTube and a SoundCloud track (a mixed-
     // source queue/crossfade) - the existing player is the wrong kind to
@@ -29672,7 +29704,7 @@ function castDefaultAppId(){
 // Which receiver app can play this track: YouTube's for a matched video, the
 // Default Media Receiver for a podcast file, none for SoundCloud-native.
 function castAppFor(videoId){
-  if (!videoId || isSoundCloudVideoId(videoId)) return null;
+  if (!videoId || isSoundCloudVideoId(videoId) || isAudiusVideoId(videoId)) return null;
   return isAudioVideoId(videoId) ? castDefaultAppId() : CAST_YT_APP_ID;
 }
 function castContentId(videoId){ return isAudioVideoId(videoId) ? audioUrlOf(videoId) : videoId; }
@@ -30315,7 +30347,7 @@ function iosColdDeck(deck){ return isIOS && !deck.iosWarm; }
 // kind) for this track, so advancing in place keeps the unlocked player.
 function iosCanAdvanceInPlace(videoId){
   const ad = activeDeck();
-  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId)) ? 'au' : 'yt';
+  const kind = isSoundCloudVideoId(videoId) ? 'sc' : (isAudioVideoId(videoId) || isLocalVideoId(videoId) || isAudiusVideoId(videoId)) ? 'au' : 'yt';
   return !!(ad.iosWarm && ad.player && ad.kind === kind);
 }
 // A play/pause pressed on the lock screen (or headset) while hidden is what
