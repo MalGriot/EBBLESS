@@ -11567,3 +11567,19 @@ Add entries in this shape:
 - **Touches:** deck adapters (sc: pattern), SoundCloud BLOCK/SNIP handling, link-swap order.
 - **Branch:** agent/audius-fallback
 - **Notes:** Unconfirmed: what app_name is for and Audius terms of use for apps; check before shipping. Follow the GPU budget rules in CLAUDE.md.
+
+### adblock-mac-android-real: Real ad blocking: block ad requests, hide ads, auto-skip ads (owner decision 2026-10-25, ends compliant-only)
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Owner (2026-10-25): block ad requests, hide ads, auto-skip ads, no more compliance. Builds the parked #524 plan for the native apps, where the app controls the browser engine: Mac (Electron, session.webRequest plus injection into the YouTube player frame) and Android (WebView request interception and frame injection). A plain web page cannot do this (YouTube's player is a cross-origin iframe), so the web build keeps the existing avoidance logic.
+- **Touches:** desktop/ (adblock.js, main.js), android-webview/, README.
+- **Branch:** agent/adblock-mac (Mac, existing lane), agent/adblock-android
+- **Notes:** Known risk, accepted by the owner: YouTube's API terms forbid blocking ads in embeds, so enforcement could cut off the embed or API access for every user. Ship behind an on/off switch so it can be killed instantly (remote flag from the worker) without a release.
+
+### podcast-ad-strip: Strip ads from podcasts and long YouTube audio (owner decision 2026-10-25)
+- **Status:** in-progress
+- **Priority:** high
+- **Description:** Owner (2026-10-25): strip ads from podcasts and long YouTube audio. Detect ad and sponsor reads and skip them automatically. SponsorBlock-style skipping for YouTube already ships; extend it, and build podcast ad detection (EBBLESS already generates captions on device and has Workers AI), so detected ad segments are skipped or cut automatically, with a one-tap undo.
+- **Touches:** podcast player, pod-captioner / captions, worker (segment detection), SponsorBlock skip code, docs/SPONSORBLOCK-AND-PODCAST-ADS.md
+- **Branch:** agent/podcast-ad-strip
+- **Notes:** Earlier research (docs/SPONSORBLOCK-AND-PODCAST-ADS.md) recommended against stripping podcast ads; owner has now decided. Mind the free-tier Workers AI budget (PodCaptionBudget).
