@@ -1618,7 +1618,7 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
   pointer-events:none}
 .viz-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out);background:#000}
-.viz-canvas.is-active{opacity:1}
+.viz-canvas.is-active{opacity:1;pointer-events:auto;touch-action:pan-y} /* touchable: drag blows the sand, tap ripples (inline keeps vertical page scroll) */
 .viz-controls{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;z-index:6;
   opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out)}
 .artwork-wrap.mode-viz .viz-controls{opacity:1;pointer-events:auto}
@@ -2318,7 +2318,7 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
   background:linear-gradient(to bottom, transparent, var(--bg) 40px)}
 #flow-layer .flow-viz{position:absolute;inset:0;width:100%;height:100%;border-radius:0;box-shadow:none;
   background:var(--bg)}
-#flow-layer .flow-viz .viz-canvas{opacity:1}
+#flow-layer .flow-viz .viz-canvas{opacity:1;touch-action:none}
 #flow-layer .flow-viz #vizAutoBtn{position:absolute;right:16px;bottom:calc(16px + var(--safe-b));z-index:6;
   opacity:1;pointer-events:auto;transition:opacity 600ms var(--ease-in-out)}
 #flow-layer .flow-viz #vizSpeedBtn{position:absolute;right:58px;bottom:calc(16px + var(--safe-b));z-index:6;
@@ -24598,6 +24598,7 @@ function vizStartTransition(familyIdx, params){
   if (vizMix > 0) return;   // already mid-transition; ignore
   vizNextFamilyIdx = familyIdx;
   vizNextParams = params;
+  vizTuneZoomT = 0; vizTuneTwistT = 0; // a new pattern starts from its own tuning
   vizParamsB = vizRandomParams();
   vizMix = 0.0001;
 }
@@ -24630,6 +24631,71 @@ function vizResize(){
   vizCtx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+/* ---------- interactive plate: finger = blow the sand (drive), tap = ripple, two fingers (or shift-drag / wheel) = tune
+   (horizontal = frequency, vertical = twist), and the song's own progress sweeps the same two knobs so every track keeps
+   breathing through its figures. Zoom/twist are applied to the coordinates before field(), so every family responds. ---------- */
+let vizBusy = false;                       // being touched or rippling: keep drawing at full rate even when paused
+const vizPtrs = new Map();                 // pointerId -> { cx, cy } client coords
+let vizTapStart = null;
+let vizRipples = [];                       // { x, y, t0 } in plate coords
+let vizTuneZoomT = 0, vizTuneTwistT = 0;   // user's tuning targets (log-zoom, radians)
+let vizTuneZoom = 0, vizTuneTwist = 0;     // eased
+let vizSweepProg = 0, vizSweepAt = 0;      // song progress 0-1, sampled ~4x a second
+const VIZ_ZOOM_LIM = [Math.log(0.55), Math.log(2.2)];
+function vizSongProgress(now){
+  if (now - vizSweepAt < 250) return vizSweepProg;
+  vizSweepAt = now;
+  try {
+    const p = activeDeck() && activeDeck().player, dur = p && p.getDuration ? +p.getDuration() : 0;
+    vizSweepProg = dur > 0 ? Math.min(1, Math.max(0, (+p.getCurrentTime() || 0) / dur)) : 0;
+  } catch(e){ vizSweepProg = 0; }
+  return vizSweepProg;
+}
+function vizTune(dx, dy){
+  const size = Math.max(200, Math.min(vizCanvas.clientWidth, vizCanvas.clientHeight));
+  vizTuneZoomT = Math.min(VIZ_ZOOM_LIM[1], Math.max(VIZ_ZOOM_LIM[0], vizTuneZoomT + dx / size * 2.4));
+  vizTuneTwistT += dy / size * 3;
+}
+function vizCentroid(){
+  let x = 0, y = 0; vizPtrs.forEach(o => { x += o.cx; y += o.cy; });
+  return { x: x / vizPtrs.size, y: y / vizPtrs.size };
+}
+vizCanvas.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  try { vizCanvas.setPointerCapture(e.pointerId); } catch(_){}
+  vizPtrs.set(e.pointerId, { cx: e.clientX, cy: e.clientY });
+  vizTapStart = vizPtrs.size === 1 ? { t: performance.now(), cx: e.clientX, cy: e.clientY, moved: false, shift: e.shiftKey } : null;
+  vizBusy = true;
+  if (!lsGet('ebbless:vizTouchHint', false)){
+    lsSet('ebbless:vizTouchHint', true);
+    showToast('Drag to blow the sand. Two fingers to tune. Tap for a ripple.');
+  }
+});
+vizCanvas.addEventListener('pointermove', (e) => {
+  const o = vizPtrs.get(e.pointerId); if (!o) return;
+  const dx = e.clientX - o.cx, dy = e.clientY - o.cy;
+  const before = vizPtrs.size >= 2 ? vizCentroid() : null;
+  o.cx = e.clientX; o.cy = e.clientY;
+  if (vizTapStart && Math.hypot(e.clientX - vizTapStart.cx, e.clientY - vizTapStart.cy) > 9) vizTapStart.moved = true;
+  if (vizPtrs.size >= 2){ const c = vizCentroid(); vizTune(c.x - before.x, c.y - before.y); }
+  else if (e.shiftKey || (vizTapStart && vizTapStart.shift)) vizTune(dx, dy);
+});
+function vizPointerEnd(e){
+  if (!vizPtrs.delete(e.pointerId)) return;
+  if (vizTapStart && !vizTapStart.moved && !vizTapStart.shift && vizPtrs.size === 0 && performance.now() - vizTapStart.t < 320){
+    const r = vizCanvas.getBoundingClientRect(), w = r.width, h = r.height, rad = Math.hypot(w / 2, h / 2) / Math.SQRT2;
+    const u = (vizTapStart.cx - r.left - w / 2) / rad, v = (vizTapStart.cy - r.top - h / 2) / rad;
+    const c = Math.cos(vizAngle), s = Math.sin(vizAngle);
+    vizRipples.push({ x: u * c + v * s, y: -u * s + v * c, t0: performance.now() });
+    if (vizRipples.length > 6) vizRipples.shift();
+  }
+  vizTapStart = null;
+  vizBusy = vizPtrs.size > 0 || vizRipples.length > 0;
+}
+vizCanvas.addEventListener('pointerup', vizPointerEnd);
+vizCanvas.addEventListener('pointercancel', vizPointerEnd);
+vizCanvas.addEventListener('wheel', (e) => { if (!state.flowOpen && visualMode !== 'viz') return; e.preventDefault(); vizTune(-e.deltaY * 0.5, 0); }, { passive: false });
+
 // #635: the grain field is ~1600 arcs a frame (3200 fullscreen). Off screen it
 // draws nothing; paused it ticks at ~10 fps; on a phone (coarse pointer) it
 // plays at ~30 fps. dt below is capped higher to match so speed stays true.
@@ -24637,7 +24703,7 @@ let vizOnScreen = true;
 if ('IntersectionObserver' in window) new IntersectionObserver(es => { vizOnScreen = es[es.length - 1].isIntersecting; }).observe(vizCanvas);
 const vizCoarse = window.matchMedia && matchMedia('(pointer:coarse)').matches;
 function vizDraw(t){
-  const minGap = !vizOnScreen ? 250 : !vizPlaying ? 100 : vizCoarse ? 33 : 0;
+  const minGap = !vizOnScreen ? 250 : (!vizPlaying && !vizBusy) ? 100 : vizCoarse ? 33 : 0;
   if (vizLastT && t - vizLastT < minGap - 4){ vizRAF = requestAnimationFrame(vizDraw); return; }
   if (!vizOnScreen){ vizLastT = t; vizRAF = requestAnimationFrame(vizDraw); return; }
   const dt = (vizLastT ? Math.min(Math.max(48, minGap + 16), t - vizLastT) : 16) * vizSpeed;
@@ -24678,6 +24744,24 @@ function vizDraw(t){
 
   const cx = w / 2, cy = h / 2;
   const radius = Math.hypot(w / 2, h / 2) / Math.SQRT2;
+  // interactive: eased tuning + the song's sweep, folded into one scale/twist applied before field()
+  const nowMs = performance.now(), ease = Math.min(1, dt / 140);
+  vizTuneZoom += (vizTuneZoomT - vizTuneZoom) * ease;
+  vizTuneTwist += (vizTuneTwistT - vizTuneTwist) * ease;
+  const sweepP = vizSongProgress(nowMs);
+  const zoom = Math.exp(vizTuneZoom + 0.22 * Math.sin(sweepP * Math.PI * 2 * 2.5));
+  const twist = vizTuneTwist + 0.2 * Math.sin(sweepP * Math.PI * 2 * 1.5 + 1);
+  const tCa = Math.cos(twist) * zoom, tSa = Math.sin(twist) * zoom;
+  // ripples (plate coords) and the one finger on the sand
+  vizRipples = vizRipples.filter(r => nowMs - r.t0 < 2200);
+  const rips = vizRipples.map(r => ({ x: r.x, y: r.y, age: (nowMs - r.t0) / 1000 }));
+  let fingerX = 0, fingerY = 0, hasFinger = false;
+  if (vizPtrs.size === 1 && !(vizTapStart && vizTapStart.shift)){
+    const rc = vizCanvas.getBoundingClientRect(), o = vizPtrs.values().next().value;
+    const u = (o.cx - rc.left - cx) / radius, v = (o.cy - rc.top - cy) / radius;
+    fingerX = u * rotCos + v * rotSin; fingerY = -u * rotSin + v * rotCos; hasFinger = true;
+  }
+  vizBusy = vizPtrs.size > 0 || rips.length > 0;
   const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul;
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
   const color = vizRosicrucianColor();
@@ -24687,17 +24771,32 @@ function vizDraw(t){
   const grainCount = state.flowOpen ? VIZ_GRAINS_FULLSCREEN : VIZ_GRAINS;
   for (let i = 0; i < grainCount; i++){
     let x = vizGx[i], y = vizGy[i];
-    const fA = famA.field(x, y, vizParams, tSec);
-    const f = mix > 0 ? fA * (1 - mix) + famB.field(x, y, vizNextParams, tSec) * mix : fA;
+    const fx = x * tCa - y * tSa, fy = x * tSa + y * tCa;
+    const fA = famA.field(fx, fy, vizParams, tSec);
+    let f = mix > 0 ? fA * (1 - mix) + famB.field(fx, fy, vizNextParams, tSec) * mix : fA;
+    for (let q = 0; q < rips.length; q++){
+      const rd = Math.hypot(x - rips[q].x, y - rips[q].y) - 0.9 * rips[q].age;
+      f += 1.1 * Math.exp(-(rd * rd) / 0.012) * Math.cos(16 * rd) * Math.exp(-rips[q].age);
+    }
     // scale before clamping so only the true near-zero band reads as "settled" -
     // narrows the nodal band and pushes everything else to full jitter sooner,
     // which is what makes the resulting lines read as crisp rather than smeared.
-    const amp = Math.min(1, Math.abs(f) * 1.9);
+    let amp = Math.min(1, Math.abs(f) * 1.9);
+    let pushX = 0, pushY = 0;
+    if (hasFinger){
+      const dx = x - fingerX, dy = y - fingerY, d2 = dx * dx + dy * dy, g = Math.exp(-d2 / 0.034);
+      if (g > 0.01){
+        amp = Math.max(amp, Math.min(1, g * 1.3));
+        const d = Math.sqrt(d2) + 1e-4;
+        pushX = dx / d * g * 0.018; pushY = dy / d * g * 0.018;
+      }
+    }
     x += (Math.random() - 0.5) * jitter * (0.04 + amp);
     y += (Math.random() - 0.5) * jitter * (0.04 + amp);
     // small deterministic drift so grains keep exploring even near-zero amplitude
     x += (Math.random() - 0.5) * step * amp * amp;
     y += (Math.random() - 0.5) * step * amp * amp;
+    x += pushX; y += pushY;
     if (x > 1) x = 1; else if (x < -1) x = -1;
     if (y > 1) y = 1; else if (y < -1) y = -1;
     vizGx[i] = x; vizGy[i] = y;
@@ -32929,6 +33028,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     // lyrics in flow mode scroll vertically - don't read that as swipe-to-exit
     // nor a horizontal drag on the seek bar as a prev/next swipe (#259)
     if (e.target.closest && e.target.closest('#flowLyricsWrap, .seek-track')){ sx = null; return; }
+    if (e.target === vizCanvas){ sx = null; return; } // a drag on the cymatics plate drives the sand, it is not a swipe
     const p = e.touches ? e.touches[0] : e; sx = p.clientX; sy = p.clientY;
   }
   function end(e){
@@ -32979,14 +33079,14 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     if (!document.body.classList.contains('split-desktop') && state.currentView !== 'library') setView('library');
     if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id);
   }
-  // Cymatics (#653): a tap toggles the loop (the infinity "hold this pattern" button), a double tap toggles rotation.
-  // The first tap acts at once; if a second lands inside the window it is put back and rotation toggles instead.
+  // Cymatics (#653, interactive): a tap drops a ripple on the plate (see the pointer handlers in VISUALIZER); a double tap toggles
+  // rotation. The loop is the infinity button / I key, no longer a tap.
   let cymLastTap = 0;
   function cymaticsTap(ev){
     if (ev.target.closest && ev.target.closest('button, a')) return;
     const now = Date.now();
-    if (now - cymLastTap < DOUBLE_TAP_MS){ cymLastTap = 0; vizSetHoldMode(!vizHoldMode); vizSetRotate(!vizRotateOn); }
-    else { cymLastTap = now; vizSetHoldMode(!vizHoldMode); }
+    if (now - cymLastTap < DOUBLE_TAP_MS){ cymLastTap = 0; vizSetRotate(!vizRotateOn); }
+    else cymLastTap = now;
   }
   flowVizWrap.addEventListener('click', cymaticsTap);
   artworkWrap.addEventListener('click', (ev) => {
@@ -33076,6 +33176,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
     ], 880);
   }
   function start(e){
+    if (e.target === vizCanvas){ sx = null; return; } // finger on the cymatics plate: not a track swipe
     const p = e.touches ? e.touches[0] : e; sx = p.clientX; sy = p.clientY; dragging = false;
     flush();
     if (anim){ stopAnim(); artWrap.style.transform = ''; }
