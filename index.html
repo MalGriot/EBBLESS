@@ -1528,11 +1528,36 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
   transition:transform 700ms var(--ease-out),opacity 700ms var(--ease-out);opacity:.85}
 .cs-body{transform-box:view-box;transition:transform 560ms cubic-bezier(.3,1.45,.5,1)}
 .art-cassette[data-state="playing"] .cs-body{transform:translateY(-2.2px);transition:transform 900ms var(--ease-out)}
+.art-cassette.is-pressed .cs-body{transform:translateY(1.4px);transition:transform 90ms}
+.art-cassette[data-state="playing"].is-pressed .cs-body{transform:translateY(.6px);transition:transform 90ms}
 .art-cassette[data-state="playing"] .cs-ground{transform:scale(1.04,1.18);opacity:.62}
 .art-cassette[data-state="idle"] .cs-ground{opacity:.75}
 .cs-interior{fill:#0a0a0b}
 .cs-shell{fill:url(#csShellGrad)}
 .cs-grain{fill:url(#csGrain);pointer-events:none}
+/* interactive cassette: touch zones, pen marks, button dip, side B flip (transform/opacity only) */
+.cs-zone{fill:transparent;pointer-events:all;cursor:pointer}
+.cs-zone[data-z="hubL"],.cs-zone[data-z="hubR"],.cs-zone[data-z="peel"]{cursor:grab}
+.cs-pen{opacity:0;transition:opacity 200ms;pointer-events:none}
+.cs-pen.on{opacity:1}
+text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans MS',cursive;fill:#d6453a;paint-order:stroke;stroke:rgba(255,255,255,.75);stroke-width:3.4px;stroke-linejoin:round}
+.art-cassette.is-flipping .cassette-svg,.art-cassette.is-flipped .cassette-svg{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.art-cassette.is-flipped .cassette-svg{transform:perspective(1100px) rotateY(180deg);pointer-events:none}
+.cassette-back{display:none;position:absolute;left:50%;top:50%;width:94%;max-height:94%;aspect-ratio:384/240;container-type:inline-size;box-sizing:border-box;border-radius:3.2%;
+  padding:5% 6.5%;flex-direction:column;gap:2px;overflow:hidden;background:#d9d2c0;color:#262320;box-shadow:inset 0 0 0 3px #bfb7a2;
+  transform:translate(-50%,-50%) perspective(1100px) rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  font-family:'Bradley Hand','Segoe Print','Marker Felt','Comic Sans MS',cursive;cursor:pointer}
+.art-cassette.is-flipping .cassette-back,.art-cassette.is-flipped .cassette-back{display:flex}
+.art-cassette.is-flipped .cassette-back{transform:translate(-50%,-50%) perspective(1100px) rotateY(0deg)}
+.art-cassette.is-flipping .cassette-svg,.art-cassette.is-flipping .cassette-back{transition:transform 640ms cubic-bezier(.3,.7,.2,1)}
+.cb-head{display:flex;justify-content:space-between;font-weight:700;font-size:clamp(14px,3.6cqw,22px);border-bottom:2px solid #262320;padding-bottom:3px}
+.cb-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;display:flex;flex-direction:column}
+.cb-list li{flex:1;min-height:0;display:flex;align-items:center;gap:8px;border-bottom:1px dashed #8d8470;font-weight:700;font-size:clamp(13px,3.2cqw,19px);line-height:1.1;cursor:pointer;overflow:hidden}
+.cb-list li span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-list li i{font-style:normal;width:1.3em;flex:none;opacity:.55}
+.cb-list li.is-cur{background:rgba(38,35,32,.12)}
+.cb-hint{font:400 10px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;opacity:.55;text-align:right}
+@media (prefers-reduced-motion:reduce){.art-cassette.is-flipping .cassette-svg,.art-cassette.is-flipping .cassette-back{transition:none}}
 .cs-grain2{fill:url(#csGrain2);pointer-events:none}
 .cs-parting{fill:none;stroke:rgba(0,0,0,.42);stroke-width:.9}
 .cs-shell-rim{fill:none;stroke:url(#csRimGrad);stroke-width:1}
@@ -4518,6 +4543,11 @@ body.week-up-on{overflow:hidden}
                   <stop offset="55%" stop-color="#000" stop-opacity=".22"/>
                   <stop offset="100%" stop-color="#000" stop-opacity="0"/>
                 </radialGradient>
+                <!-- interactive label (peel): the part of the sticker that stays flat, the part that folds over, the paper back, and the label outline for shadows -->
+                <clipPath id="csRemain"><rect id="csRemainRect" x="-400" y="-400" width="800" height="1000"/></clipPath>
+                <clipPath id="csFoldClip"><rect id="csFoldRect" x="400" y="-400" width="800" height="1000"/></clipPath>
+                <clipPath id="csLabelOuter"><path d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/></clipPath>
+                <linearGradient id="csPaperGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8e8671"/><stop offset=".012" stop-color="#fdfaf1"/><stop offset=".07" stop-color="#ece6d6"/><stop offset=".3" stop-color="#e3dccb"/><stop offset="1" stop-color="#d6cfbc"/></linearGradient>
                 <!-- label recess minus the reel/window band (evenodd) -->
                 <clipPath id="csLabelClip"><path clip-rule="evenodd" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z M112,84 H288 A28,28 0 0 1 316,112 V112 A28,28 0 0 1 288,140 H112 A28,28 0 0 1 84,112 V112 A28,28 0 0 1 112,84 Z"/></clipPath>
               </defs>
@@ -4566,15 +4596,27 @@ body.week-up-on{overflow:hidden}
               <rect class="cs-shell-spec" x="8" y="8" width="384" height="240" rx="9"/>
               <rect class="cs-shell-rim" x="8.5" y="8.5" width="383" height="239" rx="8.5"/>
 
-              <!-- label: album art in the recessed, chamfered label area -->
-              <g clip-path="url(#csLabelClip)">
-                <path class="cs-label-panel" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
-                <image id="cassetteLabelArt" class="cs-label-art" x="22" y="-71" width="356" height="356" preserveAspectRatio="xMidYMid slice"/>
-                <path class="cs-label-shade" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
-                <path class="cs-label-side" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+              <g id="csSticker">
+              <g id="csStickerMain" clip-path="url(#csRemain)">
+                <!-- label: album art in the recessed, chamfered label area -->
+                <g clip-path="url(#csLabelClip)">
+                  <path class="cs-label-panel" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+                  <image id="cassetteLabelArt" class="cs-label-art" x="22" y="-71" width="356" height="356" preserveAspectRatio="xMidYMid slice"/>
+                  <path class="cs-label-shade" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+                  <path class="cs-label-side" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+                </g>
+                <path class="cs-label-recess" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
+                <path class="cs-label-lip" d="M34,196.8 H366 L378.8,184"/>
+                <!-- pen marks, drawn by long-pressing the label: a star for liked, "repeat" for repeat-one -->
+                <g id="csPenStar" class="cs-pen"><g transform="translate(338 50) scale(.62) translate(-200 -88)" fill="none" stroke-linejoin="round" stroke-linecap="round"><path d="M200,70 l7,16 17,2 -13,11 4,17 -15,-9 -15,9 4,-17 -13,-11 17,-2 z" stroke="#fff" stroke-opacity=".7" stroke-width="7"/><path d="M200,70 l7,16 17,2 -13,11 4,17 -15,-9 -15,9 4,-17 -13,-11 17,-2 z" stroke="#d6453a" stroke-width="3.2"/></g></g>
+                <text id="csPenLoop" class="cs-pen" x="200" y="174" text-anchor="middle" transform="rotate(-2 200 174)">&#8734; repeat</text>
               </g>
-              <path class="cs-label-recess" d="M40,18 H360 L378,36 V184 L366,196 H34 L22,184 V36 Z"/>
-              <path class="cs-label-lip" d="M34,196.8 H366 L378.8,184"/>
+              <g id="csFold" display="none">
+                <g clip-path="url(#csLabelOuter)"><g id="csFlapSh1" opacity=".18"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect x="0" y="-400" width="300" height="1000" fill="#000"/></g></g></g></g>
+                <g clip-path="url(#csLabelOuter)"><g id="csFlapSh2" opacity=".09"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect x="0" y="-400" width="300" height="1000" fill="#000"/></g></g></g></g>
+                <g id="csFlap"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect id="csPaperRect" x="0" y="-400" width="300" height="1000" fill="url(#csPaperGrad)"/><use href="#cassetteLabelArt" opacity=".2"/></g></g></g>
+              </g>
+              </g>
               <!-- reel/window band: recessed plastic between the label halves -->
               <path class="cs-band-edge" d="M112,84 H288 A28,28 0 0 1 316,112 V112 A28,28 0 0 1 288,140 H112 A28,28 0 0 1 84,112 V112 A28,28 0 0 1 112,84 Z"/>
               <path class="cs-band-lip" d="M112,140.8 H288 A28.8,28.8 0 0 0 316.4,118"/>
@@ -4616,8 +4658,22 @@ body.week-up-on{overflow:hidden}
                 <g transform="translate(22 234)"><circle class="cs-screw-well" r="5.8"/><circle class="cs-screw-head" r="4.4"/><path class="cs-screw-slot" transform="rotate(51)" d="M-2.7,0 H2.7 M0,-2.7 V2.7"/></g>
                 <g transform="translate(378 234)"><circle class="cs-screw-well" r="5.8"/><circle class="cs-screw-head" r="4.4"/><path class="cs-screw-slot" transform="rotate(-8)" d="M-2.7,0 H2.7 M0,-2.7 V2.7"/></g>
               </g>
+              <!-- touch zones (interactive cassette): label flips / pen, hubs scrub and shuttle, window plays / holds, corners peel -->
+              <g class="cs-zones">
+                <rect class="cs-zone" data-z="label" x="22" y="18" width="356" height="66"/>
+                <rect class="cs-zone" data-z="label" x="22" y="140" width="356" height="56"/>
+                <circle class="cs-zone" data-z="hubL" cx="119" cy="112" r="34"/>
+                <circle class="cs-zone" data-z="hubR" cx="281" cy="112" r="34"/>
+                <rect class="cs-zone" data-z="win" x="152" y="90" width="96" height="44"/>
+                <rect class="cs-zone" data-z="peel" data-c="tl" x="22" y="18" width="52" height="34"/>
+                <rect class="cs-zone" data-z="peel" data-c="tr" x="326" y="18" width="52" height="34"/>
+                <rect class="cs-zone" data-z="peel" data-c="bl" x="22" y="162" width="52" height="34"/>
+                <rect class="cs-zone" data-z="peel" data-c="br" x="326" y="162" width="52" height="34"/>
+              </g>
               </g>
             </svg>
+            <!-- side B of the tape: the queue, in marker (tap the label to flip) -->
+            <div class="cassette-back" id="cassetteBack"><div class="cb-head"><span>Side B</span><span>Up next</span></div><ol class="cb-list" id="cbList"></ol><div class="cb-hint">Tap a song to play it. Tap anywhere else to flip back.</div></div>
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
@@ -14754,6 +14810,7 @@ function toggleLikeTrack(track){
   }
   likeNudgeTrackChanged(track);
   renderQueuePanel();
+  csMarksSync();
 }
 
 /* Smart playlists (#469 phase 4, Marvis "smart rules"): a custom playlist with
@@ -19922,6 +19979,7 @@ function cycleRepeat(){
   state.repeat = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
   repeatBtn.classList.toggle('is-active', state.repeat !== 'off');
   repeatOneBadge.hidden = state.repeat !== 'one';
+  csMarksSync();
   // the icon alone doesn't say which of the three repeat modes is on
   const repeatLabel = state.repeat === 'one' ? 'Repeat: this song' : state.repeat === 'all' ? 'Repeat: on' : 'Repeat: off';
   repeatBtn.title = repeatLabel; repeatBtn.setAttribute('aria-label', repeatLabel);
@@ -25850,7 +25908,7 @@ let csLeftAngle = 0, csRightAngle = -23, csTapeOffset = 0;
 let csRafId = null, csLastTs = 0;
 /* each reel has its own speed so the take-up side lags a touch on start
    and coasts a touch longer on stop - the small mismatch a real shell has */
-let csSpeedL = 0, csSpeedR = 0, csTargetMul = 0, csSettleT = -1, csPlaying = false, csHasTrack = false;
+let csSpeedL = 0, csSpeedR = 0, csTargetMul = 0, csSettleT = -1, csPlaying = false, csHasTrack = false, csScrub = false;
 const csReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 function cassetteVisible(){ return artStyle === 'cassette' && artworkWrap.dataset.mode === 'art'; }
@@ -25864,7 +25922,10 @@ function csTangent(c, g, r, sign){
   return (c[0] + r * Math.cos(a)).toFixed(2) + ',' + (c[1] + r * Math.sin(a)).toFixed(2);
 }
 function cassetteSetProgress(cur, dur){
-  const p = dur ? Math.min(1, Math.max(0, cur / dur)) : 0;
+  if (csScrub) return;   /* a finger is turning a reel: it owns the packs until release */
+  csPaintProgress(dur ? Math.min(1, Math.max(0, cur / dur)) : 0);
+}
+function csPaintProgress(p){
   // tape length moves from one pack to the other, so their areas (not
   // radii) trade off: both packs bulge past the middle of the window midway
   const a2 = CS_MAX_R * CS_MAX_R - CS_MIN_R * CS_MIN_R;
@@ -25967,9 +26028,236 @@ function cassetteUpdateTrack(t, pos, opts){
   csHasTrack = !!t;
   cassetteSyncState();
   if (!(opts && opts.skipLabelArt)) cassetteSetLabelArt(t);
+  csMarksSync();
+  if (cassetteEl.classList.contains('is-flipped')) csBackRender();
 }
 cassetteSetProgress(0, 0);
 cassetteApplyRotation(0);
+
+/* ---------- interactive cassette ----------
+   Reels: drag to scrub (seeks on release). Tap a reel: 15s back / forward.
+   Tape window: tap plays or pauses, hold stops the tape until you let go.
+   Label: tap flips to side B (the queue), long-press pens a mark (star = liked,
+   repeat = repeat one), pull a corner to peel the sticker (it presses back on
+   release). Swiping the art to skip is the art swipe above. */
+const csSvg = $('cassetteSvg'), csBack = $('cassetteBack'), csBackList = $('cbList');
+const CS_SCRUB_X = 8;      /* seconds of song per second of tape a finger pulls */
+const CS_JUMP_S = 15;
+const CS_HOLD_MS = 320, CS_PEN_MS = 520;
+const CS_CORNER = { tl: [22, 18], tr: [378, 18], bl: [22, 196], br: [378, 196] };
+const csRemainRect = $('csRemainRect'), csFoldRect = $('csFoldRect'), csPaperRect = $('csPaperRect');
+const csFoldG = $('csFold'), csFlap = $('csFlap'), csFlapSh1 = $('csFlapSh1'), csFlapSh2 = $('csFlapSh2');
+let csG = null, csFoldAnim = 0, csFlipT = 0;
+
+function csPt(e){
+  const r = csSvg.getBoundingClientRect(), k = Math.min(r.width / 400, r.height / 256);
+  return [(e.clientX - r.left - (r.width - 400 * k) / 2) / k, (e.clientY - r.top - (r.height - 256 * k) / 2) / k];
+}
+function csDeck(){
+  const ad = activeDeck();
+  return ad && ad.player && ad.player.getDuration && ad.player.getCurrentTime && ad.player.seekTo ? ad : null;
+}
+function csHaptic(){ if (navigator.vibrate) navigator.vibrate(12); }
+
+/* seek by dragging a reel */
+function csScrubStart(){
+  const ad = csDeck(); if (!ad) return false;
+  const dur = ad.player.getDuration() || 0; if (!dur) return false;
+  csG.dur = dur; csG.t = csG.t0 = ad.player.getCurrentTime() || 0;
+  csScrub = true;
+  if (csRafId){ cancelAnimationFrame(csRafId); csRafId = null; }
+  csSpeedL = csSpeedR = 0; csSettleT = -1; csLastTs = 0;
+  return true;
+}
+function csScrubMove(dDeg){
+  const left = csG.zone === 'hubL', rD = left ? csLeftR : csRightR, rO = left ? csRightR : csLeftR;
+  const t = csG.t - dDeg * Math.PI / 180 * rD * CS_SCRUB_X / CS_TAPE_SPEED;
+  csG.t = Math.min(csG.dur - 0.5, Math.max(0, t));
+  if (left){ csLeftAngle += dDeg; csRightAngle += dDeg * rD / rO; }
+  else { csRightAngle += dDeg; csLeftAngle += dDeg * rD / rO; }
+  csPaintProgress(csG.t / csG.dur);
+  cassetteApplyRotation(0);
+}
+function csScrubEnd(){
+  csScrub = false;
+  const ad = csDeck();
+  if (ad){
+    ad.player.seekTo(csG.t, true);
+    seekHold = { t: csG.t, until: performance.now() + 2000 };
+    if (csG.t < csG.t0 - 2) playLpNeedle('rewind');
+    updateSeekUI();
+  }
+  csSpin(csG.t >= csG.t0 ? 1 : -1, 2);
+}
+function csSpin(dir, speed){
+  if (csReducedMotion) return;
+  csSettleT = -1; csSpeedL = csSpeedR = (speed || 3.2) * dir;
+  cassetteStart();
+}
+function csJump(dir){
+  const ad = csDeck(); if (!ad) return;
+  const dur = ad.player.getDuration() || 0, cur = ad.player.getCurrentTime() || 0;
+  const t = Math.min(Math.max(0, dur - 0.5), Math.max(0, cur + dir * CS_JUMP_S));
+  ad.player.seekTo(t, true);
+  seekHold = { t, until: performance.now() + 2000 };
+  if (dir < 0) playLpNeedle('rewind');
+  updateSeekUI();
+  csSpin(dir);
+}
+
+/* sticker peel: the corner follows the finger, the fold sits halfway between
+   the corner and the finger, and the flap (paper back, label art showing
+   through) is the sticker reflected across that fold */
+function csSetFold(C, P){
+  const dx = C[0] - P[0], dy = C[1] - P[1];
+  if (Math.hypot(dx, dy) < 3){
+    csFoldG.setAttribute('display', 'none');
+    csRemainRect.setAttribute('x', '-400'); csRemainRect.removeAttribute('transform');
+    return;
+  }
+  const mx = (C[0] + P[0]) / 2, my = (C[1] + P[1]) / 2, phi = Math.atan2(dy, dx) * 180 / Math.PI;
+  const rot = 'rotate(' + phi.toFixed(2) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1) + ')';
+  csRemainRect.setAttribute('x', (mx - 800).toFixed(1)); csRemainRect.setAttribute('transform', rot);
+  csFoldRect.setAttribute('x', mx.toFixed(1)); csFoldRect.setAttribute('transform', rot);
+  csPaperRect.setAttribute('x', mx.toFixed(1));
+  const flip = rot + ' translate(' + (2 * mx).toFixed(1) + ' 0) scale(-1 1) rotate(' + (-phi).toFixed(2) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1) + ')';
+  csFlap.setAttribute('transform', flip);
+  csFlapSh1.setAttribute('transform', 'translate(3 5) ' + flip);
+  csFlapSh2.setAttribute('transform', 'translate(7 11) ' + flip);
+  csFoldG.removeAttribute('display');
+}
+function csReleaseFold(C, P){
+  cancelAnimationFrame(csFoldAnim);
+  if (csReducedMotion){ csSetFold(C, C); return; }
+  const t0 = performance.now(), from = P.slice(), ms = 300;
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / ms), e = k * k * (3 - 2 * k);
+    csSetFold(C, [from[0] + (C[0] - from[0]) * e, from[1] + (C[1] - from[1]) * e]);
+    if (k < 1) csFoldAnim = requestAnimationFrame(step); else csSetFold(C, C);
+  };
+  csFoldAnim = requestAnimationFrame(step);
+}
+
+/* side B */
+function csBackRender(){
+  csBackList.textContent = '';
+  const add = (txt, i, cur, pos) => {
+    const li = document.createElement('li');
+    if (cur) li.className = 'is-cur';
+    const mark = document.createElement('i'); mark.textContent = cur ? '▶' : (i + 1) + '.';
+    const name = document.createElement('span'); name.textContent = txt;
+    li.append(mark, name);
+    if (pos != null) li.addEventListener('click', (ev) => { ev.stopPropagation(); if (!cur) playIndex(pos, { crossfade: true }); csFlip(false); });
+    csBackList.appendChild(li);
+  };
+  if (state.queuePos < 0 || !state.queue.length){ add('Nothing queued yet', 0, false, null); return; }
+  for (let n = 0; n < 6; n++){
+    const pos = state.queuePos + n; if (pos >= state.queue.length) break;
+    const t = trackAt(pos); if (t) add(t.title || 'Untitled', n, n === 0, pos);
+  }
+}
+function csFlip(on){
+  const flipped = cassetteEl.classList.contains('is-flipped');
+  if (on === undefined) on = !flipped;
+  if (on === flipped) return;
+  clearTimeout(csFlipT);
+  if (on) csBackRender();
+  cassetteEl.classList.add('is-flipping');
+  void cassetteEl.offsetWidth;
+  cassetteEl.classList.toggle('is-flipped', on);
+  csFlipT = setTimeout(() => cassetteEl.classList.remove('is-flipping'), csReducedMotion ? 0 : 700);
+}
+csBack.addEventListener('click', (ev) => { ev.stopPropagation(); csFlip(false); });
+
+/* pen marks mirror the real like and repeat-one state */
+function csMarksSync(){
+  const star = $('csPenStar'), loop = $('csPenLoop'); if (!star || !loop) return;
+  const t = currentTrack();
+  star.classList.toggle('on', !!(t && t.videoId && isTrackLiked(t.videoId)));
+  loop.classList.toggle('on', state.repeat === 'one');
+}
+function csPenCycle(){
+  const t = currentTrack(); if (!t || !t.videoId) return;
+  const liked = isTrackLiked(t.videoId), one = state.repeat === 'one';
+  const setRepeat = (mode) => { for (let i = 0; i < 3 && state.repeat !== mode; i++) cycleRepeat(); };
+  if (!liked) toggleLikeTrack(t);
+  else if (!one) setRepeat('one');
+  else { toggleLikeTrack(t); setRepeat('off'); }
+  csMarksSync(); csHaptic();
+}
+
+/* pointer handling */
+function csDown(e){
+  if (e.button !== 0 || csG || cassetteEl.classList.contains('is-flipped')) return;
+  const z = e.target.closest && e.target.closest('.cs-zone'); if (!z) return;
+  const zone = z.dataset.z;
+  csG = { zone, id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, held: false, timer: 0, ang: 0, angTot: 0, scrubbing: false };
+  try { csSvg.setPointerCapture(e.pointerId); } catch (_){}
+  if (zone === 'hubL' || zone === 'hubR'){ csG.ang = csAngle(e, zone); csSvg.style.cursor = 'grabbing'; }
+  else if (zone === 'peel'){ cancelAnimationFrame(csFoldAnim); csG.C = CS_CORNER[z.dataset.c]; csG.P = csG.C.slice(); csSvg.style.cursor = 'grabbing'; }
+  else if (zone === 'win'){
+    cassetteEl.classList.add('is-pressed');
+    csG.timer = setTimeout(() => {
+      if (!csG || csG.moved || !csPlaying || state.queuePos < 0) return;
+      csG.held = true; userTogglePlayback();   /* tape stops while held */
+    }, CS_HOLD_MS);
+  }
+  else if (zone === 'label') csG.timer = setTimeout(() => { if (csG && !csG.moved){ csG.held = true; csPenCycle(); } }, CS_PEN_MS);
+}
+function csAngle(e, zone){
+  const [x, y] = csPt(e), c = zone === 'hubL' ? CS_REEL_L : CS_REEL_R;
+  return Math.atan2(y - c[1], x - c[0]) * 180 / Math.PI;
+}
+function csMove(e){
+  if (!csG || e.pointerId !== csG.id) return;
+  const z = csG.zone, dist = Math.hypot(e.clientX - csG.x0, e.clientY - csG.y0);
+  if (z === 'hubL' || z === 'hubR'){
+    let a = csAngle(e, z), d = a - csG.ang; if (d > 180) d -= 360; if (d < -180) d += 360; csG.ang = a;
+    csG.angTot += d;
+    if (!csG.scrubbing && Math.abs(csG.angTot) > 8){ csG.moved = true; csG.scrubbing = csScrubStart(); if (csG.scrubbing) d = csG.angTot; }
+    if (csG.scrubbing) csScrubMove(d);
+    return;
+  }
+  if (z === 'peel'){
+    let [x, y] = csPt(e); const C = csG.C, vx = x - C[0], vy = y - C[1], L = Math.hypot(vx, vy), MAX = 300;
+    if (L > MAX){ x = C[0] + vx / L * MAX; y = C[1] + vy / L * MAX; }
+    if (L > 8) csG.moved = true;
+    csG.P = [x, y]; csSetFold(C, csG.P);
+    return;
+  }
+  if (dist > 10){ csG.moved = true; clearTimeout(csG.timer); }
+}
+function csUp(e){
+  if (!csG || e.pointerId !== csG.id) return;
+  const g = csG; csG = null;
+  clearTimeout(g.timer); cassetteEl.classList.remove('is-pressed'); csSvg.style.cursor = '';
+  const cancelled = e.type === 'pointercancel';
+  if (g.zone === 'peel'){ if (g.moved) csReleaseFold(g.C, g.P); return; }
+  if (g.zone === 'hubL' || g.zone === 'hubR'){
+    if (g.scrubbing) csScrubEnd();
+    else if (!g.moved && !cancelled) csJump(g.zone === 'hubL' ? -1 : 1);
+    return;
+  }
+  if (g.zone === 'win'){
+    if (g.held) userTogglePlayback();   /* let go: the tape runs again */
+    else if (!g.moved && !cancelled) playBtn.click();
+    return;
+  }
+  if (g.zone === 'label' && !g.held && !g.moved && !cancelled) csFlip();
+}
+csSvg.addEventListener('pointerdown', csDown);
+csSvg.addEventListener('pointermove', csMove);
+csSvg.addEventListener('pointerup', csUp);
+csSvg.addEventListener('pointercancel', csUp);
+/* keep the art-wide swipe and page scroll out of reel turns, peels and window holds */
+csSvg.addEventListener('touchstart', (e) => {
+  const z = e.target.closest && e.target.closest('.cs-zone'); if (!z) return;
+  const k = z.dataset.z;
+  if (k === 'hubL' || k === 'hubR' || k === 'peel'){ e.preventDefault(); e.stopPropagation(); }
+  else if (k === 'win') e.stopPropagation();
+}, { passive: false });
+/* a tap on a zone is ours, not the art's (which would open the album) */
+csSvg.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.cs-zone')) e.stopPropagation(); });
 
 visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   if (btn.dataset.mode === 'art'){

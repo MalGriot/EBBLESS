@@ -11608,3 +11608,11 @@ Add entries in this shape:
 - **Touches:** desktop/adblock.js, android-webview AdBlock.java/MainActivity, new adblock/ folder, Settings reload row in index.html.
 - **Branch:** agent/adblock-live-rules (integrates agent/adblock-android and agent/app-update-button)
 - **Notes:** One manual install of the new native builds is still needed once per device. Security: fetch only from the site's own https host, size and JSON checks, inject only into youtube embed frames, honor the /flags kill switch.
+
+### cassette-interactive: Make the cassette interactive (reels, window, label, peel)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Cassette mode reacts to touch. Drag a reel to scrub (seeks on release), tap a reel for 15s back or forward, tap the tape window to play or pause, hold it to stop the tape until you let go, tap the label to flip to side B (the queue; tap a song to play it), long-press the label to pen a mark (star = liked, repeat = repeat one), pull a label corner to peel the sticker (it presses back on release). Swipe to skip is the existing art swipe.
+- **Touches:** index.html (cassette SVG, `.cs-zone` / `.cassette-back` CSS, "interactive cassette" block after cassetteSetProgress), sw.js cache v410.
+- **Branch:** agent/cassette-interactive
+- **Notes:** Prototyped as "Cassette Lab" first. Brake is a real pause while held (the player cannot bend pitch), not a tape-slow sound. Stack-tap-to-jump from the prototype is not ported (side B list covers jumping). Verified in a local browser with the Rickroll fallback deck: flip, side B list, peel and release, hub tap and scrub seek without errors. Not checked: touch on a real phone, fullscreen flow layer, mini player (its cloned cassette is inert), GPU watchdog under long use.
