@@ -1541,35 +1541,17 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 .cs-pen{opacity:0;transition:opacity 200ms;pointer-events:none}
 .cs-pen.on{opacity:1}
 text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans MS',cursive;fill:#d6453a;paint-order:stroke;stroke:rgba(255,255,255,.75);stroke-width:3.4px;stroke-linejoin:round}
-/* the tape is a real box while it turns: front face, back face and four edges, each pushed out in z.
-   --cw / --ch / --cd (shell width, height, thickness in px) are set by csFlip. 3D only while flipping/flipped. */
+/* side B: the tape slides off to the left while the J-card slides in from the right (transform/opacity only) */
 .cassette-box{position:relative;width:100%;height:100%}
-.art-cassette.is-flipping .cassette-box,.art-cassette.is-flipped .cassette-box{transform-style:preserve-3d}
-.art-cassette.is-flipped .cassette-box{transform:perspective(900px) rotateY(180deg)}
-.art-cassette.is-flipping .cassette-svg,.art-cassette.is-flipped .cassette-svg{transform:translateZ(calc(var(--cd) / 2));backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.art-cassette.is-flipped .cassette-svg{pointer-events:none}
-.cassette-back,.cs-edge{display:none;position:absolute;left:50%;top:50%}
-.cassette-back{width:var(--cw);height:var(--ch);container-type:inline-size;box-sizing:border-box;border-radius:3.2%;
-  padding:5% 6.5%;flex-direction:column;gap:2px;overflow:hidden;background:#d9d2c0;color:#262320;box-shadow:inset 0 0 0 3px #bfb7a2;
-  transform:translate(-50%,-50%) translateZ(calc(var(--cd) / -2)) rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;
+.cassette-svg{transition:transform 560ms cubic-bezier(.3,.8,.25,1),opacity 420ms ease}
+.art-cassette.is-flipped .cassette-svg{transform:translateX(-115%) rotate(-9deg);opacity:0;pointer-events:none}
+.cassette-back{display:none;position:absolute;left:50%;top:50%;width:92%;max-height:94%;aspect-ratio:384/240;container-type:inline-size;box-sizing:border-box;border-radius:3.2%;
+  padding:5% 6.5%;flex-direction:column;gap:2px;overflow:hidden;background:#d9d2c0;color:#262320;box-shadow:inset 0 0 0 3px #bfb7a2,0 10px 24px rgba(0,0,0,.45);
+  transform:translate(-50%,-50%) translateX(115%) rotate(9deg);opacity:0;
+  transition:transform 560ms cubic-bezier(.3,.8,.25,1.08),opacity 420ms ease;
   font-family:'Bradley Hand','Segoe Print','Marker Felt','Comic Sans MS',cursive;cursor:pointer}
 .art-cassette.is-flipping .cassette-back,.art-cassette.is-flipped .cassette-back{display:flex}
-.art-cassette.is-flipping .cs-edge,.art-cassette.is-flipped .cs-edge{display:block}
-.cs-edge{background:linear-gradient(#303238,#1b1c20);box-shadow:inset 0 0 0 1px rgba(0,0,0,.5)}
-.cs-edge-t,.cs-edge-b{width:var(--cw);height:var(--cd);background:linear-gradient(90deg,#26272b,#34363c 20%,#2a2b30 50%,#34363c 80%,#26272b)}
-.cs-edge-l,.cs-edge-r{width:var(--cd);height:var(--ch);background:linear-gradient(90deg,#2a2b30,#1c1d21)}
-.cs-edge-t{transform:translate(-50%,-50%) translateY(calc(var(--ch) / -2)) rotateX(90deg)}
-.cs-edge-b{transform:translate(-50%,-50%) translateY(calc(var(--ch) / 2)) rotateX(-90deg)}
-.cs-edge-l{transform:translate(-50%,-50%) translateX(calc(var(--cw) / -2)) rotateY(-90deg)}
-.cs-edge-r{transform:translate(-50%,-50%) translateX(calc(var(--cw) / 2)) rotateY(90deg)}
-.art-cassette.is-flipping .cassette-box,.art-cassette.is-flipping .cs-shade,.art-cassette.is-flipping .cs-shade::before,.art-cassette.is-flipping .cs-flip-shadow{animation-duration:1250ms;animation-timing-function:cubic-bezier(.45,.05,.25,1);animation-fill-mode:both}
-.art-cassette.is-flipping .cassette-box{animation-name:csFlipBox}
-.art-cassette.is-flipping.to-front .cassette-box,.art-cassette.is-flipping.to-front .cs-shade,.art-cassette.is-flipping.to-front .cs-shade::before,.art-cassette.is-flipping.to-front .cs-flip-shadow{animation-direction:reverse}
-/* lifts toward you, tips back, swings over */
-@keyframes csFlipBox{
-  0%{transform:perspective(900px) translateZ(0) rotateX(0) rotateY(0)}
-  50%{transform:perspective(900px) translateZ(150px) rotateX(-22deg) rotateY(95deg)}
-  100%{transform:perspective(900px) translateZ(0) rotateX(0) rotateY(180deg)}}
+.art-cassette.is-flipped .cassette-back{transform:translate(-50%,-50%);opacity:1}
 .cb-head{display:flex;justify-content:space-between;font-weight:700;font-size:clamp(14px,3.6cqw,22px);border-bottom:2px solid #262320;padding-bottom:3px}
 .cb-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;display:flex;flex-direction:column}
 .cb-list li{flex:1;min-height:0;display:flex;align-items:center;gap:8px;border-bottom:1px dashed #8d8470;font-weight:700;font-size:clamp(13px,3.2cqw,19px);line-height:1.1;cursor:pointer;overflow:hidden}
@@ -1577,24 +1559,7 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .cb-list li i{font-style:normal;width:1.3em;flex:none;opacity:.55}
 .cb-list li.is-cur{background:rgba(38,35,32,.12)}
 .cb-hint{font:400 10px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;opacity:.55;text-align:right}
-/* light and shadow that follow the turn: each face darkens as it goes edge-on, a sheen sweeps across it, and the ground shadow shrinks and softens while it is lifted */
-.cs-shade,.cs-flip-shadow{display:none;pointer-events:none}
-.art-cassette.is-flipping .cs-shade,.art-cassette.is-flipped .cs-flip-shadow,.art-cassette.is-flipping .cs-flip-shadow{display:block}
-.cs-shade{position:absolute;left:50%;top:50%;width:var(--cw);height:var(--ch);border-radius:3.2%;overflow:hidden;background:#000;opacity:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.cs-shade::before{content:"";position:absolute;inset:0 -100%;background:linear-gradient(100deg,transparent 42%,rgba(255,255,255,.55) 50%,transparent 58%);mix-blend-mode:normal;opacity:.5}
-.cs-shade-f{transform:translate(-50%,-50%) translateZ(calc(var(--cd) / 2 + 1px))}
-.cs-shade-b{transform:translate(-50%,-50%) translateZ(calc(var(--cd) / -2 - 1px)) rotateY(180deg)}
-.art-cassette.is-flipping .cs-shade-f{animation-name:csShadeF}
-.art-cassette.is-flipping .cs-shade-b{animation-name:csShadeB}
-.art-cassette.is-flipping .cs-shade::before{animation-name:csSheen}
-@keyframes csShadeF{0%{opacity:0}50%{opacity:.7}100%{opacity:.7}}
-@keyframes csShadeB{0%{opacity:.7}50%{opacity:.7}100%{opacity:0}}
-@keyframes csSheen{0%{transform:translateX(-45%)}50%{transform:translateX(0)}100%{transform:translateX(45%)}}
-.cs-flip-shadow{position:absolute;left:50%;top:calc(50% + var(--ch) / 2 - var(--cd) * .25);width:calc(var(--cw) * .94);height:calc(var(--cd) * 1.1);margin-left:calc(var(--cw) * -.47);
-  background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));border-radius:50%}
-.art-cassette.is-flipping .cs-flip-shadow{animation-name:csFlipShadow}
-@keyframes csFlipShadow{0%{transform:scale(1,1);opacity:.85}50%{transform:scale(.7,.55) translateY(40px);opacity:.35}100%{transform:scale(1,1);opacity:.85}}
-@media (prefers-reduced-motion:reduce){.art-cassette.is-flipping .cassette-box,.art-cassette.is-flipping .cs-shade,.art-cassette.is-flipping .cs-shade::before,.art-cassette.is-flipping .cs-flip-shadow{animation:none}}
+@media (prefers-reduced-motion:reduce){.cassette-svg,.cassette-back{transition:none}}
 .cs-grain2{fill:url(#csGrain2);pointer-events:none}
 .cs-parting{fill:none;stroke:rgba(0,0,0,.42);stroke-width:.9}
 .cs-shell-rim{fill:none;stroke:url(#csRimGrad);stroke-width:1}
@@ -4711,10 +4676,7 @@ body.week-up-on{overflow:hidden}
             </svg>
             <!-- side B of the tape: the queue, in marker (tap the label to flip) -->
             <div class="cassette-back" id="cassetteBack"><div class="cb-head"><span>Side B</span><span>Up next</span></div><ol class="cb-list" id="cbList"></ol><div class="cb-hint">Tap a song to play it. Tap anywhere else to flip back.</div></div>
-            <div class="cs-edge cs-edge-t"></div><div class="cs-edge cs-edge-b"></div><div class="cs-edge cs-edge-l"></div><div class="cs-edge cs-edge-r"></div>
-            <div class="cs-shade cs-shade-f"></div><div class="cs-shade cs-shade-b"></div>
             </div>
-            <div class="cs-flip-shadow"></div>
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
@@ -26201,16 +26163,11 @@ function csFlip(on){
   if (on === undefined) on = !flipped;
   if (on === flipped) return;
   clearTimeout(csFlipT);
-  if (on){
-    csBackRender();
-    const r = csSvg.getBoundingClientRect(), k = Math.min(r.width / 400, r.height / 256), bs = cassetteEl.style;
-    bs.setProperty('--cw', (384 * k).toFixed(1) + 'px'); bs.setProperty('--ch', (240 * k).toFixed(1) + 'px'); bs.setProperty('--cd', (384 * k * .14).toFixed(1) + 'px');
-  }
-  cassetteEl.classList.toggle('to-front', !on);
+  if (on) csBackRender();
   cassetteEl.classList.add('is-flipping');
   void cassetteEl.offsetWidth;
   cassetteEl.classList.toggle('is-flipped', on);
-  csFlipT = setTimeout(() => cassetteEl.classList.remove('is-flipping', 'to-front'), csReducedMotion ? 0 : 1300);
+  csFlipT = setTimeout(() => cassetteEl.classList.remove('is-flipping'), csReducedMotion ? 0 : 600);
 }
 csBack.addEventListener('click', (ev) => { ev.stopPropagation(); csFlip(false); });
 
