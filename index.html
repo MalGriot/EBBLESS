@@ -4614,7 +4614,7 @@ body.week-up-on{overflow:hidden}
               <g id="csFold" display="none">
                 <g clip-path="url(#csLabelOuter)"><g id="csFlapSh1" opacity=".18"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect x="0" y="-400" width="300" height="1000" fill="#000"/></g></g></g></g>
                 <g clip-path="url(#csLabelOuter)"><g id="csFlapSh2" opacity=".09"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect x="0" y="-400" width="300" height="1000" fill="#000"/></g></g></g></g>
-                <g id="csFlap"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect id="csPaperRect" x="0" y="-400" width="300" height="1000" fill="url(#csPaperGrad)"/><use href="#cassetteLabelArt" opacity=".35"/></g></g></g>
+                <g id="csFlap"><g clip-path="url(#csLabelClip)"><g clip-path="url(#csFoldClip)"><rect id="csPaperRect" x="0" y="-400" width="300" height="1000" fill="url(#csPaperGrad)"/><use href="#cassetteLabelArt" opacity=".9"/><rect id="csPaperShade" x="0" y="-400" width="300" height="1000" fill="url(#csPaperGrad)" opacity=".3"/></g></g></g>
               </g>
               </g>
               <!-- reel/window band: recessed plastic between the label halves -->
@@ -26045,7 +26045,7 @@ const CS_SCRUB_X = 8;      /* seconds of song per second of tape a finger pulls 
 const CS_JUMP_S = 15;
 const CS_HOLD_MS = 320, CS_PEN_MS = 520;
 const CS_CORNER = { tl: [22, 18], tr: [378, 18], bl: [22, 196], br: [378, 196] };
-const csRemainRect = $('csRemainRect'), csFoldRect = $('csFoldRect'), csPaperRect = $('csPaperRect');
+const csRemainRect = $('csRemainRect'), csFoldRect = $('csFoldRect'), csPaperRect = $('csPaperRect'), csPaperShade = $('csPaperShade');
 const csFoldG = $('csFold'), csFlap = $('csFlap'), csFlapSh1 = $('csFlapSh1'), csFlapSh2 = $('csFlapSh2');
 let csG = null, csFoldAnim = 0, csFlipT = 0;
 
@@ -26119,7 +26119,7 @@ function csSetFold(C, P){
   const rot = 'rotate(' + phi.toFixed(2) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1) + ')';
   csRemainRect.setAttribute('x', (mx - 800).toFixed(1)); csRemainRect.setAttribute('transform', rot);
   csFoldRect.setAttribute('x', mx.toFixed(1)); csFoldRect.setAttribute('transform', rot);
-  csPaperRect.setAttribute('x', mx.toFixed(1));
+  csPaperRect.setAttribute('x', mx.toFixed(1)); csPaperShade.setAttribute('x', mx.toFixed(1));
   const flip = rot + ' translate(' + (2 * mx).toFixed(1) + ' 0) scale(-1 1) rotate(' + (-phi).toFixed(2) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1) + ')';
   csFlap.setAttribute('transform', flip);
   csFlapSh1.setAttribute('transform', 'translate(3 5) ' + flip);
