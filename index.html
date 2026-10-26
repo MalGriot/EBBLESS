@@ -1562,12 +1562,13 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .cs-edge-b{transform:translate(-50%,-50%) translateY(calc(var(--ch) / 2)) rotateX(-90deg)}
 .cs-edge-l{transform:translate(-50%,-50%) translateX(calc(var(--cw) / -2)) rotateY(-90deg)}
 .cs-edge-r{transform:translate(-50%,-50%) translateX(calc(var(--cw) / 2)) rotateY(90deg)}
-.art-cassette.is-flipping .cassette-box{animation:csFlipBox 900ms cubic-bezier(.45,.05,.25,1) both}
-.art-cassette.is-flipping.to-front .cassette-box{animation-direction:reverse}
+.art-cassette.is-flipping .cassette-box,.art-cassette.is-flipping .cs-shade,.art-cassette.is-flipping .cs-shade::before,.art-cassette.is-flipping .cs-flip-shadow{animation-duration:1250ms;animation-timing-function:cubic-bezier(.45,.05,.25,1);animation-fill-mode:both}
+.art-cassette.is-flipping .cassette-box{animation-name:csFlipBox}
+.art-cassette.is-flipping.to-front .cassette-box,.art-cassette.is-flipping.to-front .cs-shade,.art-cassette.is-flipping.to-front .cs-shade::before,.art-cassette.is-flipping.to-front .cs-flip-shadow{animation-direction:reverse}
 /* lifts toward you, tips back, swings over */
 @keyframes csFlipBox{
   0%{transform:perspective(900px) translateZ(0) rotateX(0) rotateY(0)}
-  50%{transform:perspective(900px) translateZ(90px) rotateX(-16deg) rotateY(95deg)}
+  50%{transform:perspective(900px) translateZ(150px) rotateX(-22deg) rotateY(95deg)}
   100%{transform:perspective(900px) translateZ(0) rotateX(0) rotateY(180deg)}}
 .cb-head{display:flex;justify-content:space-between;font-weight:700;font-size:clamp(14px,3.6cqw,22px);border-bottom:2px solid #262320;padding-bottom:3px}
 .cb-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;display:flex;flex-direction:column}
@@ -1576,7 +1577,24 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .cb-list li i{font-style:normal;width:1.3em;flex:none;opacity:.55}
 .cb-list li.is-cur{background:rgba(38,35,32,.12)}
 .cb-hint{font:400 10px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;opacity:.55;text-align:right}
-@media (prefers-reduced-motion:reduce){.art-cassette.is-flipping .cassette-box{animation:none}}
+/* light and shadow that follow the turn: each face darkens as it goes edge-on, a sheen sweeps across it, and the ground shadow shrinks and softens while it is lifted */
+.cs-shade,.cs-flip-shadow{display:none;pointer-events:none}
+.art-cassette.is-flipping .cs-shade,.art-cassette.is-flipped .cs-flip-shadow,.art-cassette.is-flipping .cs-flip-shadow{display:block}
+.cs-shade{position:absolute;left:50%;top:50%;width:var(--cw);height:var(--ch);border-radius:3.2%;overflow:hidden;background:#000;opacity:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.cs-shade::before{content:"";position:absolute;inset:0 -100%;background:linear-gradient(100deg,transparent 42%,rgba(255,255,255,.55) 50%,transparent 58%);mix-blend-mode:normal;opacity:.5}
+.cs-shade-f{transform:translate(-50%,-50%) translateZ(calc(var(--cd) / 2 + 1px))}
+.cs-shade-b{transform:translate(-50%,-50%) translateZ(calc(var(--cd) / -2 - 1px)) rotateY(180deg)}
+.art-cassette.is-flipping .cs-shade-f{animation-name:csShadeF}
+.art-cassette.is-flipping .cs-shade-b{animation-name:csShadeB}
+.art-cassette.is-flipping .cs-shade::before{animation-name:csSheen}
+@keyframes csShadeF{0%{opacity:0}50%{opacity:.7}100%{opacity:.7}}
+@keyframes csShadeB{0%{opacity:.7}50%{opacity:.7}100%{opacity:0}}
+@keyframes csSheen{0%{transform:translateX(-45%)}50%{transform:translateX(0)}100%{transform:translateX(45%)}}
+.cs-flip-shadow{position:absolute;left:50%;top:calc(50% + var(--ch) / 2 - var(--cd) * .25);width:calc(var(--cw) * .94);height:calc(var(--cd) * 1.1);margin-left:calc(var(--cw) * -.47);
+  background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));border-radius:50%}
+.art-cassette.is-flipping .cs-flip-shadow{animation-name:csFlipShadow}
+@keyframes csFlipShadow{0%{transform:scale(1,1);opacity:.85}50%{transform:scale(.7,.55) translateY(40px);opacity:.35}100%{transform:scale(1,1);opacity:.85}}
+@media (prefers-reduced-motion:reduce){.art-cassette.is-flipping .cassette-box,.art-cassette.is-flipping .cs-shade,.art-cassette.is-flipping .cs-shade::before,.art-cassette.is-flipping .cs-flip-shadow{animation:none}}
 .cs-grain2{fill:url(#csGrain2);pointer-events:none}
 .cs-parting{fill:none;stroke:rgba(0,0,0,.42);stroke-width:.9}
 .cs-shell-rim{fill:none;stroke:url(#csRimGrad);stroke-width:1}
@@ -4694,7 +4712,9 @@ body.week-up-on{overflow:hidden}
             <!-- side B of the tape: the queue, in marker (tap the label to flip) -->
             <div class="cassette-back" id="cassetteBack"><div class="cb-head"><span>Side B</span><span>Up next</span></div><ol class="cb-list" id="cbList"></ol><div class="cb-hint">Tap a song to play it. Tap anywhere else to flip back.</div></div>
             <div class="cs-edge cs-edge-t"></div><div class="cs-edge cs-edge-b"></div><div class="cs-edge cs-edge-l"></div><div class="cs-edge cs-edge-r"></div>
+            <div class="cs-shade cs-shade-f"></div><div class="cs-shade cs-shade-b"></div>
             </div>
+            <div class="cs-flip-shadow"></div>
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
@@ -26183,14 +26203,14 @@ function csFlip(on){
   clearTimeout(csFlipT);
   if (on){
     csBackRender();
-    const r = csSvg.getBoundingClientRect(), k = Math.min(r.width / 400, r.height / 256), bs = $('cassetteBox').style;
-    bs.setProperty('--cw', (384 * k).toFixed(1) + 'px'); bs.setProperty('--ch', (240 * k).toFixed(1) + 'px'); bs.setProperty('--cd', (384 * k * .12).toFixed(1) + 'px');
+    const r = csSvg.getBoundingClientRect(), k = Math.min(r.width / 400, r.height / 256), bs = cassetteEl.style;
+    bs.setProperty('--cw', (384 * k).toFixed(1) + 'px'); bs.setProperty('--ch', (240 * k).toFixed(1) + 'px'); bs.setProperty('--cd', (384 * k * .14).toFixed(1) + 'px');
   }
   cassetteEl.classList.toggle('to-front', !on);
   cassetteEl.classList.add('is-flipping');
   void cassetteEl.offsetWidth;
   cassetteEl.classList.toggle('is-flipped', on);
-  csFlipT = setTimeout(() => cassetteEl.classList.remove('is-flipping', 'to-front'), csReducedMotion ? 0 : 920);
+  csFlipT = setTimeout(() => cassetteEl.classList.remove('is-flipping', 'to-front'), csReducedMotion ? 0 : 1300);
 }
 csBack.addEventListener('click', (ev) => { ev.stopPropagation(); csFlip(false); });
 
