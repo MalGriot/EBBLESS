@@ -1535,31 +1535,12 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 .cs-interior{fill:#0a0a0b}
 .cs-shell{fill:url(#csShellGrad)}
 .cs-grain{fill:url(#csGrain);pointer-events:none}
-/* interactive cassette: touch zones, pen marks, button dip, side B flip (transform/opacity only) */
+/* interactive cassette: touch zones, pen marks, button dip (transform/opacity only) */
 .cs-zone{fill:transparent;pointer-events:all;cursor:pointer}
 .cs-zone[data-z="hubL"],.cs-zone[data-z="hubR"],.cs-zone[data-z="peel"]{cursor:grab}
 .cs-pen{opacity:0;transition:opacity 200ms;pointer-events:none}
 .cs-pen.on{opacity:1}
 text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans MS',cursive;fill:#d6453a;paint-order:stroke;stroke:rgba(255,255,255,.75);stroke-width:3.4px;stroke-linejoin:round}
-/* side B: the tape slides off to the left while the J-card slides in from the right (transform/opacity only) */
-.cassette-box{position:relative;width:100%;height:100%}
-.cassette-svg{transition:transform 560ms cubic-bezier(.3,.8,.25,1),opacity 420ms ease}
-.art-cassette.is-flipped .cassette-svg{transform:translateX(-115%) rotate(-9deg);opacity:0;pointer-events:none}
-.cassette-back{display:none;position:absolute;left:50%;top:50%;width:92%;max-height:94%;aspect-ratio:384/240;container-type:inline-size;box-sizing:border-box;border-radius:3.2%;
-  padding:5% 6.5%;flex-direction:column;gap:2px;overflow:hidden;background:#d9d2c0;color:#262320;box-shadow:inset 0 0 0 3px #bfb7a2,0 10px 24px rgba(0,0,0,.45);
-  transform:translate(-50%,-50%) translateX(115%) rotate(9deg);opacity:0;
-  transition:transform 560ms cubic-bezier(.3,.8,.25,1.08),opacity 420ms ease;
-  font-family:'Bradley Hand','Segoe Print','Marker Felt','Comic Sans MS',cursive;cursor:pointer}
-.art-cassette.is-flipping .cassette-back,.art-cassette.is-flipped .cassette-back{display:flex}
-.art-cassette.is-flipped .cassette-back{transform:translate(-50%,-50%);opacity:1}
-.cb-head{display:flex;justify-content:space-between;font-weight:700;font-size:clamp(14px,3.6cqw,22px);border-bottom:2px solid #262320;padding-bottom:3px}
-.cb-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;display:flex;flex-direction:column}
-.cb-list li{flex:1;min-height:0;display:flex;align-items:center;gap:8px;border-bottom:1px dashed #8d8470;font-weight:700;font-size:clamp(13px,3.2cqw,19px);line-height:1.1;cursor:pointer;overflow:hidden}
-.cb-list li span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cb-list li i{font-style:normal;width:1.3em;flex:none;opacity:.55}
-.cb-list li.is-cur{background:rgba(38,35,32,.12)}
-.cb-hint{font:400 10px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;opacity:.55;text-align:right}
-@media (prefers-reduced-motion:reduce){.cassette-svg,.cassette-back{transition:none}}
 .cs-grain2{fill:url(#csGrain2);pointer-events:none}
 .cs-parting{fill:none;stroke:rgba(0,0,0,.42);stroke-width:.9}
 .cs-shell-rim{fill:none;stroke:url(#csRimGrad);stroke-width:1}
@@ -4448,7 +4429,6 @@ body.week-up-on{overflow:hidden}
                  the recess. Geometry is authored at the real cassette
                  ratio inside the same 400x256 viewBox as before (body at
                  8,8 384x240), so the stack/orbit maths is unchanged. -->
-            <div class="cassette-box" id="cassetteBox">
             <svg class="cassette-svg" id="cassetteSvg" viewBox="0 0 400 256" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Cassette tape, now playing">
               <defs>
                 <!-- charcoal molded plastic: a touch lighter where the light
@@ -4674,9 +4654,6 @@ body.week-up-on{overflow:hidden}
               </g>
               </g>
             </svg>
-            <!-- side B of the tape: the queue, in marker (tap the label to flip) -->
-            <div class="cassette-back" id="cassetteBack"><div class="cb-head"><span>Side B</span><span>Up next</span></div><ol class="cb-list" id="cbList"></ol><div class="cb-hint">Tap a song to play it. Tap anywhere else to flip back.</div></div>
-            </div>
           </div>
           <canvas class="viz-canvas" id="vizCanvas"></canvas>
           <div class="viz-controls" id="vizControls">
@@ -26032,7 +26009,6 @@ function cassetteUpdateTrack(t, pos, opts){
   cassetteSyncState();
   if (!(opts && opts.skipLabelArt)) cassetteSetLabelArt(t);
   csMarksSync();
-  if (cassetteEl.classList.contains('is-flipped')) csBackRender();
 }
 cassetteSetProgress(0, 0);
 cassetteApplyRotation(0);
@@ -26040,17 +26016,17 @@ cassetteApplyRotation(0);
 /* ---------- interactive cassette ----------
    Reels: drag to scrub (seeks on release). Tap a reel: 15s back / forward.
    Tape window: tap plays or pauses, hold stops the tape until you let go.
-   Label: tap flips to side B (the queue), long-press pens a mark (star = liked,
+   Label: long-press pens a mark (star = liked,
    repeat = repeat one), pull a corner to peel the sticker (it presses back on
    release). Swiping the art to skip is the art swipe above. */
-const csSvg = $('cassetteSvg'), csBack = $('cassetteBack'), csBackList = $('cbList');
+const csSvg = $('cassetteSvg');
 const CS_SCRUB_X = 8;      /* seconds of song per second of tape a finger pulls */
 const CS_JUMP_S = 15;
 const CS_HOLD_MS = 320, CS_PEN_MS = 520;
 const CS_CORNER = { tl: [22, 18], tr: [378, 18], bl: [22, 196], br: [378, 196] };
 const csRemainRect = $('csRemainRect'), csFoldRect = $('csFoldRect');
 const csFoldG = $('csFold'), csFlap = $('csFlap'), csFlapSh1 = $('csFlapSh1'), csFlapSh2 = $('csFlapSh2');
-let csG = null, csFoldAnim = 0, csFlipT = 0;
+let csG = null, csFoldAnim = 0;
 
 function csPt(e){
   const r = csSvg.getBoundingClientRect(), k = Math.min(r.width / 400, r.height / 256);
@@ -26140,36 +26116,6 @@ function csReleaseFold(C, P){
   csFoldAnim = requestAnimationFrame(step);
 }
 
-/* side B */
-function csBackRender(){
-  csBackList.textContent = '';
-  const add = (txt, i, cur, pos) => {
-    const li = document.createElement('li');
-    if (cur) li.className = 'is-cur';
-    const mark = document.createElement('i'); mark.textContent = cur ? '▶' : (i + 1) + '.';
-    const name = document.createElement('span'); name.textContent = txt;
-    li.append(mark, name);
-    if (pos != null) li.addEventListener('click', (ev) => { ev.stopPropagation(); if (!cur) playIndex(pos, { crossfade: true }); csFlip(false); });
-    csBackList.appendChild(li);
-  };
-  if (state.queuePos < 0 || !state.queue.length){ add('Nothing queued yet', 0, false, null); return; }
-  for (let n = 0; n < 6; n++){
-    const pos = state.queuePos + n; if (pos >= state.queue.length) break;
-    const t = trackAt(pos); if (t) add(t.title || 'Untitled', n, n === 0, pos);
-  }
-}
-function csFlip(on){
-  const flipped = cassetteEl.classList.contains('is-flipped');
-  if (on === undefined) on = !flipped;
-  if (on === flipped) return;
-  clearTimeout(csFlipT);
-  if (on) csBackRender();
-  cassetteEl.classList.add('is-flipping');
-  void cassetteEl.offsetWidth;
-  cassetteEl.classList.toggle('is-flipped', on);
-  csFlipT = setTimeout(() => cassetteEl.classList.remove('is-flipping'), csReducedMotion ? 0 : 600);
-}
-csBack.addEventListener('click', (ev) => { ev.stopPropagation(); csFlip(false); });
 
 /* pen marks mirror the real like and repeat-one state */
 function csMarksSync(){
@@ -26190,7 +26136,7 @@ function csPenCycle(){
 
 /* pointer handling */
 function csDown(e){
-  if (e.button !== 0 || csG || cassetteEl.classList.contains('is-flipped')) return;
+  if (e.button !== 0 || csG) return;
   const z = e.target.closest && e.target.closest('.cs-zone'); if (!z) return;
   const zone = z.dataset.z;
   csG = { zone, id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false, held: false, timer: 0, ang: 0, angTot: 0, scrubbing: false };
@@ -26245,7 +26191,6 @@ function csUp(e){
     else if (!g.moved && !cancelled) playBtn.click();
     return;
   }
-  if (g.zone === 'label' && !g.held && !g.moved && !cancelled) csFlip();
 }
 csSvg.addEventListener('pointerdown', csDown);
 csSvg.addEventListener('pointermove', csMove);
@@ -26259,7 +26204,7 @@ csSvg.addEventListener('touchstart', (e) => {
   else if (k === 'win') e.stopPropagation();
 }, { passive: false });
 /* a tap on a zone is ours, not the art's (which would open the album) */
-csSvg.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.cs-zone')) e.stopPropagation(); });
+csSvg.addEventListener('click', (e) => { const z = e.target.closest && e.target.closest('.cs-zone'); if (z && z.dataset.z !== 'label') e.stopPropagation(); });
 
 visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   if (btn.dataset.mode === 'art'){
