@@ -11616,3 +11616,19 @@ Add entries in this shape:
 - **Touches:** index.html (cassette SVG, `.cs-zone` / `.cassette-back` CSS, "interactive cassette" block after cassetteSetProgress), sw.js cache v410.
 - **Branch:** agent/cassette-interactive
 - **Notes:** Prototyped as "Cassette Lab" first. Brake is a real pause while held (the player cannot bend pitch), not a tape-slow sound. Stack-tap-to-jump and the side B queue flip from the prototype are not ported. Verified in a local browser with the Rickroll fallback deck: flip, side B list, peel and release, hub tap and scrub seek without errors. Not checked: touch on a real phone, fullscreen flow layer, mini player (its cloned cassette is inert), GPU watchdog under long use.
+
+### mobile-miniplayer-video-667: Mobile mini-player that works for videos too (Geethub #667)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** On mobile, add a mini-player that also works when the current song is a video.
+- **Touches:** (not specified)
+- **Branch:**
+- **Notes:** Related to #668 (video in the player, not a popout).
+
+### video-in-player-668: Video plays inside the player, not a popout, so the rest of the UI stays usable (Geethub #668)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** The video should show inside the player instead of a popout, so the rest of the UI can still be used while it plays.
+- **Touches:** (not specified)
+- **Branch:**
+- **Notes:** Related to #667 (mobile mini-player for videos).
