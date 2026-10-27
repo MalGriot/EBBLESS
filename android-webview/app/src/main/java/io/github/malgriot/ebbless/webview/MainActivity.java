@@ -475,7 +475,9 @@ public class MainActivity extends Activity {
                 r -> android.util.Log.d("EBB/signin", "page hook returned " + r));
     }
 
-    @Override public void onBackPressed() { moveTaskToBack(true); }
+    // #638: hand Back to the page first (it steps back inside the app or swallows it at rest);
+    // only minimise if the page has no history to go back to.
+    @Override public void onBackPressed() { if (web != null && web.canGoBack()) web.goBack(); else moveTaskToBack(true); }
 
     @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); if (web != null) web.saveState(b); }   // the WebView is built a moment after the splash is up
 }
