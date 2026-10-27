@@ -2064,6 +2064,14 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .q-row .q-menu,.q-now .q-menu{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
 .q-row .q-menu:hover,.q-row .q-menu.is-active,.q-now .q-menu:hover,.q-now .q-menu.is-active{background:var(--panel-3);color:var(--text)}
 .q-row .q-menu svg,.q-now .q-menu svg{width:13px;height:13px}
+/* quiet by default (#583c): mouse only. Queue row handle/remove/menu sit back until the row is
+   hovered or focused; touch and keyboard focus stay fully visible. Opacity only. */
+@media (hover:hover) and (pointer:fine){
+  .q-row .handle,.q-row .remove,.q-row .q-menu{opacity:.4;transition:opacity var(--dur-ui) var(--ease-out)}
+  .q-row:hover .handle,.q-row:hover .remove,.q-row:hover .q-menu,
+  .q-row:focus-within .handle,.q-row:focus-within .remove,.q-row:focus-within .q-menu,
+  .q-row .q-menu.is-active,.q-row.is-dragging .handle{opacity:1}
+}
 /* Hover fills the row with the current UI color (#394); text flips to --on-accent so light colors stay legible */
 .q-row{transition:background-color var(--dur-ui) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
