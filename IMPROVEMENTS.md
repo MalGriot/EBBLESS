@@ -11675,12 +11675,12 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Changed: queue row drag handle, remove X and 3-dot menu now sit at 40% opacity on mouse devices only (@media hover:hover and pointer:fine) and return to full on row hover, keyboard focus-within, open menu, or drag. Touch unchanged and fully visible. Opacity transition only, no filter/blur/animation. Considered and skipped: art corner buttons (#fsBtn, like, cast) because the fullscreen idle fade already drives their opacity.
 
 ### home-your-stuff-shelf-583d: Home: a shelf of your recent things (last playlist, album, favorite) instead of recommendations (Geethub #583)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Objects left on a table, not a store shelf. No accounts, no ad-like feel.
-- **Touches:** tbd.
-- **Branch:**
-- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+- **Touches:** index.html (renderHomeShelf, #homeShelf, setView).
+- **Branch:** agent/home-shelf-583d (merged to main)
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: up to 4 small static tiles under "Find music" on the empty player: last played playlist, last played album, Liked Songs, then other recently played, from existing last-played times and the cached playlists (no new storage, no network, no animation, no blur). One tap calls playPlaylistNow. Shows nothing when nothing was played; hides itself once something loads. The art gives its row back at mobile and desktop widths so controls stay in view; Library/Player/Queue spots untouched. Limit: it only appears on the empty player, and a cold open with nothing resumed still lands on Library (setView), so it is seen after leaving Library for Player or after a resume is cleared; with a resumed song the welcome-back toast covers it. Verified on localhost (800x600) with seeded playlists: tiles render, tap loads the song, console clean. Real audio start not verified, and mobile width not eyeballed.
 
 ### home-welcome-back-583e: Home: welcome-back line with one-tap resume of what you were playing (Geethub #583)
 - **Status:** review
