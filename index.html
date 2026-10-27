@@ -9723,7 +9723,38 @@ function syncHistoryBuffer(){
   const once = () => { evs.forEach(t => window.removeEventListener(t, once, true)); if (!historyBuffered) push(); };
   evs.forEach(t => window.addEventListener(t, once, true));
 })();
+// #638: small overlays (menus, modals, History, Find music, import) are not "views", so
+// they never counted as away from rest and Back skipped past them. Close the topmost one
+// per press, then keep the buffer. Only called after load, so later consts are initialised.
+function closeTopOverlay(){
+  const open = el => !!el && el.classList.contains('is-open');
+  const steps = [
+    [() => pasteRecentsEl && !pasteRecentsEl.hidden, closePasteRecents],
+    [() => !!artistPickMenu, closeArtistPick],
+    [() => open(libSortMenu), closeLibSortMenu],
+    [() => open(artStyleMenu), closeArtStyleMenu],
+    [() => !!openCtxMenu, closeLibCtxMenu],
+    [() => !!openTrackCtxMenu, closeTrackCtxMenu],
+    [() => open(feedbackModal), closeFeedbackModal],
+    [() => open(creditsModal), closeCreditsModal],
+    [() => open(whatsNewModal), closeWhatsNewModal],
+    [() => open(rerollModal), closeRerollPrompt],
+    [() => ytPanelOpen(), () => closeYtPanel()],
+    [() => open(importOverlay), closeImportOverlay],
+    [() => playHistOpen, closePlayHistory],
+    [() => !!fmEl && !fmEl.hidden, closeFindMusic],
+  ];
+  for (const [isOpen, close] of steps){
+    try { if (isOpen()){ close(); return true; } } catch(e){}
+  }
+  return false;
+}
 window.addEventListener('popstate', () => {
+  if (closeTopOverlay()){
+    try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
+    historyBuffered = true;
+    return;
+  }
   if (!isAwayFromRest()){
     // #638: at rest a back press must never leave the app: swallow it and put the buffer back
     try { history.pushState({ ebblessNav: true }, ''); } catch(e){}
