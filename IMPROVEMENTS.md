@@ -11648,3 +11648,51 @@ Add entries in this shape:
 - **Touches:** (not specified)
 - **Branch:** agent/no-art-hover-670
 - **Notes:** Removed the cassette-hover-expand (#403) CSS block and its pointerenter script (--art-hx). Library card hover untouched. Console clean of new errors.
+
+### home-fixed-spots-583a: Home: fixed spots. Player, library and queue never move or get renamed (Geethub #583)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Audit what moves or changes place today, then lock three permanent places so everything is findable without looking.
+- **Touches:** tbd.
+- **Branch:**
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+
+### home-time-of-day-warmth-583b: Home: ambient color temperature shifts with the time of day (Geethub #583)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Slow static tint (amber evening, cooler morning, dim late night). No new animation or blur layers, so GPU budget stays flat.
+- **Touches:** tbd.
+- **Branch:**
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+
+### home-quiet-by-default-583c: Home: quiet by default, controls fade back until the pointer or finger is near (Geethub #583)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Art and the song are the loudest thing on screen. Must respect the least-clicks motto: nothing hidden that costs an extra tap.
+- **Touches:** tbd.
+- **Branch:**
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+
+### home-your-stuff-shelf-583d: Home: a shelf of your recent things (last playlist, album, favorite) instead of recommendations (Geethub #583)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Objects left on a table, not a store shelf. No accounts, no ad-like feel.
+- **Touches:** tbd.
+- **Branch:**
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+
+### home-welcome-back-583e: Home: welcome-back line with one-tap resume of what you were playing (Geethub #583)
+- **Status:** draft
+- **Priority:** low
+- **Description:** On open, e.g. 'Welcome back. You were in the middle of [album].' One tap to resume.
+- **Touches:** tbd.
+- **Branch:**
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+
+### home-edge-breathing-room-583f: Home: consistent spacing and softer edges so no panel crowds another (Geethub #583)
+- **Status:** draft
+- **Priority:** low
+- **Description:** Overlaps #654 and #655 (queue and library edge styles); fold into them where they already cover it.
+- **Touches:** tbd.
+- **Branch:**
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
