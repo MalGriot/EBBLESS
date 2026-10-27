@@ -11675,7 +11675,7 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Changed: queue row drag handle, remove X and 3-dot menu now sit at 40% opacity on mouse devices only (@media hover:hover and pointer:fine) and return to full on row hover, keyboard focus-within, open menu, or drag. Touch unchanged and fully visible. Opacity transition only, no filter/blur/animation. Considered and skipped: art corner buttons (#fsBtn, like, cast) because the fullscreen idle fade already drives their opacity.
 
 ### home-your-stuff-shelf-583d: Home: a shelf of your recent things (last playlist, album, favorite) instead of recommendations (Geethub #583)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Objects left on a table, not a store shelf. No accounts, no ad-like feel.
 - **Touches:** tbd.
