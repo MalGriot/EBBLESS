@@ -11090,7 +11090,7 @@ Add entries in this shape:
 
 
 ### mobile-search-bar-fills-top-row: mobile search bar fills the whole top row (Geethub #639)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #639. the search bar on mobile needs to take up the whole top that's left to take.
 - **Touches:** none (no code change).
@@ -11250,7 +11250,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #619. Built (1150px and wider, the 3-pane desktop layout): a double-chevron button at the right end of the library toolbar toggles a wide library. Wide = grid columns 1fr 340px 340px, so the library takes all the slack, the player pane shrinks to the queue's width (340px) and sits between them; art and title scale to the narrower pane (300px art, 20px title). Chevron flips and the choice is remembered (localStorage ebbless:libraryWide, body.lib-wide). Snaps, no grid animation (GPU budget). Hidden below 1150px and in desktop fullscreen where the library is a drawer. Verified in the 1400px browser preview: pane widths 720/340/340 and back to 340/720/340, no new [gpu-watchdog]. Not checked: between 1150 and 1300px widths, Settings or search overlay in the narrow center pane. Cache v331.
 
 ### sliding-on-list-items: sliding on list items (Geethub #620)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #620. sliding left/right on library and queue list items should be animated the list item should move over 28% and stay there til cancelled after swipe left should reveal red underneath with a trashcan icon. if they tap the icon, it prompts them to ensure they want to delete. when they tap yes, it deletes. when they hit no, the list item returns to origi
 - **Touches:** tbd.
@@ -11431,7 +11431,7 @@ Add entries in this shape:
 - **Notes:** Built: when an episode's audio is 8 to 75 seconds longer than the length its feed lists, the extra is treated as a stitched-in ad on the front and the existing "Ad" skip button is offered over 0:00 to that length. Assumptions: the ad sits at the start (as reported) and the feed length excludes it; the button is tap-to-skip like the other ad ranges, not silent. Works in any language since it uses length, not captions. Verified: page loads with no script errors. Not verified: a real No Sleep episode (needs the owner's phone or location to be served the ad); sw.js cache not bumped (do at deploy).
 
 ### back-never-leaves-app: back button must never let you leave the app (Geethub #638)
-- **Status:** done
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea Geethub #638. Back from the player used to exit the app; it should only ever step back inside it.
 - **Touches:** index.html (history buffer and popstate handler, near isAwayFromRest).
@@ -11441,7 +11441,7 @@ Add entries in this shape:
 <!-- 2026-10-18: owner confirmed the mini player and dock icon as PERFECT. Tag milestone-mini-player-perfect (commit 44dae77, web cache v376, Mac app 1.0.10). If anything breaks, return to it: git diff milestone-mini-player-perfect -- index.html desktop/ -->
 
 ### fix-song-needs-play-tap: "Fix this song" needs a play tap to reload (Geethub #651)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Bug Geethub #651. After hitting fix this song (seen on 40 Winks by Jon Wayne) it finished the ad, froze, and needed a play tap to reload.
 - **Touches:** index.html (loadIntoDeck, returnFromAdDodge), sw.js.
@@ -11449,7 +11449,7 @@ Add entries in this shape:
 - **Notes:** INFERRED fix, not reproduced (needs a real ad): loadIntoDeck reused a deck for the fixed video without clearing the old video's ad state (adDodge, adMutedAt, adIgnore, adClock, adSeen), so a stale dodge/mute flag could leave the fixed song held and never started. Now cleared on every YouTube load, as resetDeck does. Syntax-checked only; verify on a phone with a song that serves a pre-roll after Fix this song.
 
 ### ad-switch-fade-back: After an ad-triggered switch to the next song and back, fade back to the first song (Geethub #658)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #658. When a song loads an ad and playback switches to the next song then back to the first, it should fade back in.
 - **Touches:** index.html (loadIntoDeck, returnFromAdDodge), sw.js.
@@ -11618,7 +11618,7 @@ Add entries in this shape:
 - **Notes:** Prototyped as "Cassette Lab" first. Brake is a real pause while held (the player cannot bend pitch), not a tape-slow sound. Stack-tap-to-jump and the side B queue flip from the prototype are not ported. Verified in a local browser with the Rickroll fallback deck: flip, side B list, peel and release, hub tap and scrub seek without errors. Not checked: touch on a real phone, fullscreen flow layer, mini player (its cloned cassette is inert), GPU watchdog under long use.
 
 ### mobile-miniplayer-video-667: Mobile mini-player that works for videos too (Geethub #667)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** On mobile, add a mini-player that also works when the current song is a video.
 - **Touches:** (not specified)
@@ -11626,7 +11626,7 @@ Add entries in this shape:
 - **Notes:** Related to #668 (video in the player, not a popout).
 
 ### video-in-player-668: Video plays inside the player, not a popout, so the rest of the UI stays usable (Geethub #668)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** The video should show inside the player instead of a popout, so the rest of the UI can still be used while it plays.
 - **Touches:** (not specified)
