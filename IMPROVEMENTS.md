@@ -11626,9 +11626,9 @@ Add entries in this shape:
 - **Notes:** Related to #668 (video in the player, not a popout).
 
 ### video-in-player-668: Video plays inside the player, not a popout, so the rest of the UI stays usable (Geethub #668)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** The video should show inside the player instead of a popout, so the rest of the UI can still be used while it plays.
 - **Touches:** (not specified)
-- **Branch:**
+- **Branch:** agent/video-in-player-668
 - **Notes:** Related to #667 (mobile mini-player for videos).
