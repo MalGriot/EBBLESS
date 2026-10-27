@@ -11650,12 +11650,13 @@ Add entries in this shape:
 - **Notes:** Removed the cassette-hover-expand (#403) CSS block and its pointerenter script (--art-hx). Library card hover untouched. Console clean of new errors.
 
 ### home-fixed-spots-583a: Home: fixed spots. Player, library and queue never move or get renamed (Geethub #583)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Audit what moves or changes place today, then lock three permanent places so everything is findable without looking.
-- **Touches:** tbd.
-- **Branch:**
-- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+- **Touches:** index.html (#bottom-nav order).
+- **Branch:** agent/home-fixed-spots-583a
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Audit: names are already consistent everywhere (nav buttons, pane headings, fullscreen nav, aria labels all say Library / Player / Queue; no JS renames them). Desktop split keeps Library left, Player center, Queue right in a fixed grid. Only real drift found: mobile bottom nav put Search between Player and Queue (Library, Player, Search, Queue, Settings) while the top nav is Library, Player, Queue. Fixed by moving Queue before Search, so the three always sit in the same order. Not changed, needs a decision: (1) Library and Queue hide from the top nav in desktop split but come back in desktop fullscreen; (2) on mobile the Queue is a slide-over sheet, not a page like Library and Player; (3) Search exists only in the bottom nav (mobile); (4) the Queue heading shows "Now playing from X" as a section label when a playlist is playing, which is content, not a rename.
+
 
 ### home-time-of-day-warmth-583b: Home: ambient color temperature shifts with the time of day (Geethub #583)
 - **Status:** review
