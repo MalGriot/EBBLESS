@@ -32249,6 +32249,24 @@ function tryResume(){
   podHydrate(track, state.queue[state.queuePos].plId);
 }
 
+// Welcome back (#583e): on a cold open with something restored by tryResume,
+// the existing toast offers one tap to carry on. Waits for the splash to
+// clear, fades by itself, shows nothing when there is nothing to resume.
+function welcomeBackLine(){
+  const t = currentTrack(), e = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  if (!t || !e) return;
+  const pl = getCachedPlaylist(e.plId);
+  const named = pl && pl.name && ![SWELL_ID, BLEND_ID, NP_ID].includes(pl.id);
+  const what = named ? pl.name : t.title;
+  if (!what) return;
+  const show = () => showToast('Welcome back. You were in the middle of ' + what + '.', { label: 'Resume', run: () => { try{ resumePlayback(); } catch(err){} } });
+  const sp = $('splash');
+  if (!sp || sp.classList.contains('is-hidden')){ show(); return; }
+  const mo = new MutationObserver(() => { if (sp.classList.contains('is-hidden')){ mo.disconnect(); setTimeout(show, 400); } });
+  mo.observe(sp, { attributes: true, attributeFilter: ['class'] });
+  setTimeout(() => mo.disconnect(), 120000);
+}
+
 /* =========================================================================
    FULLSCREEN / FLOW MODE
    ========================================================================= */
@@ -33547,6 +33565,7 @@ function startApp(){
     // show on the player view, so land them on the library instead.
     setView(currentTrack() ? 'player' : 'library');
     if (!currentTrack()) updateMiniBarVisibility();
+    try{ if (!resumingFromBackground) welcomeBackLine(); } catch(e){}
     refreshSwellIfDue();
     // CuRRentSSsss grows once per daily period and resets at midnight - poll
     // so a session left open picks up each period change (and the midnight

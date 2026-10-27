@@ -11683,12 +11683,12 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
 
 ### home-welcome-back-583e: Home: welcome-back line with one-tap resume of what you were playing (Geethub #583)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** On open, e.g. 'Welcome back. You were in the middle of [album].' One tap to resume.
-- **Touches:** tbd.
-- **Branch:**
-- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+- **Touches:** index.html (welcomeBackLine, startApp).
+- **Branch:** agent/home-welcome-back-583e (merged to main)
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: on a cold open with a saved resume (LS_RESUME via tryResume), the existing toast reads "Welcome back. You were in the middle of [playlist or song]." with a Resume button (one tap, auto-fades, nothing to dismiss). Waits for the splash to clear; shows nothing with no saved resume or on a return from background. Verified on localhost with a seeded resume; real audio start on tap not verified.
 
 ### home-edge-breathing-room-583f: Home: consistent spacing and softer edges so no panel crowds another (Geethub #583)
 - **Status:** ready
