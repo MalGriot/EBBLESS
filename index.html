@@ -2823,6 +2823,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     grid-template-columns:minmax(280px,340px) 1fr minmax(280px,340px);
   }
   body.split-desktop #topbar{grid-column:1/-1;grid-row:1}
+  /* #583f: the rounded library and queue panes no longer butt against the player pane and the window edge; one shared gap (static, no animation) */
+  body.split-desktop:not(.desktop-fs){--pane-gap:8px}
+  body.split-desktop:not(.desktop-fs) #app{column-gap:var(--pane-gap);padding:0 var(--pane-gap) var(--pane-gap)}
   /* #619: library expanded to the right - it takes the slack, the player pane shrinks to the queue's width and sits between them.
      Snaps (no grid-template animation, GPU budget). The art and title follow the narrower pane. */
   body.split-desktop.lib-wide:not(.desktop-fs) #app{grid-template-columns:1fr 340px 340px}

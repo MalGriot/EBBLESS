@@ -11691,9 +11691,9 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: on a cold open with a saved resume (LS_RESUME via tryResume), the existing toast reads "Welcome back. You were in the middle of [playlist or song]." with a Resume button (one tap, auto-fades, nothing to dismiss). Waits for the splash to clear; shows nothing with no saved resume or on a return from background. Verified on localhost with a seeded resume; real audio start on tap not verified.
 
 ### home-edge-breathing-room-583f: Home: consistent spacing and softer edges so no panel crowds another (Geethub #583)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Overlaps #654 and #655 (queue and library edge styles); fold into them where they already cover it.
-- **Touches:** tbd.
-- **Branch:**
-- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+- **Touches:** index.html.
+- **Branch:** agent/home-edge-583f
+- **Notes:** Audit: library and queue panes were rounded (--r-lg) but butted against the player pane and window edge with zero gap. Added one shared --pane-gap (8px) as column-gap and side/bottom padding on #app, desktop split layout only (not desktop-fs drawers). Static CSS. Skipped as redesign: unifying inner row gutters (library 24px vs queue row padding) and mobile panel radii. Not covered here: #654 and #655. Verified gap computes at 1400px and console shows only the known identity-provider and script-fetch errors; not eyeballed with real data.
