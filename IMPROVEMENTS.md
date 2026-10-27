@@ -11634,12 +11634,12 @@ Add entries in this shape:
 - **Notes:** Related to #667 (mobile mini-player for videos).
 
 ### queue-scroll-up-previous-669: Scroll up in the queue to see the previous songs (Geethub #669)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea Geethub #669. Scrolling up in the queue should reveal the songs that already played.
 - **Touches:** (not specified)
-- **Branch:**
-- **Notes:**
+- **Branch:** agent/queue-scroll-up-669
+- **Notes:** renderQueuePanel now renders already-played songs (queue entries before queuePos, last 100, dimmed, tap to jump) above Now; Now stays the scroll anchor (snaps to top of view on open/new queue per #629, kept steady on edits). Static, no animation. Page-load verified, render not exercised live (state is module-scoped).
 
 ### no-album-art-hover-expand-670: Hovering the album art should not expand it (Geethub #670)
 - **Status:** in-progress
