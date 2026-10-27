@@ -11667,7 +11667,7 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Built: one --tod-tint var on #ambient, extra gradient layer inside the existing #ambient::after, refreshed every 5 min, no animation/blur/new layer. Cool morning (5-10h), neutral day, amber evening (16-22h), dim night. Peak alpha .20 (night), .09 (evening). Verified load and console only; not eyeballed at each hour.
 
 ### home-quiet-by-default-583c: Home: quiet by default, controls fade back until the pointer or finger is near (Geethub #583)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Art and the song are the loudest thing on screen. Must respect the least-clicks motto: nothing hidden that costs an extra tap.
 - **Touches:** tbd.
