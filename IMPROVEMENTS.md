@@ -11618,11 +11618,11 @@ Add entries in this shape:
 - **Notes:** Prototyped as "Cassette Lab" first. Brake is a real pause while held (the player cannot bend pitch), not a tape-slow sound. Stack-tap-to-jump and the side B queue flip from the prototype are not ported. Verified in a local browser with the Rickroll fallback deck: flip, side B list, peel and release, hub tap and scrub seek without errors. Not checked: touch on a real phone, fullscreen flow layer, mini player (its cloned cassette is inert), GPU watchdog under long use.
 
 ### mobile-miniplayer-video-667: Mobile mini-player that works for videos too (Geethub #667)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** On mobile, add a mini-player that also works when the current song is a video.
 - **Touches:** (not specified)
-- **Branch:**
+- **Branch:** agent/mobile-miniplayer-video-667
 - **Notes:** Related to #668 (video in the player, not a popout).
 
 ### video-in-player-668: Video plays inside the player, not a popout, so the rest of the UI stays usable (Geethub #668)
