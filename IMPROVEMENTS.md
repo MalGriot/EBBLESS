@@ -11642,9 +11642,9 @@ Add entries in this shape:
 - **Notes:**
 
 ### no-album-art-hover-expand-670: Hovering the album art should not expand it (Geethub #670)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug Geethub #670. Remove the feature where hovering the album art expands it.
 - **Touches:** (not specified)
-- **Branch:**
-- **Notes:**
+- **Branch:** agent/no-art-hover-670
+- **Notes:** Removed the cassette-hover-expand (#403) CSS block and its pointerenter script (--art-hx). Library card hover untouched. Console clean of new errors.
