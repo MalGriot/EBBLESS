@@ -1746,6 +1746,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 /* your recent things (#583d): small static tiles under Find music, only while the player is empty */
 .home-shelf{display:none;justify-content:center;gap:10px;margin:12px auto 0;max-width:100%}
 .track-meta.is-empty .home-shelf:not([hidden]){display:flex}
+.home-shelf-lib:not([hidden]){display:flex;justify-content:flex-start;margin:4px 0 8px;overflow-x:auto}
 .home-shelf-item{display:block;width:68px;min-width:0;padding:0;text-align:center;font:inherit;color:inherit}
 .home-shelf-item img,.home-shelf-item .home-shelf-ph{display:block;margin:0 auto;width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--surface-2,rgba(128,128,128,.18))}
 .home-shelf-item span.home-shelf-name{display:block;margin-top:5px;font-size:11px;line-height:1.25;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -4302,6 +4303,7 @@ body.week-up-on{overflow:hidden}
         <div class="section-label lib-bar-label hidden" id="libBarLabel" role="button" tabindex="0"></div>
         </div>
         <div class="lib-body">
+        <div class="home-shelf home-shelf-lib" id="libShelf" hidden></div>
         <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
           <div class="section-label">Playlists</div>
@@ -9634,7 +9636,7 @@ function showLoadSuccess(){
 document.getElementById('settingsBackBtn')?.addEventListener('click', () => setView(state.preSettingsView || 'library'));
 function setView(name){
   const prevView = state.currentView;
-  if (name === 'player') try{ renderHomeShelf(); } catch(e){} // recent-things shelf (#583d)
+  if (name === 'player' || name === 'library') try{ renderHomeShelf(); } catch(e){} // recent-things shelf (#583d)
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
   // Settings should open on its own (issue #131): the split-desktop
   // "fullscreen player" mode (desktop-fs) keeps the library/queue panes as
@@ -10549,6 +10551,7 @@ libSearchClear.addEventListener('click', () => {
 });
 function setLibSearchOpen(open){
   libSearchBox.classList.toggle('hidden', !open);
+  try{ renderHomeShelf(); } catch(e){}
   libSearchToggle.classList.toggle('is-active', open);
   libSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open){ libSearch.focus(); return; }
@@ -10629,6 +10632,7 @@ function syncLibraryVideos(){
 }
 document.addEventListener('visibilitychange', syncLibraryVideos);
 function renderLibrary(){
+  try{ renderHomeShelf(); } catch(e){}
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
   // (#409) an artist window (page or saved artist entry) stays open until the
@@ -32279,8 +32283,13 @@ function tryResume(){
 // player, from what is already saved (last-played times, Liked Songs). One tap
 // plays it. Nothing recent, nothing shown. Static: no network, no animation.
 function renderHomeShelf(){
-  const box = $('homeShelf'), meta = $('trackMeta');
-  if (!box || !meta || !meta.classList.contains('is-empty')) return;
+  renderShelfInto($('homeShelf'), !!$('trackMeta') && $('trackMeta').classList.contains('is-empty'));
+  const sb = $('libSearchBox');
+  renderShelfInto($('libShelf'), !(sb && !sb.classList.contains('hidden'))); // also on the Library landing, not while searching
+}
+function renderShelfInto(box, show){
+  if (!box) return;
+  if (!show){ box.hidden = true; return; }
   const items = [], seen = new Set();
   const add = (id, pl) => { if (!seen.has(id) && pl && pl.tracks && pl.tracks.length && pl.name && items.length < 4){ seen.add(id); items.push({ id, pl }); } };
   const recent = getLibrary()
