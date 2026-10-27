@@ -11667,12 +11667,12 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Built: one --tod-tint var on #ambient, extra gradient layer inside the existing #ambient::after, refreshed every 5 min, no animation/blur/new layer. Cool morning (5-10h), neutral day, amber evening (16-22h), dim night. Peak alpha .20 (night), .09 (evening). Verified load and console only; not eyeballed at each hour.
 
 ### home-quiet-by-default-583c: Home: quiet by default, controls fade back until the pointer or finger is near (Geethub #583)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Art and the song are the loudest thing on screen. Must respect the least-clicks motto: nothing hidden that costs an extra tap.
-- **Touches:** tbd.
-- **Branch:**
-- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+- **Touches:** index.html (queue row CSS)
+- **Branch:** agent/home-quiet-583c
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Changed: queue row drag handle, remove X and 3-dot menu now sit at 40% opacity on mouse devices only (@media hover:hover and pointer:fine) and return to full on row hover, keyboard focus-within, open menu, or drag. Touch unchanged and fully visible. Opacity transition only, no filter/blur/animation. Considered and skipped: art corner buttons (#fsBtn, like, cast) because the fullscreen idle fade already drives their opacity.
 
 ### home-your-stuff-shelf-583d: Home: a shelf of your recent things (last playlist, album, favorite) instead of recommendations (Geethub #583)
 - **Status:** ready
