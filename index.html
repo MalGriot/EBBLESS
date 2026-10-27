@@ -375,7 +375,8 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
 #ambient::after{content:'';position:absolute;inset:0;transition:background 4s linear;
   background:
     radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%),
-    var(--clock-tint-ambient, transparent);
+    var(--clock-tint-ambient, transparent),
+    linear-gradient(var(--tod-tint, transparent),var(--tod-tint, transparent));
 }
 
 /* ---------- topbar (desktop) ---------- */
@@ -24325,6 +24326,21 @@ function updateLibraryClockColor(){
 updateLibraryClockColor();
 setTimeout(() => document.documentElement.classList.remove('clock-color-init'), 50);
 setInterval(updateLibraryClockColor, 10000);
+
+/* #583b: one static wash on #ambient::after for the local time of day (cool
+   morning, neutral day, amber evening, dim late night). A single CSS var,
+   re-set every 5 min and never animated; the song-color fade is a separate layer. */
+function updateTimeOfDayTint(){
+  const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+  // [hour, r, g, b, alpha] keyframes, linearly blended between neighbours
+  const K = [[0,0,0,12,.20],[5,0,0,12,.14],[7,120,170,255,.06],[10,120,170,255,0],[16,255,170,70,0],[19,255,150,40,.09],[22,255,120,40,.07],[24,0,0,12,.20]];
+  let i = 0; while (i < K.length - 2 && h >= K[i + 1][0]) i++;
+  const a = K[i], b = K[i + 1], t = Math.min(1, Math.max(0, (h - a[0]) / (b[0] - a[0])));
+  const m = (j) => Math.round(a[j] + (b[j] - a[j]) * t);
+  ambientEl.style.setProperty('--tod-tint', `rgba(${m(1)},${m(2)},${m(3)},${(a[4] + (b[4] - a[4]) * t).toFixed(3)})`);
+}
+updateTimeOfDayTint();
+setInterval(updateTimeOfDayTint, 300000);
 
 /* 49 genuinely different nodal-field families the grains can settle into.
    Each supplies its own field(x,y,params,t) -> scalar, plus a short list of

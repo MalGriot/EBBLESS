@@ -11658,12 +11658,12 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
 
 ### home-time-of-day-warmth-583b: Home: ambient color temperature shifts with the time of day (Geethub #583)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Slow static tint (amber evening, cooler morning, dim late night). No new animation or blur layers, so GPU budget stays flat.
-- **Touches:** tbd.
-- **Branch:**
-- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27.
+- **Touches:** index.html (#ambient::after, updateTimeOfDayTint).
+- **Branch:** agent/home-time-of-day-583b
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Built: one --tod-tint var on #ambient, extra gradient layer inside the existing #ambient::after, refreshed every 5 min, no animation/blur/new layer. Cool morning (5-10h), neutral day, amber evening (16-22h), dim night. Peak alpha .20 (night), .09 (evening). Verified load and console only; not eyeballed at each hour.
 
 ### home-quiet-by-default-583c: Home: quiet by default, controls fade back until the pointer or finger is near (Geethub #583)
 - **Status:** ready
