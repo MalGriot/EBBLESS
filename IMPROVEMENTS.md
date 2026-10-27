@@ -11513,7 +11513,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #660. Deleted the #626 pseudo-element block; cache v391.
 
 ### lyrics-not-working-664: Lyrics not working for almost any song (Geethub #664)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Lyrics fail to load for almost any song. No details given. Related to the merged lyrics-accuracy entry, but this reports a broad failure, so check the lyrics source/fetch first for an outage or a regression.
 - **Touches:** lyrics fetch/matching
@@ -11529,7 +11529,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #663 (idea); issue body was empty beyond the title.
 
 ### search-music-only-662: Search shows random YouTube videos, not just music (Geethub #662)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Search returns everything on YouTube (random videos etc.). Find a way to tell music from other content and favor/limit to music.
 - **Touches:** search results
@@ -11537,7 +11537,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #662 (bug); issue body was empty beyond the title.
 
 ### h-key-goes-to-main-view-661: Pressing h should go to the main view (player, library, queue), not the splash (Geethub #661)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The h shortcut sends you to the splash. It should go to the main view with player, library and queue.
 - **Touches:** keyboard shortcuts / navigation
