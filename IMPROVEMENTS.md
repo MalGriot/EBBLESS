@@ -11632,3 +11632,19 @@ Add entries in this shape:
 - **Touches:** (not specified)
 - **Branch:**
 - **Notes:** Related to #667 (mobile mini-player for videos).
+
+### queue-scroll-up-previous-669: Scroll up in the queue to see the previous songs (Geethub #669)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea Geethub #669. Scrolling up in the queue should reveal the songs that already played.
+- **Touches:** (not specified)
+- **Branch:**
+- **Notes:**
+
+### no-album-art-hover-expand-670: Hovering the album art should not expand it (Geethub #670)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Bug Geethub #670. Remove the feature where hovering the album art expands it.
+- **Touches:** (not specified)
+- **Branch:**
+- **Notes:**
