@@ -211,9 +211,11 @@ html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint{tran
 /* the app's native splash is up: the web one stays invisible (still wired up, so the app can press its Enter) and its videos stay unloaded */
 html.ebb-nsplash #splash{visibility:hidden!important}
 /* screen off (set by the Android app): hide every screen so the compositor can drop its textures; the players stay (#yt-host, audio) */
-html.ebb-screenoff #app > :not(#yt-host){visibility:hidden!important}
-html.ebb-screenoff body > :not(#app):not(script):not(style):not(link):not(audio){visibility:hidden!important}
-html.ebb-screenoff *, html.ebb-screenoff *::before, html.ebb-screenoff *::after{animation-play-state:paused!important}
+html:is(.ebb-screenoff,.ebb-pip) #app > :not(#yt-host){visibility:hidden!important}
+html:is(.ebb-screenoff,.ebb-pip) body > :not(#app):not(script):not(style):not(link):not(audio){visibility:hidden!important}
+html:is(.ebb-screenoff,.ebb-pip) *, html:is(.ebb-screenoff,.ebb-pip) *::before, html:is(.ebb-screenoff,.ebb-pip) *::after{animation-play-state:paused!important}
+/* #667: the Android app's Picture-in-Picture window shows only the video, edge to edge */
+html.ebb-pip #yt-host.is-shown{z-index:200;border-radius:0}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -796,7 +798,7 @@ body.onb-active .paste-guide{display:none}
   #libraryListWrap .lib-top .lib-pillrow{order:-1;margin-top:0}
   .lib-grid.is-list .lib-card .row-actions .row-play,.lib-grid.is-list .lib-card .row-actions .row-pin{display:none}
   /* footer player: play/pause only */
-  #mini-bar .mini-ctl>button:not(#miniPlayBtn):not(#miniVideoBtn){display:none!important}
+  #mini-bar .mini-ctl>button:not(#miniPlayBtn){display:none!important}
 }
 @media (min-width:860px){#ctxSheetScrim{display:none}}
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}
@@ -1882,7 +1884,6 @@ body:not(.split-desktop):has(#import-overlay.is-open) #mini-bar{z-index:61}
 #mini-bar .title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #mini-bar .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #mini-bar .mini-ctl{flex:none;display:flex;align-items:center;gap:0}
-#mini-bar #miniVideoBtn[hidden]{display:none!important}
 #mini-bar .mini-line{position:absolute;left:0;right:0;top:0;height:2px;background:var(--border)}
 #mini-bar .mini-line .fill{height:100%;background:var(--player-accent);width:0%}
 @media (max-width:420px){
@@ -5320,9 +5321,6 @@ body.week-up-on{overflow:hidden}
       <button class="ctl-btn small player-like-btn" id="miniLikeBtn" title="Add to Liked Songs" aria-label="Add to Liked Songs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6.7-4.35-9.55-8.36C.6 10.28 1.1 6.9 3.6 5.1c2.16-1.56 4.9-1.1 6.4.8L12 8l2-2.1c1.5-1.9 4.24-2.36 6.4-.8 2.5 1.8 3 5.18 1.15 7.54C18.7 16.65 12 21 12 21z"/></svg>
       </button>
-      <button class="ctl-btn small" id="miniVideoBtn" title="Watch the video" aria-label="Watch the video" hidden>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5zm7.2 1.3v6.4l5.3-3.2z"/></svg>
-      </button>
       <button class="ctl-btn small" id="miniShuffleBtn" title="Shuffle" aria-label="Shuffle">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zM14.83 13.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       </button>
@@ -5678,7 +5676,7 @@ setTimeout(() => {
       const aw = document.getElementById('artworkWrap');
       if (aw && EbbNative.playing) {
         let lastPlaying = null;
-        const reportPlaying = () => { const p = aw.classList.contains('is-playing'); if (p !== lastPlaying) { lastPlaying = p; try { EbbNative.playing(p); } catch (e) {} } };
+        const reportPlaying = () => { const p = aw.classList.contains('is-playing'); if (p !== lastPlaying) { lastPlaying = p; try { EbbNative.playing(p); } catch (e) {} try { ytPanelBtnSync(); } catch (e) {} } };
         new MutationObserver(reportPlaying).observe(aw, { attributes: true, attributeFilter: ['class'] });
         reportPlaying();
       }
@@ -18456,13 +18454,17 @@ function ytPanelAvailable(){
   const deck = activeDeck();
   return !(deck && deck.videoId === t.videoId && deck.ytErrorFor === t.videoId);
 }
+let lastVideoPip = null;
 function ytPanelBtnSync(){
   let ok = false;
   try { ok = ytPanelAvailable(); } catch(e){ /* called before the deck code has initialized */ }
+  // #667: tell the Android app a video song is playing, so leaving the app turns it into a Picture-in-Picture mini player
+  try {
+    const aw = $('artworkWrap'), v = ok && !!aw && aw.classList.contains('is-playing');
+    if (window.EbbNative && EbbNative.videoPip && v !== lastVideoPip){ lastVideoPip = v; EbbNative.videoPip(v); }
+  } catch(e){}
   const adsBtn = $('adsReportBtn');
   if (adsBtn) adsBtn.hidden = !ok;
-  const mv = $('miniVideoBtn');   // #667: the footer player's video button, any view
-  if (mv) mv.hidden = !ok;
   const btn = $('ytPanelBtn');
   if (!btn) return ok;
   btn.disabled = !ok;
@@ -18472,7 +18474,8 @@ function ytPanelBtnSync(){
 }
 function ytPanelSync(){
   if (ytPanelOpen() && !ytPanelBtnSync()) return;
-  const open = ytPanelOpen();
+  const pip = document.documentElement.classList.contains('ebb-pip');
+  const open = ytPanelOpen() || pip;
   const deck = activeDeck(), t = trackAt(state.queuePos);
   const el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
   const show = open && !!el && el.tagName === 'IFRAME';
@@ -18488,12 +18491,20 @@ function ytPanelSync(){
   ytSlotNote.hidden = show || !open;
   if (open && !show) ytSlotNote.textContent = 'Loading the video\u2026';
   if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
-  const r = ytSlot.getBoundingClientRect();
+  const r = pip ? {left:0, top:0, width:innerWidth, height:innerHeight} : ytSlot.getBoundingClientRect();
   ytHost.style.left = r.left + 'px';
   ytHost.style.top = r.top + 'px';
   ytHost.style.width = r.width + 'px';
   ytHost.style.height = r.height + 'px';
 }
+// #667: the Android app calls this when it enters/leaves Picture-in-Picture (leaving the app while a video song plays).
+// The video fills the small window and everything else is hidden (CSS); back in the app the page is as it was.
+window.__ebbPip = function (on){
+  document.documentElement.classList.toggle('ebb-pip', !!on);
+  ytPanelSync();
+  if (on){ clearInterval(window.__ebbPipTimer); window.__ebbPipTimer = setInterval(ytPanelSync, 250); }
+  else { clearInterval(window.__ebbPipTimer); window.__ebbPipTimer = null; }
+};
 function openYtPanel(){
   if (!ytPanelBtnSync()) return;
   closeArtStyleMenu();
@@ -18529,7 +18540,6 @@ function toggleYtFullscreen(){
   try { const p = fn && fn.call(ytHost, {navigationUI:'hide'}); if (p && p.catch) p.catch(() => {}); } catch (_){}
 }
 ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); openYtPanel(); });
-$('miniVideoBtn').addEventListener('click', (e) => { e.stopPropagation(); openYtPanel(); });
 $('ytCloseBtn').addEventListener('click', () => closeYtPanel());
 dangerScrim.addEventListener('click', () => closeYtPanel());
 ytModal.addEventListener('transitionend', ytPanelSync);
