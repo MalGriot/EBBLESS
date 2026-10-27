@@ -11691,7 +11691,7 @@ Add entries in this shape:
 - **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: on a cold open with a saved resume (LS_RESUME via tryResume), the existing toast reads "Welcome back. You were in the middle of [playlist or song]." with a Resume button (one tap, auto-fades, nothing to dismiss). Waits for the splash to clear; shows nothing with no saved resume or on a return from background. Verified on localhost with a seeded resume; real audio start on tap not verified.
 
 ### home-edge-breathing-room-583f: Home: consistent spacing and softer edges so no panel crowds another (Geethub #583)
-- **Status:** ready
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Overlaps #654 and #655 (queue and library edge styles); fold into them where they already cover it.
 - **Touches:** tbd.
