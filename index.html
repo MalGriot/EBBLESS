@@ -1420,18 +1420,6 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 .artwork-wrap[data-mode="art"][data-art-style="record"] .art-record{display:flex;opacity:1}
 .artwork-wrap[data-mode="art"][data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
 
-/* cassette-hover-expand (#403): on a real mouse, the main-UI album art / LP /
-   cassette eases up to the width of the title marquee. Uses the independent
-   'scale' property (no layout shift, never fights other transforms).
-   --art-hx is measured on pointerenter (see script near the button hover
-   expand). z-index:-1 inside the isolated stage keeps it behind every HUD. */
-@media (hover:hover) and (pointer:fine){
-  .player-stage{isolation:isolate}
-  .artwork-wrap[data-mode="art"]{z-index:-1;transition:scale 320ms var(--ease-out),height var(--dur-surface) var(--ease-in-out)}
-  .artwork-wrap[data-mode="art"]:hover{scale:var(--art-hx,1)}
-}
-@media (prefers-reduced-motion:reduce){.artwork-wrap[data-mode="art"]:hover{scale:1}}
-
 .record-shadow,.record-disc{position:absolute;top:50%;left:50%;width:96%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%)}
 .record-shadow{box-shadow:0 20px 46px -14px rgba(0,0,0,.7)}
@@ -35906,20 +35894,6 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     var b = e.target.closest && e.target.closest('button');
     if (!b || !b._hx || (e.relatedTarget && b.contains(e.relatedTarget))) return;
     grow(b, '1');
-  });
-})();
-</script>
-<script>
-/* cassette-hover-expand (#403): measure how far the art can grow to match the
-   title marquee; CSS (.artwork-wrap:hover) does the eased scale. */
-(function(){
-  if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  var w = document.getElementById('artworkWrap'), row = document.getElementById('trackTitle');
-  if (!w || !row) return;
-  w.addEventListener('pointerenter', function(e){
-    if (e.pointerType !== 'mouse') return;
-    var aw = w.offsetWidth, rw = row.getBoundingClientRect().width;
-    w.style.setProperty('--art-hx', aw > 0 ? Math.max(1, rw / aw).toFixed(3) : '1');
   });
 })();
 </script>
