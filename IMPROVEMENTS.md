@@ -11843,7 +11843,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #688, 2026-10-28. Brainstorm what a good widget needs (options), then build. Android only per platform scope; likely needs native work in android-webview.
 
 ### lockscreen-buttons-spacing-689: Lock screen and notification player: buttons evenly distributed, player centered (Geethub #689)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #689. Lock screen and notification player: buttons evenly distributed, player centered.
 - **Touches:** index.html.
