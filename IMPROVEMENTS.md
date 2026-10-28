@@ -11715,7 +11715,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #672, 2026-10-28; flipped to ready by owner. Overlaps #654 and #655.
 
 ### discover-tracks-on-load-673: Discover tracks arrive immediately when a track loads (Geethub #673)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #673. Discover tracks arrive immediately when a track loads.
 - **Touches:** index.html.
@@ -11723,7 +11723,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #673, 2026-10-28; flipped to ready by owner. Related: discovery-radio-continuation.
 
 ### shuffle-second-mode-discover-674: Shuffle gets a 2nd mode (click again) that mixes discover tracks into the queue (Geethub #674)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #674. Shuffle gets a 2nd mode (click again) that mixes discover tracks into the queue.
 - **Touches:** index.html.
@@ -11731,7 +11731,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #674, 2026-10-28; flipped to ready by owner. Related: #673.
 
 ### desktop-library-expand-tab-675: Desktop: library expand button becomes a small tab sticking out of the window edge (Geethub #675)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #675. Desktop: library expand button becomes a small tab sticking out of the window edge.
 - **Touches:** index.html.
@@ -11739,7 +11739,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #675, 2026-10-28; flipped to ready by owner. 
 
 ### currents-newest-first-676: Currents playlist adds songs to the top and plays newest to oldest (Geethub #676)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #676. Currents playlist adds songs to the top and plays newest to oldest.
 - **Touches:** index.html.
