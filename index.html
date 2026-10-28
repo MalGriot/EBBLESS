@@ -1748,6 +1748,18 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .art-fs-btn.art-like-btn.is-liked,.art-fs-btn.art-like-btn.is-liked:hover{color:var(--player-accent)}
 /* the visualizer's controls own the bottom-right: the heart steps over to the bottom-left while they show */
 .artwork-wrap.mode-viz .art-fs-btn.art-like-btn{right:auto;left:10px}
+/* #692 (desktop): dislike in the art's bottom-right, heart steps left of it while it shows; "more" in the top-left (cast shifts right of it) */
+.art-fs-btn.art-decline-btn{top:auto;bottom:10px;color:var(--faint)}
+.art-fs-btn.art-decline-btn[hidden]{display:none}
+.art-decline-btn:not([hidden]) ~ .art-like-btn{right:50px}
+.art-fs-btn.art-more-btn{right:auto;left:10px}
+.artwork-wrap:has(.art-more-btn) .art-cast-btn{left:50px}
+.player-stage:has(.track-meta.is-empty) .artwork-wrap > .player-like-btn{visibility:hidden}
+/* #692: every button over the art shows only on hover / keyboard focus (hover-capable fine pointers only; touch keeps them visible). Static opacity, no animation. */
+@media (hover:hover) and (pointer:fine){
+  .artwork-wrap > .art-fs-btn{opacity:0;transition:opacity var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  .artwork-wrap:hover > .art-fs-btn,.artwork-wrap:focus-within > .art-fs-btn{opacity:1}
+}
 .track-meta{margin-top:clamp(8px,4dvh,26px);text-align:center;width:min(420px,72vw)}
 .track-meta .title{font-size:22px;font-weight:700;letter-spacing:-.2px;line-height:1.3}
 .track-meta .artist{font-size:14.5px;color:var(--faint);margin-top:5px}
@@ -26512,17 +26524,25 @@ $('visualTabs').appendChild($('vizControls'));
 // Desktop: the heart sits on the art's bottom-right corner like the fullscreen
 // button (#610); the options button stays beside the title.
 const playerCtlMQ = window.matchMedia('(max-width:859.98px)');
-const playerLikeEl = $('playerLikeBtn'), playerMoreEl = $('playerMoreBtn'), playerAddPlEl = $('playerAddPlBtn');
+const playerLikeEl = $('playerLikeBtn'), playerMoreEl = $('playerMoreBtn'), playerAddPlEl = $('playerAddPlBtn'), playerDeclineEl = $('playerDeclineBtn');
 function playerControlsPlace(){
   const phone = playerCtlMQ.matches;
   playerLikeEl.classList.toggle('art-fs-btn', !phone);
   playerLikeEl.classList.toggle('art-like-btn', !phone);
+  playerDeclineEl.classList.toggle('art-fs-btn', !phone);
+  playerDeclineEl.classList.toggle('art-decline-btn', !phone);
+  playerMoreEl.classList.toggle('art-fs-btn', !phone);
+  playerMoreEl.classList.toggle('art-more-btn', !phone);
   if (phone){
     $('shuffleBtn').before(playerLikeEl);
     $('repeatBtn').after(playerMoreEl);
+    $('trackTitle').after(playerDeclineEl);
   } else {
-    $('fsBtn').parentElement.appendChild(playerLikeEl);
-    playerAddPlEl.after(playerMoreEl);
+    // #692: decline, heart and options all sit on the art (decline first so the heart's sibling rule can step it over)
+    const artBox = $('fsBtn').parentElement;
+    artBox.appendChild(playerDeclineEl);
+    artBox.appendChild(playerLikeEl);
+    artBox.appendChild(playerMoreEl);
   }
 }
 playerCtlMQ.addEventListener('change', playerControlsPlace);
