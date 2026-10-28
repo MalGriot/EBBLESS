@@ -778,3 +778,19 @@ Android native bridge (web + owner testing only), about 3 to 4 days.
     commands (safer, simpler)?
 11. Hosting the LLM key: confirm an Anthropic API account and monthly budget,
     or keep Workers AI for free tier and use Anthropic only for paid.
+
+## Owner decisions (2026-10-29)
+
+Answers to the open questions above, as given by the owner:
+
+1. The search-bar mic is visible in the Android app today. Confirm whether Web Speech actually works in the WebView before building the native recognizer bridge; build the bridge only if it does not.
+2. No mic on the Mac app.
+3. Voice DJ belongs to the FLOW and HORIZON tiers (paid).
+4. Caps: 7 LLM requests a day free, 100 a day paid. Daily global spend ceiling still to be set.
+5. Answered "yes" to a choice between phone volume and in-app volume, so unresolved. Default plan: in-app player volume; check with the owner before touching system volume.
+6. Whole songs with no crossfade is acceptable. A crossfade option may exist but is not the default.
+7. As many languages as possible without affecting GPU. Suggested six besides English: Spanish, Mandarin, Hindi, French, Arabic, Portuguese (to confirm). Speech recognition and LLM cost nothing in GPU terms; only keep any language UI text lightweight.
+8. Sending the current song plus the last 5 played to the LLM provider is acceptable.
+9. Free users must sign in for their daily LLM requests.
+10. Lock screen and widget mics should build sets as well as run commands, if that does not hurt GPU; otherwise commands only. (Speech capture is not a GPU workload; keep the lock screen player's existing animation limits.)
+11. Free tier on a free service (Workers AI free tier); Anthropic for the paid tier.
