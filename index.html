@@ -22038,6 +22038,7 @@ window.ebblessTimeContext.rank = function(ranked, candMetrics, d, scale){ return
 // The first entry tells them apart: edits keep what was queued before the song
 // that is playing, a fresh load starts a new list.
 let lastQueueHead = '';
+let lastQueueNowHead = '', lastQueueNowPos = -1;
 function renderQueuePanel(){
   renderDiscoverToggle();
   markNowPlaying();
@@ -22090,6 +22091,20 @@ function renderQueuePanel(){
   });
   queueBody.appendChild(nowLabel); queueBody.appendChild(nowRow); queueBody.appendChild(queueArrowsRow);
   if (sc) sc.scrollTop = Math.max(0, nowLabel.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - nowDelta);
+  /* #680: when the song advances, slide the list so Now sits near the top;
+     played songs stay reachable above (#669). Skipped while the user is
+     scrolling or dragging the queue, and on edits that keep the same song. */
+  const advanced = lastQueueNowPos >= 0 && lastQueueNowPos !== state.queuePos && head === lastQueueNowHead && oldNow;
+  lastQueueNowPos = state.queuePos; lastQueueNowHead = head;
+  if (sc && !sc._slideWired){
+    sc._slideWired = true;
+    const touch = () => { sc._userAt = Date.now(); };
+    ['wheel','touchstart','touchmove','pointerdown'].forEach(ev => sc.addEventListener(ev, touch, { passive: true }));
+  }
+  if (sc && advanced && !(Date.now() - (sc._userAt || 0) < 1500) && !queueBody.querySelector('.is-dragging')){
+    const target = Math.max(0, nowLabel.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 8);
+    try { sc.scrollTo({ top: target, behavior: msMotionOk() ? 'smooth' : 'auto' }); } catch(e){ sc.scrollTop = target; }
+  }
 
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (!upcoming.length){
