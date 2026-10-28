@@ -10766,7 +10766,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #562. Dropped 2026-10-17: native Android ships by sideload only, no Google Play.
 
 ### reverse-engineer-caffeiene-to-implement-is: reverse engineer caffeiene to implement is in ebbless - possibly to cure iphone pausing issue (Geethub #563)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #563. medium https://www.zhornsoftware.co.uk/caffeine/
 - **Touches:** tbd.
