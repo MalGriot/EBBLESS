@@ -11697,3 +11697,107 @@ Add entries in this shape:
 - **Touches:** index.html.
 - **Branch:** agent/home-edge-583f
 - **Notes:** Audit: library and queue panes were rounded (--r-lg) but butted against the player pane and window edge with zero gap. Added one shared --pane-gap (8px) as column-gap and side/bottom padding on #app, desktop split layout only (not desktop-fs drawers). Static CSS. Skipped as redesign: unifying inner row gutters (library 24px vs queue row padding) and mobile panel radii. Not covered here: #654 and #655. Verified gap computes at 1400px and console shows only the known identity-provider and script-fetch errors; not eyeballed with real data.
+
+### resume-prompt-blocks-play-671: The resume prompt must never sit in front of a button (the play button) (Geethub #671)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #671. The resume prompt must never sit in front of a button (the play button).
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #671, 2026-10-28; flipped to ready by owner. Related: home-welcome-back-583e.
+
+### queue-same-color-as-library-672: Queue window is the same color as the library (Geethub #672)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #672. Queue window is the same color as the library.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #672, 2026-10-28; flipped to ready by owner. Overlaps #654 and #655.
+
+### discover-tracks-on-load-673: Discover tracks arrive immediately when a track loads (Geethub #673)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #673. Discover tracks arrive immediately when a track loads.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #673, 2026-10-28; flipped to ready by owner. Related: discovery-radio-continuation.
+
+### shuffle-second-mode-discover-674: Shuffle gets a 2nd mode (click again) that mixes discover tracks into the queue (Geethub #674)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #674. Shuffle gets a 2nd mode (click again) that mixes discover tracks into the queue.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #674, 2026-10-28; flipped to ready by owner. Related: #673.
+
+### desktop-library-expand-tab-675: Desktop: library expand button becomes a small tab sticking out of the window edge (Geethub #675)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #675. Desktop: library expand button becomes a small tab sticking out of the window edge.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #675, 2026-10-28; flipped to ready by owner. 
+
+### currents-newest-first-676: Currents playlist adds songs to the top and plays newest to oldest (Geethub #676)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #676. Currents playlist adds songs to the top and plays newest to oldest.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #676, 2026-10-28; flipped to ready by owner. Related: currents-playlist-algorithm.
+
+### library-one-tab-active-677: Library: only one tab active at a time (playlist, album, artist, podcast) (Geethub #677)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #677. Library: only one tab active at a time (playlist, album, artist, podcast).
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #677, 2026-10-28; flipped to ready by owner. 
+
+### recents-label-678: Label the recents section 'recents' (Geethub #678)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #678. Label the recents section 'recents'.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #678, 2026-10-28; flipped to ready by owner. Related: home-your-stuff-shelf-583d.
+
+### mobile-footer-tab-order-679: Mobile: reorder the footer tab buttons (Geethub #679)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #679. Mobile: reorder the footer tab buttons.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #679, 2026-10-28; flipped to ready by owner. Issue gives no order; ask owner before building.
+
+### queue-slide-current-to-top-680: When the queue advances, the list slides up so the current song sits near the top (Geethub #680)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #680. When the queue advances, the list slides up so the current song sits near the top.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #680, 2026-10-28; flipped to ready by owner. Related: #669.
+
+### album-art-tab-icons-follow-mode-681: Album art tab icons: LP tab shows an LP icon when active, cassette tab a cassette, default unchanged (Geethub #681)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #681. Album art tab icons: LP tab shows an LP icon when active, cassette tab a cassette, default unchanged.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #681, 2026-10-28; flipped to ready by owner. 
+
+### visualizer-spin-icon-spins-682: When visualizer spin is on, only the icon spins (not the whole button) (Geethub #682)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #682. When visualizer spin is on, only the icon spins (not the whole button).
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #682, 2026-10-28; flipped to ready by owner. Animate transform only; stop when hidden (GPU budget).
+
+### visualizer-controls-under-art-tabs-683: Visualizer controls sit beneath the album art tab selector (Geethub #683)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #683. Visualizer controls sit beneath the album art tab selector.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #683, 2026-10-28; flipped to ready by owner. 
