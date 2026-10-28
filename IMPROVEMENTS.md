@@ -11699,11 +11699,11 @@ Add entries in this shape:
 - **Notes:** Audit: library and queue panes were rounded (--r-lg) but butted against the player pane and window edge with zero gap. Added one shared --pane-gap (8px) as column-gap and side/bottom padding on #app, desktop split layout only (not desktop-fs drawers). Static CSS. Skipped as redesign: unifying inner row gutters (library 24px vs queue row padding) and mobile panel radii. Not covered here: #654 and #655. Verified gap computes at 1400px and console shows only the known identity-provider and script-fetch errors; not eyeballed with real data.
 
 ### resume-prompt-blocks-play-671: The resume prompt must never sit in front of a button (the play button) (Geethub #671)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #671. The resume prompt must never sit in front of a button (the play button).
 - **Touches:** index.html.
-- **Branch:** 
+- **Branch:** agent/resume-prompt-671
 - **Notes:** Synced from Geethub #671, 2026-10-28; flipped to ready by owner. Related: home-welcome-back-583e.
 
 ### queue-same-color-as-library-672: Queue window is the same color as the library (Geethub #672)
@@ -11747,11 +11747,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #676, 2026-10-28; flipped to ready by owner. Related: currents-playlist-algorithm.
 
 ### library-one-tab-active-677: Library: only one tab active at a time (playlist, album, artist, podcast) (Geethub #677)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #677. Library: only one tab active at a time (playlist, album, artist, podcast).
 - **Touches:** index.html.
-- **Branch:** 
+- **Branch:** agent/library-one-tab-677
 - **Notes:** Synced from Geethub #677, 2026-10-28; flipped to ready by owner. 
 
 ### recents-label-678: Label the recents section 'recents' (Geethub #678)
@@ -11763,11 +11763,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #678, 2026-10-28; flipped to ready by owner. Related: home-your-stuff-shelf-583d.
 
 ### mobile-footer-tab-order-679: Mobile: reorder the footer tab buttons (Geethub #679)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #679. Mobile: reorder the footer tab buttons.
 - **Touches:** index.html.
-- **Branch:** 
+- **Branch:** agent/mobile-footer-order-679
 - **Notes:** Synced from Geethub #679, 2026-10-28; flipped to ready by owner. Issue gives no order; ask owner before building.
 
 ### queue-slide-current-to-top-680: When the queue advances, the list slides up so the current song sits near the top (Geethub #680)
