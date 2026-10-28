@@ -33851,6 +33851,7 @@ function startApp(){
   // splash from clearing.
   try{
     ensureSwellPlaylist();
+    if (getCachedPlaylist(LIKED_ID)) ensureLikedPlaylist();   // (#695) one-time newest-first flip
     ensureBlendPlaylist();
     ensureNowPlayingPlaylist();
     renderLibrary();
