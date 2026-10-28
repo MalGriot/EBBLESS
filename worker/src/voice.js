@@ -17,6 +17,22 @@ export const VOICE_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'; // Workers AI,
 export const VOICE_AI_TIMEOUT_MS = 6000;
 export const VOICE_CAPS = { free: 7, paid: 100 };    // LLM requests per signed-in user per UTC day (owner decision 4)
 export const VOICE_MAX_TEXT = 300;
+
+// ---- global spend ceiling (account-wide, keeps the AI use inside the FREE allocation) ----
+// Workers AI free allocation: 10,000 neurons/day, shared by /vibe-interpret, the podcast captioner and this route.
+// Cost estimate per /voice/plan call with VOICE_MODEL (llama-3.1-8b-instruct-fast), from Cloudflare's published
+// model pricing as remembered when this was written (re-check on the Workers AI pricing page, it can change):
+// about 4,119 neurons per million input tokens and 34,868 per million output tokens. A call sends about 600
+// input tokens (system prompt + JSON schema + sentence + context) = ~2.5 neurons, and max_tokens is 500, so the
+// worst case output is 500 tokens = ~17.4 neurons; a typical plan is ~250 tokens = ~9. Worst case is ~20, rounded
+// up to 25 so a drifting prompt does not silently break the ceiling.
+export const VOICE_NEURONS_PER_CALL = 25;
+export const VOICE_DAILY_NEURON_BUDGET = 10000;   // the free allocation
+export const VOICE_GLOBAL_SHARE = 0.4;            // voice may use at most 40% of it (4,000 neurons = 160 calls/day); the rest stays for vibe search and captions
+export const VOICE_GLOBAL_LIMIT = Math.floor(VOICE_DAILY_NEURON_BUDGET * VOICE_GLOBAL_SHARE);
+// SAFETY: this ceiling only helps if the Cloudflare account is on the Workers FREE plan, where the AI allocation
+// is a hard limit (requests fail after it, no overage billing). On a paid Workers plan, usage past the free
+// allocation is billed. That setting lives in the Cloudflare dashboard and cannot be verified from this repo.
 export const VOICE_OPS = ['play', 'pause', 'next', 'prev', 'volume', 'mute', 'unmute', 'like', 'unlike', 'shuffle', 'repeat', 'more_like_this'];
 export const VOICE_KINDS = ['command', 'search', 'mood'];
 
@@ -166,7 +182,16 @@ export async function handleVoicePlan(request, env, ctx, deps) {
 
   const quota = env.VOICE_QUOTA.get(env.VOICE_QUOTA.idFromName('u:' + who.sub));
   const take = await quota.take(limit);
-  if (!take.ok) return json({ capped: true, plan: heuristic(), source: 'heuristic', tier, limit, used: take.used });
+  if (!take.ok) return json({ capped: true, reason: 'user', plan: heuristic(), source: 'heuristic', tier, limit, used: take.used });
+
+  // Account-wide ceiling. Fails closed: if the counter can't be read we don't call the model.
+  const global = env.VOICE_QUOTA.get(env.VOICE_QUOTA.idFromName('g:' + new Date().toISOString().slice(0, 10)));
+  let spend;
+  try { spend = await global.spend(VOICE_NEURONS_PER_CALL, VOICE_GLOBAL_LIMIT); } catch (e) { spend = { ok: false }; }
+  if (!spend.ok) {
+    await quota.refund();   // the listener's own request was not served: don't charge it
+    return json({ capped: true, reason: 'global', plan: heuristic(), source: 'heuristic', tier, limit, used: Math.max(0, take.used - 1) });
+  }
 
   let raw = null, via = 'ai';
   if (tier === 'paid') { raw = await askPaidModel(env, said, c); }

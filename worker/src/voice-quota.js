@@ -21,4 +21,20 @@ export class VoiceQuota extends DurableObject {
     const used = (await this.ctx.storage.get(day)) || 0;
     if (used > 0) await this.ctx.storage.put(day, used - 1);
   }
+
+  // Account-wide daily neuron estimate (instance named "g:<UTC date>"; see voice.js VOICE_NEURONS_PER_CALL).
+  // Reserves `cost` neurons if the day's total stays within `budget`. Nothing is reserved when it would not.
+  async spend(cost, budget) {
+    const key = 'n:' + new Date().toISOString().slice(0, 10);
+    const used = (await this.ctx.storage.get(key)) || 0;
+    if (used + cost > budget) return { ok: false, used };
+    await this.ctx.storage.put(key, used + cost);
+    for (const k of (await this.ctx.storage.list()).keys()) if (k !== key) await this.ctx.storage.delete(k);
+    return { ok: true, used: used + cost };
+  }
+  async unspend(cost) {
+    const key = 'n:' + new Date().toISOString().slice(0, 10);
+    const used = (await this.ctx.storage.get(key)) || 0;
+    if (used > 0) await this.ctx.storage.put(key, Math.max(0, used - cost));
+  }
 }

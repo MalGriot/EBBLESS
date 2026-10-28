@@ -1,7 +1,7 @@
 // Voice DJ /voice/plan (src/voice.js). Dependency-free: `npm test` in worker/.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validatePlan, heuristicPlan, voiceTierFor, handleVoicePlan, sanitizeCtx, VOICE_CAPS } from '../src/voice.js';
+import { validatePlan, heuristicPlan, voiceTierFor, handleVoicePlan, sanitizeCtx, VOICE_CAPS, VOICE_NEURONS_PER_CALL, VOICE_GLOBAL_LIMIT, VOICE_DAILY_NEURON_BUDGET, VOICE_GLOBAL_SHARE } from '../src/voice.js';
 
 test('validatePlan: clamps, filters and rebuilds', () => {
   const p = validatePlan({
@@ -52,6 +52,7 @@ function fakeKV(init = {}) { const m = new Map(Object.entries(init)); return { g
 function fakeQuota(opts = {}) {
   const days = new Map(), spent = new Map();
   return { spent, idFromName: (n) => n, get: (id) => ({
+    spend: async (cost, budget) => { if (opts.spendThrows) throw new Error('do down'); const u = spent.get(id) || 0; if (u + cost > budget) return { ok: false, used: u }; spent.set(id, u + cost); return { ok: true, used: u + cost }; },
     take: async (limit) => { const u = days.get(id) || 0; if (u >= limit) return { ok: false, used: u }; days.set(id, u + 1); return { ok: true, used: u + 1 }; },
     refund: async () => { days.set(id, Math.max(0, (days.get(id) || 0) - 1)); } }) };
 }
@@ -96,6 +97,41 @@ test('handler: tier comes from ent:<sub>, defaults to free', async () => {
   assert.equal(await voiceTierFor(mkEnv(goodAi, { 'ent:u1': 'not json' }), 'u1'), 'free');
   const r = await call(mkEnv(goodAi, { 'ent:u1': '{"tier":"horizon"}' }), { idToken: 'ebs1.good', text: 'more energy please' });
   assert.equal(r.body.limit, 100); assert.equal(r.body.tier, 'paid');
+});
+
+test('global ceiling: constants are conservative and consistent', () => {
+  assert.equal(VOICE_DAILY_NEURON_BUDGET, 10000);
+  assert.ok(VOICE_GLOBAL_SHARE <= 0.5);
+  assert.equal(VOICE_GLOBAL_LIMIT, Math.floor(VOICE_DAILY_NEURON_BUDGET * VOICE_GLOBAL_SHARE));
+  assert.ok(VOICE_NEURONS_PER_CALL >= 20);
+});
+
+test('global ceiling: stops calling the model once the voice share is used, refunds the user', async () => {
+  let aiCalls = 0;
+  const ai = { run: async () => { aiCalls++; return goodAi.run(); } };
+  const quota = fakeQuota();
+  const day = new Date().toISOString().slice(0, 10);
+  quota.spent.set('g:' + day, VOICE_GLOBAL_LIMIT - VOICE_NEURONS_PER_CALL);   // room for exactly one more call
+  const env = mkEnv(ai, {}, quota);
+  const a = await call(env, { idToken: 'ebs1.good', text: 'a bit quieter in here' });
+  assert.equal(a.body.source, 'ai'); assert.equal(aiCalls, 1);
+  const b = await call(env, { idToken: 'ebs1.good', text: 'a bit quieter in here' });
+  assert.equal(b.body.capped, true); assert.equal(b.body.reason, 'global'); assert.equal(b.body.source, 'heuristic'); assert.ok(b.body.plan);
+  assert.equal(aiCalls, 1, 'model must not be called past the ceiling');
+  assert.equal(b.body.used, 1, 'the refused request is not charged to the user');
+});
+
+test('global ceiling: fails closed if the counter errors', async () => {
+  let aiCalls = 0;
+  const env = mkEnv({ run: async () => { aiCalls++; return goodAi.run(); } }, {}, fakeQuota({ spendThrows: true }));
+  const r = await call(env, { idToken: 'ebs1.good', text: 'a bit quieter in here' });
+  assert.equal(r.body.reason, 'global'); assert.equal(aiCalls, 0);
+});
+
+test('per-user cap reports reason user', async () => {
+  const env = mkEnv(goodAi);
+  for (let i = 0; i < 7; i++) await call(env, { idToken: 'ebs1.good', text: 'something calm please' });
+  assert.equal((await call(env, { idToken: 'ebs1.good', text: 'something calm please' })).body.reason, 'user');
 });
 
 test('mood plan carries a grounded interp (so the client skips /vibe-interpret); not for commands or empty grounding', async () => {
