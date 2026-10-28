@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.IBinder;
 import android.os.Message;
 import android.speech.RecognitionListener;
@@ -112,6 +114,7 @@ public class MainActivity extends Activity {
         @Override public void onReceive(android.content.Context c, Intent i) {
             if (web == null || i == null) return;
             boolean on = Intent.ACTION_SCREEN_ON.equals(i.getAction());
+            if (!on) voiceTeardown(true);   // a mic left listening ends when the screen goes off
             web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(" + on + ")", null);
         }
     };
@@ -203,6 +206,11 @@ public class MainActivity extends Activity {
     private String voiceId;
     /** Id waiting on the RECORD_AUDIO permission prompt. */
     private String voicePendingId;
+    /** Watchdogs: end a session that never ends on its own. Every callback is removed on result, error, stop, cancel and destroy. */
+    private final Handler voiceHandler = new Handler(Looper.getMainLooper());
+    private static final long VOICE_HARD_MS = 12000;     // no final/end this long after start: stopListening()
+    private static final long VOICE_QUIET_MS = 7000;     // nothing heard at all this long after start: quiet nomatch
+    private static final long VOICE_STOP_GRACE_MS = 3000; // stopListening() produced nothing: tear down
 
     private void voiceEmit(String id, String kind, String text) {
         if (web == null || id == null) return;
@@ -214,6 +222,7 @@ public class MainActivity extends Activity {
         String id = voiceId;
         voiceId = null;
         voicePendingId = null;
+        voiceHandler.removeCallbacksAndMessages(null);
         if (recognizer != null) {
             try { recognizer.setRecognitionListener(null); } catch (Throwable ignored) {}
             try { recognizer.cancel(); } catch (Throwable ignored) {}
@@ -252,8 +261,15 @@ public class MainActivity extends Activity {
             recognizer = SpeechRecognizer.createSpeechRecognizer(this);
             recognizer.setRecognitionListener(new RecognitionListener() {
                 private boolean got;
+                private boolean heard;
                 private boolean live() { return id.equals(voiceId); }
-                @Override public void onReadyForSpeech(Bundle p) { if (live()) voiceEmit(id, "start", ""); }
+                @Override public void onReadyForSpeech(Bundle p) {
+                    if (!live()) return;
+                    voiceEmit(id, "start", "");
+                    voiceHandler.removeCallbacksAndMessages(null);
+                    voiceHandler.postDelayed(() -> { if (id.equals(voiceId)) voiceStop(id); }, VOICE_HARD_MS);
+                    voiceHandler.postDelayed(() -> { if (id.equals(voiceId) && !heard) voiceFinish(id, "error:nomatch"); }, VOICE_QUIET_MS);
+                }
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rms) {}
                 @Override public void onBufferReceived(byte[] buf) {}
@@ -262,7 +278,7 @@ public class MainActivity extends Activity {
                 @Override public void onPartialResults(Bundle p) {
                     if (!live()) return;
                     ArrayList<String> r = p == null ? null : p.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (r != null && !r.isEmpty()) voiceEmit(id, "partial", r.get(0));
+                    if (r != null && !r.isEmpty()) { heard = true; voiceEmit(id, "partial", r.get(0)); }
                 }
                 @Override public void onResults(Bundle p) {
                     if (!live()) return;
@@ -292,6 +308,10 @@ public class MainActivity extends Activity {
             i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
             i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag());
             i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+            // end soon after the user stops talking (some OEM recognizers ignore these)
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L);
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 800L);
             i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
             recognizer.startListening(i);
         } catch (Throwable t) {
@@ -303,6 +323,7 @@ public class MainActivity extends Activity {
 
     /** Ends the session after a result or error: report it (kind may be null), say "end", free the recognizer. */
     private void voiceFinish(String id, String kind) {
+        voiceHandler.removeCallbacksAndMessages(null);
         if (kind != null) voiceEmit(id, kind, "");
         voiceEmit(id, "end", "");
         voiceId = null;
@@ -315,7 +336,10 @@ public class MainActivity extends Activity {
 
     private void voiceStop(String id) {
         if (id == null || !id.equals(voiceId) || recognizer == null) return;
-        try { recognizer.stopListening(); } catch (Throwable t) { voiceTeardown(true); }
+        voiceHandler.removeCallbacksAndMessages(null);
+        try { recognizer.stopListening(); } catch (Throwable t) { voiceTeardown(true); return; }
+        // if stopping yields no result or end, do not hang
+        voiceHandler.postDelayed(() -> { if (id.equals(voiceId)) voiceTeardown(true); }, VOICE_STOP_GRACE_MS);
     }
 
     private void voiceCancel(String id) {

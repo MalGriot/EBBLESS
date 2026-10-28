@@ -18115,8 +18115,9 @@ function voiceNoMatch(said){
 function setupNativeMic(btn){
   btn.hidden = false;
   const placeholder = urlInput.placeholder;
-  let sid = 0, active = '', finalText = '';
+  let sid = 0, active = '', finalText = '', guard = 0;
   function reset(){
+    clearTimeout(guard);
     active = '';
     btn.classList.remove('is-listening');
     btn.setAttribute('aria-pressed', 'false');
@@ -18152,6 +18153,14 @@ function setupNativeMic(btn){
     btn.setAttribute('aria-pressed', 'true');
     urlInput.value = '';
     urlInput.placeholder = 'Listening…';
+    const myId = active;
+    clearTimeout(guard);
+    // safety: if no end ever arrives (lost callback), cancel and reset the UI
+    guard = setTimeout(() => {
+      if (active !== myId) return;
+      try { EbbNative.cancel(myId); } catch(e){}
+      reset(); urlInput.value = '';
+    }, 15000);
     try { EbbNative.listen(active); } catch(e){ reset(); }
   });
 }
@@ -18207,7 +18216,14 @@ function setupNativeMic(btn){
     btn.setAttribute('aria-pressed', 'true');
     urlInput.value = '';
     urlInput.placeholder = 'Listening…';
-    try { rec.start(); } catch(e){ rec = null; btn.classList.remove('is-listening'); urlInput.placeholder = placeholder; }
+    try { rec.start(); } catch(e){ rec = null; btn.classList.remove('is-listening'); urlInput.placeholder = placeholder; return; }
+    // safety stop: never leave the mic on past 15s (stop() finishes with what was heard; abort() if that hangs)
+    const mine = rec;
+    setTimeout(() => {
+      if (rec !== mine) return;
+      try { mine.stop(); } catch(e){}
+      setTimeout(() => { if (rec === mine){ try { mine.abort(); } catch(e){} } }, 2500);
+    }, 15000);
   });
 })();
 
