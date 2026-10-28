@@ -26359,11 +26359,30 @@ async function lrclibDirect(title, artist, dur){
   const tn = fold(title);
   const an = fold(String(artist || '').split(/\s*(?:,|&|\sfeat\.?\s|\sft\.?\s|\sx\s)\s*/i)[0]);
   if (!tn) return null;
-  const q = new URLSearchParams({ track_name: String(title || '').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+-\s+.*$/, '').trim() });
-  if (an) q.set('artist_name', String(artist).split(/\s*(?:,|&|\sfeat\.?\s|\sft\.?\s|\sx\s)\s*/i)[0]);
-  const res = await fetch('https://lrclib.net/api/search?' + q.toString());
-  if (!res.ok) return null;
-  const list = await res.json();
+  const cleanT = String(title || '').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+-\s+.*$/, '').trim();
+  const artist1 = String(artist || '').split(/\s*(?:,|&|\sfeat\.?\s|\sft\.?\s|\sx\s)\s*/i)[0];
+  // Same song can be indexed under a slightly different artist/title, so try
+  // exact fields first, then a loose text query, until something matches.
+  const queries = [];
+  if (an) queries.push({ track_name: cleanT, artist_name: artist1 });
+  queries.push({ track_name: cleanT });
+  queries.push({ q: (cleanT + ' ' + (an ? artist1 : '')).trim() });
+  const list = [];
+  for (const qq of queries){
+    for (let attempt = 0; attempt < 3; attempt++){
+      try {
+        const res = await fetch('https://lrclib.net/api/search?' + new URLSearchParams(qq).toString());
+        if (res.ok){
+          const arr = await res.json();
+          (Array.isArray(arr) ? arr : []).forEach(r => { if (!list.some(x => x.id === r.id)) list.push(r); });
+          break;
+        }
+        if (res.status !== 429 && res.status < 500) break;   /* a real "no" */
+      } catch (e) { /* throttled or offline: retry */ }
+      await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
+    }
+    if (list.some(r => !r.instrumental && (r.syncedLyrics || r.plainLyrics) && fold(r.trackName) === tn)) break;
+  }
   let best = null, bestScore = -1;
   (Array.isArray(list) ? list : []).forEach(r => {
     if (r.instrumental || !(r.syncedLyrics || r.plainLyrics)) return;

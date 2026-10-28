@@ -2333,15 +2333,26 @@ function artistMatches(queryArtist, resultArtist) {
   return artistNames(queryArtist).some(ws => ws.every(w => words.has(w)));
 }
 
+// A failed call (429/403/5xx/network) is not the same as "no such song":
+// lrclib throttles shared server addresses, so retry a couple of times and
+// flag the list so a throttled miss is not cached like a real one (#664).
 async function lrclibSearch(params) {
-  const res = await fetch('https://lrclib.net/api/search?' + new URLSearchParams(params).toString(), {
-    headers: { 'User-Agent': 'EBBLESS (https://github.com/) - synced lyrics lookup' },
-  });
-  if (!res.ok) return [];
-  try {
-    const list = JSON.parse(await res.text());
-    return Array.isArray(list) ? list : [];
-  } catch (e) { return []; }
+  const out = [];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch('https://lrclib.net/api/search?' + new URLSearchParams(params).toString(), {
+        headers: { 'User-Agent': 'EBBLESS/1.0 (https://github.com/MalGriot/EBBLESS) synced lyrics lookup', 'Lrclib-Client': 'EBBLESS/1.0 (https://github.com/MalGriot/EBBLESS)' },
+      });
+      if (res.ok) {
+        const list = JSON.parse(await res.text());
+        return Array.isArray(list) ? list : out;
+      }
+      if (res.status !== 429 && res.status !== 403 && res.status < 500) return out; // a real "no"
+    } catch (e) { /* retry */ }
+    await new Promise(r => setTimeout(r, 250 * (attempt + 1)));
+  }
+  out.failed = true;
+  return out;
 }
 
 function pickLrclib(list, title, artist, duration) {
@@ -2369,6 +2380,34 @@ function pickLrclib(list, title, artist, duration) {
   return (scored[0] && scored[0].r) || null;
 }
 
+// Second source for songs lrclib lacks (new or esoteric releases): lyrics.ovh.
+// It returns plain text only and cannot be duration-checked, so it is held to
+// a stricter bar than lrclib: only with a known artist, a clean title (no
+// remix/live/version tag, where the wrong cut is likely) and a body that
+// looks like real lyrics. Used only after lrclib finds nothing.
+async function lyricsOvhLookup(title, artist) {
+  const a = String(artist || '').split(/\s*(?:,|;|\/|&|\sx\s|\sfeat\.?\s|\sft\.?\s|\swith\s)\s*/i)[0].trim();
+  const t = cleanTitle(title) || '';
+  if (!a || !t || VERSION_TAG.test(title)) return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch('https://api.lyrics.ovh/v1/' + encodeURIComponent(a) + '/' + encodeURIComponent(t), {
+        headers: { 'User-Agent': 'EBBLESS/1.0 (https://github.com/MalGriot/EBBLESS) lyrics lookup' },
+      });
+      if (res.status === 404) return null;
+      if (res.ok) {
+        const d = await res.json();
+        const lines = String(d.lyrics || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(l => l && !isNonLyricLine(l));
+        // too short is a stub or an error page, not a song
+        return lines.length >= 6 ? lines : null;
+      }
+    } catch (e) { /* retry once */ }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return null;
+}
+
+let lrclibThrottled = false; // set when a miss came from failed lookups, not an empty answer
 async function getLrclibMatch(title, artist, duration) {
   // YouTube-only tracks often arrive with no artist and an "Artist - Title"
   // video title; split that so lrclib gets a real artist to filter on.
@@ -2391,12 +2430,15 @@ async function getLrclibMatch(title, artist, duration) {
     const key = JSON.stringify(p);
     if (seen.has(key)) continue;
     seen.add(key);
-    for (const r of await lrclibSearch(p)) if (!all.some(x => x.id === r.id)) all.push(r);
+    const found = await lrclibSearch(p);
+    if (found.failed) all.failed = true;
+    for (const r of found) if (!all.some(x => x.id === r.id)) all.push(r);
     best = pickLrclib(all, title, artist, duration);
     // Stop early once the pick is clearly right (exact title + artist) and
     // either synced or duration-verified - no need for more lrclib calls.
     if (best && normTitle(best.trackName) === normTitle(title) && artistMatches(artist, best.artistName) && (best.syncedLyrics || duration)) break;
   }
+  if (!best && all.failed) lrclibThrottled = true;
   return best;
 }
 
@@ -2593,7 +2635,9 @@ async function handleLyrics(url, ctx) {
   if (cached) return applyCors(cached);
 
   let match = null;
+  lrclibThrottled = false;
   try { match = await getLrclibMatch(title, artist, duration); } catch (e) { match = null; }
+  const throttled = !match && lrclibThrottled;
 
   let payload;
   if (match && match.syncedLyrics) {
@@ -2605,13 +2649,17 @@ async function handleLyrics(url, ctx) {
     const lines = match.plainLyrics.split('\n').map(l => l.trim()).filter(l => l && !isNonLyricLine(l));
     payload = { synced: false, source: 'lrclib', lines: lines.map(t => ({ t: null, text: t })) };
   } else {
-    payload = { synced: false, source: 'none', lines: [] };
+    let ovh = null;
+    try { ovh = await lyricsOvhLookup(title, artist); } catch (e) { ovh = null; }
+    payload = ovh
+      ? { synced: false, source: 'lyrics.ovh', lines: ovh.map(t => ({ t: null, text: t })) }
+      : { synced: false, source: 'none', lines: [] };
   }
 
   // A miss is worth re-checking sooner than a real hit - lrclib's index
   // grows over time, so a track with nothing today may have a match next
   // week, and a day-long negative cache would sit in the way of that.
-  const ttl = payload.source === 'none' ? 3600 : 86400;
+  const ttl = payload.source === 'none' ? (throttled ? 30 : 3600) : 86400;
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
