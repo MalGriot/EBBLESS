@@ -5023,6 +5023,7 @@ body.week-up-on{overflow:hidden}
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
         </div>
         <div class="settings-row"><div><div class="label">Milestone sound</div><div class="desc">A soft chime when you finish a step on a phone.</div></div><button type="button" class="switch is-active" id="msSoundBtn" role="switch" aria-checked="true" aria-label="Milestone sound"><span class="switch-knob"></span></button></div>
+        <div class="settings-row"><div><div class="label">Soft sounds and vibration</div><div class="desc">A very quiet tap sound (and a light buzz on phones) when you press buttons.</div></div><button type="button" class="switch is-active" id="softTapBtn" role="switch" aria-checked="true" aria-label="Soft sounds and vibration"><span class="switch-knob"></span></button></div>
         <div class="settings-row">
           <div>
             <div class="label">What's new<span class="whatsnew-dot" id="whatsNewDot" hidden aria-hidden="true"></span></div>
@@ -25575,6 +25576,40 @@ const LS_MS_SOUND = 'ebbless:milestoneSound';
 function milestonesDone(){
   try { const v = JSON.parse(localStorage.getItem(LS_MILESTONES)); return v && typeof v === 'object' ? v : {}; } catch(e){ return {}; }
 }
+// #583 tangibility: soft sounds and vibration on taps. One setting (default ON)
+// gates both. The blip is generated (no asset): a short low sine with a fast
+// decay at ~0.05 gain, on its own tiny AudioContext made on the tap itself.
+// Skipped when the tab is hidden or the active player is muted.
+const LS_SOFT_TAP = 'ebbless:softTap';
+function softTapOn(){ try { return localStorage.getItem(LS_SOFT_TAP) !== 'off'; } catch(e){ return true; } }
+let softTapCtx = null;
+function softTapSilenced(){
+  if (document.visibilityState !== 'visible') return true;
+  try { const ad = activeDeck(); if (ad && ad.player && ad.player.isMuted && ad.player.isMuted()) return true; } catch(e){}
+  return false;
+}
+function softTapSound(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!softTapCtx) softTapCtx = new AC();
+    const ctx = softTapCtx;
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(150, t + .06);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + .006); g.gain.exponentialRampToValueAtTime(0.0001, t + .07);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + .08);
+  } catch(e){}
+}
+const SOFT_TAP_SEL = 'button,[role="button"],.lib-card,.btn-ghost,.ctl-btn,.nav-btn';
+function softTap(e){
+  if (!e.isTrusted || !softTapOn()) return;
+  const el = e.target && e.target.closest ? e.target.closest(SOFT_TAP_SEL) : null;
+  if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
+  if (softTapSilenced()) return;
+  softTapSound();
+}
+document.addEventListener('click', softTap, true);
 function msSoundOn(){ try { return localStorage.getItem(LS_MS_SOUND) !== 'off'; } catch(e){ return true; } }
 // The per-page cards are phone-only (CSS hides them elsewhere); desktop keeps
 // the plain list in Settings.
@@ -25801,6 +25836,12 @@ function awardMilestone(id){
   if (seek) seek.addEventListener('pointerdown', () => awardMilestone('progress'));
   const cv = document.getElementById('castVol');
   if (cv) cv.addEventListener('input', () => awardMilestone('volume'));
+  const stb = document.getElementById('softTapBtn');
+  if (stb){
+    const sync = () => { stb.classList.toggle('is-active', softTapOn()); stb.setAttribute('aria-checked', String(softTapOn())); };
+    sync();
+    stb.addEventListener('click', () => { try { localStorage.setItem(LS_SOFT_TAP, softTapOn() ? 'off' : 'on'); } catch(e){} sync(); });
+  }
   const snd = document.getElementById('msSoundBtn');
   if (snd) snd.addEventListener('click', () => { try { localStorage.setItem(LS_MS_SOUND, msSoundOn() ? 'off' : 'on'); } catch(e){} renderMilestones(); if (msSoundOn()) msChime(); });
 })();
