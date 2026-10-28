@@ -10154,12 +10154,12 @@ Add entries in this shape:
 - **Notes:** Verified hidden in real Chrome: 4 loose songs in a row, 6 with two sets plus loose. Song 5+ of a hidden stretch still needs a click. Chrome only (credentialless); off on iOS and touch devices. 6 SC iframes instead of 3 (about 75 to 110 MB each). Real PiP window untested. Cache v193.
 
 ### glitch-blink-487: Rapidly blinking background and menus (GPU glitch) (Geethub #487)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** high
 - **Description:** Bug, Geethub #487. Rapidly blinking background and menus (GPU glitch).
 - **Touches:**
 - **Branch:** agent/glitch-blink-487
-- **Notes:** Synced from Geethub #487. Lane already active (see AGENTS.md); several commits on its branch.
+- **Notes:** Synced from Geethub #487. Lane already active (see AGENTS.md); several commits on its branch. Owner closed 2026-10-28: cause is GPU overload, covered by the GPU budget rules.
 
 ### mac-warning-softener: Soften the Mac security warning so people don't get scared (Geethub #516)
 - **Status:** archived
