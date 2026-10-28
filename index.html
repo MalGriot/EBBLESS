@@ -2023,6 +2023,20 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 /* playlist-thumb-hover-open (#275): play overlay on the panel's cover art.
    Desktop shows it on hover; touch devices (no hover) always show the
    button, smaller and without the dim, so it reads as tappable. */
+/* #685/#687 artist page photo: tap cycles, a non-square photo pans its long axis (transform + opacity only) */
+.libpl-art-wrap.has-stage .libpl-art-box{display:none}
+.artist-photo{position:relative;width:100%;max-width:220px;aspect-ratio:1;margin:0 auto;border-radius:var(--r-md);overflow:hidden;background:var(--panel-3)}
+.artist-photo.is-multi{cursor:pointer}
+.ap-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .45s var(--ease-out,ease)}
+.ap-img.is-on{opacity:1}
+.ap-img.is-pan-x{width:auto;max-width:none;object-fit:fill}
+.ap-img.is-pan-y{height:auto;max-height:none;object-fit:fill}
+.ap-img.is-on.is-pan-x{will-change:transform;animation:ap-pan-x 18s ease-in-out infinite alternate}
+.ap-img.is-on.is-pan-y{will-change:transform;animation:ap-pan-y 18s ease-in-out infinite alternate}
+@keyframes ap-pan-x{0%,8%{transform:translate3d(0,0,0)}92%,100%{transform:translate3d(var(--pan-x),0,0)}}
+@keyframes ap-pan-y{0%,8%{transform:translate3d(0,0,0)}92%,100%{transform:translate3d(0,var(--pan-y),0)}}
+#libpl-panel:not(.is-open) .ap-img{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.ap-img.is-on.is-pan-x,.ap-img.is-on.is-pan-y{animation:none;will-change:auto}.ap-img.is-pan-x,.ap-img.is-pan-y{width:100%;height:100%;object-fit:cover}}
 .libpl-art-box{position:relative;max-width:220px;margin:0 auto;border-radius:var(--r-md);overflow:hidden}
 .libpl-art-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   background:rgba(0,0,0,.32);opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
@@ -11516,6 +11530,7 @@ function toggleLibraryPlaylistPanel(id){
 
   openLibraryPanelId = id;
   libplAddBar.hidden = !addablePlaylists().some(p => p.id === id);
+  resetArtistPhoto();
   libplPanel.classList.remove('is-artist-info');
   libplTitle.textContent = pl.name;
   libplTitle.classList.toggle('np-live', id === NP_ID && npFeed.onAir);
@@ -12117,6 +12132,7 @@ async function openAlbumPreview(a, name, backFn){
   collapseLibWide();
   openLibraryPanelId = id;
   libplAddBar.hidden = true;
+  resetArtistPhoto();
   libplPanel.classList.add('is-artist-info');
   libplTitle.textContent = a.name;
   if (a.art){ attachArtworkFallback(libplArt, { art: a.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
@@ -12234,6 +12250,7 @@ function openSongPage(t, plId, trackIdx){
   collapseLibWide();
   openLibraryPanelId = id;
   libplAddBar.hidden = true;
+  resetArtistPhoto();
   libplPanel.classList.add('is-artist-info');
   libplTitle.textContent = t.title;
   if (t.art){ attachArtworkFallback(libplArt, { art: t.art }); libplArtWrap.hidden = false; } else { libplArt.removeAttribute('src'); libplArtWrap.hidden = true; }
@@ -12354,6 +12371,69 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
   if (todoCollections.length){ sectionLabel('Collections and compilations'); todoCollections.forEach(addAlbumRow); }
   libplBody.appendChild(box);
 }
+// #685/#687: the artist page picture. Up to 3 photos (the main one plus other
+// Wikipedia article photos), tap to cycle with an opacity crossfade; a photo
+// that isn't square pans its long axis beneath the round-cornered mask.
+function resetArtistPhoto(){
+  const st = libplArtWrap.querySelector('.artist-photo');
+  if (st) st.remove();
+  libplArtWrap.classList.remove('has-stage');
+}
+const artistExtraPhotoCache = new Map();
+function artistPhotoKey(u){ return decodeURIComponent(String(u)).replace(/_/g, ' ').replace(/\/thumb\//, '/'); }
+function fetchArtistExtraPhotos(wikiUrl, mainUrl){
+  const m = /\/wiki\/([^?#]+)/.exec(wikiUrl || '');
+  if (!m) return Promise.resolve([]);
+  if (artistExtraPhotoCache.has(wikiUrl)) return artistExtraPhotoCache.get(wikiUrl);
+  const p = (async () => {
+    const wp = await artistInfoJson('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=images&gimlimit=30&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=500&titles=' + encodeURIComponent(decodeURIComponent(m[1]).replace(/_/g, ' ')));
+    const main = artistPhotoKey(mainUrl);
+    return Object.values((wp.query && wp.query.pages) || {}).map(pg => ({ t: String(pg.title || ''), ii: pg.imageinfo && pg.imageinfo[0] }))
+      .filter(x => x.ii && x.ii.mime === 'image/jpeg' && x.ii.thumburl && x.ii.width >= 300 && x.ii.height >= 300
+        && !/logo|icon|flag|signature|symbol|map|cover|album|single|poster|stamp|commons|wiki|stub|autograph/i.test(x.t)
+        && !main.includes(x.t.replace(/^File:/i, '').replace(/_/g, ' ')))
+      .map(x => x.ii.thumburl).slice(0, 2);
+  })().catch(() => []);
+  artistExtraPhotoCache.set(wikiUrl, p);
+  return p;
+}
+function showArtistPhotos(panelId, mainUrl, wikiUrl){
+  resetArtistPhoto();
+  const st = document.createElement('div');
+  st.className = 'artist-photo';
+  libplArtWrap.appendChild(st);
+  libplArtWrap.classList.add('has-stage');
+  libplArtWrap.hidden = false;
+  let cur = 0;
+  const imgs = () => st.querySelectorAll('.ap-img');
+  const add = (url, first) => {
+    const img = document.createElement('img');
+    img.className = 'ap-img'; img.alt = '';
+    img.addEventListener('load', () => {
+      if (!st.isConnected) return;
+      const r = img.naturalWidth / img.naturalHeight;
+      if (r > 1.04){ img.classList.add('is-pan-x'); img.style.setProperty('--pan-x', (-(1 - 1 / r) * 100).toFixed(2) + '%'); }
+      else if (r < 0.96){ img.classList.add('is-pan-y'); img.style.setProperty('--pan-y', (-(1 - r) * 100).toFixed(2) + '%'); }
+      st.appendChild(img);
+      if (first) img.classList.add('is-on');
+      if (imgs().length > 1) st.classList.add('is-multi');
+    });
+    img.addEventListener('error', () => { if (first && st.isConnected && !imgs().length){ resetArtistPhoto(); libplArtWrap.hidden = true; } });
+    img.src = url;
+  };
+  add(mainUrl, true);
+  st.addEventListener('click', () => {
+    const list = imgs();
+    if (list.length < 2) return;
+    list[cur].classList.remove('is-on');
+    cur = (cur + 1) % list.length;
+    list[cur].classList.add('is-on');
+  });
+  fetchArtistExtraPhotos(wikiUrl, mainUrl).then(urls => {
+    if (openLibraryPanelId !== panelId || !st.isConnected) return;
+    urls.forEach(u => add(u, false));
+  });
+}
 function loadArtistInfoInto(panelId, name, title, standalone){
   const status = document.createElement('div');
   status.className = 'currents-status';
@@ -12368,7 +12448,7 @@ function loadArtistInfoInto(panelId, name, title, standalone){
     if (standalone){
       if (!has && !(info && info.image)) libplBody.insertAdjacentHTML('afterbegin', '<div class="empty-lib">No verified info found for this artist yet.</div>');
       if (info && info.name) libplTitle.textContent = info.name;
-      if (info && info.image){ attachArtworkFallback(libplArt, { art: info.image }); libplArtWrap.hidden = false; }
+      if (info && info.image) showArtistPhotos(panelId, info.image, info.wikiUrl);
       // artist isn't in the library: offer to add their profile, using the
       // same artist-page link import a pasted link takes (Spotify first)
       const pref = ['Spotify', 'YouTube', 'Apple Music', 'SoundCloud'];
@@ -12418,6 +12498,7 @@ function openArtistPage(rawName, title){
   openLibraryPanelId = id;
   libplBackFn = null; syncLibplCloseBtn();
   libplAddBar.hidden = true;
+  resetArtistPhoto();
   libplPanel.classList.add('is-artist-info');
   // a multi-artist credit opens on the first-named artist
   libplTitle.textContent = name.split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i)[0].trim() || name;
