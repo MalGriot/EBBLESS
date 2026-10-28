@@ -11707,7 +11707,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #671, 2026-10-28; flipped to ready by owner. Related: home-welcome-back-583e.
 
 ### queue-same-color-as-library-672: Queue window is the same color as the library (Geethub #672)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #672. Queue window is the same color as the library.
 - **Touches:** index.html.
@@ -11755,7 +11755,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #677, 2026-10-28; flipped to ready by owner. 
 
 ### recents-label-678: Label the recents section 'recents' (Geethub #678)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #678. Label the recents section 'recents'.
 - **Touches:** index.html.
@@ -11795,7 +11795,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #682, 2026-10-28; flipped to ready by owner. Animate transform only; stop when hidden (GPU budget).
 
 ### visualizer-controls-under-art-tabs-683: Visualizer controls sit beneath the album art tab selector (Geethub #683)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #683. Visualizer controls sit beneath the album art tab selector.
 - **Touches:** index.html.
