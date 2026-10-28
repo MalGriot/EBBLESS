@@ -80,25 +80,161 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <ImageView
-                android:id="@+id/w_progress"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="3dp"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="4dp"
-                android:contentDescription="@null"
-                android:scaleType="fitXY" />
+                android:layout_height="14dp">
+
+                <ImageView
+                    android:id="@+id/w_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="3dp"
+                    android:layout_gravity="center_vertical"
+                    android:contentDescription="@null"
+                    android:scaleType="fitXY" />
+
+                <!-- 20 invisible tap zones over the line: each one seeks to its own place in the song -->
+                <LinearLayout
+                    android:id="@+id/w_seek_zones"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+                <FrameLayout
+                    android:id="@+id/w_seek_0"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_4"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_5"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_6"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_7"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_8"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_9"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_10"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_11"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_12"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_13"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_14"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_15"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_16"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_17"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_18"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                <FrameLayout
+                    android:id="@+id/w_seek_19"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+                </LinearLayout>
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
+                android:layout_height="10dp"
+                android:orientation="horizontal">
+
+                <Chronometer
+                    android:id="@+id/w_elapsed"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:includeFontPadding="false"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/w_dur"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
                 android:gravity="center"
                 android:orientation="horizontal">
 
                 <FrameLayout
                     android:id="@+id/w_prev"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp">
+                    android:layout_width="34dp"
+                    android:layout_height="34dp">
 
                     <ImageView
                         android:layout_width="match_parent"
@@ -110,10 +246,10 @@
 
                 <FrameLayout
                     android:id="@+id/w_play"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginStart="14dp"
-                    android:layout_marginEnd="14dp">
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp">
 
                     <ImageView
                         android:id="@+id/w_play_bg"
@@ -133,8 +269,8 @@
 
                 <FrameLayout
                     android:id="@+id/w_next"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp">
+                    android:layout_width="34dp"
+                    android:layout_height="34dp">
 
                     <ImageView
                         android:layout_width="match_parent"

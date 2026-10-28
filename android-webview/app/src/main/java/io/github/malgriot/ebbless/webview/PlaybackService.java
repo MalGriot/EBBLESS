@@ -64,6 +64,15 @@ public class PlaybackService extends Service {
     /** The cover this service already fetched for url, or null. */
     static Bitmap artFor(String url) { PlaybackService s = live; return s != null && url.equals(s.artUrl) ? s.art : null; }
 
+    /** Widget progress redraws only run while the screen is on: off cancels them, on re-anchors the line and restarts them. */
+    private final android.content.BroadcastReceiver widgetScreen = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(android.content.Context c, Intent i) {
+            if (i == null) return;
+            if (Intent.ACTION_SCREEN_OFF.equals(i.getAction())) EbblessWidget.stopTicks();
+            else EbblessWidget.refresh(PlaybackService.this, true);
+        }
+    };
+
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaSession session;
@@ -110,6 +119,12 @@ public class PlaybackService extends Service {
             session = null;   // never let the player widget stop the music
         }
         live = this;
+        try {
+            android.content.IntentFilter sf = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
+            sf.addAction(Intent.ACTION_SCREEN_ON);
+            if (Build.VERSION.SDK_INT >= 33) registerReceiver(widgetScreen, sf, android.content.Context.RECEIVER_NOT_EXPORTED);
+            else registerReceiver(widgetScreen, sf);
+        } catch (Throwable ignored) {}
         if (latest != null) handler.post(this::render);
     }
 
@@ -319,6 +334,8 @@ public class PlaybackService extends Service {
 
     @Override public void onDestroy() {
         live = null;
+        try { unregisterReceiver(widgetScreen); } catch (Exception ignored) {}
+        EbblessWidget.stopTicks();
         EbblessWidget.refresh(this, true);   // widget falls back to Last played + Resume
         if (session != null) { try { session.release(); } catch (Exception ignored) {} session = null; }
         art = null;
