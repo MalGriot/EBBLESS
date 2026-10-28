@@ -18251,10 +18251,67 @@ function voiceNoMatch(said){
    through the local command grammar first (voiceParse); only lines it does not
    claim reach the interpreter, whatever their length. */
 (function setupVoiceRow(){ const b = $('voiceBtn'); if (b) b.addEventListener('click', () => openVoiceConsent()); renderVoiceRow(); })();
+function setupNativeMic(btn){
+  btn.hidden = false;
+  const placeholder = urlInput.placeholder;
+  let sid = 0, active = '', finalText = '', guard = 0;
+  function reset(){
+    clearTimeout(guard);
+    active = '';
+    btn.classList.remove('is-listening');
+    btn.setAttribute('aria-pressed', 'false');
+    urlInput.placeholder = placeholder;
+  }
+  window.__ebbSpeech = function(id, kind, text){
+    if (id !== active) return;   // a stale session
+    if (kind === 'start') return;
+    if (kind === 'partial'){ urlInput.value = String(text || '').trim().slice(0, 250); return; }
+    if (kind === 'final'){ finalText = String(text || ''); urlInput.value = finalText.trim().slice(0, 250); return; }
+    if (kind === 'error:permission') showToast('Allow the microphone in Android settings to use voice');
+    else if (kind.indexOf('error:') === 0 && kind !== 'error:nomatch' && kind !== 'error:aborted') importErr.textContent = "Couldn't hear that - try again or type it.";
+    if (kind.indexOf('error:') === 0 && kind !== 'error:nomatch'){ reset(); urlInput.value = ''; return; }
+    if (kind === 'end' || kind === 'error:nomatch'){
+      reset();
+      const said = (finalText || urlInput.value).trim().slice(0, 250);
+      finalText = '';
+      if (said && !looksLikeUrl(said)){
+        urlInput.value = '';
+        const cmd = voiceParse(said, navigator.language);   // same path as the web mic
+        if (cmd){ voiceRun(cmd); return; }
+        rememberPasteRecent(said);
+        voiceNoMatch(said);
+      }
+    }
+  };
+  btn.addEventListener('click', () => {
+    if (active){ try { EbbNative.stop(active); } catch(e){ try { EbbNative.cancel(active); } catch(e2){} } return; }   // stop = finish with what was heard
+    importErr.textContent = '';
+    finalText = '';
+    active = 'm' + (++sid);
+    btn.classList.add('is-listening');
+    btn.setAttribute('aria-pressed', 'true');
+    urlInput.value = '';
+    urlInput.placeholder = 'Listening…';
+    const myId = active;
+    clearTimeout(guard);
+    // safety: if no end ever arrives (lost callback), cancel and reset the UI
+    guard = setTimeout(() => {
+      if (active !== myId) return;
+      try { EbbNative.cancel(myId); } catch(e){}
+      reset(); urlInput.value = '';
+    }, 15000);
+    try { EbbNative.listen(active); } catch(e){ reset(); }
+  });
+}
 (function setupVibeMic(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = $('micBtn');
-  if (!btn || !SR) return;
+  if (!btn) return;
+  // Android app (#553): the WebView has no Web Speech, so the native SpeechRecognizer is driven through EbbNative.
+  let nativeVoice = false;
+  try { nativeVoice = !SR && !!(window.EbbNative && EbbNative.voiceAvailable && EbbNative.voiceAvailable()); } catch(e){}
+  if (nativeVoice){ setupNativeMic(btn); return; }
+  if (!SR) return;
   btn.hidden = false;
   let rec = null;
   const placeholder = urlInput.placeholder;
@@ -18298,7 +18355,14 @@ function voiceNoMatch(said){
     btn.setAttribute('aria-pressed', 'true');
     urlInput.value = '';
     urlInput.placeholder = 'Listening…';
-    try { rec.start(); } catch(e){ rec = null; btn.classList.remove('is-listening'); urlInput.placeholder = placeholder; }
+    try { rec.start(); } catch(e){ rec = null; btn.classList.remove('is-listening'); urlInput.placeholder = placeholder; return; }
+    // safety stop: never leave the mic on past 15s (stop() finishes with what was heard; abort() if that hangs)
+    const mine = rec;
+    setTimeout(() => {
+      if (rec !== mine) return;
+      try { mine.stop(); } catch(e){}
+      setTimeout(() => { if (rec === mine){ try { mine.abort(); } catch(e){} } }, 2500);
+    }, 15000);
   });
 })();
 

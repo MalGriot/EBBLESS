@@ -6,8 +6,13 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.IBinder;
 import android.os.Message;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
@@ -20,6 +25,7 @@ import android.widget.FrameLayout;
 import org.json.JSONObject;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
 
 /**
  * EBBLESS in its own window: a WebView on the site, so recents shows EBBLESS
@@ -108,6 +114,7 @@ public class MainActivity extends Activity {
         @Override public void onReceive(android.content.Context c, Intent i) {
             if (web == null || i == null) return;
             boolean on = Intent.ACTION_SCREEN_ON.equals(i.getAction());
+            if (!on) voiceTeardown(true);   // a mic left listening ends when the screen goes off
             web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(" + on + ")", null);
         }
     };
@@ -179,10 +186,166 @@ public class MainActivity extends Activity {
         if (web != null) web.evaluateJavascript("window.__ebbPip&&__ebbPip(" + in + ")", null);
     }
 
+    @Override protected void onStop() {
+        voiceTeardown(true);
+        super.onStop();
+    }
+
     @Override protected void onDestroy() {
+        voiceTeardown(false);
         PlaybackService.sink = null;
         try { unregisterReceiver(screenReceiver); } catch (Exception ignored) {}
         super.onDestroy();
+    }
+
+
+    // ---- Voice DJ (#553): native speech recognition. All of this runs on the main thread; no audio is recorded or stored here. ----
+    private static final int REQ_RECORD_AUDIO = 553;
+    private SpeechRecognizer recognizer;
+    /** Id of the session currently listening, or null. */
+    private String voiceId;
+    /** Id waiting on the RECORD_AUDIO permission prompt. */
+    private String voicePendingId;
+    /** Watchdogs: end a session that never ends on its own. Every callback is removed on result, error, stop, cancel and destroy. */
+    private final Handler voiceHandler = new Handler(Looper.getMainLooper());
+    private static final long VOICE_HARD_MS = 12000;     // no final/end this long after start: stopListening()
+    private static final long VOICE_QUIET_MS = 7000;     // nothing heard at all this long after start: quiet nomatch
+    private static final long VOICE_STOP_GRACE_MS = 3000; // stopListening() produced nothing: tear down
+
+    private void voiceEmit(String id, String kind, String text) {
+        if (web == null || id == null) return;
+        web.evaluateJavascript("window.__ebbSpeech&&__ebbSpeech(" + JSONObject.quote(id) + "," + JSONObject.quote(kind) + "," + JSONObject.quote(text == null ? "" : text) + ")", null);
+    }
+
+    /** Drops the recognizer. emitEnd tells the page its session ended (skipped when the activity is going away). */
+    private void voiceTeardown(boolean emitEnd) {
+        String id = voiceId;
+        voiceId = null;
+        voicePendingId = null;
+        voiceHandler.removeCallbacksAndMessages(null);
+        if (recognizer != null) {
+            try { recognizer.setRecognitionListener(null); } catch (Throwable ignored) {}
+            try { recognizer.cancel(); } catch (Throwable ignored) {}
+            try { recognizer.destroy(); } catch (Throwable ignored) {}
+            recognizer = null;
+        }
+        if (emitEnd && id != null) voiceEmit(id, "end", "");
+    }
+
+    private void voiceListen(String id) {
+        if (id == null) return;
+        // only one session at a time: a new one ends the old one
+        if (voiceId != null || recognizer != null) voiceTeardown(true);
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            voicePendingId = id;
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_RECORD_AUDIO);
+            return;
+        }
+        voiceStart(id);
+    }
+
+    @Override public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(code, perms, results);
+        if (code != REQ_RECORD_AUDIO) return;
+        String id = voicePendingId;
+        voicePendingId = null;
+        if (id == null) return;
+        if (results != null && results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) voiceStart(id);
+        else { voiceEmit(id, "error:permission", ""); voiceEmit(id, "end", ""); }
+    }
+
+    private void voiceStart(final String id) {
+        try {
+            if (!SpeechRecognizer.isRecognitionAvailable(this)) { voiceEmit(id, "error:unavailable", ""); voiceEmit(id, "end", ""); return; }
+            voiceId = id;
+            recognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            recognizer.setRecognitionListener(new RecognitionListener() {
+                private boolean got;
+                private boolean heard;
+                private boolean live() { return id.equals(voiceId); }
+                @Override public void onReadyForSpeech(Bundle p) {
+                    if (!live()) return;
+                    voiceEmit(id, "start", "");
+                    voiceHandler.removeCallbacksAndMessages(null);
+                    voiceHandler.postDelayed(() -> { if (id.equals(voiceId)) voiceStop(id); }, VOICE_HARD_MS);
+                    voiceHandler.postDelayed(() -> { if (id.equals(voiceId) && !heard) voiceFinish(id, "error:nomatch"); }, VOICE_QUIET_MS);
+                }
+                @Override public void onBeginningOfSpeech() {}
+                @Override public void onRmsChanged(float rms) {}
+                @Override public void onBufferReceived(byte[] buf) {}
+                @Override public void onEndOfSpeech() {}
+                @Override public void onEvent(int type, Bundle p) {}
+                @Override public void onPartialResults(Bundle p) {
+                    if (!live()) return;
+                    ArrayList<String> r = p == null ? null : p.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (r != null && !r.isEmpty()) { heard = true; voiceEmit(id, "partial", r.get(0)); }
+                }
+                @Override public void onResults(Bundle p) {
+                    if (!live()) return;
+                    ArrayList<String> r = p == null ? null : p.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (r != null && !r.isEmpty()) { got = true; voiceEmit(id, "final", r.get(0)); }
+                    voiceFinish(id, got ? null : "error:nomatch");
+                }
+                @Override public void onError(int err) {
+                    if (!live()) return;
+                    String kind;
+                    switch (err) {
+                        case SpeechRecognizer.ERROR_NO_MATCH:
+                        case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: kind = "error:nomatch"; break;
+                        case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: kind = "error:permission"; break;
+                        case SpeechRecognizer.ERROR_RECOGNIZER_BUSY: kind = "error:busy"; break;
+                        case SpeechRecognizer.ERROR_NETWORK:
+                        case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: kind = "error:network"; break;
+                        case SpeechRecognizer.ERROR_AUDIO: kind = "error:audio"; break;
+                        case SpeechRecognizer.ERROR_CLIENT: kind = "error:aborted"; break;
+                        default: kind = "error:" + err; break;
+                    }
+                    voiceFinish(id, kind);
+                }
+            });
+            Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag());
+            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+            // end soon after the user stops talking (some OEM recognizers ignore these)
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L);
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 800L);
+            i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
+            recognizer.startListening(i);
+        } catch (Throwable t) {
+            voiceTeardown(false);
+            voiceEmit(id, "error:unavailable", "");
+            voiceEmit(id, "end", "");
+        }
+    }
+
+    /** Ends the session after a result or error: report it (kind may be null), say "end", free the recognizer. */
+    private void voiceFinish(String id, String kind) {
+        voiceHandler.removeCallbacksAndMessages(null);
+        if (kind != null) voiceEmit(id, kind, "");
+        voiceEmit(id, "end", "");
+        voiceId = null;
+        if (recognizer != null) {
+            try { recognizer.setRecognitionListener(null); } catch (Throwable ignored) {}
+            try { recognizer.destroy(); } catch (Throwable ignored) {}
+            recognizer = null;
+        }
+    }
+
+    private void voiceStop(String id) {
+        if (id == null || !id.equals(voiceId) || recognizer == null) return;
+        voiceHandler.removeCallbacksAndMessages(null);
+        try { recognizer.stopListening(); } catch (Throwable t) { voiceTeardown(true); return; }
+        // if stopping yields no result or end, do not hang
+        voiceHandler.postDelayed(() -> { if (id.equals(voiceId)) voiceTeardown(true); }, VOICE_STOP_GRACE_MS);
+    }
+
+    private void voiceCancel(String id) {
+        if (id == null) return;
+        if (id.equals(voicePendingId)) { voicePendingId = null; voiceEmit(id, "end", ""); return; }
+        if (id.equals(voiceId)) voiceTeardown(true);
     }
 
     /**
@@ -339,6 +502,16 @@ public class MainActivity extends Activity {
                     return am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) + "/" + am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
                 } catch (Throwable t) { return ""; }
             }
+            /** Voice DJ (#553): the native speech recognizer behind the mic (the WebView has no Web Speech). False when the device has no speech service. */
+            @android.webkit.JavascriptInterface public boolean voiceAvailable() {
+                try { return SpeechRecognizer.isRecognitionAvailable(MainActivity.this); } catch (Throwable t) { return false; }
+            }
+            /** Starts one listening session; results come back through window.__ebbSpeech(id, kind, text). */
+            @android.webkit.JavascriptInterface public void listen(final String id) { runOnUiThread(() -> voiceListen(id)); }
+            /** Stop listening but still deliver what was heard so far. */
+            @android.webkit.JavascriptInterface public void stop(final String id) { runOnUiThread(() -> voiceStop(id)); }
+            /** Abandon the session without a result. */
+            @android.webkit.JavascriptInterface public void cancel(final String id) { runOnUiThread(() -> voiceCancel(id)); }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }
