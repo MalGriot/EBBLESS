@@ -375,7 +375,8 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
 #ambient::after{content:'';position:absolute;inset:0;transition:background 4s linear;
   background:
     radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%),
-    var(--clock-tint-ambient, transparent);
+    var(--clock-tint-ambient, transparent),
+    linear-gradient(var(--tod-tint, transparent),var(--tod-tint, transparent));
 }
 
 /* ---------- topbar (desktop) ---------- */
@@ -1420,18 +1421,6 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 .artwork-wrap[data-mode="art"][data-art-style="record"] .art-record{display:flex;opacity:1}
 .artwork-wrap[data-mode="art"][data-art-style="cassette"] .art-cassette{display:flex;opacity:1}
 
-/* cassette-hover-expand (#403): on a real mouse, the main-UI album art / LP /
-   cassette eases up to the width of the title marquee. Uses the independent
-   'scale' property (no layout shift, never fights other transforms).
-   --art-hx is measured on pointerenter (see script near the button hover
-   expand). z-index:-1 inside the isolated stage keeps it behind every HUD. */
-@media (hover:hover) and (pointer:fine){
-  .player-stage{isolation:isolate}
-  .artwork-wrap[data-mode="art"]{z-index:-1;transition:scale 320ms var(--ease-out),height var(--dur-surface) var(--ease-in-out)}
-  .artwork-wrap[data-mode="art"]:hover{scale:var(--art-hx,1)}
-}
-@media (prefers-reduced-motion:reduce){.artwork-wrap[data-mode="art"]:hover{scale:1}}
-
 .record-shadow,.record-disc{position:absolute;top:50%;left:50%;width:96%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%)}
 .record-shadow{box-shadow:0 20px 46px -14px rgba(0,0,0,.7)}
@@ -1754,6 +1743,15 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .empty-find-btn:hover{filter:brightness(1.1)}
 .empty-find-btn:active{transform:scale(.96)}
 .track-meta.is-empty .empty-find-btn{display:inline-block}
+/* your recent things (#583d): small static tiles under Find music, only while the player is empty */
+.home-shelf{display:none;justify-content:center;gap:10px;margin:12px auto 0;max-width:100%}
+.track-meta.is-empty .home-shelf:not([hidden]){display:flex}
+.home-shelf-lib:not([hidden]){display:flex;justify-content:flex-start;margin:4px 0 8px;overflow-x:auto}
+.home-shelf-item{display:block;width:68px;min-width:0;padding:0;text-align:center;font:inherit;color:inherit}
+.home-shelf-item img,.home-shelf-item .home-shelf-ph{display:block;margin:0 auto;width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--surface-2,rgba(128,128,128,.18))}
+.home-shelf-item span.home-shelf-name{display:block;margin-top:5px;font-size:11px;line-height:1.25;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-shelf-item:hover span.home-shelf-name{color:inherit}
+.home-shelf-item:active{transform:scale(.96)}
 .track-meta.is-empty .title-row .player-like-btn{visibility:hidden}
 .player-stage:has(.track-meta.is-empty) #playerLikeBtn{visibility:hidden}
 .transport-full{width:100%;max-width:480px;margin-top:clamp(10px,4dvh,26px)}
@@ -2056,6 +2054,12 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .swipe-under .su-ask .su-yes{background:#fff;color:#8a1f19}
 .is-swipe{position:relative;z-index:1;background:var(--panel)!important}
 .q-row + .q-row{margin-top:2px}
+/* #669: songs already played in this queue, above Now; scroll up to see them */
+.q-played{display:flex;align-items:center;gap:10px;padding:8px 20px;opacity:.55;cursor:pointer}
+.q-played img{width:38px;height:38px;border-radius:5px;object-fit:cover;background:var(--panel-3);flex:none}
+.q-played .meta{min-width:0;flex:1}
+.q-played .title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-played .artist{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q-row.is-dragging{opacity:.85;box-shadow:0 6px 18px rgba(0,0,0,.4);z-index:2}
 .q-row .handle{flex:none;width:18px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);cursor:grab;touch-action:none}
 .q-row .handle svg{width:12px;height:16px}
@@ -2069,6 +2073,14 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .q-row .q-menu,.q-now .q-menu{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint-2)}
 .q-row .q-menu:hover,.q-row .q-menu.is-active,.q-now .q-menu:hover,.q-now .q-menu.is-active{background:var(--panel-3);color:var(--text)}
 .q-row .q-menu svg,.q-now .q-menu svg{width:13px;height:13px}
+/* quiet by default (#583c): mouse only. Queue row handle/remove/menu sit back until the row is
+   hovered or focused; touch and keyboard focus stay fully visible. Opacity only. */
+@media (hover:hover) and (pointer:fine){
+  .q-row .handle,.q-row .remove,.q-row .q-menu{opacity:.4;transition:opacity var(--dur-ui) var(--ease-out)}
+  .q-row:hover .handle,.q-row:hover .remove,.q-row:hover .q-menu,
+  .q-row:focus-within .handle,.q-row:focus-within .remove,.q-row:focus-within .q-menu,
+  .q-row .q-menu.is-active,.q-row.is-dragging .handle{opacity:1}
+}
 /* Hover fills the row with the current UI color (#394); text flips to --on-accent so light colors stay legible */
 .q-row{transition:background-color var(--dur-ui) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
@@ -2723,6 +2735,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   .player-stage{--art-w:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 332px)))}
   /* nothing playing: the Find music button takes a row, so the art gives that room back */
   body:not(.onb-active) .player-stage:has(.track-meta.is-empty){--art-w:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 392px)))}
+  /* the shelf of recent things takes a row too */
+  body:not(.onb-active) .player-stage:has(.track-meta.is-empty .home-shelf:not([hidden])){--art-w:min(340px,84vw,max(72px,calc(100dvh - var(--topbar-h) - var(--nav-h) - var(--safe-b) - var(--safe-t) - 478px)))}
   .artwork-wrap{width:var(--art-w)}
   .track-meta{width:var(--art-w)}
   /* heart and options sit in the controls row on phones (playerControlsPlace), so the title row only keeps the opt-in extras */
@@ -2765,6 +2779,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      the screen (~40-50px); this pulls them up clear of that band */
   #view-player .view-scroll{padding-bottom:44px}
 }
+/* recent-things shelf (#583d): its row comes out of the art, desktop widths */
+@media (min-width:860px){ .player-stage:has(.track-meta.is-empty .home-shelf:not([hidden])) .artwork-wrap{width:min(560px,52vw,max(72px,calc(100dvh - var(--topbar-h) - 475px)))} }
+@media (min-width:1150px){ body.split-desktop:not(.desktop-fs) .player-stage:has(.track-meta.is-empty .home-shelf:not([hidden])) .artwork-wrap{width:min(820px,calc(100vw - 740px),max(72px,calc(100dvh - var(--topbar-h) - 425px)))} body.split-desktop.lib-wide:not(.desktop-fs) .player-stage:has(.track-meta.is-empty .home-shelf:not([hidden])) .artwork-wrap{width:min(300px,max(72px,calc(100dvh - var(--topbar-h) - 425px)))} }
 /* wide desktop: persistent 3-pane layout (library | now playing | queue) in
    place of the tab-switching + overlay-queue behavior used below 1150px.
    Each pane is a grid item whose default min-height is auto (= its content's
@@ -2816,6 +2833,9 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
     grid-template-columns:minmax(280px,340px) 1fr minmax(280px,340px);
   }
   body.split-desktop #topbar{grid-column:1/-1;grid-row:1}
+  /* #583f: the rounded library and queue panes no longer butt against the player pane and the window edge; one shared gap (static, no animation) */
+  body.split-desktop:not(.desktop-fs){--pane-gap:8px}
+  body.split-desktop:not(.desktop-fs) #app{column-gap:var(--pane-gap);padding:0 var(--pane-gap) var(--pane-gap)}
   /* #619: library expanded to the right - it takes the slack, the player pane shrinks to the queue's width and sits between them.
      Snaps (no grid-template animation, GPU budget). The art and title follow the narrower pane. */
   body.split-desktop.lib-wide:not(.desktop-fs) #app{grid-template-columns:1fr 340px 340px}
@@ -4279,6 +4299,7 @@ body.week-up-on{overflow:hidden}
         <div class="section-label lib-bar-label hidden" id="libBarLabel" role="button" tabindex="0"></div>
         </div>
         <div class="lib-body">
+        <div class="home-shelf home-shelf-lib" id="libShelf" hidden></div>
         <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
           <div class="section-label">Playlists</div>
@@ -4709,6 +4730,7 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="artist marquee" id="trackArtist"><span></span></div>
           <button type="button" class="empty-find-btn" id="emptyFindBtn">Find music</button>
+          <div class="home-shelf" id="homeShelf" hidden></div>
           <div class="cast-bar" id="castBar" hidden>
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/></svg>
             <span class="cast-bar-label">Playing on <strong id="castBarName"></strong></span>
@@ -5342,13 +5364,13 @@ body.week-up-on{overflow:hidden}
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 100-6 3 3 0 000 6zm12-3a3 3 0 100-6 3 3 0 000 6z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
       Player
     </button>
-    <button data-view="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-      Search
-    </button>
     <button data-action="toggle-queue">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
       Queue
+    </button>
+    <button data-view="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      Search
     </button>
     <button data-view="settings">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94a7.14 7.14 0 0 0 .06-.94 7.14 7.14 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94L14.4 2.5a.5.5 0 0 0-.5-.42h-3.8a.5.5 0 0 0-.5.42l-.36 2.32a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.42.32.66.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.32a.5.5 0 0 0 .5.42h3.8a.5.5 0 0 0 .5-.42l.36-2.32a7.3 7.3 0 0 0 1.63-.94l2.39.96c.24.1.52.02.66-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
@@ -9599,6 +9621,7 @@ function showLoadSuccess(){
 document.getElementById('settingsBackBtn')?.addEventListener('click', () => setView(state.preSettingsView || 'library'));
 function setView(name){
   const prevView = state.currentView;
+  if (name === 'player' || name === 'library') try{ renderHomeShelf(); } catch(e){} // recent-things shelf (#583d)
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
   // Settings should open on its own (issue #131): the split-desktop
   // "fullscreen player" mode (desktop-fs) keeps the library/queue panes as
@@ -10513,6 +10536,7 @@ libSearchClear.addEventListener('click', () => {
 });
 function setLibSearchOpen(open){
   libSearchBox.classList.toggle('hidden', !open);
+  try{ renderHomeShelf(); } catch(e){}
   libSearchToggle.classList.toggle('is-active', open);
   libSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open){ libSearch.focus(); return; }
@@ -10593,6 +10617,7 @@ function syncLibraryVideos(){
 }
 document.addEventListener('visibilitychange', syncLibraryVideos);
 function renderLibrary(){
+  try{ renderHomeShelf(); } catch(e){}
   // an artist page opened from the player (openArtistPage) shows nothing
   // from the library, so a re-render underneath it leaves it open
   // (#409) an artist window (page or saved artist entry) stays open until the
@@ -21949,11 +21974,12 @@ function renderQueuePanel(){
   renderDiscoverToggle();
   markNowPlaying();
   const head = state.queue.length ? state.queue[0].plId + '|' + state.queue[0].idx : '';
-  if (head !== lastQueueHead){
-    lastQueueHead = head;
-    const sc = queueBody.closest('.queue-scroll');
-    if (sc) sc.scrollTop = 0;
-  }
+  const sc = queueBody.closest('.queue-scroll');
+  /* #669: Now stays the anchor; remember where it sits so the played songs
+     added above it do not shift the view */
+  const oldNow = queueBody.querySelector('[data-q-now]');
+  let nowDelta = (sc && oldNow && head === lastQueueHead) ? oldNow.getBoundingClientRect().top - sc.getBoundingClientRect().top : 0;
+  lastQueueHead = head;
   queueBody.innerHTML = '';
   if (state.queuePos < 0 || !state.queue.length){ queueBody.innerHTML = '<div class="q-empty">Nothing queued yet.</div>'; queueBody.appendChild(queueArrowsRow); return; }
 
@@ -21979,7 +22005,23 @@ function renderQueuePanel(){
   nowMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleTrackCtxMenu(nowEntry.plId, nowEntry.idx, nowMenuBtn, { inQueue: true, isNow: true }); });
   nowRow.appendChild(nowImg); nowRow.appendChild(nowMeta); nowRow.appendChild(nowMenuBtn); nowRow.appendChild(nowPlayBtn);
   attachLongPress(nowMeta, () => toggleTrackCtxMenu(nowEntry.plId, nowEntry.idx, nowMenuBtn, { inQueue: true, isNow: true }));
+  nowLabel.dataset.qNow = '1';
+  state.queue.slice(Math.max(0, state.queuePos - 100), state.queuePos).forEach((pe, k, arr) => {
+    const ppl = playlistById(pe.plId), pt = ppl && ppl.tracks[pe.idx];
+    if (!pt) return;
+    const prow = document.createElement('div'); prow.className = 'q-played';
+    const pimg = document.createElement('img'); attachArtworkFallback(pimg, pt);
+    const pmeta = document.createElement('div'); pmeta.className = 'meta';
+    pmeta.innerHTML = '<div class="title"></div><div class="artist"></div>';
+    pmeta.querySelector('.title').textContent = pt.title;
+    pmeta.querySelector('.artist').textContent = [podDateLabel(pt), pt.artist].filter(Boolean).join(' · ');
+    const ppos = Math.max(0, state.queuePos - 100) + k;
+    prow.addEventListener('click', () => queueJumpTo(ppos));
+    prow.appendChild(pimg); prow.appendChild(pmeta);
+    queueBody.appendChild(prow);
+  });
   queueBody.appendChild(nowLabel); queueBody.appendChild(nowRow); queueBody.appendChild(queueArrowsRow);
+  if (sc) sc.scrollTop = Math.max(0, nowLabel.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - nowDelta);
 
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (!upcoming.length){
@@ -24285,6 +24327,21 @@ function updateLibraryClockColor(){
 updateLibraryClockColor();
 setTimeout(() => document.documentElement.classList.remove('clock-color-init'), 50);
 setInterval(updateLibraryClockColor, 10000);
+
+/* #583b: one static wash on #ambient::after for the local time of day (cool
+   morning, neutral day, amber evening, dim late night). A single CSS var,
+   re-set every 5 min and never animated; the song-color fade is a separate layer. */
+function updateTimeOfDayTint(){
+  const d = new Date(), h = d.getHours() + d.getMinutes() / 60;
+  // [hour, r, g, b, alpha] keyframes, linearly blended between neighbours
+  const K = [[0,0,0,12,.20],[5,0,0,12,.14],[7,120,170,255,.06],[10,120,170,255,0],[16,255,170,70,0],[19,255,150,40,.09],[22,255,120,40,.07],[24,0,0,12,.20]];
+  let i = 0; while (i < K.length - 2 && h >= K[i + 1][0]) i++;
+  const a = K[i], b = K[i + 1], t = Math.min(1, Math.max(0, (h - a[0]) / (b[0] - a[0])));
+  const m = (j) => Math.round(a[j] + (b[j] - a[j]) * t);
+  ambientEl.style.setProperty('--tod-tint', `rgba(${m(1)},${m(2)},${m(3)},${(a[4] + (b[4] - a[4]) * t).toFixed(3)})`);
+}
+updateTimeOfDayTint();
+setInterval(updateTimeOfDayTint, 300000);
 
 /* 49 genuinely different nodal-field families the grains can settle into.
    Each supplies its own field(x,y,params,t) -> scalar, plus a short list of
@@ -32194,6 +32251,68 @@ function tryResume(){
   podHydrate(track, state.queue[state.queuePos].plId);
 }
 
+// Your recent things (#583d): a few tiles under "Find music" on the empty
+// player, from what is already saved (last-played times, Liked Songs). One tap
+// plays it. Nothing recent, nothing shown. Static: no network, no animation.
+function renderHomeShelf(){
+  renderShelfInto($('homeShelf'), !!$('trackMeta') && $('trackMeta').classList.contains('is-empty'));
+  const sb = $('libSearchBox');
+  renderShelfInto($('libShelf'), !(sb && !sb.classList.contains('hidden'))); // also on the Library landing, not while searching
+}
+function renderShelfInto(box, show){
+  if (!box) return;
+  if (!show){ box.hidden = true; return; }
+  const items = [], seen = new Set();
+  const add = (id, pl) => { if (!seen.has(id) && pl && pl.tracks && pl.tracks.length && pl.name && items.length < 4){ seen.add(id); items.push({ id, pl }); } };
+  const recent = getLibrary()
+    .filter(id => ![SWELL_ID, BLEND_ID, NP_ID, LIKED_ID].includes(id) && !String(id).startsWith('discover-ext:') && !isPodcastPlaylistId(id) && getLastPlayed(id))
+    .sort((a, b) => getLastPlayed(b) - getLastPlayed(a))
+    .map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl && !isArtistEntry(x.pl));
+  const firstOf = (kind) => recent.find(x => libSectionOf(x.pl) === kind);
+  const lp = firstOf('playlist'), la = firstOf('album');
+  if (lp) add(lp.id, lp.pl);
+  if (la) add(la.id, la.pl);
+  const liked = getCachedPlaylist(LIKED_ID);
+  if (liked && liked.tracks && liked.tracks.length) add(LIKED_ID, { tracks: liked.tracks, name: 'Liked Songs', image: liked.image });
+  recent.forEach(x => add(x.id, x.pl));
+  box.textContent = '';
+  box.hidden = !items.length;
+  items.forEach(({ id, pl }) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'home-shelf-item'; b.title = pl.name; b.setAttribute('aria-label', 'Play ' + pl.name);
+    const src = pl.image ? { art: pl.image } : pl.tracks.find(t => t.videoId || t.art);
+    let cover;
+    if (src){ cover = document.createElement('img'); cover.loading = 'lazy'; cover.alt = ''; attachCardArt(cover, src); }
+    else { cover = document.createElement('div'); cover.className = 'home-shelf-ph'; }
+    const nm = document.createElement('span'); nm.className = 'home-shelf-name'; nm.textContent = pl.name;
+    b.appendChild(cover); b.appendChild(nm);
+    b.addEventListener('click', () => playPlaylistNow(id));
+    box.appendChild(b);
+  });
+}
+try{
+  const m = $('trackMeta');
+  if (m) new MutationObserver(renderHomeShelf).observe(m, { attributes: true, attributeFilter: ['class'] });
+} catch(e){}
+
+// Welcome back (#583e): on a cold open with something restored by tryResume,
+// the existing toast offers one tap to carry on. Waits for the splash to
+// clear, fades by itself, shows nothing when there is nothing to resume.
+function welcomeBackLine(){
+  const t = currentTrack(), e = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
+  if (!t || !e) return;
+  const pl = getCachedPlaylist(e.plId);
+  const named = pl && pl.name && ![SWELL_ID, BLEND_ID, NP_ID].includes(pl.id);
+  const what = named ? pl.name : t.title;
+  if (!what) return;
+  const show = () => showToast('Welcome back. You were in the middle of ' + what + '.', { label: 'Resume', run: () => { try{ resumePlayback(); } catch(err){} } });
+  const sp = $('splash');
+  if (!sp || sp.classList.contains('is-hidden')){ show(); return; }
+  const mo = new MutationObserver(() => { if (sp.classList.contains('is-hidden')){ mo.disconnect(); setTimeout(show, 400); } });
+  mo.observe(sp, { attributes: true, attributeFilter: ['class'] });
+  setTimeout(() => mo.disconnect(), 120000);
+}
+
 /* =========================================================================
    FULLSCREEN / FLOW MODE
    ========================================================================= */
@@ -33492,6 +33611,8 @@ function startApp(){
     // show on the player view, so land them on the library instead.
     setView(currentTrack() ? 'player' : 'library');
     if (!currentTrack()) updateMiniBarVisibility();
+    try{ if (!resumingFromBackground) welcomeBackLine(); } catch(e){}
+    try{ renderHomeShelf(); } catch(e){}
     refreshSwellIfDue();
     // CuRRentSSsss grows once per daily period and resets at midnight - poll
     // so a session left open picks up each period change (and the midnight
@@ -35878,20 +35999,6 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     var b = e.target.closest && e.target.closest('button');
     if (!b || !b._hx || (e.relatedTarget && b.contains(e.relatedTarget))) return;
     grow(b, '1');
-  });
-})();
-</script>
-<script>
-/* cassette-hover-expand (#403): measure how far the art can grow to match the
-   title marquee; CSS (.artwork-wrap:hover) does the eased scale. */
-(function(){
-  if (!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  var w = document.getElementById('artworkWrap'), row = document.getElementById('trackTitle');
-  if (!w || !row) return;
-  w.addEventListener('pointerenter', function(e){
-    if (e.pointerType !== 'mouse') return;
-    var aw = w.offsetWidth, rw = row.getBoundingClientRect().width;
-    w.style.setProperty('--art-hx', aw > 0 ? Math.max(1, rw / aw).toFixed(3) : '1');
   });
 })();
 </script>

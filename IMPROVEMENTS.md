@@ -11513,7 +11513,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #660. Deleted the #626 pseudo-element block; cache v391.
 
 ### lyrics-not-working-664: Lyrics not working for almost any song (Geethub #664)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Lyrics fail to load for almost any song. No details given. Related to the merged lyrics-accuracy entry, but this reports a broad failure, so check the lyrics source/fetch first for an outage or a regression.
 - **Touches:** lyrics fetch/matching
@@ -11529,7 +11529,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #663 (idea); issue body was empty beyond the title.
 
 ### search-music-only-662: Search shows random YouTube videos, not just music (Geethub #662)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Search returns everything on YouTube (random videos etc.). Find a way to tell music from other content and favor/limit to music.
 - **Touches:** search results
@@ -11537,7 +11537,7 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #662 (bug); issue body was empty beyond the title.
 
 ### h-key-goes-to-main-view-661: Pressing h should go to the main view (player, library, queue), not the splash (Geethub #661)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The h shortcut sends you to the splash. It should go to the main view with player, library and queue.
 - **Touches:** keyboard shortcuts / navigation
@@ -11632,3 +11632,68 @@ Add entries in this shape:
 - **Touches:** (not specified)
 - **Branch:** agent/video-in-player-668
 - **Notes:** Related to #667 (mobile mini-player for videos).
+
+### queue-scroll-up-previous-669: Scroll up in the queue to see the previous songs (Geethub #669)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea Geethub #669. Scrolling up in the queue should reveal the songs that already played.
+- **Touches:** (not specified)
+- **Branch:** agent/queue-scroll-up-669
+- **Notes:** renderQueuePanel now renders already-played songs (queue entries before queuePos, last 100, dimmed, tap to jump) above Now; Now stays the scroll anchor (snaps to top of view on open/new queue per #629, kept steady on edits). Static, no animation. Page-load verified, render not exercised live (state is module-scoped).
+
+### no-album-art-hover-expand-670: Hovering the album art should not expand it (Geethub #670)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Bug Geethub #670. Remove the feature where hovering the album art expands it.
+- **Touches:** (not specified)
+- **Branch:** agent/no-art-hover-670
+- **Notes:** Removed the cassette-hover-expand (#403) CSS block and its pointerenter script (--art-hx). Library card hover untouched. Console clean of new errors.
+
+### home-fixed-spots-583a: Home: fixed spots. Player, library and queue never move or get renamed (Geethub #583)
+- **Status:** review
+- **Priority:** low
+- **Description:** Audit what moves or changes place today, then lock three permanent places so everything is findable without looking.
+- **Touches:** index.html (#bottom-nav order).
+- **Branch:** agent/home-fixed-spots-583a
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Audit: names are already consistent everywhere (nav buttons, pane headings, fullscreen nav, aria labels all say Library / Player / Queue; no JS renames them). Desktop split keeps Library left, Player center, Queue right in a fixed grid. Only real drift found: mobile bottom nav put Search between Player and Queue (Library, Player, Search, Queue, Settings) while the top nav is Library, Player, Queue. Fixed by moving Queue before Search, so the three always sit in the same order. Not changed, needs a decision: (1) Library and Queue hide from the top nav in desktop split but come back in desktop fullscreen; (2) on mobile the Queue is a slide-over sheet, not a page like Library and Player; (3) Search exists only in the bottom nav (mobile); (4) the Queue heading shows "Now playing from X" as a section label when a playlist is playing, which is content, not a rename.
+
+
+### home-time-of-day-warmth-583b: Home: ambient color temperature shifts with the time of day (Geethub #583)
+- **Status:** review
+- **Priority:** low
+- **Description:** Slow static tint (amber evening, cooler morning, dim late night). No new animation or blur layers, so GPU budget stays flat.
+- **Touches:** index.html (#ambient::after, updateTimeOfDayTint).
+- **Branch:** agent/home-time-of-day-583b
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Built: one --tod-tint var on #ambient, extra gradient layer inside the existing #ambient::after, refreshed every 5 min, no animation/blur/new layer. Cool morning (5-10h), neutral day, amber evening (16-22h), dim night. Peak alpha .20 (night), .09 (evening). Verified load and console only; not eyeballed at each hour.
+
+### home-quiet-by-default-583c: Home: quiet by default, controls fade back until the pointer or finger is near (Geethub #583)
+- **Status:** review
+- **Priority:** low
+- **Description:** Art and the song are the loudest thing on screen. Must respect the least-clicks motto: nothing hidden that costs an extra tap.
+- **Touches:** index.html (queue row CSS)
+- **Branch:** agent/home-quiet-583c
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Changed: queue row drag handle, remove X and 3-dot menu now sit at 40% opacity on mouse devices only (@media hover:hover and pointer:fine) and return to full on row hover, keyboard focus-within, open menu, or drag. Touch unchanged and fully visible. Opacity transition only, no filter/blur/animation. Considered and skipped: art corner buttons (#fsBtn, like, cast) because the fullscreen idle fade already drives their opacity.
+
+### home-your-stuff-shelf-583d: Home: a shelf of your recent things (last playlist, album, favorite) instead of recommendations (Geethub #583)
+- **Status:** review
+- **Priority:** low
+- **Description:** Objects left on a table, not a store shelf. No accounts, no ad-like feel.
+- **Touches:** index.html (renderHomeShelf, #homeShelf, setView).
+- **Branch:** agent/home-shelf-583d (merged to main)
+- **Notes:** Also shown on the Library landing (above the grid, hidden while searching), 2026-10-27. Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: up to 4 small static tiles under "Find music" on the empty player: last played playlist, last played album, Liked Songs, then other recently played, from existing last-played times and the cached playlists (no new storage, no network, no animation, no blur). One tap calls playPlaylistNow. Shows nothing when nothing was played; hides itself once something loads. The art gives its row back at mobile and desktop widths so controls stay in view; Library/Player/Queue spots untouched. Limit: it only appears on the empty player, and a cold open with nothing resumed still lands on Library (setView), so it is seen after leaving Library for Player or after a resume is cleared; with a resumed song the welcome-back toast covers it. Verified on localhost (800x600) with seeded playlists: tiles render, tap loads the song, console clean. Real audio start not verified, and mobile width not eyeballed.
+
+### home-welcome-back-583e: Home: welcome-back line with one-tap resume of what you were playing (Geethub #583)
+- **Status:** review
+- **Priority:** low
+- **Description:** On open, e.g. 'Welcome back. You were in the middle of [album].' One tap to resume.
+- **Touches:** index.html (welcomeBackLine, startApp).
+- **Branch:** agent/home-welcome-back-583e (merged to main)
+- **Notes:** Split out of #583 (app should feel like home) brainstorm, 2026-10-27. Shipped: on a cold open with a saved resume (LS_RESUME via tryResume), the existing toast reads "Welcome back. You were in the middle of [playlist or song]." with a Resume button (one tap, auto-fades, nothing to dismiss). Waits for the splash to clear; shows nothing with no saved resume or on a return from background. Verified on localhost with a seeded resume; real audio start on tap not verified.
+
+### home-edge-breathing-room-583f: Home: consistent spacing and softer edges so no panel crowds another (Geethub #583)
+- **Status:** review
+- **Priority:** low
+- **Description:** Overlaps #654 and #655 (queue and library edge styles); fold into them where they already cover it.
+- **Touches:** index.html.
+- **Branch:** agent/home-edge-583f
+- **Notes:** Audit: library and queue panes were rounded (--r-lg) but butted against the player pane and window edge with zero gap. Added one shared --pane-gap (8px) as column-gap and side/bottom padding on #app, desktop split layout only (not desktop-fs drawers). Static CSS. Skipped as redesign: unifying inner row gutters (library 24px vs queue row padding) and mobile panel radii. Not covered here: #654 and #655. Verified gap computes at 1400px and console shows only the known identity-provider and script-fetch errors; not eyeballed with real data.
