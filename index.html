@@ -1638,6 +1638,11 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .viz-ctl-btn.viz-speed-btn{width:auto;padding:0 9px;border-radius:15px;font-size:12px;font-weight:700;letter-spacing:.02em}
 .viz-ctl-btn:hover{background:rgba(10,10,10,.78);color:var(--text)}
 .viz-ctl-btn.is-active{background:var(--accent);color:var(--on-accent,#151107)}
+/* #682: spin icon turns only while rotate is on; paused when the control is faded out (chrome-hidden) */
+@keyframes viz-icon-spin{to{transform:rotate(360deg)}}
+#vizRotateBtn.is-active svg{animation:viz-icon-spin 4s linear infinite}
+#flow-layer.chrome-hidden #vizRotateBtn.is-active svg{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){#vizRotateBtn.is-active svg{animation:none}}
 .art-fs-btn{position:absolute;top:10px;right:10px;z-index:6;width:32px;height:32px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.6);color:var(--faint);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
