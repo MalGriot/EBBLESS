@@ -11857,3 +11857,11 @@ Add entries in this shape:
 - **Touches:** index.html.
 - **Branch:** 
 - **Notes:** Synced from Geethub #690, 2026-10-28. Related: #673, #674 (just shipped).
+
+### lockscreen-fullscreen-player-691: Full-screen animated lock-screen player (spun out of #689)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Owner spec 2026-10-29, spun out of #689 because Android's standard media notification and lock screen player cannot animate. A full-screen player activity that shows over the lock screen: background is the song art scrolling top to bottom to top; progress bar with elapsed time on the left and full duration on the right, both just beneath it; big play button centered between big previous and next; slightly smaller heart/like left of previous; slightly smaller button right of next that cycles the background: art, then cymatics, then the app's lava-lamp color with the EBBLESS logo bouncing around as in the app with no track queued.
+- **Touches:** android-webview (new activity, PlaybackService.java launch), reuse index.html visuals.
+- **Branch:**
+- **Notes:** Starts after lockscreen-buttons-spacing-689 lands (both touch PlaybackService.java). Must obey the GPU budget (transform/opacity only, stop when screen off or hidden). The standard notification keeps the album art bg and gets a right-side button that opens this player.
