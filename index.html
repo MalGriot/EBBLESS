@@ -18500,9 +18500,12 @@ function ytPanelSync(){
   const r = artworkWrap.getBoundingClientRect();
   if (r.width < 2){ ytHost.classList.remove('is-shown'); artworkWrap.classList.remove('yt-video'); el.classList.remove('yt-on'); ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
   // the old popout's size (640 wide), never narrower than the art it replaces
-  const w = Math.round(Math.min(640, window.innerWidth - 32, Math.max(r.width, r.height * 16 / 9)));
+  // on split desktop the player is the middle column: stay between the library and the queue
+  const vr = $('view-player').getBoundingClientRect();
+  const w = Math.round(Math.min(640, vr.width - 32, Math.max(r.width, r.height * 16 / 9)));
   const h = Math.round(w * 9 / 16);
-  ytHost.style.left = (r.left + (r.width - w) / 2) + 'px';
+  const left = Math.max(vr.left + 16, Math.min(r.left + (r.width - w) / 2, vr.right - 16 - w));
+  ytHost.style.left = left + 'px';
   ytHost.style.top = (r.top + (r.height - h) / 2) + 'px';
   ytHost.style.width = w + 'px';
   ytHost.style.height = h + 'px';
