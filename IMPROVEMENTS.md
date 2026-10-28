@@ -11835,7 +11835,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #687, 2026-10-28. Do together with #685.
 
 ### mobile-home-widget-688: Mobile home-screen widget (Geethub #688)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #688. Mobile home-screen widget.
 - **Touches:** index.html.
