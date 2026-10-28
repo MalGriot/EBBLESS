@@ -1281,6 +1281,10 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .btn-ghost:hover{background:var(--panel-2)}
 /* #583 tangibility: buttons press in a little, like firm memory foam (transform only) */
+.tap-ripple{position:fixed;z-index:2147483000;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;pointer-events:none;
+  border:2px solid var(--accent);background:var(--accent-dim);opacity:0;will-change:transform,opacity;animation:tap-ripple 560ms var(--ease-out) forwards}
+@keyframes tap-ripple{0%{transform:scale(.25);opacity:.55}100%{transform:scale(1.15);opacity:0}}
+@media (prefers-reduced-motion:reduce){.tap-ripple{display:none}}
 .btn-ghost:active,.nav-btn:active,.btn-danger:active,.view-toggle-btn:active{transform:scale(.97)}
 .link-btn{font-size:12px;color:var(--text-dim,var(--text));text-decoration:underline;padding:4px 6px;opacity:.8}
 .link-btn:hover:not(:disabled){opacity:1}
@@ -25612,6 +25616,26 @@ function softTap(e){
   softTapSound();
 }
 document.addEventListener('click', softTap, true);
+// #583 tangibility: a soft ripple where you tap. One fixed element at the pointer
+// (transform + opacity only), removed on animationend, at most 3 alive; skipped for
+// reduced motion. Delegated on document in capture, like softTap.
+const TAP_RIPPLE_SEL = 'button,[role="button"],.lib-card,.btn-ghost,.ctl-btn,.nav-btn,.q-row,.track-row';
+function tapRipple(e){
+  if (!e.isTrusted || !e.target || !e.target.closest) return;
+  try { if (!msMotionOk()) return; } catch(err){ return; }
+  const el = e.target.closest(TAP_RIPPLE_SEL);
+  if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
+  if (document.visibilityState !== 'visible' || (!e.clientX && !e.clientY)) return;
+  const live = document.querySelectorAll('.tap-ripple');
+  for (let i = 0; i <= live.length - 3; i++) live[i].remove();
+  const r = document.createElement('div');
+  r.className = 'tap-ripple';
+  r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
+  r.addEventListener('animationend', () => r.remove(), { once: true });
+  setTimeout(() => r.remove(), 900);
+  document.body.appendChild(r);
+}
+document.addEventListener('click', tapRipple, true);
 function msSoundOn(){ try { return localStorage.getItem(LS_MS_SOUND) !== 'off'; } catch(e){ return true; } }
 // The per-page cards are phone-only (CSS hides them elsewhere); desktop keeps
 // the plain list in Settings.
