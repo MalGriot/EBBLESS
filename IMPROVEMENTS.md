@@ -11803,12 +11803,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #683, 2026-10-28; flipped to ready by owner. 
 
 ### song-info-credits-684: Song info shows what song was sampled, release date, album, all credits (producer, label), artist, genre, trivia (Geethub #684)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #684. Song info shows what song was sampled, release date, album, all credits (producer, label), artist, genre, trivia.
 - **Touches:** index.html.
 - **Branch:** 
-- **Notes:** Synced from Geethub #684, 2026-10-28. Large: needs a metadata source (MusicBrainz/Genius/WhoSampled-style). Plan sources before building.
+- **Notes:** Synced from Geethub #684, 2026-10-28. Owner decision 2026-10-29: build on MusicBrainz (release date, album, label, credits, genre, sample relationships where present) plus Wikipedia for a trivia line. Genius (samples, trivia) is a later add; needs an API key and a small proxy.
 
 ### artist-photo-tap-cycles-685: Artist window: tapping the artist picture shows another image of the artist (up to 3) (Geethub #685)
 - **Status:** merged
