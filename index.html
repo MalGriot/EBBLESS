@@ -5168,13 +5168,6 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Double-tap the Library tab"><button type="button" class="btn-ghost" data-adv="glib" data-val="none">Nothing</button><button type="button" class="btn-ghost" data-adv="glib" data-val="top">Back to top</button><button type="button" class="btn-ghost" data-adv="glib" data-val="search">Search library</button></div>
         </div>
-        <div class="settings-row settings-row-slider">
-          <div>
-            <div class="label"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9c4-3 10-3 14 0M5 13c4-3 10-3 14 0M5 17c4-3 10-3 14 0"/></svg>Hold the E logo</div>
-            <div class="desc">Tapping the logo shows the splash screen. Holding opens the mini player when a song is playing.</div>
-          </div>
-          <div class="adv-chips" role="group" aria-label="Hold the E logo"><button type="button" class="btn-ghost" data-adv="lhold" data-val="mini">Mini player</button><button type="button" class="btn-ghost" data-adv="lhold" data-val="splash">Splash screen</button></div>
-        </div>
         <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>Backup</div>
         <div class="settings-row">
           <div>
@@ -9810,8 +9803,8 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
   }
   toggleQueuePanel();
 }));
-// Hold-to-splash (Geethub #277): press and hold the wordmark ~1s (mouse or
-// touch) to go back to the splash screen; the .wm-hold-ring fills while held.
+// Hold-to-reload: press and hold the wordmark ~1s (mouse or
+// touch) to reload the app (was hold-to-splash, Geethub #277); the .wm-hold-ring fills while held.
 // Releasing early cancels and the normal click (player view) still fires.
 // Playback keeps going - the splash is just a cover, and Enter drops the
 // listener right back where they were. A completed hold swallows the click
@@ -9840,8 +9833,7 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
       // the release that ends this hold may land on the splash instead, in
       // which case no click reaches the button - don't let the flag linger
       setTimeout(() => { swallowClick = false; }, 1500);
-      if (advPrefs().lhold !== 'splash' && miniPlayerSupported() && currentTrack()) openMiniPlayer();
-      else returnToSplash();
+      $('reloadAppBtn').click();   // same path as Settings > Reload now
     }, HOLD_MS);
   });
   btn.addEventListener('pointermove', (e) => {
@@ -9856,7 +9848,15 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
   });
 })();
 // desktop only (where the mini player exists); on phones the logo still goes to the player
-$('wordmarkBtn').addEventListener('click', () => { if (miniPlayerSupported()) returnToSplash(); else setView('player'); });
+// double-tap opens the mini player (when a song is playing), so the single tap waits a beat to see if a second one follows
+{
+  let tapTimer = null;
+  $('wordmarkBtn').addEventListener('click', () => {
+    if (!miniPlayerSupported()){ setView('player'); return; }
+    if (tapTimer){ clearTimeout(tapTimer); tapTimer = null; if (currentTrack()) openMiniPlayer(); else returnToSplash(); return; }
+    tapTimer = setTimeout(() => { tapTimer = null; returnToSplash(); }, 333);
+  });
+}
 
 // Bring the splash back over the already-running app (wordmark hold above).
 // Reuses the first-visit Tutorial/Enter choice: Enter just hides the splash
@@ -18649,7 +18649,7 @@ const WHATS_NEW = [
     'CuRRentSSsss learns from what you come back to, and has a thumbs-down to say "not for me".',
     'The paste box cycles through ideas of what to paste or search, including suggestions picked for you.',
     'The mini-player fades and shrinks when your mouse is away.',
-    'Hold the E logo to go back to the splash screen.',
+    'Hold the E logo to reload the app. Double-tap it for the mini player.',
     'The keyboard shortcuts list in Settings stays closed until you open it.',
     'Updates from the same day now show as one version here.'
   ]},
