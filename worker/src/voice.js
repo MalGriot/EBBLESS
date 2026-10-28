@@ -216,9 +216,9 @@ const H_OPS = [
   [/\b(pause|stop)\b/, { op: 'pause' }], [/\b(louder|turn (it )?up)\b/, { op: 'volume', dir: 1 }],
   [/\b(quieter|softer|turn (it )?down)\b/, { op: 'volume', dir: -1 }],
 ];
-export function heuristicPlan(text) {
+export function heuristicPlan(text, want) {
   const t = cleanStr(text, VOICE_MAX_TEXT).toLowerCase();
-  if (t.split(' ').length > 3 && looksLikeSet(t)) { const p = validatePlan({ kind: 'set', intention: t.slice(0, 140) }, t); if (p) return p; }
+  if (want === 'set' || (t.split(' ').length > 3 && looksLikeSet(t))) { const p = validatePlan({ kind: 'set', intention: t.slice(0, 140) }, t); if (p) return p; }
   if (t.split(' ').length <= 5) for (const [re, op] of H_OPS) if (re.test(t)) return validatePlan({ kind: 'command', ops: [op] });
   // Everything else is a mood sentence: the client hands it to the existing /vibe-interpret path.
   return validatePlan({ kind: 'mood', text: t || 'good music', energy: 5 });
@@ -257,11 +257,11 @@ const VOICE_JSON_SCHEMA = {
   required: ['kind', 'ops', 'seeds', 'tags', 'energy', 'text', 'say'],
 };
 
-export async function askFreeModel(env, text, ctx) {
+export async function askFreeModel(env, text, ctx, want) {
   if (!env.AI || typeof env.AI.run !== 'function') return null;
   let timer;
   try {
-    const user = JSON.stringify({ said: text, playing: ctx.now, recent: ctx.recent });
+    const user = JSON.stringify(want === 'set' ? { said: text, playing: ctx.now, recent: ctx.recent, instruction: 'The listener asked for a timed set: answer with kind set.' } : { said: text, playing: ctx.now, recent: ctx.recent });
     const run = env.AI.run(VOICE_MODEL, {
       messages: [{ role: 'system', content: VOICE_SYSTEM_PROMPT }, { role: 'user', content: user }],
       max_tokens: 600, temperature: 0.3,
@@ -294,12 +294,13 @@ export async function handleVoicePlan(request, env, ctx, deps) {
   const said = cleanStr(body.text, VOICE_MAX_TEXT);
   if (said.length < 2) return json({ error: 'missing text' }, 400);
   const c = sanitizeCtx(body.ctx);
+  const want = body.want === 'set' ? 'set' : '';   // typed "set: ..." entry: the listener explicitly asked for a set
 
   const tier = await voiceTierFor(env, who.sub);
   const limit = VOICE_CAPS[tier];
   // Sets are a paid feature: free listeners get the same intention as one flat mood plus {upsell:'sets'}.
   const gate = (p) => (p && p.kind === 'set' && tier !== 'paid' ? { plan: setToMood(p), upsell: 'sets' } : { plan: p });
-  const heuristic = () => heuristicPlan(said);
+  const heuristic = () => heuristicPlan(said, want);
   const hOut = () => { const g = gate(heuristic()); return g; };
   if (!env.VOICE_QUOTA) return json({ ...hOut(), source: 'heuristic', tier, limit, why: 'no-quota-binding' });
 
@@ -317,8 +318,8 @@ export async function handleVoicePlan(request, env, ctx, deps) {
   }
 
   let raw = null, via = 'ai';
-  if (tier === 'paid') { raw = await askPaidModel(env, said, c); }
-  if (raw == null) raw = await askFreeModel(env, said, c);
+  if (tier === 'paid') { raw = await askPaidModel(env, said, c, want); }
+  if (raw == null) raw = await askFreeModel(env, said, c, want);
   const gated = raw == null ? null : validatePlan(raw, said);
   if (!gated) {
     await quota.refund();   // the listener got nothing from the model: don't charge the request

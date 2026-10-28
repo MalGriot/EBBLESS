@@ -1962,6 +1962,8 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
   box-shadow:0 0 60px rgba(0,0,0,.5)}
 .queue-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px;flex:none}
 .queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.queue-arc{padding:0 20px 8px;font-size:11.5px;font-weight:600;color:var(--faint-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.queue-arc[hidden]{display:none}
 .queue-head .clear{font-size:12px;color:var(--faint-2);flex:none}
 .queue-head .clear:hover{color:var(--bad)}
 .queue-head .discover-toggle{flex:none;display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
@@ -5480,6 +5482,7 @@ body.week-up-on{overflow:hidden}
       <button class="re qh-icon" id="queueSaveBtn" title="Save this queue as a new playlist in your library" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg></button>
       <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
     </div>
+    <div class="queue-arc" id="queueArcRow" hidden></div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody">
       <div class="q-arrows" id="queueArrowsRow">
@@ -17251,6 +17254,9 @@ importForm.addEventListener('submit', (e) => {
   // anything else (playlist-vibe-search) is sent to /playlistsearch instead
   // of just erroring, so the input bar doubles as "paste a link" and
   // "search a vibe" without a separate affordance.
+  // Voice DJ phase 2: "set: ecstatic dance, 90 minutes, start gentle, build, end calm" runs the same set path as the mic, no microphone needed.
+  const typedSet = /^set\s*:\s*(.{2,})$/i.exec(val);
+  if (typedSet){ importErr.textContent = ''; urlInput.value = ''; voiceNoMatch(typedSet[1].slice(0, 250), 'set'); return; }
   if (looksLikeUrl(val)){
     importErr.textContent = /\/(artist|channel)s?\/|\/@/i.test(val)
       ? "Artist pages can be imported from Spotify, YouTube, SoundCloud, or Apple Music - that one isn't supported."
@@ -18098,6 +18104,113 @@ function voiceMoodOf(w, idx){
 }
 /* VOICE-GRAMMAR:END */
 
+/* SET-ARC:BEGIN - pure arc filler (Voice DJ #553 phase 2). No DOM, no network, no app globals:
+   tools/voice-sets.test.js loads exactly this block. A set session walks an arc
+   (steps of minutes with an energy and optional BPM glide) and, for each slot,
+   picks the best unused candidate from a pool. The caller resolves the pick to a
+   playable video (async) and then commits it with the real duration, or rejects it. */
+const SET_MAX_BPM_JUMP = 12;       // largest tempo change allowed between neighbouring songs
+const SET_DEFAULT_SONG_SEC = 210;  // 3.5 min, when a song's length is unknown
+const SET_STEP_SLACK_SEC = 90;     // a step counts as filled within this of its length
+const SET_ENERGY_CAP = [3, 6];     // pass 1 / pass 2 (relaxed): largest |energy - target| accepted when the energy is known
+const SET_TAG_ENERGY = { ambient: 1.5, sleep: 1, drone: 1, 'new age': 2, classical: 2.5, chill: 3, downtempo: 3.5, 'lo-fi': 3, acoustic: 3, mellow: 3, jazz: 4, soul: 4.5, folk: 4, world: 5, reggae: 5, blues: 4.5, 'r&b': 5, pop: 6, funk: 6.5, disco: 7, afrobeat: 6.5, rock: 6.5, 'hip hop': 6.5, 'afro house': 7.5, 'deep house': 7, house: 8, dance: 8, electronic: 7, techno: 8.5, edm: 9, party: 8.5, trance: 8.5, metal: 9, punk: 8.5 };
+function setRng(seed){   // mulberry32: same seed, same set
+  let a = seed >>> 0;
+  return function(){ a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function setTagEnergy(tags){   // coarse 0-10 estimate from tags, or null
+  let sum = 0, n = 0;
+  (tags || []).forEach(t => { const v = SET_TAG_ENERGY[String(t).toLowerCase()]; if (v != null){ sum += v; n++; } });
+  return n ? sum / n : null;
+}
+function setLerp(a, b, f){ return a + (b - a) * Math.max(0, Math.min(1, f)); }
+function createSetSession(arc, opts){
+  opts = opts || {};
+  const rng = opts.rng || setRng(1), maxJump = opts.maxJump || SET_MAX_BPM_JUMP;
+  const used = new Set(), recent = opts.recent || new Set();   // keys (title|artist lowercase) never picked again
+  const artistCount = new Map();
+  const steps = (arc || []).map(s => ({ s, totalSec: Math.max(60, (s.minutes || 0) * 60), elapsed: 0, picks: 0, skipped: false }));
+  const S = { picks: [], stepIdx: 0, prevBpm: null, prevArtist: '', estimated: 0, relaxed: 0, steps };
+  function advance(){
+    while (S.stepIdx < steps.length){
+      const st = steps[S.stepIdx];
+      if (st.skipped || st.elapsed >= st.totalSec - SET_STEP_SLACK_SEC) S.stepIdx++; else break;
+    }
+    return S.stepIdx < steps.length;
+  }
+  S.done = () => !advance();
+  S.step = () => (advance() ? steps[S.stepIdx].s : null);
+  // The best candidate for the next slot, or null if none fits (pool exhausted for this slot).
+  S.next = function(pool){
+    if (!advance()) return null;
+    const st = steps[S.stepIdx], s = st.s, f = st.elapsed / st.totalSec;
+    const tE = setLerp(s.energyFrom, s.energyTo, f);
+    const hasBpm = s.bpmFrom != null && s.bpmTo != null, tB = hasBpm ? setLerp(s.bpmFrom, s.bpmTo, f) : null;
+    const lo = hasBpm ? Math.min(s.bpmFrom, s.bpmTo) : 0, hi = hasBpm ? Math.max(s.bpmFrom, s.bpmTo) : 0;
+    for (let pass = 0; pass < SET_ENERGY_CAP.length; pass++){
+      let best = null, bestScore = Infinity;
+      for (const c of pool){
+        if (!c || !c.key || used.has(c.key) || recent.has(c.key) || c.rejected) continue;
+        const bpm = c.bpm > 0 ? c.bpm : null;
+        if (bpm && S.prevBpm && Math.abs(bpm - S.prevBpm) > maxJump) continue;       // hard rule: it has to mix
+        let e = typeof c.energy === 'number' ? c.energy : setTagEnergy(c.tags), est = typeof c.energy !== 'number';
+        let sc = 0;
+        if (e == null) sc += 2; else {
+          const d = Math.abs(e - tE);
+          if (d > SET_ENERGY_CAP[pass]) continue;
+          sc += d;
+        }
+        if (bpm && hasBpm) sc += Math.max(0, lo - bpm, bpm - hi) / 10;
+        if (bpm && S.prevBpm) sc += Math.abs(bpm - S.prevBpm) / maxJump * 0.8;
+        const tags = (c.tags || []).map(t => String(t).toLowerCase());
+        sc -= Math.min(2, (s.tags || []).filter(t => tags.includes(String(t).toLowerCase())).length) * 0.5;
+        const ak = String(c.artist || '').toLowerCase();
+        if (ak && ak === S.prevArtist) sc += 1.5;
+        sc += (artistCount.get(ak) || 0) * 0.4;
+        sc += rng() * 0.3;
+        if (sc < bestScore){ bestScore = sc; best = { c, est, relaxed: pass > 0 }; }
+      }
+      if (best) return { cand: best.c, stepIdx: S.stepIdx, step: s, estimated: best.est, relaxed: best.relaxed };
+    }
+    return null;
+  };
+  S.commit = function(pick, durationSec){
+    const st = steps[pick.stepIdx], c = pick.cand, sec = durationSec > 0 ? durationSec : (c.durationSec > 0 ? c.durationSec : SET_DEFAULT_SONG_SEC);
+    used.add(c.key); st.elapsed += sec; st.picks++;
+    if (c.bpm > 0) S.prevBpm = c.bpm;
+    S.prevArtist = String(c.artist || '').toLowerCase();
+    artistCount.set(S.prevArtist, (artistCount.get(S.prevArtist) || 0) + 1);
+    if (pick.estimated) S.estimated++;
+    if (pick.relaxed) S.relaxed++;
+    S.picks.push({ cand: c, stepIdx: pick.stepIdx, sec });
+  };
+  S.reject = function(pick){ pick.cand.rejected = true; };   // could not be matched to a playable video
+  S.skipStep = function(){ if (S.stepIdx < steps.length) steps[S.stepIdx].skipped = true; };   // pool ran dry for this step: move on, report it
+  S.shortfall = () => steps.map((st, i) => ({ idx: i, label: st.s.label, missingMin: Math.max(0, Math.round((st.totalSec - st.elapsed) / 60)), picks: st.picks })).filter(x => x.missingMin > 1);
+  S.totalSec = () => S.picks.reduce((n, p) => n + p.sec, 0);
+  S.targetSec = () => steps.reduce((n, st) => n + st.totalSec, 0);
+  return S;
+}
+// Fill a whole arc from a static pool (tests, and the quick first pass). resolve(cand) -> seconds | 0 to reject.
+function fillSetArc(arc, pool, opts){
+  const S = createSetSession(arc, opts), resolve = opts && opts.resolve;
+  for (let guard = 0; guard < 2000 && !S.done(); guard++){
+    const pick = S.next(pool);
+    if (!pick){ S.skipStep(); continue; }
+    const sec = resolve ? resolve(pick.cand) : (pick.cand.durationSec || SET_DEFAULT_SONG_SEC);
+    if (resolve && !sec){ S.reject(pick); continue; }
+    S.commit(pick, sec);
+  }
+  return { picks: S.picks, shortfall: S.shortfall(), estimated: S.estimated, relaxed: S.relaxed, totalSec: S.totalSec(), targetSec: S.targetSec() };
+}
+// Static one-line arc summary for the queue header.
+function setArcSummary(meta){
+  if (!meta) return '';
+  const names = (meta.arc || []).map(s => s.label).join(' > ');
+  return [meta.intention, meta.durationMin + ' min', names].filter(Boolean).join(' - ');
+}
+/* SET-ARC:END */
+
 const VOICE_STEP = 10;           // in-app volume step, percent
 function voiceSetAppVolume(p){ voiceVolPct = Math.max(0, Math.min(100, p)); reapplyLevel(); }
 // Android: the phone's media volume (AudioManager STREAM_MUSIC) by one step, through the native
@@ -18192,11 +18305,11 @@ function voicePlanCtx(){
   };
 }
 const VOICE_PLAN_OPS = ['play', 'pause', 'next', 'prev', 'volume', 'mute', 'unmute', 'like', 'unlike', 'shuffle', 'repeat', 'more_like_this'];
-async function fetchVoicePlan(said){
+async function fetchVoicePlan(said, want){
   const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), VOICE_PLAN_TIMEOUT_MS);
   try {
     const res = await fetch(BACKEND + '/voice/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
-      body: JSON.stringify({ idToken: profileIdToken, text: said.slice(0, 300), ctx: voicePlanCtx() }) });
+      body: JSON.stringify({ idToken: profileIdToken, text: said.slice(0, 300), ctx: voicePlanCtx(), want: want === 'set' ? 'set' : undefined }) });
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) return { signedOut: true };
     if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
@@ -18219,12 +18332,18 @@ function voiceRunPlan(plan, said, interp){
     const vibe = (typeof plan.text === 'string' && plan.text.trim()) || (Array.isArray(plan.tags) ? plan.tags.join(', ') : '') || said;
     return voiceRun({ op: 'mood', key: (plan.tags && plan.tags[0]) || 'your mood', vibe: vibe.slice(0, 200), interp: interp && Array.isArray(interp.tracks) && interp.tracks.length ? interp : undefined });
   }
+  if (plan.kind === 'set'){
+    if (navigator.onLine === false){ showToast('Needs a connection for sets'); return true; }
+    if (!setClientPlan(plan)) return false;
+    startVoiceSet(plan, interp, said).catch(() => { showToast("Couldn't build that set"); beginConversationalVibe(said); });
+    return true;
+  }
   return false;
 }
-async function voiceLlm(said){
+async function voiceLlm(said, want){
   showToast('Thinking...');
   let data;
-  try { data = await fetchVoicePlan(said); }
+  try { data = await fetchVoicePlan(said, want); }
   catch(e){ showToast("Couldn't reach voice requests - trying a normal search"); beginConversationalVibe(said); return; }
   if (data.signedOut){ showToast('Sign in to use voice requests'); beginConversationalVibe(said); return; }
   if (data.capped){
@@ -18232,16 +18351,160 @@ async function voiceLlm(said){
     beginConversationalVibe(said); return;
   }
   if (!voiceRunPlan(data.plan, said, data.interp)) beginConversationalVibe(said);
+  if (data.upsell === 'sets') setTimeout(() => showToast('Sets are part of FLOW and HORIZON'), 2500);   // after the single-mood plan's own toast
 }
+/* ---- Voice DJ (#553) phase 2: mood and arc sets (the driver for SET-ARC above) ----
+   The worker plan only names an arc, seeds and tags. Every song here comes from the
+   existing candidate sources (the grounded interp pool, /similar walks, /metrics for
+   BPM and energy) and must resolve through searchYouTubeCached, so the model can
+   never put a track in the queue. Whole songs, no crossfade of its own (the global
+   "Blend songs together" setting still applies, default off). Playback starts on the
+   first matched song; the rest is appended in the background, a few songs ahead of the
+   listener, and stops the moment the queue is replaced or a new set starts. */
+const SET_SESSION_ID = 'custom-voice-set';   // an unsaved set - reused, like VIBE_SESSION_ID
+const SET_AHEAD = 10;                        // songs kept queued after the current one
+const SET_AHEAD_POLL_MS = 15000;             // idle check when the buffer is full
+const SET_POOL_ROUNDS = 4;                   // pool extensions tried before a step is given up on
+const SET_METRIC_ROUNDS = 6;                 // /metrics batches (24 songs each) per set
+var setBuildToken = 0, setMeta = null;       // var: renderQueuePanel reads setMeta before this line runs on a cold start
+function setCancel(){ setBuildToken++; }
+function setClientPlan(plan){   // re-check the worker's set plan (it could have been cached or tampered with)
+  const raw = plan && Array.isArray(plan.arc) ? plan.arc.slice(0, 8) : [];
+  const clampE = (n, d) => { n = Number(n); return Number.isFinite(n) ? Math.min(10, Math.max(0, Math.round(n))) : d; };
+  const arc = [];
+  for (const x of raw){
+    if (!x || typeof x !== 'object') return null;
+    const label = String(x.label || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 24), minutes = Number(x.minutes);
+    if (!label || !(minutes > 0)) return null;
+    const eFrom = clampE(x.energyFrom, 5), st = { label, minutes: Math.min(240, minutes), energyFrom: eFrom, energyTo: clampE(x.energyTo, eFrom),
+      tags: (Array.isArray(x.tags) ? x.tags : []).map(t => String(t).toLowerCase().slice(0, 30)).filter(Boolean).slice(0, 4) };
+    const bf = Number(x.bpmFrom), bt = Number(x.bpmTo);
+    if (bf >= 50 && bf <= 200 && bt >= 50 && bt <= 200){ st.bpmFrom = bf; st.bpmTo = bt; }
+    arc.push(st);
+  }
+  if (!arc.length) return null;
+  const durationMin = Math.max(10, Math.min(240, Math.round(arc.reduce((n, s) => n + s.minutes, 0))));
+  return { arc, durationMin, intention: String(plan.intention || plan.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 60) };
+}
+function renderSetArcRow(){
+  const el = $('queueArcRow');
+  if (!el) return;
+  if (!setMeta || !state.playlist || state.playlist.id !== setMeta.id || state.queuePos < 0){ el.hidden = true; return; }
+  let t = setArcSummary(setMeta);
+  if (setMeta.building) t += ' - ' + setMeta.got + ' of about ' + setMeta.want + ' songs';
+  else if (setMeta.short) t += ' - short: ' + setMeta.got + ' of ' + setMeta.want + ' songs';
+  el.textContent = t; el.title = t; el.hidden = false;
+}
+const setWait = (ms) => new Promise(r => setTimeout(r, ms));
+function setNormTags(tags){ return (Array.isArray(tags) ? tags : []).map(x => (typeof x === 'string' ? x : x && x.name)).filter(Boolean).map(x => String(x).toLowerCase()); }
+async function setAnnotate(list){   // BPM and energy (0-10) from /metrics for songs not yet tried; best-effort
+  const todo = list.filter(c => !c.annotated).slice(0, 24);
+  if (!todo.length) return;
+  todo.forEach(c => { c.annotated = true; });
+  const parts = await Promise.all([fetchTrackMetrics(todo.slice(0, 12)), todo.length > 12 ? fetchTrackMetrics(todo.slice(12)) : Promise.resolve([])]);
+  const ms = parts[0].concat(parts[1]);
+  todo.forEach((c, i) => { const m = ms[i]; if (!m) return; if (m.bpm > 0) c.bpm = m.bpm; if (typeof m.energy === 'number') c.energy = Math.round(m.energy * 100) / 10; });
+}
+async function startVoiceSet(plan, interp, said){
+  const cp = setClientPlan(plan);
+  if (!cp) return false;
+  const token = ++setBuildToken, alive = () => token === setBuildToken;
+  const { arc } = cp, id = SET_SESSION_ID;
+  awardMilestone('search'); statsFeature('voice_set');
+  showToast('Building your set: ' + arc[0].label.toLowerCase() + '...');
+  // 1. Candidate pool: the plan's seeds and the grounded interp tracks, then /similar walks from the seeds.
+  const pool = [], have = new Set();
+  const add = (t, from) => {
+    if (!t || !t.title || !t.artist) return;
+    const key = tagCacheKey(t);
+    if (have.has(key)) return;
+    have.add(key); pool.push({ key, title: String(t.title), artist: String(t.artist), image: t.image || null, tags: setNormTags(t.tags), bpm: null, energy: null, from });
+  };
+  (plan.seeds || []).forEach(s => add(s, 'seed'));
+  ((interp && interp.tracks) || []).forEach(t => add(t, t.from || 'tag'));
+  const walkFrom = pool.slice(0, 2);
+  const sims = await Promise.all(walkFrom.map(s => fetchSimilar(s.title, s.artist, 25).catch(() => ({ candidates: [] }))));
+  if (!alive()) return true;
+  sims.forEach(r => (r.candidates || []).forEach(c => add(c, 'similar')));
+  if (pool.length < 4){ setBuildToken++; showToast("Couldn't find songs for that set - trying a normal search"); beginConversationalVibe(said); return true; }
+  const recent = new Set(listenSeedHistory().map(h => ((h.t || '') + '|' + (h.a || '')).toLowerCase()));
+  const nowT = currentTrack(); if (nowT) recent.add(tagCacheKey(nowT));
+  let metricRounds = 1;
+  await setAnnotate(pool).catch(() => {});
+  if (!alive()) return true;
+  // 2. Walk the arc.
+  const S = createSetSession(arc, { rng: setRng((Date.now() ^ pool.length * 7919) >>> 0), recent });
+  const want = Math.max(1, Math.round(S.targetSec() / SET_DEFAULT_SONG_SEC));
+  const pl = { id, type: 'custom', name: (cp.intention ? cp.intention.charAt(0).toUpperCase() + cp.intention.slice(1) : 'Your set') + ' set', image: null, tracks: [], ts: Date.now(), vibeQuery: String(said || '').slice(0, 300) };
+  const meta = { id, intention: cp.intention, durationMin: cp.durationMin, arc, got: 0, want, building: true, short: false };
+  let started = false, rounds = 0, lastStep = -1;
+  while (alive() && !S.done()){
+    if (started){
+      if (!state.playlist || state.playlist.id !== id) return true;   // queue replaced by something else: stop quietly
+      if (state.queue.length - 1 - state.queuePos >= SET_AHEAD){ await setWait(SET_AHEAD_POLL_MS); continue; }
+    }
+    if (pool.some(c => !c.annotated && !c.rejected) && metricRounds < SET_METRIC_ROUNDS){ metricRounds++; await setAnnotate(pool).catch(() => {}); if (!alive()) return true; }
+    const pick = S.next(pool);
+    if (!pick){
+      if (rounds < SET_POOL_ROUNDS){
+        // thin pool for this slot: walk /similar from a song already in the set (or a seed), then try again
+        const anchor = S.picks.length ? S.picks[Math.max(0, S.picks.length - 1 - rounds)].cand : pool[rounds % pool.length];
+        rounds++;
+        const r = await fetchSimilar(anchor.title, anchor.artist, 25).catch(() => ({ candidates: [] }));
+        if (!alive()) return true;
+        const before = pool.length;
+        (r.candidates || []).forEach(c => add(c, 'similar'));
+        if (pool.length > before && metricRounds < SET_METRIC_ROUNDS){ metricRounds++; await setAnnotate(pool).catch(() => {}); }
+      } else { S.skipStep(); rounds = 0; }
+      continue;
+    }
+    if (pick.stepIdx !== lastStep){ lastStep = pick.stepIdx; if (!started) showToast('Building your set: ' + pick.step.label.toLowerCase() + '...'); }
+    const c = pick.cand;
+    const match = await searchYouTubeCached(c.title, c.artist).catch(() => null);
+    if (!alive()) return true;
+    if (!match || !match.videoId){ S.reject(pick); continue; }
+    rounds = 0;
+    S.commit(pick, match.duration || 0);
+    const row = { title: c.title, artist: c.artist, videoId: match.videoId, matchedTitle: match.title || '', channel: match.channel || '', plays: 0, art: c.image || null, duration: match.duration || 0 };
+    pl.tracks.push(row); pl.ts = Date.now(); persistPlaylistObj(pl);
+    meta.got = pl.tracks.length;
+    if (!c.image) resolveTrackArt('applemusic', c.title, c.artist, null).then(a => { if (a && alive()){ row.art = a; persistPlaylistObj(pl); } }).catch(() => {});
+    if (!started){
+      started = true;
+      setMeta = meta;
+      closeImportOverlay();
+      loadPlaylistIntoPlayer(pl);
+      if (state.shuffle) toggleShuffle();   // an arc only works in order
+      buildQueueFrom(0, id);
+      loadIndex(state.queuePos, true);
+      setView('player');
+    } else if (state.playlist && state.playlist.id === id){
+      state.queue.push({ plId: id, idx: pl.tracks.length - 1 });
+      renderQueuePanel();
+    }
+    if (pl.tracks.length > SET_FIRST_FAST) await setWait(350);   // the opening songs go back to back; then pace the matcher
+  }
+  if (!alive()) return true;
+  meta.building = false;
+  if (!started){ showToast("Couldn't find playable songs for that set - trying a normal search"); beginConversationalVibe(said); return true; }
+  const fill = S.totalSec() / S.targetSec();
+  meta.short = fill < 0.6;
+  try { console.info('[voice] set: ' + S.estimated + '/' + S.picks.length + ' slots estimated, ' + S.relaxed + ' relaxed, shortfall ' + JSON.stringify(S.shortfall())); } catch(e){}
+  showToast(meta.short ? 'Short set: ' + meta.got + ' of ' + want + ' songs matched.' : 'Set ready: ' + meta.got + ' songs, about ' + Math.round(S.totalSec() / 60) + ' min');
+  renderSetArcRow();
+  return true;
+}
+const SET_FIRST_FAST = 6;   // songs matched back to back before pacing (playback starts on the first)
+
 // What the local grammar did not claim.
-function voiceNoMatch(said){
+function voiceNoMatch(said, want){
   if (navigator.onLine === false){ showToast('Needs a connection for that one'); return; }
   if (!voiceSignedIn()){
     if (!voiceSignInToasted){ voiceSignInToasted = true; showToast('Sign in to use voice requests'); }
     beginConversationalVibe(said); return;
   }
-  if (!voiceConsented()){ openVoiceConsent((ok) => { if (ok) voiceLlm(said); else beginConversationalVibe(said); }); return; }
-  voiceLlm(said);
+  if (!voiceConsented()){ openVoiceConsent((ok) => { if (ok) voiceLlm(said, want); else beginConversationalVibe(said); }); return; }
+  voiceLlm(said, want);
 }
 
 /* ---- mic: speak the vibe (Web Speech API) ----
@@ -22838,6 +23101,7 @@ let lastQueueHead = '';
 let lastQueueNowHead = '', lastQueueNowPos = -1;
 function renderQueuePanel(){
   renderDiscoverToggle();
+  renderSetArcRow();
   markNowPlaying();
   const head = state.queue.length ? state.queue[0].plId + '|' + state.queue[0].idx : '';
   const sc = queueBody.closest('.queue-scroll');

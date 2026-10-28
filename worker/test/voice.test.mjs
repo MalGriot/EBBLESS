@@ -226,3 +226,12 @@ test('set handler: model error / cap / global ceiling still serve a template set
   assert.equal(c.body.reason, 'global'); assert.equal(c.body.plan.kind, 'set');
   assert.equal(setToMood(c.body.plan).kind, 'mood');
 });
+
+test('set handler: want=set forces a set from the heuristic and tells the model', async () => {
+  let user = null;
+  const ai = { run: async (m, o) => { user = o.messages[1].content; return { response: JSON.stringify(goodSet) }; } };
+  const r = await call(mkEnv(ai, { 'ent:u1': '{"tier":"flow"}' }), { idToken: 'ebs1.good', text: 'rainy evening', want: 'set' });
+  assert.equal(r.body.plan.kind, 'set'); assert.match(user, /timed set/);
+  const h = await call(mkEnv(undefined, { 'ent:u1': '{"tier":"flow"}' }), { idToken: 'ebs1.good', text: 'deep focus', want: 'set' });
+  assert.equal(h.body.plan.kind, 'set'); assert.equal(h.body.plan.arc[1].label, 'Steady');
+});
