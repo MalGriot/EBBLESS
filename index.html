@@ -477,7 +477,8 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
    vizRosicrucianColor() / updateLibraryClockColor() in the script), so the
    Load button / active-pin color drifts with it through the day like the
    rest of the app; this view additionally gets a soft tint wash. */
-#view-library{
+#view-library,
+body.split-desktop #queue-panel{   /* #672: queue pane matches the library pane (transparent over .lib-bg + same tint) */
   background:radial-gradient(ellipse 140% 60% at 50% -10%, var(--clock-tint, transparent) 0%, transparent 70%);
   transition:background 4s linear;
   isolation:isolate;
@@ -486,6 +487,7 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
    first paint transitions from the CSS fallback color to today's actual
    color instead of just starting on it */
 .clock-color-init #view-library,
+.clock-color-init body.split-desktop #queue-panel,
 .clock-color-init .lib-bg-tint,
 .clock-color-init #splash,
 .clock-color-init #splash .splash-tint{transition:none!important}
