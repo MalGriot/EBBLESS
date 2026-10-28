@@ -5175,6 +5175,13 @@ body.week-up-on{overflow:hidden}
           </div>
           <div class="adv-chips" role="group" aria-label="Start volume"><button type="button" class="btn-ghost" data-adv="start" data-val="quiet">Quiet</button><button type="button" class="btn-ghost" data-adv="start" data-val="loud">Loud</button></div>
         </div>
+        <div class="settings-row settings-row-slider">
+          <div>
+            <div class="label">Auto-resume on reload</div>
+            <div class="desc">If music was playing when the app closed, pick it back up on open. If the browser blocks sound, one tap carries on.</div>
+          </div>
+          <div class="adv-chips" role="group" aria-label="Auto-resume on reload"><button type="button" class="btn-ghost" data-adv="autoresume" data-val="on">On</button><button type="button" class="btn-ghost" data-adv="autoresume" data-val="off">Off</button></div>
+        </div>
         <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Player</div>
         <div class="settings-row settings-row-slider">
           <div>
@@ -6807,6 +6814,10 @@ const LS_BLEND_GENERATED = 'ebbless:blendGeneratedAt';  // ms timestamp SwiiiRrr
 const LS_YEAR_CACHE = 'ebbless:yearCache:v1';  // release year per title|artist from /spotifyart (0 = looked up, none found)
 const LS_PLAY_HISTORY = 'ebbless:playHistory';  // recent track plays, newest first: [{v,t,a,ts}] - feeds CuRRentSSsss' "latest played" seed and its unplayed filter
 const LS_BACKGROUNDED_AT = 'ebbless:backgroundedAt';    // ms timestamp the app was last hidden/paused
+// #686: was music playing when the page last went away (kept current by setPlayingUI). Read once at load, before anything can overwrite it.
+const LS_RESUME_PLAY = 'ebbless:resumePlaying';
+const resumeWasPlaying = lsGet(LS_RESUME_PLAY, false) === true;
+let resumeBootDone = false;   // setPlayingUI only records the flag after the load-time resume attempt, so boot-time UI resets can't clear it
 const LS_WAS_PLAYING = 'ebbless:wasPlayingAtBackground'; // whether playback was active going into that background
 
 function lsGet(key, fallback){
@@ -24426,6 +24437,7 @@ function startLoadIconTicker(){
 }
 
 function setPlayingUI(isPlaying){
+  if (resumeBootDone) lsSet(LS_RESUME_PLAY, !!isPlaying);
   ytPanelBtnSync();
   if (isPlaying && activeLoadProgress() !== null) startLoadIconTicker();
   else { stopLoadIconTicker(); [seekTrack, flowSeekTrack].forEach(el => el.classList.remove('is-loading', 'ad-fill')); setPlayIcons(isPlaying ? ICO_PAUSE : ICO_PLAY); }
@@ -25299,7 +25311,7 @@ function advRender(){
   const active = {
     art: artStyle, motion: p.motion === 'reduced' ? 'reduced' : 'full', accent: p.accent || '', cursor: ['dot','ring','cross','native'].includes(p.cursor) ? p.cursor : 'drop',
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
-    start: p.start === 'loud' ? 'loud' : 'quiet',
+    start: p.start === 'loud' ? 'loud' : 'quiet', autoresume: p.autoresume === 'off' ? 'off' : 'on',
     gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none', lhold: p.lhold === 'splash' ? 'splash' : 'mini',
     albsec: p.albsec === 'flat' ? 'flat' : 'sections', shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
@@ -25662,6 +25674,7 @@ function advChoose(k, v){
   else if (k === 'sort'){ setLibrarySort(v); applyLibSortUI(); renderLibrary(); }
   else if (k === 'blend'){ crossfadePrefs.ms = parseInt(v, 10) || 4000; lsSet(LS_CROSSFADE, crossfadePrefs); renderCrossfadeUI(); }
   else if (k === 'start'){ advSet('start', v === 'loud' ? 'loud' : null); reapplyLevel(); }
+  else if (k === 'autoresume') advSet('autoresume', v === 'off' ? 'off' : null);
   else if ((k === 'gdt' || k === 'glp' || k === 'gtt') && ADV_GACT.includes(v)) advSet(k, v === ADV_GDEF[k] ? null : v);
   else if (k === 'glib') advSet('glib', v === 'none' ? null : v);
   else if (k === 'lhold') advSet('lhold', v === 'splash' ? 'splash' : null);
@@ -32550,6 +32563,26 @@ try{
 // Welcome back (#583e): on a cold open with something restored by tryResume,
 // the existing toast offers one tap to carry on. Waits for the splash to
 // clear, fades by itself, shows nothing when there is nothing to resume.
+// #686: try to play on load. Browsers may refuse sound without a gesture; then
+// fall back to the Welcome back toast (Resume button) and also resume on the
+// first tap on empty space, as long as the listener has not started something else.
+function autoResumeOnLoad(){
+  const startEntry = state.queue[state.queuePos], startPos = state.queuePos;
+  resumePlayback();
+  const isPlayingNow = () => { const ad = activeDeck(); const s = ad && ad.player && ad.player.getPlayerState ? ad.player.getPlayerState() : -1; return s === 1 || s === 3; };
+  setTimeout(() => {
+    if (isPlayingNow()) return;
+    const sameSong = () => state.queuePos === startPos && state.queue[state.queuePos] === startEntry;
+    try{ welcomeBackLine(); } catch(e){}
+    const onTap = (e) => {
+      if (isPlayingNow() || !sameSong()){ document.removeEventListener('click', onTap, true); return; }
+      if (e.target && e.target.closest && e.target.closest('button,a,input,select,textarea,[role="button"],[role="slider"],label')) return;
+      document.removeEventListener('click', onTap, true);
+      try{ resumePlayback(); } catch(err){}
+    };
+    document.addEventListener('click', onTap, true);
+  }, 4000);
+}
 function welcomeBackLine(){
   const t = currentTrack(), e = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
   if (!t || !e) return;
@@ -33848,12 +33881,17 @@ function startApp(){
     // tryResume itself doesn't anticipate - never let a bad resume take the
     // rest of init down with it (the splash screen would hang forever).
     try{ tryResume(); } catch(e){}
+    let autoResumeTried = false;
     if (resumingFromBackground && wasPlayingAtBackground){
       // Best-effort: browsers can still block unrequested playback here since
       // this is a fresh page load with no fresh user gesture, but it's worth
       // trying rather than leaving a track that was actively playing sitting
       // paused for no visible reason.
       try{ resumePlayback(); } catch(e){}
+    } else if (!resumingFromBackground && resumeWasPlaying && advPrefs().autoresume !== 'off' && currentTrack()){
+      // #686: a plain reload while music was playing (not paused by the listener).
+      autoResumeTried = true;
+      try{ autoResumeOnLoad(); } catch(e){ autoResumeTried = false; }
     } else {
       // Not auto-resuming sound (a real cold launch, or nothing was playing
       // when it backgrounded) - still warm the deck for whatever tryResume()
@@ -33865,7 +33903,8 @@ function startApp(){
     // show on the player view, so land them on the library instead.
     setView(currentTrack() ? 'player' : 'library');
     if (!currentTrack()) updateMiniBarVisibility();
-    try{ if (!resumingFromBackground) welcomeBackLine(); } catch(e){}
+    resumeBootDone = true;
+    try{ if (!resumingFromBackground && !autoResumeTried) welcomeBackLine(); } catch(e){}
     try{ renderHomeShelf(); } catch(e){}
     refreshSwellIfDue();
     // CuRRentSSsss grows once per daily period and resets at midnight - poll
