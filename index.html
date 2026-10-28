@@ -6787,7 +6787,8 @@ function levelGainFor(videoId){
 }
 // Full volume for a deck (100 * its track's leveling gain). Every fade/
 // crossfade scales from this, so leveling rides along with all of them.
-function effectiveVolume(deck){ return Math.round(100 * levelGainFor(deck && deck.videoId)); }
+let voiceVolPct = 100;   // Voice DJ in-app master volume (web/desktop), percent; see voiceSetAppVolume
+function effectiveVolume(deck){ return Math.round(100 * levelGainFor(deck && deck.videoId) * voiceVolPct / 100); }
 function ensureLoudness(videoId){
   if (!videoId || isNativeVideoId(videoId) || videoId in loudnessMap() || loudnessInFlight.has(videoId)) return;
   loudnessInFlight.add(videoId);
@@ -17830,6 +17831,174 @@ async function playVibePlaylist(interp, list, startIdx, save, text, opts){
     const anchor = cur && cur.plId === id ? cur.idx : 0;
     buildQueueFrom(anchor, id);
   }
+}
+
+/* ---- Voice DJ (#553) phase 1: local command grammar ----
+   Offline, no network, microseconds. Every spoken line goes through
+   voiceParse() first; a match runs a command (voiceRun) and never reaches
+   the vibe interpreter or the LLM. The grammar is DATA: one VOICE_LANGS
+   entry per language, same shape, no per-language code - add a language by
+   adding an object. worker/ and node tests read this block between the
+   VOICE-GRAMMAR markers (tests/voice-grammar.test.js), so keep it free of
+   app globals. */
+/* VOICE-GRAMMAR:BEGIN */
+const VOICE_LANGS = {
+  en: {
+    // stripped from the start / end of what was said ("hey ebbless, can you skip please")
+    lead: ['please', 'hey', 'ok', 'okay', 'ebbless', 'can you', 'could you', 'would you', 'will you', 'can i', 'i want to', 'i wanna', 'i would like to', 'go ahead and', 'just'],
+    trail: ['please', 'now', 'for me', 'thanks', 'thank you', 'right now', 'again'],
+    // ignored when matching a command phrase (never when keeping a search)
+    drop: ['the', 'a', 'an', 'my', 'it'],
+    // exact phrases, matched after fillers and drop words are removed
+    commands: [
+      { op: 'play', say: ['play', 'resume', 'continue', 'unpause', 'keep playing', 'start', 'start playing', 'play music', 'play something', 'play again', 'press play'] },
+      { op: 'pause', say: ['pause', 'stop', 'stop music', 'stop playing', 'pause music', 'hold on', 'be quiet'] },
+      { op: 'next', say: ['next', 'next song', 'next track', 'skip', 'skip song', 'skip this', 'skip this song', 'skip track', 'skip this track', 'play next', 'next one', 'another one'] },
+      { op: 'prev', say: ['previous', 'previous song', 'previous track', 'back', 'go back', 'last song', 'last track', 'play previous', 'play last one', 'back one', 'play last song'] },
+      { op: 'volume', dir: 1, say: ['louder', 'volume up', 'turn up', 'turn up volume', 'raise volume', 'increase volume', 'bit louder', 'little louder', 'more volume', 'up'] },
+      { op: 'volume', dir: -1, say: ['quieter', 'softer', 'lower', 'volume down', 'turn down', 'turn down volume', 'lower volume', 'decrease volume', 'bit quieter', 'little quieter', 'not so loud', 'too loud', 'down'] },
+      { op: 'mute', say: ['mute', 'silence'] },
+      { op: 'unmute', say: ['unmute'] },
+      { op: 'like', say: ['like', 'like this', 'like this song', 'like this track', 'love this', 'love this song', 'i like this', 'i love this', 'heart', 'heart this', 'favorite this', 'add to liked', 'add to liked songs', 'save this', 'save this song'] },
+      { op: 'unlike', say: ['unlike', 'unlike this', 'unlike this song', 'unlike this track', 'unheart', 'remove like', 'remove from liked', 'remove from liked songs', 'dont like this'] },
+      { op: 'more_like_this', say: ['more like this', 'more like that', 'more songs like this', 'similar songs', 'similar', 'play similar', 'play similar songs', 'play more like this', 'start radio', 'song radio', 'more of this'] },
+      { op: 'repeat', mode: 'one', say: ['repeat this', 'repeat this song', 'repeat song', 'repeat one', 'loop this', 'loop this song', 'play on repeat'] }
+    ],
+    // "shuffle", "shuffle on", "turn off shuffle", "stop shuffling"
+    toggles: [
+      { op: 'shuffle', names: ['shuffle', 'shuffling'] },
+      { op: 'repeat', names: ['repeat', 'repeating', 'loop', 'looping'] }
+    ],
+    verbs: ['turn', 'switch', 'set', 'put', 'toggle', 'mode', 'please'],
+    on: ['on', 'enable', 'enabled', 'start'],
+    off: ['off', 'disable', 'disabled', 'stop', 'no', 'dont', 'cancel'],
+    // "play <x>"; longest first is not required (sorted at load)
+    playPrefix: ['play me', 'play', 'put on', 'listen to', 'i want to hear', 'i wanna hear', 'let me hear'],
+    // words that carry no mood or artist when a line is judged to be "just a mood"
+    fluff: ['some', 'something', 'music', 'songs', 'song', 'tracks', 'a', 'an', 'bit', 'little', 'of', 'me', 'vibes', 'vibe', 'feeling', 'mood', 'for', 'put', 'on', 'play', 'give', 'i', 'want', 'need', 'to', 'hear', 'listen', 'the', 'very', 'really', 'so', 'something'],
+    // one-word moods -> the sentence handed to the existing vibe interpreter
+    moods: {
+      calm: { words: ['calm', 'relax', 'relaxed', 'relaxing', 'mellow', 'peaceful', 'soft', 'gentle'], vibe: 'calm, peaceful, gentle music to relax to' },
+      chill: { words: ['chill', 'chilled', 'chillout', 'laidback', 'easy'], vibe: 'chill, laid back, easygoing music' },
+      hype: { words: ['hype', 'hyped', 'pump', 'pumped', 'energy', 'energetic', 'upbeat'], vibe: 'hype, high energy music to get pumped up' },
+      rage: { words: ['rage', 'angry', 'aggressive', 'heavy', 'mad'], vibe: 'angry, aggressive, heavy music to rage to' },
+      focus: { words: ['focus', 'study', 'studying', 'concentrate', 'concentration', 'productive', 'work'], vibe: 'focused instrumental music for studying and deep work' },
+      sleep: { words: ['sleep', 'sleepy', 'bedtime', 'dream', 'night'], vibe: 'slow, soft music for falling asleep' },
+      party: { words: ['party', 'dance', 'club', 'rave'], vibe: 'upbeat party dance music' },
+      workout: { words: ['workout', 'gym', 'run', 'running', 'cardio'], vibe: 'high energy workout music' },
+      sad: { words: ['sad', 'melancholy', 'heartbreak', 'cry', 'lonely'], vibe: 'sad, emotional, melancholic songs' },
+      happy: { words: ['happy', 'cheerful', 'joy', 'feelgood', 'sunny'], vibe: 'happy, feel good, sunny songs' },
+      romantic: { words: ['romantic', 'love', 'romance'], vibe: 'romantic, warm, intimate songs' }
+    }
+  }
+};
+const VOICE_IDX = {};
+function voiceWords(s){ return String(s || '').toLowerCase().replace(/['’]/g, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean); }
+function voiceLangOf(lang){ const k = String(lang || 'en').toLowerCase().split(/[-_]/)[0]; return VOICE_LANGS[k] ? k : 'en'; }
+function voiceIndex(k){
+  if (VOICE_IDX[k]) return VOICE_IDX[k];
+  const L = VOICE_LANGS[k], drop = new Set(L.drop), core = (p) => voiceWords(p).filter(w => !drop.has(w)).join(' ');
+  const phrases = new Map();
+  L.commands.forEach(c => c.say.forEach(p => { const key = core(p); if (key && !phrases.has(key)) phrases.set(key, c); }));
+  const names = new Map(); L.toggles.forEach(t => t.names.forEach(n => names.set(n, t)));
+  const moodWord = new Map(); Object.keys(L.moods).forEach(m => L.moods[m].words.forEach(w => moodWord.set(w, m)));
+  const leadP = L.lead.map(voiceWords).sort((a, b) => b.length - a.length), trailP = L.trail.map(voiceWords).sort((a, b) => b.length - a.length);
+  const playP = L.playPrefix.map(voiceWords).sort((a, b) => b.length - a.length);
+  return (VOICE_IDX[k] = { L, drop, phrases, names, moodWord, leadP, trailP, playP, fluff: new Set(L.fluff), verbs: new Set(L.verbs), on: new Set(L.on), off: new Set(L.off) });
+}
+function voiceStrip(w, idx){
+  let go = true;
+  while (go && w.length){
+    go = false;
+    for (const p of idx.leadP) if (p.length < w.length && p.every((x, i) => w[i] === x)){ w = w.slice(p.length); go = true; break; }
+    if (go) continue;
+    for (const p of idx.trailP) if (p.length < w.length && p.every((x, i) => w[w.length - p.length + i] === x)){ w = w.slice(0, w.length - p.length); go = true; break; }
+  }
+  return w;
+}
+// text -> { op, ... } or null. null means "not a command": hand it on.
+function voiceParse(text, lang){
+  const idx = voiceIndex(voiceLangOf(lang));
+  const w = voiceStrip(voiceWords(text), idx);
+  if (!w.length || w.length > 12) return null;
+  const core = w.filter(x => !idx.drop.has(x));
+  const key = core.join(' ');
+  const hit = idx.phrases.get(key);
+  if (hit) return { op: hit.op, dir: hit.dir, mode: hit.mode };
+  // shuffle / repeat with an optional on/off either side
+  const rest = core.filter(x => !idx.verbs.has(x));
+  const nameAt = rest.findIndex(x => idx.names.has(x));
+  if (nameAt >= 0 && rest.length <= 3){
+    const t = idx.names.get(rest[nameAt]), others = rest.filter((_, i) => i !== nameAt);
+    if (others.every(x => idx.on.has(x) || idx.off.has(x))){
+      const off = others.some(x => idx.off.has(x));
+      return { op: t.op, on: !off };
+    }
+  }
+  // play <something>
+  for (const p of idx.playP){
+    if (w.length > p.length && p.every((x, i) => w[i] === x)){
+      const said = w.slice(p.length);
+      const mood = voiceMoodOf(said, idx);
+      if (mood) return mood;
+      const q = said.filter((x, i) => !(i === 0 && x === 'some')).join(' ');
+      return q ? { op: 'search', q } : { op: 'play' };
+    }
+  }
+  return voiceMoodOf(w, idx);
+}
+// a line that is only one mood word plus fluff ("something calm", "chill music", "hype")
+function voiceMoodOf(w, idx){
+  if (w.length > 5) return null;
+  const left = w.filter(x => !idx.fluff.has(x));
+  if (left.length !== 1 || !idx.moodWord.has(left[0])) return null;
+  const m = idx.moodWord.get(left[0]);
+  return { op: 'mood', key: m, vibe: idx.L.moods[m].vibe };
+}
+/* VOICE-GRAMMAR:END */
+
+const VOICE_STEP = 10;           // in-app volume step, percent
+function voiceSetAppVolume(p){ voiceVolPct = Math.max(0, Math.min(100, p)); reapplyLevel(); }
+// Android: the phone's media volume (AudioManager STREAM_MUSIC) by one step, through the native
+// shell. Returns "level/max", or "" when the shell has no such method (older build) or it failed.
+function voiceNativeVolume(dir){
+  try { if (window.EbbNative && typeof EbbNative.adjustVolume === 'function') return String(EbbNative.adjustVolume(dir) || ''); } catch(e){}
+  return '';
+}
+const VOICE_ACTIONS = {
+  play(){ if (state.queuePos < 0) return 'Nothing queued yet - say what to play'; resumePlayback(); return 'Playing'; },
+  pause(){ if (state.queuePos < 0) return 'Nothing is playing'; pausePlayback(); return 'Paused'; },
+  next(){ if (state.queuePos < 0) return 'Nothing is playing'; nextBtn.click(); return 'Next'; },
+  prev(){ if (state.queuePos < 0) return 'Nothing is playing'; prevBtn.click(); return 'Previous'; },
+  volume(c){
+    if (voiceVolPct < 100 && c.dir > 0){ voiceSetAppVolume(Math.min(100, voiceVolPct + VOICE_STEP)); return 'Volume up'; }   // un-muted/lowered in-app first
+    const n = voiceNativeVolume(c.dir);
+    if (n){ const m = /^(\d+)\/(\d+)$/.exec(n); return (c.dir > 0 ? 'Louder' : 'Quieter') + (m && +m[2] ? ' - ' + Math.round(100 * m[1] / m[2]) + '%' : ''); }
+    voiceSetAppVolume((voiceVolPct || 0) + c.dir * VOICE_STEP);
+    return (c.dir > 0 ? 'Louder' : 'Quieter') + ' - ' + voiceVolPct + '%';
+  },
+  mute(){ voiceSetAppVolume(0); return 'Muted'; },
+  unmute(){ voiceSetAppVolume(100); return 'Unmuted'; },
+  like(){ const t = currentTrack(); if (!t || !t.videoId) return 'Nothing is playing'; if (isTrackLiked(t.videoId)) return 'Already in Liked Songs'; toggleLikeTrack(t); return null; },
+  unlike(){ const t = currentTrack(); if (!t || !t.videoId) return 'Nothing is playing'; if (!isTrackLiked(t.videoId)) return 'Not in Liked Songs'; toggleLikeTrack(t); return null; },
+  shuffle(c){ for (let i = 0; i < 3 && !!state.shuffle !== c.on; i++) toggleShuffle(); return c.on ? null : 'Shuffle off'; },
+  repeat(c){ const want = c.mode === 'one' ? 'one' : c.on === false ? 'off' : 'all'; for (let i = 0; i < 3 && state.repeat !== want; i++) cycleRepeat(); return want === 'one' ? 'Repeat: this song' : want === 'all' ? 'Repeat on' : 'Repeat off'; },
+  more_like_this(){
+    const t = currentTrack(); if (!t || !t.videoId) return 'Nothing is playing';
+    if (navigator.onLine === false) return "Offline - can't find similar songs";
+    const ct = t; startRadio(t.title + ' Radio', [ct], true); return null;
+  },
+  search(c){ if (navigator.onLine === false) return "Offline - can't search new songs"; beginVibeSearch(c.q); return 'Searching: ' + c.q.slice(0, 40); },
+  mood(c){ if (navigator.onLine === false) return 'Needs a connection for moods'; beginConversationalVibe(c.vibe); return 'Finding ' + c.key + ' songs'; }
+};
+// Runs a parsed command. Always one short toast (null = the action toasts itself).
+function voiceRun(cmd){
+  const fn = VOICE_ACTIONS[cmd && cmd.op];
+  if (!fn) return false;
+  let msg;
+  try { msg = fn(cmd); } catch(e){ msg = "Couldn't do that"; }
+  if (msg) showToast(msg);
+  return true;
 }
 
 /* ---- mic: speak the vibe (Web Speech API) ----

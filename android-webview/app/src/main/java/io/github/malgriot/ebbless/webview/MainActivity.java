@@ -330,6 +330,15 @@ public class MainActivity extends Activity {
             @android.webkit.JavascriptInterface public String appVersion() {
                 try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Throwable t) { return ""; }
             }
+            /** Voice DJ (#553): "louder"/"quieter" move the phone's media volume one step. dir > 0 up, < 0 down, 0 just reads. Returns "level/max", or "" on failure. */
+            @android.webkit.JavascriptInterface public String adjustVolume(int dir) {
+                try {
+                    android.media.AudioManager am = (android.media.AudioManager) getSystemService(android.content.Context.AUDIO_SERVICE);
+                    if (am == null) return "";
+                    if (dir != 0) am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, dir > 0 ? android.media.AudioManager.ADJUST_RAISE : android.media.AudioManager.ADJUST_LOWER, 0);
+                    return am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) + "/" + am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
+                } catch (Throwable t) { return ""; }
+            }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }
