@@ -1749,6 +1749,8 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 /* your recent things (#583d): small static tiles under Find music, only while the player is empty */
 .home-shelf{display:none;justify-content:center;gap:10px;margin:12px auto 0;max-width:100%}
 .track-meta.is-empty .home-shelf:not([hidden]){display:flex}
+.home-shelf-label{margin:8px 0 8px}
+.home-shelf-label[hidden]{display:none}
 .home-shelf-lib:not([hidden]){display:flex;justify-content:flex-start;margin:4px 0 8px;overflow-x:auto}
 .home-shelf-item{display:block;width:68px;min-width:0;padding:0;text-align:center;font:inherit;color:inherit}
 .home-shelf-item img,.home-shelf-item .home-shelf-ph{display:block;margin:0 auto;width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--surface-2,rgba(128,128,128,.18))}
@@ -4309,6 +4311,7 @@ body.week-up-on{overflow:hidden}
         <div class="section-label lib-bar-label hidden" id="libBarLabel" role="button" tabindex="0"></div>
         </div>
         <div class="lib-body">
+        <div class="section-label home-shelf-label" id="libShelfLabel" hidden>Recents</div>
         <div class="home-shelf home-shelf-lib" id="libShelf" hidden></div>
         <div class="lib-sec">
         <div class="section-label-row hidden" id="libraryPlaylistsHead">
@@ -32342,7 +32345,7 @@ function renderHomeShelf(){
 }
 function renderShelfInto(box, show){
   if (!box) return;
-  if (!show){ box.hidden = true; return; }
+  if (!show){ box.hidden = true; if (box.id === 'libShelf'){ const lb = $('libShelfLabel'); if (lb) lb.hidden = true; } return; }
   const items = [], seen = new Set();
   const add = (id, pl) => { if (!seen.has(id) && pl && pl.tracks && pl.tracks.length && pl.name && items.length < 4){ seen.add(id); items.push({ id, pl }); } };
   const recent = getLibrary()
@@ -32358,6 +32361,7 @@ function renderShelfInto(box, show){
   recent.forEach(x => add(x.id, x.pl));
   box.textContent = '';
   box.hidden = !items.length;
+  if (box.id === 'libShelf'){ const lb = $('libShelfLabel'); if (lb) lb.hidden = box.hidden; }
   items.forEach(({ id, pl }) => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'home-shelf-item'; b.title = pl.name; b.setAttribute('aria-label', 'Play ' + pl.name);
