@@ -2887,12 +2887,16 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.lib-wide:not(.desktop-fs) .lib-grid.is-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px}
   body.split-desktop.lib-wide:not(.desktop-fs) .track-meta .title{font-size:20px}
   body.split-desktop:not(.desktop-fs) #libWideBtn{display:flex}
-  /* #675: the expand control is a small tab on the library pane's right edge (the edge it grows toward), not a button in the toolbar. Solid fill, static (no blur/animation). */
-  body.split-desktop:not(.desktop-fs) #libWideBtn{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:5;width:18px;height:56px;border-radius:10px 0 0 10px;background:rgba(24,24,28,.92);border:1px solid var(--border);border-right:0;color:var(--faint-2)}
-  body.split-desktop:not(.desktop-fs) #libWideBtn:hover{color:var(--accent)}
+  /* #675/#691: the expand control is a small tab sticking out to the right of the library pane, outside its clip (grid item in the library cell, pulled 18px past the cell edge). Solid fill, static (no blur/animation); hover takes the UI accent. */
+  body.split-desktop:not(.desktop-fs) #libWideBtn{grid-column:1;grid-row:2;justify-self:end;align-self:center;margin-right:-18px;z-index:5;width:18px;height:56px;border-radius:0 10px 10px 0;background:rgba(24,24,28,.92);border:1px solid var(--border);border-left:0;color:var(--faint-2)}
+  body.split-desktop:not(.desktop-fs) #libWideBtn:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
   body.split-desktop:not(.desktop-fs) #libWideBtn svg{width:14px;height:14px}
+  /* #691: expanded library turns slate (the ambient layer is hidden, which also stops its video) */
+  body.split-desktop.lib-wide:not(.desktop-fs) #view-library{background:#2b2f36}
+  body.split-desktop.lib-wide:not(.desktop-fs) #view-library .lib-bg{display:none}
   body.split-desktop.lib-wide #libWideBtn svg{transform:scaleX(-1)}
   body.split-desktop #libWideBtn.is-active{color:var(--accent)}
+  body.split-desktop:not(.desktop-fs) #libWideBtn.is-active:hover{color:var(--on-accent,#151107)}
   /* issue #151: the 60px bar with no edge read as floating above the panes.
      A shorter row (still room for the 32px nav pills) with the same hairline
      the panes use as dividers ties it into the grid; the logo sits on the
@@ -4273,10 +4277,6 @@ body.week-up-on{overflow:hidden}
             </button>
             <!-- one "View" menu holds sort order and layout (was a sort icon
                  plus three tiny layout icons) -->
-            <!-- #619: desktop only - widens the library to the right; the player shrinks to the queue's width -->
-            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libWideBtn" title="Expand the library" aria-label="Expand the library" aria-pressed="false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg>
-            </button>
           </div>
         </div>
         <div class="lib-search hidden" id="libSearchBox" role="search">
@@ -4377,6 +4377,10 @@ body.week-up-on{overflow:hidden}
       </div>
     </div>
   </main>
+  <!-- #619/#691: desktop only - widens the library to the right; the player shrinks to the queue's width. A sibling of the library pane (not inside it) so the pane's overflow clip can't hide the tab sticking out past its right edge -->
+  <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libWideBtn" title="Expand the library" aria-label="Expand the library" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg>
+  </button>
 
   <!-- ===== PLAYER ===== -->
   <main class="view" id="view-player" hidden>
