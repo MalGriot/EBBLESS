@@ -1799,6 +1799,8 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .ctl-btn:active{transform:scale(.92)}
 .ctl-btn svg{width:16px;height:16px}
 .ctl-btn.is-active{color:var(--player-accent)}
+.ctl-btn.is-discover{position:relative}
+.ctl-btn.is-discover::after{content:'';position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#ffc83d}
 .ctl-btn.main{width:52px;height:52px;background:var(--accent);color:var(--on-accent,#151107)}
 .ctl-btn.main:hover{background:var(--accent)}
 .ctl-btn.main svg{width:19px;height:19px}
@@ -8718,6 +8720,7 @@ const state = {
   queue: [],             // array of { plId, idx } pairs, effective play order (can span playlists)
   queuePos: -1,          // pointer into queue
   shuffle: false,
+  shuffleDiscover: false,   // shuffle's second mode (#674): mixes Discover songs into the queue
   repeat: 'off',          // off | all | one
   currentView: 'player',
   preSettingsView: 'library',
@@ -20010,12 +20013,34 @@ function queueReorder(fromPos, toPos){
   schedulePreload(state.queuePos);
 }
 
+function renderShuffleButtons(){
+  const label = state.shuffleDiscover ? 'Shuffle with Discover (on)' : state.shuffle ? 'Shuffle (on)' : 'Shuffle';
+  [shuffleBtn, miniShuffleBtn, flowShuffleBtn].forEach(b => {
+    b.classList.toggle('is-active', state.shuffle);
+    b.classList.toggle('is-discover', !!state.shuffleDiscover);
+    b.title = label; b.setAttribute('aria-label', label);
+  });
+  shuffleBtn.setAttribute('aria-pressed', state.shuffleDiscover ? 'mixed' : state.shuffle ? 'true' : 'false');
+}
+// Cycle (#674): off -> shuffle -> shuffle + Discover -> off. The Discover step
+// keeps the shuffled order and mixes similar songs into what is coming up.
 function toggleShuffle(){
-  state.shuffle = !state.shuffle;
-  shuffleBtn.classList.toggle('is-active', state.shuffle);
-  shuffleBtn.setAttribute('aria-pressed', state.shuffle ? 'true' : 'false');
-  miniShuffleBtn.classList.toggle('is-active', state.shuffle);
-  flowShuffleBtn.classList.toggle('is-active', state.shuffle);
+  const wasDiscover = state.shuffleDiscover;
+  if (!state.shuffle){ state.shuffle = true; state.shuffleDiscover = false; }
+  else if (!state.shuffleDiscover){ state.shuffleDiscover = true; }
+  else { state.shuffle = false; state.shuffleDiscover = false; }
+  renderShuffleButtons();
+  if (state.shuffleDiscover){
+    showToast('Shuffle + Discover - similar songs mixed into your queue');
+    discoverEmptyTs = 0;
+    maybeExtendDiscoverQueue();
+    return;
+  }
+  // leaving the mode: take the mixed-in songs back out unless Discover is on for this queue
+  if (wasDiscover){
+    const o = discoverOriginId();
+    if (!(o && isDiscoverOn(o))) removeDiscoverFromQueue();
+  }
   if (!state.playlist || state.queuePos < 0) return;
   const upcoming = state.queue.slice(state.queuePos + 1);
   if (state.shuffle){
@@ -21272,6 +21297,26 @@ let discoverExtendPromise = null;
 // well before the current one ends, not only when Next is finally pressed.
 let discoverEmptyTs = 0, discoverRetryTimer = null;
 const DISCOVER_RETRY_MS = 20000;
+// #673: Discover starts looking the moment a track loads, even while the queue
+// is still long, and keeps the result for the extension to use. One prefetch at
+// a time, keyed by origin + track: a track change replaces it (the stale result
+// is simply never used), and the same track never fetches twice.
+let discoverPrefetch = null;
+function discoverPrefetchKey(originPlId, t){ return originPlId + '|' + (t && t.videoId || ''); }
+function prefetchDiscover(originPlId){
+  const t = trackAt(state.queuePos);
+  if (!t || !t.videoId || discoverExtendPromise) return;
+  const key = discoverPrefetchKey(originPlId, t);
+  if (discoverPrefetch && discoverPrefetch.key === key) return;
+  const seedTracks = [];
+  for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
+    const x = trackAt(p);
+    if (x) seedTracks.push(x);
+  }
+  const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
+  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong).catch(() => []);
+  discoverPrefetch = { key, promise };
+}
 function extendQueueWithDiscover(originPlId){
   if (discoverExtendPromise) return discoverExtendPromise;
   discoverExtendPromise = (async () => {
@@ -21283,10 +21328,15 @@ function extendQueueWithDiscover(originPlId){
       }
       if (!seedTracks.length) return;
       const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
-      const found = await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong);
+      // Reuse the fetch started when this track loaded (prefetchDiscover) if it
+      // is for the same track, so the batch is usually already there.
+      const pf = discoverPrefetch;
+      discoverPrefetch = null;
+      const found = (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])) ? await pf.promise
+        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong);
       // Discover may have been switched off (or the queue replaced) while
       // the fetch was in flight - don't append a batch nobody asked for.
-      if (!found.length || !isDiscoverOn(originPlId) || discoverOriginId() !== originPlId){
+      if (!found.length || !(isDiscoverOn(originPlId) || state.shuffleDiscover) || discoverOriginId() !== originPlId){
         if (!found.length) noteDiscoverEmpty();
         return;
       }
@@ -21342,9 +21392,12 @@ function discoverOriginId(){
 // actually runs out, so there's no dead air waiting on a network round trip.
 function maybeExtendDiscoverQueue(){
   const originPlId = discoverOriginId();
-  if (!originPlId || !isDiscoverOn(originPlId)) return;
+  if (!originPlId || !(isDiscoverOn(originPlId) || state.shuffleDiscover)) return;
   const remaining = state.queue.length - 1 - state.queuePos;
-  if (remaining > DISCOVER_LOOKAHEAD) return;
+  // shuffle+discover (#674) keeps a few discovered songs mixed into what is
+  // coming up, not only at the very end
+  const mixNeeded = state.shuffleDiscover && state.queue.slice(state.queuePos + 1).filter(e => e.discover).length < DISCOVER_BATCH;
+  if (remaining > DISCOVER_LOOKAHEAD && !mixNeeded){ prefetchDiscover(originPlId); return; }
   if (discoverEmptyTs && Date.now() - discoverEmptyTs < DISCOVER_RETRY_MS) return;
   extendQueueWithDiscover(originPlId);
 }
