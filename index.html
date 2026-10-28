@@ -14560,9 +14560,11 @@ function ensureSwellPlaylist(){
   if (existing){
     // Migrate playlists created before the rename from "Swell" to "CuRRentSSsss".
     if (existing.name !== 'CuRRentSSsss'){ existing.name = 'CuRRentSSsss'; lsSet(LS_PL(SWELL_ID), existing); }
+    // (#676) Newest first: lists saved before this were oldest first, so flip them once.
+    if (!existing.newestFirst){ existing.tracks = existing.tracks.slice().reverse(); existing.newestFirst = true; lsSet(LS_PL(SWELL_ID), existing); }
     return;
   }
-  const pl = { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
+  const pl = { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now(), newestFirst: true };
   lsSet(LS_PL(SWELL_ID), pl);
   saveToLibrary(SWELL_ID);
 }
@@ -21710,19 +21712,23 @@ async function refreshCurrents(mode, opts){
       if (doneToast) showToast("Couldn't find new songs right now. Try again in a bit.");
       return 0;
     }
-    const pl = playlistById(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now() };
+    const pl = playlistById(SWELL_ID) || { id: SWELL_ID, type: 'custom', name: 'CuRRentSSsss', image: null, tracks: [], ts: Date.now(), newestFirst: true };
     changed = true;
     if (mode !== 'reset'){
-      // Appends only: whatever is playing keeps playing, and when it's
-      // CuRRentSSsss the new tracks queue up behind it.
+      // (#676) New songs go on top (newest first): whatever is playing keeps
+      // playing, and when it's CuRRentSSsss the new tracks queue up next.
       const have = new Set(pl.tracks.map(t => t.videoId).filter(Boolean));
       const add = picks.filter(t => !have.has(t.videoId));
-      const start = pl.tracks.length;
-      pl.tracks = pl.tracks.concat(add);
+      pl.tracks = add.concat(pl.tracks);
       lsSet(LS_PL(SWELL_ID), pl);
       if (state.playlist && state.playlist.id === SWELL_ID){
         state.playlist = pl;
-        if (state.queuePos >= 0) add.forEach((t, i) => state.queue.push({ plId: SWELL_ID, idx: start + i }));
+        if (state.queuePos >= 0 && add.length){
+          // existing entries into this list slide down by add.length
+          state.queue = state.queue.map(e => e.plId === SWELL_ID ? Object.assign({}, e, { idx: e.idx + add.length }) : e);
+          state.queue.splice(state.queuePos + 1, 0, ...add.map((t, i) => ({ plId: SWELL_ID, idx: i })));
+          persistResume();
+        }
         renderQueuePanel();
       }
       added = add.length;
