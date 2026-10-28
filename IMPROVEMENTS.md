@@ -10678,12 +10678,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #552. Already on main (#586/#594): library bar fixed, list scrolls in .lib-body; queue head sits above .queue-scroll. Verified in browser, no new change.
 
 ### feedback-tester-s-wishes: feedback tester's wishes (Geethub #553)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Description:** Idea, Geethub #553. medium Intuitive music app - you think about a song and can talk to it and it plays it - it understands if you've been in a fight and need to rage or chill, if you have a party- what mood you are in for to entertain Also
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Owner 2026-10-29: explore a depth meter for how esoteric versus mainstream discovery should be. No never-show-this-artist button. Synced from Geethub #553.
+- **Notes:** Proposal written: docs/PROPOSAL-depth-meter.md (Depth pill: Mainstream / Familiar / Deep cuts / Underground; Last.fm listener counts; first slice about 1 to 1.5 days). Open questions for the owner are in the doc and the 2026-10-29 chat. Owner 2026-10-29: explore a depth meter for how esoteric versus mainstream discovery should be. No never-show-this-artist button. Synced from Geethub #553.
 
 ### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
 - **Status:** merged
