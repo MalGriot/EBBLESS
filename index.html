@@ -211,9 +211,11 @@ html.ebb-android #splash .splash-tint, html.ebb-android #beta-lock .bl-tint{tran
 /* the app's native splash is up: the web one stays invisible (still wired up, so the app can press its Enter) and its videos stay unloaded */
 html.ebb-nsplash #splash{visibility:hidden!important}
 /* screen off (set by the Android app): hide every screen so the compositor can drop its textures; the players stay (#yt-host, audio) */
-html.ebb-screenoff #app > :not(#yt-host){visibility:hidden!important}
-html.ebb-screenoff body > :not(#app):not(script):not(style):not(link):not(audio){visibility:hidden!important}
-html.ebb-screenoff *, html.ebb-screenoff *::before, html.ebb-screenoff *::after{animation-play-state:paused!important}
+html:is(.ebb-screenoff,.ebb-pip) #app > :not(#yt-host){visibility:hidden!important}
+html:is(.ebb-screenoff,.ebb-pip) body > :not(#app):not(script):not(style):not(link):not(audio){visibility:hidden!important}
+html:is(.ebb-screenoff,.ebb-pip) *, html:is(.ebb-screenoff,.ebb-pip) *::before, html:is(.ebb-screenoff,.ebb-pip) *::after{animation-play-state:paused!important}
+/* #667: the Android app's Picture-in-Picture window shows only the video, edge to edge */
+html.ebb-pip #yt-host.is-shown{z-index:200;border-radius:0}
 html.ebb-android video.ebb-ready{opacity:1!important}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-tint{opacity:1;z-index:-3;background:color-mix(in srgb, var(--clock-accent,#e0b26a) 72%, #fff)}
 html.ebb-android #splash:has(.splash-video.ebb-ready) .splash-poster{display:none}
@@ -5678,7 +5680,7 @@ setTimeout(() => {
       const aw = document.getElementById('artworkWrap');
       if (aw && EbbNative.playing) {
         let lastPlaying = null;
-        const reportPlaying = () => { const p = aw.classList.contains('is-playing'); if (p !== lastPlaying) { lastPlaying = p; try { EbbNative.playing(p); } catch (e) {} } };
+        const reportPlaying = () => { const p = aw.classList.contains('is-playing'); if (p !== lastPlaying) { lastPlaying = p; try { EbbNative.playing(p); } catch (e) {} try { ytPanelBtnSync(); } catch (e) {} } };
         new MutationObserver(reportPlaying).observe(aw, { attributes: true, attributeFilter: ['class'] });
         reportPlaying();
       }
@@ -18506,9 +18508,15 @@ function ytPanelAvailable(){
   const deck = activeDeck();
   return !(deck && deck.videoId === t.videoId && deck.ytErrorFor === t.videoId);
 }
+let lastVideoPip = null;
 function ytPanelBtnSync(){
   let ok = false;
   try { ok = ytPanelAvailable(); } catch(e){ /* called before the deck code has initialized */ }
+  // #667: tell the Android app a video song is playing, so leaving the app turns it into a Picture-in-Picture mini player
+  try {
+    const aw = $('artworkWrap'), v = ok && !!aw && aw.classList.contains('is-playing');
+    if (window.EbbNative && EbbNative.videoPip && v !== lastVideoPip){ lastVideoPip = v; EbbNative.videoPip(v); }
+  } catch(e){}
   const adsBtn = $('adsReportBtn');
   if (adsBtn) adsBtn.hidden = !ok;
   const btn = $('ytPanelBtn');
@@ -18520,7 +18528,8 @@ function ytPanelBtnSync(){
 }
 function ytPanelSync(){
   if (ytPanelOpen() && !ytPanelBtnSync()) return;
-  const open = ytPanelOpen();
+  const pip = document.documentElement.classList.contains('ebb-pip');
+  const open = ytPanelOpen() || pip;
   const deck = activeDeck(), t = trackAt(state.queuePos);
   const el = deck && deck.kind === 'yt' && deck.player && t && deck.videoId === t.videoId ? document.getElementById(deck.id) : null;
   const show = open && !!el && el.tagName === 'IFRAME';
@@ -18535,6 +18544,8 @@ function ytPanelSync(){
   ytHost.classList.toggle('is-shown', show);
   artworkWrap.classList.toggle('yt-video', show);
   if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
+  // #667: in Picture-in-Picture the video fills the whole small window
+  if (pip){ ytHost.style.left = ytHost.style.top = '0px'; ytHost.style.width = innerWidth + 'px'; ytHost.style.height = innerHeight + 'px'; return; }
   // 16:9 centered in the art area; the player view hidden (Library etc.) gives
   // a zero rect, so the video steps aside there and the audio carries on
   const r = artworkWrap.getBoundingClientRect();
@@ -18550,6 +18561,14 @@ function ytPanelSync(){
   ytHost.style.width = w + 'px';
   ytHost.style.height = h + 'px';
 }
+// #667: the Android app calls this when it enters/leaves Picture-in-Picture (leaving the app while a video song plays).
+// The video fills the small window and everything else is hidden (CSS); back in the app the page is as it was.
+window.__ebbPip = function (on){
+  document.documentElement.classList.toggle('ebb-pip', !!on);
+  ytPanelSync();
+  if (on){ clearInterval(window.__ebbPipTimer); window.__ebbPipTimer = setInterval(ytPanelSync, 250); }
+  else { clearInterval(window.__ebbPipTimer); window.__ebbPipTimer = null; }
+};
 function openYtPanel(){
   if (!ytPanelBtnSync()) return;
   closeArtStyleMenu();

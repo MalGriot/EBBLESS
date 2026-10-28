@@ -11431,7 +11431,7 @@ Add entries in this shape:
 - **Notes:** Built: when an episode's audio is 8 to 75 seconds longer than the length its feed lists, the extra is treated as a stitched-in ad on the front and the existing "Ad" skip button is offered over 0:00 to that length. Assumptions: the ad sits at the start (as reported) and the feed length excludes it; the button is tap-to-skip like the other ad ranges, not silent. Works in any language since it uses length, not captions. Verified: page loads with no script errors. Not verified: a real No Sleep episode (needs the owner's phone or location to be served the ad); sw.js cache not bumped (do at deploy).
 
 ### back-never-leaves-app: back button must never let you leave the app (Geethub #638)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #638. Back from the player used to exit the app; it should only ever step back inside it.
 - **Touches:** index.html (history buffer and popstate handler, near isAwayFromRest).
@@ -11618,11 +11618,11 @@ Add entries in this shape:
 - **Notes:** Prototyped as "Cassette Lab" first. Brake is a real pause while held (the player cannot bend pitch), not a tape-slow sound. Stack-tap-to-jump and the side B queue flip from the prototype are not ported. Verified in a local browser with the Rickroll fallback deck: flip, side B list, peel and release, hub tap and scrub seek without errors. Not checked: touch on a real phone, fullscreen flow layer, mini player (its cloned cassette is inert), GPU watchdog under long use.
 
 ### mobile-miniplayer-video-667: Mobile mini-player that works for videos too (Geethub #667)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** On mobile, add a mini-player that also works when the current song is a video.
 - **Touches:** (not specified)
-- **Branch:**
+- **Branch:** agent/mobile-miniplayer-video-667
 - **Notes:** Related to #668 (video in the player, not a popout).
 
 ### video-in-player-668: Video plays inside the player, not a popout, so the rest of the UI stays usable (Geethub #668)

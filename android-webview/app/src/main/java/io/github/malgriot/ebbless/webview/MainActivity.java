@@ -162,6 +162,23 @@ public class MainActivity extends Activity {
         if (web != null) web.evaluateJavascript("window.__ebbScreen&&__ebbScreen(true)", null);   // never leave the page in lightweight mode while it is on screen
     }
 
+    /** #667: the page says a video song is playing; leaving the app then shrinks the video into a Picture-in-Picture window. */
+    private volatile boolean videoPip = false;
+
+    @Override protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (!videoPip || Build.VERSION.SDK_INT < 26) return;
+        try {
+            enterPictureInPictureMode(new android.app.PictureInPictureParams.Builder()
+                .setAspectRatio(new android.util.Rational(16, 9)).build());
+        } catch (Exception ignored) {}
+    }
+
+    @Override public void onPictureInPictureModeChanged(boolean in, android.content.res.Configuration cfg) {
+        super.onPictureInPictureModeChanged(in, cfg);
+        if (web != null) web.evaluateJavascript("window.__ebbPip&&__ebbPip(" + in + ")", null);
+    }
+
     @Override protected void onDestroy() {
         PlaybackService.sink = null;
         try { unregisterReceiver(screenReceiver); } catch (Exception ignored) {}
@@ -253,6 +270,8 @@ public class MainActivity extends Activity {
                 tellWatchdog(on);
                 if (on) runOnUiThread(() -> askBatteryExemption());
             }
+            /** The page: a video song is (not) playing right now, so leaving the app should (not) open Picture-in-Picture. */
+            @android.webkit.JavascriptInterface public void videoPip(boolean on) { videoPip = on; }
             /** The page's player state (title, artist, art, play state, position, liked) for the lock screen and notification player. */
             @android.webkit.JavascriptInterface public void media(String json) { PlaybackService.media(json); }
             /** Settings > Reload app: fetch the live page now (the saved copy is a launch behind), then load it. */
