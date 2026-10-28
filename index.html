@@ -20088,8 +20088,9 @@ function cycleRepeat(){
    then fold the outcome of each play back into that graph and into the
    pooled affinity data every listener contributes to (/pool/signal).
    ========================================================================= */
-const DISCOVER_LOOKAHEAD = 3;   // extend once this few tracks remain in the queue
-const DISCOVER_BATCH = 6;       // tracks fetched per extension
+const DISCOVER_MIN_AHEAD = 7;   // #690: with Discover on, never fewer than this many songs queued ahead
+const DISCOVER_LOOKAHEAD = DISCOVER_MIN_AHEAD - 1;   // extend once this few remain (fewer than 7 ahead)
+const DISCOVER_BATCH = 28;      // songs fetched per Discover load (#690)
 
 // Long uploads (DJ sets, full albums, hour-long mixes) are fine to play but
 // make poor automatic picks: one wrong guess eats an hour. Discover quietly
@@ -20153,7 +20154,7 @@ function discoverSampleOrder(ranked, recentKeys, rand){
 
 const DISCOVER_LONG_MIN = 15 * 60;
 const DISCOVER_LONG_STRONG_RANK = 5;  // 45+ min needs a top-5 scored candidate
-const DISCOVER_LONG_AFTER = DISCOVER_BATCH;
+const DISCOVER_LONG_AFTER = 6;
 let discoverQueuedThisSession = 0;
 function discoverLongTrackOk(seconds, rank, allowLong){
   if (!seconds || seconds <= DISCOVER_LONG_MIN) return true;
@@ -20845,7 +20846,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   const recentArtists = new Set(seedTracks.slice(0, 5).map(t => (t.artist || '').toLowerCase()));
 
   const [similar, thisIs] = await Promise.all([
-    fetchSimilar(seed.title, seed.artist, 25),
+    fetchSimilar(seed.title, seed.artist, Math.max(25, count + 12)),
     fetchThisIsPlaylist(seed.artist),
   ]);
   let pool = similar.candidates || [];
@@ -21396,7 +21397,7 @@ function maybeExtendDiscoverQueue(){
   const remaining = state.queue.length - 1 - state.queuePos;
   // shuffle+discover (#674) keeps a few discovered songs mixed into what is
   // coming up, not only at the very end
-  const mixNeeded = state.shuffleDiscover && state.queue.slice(state.queuePos + 1).filter(e => e.discover).length < DISCOVER_BATCH;
+  const mixNeeded = state.shuffleDiscover && state.queue.slice(state.queuePos + 1).filter(e => e.discover).length < DISCOVER_MIN_AHEAD;
   if (remaining > DISCOVER_LOOKAHEAD && !mixNeeded){ prefetchDiscover(originPlId); return; }
   if (discoverEmptyTs && Date.now() - discoverEmptyTs < DISCOVER_RETRY_MS) return;
   extendQueueWithDiscover(originPlId);
