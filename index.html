@@ -12200,10 +12200,12 @@ async function openAlbumPreview(a, name, backFn){
     status.textContent = "Couldn't load songs for that album.";
   }
 }
-// Song credits (who wrote, produced, mixed it), from MusicBrainz only: the same
-// keyless, CORS-open source the artist page uses. Nothing is guessed. A role with
-// no names, or a song MusicBrainz doesn't know, is left out entirely.
+// #684: Song info. A short list of providers (MusicBrainz, Wikipedia), each
+// returning a partial { date, album, label, genres, samples, roles, trivia, sources }.
+// fetchSongInfo merges them. A Genius provider can be pushed onto SONG_INFO_PROVIDERS
+// later (it needs a key and a proxy). Missing fields are simply left out.
 const songCreditsCache = new Map();
+const SONG_INFO_LS = 'ebbless-songinfo-v1';
 const SONG_CREDIT_ROLES = [
   { label: 'Written by', types: ['composer', 'lyricist', 'writer', 'librettist'] },
   { label: 'Produced by', types: ['producer'] },
@@ -12212,61 +12214,156 @@ const SONG_CREDIT_ROLES = [
   { label: 'Engineered by', types: ['engineer', 'recording', 'sound'] },
   { label: 'Mastered by', types: ['mastering'] },
 ];
-async function fetchSongCredits(title, artist){
+// MusicBrainz asks for at most 1 request per second: every call goes through
+// one queue, spaced 1.1s apart, with one retry after a 503/429 "busy" answer.
+let mbQueue = Promise.resolve(), mbNextAt = 0;
+function mbGet(url){
+  const job = mbQueue.then(async () => {
+    for (let attempt = 0; attempt < 2; attempt++){
+      const wait = mbNextAt - Date.now();
+      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+      mbNextAt = Date.now() + 1100;
+      const res = await fetch(url);
+      if (res.status === 503 || res.status === 429){ mbNextAt = Date.now() + 2500; continue; }
+      if (!res.ok) throw new Error('musicbrainz ' + res.status);
+      return res.json();
+    }
+    throw new Error('musicbrainz busy');
+  });
+  mbQueue = job.catch(() => {});
+  return job;
+}
+async function songInfoMusicBrainz(title, artist){
+  const tkey = artistNameKey(title), akey = artistNameKey(artist);
+  if (!tkey) return null;
+  const q = 'recording:' + mbQuoted(title) + (artist ? ' AND artist:' + mbQuoted(artist) : '');
+  const d = await mbGet(MB_API + 'recording/?fmt=json&limit=25&query=' + encodeURIComponent(q));
+  // the same song is on many releases; try the earliest few exact matches
+  const hits = (d.recordings || []).filter(r => artistNameKey(r.title) === tkey &&
+    (!akey || (r['artist-credit'] || []).some(c => artistNameKey(c.name) === akey || (c.artist && artistNameKey(c.artist.name) === akey))))
+    .sort((a, b) => String(a['first-release-date'] || '9').localeCompare(String(b['first-release-date'] || '9')));
+  if (!hits.length) return null;
+  const roles = new Map(), samples = [];
+  const add = (type, name) => {
+    const role = name && SONG_CREDIT_ROLES.find(x => x.types.includes(type));
+    if (!role) return;
+    if (!roles.has(role.label)) roles.set(role.label, []);
+    const list = roles.get(role.label);
+    if (!list.some(n => artistNameKey(n) === artistNameKey(name))) list.push(name);
+  };
+  let first = null, rel = null;
+  for (const h of hits.slice(0, 3)){
+    const r = await mbGet(MB_API + 'recording/' + h.id + '?fmt=json&inc=artist-rels+work-rels+work-level-rels+recording-rels+artist-credits+releases+genres+tags');
+    if (!first) first = r;
+    (r.relations || []).forEach(x => {
+      if (x.artist) add(x.type, x.artist.name);
+      if (x.work) (x.work.relations || []).forEach(wr => { if (wr.artist) add(wr.type, wr.artist.name); });
+      if (x.type === 'samples material' && x.recording && x.direction !== 'backward'){
+        const by = (x.recording['artist-credit'] || []).map(c => c.name).join('');
+        const s = x.recording.title + (by ? ' - ' + by : '');
+        if (!samples.includes(s)) samples.push(s);
+      }
+    });
+    if ((r.relations || []).length) break;
+  }
+  const out = { sources: [{ name: 'MusicBrainz', url: 'https://musicbrainz.org/recording/' + hits[0].id }] };
+  out.roles = SONG_CREDIT_ROLES.filter(x => roles.has(x.label)).map(x => ({ label: x.label, names: roles.get(x.label) }));
+  if (samples.length) out.samples = samples.slice(0, 6);
+  const g = (first.genres || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0)).map(x => x.name);
+  out.genres = (g.length ? g : (first.tags || []).slice().sort((a, b) => (b.count || 0) - (a.count || 0)).map(x => x.name)).slice(0, 4);
+  const dated = (first.releases || []).filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date));
+  const relz = dated[0] || (first.releases || [])[0];
+  out.date = (dated[0] && dated[0].date) || first['first-release-date'] || '';
+  if (relz) out.album = relz.title;
+  if (relz && relz.id){
+    try{
+      rel = await mbGet(MB_API + 'release/' + relz.id + '?fmt=json&inc=labels');
+      const li = (rel['label-info'] || []).find(x => x.label && x.label.name);
+      if (li) out.label = li.label.name;
+    } catch(e){}
+  }
+  return out;
+}
+async function songInfoWikipedia(title, artist){
+  const tkey = artistNameKey(title), akey = artistNameKey(artist);
+  if (!tkey || !akey) return null;
+  const s = await artistInfoJson('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&list=search&srlimit=3&srsearch=' + encodeURIComponent(title + ' ' + artist + ' song'));
+  for (const hit of ((s.query && s.query.search) || [])){
+    if (!artistNameKey(hit.title).startsWith(tkey)) continue;
+    const p = await artistInfoJson('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(hit.title.replace(/ /g, '_')));
+    const ex = String(p.extract || '');
+    if (!ex || !artistNameKey(ex).includes(akey.slice(0, 12))) continue;
+    const sentences = ex.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [ex];
+    return { trivia: sentences.slice(0, 2).join(' ').trim().slice(0, 320), sources: [{ name: 'Wikipedia', url: (p.content_urls && p.content_urls.desktop && p.content_urls.desktop.page) || 'https://en.wikipedia.org/wiki/' + encodeURIComponent(hit.title.replace(/ /g, '_')) }] };
+  }
+  return null;
+}
+const SONG_INFO_PROVIDERS = [songInfoMusicBrainz, songInfoWikipedia];
+function songInfoStoreRead(){ try{ return JSON.parse(localStorage.getItem(SONG_INFO_LS) || '{}') || {}; } catch(e){ return {}; } }
+function songInfoStoreWrite(key, v){
+  try{
+    const all = songInfoStoreRead(); all[key] = v;
+    const keys = Object.keys(all); if (keys.length > 150) keys.slice(0, keys.length - 150).forEach(k => delete all[k]);
+    localStorage.setItem(SONG_INFO_LS, JSON.stringify(all));
+  } catch(e){}
+}
+function fetchSongInfo(title, artist){
   const key = artistNameKey(title) + '|' + artistNameKey(artist);
   if (songCreditsCache.has(key)) return songCreditsCache.get(key);
-  const job = (async () => {
-    const tkey = artistNameKey(title), akey = artistNameKey(artist);
-    if (!tkey) return null;
-    const q = 'recording:' + mbQuoted(title) + (artist ? ' AND artist:' + mbQuoted(artist) : '');
-    const d = await artistInfoJson(MB_API + 'recording/?fmt=json&limit=10&query=' + encodeURIComponent(q));
-    const hit = (d.recordings || []).find(r => artistNameKey(r.title) === tkey &&
-      (!akey || (r['artist-credit'] || []).some(c => artistNameKey(c.name) === akey || (c.artist && artistNameKey(c.artist.name) === akey))));
-    if (!hit) return null;
-    const r = await artistInfoJson(MB_API + 'recording/' + hit.id + '?fmt=json&inc=artist-rels+work-rels+work-level-rels');
-    const roles = new Map();
-    const add = (type, name) => {
-      if (!name) return;
-      const role = SONG_CREDIT_ROLES.find(x => x.types.includes(type));
-      if (!role) return;
-      if (!roles.has(role.label)) roles.set(role.label, []);
-      const list = roles.get(role.label);
-      if (!list.some(n => artistNameKey(n) === artistNameKey(name))) list.push(name);
-    };
-    (r.relations || []).forEach(rel => {
-      if (rel.artist) add(rel.type, rel.artist.name);
-      if (rel.work) (rel.work.relations || []).forEach(wr => { if (wr.artist) add(wr.type, wr.artist.name); });
+  const stored = songInfoStoreRead()[key];
+  if (stored){ const p = Promise.resolve(stored); songCreditsCache.set(key, p); return p; }
+  const job = Promise.all(SONG_INFO_PROVIDERS.map(p => p(title, artist).catch(() => null))).then(parts => {
+    const m = { roles: [], sources: [], genres: [] };
+    parts.filter(Boolean).forEach(x => {
+      ['date', 'album', 'label', 'trivia', 'samples'].forEach(f => { if (x[f] && !m[f]) m[f] = x[f]; });
+      if (x.genres && x.genres.length && !m.genres.length) m.genres = x.genres;
+      if (x.roles) m.roles = m.roles.concat(x.roles);
+      m.sources = m.sources.concat(x.sources || []);
     });
-    const out = SONG_CREDIT_ROLES.filter(x => roles.has(x.label)).map(x => ({ label: x.label, names: roles.get(x.label) }));
-    return out.length ? { mbUrl: 'https://musicbrainz.org/recording/' + hit.id, roles: out } : null;
-  })().catch(() => null);
+    const any = m.date || m.album || m.label || m.trivia || m.samples || m.genres.length || m.roles.length;
+    if (any) songInfoStoreWrite(key, m);
+    return any ? m : null;
+  });
   songCreditsCache.set(key, job);
   // a failed or empty lookup shouldn't stick for the whole session
   job.then(v => { if (!v) songCreditsCache.delete(key); });
   return job;
 }
-function buildSongCreditsEl(c){
+function buildSongInfoEl(c){
   const box = document.createElement('div');
   box.className = 'song-credits';
-  const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Credits';
+  const lbl = document.createElement('div'); lbl.className = 'section-label'; lbl.textContent = 'Info';
   box.appendChild(lbl);
-  c.roles.forEach(role => {
+  const row = (label, content) => {
     const line = document.createElement('div'); line.className = 'song-credits-line';
-    const r = document.createElement('div'); r.className = 'song-credits-role'; r.textContent = role.label;
-    const names = document.createElement('div'); names.className = 'song-credits-names';
+    const r = document.createElement('div'); r.className = 'song-credits-role'; r.textContent = label;
+    const v = document.createElement('div'); v.className = 'song-credits-names';
+    if (typeof content === 'string') v.textContent = content; else v.appendChild(content);
+    line.appendChild(r); line.appendChild(v); box.appendChild(line);
+  };
+  if (c.date) row('Released', c.date);
+  if (c.album) row('Album', c.album);
+  if (c.label) row('Label', c.label);
+  if (c.genres && c.genres.length) row('Genre', c.genres.join(', '));
+  if (c.samples && c.samples.length) row('Samples', c.samples.join('; '));
+  c.roles.forEach(role => {
+    const names = document.createElement('span');
     role.names.forEach((n, i) => {
       if (i) names.append(', ');
       const a = document.createElement('span'); a.className = 'song-page-link'; a.textContent = n;
       a.addEventListener('click', () => openArtistPage(n));
       names.appendChild(a);
     });
-    line.appendChild(r); line.appendChild(names);
-    box.appendChild(line);
+    row(role.label, names);
   });
+  if (c.trivia) row('Trivia', c.trivia);
   const src = document.createElement('div'); src.className = 'song-credits-source';
   src.append('From ');
-  const l = document.createElement('a'); l.href = c.mbUrl; l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'MusicBrainz';
-  src.appendChild(l);
+  c.sources.forEach((s, i) => {
+    if (i) src.append(', ');
+    const l = document.createElement('a'); l.href = s.url; l.target = '_blank'; l.rel = 'noopener'; l.textContent = s.name;
+    src.appendChild(l);
+  });
   box.appendChild(src);
   return box;
 }
@@ -12323,9 +12420,12 @@ function openSongPage(t, plId, trackIdx){
   fetchTrackYear(t.title, t.artist).then(y => {
     if (y && openLibraryPanelId === id){ yearSpan.textContent = (info.textContent ? ' · ' : '') + y; }
   }).catch(() => {});
-  fetchSongCredits(t.title, t.artist).then(c => {
-    if (c && openLibraryPanelId === id) libplBody.appendChild(buildSongCreditsEl(c));
-  });
+  const infoStatus = document.createElement('div'); infoStatus.className = 'currents-status'; infoStatus.textContent = 'Loading info...';
+  libplBody.appendChild(infoStatus);
+  fetchSongInfo(t.title, t.artist).then(c => {
+    if (openLibraryPanelId !== id) return;
+    if (c) infoStatus.replaceWith(buildSongInfoEl(c)); else infoStatus.textContent = 'No extra info found.', infoStatus.style.animation = 'none';
+  }).catch(() => { if (openLibraryPanelId === id){ infoStatus.textContent = 'No extra info found.'; infoStatus.style.animation = 'none'; } });
 }
 async function loadArtistAlbumsInto(panelId, name, standalone){
   const lib = getCachedPlaylist(panelId);
