@@ -26,6 +26,9 @@ import { ARTISTMAP_LIMIT, classifyLastfmSimilar, shapeArtistMap, artistMapCacheC
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
 import { handlePodAds } from './pod-ads.js';
 export { PodCaptioner, PodCaptionBudget };
+import { VoiceQuota } from './voice-quota.js';
+import { handleVoicePlan } from './voice.js';
+export { VoiceQuota };
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -5001,6 +5004,7 @@ export default {
       if (url.pathname === '/artistmap') return await handleArtistMap(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
       if (url.pathname === '/vibe-interpret') return await handleVibeInterpret(url, env, ctx);
+      if (url.pathname === '/voice/plan') return await handleVoicePlan(request, env, ctx, { json, verifyIdentity: (t, e, c) => verifyGoogleIdToken(t, e.GOOGLE_CLIENT_ID, e, c) });
       if (url.pathname === '/metrics') return await handleMetrics(request, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);
@@ -5017,7 +5021,7 @@ export default {
       if (url.pathname === '/profile/fetch') return await handleProfileFetch(request, env, ctx);
       if (url.pathname === '/profile/delete') return await handleProfileDelete(request, env, ctx, { json, verifyGoogleIdToken, profileKey });
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
-      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
+      return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/voice/plan (POST)', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
     } catch (e) {
       return json({ error: 'internal error: ' + e.message }, 500);
     }
