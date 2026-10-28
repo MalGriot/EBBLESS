@@ -1390,6 +1390,11 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 /* issue #143: the record's own drop shadow reaches past this box, so the
    default overflow:hidden sliced it into a hard rectangular edge */
 .artwork-wrap[data-mode="art"][data-art-style="record"]{overflow:visible}
+/* #583 tangibility: bevel on album art. Static overlay (no animation, no filter): a thin top-light edge plus a soft inset shade, so the art reads as a pressed-in object. */
+.artwork-wrap[data-mode="art"][data-art-style="default"]::after,.lib-card .art::after{content:'';position:absolute;inset:0;z-index:5;border-radius:inherit;pointer-events:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.05),inset 0 -2px 6px rgba(0,0,0,.28)}
+.lib-card.is-artist-card .art::after{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,255,255,.05)}
+#mini-bar img{box-shadow:0 0 0 1px rgba(255,255,255,.07),0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.35)}
 .artwork-wrap[data-mode="art"]{aspect-ratio:1!important;height:auto!important;flex-shrink:0}
 /* #613: DVD-logo bounce on the empty player. The logo is 40% of the art wide (wordmark is 5:1, so 8% tall):
    the outer box slides down the art's height (1150% of its own height = 92% of the art) and the image across
