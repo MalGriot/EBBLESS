@@ -11771,7 +11771,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #679, 2026-10-28; flipped to ready by owner. Issue gives no order; ask owner before building.
 
 ### queue-slide-current-to-top-680: When the queue advances, the list slides up so the current song sits near the top (Geethub #680)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #680. When the queue advances, the list slides up so the current song sits near the top.
 - **Touches:** index.html.
@@ -11779,7 +11779,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #680, 2026-10-28; flipped to ready by owner. Related: #669.
 
 ### album-art-tab-icons-follow-mode-681: Album art tab icons: LP tab shows an LP icon when active, cassette tab a cassette, default unchanged (Geethub #681)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #681. Album art tab icons: LP tab shows an LP icon when active, cassette tab a cassette, default unchanged.
 - **Touches:** index.html.
@@ -11787,7 +11787,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #681, 2026-10-28; flipped to ready by owner. 
 
 ### visualizer-spin-icon-spins-682: When visualizer spin is on, only the icon spins (not the whole button) (Geethub #682)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #682. When visualizer spin is on, only the icon spins (not the whole button).
 - **Touches:** index.html.
