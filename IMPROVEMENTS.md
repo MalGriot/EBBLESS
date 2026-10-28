@@ -10483,20 +10483,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #542. Check against the mission statement. Research written, see docs/research/TIDAL-USPS.md. Top picks: song credits, listening recap card, quiet support-this-artist link. Hi-res audio does not fit (source is YouTube/SoundCloud).
 
 ### electron-spoof-user-agent: Spoof the User-Agent dynamically in Electron (Geethub #541)
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** Idea, Geethub #541. Idea: change the User-Agent dynamically in the desktop (Electron) app.
 - **Touches:** desktop/ Electron.
 - **Branch:** 
-- **Notes:** Synced from Geethub #541. Ad-related group with #527-#529, #539, #540. Ad avoidance is core (#523 shipped); must stay within terms the user accepts.
+- **Notes:** Owner 2026-10-29: covered by the shipped real ad blocking (adblock-mac-android-real); closed as duplicate. Synced from Geethub #541. Ad-related group with #527-#529, #539, #540. Ad avoidance is core (#523 shipped); must stay within terms the user accepts.
 
 ### yt-ad-blocking-more: More on ad blocking YouTube (compliantly) (Geethub #540)
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** medium
 - **Description:** Idea, Geethub #540. Further YouTube ad handling, compliantly.
 - **Touches:** ad handling.
 - **Branch:** 
-- **Notes:** Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
+- **Notes:** Owner 2026-10-29: covered by the shipped real ad blocking; closed as duplicate. Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
 - **Status:** review
@@ -10678,12 +10678,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #552. Already on main (#586/#594): library bar fixed, list scrolls in .lib-body; queue head sits above .queue-scroll. Verified in browser, no new change.
 
 ### feedback-tester-s-wishes: feedback tester's wishes (Geethub #553)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub #553. medium Intuitive music app - you think about a song and can talk to it and it plays it - it understands if you've been in a fight and need to rage or chill, if you have a party- what mood you are in for to entertain Also
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #553.
+- **Notes:** Owner 2026-10-29: explore a depth meter for how esoteric versus mainstream discovery should be. No never-show-this-artist button. Synced from Geethub #553.
 
 ### prioritize-official-audio-higher-than-anything: prioritize "official audio" higher than anything else in link matching (Geethub #554)
 - **Status:** merged
@@ -10702,12 +10702,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #555.
 
 ### let-s-create-a-test-to: let's create a test to improve song matching (Geethub #556)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** low
 - **Description:** Idea, Geethub #556. medium we'll take a playlist and i'll match a bunch of songs manually. ebbless will study the pattern and learn it
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #556.
+- **Notes:** Owner 2026-10-29: postponed. Synced from Geethub #556.
 
 ### youtube-ads-tip-when-the-skip: youtube ads tip: when the skip button appears, you don't have to click it, all you have to do is refresh the page and it plays (Geethub #557)
 - **Status:** review
@@ -10766,12 +10766,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #562. Dropped 2026-10-17: native Android ships by sideload only, no Google Play.
 
 ### reverse-engineer-caffeiene-to-implement-is: reverse engineer caffeiene to implement is in ebbless - possibly to cure iphone pausing issue (Geethub #563)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** low
 - **Description:** Idea, Geethub #563. medium https://www.zhornsoftware.co.uk/caffeine/
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #563.
+- **Notes:** Owner 2026-10-29: check whether Mac/PC pause on sleep; build keep-awake while playing if so. Synced from Geethub #563.
 
 ### bug-mac-app-going-into-miniplayer-removes: mac app: going into miniplayer removes app icon from dock (Geethub #564)
 - **Status:** merged
@@ -10806,12 +10806,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #567. Fixed with #501 (same fix: text color chosen from the button fill by contrast).
 
 ### adblock-code-option: adblock code option (Geethub #568)
-- **Status:** draft
+- **Status:** dropped
 - **Priority:** low
 - **Description:** Idea, Geethub #568. medium # adblock ## Table of Contents - [CLI Microlink API example](#cli-microlink-api-example) - [cURL Microlink API example](#curl-microlink-api-example) - [JavaScript Microlink API example](#javascript-microlink-api-e
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #568.
+- **Notes:** Owner 2026-10-29: unrelated screenshot-service doc, not applicable; dropped. Synced from Geethub #568.
 
 ### library-view-button-hitting-a-button: library view button: hitting a button in the "sort by" list should reverse the list by that parameter (Geethub #569)
 - **Status:** merged
@@ -11024,12 +11024,12 @@ Add entries in this shape:
 - **Notes:** Details, guards and accuracy limits in the doc, Part 4. Needs worker deploy for the shared per-episode cache. Cache v407. Not run against a real episode; Android native not tried.
 
 ### app-should-feel-like-home: app should feel like home (Geethub #583)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Idea Geethub #583. unlinke most apps, spotify feels like a place. but what kind of place? a shop? a room? your room? ebbless should feel like it's YOURS. and it's actively helping you stay in feng shui. think cozy, spacious, warm, not claustrophobic, not so open you get lost, not too busy but attention grabbing, knowing exactly where to go and what to do. comfortable
 - **Touches:** tbd.
 - **Branch:** 
-- **Notes:** Synced from Geethub #583.
+- **Notes:** Owner 2026-10-29: build the tangibility pass (bevel on album art, soft shadows under windows, soft transitions, soft sounds, soft haptics on taps, wavy ripples on click). Synced from Geethub #583.
 
 ### android-app-killed-by-low-memory-killer-af: Android: app killed by low-memory killer after ~46 min of screen-off playback (Geethub #584)
 - **Status:** merged
@@ -11545,12 +11545,12 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #661 (bug); issue body was empty beyond the title.
 
 ### cool-visualizer-zoomquilt-641: Visualizer idea: zoomquilt-style infinite zoom (Geethub #641)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Idea link: https://zoomquilt.org/ (endless zooming artwork). Consider an art/visualizer mode in that spirit. Follow the GPU budget rules in CLAUDE.md.
 - **Touches:** visualizer / art modes
 - **Branch:**
-- **Notes:** Synced from GitHub issue #641 (idea); issue body was empty beyond the title.
+- **Notes:** Owner 2026-10-29: postponed. Synced from GitHub issue #641 (idea); issue body was empty beyond the title.
 
 ### donate-button-640: Donate button (Geethub #640)
 - **Status:** merged
@@ -11561,12 +11561,12 @@ Add entries in this shape:
 - **Notes:** Synced from GitHub issue #640 (idea); issue body was empty beyond the title.
 
 ### natural-visuals-ambient-sounds-637: Big natural visuals with ambient sounds alongside (Geethub #637)
-- **Status:** draft
+- **Status:** archived
 - **Priority:** medium
 - **Description:** Big beautiful natural visuals with ambient sounds alongside. Related to ambient-soundscapes and echo-ambient-library entries; probably should be folded into them.
 - **Touches:** art modes / ambient
 - **Branch:**
-- **Notes:** Synced from GitHub issue #637 (idea); issue body was empty beyond the title.
+- **Notes:** Owner 2026-10-29: postponed. Synced from GitHub issue #637 (idea); issue body was empty beyond the title.
 
 ### audius-fallback-source: Play songs from Audius when SoundCloud blocks or only previews them (from #571 research)
 - **Status:** review
