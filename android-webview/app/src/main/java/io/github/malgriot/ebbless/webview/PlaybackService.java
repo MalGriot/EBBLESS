@@ -87,7 +87,7 @@ public class PlaybackService extends Service {
                 @Override public void onSkipToNext() { dispatch("next"); }
                 @Override public void onSkipToPrevious() { dispatch("prev"); }
                 @Override public void onSeekTo(long posMs) { dispatch("seekto:" + (posMs / 1000.0)); }
-                @Override public void onCustomAction(String action, android.os.Bundle extras) { if ("like".equals(action)) dispatch("like"); }
+                @Override public void onCustomAction(String action, android.os.Bundle extras) { if ("like".equals(action)) dispatch("like"); else if ("visual".equals(action)) openAppNow(); }
             }, handler);
         } catch (Throwable t) {
             session = null;   // never let the player widget stop the music
@@ -135,6 +135,15 @@ public class PlaybackService extends Service {
         return PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE);
     }
 
+    /** The "visual mode" button: for now it just brings the app to the front (a later item makes it the full-screen player). */
+    private void openAppNow() {
+        try { openApp().send(); } catch (Exception ignored) {}
+    }
+
+    private Notification.Action openButton(int icon, String label) {
+        return new Notification.Action.Builder(Icon.createWithResource(this, icon), label, openApp()).build();
+    }
+
     private Notification.Action button(int code, String name, int icon, String label) {
         Intent i = new Intent(this, PlaybackService.class).setAction(ACT + name);
         PendingIntent pi = PendingIntent.getService(this, code, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -176,6 +185,7 @@ public class PlaybackService extends Service {
                 .addCustomAction(new PlaybackState.CustomAction.Builder("like",
                         liked ? "Remove from Liked Songs" : "Add to Liked Songs",
                         liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart).build())
+                .addCustomAction(new PlaybackState.CustomAction.Builder("visual", "Visual mode", R.drawable.ic_media_visual).build())
                 .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, pos, playing ? rate : 0f, SystemClock.elapsedRealtime())
                 .build());
         session.setActive(true);
@@ -189,11 +199,12 @@ public class PlaybackService extends Service {
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
+                .addAction(button(13, "like", liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart, liked ? "Remove from Liked Songs" : "Add to Liked Songs"))
                 .addAction(button(10, "prev", R.drawable.ic_media_prev, "Previous"))
                 .addAction(playing ? button(11, "pause", R.drawable.ic_media_pause, "Pause") : button(11, "play", R.drawable.ic_media_play, "Play"))
                 .addAction(button(12, "next", R.drawable.ic_media_next, "Next"))
-                .addAction(button(13, "like", liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart, liked ? "Remove from Liked Songs" : "Add to Liked Songs"))
-                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 3));
+                .addAction(openButton(R.drawable.ic_media_visual, "Visual mode"))
+                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(1, 2, 3));
         if (art != null) b.setLargeIcon(art);
         nm.notify(1, b.build());
     }
