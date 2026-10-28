@@ -1624,8 +1624,8 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .viz-controls{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;z-index:6;
   opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out)}
 .artwork-wrap.mode-viz .viz-controls{opacity:1;pointer-events:auto}
-/* mobile: the controls row drops in directly beneath the tab bar (moved there
-   by vizControlsPlace) instead of sitting over the art's bottom corner */
+/* the controls row sits directly beneath the tab bar (moved there at load, #683)
+   instead of over the art's bottom corner */
 .visual-tabs > .viz-controls{right:auto;bottom:auto;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:5}
 .visual-tabs:has(.v-tab[data-mode="viz"].is-active) > .viz-controls{opacity:1;pointer-events:auto}
 /* #487: no backdrop-filter on these or .art-fs-btn - in fullscreen they float over
@@ -26318,15 +26318,8 @@ visualTabs.forEach(btn => btn.addEventListener('click', (e) => {
   setVisualMode(btn.dataset.mode);
 }));
 window.addEventListener('resize', () => { if (visualMode === 'viz') vizResize(); });
-// phones/narrow screens: viz controls sit under the tab bar, wider: over the art
-const vizControlsEl = $('vizControls'), vizControlsHome = vizControlsEl.parentElement, vizControlsAnchor = vizControlsEl.nextElementSibling;
-const vizControlsMQ = window.matchMedia('(max-width:859px)');
-function vizControlsPlace(){
-  if (vizControlsMQ.matches) $('visualTabs').appendChild(vizControlsEl);
-  else vizControlsHome.insertBefore(vizControlsEl, vizControlsAnchor);
-}
-vizControlsMQ.addEventListener('change', vizControlsPlace);
-vizControlsPlace();
+// viz controls always sit directly beneath the art tab selector (#683), phone and desktop
+$('visualTabs').appendChild($('vizControls'));
 // phones/narrow screens: the heart and the song options button sit in the
 // controls row, one on each side, so the title above gets the full art width (#611).
 // Desktop: the heart sits on the art's bottom-right corner like the fullscreen
