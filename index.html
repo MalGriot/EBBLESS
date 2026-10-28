@@ -17881,21 +17881,150 @@ const VOICE_LANGS = {
     off: ['off', 'disable', 'disabled', 'stop', 'no', 'dont', 'cancel'],
     // "play <x>"; longest first is not required (sorted at load)
     playPrefix: ['play me', 'play', 'put on', 'listen to', 'i want to hear', 'i wanna hear', 'let me hear'],
-    // words that carry no mood or artist when a line is judged to be "just a mood"
-    fluff: ['some', 'something', 'music', 'songs', 'song', 'tracks', 'a', 'an', 'bit', 'little', 'of', 'me', 'vibes', 'vibe', 'feeling', 'mood', 'for', 'put', 'on', 'play', 'give', 'i', 'want', 'need', 'to', 'hear', 'listen', 'the', 'very', 'really', 'so', 'something'],
-    // one-word moods -> the sentence handed to the existing vibe interpreter
+    // Words that carry no mood or artist when a line is judged to be "just a mood". They are dropped
+    // from BOTH the spoken line and every mood phrase before matching, so "I feel <mood>", "give me
+    // <mood> music", "put on something <mood>", "something to <mood> to", "pump me up" and "I'm
+    // pissed off" all reduce to the same key as the bare phrase. Never put a command word here.
+    fluff: ['some', 'something', 'music', 'songs', 'song', 'tracks', 'track', 'tunes', 'playlist', 'mix', 'jams', 'stuff', 'a', 'an', 'bit', 'little', 'of', 'me', 'vibes', 'vibe', 'feeling', 'feel', 'mood', 'for', 'put', 'on', 'play', 'give', 'gimme', 'i', 'im', 'am', 'want', 'wanna', 'need', 'to', 'hear', 'listen', 'the', 'very', 'really', 'so', 'kind', 'sort', 'type', 'its', 'is', 'in', 'with', 'tonight', 'today', 'kinda', 'sorta', 'pretty', 'super', 'more', 'like', 'ones', 'help', 'my', 'mode', 'it', 'just'],
+    // mood key -> { words: one word or phrase each (synonyms, activities, settings, genres), vibe: the sentence
+    // handed to the existing vibe interpreter }. A phrase must equal the whole line (after fluff and fillers
+    // are removed), so nothing here can claim a longer request: those fall through to the LLM / vibe path.
     moods: {
-      calm: { words: ['calm', 'relax', 'relaxed', 'relaxing', 'mellow', 'peaceful', 'soft', 'gentle'], vibe: 'calm, peaceful, gentle music to relax to' },
-      chill: { words: ['chill', 'chilled', 'chillout', 'laidback', 'easy'], vibe: 'chill, laid back, easygoing music' },
-      hype: { words: ['hype', 'hyped', 'pump', 'pumped', 'energy', 'energetic', 'upbeat'], vibe: 'hype, high energy music to get pumped up' },
-      rage: { words: ['rage', 'angry', 'aggressive', 'heavy', 'mad'], vibe: 'angry, aggressive, heavy music to rage to' },
-      focus: { words: ['focus', 'study', 'studying', 'concentrate', 'concentration', 'productive', 'work'], vibe: 'focused instrumental music for studying and deep work' },
-      sleep: { words: ['sleep', 'sleepy', 'bedtime', 'dream', 'night'], vibe: 'slow, soft music for falling asleep' },
-      party: { words: ['party', 'dance', 'club', 'rave'], vibe: 'upbeat party dance music' },
-      workout: { words: ['workout', 'gym', 'run', 'running', 'cardio'], vibe: 'high energy workout music' },
-      sad: { words: ['sad', 'melancholy', 'heartbreak', 'cry', 'lonely'], vibe: 'sad, emotional, melancholic songs' },
-      happy: { words: ['happy', 'cheerful', 'joy', 'feelgood', 'sunny'], vibe: 'happy, feel good, sunny songs' },
-      romantic: { words: ['romantic', 'love', 'romance'], vibe: 'romantic, warm, intimate songs' }
+      calm: { words: ['calm', 'relax', 'relaxed', 'relaxing', 'mellow', 'soft', 'gentle', 'serene', 'tranquil', 'at ease', 'unwind', 'wind down', 'decompress', 'destress', 'de stress', 'zen'], vibe: 'calm, peaceful, gentle music to relax to' },
+      chill: { words: ['chill', 'chilled', 'chillout', 'chill out', 'laidback', 'laid back', 'easy', 'easygoing', 'low key', 'lowkey', 'vibe out', 'vibing', 'smooth'], vibe: 'chill, laid back, easygoing music' },
+      hype: { words: ['hype', 'hyped', 'pump', 'pumped', 'pump up', 'pump it up', 'get pumped', 'energetic', 'upbeat', 'amped', 'fired up', 'banger', 'bangers', 'adrenaline', 'psyched'], vibe: 'hype, high energy music to get pumped up' },
+      rage: { words: ['rage', 'aggressive', 'heavy', 'furious', 'livid', 'fuming', 'smash', 'destroy', 'blow off steam', 'vent', 'venting', 'let it out'], vibe: 'angry, aggressive, heavy music to rage to' },
+      angry: { words: ['angry', 'mad', 'pissed', 'pissed off', 'annoyed', 'irritated', 'fed up', 'ticked off', 'upset', 'resentful'], vibe: 'angry, intense, defiant songs for when you are pissed off' },
+      frustrated: { words: ['frustrated', 'frustration', 'had enough', 'sick of it'], vibe: 'frustrated, raw, cathartic songs to release tension' },
+      focus: { words: ['focus', 'focused', 'concentrate', 'concentration', 'productive', 'productivity', 'work', 'working', 'deep work', 'office', 'get things done', 'in the zone', 'zone in', 'flow state'], vibe: 'focused instrumental music for studying and deep work' },
+      study: { words: ['study', 'studying', 'homework', 'exam', 'exams', 'revision', 'revise', 'cram', 'cramming', 'library'], vibe: 'quiet focused instrumental music for studying' },
+      sleep: { words: ['sleep', 'sleepy', 'dream', 'night', 'fall asleep', 'go to sleep', 'lullaby', 'insomnia', 'cant sleep', 'nap', 'napping', 'drift off'], vibe: 'slow, soft music for falling asleep' },
+      party: { words: ['party', 'dance', 'partying', 'dancing', 'turn the party up', 'get the party started'], vibe: 'upbeat party dance music' },
+      pregame: { words: ['pregame', 'pregaming', 'pre game', 'pre drinks', 'predrinks', 'getting ready', 'get ready', 'warm up the night', 'before the club'], vibe: 'upbeat pregame songs for getting ready to go out' },
+      'house party': { words: ['house party', 'kickback', 'kick back', 'get together', 'gathering', 'crowd pleaser', 'crowd pleasers'], vibe: 'crowd pleasing party songs everyone knows' },
+      'ecstatic dance': { words: ['ecstatic dance', 'ecstatic', 'conscious dance', '5 rhythms', 'shamanic', 'trance dance', 'movement', 'free movement'], vibe: 'ecstatic dance journey, building from grounded to wild rhythms, world and electronic percussion' },
+      club: { words: ['club', 'clubbing', 'nightclub', 'night club', 'dancefloor', 'dance floor', 'bottle service', 'vip'], vibe: 'club ready dance music with a heavy bass, high energy' },
+      rave: { words: ['rave', 'raving', 'warehouse', 'underground', 'all night', 'after party', 'afterparty', 'afterhours', 'after hours'], vibe: 'driving rave and warehouse electronic music, high bpm' },
+      barbecue: { words: ['barbecue', 'bbq', 'cookout', 'grill', 'grilling', 'backyard', 'block party', 'cook out'], vibe: 'feel good barbecue and cookout songs, soul, funk, hip hop classics' },
+      'dinner party': { words: ['dinner party', 'dinner guests', 'entertaining', 'cocktail hour', 'cocktails', 'wine night'], vibe: 'stylish dinner party music, warm jazz, soul and bossa' },
+      friends: { words: ['friends', 'with friends', 'hang out', 'hanging out', 'hangout', 'squad', 'the crew', 'good company', 'good times'], vibe: 'feel good songs for hanging out with friends' },
+      karaoke: { words: ['karaoke', 'singing', 'belt it out', 'shower karaoke'], vibe: 'big sing along songs everyone knows the words to' },
+      celebration: { words: ['celebrate', 'celebration', 'celebrating', 'birthday', 'graduation', 'victory', 'champagne'], vibe: 'celebration songs, triumphant and joyful' },
+      wedding: { words: ['wedding', 'reception', 'first dance', 'bride', 'bridal', 'cocktail wedding'], vibe: 'wedding reception songs, romantic and danceable' },
+      family: { words: ['family', 'family time', 'family gathering', 'cousins', 'holiday dinner', 'cookout family'], vibe: 'warm family friendly songs, nostalgic and easy to share' },
+      workout: { words: ['workout', 'gym', 'cardio', 'lifting', 'weights', 'weightlifting', 'training', 'exercise', 'exercising', 'work out', 'hiit', 'crossfit', 'bodybuilding', 'leg day'], vibe: 'high energy workout music' },
+      running: { words: ['run', 'running', 'jog', 'jogging', 'marathon', 'sprint', 'sprints', 'treadmill', '5k', '10k', 'runner'], vibe: 'steady driving music for running, strong beat, around 160 bpm' },
+      cycling: { words: ['cycling', 'bike', 'biking', 'spin', 'spinning', 'bike ride'], vibe: 'rhythmic upbeat music for cycling and spin class' },
+      walking: { words: ['walk', 'walking', 'stroll', 'strolling', 'walk the dog', 'wander', 'wandering', 'urban walk'], vibe: 'easy mid tempo music for a long walk' },
+      hiking: { words: ['hiking', 'hike', 'trail', 'nature walk', 'camping', 'mountains'], vibe: 'open, organic music for hiking and the outdoors, folk and indie' },
+      yoga: { words: ['yoga', 'stretch', 'stretching', 'pilates', 'yin yoga', 'vinyasa', 'savasana', 'mobility'], vibe: 'gentle flowing music for yoga and stretching' },
+      meditation: { words: ['meditation', 'meditate', 'meditating', 'mindfulness', 'breathwork', 'breathing', 'prayer', 'pray', 'zen garden', 'quiet mind'], vibe: 'slow, spacious meditation music, ambient and minimal' },
+      reading: { words: ['reading', 'reading a book', 'novel', 'library quiet', 'bookstore', 'study break'], vibe: 'soft instrumental music for reading' },
+      writing: { words: ['writing', 'journaling', 'journal', 'songwriting', 'write lyrics', 'essay', 'screenplay', 'novel writing'], vibe: 'thoughtful lyric light music for writing and journaling' },
+      coding: { words: ['coding', 'programming', 'debugging', 'hacking', 'developer', 'dev', 'hackathon', 'build mode', 'ship it'], vibe: 'steady electronic and instrumental music for coding, no vocals' },
+      cooking: { words: ['cooking', 'cook', 'kitchen', 'baking', 'bake', 'making dinner', 'meal prep', 'chopping', 'sunday cooking'], vibe: 'feel good music for cooking, soul, funk and bossa' },
+      cleaning: { words: ['cleaning', 'clean', 'cleanup', 'clean up', 'chores', 'housework', 'tidy', 'tidying', 'laundry', 'spring cleaning', 'dishes'], vibe: 'upbeat music to clean the house to' },
+      driving: { words: ['driving', 'drive home', 'in the car', 'windows down', 'cruising', 'cruise'], vibe: 'driving music, open road, windows down' },
+      'road trip': { words: ['road trip', 'roadtrip', 'long drive', 'highway', 'interstate', 'cross country', 'road tripping', 'on the road', 'sing along drive'], vibe: 'road trip songs, big choruses and open highway energy' },
+      'night drive': { words: ['night drive', 'late night drive', 'midnight drive', 'neon', 'city lights', 'city at night', 'drive at night', 'nocturnal'], vibe: 'night drive music, moody synths and slow groove, city lights' },
+      commute: { words: ['commute', 'commuting', 'bus ride', 'way to work', 'ride home', 'transit'], vibe: 'steady mid tempo music for a commute' },
+      shower: { words: ['shower', 'in the shower', 'shower songs', 'bath', 'bubble bath', 'bathtub', 'soak', 'getting dressed'], vibe: 'feel good shower songs, uplifting and singable' },
+      dinner: { words: ['dinner', 'dining', 'supper', 'lunch', 'brunch', 'restaurant'], vibe: 'warm background music for dinner, soul, jazz and light groove' },
+      'date night': { words: ['date night', 'first date', 'candlelight', 'candlelit', 'romantic dinner', 'anniversary', 'valentines', 'intimate', 'wine and dine'], vibe: 'date night music, warm, intimate and a little sexy' },
+      breakfast: { words: ['breakfast', 'making coffee', 'cafe', 'coffee shop', 'espresso', 'pancakes'], vibe: 'easy morning cafe music, acoustic and soft groove' },
+      morning: { words: ['morning', 'wake up', 'waking up', 'good morning', 'sunrise', 'rise and shine', 'start the day', 'early morning'], vibe: 'bright gentle morning music to start the day' },
+      bedtime: { words: ['wind down night', 'before bed', 'pillow', 'bedroom', 'lights out', 'evening wind down', 'sunday night', 'night routine'], vibe: 'soft slow evening music for winding down before bed' },
+      gaming: { words: ['gaming', 'gamer', 'video games', 'playing games', 'esports', 'stream', 'streaming', 'grind', 'grinding'], vibe: 'high focus electronic and instrumental music for gaming' },
+      painting: { words: ['painting', 'paint', 'sketching', 'creating art', 'crafting', 'making art'], vibe: 'loose creative flowing music for painting and making art' },
+      creative: { words: ['creative', 'creativity', 'inspired', 'inspiration', 'creating', 'brainstorm', 'ideas', 'muse', 'making music', 'studio session'], vibe: 'inspiring, open, imaginative music for creative work' },
+      shopping: { words: ['shopping', 'mall', 'retail', 'window shopping', 'errands', 'run errands', 'groceries', 'grocery shopping'], vibe: 'light bright upbeat music for errands and shopping' },
+      travel: { words: ['travel', 'traveling', 'travelling', 'airport', 'flight', 'vacation', 'wanderlust', 'adventure', 'explore', 'exploring'], vibe: 'adventurous travel music, open and wide, world influences' },
+      beach: { words: ['beach', 'seaside', 'ocean', 'tropical', 'island', 'island vibes', 'poolside', 'pool', 'pool party', 'palm trees', 'sandy'], vibe: 'sunny beach and poolside songs, breezy and warm' },
+      gardening: { words: ['gardening', 'garden', 'plants', 'plant', 'planting', 'sunday garden', 'porch', 'porch sitting'], vibe: 'gentle sunny acoustic and soul for gardening' },
+      sad: { words: ['sad', 'heartbreak', 'cry', 'crying', 'tears', 'blue', 'depressed', 'gloomy', 'feeling down', 'bummed', 'hurting'], vibe: 'sad, emotional, melancholic songs' },
+      heartbroken: { words: ['heartbroken', 'got dumped', 'broken heart', 'breakup', 'break up', 'broke up', 'dumped', 'missing you', 'miss you', 'miss her', 'miss him', 'heartache', 'lovesick', 'getting over', 'move on'], vibe: 'heartbreak and breakup songs, raw and honest' },
+      lonely: { words: ['lonesome', 'alone', 'all alone', 'isolated', 'solitude', 'by myself', 'solo', 'home alone', 'empty', 'empty house'], vibe: 'lonely, quiet, introspective songs for being alone' },
+      melancholy: { words: ['bittersweet', 'wistful', 'pensive', 'somber', 'sombre', 'sorrow', 'sorrowful', 'mournful', 'longing', 'yearning'], vibe: 'bittersweet melancholy songs, slow and reflective' },
+      nostalgic: { words: ['nostalgic', 'nostalgia', 'throwback', 'throwbacks', 'old school', 'oldies', 'remember', 'memories', 'old days', 'good old days', 'childhood', 'back in the day', 'retro', 'vintage', 'flashback'], vibe: 'nostalgic throwback songs from back in the day' },
+      reflective: { words: ['reflective', 'reflect', 'reflecting', 'introspective', 'thoughtful', 'contemplative', 'deep thoughts', 'thinking', 'thinking about life', 'soul searching', 'existential'], vibe: 'reflective, introspective songs for thinking things over' },
+      anxious: { words: ['anxious', 'anxiety', 'nervous', 'worried', 'worry', 'on edge', 'panic', 'overthinking', 'uneasy', 'jittery', 'restless', 'butterflies'], vibe: 'steady grounding songs to ease anxiety, slow and soothing' },
+      stressed: { words: ['stressed', 'stressed out', 'stress', 'stressful', 'tense', 'tension', 'burned out', 'burnout', 'exhausted', 'pressure', 'deadline', 'deadlines', 'swamped'], vibe: 'calming music to relieve stress, slow tempo, warm and soothing' },
+      overwhelmed: { words: ['overwhelmed', 'too much', 'drowning', 'spiraling', 'cant cope', 'need a break', 'take a breather', 'breather', 'reset'], vibe: 'slow gentle soothing music to reset when overwhelmed' },
+      tired: { words: ['tired', 'drained', 'worn out', 'low energy', 'sluggish', 'lazy', 'lazy day', 'slow day', 'drowsy', 'groggy', 'lethargic'], vibe: 'slow warm low energy music for a tired day' },
+      bored: { words: ['bored', 'boring', 'nothing to do', 'surprise me', 'anything', 'whatever', 'random', 'mix it up', 'shake things up', 'something new', 'discover'], vibe: 'something fresh and varied, surprise me, mixed genres' },
+      happy: { words: ['happy', 'cheerful', 'joy', 'feelgood', 'feel good', 'sunny', 'joyful', 'good mood', 'great mood', 'smiling', 'bright', 'uplifting', 'uplift', 'good vibes', 'positive', 'positivity', 'sunshine', 'glad', 'delighted'], vibe: 'happy, feel good, sunny songs' },
+      excited: { words: ['excited', 'excitement', 'cant wait', 'thrilled', 'stoked', 'exhilarated', 'giddy', 'buzzing', 'anticipation', 'pumped about'], vibe: 'excited, bright, anticipatory songs with a rising feel' },
+      euphoric: { words: ['euphoric', 'euphoria', 'ecstasy', 'elated', 'blissful', 'bliss', 'on top of the world', 'high on life', 'floating', 'transcendent', 'peak', 'peak time'], vibe: 'euphoric uplifting songs, soaring and ecstatic' },
+      hopeful: { words: ['hopeful', 'hope', 'optimistic', 'optimism', 'better days', 'light at the end', 'brighter days', 'silver lining', 'new beginnings', 'fresh start', 'new chapter', 'healing journey'], vibe: 'hopeful, uplifting songs about better days ahead' },
+      confident: { words: ['confident', 'confidence', 'self assured', 'boss up', 'swagger', 'strut', 'struts', 'main character', 'own it', 'i got this', 'unstoppable', 'untouchable', 'flexing'], vibe: 'confident swagger songs, bold beats and attitude' },
+      bold: { words: ['bold', 'fearless', 'badass', 'bad ass', 'savage', 'fierce', 'dangerous', 'powerful', 'strength'], vibe: 'bold, fierce, powerful songs' },
+      empowered: { words: ['empowered', 'empowering', 'empowerment', 'girl power', 'self love', 'self care', 'love myself', 'worth it', 'glow up', 'self respect', 'affirmation', 'affirmations'], vibe: 'empowering self love and strength anthems' },
+      determined: { words: ['determined', 'determination', 'locked in', 'lock in', 'on a mission', 'no excuses', 'discipline', 'disciplined', 'relentless', 'hustle', 'hustling', 'go getter', 'gettin it'], vibe: 'determined, driven, relentless songs for staying locked in' },
+      motivated: { words: ['motivated', 'motivation', 'motivational', 'motivate', 'inspire me', 'inspirational', 'get up', 'get going', 'get moving', 'get started', 'get me going', 'driven', 'ambition', 'ambitious', 'success'], vibe: 'motivational, driving songs to get things done' },
+      brave: { words: ['brave', 'courage', 'courageous', 'face my fears', 'facing fears', 'nervous but ready', 'stand up', 'rise up', 'overcome', 'overcoming', 'resilience', 'resilient', 'survive', 'survivor'], vibe: 'brave, resilient songs about overcoming and rising up' },
+      grateful: { words: ['grateful', 'gratitude', 'thankful', 'thanks giving', 'blessed', 'appreciative', 'count my blessings', 'appreciate', 'appreciation', 'humble', 'blessings', 'praise'], vibe: 'grateful, warm, thankful songs, soulful and uplifting' },
+      peaceful: { words: ['serenity', 'quiet', 'quiet time', 'stillness', 'hush', 'hushed', 'spacious', 'sanctuary', 'safe space', 'tranquility'], vibe: 'quiet, spacious, peaceful instrumental and acoustic music' },
+      moody: { words: ['moody', 'brooding', 'darkness', 'gothic', 'goth', 'shadowy', 'mysterious', 'noir', 'smoky', 'gritty', 'haunting', 'eerie', 'spooky', 'edgy'], vibe: 'dark, moody, atmospheric songs with a brooding feel' },
+      playful: { words: ['playful', 'silly', 'goofy', 'quirky', 'cheeky', 'mischievous', 'lighthearted', 'light hearted', 'whimsical', 'bouncy', 'cartoon', 'kid at heart'], vibe: 'playful, quirky, bouncy fun songs' },
+      carefree: { words: ['carefree', 'freedom', 'free spirit', 'no worries', 'no stress', 'easy living', 'breezy', 'breeze', 'feeling free', 'windows open', 'summer breeze', 'airy'], vibe: 'carefree, breezy, easy going feel good songs' },
+      sexy: { words: ['sexy', 'sensual', 'seductive', 'seduce', 'seduction', 'steamy', 'sultry', 'slow jam', 'slow jams', 'baby making', 'freaky', 'thirsty', 'flirty', 'flirt', 'flirting', 'make out', 'making out', 'late night love'], vibe: 'sexy, sensual slow jams, smooth r&b and soul' },
+      romantic: { words: ['romantic', 'romance', 'in love', 'falling in love', 'crush', 'love songs', 'love song', 'butterflies love', 'adore', 'affection', 'tender', 'tenderness', 'cuddle', 'cuddling', 'couple', 'couples', 'honeymoon'], vibe: 'romantic, warm, intimate songs' },
+      dreamy: { words: ['dreamy', 'dreaming', 'dreamlike', 'ethereal', 'floaty', 'hazy', 'haze', 'cloudy', 'clouds', 'celestial', 'cosmic', 'space age', 'otherworldly', 'shimmer', 'shimmering', 'heavenly', 'angelic', 'daydream', 'daydreaming'], vibe: 'dreamy, hazy, ethereal songs, shimmering synths and soft vocals' },
+      cozy: { words: ['cozy', 'cosy', 'warm', 'warmth', 'blanket', 'fireplace', 'candles', 'candle', 'hot chocolate', 'cocoa', 'snuggle', 'snug', 'homey', 'hygge', 'comfort', 'comforting', 'comfort food'], vibe: 'cozy, warm, comforting songs for a night in' },
+      emotional: { words: ['emotional', 'feels', 'the feels', 'touching', 'moving', 'tearjerker', 'tear jerker', 'make me cry', 'ugly cry', 'cathartic', 'catharsis', 'release', 'let go', 'letting go'], vibe: 'deeply emotional, cathartic songs with big feeling' },
+      healing: { words: ['healing', 'heal', 'recovery', 'recover', 'therapy', 'therapeutic', 'soothing', 'soothe', 'pick me up', 'lift me up', 'cheer me up', 'cheer up', 'feel better', 'make me feel better', 'self healing'], vibe: 'soothing, healing songs that lift the mood gently' },
+      proud: { words: ['proud', 'pride', 'accomplished', 'accomplishment', 'achievement', 'milestone', 'made it', 'we made it', 'come up', 'came up', 'level up', 'leveled up', 'glory', 'triumph', 'triumphant', 'victorious'], vibe: 'triumphant, proud songs about how far you have come' },
+      jealous: { words: ['jealous', 'jealousy', 'envy', 'envious', 'petty', 'pettiness', 'shade', 'throw shade', 'revenge', 'payback', 'diss', 'toxic', 'toxic ex', 'bitter', 'spite'], vibe: 'petty, defiant, shade throwing songs' },
+      curious: { words: ['curious', 'curiosity', 'explore sounds', 'something different', 'something unusual', 'weird', 'strange', 'experimental', 'avant garde', 'left field', 'out there', 'eclectic', 'offbeat', 'obscure', 'deep cuts', 'hidden gems'], vibe: 'experimental, eclectic, left field songs' },
+      sentimental: { words: ['sentimental', 'tender memories', 'sweet memories', 'love letter', 'heartfelt', 'sincere', 'wholesome', 'sweet', 'sweetness', 'gentle love', 'soft love', 'loving'], vibe: 'heartfelt, sentimental, sweet songs' },
+      rainy: { words: ['rainy', 'rainy day', 'rain', 'raining', 'rainfall', 'thunderstorm', 'storm', 'stormy', 'drizzle', 'gray day', 'grey day', 'overcast', 'gloomy weather'], vibe: 'rainy day songs, soft, atmospheric and a little melancholy' },
+      sunset: { words: ['sunset', 'golden hour', 'sundown', 'dusk', 'twilight', 'evening glow', 'magic hour', 'end of day', 'dusk drive', 'sunset drive'], vibe: 'golden hour sunset songs, warm and glowing' },
+      midnight: { words: ['midnight', 'late night', '3am', '2am', '4am', 'after midnight', 'witching hour', 'late at night', 'wee hours', 'all nighter', 'night owl', 'night time', 'nighttime'], vibe: 'late night songs, smooth and hushed, after midnight' },
+      summer: { words: ['summer', 'summertime', 'summer vibes', 'summer day', 'hot day', 'heat wave', 'heatwave', 'sunny day', 'sunshine day', 'sunbathing', 'sunny afternoon', 'july', 'august', 'ice cream'], vibe: 'summer songs, warm, sunny and carefree' },
+      winter: { words: ['winter', 'snow', 'snowy', 'snowfall', 'cold day', 'freezing', 'frost', 'frosty', 'icy', 'blizzard', 'december', 'january', 'wintertime', 'winter night', 'chilly night'], vibe: 'winter songs, cold air and warm blankets, soft and atmospheric' },
+      autumn: { words: ['autumn', 'fall vibes', 'falling leaves', 'october', 'november', 'harvest', 'sweater weather', 'crisp', 'pumpkin', 'cider'], vibe: 'autumn songs, warm, reflective and a little wistful' },
+      spring: { words: ['springtime', 'blossom', 'bloom', 'blooming', 'flowers', 'april', 'renewal', 'spring day', 'spring morning', 'new growth'], vibe: 'spring songs, fresh, bright and hopeful' },
+      'sunday morning': { words: ['sunday morning', 'sunday', 'lazy sunday', 'slow sunday', 'sunday brunch', 'sunday vibes', 'sunday coffee', 'saturday morning', 'weekend morning', 'slow morning', 'slow mornings', 'lazy morning'], vibe: 'sunday morning songs, slow, warm, soulful and easy' },
+      weekend: { words: ['friday night', 'friday feeling', 'saturday night', 'weekend vibes', 'its friday', 'off work', 'clock out', 'knock off', 'tgif'], vibe: 'weekend feeling songs, relief and anticipation, upbeat' },
+      lofi: { words: ['lofi', 'lo fi', 'lo fi beats', 'lofi beats', 'lofi hip hop', 'study beats', 'chillhop', 'chill hop', 'jazzhop', 'beats to relax', 'beats to study'], vibe: 'lofi hip hop beats, mellow, dusty and relaxing' },
+      soul: { words: ['soul', 'soulful', 'classic soul', 'motown', 'southern soul', 'deep soul', 'old soul', 'soul music', 'stax', 'philly soul', 'northern soul'], vibe: 'classic and modern soul music, warm and heartfelt' },
+      'neo soul': { words: ['neo soul', 'neosoul', 'nu soul', 'erykah', 'organic soul', 'modern soul', 'alternative soul'], vibe: 'neo soul, organic, jazzy grooves and smooth vocals' },
+      funk: { words: ['funk', 'funky', 'groove', 'grooves', 'groovy', 'boogie', 'get funky', 'p funk', 'parliament', 'nu funk', 'bass groove'], vibe: 'funk, tight grooves, slap bass and horns' },
+      disco: { words: ['disco', 'discotheque', 'studio 54', 'mirrorball', 'mirror ball', 'glitter', 'glitterball', 'nu disco', 'nudisco', 'boogie nights'], vibe: 'disco, shimmering strings, four on the floor and dancefloor joy' },
+      'afro house': { words: ['afro house', 'afrohouse', 'afro tech', 'afrotech', 'afro deep', 'afro electronic', 'afro house music', 'afro house vibes', 'sunset afro', 'afro dance'], vibe: 'afro house, deep percussion, warm basslines and hypnotic grooves' },
+      afrobeats: { words: ['afrobeats', 'afrobeat', 'afropop', 'afro pop', 'naija', 'nigerian', 'lagos', 'ghana', 'highlife', 'afro swing', 'afro vibes', 'afro'], vibe: 'afrobeats and afropop, danceable, warm and percussive' },
+      amapiano: { words: ['amapiano', 'piano grooves', 'south african house', 'gqom', 'log drum', 'kwaito', 'south africa'], vibe: 'amapiano, log drums, jazzy piano and deep South African house grooves' },
+      'boom bap': { words: ['boom bap', 'boombap', '90s hip hop', 'nineties hip hop', 'golden era', 'golden age hip hop', 'east coast', 'east coast hip hop', 'real hip hop', 'backpack', 'backpack rap', 'boom bap beats', 'cypher', 'lyrical', 'lyricist', 'bars', 'emcee', 'spoken word', 'poetry'], vibe: 'boom bap hip hop, hard drums, dusty samples and sharp lyricism' },
+      'hip hop': { words: ['hip hop', 'hiphop', 'rap', 'rapper', 'rappers', 'hip hop music', 'rap music', 'hip hop classics', 'old school hip hop', 'new school', 'freestyle', 'freestyles', 'verses', 'trap soul'], vibe: 'hip hop, strong beats and strong verses' },
+      trap: { words: ['trap', 'trap music', '808', '808s', 'drill', 'uk drill', 'trap beats', 'southern rap', 'atlanta', 'hard rap', 'street rap'], vibe: 'trap, heavy 808s, hi hats and hard verses' },
+      rnb: { words: ['rnb', 'r b', 'r and b', 'rhythm and blues', 'randb', 'contemporary rnb', '90s rnb', 'nineties rnb', 'new jack swing', 'alternative rnb', 'alt rnb', 'pbrnb'], vibe: 'r&b, smooth vocals, silky grooves and modern production' },
+      reggae: { words: ['reggae', 'roots', 'roots reggae', 'dub', 'ska', 'rocksteady', 'jamaica', 'jamaican', 'rasta', 'one love', 'marley', 'riddim'], vibe: 'reggae, relaxed offbeat rhythm, warm bass and positive vibes' },
+      reggaeton: { words: ['reggaeton', 'latin trap', 'perreo', 'dembow', 'urbano', 'latin urban', 'reggaeton party', 'latin party', 'twerk', 'twerking'], vibe: 'reggaeton, dembow rhythm, latin urban party songs' },
+      latin: { words: ['latin', 'latino', 'latina', 'salsa', 'bachata', 'cumbia', 'merengue', 'spanish', 'spanish music', 'musica latina', 'mariachi', 'bolero', 'samba', 'tango', 'flamenco'], vibe: 'latin music, rhythmic, passionate, salsa, bachata and cumbia' },
+      'bossa nova': { words: ['bossa nova', 'bossa', 'brazilian', 'brazil', 'mpb', 'tropicalia', 'tropicalismo', 'samba jazz', 'rio'], vibe: 'bossa nova and brazilian music, gentle guitar and warm vocals' },
+      jazz: { words: ['jazz', 'jazzy', 'smooth jazz', 'cool jazz', 'bebop', 'swing', 'big band', 'jazz club', 'jazz cafe', 'modal jazz', 'jazz fusion', 'nu jazz', 'jazz trio', 'jazz piano'], vibe: 'jazz, warm, improvised and sophisticated' },
+      blues: { words: ['blues', 'bluesy', 'delta blues', 'chicago blues', 'electric blues', 'blues guitar', 'twelve bar', '12 bar', 'juke joint'], vibe: 'blues, soulful guitar and gritty honest vocals' },
+      gospel: { words: ['gospel', 'gospel music', 'church', 'choir', 'praise and worship', 'worship', 'hymns', 'hymn', 'spiritual', 'spirituals', 'sunday service', 'hallelujah', 'sanctified'], vibe: 'gospel, choirs, organ and uplifting praise' },
+      classical: { words: ['classical', 'classical music', 'orchestra', 'orchestral', 'symphony', 'concerto', 'sonata', 'baroque', 'opera', 'chamber', 'chamber music', 'string quartet', 'cello', 'violin', 'romantic era', 'mozart', 'beethoven', 'bach'], vibe: 'classical music, orchestral and elegant' },
+      piano: { words: ['piano', 'solo piano', 'piano music', 'piano keys', 'pianist', 'piano ballad', 'piano instrumental', 'neoclassical', 'neo classical', 'modern classical', 'ludovico'], vibe: 'solo piano and neoclassical music, intimate and spacious' },
+      ambient: { words: ['ambient', 'ambient music', 'drone', 'soundscape', 'soundscapes', 'atmosphere', 'atmospheric', 'textures', 'textural', 'brian eno', 'eno', 'new age', 'new age music', 'healing frequencies', 'sound bath', 'soundbath', 'binaural'], vibe: 'ambient soundscapes, drifting textures and slow evolving pads' },
+      instrumental: { words: ['instrumental', 'instrumentals', 'no vocals', 'no lyrics', 'without lyrics', 'no words', 'wordless', 'beats only', 'instrumental beats', 'background music'], vibe: 'instrumental music without vocals' },
+      electronic: { words: ['electronic', 'electro', 'electronica', 'edm', 'synth', 'synths', 'synthesizer', 'idm', 'glitch', 'breakbeat', 'breaks', 'dnb', 'drum and bass', 'jungle', 'dubstep', 'bass music', 'future bass'], vibe: 'electronic music, synths, driving beats and modern production' },
+      house: { words: ['house', 'house music', 'deep house', 'tech house', 'chicago house', 'progressive house', 'garage', 'uk garage', 'ukg', 'disco house', 'soulful house', 'four on the floor'], vibe: 'house music, steady four on the floor groove, warm bass and soulful vocals' },
+      techno: { words: ['techno', 'minimal techno', 'detroit techno', 'berghain', 'hard techno', 'industrial techno', 'acid', 'acid techno', 'melodic techno', 'dark techno'], vibe: 'techno, hypnotic, driving and dark' },
+      synthwave: { words: ['synthwave', 'retrowave', 'outrun', '80s', 'eighties', '80s synth', 'new wave', 'synthpop', 'synth pop', 'vaporwave', 'city pop', 'citypop', 'miami vice', 'neon synth'], vibe: 'synthwave and 80s inspired retro synth songs, neon and nostalgic' },
+      rock: { words: ['rock', 'rock music', 'classic rock', 'rock and roll', 'rock n roll', 'guitar rock', 'hard rock', 'stadium rock', 'arena rock', 'garage rock', 'blues rock', 'southern rock', '70s rock', 'alt rock', 'alternative rock', 'grunge'], vibe: 'rock, big guitars, driving drums and raw energy' },
+      indie: { words: ['indie', 'indie rock', 'indie pop', 'indie folk', 'bedroom pop', 'alternative', 'dream pop', 'shoegaze', 'jangle', 'lo fi indie', 'coming of age', 'sad indie', 'hipster'], vibe: 'indie, guitars, soft vocals and bedroom pop textures' },
+      folk: { words: ['folk', 'folk music', 'acoustic folk', 'singer songwriter', 'singer songwriters', 'campfire', 'fireside', 'americana', 'bluegrass', 'country folk', 'appalachian', 'troubadour', 'storyteller', 'storytelling'], vibe: 'folk, acoustic storytelling songs, warm and intimate' },
+      acoustic: { words: ['acoustic', 'unplugged', 'acoustic guitar', 'stripped back', 'stripped', 'acoustic session', 'acoustic covers', 'live acoustic', 'raw', 'naked', 'coffeehouse'], vibe: 'acoustic, stripped back songs, guitar and voice' },
+      country: { words: ['country', 'country music', 'honky tonk', 'outlaw country', 'nashville', 'cowboy', 'cowgirl', 'pickup truck', 'dirt road', 'back road', 'country roads', 'southern', 'hillbilly', 'alt country'], vibe: 'country, storytelling songs, guitars, steel and warm vocals' },
+      pop: { words: ['pop', 'pop music', 'top 40', 'top forty', 'charts', 'catchy', 'earworm', 'earworms', 'bubblegum', 'pop hits', 'pop songs', 'sing along pop'], vibe: 'pop, catchy hooks, bright production and big choruses' },
+      metal: { words: ['metal', 'heavy metal', 'death metal', 'thrash', 'thrash metal', 'black metal', 'doom', 'doom metal', 'metalcore', 'nu metal', 'numetal', 'hard and heavy', 'mosh', 'moshing', 'headbang', 'headbanging', 'screamo', 'hardcore', 'hard core'], vibe: 'metal, crushing riffs, double kick drums and raw intensity' },
+      punk: { words: ['punk', 'punk rock', 'pop punk', 'skate punk', 'skate', 'skateboard', 'skateboarding', 'riot', 'rebel', 'rebellious', 'rebellion', 'anarchy', 'anthem', 'anthems', 'protest', 'mosh pit', 'garage punk', 'emo'], vibe: 'punk, fast loud and rebellious' },
+      'disco funk': { words: ['nile rodgers', 'chic', 'earth wind and fire', 'earth wind fire', 'kool and the gang', '70s soul', 'seventies', '70s funk', '70s', 'seventies funk', 'soul train', 'groove 70s'], vibe: '70s soul, disco and funk, warm horns and strings' },
+      dancehall: { words: ['bashment', 'jamaican dancehall', 'dancehall party', 'dancehall riddim'], vibe: 'dancehall, bashment and riddims, hot and rhythmic' },
+      world: { words: ['world music', 'global beats', 'global sounds', 'tribal beats', 'drum circle', 'percussion', 'percussive', 'polyrhythm', 'polyrhythms', 'hand drums', 'djembe'], vibe: 'world music, global rhythms and rich percussion' },
+      'meditative drums': { words: ['shamanic drums', 'sound healing', 'singing bowls', 'tibetan', 'tibetan bowls', 'chanting', 'chants', 'mantra', 'mantras', 'kirtan'], vibe: 'sacred chanting, bowls and meditative drones' }
     }
   }
 };
@@ -17908,7 +18037,9 @@ function voiceIndex(k){
   const phrases = new Map();
   L.commands.forEach(c => c.say.forEach(p => { const key = core(p); if (key && !phrases.has(key)) phrases.set(key, c); }));
   const names = new Map(); L.toggles.forEach(t => t.names.forEach(n => names.set(n, t)));
-  const moodWord = new Map(); Object.keys(L.moods).forEach(m => L.moods[m].words.forEach(w => moodWord.set(w, m)));
+  const fl = new Set(L.fluff), moodWord = new Map();
+  const mkey = (p) => voiceWords(p).filter(x => !fl.has(x)).join(' ');
+  Object.keys(L.moods).forEach(m => L.moods[m].words.concat([m]).forEach(w => { const key = mkey(w); if (key && !moodWord.has(key)) moodWord.set(key, m); }));
   const leadP = L.lead.map(voiceWords).sort((a, b) => b.length - a.length), trailP = L.trail.map(voiceWords).sort((a, b) => b.length - a.length);
   const playP = L.playPrefix.map(voiceWords).sort((a, b) => b.length - a.length);
   return (VOICE_IDX[k] = { L, drop, phrases, names, moodWord, leadP, trailP, playP, fluff: new Set(L.fluff), verbs: new Set(L.verbs), on: new Set(L.on), off: new Set(L.off) });
@@ -17954,12 +18085,13 @@ function voiceParse(text, lang){
   }
   return voiceMoodOf(w, idx);
 }
-// a line that is only one mood word plus fluff ("something calm", "chill music", "hype")
+// a line that is only a mood word or phrase plus fluff ("something calm", "chill music", "I feel pissed off", "pump me up")
 function voiceMoodOf(w, idx){
-  if (w.length > 5) return null;
+  if (w.length > 9) return null;
   const left = w.filter(x => !idx.fluff.has(x));
-  if (left.length !== 1 || !idx.moodWord.has(left[0])) return null;
-  const m = idx.moodWord.get(left[0]);
+  if (!left.length || left.length > 4) return null;
+  const m = idx.moodWord.get(left.join(' '));
+  if (!m) return null;
   return { op: 'mood', key: m, vibe: idx.L.moods[m].vibe };
 }
 /* VOICE-GRAMMAR:END */
