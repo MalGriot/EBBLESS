@@ -2144,15 +2144,15 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
    (#artworkWrap) by ytPanelSync, so the queue, library and search stay usable.
    z-index 40 sits under the bottom nav (45) and every menu/modal (60+). ---------- */
 /* video on: the art under it is hidden, not just covered */
-.artwork-wrap.yt-video{background:transparent;box-shadow:none}
-.artwork-wrap.yt-video > *{visibility:hidden}
+.artwork-wrap.yt-video,#flow-layer .flow-art.yt-video{background:transparent;box-shadow:none}
+.artwork-wrap.yt-video > *,.flow-art.yt-video > *{visibility:hidden}
+#yt-host.is-shown.in-flow{z-index:51} /* above #flow-layer (50) */
 #yt-host.is-shown{position:fixed;z-index:40;opacity:1;pointer-events:auto;border-radius:var(--r-md);background:#000}
 #yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
 #yt-host.is-shown > .yt-on{z-index:1}
 /* #523: covers the live player while an ad is held silent (card and F fullscreen) */
 #yt-host.is-shown > .yt-ad-cover:not([hidden]){z-index:2;display:flex;align-items:center;justify-content:center;padding:16px;
   text-align:center;background:#000;color:var(--faint);font-size:13px;line-height:1.5}
-#yt-host:fullscreen > .yt-ad-cover:not([hidden]){font-size:18px}
 /* ---------- tester feedback form (no login, no GitHub - posts to the
    worker's /tester-report). Reuses #danger-scrim and the danger modal's
    centered-card look, just wider and with form fields ---------- */
@@ -18494,15 +18494,21 @@ function ytPanelSync(){
   Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
   ytHost.classList.toggle('is-shown', show);
   artworkWrap.classList.toggle('yt-video', show);
+  flowArtWrap.classList.toggle('yt-video', show);
   if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
   // 16:9 centered in the art area; the player view hidden (Library etc.) gives
   // a zero rect, so the video steps aside there and the audio carries on
-  const r = artworkWrap.getBoundingClientRect();
-  if (r.width < 2){ ytHost.classList.remove('is-shown'); artworkWrap.classList.remove('yt-video'); el.classList.remove('yt-on'); ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
+  const inFlow = !!state.flowOpen;
+  const r = (inFlow ? flowArtWrap : artworkWrap).getBoundingClientRect();
+  ytHost.classList.toggle('in-flow', inFlow);
+  if (r.width < 2){ ytHost.classList.remove('is-shown'); artworkWrap.classList.remove('yt-video'); flowArtWrap.classList.remove('yt-video'); el.classList.remove('yt-on'); ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
   // the old popout's size (640 wide), never narrower than the art it replaces
   // on split desktop the player is the middle column: stay between the library and the queue
-  const vr = $('view-player').getBoundingClientRect();
-  const w = Math.round(Math.min(640, vr.width - 32, Math.max(r.width, r.height * 16 / 9)));
+  // in the fullscreen layer (flow mode) the frame fits the screen between its top and bottom controls
+  const vr = inFlow ? {left: 0, right: window.innerWidth, width: window.innerWidth} : $('view-player').getBoundingClientRect();
+  const w = Math.round(inFlow
+    ? Math.min(vr.width - 48, (window.innerHeight - 280) * 16 / 9)
+    : Math.min(640, vr.width - 32, Math.max(r.width, r.height * 16 / 9)));
   const h = Math.round(w * 9 / 16);
   const left = Math.max(vr.left + 16, Math.min(r.left + (r.width - w) / 2, vr.right - 16 - w));
   ytHost.style.left = left + 'px';
@@ -18530,19 +18536,6 @@ function closeYtPanel(auto){
   clearInterval(ytPanelTimer);
   ytPanelTimer = null;
   ytPanelSync();
-}
-// F in video mode (Geethub #327): browser-fullscreen #yt-host, which holds the
-// live iframe (never reparented), so the video fills the screen. Esc leaves
-// it via the browser; ytPanelSync (250ms) re-places the card afterwards.
-function toggleYtFullscreen(){
-  if (docFsElement()){
-    const x = document.exitFullscreen || document.webkitExitFullscreen;
-    try { const p = x && x.call(document); if (p && p.catch) p.catch(() => {}); } catch (_){}
-    return;
-  }
-  if (!ytHost.classList.contains('is-shown')) return;
-  const fn = ytHost.requestFullscreen || ytHost.webkitRequestFullscreen;
-  try { const p = fn && fn.call(ytHost, {navigationUI:'hide'}); if (p && p.catch) p.catch(() => {}); } catch (_){}
 }
 ytPanelBtn.addEventListener('click', (e) => { e.stopPropagation(); if (ytOn) closeYtPanel(); else openYtPanel(); });
 window.addEventListener('resize', () => { if (ytPanelOpen()) ytPanelSync(); });
@@ -28582,9 +28575,8 @@ document.addEventListener('keydown', (e) => {
       else { e.preventDefault(); kbSkipBy(seekStepS()); }
       break;
     case 'f': case 'F':
-      // video mode (YouTube card open): F fullscreens the video itself
-      // (Geethub #327); pressed again it steps back out
-      if (ytPanelOpen()){ if (!e.repeat) toggleYtFullscreen(); break; }
+      // video mode too: the same EBBLESS fullscreen as the other modes
+      // (the video is placed over its art by ytPanelSync)
       if (state.flowOpen) closeFlow();
       else if (currentTrack()) openFlow();
       break;
@@ -28665,7 +28657,7 @@ document.addEventListener('keydown', (e) => {
       // handled this Escape marks it defaultPrevented, so one press closes
       // one thing.
       if (e.defaultPrevented) break;
-      if (ytPanelOpen()){ closeYtPanel(); break; }
+      if (ytPanelOpen() && !state.flowOpen){ closeYtPanel(); break; }
       if (state.queueOpen && document.body.classList.contains('queue-over-fs')){ closeQueuePanel(); break; }
       if (leaveFullscreen()) break;
       if (openLibraryPanelId) closeLibraryPlaylistPanel();
@@ -32478,10 +32470,12 @@ function openFlow(immersive = document.body.classList.contains('split-desktop'))
   armFsIdleTimer();
   csStackSync();
   syncHistoryBuffer();
+  if (ytPanelOpen()) ytPanelSync();
 }
 function closeFlow(){
   clearTimeout(flowFsT);
   state.flowOpen = false;
+  if (ytPanelOpen()) ytPanelSync();
   const seq = ++flowCloseSeq;
   let faded = false;
   const fade = () => {
