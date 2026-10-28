@@ -516,6 +516,16 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); handleIntent(i); }
 
     private void handleIntent(Intent i) {
+        String wAct = i == null ? null : i.getStringExtra("widgetAction");   // a widget button tapped while the app was closed
+        if (wAct != null) i.removeExtra("widgetAction");
+        if (wAct != null || (i != null && i.getBooleanExtra("widgetResume", false))) {
+            final String act = wAct != null ? wAct : "play";
+            // #688: the widget's Resume button. The page restores the last song by itself on load, then the same "play" the notification button
+            // sends starts it. A running app takes it almost at once; a cold start waits for the page to finish booting.
+            i.removeExtra("widgetResume");
+            boolean warm = web != null && !splashHolding && splash == null;
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> PlaybackService.control(act), warm ? 400 : 5000);
+        }
         Uri d = i == null ? null : i.getData();
         if (d == null || !"ebbless".equals(d.getScheme()) || !"signin".equals(d.getHost())) return;
         android.util.Log.d("EBB/signin", "link in, fragment len=" + (d.getFragment() == null ? -1 : d.getFragment().length()) + " pending=" + (pendingState != null));
