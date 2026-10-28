@@ -10705,7 +10705,9 @@ function renderLibrary(){
   // #536: playlist and album windows get the same treatment: a background re-render
   // (sync, art backfill, play counts) only closes the window if its playlist is gone.
   // Callers that need the contents rebuilt use reopenLibraryPanel().
-  if (!String(openLibraryPanelId || '').startsWith('artistinfo:') && !openPl) closeLibraryPlaylistPanel();
+  // #693: album/song/preview windows are not library playlists either; adding a
+  // song to a playlist (which calls renderLibrary) must not shut them
+  if (!/^(artistinfo|albumprev|songpage|addprev):/.test(String(openLibraryPanelId || '')) && !openPl) closeLibraryPlaylistPanel();
   if (typeof closeLibCtxMenu === 'function') closeLibCtxMenu();
   const ids = orderedLibraryIds();
   if (!ids.length){ libraryEmpty.classList.remove('hidden'); libraryListWrap.classList.add('hidden'); return; }
