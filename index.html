@@ -17693,7 +17693,9 @@ function vibeMoodWords(interp){
 }
 
 let vibeResultsToken = 0;
-async function beginConversationalVibe(text){
+// preInterp (optional): an interpretation already in /vibe-interpret's shape (the Voice DJ plan, #553), so the
+// model is not asked a second time. Without it, behaviour is unchanged.
+async function beginConversationalVibe(text, preInterp){
   awardMilestone('search');
   statsFeature('vibe_search');
   const token = ++vibeResultsToken;
@@ -17702,7 +17704,7 @@ async function beginConversationalVibe(text){
   stageInterpreting(text);
   let interp;
   try{
-    interp = await fetchVibeInterpretation(text);
+    interp = (preInterp && Array.isArray(preInterp.tracks) && preInterp.tracks.length) ? preInterp : await fetchVibeInterpretation(text);
   } catch(e){
     if (token !== vibeResultsToken) return;
     // Interpreter unreachable - the plain playlist search still works.
@@ -18128,7 +18130,7 @@ const VOICE_ACTIONS = {
     const ct = t; startRadio(t.title + ' Radio', [ct], true); return null;
   },
   search(c){ if (navigator.onLine === false) return "Offline - can't search new songs"; beginVibeSearch(c.q); return 'Searching: ' + c.q.slice(0, 40); },
-  mood(c){ if (navigator.onLine === false) return 'Needs a connection for moods'; beginConversationalVibe(c.vibe); return 'Finding ' + c.key + ' songs'; }
+  mood(c){ if (navigator.onLine === false) return 'Needs a connection for moods'; beginConversationalVibe(c.vibe, c.interp); return 'Finding ' + c.key + ' songs'; }
 };
 // Runs a parsed command. Always one short toast (null = the action toasts itself).
 function voiceRun(cmd){
@@ -18202,7 +18204,7 @@ async function fetchVoicePlan(said){
   } finally { clearTimeout(timer); }
 }
 // Runs a plan the worker returned, after re-checking it. Returns false if nothing usable ran.
-function voiceRunPlan(plan, said){
+function voiceRunPlan(plan, said, interp){
   if (!plan || typeof plan !== 'object') return false;
   if (plan.kind === 'command' && Array.isArray(plan.ops)){
     const ops = plan.ops.filter(o => o && VOICE_PLAN_OPS.includes(o.op)).slice(0, 3);
@@ -18211,9 +18213,11 @@ function voiceRunPlan(plan, said){
   }
   if (plan.kind === 'search' && typeof plan.text === 'string' && plan.text.trim()) return voiceRun({ op: 'search', q: plan.text.trim().slice(0, 80) });
   if (plan.kind === 'mood'){
-    // Phase 1 reuses the existing vibe path for the music itself (it grounds songs); the plan's energy/seeds feed the phase 2 set builder.
+    // One AI call per mood: when the worker grounded the plan (data.interp: title, tags, keywords, energy range,
+    // bpm, real tracks, the same shape /vibe-interpret returns) it feeds the vibe path directly and
+    // /vibe-interpret is not called. No interp (heuristic plan, no songs found) = the old path, unchanged.
     const vibe = (typeof plan.text === 'string' && plan.text.trim()) || (Array.isArray(plan.tags) ? plan.tags.join(', ') : '') || said;
-    return voiceRun({ op: 'mood', key: (plan.tags && plan.tags[0]) || 'your mood', vibe: vibe.slice(0, 200) });
+    return voiceRun({ op: 'mood', key: (plan.tags && plan.tags[0]) || 'your mood', vibe: vibe.slice(0, 200), interp: interp && Array.isArray(interp.tracks) && interp.tracks.length ? interp : undefined });
   }
   return false;
 }
@@ -18223,8 +18227,11 @@ async function voiceLlm(said){
   try { data = await fetchVoicePlan(said); }
   catch(e){ showToast("Couldn't reach voice requests - trying a normal search"); beginConversationalVibe(said); return; }
   if (data.signedOut){ showToast('Sign in to use voice requests'); beginConversationalVibe(said); return; }
-  if (data.capped){ showToast("You've used your " + (data.limit || 7) + ' voice requests today'); beginConversationalVibe(said); return; }
-  if (!voiceRunPlan(data.plan, said)) beginConversationalVibe(said);
+  if (data.capped){
+    showToast(data.reason === 'global' ? 'Voice requests are resting for today, normal search still works' : "You've used your " + (data.limit || 7) + ' voice requests today');
+    beginConversationalVibe(said); return;
+  }
+  if (!voiceRunPlan(data.plan, said, data.interp)) beginConversationalVibe(said);
 }
 // What the local grammar did not claim.
 function voiceNoMatch(said){

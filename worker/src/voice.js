@@ -142,6 +142,8 @@ export async function askPaidModel(/* env, text, ctx */) { return null; }
 
 // ---- route ---------------------------------------------------------------
 // deps: { json, verifyIdentity(idToken, env, ctx) -> payload with .sub }
+// deps.groundMood(plan, said, env) (optional, supplied by index.js) turns a mood plan into the vibe path's
+// interpretation shape with real songs, WITHOUT another AI call, so the client need not call /vibe-interpret.
 export async function handleVoicePlan(request, env, ctx, deps) {
   const { json } = deps;
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -174,5 +176,9 @@ export async function handleVoicePlan(request, env, ctx, deps) {
     await quota.refund();   // the listener got nothing from the model: don't charge the request
     return json({ plan: heuristic(), source: 'heuristic', tier, limit, used: Math.max(0, take.used - 1), why: raw == null ? 'model-error' : 'off-schema' });
   }
-  return json({ plan, source: via, tier, limit, used: take.used });
+  const out = { plan, source: via, tier, limit, used: take.used };
+  if (plan.kind === 'mood' && typeof deps.groundMood === 'function') {
+    try { const interp = await deps.groundMood(plan, said, env); if (interp && Array.isArray(interp.tracks) && interp.tracks.length) out.interp = interp; } catch (e) { /* client falls back to /vibe-interpret */ }
+  }
+  return json(out);
 }

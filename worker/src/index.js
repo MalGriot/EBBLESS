@@ -4341,6 +4341,30 @@ async function handleVibeInterpret(url, env, ctx) {
   return response;
 }
 
+// Voice DJ (#553): maps a validated /voice/plan mood plan onto the interpretation
+// /vibe-interpret returns, then grounds real songs with the same no-AI plumbing, so
+// the client skips a second model call. Mapping: plan.tags -> tags (fallback: keyword
+// heuristic's tags); plan.text -> keywords[0]; plan.energy 0-10 -> energy [e/10 +- 0.2]
+// clamped 0..1; plan.seeds -> seeds (verified against the catalog like any model seed);
+// bpm/title come from vibeHeuristic (the plan has no tempo).
+async function voiceGroundMood(plan, said, env) {
+  const text = vibeNormalizeInput(plan.text || said || '');
+  if (text.length < 3) return null;
+  const h = vibeHeuristic(text);
+  const e = Math.min(1, Math.max(0, (Number(plan.energy) || 5) / 10));
+  const interp = {
+    title: h.title,
+    tags: (plan.tags && plan.tags.length ? plan.tags : h.tags).slice(0, VIBE_MAX_TAGS),
+    keywords: [text.slice(0, 60)],
+    energy: [Math.max(0, +(e - 0.2).toFixed(2)), Math.min(1, +(e + 0.2).toFixed(2))],
+    bpm: h.bpm,
+    seeds: plan.seeds || [],
+  };
+  const g = await vibeGroundTracks(interp, env, vibeCacheText(text) || text);
+  return { source: 'voice-plan', title: interp.title, tags: interp.tags, keywords: interp.keywords, energy: interp.energy, bpm: interp.bpm,
+    seeds: { suggested: g.seedsSuggested, verified: g.seedsVerified }, tracks: g.tracks };
+}
+
 // ---------- POST /pool/signal, GET /pool/affinity ----------
 // The listening graph every EBBLESS listener quietly contributes to and
 // draws from. A completed/liked/skipped play submits the seed track's tags
@@ -5004,7 +5028,7 @@ export default {
       if (url.pathname === '/artistmap') return await handleArtistMap(url, env, ctx);
       if (url.pathname === '/tags') return await handleTags(url, env, ctx);
       if (url.pathname === '/vibe-interpret') return await handleVibeInterpret(url, env, ctx);
-      if (url.pathname === '/voice/plan') return await handleVoicePlan(request, env, ctx, { json, verifyIdentity: (t, e, c) => verifyGoogleIdToken(t, e.GOOGLE_CLIENT_ID, e, c) });
+      if (url.pathname === '/voice/plan') return await handleVoicePlan(request, env, ctx, { json, verifyIdentity: (t, e, c) => verifyGoogleIdToken(t, e.GOOGLE_CLIENT_ID, e, c), groundMood: voiceGroundMood });
       if (url.pathname === '/metrics') return await handleMetrics(request, env, ctx);
       if (url.pathname === '/ytmix') return await handleYtMix(url, ctx);
       if (url.pathname === '/artistsearch') return await handleArtistSearch(url, ctx);

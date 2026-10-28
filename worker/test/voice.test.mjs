@@ -49,16 +49,16 @@ test('sanitizeCtx caps recent at 5', () => {
 
 // ---- handler ----
 function fakeKV(init = {}) { const m = new Map(Object.entries(init)); return { get: async (k) => (m.has(k) ? m.get(k) : null), put: async (k, v) => { m.set(k, v); } }; }
-function fakeQuota() {
-  const days = new Map();
-  return { idFromName: (n) => n, get: (id) => ({
+function fakeQuota(opts = {}) {
+  const days = new Map(), spent = new Map();
+  return { spent, idFromName: (n) => n, get: (id) => ({
     take: async (limit) => { const u = days.get(id) || 0; if (u >= limit) return { ok: false, used: u }; days.set(id, u + 1); return { ok: true, used: u + 1 }; },
     refund: async () => { days.set(id, Math.max(0, (days.get(id) || 0) - 1)); } }) };
 }
 const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
 const verifyIdentity = async (t) => { if (t !== 'ebs1.good') throw new Error('bad'); return { sub: 'u1' }; };
-const call = (env, body) => handleVoicePlan(new Request('https://w.test/voice/plan', { method: 'POST', body: JSON.stringify(body) }), env, {}, { json, verifyIdentity }).then(async (r) => ({ status: r.status, body: await r.json() }));
-const mkEnv = (ai, profiles = {}) => ({ PROFILES: fakeKV(profiles), GOOGLE_CLIENT_ID: 'cid', VOICE_QUOTA: fakeQuota(), AI: ai });
+const call = (env, body, extra = {}) => handleVoicePlan(new Request('https://w.test/voice/plan', { method: 'POST', body: JSON.stringify(body) }), env, {}, { json, verifyIdentity, ...extra }).then(async (r) => ({ status: r.status, body: await r.json() }));
+const mkEnv = (ai, profiles = {}, quota = fakeQuota()) => ({ PROFILES: fakeKV(profiles), GOOGLE_CLIENT_ID: 'cid', VOICE_QUOTA: quota, AI: ai });
 const goodAi = { run: async () => ({ response: '{"kind":"command","ops":[{"op":"volume","dir":-1}],"seeds":[],"tags":[],"energy":3,"text":"","say":"Quieter"}' }) };
 
 test('handler: signed out and bad token are 401 signedOut', async () => {
@@ -96,4 +96,18 @@ test('handler: tier comes from ent:<sub>, defaults to free', async () => {
   assert.equal(await voiceTierFor(mkEnv(goodAi, { 'ent:u1': 'not json' }), 'u1'), 'free');
   const r = await call(mkEnv(goodAi, { 'ent:u1': '{"tier":"horizon"}' }), { idToken: 'ebs1.good', text: 'more energy please' });
   assert.equal(r.body.limit, 100); assert.equal(r.body.tier, 'paid');
+});
+
+test('mood plan carries a grounded interp (so the client skips /vibe-interpret); not for commands or empty grounding', async () => {
+  const moodAi = { run: async () => ({ response: '{"kind":"mood","ops":[],"seeds":[{"artist":"A","title":"T"}],"tags":["soul"],"energy":3,"text":"slow warm soul","say":"Slowing it down"}' }) };
+  let seen = null;
+  const groundMood = async (plan, said) => { seen = { plan, said }; return { title: 'X', tags: plan.tags, keywords: [plan.text], energy: [0.1, 0.5], bpm: [60, 100], tracks: [{ title: 'T', artist: 'A' }] }; };
+  const r = await call(mkEnv(moodAi), { idToken: 'ebs1.good', text: 'something slow and warm' }, { groundMood });
+  assert.equal(r.body.plan.kind, 'mood'); assert.equal(r.body.interp.tracks.length, 1); assert.deepEqual(seen.plan.tags, ['soul']);
+  const c = await call(mkEnv(goodAi), { idToken: 'ebs1.good', text: 'a bit quieter in here' }, { groundMood });
+  assert.equal(c.body.interp, undefined);
+  const empty = await call(mkEnv(moodAi), { idToken: 'ebs1.good', text: 'something slow and warm' }, { groundMood: async () => ({ tracks: [] }) });
+  assert.equal(empty.body.interp, undefined);
+  const boom = await call(mkEnv(moodAi), { idToken: 'ebs1.good', text: 'something slow and warm' }, { groundMood: async () => { throw new Error('x'); } });
+  assert.equal(boom.status, 200); assert.equal(boom.body.interp, undefined);
 });
