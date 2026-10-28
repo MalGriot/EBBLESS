@@ -2524,6 +2524,10 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .toast.is-open{opacity:1;transform:translate(-50%,0)}
 .toast.has-action{display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px}
 .toast.has-action.is-open{pointer-events:auto}
+/* #671: the welcome-back prompt sits under the top bar, clear of the mini
+   player / play button and the bottom nav */
+.toast.is-top{bottom:auto;top:calc(var(--topbar-h) + var(--safe-t,0px) + 8px);transform:translate(-50%,-10px);max-width:calc(100vw - 24px)}
+.toast.is-top.is-open{transform:translate(-50%,0)}
 .toast-action{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
 /* tap-to-skip prompt (#575): sits above the toast; hidden = out of rendering */
@@ -9569,6 +9573,7 @@ document.addEventListener('click', (e) => {
 function showToast(msg, action){
   toastEl.textContent = msg;
   toastEl.classList.toggle('has-action', !!action);
+  toastEl.classList.toggle('is-top', !!(action && action.top));
   if (action){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
@@ -9586,7 +9591,7 @@ function showToast(msg, action){
 let adWaitShown = false;
 function showAdWait(){
   adWaitShown = true;
-  toastEl.classList.remove('has-action');
+  toastEl.classList.remove('has-action', 'is-top');
   toastEl.textContent = 'One sec, clearing a YouTube ad so your song starts clean. It will play on its own.';
   toastEl.classList.add('is-open');
   clearTimeout(toastTimer);
@@ -32368,7 +32373,7 @@ function welcomeBackLine(){
   const named = pl && pl.name && ![SWELL_ID, BLEND_ID, NP_ID].includes(pl.id);
   const what = named ? pl.name : t.title;
   if (!what) return;
-  const show = () => showToast('Welcome back. You were in the middle of ' + what + '.', { label: 'Resume', run: () => { try{ resumePlayback(); } catch(err){} } });
+  const show = () => showToast('Welcome back. You were in the middle of ' + what + '.', { label: 'Resume', top: true, run: () => { try{ resumePlayback(); } catch(err){} } });
   const sp = $('splash');
   if (!sp || sp.classList.contains('is-hidden')){ show(); return; }
   const mo = new MutationObserver(() => { if (sp.classList.contains('is-hidden')){ mo.disconnect(); setTimeout(show, 400); } });
