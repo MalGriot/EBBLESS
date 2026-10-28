@@ -11803,7 +11803,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #683, 2026-10-28; flipped to ready by owner. 
 
 ### song-info-credits-684: Song info shows what song was sampled, release date, album, all credits (producer, label), artist, genre, trivia (Geethub #684)
-- **Status:** ready
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #684. Song info shows what song was sampled, release date, album, all credits (producer, label), artist, genre, trivia.
 - **Touches:** index.html.
