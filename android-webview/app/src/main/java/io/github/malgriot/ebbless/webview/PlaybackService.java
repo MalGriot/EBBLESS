@@ -48,6 +48,18 @@ public class PlaybackService extends Service {
 
     private static volatile PlaybackService live;
     private static volatile JSONObject latest;   // the page's last report: {t, a, al, art, pl, pos, dur, rate, liked}
+    private static volatile long latestAt;       // SystemClock.elapsedRealtime() when latest arrived (the player extrapolates the position from it)
+
+    /** The full-screen player (#691) listens here so it follows the same reports as the lock screen player. */
+    interface StateListener { void onState(); }
+    static volatile StateListener stateListener;
+
+    static JSONObject snapshot() { return latest; }
+    static long snapshotAt() { return latestAt; }
+    /** Send a player button press (play / pause / prev / next / like / seekto:SECONDS) to the page, same path as the notification buttons. */
+    static void control(String action) { Sink s = sink; if (s != null) s.send(action); }
+    /** The cover this service already fetched for url, or null. */
+    static Bitmap artFor(String url) { PlaybackService s = live; return s != null && url.equals(s.artUrl) ? s.art : null; }
 
     private PowerManager.WakeLock wakeLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -57,7 +69,9 @@ public class PlaybackService extends Service {
 
     /** Called from the page (a JS bridge thread) with the current player state as JSON. */
     static void media(String json) {
-        try { latest = new JSONObject(json); } catch (Exception e) { return; }
+        try { latest = new JSONObject(json); latestAt = SystemClock.elapsedRealtime(); } catch (Exception e) { return; }
+        StateListener l = stateListener;
+        if (l != null) l.onState();
         final PlaybackService s = live;
         if (s != null) s.handler.post(s::render);
     }
@@ -87,7 +101,7 @@ public class PlaybackService extends Service {
                 @Override public void onSkipToNext() { dispatch("next"); }
                 @Override public void onSkipToPrevious() { dispatch("prev"); }
                 @Override public void onSeekTo(long posMs) { dispatch("seekto:" + (posMs / 1000.0)); }
-                @Override public void onCustomAction(String action, android.os.Bundle extras) { if ("like".equals(action)) dispatch("like"); else if ("visual".equals(action)) openAppNow(); }
+                @Override public void onCustomAction(String action, android.os.Bundle extras) { if ("like".equals(action)) dispatch("like"); else if ("visual".equals(action)) openVisualPlayer(); }
             }, handler);
         } catch (Throwable t) {
             session = null;   // never let the player widget stop the music
@@ -135,13 +149,49 @@ public class PlaybackService extends Service {
         return PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE);
     }
 
-    /** The "visual mode" button: for now it just brings the app to the front (a later item makes it the full-screen player). */
-    private void openAppNow() {
-        try { openApp().send(); } catch (Exception ignored) {}
+    private Intent visualIntent() {
+        return new Intent(this, FullScreenPlayerActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
     }
 
-    private Notification.Action openButton(int icon, String label) {
-        return new Notification.Action.Builder(Icon.createWithResource(this, icon), label, openApp()).build();
+    /**
+     * The "visual" session custom action (Android 13+ media controls, lock screen widget): open the full-screen player, or close it if it is
+     * already up. Android 10+ blocks an app that is not on screen from starting an activity, and a MediaSession callback is not an exemption,
+     * so besides a plain startActivity (works whenever the app is visible) this posts a high-priority notification with a full-screen intent,
+     * which the system launches itself when the phone is locked or the screen is off, and shows as a tap-to-open heads-up otherwise.
+     */
+    private void openVisualPlayer() {
+        FullScreenPlayerActivity open = FullScreenPlayerActivity.live;
+        if (open != null) { open.finish(); return; }
+        Intent i = visualIntent();
+        PendingIntent pi = PendingIntent.getActivity(this, 21, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        try {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (Build.VERSION.SDK_INT >= 26) {
+                NotificationChannel ch = new NotificationChannel("visual", "Visual player", NotificationManager.IMPORTANCE_HIGH);
+                ch.setSound(null, null); ch.enableVibration(false); ch.setShowBadge(false);
+                ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                nm.createNotificationChannel(ch);
+            }
+            nm.notify(FullScreenPlayerActivity.NOTIF_ID, new Notification.Builder(this, "visual")
+                    .setSmallIcon(R.drawable.ic_stat_ebbless)
+                    .setContentTitle("EBBLESS visual player")
+                    .setContentText("Tap to open")
+                    .setContentIntent(pi)
+                    .setFullScreenIntent(pi, true)
+                    .setAutoCancel(true)
+                    .setTimeoutAfter(8000)
+                    .build());
+        } catch (Exception ignored) {}
+        try { startActivity(i); } catch (Exception ignored) {}
+    }
+
+    /** The notification's own "visual" button: a direct activity PendingIntent (a user tap, so allowed from the background). On the lock screen it must not ask to unlock first. */
+    private Notification.Action visualButton() {
+        Intent i = visualIntent().putExtra(FullScreenPlayerActivity.EXTRA_TOGGLE, true);
+        PendingIntent pi = PendingIntent.getActivity(this, 20, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification.Action.Builder ab = new Notification.Action.Builder(Icon.createWithResource(this, R.drawable.ic_media_visual), "Visual mode", pi);
+        if (Build.VERSION.SDK_INT >= 31) ab.setAuthenticationRequired(false);
+        return ab.build();
     }
 
     private Notification.Action button(int code, String name, int icon, String label) {
@@ -203,7 +253,7 @@ public class PlaybackService extends Service {
                 .addAction(button(10, "prev", R.drawable.ic_media_prev, "Previous"))
                 .addAction(playing ? button(11, "pause", R.drawable.ic_media_pause, "Pause") : button(11, "play", R.drawable.ic_media_play, "Play"))
                 .addAction(button(12, "next", R.drawable.ic_media_next, "Next"))
-                .addAction(openButton(R.drawable.ic_media_visual, "Visual mode"))
+                .addAction(visualButton())
                 .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(1, 2, 3));
         if (art != null) b.setLargeIcon(art);
         nm.notify(1, b.build());

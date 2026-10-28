@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- the full-screen visual player (#691) is started over the lock screen by a full-screen-intent notification -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- self-updates (Updater): the sideloaded app installs its own new version -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -43,6 +45,18 @@
                 <data android:scheme="ebbless" android:host="signin" />
             </intent-filter>
         </activity>
+
+        <!-- #691: full-screen player drawn over the lock screen; own task so closing it returns to the lock screen / standard player -->
+        <activity
+            android:name=".FullScreenPlayerActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
 
         <receiver android:name=".UpdateReceiver" android:exported="false" />
 
