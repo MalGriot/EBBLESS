@@ -11835,12 +11835,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #687, 2026-10-28. Do together with #685.
 
 ### mobile-home-widget-688: Mobile home-screen widget (Geethub #688)
-- **Status:** draft
+- **Status:** in-progress
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #688. Mobile home-screen widget.
 - **Touches:** index.html.
 - **Branch:** 
-- **Notes:** Synced from Geethub #688, 2026-10-28. Brainstorm what a good widget needs (options), then build. Android only per platform scope; likely needs native work in android-webview.
+- **Notes:** Owner approved mockup 2026-10-29: 4x2 widget. Playing: art left; title, artist, heart; progress line; previous, play/pause, next; tap elsewhere opens the app. Idle: EBBLESS E on the art square, last played song, Resume button. Accent from the art. Android only, native (android-webview). Synced from Geethub #688, 2026-10-28. Brainstorm what a good widget needs (options), then build. Android only per platform scope; likely needs native work in android-webview.
 
 ### lockscreen-buttons-spacing-689: Lock screen and notification player: buttons evenly distributed, player centered (Geethub #689)
 - **Status:** merged
