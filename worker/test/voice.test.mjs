@@ -147,3 +147,82 @@ test('mood plan carries a grounded interp (so the client skips /vibe-interpret);
   const boom = await call(mkEnv(moodAi), { idToken: 'ebs1.good', text: 'something slow and warm' }, { groundMood: async () => { throw new Error('x'); } });
   assert.equal(boom.status, 200); assert.equal(boom.body.interp, undefined);
 });
+
+// ---- phase 2: sets ----
+import { SET_TEMPLATES, templateFor, defaultArc, parseMinutes, setToMood, looksLikeSet } from '../src/voice.js';
+const sumMin = (a) => a.reduce((n, s) => n + s.minutes, 0);
+const goodSet = { kind: 'set', durationMin: 90, intention: 'ecstatic dance', tags: ['dance'], seeds: [], energy: 6, text: '', ops: [], say: 'Building a 90 minute set', arc: [
+  { label: 'Warm-up', minutes: 20, energyFrom: 2, energyTo: 4, tags: ['downtempo'], bpmFrom: 90, bpmTo: 105 },
+  { label: 'Build', minutes: 25, energyFrom: 4, energyTo: 8, tags: ['afrobeat'] },
+  { label: 'Peak', minutes: 30, energyFrom: 8, energyTo: 9, tags: ['house'] },
+  { label: 'Ease out', minutes: 15, energyFrom: 6, energyTo: 2, tags: ['ambient'] }] };
+const setAi = (o) => ({ run: async () => ({ response: JSON.stringify(o) }) });
+
+test('set: valid plan passes, minutes sum to duration, energy and bpm clamped', () => {
+  const p = validatePlan(goodSet);
+  assert.equal(p.kind, 'set'); assert.equal(p.durationMin, 90); assert.equal(p.arc.length, 4);
+  assert.equal(sumMin(p.arc), 90); assert.equal(p.arc[0].bpmFrom, 90); assert.equal(p.arc[1].bpmFrom, undefined);
+  const w = validatePlan({ ...goodSet, durationMin: 9999, arc: [{ label: 'A', minutes: 5, energyFrom: 99, energyTo: -4, tags: ['x'], bpmFrom: 10, bpmTo: 500 }, { label: 'B', minutes: 10, energyFrom: 3.6, energyTo: 'x' }] });
+  assert.equal(w.durationMin, 240); assert.equal(sumMin(w.arc), 240);
+  assert.deepEqual([w.arc[0].energyFrom, w.arc[0].energyTo, w.arc[0].bpmFrom], [10, 0, undefined]);
+  assert.equal(w.arc[1].energyFrom, 4); assert.equal(w.arc[1].energyTo, 4);
+  assert.equal(validatePlan({ ...goodSet, durationMin: 1 }).durationMin, 10);
+  assert.equal(sumMin(validatePlan({ ...goodSet, durationMin: 10 }).arc), 10);
+});
+
+test('set: caps steps at 8, strips urls and control chars, allowlists tags', () => {
+  const many = Array.from({ length: 12 }, (_, i) => ({ label: 'S' + i, minutes: 5, energyFrom: 5, energyTo: 5 }));
+  assert.equal(validatePlan({ ...goodSet, durationMin: 120, arc: many }).arc.length, 8);
+  const p = validatePlan({ ...goodSet, intention: 'dance https://evil.example/x\u0000now', say: 'y'.repeat(200), arc: [{ label: 'Go www.bad.com\u0007', minutes: 30, energyFrom: 3, energyTo: 6, tags: ['<script>', 'Soul', 'a'.repeat(50), 'lo-fi', 'x', 'y', 'z'] }] });
+  assert.ok(!/https?:|www\.|\u0000|\u0007/.test(JSON.stringify(p)));
+  assert.ok(p.say.length <= 60);
+  assert.deepEqual(p.arc[0].tags, ['soul', 'a'.repeat(30), 'lo-fi', 'x']);
+});
+
+test('set: off-schema arc falls back to the intention template; a bare set is rejected', () => {
+  for (const arc of [[], [{ label: '', minutes: 5, energyFrom: 1, energyTo: 2 }], [{ label: 'x', minutes: 'soon', energyFrom: 1, energyTo: 2 }], ['junk'], [{ label: 'x', minutes: -4, energyFrom: 1, energyTo: 2 }]]) {
+    const p = validatePlan({ ...goodSet, arc });
+    assert.equal(p.arc.length, SET_TEMPLATES.ecstatic.length, JSON.stringify(arc)); assert.equal(sumMin(p.arc), 90);
+  }
+  assert.equal(validatePlan({ ...goodSet, arc: 'nope' }), null);
+  assert.equal(validatePlan({ kind: 'set' }), null);
+  assert.deepEqual(validatePlan({ kind: 'set', intention: 'deep focus study', durationMin: 60 }).arc.map((s) => s.label), ['Settle', 'Steady', 'Ease out']);
+});
+
+test('set: templates per intention, duration parsing, always valid', () => {
+  assert.deepEqual(['ecstatic dance', 'deep focus', 'house party ramp', 'wind down for sleep', 'something'].map(templateFor), ['ecstatic', 'focus', 'party', 'sleep', 'ecstatic']);
+  for (const k of Object.keys(SET_TEMPLATES)) for (const d of [10, 37, 90, 240]) { const a = defaultArc(k === 'ecstatic' ? 'dance' : k, d); assert.equal(sumMin(a), d); assert.ok(a.every((s) => s.minutes >= 1 && s.energyFrom >= 0 && s.energyTo <= 10)); }
+  assert.deepEqual(['90 minutes', '2 hours', 'an hour', '1.5 hours', 'forever'].map(parseMinutes), [90, 120, 60, 90, null]);
+  assert.equal(validatePlan({ kind: 'set', intention: 'x' }, 'dance for 2 hours').durationMin, 120);
+  assert.ok(looksLikeSet('ecstatic dance for 90 minutes, start gentle, build to a peak') && !looksLikeSet('something calm'));
+});
+
+test('set handler: paid user gets the set, grounded interp built from all step tags', async () => {
+  let seen = null;
+  const groundMood = async (plan) => { seen = plan; return { tracks: [{ title: 'T', artist: 'A' }] }; };
+  const r = await call(mkEnv(setAi(goodSet), { 'ent:u1': '{"tier":"flow"}' }), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, start gentle, build to a peak, end calm' }, { groundMood });
+  assert.equal(r.body.plan.kind, 'set'); assert.equal(r.body.upsell, undefined); assert.equal(sumMin(r.body.plan.arc), 90);
+  assert.equal(r.body.interp.tracks.length, 1); assert.ok(seen.tags.includes('afrobeat') && seen.text === 'ecstatic dance');
+});
+
+test('set handler: free user gets a single-mood plan plus upsell, charged like any request', async () => {
+  const r = await call(mkEnv(setAi(goodSet)), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, build to a peak' });
+  assert.equal(r.body.plan.kind, 'mood'); assert.equal(r.body.plan.arc, undefined); assert.equal(r.body.upsell, 'sets');
+  assert.equal(r.body.plan.text, 'ecstatic dance'); assert.equal(r.body.used, 1); assert.equal(r.body.tier, 'free');
+  const plain = await call(mkEnv(goodAi), { idToken: 'ebs1.good', text: 'a bit quieter in here' });
+  assert.equal(plain.body.upsell, undefined);
+});
+
+test('set handler: model error / cap / global ceiling still serve a template set to paid, mood + upsell to free', async () => {
+  const text = 'ecstatic dance for 90 minutes, start gentle, build to a peak, end calm';
+  const paid = { 'ent:u1': '{"tier":"horizon"}' };
+  const down = { run: async () => { throw new Error('boom'); } };
+  const a = await call(mkEnv(down, paid), { idToken: 'ebs1.good', text });
+  assert.equal(a.body.source, 'heuristic'); assert.equal(a.body.plan.kind, 'set'); assert.equal(a.body.plan.durationMin, 90); assert.equal(sumMin(a.body.plan.arc), 90); assert.equal(a.body.used, 0);
+  const b = await call(mkEnv(down), { idToken: 'ebs1.good', text });
+  assert.equal(b.body.plan.kind, 'mood'); assert.equal(b.body.upsell, 'sets');
+  const q = fakeQuota(); const day = new Date().toISOString().slice(0, 10); q.spent.set('g:' + day, VOICE_GLOBAL_LIMIT);
+  const c = await call(mkEnv(setAi(goodSet), paid, q), { idToken: 'ebs1.good', text });
+  assert.equal(c.body.reason, 'global'); assert.equal(c.body.plan.kind, 'set');
+  assert.equal(setToMood(c.body.plan).kind, 'mood');
+});
