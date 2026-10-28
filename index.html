@@ -1338,6 +1338,7 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .v-tab-label{font-size:10px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap}
 .visual-tabs .v-tab:hover{color:var(--text)}
 .visual-tabs .v-tab.is-active{background:var(--accent);color:var(--on-accent,#151107)}
+.visual-tabs.yt-on .v-tab:not(#ytPanelBtn).is-active{background:none;color:var(--faint)}
 .visual-tabs .v-tab:disabled{opacity:.35;pointer-events:none}
 /* visualizer tab icon: three cymatics plate figures crossfading, one full
    3-shape cycle every 20s (3 cycles/min). each phase holds ~5s, fades ~1.7s.
@@ -18511,6 +18512,7 @@ function openYtPanel(){
   closeArtStyleMenu();
   ytOn = true;
   ytPanelBtn.classList.add('is-active');
+  $('visualTabs').classList.add('yt-on');
   ytPanelBtn.setAttribute('aria-pressed', 'true');
   ytPanelSync();
   clearInterval(ytPanelTimer);
@@ -18520,6 +18522,7 @@ function closeYtPanel(auto){
   if (!ytPanelOpen()) return;
   ytOn = false;
   ytPanelBtn.classList.remove('is-active');
+  $('visualTabs').classList.remove('yt-on');
   ytPanelBtn.setAttribute('aria-pressed', 'false');
   clearInterval(ytPanelTimer);
   ytPanelTimer = null;
