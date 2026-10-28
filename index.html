@@ -2871,6 +2871,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.lib-wide:not(.desktop-fs) .lib-grid.is-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px}
   body.split-desktop.lib-wide:not(.desktop-fs) .track-meta .title{font-size:20px}
   body.split-desktop:not(.desktop-fs) #libWideBtn{display:flex}
+  /* #675: the expand control is a small tab on the library pane's right edge (the edge it grows toward), not a button in the toolbar. Solid fill, static (no blur/animation). */
+  body.split-desktop:not(.desktop-fs) #libWideBtn{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:5;width:18px;height:56px;border-radius:10px 0 0 10px;background:rgba(24,24,28,.92);border:1px solid var(--border);border-right:0;color:var(--faint-2)}
+  body.split-desktop:not(.desktop-fs) #libWideBtn:hover{color:var(--accent)}
+  body.split-desktop:not(.desktop-fs) #libWideBtn svg{width:14px;height:14px}
   body.split-desktop.lib-wide #libWideBtn svg{transform:scaleX(-1)}
   body.split-desktop #libWideBtn.is-active{color:var(--accent)}
   /* issue #151: the 60px bar with no edge read as floating above the panes.
