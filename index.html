@@ -10501,29 +10501,20 @@ libFilterMore.addEventListener('click', () => {
 });
 libFilter.addEventListener('scroll', updateLibFilterMore, { passive: true });
 window.addEventListener('resize', updateLibFilterMore);
+function setOnlyLibPill(key){
+  libFilter.querySelectorAll('.lib-filter-btn').forEach(b => { libFolded[b.dataset.filter] = b.dataset.filter !== key; });
+  const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+  libAlbumGroupKeys.forEach(k => { f[k] = key !== 'albums'; });   // album sub-groups follow the albums pill (#495)
+  lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+}
 libFilter.addEventListener('click', (e) => {
   const btn = e.target.closest('.lib-filter-btn');
   if (!btn) return;
   const key = btn.dataset.filter;
   // #631: while searching the pills mirror the matches; tapping one leaves the search and shows the library again
   if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); rerenderLibraryKeepPanel(); return; }
-  // each pill extends or retracts its whole section, every sub-group included (#495)
-  const extend = !!libFolded[key];
-  // the last open pill can't be switched off (the library is never empty, #495): tapping it again opens every pill instead (#616)
-  if (!extend && [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].filter(b => !libFolded[b.dataset.filter]).length <= 1){
-    libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)').forEach(b => { libFolded[b.dataset.filter] = false; });
-    const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
-    libAlbumGroupKeys.forEach(k => { f[k] = false; });
-    lsSet(LS_ALBUM_ARTIST_FOLDED, f);
-    rerenderLibraryKeepPanel();
-    return;
-  }
-  libFolded[key] = !extend;
-  if (key === 'albums'){
-    const f = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
-    libAlbumGroupKeys.forEach(k => { f[k] = !extend; });
-    lsSet(LS_ALBUM_ARTIST_FOLDED, f);
-  }
+  // #677: only one pill (playlists, artists, albums, podcasts) is active at a time; tapping one switches to it
+  setOnlyLibPill(key);
   rerenderLibraryKeepPanel();
 });
 function applyLibSortUI(){
@@ -10695,6 +10686,9 @@ function renderLibrary(){
   // chips only help when there's more than one kind to pick between
   libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
+  // #677: exactly one visible pill is active; if none or several are, keep the first open one (else the first pill)
+  { const vis = [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].map(b => b.dataset.filter), open = vis.filter(k => !libFolded[k]);
+    if (vis.length && open.length !== 1) setOnlyLibPill(open[0] || vis[0]); }
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter]));
   updateLibFilterMore();
   const showPlaylists = (filter === 'all' || filter === 'playlists') && !advHide.includes('playlist');
@@ -11128,7 +11122,7 @@ function renderLibrary(){
   [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
     // Attach click handler to the entire section-label-row if not already set
     if (!head.dataset.foldHandlerAttached) {
-      head.addEventListener('click', () => { libFolded[key] = !libFolded[key]; renderLibrary(); });
+      head.addEventListener('click', () => { /* #677: one section is always open; switch via the pills */ });
       head.dataset.foldHandlerAttached = 'true';
     }
     const folded = filter === 'all' && !!libFolded[key];
