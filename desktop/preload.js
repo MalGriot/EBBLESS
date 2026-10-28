@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('ebblessDesktop', {
   onAway: (fn) => ipcRenderer.on('ebbless:away', () => fn()),
   // the main window is back on screen: the page closes the mini player
   onBack: (fn) => ipcRenderer.on('ebbless:back', () => fn()),
+  // playback started/stopped: the shell keeps the machine awake while music plays (#563)
+  setPlaying: (on) => ipcRenderer.send('ebbless:playing', !!on),
   // the page draws a dock icon for the active art mode (#633); a PNG data URL
   setDockIcon: (dataUrl) => ipcRenderer.send('ebbless:dock-icon', dataUrl),
   // a Google credential from the browser sign-in (desktop/signin.html)

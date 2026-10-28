@@ -24582,6 +24582,7 @@ function setPlayingUI(isPlaying){
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   syncMediaPositionState(true);
   setKeepAliveAudio(isPlaying);
+  try { if (window.ebblessDesktop && ebblessDesktop.setPlaying) ebblessDesktop.setPlaying(!!isPlaying); } catch(e){}
   vizSetPlaying(isPlaying);
   recordSetPlaying(isPlaying);
   cassetteSetPlaying(isPlaying);
