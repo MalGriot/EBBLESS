@@ -11819,7 +11819,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #685, 2026-10-28. Do together with #687 (same window).
 
 ### auto-resume-on-reload-686: On app reload, auto-resume the song (Geethub #686)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #686. On app reload, auto-resume the song.
 - **Touches:** index.html.
@@ -11867,7 +11867,7 @@ Add entries in this shape:
 - **Notes:** OWNER RESTORE 2026-10-29: scrolling-art background, cymatics and bouncing logo are back in. Working reading (confirm with owner before building): the button right of next cycles the full-screen player's background: (1) song art scrolling top to bottom to top, (2) cymatics, (3) the app's lava-lamp color with the EBBLESS logo bouncing around; one more press returns to the standard system player. The 2026-10-29 layout revision applies in the lava-lamp mode: song art full size nearly filling the screen horizontally, clock above it, player attached to the bottom of the art square stretching down with rounded bottom corners. Open question: whether that art-square layout should also apply in the scrolling-art and cymatics modes. OWNER REVISION 2026-10-29 (replaces the bg cycle in the Description): the button right of next on the standard lock screen player TOGGLES a lock-screen mode. On: the entire lock screen bg becomes the app's lava-lamp look; the song art shows full size, almost filling the screen horizontally, with the clock above it; the player is connected to the bottom of the art square and stretches down from it with rounded bottom corners. Off: back to the standard player. So the cymatics/bouncing-logo cycle and the scrolling-art bg are dropped unless the owner asks for them again. Needs a full-screen activity shown over the keyguard (it draws its own clock), launched by the 'visual' button of lockscreen-buttons-spacing-689. Starts after lockscreen-buttons-spacing-689 lands (both touch PlaybackService.java). Must obey the GPU budget (transform/opacity only, stop when screen off or hidden). The standard notification keeps the album art bg and gets a right-side button that opens this player.
 
 ### library-tab-outside-window-691: Library extender tab sits outside/right of the window; the library turns slate black/grey on extend and back on retract; on hover the tab takes the current UI colors (Geethub #691)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #691. Library extender tab sits outside/right of the window; the library turns slate black/grey on extend and back on retract; on hover the tab takes the current UI colors.
 - **Touches:** index.html.
@@ -11875,7 +11875,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #691, 2026-10-29. Follow-up to library-expand-tab-675 (shipped inside the pane). Not the same as my own internal 'lockscreen-fullscreen-player-691' slug (that name is just a label).
 
 ### desktop-art-buttons-on-hover-692: Desktop: dislike button on the song art bottom right, 3-dots button top left, all art buttons appear on hover (Geethub #692)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #692. Desktop: dislike button on the song art bottom right, 3-dots button top left, all art buttons appear on hover.
 - **Touches:** index.html.
@@ -11883,7 +11883,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #692, 2026-10-29. 
 
 ### add-song-keeps-window-open-693: Adding a song/album/artist to a playlist must not close the window (artist window currently closes) (Geethub #693)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #693. Adding a song/album/artist to a playlist must not close the window (artist window currently closes).
 - **Touches:** index.html.
@@ -11891,7 +11891,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #693, 2026-10-29. Bug.
 
 ### bouncing-logo-tap-and-ripples-694: Bouncing E logo: tapping the first E bounces it immediately and shows ripples in the background (Geethub #694)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #694. Bouncing E logo: tapping the first E bounces it immediately and shows ripples in the background.
 - **Touches:** index.html.
@@ -11899,7 +11899,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #694, 2026-10-29. Mind the GPU budget for ripples (transform/opacity only).
 
 ### liked-songs-newest-first-695: Liked songs show most recent first by default; playlist art changes to match (Geethub #695)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #695. Liked songs show most recent first by default; playlist art changes to match.
 - **Touches:** index.html.
@@ -11907,7 +11907,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #695, 2026-10-29. Related: #676 (Currents newest first).
 
 ### add-songs-plus-centering-696: Plus sign not vertically centered on the buttons in 'adding to liked songs' list (open playlist, + add songs) (Geethub #696)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #696. Plus sign not vertically centered on the buttons in 'adding to liked songs' list (open playlist, + add songs).
 - **Touches:** index.html.
@@ -11915,7 +11915,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #696, 2026-10-29. Bug, small.
 
 ### dock-icon-shadow-697: Dock icon has an ugly pixelated drop shadow: make it pretty or remove it (Geethub #697)
-- **Status:** draft
+- **Status:** ready
 - **Priority:** medium
 - **Description:** Geethub issue #697. Dock icon has an ugly pixelated drop shadow: make it pretty or remove it.
 - **Touches:** index.html.
