@@ -11848,7 +11848,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub issue #689. Lock screen and notification player: buttons evenly distributed, player centered.
 - **Touches:** index.html.
 - **Branch:** 
-- **Notes:** Synced from Geethub #689, 2026-10-28. Android media notification / Media Session layout.
+- **Notes:** OWNER SPEC 2026-10-29 (replaces the 'just space the buttons' reading): lock screen/notification player: full background is the song art scrolling top to bottom to top; progress bar with elapsed time left and full duration right, both just beneath it; big play button centered between big previous/next; slightly smaller heart/like left of previous; slightly smaller button right of next that cycles the background: art, then cymatics, then the app's lava-lamp color with the bouncing EBBLESS logo (as in the app with no track queued). Android limits: notification and lock-screen media controls are drawn by the system and cannot animate or take a custom background. Needs an owner decision on approach. Lane agent/lockscreen-buttons-689 (heart removed, 3 buttons) is superseded; do not merge as-is. Synced from Geethub #689, 2026-10-28. Android media notification / Media Session layout.
 
 ### discover-min-queue-690: With Discover on, never fewer than 7 songs queued; load 28 songs (Geethub #690)
 - **Status:** draft
