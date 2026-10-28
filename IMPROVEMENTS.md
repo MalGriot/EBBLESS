@@ -11811,7 +11811,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #684, 2026-10-28. Large: needs a metadata source (MusicBrainz/Genius/WhoSampled-style). Plan sources before building.
 
 ### artist-photo-tap-cycles-685: Artist window: tapping the artist picture shows another image of the artist (up to 3) (Geethub #685)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #685. Artist window: tapping the artist picture shows another image of the artist (up to 3).
 - **Touches:** index.html.
@@ -11827,7 +11827,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #686, 2026-10-28. Overlaps home-welcome-back-583e and #671 (the resume prompt); flag: autoplay may be blocked by browsers until a tap.
 
 ### artist-photo-pan-nonsquare-687: Artist window: a non-square image pans up/down or left/right beneath the mask so the whole picture shows (Geethub #687)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #687. Artist window: a non-square image pans up/down or left/right beneath the mask so the whole picture shows.
 - **Touches:** index.html.
@@ -11851,7 +11851,7 @@ Add entries in this shape:
 - **Notes:** OWNER SPEC 2026-10-29 (replaces the 'just space the buttons' reading): lock screen/notification player: full background is the song art scrolling top to bottom to top; progress bar with elapsed time left and full duration right, both just beneath it; big play button centered between big previous/next; slightly smaller heart/like left of previous; slightly smaller button right of next that cycles the background: art, then cymatics, then the app's lava-lamp color with the bouncing EBBLESS logo (as in the app with no track queued). Android limits: notification and lock-screen media controls are drawn by the system and cannot animate or take a custom background. Needs an owner decision on approach. Lane agent/lockscreen-buttons-689 (heart removed, 3 buttons) is superseded; do not merge as-is. Synced from Geethub #689, 2026-10-28. Android media notification / Media Session layout.
 
 ### discover-min-queue-690: With Discover on, never fewer than 7 songs queued; load 28 songs (Geethub #690)
-- **Status:** draft
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #690. With Discover on, never fewer than 7 songs queued; load 28 songs.
 - **Touches:** index.html.
