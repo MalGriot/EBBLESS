@@ -11801,3 +11801,59 @@ Add entries in this shape:
 - **Touches:** index.html.
 - **Branch:** 
 - **Notes:** Synced from Geethub #683, 2026-10-28; flipped to ready by owner. 
+
+### song-info-credits-684: Song info shows what song was sampled, release date, album, all credits (producer, label), artist, genre, trivia (Geethub #684)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #684. Song info shows what song was sampled, release date, album, all credits (producer, label), artist, genre, trivia.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #684, 2026-10-28. Large: needs a metadata source (MusicBrainz/Genius/WhoSampled-style). Plan sources before building.
+
+### artist-photo-tap-cycles-685: Artist window: tapping the artist picture shows another image of the artist (up to 3) (Geethub #685)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #685. Artist window: tapping the artist picture shows another image of the artist (up to 3).
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #685, 2026-10-28. Do together with #687 (same window).
+
+### auto-resume-on-reload-686: On app reload, auto-resume the song (Geethub #686)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #686. On app reload, auto-resume the song.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #686, 2026-10-28. Overlaps home-welcome-back-583e and #671 (the resume prompt); flag: autoplay may be blocked by browsers until a tap.
+
+### artist-photo-pan-nonsquare-687: Artist window: a non-square image pans up/down or left/right beneath the mask so the whole picture shows (Geethub #687)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #687. Artist window: a non-square image pans up/down or left/right beneath the mask so the whole picture shows.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #687, 2026-10-28. Do together with #685.
+
+### mobile-home-widget-688: Mobile home-screen widget (Geethub #688)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #688. Mobile home-screen widget.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #688, 2026-10-28. Brainstorm what a good widget needs (options), then build. Android only per platform scope; likely needs native work in android-webview.
+
+### lockscreen-buttons-spacing-689: Lock screen and notification player: buttons evenly distributed, player centered (Geethub #689)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #689. Lock screen and notification player: buttons evenly distributed, player centered.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #689, 2026-10-28. Android media notification / Media Session layout.
+
+### discover-min-queue-690: With Discover on, never fewer than 7 songs queued; load 28 songs (Geethub #690)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #690. With Discover on, never fewer than 7 songs queued; load 28 songs.
+- **Touches:** index.html.
+- **Branch:** 
+- **Notes:** Synced from Geethub #690, 2026-10-28. Related: #673, #674 (just shipped).
