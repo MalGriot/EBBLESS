@@ -173,9 +173,6 @@ public class PlaybackService extends Service {
         if (dur > 0) actions |= PlaybackState.ACTION_SEEK_TO;
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(actions)
-                .addCustomAction(new PlaybackState.CustomAction.Builder("like",
-                        liked ? "Remove from Liked Songs" : "Add to Liked Songs",
-                        liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart).build())
                 .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, pos, playing ? rate : 0f, SystemClock.elapsedRealtime())
                 .build());
         session.setActive(true);
@@ -192,8 +189,7 @@ public class PlaybackService extends Service {
                 .addAction(button(10, "prev", R.drawable.ic_media_prev, "Previous"))
                 .addAction(playing ? button(11, "pause", R.drawable.ic_media_pause, "Pause") : button(11, "play", R.drawable.ic_media_play, "Play"))
                 .addAction(button(12, "next", R.drawable.ic_media_next, "Next"))
-                .addAction(button(13, "like", liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart, liked ? "Remove from Liked Songs" : "Add to Liked Songs"))
-                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 3));
+                .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         if (art != null) b.setLargeIcon(art);
         nm.notify(1, b.build());
     }
