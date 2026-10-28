@@ -2959,6 +2959,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      (rules further down), where only the inner-facing corners round. */
   body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel){border-radius:var(--r-lg)}
   body.split-desktop:not(.desktop-fs) #hist-panel{border-radius:var(--r-lg)}
+  /* #583 tangibility: soft static drop shadows lift the panes off the backdrop. Static box-shadow only (never animated); kept inside the --pane-gap so #app's clip does not cut it. */
+  body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel,#hist-panel){box-shadow:0 2px 3px rgba(0,0,0,.18),0 4px 10px -2px rgba(0,0,0,.32)}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#view-library,#libpl-panel){border-radius:0 var(--r-lg) var(--r-lg) 0}
   body.split-desktop.desktop-fs:not(.view-settings-active) #queue-panel{border-radius:var(--r-lg) 0 0 var(--r-lg)}
   /* Search/relink/import window: only the middle (player) pane, between
