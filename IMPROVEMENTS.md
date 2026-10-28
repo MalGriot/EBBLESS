@@ -11024,7 +11024,7 @@ Add entries in this shape:
 - **Notes:** Details, guards and accuracy limits in the doc, Part 4. Needs worker deploy for the shared per-episode cache. Cache v407. Not run against a real episode; Android native not tried.
 
 ### app-should-feel-like-home: app should feel like home (Geethub #583)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #583. unlinke most apps, spotify feels like a place. but what kind of place? a shop? a room? your room? ebbless should feel like it's YOURS. and it's actively helping you stay in feng shui. think cozy, spacious, warm, not claustrophobic, not so open you get lost, not too busy but attention grabbing, knowing exactly where to go and what to do. comfortable
 - **Touches:** tbd.
