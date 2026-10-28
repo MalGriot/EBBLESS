@@ -2333,15 +2333,26 @@ function artistMatches(queryArtist, resultArtist) {
   return artistNames(queryArtist).some(ws => ws.every(w => words.has(w)));
 }
 
+// A failed call (429/403/5xx/network) is not the same as "no such song":
+// lrclib throttles shared server addresses, so retry a couple of times and
+// flag the list so a throttled miss is not cached like a real one (#664).
 async function lrclibSearch(params) {
-  const res = await fetch('https://lrclib.net/api/search?' + new URLSearchParams(params).toString(), {
-    headers: { 'User-Agent': 'EBBLESS (https://github.com/) - synced lyrics lookup' },
-  });
-  if (!res.ok) return [];
-  try {
-    const list = JSON.parse(await res.text());
-    return Array.isArray(list) ? list : [];
-  } catch (e) { return []; }
+  const out = [];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch('https://lrclib.net/api/search?' + new URLSearchParams(params).toString(), {
+        headers: { 'User-Agent': 'EBBLESS/1.0 (https://github.com/MalGriot/EBBLESS) synced lyrics lookup', 'Lrclib-Client': 'EBBLESS/1.0 (https://github.com/MalGriot/EBBLESS)' },
+      });
+      if (res.ok) {
+        const list = JSON.parse(await res.text());
+        return Array.isArray(list) ? list : out;
+      }
+      if (res.status !== 429 && res.status !== 403 && res.status < 500) return out; // a real "no"
+    } catch (e) { /* retry */ }
+    await new Promise(r => setTimeout(r, 250 * (attempt + 1)));
+  }
+  out.failed = true;
+  return out;
 }
 
 function pickLrclib(list, title, artist, duration) {
@@ -2369,6 +2380,7 @@ function pickLrclib(list, title, artist, duration) {
   return (scored[0] && scored[0].r) || null;
 }
 
+let lrclibThrottled = false; // set when a miss came from failed lookups, not an empty answer
 async function getLrclibMatch(title, artist, duration) {
   // YouTube-only tracks often arrive with no artist and an "Artist - Title"
   // video title; split that so lrclib gets a real artist to filter on.
@@ -2391,12 +2403,15 @@ async function getLrclibMatch(title, artist, duration) {
     const key = JSON.stringify(p);
     if (seen.has(key)) continue;
     seen.add(key);
-    for (const r of await lrclibSearch(p)) if (!all.some(x => x.id === r.id)) all.push(r);
+    const found = await lrclibSearch(p);
+    if (found.failed) all.failed = true;
+    for (const r of found) if (!all.some(x => x.id === r.id)) all.push(r);
     best = pickLrclib(all, title, artist, duration);
     // Stop early once the pick is clearly right (exact title + artist) and
     // either synced or duration-verified - no need for more lrclib calls.
     if (best && normTitle(best.trackName) === normTitle(title) && artistMatches(artist, best.artistName) && (best.syncedLyrics || duration)) break;
   }
+  if (!best && all.failed) lrclibThrottled = true;
   return best;
 }
 
@@ -2593,7 +2608,9 @@ async function handleLyrics(url, ctx) {
   if (cached) return applyCors(cached);
 
   let match = null;
+  lrclibThrottled = false;
   try { match = await getLrclibMatch(title, artist, duration); } catch (e) { match = null; }
+  const throttled = !match && lrclibThrottled;
 
   let payload;
   if (match && match.syncedLyrics) {
@@ -2611,7 +2628,7 @@ async function handleLyrics(url, ctx) {
   // A miss is worth re-checking sooner than a real hit - lrclib's index
   // grows over time, so a track with nothing today may have a match next
   // week, and a day-long negative cache would sit in the way of that.
-  const ttl = payload.source === 'none' ? 3600 : 86400;
+  const ttl = payload.source === 'none' ? (throttled ? 30 : 3600) : 86400;
   const response = json(payload);
   const toCache = response.clone();
   ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {

@@ -11518,7 +11518,7 @@ Add entries in this shape:
 - **Description:** Lyrics fail to load for almost any song. No details given. Related to the merged lyrics-accuracy entry, but this reports a broad failure, so check the lyrics source/fetch first for an outage or a regression.
 - **Touches:** lyrics fetch/matching
 - **Branch:**
-- **Notes:** Synced from GitHub issue #664 (bug); issue body was empty beyond the title.
+- **Notes:** Synced from GitHub issue #664 (bug); issue body was empty beyond the title. Follow-up 2026-10-28 (branch agent/lyrics-worker-664, status review): worker lrclib lookup still missed songs (Redbone, Get Lucky) when lrclib throttled; worker now retries 429/403/5xx and barely caches throttled misses; browser fallback tries 3 query shapes with retries. 8/8 test songs return synced lyrics. Needs worker deploy + cache bump on merge.
 
 ### beta-rejoin-extension-663: Beta testers who rejoin after the 2-week window get another 2 weeks, repeating until stopped (Geethub #663)
 - **Status:** merged
