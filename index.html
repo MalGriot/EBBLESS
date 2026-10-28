@@ -404,7 +404,7 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
    cold-start logo reveal. */
 #splash.is-return .splash-choice{transition-delay:250ms}
 #topnav{display:flex;align-items:center;gap:4px}
-.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
@@ -744,7 +744,7 @@ body.onb-active .paste-guide{display:none}
 .art-style-menu.lib-sort-menu{left:auto;right:0;transform:translateY(-6px)}
 .art-style-menu.lib-sort-menu.is-open{transform:translateY(0)}
 .view-toggle{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
-.view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .view-toggle-btn svg{width:14px;height:14px}
 .view-toggle-btn:hover{color:var(--faint)}
 .view-toggle-btn.is-active{background:var(--panel-3);color:var(--text)}
@@ -1278,8 +1278,10 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .big-play svg{width:26px;height:26px;color:var(--on-accent,#151107);margin-left:3px}
 .import-error{display:flex;flex-direction:column;align-items:center;gap:16px}
 .import-error .msg{font-size:14.5px;color:var(--text);max-width:320px;line-height:1.5}
-.btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out)}
+.btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .btn-ghost:hover{background:var(--panel-2)}
+/* #583 tangibility: buttons press in a little, like firm memory foam (transform only) */
+.btn-ghost:active,.nav-btn:active,.btn-danger:active,.view-toggle-btn:active{transform:scale(.97)}
 .link-btn{font-size:12px;color:var(--text-dim,var(--text));text-decoration:underline;padding:4px 6px;opacity:.8}
 .link-btn:hover:not(:disabled){opacity:1}
 .link-btn:disabled{opacity:.4}
@@ -1300,7 +1302,7 @@ select.btn-ghost{-webkit-appearance:none;appearance:none;background-color:var(--
 select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .btn-danger{border:1px solid var(--bad);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:600;
   color:var(--bad);background:rgba(224,101,94,.1);flex:none;
-  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .btn-danger:hover{background:var(--bad);color:#fff}
 /* press-and-hold confirm (Clear playlists): a fill sweeps across while held,
    retracts if released early; --hold-ms must match CLEAR_HOLD_MS in the JS */
@@ -1817,7 +1819,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .ctl-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .ctl-btn:hover{background:var(--panel-2)}
-.ctl-btn:active{transform:scale(.92)}
+.ctl-btn:active{transform:scale(.94)}
 .ctl-btn svg{width:16px;height:16px}
 .ctl-btn.is-active{color:var(--player-accent)}
 .ctl-btn.is-discover{position:relative}
