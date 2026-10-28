@@ -4903,6 +4903,13 @@ body.week-up-on{overflow:hidden}
           </div>
           <button class="btn-ghost" id="reloadAppBtn">Reload now</button>
         </div>
+        <div class="settings-row" id="voiceRow">
+          <div>
+            <div class="label">Voice</div>
+            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
+          </div>
+          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
+        </div>
         <div class="settings-row" id="adblockRow" hidden>
           <div>
             <div class="label">Ad blocking</div>
@@ -17855,8 +17862,8 @@ const VOICE_LANGS = {
       { op: 'pause', say: ['pause', 'stop', 'stop music', 'stop playing', 'pause music', 'hold on', 'be quiet'] },
       { op: 'next', say: ['next', 'next song', 'next track', 'skip', 'skip song', 'skip this', 'skip this song', 'skip track', 'skip this track', 'play next', 'next one', 'another one'] },
       { op: 'prev', say: ['previous', 'previous song', 'previous track', 'back', 'go back', 'last song', 'last track', 'play previous', 'play last one', 'back one', 'play last song'] },
-      { op: 'volume', dir: 1, say: ['louder', 'volume up', 'turn up', 'turn up volume', 'raise volume', 'increase volume', 'bit louder', 'little louder', 'more volume', 'up'] },
-      { op: 'volume', dir: -1, say: ['quieter', 'softer', 'lower', 'volume down', 'turn down', 'turn down volume', 'lower volume', 'decrease volume', 'bit quieter', 'little quieter', 'not so loud', 'too loud', 'down'] },
+      { op: 'volume', dir: 1, say: ['louder', 'volume up', 'turn up', 'turn up volume', 'raise volume', 'increase volume', 'bit louder', 'little louder', 'turn up bit', 'turn up little', 'louder bit', 'louder little', 'more volume', 'up'] },
+      { op: 'volume', dir: -1, say: ['quieter', 'softer', 'lower', 'volume down', 'turn down', 'turn down volume', 'lower volume', 'decrease volume', 'bit quieter', 'little quieter', 'turn down bit', 'turn down little', 'quieter bit', 'quieter little', 'bit lower', 'not so loud', 'too loud', 'down'] },
       { op: 'mute', say: ['mute', 'silence'] },
       { op: 'unmute', say: ['unmute'] },
       { op: 'like', say: ['like', 'like this', 'like this song', 'like this track', 'love this', 'love this song', 'i like this', 'i love this', 'heart', 'heart this', 'favorite this', 'add to liked', 'add to liked songs', 'save this', 'save this song'] },
@@ -18001,15 +18008,110 @@ function voiceRun(cmd){
   return true;
 }
 
-// What the local grammar did not claim. Phase 1: the existing vibe interpreter (the LLM route is added in the next step).
-function voiceNoMatch(said){ beginConversationalVibe(said); }
+/* ---- Voice DJ (#553) phase 1: the LLM route for lines the grammar did not claim ----
+   Needs: signed in (the daily cap is per account), the listener's consent
+   (first time a transcript would leave the device), and a connection. Any
+   other state falls through to the existing vibe interpreter so the mic never
+   gets worse than before. The worker (POST /voice/plan) validates the plan and
+   the client re-checks it: only ops this file knows can run. */
+const LS_VOICE_CONSENT = 'ebbless:voiceConsent';   // { at, v } - device-local on purpose (not a synced setting)
+const VOICE_CONSENT_V = 1;
+const VOICE_PLAN_TIMEOUT_MS = 12000;
+function voiceConsented(){ const c = lsGet(LS_VOICE_CONSENT, null); return !!(c && c.v === VOICE_CONSENT_V); }
+function voiceSignedIn(){ return !!profileIdToken; }
+let voiceSignInToasted = false;
+
+// One screen, two uses: asking the first time (onDone gets true/false) and Settings > Voice (review / withdraw).
+function openVoiceConsent(onDone){
+  const on = voiceConsented();
+  openImportOverlay();
+  importStage.innerHTML =
+    '<div class="step">Voice requests</div>' +
+    '<div style="width:100%;text-align:left;font-size:14px;line-height:1.5;margin-bottom:16px">' +
+      '<p style="margin:0 0 10px">Simple commands like skip, pause or louder run on your device and send nothing.</p>' +
+      '<p style="margin:0 0 10px">For anything else, EBBLESS sends <b>the words you spoke</b>, the <b>song playing now</b> and the <b>last 5 songs you played</b> (titles and artists) to our server and an AI model, to work out what you meant. Nothing else is sent: no name, no email, no library.</p>' +
+      '<p style="margin:0 0 10px">No audio is stored. Your browser or phone turns speech into text, and EBBLESS never receives the audio. We do not keep what you said.</p>' +
+      '<p style="margin:0">You need to be signed in. Free accounts get 7 voice requests a day. You can withdraw any time in Settings under Voice.</p>' +
+    '</div>' +
+    (on
+      ? '<button class="btn-ghost" id="voiceConsentNo" style="width:100%;margin-bottom:8px">Withdraw consent</button><button class="btn-ghost" id="voiceConsentClose" style="width:100%">Close</button>'
+      : '<button class="btn-ghost" id="voiceConsentYes" style="width:100%;margin-bottom:8px">Allow voice requests</button><button class="btn-ghost" id="voiceConsentNo" style="width:100%">Not now</button>');
+  const done = (v) => { closeImportOverlay(); renderVoiceRow(); if (onDone) onDone(v); };
+  const yes = $('voiceConsentYes'), no = $('voiceConsentNo'), close = $('voiceConsentClose');
+  if (yes) yes.addEventListener('click', () => { lsSet(LS_VOICE_CONSENT, { at: Date.now(), v: VOICE_CONSENT_V }); done(true); });
+  if (no) no.addEventListener('click', () => { if (on){ lsDel(LS_VOICE_CONSENT); showToast('Voice requests turned off'); } done(false); });
+  if (close) close.addEventListener('click', () => done(true));
+}
+function renderVoiceRow(){
+  const d = $('voiceDesc'), b = $('voiceBtn');
+  if (!d || !b) return;
+  d.textContent = voiceConsented() ? 'On. Words you speak that need an AI are sent when you ask, up to 7 a day.' : 'Off. Simple commands still work. Nothing is sent until you allow it.';
+  b.textContent = voiceConsented() ? 'Review or withdraw' : 'Review';
+}
+
+// What the worker may know: the song playing and the last 5 played. Titles and artists only.
+function voicePlanCtx(){
+  const t = currentTrack();
+  return {
+    now: t ? { title: String(t.title || '').slice(0, 100), artist: String(t.artist || '').slice(0, 100) } : null,
+    recent: listenSeedHistory().slice(0, 5).map(h => ({ t: String(h.t || '').slice(0, 100), a: String(h.a || '').slice(0, 100) }))
+  };
+}
+const VOICE_PLAN_OPS = ['play', 'pause', 'next', 'prev', 'volume', 'mute', 'unmute', 'like', 'unlike', 'shuffle', 'repeat', 'more_like_this'];
+async function fetchVoicePlan(said){
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), VOICE_PLAN_TIMEOUT_MS);
+  try {
+    const res = await fetch(BACKEND + '/voice/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
+      body: JSON.stringify({ idToken: profileIdToken, text: said.slice(0, 300), ctx: voicePlanCtx() }) });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) return { signedOut: true };
+    if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
+    return data;
+  } finally { clearTimeout(timer); }
+}
+// Runs a plan the worker returned, after re-checking it. Returns false if nothing usable ran.
+function voiceRunPlan(plan, said){
+  if (!plan || typeof plan !== 'object') return false;
+  if (plan.kind === 'command' && Array.isArray(plan.ops)){
+    const ops = plan.ops.filter(o => o && VOICE_PLAN_OPS.includes(o.op)).slice(0, 3);
+    ops.forEach(o => voiceRun({ op: o.op, dir: o.dir < 0 ? -1 : 1, on: o.on !== false, mode: o.mode === 'one' ? 'one' : undefined }));
+    return ops.length > 0;
+  }
+  if (plan.kind === 'search' && typeof plan.text === 'string' && plan.text.trim()) return voiceRun({ op: 'search', q: plan.text.trim().slice(0, 80) });
+  if (plan.kind === 'mood'){
+    // Phase 1 reuses the existing vibe path for the music itself (it grounds songs); the plan's energy/seeds feed the phase 2 set builder.
+    const vibe = (typeof plan.text === 'string' && plan.text.trim()) || (Array.isArray(plan.tags) ? plan.tags.join(', ') : '') || said;
+    return voiceRun({ op: 'mood', key: (plan.tags && plan.tags[0]) || 'your mood', vibe: vibe.slice(0, 200) });
+  }
+  return false;
+}
+async function voiceLlm(said){
+  showToast('Thinking...');
+  let data;
+  try { data = await fetchVoicePlan(said); }
+  catch(e){ showToast("Couldn't reach voice requests - trying a normal search"); beginConversationalVibe(said); return; }
+  if (data.signedOut){ showToast('Sign in to use voice requests'); beginConversationalVibe(said); return; }
+  if (data.capped){ showToast("You've used your " + (data.limit || 7) + ' voice requests today'); beginConversationalVibe(said); return; }
+  if (!voiceRunPlan(data.plan, said)) beginConversationalVibe(said);
+}
+// What the local grammar did not claim.
+function voiceNoMatch(said){
+  if (navigator.onLine === false){ showToast('Needs a connection for that one'); return; }
+  if (!voiceSignedIn()){
+    if (!voiceSignInToasted){ voiceSignInToasted = true; showToast('Sign in to use voice requests'); }
+    beginConversationalVibe(said); return;
+  }
+  if (!voiceConsented()){ openVoiceConsent((ok) => { if (ok) voiceLlm(said); else beginConversationalVibe(said); }); return; }
+  voiceLlm(said);
+}
 
 /* ---- mic: speak the vibe (Web Speech API) ----
    Chrome/Edge/Safari expose it (webkit-prefixed); Firefox doesn't, and the
    button simply stays hidden there (and in the Android app's WebView, which has
-   no Web Speech: see docs/PROPOSAL-voice-dj.md, phase 1 notes). Every line goes
+   no Web Speech; a native recognizer is the next step for #553). Every line goes
    through the local command grammar first (voiceParse); only lines it does not
    claim reach the interpreter, whatever their length. */
+(function setupVoiceRow(){ const b = $('voiceBtn'); if (b) b.addEventListener('click', () => openVoiceConsent()); renderVoiceRow(); })();
 (function setupVibeMic(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = $('micBtn');

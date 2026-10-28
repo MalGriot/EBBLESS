@@ -31,8 +31,8 @@ test('simple commands', () => {
 });
 
 test('volume direction', () => {
-  for (const l of ['louder', 'volume up', 'turn it up', 'turn up the volume', 'a bit louder', 'raise the volume']) assert.deepStrictEqual([op(l), parse(l).dir], ['volume', 1], l);
-  for (const l of ['quieter', 'volume down', 'turn it down', 'turn down the volume', 'a little quieter', 'too loud']) assert.deepStrictEqual([op(l), parse(l).dir], ['volume', -1], l);
+  for (const l of ['louder', 'volume up', 'turn it up', 'turn up the volume', 'a bit louder', 'raise the volume', 'turn it up a little', 'louder please']) assert.deepStrictEqual([op(l), parse(l).dir], ['volume', 1], l);
+  for (const l of ['quieter', 'volume down', 'turn it down', 'turn down the volume', 'a little quieter', 'too loud', 'turn it down a bit']) assert.deepStrictEqual([op(l), parse(l).dir], ['volume', -1], l);
 });
 
 test('shuffle and repeat on/off', () => {
