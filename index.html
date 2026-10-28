@@ -404,7 +404,7 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
    cold-start logo reveal. */
 #splash.is-return .splash-choice{transition-delay:250ms}
 #topnav{display:flex;align-items:center;gap:4px}
-.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.nav-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:20px;font-size:13px;font-weight:500;color:var(--faint);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
 .nav-btn.is-active{color:var(--text);background:var(--panel-2)}
 .nav-btn svg{width:16px;height:16px}
@@ -744,7 +744,7 @@ body.onb-active .paste-guide{display:none}
 .art-style-menu.lib-sort-menu{left:auto;right:0;transform:translateY(-6px)}
 .art-style-menu.lib-sort-menu.is-open{transform:translateY(0)}
 .view-toggle{display:flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--panel-2);flex:none}
-.view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+.view-toggle-btn{width:26px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint-2);transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .view-toggle-btn svg{width:14px;height:14px}
 .view-toggle-btn:hover{color:var(--faint)}
 .view-toggle-btn.is-active{background:var(--panel-3);color:var(--text)}
@@ -1278,8 +1278,14 @@ body:has(#musicMap:not([hidden])):has(#mini-bar:not([hidden])) .mm-foot{padding-
 .big-play svg{width:26px;height:26px;color:var(--on-accent,#151107);margin-left:3px}
 .import-error{display:flex;flex-direction:column;align-items:center;gap:16px}
 .import-error .msg{font-size:14.5px;color:var(--text);max-width:320px;line-height:1.5}
-.btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out)}
+.btn-ghost{border:1px solid var(--border-2);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:500;color:var(--text);transition:background var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .btn-ghost:hover{background:var(--panel-2)}
+/* #583 tangibility: buttons press in a little, like firm memory foam (transform only) */
+.tap-ripple{position:fixed;z-index:2147483000;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;pointer-events:none;
+  border:2px solid var(--accent);background:var(--accent-dim);opacity:0;will-change:transform,opacity;animation:tap-ripple 560ms var(--ease-out) forwards}
+@keyframes tap-ripple{0%{transform:scale(.25);opacity:.55}100%{transform:scale(1.15);opacity:0}}
+@media (prefers-reduced-motion:reduce){.tap-ripple{display:none}}
+.btn-ghost:active,.nav-btn:active,.btn-danger:active,.view-toggle-btn:active{transform:scale(.97)}
 .link-btn{font-size:12px;color:var(--text-dim,var(--text));text-decoration:underline;padding:4px 6px;opacity:.8}
 .link-btn:hover:not(:disabled){opacity:1}
 .link-btn:disabled{opacity:.4}
@@ -1300,7 +1306,7 @@ select.btn-ghost{-webkit-appearance:none;appearance:none;background-color:var(--
 select.btn-ghost option{background-color:var(--panel-2);color:var(--text)}
 .btn-danger{border:1px solid var(--bad);border-radius:20px;padding:9px 18px;font-size:13px;font-weight:600;
   color:var(--bad);background:rgba(224,101,94,.1);flex:none;
-  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out)}
+  transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .btn-danger:hover{background:var(--bad);color:#fff}
 /* press-and-hold confirm (Clear playlists): a fill sweeps across while held,
    retracts if released early; --hold-ms must match CLEAR_HOLD_MS in the JS */
@@ -1390,6 +1396,11 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 /* issue #143: the record's own drop shadow reaches past this box, so the
    default overflow:hidden sliced it into a hard rectangular edge */
 .artwork-wrap[data-mode="art"][data-art-style="record"]{overflow:visible}
+/* #583 tangibility: bevel on album art. Static overlay (no animation, no filter): a thin top-light edge plus a soft inset shade, so the art reads as a pressed-in object. */
+.artwork-wrap[data-mode="art"][data-art-style="default"]::after,.lib-card .art::after{content:'';position:absolute;inset:0;z-index:5;border-radius:inherit;pointer-events:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.05),inset 0 -2px 6px rgba(0,0,0,.28)}
+.lib-card.is-artist-card .art::after{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,255,255,.05)}
+#mini-bar img{box-shadow:0 0 0 1px rgba(255,255,255,.07),0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.35)}
 .artwork-wrap[data-mode="art"]{aspect-ratio:1!important;height:auto!important;flex-shrink:0}
 /* #613: DVD-logo bounce on the empty player. The logo is 40% of the art wide (wordmark is 5:1, so 8% tall):
    the outer box slides down the art's height (1150% of its own height = 92% of the art) and the image across
@@ -1812,7 +1823,7 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .ctl-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text);
   transition:background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .ctl-btn:hover{background:var(--panel-2)}
-.ctl-btn:active{transform:scale(.92)}
+.ctl-btn:active{transform:scale(.94)}
 .ctl-btn svg{width:16px;height:16px}
 .ctl-btn.is-active{color:var(--player-accent)}
 .ctl-btn.is-discover{position:relative}
@@ -2954,6 +2965,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      (rules further down), where only the inner-facing corners round. */
   body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel){border-radius:var(--r-lg)}
   body.split-desktop:not(.desktop-fs) #hist-panel{border-radius:var(--r-lg)}
+  /* #583 tangibility: soft static drop shadows lift the panes off the backdrop. Static box-shadow only (never animated); kept inside the --pane-gap so #app's clip does not cut it. */
+  body.split-desktop:not(.desktop-fs) :is(#view-library,#libpl-panel,#queue-panel,#hist-panel){box-shadow:0 2px 3px rgba(0,0,0,.18),0 4px 10px -2px rgba(0,0,0,.32)}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#view-library,#libpl-panel){border-radius:0 var(--r-lg) var(--r-lg) 0}
   body.split-desktop.desktop-fs:not(.view-settings-active) #queue-panel{border-radius:var(--r-lg) 0 0 var(--r-lg)}
   /* Search/relink/import window: only the middle (player) pane, between
@@ -5014,6 +5027,7 @@ body.week-up-on{overflow:hidden}
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
         </div>
         <div class="settings-row"><div><div class="label">Milestone sound</div><div class="desc">A soft chime when you finish a step on a phone.</div></div><button type="button" class="switch is-active" id="msSoundBtn" role="switch" aria-checked="true" aria-label="Milestone sound"><span class="switch-knob"></span></button></div>
+        <div class="settings-row"><div><div class="label">Soft sounds and vibration</div><div class="desc">A very quiet tap sound (and a light buzz on phones) when you press buttons.</div></div><button type="button" class="switch is-active" id="softTapBtn" role="switch" aria-checked="true" aria-label="Soft sounds and vibration"><span class="switch-knob"></span></button></div>
         <div class="settings-row">
           <div>
             <div class="label">What's new<span class="whatsnew-dot" id="whatsNewDot" hidden aria-hidden="true"></span></div>
@@ -25567,6 +25581,62 @@ const LS_MS_SOUND = 'ebbless:milestoneSound';
 function milestonesDone(){
   try { const v = JSON.parse(localStorage.getItem(LS_MILESTONES)); return v && typeof v === 'object' ? v : {}; } catch(e){ return {}; }
 }
+// #583 tangibility: soft sounds and vibration on taps. One setting (default ON)
+// gates both. The blip is generated (no asset): a short low sine with a fast
+// decay at ~0.05 gain, on its own tiny AudioContext made on the tap itself.
+// Skipped when the tab is hidden or the active player is muted.
+const LS_SOFT_TAP = 'ebbless:softTap';
+function softTapOn(){ try { return localStorage.getItem(LS_SOFT_TAP) !== 'off'; } catch(e){ return true; } }
+let softTapCtx = null;
+function softTapSilenced(){
+  if (document.visibilityState !== 'visible') return true;
+  try { const ad = activeDeck(); if (ad && ad.player && ad.player.isMuted && ad.player.isMuted()) return true; } catch(e){}
+  return false;
+}
+function softTapSound(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!softTapCtx) softTapCtx = new AC();
+    const ctx = softTapCtx;
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(150, t + .06);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + .006); g.gain.exponentialRampToValueAtTime(0.0001, t + .07);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + .08);
+  } catch(e){}
+}
+const SOFT_TAP_SEL = 'button,[role="button"],.lib-card,.btn-ghost,.ctl-btn,.nav-btn';
+function softTap(e){
+  if (!e.isTrusted || !softTapOn()) return;
+  const el = e.target && e.target.closest ? e.target.closest(SOFT_TAP_SEL) : null;
+  if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
+  // light buzz where supported (Android); the sound is the only part the silenced check skips
+  try { if (navigator.vibrate) navigator.vibrate(8); } catch(e){}
+  if (softTapSilenced()) return;
+  softTapSound();
+}
+document.addEventListener('click', softTap, true);
+// #583 tangibility: a soft ripple where you tap. One fixed element at the pointer
+// (transform + opacity only), removed on animationend, at most 3 alive; skipped for
+// reduced motion. Delegated on document in capture, like softTap.
+const TAP_RIPPLE_SEL = 'button,[role="button"],.lib-card,.btn-ghost,.ctl-btn,.nav-btn,.q-row,.track-row';
+function tapRipple(e){
+  if (!e.isTrusted || !e.target || !e.target.closest) return;
+  try { if (!msMotionOk()) return; } catch(err){ return; }
+  const el = e.target.closest(TAP_RIPPLE_SEL);
+  if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
+  if (document.visibilityState !== 'visible' || (!e.clientX && !e.clientY)) return;
+  const live = document.querySelectorAll('.tap-ripple');
+  for (let i = 0; i <= live.length - 3; i++) live[i].remove();
+  const r = document.createElement('div');
+  r.className = 'tap-ripple';
+  r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
+  r.addEventListener('animationend', () => r.remove(), { once: true });
+  setTimeout(() => r.remove(), 900);
+  document.body.appendChild(r);
+}
+document.addEventListener('click', tapRipple, true);
 function msSoundOn(){ try { return localStorage.getItem(LS_MS_SOUND) !== 'off'; } catch(e){ return true; } }
 // The per-page cards are phone-only (CSS hides them elsewhere); desktop keeps
 // the plain list in Settings.
@@ -25793,6 +25863,12 @@ function awardMilestone(id){
   if (seek) seek.addEventListener('pointerdown', () => awardMilestone('progress'));
   const cv = document.getElementById('castVol');
   if (cv) cv.addEventListener('input', () => awardMilestone('volume'));
+  const stb = document.getElementById('softTapBtn');
+  if (stb){
+    const sync = () => { stb.classList.toggle('is-active', softTapOn()); stb.setAttribute('aria-checked', String(softTapOn())); };
+    sync();
+    stb.addEventListener('click', () => { try { localStorage.setItem(LS_SOFT_TAP, softTapOn() ? 'off' : 'on'); } catch(e){} sync(); });
+  }
   const snd = document.getElementById('msSoundBtn');
   if (snd) snd.addEventListener('click', () => { try { localStorage.setItem(LS_MS_SOUND, msSoundOn() ? 'off' : 'on'); } catch(e){} renderMilestones(); if (msSoundOn()) msChime(); });
 })();
