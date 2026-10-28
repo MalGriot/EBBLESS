@@ -3,7 +3,7 @@
 // 'ebbless-mini' (see the desktop shim in index.html); this gives it a real
 // frameless, see-through window that stays above every app, on every desktop
 // (Space) and over full-screen apps - which Chrome's Picture-in-Picture can't.
-const { app, BrowserWindow, shell, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, nativeImage, powerSaveBlocker } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
@@ -161,6 +161,20 @@ ipcMain.on('ebbless:hide-main', () => {
   }
   mainWin.minimize();
 });
+
+// #563: music must not pause when the display or machine idles. While the page
+// reports playback, hold a prevent-app-suspension blocker (audio keeps running
+// with the display off; the screen itself may still sleep). Released on pause.
+let sleepBlockerId = null;
+function setSleepBlocker(on){
+  if (on && sleepBlockerId === null) sleepBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+  else if (!on && sleepBlockerId !== null){
+    if (powerSaveBlocker.isStarted(sleepBlockerId)) powerSaveBlocker.stop(sleepBlockerId);
+    sleepBlockerId = null;
+  }
+}
+ipcMain.on('ebbless:playing', (e, on) => { if (fromMain(e)) setSleepBlocker(!!on); });
+app.on('before-quit', () => setSleepBlocker(false));
 
 // #633: the page draws the dock icon for its active art mode (logo over a
 // record, cassette or cymatics) and sends it as a PNG data URL. Only the main

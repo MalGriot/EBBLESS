@@ -14,6 +14,7 @@ import android.graphics.drawable.Icon;
 import android.media.MediaMetadata;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -74,6 +75,7 @@ public class PlaybackService extends Service {
     };
 
     private PowerManager.WakeLock wakeLock;
+    private WifiManager.WifiLock wifiLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MediaSession session;
     private String artUrl = "";
@@ -103,6 +105,15 @@ public class PlaybackService extends Service {
         PowerManager pm = getSystemService(PowerManager.class);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ebbless:playback");
         wakeLock.acquire(8 * 60 * 60 * 1000L);
+        // keep Wi-Fi from dozing so streaming does not stall with the screen off (#563)
+        try {
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+            if (wm != null) {
+                wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "ebbless:playback");
+                wifiLock.setReferenceCounted(false);
+                wifiLock.acquire();
+            }
+        } catch (Exception ignored) {}
 
         try {
             session = new MediaSession(this, "EBBLESS");
@@ -340,6 +351,7 @@ public class PlaybackService extends Service {
         if (session != null) { try { session.release(); } catch (Exception ignored) {} session = null; }
         art = null;
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+        try { if (wifiLock != null && wifiLock.isHeld()) wifiLock.release(); } catch (Exception ignored) {}
         super.onDestroy();
     }
 
