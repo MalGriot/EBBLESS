@@ -204,6 +204,43 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
+    /**
+     * #667: Picture-in-Picture can be switched off per app in the phone's settings. The first time a video song plays in a launch and it
+     * is off, say what it is for and open that exact setting. Up to 3 launches in total, like the battery ask.
+     */
+    private boolean pipAskedThisRun;
+
+    private boolean pipAllowed() {
+        if (Build.VERSION.SDK_INT < 26 || !getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return true;   // nothing to ask for
+        try {
+            android.app.AppOpsManager ops = (android.app.AppOpsManager) getSystemService(APP_OPS_SERVICE);
+            return ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_PICTURE_IN_PICTURE, android.os.Process.myUid(), getPackageName())
+                == android.app.AppOpsManager.MODE_ALLOWED;
+        } catch (Exception e) { return true; }
+    }
+
+    private void askPipPermission() {
+        try {
+            android.content.SharedPreferences prefs = getSharedPreferences("ebb", MODE_PRIVATE);
+            int asked = prefs.getInt("pipAsks", 0);
+            if (asked >= 3 || pipAskedThisRun || pipAllowed()) return;
+            pipAskedThisRun = true;
+            prefs.edit().putInt("pipAsks", asked + 1).apply();
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Keep the video playing")
+                .setMessage("Turn on Picture-in-picture for EBBLESS and the video keeps playing in a small window when you switch to another app.")
+                .setPositiveButton("Open setting", (d, w) -> {
+                    try {
+                        startActivity(new Intent("android.settings.PICTURE_IN_PICTURE_SETTINGS", Uri.parse("package:" + getPackageName())));
+                    } catch (Exception e) {
+                        try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) {}
+                    }
+                })
+                .setNegativeButton("Not now", null)
+                .show();
+        } catch (Exception ignored) {}
+    }
+
     private long lastReclaimAt;
 
     /**
@@ -271,7 +308,7 @@ public class MainActivity extends Activity {
                 if (on) runOnUiThread(() -> askBatteryExemption());
             }
             /** The page: a video song is (not) playing right now, so leaving the app should (not) open Picture-in-Picture. */
-            @android.webkit.JavascriptInterface public void videoPip(boolean on) { videoPip = on; }
+            @android.webkit.JavascriptInterface public void videoPip(boolean on) { videoPip = on; if (on) runOnUiThread(() -> askPipPermission()); }
             /** The page's player state (title, artist, art, play state, position, liked) for the lock screen and notification player. */
             @android.webkit.JavascriptInterface public void media(String json) { PlaybackService.media(json); }
             /** Settings > Reload app: fetch the live page now (the saved copy is a launch behind), then load it. */
