@@ -14636,8 +14636,14 @@ function repaintNowPlayingArt(cur){
 // library until it actually has something in it. Once created it's
 // always pinned to the front of the library (see orderedLibraryIds).
 function ensureLikedPlaylist(){
-  if (getCachedPlaylist(LIKED_ID)) return;
-  const pl = { id: LIKED_ID, type: 'custom', name: 'Liked Songs', image: null, tracks: [], ts: Date.now() };
+  const existing = getCachedPlaylist(LIKED_ID);
+  if (existing){
+    // (#695) Newest first: lists saved before this were oldest first, so flip them once.
+    // New likes go on top (see addTracksToPlaylist), so the cover mosaic shows the newest.
+    if (!existing.newestFirst && Array.isArray(existing.tracks)){ existing.tracks = existing.tracks.slice().reverse(); existing.newestFirst = true; lsSet(LS_PL(LIKED_ID), existing); }
+    return;
+  }
+  const pl = { id: LIKED_ID, type: 'custom', name: 'Liked Songs', image: null, tracks: [], ts: Date.now(), newestFirst: true };
   lsSet(LS_PL(LIKED_ID), pl);
   saveToLibrary(LIKED_ID);
 }
@@ -15124,13 +15130,19 @@ function addTracksToPlaylist(playlistId, tracks, allowDup){
   if (playlistId !== LIKED_ID && !PROFILE_REGENERATED_IDS.includes(playlistId) && !document.body.classList.contains('onb-active') && tracks && tracks.length) awardMilestone('load');
   const known = new Set(pl.tracks.filter(t => t.videoId).map(t => t.videoId));
   let added = 0;
+  const fresh = [];
   tracks.forEach(t => {
     if (!allowDup && t.videoId && known.has(t.videoId)) return;
     if (t.videoId) known.add(t.videoId);
-    pl.tracks.push({ title: t.title, artist: t.artist, videoId: t.videoId || null, matchedTitle: t.matchedTitle || '', channel: t.channel || '', plays: 0, manual: true, art: t.art || null });
+    fresh.push({ title: t.title, artist: t.artist, videoId: t.videoId || null, matchedTitle: t.matchedTitle || '', channel: t.channel || '', plays: 0, manual: true, art: t.art || null });
     added++;
   });
   if (!added) return 0;
+  if (playlistId === LIKED_ID){
+    // (#695) newest like on top; queue entries into Liked slide down by the new count
+    pl.tracks = fresh.concat(pl.tracks);
+    if (state.playlist && state.playlist.id === LIKED_ID) state.queue = state.queue.map(e => e.plId === LIKED_ID ? Object.assign({}, e, { idx: e.idx + added }) : e);
+  } else pl.tracks = pl.tracks.concat(fresh);
   lsSet(LS_PL(playlistId), pl);
   renderLibrary();
   if (state.playlist && state.playlist.id === playlistId) state.playlist = pl;
@@ -21685,8 +21697,8 @@ function currentsSlots(mode, timeCtx, block){
 
   // The 30 newest likes plus the 10 liked songs they return to most.
   const likedAll = currentsPlayable(getCachedPlaylist(LIKED_ID));
-  const likedRecent = likedAll.slice(-30);
-  likedAll.slice(0, -30)
+  const likedRecent = likedAll.slice(0, 30);   // (#695) newest first
+  likedAll.slice(30)
     .map(t => ({ t, s: prof.tracks.get(t.videoId) || 0 }))
     .filter(x => x.s > 3)
     .sort((a, b) => b.s - a.s)
@@ -33842,6 +33854,7 @@ function startApp(){
   // splash from clearing.
   try{
     ensureSwellPlaylist();
+    if (getCachedPlaylist(LIKED_ID)) ensureLikedPlaylist();   // (#695) one-time newest-first flip
     ensureBlendPlaylist();
     ensureNowPlayingPlaylist();
     renderLibrary();
