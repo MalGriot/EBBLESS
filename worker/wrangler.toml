@@ -41,9 +41,19 @@ class_name = "PodCaptioner"
 name = "POD_CAPTION_BUDGET"
 class_name = "PodCaptionBudget"
 
+# Voice DJ (#553, src/voice.js + src/voice-quota.js): one VoiceQuota per
+# signed-in user, counting that day's LLM voice requests (7 free, 100 paid).
+[[durable_objects.bindings]]
+name = "VOICE_QUOTA"
+class_name = "VoiceQuota"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["PodCaptioner", "PodCaptionBudget"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["VoiceQuota"]
 
 # Remote kill switch for the Mac app adblock (#524): set ADBLOCK_FLAG = "false" to turn it off (GET /flags). Unset = on.
 [vars]
@@ -81,6 +91,10 @@ class_name = "PodCaptioner"
 [[env.staging.durable_objects.bindings]]
 name = "POD_CAPTION_BUDGET"
 class_name = "PodCaptionBudget"
+
+[[env.staging.durable_objects.bindings]]
+name = "VOICE_QUOTA"
+class_name = "VoiceQuota"
 
 [env.staging.vars]
 # Keeps staging's entries out of production's cache - both workers share

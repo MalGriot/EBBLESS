@@ -26,7 +26,7 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 <a class="back" href="./">&larr; Back to EBBLESS</a>
 
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated 2026-10-18. EBBLESS is in private beta, so this will change. Written from what the app's code actually does, not from a template.</p>
+<p class="meta">Last updated 2026-10-29. EBBLESS is in private beta, so this will change. Written from what the app's code actually does, not from a template.</p>
 
 <div class="box"><strong>The short version.</strong>
 <ul>
@@ -91,6 +91,18 @@ code{font-size:13px;background:rgba(255,255,255,.08);padding:1px 5px;border-radi
 <p>Turning it off does <strong>not</strong> stop the play history list you can see in the app, the listening recap log, or per-playlist play counts. Those are your own records, not taste learning. See section 8 for how to clear them.</p>
 <h3>Your control: Reset listening profile</h3>
 <p>The same section has "Reset listening profile". It erases the taste data, genre links, thumbs-downs, genre tag cache and recent-plays seed list on that device. It does not delete playlists, Liked Songs or the library. Thumbs-downs are removed from your cloud profile at the next sync. Other devices keep their own taste data until you reset them too.</p>
+
+<h2>5a. Voice requests</h2>
+<p>You can speak to EBBLESS with the microphone button. What happens depends on what you say.</p>
+<ul>
+<li><strong>Simple commands</strong> (skip, pause, louder, like, shuffle, and common moods and genres such as "chill" or "jazz") are worked out on your device. Nothing is sent to us.</li>
+<li><strong>Everything else</strong> is a voice request. If you are signed in and have allowed voice requests, EBBLESS sends our server the words you spoke (as text), the song playing now, and the last 5 songs you played (titles and artists only). Our server passes them to an AI model to work out what you meant. Nothing else is sent with it: no name, no email, no library.</li>
+<li><strong>Speech to text.</strong> EBBLESS never receives your audio and does not store it. Your device turns your voice into text using the speech service built into your browser or phone, and that service may send the audio to its own company (for example Google in Chrome and on Android, or Apple in Safari) under its own privacy policy. We do not control that.</li>
+<li><strong>The AI service.</strong> Free voice requests use Cloudflare Workers AI. We do not store the sentence or the song context, and our code does not log them. Cloudflare may keep standard request logs (see section 6).</li>
+<li><strong>If you are not signed in, or have not allowed voice requests,</strong> a spoken sentence that is not a simple command still goes through the existing vibe search, which sends the sentence to our server and the same AI service to find matching songs.</li>
+<li><strong>Your sign-in</strong> is used only to count your daily limit (7 voice requests a day on free accounts). The server keeps that day's count against your account ID and clears older days. It is not used for anything else in voice requests.</li>
+<li><strong>Withdrawing consent.</strong> In <strong>Settings &rarr; Voice</strong> you can review this and withdraw. After that, nothing you say is sent to the voice service; simple commands keep working on your device.</li>
+</ul>
 
 <h2>6. Analytics and tracking</h2>
 <ul>

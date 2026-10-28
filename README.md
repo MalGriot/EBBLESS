@@ -55,6 +55,20 @@ npx wrangler deploy
 Requires the project owner's Cloudflare account to be authenticated via
 `wrangler login` (already set up in this environment).
 
+**Check before every deploy: the Cloudflare account must stay on the Workers
+FREE plan.** The Workers AI allocation (10,000 neurons/day, shared by
+`/vibe-interpret`, the podcast captioner and `/voice/plan`) is a hard limit on
+the free plan: past it, AI calls fail and the app falls back to its heuristics,
+with no charge. On a paid Workers plan, usage beyond the free allocation is
+billed. The plan is set in the Cloudflare dashboard and cannot be verified from
+this repo, so look at it (Workers & Pages > Plans) when redeploying. As a second
+guard, `/voice/plan` keeps an account-wide daily counter (`VoiceQuota` instance
+`g:<UTC date>`) and stops calling the model once voice has used
+`VOICE_GLOBAL_SHARE` (40%) of the budget, estimated at `VOICE_NEURONS_PER_CALL`
+(25) neurons a call, i.e. about 160 voice requests a day (constants in
+`worker/src/voice.js`). The estimate comes from remembered Workers AI pricing
+for the model, so re-check it if the model or prompt changes.
+
 ## Testing against staging, not production
 
 The worker's KV namespaces (`MATCH_REPORTS`, `TASTE_POOL`, `PROFILES`) are on
