@@ -2142,6 +2142,9 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
    player (the active deck's iframe in #yt-host) is placed over the art area
    (#artworkWrap) by ytPanelSync, so the queue, library and search stay usable.
    z-index 40 sits under the bottom nav (45) and every menu/modal (60+). ---------- */
+/* video on: the art under it is hidden, not just covered */
+.artwork-wrap.yt-video{background:transparent;box-shadow:none}
+.artwork-wrap.yt-video > *{visibility:hidden}
 #yt-host.is-shown{position:fixed;z-index:40;opacity:1;pointer-events:auto;border-radius:var(--r-md);background:#000}
 #yt-host.is-shown > *{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
 #yt-host.is-shown > .yt-on{z-index:1}
@@ -18489,15 +18492,18 @@ function ytPanelSync(){
   if (adTxt) ytAdCover.textContent = adTxt;
   Array.prototype.forEach.call(ytHost.children, c => c.classList.toggle('yt-on', show && c === el));
   ytHost.classList.toggle('is-shown', show);
+  artworkWrap.classList.toggle('yt-video', show);
   if (!show){ ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
   // 16:9 centered in the art area; the player view hidden (Library etc.) gives
   // a zero rect, so the video steps aside there and the audio carries on
   const r = artworkWrap.getBoundingClientRect();
-  if (r.width < 2){ ytHost.classList.remove('is-shown'); el.classList.remove('yt-on'); ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
-  const h = Math.min(r.height, Math.round(r.width * 9 / 16));
-  ytHost.style.left = r.left + 'px';
+  if (r.width < 2){ ytHost.classList.remove('is-shown'); artworkWrap.classList.remove('yt-video'); el.classList.remove('yt-on'); ytHost.style.left = ytHost.style.top = ytHost.style.width = ytHost.style.height = ''; return; }
+  // the old popout's size (640 wide), never narrower than the art it replaces
+  const w = Math.round(Math.min(640, window.innerWidth - 32, Math.max(r.width, r.height * 16 / 9)));
+  const h = Math.round(w * 9 / 16);
+  ytHost.style.left = (r.left + (r.width - w) / 2) + 'px';
   ytHost.style.top = (r.top + (r.height - h) / 2) + 'px';
-  ytHost.style.width = r.width + 'px';
+  ytHost.style.width = w + 'px';
   ytHost.style.height = h + 'px';
 }
 function openYtPanel(){
