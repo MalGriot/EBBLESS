@@ -18001,10 +18001,15 @@ function voiceRun(cmd){
   return true;
 }
 
+// What the local grammar did not claim. Phase 1: the existing vibe interpreter (the LLM route is added in the next step).
+function voiceNoMatch(said){ beginConversationalVibe(said); }
+
 /* ---- mic: speak the vibe (Web Speech API) ----
    Chrome/Edge/Safari expose it (webkit-prefixed); Firefox doesn't, and the
-   button simply stays hidden there. A spoken sentence always goes through
-   the interpreter, whatever its length. */
+   button simply stays hidden there (and in the Android app's WebView, which has
+   no Web Speech: see docs/PROPOSAL-voice-dj.md, phase 1 notes). Every line goes
+   through the local command grammar first (voiceParse); only lines it does not
+   claim reach the interpreter, whatever their length. */
 (function setupVibeMic(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = $('micBtn');
@@ -18042,8 +18047,10 @@ function voiceRun(cmd){
       const said = (finalText || urlInput.value).trim().slice(0, 250);
       if (said && !looksLikeUrl(said)){
         urlInput.value = '';
+        const cmd = voiceParse(said, navigator.language);   // Voice DJ: commands never reach the vibe interpreter
+        if (cmd){ voiceRun(cmd); return; }
         rememberPasteRecent(said);
-        beginConversationalVibe(said);
+        voiceNoMatch(said);
       }
     };
     btn.classList.add('is-listening');
