@@ -2012,7 +2012,8 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .as-msg{font-size:13px;color:var(--faint-2);padding:14px 4px}
 .as-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .as-row .search-pick{margin-bottom:0;flex:1;min-width:0}
-.as-add{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--border-2);background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+.as-add{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--border-2);background:transparent;color:var(--text);font-size:20px;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.as-add svg{display:block;width:18px;height:18px}
 .as-add:hover,.as-add:focus-visible{background:var(--panel-2);outline:none}
 .as-add.is-done{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#111)}
 .as-add.is-again{width:auto;padding:0 12px;border-radius:20px;font-size:12px}
@@ -15962,7 +15963,7 @@ function openAddSongsView(plId){
       const image = c.image || (c.source === 'youtube' ? refreshLinkCandidateThumb(c.videoId) : '');
       return '<div class="as-row" data-i="' + i + '">' +
         searchPickRowHtml(i, image, c.title || '(untitled)', escapeHtml(sub), c.source === 'youtube' ? 'is-video' : '') +
-        '<button type="button" class="as-add" aria-label="Add to playlist">+</button></div>';
+        '<button type="button" class="as-add" aria-label="Add to playlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button></div>';
     }).join('');
     list.querySelectorAll('.as-row').forEach(row => {
       const c = results[parseInt(row.dataset.i, 10)], btn = row.querySelector('.as-add');
