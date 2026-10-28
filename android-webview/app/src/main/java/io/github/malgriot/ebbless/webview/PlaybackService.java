@@ -58,6 +58,9 @@ public class PlaybackService extends Service {
     static long snapshotAt() { return latestAt; }
     /** Send a player button press (play / pause / prev / next / like / seekto:SECONDS) to the page, same path as the notification buttons. */
     static void control(String action) { Sink s = sink; if (s != null) s.send(action); }
+    static boolean isLive() { return live != null; }
+    /** The cover for the song now playing (null until fetched). */
+    static Bitmap currentArt() { PlaybackService s = live; return s == null ? null : s.art; }
     /** The cover this service already fetched for url, or null. */
     static Bitmap artFor(String url) { PlaybackService s = live; return s != null && url.equals(s.artUrl) ? s.art : null; }
 
@@ -115,6 +118,7 @@ public class PlaybackService extends Service {
             // The system restarted this service after the process was killed (low memory). The page is gone, so nothing is playing.
             // If music was playing when it died, leave a notification that picks the queue back up; either way stop claiming to play.
             stopForeground(Service.STOP_FOREGROUND_REMOVE);
+            EbblessWidget.refresh(this, true);
             SharedPreferences prefs = getSharedPreferences("ebb", MODE_PRIVATE);
             if (prefs.getBoolean("playing", false)) {
                 prefs.edit().putBoolean("playing", false).apply();
@@ -209,6 +213,7 @@ public class PlaybackService extends Service {
         if (session == null || title.isEmpty()) {
             if (session != null) session.setActive(false);
             nm.notify(1, plainNotification());
+            EbblessWidget.refresh(this, false);
             return;
         }
         boolean playing = j.optBoolean("pl");
@@ -257,6 +262,7 @@ public class PlaybackService extends Service {
                 .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(1, 2, 3));
         if (art != null) b.setLargeIcon(art);
         nm.notify(1, b.build());
+        EbblessWidget.refresh(this, false);   // home screen widget (#688)
     }
 
     /** Fetch the cover for the notification and lock screen (scaled to about 300-600 px, so it stays around a megabyte). */
@@ -313,6 +319,7 @@ public class PlaybackService extends Service {
 
     @Override public void onDestroy() {
         live = null;
+        EbblessWidget.refresh(this, true);   // widget falls back to Last played + Resume
         if (session != null) { try { session.release(); } catch (Exception ignored) {} session = null; }
         art = null;
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();

@@ -60,6 +60,19 @@
 
         <receiver android:name=".UpdateReceiver" android:exported="false" />
 
+        <!-- #688: home screen widget (now playing controls, or Last played + Resume) -->
+        <receiver
+            android:name=".EbblessWidget"
+            android:exported="false"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/ebbless_widget_info" />
+        </receiver>
+
         <!-- own process: survives the main (WebView) process being killed for memory, and says so -->
         <service
             android:name=".WatchdogService"
