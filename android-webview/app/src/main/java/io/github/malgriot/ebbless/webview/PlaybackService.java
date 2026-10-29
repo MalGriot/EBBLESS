@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
@@ -22,6 +24,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -55,7 +58,57 @@ public class PlaybackService extends Service {
     interface StateListener { void onState(); }
     static volatile StateListener stateListener;
 
+    private static volatile int accentColor;   // the page's accent (#691), 0 = not reported yet this process
+
+    /** The page's accent for the native full-screen player, or fallback when the page never reported one (reads the saved copy after a process death). */
+    static int accent(Context c, int fallback) {
+        if (accentColor == 0) accentColor = c.getSharedPreferences("ebb", MODE_PRIVATE).getInt("playerAccent", 0);
+        return accentColor == 0 ? fallback : accentColor;
+    }
+
+    static void setAccent(Context c, String hex) {
+        int v;
+        try { v = Color.parseColor(hex) | 0xFF000000; } catch (Exception e) { return; }
+        if (v == accentColor) return;
+        accentColor = v;
+        c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putInt("playerAccent", v).apply();
+        StateListener l = stateListener;
+        if (l != null) l.onState();
+    }
+
     static JSONObject snapshot() { return latest; }
+
+    // ---- iPod player data the page pushes (EbbNative.setLibrary / setTopCovers), saved so it works when the page is not running
+    private static volatile JSONArray libraryCache, coversCache;
+
+    static void setLibrary(Context c, String json) {
+        try { libraryCache = new JSONArray(json); } catch (Exception e) { return; }
+        c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("ipodLib", json).apply();
+    }
+
+    /** [{id, name}] of the user's playlists, or an empty array. */
+    static JSONArray library(Context c) {
+        if (libraryCache == null) {
+            try { libraryCache = new JSONArray(c.getSharedPreferences("ebb", MODE_PRIVATE).getString("ipodLib", "[]")); } catch (Exception e) { libraryCache = new JSONArray(); }
+        }
+        return libraryCache;
+    }
+
+    static void setTopCovers(Context c, String json) {
+        try { coversCache = new JSONArray(json); } catch (Exception e) { return; }
+        c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("ipodCovers", json).apply();
+    }
+
+    /** https cover URLs of the most listened albums (Match 3 tiles), or an empty array. */
+    static JSONArray topCovers(Context c) {
+        if (coversCache == null) {
+            try { coversCache = new JSONArray(c.getSharedPreferences("ebb", MODE_PRIVATE).getString("ipodCovers", "[]")); } catch (Exception e) { coversCache = new JSONArray(); }
+        }
+        return coversCache;
+    }
+
+    /** True once the page has reported at least once this process (so control() actions reach a running page). */
+    static boolean pageReporting() { return latest != null && sink != null; }
     static long snapshotAt() { return latestAt; }
     /** Send a player button press (play / pause / prev / next / like / seekto:SECONDS) to the page, same path as the notification buttons. */
     static void control(String action) { Sink s = sink; if (s != null) s.send(action); }
@@ -83,7 +136,14 @@ public class PlaybackService extends Service {
 
     /** Called from the page (a JS bridge thread) with the current player state as JSON. */
     static void media(String json) {
-        try { latest = new JSONObject(json); latestAt = SystemClock.elapsedRealtime(); } catch (Exception e) { return; }
+        try {
+            JSONObject j = new JSONObject(json);
+            JSONObject old = latest;
+            if (old != null && !j.has("q") && old.has("q")) {   // the page only resends the queue when it changed (iPod player): keep the last one
+                j.put("q", old.get("q")); j.put("qs", old.opt("qs")); j.put("qi", old.opt("qi"));
+            }
+            latest = j; latestAt = SystemClock.elapsedRealtime();
+        } catch (Exception e) { return; }
         StateListener l = stateListener;
         if (l != null) l.onState();
         final PlaybackService s = live;
