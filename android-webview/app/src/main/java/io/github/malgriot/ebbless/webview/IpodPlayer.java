@@ -47,7 +47,7 @@ import java.util.Locale;
  * second while the Now Playing bar moves). A game is the only thing that ticks faster (<= 30 fps) and only while it is on screen with
  * the activity resumed and the screen on.
  */
-final class IpodPlayer {
+final class IpodPlayer implements IpodFx {
     /** What the iPod needs from the activity that hosts it. */
     interface Host {
         void openApp();
@@ -76,6 +76,9 @@ final class IpodPlayer {
     private final GameBar gameBar;
     private final AudioManager audio;
     private final Bitmap logo;
+    private final IpodFxHost fx;
+    private long lastFx;
+    private final RectF heartHit = new RectF();
 
     private int accent;
     private int body = IpodColor.SILVER, hi;   // the iPod's body color and the screen's highlight color: from the cover, animated
@@ -108,6 +111,7 @@ final class IpodPlayer {
         dp = a.getResources().getDisplayMetrics().density;
         audio = (AudioManager) a.getSystemService(Context.AUDIO_SERVICE);
         logo = BitmapFactory.decodeResource(a.getResources(), R.drawable.mark_white);
+        fx = new IpodFxHost(a, dp);
 
         root = new LinearLayout(a);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -168,6 +172,8 @@ final class IpodPlayer {
         ui.removeCallbacks(gameTick);
         if (!on && themeAnim != null) { themeAnim.cancel(); themeAnim = null; applyTheme(bodyTo, hiTo); }
         ui.removeCallbacks(clockTick);
+        ui.removeCallbacks(fxTick);
+        if (!on) fx.clear();
         if (on) {
             refreshClock();
             ui.postDelayed(clockTick, untilNextMinute());   // one shot per minute, only while visible and the screen is on
@@ -179,6 +185,7 @@ final class IpodPlayer {
 
     void destroy() {
         destroyed = true;
+        fx.release();
         if (themeAnim != null) { themeAnim.cancel(); themeAnim = null; }
         ui.removeCallbacksAndMessages(null);
         stopGame();
@@ -308,6 +315,7 @@ final class IpodPlayer {
                     act.startActivity(i);
                 }
                 go(S_NOW);
+                achievement(1, "Playing " + o.optString("name"));
                 break;
             }
             case S_SET:
@@ -394,6 +402,31 @@ final class IpodPlayer {
         screen.invalidate();
     }
 
+    // ------------------------------------------------------------------ celebrations (IpodFx)
+
+    /** Games and the shell call this for good moments: haptics, a soft chime and a banner with a particle burst on the screen. */
+    @Override public void achievement(int tier, String text) {
+        if (!active || destroyed) return;   // nothing while the screen is off or the iPod is not showing
+        long now = SystemClock.uptimeMillis();
+        fx.trigger(tier, text, hi, soft(), vol() > 0, now);
+        ui.removeCallbacks(fxTick);
+        lastFx = now;
+        ui.postDelayed(fxTick, TICK_MS);
+        screen.invalidate();
+    }
+
+    /** Ticks only while a banner or a particle is alive, then stops by itself. */
+    private final Runnable fxTick = new Runnable() {
+        @Override public void run() {
+            if (!active || destroyed) return;
+            long now = SystemClock.uptimeMillis();
+            fx.update(Math.min(100, Math.max(1, now - lastFx)));
+            lastFx = now;
+            screen.invalidate();
+            if (fx.alive(now)) ui.postDelayed(this, TICK_MS);
+        }
+    };
+
     // ------------------------------------------------------------------ clock in the title bar
 
     private void refreshClock() {
@@ -471,6 +504,7 @@ final class IpodPlayer {
             Toast.makeText(act, GAMES[idx] + " is not available yet", Toast.LENGTH_SHORT).show();
             return;
         }
+        try { g.setFx(this); } catch (Throwable ignored) {}
         game = g;
         gameIdx = idx;
         scr = S_GAME;
@@ -660,6 +694,28 @@ final class IpodPlayer {
             shineDst.set(0, 0, w, h);
         }
 
+        private boolean heartDown;
+
+        @Override public boolean onTouchEvent(MotionEvent e) {
+            if (scr != S_NOW) return false;
+            boolean in = heartHit.contains(e.getX(), e.getY());
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN: heartDown = in; return in;
+                case MotionEvent.ACTION_UP:
+                    if (heartDown && in) {
+                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                        PlaybackService.control("like");   // the page toggles its like; its next report confirms
+                        liked = !liked;
+                        if (liked) achievement(1, "Liked");
+                        invalidate();
+                    }
+                    heartDown = false;
+                    return true;
+                case MotionEvent.ACTION_CANCEL: heartDown = false; return true;
+                default: return heartDown;
+            }
+        }
+
         private void text(Canvas c, String s, float x, float y, float size, int color, boolean bold, Paint.Align al, float maxW) {
             tp.setTextSize(size);
             tp.setColor(color);
@@ -723,6 +779,7 @@ final class IpodPlayer {
 
             // volume overlay (Now Playing, or Settings while adjusting)
             if (volShownAt != 0 || (scr == S_SET && adjustVolume)) drawVolume(c, w, h);
+            fx.draw(c, w, h, SystemClock.uptimeMillis());
 
             // glass: the cached reflection, then a thin dark edge where the glass meets the bezel
             if (shine != null) c.drawBitmap(shine, null, shineDst, blit);
@@ -840,6 +897,7 @@ final class IpodPlayer {
                 text(c, artist, tx, top + dp(42), dp(14), 0xCCFFFFFF, false, Paint.Align.LEFT, tw);
                 text(c, album, tx, top + dp(62), dp(12.5f), 0x88FFFFFF, false, Paint.Align.LEFT, tw);
                 text(c, liked ? "♥" : "♡", tx, top + dp(96), dp(24), liked ? hi : 0x88FFFFFF, false, Paint.Align.LEFT, 0);
+                heartHit.set(tx - dp(10), top + dp(68), tx + dp(52), top + dp(108));   // tap the heart to like
             }
             // progress
             long pos = positionMs();
