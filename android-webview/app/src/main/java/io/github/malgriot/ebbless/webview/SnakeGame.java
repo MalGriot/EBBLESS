@@ -134,7 +134,7 @@ final class SnakeGame implements IpodGame {
         return true;
     }
 
-    @Override public String title() { return "Snake"; }
+    @Override public String title() { return "Ssswell"; }
     @Override public int score() { return logic.score; }
 
     @Override public void draw(Canvas c, RectF s) {

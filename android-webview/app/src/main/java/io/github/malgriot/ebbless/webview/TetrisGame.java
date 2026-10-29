@@ -154,7 +154,7 @@ final class TetrisGame implements IpodGame {
         return true;
     }
 
-    @Override public String title() { return "Tetris"; }
+    @Override public String title() { return "Ebbtris"; }
     @Override public int score() { return logic.score; }
 
     private void tile(Canvas c, int type, float x, float y, float cell) {

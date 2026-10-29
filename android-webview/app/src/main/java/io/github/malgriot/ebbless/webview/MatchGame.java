@@ -252,7 +252,7 @@ final class MatchGame implements IpodGame {
         return true;
     }
 
-    @Override public String title() { return "Match"; }
+    @Override public String title() { return "Ebbazzled"; }
     @Override public int score() { return score; }
 
     @Override public void draw(Canvas c, RectF s) {
