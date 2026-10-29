@@ -35,7 +35,9 @@ import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -57,7 +59,7 @@ final class IpodPlayer {
 
     private static final int S_NOW = 0, S_MENU = 1, S_QUEUE = 2, S_LIB = 3, S_SET = 4, S_GAMES = 5, S_GAME = 6;
     private static final String[] MENU = {"Now Playing", "Library", "Queue", "Settings", "Games", "Exit iPod"};
-    private static final String[] GAMES = {"Snake", "Tetris", "Match 3"};
+    private static final String[] GAMES = {"Ssswell", "Ebbtris", "Ebbazzled"};
     private static final String[] GAME_CLASSES = {"SnakeGame", "TetrisGame", "MatchGame"};
     private static final int TICK_MS = 33;   // ~30 fps while a game is on screen
 
@@ -89,6 +91,7 @@ final class IpodPlayer {
     private final int[] top = new int[7];
     private boolean adjustVolume;   // Settings > Volume row: the wheel turns the volume until Menu
     private long volShownAt;
+    private String timeStr = "", dateStr = "";
     private IpodGame game;
     private int gameIdx;
     private long lastTick;
@@ -161,7 +164,10 @@ final class IpodPlayer {
         ui.removeCallbacks(progressTick);
         ui.removeCallbacks(gameTick);
         if (!on && themeAnim != null) { themeAnim.cancel(); themeAnim = null; applyTheme(bodyTo, hiTo); }
+        ui.removeCallbacks(clockTick);
         if (on) {
+            refreshClock();
+            ui.postDelayed(clockTick, untilNextMinute());   // one shot per minute, only while visible and the screen is on
             screen.invalidate();
             scheduleProgress();
             if (game != null && scr == S_GAME) { lastTick = SystemClock.uptimeMillis(); ui.postDelayed(gameTick, TICK_MS); }
@@ -378,6 +384,26 @@ final class IpodPlayer {
         screen.invalidate();
     }
 
+    // ------------------------------------------------------------------ clock in the title bar
+
+    private void refreshClock() {
+        Date now = new Date();
+        timeStr = android.text.format.DateFormat.getTimeFormat(act).format(now);   // follows the phone's 12/24 hour setting
+        Locale loc = Locale.getDefault();
+        dateStr = new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(loc, "EEEMMMd"), loc).format(now);
+    }
+
+    private static long untilNextMinute() { return 60000 - System.currentTimeMillis() % 60000 + 150; }
+
+    private final Runnable clockTick = new Runnable() {
+        @Override public void run() {
+            if (!active || destroyed) return;
+            refreshClock();
+            screen.invalidate();
+            ui.postDelayed(this, untilNextMinute());
+        }
+    };
+
     // ------------------------------------------------------------------ progress ticker (1 per second, only on Now Playing while playing)
 
     private final Runnable progressTick = new Runnable() {
@@ -473,7 +499,7 @@ final class IpodPlayer {
         }
     };
 
-    /** Match 3 tiles: the page pushes the cover URLs of the most listened albums; fetch them once, lazily, off the main thread. */
+    /** Ebbazzled tiles: the page pushes the cover URLs of the most listened albums; fetch them once, lazily, off the main thread. */
     private void prefetchCovers() {
         final JSONArray urls = PlaybackService.topCovers(act);
         for (int i = 0; i < urls.length() && i < 8; i++) {
@@ -651,19 +677,23 @@ final class IpodPlayer {
             p.setColor(0xFF0D0D0F);
             c.drawRect(0, 0, w, h, p);
 
-            // title bar
-            float bar = dp(30);
+            // title bar (classic iPod): play state and title on the left, date over time on the right
+            float bar = dp(34);
             p.setColor(0xFF1C1C20);
             c.drawRect(0, 0, w, bar, p);
             p.setColor(hi);
             c.drawRect(0, bar - dp(1.5f), w, bar, p);
-            text(c, header(), w / 2, bar / 2 + dp(5), dp(15), 0xFFFFFFFF, true, Paint.Align.CENTER, w - dp(120));
+            float ty = bar / 2 + dp(5);
+            text(c, playing ? "▶" : "❚❚", dp(10), ty, dp(12), hi, false, Paint.Align.LEFT, 0);
             if (scr == S_GAME && game != null) {
                 int sc = 0;
                 try { sc = game.score(); } catch (Throwable ignored) {}
-                text(c, String.valueOf(sc), w - dp(10), bar / 2 + dp(5), dp(14), hi, true, Paint.Align.RIGHT, dp(100));
+                text(c, String.valueOf(sc), w - dp(10), ty, dp(14), hi, true, Paint.Align.RIGHT, dp(100));
+                text(c, header(), dp(28), ty, dp(15), 0xFFFFFFFF, true, Paint.Align.LEFT, w - dp(28) - dp(110));
             } else {
-                text(c, playing ? "▶" : "❚❚", dp(12), bar / 2 + dp(5), dp(12), hi, false, Paint.Align.LEFT, 0);
+                text(c, dateStr, w - dp(10), dp(14), dp(10.5f), 0x99FFFFFF, false, Paint.Align.RIGHT, dp(110));
+                text(c, timeStr, w - dp(10), dp(28), dp(13), 0xFFFFFFFF, true, Paint.Align.RIGHT, dp(110));
+                text(c, header(), dp(28), ty, dp(15), 0xFFFFFFFF, true, Paint.Align.LEFT, w - dp(28) - dp(122));
             }
 
             switch (scr) {

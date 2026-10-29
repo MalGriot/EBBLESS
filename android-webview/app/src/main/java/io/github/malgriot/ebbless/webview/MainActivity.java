@@ -515,7 +515,7 @@ public class MainActivity extends Activity {
             /** #691: the page's current accent as #rrggbb; kept for the full-screen player (also across process death). */
             /** iPod player: the user's playlists as [{id,name}] (capped by the page), so the lock screen iPod can list and play them. */
             @android.webkit.JavascriptInterface public void setLibrary(String json) { PlaybackService.setLibrary(MainActivity.this, json); }
-            /** iPod player: https cover URLs of the most listened albums, for the Match 3 tiles. */
+            /** iPod player: https cover URLs of the most listened albums, for the Ebbazzled tiles. */
             @android.webkit.JavascriptInterface public void setTopCovers(String json) { PlaybackService.setTopCovers(MainActivity.this, json); }
             @android.webkit.JavascriptInterface public void accent(String hex) { PlaybackService.setAccent(MainActivity.this, hex); }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {

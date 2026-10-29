@@ -101,7 +101,7 @@ public class PlaybackService extends Service {
         c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("ipodCovers", json).apply();
     }
 
-    /** https cover URLs of the most listened albums (Match 3 tiles), or an empty array. */
+    /** https cover URLs of the most listened albums (Ebbazzled tiles), or an empty array. */
     static JSONArray topCovers(Context c) {
         if (coversCache == null) {
             try { coversCache = new JSONArray(c.getSharedPreferences("ebb", MODE_PRIVATE).getString("ipodCovers", "[]")); } catch (Exception e) { coversCache = new JSONArray(); }
