@@ -11921,3 +11921,11 @@ Add entries in this shape:
 - **Touches:** index.html.
 - **Branch:** 
 - **Notes:** Synced from Geethub #697, 2026-10-29. Bug. Mac dock icon (desktop/); simplest fix is removing the baked-in shadow from the icon.
+
+### lockscreen-ipod-player: Full-screen lock screen player in lava-lamp mode becomes a large iPod (spun out of owner feedback 2026-10-29)
+- **Status:** draft
+- **Priority:** medium
+- **Description:** Owner feedback on the phone (TECNO), on the lava-lamp view of the full-screen lock screen player: make it fill the whole screen and make it an iPod (large). Working reading, to confirm with a mockup before building: an iPod-classic styled player scaled up to fill the screen: art as the top "screen" area (with title/artist/progress as the iPod's now-playing screen), and a big click-wheel below (previous, next, play/pause in the center, menu/visual button on the wheel) in the app's accent color; the clock stays above.
+- **Touches:** android-webview FullScreenPlayerActivity (lava-lamp mode).
+- **Branch:**
+- **Notes:** Own task per the owner. Starts after fullscreen-polish-691 lands (same file).
