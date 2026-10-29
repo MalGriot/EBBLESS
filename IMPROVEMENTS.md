@@ -11929,3 +11929,19 @@ Add entries in this shape:
 - **Touches:** android-webview FullScreenPlayerActivity (lava-lamp mode).
 - **Branch:**
 - **Notes:** OWNER SPEC 2026-10-29: large iPod filling the screen; a working SCROLL WHEEL with a button in the center; tapping the TOP of the wheel (Menu) opens a menu: Now Playing, Library, Queue, Settings, Games. Games, all controlled only by the scroll wheel: SNAKE (the E logo eating spinning LPs and cassettes), TETRIS (the E logo as the blocks, in different colors), CANDY CRUSH style match-3 (different colored LPs and cassettes, the E logo, and the most listened album covers). Two lanes: agent/ipod-player (shell, wheel, menu, now playing, queue, library, settings, data bridge) and agent/ipod-games (the three games) sharing the IpodGame interface. GPU: games animate only while visible and stop on screen off. Own task per the owner. Starts after fullscreen-polish-691 lands (same file).
+
+### cymatics-native-parity: Native lock screen cymatics: double-tap rotates the plate; zoom and twist sweep follows song progress (owner 2026-10-29)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Port the two web cymatics behaviors that agent/fullscreen-polish-691 left out of FullScreenPlayerActivity: double-tap rotates the plate, and the song-progress sweep of zoom and twist.
+- **Touches:** android-webview FullScreenPlayerActivity (cymatics view).
+- **Branch:**
+- **Notes:** Queued behind agent/ipod-player (same file). Start when it lands.
+
+### widget-app-accent: Home widget uses the app's accent color (owner 2026-10-29)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** The home-screen widget draws its accent from the album cover; owner wants it to use the app's accent (the same one pushed to the lock screen player).
+- **Touches:** android-webview EblessWidget.java, PlaybackService accent.
+- **Branch:** agent/widget-accent-688
+- **Notes:** Needs agent/fullscreen-polish-691 (accent bridge).
