@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
@@ -54,6 +56,24 @@ public class PlaybackService extends Service {
     /** The full-screen player (#691) listens here so it follows the same reports as the lock screen player. */
     interface StateListener { void onState(); }
     static volatile StateListener stateListener;
+
+    private static volatile int accentColor;   // the page's accent (#691), 0 = not reported yet this process
+
+    /** The page's accent for the native full-screen player, or fallback when the page never reported one (reads the saved copy after a process death). */
+    static int accent(Context c, int fallback) {
+        if (accentColor == 0) accentColor = c.getSharedPreferences("ebb", MODE_PRIVATE).getInt("playerAccent", 0);
+        return accentColor == 0 ? fallback : accentColor;
+    }
+
+    static void setAccent(Context c, String hex) {
+        int v;
+        try { v = Color.parseColor(hex) | 0xFF000000; } catch (Exception e) { return; }
+        if (v == accentColor) return;
+        accentColor = v;
+        c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putInt("playerAccent", v).apply();
+        StateListener l = stateListener;
+        if (l != null) l.onState();
+    }
 
     static JSONObject snapshot() { return latest; }
     static long snapshotAt() { return latestAt; }
