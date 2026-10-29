@@ -11923,7 +11923,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #697, 2026-10-29. Bug. Mac dock icon (desktop/); simplest fix is removing the baked-in shadow from the icon.
 
 ### lockscreen-ipod-player: Full-screen lock screen player in lava-lamp mode becomes a large iPod (spun out of owner feedback 2026-10-29)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Owner feedback on the phone (TECNO), on the lava-lamp view of the full-screen lock screen player: make it fill the whole screen and make it an iPod (large). Working reading, to confirm with a mockup before building: an iPod-classic styled player scaled up to fill the screen: art as the top "screen" area (with title/artist/progress as the iPod's now-playing screen), and a big click-wheel below (previous, next, play/pause in the center, menu/visual button on the wheel) in the app's accent color; the clock stays above.
 - **Touches:** android-webview FullScreenPlayerActivity (lava-lamp mode).
@@ -11931,7 +11931,7 @@ Add entries in this shape:
 - **Notes:** OWNER SPEC 2026-10-29: large iPod filling the screen; a working SCROLL WHEEL with a button in the center; tapping the TOP of the wheel (Menu) opens a menu: Now Playing, Library, Queue, Settings, Games. Games, all controlled only by the scroll wheel: SNAKE (the E logo eating spinning LPs and cassettes), TETRIS (the E logo as the blocks, in different colors), CANDY CRUSH style match-3 (different colored LPs and cassettes, the E logo, and the most listened album covers). Two lanes: agent/ipod-player (shell, wheel, menu, now playing, queue, library, settings, data bridge) and agent/ipod-games (the three games) sharing the IpodGame interface. GPU: games animate only while visible and stop on screen off. Own task per the owner. Starts after fullscreen-polish-691 lands (same file).
 
 ### cymatics-native-parity: Native lock screen cymatics: double-tap rotates the plate; zoom and twist sweep follows song progress (owner 2026-10-29)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Port the two web cymatics behaviors that agent/fullscreen-polish-691 left out of FullScreenPlayerActivity: double-tap rotates the plate, and the song-progress sweep of zoom and twist.
 - **Touches:** android-webview FullScreenPlayerActivity (cymatics view).
@@ -11939,7 +11939,7 @@ Add entries in this shape:
 - **Notes:** Queued behind agent/ipod-player (same file). Start when it lands.
 
 ### widget-app-accent: Home widget uses the app's accent color (owner 2026-10-29)
-- **Status:** in-progress
+- **Status:** merged
 - **Priority:** medium
 - **Description:** The home-screen widget draws its accent from the album cover; owner wants it to use the app's accent (the same one pushed to the lock screen player).
 - **Touches:** android-webview EblessWidget.java, PlaybackService accent.
