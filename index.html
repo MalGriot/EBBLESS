@@ -107,17 +107,35 @@ try {
       }
       return best;
     }
+    // iPod player (Queue screen): up to 60 songs around the current one, sent only when the queue or position changed (the app keeps the last copy)
+    var qKey = '';
+    function queueInfo() {
+      try {
+        if (typeof state === 'undefined' || !state.queue || !state.queue.length) return null;
+        var key = state.queuePos + '|' + state.queue.length + '|' + ((state.playlist && state.playlist.id) || '');
+        if (key === qKey) return null;
+        qKey = key;
+        var n = state.queue.length, cur = Math.max(0, state.queuePos), start = Math.max(0, Math.min(cur - 10, n - 60)), end = Math.min(n, start + 60), q = [], pls = {};
+        for (var i = start; i < end; i++) {
+          var e = state.queue[i], pl = e && (e.plId in pls ? pls[e.plId] : (pls[e.plId] = playlistById(e.plId))), t = pl && pl.tracks && pl.tracks[e.idx];
+          q.push({ t: String((t && t.title) || '').slice(0, 80), a: String((t && t.artist) || '').slice(0, 60) });
+        }
+        return { q: q, qs: start, qi: cur };
+      } catch (e) { return null; }
+    }
     function push() {
       if (timer) return;
       timer = setTimeout(function () {
         timer = 0;
         try {
           var lb = document.getElementById('playerLikeBtn'), now = ps === 'playing' && pos ? pos.position + (Date.now() - pos.at) / 1000 * pos.rate : (pos ? pos.position : 0);
-          EbbNative.media(JSON.stringify({
+          var rep = {
             t: md ? md.title || '' : '', a: md ? md.artist || '' : '', al: md ? md.album || '' : '', art: artUrl(),
             pl: ps === 'playing', pos: Math.round(now * 1000), dur: pos ? Math.round(pos.duration * 1000) : 0, rate: pos ? pos.rate : 1,
             liked: !!(lb && lb.classList.contains('is-liked'))
-          }));
+          }, qi = queueInfo();
+          if (qi) { rep.q = qi.q; rep.qs = qi.qs; rep.qi = qi.qi; }
+          EbbNative.media(JSON.stringify(rep));
         } catch (e) {}
       }, 150);
     }
@@ -137,6 +155,16 @@ try {
         if (a === 'like') { var lb = document.getElementById('playerLikeBtn'); if (lb) lb.click(); return; }
         var map = { play: 'play', pause: 'pause', next: 'nexttrack', prev: 'previoustrack' }, m = /^seekto:(.+)$/.exec(a);
         if (m) { if (handlers.seekto) handlers.seekto({ action: 'seekto', seekTime: parseFloat(m[1]) }); return; }
+        // iPod player (lock screen): play a queue row, play a library playlist, soft sounds on/off
+        var iq = /^playqueueindex:(\d+)$/.exec(a), ip = /^playlist:(.+)$/.exec(a), isf = /^softtap:([01])$/.exec(a);
+        if (iq) { var qn = parseInt(iq[1], 10); if (typeof state !== 'undefined' && qn >= 0 && qn < state.queue.length) loadIndex(qn, true); return; }
+        if (ip) { if (typeof playPlaylistNow === 'function') playPlaylistNow(ip[1]); return; }
+        if (isf) {
+          try { localStorage.setItem('ebbless:softTap', isf[1] === '1' ? 'on' : 'off'); } catch (e) {}
+          var sb = document.getElementById('softTapBtn');
+          if (sb) { sb.classList.toggle('is-active', isf[1] === '1'); sb.setAttribute('aria-checked', isf[1] === '1' ? 'true' : 'false'); }
+          return;
+        }
         var h = handlers[map[a]];
         if (h) h({ action: map[a] });
       } catch (e) {}
@@ -6887,6 +6915,7 @@ function lsSet(key, val, knownChange){
   const synced = isProfileSyncedKey(key) && noteProfileWrite(key, val, knownChange);
   try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
   if (synced) scheduleProfileSync();
+  if (key === LS_LIB && typeof scheduleIpodPush === 'function') scheduleIpodPush();
 }
 let crossfadePrefs = Object.assign({ on: false, ms: 4000 }, lsGet(LS_CROSSFADE, {}));
 function lsDel(key){
@@ -8218,6 +8247,34 @@ window.addEventListener('load', () => initGoogleOneTap());
 setTimeout(restoreSession, 0);   // after the rest of this script has run, before 'load' (One Tap) so it can skip the prompt
 
 function getLibrary(){ return lsGet(LS_LIB, []); }
+/* Android app, iPod player on the lock screen: hand the app a compact playlist list (id + name, max 100) and the covers of the
+   albums listened to most (summed song play counts per cover, topped up with the most recently played), so it can list and play
+   them without the page open. Debounced, off the first seconds of startup, and only when the library changes. */
+var ipodPushT = 0;
+function scheduleIpodPush(delay){
+  if (!(window.EbbNative && EbbNative.setLibrary)) return;
+  clearTimeout(ipodPushT);
+  ipodPushT = setTimeout(pushIpodData, delay || 8000);
+}
+function pushIpodData(){
+  try {
+    const libOut = [], plays = new Map();
+    orderedLibraryIds().filter(id => id !== NP_ID).forEach(id => {
+      const p = getCachedPlaylist(id);
+      const name = (p && (p.name || p.title)) || (id === LIKED_ID ? 'Liked Songs' : id === SWELL_ID ? 'Currents' : '');
+      if (!p || !name) return;
+      if (libOut.length < 100) libOut.push({ id: id, name: String(name).slice(0, 60) });
+      (p.tracks || []).forEach(t => { if (t && t.plays > 0 && /^https:/.test(t.art || '')) plays.set(t.art, (plays.get(t.art) || 0) + t.plays); });
+    });
+    EbbNative.setLibrary(JSON.stringify(libOut));
+    if (EbbNative.setTopCovers){
+      const top = Array.from(plays).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0]);
+      if (top.length < 8) (lsGet(LS_PLAYHIST, []) || []).forEach(h => { if (top.length < 8 && h && /^https:/.test(h.art || '') && !top.includes(h.art)) top.push(h.art); });
+      EbbNative.setTopCovers(JSON.stringify(top));
+    }
+  } catch(e){}
+}
+scheduleIpodPush(6000);
 function saveToLibrary(id){
   const lib = getLibrary().filter(x => x !== id);
   lib.unshift(id);
