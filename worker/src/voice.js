@@ -327,11 +327,9 @@ export async function handleVoicePlan(request, env, ctx, deps) {
   }
   const { plan, upsell } = gate(gated);
   // A set asked for by a free listener is downgraded to a flat mood plan: that costs them nothing, so give back
-  // their daily request and the account-wide neurons it was charged (the model did run, but this is the owner's call).
-  if (upsell) {
-    await quota.refund();
-    try { await global.unspend(VOICE_NEURONS_PER_CALL); } catch (e) { /* ceiling stays conservative */ }
-  }
+  // their daily request. The account-wide neurons stay charged: the model really ran, and the free Workers AI
+  // allowance is what must never be exceeded.
+  if (upsell) await quota.refund();
   const out = { plan, source: via, tier, limit, used: upsell ? Math.max(0, take.used - 1) : take.used };
   if (upsell) out.upsell = upsell;
   if ((plan.kind === 'mood' || plan.kind === 'set') && typeof deps.groundMood === 'function') {

@@ -237,13 +237,13 @@ test('set handler: want=set forces a set from the heuristic and tells the model'
   assert.equal(h.body.plan.kind, 'set'); assert.equal(h.body.plan.arc[1].label, 'Steady');
 });
 
-test('set downgrade refund: free user daily count and global neurons are given back; paid sets and plain moods still count', async () => {
+test('set downgrade refund: free user daily count is given back but global neurons stay charged; paid sets and plain moods still count', async () => {
   const q = fakeQuota(); const day = new Date().toISOString().slice(0, 10);
   const env = mkEnv(setAi(goodSet), {}, q);
   for (let i = 0; i < 10; i++) { const r = await call(env, { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, build to a peak' }); assert.equal(r.body.upsell, 'sets'); assert.equal(r.body.used, 0); assert.ok(!r.body.capped, 'never capped by downgrades'); }
-  assert.equal(q.spent.get('g:' + day), 0);
+  assert.equal(q.spent.get('g:' + day), 10 * VOICE_NEURONS_PER_CALL, 'the model ran, so the account-wide ceiling still counts it');
   const paid = await call(mkEnv(setAi(goodSet), { 'ent:u1': '{"tier":"flow"}' }, q), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes' });
-  assert.equal(paid.body.used, 1); assert.equal(q.spent.get('g:' + day), VOICE_NEURONS_PER_CALL);
+  assert.equal(paid.body.used, 1); assert.equal(q.spent.get('g:' + day), 11 * VOICE_NEURONS_PER_CALL);
   const mood = await call(mkEnv(goodAi, {}, fakeQuota()), { idToken: 'ebs1.good', text: 'a bit quieter in here' });
   assert.equal(mood.body.used, 1);
 });
