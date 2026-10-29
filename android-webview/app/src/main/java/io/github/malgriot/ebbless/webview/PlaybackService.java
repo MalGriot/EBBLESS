@@ -73,6 +73,8 @@ public class PlaybackService extends Service {
         c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putInt("playerAccent", v).apply();
         StateListener l = stateListener;
         if (l != null) l.onState();
+        final Context app = c.getApplicationContext();
+        new Handler(Looper.getMainLooper()).post(() -> EbblessWidget.refresh(app, false));   // the accent is part of the widget's redraw key
     }
 
     static JSONObject snapshot() { return latest; }

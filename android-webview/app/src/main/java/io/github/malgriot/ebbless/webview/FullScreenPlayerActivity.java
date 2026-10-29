@@ -361,7 +361,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     }
 
     /** index.html onAccentFor: WCAG relative luminance picks dark or white, whichever reads better on the accent. */
-    private static int onAccent(int c) {
+    static int onAccent(int c) {
         double[] l = new double[3];
         int[] ch = {Color.red(c), Color.green(c), Color.blue(c)};
         for (int i = 0; i < 3; i++) { double v = ch[i] / 255.0; l[i] = v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
@@ -629,7 +629,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     // ------------------------------------------------------------------ color clock
 
     /** The app's time-of-day accent (index.html vizRosicrucianColor, without the 5 minute blends). */
-    private static int clockColor() {
+    static int clockColor() {
         int[] lc = {0xe0b45c, 0xd98aa3, 0xa89aef, 0xd68a63, 0x9aa9bd, 0x5fcabf, 0xd17a72};   // A..G
         int[] ls = {6, 2, 5, 1, 4, 0, 3};
         Calendar n = Calendar.getInstance();
