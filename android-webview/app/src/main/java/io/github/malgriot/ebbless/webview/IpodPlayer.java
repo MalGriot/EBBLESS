@@ -57,7 +57,10 @@ final class IpodPlayer {
 
     private interface BarCallback { void onToggle(); void onMenu(); }
 
-    private static final int S_NOW = 0, S_MENU = 1, S_QUEUE = 2, S_LIB = 3, S_SET = 4, S_GAMES = 5, S_GAME = 6;
+    private static final int S_NOW = 0, S_MENU = 1, S_QUEUE = 2, S_LIB = 3, S_SET = 4, S_GAMES = 5, S_GAME = 6, S_LIBLIST = 7;
+    private static final String[] LIB_KINDS = {"playlists", "albums", "artists", "podcasts"};
+    private static final String[] LIB_LABELS = {"Playlists", "Albums", "Artists", "Podcasts"};
+    private static final String[] LIB_ACTIONS = {"playlist", "album", "artist", "podcast"};   // __ebbMediaAction prefixes
     private static final String[] MENU = {"Now Playing", "Library", "Queue", "Settings", "Games", "Exit iPod"};
     private static final String[] GAMES = {"Ssswell", "Ebbtris", "Ebbazzled"};
     private static final String[] GAME_CLASSES = {"SnakeGame", "TetrisGame", "MatchGame"};
@@ -87,13 +90,13 @@ final class IpodPlayer {
     private Bitmap art;
 
     private int scr = S_NOW;
-    private final int[] sel = new int[7];
-    private final int[] top = new int[7];
+    private final int[] sel = new int[8];
+    private final int[] top = new int[8];
     private boolean adjustVolume;   // Settings > Volume row: the wheel turns the volume until Menu
     private long volShownAt;
     private String timeStr = "", dateStr = "";
     private IpodGame game;
-    private int gameIdx;
+    private int gameIdx, libKind;
     private long lastTick;
     private final ArrayList<Bitmap> covers = new ArrayList<>();
     private final ArrayList<String> coversRequested = new ArrayList<>();
@@ -285,18 +288,23 @@ final class IpodPlayer {
                 go(S_NOW);
                 break;
             }
-            case S_LIB: {
-                JSONArray lib = PlaybackService.library(act);
+            case S_LIB:
+                libKind = sel[S_LIB];
+                sel[S_LIBLIST] = 0; top[S_LIBLIST] = 0;
+                go(S_LIBLIST);
+                break;
+            case S_LIBLIST: {
+                JSONArray lib = PlaybackService.library(act, LIB_KINDS[libKind]);
                 if (lib.length() == 0) { host.openApp(); break; }
-                JSONObject o = lib.optJSONObject(sel[S_LIB]);
+                JSONObject o = lib.optJSONObject(sel[S_LIBLIST]);
                 if (o == null) break;
-                String id = o.optString("id");
+                String act1 = LIB_ACTIONS[libKind] + ":" + o.optString("id");
                 if (PlaybackService.pageReporting()) {
-                    PlaybackService.control("playlist:" + id);
+                    PlaybackService.control(act1);
                 } else {   // the page is not running: open the app, it runs the action once it has booted (same path as the widget's buttons)
                     Intent i = new Intent(act, MainActivity.class);
                     i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    i.putExtra("widgetAction", "playlist:" + id);
+                    i.putExtra("widgetAction", act1);
                     act.startActivity(i);
                 }
                 go(S_NOW);
@@ -330,6 +338,7 @@ final class IpodPlayer {
             case S_SET:
                 if (adjustVolume) { adjustVolume = false; screen.invalidate(); } else go(S_MENU);
                 break;
+            case S_LIBLIST: go(S_LIB); break;
             default: go(S_MENU); break;
         }
     }
@@ -352,7 +361,8 @@ final class IpodPlayer {
         switch (scr) {
             case S_MENU: return MENU.length;
             case S_QUEUE: { JSONArray q = snap == null ? null : snap.optJSONArray("q"); return q == null ? 0 : q.length(); }
-            case S_LIB: return Math.max(1, PlaybackService.library(act).length());
+            case S_LIB: return LIB_KINDS.length;
+            case S_LIBLIST: return Math.max(1, PlaybackService.library(act, LIB_KINDS[libKind]).length());
             case S_SET: return 5;
             case S_GAMES: return GAMES.length;
             default: return 0;
@@ -665,6 +675,7 @@ final class IpodPlayer {
                 case S_MENU: return "iPod";
                 case S_QUEUE: return "Queue";
                 case S_LIB: return "Library";
+                case S_LIBLIST: return LIB_LABELS[libKind];
                 case S_SET: return "Settings";
                 case S_GAMES: return "Games";
                 default: return game == null ? "" : game.title();
@@ -735,7 +746,7 @@ final class IpodPlayer {
             top[scr] = t;
 
             JSONArray q = scr == S_QUEUE && snap != null ? snap.optJSONArray("q") : null;
-            JSONArray lib = scr == S_LIB ? PlaybackService.library(act) : null;
+            JSONArray lib = scr == S_LIBLIST ? PlaybackService.library(act, LIB_KINDS[libKind]) : null;
             int curRow = scr == S_QUEUE && snap != null ? snap.optInt("qi", -1) - snap.optInt("qs", 0) : -1;
             if (scr == S_QUEUE && (q == null || q.length() == 0)) { text(c, "Nothing in the queue", w / 2, bar + dp(60), dp(15), 0x99FFFFFF, false, Paint.Align.CENTER, w - dp(20)); return; }
 
@@ -758,8 +769,13 @@ final class IpodPlayer {
                         break;
                     }
                     case S_LIB:
-                        if (lib.length() == 0) { main = "Open EBBLESS to load your library"; }
-                        else { JSONObject o = lib.optJSONObject(idx); main = o == null ? "" : o.optString("name"); }
+                        main = LIB_LABELS[idx];
+                        val = String.valueOf(PlaybackService.library(act, LIB_KINDS[idx]).length());
+                        chevron = true;
+                        break;
+                    case S_LIBLIST:
+                        if (lib.length() == 0) { main = "Nothing here yet. Open EBBLESS"; }
+                        else { JSONObject o = lib.optJSONObject(idx); main = o == null ? "" : o.optString("name"); sub = o == null ? "" : o.optString("artist"); }
                         break;
                     case S_SET:
                         if (idx == 0) { main = "Soft sounds and vibration"; val = soft() ? "On" : "Off"; }

@@ -81,19 +81,39 @@ public class PlaybackService extends Service {
     static JSONObject snapshot() { return latest; }
 
     // ---- iPod player data the page pushes (EbbNative.setLibrary / setTopCovers), saved so it works when the page is not running
-    private static volatile JSONArray libraryCache, coversCache;
+    private static volatile JSONObject libraryCache;
+    private static volatile JSONArray coversCache;
 
+    /**
+     * The page sends {playlists:[{id,name}], albums:[{id,name,artist}], artists:[{id,name}], podcasts:[{id,name}]}; the old shape, a bare
+     * [{id,name}] array of playlists, still works (it becomes the playlists list).
+     */
     static void setLibrary(Context c, String json) {
-        try { libraryCache = new JSONArray(json); } catch (Exception e) { return; }
+        JSONObject o = parseLibrary(json);
+        if (o == null) return;
+        libraryCache = o;
         c.getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("ipodLib", json).apply();
     }
 
+    private static JSONObject parseLibrary(String json) {
+        try {
+            String t = json == null ? "" : json.trim();
+            if (t.startsWith("[")) { JSONObject o = new JSONObject(); o.put("playlists", new JSONArray(t)); return o; }
+            return new JSONObject(t);
+        } catch (Exception e) { return null; }
+    }
+
     /** [{id, name}] of the user's playlists, or an empty array. */
-    static JSONArray library(Context c) {
+    static JSONArray library(Context c) { return library(c, "playlists"); }
+
+    /** Entries of one kind: "playlists", "albums", "artists" or "podcasts"; an empty array when the page has not sent any. */
+    static JSONArray library(Context c, String kind) {
         if (libraryCache == null) {
-            try { libraryCache = new JSONArray(c.getSharedPreferences("ebb", MODE_PRIVATE).getString("ipodLib", "[]")); } catch (Exception e) { libraryCache = new JSONArray(); }
+            JSONObject o = parseLibrary(c.getSharedPreferences("ebb", MODE_PRIVATE).getString("ipodLib", "[]"));
+            libraryCache = o != null ? o : new JSONObject();
         }
-        return libraryCache;
+        JSONArray a = libraryCache.optJSONArray(kind);
+        return a != null ? a : new JSONArray();
     }
 
     static void setTopCovers(Context c, String json) {
