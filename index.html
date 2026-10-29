@@ -4324,6 +4324,7 @@ body.week-up-on{overflow:hidden}
           <button type="button" class="lib-filter-btn hidden" data-filter="artists" id="libFilterArtists">Artists</button>
           <button type="button" class="lib-filter-btn" data-filter="albums" id="libFilterAlbums">Albums</button>
           <button type="button" class="lib-filter-btn hidden" data-filter="podcasts" id="libFilterPodcasts">Podcasts</button>
+          <button type="button" class="lib-filter-btn hidden" data-filter="sets" id="libFilterSets">Sets</button>
           <button type="button" class="lib-filter-more hidden" id="libFilterMore" aria-label="Show more filters"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg></button>
         </div>
         <div class="lib-sort">
@@ -4399,6 +4400,12 @@ body.week-up-on{overflow:hidden}
           <div class="section-label">Podcasts</div>
         </div>
         <div class="lib-grid" id="libraryPodcastsGrid"></div>
+        </div>
+        <div class="lib-sec">
+        <div class="section-label-row hidden" id="librarySetsHead">
+          <div class="section-label">Sets</div>
+        </div>
+        <div class="lib-grid" id="librarySetsGrid"></div>
         </div>
         <div class="hidden" id="libSearchTracks">
           <div class="section-label">Songs</div>
@@ -4909,6 +4916,7 @@ body.week-up-on{overflow:hidden}
           <div>
             <div class="label">Voice</div>
             <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
+            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
           </div>
           <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
         </div>
@@ -8936,6 +8944,7 @@ const libraryPlaylistsHead = $('libraryPlaylistsHead');
 const libraryArtistsHead = $('libraryArtistsHead'), libraryArtistsGrid = $('libraryArtistsGrid');
 const libraryAlbumsHead = $('libraryAlbumsHead'), libraryAlbumsGrid = $('libraryAlbumsGrid');
 const libraryPodcastsHead = $('libraryPodcastsHead'), libraryPodcastsGrid = $('libraryPodcastsGrid');
+const librarySetsHead = $('librarySetsHead'), librarySetsGrid = $('librarySetsGrid');   // Voice DJ sets (#553)
 // Geethub #552: the top bar names the section at the top of the list. When the next section header reaches the bar, the name swaps and that header steps aside
 const libBarLabel = $('libBarLabel');
 let libBarHead = null;
@@ -8966,6 +8975,7 @@ if (libBody){
   updateLibBar();
 }
 const libFilterPodcasts = $('libFilterPodcasts');
+const libFilterSets = $('libFilterSets');
 const libFilterArtists = $('libFilterArtists');
 const libraryFilterEmpty = $('libraryFilterEmpty');
 const libViewToggle = $('libViewToggle');
@@ -10491,12 +10501,14 @@ function setLibraryView(mode){
   libraryAlbumsGrid.classList.toggle('is-compact', mode === 'compact');
   libraryPodcastsGrid.classList.toggle('is-list', mode === 'list');
   libraryPodcastsGrid.classList.toggle('is-compact', mode === 'compact');
+  librarySetsGrid.classList.toggle('is-list', mode === 'list');
+  librarySetsGrid.classList.toggle('is-compact', mode === 'compact');
   libViewToggle.querySelectorAll('[data-mode]').forEach(btn => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
   // All's overview keeps two rows per section, so a new column count needs a
   // fresh trim (#487); grids are still empty at startup, so boot skips this
-  if (prevView !== mode && getLibraryFilter() === 'all' && libraryGrid.children.length + libraryArtistsGrid.children.length + libraryAlbumsGrid.children.length + libraryPodcastsGrid.children.length){
+  if (prevView !== mode && getLibraryFilter() === 'all' && libraryGrid.children.length + libraryArtistsGrid.children.length + libraryAlbumsGrid.children.length + libraryPodcastsGrid.children.length + librarySetsGrid.children.length){
     rerenderLibraryKeepPanel();
     return;
   }
@@ -10551,6 +10563,7 @@ const LIB_SECTIONS = { playlists: 'playlist', albums: 'album', podcasts: 'podcas
 function canFileUnder(pl){ return !!pl && pl.type !== 'custom' && !isSingleTrackType(pl.type) && !isArtistEntry(pl); }
 function libSectionOf(pl){
   const o = pl && canFileUnder(pl) ? LIB_SECTIONS[pl.sectionOverride] : undefined;
+  if (pl && pl.isSet && pl.type === 'custom') return 'set';   // Voice DJ set (#553)
   return o || (isPodcastEntry(pl) ? 'podcast' : isArtistEntry(pl) ? 'artist' : isAlbumEntry(pl) ? 'album' : 'playlist');
 }
 libViewToggle.addEventListener('click', (e) => {
@@ -10567,12 +10580,12 @@ libViewToggle.addEventListener('click', (e) => {
   } else setLibraryView(btn.dataset.mode);
   closeLibSortMenu();
 });
-const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts'];
+const LIB_FILTER_CYCLE = ['all', 'playlists', 'artists', 'albums', 'podcasts', 'sets'];
 // A filter chip only shows while the library holds that kind (kept current
 // by renderLibrary); a saved choice for a kind that's gone reads as 'all'.
 // Playlists/Albums default to shown until the first render knows better.
-let libHasPodcasts = false, libHasArtists = false, libHasPlaylists = true, libHasAlbums = true;
-function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'artists' || libHasArtists) && (m !== 'playlists' || libHasPlaylists) && (m !== 'albums' || libHasAlbums)); }
+let libHasSets = false, libHasPodcasts = false, libHasArtists = false, libHasPlaylists = true, libHasAlbums = true;
+function libFilterCycleModes(){ return LIB_FILTER_CYCLE.filter(m => (m !== 'podcasts' || libHasPodcasts) && (m !== 'sets' || libHasSets) && (m !== 'artists' || libHasArtists) && (m !== 'playlists' || libHasPlaylists) && (m !== 'albums' || libHasAlbums)); }
 function getLibraryFilter(){
   return 'all';   // no All pill any more: the library is always the stacked sections, the pills fold them (#495)
 }
@@ -10773,9 +10786,12 @@ function renderLibrary(){
   libraryArtistsGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
   libraryPodcastsGrid.innerHTML = '';
+  librarySetsGrid.innerHTML = '';
   const advHide = advPrefs().hide || [];
   libHasPodcasts = !advHide.includes('podcast');   // chips always show (unless hidden in Advanced), even with nothing of that kind yet
   libFilterPodcasts.classList.toggle('hidden', !libHasPodcasts);
+  libHasSets = ids.some(sid => { const sp = getCachedPlaylist(sid); return !!(sp && sp.isSet && sp.type === 'custom'); });   // the pill only appears once a set exists
+  libFilterSets.classList.toggle('hidden', !libHasSets);
   libHasArtists = !advHide.includes('artist');
   libArtistNames = new Map();
   ids.forEach(id => { const p = getCachedPlaylist(id); if (p && isArtistEntry(p) && p.name) libArtistNames.set(artistNameKey(p.name), p.name); });
@@ -10785,7 +10801,7 @@ function renderLibrary(){
   libHasPlaylists = !advHide.includes('playlist');
   libFilterPlaylists.classList.toggle('hidden', !libHasPlaylists);
   // chips only help when there's more than one kind to pick between
-  libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts].filter(Boolean).length < 2);
+  libFilter.classList.toggle('hidden', [libHasPlaylists, libHasAlbums, libHasArtists, libHasPodcasts, libHasSets].filter(Boolean).length < 2);
   const filter = getLibraryFilter();
   // #677: exactly one visible pill is active; if none or several are, keep the first open one (else the first pill)
   { const vis = [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].map(b => b.dataset.filter), open = vis.filter(k => !libFolded[k]);
@@ -10796,14 +10812,15 @@ function renderLibrary(){
   const showArtists = (filter === 'all' || filter === 'artists') && !advHide.includes('artist');
   const showAlbums = (filter === 'all' || filter === 'albums') && !advHide.includes('album');
   const showPodcasts = (filter === 'all' || filter === 'podcasts') && !advHide.includes('podcast');
+  const showSets = (filter === 'all' || filter === 'sets');
   // which bucket a saved entry is filed under
   const kindOf = libSectionOf;
-  const kindShown = (k) => k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
+  const kindShown = (k) => k === 'set' ? showSets : k === 'podcast' ? showPodcasts : k === 'artist' ? showArtists : k === 'album' ? showAlbums : showPlaylists;
   libraryGrid.classList.toggle('hidden', !showPlaylists);
   const searchQ = normLibSearch(libSearch.value);
   libSearchTracksList.innerHTML = '';
   let searchTrackCount = 0;
-  let artistCount = 0, albumCount = 0, podcastCount = 0;
+  let artistCount = 0, albumCount = 0, podcastCount = 0, setCount = 0;
   const albumGroups = new Map(); // artistKey -> { name, cards }
   // SoundCloud (sc:) songs saved without art (older or cached items) have no
   // img.youtube.com fallback, so their tiles and collage cells were blank.
@@ -10863,6 +10880,8 @@ function renderLibrary(){
     if (isArtist) artistCount++;
     if (isAlbum) albumCount++;
     if (isPodcast) podcastCount++;
+    const isSetEntry = kind === 'set';
+    if (isSetEntry) setCount++;
     const isLiked = id === LIKED_ID;
     const isSystemPl = isLiked || id === SWELL_ID || id === BLEND_ID || id === NP_ID;
     const pinned = isPinned(id);
@@ -11071,6 +11090,10 @@ function renderLibrary(){
       desc.textContent = id === SWELL_ID ? 'Daily picks for you' : 'A mix of your library';
       if (!pl.tracks.length) count.textContent = id === SWELL_ID ? 'Ready after you play a few songs' : 'Ready after you save a playlist or like a few songs';
     }
+    if (isSetEntry && pl.setMeta && Array.isArray(pl.setMeta.arc)){   // static arc subtitle
+      desc = document.createElement('div'); desc.className = 'count lib-desc';
+      desc.textContent = pl.setMeta.arc.map(a => a.label).join(' > ');
+    }
     if (id === SWELL_ID && currentsBusy){
       count.textContent = currentsBusy === 'more' ? 'Adding more songs...' : 'Finding new picks...';
       card.classList.add('is-refreshing');
@@ -11133,7 +11156,7 @@ function renderLibrary(){
       card._sortPlays = totalPlaylistPlays(pl); card._sortTracks = pl.tracks.length;
       albumGroups.get(gk).cards.push(card);
     } else {
-      (isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
+      (isSetEntry ? librarySetsGrid : isPodcast ? libraryPodcastsGrid : isArtist ? libraryArtistsGrid : libraryGrid).appendChild(card);
     }
     } catch(e){
       console.warn('[ebbless] dropping corrupted library entry', id, e);
@@ -11205,7 +11228,7 @@ function renderLibrary(){
   // #631: while searching, a pill is lit only if its section has a match, so a
   // song-only search leaves every pill off
   if (searchQ){
-    const hits = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount };
+    const hits = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount, sets: setCount };
     libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter] && hits[btn.dataset.filter] > 0));
   }
   libraryArtistsHead.classList.toggle('hidden', artistCount === 0);
@@ -11214,13 +11237,15 @@ function renderLibrary(){
   libraryAlbumsGrid.classList.toggle('hidden', albumCount === 0);
   libraryPodcastsHead.classList.toggle('hidden', podcastCount === 0);
   libraryPodcastsGrid.classList.toggle('hidden', podcastCount === 0);
+  librarySetsHead.classList.toggle('hidden', setCount === 0);
+  librarySetsGrid.classList.toggle('hidden', setCount === 0);
   libSearchTracks.classList.toggle('hidden', !searchTrackCount);
   // Fold arrows on the section headers: All view only, so a single-type
   // filter always shows its list open. State lives for the session.
   libraryPlaylistsHead.classList.toggle('hidden', filter !== 'all');
   // Section header fold/unfold: click entire header to toggle, All view only
   let firstSecSeen = false;   // the first visible section gets no divider line above it
-  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts']].forEach(([head, grid, key]) => {
+  [[libraryPlaylistsHead, libraryGrid, 'playlists'], [libraryArtistsHead, libraryArtistsGrid, 'artists'], [libraryAlbumsHead, libraryAlbumsGrid, 'albums'], [libraryPodcastsHead, libraryPodcastsGrid, 'podcasts'], [librarySetsHead, librarySetsGrid, 'sets']].forEach(([head, grid, key]) => {
     // Attach click handler to the entire section-label-row if not already set
     if (!head.dataset.foldHandlerAttached) {
       head.addEventListener('click', () => { /* #677: one section is always open; switch via the pills */ });
@@ -11234,7 +11259,7 @@ function renderLibrary(){
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
     if (folded) grid.classList.add('hidden');
     // an empty kind keeps its title and says so (the pills are always there now)
-    const cnt = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount }[key];
+    const cnt = { playlists: libraryGrid.children.length, artists: artistCount, albums: albumCount, podcasts: podcastCount, sets: setCount }[key];
     let none = grid.nextElementSibling && grid.nextElementSibling.classList.contains('lib-none') ? grid.nextElementSibling : null;
     if (!none){ none = document.createElement('div'); none.className = 'currents-hint lib-none'; none.style.cssText = 'padding:6px 2px 14px'; grid.after(none); }
     const empty = !cnt && !folded && !searchQ && filter === 'all' && !advHide.includes(key.slice(0, -1));
@@ -11245,9 +11270,9 @@ function renderLibrary(){
   // #487: All is an overview - each section shows its first two rows, with
   // "See all (N)" opening that section's own filter. Rendering every card
   // here made a big library's All view heavy enough to glitch the screen.
-  if (!searchQ) ['playlists', 'artists', 'albums', 'podcasts'].forEach(libraryCapSection);   // open sections show a page of cards, then Show more (#487)
-  const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !searchTrackCount;
-  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : 'No playlists in your library yet.';
+  if (!searchQ) ['playlists', 'artists', 'albums', 'podcasts', 'sets'].forEach(libraryCapSection);   // open sections show a page of cards, then Show more (#487)
+  const nothingShown = !libraryGrid.children.length && !libraryArtistsGrid.children.length && !libraryAlbumsGrid.children.length && !libraryPodcastsGrid.children.length && !librarySetsGrid.children.length && !searchTrackCount;
+  libraryFilterEmpty.textContent = searchQ ? 'Nothing in your library matches "' + libSearch.value.trim() + '".' : filter === 'artists' ? 'No artists in your library yet.' : filter === 'albums' ? 'No albums in your library yet.' : filter === 'podcasts' ? 'No podcasts in your library yet.' : filter === 'sets' ? 'No sets in your library yet.' : 'No playlists in your library yet.';
   libraryFilterEmpty.classList.toggle('hidden', (filter === 'all' && !searchQ) || !nothingShown);
   refreshLibraryMarquees();
   markNowPlaying();
@@ -11265,7 +11290,7 @@ function trimLibraryGrid(grid, keep){
   return cards.length;
 }
 function libraryCapSection(filter){
-  const grid = { playlists: libraryGrid, artists: libraryArtistsGrid, albums: libraryAlbumsGrid, podcasts: libraryPodcastsGrid }[filter];
+  const grid = { playlists: libraryGrid, artists: libraryArtistsGrid, albums: libraryAlbumsGrid, podcasts: libraryPodcastsGrid, sets: librarySetsGrid }[filter];
   if (!grid || grid.classList.contains('hidden')) return;
   const total = trimLibraryGrid(grid, libShowCount);
   if (total <= libShowCount) return;
@@ -11281,7 +11306,7 @@ function libraryCapSection(filter){
 }
 function libraryAllOverview(totals){
   const view = getLibraryView();
-  [[libraryGrid, 'playlists'], [libraryArtistsGrid, 'artists'], [libraryAlbumsGrid, 'albums'], [libraryPodcastsGrid, 'podcasts']].forEach(([grid, key]) => {
+  [[libraryGrid, 'playlists'], [libraryArtistsGrid, 'artists'], [libraryAlbumsGrid, 'albums'], [libraryPodcastsGrid, 'podcasts'], [librarySetsGrid, 'sets']].forEach(([grid, key]) => {
     if (grid.classList.contains('hidden')) return;
     const cards = Array.from(grid.children).filter(c => c.classList.contains('lib-card'));
     let keep = 6;
@@ -18278,7 +18303,7 @@ function openVoiceConsent(onDone){
       '<p style="margin:0 0 10px">Simple commands like skip, pause or louder run on your device and send nothing.</p>' +
       '<p style="margin:0 0 10px">For anything else, EBBLESS sends <b>the words you spoke</b>, the <b>song playing now</b> and the <b>last 5 songs you played</b> (titles and artists) to our server and an AI model, to work out what you meant. Nothing else is sent: no name, no email, no library.</p>' +
       '<p style="margin:0 0 10px">No audio is stored. Your browser or phone turns speech into text, and EBBLESS never receives the audio. We do not keep what you said.</p>' +
-      '<p style="margin:0">You need to be signed in. Free accounts get 7 voice requests a day. You can withdraw any time in Settings under Voice.</p>' +
+      '<p style="margin:0">You need to be signed in. Free accounts get 7 voice requests a day. Timed sets ("ecstatic dance for 90 minutes") are part of FLOW and HORIZON. You can withdraw any time in Settings under Voice.</p>' +
     '</div>' +
     (on
       ? '<button class="btn-ghost" id="voiceConsentNo" style="width:100%;margin-bottom:8px">Withdraw consent</button><button class="btn-ghost" id="voiceConsentClose" style="width:100%">Close</button>'
@@ -18361,12 +18386,11 @@ async function voiceLlm(said, want){
    "Blend songs together" setting still applies, default off). Playback starts on the
    first matched song; the rest is appended in the background, a few songs ahead of the
    listener, and stops the moment the queue is replaced or a new set starts. */
-const SET_SESSION_ID = 'custom-voice-set';   // an unsaved set - reused, like VIBE_SESSION_ID
 const SET_AHEAD = 10;                        // songs kept queued after the current one
 const SET_AHEAD_POLL_MS = 15000;             // idle check when the buffer is full
 const SET_POOL_ROUNDS = 4;                   // pool extensions tried before a step is given up on
 const SET_METRIC_ROUNDS = 6;                 // /metrics batches (24 songs each) per set
-var setBuildToken = 0, setMeta = null;       // var: renderQueuePanel reads setMeta before this line runs on a cold start
+var setBuildToken = 0, setMeta = null;       // in-memory build progress only; the arc itself lives on the saved set (pl.setMeta). var: renderQueuePanel reads it before this line runs on a cold start
 function setCancel(){ setBuildToken++; }
 function setClientPlan(plan){   // re-check the worker's set plan (it could have been cached or tampered with)
   const raw = plan && Array.isArray(plan.arc) ? plan.arc.slice(0, 8) : [];
@@ -18386,13 +18410,14 @@ function setClientPlan(plan){   // re-check the worker's set plan (it could have
   const durationMin = Math.max(10, Math.min(240, Math.round(arc.reduce((n, s) => n + s.minutes, 0))));
   return { arc, durationMin, intention: String(plan.intention || plan.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 60) };
 }
-function renderSetArcRow(){
+function renderSetArcRow(){   // restores from the saved set, so it survives a reload
   const el = $('queueArcRow');
   if (!el) return;
-  if (!setMeta || !state.playlist || state.playlist.id !== setMeta.id || state.queuePos < 0){ el.hidden = true; return; }
-  let t = setArcSummary(setMeta);
-  if (setMeta.building) t += ' - ' + setMeta.got + ' of about ' + setMeta.want + ' songs';
-  else if (setMeta.short) t += ' - short: ' + setMeta.got + ' of ' + setMeta.want + ' songs';
+  const cur = state.queuePos >= 0 ? state.queue[state.queuePos] : null, pl = cur && playlistById(cur.plId), sm = pl && pl.isSet && pl.setMeta;
+  if (!sm){ el.hidden = true; return; }
+  let t = setArcSummary(sm);
+  if (setMeta && setMeta.id === pl.id && setMeta.building) t += ' - ' + setMeta.got + ' of about ' + setMeta.want + ' songs';
+  else if (sm.short) t += ' - short set';
   el.textContent = t; el.title = t; el.hidden = false;
 }
 const setWait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -18409,7 +18434,7 @@ async function startVoiceSet(plan, interp, said){
   const cp = setClientPlan(plan);
   if (!cp) return false;
   const token = ++setBuildToken, alive = () => token === setBuildToken;
-  const { arc } = cp, id = SET_SESSION_ID;
+  const { arc } = cp, id = 'set-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   awardMilestone('search'); statsFeature('voice_set');
   showToast('Building your set: ' + arc[0].label.toLowerCase() + '...');
   // 1. Candidate pool: the plan's seeds and the grounded interp tracks, then /similar walks from the seeds.
@@ -18435,12 +18460,13 @@ async function startVoiceSet(plan, interp, said){
   // 2. Walk the arc.
   const S = createSetSession(arc, { rng: setRng((Date.now() ^ pool.length * 7919) >>> 0), recent });
   const want = Math.max(1, Math.round(S.targetSec() / SET_DEFAULT_SONG_SEC));
-  const pl = { id, type: 'custom', name: (cp.intention ? cp.intention.charAt(0).toUpperCase() + cp.intention.slice(1) : 'Your set') + ' set', image: null, tracks: [], ts: Date.now(), vibeQuery: String(said || '').slice(0, 300) };
+  const pl = { id, type: 'custom', name: (cp.intention ? cp.intention.charAt(0).toUpperCase() + cp.intention.slice(1) : 'Your set') + ' - ' + cp.durationMin + ' min', image: null, tracks: [], ts: Date.now(), vibeQuery: String(said || '').slice(0, 300),
+    isSet: true, setMeta: { intention: cp.intention, durationMin: cp.durationMin, arc: arc.map(a => ({ label: a.label, minutes: a.minutes, energyFrom: a.energyFrom, energyTo: a.energyTo, bpmFrom: a.bpmFrom, bpmTo: a.bpmTo, tags: a.tags })), short: false } };   // a normal custom playlist flagged as a set: it syncs per song like any other, and opens with no AI call
   const meta = { id, intention: cp.intention, durationMin: cp.durationMin, arc, got: 0, want, building: true, short: false };
   let started = false, rounds = 0, lastStep = -1;
   while (alive() && !S.done()){
     if (started){
-      if (!state.playlist || state.playlist.id !== id) return true;   // queue replaced by something else: stop quietly
+      if (!state.playlist || state.playlist.id !== id || !getLibrary().includes(id)) return true;   // queue replaced, or the set deleted: stop quietly
       if (state.queue.length - 1 - state.queuePos >= SET_AHEAD){ await setWait(SET_AHEAD_POLL_MS); continue; }
     }
     if (pool.some(c => !c.annotated && !c.rejected) && metricRounds < SET_METRIC_ROUNDS){ metricRounds++; await setAnnotate(pool).catch(() => {}); if (!alive()) return true; }
@@ -18472,6 +18498,7 @@ async function startVoiceSet(plan, interp, said){
     if (!started){
       started = true;
       setMeta = meta;
+      saveToLibrary(id); renderLibrary();   // the set lives in the library from its first song
       closeImportOverlay();
       loadPlaylistIntoPlayer(pl);
       if (state.shuffle) toggleShuffle();   // an arc only works in order
@@ -18489,6 +18516,7 @@ async function startVoiceSet(plan, interp, said){
   if (!started){ showToast("Couldn't find playable songs for that set - trying a normal search"); beginConversationalVibe(said); return true; }
   const fill = S.totalSec() / S.targetSec();
   meta.short = fill < 0.6;
+  pl.setMeta.short = meta.short; persistPlaylistObj(pl);
   try { console.info('[voice] set: ' + S.estimated + '/' + S.picks.length + ' slots estimated, ' + S.relaxed + ' relaxed, shortfall ' + JSON.stringify(S.shortfall())); } catch(e){}
   showToast(meta.short ? 'Short set: ' + meta.got + ' of ' + want + ' songs matched.' : 'Set ready: ' + meta.got + ' songs, about ' + Math.round(S.totalSec() / 60) + ' min');
   renderSetArcRow();

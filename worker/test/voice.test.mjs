@@ -52,6 +52,7 @@ function fakeKV(init = {}) { const m = new Map(Object.entries(init)); return { g
 function fakeQuota(opts = {}) {
   const days = new Map(), spent = new Map();
   return { spent, idFromName: (n) => n, get: (id) => ({
+    unspend: async (cost) => { spent.set(id, Math.max(0, (spent.get(id) || 0) - cost)); },
     spend: async (cost, budget) => { if (opts.spendThrows) throw new Error('do down'); const u = spent.get(id) || 0; if (u + cost > budget) return { ok: false, used: u }; spent.set(id, u + cost); return { ok: true, used: u + cost }; },
     take: async (limit) => { const u = days.get(id) || 0; if (u >= limit) return { ok: false, used: u }; days.set(id, u + 1); return { ok: true, used: u + 1 }; },
     refund: async () => { days.set(id, Math.max(0, (days.get(id) || 0) - 1)); } }) };
@@ -205,10 +206,10 @@ test('set handler: paid user gets the set, grounded interp built from all step t
   assert.equal(r.body.interp.tracks.length, 1); assert.ok(seen.tags.includes('afrobeat') && seen.text === 'ecstatic dance');
 });
 
-test('set handler: free user gets a single-mood plan plus upsell, charged like any request', async () => {
+test('set handler: free user gets a single-mood plan plus upsell, and the request is refunded', async () => {
   const r = await call(mkEnv(setAi(goodSet)), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, build to a peak' });
   assert.equal(r.body.plan.kind, 'mood'); assert.equal(r.body.plan.arc, undefined); assert.equal(r.body.upsell, 'sets');
-  assert.equal(r.body.plan.text, 'ecstatic dance'); assert.equal(r.body.used, 1); assert.equal(r.body.tier, 'free');
+  assert.equal(r.body.plan.text, 'ecstatic dance'); assert.equal(r.body.used, 0, 'downgrade is refunded'); assert.equal(r.body.tier, 'free');
   const plain = await call(mkEnv(goodAi), { idToken: 'ebs1.good', text: 'a bit quieter in here' });
   assert.equal(plain.body.upsell, undefined);
 });
@@ -234,4 +235,15 @@ test('set handler: want=set forces a set from the heuristic and tells the model'
   assert.equal(r.body.plan.kind, 'set'); assert.match(user, /timed set/);
   const h = await call(mkEnv(undefined, { 'ent:u1': '{"tier":"flow"}' }), { idToken: 'ebs1.good', text: 'deep focus', want: 'set' });
   assert.equal(h.body.plan.kind, 'set'); assert.equal(h.body.plan.arc[1].label, 'Steady');
+});
+
+test('set downgrade refund: free user daily count and global neurons are given back; paid sets and plain moods still count', async () => {
+  const q = fakeQuota(); const day = new Date().toISOString().slice(0, 10);
+  const env = mkEnv(setAi(goodSet), {}, q);
+  for (let i = 0; i < 10; i++) { const r = await call(env, { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, build to a peak' }); assert.equal(r.body.upsell, 'sets'); assert.equal(r.body.used, 0); assert.ok(!r.body.capped, 'never capped by downgrades'); }
+  assert.equal(q.spent.get('g:' + day), 0);
+  const paid = await call(mkEnv(setAi(goodSet), { 'ent:u1': '{"tier":"flow"}' }, q), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes' });
+  assert.equal(paid.body.used, 1); assert.equal(q.spent.get('g:' + day), VOICE_NEURONS_PER_CALL);
+  const mood = await call(mkEnv(goodAi, {}, fakeQuota()), { idToken: 'ebs1.good', text: 'a bit quieter in here' });
+  assert.equal(mood.body.used, 1);
 });

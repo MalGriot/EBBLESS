@@ -326,7 +326,13 @@ export async function handleVoicePlan(request, env, ctx, deps) {
     return json({ ...hOut(), source: 'heuristic', tier, limit, used: Math.max(0, take.used - 1), why: raw == null ? 'model-error' : 'off-schema' });
   }
   const { plan, upsell } = gate(gated);
-  const out = { plan, source: via, tier, limit, used: take.used };
+  // A set asked for by a free listener is downgraded to a flat mood plan: that costs them nothing, so give back
+  // their daily request and the account-wide neurons it was charged (the model did run, but this is the owner's call).
+  if (upsell) {
+    await quota.refund();
+    try { await global.unspend(VOICE_NEURONS_PER_CALL); } catch (e) { /* ceiling stays conservative */ }
+  }
+  const out = { plan, source: via, tier, limit, used: upsell ? Math.max(0, take.used - 1) : take.used };
   if (upsell) out.upsell = upsell;
   if ((plan.kind === 'mood' || plan.kind === 'set') && typeof deps.groundMood === 'function') {
     // A set is grounded from its intention, seeds and every step's tags (one pool; the client walks it along the arc).
