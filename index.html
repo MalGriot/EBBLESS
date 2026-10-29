@@ -3672,6 +3672,21 @@ body.onb-stage-settings #view-settings #settingsAboutBlock{display:none}
   .ms-card.ms-pulse::after{content:"";position:absolute;inset:0;border-radius:12px;border:2px solid var(--accent,#e0b26a);pointer-events:none;animation:msRing .7s ease-out forwards}
   @keyframes msPop{0%{transform:scale(.4)}100%{transform:scale(1)}}
   @keyframes msRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+  /* celebrate(): delight system. Badge + particles + ring, transform and opacity only; elements exist only while animating */
+  #cbHost{position:fixed;left:0;right:0;top:calc(var(--topbar-h,56px) + var(--safe-t,0px) + 12px);z-index:9000;display:flex;justify-content:center;pointer-events:none}
+  #cbFx{position:fixed;inset:0;z-index:8999;pointer-events:none;overflow:hidden}
+  .cb-badge{display:inline-flex;align-items:baseline;gap:10px;max-width:calc(100vw - 32px);padding:10px 18px;border-radius:999px;background:rgba(18,18,22,.94);color:#fff;border:1.5px solid var(--accent);font-size:14px;line-height:1.25;opacity:0}
+  .cb-badge b{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cb-badge.is-in{will-change:transform,opacity;animation:cbPop 460ms cubic-bezier(.34,1.56,.64,1) forwards}
+  .cb-badge.is-out{will-change:transform,opacity;animation:cbOut 260ms ease-in forwards}
+  .cb-p{position:absolute;width:7px;height:10px;margin:-5px 0 0 -3px;border-radius:2px;opacity:0;will-change:transform,opacity;animation:cbFly var(--t,900ms) cubic-bezier(.2,.7,.4,1) forwards}
+  .cb-p.is-spark{width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%}
+  .cb-ring{position:absolute;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;border:2px solid var(--accent);opacity:0;will-change:transform,opacity;animation:cbRing 700ms ease-out forwards}
+  @keyframes cbPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+  @keyframes cbOut{0%{transform:scale(1);opacity:1}100%{transform:scale(.96);opacity:0}}
+  @keyframes cbFly{0%{transform:translate(0,0) rotate(0) scale(.5);opacity:1}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1);opacity:0}}
+  @keyframes cbRing{0%{transform:scale(.3);opacity:.8}100%{transform:scale(3.2);opacity:0}}
+  @media (prefers-reduced-motion:reduce){.cb-badge.is-in,.cb-badge.is-out{animation-duration:1ms}}
 }
 @media (prefers-reduced-motion:reduce){.ms-ring,.ms-card.is-celebrate .ms-ring,.ms-card.ms-pulse::after{animation:none}}
 .ms-q{flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--faint);font-size:12px;line-height:1;padding:0;margin-left:6px}
@@ -5071,7 +5086,7 @@ body.week-up-on{overflow:hidden}
           </div>
           <button class="btn-ghost" id="replayTutorialBtn">Replay</button>
         </div>
-        <div class="settings-row"><div><div class="label">Milestone sound</div><div class="desc">A soft chime when you finish a step on a phone.</div></div><button type="button" class="switch is-active" id="msSoundBtn" role="switch" aria-checked="true" aria-label="Milestone sound"><span class="switch-knob"></span></button></div>
+        <div class="settings-row"><div><div class="label">Milestone sound</div><div class="desc">A soft chime, sparkle and buzz when you hit a milestone or a new best.</div></div><button type="button" class="switch is-active" id="msSoundBtn" role="switch" aria-checked="true" aria-label="Milestone sound"><span class="switch-knob"></span></button></div>
         <div class="settings-row"><div><div class="label">Soft sounds and vibration</div><div class="desc">A very quiet tap sound (and a light buzz on phones) when you press buttons.</div></div><button type="button" class="switch is-active" id="softTapBtn" role="switch" aria-checked="true" aria-label="Soft sounds and vibration"><span class="switch-knob"></span></button></div>
         <div class="settings-row">
           <div>
@@ -15194,7 +15209,8 @@ function toggleLikeTrack(track){
     addTracksToPlaylist(LIKED_ID, [track]);
     recordListenSignal(track, 2);
     const streak = noteLikeStreak();
-    showToast(streak.grew && streak.count >= 2 ? 'Added to Liked Songs · ' + streak.count + '-day streak' : 'Added to Liked Songs');
+    if (streak.grew && streak.count >= 2) celebrate(1, { label: 'Added to Liked Songs \u00B7 ' + streak.count + '-day streak' });
+    else showToast('Added to Liked Songs');
   }
   likeNudgeTrackChanged(track);
   renderQueuePanel();
@@ -26508,6 +26524,110 @@ function msChime(long){
     }, hold);
   } catch(e){}
 }
+// celebrate(tier, opts): one reward system for every win. tier 1 small / 2 medium / 3 big.
+// opts: { label, pts, quiet (skip chime), plain (skip particles) }. A FIFO shows one badge at a time;
+// wins that land together merge into "+N milestones". Chime = generated sine partials on the shared
+// softTapCtx (gated by the Milestone sound setting, hidden tab, muted player); haptics follow the
+// Soft sounds and vibration setting. Particles: capped at 40 alive, removed on animationend, only
+// transform + opacity, skipped for reduced motion.
+const CB_TIERS = {
+  1: { n: 8, spark: true, show: 1600, vib: [10], notes: [[880, .0, .16], [1318, .05, .12]], gain: .05 },
+  2: { n: 16, spark: false, show: 2000, vib: [12, 40, 12], notes: [[660, 0, .3], [990, .07, .26], [1320, .14, .22]], gain: .07 },
+  3: { n: 30, spark: false, show: 2700, vib: [14, 50, 14, 50, 28], notes: [[523, 0, .45], [784, .09, .42], [1047, .18, .38], [1568, .27, .3]], gain: .09, ring: true }
+};
+const cbQueue = []; let cbShowing = false, cbHost = null, cbFx = null;
+function cbEnsureCtx(){
+  try {
+    if (softTapCtx) return softTapCtx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) softTapCtx = new AC();
+  } catch(e){}
+  return softTapCtx;
+}
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, cbEnsureCtx, { capture: true, once: true, passive: true }));
+function cbChime(t){
+  if (!msSoundOn() || softTapSilenced() || !softTapCtx) return;
+  try {
+    const ctx = softTapCtx;
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    const t0 = ctx.currentTime + .01;
+    t.notes.forEach(([f, at, dur]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + at);
+      g.gain.linearRampToValueAtTime(t.gain, t0 + at + .015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+      o.connect(g); g.connect(ctx.destination); o.start(t0 + at); o.stop(t0 + at + dur + .02);
+    });
+  } catch(e){}
+}
+function cbBurst(t, from){
+  if (!msMotionOk() || document.visibilityState !== 'visible') return;
+  const r = from.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const cols = ['var(--accent)', '#fff', 'color-mix(in srgb, var(--accent) 55%, #fff)'];
+  const room = 40 - cbFx.childElementCount - (t.ring ? 1 : 0);
+  if (t.ring && room >= 0){
+    const ring = document.createElement('i');
+    ring.className = 'cb-ring'; ring.style.left = cx + 'px'; ring.style.top = cy + 'px';
+    ring.addEventListener('animationend', () => ring.remove(), { once: true });
+    cbFx.appendChild(ring);
+    setTimeout(() => ring.remove(), 1600);
+  }
+  const n = Math.min(t.n, Math.max(0, room));
+  for (let i = 0; i < n; i++){
+    const p = document.createElement('i'), a = (i / n) * Math.PI * 2 + Math.random() * .5, d = 70 + Math.random() * 90;
+    p.className = 'cb-p' + (t.spark ? ' is-spark' : '');
+    p.style.cssText = 'left:' + cx + 'px;top:' + cy + 'px;background:' + cols[i % 3] + ';--dx:' + Math.round(Math.cos(a) * d) + 'px;--dy:' + Math.round(Math.sin(a) * d + (t.spark ? 0 : 50)) + 'px;--rot:' + Math.round((Math.random() - .5) * 720) + 'deg;--t:' + Math.round(700 + Math.random() * 400) + 'ms';
+    p.addEventListener('animationend', () => p.remove(), { once: true });
+    cbFx.appendChild(p);
+    setTimeout(() => p.remove(), 1600);   // backstop if animationend never fires (tab hidden mid-flight)
+  }
+}
+function celebrate(tier, opts){
+  opts = opts || {};
+  cbQueue.push({ tier: CB_TIERS[tier] ? tier : 1, label: String(opts.label || ''), pts: +opts.pts || 0, quiet: !!opts.quiet, plain: !!opts.plain, n: 1 });
+  if (cbQueue.length > 12) cbQueue.splice(0, cbQueue.length - 12);
+  if (!cbShowing) cbPump();
+}
+function cbPump(){
+  if (!cbQueue.length){ cbShowing = false; return; }
+  if (document.visibilityState !== 'visible'){ cbQueue.length = 0; cbShowing = false; return; }
+  cbShowing = true;
+  let it = cbQueue.shift();
+  if (cbQueue.length){
+    const all = [it].concat(cbQueue.splice(0));
+    it = { tier: Math.max(...all.map(x => x.tier)), pts: all.reduce((s, x) => s + x.pts, 0), n: all.length, label: '+' + all.length + ' milestones', quiet: all.every(x => x.quiet), plain: all.every(x => x.plain) };
+  }
+  if (!cbHost){
+    cbHost = document.createElement('div'); cbHost.id = 'cbHost'; cbHost.setAttribute('role', 'status'); cbHost.setAttribute('aria-live', 'polite');
+    cbFx = document.createElement('div'); cbFx.id = 'cbFx'; cbFx.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cbFx); document.body.appendChild(cbHost);
+  }
+  const t = CB_TIERS[it.tier], badge = document.createElement('div');
+  badge.className = 'cb-badge';
+  const name = document.createElement('span'); name.textContent = it.label;
+  badge.appendChild(name);
+  let num = null;
+  if (it.pts){ num = document.createElement('b'); num.textContent = '+0 pts'; badge.appendChild(num); }
+  cbHost.appendChild(badge);
+  requestAnimationFrame(() => badge.classList.add('is-in'));
+  if (!it.quiet) cbChime(t);
+  if (softTapOn()){ try { if (navigator.vibrate) navigator.vibrate(t.vib); } catch(e){} }
+  if (!it.plain) cbBurst(t, badge);
+  if (num){
+    const t0 = Date.now(), dur = msMotionOk() ? 800 : 0;
+    const tick = setInterval(() => {
+      const k = dur ? Math.min(1, (Date.now() - t0) / dur) : 1;
+      num.textContent = '+' + msFmt(Math.round(it.pts * (1 - Math.pow(1 - k, 3)))) + ' pts';
+      if (k >= 1) clearInterval(tick);
+    }, 60);
+    setTimeout(() => clearInterval(tick), 1000);
+  }
+  setTimeout(() => {
+    badge.classList.remove('is-in'); badge.classList.add('is-out');
+    setTimeout(() => { badge.remove(); cbPump(); }, 280);
+  }, t.show);
+}
 // Points are big and random: rolled once per step (and a huge bonus per finished page), kept in the saved list under _pts
 function msRoll(bonus){
   const r = Math.random();
@@ -26655,13 +26775,10 @@ function awardMilestone(id){
       if (msMotionOk()){
         card.classList.remove('ms-pulse'); void card.offsetWidth; card.classList.add('ms-pulse');
       }
-      if (pageDone) msConfetti(card);
-      msChime(pageDone);
-      return;
     }
   }
-  msChime(pageDone);   // card off screen (scrolled away / other page): the toast still gets its sound
-  showToast('+' + msFmt(pts) + ' pts \u00B7 ' + m[1] + (bonus ? ' \u00B7 ' + MS_PAGE_NAMES[m[3]] + ' complete! +' + msFmt(bonus) + ' bonus' : ''));
+  if (pageDone) msChime(true);   // finishing a whole page also gets the EBBLESS theme hit
+  celebrate(pageDone ? 3 : 2, { label: pageDone ? MS_PAGE_NAMES[m[3]] + ' complete! ' + m[1] : m[1], pts: pts + bonus });
 }
 (function msInit(){
   MS_PAGES.forEach(page => {
@@ -27113,6 +27230,7 @@ function recordGameBestSound(){
   } catch(e){}
 }
 function recordGameBestFx(){
+  celebrate(2, { label: 'New best', quiet: true, plain: true });   // the game has its own sound and sparks
   recGameHud.classList.add('is-new');
   recordGameBestSound();
   recBestAnims.forEach(a => a.cancel()); recBestAnims = [];
@@ -27184,6 +27302,7 @@ function recordGameTap(){
   }
   recordGameRender();
   recordGameHitFx(hitDotTop);
+  if (recGame.score % 10 === 0) celebrate(1, { label: recGame.score + ' in a row', quiet: true, plain: true });
   if (recGame.startBest > 0 && recGame.score > recGame.startBest){
     if (!recGame.newBest){ recGame.newBest = true; recordGameBestFx(); }
     else recordGameBestSound(); // every further point of a new-best run raises the best again
