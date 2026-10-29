@@ -26,6 +26,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
@@ -685,6 +687,72 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
         void setPlaying(boolean p) { playing = p; }
 
+        // ---- touch, ported from index.html's interactive plate: one finger blows the sand, a tap sends a ripple, two fingers tune
+        // (horizontal = frequency/zoom, vertical = twist). Zoom/twist are applied to the coordinates before field(), so every family responds.
+        private static final float ZOOM_MIN = (float) Math.log(0.55), ZOOM_MAX = (float) Math.log(2.2);
+        private final float slop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
+        private static final class Ripple { final float x, y; final long t0; Ripple(float x, float y, long t0) { this.x = x; this.y = y; this.t0 = t0; } }
+        private final ArrayList<Ripple> ripples = new ArrayList<>();   // plate coords
+        private float tuneZoomT, tuneTwistT, tuneZoom, tuneTwist;
+        private int touches;
+        private float lastCx, lastCy, fingerPx, fingerPy, tapX, tapY;
+        private long tapT;
+        private boolean tapValid;
+
+        @Override public boolean onTouchEvent(MotionEvent e) {
+            int act = e.getActionMasked();
+            switch (act) {
+                case MotionEvent.ACTION_DOWN:
+                    tapX = e.getX(); tapY = e.getY(); tapT = SystemClock.uptimeMillis(); tapValid = true;
+                    touches = 1; centroid(e, -1); fingerPx = lastCx; fingerPy = lastCy;
+                    break;
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    tapValid = false; touches = e.getPointerCount(); centroid(e, -1);
+                    break;
+                case MotionEvent.ACTION_MOVE: {
+                    float ox = lastCx, oy = lastCy;
+                    centroid(e, -1);
+                    if (e.getPointerCount() >= 2) tune(lastCx - ox, lastCy - oy);
+                    else { fingerPx = lastCx; fingerPy = lastCy; }
+                    if (tapValid && Math.hypot(lastCx - tapX, lastCy - tapY) > slop) tapValid = false;
+                    break;
+                }
+                case MotionEvent.ACTION_POINTER_UP:
+                    tapValid = false; touches = e.getPointerCount() - 1; centroid(e, e.getActionIndex());
+                    if (touches == 1) { fingerPx = lastCx; fingerPy = lastCy; }
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (tapValid && SystemClock.uptimeMillis() - tapT < 320) addRipple(tapX, tapY);
+                    touches = 0;
+                    break;
+                case MotionEvent.ACTION_CANCEL:
+                    touches = 0; tapValid = false;
+                    break;
+                default: return super.onTouchEvent(e);
+            }
+            if (running) postInvalidateOnAnimation();   // a touch redraws at once even from the paused 10 fps rhythm
+            return true;
+        }
+
+        /** Centroid of the pointers (optionally leaving one out, the one just lifted) into lastCx/lastCy. */
+        private void centroid(MotionEvent e, int skip) {
+            float x = 0, y = 0; int n = 0;
+            for (int i = 0; i < e.getPointerCount(); i++) { if (i == skip) continue; x += e.getX(i); y += e.getY(i); n++; }
+            if (n > 0) { lastCx = x / n; lastCy = y / n; }
+        }
+
+        private void tune(float dx, float dy) {
+            float size = Math.max(200 * dens, Math.min(getWidth(), getHeight()));
+            tuneZoomT = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, tuneZoomT + dx / size * 2.4f));
+            tuneTwistT += dy / size * 3f;
+        }
+
+        private void addRipple(float vx, float vy) {
+            float w = getWidth(), h = getHeight(), rad = (float) Math.hypot(w / 2, h / 2) / (float) Math.sqrt(2);
+            ripples.add(new Ripple((vx - w / 2) / rad, (vy - h / 2) / rad, SystemClock.uptimeMillis()));
+            if (ripples.size() > 6) ripples.remove(0);
+        }
+
         void setColor(int c) {
             color = c;
             for (int b = 0; b < 4; b++) { paints[b].setColor(c); paints[b].setAlpha(Math.round(ALPHA[b] * 255)); }
@@ -732,15 +800,41 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             }
             float w = getWidth(), h = getHeight(), cx = w / 2, cy = h / 2;
             float radius = (float) Math.hypot(w / 2, h / 2) / (float) Math.sqrt(2);
+            // interactive: eased tuning folded into one scale/twist applied before field(); ripples in plate coords; one finger on the sand
+            float ease = Math.min(1f, dt / 140f);
+            tuneZoom += (tuneZoomT - tuneZoom) * ease;
+            tuneTwist += (tuneTwistT - tuneTwist) * ease;
+            float zoom = (float) Math.exp(tuneZoom);
+            float tCa = (float) Math.cos(tuneTwist) * zoom, tSa = (float) Math.sin(tuneTwist) * zoom;
+            for (int q = ripples.size() - 1; q >= 0; q--) if (now - ripples.get(q).t0 >= 2200) ripples.remove(q);
+            int nr = ripples.size();
+            boolean hasFinger = touches == 1;
+            float fingerX = (fingerPx - cx) / radius, fingerY = (fingerPy - cy) / radius;
             float jitter = playing ? 0.020f : 0.004f, step = playing ? 0.016f : 0.006f;
             cnt[0] = cnt[1] = cnt[2] = cnt[3] = 0;
             for (int i = 0; i < N; i++) {
                 float x = gx[i], y = gy[i];
-                float f = field(fam, x, y, par);
-                if (mix > 0) f = f * (1 - mix) + field(nextFam, x, y, nextPar) * mix;
+                float fx = x * tCa - y * tSa, fy = x * tSa + y * tCa;
+                float f = field(fam, fx, fy, par);
+                if (mix > 0) f = f * (1 - mix) + field(nextFam, fx, fy, nextPar) * mix;
+                for (int q = 0; q < nr; q++) {
+                    Ripple rp = ripples.get(q);
+                    float age = (now - rp.t0) / 1000f;
+                    float rd = (float) Math.hypot(x - rp.x, y - rp.y) - 0.9f * age;
+                    f += 1.1f * (float) (Math.exp(-(rd * rd) / 0.012) * Math.cos(16 * rd) * Math.exp(-age));
+                }
                 float amp = Math.min(1f, Math.abs(f) * 1.9f);
-                x += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp;
-                y += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp;
+                float pushX = 0, pushY = 0;
+                if (hasFinger) {
+                    float ddx = x - fingerX, ddy = y - fingerY, d2 = ddx * ddx + ddy * ddy, g = (float) Math.exp(-d2 / 0.034);
+                    if (g > 0.01f) {
+                        amp = Math.max(amp, Math.min(1f, g * 1.3f));
+                        float d = (float) Math.sqrt(d2) + 1e-4f;
+                        pushX = ddx / d * g * 0.018f; pushY = ddy / d * g * 0.018f;
+                    }
+                }
+                x += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp + pushX;
+                y += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp + pushY;
                 if (x > 1) x = 1; else if (x < -1) x = -1;
                 if (y > 1) y = 1; else if (y < -1) y = -1;
                 gx[i] = x; gy[i] = y;
@@ -751,7 +845,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
                 pts[b][k + 1] = cy + y * radius;
             }
             for (int b = 0; b < 4; b++) if (cnt[b] > 0) cv.drawPoints(pts[b], 0, cnt[b] * 2, paints[b]);
-            if (running) postInvalidateDelayed(playing ? 33 : 100);
+            if (running) postInvalidateDelayed(playing || touches > 0 || nr > 0 ? 33 : 100);   // touched or rippling keeps full rate even when paused
         }
     }
 }
