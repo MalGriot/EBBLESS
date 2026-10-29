@@ -88,7 +88,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     private GradientDrawable playCircle;
     private ImageView btnClose, btnPrev, btnNext;
 
-    private FrameLayout root, bg;
+    private FrameLayout root, bg, top;
     private ImageView scrollArt, btnLike, btnPlay, btnMode;
     private View navFill, scrim, spacer;
     private CymaticsView cym;
@@ -211,7 +211,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         root.addView(navFill, new FrameLayout.LayoutParams(-1, 0, Gravity.BOTTOM));
 
         // clock row
-        FrameLayout top = new FrameLayout(this);
+        top = new FrameLayout(this);
         LinearLayout clock = new LinearLayout(this);
         clock.setOrientation(LinearLayout.VERTICAL);
         clock.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -236,10 +236,9 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         ipod = new IpodPlayer(this, new IpodPlayer.Host() {
             @Override public void openApp() { startActivity(new Intent(FullScreenPlayerActivity.this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)); }
             @Override public void cycleVisual() { cycleMode(); }
+            @Override public void close() { finish(); }
         }, accent, screenW, screenH);
         LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(-1, 0, 1f);
-        ipl.leftMargin = ipl.rightMargin = dp(8);
-        ipl.bottomMargin = dp(8);
         content.addView(ipod.view(), ipl);
 
         spacer = new View(this);
@@ -374,10 +373,34 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         cym.setVisibility(mode == MODE_CYMATICS ? View.VISIBLE : View.GONE);
         ipod.view().setVisibility(ipodOn ? View.VISIBLE : View.GONE);
         panel.setVisibility(ipodOn ? View.GONE : View.VISIBLE);
+        applyChrome();
         spacer.setVisibility(ipodOn ? View.GONE : View.VISIBLE);   // the iPod fills the space itself
         applyArt();
         startModeStuff();
         applyActive();
+    }
+
+    /** The iPod fills the whole screen: no clock row, no X, no status or navigation bar (immersive sticky, display cutouts used). The other modes keep their chrome. */
+    @SuppressWarnings("deprecation")
+    private void applyChrome() {
+        boolean ip = mode == MODE_IPOD;
+        int base = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+        getWindow().getDecorView().setSystemUiVisibility(ip
+                ? base | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY : base);
+        if (Build.VERSION.SDK_INT >= 28) {
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            int want = ip ? WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES : WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+            if (lp.layoutInDisplayCutoutMode != want) { lp.layoutInDisplayCutoutMode = want; getWindow().setAttributes(lp); }
+        }
+        top.setVisibility(ip ? View.GONE : View.VISIBLE);
+        root.setBackgroundColor(ip ? 0xFF222226 : 0xFF121212);   // a little lighter behind the device so its drop shadow reads
+        navFill.setVisibility(ip ? View.GONE : View.VISIBLE);
+        root.requestApplyInsets();
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && mode == MODE_IPOD && root != null) applyChrome();   // sticky immersive drops back when the system UI was pulled down
     }
 
     private void startModeStuff() {

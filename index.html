@@ -156,8 +156,10 @@ try {
         var map = { play: 'play', pause: 'pause', next: 'nexttrack', prev: 'previoustrack' }, m = /^seekto:(.+)$/.exec(a);
         if (m) { if (handlers.seekto) handlers.seekto({ action: 'seekto', seekTime: parseFloat(m[1]) }); return; }
         // iPod player (lock screen): play a queue row, play a library playlist, soft sounds on/off
-        var iq = /^playqueueindex:(\d+)$/.exec(a), ip = /^playlist:(.+)$/.exec(a), isf = /^softtap:([01])$/.exec(a);
+        var iq = /^playqueueindex:(\d+)$/.exec(a), ip = /^(?:playlist|album|artist|podcast):(.+)$/.exec(a), isf = /^softtap:([01])$/.exec(a);
         if (iq) { var qn = parseInt(iq[1], 10); if (typeof state !== 'undefined' && qn >= 0 && qn < state.queue.length) loadIndex(qn, true); return; }
+        // playlist:<id> / album:<id> / artist:<id> / podcast:<id>: all four are library entries, so each starts that entry from the top of its own order
+        // (album = the album's tracks, artist = the artist's library songs in order, podcast = the show's episodes in the show's order), like the card's play button
         if (ip) { if (typeof playPlaylistNow === 'function') playPlaylistNow(ip[1]); return; }
         if (isf) {
           try { localStorage.setItem('ebbless:softTap', isf[1] === '1' ? 'on' : 'off'); } catch (e) {}
@@ -8273,12 +8275,18 @@ function scheduleIpodPush(delay){
 }
 function pushIpodData(){
   try {
-    const libOut = [], plays = new Map();
+    // {playlists:[{id,name}], albums:[{id,name,artist}], artists:[{id,name}], podcasts:[{id,name}]}, up to 100 each, filed the way the Library pills are (libSectionOf)
+    const libOut = { playlists: [], albums: [], artists: [], podcasts: [] }, plays = new Map();
     orderedLibraryIds().filter(id => id !== NP_ID).forEach(id => {
       const p = getCachedPlaylist(id);
       const name = (p && (p.name || p.title)) || (id === LIKED_ID ? 'Liked Songs' : id === SWELL_ID ? 'Currents' : '');
       if (!p || !name) return;
-      if (libOut.length < 100) libOut.push({ id: id, name: String(name).slice(0, 60) });
+      const kind = libSectionOf(p), list = kind === 'album' ? libOut.albums : kind === 'artist' ? libOut.artists : kind === 'podcast' ? libOut.podcasts : libOut.playlists;
+      if (list.length < 100){
+        const e = { id: id, name: String(name).slice(0, 60) };
+        if (kind === 'album') e.artist = String(p.artist || p.owner || (p.tracks && p.tracks[0] && p.tracks[0].artist) || '').slice(0, 60);
+        list.push(e);
+      }
       (p.tracks || []).forEach(t => { if (t && t.plays > 0 && /^https:/.test(t.art || '')) plays.set(t.art, (plays.get(t.art) || 0) + t.plays); });
     });
     EbbNative.setLibrary(JSON.stringify(libOut));
