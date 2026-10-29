@@ -228,7 +228,7 @@ final class TetrisGame implements IpodGame {
             else overlay(c, s, "GAME OVER", scoreLbl.get(logic.score), "Center: retry   Menu: exit", 0xFFFFFFFF);
         } else if (paused) {
             if (started) overlay(c, s, "PAUSED", "Wheel: move   Center: rotate", "Center: resume   Menu: exit", 0xFFFFFFFF);
-            else overlay(c, s, "TETRIS", "Wheel: move   Center: rotate", "Center: start", 0xFFFFFFFF);
+            else overlay(c, s, "EBBTRIS", "Wheel: move   Center: rotate", "Center: start", 0xFFFFFFFF);
         }
     }
 

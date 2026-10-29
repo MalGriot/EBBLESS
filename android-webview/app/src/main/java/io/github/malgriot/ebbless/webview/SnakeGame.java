@@ -192,7 +192,7 @@ final class SnakeGame implements IpodGame {
             else overlay(c, s, "GAME OVER", scoreLbl.get(logic.score), "Center: retry   Menu: exit", 0xFFFFFFFF);
         } else if (paused) {
             if (started) overlay(c, s, "PAUSED", "Turn the wheel to steer", "Center: resume   Menu: exit", 0xFFFFFFFF);
-            else overlay(c, s, "SNAKE", "Turn the wheel to steer", "Center: start", 0xFFFFFFFF);
+            else overlay(c, s, "SSSWELL", "Turn the wheel to steer", "Center: start", 0xFFFFFFFF);
         }
     }
 

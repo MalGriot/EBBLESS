@@ -348,7 +348,7 @@ final class MatchGame implements IpodGame {
             else overlay(c, s, "GAME OVER", scoreLbl.get(score), "Center: retry   Menu: exit", 0xFFFFFFFF);
         } else if (paused) {
             if (started) overlay(c, s, "PAUSED", "Swap tiles to match 3", "Center: resume   Menu: exit", 0xFFFFFFFF);
-            else overlay(c, s, "MATCH", "Wheel: move   Center: pick", "Center: start", 0xFFFFFFFF);
+            else overlay(c, s, "EBBAZZLED", "Wheel: move   Center: pick", "Center: start", 0xFFFFFFFF);
         }
     }
 
