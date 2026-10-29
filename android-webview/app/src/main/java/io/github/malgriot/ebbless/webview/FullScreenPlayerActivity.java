@@ -70,6 +70,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     static final int NOTIF_ID = 3;
     static volatile FullScreenPlayerActivity live;
 
+    private static final int BASE = 0xFF121212;
     private static final int MODE_SCROLL = 0, MODE_CYMATICS = 1, MODE_LAVA = 2;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -84,7 +85,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
     private FrameLayout root, bg, artHolder, logoBox;
     private ImageView scrollArt, lavaLayer, artImg, btnLike, btnPlay, btnMode;
-    private View scrim, lavaTint, lavaVignette, spacer;
+    private View navFill, scrim, lavaTint, lavaVignette, spacer;
     private CymaticsView cym;
     private LinearLayout content, panel;
     private TextView titleTv, artistTv, elapsedTv, durTv;
@@ -106,7 +107,9 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
         else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(BASE);   // solid player base in every mode; the system must not tint it (no light-bar flag, no contrast scrim)
+        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(BASE));
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         dp = getResources().getDisplayMetrics().density;
         screenW = getResources().getDisplayMetrics().widthPixels;
@@ -212,8 +215,15 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         root.addView(content, new FrameLayout.LayoutParams(-1, -1));
         root.setOnApplyWindowInsetsListener((v, in) -> {
             content.setPadding(in.getSystemWindowInsetLeft(), in.getSystemWindowInsetTop(), in.getSystemWindowInsetRight(), in.getSystemWindowInsetBottom());
+            FrameLayout.LayoutParams np = (FrameLayout.LayoutParams) navFill.getLayoutParams();
+            if (np.height != in.getSystemWindowInsetBottom()) { np.height = in.getSystemWindowInsetBottom(); navFill.setLayoutParams(np); }
             return in;
         });
+
+        // solid strip behind the system navigation bar so it reads as one dark surface with the player in every mode
+        navFill = new View(this);
+        navFill.setBackgroundColor(BASE);
+        root.addView(navFill, new FrameLayout.LayoutParams(-1, 0, Gravity.BOTTOM));
 
         // clock row
         FrameLayout top = new FrameLayout(this);
