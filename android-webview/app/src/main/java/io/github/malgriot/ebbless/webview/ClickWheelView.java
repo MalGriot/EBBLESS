@@ -13,6 +13,8 @@ import android.view.ViewConfiguration;
 /**
  * iPod-style click wheel. Drag a finger around the ring to rotate (one step per ~22 degrees, a soft haptic tick on each step);
  * tap the center for select, the top for Menu, left for previous, right for next, bottom for play/pause.
+ * Controls mode (a game is running): the ring becomes four arrow keys (up, right, down, left) that fire onDirection on touch-down and
+ * repeat while held; the center button still selects. Menu is then a separate button (IpodPlayer's game bar).
  * Draws only on touch and on state changes (no animation, no frame loop).
  */
 final class ClickWheelView extends View {
@@ -23,6 +25,7 @@ final class ClickWheelView extends View {
         void onPrev();
         void onNext();
         void onPlayPause();
+        void onDirection(int dir);   // controls mode: 0 up, 1 right, 2 down, 3 left (IpodGame.DIR_*)
     }
 
     static final float STEP_DEG = 22f;
@@ -32,7 +35,8 @@ final class ClickWheelView extends View {
     private final Path path = new Path();
     private Listener listener;
     private int accent;
-    private boolean haptics = true, playing;
+    private static final long REPEAT_FIRST_MS = 340, REPEAT_MS = 110;
+    private boolean haptics = true, playing, controls;
     private float cx, cy, outerR, innerR;
     private final float slop;
 
@@ -51,6 +55,20 @@ final class ClickWheelView extends View {
     void setListener(Listener l) { listener = l; }
     void setAccent(int a) { if (a != accent) { accent = a; invalidate(); } }
     void setHaptics(boolean on) { haptics = on; }
+    boolean isControls() { return controls; }
+    void setControls(boolean on) { if (on != controls) { controls = on; stopRepeat(); tracking = false; zone = -1; centerPressed = false; invalidate(); } }
+
+    private final Runnable repeat = new Runnable() {
+        @Override public void run() {
+            if (!tracking || !controls || zone < 0) return;
+            tick();
+            if (listener != null) listener.onDirection(zone);
+            postDelayed(this, REPEAT_MS);
+        }
+    };
+    private void stopRepeat() { removeCallbacks(repeat); }
+    @Override protected void onDetachedFromWindow() { stopRepeat(); super.onDetachedFromWindow(); }
+
     void setPlaying(boolean on) { if (on != playing) { playing = on; invalidate(); } }
 
     @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
@@ -78,6 +96,11 @@ final class ClickWheelView extends View {
                 centerPressed = inCenter;
                 zone = inCenter ? -1 : zoneOf(lastAngle);
                 invalidate();
+                if (controls && zone >= 0) {   // an arrow key fires at once and repeats while it is held
+                    tick();
+                    if (listener != null) listener.onDirection(zone);
+                    postDelayed(repeat, REPEAT_FIRST_MS);
+                }
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
@@ -86,6 +109,7 @@ final class ClickWheelView extends View {
                     if (Math.hypot(x - downX, y - downY) > slop * 2) { canceled = true; centerPressed = false; invalidate(); }
                     return true;
                 }
+                if (controls) return true;   // arrows do not rotate
                 float a = angleOf(x, y);
                 float d = a - lastAngle;
                 if (d > 180) d -= 360; else if (d < -180) d += 360;
@@ -103,8 +127,9 @@ final class ClickWheelView extends View {
             case MotionEvent.ACTION_UP: {
                 if (!tracking) return false;
                 tracking = false;
+                stopRepeat();
                 boolean wasCenter = inCenter, ok = !dragged && !canceled;
-                int z = zone;
+                int z = controls ? -1 : zone;
                 centerPressed = false; zone = -1;
                 invalidate();
                 if (ok && listener != null) {
@@ -121,6 +146,7 @@ final class ClickWheelView extends View {
                 return true;
             }
             case MotionEvent.ACTION_CANCEL:
+                stopRepeat();
                 tracking = false; centerPressed = false; zone = -1; invalidate();
                 return true;
             default:
@@ -185,6 +211,7 @@ final class ClickWheelView extends View {
         p.setTextAlign(Paint.Align.CENTER);
         p.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         p.setTextSize(outerR * 0.12f);
+        if (controls) { drawArrows(c, mid, g); return; }
         c.drawText("MENU", cx, cy - mid + p.getTextSize() * 0.36f, p);
         // previous: bar + two triangles pointing left
         float lx = cx - mid;
@@ -207,5 +234,20 @@ final class ClickWheelView extends View {
         c.drawPath(path, p);
         c.drawRect(cx + g * 0.2f, by - g, cx + g * 0.7f, by + g, p);
         c.drawRect(cx + g * 1.1f, by - g, cx + g * 1.6f, by + g, p);
+    }
+
+    /** Controls mode: four triangles pointing up, right, down, left. */
+    private void drawArrows(Canvas c, float mid, float g) {
+        float a = g * 1.5f;
+        for (int k = 0; k < 4; k++) {
+            float ax = cx + (k == 1 ? mid : k == 3 ? -mid : 0), ay = cy + (k == 0 ? -mid : k == 2 ? mid : 0);
+            path.reset();
+            if (k == 0) { path.moveTo(ax, ay - a); path.lineTo(ax - a, ay + a * 0.7f); path.lineTo(ax + a, ay + a * 0.7f); }
+            else if (k == 1) { path.moveTo(ax + a, ay); path.lineTo(ax - a * 0.7f, ay - a); path.lineTo(ax - a * 0.7f, ay + a); }
+            else if (k == 2) { path.moveTo(ax, ay + a); path.lineTo(ax - a, ay - a * 0.7f); path.lineTo(ax + a, ay - a * 0.7f); }
+            else { path.moveTo(ax - a, ay); path.lineTo(ax + a * 0.7f, ay - a); path.lineTo(ax + a * 0.7f, ay + a); }
+            path.close();
+            c.drawPath(path, p);
+        }
     }
 }

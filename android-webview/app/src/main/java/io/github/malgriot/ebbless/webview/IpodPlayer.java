@@ -17,6 +17,8 @@ import android.os.SystemClock;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.widget.LinearLayout;
@@ -46,6 +48,8 @@ final class IpodPlayer {
         void close();
     }
 
+    private interface BarCallback { void onToggle(); void onMenu(); }
+
     private static final int S_NOW = 0, S_MENU = 1, S_QUEUE = 2, S_LIB = 3, S_SET = 4, S_GAMES = 5, S_GAME = 6;
     private static final String[] MENU = {"Now Playing", "Library", "Queue", "Settings", "Games", "Exit iPod"};
     private static final String[] GAMES = {"Snake", "Tetris", "Match 3"};
@@ -59,6 +63,7 @@ final class IpodPlayer {
     private final LinearLayout root;
     private final ScreenView screen;
     private final ClickWheelView wheel;
+    private final GameBar gameBar;
     private final AudioManager audio;
     private final Bitmap logo;
 
@@ -75,6 +80,7 @@ final class IpodPlayer {
     private boolean adjustVolume;   // Settings > Volume row: the wheel turns the volume until Menu
     private long volShownAt;
     private IpodGame game;
+    private int gameIdx;
     private long lastTick;
     private final ArrayList<Bitmap> covers = new ArrayList<>();
     private final ArrayList<String> coversRequested = new ArrayList<>();
@@ -101,6 +107,11 @@ final class IpodPlayer {
 
         int availW = screenW - dp(16) - dp(28);
         int wheelS = Math.min(availW, Math.round(screenH * 0.40f));
+        gameBar = new GameBar(a);
+        gameBar.setVisibility(View.GONE);
+        LinearLayout.LayoutParams gl = new LinearLayout.LayoutParams(-1, dp(34));
+        gl.topMargin = dp(10);
+        root.addView(gameBar, gl);
         wheel = new ClickWheelView(a, accent);
         wheel.setHaptics(a.getSharedPreferences("ebb", Context.MODE_PRIVATE).getBoolean("ipodSoft", true));
         LinearLayout.LayoutParams wl = new LinearLayout.LayoutParams(wheelS, wheelS);
@@ -114,6 +125,11 @@ final class IpodPlayer {
             @Override public void onPrev() { PlaybackService.control("prev"); }
             @Override public void onNext() { PlaybackService.control("next"); }
             @Override public void onPlayPause() { togglePlay(); }
+            @Override public void onDirection(int dir) { if (scr == S_GAME && game != null) guard(() -> game.onDirection(dir)); }
+        });
+        gameBar.setCallback(new BarCallback() {
+            @Override public void onToggle() { setControls(!wheel.isControls()); }
+            @Override public void onMenu() { menu(); }
         });
     }
 
@@ -369,7 +385,10 @@ final class IpodPlayer {
             return;
         }
         game = g;
+        gameIdx = idx;
         scr = S_GAME;
+        gameBar.setVisibility(View.VISIBLE);
+        setControls(act.getSharedPreferences("ebb", Context.MODE_PRIVATE).getBoolean("ipodCtl" + idx, false));   // the wheel by default; the choice is remembered per game
         try { g.start(); } catch (Throwable t) { stopGame(); go(S_GAMES); return; }
         lastTick = SystemClock.uptimeMillis();
         ui.removeCallbacks(gameTick);
@@ -377,10 +396,18 @@ final class IpodPlayer {
         screen.invalidate();
     }
 
+    private void setControls(boolean on) {
+        wheel.setControls(on);
+        gameBar.setControls(on);
+        act.getSharedPreferences("ebb", Context.MODE_PRIVATE).edit().putBoolean("ipodCtl" + gameIdx, on).apply();
+    }
+
     private void stopGame() {
         ui.removeCallbacks(gameTick);
         IpodGame g = game;
         game = null;
+        wheel.setControls(false);   // outside a game the wheel is always the wheel
+        gameBar.setVisibility(View.GONE);
         if (g != null) { try { g.stop(); } catch (Throwable ignored) {} }
     }
 
@@ -451,6 +478,64 @@ final class IpodPlayer {
     private static String fmt(long ms) {
         long s = ms / 1000;
         return s >= 3600 ? String.format(Locale.US, "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60) : String.format(Locale.US, "%d:%02d", s / 60, s % 60);
+    }
+
+    /** The strip between the screen and the wheel while a game runs: a Wheel/Arrows switch (shows the current mode) and, in arrows mode, a Menu button. */
+    private final class GameBar extends View {
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF left = new RectF(), right = new RectF();
+        private BarCallback cb;
+        private boolean controls;
+        private int down;   // 0 none, 1 left, 2 right
+
+        GameBar(Context c) { super(c); setContentDescription("Game controls"); p.setTextAlign(Paint.Align.CENTER); }
+
+        void setCallback(BarCallback c) { cb = c; }
+        void setControls(boolean on) { controls = on; invalidate(); }
+
+        @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
+            float pw = dp(108), pw2 = dp(84);
+            left.set(dp(14), 1, dp(14) + pw, h - 1);
+            right.set(w - dp(14) - pw2, 1, w - dp(14), h - 1);
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent e) {
+            float x = e.getX(), y = e.getY();
+            int hit = left.contains(x, y) ? 1 : controls && right.contains(x, y) ? 2 : 0;
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN: down = hit; invalidate(); return hit != 0;
+                case MotionEvent.ACTION_UP: {
+                    int d = down; down = 0; invalidate();
+                    if (d != 0 && d == hit && cb != null) {
+                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                        if (d == 1) cb.onToggle(); else cb.onMenu();
+                    }
+                    return true;
+                }
+                case MotionEvent.ACTION_CANCEL: down = 0; invalidate(); return true;
+                default: return true;
+            }
+        }
+
+        private void pill(Canvas c, RectF r, String label, boolean pressed) {
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(pressed ? 0x66000000 : 0x38000000);
+            c.drawRoundRect(r, r.height() / 2, r.height() / 2, p);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(dp(1));
+            p.setColor(0x40FFFFFF);
+            c.drawRoundRect(r, r.height() / 2, r.height() / 2, p);
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(0xDDFFFFFF);
+            p.setTextSize(dp(12));
+            p.setFakeBoldText(true);
+            c.drawText(label, r.centerX(), r.centerY() + dp(4), p);
+        }
+
+        @Override protected void onDraw(Canvas c) {
+            pill(c, left, controls ? "ARROWS" : "WHEEL", down == 1);
+            if (controls) pill(c, right, "MENU", down == 2);
+        }
     }
 
     private final class ScreenView extends View {
