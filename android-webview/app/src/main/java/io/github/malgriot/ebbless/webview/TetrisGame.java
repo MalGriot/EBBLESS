@@ -114,7 +114,7 @@ final class TetrisGame implements IpodGame {
         int tier = TetrisLogic.clearTier(n);
         if (n == 2) fx(tier, "Double");
         else if (n == 3) fx(tier, "Triple");
-        else if (n == 4) fx(tier, "TETRIS!");
+        else if (n == 4) fx(tier, "EBBTRIS!");
         if (logic.lastB2B) fx(3, "Back to back");
         if (logic.lastLevelUp) fx(2, "Level " + (logic.level + 1));
     }
