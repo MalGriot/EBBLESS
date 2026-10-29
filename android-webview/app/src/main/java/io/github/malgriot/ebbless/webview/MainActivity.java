@@ -512,6 +512,8 @@ public class MainActivity extends Activity {
             @android.webkit.JavascriptInterface public void stop(final String id) { runOnUiThread(() -> voiceStop(id)); }
             /** Abandon the session without a result. */
             @android.webkit.JavascriptInterface public void cancel(final String id) { runOnUiThread(() -> voiceCancel(id)); }
+            /** #691: the page's current accent as #rrggbb; kept for the full-screen player (also across process death). */
+            @android.webkit.JavascriptInterface public void accent(String hex) { PlaybackService.setAccent(MainActivity.this, hex); }
             @android.webkit.JavascriptInterface public void accentOverride(String css) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putString("accentOverride", css == null ? "" : css).apply();
             }
