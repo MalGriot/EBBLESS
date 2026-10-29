@@ -11953,3 +11953,11 @@ Add entries in this shape:
 - **Touches:** index.html (Milestones section).
 - **Branch:** agent/milestones-delight
 - **Notes:** The iPod and its games get their own FX host (agent/ipod-shell-2, agent/ipod-games-2), still to merge.
+
+### ipod-v2: iPod v2: fullscreen, realistic body, color from the song, header clock, wheel/arrows toggle, library tabs, achievements FX; games renamed Ssswell, Ebbtris, Ebbazzled (owner 2026-10-29)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** See the owner list of 2026-10-29: fullscreen, achievements feel delicious, arrows mode, color from the song, realism (bevels, shadows, shine), time and date in the header, library opens to Playlists / Albums / Artists / Podcasts.
+- **Touches:** android-webview (IpodPlayer, ClickWheelView, IpodBody, IpodColor, IpodFxHost, games), index.html (library push, media actions).
+- **Branch:** agent/ipod-shell-2, agent/ipod-games-2
+- **Notes:** Android 2.16.0 (versionCode 34). Not on-device verified. Cut: brushed-metal look; podcasts start from the top of the show, no resume-latest.
