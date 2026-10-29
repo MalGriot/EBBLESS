@@ -316,28 +316,31 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         btnLike = icon(R.drawable.ic_media_heart, 48, 10);
         btnLike.setContentDescription("Like");
         btnLike.setOnClickListener(v -> { liked = !liked; btnLike.setImageResource(liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart); PlaybackService.control("like"); });
-        ImageView prev = icon(R.drawable.ic_media_prev, 64, 12);
+        ImageView prev = icon(R.drawable.ic_media_prev, 48, 8);
         prev.setContentDescription("Previous");
         prev.setOnClickListener(v -> PlaybackService.control("prev"));
-        btnPlay = icon(R.drawable.ic_media_play, 84, 22);
+        btnPlay = icon(R.drawable.ic_media_play, 76, 20);
         btnPlay.setContentDescription("Play or pause");
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL); circle.setColor(Color.WHITE);
         btnPlay.setBackground(circle);
         btnPlay.setColorFilter(0xFF121212, PorterDuff.Mode.SRC_IN);
         btnPlay.setOnClickListener(v -> { playing = !playing; showPlaying(); PlaybackService.control(playing ? "play" : "pause"); });
-        ImageView next = icon(R.drawable.ic_media_next, 64, 12);
+        ImageView next = icon(R.drawable.ic_media_next, 48, 8);
         next.setContentDescription("Next");
         next.setOnClickListener(v -> PlaybackService.control("next"));
         btnMode = icon(R.drawable.ic_media_visual, 48, 10);
         btnMode.setContentDescription("Change visual");
         btnMode.setOnClickListener(v -> cycleMode());
-        // five equal cells so the big play button sits exactly between big previous and next
+        // the play cell is a fixed width a little wider than the circle (so it can never be squeezed into an ellipse or clipped);
+        // the four side cells share the rest equally, which keeps the play button centered
+        row.setClipChildren(false); row.setClipToPadding(false);
         for (View v : new View[]{btnLike, prev, btnPlay, next, btnMode}) {
             FrameLayout cell = new FrameLayout(this);
+            cell.setClipChildren(false); cell.setClipToPadding(false);
             ViewGroup.LayoutParams p = v.getLayoutParams();
             cell.addView(v, new FrameLayout.LayoutParams(p.width, p.height, Gravity.CENTER));
-            row.addView(cell, new LinearLayout.LayoutParams(0, dp(88), 1f));
+            row.addView(cell, v == btnPlay ? new LinearLayout.LayoutParams(dp(84), dp(88)) : new LinearLayout.LayoutParams(0, dp(88), 1f));
         }
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-1, -2);
         rlp.topMargin = dp(8);
