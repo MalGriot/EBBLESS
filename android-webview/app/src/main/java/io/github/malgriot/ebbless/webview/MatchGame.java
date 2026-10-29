@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
@@ -23,7 +24,7 @@ import java.util.List;
  */
 final class MatchGame implements IpodGame {
     private static final int N = MatchLogic.N, SPRITE = 48, START_MOVES = 30;
-    private static final long SWAP_MS = 160, CLEAR_MS = 220, FALL_MS = 260;
+    private static final long SWAP_MS = 160, CLEAR_MS = 220, FALL_MS = 260, SHIMMER_MS = 600;
     private static final int IDLE = 0, SWAP = 1, SWAPBACK = 2, CLEAR = 3, FALL = 4, OVER = 5;
 
     private final SharedPreferences prefs;
@@ -40,7 +41,11 @@ final class MatchGame implements IpodGame {
     private final IpodGameArt.Label movesLbl = new IpodGameArt.Label("Moves ");
     private final IpodGameArt.Label bestLbl = new IpodGameArt.Label("Best ");
     private final int[] nbr = new int[4];
-    private int best, score, moves, cascade;
+    private final IpodGameArt.Pops pops = new IpodGameArt.Pops();
+    private final IpodGameArt.Label newBestLbl = new IpodGameArt.Label("New best! ");
+    private IpodFx fx;
+    private int best, score, moves, cascade, bestAtStart, shimmerMs;
+    private boolean pbFired, overFired;
     private int phase = IDLE;
     private long phaseT;
     private float clock;
@@ -74,7 +79,17 @@ final class MatchGame implements IpodGame {
         score = 0; moves = START_MOVES; cascade = 0;
         phase = IDLE; phaseT = 0;
         cursor = 0; sel = -1; nbrCount = 0; shuffleFlash = 0;
+        bestAtStart = best; pbFired = false; overFired = false; shimmerMs = 0;
+        pops.clear();
     }
+
+    @Override public void setFx(IpodFx fx) { this.fx = fx; }
+
+    private void fx(int tier, String text) {
+        if (fx != null) fx.achievement(tier, text);
+    }
+
+    private boolean newBest() { return score > 0 && score > bestAtStart; }
 
     @Override public void start() {
         resetBoard();
@@ -89,6 +104,8 @@ final class MatchGame implements IpodGame {
         if (dtMs < 0) dtMs = 0;
         clock += dtMs;
         if (shuffleFlash > 0) shuffleFlash = (int) Math.max(0, shuffleFlash - dtMs);
+        if (shimmerMs > 0) shimmerMs = (int) Math.max(0, shimmerMs - dtMs);
+        pops.update(dtMs);
         if (paused || phase == IDLE || phase == OVER) return;
         phaseT += dtMs;
         switch (phase) {
@@ -128,19 +145,39 @@ final class MatchGame implements IpodGame {
 
     private void beginClear() {
         int n = 0;
-        for (int i = 0; i < logic.mark.length; i++) if (logic.mark[i]) n++;
+        float sr = 0f, sc = 0f;
+        for (int i = 0; i < logic.mark.length; i++) {
+            if (logic.mark[i]) { n++; sr += i / N; sc += i % N; }
+        }
         cascade++;
-        score += n * 10 * cascade;
+        int gain = n * 10 * cascade;
+        score += gain;
         if (score > best) {
             best = score;
             prefs.edit().putInt("match_best", best).apply();
+        }
+        pops.add(sc / n + 0.5f, sr / n + 0.5f, gain, 0xFFFFFFFF);
+        // achievements (events, not per frame); logic.maxRun is still from the findMatches that led here
+        if (logic.maxRun >= 4) fx(1, "Great");
+        int tier = MatchLogic.cascadeTier(cascade);
+        if (tier == 3) fx(3, "Delicious!");
+        else if (tier == 2) fx(2, "Sweet!");
+        else if (tier == 1) fx(1, "Combo x" + cascade);
+        if (cascade >= 3 || logic.maxRun >= 5) shimmerMs = (int) SHIMMER_MS;
+        if (!pbFired && bestAtStart > 0 && score > bestAtStart) {
+            pbFired = true;
+            fx(2, "New best!");
         }
         phase = CLEAR; phaseT = 0;
     }
 
     private void endTurn() {
         phaseT = 0;
-        if (moves <= 0) { phase = OVER; return; }
+        if (moves <= 0) {
+            phase = OVER;
+            if (!overFired) { overFired = true; if (newBest()) fx(3, "New best"); }
+            return;
+        }
         phase = IDLE;
         if (!logic.hasMove()) {
             logic.reshuffle();
@@ -258,7 +295,11 @@ final class MatchGame implements IpodGame {
             if (y + cell < gy) continue;   // still above the board
             boolean clearing = clearK > 0f && logic.mark[i];
             float inset = cell * 0.04f;
-            if (clearing) inset += cell * 0.5f * clearK;
+            if (clearing) {
+                // pop: grow for the first 20%, then shrink away
+                inset += clearK < 0.2f ? -cell * 0.12f * (clearK / 0.2f)
+                        : cell * (-0.12f + 0.62f * ((clearK - 0.2f) / 0.8f));
+            }
             r.set(x + inset, y + inset, x + cell - inset, y + cell - inset);
             c.drawBitmap(sprites[t], null, r, bmp);
             if (t < 3 && !clearing) {
@@ -266,7 +307,16 @@ final class MatchGame implements IpodGame {
                 IpodGameArt.drawLpGlint(c, r, r2, (clock * 0.12f + i * 37f) % 360f, glint);
             }
         }
+        // shimmer: a soft light band sweeping across the board after a big combo (alpha only)
+        if (shimmerMs > 0) {
+            float k = 1f - shimmerMs / (float) SHIMMER_MS, bw = cell * 2f;
+            float bx = gx - bw + (cell * N + bw) * k;
+            fill.setColor(Color.argb((int) (70 * Math.sin(Math.PI * k)), 255, 255, 255));
+            r.set(bx, gy, bx + bw, gy + cell * N);
+            c.drawRect(r, fill);
+        }
         c.restore();
+        pops.draw(c, text, cell * 0.6f, gx, gy, cell, cell * 1.5f);
         // cursor, selection and swap target
         if (!paused && phase == IDLE) {
             stroke.setStrokeWidth(Math.max(2f, cell * 0.07f));
@@ -294,10 +344,11 @@ final class MatchGame implements IpodGame {
             c.drawText("No moves: reshuffled", s.centerX(), s.centerY(), text);
         }
         if (phase == OVER) {
-            overlay(c, s, "GAME OVER", scoreLbl.get(score), "Center: retry   Menu: exit");
+            if (newBest()) overlay(c, s, "GAME OVER", newBestLbl.get(score), "Center: retry   Menu: exit", 0xFFFFD34D);
+            else overlay(c, s, "GAME OVER", scoreLbl.get(score), "Center: retry   Menu: exit", 0xFFFFFFFF);
         } else if (paused) {
-            if (started) overlay(c, s, "PAUSED", "Swap tiles to match 3", "Center: resume   Menu: exit");
-            else overlay(c, s, "MATCH", "Wheel: move   Center: pick", "Center: start");
+            if (started) overlay(c, s, "PAUSED", "Swap tiles to match 3", "Center: resume   Menu: exit", 0xFFFFFFFF);
+            else overlay(c, s, "MATCH", "Wheel: move   Center: pick", "Center: start", 0xFFFFFFFF);
         }
     }
 
@@ -307,7 +358,7 @@ final class MatchGame implements IpodGame {
     }
 
     // Only runs on overlay screens (paused/game over), not during play.
-    private void overlay(Canvas c, RectF s, String a, String b, String d) {
+    private void overlay(Canvas c, RectF s, String a, String b, String d, int bColor) {
         fill.setColor(0xB0000000);
         c.drawRect(s, fill);
         float cx = s.centerX(), cy = s.centerY(), h = s.height();
@@ -315,7 +366,7 @@ final class MatchGame implements IpodGame {
         text.setColor(accent);
         text.setTextSize(h * 0.12f);
         c.drawText(a, cx, cy - h * 0.06f, text);
-        text.setColor(0xFFFFFFFF);
+        text.setColor(bColor);
         text.setTextSize(h * 0.065f);
         c.drawText(b, cx, cy + h * 0.04f, text);
         text.setColor(0xFFB0B0BC);

@@ -40,6 +40,14 @@ final class TetrisLogic {
     boolean over;
     /** Rows cleared by the most recent lock (for the game's flash). */
     int lastCleared;
+    /**
+     * Polled lock events (no callbacks): lockSeq goes up by one on every lock; the fields below describe that lock.
+     * lastClearRows holds the well rows (as they were before collapsing) of the lastCleared lines.
+     */
+    int lockSeq, lastLineScore;
+    final int[] lastClearRows = new int[4];
+    boolean lastLevelUp, lastB2B;
+    private boolean prevTetris;
     private final Random rnd;
     private final int[] bag = new int[7];
     private int bagPos = 7;
@@ -52,6 +60,7 @@ final class TetrisLogic {
     void reset() {
         for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) well[y][x] = 0;
         score = 0; lines = 0; level = 0; over = false; lastCleared = 0;
+        lockSeq = 0; lastLineScore = 0; lastLevelUp = false; lastB2B = false; prevTetris = false;
         bagPos = 7;
         nextType = drawBag();
         spawn();
@@ -147,6 +156,7 @@ final class TetrisLogic {
             boolean full = true;
             for (int x = 0; x < W; x++) if (well[y][x] == 0) { full = false; break; }
             if (full) {
+                if (cleared < 4) lastClearRows[cleared] = y - cleared;
                 cleared++;
                 for (int yy = y; yy > 0; yy--) System.arraycopy(well[yy - 1], 0, well[yy], 0, W);
                 for (int x = 0; x < W; x++) well[0][x] = 0;
@@ -155,10 +165,22 @@ final class TetrisLogic {
             }
         }
         lastCleared = cleared;
-        score += LINE_SCORE[cleared] * (level + 1);
+        lastLineScore = LINE_SCORE[cleared] * (level + 1);
+        score += lastLineScore;
         lines += cleared;
+        int oldLevel = level;
         level = lines / 10;
+        lastLevelUp = level > oldLevel;
+        lastB2B = cleared == 4 && prevTetris;
+        if (cleared == 4) prevTetris = true;
+        else if (cleared > 0) prevTetris = false;
+        lockSeq++;
         spawn();
+    }
+
+    /** Achievement tier for clearing n lines at once: 2 lines or 3 lines tier 1, 4 lines tier 2, else 0. */
+    static int clearTier(int n) {
+        return n == 4 ? 2 : (n >= 2 ? 1 : 0);
     }
 
     int gravityMs() {

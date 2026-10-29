@@ -28,6 +28,65 @@ final class IpodGameArt {
         }
     }
 
+    /**
+     * Floating "+N" score pops: a fixed set of slots, text kept in char buffers, so nothing is allocated while
+     * playing. Position is in cell units of the board. Driven only by update(dtMs); drawn with canvas transforms.
+     */
+    static final class Pops {
+        static final int MAX = 6;
+        static final float DURATION_MS = 700f;
+        private final float[] px = new float[MAX], py = new float[MAX], age = new float[MAX];
+        private final int[] len = new int[MAX], color = new int[MAX];
+        private final char[][] buf = new char[MAX][12];
+
+        Pops() { clear(); }
+
+        void clear() { for (int i = 0; i < MAX; i++) age[i] = -1f; }
+
+        void add(float x, float y, int value, int col) {
+            int slot = 0;
+            float oldest = -2f;
+            for (int i = 0; i < MAX; i++) {
+                if (age[i] < 0f) { slot = i; break; }
+                if (age[i] > oldest) { oldest = age[i]; slot = i; }
+            }
+            px[slot] = x; py[slot] = y; age[slot] = 0f; color[slot] = col;
+            char[] b = buf[slot];
+            int v = Math.max(0, value), n = 0;
+            do { b[n++] = (char) ('0' + v % 10); v /= 10; } while (v > 0 && n < 10);
+            b[n++] = '+';
+            len[slot] = n;
+            for (int i = 0, j = n - 1; i < j; i++, j--) { char t = b[i]; b[i] = b[j]; b[j] = t; }
+        }
+
+        void update(long dtMs) {
+            for (int i = 0; i < MAX; i++) {
+                if (age[i] < 0f) continue;
+                age[i] += dtMs;
+                if (age[i] >= DURATION_MS) age[i] = -1f;
+            }
+        }
+
+        /** (ox, oy) is the board origin in canvas pixels, cell the cell size; pops rise by rise pixels. */
+        void draw(Canvas c, Paint p, float textSize, float ox, float oy, float cell, float rise) {
+            p.setTextAlign(Paint.Align.CENTER);
+            p.setTextSize(textSize);
+            for (int i = 0; i < MAX; i++) {
+                if (age[i] < 0f) continue;
+                float k = age[i] / DURATION_MS;
+                float sc = k < 0.15f ? 0.6f + 0.6f * (k / 0.15f) : 1.2f - 0.2f * ((k - 0.15f) / 0.85f);
+                int a = (int) (255 * (1f - k * k));
+                p.setColor(color[i]);
+                p.setAlpha(a);
+                c.save();
+                c.translate(ox + px[i] * cell, oy + py[i] * cell - rise * k);
+                c.scale(sc, sc);
+                c.drawText(buf[i], 0, len[i], 0f, 0f, p);
+                c.restore();
+            }
+        }
+    }
+
     private static Paint aa() {
         return new Paint(Paint.ANTI_ALIAS_FLAG);
     }

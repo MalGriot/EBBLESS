@@ -16,7 +16,7 @@ import android.graphics.Typeface;
  * restart after game over. Menu = pause while playing, exit from pause or game over.
  */
 final class SnakeGame implements IpodGame {
-    private static final int COLS = 16, ROWS = 12, SPRITE = 48;
+    private static final int COLS = 16, ROWS = 12, SPRITE = 48, CHOMP_MS = 180;
 
     private final SharedPreferences prefs;
     private final SnakeLogic logic;
@@ -29,7 +29,11 @@ final class SnakeGame implements IpodGame {
     private final RectF r = new RectF(), r2 = new RectF();
     private final IpodGameArt.Label scoreLbl = new IpodGameArt.Label("Score ");
     private final IpodGameArt.Label bestLbl = new IpodGameArt.Label("Best ");
-    private int best;
+    private final IpodGameArt.Pops pops = new IpodGameArt.Pops();
+    private final IpodGameArt.Label newBestLbl = new IpodGameArt.Label("New best! ");
+    private IpodFx fx;
+    private int best, bestAtStart, chompMs;
+    private boolean pbFired, overFired;
     private int baseR, baseG, baseB;
     private long acc;
     private float clock;
@@ -50,8 +54,17 @@ final class SnakeGame implements IpodGame {
         glint.setStrokeCap(Paint.Cap.ROUND);
     }
 
+    @Override public void setFx(IpodFx fx) { this.fx = fx; }
+
+    private void fx(int tier, String text) {
+        if (fx != null) fx.achievement(tier, text);
+    }
+
     @Override public void start() {
         logic.reset();
+        bestAtStart = best;
+        pbFired = false; overFired = false; chompMs = 0;
+        pops.clear();
         acc = 0;
         paused = true;
         started = false;
@@ -63,17 +76,38 @@ final class SnakeGame implements IpodGame {
         if (dtMs > 100) dtMs = 100;
         if (dtMs < 0) dtMs = 0;
         clock += dtMs;
+        if (chompMs > 0) chompMs = (int) Math.max(0, chompMs - dtMs);
+        pops.update(dtMs);
         if (paused || logic.dead) return;
         acc += dtMs;
         int iv = logic.stepIntervalMs();
         while (acc >= iv && !logic.dead) {
             acc -= iv;
-            logic.step();
+            if (logic.step()) onEat();
         }
         if (logic.score > best) {
             best = logic.score;
             prefs.edit().putInt("snake_best", best).apply();
         }
+        if (logic.dead && !overFired) {
+            overFired = true;
+            if (newBest()) fx(3, "New best");
+        }
+    }
+
+    private boolean newBest() { return logic.score > 0 && logic.score > bestAtStart; }
+
+    // Runs once per snack, never per frame.
+    private void onEat() {
+        chompMs = CHOMP_MS;
+        pops.add(logic.segX(0) + 0.5f, logic.segY(0) + 0.3f, 10, 0xFFFFFFFF);
+        int tier = SnakeLogic.snackTier(logic.snacks);
+        if (tier > 0) fx(tier, "x" + logic.snacks);
+        if (!pbFired && bestAtStart > 0 && logic.score > bestAtStart) {
+            pbFired = true;
+            fx(2, "New best!");
+        }
+        if (logic.len == SnakeLogic.LENGTH_MILESTONE) fx(3, "Length " + logic.len);
     }
 
     @Override public void onRotate(int steps) {
@@ -143,19 +177,27 @@ final class SnakeGame implements IpodGame {
         }
         // head
         float hx = gx + logic.segX(0) * cell, hy = gy + logic.segY(0) * cell;
-        r.set(hx - cell * 0.05f, hy - cell * 0.05f, hx + cell * 1.05f, hy + cell * 1.05f);
+        float pulse = 1f;
+        if (chompMs > 0) {
+            float k = 1f - chompMs / (float) CHOMP_MS;
+            pulse = 1f + 0.35f * 4f * k * (1f - k);
+        }
+        float half = cell * 0.55f * pulse;
+        r.set(hx + cell * 0.5f - half, hy + cell * 0.5f - half, hx + cell * 0.5f + half, hy + cell * 0.5f + half);
         c.drawBitmap(head, null, r, bmp);
+        pops.draw(c, text, cell * 0.7f, gx, gy, cell, cell * 1.2f);
 
         if (logic.dead) {
-            overlay(c, s, "GAME OVER", scoreLbl.get(logic.score), "Center: retry   Menu: exit");
+            if (newBest()) overlay(c, s, "GAME OVER", newBestLbl.get(logic.score), "Center: retry   Menu: exit", 0xFFFFD34D);
+            else overlay(c, s, "GAME OVER", scoreLbl.get(logic.score), "Center: retry   Menu: exit", 0xFFFFFFFF);
         } else if (paused) {
-            if (started) overlay(c, s, "PAUSED", "Turn the wheel to steer", "Center: resume   Menu: exit");
-            else overlay(c, s, "SNAKE", "Turn the wheel to steer", "Center: start");
+            if (started) overlay(c, s, "PAUSED", "Turn the wheel to steer", "Center: resume   Menu: exit", 0xFFFFFFFF);
+            else overlay(c, s, "SNAKE", "Turn the wheel to steer", "Center: start", 0xFFFFFFFF);
         }
     }
 
     // Only runs on overlay screens (paused/game over), not during play.
-    private void overlay(Canvas c, RectF s, String a, String b, String d) {
+    private void overlay(Canvas c, RectF s, String a, String b, String d, int bColor) {
         fill.setColor(0xB0000000);
         c.drawRect(s, fill);
         float cx = s.centerX(), cy = s.centerY(), h = s.height();
@@ -163,7 +205,7 @@ final class SnakeGame implements IpodGame {
         text.setColor(accent);
         text.setTextSize(h * 0.12f);
         c.drawText(a, cx, cy - h * 0.06f, text);
-        text.setColor(0xFFFFFFFF);
+        text.setColor(bColor);
         text.setTextSize(h * 0.065f);
         c.drawText(b, cx, cy + h * 0.04f, text);
         text.setColor(0xFFB0B0BC);

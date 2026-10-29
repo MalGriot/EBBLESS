@@ -10,6 +10,8 @@ final class MatchLogic {
     final boolean[] mark = new boolean[N * N];
     /** Rows each cell fell in the last gravity() call (0 = did not move). */
     final int[] fall = new int[N * N];
+    /** Longest straight run (3+) found by the most recent findMatches() call, 0 if none. */
+    int maxRun;
     private final Random rnd;
 
     MatchLogic(long seed) {
@@ -29,6 +31,11 @@ final class MatchLogic {
                 g[r * N + c] = t;
             }
         }
+    }
+
+    /** Achievement tier for the nth clear of one turn: 1 none, 2-3 tier 1, 4-5 tier 2, 6+ tier 3. */
+    static int cascadeTier(int cascade) {
+        return cascade >= 6 ? 3 : (cascade >= 4 ? 2 : (cascade >= 2 ? 1 : 0));
     }
 
     boolean areNeighbours(int a, int b) {
@@ -53,13 +60,14 @@ final class MatchLogic {
 
     /** Fills mark[] with every cell in a 3+ run. Returns how many cells are marked. */
     int findMatches() {
+        maxRun = 0;
         for (int i = 0; i < mark.length; i++) mark[i] = false;
         for (int r = 0; r < N; r++) {
             int c = 0;
             while (c < N) {
                 int v = g[r * N + c], e = c + 1;
                 while (e < N && g[r * N + e] == v) e++;
-                if (v >= 0 && e - c >= 3) for (int k = c; k < e; k++) mark[r * N + k] = true;
+                if (v >= 0 && e - c >= 3) { if (e - c > maxRun) maxRun = e - c; for (int k = c; k < e; k++) mark[r * N + k] = true; }
                 c = e;
             }
         }
@@ -68,7 +76,7 @@ final class MatchLogic {
             while (r < N) {
                 int v = g[r * N + c], e = r + 1;
                 while (e < N && g[e * N + c] == v) e++;
-                if (v >= 0 && e - r >= 3) for (int k = r; k < e; k++) mark[k * N + c] = true;
+                if (v >= 0 && e - r >= 3) { if (e - r > maxRun) maxRun = e - r; for (int k = r; k < e; k++) mark[k * N + c] = true; }
                 r = e;
             }
         }

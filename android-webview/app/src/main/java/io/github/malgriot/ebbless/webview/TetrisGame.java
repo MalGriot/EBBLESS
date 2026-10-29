@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
@@ -16,7 +17,7 @@ import android.graphics.Typeface;
  * There is no soft drop (the wheel cannot hold a direction); gravity speeds up per level.
  */
 final class TetrisGame implements IpodGame {
-    private static final int TILE = 40;
+    private static final int TILE = 40, FLASH_MS = 120;
     private static final int[] COLORS = {
         0xFF35C3E8, 0xFFF2C230, 0xFFA45CE0, 0xFF4CC46A, 0xFFE84A4A, 0xFF3F6FE0, 0xFFF08A2E
     };
@@ -32,7 +33,12 @@ final class TetrisGame implements IpodGame {
     private final IpodGameArt.Label scoreLbl = new IpodGameArt.Label("");
     private final IpodGameArt.Label linesLbl = new IpodGameArt.Label("");
     private final IpodGameArt.Label levelLbl = new IpodGameArt.Label("");
-    private int best;
+    private final IpodGameArt.Pops pops = new IpodGameArt.Pops();
+    private final IpodGameArt.Label newBestLbl = new IpodGameArt.Label("New best! ");
+    private final int[] flashRows = new int[4];
+    private IpodFx fx;
+    private int best, bestAtStart, seenLock, flashCount, flashMs;
+    private boolean pbFired, overFired;
     private long acc;
     private boolean paused = true, started, controlsMode;
 
@@ -45,8 +51,18 @@ final class TetrisGame implements IpodGame {
         text.setTypeface(Typeface.DEFAULT_BOLD);
     }
 
+    @Override public void setFx(IpodFx fx) { this.fx = fx; }
+
+    private void fx(int tier, String text) {
+        if (fx != null) fx.achievement(tier, text);
+    }
+
     @Override public void start() {
         logic.reset();
+        bestAtStart = best;
+        seenLock = logic.lockSeq;
+        pbFired = false; overFired = false; flashCount = 0; flashMs = 0;
+        pops.clear();
         acc = 0;
         paused = true;
         started = false;
@@ -57,17 +73,50 @@ final class TetrisGame implements IpodGame {
     @Override public void update(long dtMs) {
         if (dtMs > 100) dtMs = 100;
         if (dtMs < 0) dtMs = 0;
+        if (flashMs > 0) flashMs = (int) Math.max(0, flashMs - dtMs);
+        pops.update(dtMs);
         if (paused || logic.over) return;
         acc += dtMs;
         int iv = logic.gravityMs();
         while (acc >= iv && !logic.over) {
             acc -= iv;
             logic.stepDown();
+            checkLock();
         }
+        checkLock();
         if (logic.score > best) {
             best = logic.score;
             prefs.edit().putInt("tetris_best", best).apply();
         }
+        if (!pbFired && bestAtStart > 0 && logic.score > bestAtStart) {
+            pbFired = true;
+            fx(2, "New best!");
+        }
+        if (logic.over && !overFired) {
+            overFired = true;
+            if (newBest()) fx(3, "New best");
+        }
+    }
+
+    private boolean newBest() { return logic.score > 0 && logic.score > bestAtStart; }
+
+    /** Reacts to a piece locking (gravity, soft drop or hard drop): flash, pop and achievements. Cheap when nothing locked. */
+    private void checkLock() {
+        if (logic.lockSeq == seenLock) return;
+        seenLock = logic.lockSeq;
+        int n = logic.lastCleared;
+        if (n == 0) return;
+        flashCount = n;
+        float mid = 0f;
+        for (int i = 0; i < n; i++) { flashRows[i] = logic.lastClearRows[i]; mid += flashRows[i] + 0.5f; }
+        flashMs = FLASH_MS;
+        pops.add(TetrisLogic.W / 2f, mid / n, logic.lastLineScore, 0xFFFFFFFF);
+        int tier = TetrisLogic.clearTier(n);
+        if (n == 2) fx(tier, "Double");
+        else if (n == 3) fx(tier, "Triple");
+        else if (n == 4) fx(tier, "TETRIS!");
+        if (logic.lastB2B) fx(3, "Back to back");
+        if (logic.lastLevelUp) fx(2, "Level " + (logic.level + 1));
     }
 
     /**
@@ -81,7 +130,7 @@ final class TetrisGame implements IpodGame {
         if (dir == DIR_LEFT) logic.move(-1);
         else if (dir == DIR_RIGHT) logic.move(1);
         else if (dir == DIR_UP) logic.rotateCW();
-        else { if (!logic.softDrop()) acc = 0; }
+        else if (!logic.softDrop()) { acc = 0; checkLock(); }
     }
 
     @Override public void onRotate(int steps) {
@@ -95,7 +144,7 @@ final class TetrisGame implements IpodGame {
     @Override public void onCenter() {
         if (logic.over) { start(); paused = false; started = true; return; }
         if (paused) { paused = false; started = true; return; }
-        if (controlsMode) { logic.hardDrop(); acc = 0; }
+        if (controlsMode) { logic.hardDrop(); acc = 0; checkLock(); }
         else logic.rotateCW();
     }
 
@@ -141,6 +190,15 @@ final class TetrisGame implements IpodGame {
                 if (cy >= 0) tile(c, logic.type, x0 + (logic.px + sh[k * 2]) * cell, y0 + cy * cell, cell);
             }
         }
+        // clear flash: white sweep over the cleared rows (alpha only), then score pops
+        if (flashMs > 0) {
+            fill.setColor(Color.argb((int) (220 * flashMs / (float) FLASH_MS), 255, 255, 255));
+            for (int i = 0; i < flashCount; i++) {
+                r.set(x0, y0 + flashRows[i] * cell, x0 + wellW, y0 + (flashRows[i] + 1) * cell);
+                c.drawRect(r, fill);
+            }
+        }
+        pops.draw(c, text, cell * 0.9f, x0, y0, cell, cell * 2f);
         // side panel
         float px = x0 + wellW + cell * 0.5f, pw = cell * (panelCells - 0.1f);
         float ts = cell * 0.62f;
@@ -166,15 +224,16 @@ final class TetrisGame implements IpodGame {
         c.drawText(levelLbl.get(logic.level + 1), px, ly + ts * 6.15f, text);
 
         if (logic.over) {
-            overlay(c, s, "GAME OVER", scoreLbl.get(logic.score), "Center: retry   Menu: exit");
+            if (newBest()) overlay(c, s, "GAME OVER", newBestLbl.get(logic.score), "Center: retry   Menu: exit", 0xFFFFD34D);
+            else overlay(c, s, "GAME OVER", scoreLbl.get(logic.score), "Center: retry   Menu: exit", 0xFFFFFFFF);
         } else if (paused) {
-            if (started) overlay(c, s, "PAUSED", "Wheel: move   Center: rotate", "Center: resume   Menu: exit");
-            else overlay(c, s, "TETRIS", "Wheel: move   Center: rotate", "Center: start");
+            if (started) overlay(c, s, "PAUSED", "Wheel: move   Center: rotate", "Center: resume   Menu: exit", 0xFFFFFFFF);
+            else overlay(c, s, "TETRIS", "Wheel: move   Center: rotate", "Center: start", 0xFFFFFFFF);
         }
     }
 
     // Only runs on overlay screens (paused/game over), not during play.
-    private void overlay(Canvas c, RectF s, String a, String b, String d) {
+    private void overlay(Canvas c, RectF s, String a, String b, String d, int bColor) {
         fill.setColor(0xB0000000);
         c.drawRect(s, fill);
         float cx = s.centerX(), cy = s.centerY(), h = s.height();
@@ -182,7 +241,7 @@ final class TetrisGame implements IpodGame {
         text.setColor(accent);
         text.setTextSize(h * 0.12f);
         c.drawText(a, cx, cy - h * 0.06f, text);
-        text.setColor(0xFFFFFFFF);
+        text.setColor(bColor);
         text.setTextSize(h * 0.065f);
         c.drawText(b, cx, cy + h * 0.04f, text);
         text.setColor(0xFFB0B0BC);

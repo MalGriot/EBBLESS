@@ -18,6 +18,8 @@ final class SnakeLogic {
     int nq;
     int foodX, foodY, foodType; // type 0 = LP, 1 = cassette
     int score;
+    /** Snacks eaten this run. */
+    int snacks;
     boolean dead;
     private final Random rnd;
 
@@ -40,6 +42,7 @@ final class SnakeLogic {
         dir = 1;
         nq = 0;
         score = 0;
+        snacks = 0;
         dead = false;
         placeFood();
     }
@@ -53,6 +56,15 @@ final class SnakeLogic {
         if (nq >= 2) return false;
         turnQ[nq++] = sign > 0 ? 1 : -1;
         return true;
+    }
+
+    /** Length that earns the big achievement. */
+    static final int LENGTH_MILESTONE = 25;
+
+    /** Achievement tier for eating snack number n: every 5 is tier 1, every 10 tier 2, else 0. */
+    static int snackTier(int n) {
+        if (n <= 0 || n % 5 != 0) return 0;
+        return n % 10 == 0 ? 2 : 1;
     }
 
     /** Heading after every queued turn has been applied. */
@@ -120,6 +132,7 @@ final class SnakeLogic {
         if (eat) {
             len++;
             score += 10;
+            snacks++;
             placeFood();
         }
         return eat;

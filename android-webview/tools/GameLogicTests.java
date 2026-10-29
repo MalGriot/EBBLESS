@@ -63,6 +63,13 @@ public class GameLogicTests {
         ok(!d.setHeading(2), "queue full of 2");
         d.step(); ok(d.dir == 0, "step applies first heading");
         d.step(); ok(d.dir == 3, "step applies second heading");
+        ok(SnakeLogic.snackTier(4) == 0 && SnakeLogic.snackTier(5) == 1 && SnakeLogic.snackTier(10) == 2
+                && SnakeLogic.snackTier(15) == 1 && SnakeLogic.snackTier(20) == 2 && SnakeLogic.snackTier(0) == 0, "snack tiers");
+        SnakeLogic sn = new SnakeLogic(16, 12, true, 8);
+        for (int i = 0; i < 5; i++) { sn.foodX = sn.segX(0) + 1; sn.foodY = sn.segY(0); ok(sn.step(), "ate"); }
+        ok(sn.snacks == 5 && sn.len == 8 && sn.score == 50, "snack counter tracks eaten");
+        sn.reset();
+        ok(sn.snacks == 0, "snack counter resets");
         SnakeLogic d2 = new SnakeLogic(16, 12, true, 6);
         d2.foodX = 0; d2.foodY = 0;
         d2.setHeading(2); d2.step();
@@ -113,6 +120,33 @@ public class GameLogicTests {
         ok(new TetrisLogic(1).gravityMs() > 0, "gravity positive");
         TetrisLogic lv = new TetrisLogic(1); lv.level = 5;
         ok(lv.gravityMs() < new TetrisLogic(1).gravityMs(), "gravity speeds up with level");
+        // lock events: double clear, rows, line score, b2b, level up
+        TetrisLogic ev = new TetrisLogic(21);
+        for (int y = 18; y < 20; y++) for (int x = 0; x < 10; x++) if (x != 0) ev.well[y][x] = 3;
+        ev.type = 0; ev.rot = 1; ev.px = -2; ev.py = 0;     // vertical I in column 0 (x offset 2 -> col 0)
+        int seq0 = ev.lockSeq;
+        while (ev.lockSeq == seq0) ev.stepDown();
+        ok(ev.lastCleared == 2 && ev.lockSeq == seq0 + 1, "double clear event");
+        ok(ev.lastClearRows[0] == 19 && ev.lastClearRows[1] == 18, "cleared rows are the original rows");
+        ok(ev.lastLineScore == 100 && TetrisLogic.clearTier(2) == 1 && TetrisLogic.clearTier(3) == 1
+                && TetrisLogic.clearTier(4) == 2 && TetrisLogic.clearTier(1) == 0, "line score and tiers");
+        ok(!ev.lastLevelUp && !ev.lastB2B, "no level up or b2b on a double");
+        // tetris twice in a row: second is back-to-back
+        TetrisLogic bb = new TetrisLogic(22);
+        for (int round = 0; round < 2; round++) {
+            for (int y = 16; y < 20; y++) for (int x = 0; x < 10; x++) bb.well[y][x] = x == 0 ? 0 : 3;
+            bb.type = 0; bb.rot = 1; bb.px = -2; bb.py = 0;
+            int sq = bb.lockSeq;
+            while (bb.lockSeq == sq) bb.stepDown();
+            ok(bb.lastCleared == 4, "tetris clears 4");
+            ok(bb.lastB2B == (round == 1), "back-to-back only on the second tetris");
+        }
+        TetrisLogic lu = new TetrisLogic(23);
+        lu.lines = 9;
+        for (int x = 0; x < 10; x++) if (x < 4 || x > 7) lu.well[19][x] = 3;
+        lu.type = 0; lu.rot = 0; lu.px = 4; lu.py = 0;
+        while (lu.stepDown()) { }
+        ok(lu.lastLevelUp && lu.level == 1, "level up flagged at 10 lines");
         // arrows mode: soft and hard drop
         TetrisLogic sd = new TetrisLogic(3);
         int y0 = sd.py, s0 = sd.score;
@@ -170,6 +204,19 @@ public class GameLogicTests {
             ok(guard < 100, "cascade terminates");
             for (int i = 0; i < 64; i++) ok(c.g[i] >= 0, "board full");
         }
+        // maxRun and cascade tiers
+        MatchLogic mr = new MatchLogic(8);
+        for (int i = 0; i < 64; i++) mr.g[i] = (i / 8 + i % 8 * 2) % 7;
+        ok(mr.findMatches() == 0 && mr.maxRun == 0, "maxRun zero without matches");
+        for (int k = 8; k < 13; k++) mr.g[k] = 3;
+        ok(mr.findMatches() >= 5 && mr.maxRun == 5, "maxRun reports a line of 5");
+        for (int i = 0; i < 64; i++) mr.g[i] = (i / 8 + i % 8 * 2) % 7;
+        mr.g[8] = 3; mr.g[9] = 3; mr.g[10] = 3; mr.g[11] = 3;
+        mr.findMatches();
+        ok(mr.maxRun == 4, "maxRun reports a line of 4");
+        ok(MatchLogic.cascadeTier(1) == 0 && MatchLogic.cascadeTier(2) == 1 && MatchLogic.cascadeTier(3) == 1
+                && MatchLogic.cascadeTier(4) == 2 && MatchLogic.cascadeTier(5) == 2 && MatchLogic.cascadeTier(6) == 3
+                && MatchLogic.cascadeTier(9) == 3, "cascade tiers");
         // arrows mode: neighbour lookup clamps at the edges
         ok(MatchLogic.neighbour(0, 0) == -1 && MatchLogic.neighbour(0, 3) == -1, "no neighbour past top-left");
         ok(MatchLogic.neighbour(0, 1) == 1 && MatchLogic.neighbour(0, 2) == 8, "right and down from 0");
