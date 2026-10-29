@@ -82,6 +82,12 @@ final class SnakeGame implements IpodGame {
         for (int i = 0; i < n; i++) logic.queueTurn(steps > 0 ? 1 : -1);
     }
 
+    /** Arrows mode: absolute heading; a direct reversal into the neck is ignored. */
+    @Override public void onDirection(int dir) {
+        if (paused || logic.dead) return;
+        logic.setHeading(dir);
+    }
+
     @Override public void onCenter() {
         if (logic.dead) { start(); paused = false; started = true; return; }
         paused = !paused;

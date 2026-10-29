@@ -52,6 +52,21 @@ public class GameLogicTests {
         c.queueTurn(1); c.step();
         c.queueTurn(1); c.step();
         ok(c.dead, "self collision kills");
+        // arrows mode: absolute heading
+        SnakeLogic d = new SnakeLogic(16, 12, true, 6);
+        d.foodX = 0; d.foodY = 0;
+        ok(!d.setHeading(3), "reversal into neck ignored");
+        ok(!d.setHeading(1), "same heading ignored");
+        ok(d.setHeading(0) && d.effectiveDir() == 0, "up from right");
+        ok(!d.setHeading(2), "reversal of queued heading ignored");
+        ok(d.setHeading(3) && d.effectiveDir() == 3, "second queued turn up -> left");
+        ok(!d.setHeading(2), "queue full of 2");
+        d.step(); ok(d.dir == 0, "step applies first heading");
+        d.step(); ok(d.dir == 3, "step applies second heading");
+        SnakeLogic d2 = new SnakeLogic(16, 12, true, 6);
+        d2.foodX = 0; d2.foodY = 0;
+        d2.setHeading(2); d2.step();
+        ok(d2.dir == 2, "right -> down");
     }
 
     static void tetris() {
@@ -98,6 +113,21 @@ public class GameLogicTests {
         ok(new TetrisLogic(1).gravityMs() > 0, "gravity positive");
         TetrisLogic lv = new TetrisLogic(1); lv.level = 5;
         ok(lv.gravityMs() < new TetrisLogic(1).gravityMs(), "gravity speeds up with level");
+        // arrows mode: soft and hard drop
+        TetrisLogic sd = new TetrisLogic(3);
+        int y0 = sd.py, s0 = sd.score;
+        ok(sd.softDrop() && sd.py == y0 + 1 && sd.score == s0 + 1, "soft drop one row +1");
+        TetrisLogic hd = new TetrisLogic(3);
+        int first2 = hd.type;
+        int rows = hd.hardDrop();
+        ok(rows > 10 && hd.score == 2 * rows && !hd.over, "hard drop to floor, +2 per row");
+        boolean any2 = false;
+        for (int x = 0; x < 10; x++) if (hd.well[19][x] == first2 + 1) any2 = true;
+        ok(any2, "hard drop locked in bottom row");
+        TetrisLogic rest = new TetrisLogic(3);
+        while (rest.fits(rest.type, rest.rot, rest.px, rest.py + 1)) rest.py++;
+        int before = rest.score;
+        ok(!rest.softDrop() && rest.score == before, "soft drop on floor locks without bonus");
     }
 
     static void match() {
@@ -140,5 +170,11 @@ public class GameLogicTests {
             ok(guard < 100, "cascade terminates");
             for (int i = 0; i < 64; i++) ok(c.g[i] >= 0, "board full");
         }
+        // arrows mode: neighbour lookup clamps at the edges
+        ok(MatchLogic.neighbour(0, 0) == -1 && MatchLogic.neighbour(0, 3) == -1, "no neighbour past top-left");
+        ok(MatchLogic.neighbour(0, 1) == 1 && MatchLogic.neighbour(0, 2) == 8, "right and down from 0");
+        ok(MatchLogic.neighbour(63, 1) == -1 && MatchLogic.neighbour(63, 2) == -1, "no neighbour past bottom-right");
+        ok(MatchLogic.neighbour(63, 0) == 55 && MatchLogic.neighbour(63, 3) == 62, "up and left from 63");
+        ok(MatchLogic.neighbour(7, 1) == -1 && MatchLogic.neighbour(8, 3) == -1, "no wrap across rows");
     }
 }

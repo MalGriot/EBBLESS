@@ -34,7 +34,7 @@ final class TetrisGame implements IpodGame {
     private final IpodGameArt.Label levelLbl = new IpodGameArt.Label("");
     private int best;
     private long acc;
-    private boolean paused = true, started;
+    private boolean paused = true, started, controlsMode;
 
     TetrisGame(Context ctx, int accentColor, Bitmap logo) {
         accent = accentColor;
@@ -70,7 +70,22 @@ final class TetrisGame implements IpodGame {
         }
     }
 
+    /**
+     * Arrows mode: left/right move one column, up rotates clockwise, down drops one row (+1 score, locks when
+     * resting). The game gets no mode flag, so the first onDirection switches centre to hard drop; onRotate (the
+     * wheel) switches it back to rotate.
+     */
+    @Override public void onDirection(int dir) {
+        controlsMode = true;
+        if (paused || logic.over) return;
+        if (dir == DIR_LEFT) logic.move(-1);
+        else if (dir == DIR_RIGHT) logic.move(1);
+        else if (dir == DIR_UP) logic.rotateCW();
+        else { if (!logic.softDrop()) acc = 0; }
+    }
+
     @Override public void onRotate(int steps) {
+        controlsMode = false;
         if (paused || logic.over) return;
         int dir = steps > 0 ? 1 : -1;
         int n = Math.min(Math.abs(steps), 4);
@@ -80,7 +95,8 @@ final class TetrisGame implements IpodGame {
     @Override public void onCenter() {
         if (logic.over) { start(); paused = false; started = true; return; }
         if (paused) { paused = false; started = true; return; }
-        logic.rotateCW();
+        if (controlsMode) { logic.hardDrop(); acc = 0; }
+        else logic.rotateCW();
     }
 
     @Override public boolean onMenu() {

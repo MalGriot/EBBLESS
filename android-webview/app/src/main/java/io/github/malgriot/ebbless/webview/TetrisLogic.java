@@ -117,6 +117,24 @@ final class TetrisLogic {
         return false;
     }
 
+    /** Arrows mode DOWN: drop one row (+1 score) or lock if resting. Returns true if the piece moved. */
+    boolean softDrop() {
+        if (over) return false;
+        if (fits(type, rot, px, py + 1)) { py++; score += 1; return true; }
+        lock();
+        return false;
+    }
+
+    /** Arrows mode centre: drop to the floor and lock (+2 score per row). Returns rows dropped. */
+    int hardDrop() {
+        if (over) return 0;
+        int n = 0;
+        while (fits(type, rot, px, py + 1)) { py++; n++; }
+        score += 2 * n;
+        lock();
+        return n;
+    }
+
     private void lock() {
         int[] s = SHAPES[type][rot];
         for (int k = 0; k < 4; k++) {

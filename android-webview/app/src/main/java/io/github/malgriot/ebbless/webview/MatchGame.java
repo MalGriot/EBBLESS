@@ -45,7 +45,7 @@ final class MatchGame implements IpodGame {
     private long phaseT;
     private float clock;
     private int cursor, sel = -1, nbrCount, nbrPos, swapA, swapB, shuffleFlash;
-    private boolean paused = true, started;
+    private boolean paused = true, started, controlsMode;
 
     MatchGame(Context ctx, int accentColor, Bitmap logo, List<Bitmap> covers) {
         accent = accentColor;
@@ -159,11 +159,33 @@ final class MatchGame implements IpodGame {
     }
 
     @Override public void onRotate(int steps) {
+        controlsMode = false;
         if (paused || phase != IDLE) return;
         if (sel < 0) {
             cursor = ((cursor + steps) % (N * N) + N * N) % (N * N);
         } else {
             nbrPos = ((nbrPos + steps) % nbrCount + nbrCount) % nbrCount;
+        }
+    }
+
+    /**
+     * Arrows mode: a direction moves the cursor (clamped); with a cell selected it swaps with that neighbour in one
+     * press. Centre then selects, and cancels a selection (see controlsMode, set here, cleared by onRotate).
+     */
+    @Override public void onDirection(int dir) {
+        controlsMode = true;
+        if (paused || phase != IDLE) return;
+        if (sel < 0) {
+            int n = MatchLogic.neighbour(cursor, dir);
+            if (n >= 0) cursor = n;
+        } else {
+            int n = MatchLogic.neighbour(sel, dir);
+            if (n < 0) return;
+            swapA = sel; swapB = n;
+            logic.swap(swapA, swapB);
+            cursor = swapB;
+            sel = -1; nbrCount = 0;
+            phase = SWAP; phaseT = 0;
         }
     }
 
@@ -174,6 +196,8 @@ final class MatchGame implements IpodGame {
         if (sel < 0) {
             sel = cursor;
             buildNeighbours();
+        } else if (controlsMode) {
+            sel = -1; nbrCount = 0;
         } else {
             swapA = sel; swapB = nbr[nbrPos];
             logic.swap(swapA, swapB);
@@ -256,9 +280,11 @@ final class MatchGame implements IpodGame {
                 c.drawRoundRect(r, cell * 0.2f, cell * 0.2f, fill);
                 stroke.setColor(accent);
                 c.drawRoundRect(r, cell * 0.2f, cell * 0.2f, stroke);
-                stroke.setColor(0xFFFFFFFF);
-                cellRect(gx, gy, cell, nbr[nbrPos]);
-                c.drawRoundRect(r, cell * 0.2f, cell * 0.2f, stroke);
+                if (!controlsMode) {
+                    stroke.setColor(0xFFFFFFFF);
+                    cellRect(gx, gy, cell, nbr[nbrPos]);
+                    c.drawRoundRect(r, cell * 0.2f, cell * 0.2f, stroke);
+                }
             }
         }
         if (shuffleFlash > 0 && phase != OVER) {

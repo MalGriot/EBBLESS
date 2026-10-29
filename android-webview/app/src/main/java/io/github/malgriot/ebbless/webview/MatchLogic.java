@@ -36,6 +36,17 @@ final class MatchLogic {
         return Math.abs(ar - br) + Math.abs(ac - bc) == 1;
     }
 
+    /** Cell next to idx in direction dir (0 up, 1 right, 2 down, 3 left), or -1 at the board edge. */
+    static int neighbour(int idx, int dir) {
+        int r = idx / N, c = idx % N;
+        switch (dir) {
+            case 0: return r > 0 ? idx - N : -1;
+            case 1: return c < N - 1 ? idx + 1 : -1;
+            case 2: return r < N - 1 ? idx + N : -1;
+            default: return c > 0 ? idx - 1 : -1;
+        }
+    }
+
     void swap(int a, int b) {
         int t = g[a]; g[a] = g[b]; g[b] = t;
     }

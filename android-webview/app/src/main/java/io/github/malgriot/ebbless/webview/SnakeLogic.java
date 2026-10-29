@@ -55,6 +55,23 @@ final class SnakeLogic {
         return true;
     }
 
+    /** Heading after every queued turn has been applied. */
+    int effectiveDir() {
+        int d = dir;
+        for (int i = 0; i < nq; i++) d = (d + turnQ[i] + 4) & 3;
+        return d;
+    }
+
+    /**
+     * Arrows mode: steer to an absolute heading (0 up, 1 right, 2 down, 3 left). Same heading and a direct
+     * reversal into the neck are ignored. Uses the same 2-turn queue as the wheel. Returns true if queued.
+     */
+    boolean setHeading(int abs) {
+        int diff = (abs - effectiveDir() + 4) & 3;
+        if (diff == 0 || diff == 2) return false;
+        return queueTurn(diff == 1 ? 1 : -1);
+    }
+
     /** Milliseconds per move: faster as the snake grows. */
     int stepIntervalMs() {
         return Math.max(75, 230 - 7 * (len - 3));
