@@ -82,6 +82,8 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     private String artUrl = "";
     private Bitmap artBmp;
     private int accent;
+    private GradientDrawable playCircle;
+    private ImageView btnClose, btnPrev, btnNext;
 
     private FrameLayout root, bg, artHolder, logoBox;
     private ImageView scrollArt, lavaLayer, artImg, btnLike, btnPlay, btnMode;
@@ -115,7 +117,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         screenW = getResources().getDisplayMetrics().widthPixels;
         screenH = getResources().getDisplayMetrics().heightPixels;
         artSize = Math.max(dp(200), Math.min(screenW - dp(32), screenH - dp(440)));
-        accent = clockColor();
+        accent = PlaybackService.accent(this, clockColor());   // the page's accent (index.html --clock-accent), saved copy, else the app's own clock color
         build();
         setContentView(root);
         cancelLaunchNotice();
@@ -189,7 +191,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         scrim.setBackgroundColor(0x66000000);
         bg.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
 
-        cym = new CymaticsView(this);
+        cym = new CymaticsView(this, accent);
         bg.addView(cym, new FrameLayout.LayoutParams(-1, -1));
 
         lavaLayer = new ImageView(this);
@@ -240,6 +242,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         clock.addView(tc); clock.addView(dc);
         top.addView(clock, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL));
         ImageView close = icon(R.drawable.ic_close, 48, 12);
+        btnClose = close;
         close.setContentDescription("Close");
         close.setOnClickListener(v -> finish());
         top.addView(close, new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START | Gravity.TOP));
@@ -316,17 +319,17 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         btnLike = icon(R.drawable.ic_media_heart, 48, 10);
         btnLike.setContentDescription("Like");
         btnLike.setOnClickListener(v -> { liked = !liked; btnLike.setImageResource(liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart); PlaybackService.control("like"); });
-        ImageView prev = icon(R.drawable.ic_media_prev, 48, 8);
+        ImageView prev = btnPrev = icon(R.drawable.ic_media_prev, 48, 8);
         prev.setContentDescription("Previous");
         prev.setOnClickListener(v -> PlaybackService.control("prev"));
         btnPlay = icon(R.drawable.ic_media_play, 76, 20);
         btnPlay.setContentDescription("Play or pause");
         GradientDrawable circle = new GradientDrawable();
-        circle.setShape(GradientDrawable.OVAL); circle.setColor(Color.WHITE);
+        circle.setShape(GradientDrawable.OVAL);
+        playCircle = circle;
         btnPlay.setBackground(circle);
-        btnPlay.setColorFilter(0xFF121212, PorterDuff.Mode.SRC_IN);
         btnPlay.setOnClickListener(v -> { playing = !playing; showPlaying(); PlaybackService.control(playing ? "play" : "pause"); });
-        ImageView next = icon(R.drawable.ic_media_next, 48, 8);
+        ImageView next = btnNext = icon(R.drawable.ic_media_next, 48, 8);
         next.setContentDescription("Next");
         next.setOnClickListener(v -> PlaybackService.control("next"));
         btnMode = icon(R.drawable.ic_media_visual, 48, 10);
@@ -345,6 +348,23 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-1, -2);
         rlp.topMargin = dp(8);
         panel.addView(row, rlp);
+        applyAccent();
+    }
+
+    /** Buttons wear the app's accent; the play circle is filled with it and its glyph uses the readable on-accent color (dark on light accents). */
+    private void applyAccent() {
+        for (ImageView v : new ImageView[]{btnLike, btnPrev, btnNext, btnMode, btnClose}) v.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
+        playCircle.setColor(accent);
+        btnPlay.setColorFilter(onAccent(accent), PorterDuff.Mode.SRC_IN);
+    }
+
+    /** index.html onAccentFor: WCAG relative luminance picks dark or white, whichever reads better on the accent. */
+    private static int onAccent(int c) {
+        double[] l = new double[3];
+        int[] ch = {Color.red(c), Color.green(c), Color.blue(c)};
+        for (int i = 0; i < 3; i++) { double v = ch[i] / 255.0; l[i] = v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+        double lum = 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2];
+        return (lum + 0.05) * (lum + 0.05) > 0.0585 ? 0xFF151107 : Color.WHITE;
     }
 
     private ImageView icon(int res, int sizeDp, int padDp) {
@@ -496,6 +516,8 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
     /** Pull the page's latest report (title, art, play state, liked, position). */
     private void refresh() {
+        int na = PlaybackService.accent(this, accent);
+        if (na != accent) { accent = na; applyAccent(); lavaTint.setBackgroundColor((accent & 0x00FFFFFF) | 0x38000000); cym.setColor(accent); }
         JSONObject j = PlaybackService.snapshot();
         String title = j == null ? "" : j.optString("t");
         titleTv.setText(title.isEmpty() ? "Nothing playing" : title);
@@ -642,13 +664,13 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         private int fam, nextFam;
         private float[] par, nextPar;
         private float mix, holdMs;
-        private final int color;
+        private int color;
         private final float dens;
 
-        CymaticsView(Context c) {
+        CymaticsView(Context c, int accent) {
             super(c);
             dens = c.getResources().getDisplayMetrics().density;
-            color = clockColor();
+            color = accent;
             for (int i = 0; i < N; i++) { gx[i] = rnd.nextFloat() * 2 - 1; gy[i] = rnd.nextFloat() * 2 - 1; }
             for (int b = 0; b < 4; b++) {
                 Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -662,6 +684,11 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         }
 
         void setPlaying(boolean p) { playing = p; }
+
+        void setColor(int c) {
+            color = c;
+            for (int b = 0; b < 4; b++) { paints[b].setColor(c); paints[b].setAlpha(Math.round(ALPHA[b] * 255)); }
+        }
 
         void setRunning(boolean r) {
             if (r == running) return;

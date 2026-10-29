@@ -25497,6 +25497,11 @@ function updateLibraryClockColor(){
   root.setProperty('--clock-tint', alpha(.22));
   root.setProperty('--clock-tint-splash', alpha(.4));
   ambientEl.style.setProperty('--clock-tint-ambient', 'transparent');   // same background on every screen (it used to be tinted in the library only)
+  // Android app: hand the current accent to the native full-screen player (#691); only when it changes
+  try {
+    const hex = '#' + [cr, cg, cb].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+    if (window.EbbNative && EbbNative.accent && updateLibraryClockColor.sent !== hex){ updateLibraryClockColor.sent = hex; EbbNative.accent(hex); }
+  } catch(e){}
 }
 updateLibraryClockColor();
 setTimeout(() => document.documentElement.classList.remove('clock-color-init'), 50);
