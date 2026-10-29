@@ -43,10 +43,11 @@ final class IpodPlayer {
     interface Host {
         void openApp();
         void cycleVisual();
+        void close();
     }
 
     private static final int S_NOW = 0, S_MENU = 1, S_QUEUE = 2, S_LIB = 3, S_SET = 4, S_GAMES = 5, S_GAME = 6;
-    private static final String[] MENU = {"Now Playing", "Library", "Queue", "Settings", "Games"};
+    private static final String[] MENU = {"Now Playing", "Library", "Queue", "Settings", "Games", "Exit iPod"};
     private static final String[] GAMES = {"Snake", "Tetris", "Match 3"};
     private static final String[] GAME_CLASSES = {"SnakeGame", "TetrisGame", "MatchGame"};
     private static final int TICK_MS = 33;   // ~30 fps while a game is on screen
@@ -199,7 +200,8 @@ final class IpodPlayer {
                     case 1: go(S_LIB); break;
                     case 2: go(S_QUEUE); break;
                     case 3: go(S_SET); break;
-                    default: go(S_GAMES); break;
+                    case 4: go(S_GAMES); break;
+                    default: host.close(); break;
                 }
                 break;
             case S_QUEUE: {
@@ -232,6 +234,7 @@ final class IpodPlayer {
                     case 0: toggleSoft(); break;
                     case 1: adjustVolume = !adjustVolume; screen.invalidate(); break;
                     case 2: host.cycleVisual(); break;
+                    case 3: host.close(); break;
                     default: host.openApp(); break;
                 }
                 break;
@@ -277,7 +280,7 @@ final class IpodPlayer {
             case S_MENU: return MENU.length;
             case S_QUEUE: { JSONArray q = snap == null ? null : snap.optJSONArray("q"); return q == null ? 0 : q.length(); }
             case S_LIB: return Math.max(1, PlaybackService.library(act).length());
-            case S_SET: return 4;
+            case S_SET: return 5;
             case S_GAMES: return GAMES.length;
             default: return 0;
         }
@@ -559,7 +562,7 @@ final class IpodPlayer {
                 String main = "", sub = "", val = "";
                 boolean chevron = false;
                 switch (scr) {
-                    case S_MENU: main = MENU[idx]; chevron = true; break;
+                    case S_MENU: main = MENU[idx]; chevron = idx != 5; break;
                     case S_QUEUE: {
                         JSONObject o = q.optJSONObject(idx);
                         main = o == null ? "" : o.optString("t");
@@ -575,6 +578,7 @@ final class IpodPlayer {
                         if (idx == 0) { main = "Soft sounds and vibration"; val = soft() ? "On" : "Off"; }
                         else if (idx == 1) { main = "Volume"; val = vol() + "/" + volMax(); }
                         else if (idx == 2) { main = "Visual mode"; val = "iPod"; }
+                        else if (idx == 3) { main = "Exit iPod"; chevron = true; }
                         else { main = "Open EBBLESS"; chevron = true; }
                         break;
                     case S_GAMES: main = GAMES[idx]; chevron = true; break;
