@@ -26,6 +26,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
@@ -70,6 +72,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     static final int NOTIF_ID = 3;
     static volatile FullScreenPlayerActivity live;
 
+    private static final int BASE = 0xFF121212;
     private static final int MODE_SCROLL = 0, MODE_CYMATICS = 1, MODE_LAVA = 2;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -81,10 +84,12 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     private String artUrl = "";
     private Bitmap artBmp;
     private int accent;
+    private GradientDrawable playCircle;
+    private ImageView btnClose, btnPrev, btnNext;
 
     private FrameLayout root, bg, artHolder, logoBox;
     private ImageView scrollArt, lavaLayer, artImg, btnLike, btnPlay, btnMode;
-    private View scrim, lavaTint, lavaVignette, spacer;
+    private View navFill, scrim, lavaTint, lavaVignette, spacer;
     private CymaticsView cym;
     private LinearLayout content, panel;
     private TextView titleTv, artistTv, elapsedTv, durTv;
@@ -106,13 +111,15 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
         else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(BASE);   // solid player base in every mode; the system must not tint it (no light-bar flag, no contrast scrim)
+        if (Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(BASE));
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         dp = getResources().getDisplayMetrics().density;
         screenW = getResources().getDisplayMetrics().widthPixels;
         screenH = getResources().getDisplayMetrics().heightPixels;
         artSize = Math.max(dp(200), Math.min(screenW - dp(32), screenH - dp(440)));
-        accent = clockColor();
+        accent = PlaybackService.accent(this, clockColor());   // the page's accent (index.html --clock-accent), saved copy, else the app's own clock color
         build();
         setContentView(root);
         cancelLaunchNotice();
@@ -186,7 +193,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         scrim.setBackgroundColor(0x66000000);
         bg.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
 
-        cym = new CymaticsView(this);
+        cym = new CymaticsView(this, accent);
         bg.addView(cym, new FrameLayout.LayoutParams(-1, -1));
 
         lavaLayer = new ImageView(this);
@@ -212,8 +219,15 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         root.addView(content, new FrameLayout.LayoutParams(-1, -1));
         root.setOnApplyWindowInsetsListener((v, in) -> {
             content.setPadding(in.getSystemWindowInsetLeft(), in.getSystemWindowInsetTop(), in.getSystemWindowInsetRight(), in.getSystemWindowInsetBottom());
+            FrameLayout.LayoutParams np = (FrameLayout.LayoutParams) navFill.getLayoutParams();
+            if (np.height != in.getSystemWindowInsetBottom()) { np.height = in.getSystemWindowInsetBottom(); navFill.setLayoutParams(np); }
             return in;
         });
+
+        // solid strip behind the system navigation bar so it reads as one dark surface with the player in every mode
+        navFill = new View(this);
+        navFill.setBackgroundColor(BASE);
+        root.addView(navFill, new FrameLayout.LayoutParams(-1, 0, Gravity.BOTTOM));
 
         // clock row
         FrameLayout top = new FrameLayout(this);
@@ -230,6 +244,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         clock.addView(tc); clock.addView(dc);
         top.addView(clock, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL));
         ImageView close = icon(R.drawable.ic_close, 48, 12);
+        btnClose = close;
         close.setContentDescription("Close");
         close.setOnClickListener(v -> finish());
         top.addView(close, new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START | Gravity.TOP));
@@ -306,32 +321,52 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         btnLike = icon(R.drawable.ic_media_heart, 48, 10);
         btnLike.setContentDescription("Like");
         btnLike.setOnClickListener(v -> { liked = !liked; btnLike.setImageResource(liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart); PlaybackService.control("like"); });
-        ImageView prev = icon(R.drawable.ic_media_prev, 64, 12);
+        ImageView prev = btnPrev = icon(R.drawable.ic_media_prev, 48, 8);
         prev.setContentDescription("Previous");
         prev.setOnClickListener(v -> PlaybackService.control("prev"));
-        btnPlay = icon(R.drawable.ic_media_play, 84, 22);
+        btnPlay = icon(R.drawable.ic_media_play, 76, 20);
         btnPlay.setContentDescription("Play or pause");
         GradientDrawable circle = new GradientDrawable();
-        circle.setShape(GradientDrawable.OVAL); circle.setColor(Color.WHITE);
+        circle.setShape(GradientDrawable.OVAL);
+        playCircle = circle;
         btnPlay.setBackground(circle);
-        btnPlay.setColorFilter(0xFF121212, PorterDuff.Mode.SRC_IN);
         btnPlay.setOnClickListener(v -> { playing = !playing; showPlaying(); PlaybackService.control(playing ? "play" : "pause"); });
-        ImageView next = icon(R.drawable.ic_media_next, 64, 12);
+        ImageView next = btnNext = icon(R.drawable.ic_media_next, 48, 8);
         next.setContentDescription("Next");
         next.setOnClickListener(v -> PlaybackService.control("next"));
         btnMode = icon(R.drawable.ic_media_visual, 48, 10);
         btnMode.setContentDescription("Change visual");
         btnMode.setOnClickListener(v -> cycleMode());
-        // five equal cells so the big play button sits exactly between big previous and next
+        // the play cell is a fixed width a little wider than the circle (so it can never be squeezed into an ellipse or clipped);
+        // the four side cells share the rest equally, which keeps the play button centered
+        row.setClipChildren(false); row.setClipToPadding(false);
         for (View v : new View[]{btnLike, prev, btnPlay, next, btnMode}) {
             FrameLayout cell = new FrameLayout(this);
+            cell.setClipChildren(false); cell.setClipToPadding(false);
             ViewGroup.LayoutParams p = v.getLayoutParams();
             cell.addView(v, new FrameLayout.LayoutParams(p.width, p.height, Gravity.CENTER));
-            row.addView(cell, new LinearLayout.LayoutParams(0, dp(88), 1f));
+            row.addView(cell, v == btnPlay ? new LinearLayout.LayoutParams(dp(84), dp(88)) : new LinearLayout.LayoutParams(0, dp(88), 1f));
         }
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(-1, -2);
         rlp.topMargin = dp(8);
         panel.addView(row, rlp);
+        applyAccent();
+    }
+
+    /** Buttons wear the app's accent; the play circle is filled with it and its glyph uses the readable on-accent color (dark on light accents). */
+    private void applyAccent() {
+        for (ImageView v : new ImageView[]{btnLike, btnPrev, btnNext, btnMode, btnClose}) v.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
+        playCircle.setColor(accent);
+        btnPlay.setColorFilter(onAccent(accent), PorterDuff.Mode.SRC_IN);
+    }
+
+    /** index.html onAccentFor: WCAG relative luminance picks dark or white, whichever reads better on the accent. */
+    static int onAccent(int c) {
+        double[] l = new double[3];
+        int[] ch = {Color.red(c), Color.green(c), Color.blue(c)};
+        for (int i = 0; i < 3; i++) { double v = ch[i] / 255.0; l[i] = v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+        double lum = 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2];
+        return (lum + 0.05) * (lum + 0.05) > 0.0585 ? 0xFF151107 : Color.WHITE;
     }
 
     private ImageView icon(int res, int sizeDp, int padDp) {
@@ -483,6 +518,8 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
     /** Pull the page's latest report (title, art, play state, liked, position). */
     private void refresh() {
+        int na = PlaybackService.accent(this, accent);
+        if (na != accent) { accent = na; applyAccent(); lavaTint.setBackgroundColor((accent & 0x00FFFFFF) | 0x38000000); cym.setColor(accent); }
         JSONObject j = PlaybackService.snapshot();
         String title = j == null ? "" : j.optString("t");
         titleTv.setText(title.isEmpty() ? "Nothing playing" : title);
@@ -592,7 +629,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     // ------------------------------------------------------------------ color clock
 
     /** The app's time-of-day accent (index.html vizRosicrucianColor, without the 5 minute blends). */
-    private static int clockColor() {
+    static int clockColor() {
         int[] lc = {0xe0b45c, 0xd98aa3, 0xa89aef, 0xd68a63, 0x9aa9bd, 0x5fcabf, 0xd17a72};   // A..G
         int[] ls = {6, 2, 5, 1, 4, 0, 3};
         Calendar n = Calendar.getInstance();
@@ -629,13 +666,13 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         private int fam, nextFam;
         private float[] par, nextPar;
         private float mix, holdMs;
-        private final int color;
+        private int color;
         private final float dens;
 
-        CymaticsView(Context c) {
+        CymaticsView(Context c, int accent) {
             super(c);
             dens = c.getResources().getDisplayMetrics().density;
-            color = clockColor();
+            color = accent;
             for (int i = 0; i < N; i++) { gx[i] = rnd.nextFloat() * 2 - 1; gy[i] = rnd.nextFloat() * 2 - 1; }
             for (int b = 0; b < 4; b++) {
                 Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -649,6 +686,77 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         }
 
         void setPlaying(boolean p) { playing = p; }
+
+        // ---- touch, ported from index.html's interactive plate: one finger blows the sand, a tap sends a ripple, two fingers tune
+        // (horizontal = frequency/zoom, vertical = twist). Zoom/twist are applied to the coordinates before field(), so every family responds.
+        private static final float ZOOM_MIN = (float) Math.log(0.55), ZOOM_MAX = (float) Math.log(2.2);
+        private final float slop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
+        private static final class Ripple { final float x, y; final long t0; Ripple(float x, float y, long t0) { this.x = x; this.y = y; this.t0 = t0; } }
+        private final ArrayList<Ripple> ripples = new ArrayList<>();   // plate coords
+        private float tuneZoomT, tuneTwistT, tuneZoom, tuneTwist;
+        private int touches;
+        private float lastCx, lastCy, fingerPx, fingerPy, tapX, tapY;
+        private long tapT;
+        private boolean tapValid;
+
+        @Override public boolean onTouchEvent(MotionEvent e) {
+            int act = e.getActionMasked();
+            switch (act) {
+                case MotionEvent.ACTION_DOWN:
+                    tapX = e.getX(); tapY = e.getY(); tapT = SystemClock.uptimeMillis(); tapValid = true;
+                    touches = 1; centroid(e, -1); fingerPx = lastCx; fingerPy = lastCy;
+                    break;
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    tapValid = false; touches = e.getPointerCount(); centroid(e, -1);
+                    break;
+                case MotionEvent.ACTION_MOVE: {
+                    float ox = lastCx, oy = lastCy;
+                    centroid(e, -1);
+                    if (e.getPointerCount() >= 2) tune(lastCx - ox, lastCy - oy);
+                    else { fingerPx = lastCx; fingerPy = lastCy; }
+                    if (tapValid && Math.hypot(lastCx - tapX, lastCy - tapY) > slop) tapValid = false;
+                    break;
+                }
+                case MotionEvent.ACTION_POINTER_UP:
+                    tapValid = false; touches = e.getPointerCount() - 1; centroid(e, e.getActionIndex());
+                    if (touches == 1) { fingerPx = lastCx; fingerPy = lastCy; }
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (tapValid && SystemClock.uptimeMillis() - tapT < 320) addRipple(tapX, tapY);
+                    touches = 0;
+                    break;
+                case MotionEvent.ACTION_CANCEL:
+                    touches = 0; tapValid = false;
+                    break;
+                default: return super.onTouchEvent(e);
+            }
+            if (running) postInvalidateOnAnimation();   // a touch redraws at once even from the paused 10 fps rhythm
+            return true;
+        }
+
+        /** Centroid of the pointers (optionally leaving one out, the one just lifted) into lastCx/lastCy. */
+        private void centroid(MotionEvent e, int skip) {
+            float x = 0, y = 0; int n = 0;
+            for (int i = 0; i < e.getPointerCount(); i++) { if (i == skip) continue; x += e.getX(i); y += e.getY(i); n++; }
+            if (n > 0) { lastCx = x / n; lastCy = y / n; }
+        }
+
+        private void tune(float dx, float dy) {
+            float size = Math.max(200 * dens, Math.min(getWidth(), getHeight()));
+            tuneZoomT = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, tuneZoomT + dx / size * 2.4f));
+            tuneTwistT += dy / size * 3f;
+        }
+
+        private void addRipple(float vx, float vy) {
+            float w = getWidth(), h = getHeight(), rad = (float) Math.hypot(w / 2, h / 2) / (float) Math.sqrt(2);
+            ripples.add(new Ripple((vx - w / 2) / rad, (vy - h / 2) / rad, SystemClock.uptimeMillis()));
+            if (ripples.size() > 6) ripples.remove(0);
+        }
+
+        void setColor(int c) {
+            color = c;
+            for (int b = 0; b < 4; b++) { paints[b].setColor(c); paints[b].setAlpha(Math.round(ALPHA[b] * 255)); }
+        }
 
         void setRunning(boolean r) {
             if (r == running) return;
@@ -692,15 +800,41 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             }
             float w = getWidth(), h = getHeight(), cx = w / 2, cy = h / 2;
             float radius = (float) Math.hypot(w / 2, h / 2) / (float) Math.sqrt(2);
+            // interactive: eased tuning folded into one scale/twist applied before field(); ripples in plate coords; one finger on the sand
+            float ease = Math.min(1f, dt / 140f);
+            tuneZoom += (tuneZoomT - tuneZoom) * ease;
+            tuneTwist += (tuneTwistT - tuneTwist) * ease;
+            float zoom = (float) Math.exp(tuneZoom);
+            float tCa = (float) Math.cos(tuneTwist) * zoom, tSa = (float) Math.sin(tuneTwist) * zoom;
+            for (int q = ripples.size() - 1; q >= 0; q--) if (now - ripples.get(q).t0 >= 2200) ripples.remove(q);
+            int nr = ripples.size();
+            boolean hasFinger = touches == 1;
+            float fingerX = (fingerPx - cx) / radius, fingerY = (fingerPy - cy) / radius;
             float jitter = playing ? 0.020f : 0.004f, step = playing ? 0.016f : 0.006f;
             cnt[0] = cnt[1] = cnt[2] = cnt[3] = 0;
             for (int i = 0; i < N; i++) {
                 float x = gx[i], y = gy[i];
-                float f = field(fam, x, y, par);
-                if (mix > 0) f = f * (1 - mix) + field(nextFam, x, y, nextPar) * mix;
+                float fx = x * tCa - y * tSa, fy = x * tSa + y * tCa;
+                float f = field(fam, fx, fy, par);
+                if (mix > 0) f = f * (1 - mix) + field(nextFam, fx, fy, nextPar) * mix;
+                for (int q = 0; q < nr; q++) {
+                    Ripple rp = ripples.get(q);
+                    float age = (now - rp.t0) / 1000f;
+                    float rd = (float) Math.hypot(x - rp.x, y - rp.y) - 0.9f * age;
+                    f += 1.1f * (float) (Math.exp(-(rd * rd) / 0.012) * Math.cos(16 * rd) * Math.exp(-age));
+                }
                 float amp = Math.min(1f, Math.abs(f) * 1.9f);
-                x += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp;
-                y += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp;
+                float pushX = 0, pushY = 0;
+                if (hasFinger) {
+                    float ddx = x - fingerX, ddy = y - fingerY, d2 = ddx * ddx + ddy * ddy, g = (float) Math.exp(-d2 / 0.034);
+                    if (g > 0.01f) {
+                        amp = Math.max(amp, Math.min(1f, g * 1.3f));
+                        float d = (float) Math.sqrt(d2) + 1e-4f;
+                        pushX = ddx / d * g * 0.018f; pushY = ddy / d * g * 0.018f;
+                    }
+                }
+                x += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp + pushX;
+                y += (rnd.nextFloat() - .5f) * jitter * (0.04f + amp) + (rnd.nextFloat() - .5f) * step * amp * amp + pushY;
                 if (x > 1) x = 1; else if (x < -1) x = -1;
                 if (y > 1) y = 1; else if (y < -1) y = -1;
                 gx[i] = x; gy[i] = y;
@@ -711,7 +845,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
                 pts[b][k + 1] = cy + y * radius;
             }
             for (int b = 0; b < 4; b++) if (cnt[b] > 0) cv.drawPoints(pts[b], 0, cnt[b] * 2, paints[b]);
-            if (running) postInvalidateDelayed(playing ? 33 : 100);
+            if (running) postInvalidateDelayed(playing || touches > 0 || nr > 0 ? 33 : 100);   // touched or rippling keeps full rate even when paused
         }
     }
 }

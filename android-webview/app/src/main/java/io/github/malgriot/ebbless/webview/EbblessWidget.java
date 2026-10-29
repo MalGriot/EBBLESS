@@ -29,14 +29,12 @@ import org.json.JSONObject;
  */
 public class EbblessWidget extends AppWidgetProvider {
     static final String ACT_CONTROL = "io.github.malgriot.ebbless.WIDGET_CONTROL";
-    private static final int FALLBACK_ACCENT = 0xFFAFA9EC;
     private static final long TICK_MS = 6_000;
 
     private static final Handler H = new Handler(Looper.getMainLooper());
     private static String lastSig = "";
     private static long lastAt;
-    private static Bitmap accentSource;   // the cover the cached accent was computed from
-    private static int accent = FALLBACK_ACCENT;
+    private static int accent;   // the app's accent (PlaybackService.accent), read on every draw so it works with no page running
 
     private static final Runnable TICK = new Runnable() {
         @Override public void run() {
@@ -94,9 +92,8 @@ public class EbblessWidget extends AppWidgetProvider {
             boolean active = !title.isEmpty();
             SharedPreferences sp = c.getSharedPreferences("ebb", Context.MODE_PRIVATE);
             Bitmap art = active ? PlaybackService.currentArt() : null;
-            if (art != null && art != accentSource) { accentSource = art; accent = accentOf(art); }
-            else if (art == null && active && accentSource == null) accent = sp.getInt("widgetAccent", FALLBACK_ACCENT);
-            else if (!active) accent = sp.getInt("widgetAccent", FALLBACK_ACCENT);
+            accent = PlaybackService.accent(c, FullScreenPlayerActivity.clockColor());   // the app's accent, same as the lock screen player
+            int onAccent = FullScreenPlayerActivity.onAccent(accent);
 
             boolean playing = active && j.optBoolean("pl");
             boolean liked = active && j.optBoolean("liked");
@@ -107,8 +104,8 @@ public class EbblessWidget extends AppWidgetProvider {
             if (!force && sameLook && !(playing && now - lastAt >= TICK_MS - 1000)) return;
             lastSig = sig; lastAt = now;
 
-            if (active && (!title.equals(sp.getString("widgetTitle", "")) || accent != sp.getInt("widgetAccent", 0))) {
-                sp.edit().putString("widgetTitle", title).putString("widgetArtist", artist).putInt("widgetAccent", accent).apply();
+            if (active && !title.equals(sp.getString("widgetTitle", ""))) {
+                sp.edit().putString("widgetTitle", title).putString("widgetArtist", artist).apply();
             }
 
             float d = c.getResources().getDisplayMetrics().density;
@@ -124,7 +121,7 @@ public class EbblessWidget extends AppWidgetProvider {
                 v.setImageViewResource(R.id.w_like_icon, liked ? R.drawable.ic_media_heart_filled : R.drawable.ic_media_heart);
                 v.setInt(R.id.w_like_icon, "setColorFilter", liked ? accent : Color.WHITE);
                 v.setImageViewResource(R.id.w_play_icon, playing ? R.drawable.ic_media_pause : R.drawable.ic_media_play);
-                v.setInt(R.id.w_play_icon, "setColorFilter", 0xFF1B1B1F);
+                v.setInt(R.id.w_play_icon, "setColorFilter", onAccent);
                 v.setInt(R.id.w_play_bg, "setColorFilter", accent);
                 long dur = Math.max(0, j.optLong("dur"));
                 long pos = Math.max(0, j.optLong("pos"));
@@ -153,6 +150,7 @@ public class EbblessWidget extends AppWidgetProvider {
                 v.setTextViewText(R.id.w_idle_title, last.isEmpty() ? "EBBLESS" : last);
                 v.setImageViewBitmap(R.id.w_idle_art, mark(c, accent, Math.round(84 * d), Math.round(12 * d)));
                 v.setInt(R.id.w_resume_bg, "setColorFilter", accent);
+                v.setTextColor(R.id.w_resume_label, onAccent);
                 v.setOnClickPendingIntent(R.id.w_resume, openApp(c, true));
             }
             AppWidgetManager.getInstance(c).updateAppWidget(new ComponentName(c, EbblessWidget.class), v);
@@ -223,29 +221,5 @@ public class EbblessWidget extends AppWidgetProvider {
             cv.drawBitmap(m, null, new RectF((size - mw) / 2f, (size - mh) / 2f, (size + mw) / 2f, (size + mh) / 2f), p);
         }
         return out;
-    }
-
-    /** A strong, readable accent from the cover: average of a 16x16 copy, weighted toward saturated pixels, then lifted to a bright value. */
-    private static int accentOf(Bitmap art) {
-        try {
-            Bitmap s = Bitmap.createScaledBitmap(art, 16, 16, true);
-            double r = 0, g = 0, b = 0, wsum = 0;
-            for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) {
-                int px = s.getPixel(x, y);
-                float[] hsv = new float[3];
-                Color.colorToHSV(px, hsv);
-                double w = 0.05 + hsv[1] * hsv[2];
-                r += Color.red(px) * w; g += Color.green(px) * w; b += Color.blue(px) * w; wsum += w;
-            }
-            if (wsum <= 0) return FALLBACK_ACCENT;
-            float[] hsv = new float[3];
-            Color.colorToHSV(Color.rgb((int) (r / wsum), (int) (g / wsum), (int) (b / wsum)), hsv);
-            if (hsv[1] < 0.12f) return FALLBACK_ACCENT;   // grey cover: keep the brand purple
-            hsv[1] = Math.min(1f, Math.max(hsv[1], 0.35f));
-            hsv[2] = Math.max(hsv[2], 0.8f);
-            return Color.HSVToColor(hsv);
-        } catch (Exception e) {
-            return FALLBACK_ACCENT;
-        }
     }
 }
