@@ -11945,3 +11945,11 @@ Add entries in this shape:
 - **Touches:** android-webview EblessWidget.java, PlaybackService accent.
 - **Branch:** agent/widget-accent-688
 - **Notes:** Needs agent/fullscreen-polish-691 (accent bridge).
+
+### milestones-delight: Achievements of any kind feel delicious (web celebrate helper) (owner 2026-10-29)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** One celebrate(tier, opts) helper: springy badge with point count-up, confetti/sparkle burst, soft chime, haptic by tier, FIFO queue. Wired into milestone unlocks, like streaks and the record game.
+- **Touches:** index.html (Milestones section).
+- **Branch:** agent/milestones-delight
+- **Notes:** The iPod and its games get their own FX host (agent/ipod-shell-2, agent/ipod-games-2), still to merge.
