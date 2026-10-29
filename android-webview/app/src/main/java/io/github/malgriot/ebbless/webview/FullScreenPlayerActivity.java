@@ -441,6 +441,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             if (url.startsWith("https://")) loadArt(url);
         }
         ipod.onState(j);
+        if (j != null) cym.setSong(Math.max(0, j.optLong("pos")), durMs, PlaybackService.snapshotAt(), j.optDouble("rate", 1.0), playing);
         updateProgress();
         if (resumed && screenOn) {
             cym.setPlaying(playing);
@@ -576,6 +577,20 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
         void setPlaying(boolean p) { playing = p; }
 
+        // song position anchored at the last state report (elapsedRealtime), so progress advances between updates with no polling
+        private long songPos, songDur, songAnchor;
+        private double songRate = 1;
+        private boolean songPlaying;
+        void setSong(long posMs, long durMs, long anchorElapsed, double rate, boolean pl) {
+            songPos = posMs; songDur = durMs; songAnchor = anchorElapsed; songRate = rate; songPlaying = pl;
+        }
+        private float songProgress(long unusedNow) {
+            if (songDur <= 0) return 0;
+            long p = songPos;
+            if (songPlaying) p += (long) ((SystemClock.elapsedRealtime() - songAnchor) * songRate);
+            return Math.min(1f, Math.max(0f, (float) p / songDur));
+        }
+
         // ---- touch, ported from index.html's interactive plate: one finger blows the sand, a tap sends a ripple, two fingers tune
         // (horizontal = frequency/zoom, vertical = twist). Zoom/twist are applied to the coordinates before field(), so every family responds.
         private static final float ZOOM_MIN = (float) Math.log(0.55), ZOOM_MAX = (float) Math.log(2.2);
@@ -585,8 +600,15 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         private float tuneZoomT, tuneTwistT, tuneZoom, tuneTwist;
         private int touches;
         private float lastCx, lastCy, fingerPx, fingerPy, tapX, tapY;
-        private long tapT;
+        private long tapT, prevTapUp;
+        private float prevTapX, prevTapY;
         private boolean tapValid;
+        // double tap toggles slow rotation (index.html cymaticsTap/vizSetRotate): one turn per 180 s, persisted; ripples still fire on every tap
+        private static final float ROTATE_MS_PER_TURN = 180000f;
+        private static final long DOUBLE_TAP_MS = 300;
+        private final android.content.SharedPreferences prefs = getContext().getSharedPreferences("ebbless_cymatics", Context.MODE_PRIVATE);
+        private boolean rotateOn = prefs.getBoolean("rotate", false);
+        private float angle;
 
         @Override public boolean onTouchEvent(MotionEvent e) {
             int act = e.getActionMasked();
@@ -611,7 +633,15 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
                     if (touches == 1) { fingerPx = lastCx; fingerPy = lastCy; }
                     break;
                 case MotionEvent.ACTION_UP:
-                    if (tapValid && SystemClock.uptimeMillis() - tapT < 320) addRipple(tapX, tapY);
+                    if (tapValid && SystemClock.uptimeMillis() - tapT < 320) {
+                        long up = SystemClock.uptimeMillis();
+                        addRipple(tapX, tapY);
+                        if (prevTapUp != 0 && up - prevTapUp < DOUBLE_TAP_MS && Math.hypot(tapX - prevTapX, tapY - prevTapY) < 100 * dens) {
+                            prevTapUp = 0;
+                            rotateOn = !rotateOn;
+                            prefs.edit().putBoolean("rotate", rotateOn).apply();
+                        } else { prevTapUp = up; prevTapX = tapX; prevTapY = tapY; }
+                    }
                     touches = 0;
                     break;
                 case MotionEvent.ACTION_CANCEL:
@@ -638,7 +668,8 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
         private void addRipple(float vx, float vy) {
             float w = getWidth(), h = getHeight(), rad = (float) Math.hypot(w / 2, h / 2) / (float) Math.sqrt(2);
-            ripples.add(new Ripple((vx - w / 2) / rad, (vy - h / 2) / rad, SystemClock.uptimeMillis()));
+            float u = (vx - w / 2) / rad, v = (vy - h / 2) / rad, c = (float) Math.cos(angle), sn = (float) Math.sin(angle);
+            ripples.add(new Ripple(u * c + v * sn, -u * sn + v * c, SystemClock.uptimeMillis()));   // inverse of the plate rotation
             if (ripples.size() > 6) ripples.remove(0);
         }
 
@@ -690,15 +721,21 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             float w = getWidth(), h = getHeight(), cx = w / 2, cy = h / 2;
             float radius = (float) Math.hypot(w / 2, h / 2) / (float) Math.sqrt(2);
             // interactive: eased tuning folded into one scale/twist applied before field(); ripples in plate coords; one finger on the sand
+            if (rotateOn) angle = (float) ((angle + dt / ROTATE_MS_PER_TURN * Math.PI * 2) % (Math.PI * 2));
+            float rotCos = (float) Math.cos(angle), rotSin = (float) Math.sin(angle);
             float ease = Math.min(1f, dt / 140f);
             tuneZoom += (tuneZoomT - tuneZoom) * ease;
             tuneTwist += (tuneTwistT - tuneTwist) * ease;
-            float zoom = (float) Math.exp(tuneZoom);
-            float tCa = (float) Math.cos(tuneTwist) * zoom, tSa = (float) Math.sin(tuneTwist) * zoom;
+            // the song's sweep rides on top of the user's tuning (index.html vizDraw), no override or decay
+            float sweepP = songProgress(now);
+            float zoom = (float) Math.exp(tuneZoom + 0.22 * Math.sin(sweepP * Math.PI * 2 * 2.5));
+            float twist = tuneTwist + (float) (0.2 * Math.sin(sweepP * Math.PI * 2 * 1.5 + 1));
+            float tCa = (float) Math.cos(twist) * zoom, tSa = (float) Math.sin(twist) * zoom;
             for (int q = ripples.size() - 1; q >= 0; q--) if (now - ripples.get(q).t0 >= 2200) ripples.remove(q);
             int nr = ripples.size();
             boolean hasFinger = touches == 1;
-            float fingerX = (fingerPx - cx) / radius, fingerY = (fingerPy - cy) / radius;
+            float fu = (fingerPx - cx) / radius, fv = (fingerPy - cy) / radius;
+            float fingerX = fu * rotCos + fv * rotSin, fingerY = -fu * rotSin + fv * rotCos;
             float jitter = playing ? 0.020f : 0.004f, step = playing ? 0.016f : 0.006f;
             cnt[0] = cnt[1] = cnt[2] = cnt[3] = 0;
             for (int i = 0; i < N; i++) {
@@ -730,8 +767,8 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
                 float settle = 1 - amp;
                 int b = Math.min(3, (int) (settle * settle * 4f));
                 int k = cnt[b]++ * 2;
-                pts[b][k] = cx + x * radius;
-                pts[b][k + 1] = cy + y * radius;
+                pts[b][k] = cx + (x * rotCos - y * rotSin) * radius;
+                pts[b][k + 1] = cy + (x * rotSin + y * rotCos) * radius;
             }
             for (int b = 0; b < 4; b++) if (cnt[b] > 0) cv.drawPoints(pts[b], 0, cnt[b] * 2, paints[b]);
             if (running) postInvalidateDelayed(playing || touches > 0 || nr > 0 ? 33 : 100);   // touched or rippling keeps full rate even when paused
