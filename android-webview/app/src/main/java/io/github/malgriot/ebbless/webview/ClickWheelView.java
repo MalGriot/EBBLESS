@@ -35,6 +35,7 @@ final class ClickWheelView extends View {
     private final Path path = new Path();
     private Listener listener;
     private int accent;
+    private int ring = 0xFF2B2B2F, hub = 0xFF1B1B1E, mark = 0xFFF6F6F8;
     private static final long REPEAT_FIRST_MS = 340, REPEAT_MS = 110;
     private boolean haptics = true, playing, controls;
     private float cx, cy, outerR, innerR;
@@ -53,7 +54,14 @@ final class ClickWheelView extends View {
     }
 
     void setListener(Listener l) { listener = l; }
-    void setAccent(int a) { if (a != accent) { accent = a; invalidate(); } }
+    void setAccent(int a) { accent = a; }
+    /** The body color (from the cover): the ring, the center button and the markings are derived from it so they always contrast. */
+    void setTheme(int body) {
+        ring = IpodColor.ringFor(body);
+        hub = IpodColor.isLight(ring) ? IpodColor.darken(ring, 0.16f) : IpodColor.lighten(ring, 0.10f);
+        mark = IpodColor.onColor(ring);
+        invalidate();
+    }
     void setHaptics(boolean on) { haptics = on; }
     boolean isControls() { return controls; }
     void setControls(boolean on) { if (on != controls) { controls = on; stopRepeat(); tracking = false; zone = -1; centerPressed = false; invalidate(); } }
@@ -170,7 +178,7 @@ final class ClickWheelView extends View {
     @Override protected void onDraw(Canvas c) {
         // ring body
         p.setStyle(Paint.Style.FILL);
-        p.setColor(0xFF2B2B2F);
+        p.setColor(ring);
         c.drawCircle(cx, cy, outerR, p);
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(2f);
@@ -180,7 +188,7 @@ final class ClickWheelView extends View {
         // pressed segment: a lighter wedge of the ring
         if (zone >= 0) {
             p.setStyle(Paint.Style.FILL);
-            p.setColor(0x26FFFFFF);
+            p.setColor(IpodColor.isLight(ring) ? 0x26000000 : 0x26FFFFFF);
             float start = -135f + zone * 90f;
             if (zone == 3) start = 135f;
             path.reset();
@@ -191,23 +199,23 @@ final class ClickWheelView extends View {
             c.clipPath(path);
             c.drawCircle(cx, cy, outerR, p);
             c.restore();
-            p.setColor(0xFF2B2B2F);   // punch the hub back out
+            p.setColor(ring);   // punch the hub back out
             c.drawCircle(cx, cy, innerR + 1, p);
         }
 
         // center button
         p.setStyle(Paint.Style.FILL);
-        p.setColor(centerPressed ? 0xFF3A3A3F : 0xFF1B1B1E);
+        p.setColor(centerPressed ? IpodColor.darken(hub, 0.18f) : hub);
         c.drawCircle(cx, cy, innerR, p);
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(Math.max(2f, outerR * 0.018f));
-        p.setColor(accent);
+        p.setColor(mark & 0x66FFFFFF);
         c.drawCircle(cx, cy, innerR, p);
 
-        // markings in the accent color
+        // markings
         float mid = (outerR + innerR) / 2f, g = outerR * 0.075f;
         p.setStyle(Paint.Style.FILL);
-        p.setColor(accent);
+        p.setColor(mark);
         p.setTextAlign(Paint.Align.CENTER);
         p.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         p.setTextSize(outerR * 0.12f);

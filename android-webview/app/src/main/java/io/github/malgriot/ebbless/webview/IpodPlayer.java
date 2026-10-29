@@ -1,5 +1,6 @@
 package io.github.malgriot.ebbless.webview;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -68,6 +69,11 @@ final class IpodPlayer {
     private final Bitmap logo;
 
     private int accent;
+    private int body = IpodColor.SILVER, hi;   // the iPod's body color and the screen's highlight color: from the cover, animated
+    private int bodyFrom, bodyTo, hiFrom, hiTo, lastStep;
+    private boolean artColored;
+    private ValueAnimator themeAnim;
+    private final GradientDrawable bodyBg;
     private boolean active, playing, liked, destroyed;
     private long durMs;
     private String title = "", artist = "", album = "";
@@ -96,11 +102,14 @@ final class IpodPlayer {
         root = new LinearLayout(a);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(14), dp(14), dp(14), dp(14));
-        GradientDrawable body = new GradientDrawable();
-        body.setCornerRadius(dp(34));
-        body.setColor(0xFF19191B);
-        body.setStroke(dp(1), 0x26FFFFFF);
-        root.setBackground(body);
+        hi = accent;
+        bodyFrom = bodyTo = body;
+        hiFrom = hiTo = hi;
+        bodyBg = new GradientDrawable();
+        bodyBg.setCornerRadius(dp(34));
+        bodyBg.setColor(body);
+        bodyBg.setStroke(dp(1), 0x26FFFFFF);
+        root.setBackground(bodyBg);
 
         screen = new ScreenView(a);
         root.addView(screen, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -113,6 +122,8 @@ final class IpodPlayer {
         gl.topMargin = dp(10);
         root.addView(gameBar, gl);
         wheel = new ClickWheelView(a, accent);
+        wheel.setTheme(body);
+        gameBar.setTheme(body);
         wheel.setHaptics(a.getSharedPreferences("ebb", Context.MODE_PRIVATE).getBoolean("ipodSoft", true));
         LinearLayout.LayoutParams wl = new LinearLayout.LayoutParams(wheelS, wheelS);
         wl.gravity = Gravity.CENTER_HORIZONTAL;
@@ -145,6 +156,7 @@ final class IpodPlayer {
         active = on;
         ui.removeCallbacks(progressTick);
         ui.removeCallbacks(gameTick);
+        if (!on && themeAnim != null) { themeAnim.cancel(); themeAnim = null; applyTheme(bodyTo, hiTo); }
         if (on) {
             screen.invalidate();
             scheduleProgress();
@@ -154,6 +166,7 @@ final class IpodPlayer {
 
     void destroy() {
         destroyed = true;
+        if (themeAnim != null) { themeAnim.cancel(); themeAnim = null; }
         ui.removeCallbacksAndMessages(null);
         stopGame();
     }
@@ -161,10 +174,44 @@ final class IpodPlayer {
     void setAccent(int a) {
         accent = a;
         wheel.setAccent(a);
+        if (!artColored) retheme(IpodColor.SILVER, a);
         screen.invalidate();
     }
 
-    void setArt(Bitmap b) { art = b; screen.invalidate(); }
+    /** The cover of the song now playing: the whole iPod takes its color from it (silver and the app accent when there is none). */
+    void setArt(Bitmap b) {
+        if (b == art) return;
+        art = b;
+        int c = IpodColor.dominant(b);
+        artColored = c != 0;
+        if (artColored) retheme(c, c); else retheme(IpodColor.SILVER, accent);
+        screen.invalidate();
+    }
+
+    /** Cross-fade to a new body/highlight color in 8 steps: the body is only restyled when a step changes, never per frame. */
+    private void retheme(int tb, int th) {
+        if (themeAnim != null) themeAnim.cancel();
+        themeAnim = null;
+        if (tb == bodyTo && th == hiTo) return;
+        bodyFrom = body; hiFrom = hi; bodyTo = tb; hiTo = th; lastStep = 0;
+        if (!active || destroyed || (tb == body && th == hi)) { applyTheme(tb, th); return; }
+        ValueAnimator an = ValueAnimator.ofFloat(0f, 1f);
+        an.setDuration(450);
+        an.addUpdateListener(a -> {
+            int st = Math.round(((Float) a.getAnimatedValue()) * 8f);
+            if (st != lastStep) { lastStep = st; applyTheme(IpodColor.lerp(bodyFrom, bodyTo, st / 8f), IpodColor.lerp(hiFrom, hiTo, st / 8f)); }
+        });
+        themeAnim = an;
+        an.start();
+    }
+
+    private void applyTheme(int b, int h) {
+        body = b; hi = h;
+        bodyBg.setColor(b);
+        wheel.setTheme(b);
+        gameBar.setTheme(b);
+        screen.invalidate();
+    }
 
     /** The page's latest report (title, artist, play state, liked, position, queue). */
     void onState(JSONObject j) {
@@ -373,11 +420,11 @@ final class IpodPlayer {
             if (idx == 2) {
                 ctor = k.getDeclaredConstructor(Context.class, int.class, Bitmap.class, List.class);
                 ctor.setAccessible(true);
-                o = ctor.newInstance(act, accent, logo, new ArrayList<Bitmap>(covers));
+                o = ctor.newInstance(act, hi, logo, new ArrayList<Bitmap>(covers));
             } else {
                 ctor = k.getDeclaredConstructor(Context.class, int.class, Bitmap.class);
                 ctor.setAccessible(true);
-                o = ctor.newInstance(act, accent, logo);
+                o = ctor.newInstance(act, hi, logo);
             }
             g = (IpodGame) o;
         } catch (Throwable t) {
@@ -492,6 +539,8 @@ final class IpodPlayer {
 
         void setCallback(BarCallback c) { cb = c; }
         void setControls(boolean on) { controls = on; invalidate(); }
+        private int ink = 0xDDFFFFFF, shade = 0x38000000;
+        void setTheme(int b) { boolean light = IpodColor.isLight(b); ink = light ? 0xDD1A1A1D : 0xDDFFFFFF; shade = light ? 0x24000000 : 0x38000000; invalidate(); }
 
         @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
             float pw = dp(108), pw2 = dp(84);
@@ -519,14 +568,14 @@ final class IpodPlayer {
 
         private void pill(Canvas c, RectF r, String label, boolean pressed) {
             p.setStyle(Paint.Style.FILL);
-            p.setColor(pressed ? 0x66000000 : 0x38000000);
+            p.setColor(pressed ? 0x66000000 : shade);
             c.drawRoundRect(r, r.height() / 2, r.height() / 2, p);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(dp(1));
-            p.setColor(0x40FFFFFF);
+            p.setColor(ink & 0x55FFFFFF);
             c.drawRoundRect(r, r.height() / 2, r.height() / 2, p);
             p.setStyle(Paint.Style.FILL);
-            p.setColor(0xDDFFFFFF);
+            p.setColor(ink);
             p.setTextSize(dp(12));
             p.setFakeBoldText(true);
             c.drawText(label, r.centerX(), r.centerY() + dp(4), p);
@@ -584,15 +633,15 @@ final class IpodPlayer {
             float bar = dp(30);
             p.setColor(0xFF1C1C20);
             c.drawRect(0, 0, w, bar, p);
-            p.setColor(accent);
+            p.setColor(hi);
             c.drawRect(0, bar - dp(1.5f), w, bar, p);
             text(c, header(), w / 2, bar / 2 + dp(5), dp(15), 0xFFFFFFFF, true, Paint.Align.CENTER, w - dp(120));
             if (scr == S_GAME && game != null) {
                 int sc = 0;
                 try { sc = game.score(); } catch (Throwable ignored) {}
-                text(c, String.valueOf(sc), w - dp(10), bar / 2 + dp(5), dp(14), accent, true, Paint.Align.RIGHT, dp(100));
+                text(c, String.valueOf(sc), w - dp(10), bar / 2 + dp(5), dp(14), hi, true, Paint.Align.RIGHT, dp(100));
             } else {
-                text(c, playing ? "▶" : "❚❚", dp(12), bar / 2 + dp(5), dp(12), accent, false, Paint.Align.LEFT, 0);
+                text(c, playing ? "▶" : "❚❚", dp(12), bar / 2 + dp(5), dp(12), hi, false, Paint.Align.LEFT, 0);
             }
 
             switch (scr) {
@@ -641,9 +690,9 @@ final class IpodPlayer {
                 int idx = t + i;
                 float y0 = bar + i * rowH;
                 boolean on = idx == s;
-                if (on) { p.setColor(accent); c.drawRect(0, y0, w, y0 + rowH, p); }
-                int fg = on ? onAccent(accent) : 0xFFFFFFFF;
-                int dim = on ? onAccent(accent) : 0x99FFFFFF;
+                if (on) { p.setColor(hi); c.drawRect(0, y0, w, y0 + rowH, p); }
+                int fg = on ? onAccent(hi) : 0xFFFFFFFF;
+                int dim = on ? onAccent(hi) : 0x99FFFFFF;
                 String main = "", sub = "", val = "";
                 boolean chevron = false;
                 switch (scr) {
@@ -671,7 +720,7 @@ final class IpodPlayer {
                 }
                 float right = w - dp(12);
                 if (chevron) { text(c, "›", right, y0 + rowH / 2 + dp(6), dp(20), dim, true, Paint.Align.RIGHT, 0); right -= dp(14); }
-                if (!val.isEmpty()) { text(c, val, right, y0 + rowH / 2 + dp(5), dp(14), on ? fg : accent, true, Paint.Align.RIGHT, 0); right -= dp(10) + tp.measureText(val); }
+                if (!val.isEmpty()) { text(c, val, right, y0 + rowH / 2 + dp(5), dp(14), on ? fg : hi, true, Paint.Align.RIGHT, 0); right -= dp(10) + tp.measureText(val); }
                 float maxW = right - dp(12);
                 if (sub.isEmpty()) {
                     text(c, main, dp(12), y0 + rowH / 2 + dp(5.5f), dp(16), fg, false, Paint.Align.LEFT, maxW);
@@ -719,7 +768,7 @@ final class IpodPlayer {
                 text(c, title.isEmpty() ? "Nothing playing" : title, tx, top + dp(20), dp(17), 0xFFFFFFFF, true, Paint.Align.LEFT, tw);
                 text(c, artist, tx, top + dp(42), dp(14), 0xCCFFFFFF, false, Paint.Align.LEFT, tw);
                 text(c, album, tx, top + dp(62), dp(12.5f), 0x88FFFFFF, false, Paint.Align.LEFT, tw);
-                text(c, liked ? "♥" : "♡", tx, top + dp(96), dp(24), liked ? accent : 0x88FFFFFF, false, Paint.Align.LEFT, 0);
+                text(c, liked ? "♥" : "♡", tx, top + dp(96), dp(24), liked ? hi : 0x88FFFFFF, false, Paint.Align.LEFT, 0);
             }
             // progress
             long pos = positionMs();
@@ -728,7 +777,7 @@ final class IpodPlayer {
             r.set(bx0, by - dp(3), bx1, by + dp(3));
             c.drawRoundRect(r, dp(3), dp(3), p);
             if (durMs > 0) {
-                p.setColor(accent);
+                p.setColor(hi);
                 r.set(bx0, by - dp(3), bx0 + (bx1 - bx0) * Math.min(1f, pos / (float) durMs), by + dp(3));
                 c.drawRoundRect(r, dp(3), dp(3), p);
             }
@@ -746,10 +795,10 @@ final class IpodPlayer {
             p.setColor(0x33FFFFFF);
             r.set(tx0, ty - dp(3), tx1, ty + dp(3));
             c.drawRoundRect(r, dp(3), dp(3), p);
-            p.setColor(accent);
+            p.setColor(hi);
             r.set(tx0, ty - dp(3), tx0 + (tx1 - tx0) * v / (float) m, ty + dp(3));
             c.drawRoundRect(r, dp(3), dp(3), p);
-            text(c, "♫", x0 + dp(16), ty + dp(6), dp(18), accent, false, Paint.Align.CENTER, 0);
+            text(c, "♫", x0 + dp(16), ty + dp(6), dp(18), hi, false, Paint.Align.CENTER, 0);
         }
     }
 }
