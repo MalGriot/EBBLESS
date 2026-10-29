@@ -60,9 +60,9 @@ import java.util.Random;
  *
  * It is built from native views (not a second WebView) on purpose: a second page would boot a whole second copy of the app and
  * could not share the one player. The visuals are small ports of the app's own: the cymatics sand plate (index.html vizDraw),
- * the lava-lamp ambient (paintAmbient + ambient-drift) and the bouncing E logo (.art-dvd, #613/#647).
+ * the iPod mode is a big click-wheel iPod (IpodPlayer + ClickWheelView) with Now Playing, Queue, Library, Settings and games.
  *
- * The button right of next cycles: 1 song art scrolling top to bottom to top, 2 cymatics, 3 lava lamp + bouncing logo, then closes
+ * The button right of next cycles: 1 song art scrolling top to bottom to top, 2 cymatics, 3 the iPod (the wheel scrolls, taps are select / menu / prev / next / play), then closes
  * (back to the standard player).
  *
  * GPU budget: only transform / alpha animators and one canvas view; everything is paused when the activity is paused or the screen is off.
@@ -73,11 +73,12 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     static volatile FullScreenPlayerActivity live;
 
     private static final int BASE = 0xFF121212;
-    private static final int MODE_SCROLL = 0, MODE_CYMATICS = 1, MODE_LAVA = 2;
+    private static final int MODE_SCROLL = 0, MODE_CYMATICS = 1, MODE_IPOD = 2;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private float dp;
-    private int screenW, screenH, artSize;
+    private int screenW, screenH;
+    private IpodPlayer ipod;
     private int mode = MODE_SCROLL;
     private boolean resumed, screenOn = true, playing, liked, dragging;
     private long durMs;
@@ -87,16 +88,14 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     private GradientDrawable playCircle;
     private ImageView btnClose, btnPrev, btnNext;
 
-    private FrameLayout root, bg, artHolder, logoBox;
-    private ImageView scrollArt, lavaLayer, artImg, btnLike, btnPlay, btnMode;
-    private View navFill, scrim, lavaTint, lavaVignette, spacer;
+    private FrameLayout root, bg;
+    private ImageView scrollArt, btnLike, btnPlay, btnMode;
+    private View navFill, scrim, spacer;
     private CymaticsView cym;
     private LinearLayout content, panel;
     private TextView titleTv, artistTv, elapsedTv, durTv;
     private SeekBar seek;
     private ObjectAnimator scrollAnim;
-    private final ArrayList<Animator> lavaAnims = new ArrayList<>();
-    private final ArrayList<Animator> logoAnims = new ArrayList<>();
 
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) {
@@ -118,7 +117,6 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         dp = getResources().getDisplayMetrics().density;
         screenW = getResources().getDisplayMetrics().widthPixels;
         screenH = getResources().getDisplayMetrics().heightPixels;
-        artSize = Math.max(dp(200), Math.min(screenW - dp(32), screenH - dp(440)));
         accent = PlaybackService.accent(this, clockColor());   // the page's accent (index.html --clock-accent), saved copy, else the app's own clock color
         build();
         setContentView(root);
@@ -170,6 +168,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         if (live == this) live = null;
         ui.removeCallbacksAndMessages(null);
         stopModeStuff();
+        if (ipod != null) ipod.destroy();
         super.onDestroy();
     }
 
@@ -195,24 +194,6 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
         cym = new CymaticsView(this, accent);
         bg.addView(cym, new FrameLayout.LayoutParams(-1, -1));
-
-        lavaLayer = new ImageView(this);
-        lavaLayer.setScaleType(ImageView.ScaleType.FIT_XY);
-        lavaLayer.setAlpha(0.9f);
-        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams((int) (screenW * 1.8f), (int) (screenH * 1.8f));
-        ll.leftMargin = -(int) (screenW * 0.4f); ll.topMargin = -(int) (screenH * 0.4f);
-        bg.addView(lavaLayer, ll);
-        lavaTint = new View(this);
-        lavaTint.setBackgroundColor((accent & 0x00FFFFFF) | 0x38000000);   // the clock-color wash, 22% like the app's ambient
-        bg.addView(lavaTint, new FrameLayout.LayoutParams(-1, -1));
-        lavaVignette = new View(this);
-        GradientDrawable vg = new GradientDrawable();
-        vg.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        vg.setGradientCenter(0.5f, 0.3f);
-        vg.setGradientRadius((float) Math.hypot(screenW, screenH) * 0.62f);
-        vg.setColors(new int[]{0x00121212, 0xFF121212});
-        lavaVignette.setBackground(vg);
-        bg.addView(lavaVignette, new FrameLayout.LayoutParams(-1, -1));
 
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -251,22 +232,15 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         content.addView(top, new LinearLayout.LayoutParams(-1, -2));
         top.setPadding(0, dp(8), 0, dp(8));
 
-        // art square (lava mode)
-        artHolder = new FrameLayout(this);
-        artHolder.setBackgroundColor(0xFF202020);
-        final float r = dp(28);
-        artHolder.setOutlineProvider(new ViewOutlineProvider() {   // round only the top corners; the panel below carries the bottom ones
-            @Override public void getOutline(View v, Outline o) { o.setRoundRect(0, 0, v.getWidth(), v.getHeight() + (int) r, r); }
-        });
-        artHolder.setClipToOutline(true);
-        artImg = new ImageView(this);
-        artImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        artHolder.addView(artImg, new FrameLayout.LayoutParams(-1, -1));
-        logoBox = new FrameLayout(this);
-        artHolder.addView(logoBox, new FrameLayout.LayoutParams(-1, -1));
-        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(artSize, artSize);
-        alp.gravity = Gravity.CENTER_HORIZONTAL;
-        content.addView(artHolder, alp);
+        // the iPod (fills everything under the clock)
+        ipod = new IpodPlayer(this, new IpodPlayer.Host() {
+            @Override public void openApp() { startActivity(new Intent(FullScreenPlayerActivity.this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)); }
+            @Override public void cycleVisual() { cycleMode(); }
+        }, accent, screenW, screenH);
+        LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(-1, 0, 1f);
+        ipl.leftMargin = ipl.rightMargin = dp(8);
+        ipl.bottomMargin = dp(8);
+        content.addView(ipod.view(), ipl);
 
         spacer = new View(this);
         content.addView(spacer, new LinearLayout.LayoutParams(-1, 0, 1f));   // vertical weight that pushes the panel down in the scroll and cymatics modes
@@ -274,6 +248,11 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
         panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(24), dp(16), dp(24), dp(16));
+        panel.setGravity(Gravity.BOTTOM);
+        GradientDrawable panelBg = new GradientDrawable();
+        panelBg.setOrientation(GradientDrawable.Orientation.TOP_BOTTOM);
+        panelBg.setColors(new int[]{0x00000000, 0xCC000000});
+        panel.setBackground(panelBg);
         content.addView(panel, new LinearLayout.LayoutParams(-1, -2));
 
         titleTv = new TextView(this);
@@ -381,43 +360,21 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     // ------------------------------------------------------------------ modes
 
     private void cycleMode() {
-        if (mode >= MODE_LAVA) { finish(); return; }   // one more press: back to the standard system player
+        if (mode >= MODE_IPOD) { finish(); return; }   // one more press: back to the standard system player
         mode++;
         applyMode();
-        Toast.makeText(this, mode == MODE_CYMATICS ? "Cymatics" : "Lava lamp", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, mode == MODE_CYMATICS ? "Cymatics" : "iPod", Toast.LENGTH_SHORT).show();
     }
 
     private void applyMode() {
         stopModeStuff();
-        boolean lava = mode == MODE_LAVA;
+        boolean ipodOn = mode == MODE_IPOD;
         scrollArt.setVisibility(mode == MODE_SCROLL ? View.VISIBLE : View.GONE);
         scrim.setVisibility(mode == MODE_SCROLL ? View.VISIBLE : View.GONE);
         cym.setVisibility(mode == MODE_CYMATICS ? View.VISIBLE : View.GONE);
-        lavaLayer.setVisibility(lava ? View.VISIBLE : View.GONE);
-        lavaTint.setVisibility(lava ? View.VISIBLE : View.GONE);
-        lavaVignette.setVisibility(lava ? View.VISIBLE : View.GONE);
-        artHolder.setVisibility(lava ? View.VISIBLE : View.GONE);
-        spacer.setVisibility(lava ? View.GONE : View.VISIBLE);
-
-        LinearLayout.LayoutParams pl = (LinearLayout.LayoutParams) panel.getLayoutParams();
-        GradientDrawable bgd = new GradientDrawable();
-        if (lava) {   // attached to the bottom of the art square, same width, rounded bottom corners, stretching down
-            pl.height = 0; pl.weight = 1f;
-            pl.leftMargin = pl.rightMargin = (screenW - artSize) / 2;
-            pl.bottomMargin = dp(20);
-            float rr = dp(28);
-            bgd.setCornerRadii(new float[]{0, 0, 0, 0, rr, rr, rr, rr});
-            bgd.setColor(0xE6181818);   // solid-ish, no backdrop blur over the moving lava layer
-            panel.setGravity(Gravity.CENTER_VERTICAL);
-        } else {
-            pl.height = ViewGroup.LayoutParams.WRAP_CONTENT; pl.weight = 0f;
-            pl.leftMargin = pl.rightMargin = pl.bottomMargin = 0;
-            bgd.setOrientation(GradientDrawable.Orientation.TOP_BOTTOM);
-            bgd.setColors(new int[]{0x00000000, 0xCC000000});
-            panel.setGravity(Gravity.BOTTOM);
-        }
-        panel.setBackground(bgd);
-        panel.setLayoutParams(pl);
+        ipod.view().setVisibility(ipodOn ? View.VISIBLE : View.GONE);
+        panel.setVisibility(ipodOn ? View.GONE : View.VISIBLE);
+        spacer.setVisibility(ipodOn ? View.GONE : View.VISIBLE);   // the iPod fills the space itself
         applyArt();
         startModeStuff();
         applyActive();
@@ -431,73 +388,20 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             scrollAnim.setRepeatMode(ObjectAnimator.REVERSE);
             scrollAnim.setInterpolator(new AccelerateDecelerateInterpolator());
             scrollAnim.start();
-        } else if (mode == MODE_LAVA) {
-            // the app's ambient-drift keyframes (0, 20 ... 100 %), as translate (% of the layer) + scale, 16 s each way
-            float w = screenW * 1.8f, h = screenH * 1.8f;
-            lavaLayer.setPivotX(w / 2); lavaLayer.setPivotY(h / 2);
-            PropertyValuesHolder tx = PropertyValuesHolder.ofFloat("translationX", 0, -0.09f * w, 0.08f * w, 0.10f * w, -0.07f * w, 0);
-            PropertyValuesHolder ty = PropertyValuesHolder.ofFloat("translationY", 0, 0.07f * h, -0.09f * h, 0.09f * h, -0.06f * h, 0);
-            PropertyValuesHolder sx = PropertyValuesHolder.ofFloat("scaleX", 1.2f, 1.42f, 1.5f, 1.28f, 1.46f, 1.2f);
-            PropertyValuesHolder sy = PropertyValuesHolder.ofFloat("scaleY", 1.2f, 1.42f, 1.5f, 1.28f, 1.46f, 1.2f);
-            ObjectAnimator a = ObjectAnimator.ofPropertyValuesHolder(lavaLayer, tx, ty, sx, sy);
-            a.setDuration(16000);
-            a.setInterpolator(new LinearInterpolator());
-            a.setRepeatCount(ObjectAnimator.INFINITE);
-            a.start();
-            lavaAnims.add(a);
-            buildLogo();
         }
     }
 
     private void stopModeStuff() {
         if (scrollAnim != null) { scrollAnim.cancel(); scrollAnim = null; }
         scrollArt.setTranslationY(0);
-        for (Animator a : lavaAnims) a.cancel();
-        lavaAnims.clear();
-        for (Animator a : logoAnims) a.cancel();
-        logoAnims.clear();
-        logoBox.removeAllViews();
         cym.setRunning(false);
-    }
-
-    /** The EBBLESS E bouncing off the art square's walls with its six-color trail (index.html .art-dvd): x and y at steady, different speeds. */
-    private void buildLogo() {
-        logoBox.removeAllViews();
-        final int bw = Math.round(artSize * 0.16f), bh = Math.round(bw * 188f / 207f);
-        final int[] colors = {0, 0xFF5aa6f0, 0xFF7ee3ee, 0xFFb5ebc0, 0xFFf5c776, 0xFFe8986b, 0xFFba687b};
-        final float[] alpha = {.85f, .85f, .75f, .65f, .55f, .45f, .35f};
-        for (int i = 6; i >= 0; i--) {   // trail first (underneath), the white E last
-            FrameLayout box = new FrameLayout(this);
-            ImageView img = new ImageView(this);
-            img.setImageResource(R.drawable.mark_white);
-            img.setScaleType(ImageView.ScaleType.FIT_XY);
-            img.setAlpha(alpha[i]);
-            if (i > 0) img.setColorFilter(colors[i], PorterDuff.Mode.SRC_IN);
-            FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams(Math.round(bw * 1.0483f), Math.round(bw * 1.0483f * 199f / 217f));
-            ip.leftMargin = Math.round(-0.029f * bw); ip.topMargin = Math.round(-0.0319f * bh);
-            box.addView(img, ip);
-            logoBox.addView(box, new FrameLayout.LayoutParams(bw, bh));
-            ObjectAnimator ax = ObjectAnimator.ofFloat(box, "translationX", 0f, artSize - bw);
-            ax.setDuration(9000);
-            ObjectAnimator ay = ObjectAnimator.ofFloat(box, "translationY", 0f, artSize - bh);
-            ay.setDuration(13800);
-            for (ObjectAnimator a : new ObjectAnimator[]{ax, ay}) {
-                a.setInterpolator(new LinearInterpolator());
-                a.setRepeatCount(ObjectAnimator.INFINITE);
-                a.setRepeatMode(ObjectAnimator.REVERSE);
-                a.start();
-                a.setCurrentPlayTime((6 - i) * 1000L);   // each ghost runs 1 s behind the one before it
-                logoAnims.add(a);
-            }
-        }
     }
 
     /** Run only while the activity is in front and the screen is on. */
     private void applyActive() {
         boolean on = resumed && screenOn;
         if (scrollAnim != null) pause(scrollAnim, !on);
-        for (Animator a : lavaAnims) pause(a, !on);
-        for (Animator a : logoAnims) pause(a, !on);
+        ipod.setActive(on && mode == MODE_IPOD);
         cym.setRunning(on && mode == MODE_CYMATICS);
         ui.removeCallbacks(tick);
         if (on) { updateProgress(); if (playing) ui.postDelayed(tick, 500); }
@@ -519,7 +423,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
     /** Pull the page's latest report (title, art, play state, liked, position). */
     private void refresh() {
         int na = PlaybackService.accent(this, accent);
-        if (na != accent) { accent = na; applyAccent(); lavaTint.setBackgroundColor((accent & 0x00FFFFFF) | 0x38000000); cym.setColor(accent); }
+        if (na != accent) { accent = na; applyAccent(); ipod.setAccent(accent); cym.setColor(accent); }
         JSONObject j = PlaybackService.snapshot();
         String title = j == null ? "" : j.optString("t");
         titleTv.setText(title.isEmpty() ? "Nothing playing" : title);
@@ -536,6 +440,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             setArt(quick);
             if (url.startsWith("https://")) loadArt(url);
         }
+        ipod.onState(j);
         updateProgress();
         if (resumed && screenOn) {
             cym.setPlaying(playing);
@@ -575,23 +480,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
 
     private void applyArt() {
         scrollArt.setImageBitmap(artBmp);
-        artImg.setImageBitmap(artBmp);
-        if (mode == MODE_LAVA) {
-            lavaLayer.setImageBitmap(artBmp == null ? null : blurred(artBmp));
-            ColorMatrix cm = new ColorMatrix();
-            cm.setSaturation(1.3f);
-            ColorMatrix dim = new ColorMatrix(new float[]{.45f, 0, 0, 0, 0, 0, .45f, 0, 0, 0, 0, 0, .45f, 0, 0, 0, 0, 0, 1, 0});
-            cm.postConcat(dim);
-            lavaLayer.setColorFilter(new ColorMatrixColorFilter(cm));
-        }
-    }
-
-    /** A tiny copy of the cover stretched over the layer is the blur (same trick as the app's paintAmbient: no filter, a small texture). */
-    private Bitmap blurred(Bitmap src) {
-        Bitmap cur = src;
-        while (cur.getWidth() / 2 >= 48 && cur.getHeight() / 2 >= 48) cur = Bitmap.createScaledBitmap(cur, cur.getWidth() / 2, cur.getHeight() / 2, true);
-        int w = 24, h = Math.max(1, Math.round(24f * screenH / screenW));
-        return Bitmap.createScaledBitmap(cur, w, h, true);
+        ipod.setArt(artBmp);
     }
 
     /** Own, bigger copy of the cover (up to ~1080 px) for the full-screen views; the lock screen one is only 300-600 px. */
