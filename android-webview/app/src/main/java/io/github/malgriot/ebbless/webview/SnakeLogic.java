@@ -18,6 +18,8 @@ final class SnakeLogic {
     int nq;
     int foodX, foodY, foodType; // type 0 = LP, 1 = cassette
     int score;
+    /** Snacks eaten this run. */
+    int snacks;
     boolean dead;
     private final Random rnd;
 
@@ -40,6 +42,7 @@ final class SnakeLogic {
         dir = 1;
         nq = 0;
         score = 0;
+        snacks = 0;
         dead = false;
         placeFood();
     }
@@ -53,6 +56,32 @@ final class SnakeLogic {
         if (nq >= 2) return false;
         turnQ[nq++] = sign > 0 ? 1 : -1;
         return true;
+    }
+
+    /** Length that earns the big achievement. */
+    static final int LENGTH_MILESTONE = 25;
+
+    /** Achievement tier for eating snack number n: every 5 is tier 1, every 10 tier 2, else 0. */
+    static int snackTier(int n) {
+        if (n <= 0 || n % 5 != 0) return 0;
+        return n % 10 == 0 ? 2 : 1;
+    }
+
+    /** Heading after every queued turn has been applied. */
+    int effectiveDir() {
+        int d = dir;
+        for (int i = 0; i < nq; i++) d = (d + turnQ[i] + 4) & 3;
+        return d;
+    }
+
+    /**
+     * Arrows mode: steer to an absolute heading (0 up, 1 right, 2 down, 3 left). Same heading and a direct
+     * reversal into the neck are ignored. Uses the same 2-turn queue as the wheel. Returns true if queued.
+     */
+    boolean setHeading(int abs) {
+        int diff = (abs - effectiveDir() + 4) & 3;
+        if (diff == 0 || diff == 2) return false;
+        return queueTurn(diff == 1 ? 1 : -1);
     }
 
     /** Milliseconds per move: faster as the snake grows. */
@@ -103,6 +132,7 @@ final class SnakeLogic {
         if (eat) {
             len++;
             score += 10;
+            snacks++;
             placeFood();
         }
         return eat;
