@@ -239,8 +239,6 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             @Override public void close() { finish(); }
         }, accent, screenW, screenH);
         LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(-1, 0, 1f);
-        ipl.leftMargin = ipl.rightMargin = dp(8);
-        ipl.bottomMargin = dp(8);
         content.addView(ipod.view(), ipl);
 
         spacer = new View(this);
@@ -395,6 +393,7 @@ public class FullScreenPlayerActivity extends Activity implements PlaybackServic
             if (lp.layoutInDisplayCutoutMode != want) { lp.layoutInDisplayCutoutMode = want; getWindow().setAttributes(lp); }
         }
         top.setVisibility(ip ? View.GONE : View.VISIBLE);
+        root.setBackgroundColor(ip ? 0xFF222226 : 0xFF121212);   // a little lighter behind the device so its drop shadow reads
         navFill.setVisibility(ip ? View.GONE : View.VISIBLE);
         root.requestApplyInsets();
     }

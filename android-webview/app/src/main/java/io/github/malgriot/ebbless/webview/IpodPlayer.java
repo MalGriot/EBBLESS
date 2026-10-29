@@ -7,6 +7,10 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.Shader;
 import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.RectF;
@@ -73,7 +77,7 @@ final class IpodPlayer {
     private int bodyFrom, bodyTo, hiFrom, hiTo, lastStep;
     private boolean artColored;
     private ValueAnimator themeAnim;
-    private final GradientDrawable bodyBg;
+    private final IpodBody bodyBg;
     private boolean active, playing, liked, destroyed;
     private long durMs;
     private String title = "", artist = "", album = "";
@@ -101,20 +105,20 @@ final class IpodPlayer {
 
         root = new LinearLayout(a);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(14), dp(14), dp(14), dp(14));
+        int pad = dp(IpodBody.SHADOW_DP + 14);   // drop shadow room + the case's own border
+        root.setPadding(pad, pad, pad, pad);
         hi = accent;
         bodyFrom = bodyTo = body;
         hiFrom = hiTo = hi;
-        bodyBg = new GradientDrawable();
-        bodyBg.setCornerRadius(dp(34));
+        bodyBg = new IpodBody(dp);
         bodyBg.setColor(body);
-        bodyBg.setStroke(dp(1), 0x26FFFFFF);
         root.setBackground(bodyBg);
 
         screen = new ScreenView(a);
         root.addView(screen, new LinearLayout.LayoutParams(-1, 0, 1f));
+        screen.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> bodyBg.setScreen(l, t, r, b));   // the bezel is cut around the screen
 
-        int availW = screenW - dp(16) - dp(28);
+        int availW = screenW - 2 * pad;
         int wheelS = Math.min(availW, Math.round(screenH * 0.40f));
         gameBar = new GameBar(a);
         gameBar.setVisibility(View.GONE);
@@ -591,7 +595,11 @@ final class IpodPlayer {
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final TextPaint tp = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         private final RectF r = new RectF();
-        private final RectF gameRect = new RectF();
+        private final RectF gameRect = new RectF(), dst = new RectF();
+        private final Path clip = new Path();
+        private final Paint blit = new Paint(Paint.FILTER_BITMAP_FLAG);
+        private final Rect shineDst = new Rect();
+        private Bitmap shine;   // glass reflection, rendered once per size at low resolution
 
         ScreenView(Context c) {
             super(c);
@@ -600,6 +608,20 @@ final class IpodPlayer {
             });
             setClipToOutline(true);
             setContentDescription("iPod screen");
+        }
+
+        @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
+            if (w <= 0 || h <= 0) return;
+            int sw = 96, sh = Math.max(8, Math.round(96f * h / w));
+            if (shine != null) shine.recycle();
+            shine = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
+            Canvas sc = new Canvas(shine);
+            Paint sp = new Paint(Paint.ANTI_ALIAS_FLAG);
+            sp.setShader(new LinearGradient(0, 0, sw * 0.55f, sh * 0.32f, 0x30FFFFFF, 0x06FFFFFF, Shader.TileMode.CLAMP));
+            Path band = new Path();
+            band.moveTo(0, 0); band.lineTo(sw * 0.82f, 0); band.lineTo(0, sh * 0.5f); band.close();   // diagonal glass reflection across the top left
+            sc.drawPath(band, sp);
+            shineDst.set(0, 0, w, h);
         }
 
         private void text(Canvas c, String s, float x, float y, float size, int color, boolean bold, Paint.Align al, float maxW) {
@@ -661,10 +683,11 @@ final class IpodPlayer {
             // volume overlay (Now Playing, or Settings while adjusting)
             if (volShownAt != 0 || (scr == S_SET && adjustVolume)) drawVolume(c, w, h);
 
-            // bezel
+            // glass: the cached reflection, then a thin dark edge where the glass meets the bezel
+            if (shine != null) c.drawBitmap(shine, null, shineDst, blit);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(dp(2));
-            p.setColor(0x40FFFFFF);
+            p.setColor(0x80000000);
             r.set(1, 1, w - 1, h - 1);
             c.drawRoundRect(r, dp(16), dp(16), p);
             p.setStyle(Paint.Style.FILL);
@@ -748,19 +771,21 @@ final class IpodPlayer {
             r.set(pad, top, pad + side, top + side);
             if (art != null) {
                 c.save();
-                android.graphics.Path clip = new android.graphics.Path();
-                clip.addRoundRect(r, dp(8), dp(8), android.graphics.Path.Direction.CW);
+                clip.reset();
+                clip.addRoundRect(r, dp(8), dp(8), Path.Direction.CW);
                 c.clipPath(clip);
                 float bw = art.getWidth(), bh = art.getHeight(), sc = Math.max(side / bw, side / bh);
                 float dw = bw * sc, dh = bh * sc;
-                c.drawBitmap(art, null, new RectF(r.left + (side - dw) / 2, r.top + (side - dh) / 2, r.left + (side + dw) / 2, r.top + (side + dh) / 2), null);
+                dst.set(r.left + (side - dw) / 2, r.top + (side - dh) / 2, r.left + (side + dw) / 2, r.top + (side + dh) / 2);
+                c.drawBitmap(art, null, dst, blit);
                 c.restore();
             } else {
                 p.setColor(0xFF26262B);
                 c.drawRoundRect(r, dp(8), dp(8), p);
                 if (logo != null) {
                     float lw = side * 0.5f, lh = lw * logo.getHeight() / logo.getWidth();
-                    c.drawBitmap(logo, null, new RectF(r.centerX() - lw / 2, r.centerY() - lh / 2, r.centerX() + lw / 2, r.centerY() + lh / 2), null);
+                    dst.set(r.centerX() - lw / 2, r.centerY() - lh / 2, r.centerX() + lw / 2, r.centerY() + lh / 2);
+                    c.drawBitmap(logo, null, dst, blit);
                 }
             }
             float tx = pad + side + dp(12), tw = w - tx - pad;
