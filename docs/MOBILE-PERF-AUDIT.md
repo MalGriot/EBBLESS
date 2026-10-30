@@ -164,10 +164,39 @@ measured: the phone was charging.
   could touch the YouTube ad UI that ad-skipping relies on.
 - A page reload undid the experiment.
 
+### Per-frame trace (8 s, real song playing, main thread busy 7.9 s)
+
+Attribution by frame (tracing inflates absolute numbers; read the shares):
+
+| Cost | ms of 7.9 s | Share |
+|---|---|---|
+| EBBLESS style recalc (`UpdateLayoutTree`) | 1850 | 23% |
+| **Accessibility tree updates (`RunAccessibilitySteps`)** | 1590 | 20% |
+| YouTube frames' JS (player base.js 895, ytembeds 511) | 1400 | 18% |
+| EBBLESS JS (`FunctionCall`) | 830 | 10% |
+| EBBLESS timers (inside the JS above) | 690 | |
+| EBBLESS pre-paint, animation frames, layout, layerize | about 600 | 8% |
+
+Two of the three YouTube frames each fire about 0.7 s of timers per 8 s while
+one is paused, so idle YouTube pages are not free, but blanking them did not
+move the total (see the retraction above).
+
+**Accessibility service on the test phone.** The TECNO has a third-party
+accessibility service enabled (`com.brainrot.android` ReelsAccessibilityService,
+"BrainPal", listening to window content changes and scrolls). With any
+accessibility service on, Android WebView builds and updates the accessibility
+tree on every DOM change, which is the `RunAccessibilitySteps` cost above. This
+is specific to the phone, not to EBBLESS, but it makes every DOM or style write
+in the app more expensive on this device, and the owner's complaint comes from
+this device. **Not yet tested:** turn that service off and re-run the 10 s
+long-task measurement. (Changing the setting is the phone owner's to do.)
+
 ### Revised order
 
-0. Not proven: idle YouTube decks as the cost. Attribute main-thread time per
-   frame (trace with frame ids) before touching the deck design.
+0. Test with the accessibility service off. If it drops a lot, the lever in
+   our code is writing less to the DOM per second (cassette/record 21 Hz style
+   writes, seek fills, marquee), because each write is paid for twice.
+   Idle YouTube decks are not proven to matter; leave the deck design alone.
 1. (Done in this lane, commit 784be7a, not deployed) skip `renderLibrary` when the library view is hidden; mark it dirty and
    render when opened (fixes the multi-second freeze, safe, small).
 2. Find what keeps the render pipeline busy at about 1 Hz with 200 to 450 ms
