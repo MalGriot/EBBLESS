@@ -9809,6 +9809,7 @@ function showLoadSuccess(){
 document.getElementById('settingsBackBtn')?.addEventListener('click', () => setView(state.preSettingsView || 'library'));
 function setView(name){
   const prevView = state.currentView;
+  if (name === 'library' && npLibStale){ npLibStale = false; try{ renderLibrary(); } catch(e){} } // deferred On Air card refresh (#635)
   if (name === 'player' || name === 'library') try{ renderHomeShelf(); } catch(e){} // recent-things shelf (#583d)
   if (name === 'settings' && prevView !== 'settings') state.preSettingsView = prevView;
   // Settings should open on its own (issue #131): the split-desktop
@@ -15053,6 +15054,7 @@ function ensureNowPlayingPlaylist(){
 // Pull the feed, swap the playlist's tracks (current first, then recent),
 // then run the follow logic. Existing track objects are reused per song;
 // songs still in the play queue are kept so queue indexes survive reordering.
+let npLibStale = false;
 async function refreshNowPlaying(manual){
   if (npBusy) return;
   npBusy = true;
@@ -15093,7 +15095,13 @@ async function refreshNowPlaying(manual){
       if (state.queue.some(e => e.plId === NP_ID)){ renderQueuePanel(); persistResume(); }
     } else if (manual) showToast('Already up to date');
     const cardChanged = !same || artFilled || prev.onAir !== npFeed.onAir || (prev.current && prev.current.v) !== (npFeed.current && npFeed.current.v);
-    if (cardChanged){ if (openLibraryPanelId === NP_ID) rerenderLibraryKeepPanel(); else renderLibrary(); }
+    // #635: the rebuild of every library card took seconds on a phone and ran
+    // while the library was not on screen; do it when the library opens instead.
+    if (cardChanged){
+      if (openLibraryPanelId === NP_ID) rerenderLibraryKeepPanel();
+      else if (!$('view-library').getClientRects().length) npLibStale = true;
+      else renderLibrary();
+    }
     npFollowTick(prev, prevExpected);
   } catch(e){ if (manual) showToast("Couldn't load right now."); }
   finally { npBusy = false; npSyncPill(); }
