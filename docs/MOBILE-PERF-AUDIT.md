@@ -1,9 +1,8 @@
 # Mobile CPU and battery audit (Geethub #635, third slice)
 
 Static audit of `index.html` plus the earlier slices recorded in IMPROVEMENTS.md
-(`mobile-moves-really-slow-and-slows-down-th`). **Nothing here was measured on
-a phone.** Numbers below are counts from the source, not profiles. Step 1 of
-the plan is to get real numbers.
+(`mobile-moves-really-slow-and-slows-down-th`). The first half is a static source audit; the "Measured" section further down
+holds the on-device numbers.
 
 ## Why Spotify still feels faster
 
@@ -100,6 +99,55 @@ battery cost. Items marked **no hidden guard** keep running with the screen off.
 3. Pause ambient drift, card cycling and art pans when paused/covered/off screen.
 4. Lowest video quality when video is not visible.
 5. Low power mode switch (auto) tying 3 and 4 and the visualizer together.
+
+## Measured on the TECNO (2026-10-30, adb + Chrome DevTools over USB)
+
+One phone, one song, a few minutes per state, 8 cores = 800%. Profiling and
+tracing add overhead, so read ratios, not absolutes.
+
+| State | WebView renderer | App process | Total |
+|---|---|---|---|
+| Playing, screen on | 182% | 141% | about 320% |
+| **Paused**, screen on | 166% | 137% | about 300% |
+| Playing, **screen off** | 132% | 29% | about 160% |
+
+1. **Paused costs as much as playing.** So the cost is the UI drawing and not
+   the audio. Screen off roughly halves it, but the renderer still burns
+   1.3 cores with the screen off. That is the battery problem.
+2. **The page's main thread is about 50% blocked.** A PerformanceObserver saw a
+   200 to 450 ms long task about once a second, for 45 s straight, plus one
+   7.8 s freeze. A 6 s trace shows the main thread busy almost the whole time:
+   render pipeline 3.25 s (style recalc 1.3, paint 1.15, layerize 0.95),
+   timers 0.97 s. Page JavaScript itself is small (about 2.6 s per 8 s).
+3. **`refreshNowPlaying` rebuilds the whole library while the library is
+   hidden.** In a 10 s profile, 4.9 s was `refreshNowPlaying` calling
+   `renderLibrary` (449 playlists, 275 cards, about 9,700 DOM nodes in a
+   `display:none` view). It runs on the 15 s poll whenever the On Air feed
+   changes, even for someone who never tuned in. This is the 7.8 s freeze.
+4. **JS-driven style writes at about 21 Hz** on `.record-disc`, `#hubL`,
+   `#hubR`, `#csTapeSheen` (cassette art mode), plus about 3 Hz on the seek
+   fills, knobs and reel paths. Five CSS animations were running: `cymPh` x3,
+   ambient drift, `viz-icon-spin`.
+5. Only 1,303 of 12,121 DOM nodes are rendered, so DOM size is not the issue.
+6. **Single toggles did not help.** Hiding iframes, ambient layers, canvases,
+   the cassette, the record, or the whole player stage each left the main
+   thread about 4.4 to 5 s blocked per 10 s. Do not expect one magic fix.
+7. `/nowplaying` was fetched only 3 times in 45 s, as designed.
+
+Open question the data did not answer: what the renderer is doing at 132% with
+the screen off (page JS in the hidden page, or the YouTube iframe). A trace
+with the screen off is the next measurement. Battery drain itself was not
+measured: the phone was charging.
+
+### Revised order
+
+1. Skip `renderLibrary` when the library view is hidden; mark it dirty and
+   render when opened (fixes the multi-second freeze, safe, small).
+2. Find what keeps the render pipeline busy at about 1 Hz with 200 to 450 ms
+   per cycle: trace the style recalcs (`UpdateLayoutTree` stack traces), then
+   fix the 21 Hz style writers (cassette/record) and the always-on animations.
+3. Trace the screen-off renderer.
+4. Then the timer clean-ups and low power mode from above.
 
 ## Not verified
 
