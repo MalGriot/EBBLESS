@@ -191,6 +191,19 @@ in the app more expensive on this device, and the owner's complaint comes from
 this device. **Not yet tested:** turn that service off and re-run the 10 s
 long-task measurement. (Changing the setting is the phone owner's to do.)
 
+### After BrainPal was removed (inconclusive)
+
+Accessibility services list is now empty, but the first re-measure still showed
+`RunAccessibilitySteps` at about 2 s per 8 s and about 4.8 to 5.0 s blocked per
+10 s, because the WebView renderer process predated the removal (Chromium keeps
+accessibility mode until the process restarts). The app was force-stopped and
+relaunched (new renderer pid 23414) to redo it, but the owner had to leave
+before the re-measure ran. **Next time:** start a song, wait about 40 s, then
+run the 10 s long-task measurement twice and the per-frame trace; compare
+`RunAccessibilitySteps` (was 1.6 to 2.0 s) and blocked time (was 4.7 to 5.4 s).
+Also note: a measurement taken on the splash screen or during a track change
+is not comparable.
+
 ### Revised order
 
 0. Test with the accessibility service off. If it drops a lot, the lever in
