@@ -149,23 +149,25 @@ measured: the phone was charging.
   in the top-bar icon, `viz-icon-spin`, ambient canvas drift) and the seek bar
   writes. Pausing all of them cut blocking only about 10 to 15% (5.0 s to 4.3
   to 4.6 s), so they are not the main cost.
-- **Three YouTube embed iframes are alive at once** (`autoplay=1&mute=1&vq=tiny`,
-  640x360 each; the other six iframes are empty SoundCloud slots). On Android
-  WebView there is no site isolation, so these YouTube pages run on the same
-  main thread as EBBLESS. Setting two of the three to `about:blank` dropped
-  main-thread blocking from **4.66 s to 0.97 s per 10 s (about 79%)**.
-  Renderer CPU in a single snapshot fell from about 180% to 110%.
-  Caveats: one run each; a track change and an ad happened around the same
-  time; the two iframes were presumably the standby/pool decks, which exist
-  for gapless playback and the ad-dodge logic, so removing them has a product
-  cost. Audio was not confirmed to be uninterrupted.
+- **RETRACTED: "three YouTube iframes cause the cost".** The first test
+  (blank two of three iframes: 4.66 s to 0.97 s blocked) was invalid: the
+  iframes I blanked included the one that was playing, so the app went quiet.
+  Redone with the playing deck left alone: baseline 5.4 and 4.7 s, blank the
+  paused deck a only 3.9 s, blank a and c 5.0 s (noise range about 4 to 6 s).
+  Blanking everything made it worse (8.8 s), probably the app's repair logic
+  reacting to dead players. Idle-deck removal is not a proven win.
+- State of the decks while a song plays (read from inside the YouTube frames):
+  the playing deck is playing and unmuted; the other two are **already paused**
+  (one paused mid-song at 194 s, one paused at 0:01, muted, 192 px wide). So
+  "pause the standby once the song is confirmed" already exists
+  (`index.html` around line 24109). The `controls=0` idea is untested and
+  could touch the YouTube ad UI that ad-skipping relies on.
 - A page reload undid the experiment.
 
 ### Revised order
 
-0. **Biggest lever found: keep only one YouTube player alive on phones** (build
-   the standby deck late, e.g. last 15 to 20 s, or load it paused and unmuted
-   only when needed). Needs a design decision: it trades gapless handoff.
+0. Not proven: idle YouTube decks as the cost. Attribute main-thread time per
+   frame (trace with frame ids) before touching the deck design.
 1. (Done in this lane, commit 784be7a, not deployed) skip `renderLibrary` when the library view is hidden; mark it dirty and
    render when opened (fixes the multi-second freeze, safe, small).
 2. Find what keeps the render pipeline busy at about 1 Hz with 200 to 450 ms
