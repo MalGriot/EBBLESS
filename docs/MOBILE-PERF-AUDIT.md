@@ -139,9 +139,34 @@ the screen off (page JS in the hidden page, or the YouTube iframe). A trace
 with the screen off is the next measurement. Battery drain itself was not
 measured: the phone was charging.
 
+### Second trace pass (same day, real song playing, phone on charger)
+
+- A first set of "playing" numbers was partly taken while the app showed
+  "Nothing playing yet" with the DVD-logo bounce running (7 animated elements).
+  Re-measured with a real song and the DVD hidden: renderer 179% + app 142%,
+  main thread 5 to 6.3 s blocked per 10 s. Same picture.
+- Style invalidations in the clean state come from CSS animations (`cym-ph`
+  in the top-bar icon, `viz-icon-spin`, ambient canvas drift) and the seek bar
+  writes. Pausing all of them cut blocking only about 10 to 15% (5.0 s to 4.3
+  to 4.6 s), so they are not the main cost.
+- **Three YouTube embed iframes are alive at once** (`autoplay=1&mute=1&vq=tiny`,
+  640x360 each; the other six iframes are empty SoundCloud slots). On Android
+  WebView there is no site isolation, so these YouTube pages run on the same
+  main thread as EBBLESS. Setting two of the three to `about:blank` dropped
+  main-thread blocking from **4.66 s to 0.97 s per 10 s (about 79%)**.
+  Renderer CPU in a single snapshot fell from about 180% to 110%.
+  Caveats: one run each; a track change and an ad happened around the same
+  time; the two iframes were presumably the standby/pool decks, which exist
+  for gapless playback and the ad-dodge logic, so removing them has a product
+  cost. Audio was not confirmed to be uninterrupted.
+- A page reload undid the experiment.
+
 ### Revised order
 
-1. Skip `renderLibrary` when the library view is hidden; mark it dirty and
+0. **Biggest lever found: keep only one YouTube player alive on phones** (build
+   the standby deck late, e.g. last 15 to 20 s, or load it paused and unmuted
+   only when needed). Needs a design decision: it trades gapless handoff.
+1. (Done in this lane, commit 784be7a, not deployed) skip `renderLibrary` when the library view is hidden; mark it dirty and
    render when opened (fixes the multi-second freeze, safe, small).
 2. Find what keeps the render pipeline busy at about 1 Hz with 200 to 450 ms
    per cycle: trace the style recalcs (`UpdateLayoutTree` stack traces), then
