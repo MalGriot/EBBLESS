@@ -11721,8 +11721,8 @@ function renderLibrary(){
       head.dataset.foldHandlerAttached = 'true';
     }
     const folded = filter === 'all' && !!libFolded[key];
-    // a retracted section (pill off) shows no title or divider at all; empty sections stay hidden too (#495)
-    head.classList.toggle('hidden', filter !== 'all' || folded || (head !== libraryPlaylistsHead && head.classList.contains('hidden')));
+    // section titles only show while searching (several sections at once); the active pill already names the list. A retracted section (pill off) shows no title or divider at all; empty sections stay hidden too (#495)
+    head.classList.toggle('hidden', filter !== 'all' || folded || !searchQ || (head !== libraryPlaylistsHead && head.classList.contains('hidden')));
     head.parentElement.classList.toggle('is-first-sec', !firstSecSeen && !head.classList.contains('hidden') && (firstSecSeen = true));
     head.setAttribute('aria-expanded', String(!folded));
     head.setAttribute('aria-label', (folded ? 'Expand ' : 'Collapse ') + key);
@@ -11734,7 +11734,7 @@ function renderLibrary(){
     const empty = !cnt && !folded && !searchQ && filter === 'all' && !advHide.includes(key.slice(0, -1));
     none.hidden = !empty;
     none.textContent = 'No ' + key + ' yet.';
-    if (empty) head.classList.remove('hidden');
+    if (empty && searchQ) head.classList.remove('hidden');
   });
   // #487: All is an overview - each section shows its first two rows, with
   // "See all (N)" opening that section's own filter. Rendering every card
