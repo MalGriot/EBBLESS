@@ -127,12 +127,12 @@ Add entries in this shape:
 -->
 
 ### progress-bar-hover-color-712: Player progress bar hover color matches the UI instead of yellow (Geethub #712)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #712. The progress bar turns yellow on hover; it should match the UI color.
 - **Touches:** (to be determined)
 - **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub #712. Title only.
+- **Notes:** Synced from Geethub #712. Cause: mini player seek fill hover used --accent, which in the mini window only gets set by the visualizer loop and otherwise stays the default yellow #e0b26a. Fix: hover now uses --mp-play-bg (the app's live UI accent, set every tick), falling back to --accent. sw cache v466.
 
 ### notifications-in-header-713: All notifications show in the header bar, marquee-scrolling (Geethub #713)
 - **Status:** ready
