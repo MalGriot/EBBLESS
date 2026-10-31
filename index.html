@@ -404,6 +404,10 @@ body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden]))
 @media (prefers-reduced-motion:reduce){
   #ambient .layer.is-active{animation:none}
 }
+/* #698: desktop drag ripples on the bare background. Low-res canvas inside #ambient (behind every window),
+   pointer-events none, display:none and no rAF while no ripple is alive (GPU budget) */
+#ambient-waves{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none}
+#ambient-waves.is-live{display:block}
 #ambient::after{content:'';position:absolute;inset:0;transition:background 4s linear;
   background:
     radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%),
@@ -4266,7 +4270,7 @@ body.week-up-on{overflow:hidden}
 </div>
 
 <div id="app">
-  <div id="ambient"><canvas class="layer" id="ambient-a"></canvas><canvas class="layer" id="ambient-b"></canvas></div>
+  <div id="ambient"><canvas class="layer" id="ambient-a"></canvas><canvas class="layer" id="ambient-b"></canvas><canvas id="ambient-waves" aria-hidden="true"></canvas></div>
 
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
@@ -37716,6 +37720,80 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
     addEventListener('focus', function(){ if (seen && style !== 'native') cv.style.opacity = '1'; });
   }
   if (document.body) start(); else addEventListener('DOMContentLoaded', start);
+})();
+</script>
+<script>
+/* #698: dragging the mouse on the bare background sends liquid ripples across it.
+   Mouse only. Ripples live on a 1/4-res canvas behind every window; rAF runs only while a ripple is alive. */
+(function(){
+  const cv = document.getElementById('ambient-waves');
+  if (!cv || !matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)');
+  const ctx = cv.getContext('2d');
+  const SCALE = 4, LIFE = 1400, MAX = 36;
+  let rings = [], raf = 0, lastX = -999, lastY = -999, dragging = false;
+  const SKIP = 'button,a,input,select,textarea,label,summary,canvas,img,video,svg,iframe,[role],[tabindex],[draggable="true"],[contenteditable],[data-art-style]';
+  function covered(){
+    return !!document.querySelector('#flow-layer.is-open,#findMusic:not([hidden]),#musicMap:not([hidden])');
+  }
+  // bare = no control, no painted box, no text of its own under the pointer
+  function isBare(el){
+    if (!el || el.closest(SKIP)) return false;
+    const cs = getComputedStyle(el);
+    if ((cs.backgroundImage !== 'none' && !el.matches('main.view')) || cs.boxShadow !== 'none' || cs.backdropFilter !== 'none') return false;
+    const m = cs.backgroundColor.match(/[\d.]+/g);
+    if (m && m.length > 3 && +m[3] > 0.02) return false;
+    if (m && m.length === 3) return false;
+    for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return false;
+    return true;
+  }
+  function stop(){
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0; rings = [];
+    cv.classList.remove('is-live');
+  }
+  function frame(t){
+    raf = 0;
+    rings = rings.filter(r => t - r.t0 < LIFE);
+    if (!rings.length || document.hidden) { stop(); return; }
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const r of rings) {
+      const k = (t - r.t0) / LIFE, e = 1 - (1 - k) * (1 - k);
+      const a = (1 - k) * 0.3, rad = (6 + e * 34);
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = 'rgba(255,255,255,' + a + ')';
+      ctx.beginPath(); ctx.arc(r.x, r.y, rad, 0, 6.2832); ctx.stroke();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(255,255,255,' + a * 0.6 + ')';
+      ctx.beginPath(); ctx.arc(r.x, r.y, rad * 0.62, 0, 6.2832); ctx.stroke();
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function spawn(x, y){
+    const w = Math.ceil(innerWidth / SCALE), h = Math.ceil(innerHeight / SCALE);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    cv.classList.add('is-live');
+    rings.push({ x: x / SCALE, y: y / SCALE, t0: performance.now() });
+    if (rings.length > MAX) rings.shift();
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+  addEventListener('pointerdown', e => {
+    dragging = e.pointerType === 'mouse' && e.button === 0 && !reduce.matches && !covered() && isBare(e.target);
+    lastX = e.clientX; lastY = e.clientY;
+  }, { passive: true });
+  addEventListener('pointermove', e => {
+    if (!dragging) return;
+    if (!(e.buttons & 1) || covered()) { dragging = false; return; }
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if (dx * dx + dy * dy < 576) return;
+    lastX = e.clientX; lastY = e.clientY;
+    if (isBare(e.target)) spawn(e.clientX, e.clientY);
+  }, { passive: true });
+  const end = () => { dragging = false; };
+  addEventListener('pointerup', end, { passive: true });
+  addEventListener('pointercancel', end, { passive: true });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
 })();
 </script>
 <script>

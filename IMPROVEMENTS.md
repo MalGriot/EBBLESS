@@ -232,12 +232,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #699.
 
 ### desktop-liquid-waves-698: Desktop: mouse drag makes liquid waves on the background only (Geethub #698)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #698. Dragging the mouse creates liquid-like waves on the background only, not on windows or song art, and must not affect buttons.
 - **Touches:** background layer, pointer. Check GPU budget rules (rAF must idle, pause when covered).
-- **Branch:**
-- **Notes:** Synced from Geethub #698.
+- **Branch:** agent/liquid-waves-698
+- **Notes:** Synced from Geethub #698. Built: 1/4-res canvas inside #ambient (behind all windows), pointer-events none, mouse drag from bare background only (skips controls, cards, text, art), rings every 24px, rAF + display only while a ripple is alive, off when fullscreen/hidden. Verified on localhost, no gpu-watchdog warnings; waves not eyeballed (pane rAF dead).
 
 ### artist-window-song-add-button: Songs in the artist window get an add-to-playlist/library icon button (Geethub #485)
 - **Status:** merged
