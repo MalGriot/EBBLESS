@@ -880,6 +880,13 @@ body:not(.split-desktop) .lib-grid:not(.is-list):not(.is-compact){grid-template-
 body:not(.split-desktop) .lib-grid.is-compact{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
 .lib-artist-divider{grid-column:1/-1;display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;margin-top:6px;background:none;border:0;border-bottom:1px solid var(--line, rgba(255,255,255,.1));color:var(--text);font:inherit;font-weight:600;text-align:left;cursor:pointer}
 .lib-artist-divider:first-child{margin-top:0}
+.lib-artist-divider .th{flex:none;width:24px;height:24px;border-radius:5px;object-fit:cover}
+.lib-album-strip{grid-column:1/-1;display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+.lib-album-strip::-webkit-scrollbar{display:none}
+.lib-album-chip{flex:none;max-width:160px;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--border-2);background:none;color:var(--faint);font:inherit;font-size:.85em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.lib-album-chip:hover{color:var(--text)}
+.lib-album-chip.is-on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+.lib-album-chip.is-fold{border-style:dashed}
 .lib-artist-divider .chev{flex:none;width:14px;height:14px;transition:transform .15s}
 .lib-artist-divider[aria-expanded="false"] .chev{transform:rotate(-90deg)}
 .lib-artist-divider .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -4441,6 +4448,10 @@ body.week-up-on{overflow:hidden}
                     <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
                   </button>
                 </div>
+                <div class="lib-menu-head">Albums</div>
+                <button type="button" class="art-style-opt" id="libAlbSecBtn"><span class="art-style-label">Group by artist</span>
+                  <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+                </button>
               </div>
             </div>
         </div>
@@ -10924,7 +10935,14 @@ function applyLibSortUI(){
   const mode = getLibrarySort();
   libSortMenu.querySelectorAll('.art-style-opt[data-sort]').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
   libSortBtn.classList.toggle('is-active', mode !== 'recent');
+  $('libAlbSecBtn').classList.toggle('is-active', advPrefs().albsec !== 'flat');
 }
+$('libAlbSecBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  advSet('albsec', advPrefs().albsec === 'flat' ? null : 'flat');
+  applyLibSortUI();
+  renderLibrary();
+});
 function openLibSortMenu(){ libSortMenu.classList.add('is-open'); libSortBtn.setAttribute('aria-expanded', 'true'); }
 function closeLibSortMenu(){ libSortMenu.classList.remove('is-open'); libSortBtn.setAttribute('aria-expanded', 'false'); }
 libSortBtn.addEventListener('click', (e) => {
@@ -11020,6 +11038,7 @@ function albumArtistName(pl){
 }
 let libArtistNames = new Map(); // artistNameKey -> name of each artist entry in the library (set by renderLibrary)
 let libAlbumGroupKeys = [];     // artist-group keys in the Albums section (set by renderLibrary)
+let libAlbumArtistPick = '';    // artist-group key picked in the Albums strip ('' = all)
 // Album versions: a remaster, re-release, deluxe/expanded edition or b-side
 // set of an album the same artist already has in the library folds under that
 // album (one tile + a small expander) instead of showing as its own tile.
@@ -11456,22 +11475,65 @@ function renderLibrary(){
   });
   if (albumGroups.size){
     const folded = lsGet(LS_ALBUM_ARTIST_FOLDED, {});
+    // One-album artists share a single "One album" section instead of a header each
+    const singles = [...albumGroups.entries()].filter(([k, g]) => k !== '_' && g.cards.length === 1);
+    if (singles.length > 1){
+      const sg = { name: 'One album', cards: [], single: true };
+      singles.forEach(([k, g]) => { albumGroups.delete(k); sg.cards.push(...g.cards); });
+      albumGroups.set('_single', sg);
+    }
     libAlbumGroupKeys = [...albumGroups.keys()];
+    if (libAlbumArtistPick && !albumGroups.has(libAlbumArtistPick)) libAlbumArtistPick = '';
+    const pick = searchQ ? '' : libAlbumArtistPick;
     // View menu applies to albums too: by-artist groups follow the chosen order
-    // (album cards inside each group are already in that order from orderedLibraryIds)
+    // (album cards inside each group are already in that order from orderedLibraryIds,
+    // so Most recent / Manual keep the insertion order: newest album first)
     const albumSortMode = getLibrarySort();
     const grpScore = (g) => g.cards.reduce((n, c) => n + (albumSortMode === 'plays_desc' ? c._sortPlays : c._sortTracks), 0);
+    const scoreSort = albumSortMode === 'plays_desc' || albumSortMode === 'tracks_desc';
+    const keepOrder = albumSortMode === 'recent' || albumSortMode === 'custom';
+    const groupList = [...albumGroups.entries()].sort((a, b) => ((a[0] === '_single') - (b[0] === '_single')) || (scoreSort ? grpScore(b[1]) - grpScore(a[1]) : 0) || (keepOrder ? 0 : a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })));
     const flatAlbums = advPrefs().albsec === 'flat';
+    // Artist strip: fold/unfold all, then one chip per artist to show only theirs
+    if (!searchQ && groupList.length >= 3){
+      const strip = document.createElement('div');
+      strip.className = 'lib-album-strip';
+      const mk = (label, on, fn, cls) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'lib-album-chip' + (on ? ' is-on' : '') + (cls ? ' ' + cls : '');
+        b.textContent = label; b.addEventListener('click', fn); strip.appendChild(b);
+      };
+      if (!flatAlbums && !pick){
+        const allFolded = groupList.every(([k]) => folded[k]);
+        mk(allFolded ? 'Unfold all' : 'Fold all', false, () => {
+          const f = {};
+          if (!allFolded) groupList.forEach(([k]) => { f[k] = true; });
+          lsSet(LS_ALBUM_ARTIST_FOLDED, f);
+          rerenderLibraryKeepPanel();
+        }, 'is-fold');
+      }
+      mk('All', !pick, () => { libAlbumArtistPick = ''; rerenderLibraryKeepPanel(); });
+      groupList.forEach(([k, g]) => mk(g.name, pick === k, () => { libAlbumArtistPick = pick === k ? '' : k; rerenderLibraryKeepPanel(); }));
+      libraryAlbumsGrid.appendChild(strip);
+    }
+    const shownGroups = pick ? groupList.filter(([k]) => k === pick) : groupList;
     if (flatAlbums){
       // #494: no artist sections, one album grid in the chosen order
-      albumGroups.forEach(g => g.cards.forEach(c => libraryAlbumsGrid.appendChild(c)));
-    } else [...albumGroups.entries()].sort((a, b) => (albumSortMode === 'plays_desc' || albumSortMode === 'tracks_desc') ? (grpScore(b[1]) - grpScore(a[1])) || a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' }) : a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })).forEach(([gk, g]) => {
-      // while searching, matching albums always show
-      const open = !!searchQ || !folded[gk];
+      shownGroups.forEach(([k, g]) => g.cards.forEach(c => libraryAlbumsGrid.appendChild(c)));
+    } else shownGroups.forEach(([gk, g]) => {
+      // while searching, matching albums always show; a picked artist is always open
+      const open = !!searchQ || !!pick || !folded[gk];
       const div = document.createElement('button');
       div.type = 'button'; div.className = 'lib-artist-divider';
       div.setAttribute('aria-expanded', String(open));
       div.innerHTML = '<svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg><span class="nm"></span><span class="ct"></span>';
+      // a folded section still shows a cover so it isn't a blank line
+      const firstImg = !open && g.cards[0] && g.cards[0].querySelector('img');
+      if (firstImg && (firstImg.currentSrc || firstImg.src)){
+        const th = document.createElement('img');
+        th.className = 'th'; th.alt = ''; th.src = firstImg.currentSrc || firstImg.src;
+        div.insertBefore(th, div.querySelector('.nm'));
+      }
       div.querySelector('.nm').textContent = g.name;
       div.querySelector('.ct').textContent = g.cards.length;
       div.addEventListener('click', () => {
@@ -11484,7 +11546,7 @@ function renderLibrary(){
       if (!open) return;
       const verSets = new Map(); // normalized title -> [cards], first-seen order
       g.cards.forEach(c => {
-        const k = c._albumVer && c._albumVer.key ? c._albumVer.key : 'id:' + c.dataset.plId;
+        const k = !g.single && c._albumVer && c._albumVer.key ? c._albumVer.key : 'id:' + c.dataset.plId;
         if (!verSets.has(k)) verSets.set(k, []);
         verSets.get(k).push(c);
       });
