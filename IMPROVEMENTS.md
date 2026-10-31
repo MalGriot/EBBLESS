@@ -183,11 +183,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #705.
 
 ### artist-links-logos-704: Artist page: links and socials buttons become just logos (Geethub #704)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #704. On the artist page, link and social buttons should show only the logo.
 - **Touches:** artist window links row.
-- **Branch:**
+- **Branch:** agent/artist-logos-704
 - **Notes:** Synced from Geethub #704.
 
 ### mobile-search-hold-mic-703: Mobile: holding the footer search button activates the mic (Geethub #703)
