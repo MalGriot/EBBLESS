@@ -10454,23 +10454,30 @@ function sampleDominantColor(img){
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
   const data = ctx.getImageData(0, 0, w, h).data;
-  let sr = 0, sg = 0, sb = 0, n = 0;
-  let bestSat = -1, bestR = 0, bestG = 0, bestB = 0;
+  // Bucket the art's pixels (3 bits per channel) and pick the bucket that is
+  // both common and colorful, then return that bucket's own average. The old
+  // code averaged every pixel with the most saturated one, which blended
+  // different hues into a color that was nowhere in the art (#707).
+  const bins = new Map();
   for (let i = 0; i < data.length; i += 4){
     const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
     if (a < 128) continue;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
     const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
     if (lum > 0.92 || lum < 0.08) continue;
-    const sat = max === 0 ? 0 : (max - min) / max;
-    sr += r; sg += g; sb += b; n++;
-    if (sat > bestSat){ bestSat = sat; bestR = r; bestG = g; bestB = b; }
+    const k = (r >> 5) << 6 | (g >> 5) << 3 | (b >> 5);
+    const e = bins.get(k) || (bins.set(k, { r: 0, g: 0, b: 0, n: 0 }), bins.get(k));
+    e.r += r; e.g += g; e.b += b; e.n++;
   }
-  if (!n) return null;
-  const r = Math.round(sr / n * 0.5 + bestR * 0.5);
-  const g = Math.round(sg / n * 0.5 + bestG * 0.5);
-  const b = Math.round(sb / n * 0.5 + bestB * 0.5);
-  return 'rgb(' + r + ',' + g + ',' + b + ')';
+  let best = null, bestScore = -1;
+  bins.forEach(e => {
+    const r = e.r / e.n, g = e.g / e.n, b = e.b / e.n;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const sat = max === 0 ? 0 : (max - min) / max;
+    const score = e.n * Math.pow(0.1 + sat, 2);
+    if (score > bestScore){ bestScore = score; best = [r, g, b]; }
+  });
+  if (!best) return null;
+  return 'rgb(' + Math.round(best[0]) + ',' + Math.round(best[1]) + ',' + Math.round(best[2]) + ')';
 }
 function rgbToHsl(r, g, b){
   r /= 255; g /= 255; b /= 255;

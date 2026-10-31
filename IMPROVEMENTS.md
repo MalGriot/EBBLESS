@@ -159,12 +159,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #708. The six trail ghosts already existed (#647); they now follow the lead E's wall hits in an 18-hit round: one E fades in per hit (1 to 6), three hits with all six, then one leaves per hit (the last one first), three hits with none, then it starts over. Hits are x every 9s from 3s and y every 13.8s from 7.8s after the empty art shows. `trailBounceTick()` (next to the `#flowArtWrap` clone) reads the lead's own animation clock and toggles `.on` on the ghosts; one timer at the next hit, polls at 1s when paused or hidden. Fade is an opacity transition only. Reduced motion still hides the trail. Verified on localhost by stepping the lead's clock through 20 hits: counts 0,1,2,3,4,5,6,6,6,6,5,4,3,2,1,0,0,0,0,1,2. No console errors. sw cache v462. Tap on the main E (#694 handler): no hop any more; the trail flashes in the UI accent (`--accent`) one E after the next, 70ms apart, 0.32s each (an accent copy of the E as `::after`, opacity only, class removed on animationend; off under reduced motion). The tap ripples are unchanged. Verified: tap sets staggered delays 0 to 350ms on t1..t6, no animation on the lead E, class cleared afterwards, no console errors. The tap ripple is a small burst: three soft accent rings (2px, light glow, staggered 160ms, 1.2s, scale to 2x) from the tap point; transform and opacity only, removed on animationend, capped at about two bursts alive.
 
 ### ui-more-album-colors-707: UI sometimes does not match the album art color; more colors available (Geethub #707)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #707. Sometimes the UI accent does not look like a color from the album art. Offer more color choices drawn from the art.
 - **Touches:** accent extraction from album art.
-- **Branch:**
-- **Notes:** Synced from Geethub #707.
+- **Branch:** agent/album-colors-707
+- **Notes:** Synced from Geethub #707. Cause: sampleDominantColor averaged all pixels 50/50 with the most saturated pixel, blending hues into a color not in the art. Now buckets pixels and returns the real average of the best common+colorful bucket. Checked with synthetic covers via a canvas mock; not yet seen on real covers.
 
 ### mobile-pause-fade-706: Pausing on mobile stops suddenly; fade out slightly (Geethub #706)
 - **Status:** review
