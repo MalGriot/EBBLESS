@@ -5009,10 +5009,10 @@ body.week-up-on{overflow:hidden}
       <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
       <h1 class="set-title" id="setTitle">Settings</h1>
       <nav class="set-hub" id="settingsHub" aria-label="Settings sections">
-        <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping, voice</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, what's new, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, voice, sounds, what's new, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </nav>
@@ -5105,14 +5105,6 @@ body.week-up-on{overflow:hidden}
           </div>
           <button type="button" class="switch" id="sbSongsBtn" role="switch" aria-checked="false" aria-label="Skip talking in songs"><span class="switch-knob"></span></button>
         </div>
-        <div class="settings-row" id="voiceRow">
-          <div>
-            <div class="label">Voice</div>
-            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
-            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
-          </div>
-          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
-        </div>
         <div class="settings-row" id="adblockRow" hidden>
           <div>
             <div class="label">Ad blocking</div>
@@ -5146,6 +5138,14 @@ body.week-up-on{overflow:hidden}
       </div>
       <div class="settings-block" id="settingsAppBlock" data-spage="app">
         <h2>App</h2>
+        <div class="settings-row" id="voiceRow">
+          <div>
+            <div class="label">Voice</div>
+            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
+            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
+          </div>
+          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
+        </div>
         <div class="settings-row" id="installBlock">
           <div>
             <div class="label">Install EBBLESS</div>
