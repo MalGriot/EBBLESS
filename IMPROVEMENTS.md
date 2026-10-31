@@ -126,6 +126,30 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### progress-bar-hover-color-712: Player progress bar hover color matches the UI instead of yellow (Geethub #712)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #712. The progress bar turns yellow on hover; it should match the UI color.
+- **Touches:** (to be determined)
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #712. Title only.
+
+### notifications-in-header-713: All notifications show in the header bar, marquee-scrolling (Geethub #713)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #713. Every notification appears in the header bar and can marquee scroll.
+- **Touches:** (to be determined)
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #713. Title only.
+
+### countdown-numbers-714: Show a counting-down number for skips, ad waits, and any countdown (Geethub #714)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #714. Whenever a song is being skipped, an ad is being waited out, or anything has a countdown, show the number counting down.
+- **Touches:** (to be determined)
+- **Branch:** (filled in by the manager once a lane is claimed)
+- **Notes:** Synced from Geethub #714. Title only.
+
 ### desktop-queue-hover-fill-711: Desktop: queue songs show a filled background when not hovered (Geethub #711)
 - **Status:** review
 - **Priority:** medium
@@ -10612,7 +10636,7 @@ Add entries in this shape:
 - **Notes:** Owner 2026-10-29: covered by the shipped real ad blocking; closed as duplicate. Synced from Geethub #540. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-539: Possible YouTube ad workaround (Geethub #539)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #539. Investigate a possible YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10695,7 +10719,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #530. Same area as custom-cursor and cursor-brainstorm (#499). Fixed: every cursor shape now has a dark outer edge and light inner edge, so it shows on any color. Cache v265.
 
 ### yt-ad-workaround-529: Yet another YouTube ad workaround (Geethub #529)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #529. Investigate and implement another YouTube ad workaround.
 - **Touches:** ad handling.
@@ -10703,7 +10727,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #529. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-528: Another possible YouTube ad workaround (Geethub #528)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #528. Investigate and implement.
 - **Touches:** ad handling.
@@ -10711,7 +10735,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #528. Ad group, see #541. Vague idea with no concrete technique. Findings 2026-10-18: nothing safe beyond what already ships (dodge #523, alt upload swap #624, held-ad skip #558, zero-ads gate). Compliant directions worth testing with real ads: prefer non-YouTube sources first when a matching SoundCloud or other upload exists, remember songs whose YouTube link tends to ad and pre-swap them, and the #557 reload test. Needs a concrete idea from the owner before building. Ad rule: detect and route around only; no blocking of YouTube ad requests or hiding of ads inside the embed (breaks YouTube API terms, see #524 parked). Owner will clarify. Questions: what technique or observation was behind this idea? Device and app? Is the goal fewer ads heard, skipped faster, or avoided by picking a different source for the song?
 
 ### yt-ad-workaround-527: Possible YouTube workaround (Geethub #527)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub #527. Investigate and implement.
 - **Touches:** ad handling.
@@ -10767,7 +10791,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #519. Related to currents-playlist-algorithm.
 
 ### bug-ads-since-install: Getting ads since installing the app (Geethub #518)
-- **Status:** review
+- **Status:** merged
 - **Priority:** high
 - **Description:** Idea, Geethub #518. Bug #518. Ads appear after the app was installed.
 - **Touches:** ads; the "Ads playing?" report (`adsReportBtn`).
@@ -10823,7 +10847,7 @@ Add entries in this shape:
 - **Notes:** Owner 2026-10-29: postponed. Synced from Geethub #556.
 
 ### youtube-ads-tip-when-the-skip: youtube ads tip: when the skip button appears, you don't have to click it, all you have to do is refresh the page and it plays (Geethub #557)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #557. medium
 - **Touches:** tbd.
@@ -10863,7 +10887,7 @@ Add entries in this shape:
   Round 9 (2026-10-17, cache v300, not deployed): Settings steps reordered so Restore a setting to its original value (Reset) is last: open Settings, explore, change a setting, customize, adjust the volume, restore. The card still shows the first unfinished step, so doing Reset early does not skip the others. Syntax-checked only, not opened in the preview.
 
 ### playing-the-next-song-in-the: playing the next song in the queue in the background to make sure the ad is played out could work also for preventing users from waiting (Geethub #561)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #561. medium
 - **Touches:** tbd.
@@ -10951,7 +10975,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #571.
 
 ### reverse-engineer-youtube-and-find-out: reverse engineer youtube and find out where the ads are coming from so we can stop them (Geethub #572)
-- **Status:** review
+- **Status:** merged
 - **Priority:** low
 - **Description:** Idea, Geethub #572. medium
 - **Touches:** tbd.
@@ -11398,7 +11422,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #623. Related to #604, #605, #612. Every shape change (menu, art skin follow, cymatics) resizes then moves the window to the bottom right corner via mpMagnetize. Not verified in real Electron.
 
 ### when-it-plays-an-ad-try-switching-the-link: when it plays an ad, try switching the link to a less popular song or a soundcloud link if it's close to 100% match (Geethub #624)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #624. 
 - **Touches:** tbd.
@@ -11536,7 +11560,7 @@ Add entries in this shape:
 - **Notes:** Built: while the app is in its playing state, the page is visible and the active deck's clock has not moved for 10s, a toast "Song not playing. Skipping to the next in 5s" with a Cancel button appears; after 5s it calls playNext(true). Cancel stops it for that song; the clock moving again also stops it. Pause, hidden page, scrubbing and deck swaps never count. With repeat-one it retries the same song. Cache v389. Verified: script syntax check only. NOT verified: in a browser or on the phone; the 10s counts from the last clock movement, so a slow ad-wait start with a frozen clock can trigger it.
 
 ### podcast-intro-ad: podcasts play a ~20s ad at the start (Geethub #648)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea Geethub #648. Some podcasts (No Sleep) play an ad of about 20 seconds before the episode, in Hindi for the owner. EBBLESS should skip it.
 - **Touches:** index.html (podAdScan, tap-to-skip ranges).
