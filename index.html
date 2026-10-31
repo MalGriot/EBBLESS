@@ -1442,12 +1442,11 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
   -webkit-mask:url(brand/assets/mark-white.png) 60.04% 54.5%/104.83% 105.85% no-repeat;mask:url(brand/assets/mark-white.png) 60.04% 54.5%/104.83% 105.85% no-repeat}
 /* the trail: six ghosts of the E, each following the same path 1s behind the one before, in the colors of the color logo, fading out */
 .art-dvd.trail{z-index:0}
-.art-dvd.t1{--i:1;--h:3s;--c:#5aa6f0;--o:.85}.art-dvd.t2{--i:2;--h:7.8s;--c:#7ee3ee;--o:.75}.art-dvd.t3{--i:3;--h:12s;--c:#b5ebc0;--o:.65}
-.art-dvd.t4{--i:4;--h:21s;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--h:21.6s;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--h:30s;--c:#ba687b;--o:.35}
-/* #708: the trail builds up. Only the lead E at first; ghost k fades in at the lead's k-th wall hit (--h; x hits at 3, 12, 21, 30s, y hits at 7.8, 21.6s, from the moment the empty art shows). Opacity only; paused with the lead. */
-.art-dvd.trail .art-dvd-e{animation:dvd-in .6s ease-out var(--h,0s) both}
-@keyframes dvd-in{from{opacity:0}}
-body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-e,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-e,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-e,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-e,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-e{animation-play-state:paused}
+.art-dvd.t1{--i:1;--c:#5aa6f0;--o:.85}.art-dvd.t2{--i:2;--c:#7ee3ee;--o:.75}.art-dvd.t3{--i:3;--c:#b5ebc0;--o:.65}
+.art-dvd.t4{--i:4;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--c:#ba687b;--o:.35}
+/* #708: the trail builds up and drains with the lead E's wall hits (JS sets .on on the first N ghosts, see trailBounceTick). Opacity transition only. */
+.art-dvd.trail .art-dvd-e{opacity:0;transition:opacity .6s ease-out}
+.art-dvd.trail.on .art-dvd-e{opacity:var(--o)}
 .art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
@@ -9724,6 +9723,30 @@ const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
 // #647: the nothing-playing E and its trail also play in the fullscreen player, so give its art the same markup
 document.querySelectorAll('.artwork-wrap > .art-dvd').forEach(n => flowArtWrap.appendChild(n.cloneNode(true)));
+
+// #708: the trail of E's follows the lead E's wall hits (x hits at 3 + 9k s, y hits at 7.8 + 13.8k s after the empty art shows).
+// 18 hits per round: E's appear one per hit (1-6), three hits with all six, they leave one per hit (last first), three hits with none, repeat.
+// Reads the lead's own animation clock, so a paused lead (fullscreen player, Find music) pauses this too; one timer, at the next hit, idle when the empty art is hidden.
+const TRAIL_X_FIRST = 3, TRAIL_X_EVERY = 9, TRAIL_Y_FIRST = 7.8, TRAIL_Y_EVERY = 13.8;
+let trailTimer = 0;
+function trailHitsBy(t){ return (t < TRAIL_X_FIRST ? 0 : Math.floor((t - TRAIL_X_FIRST) / TRAIL_X_EVERY) + 1) + (t < TRAIL_Y_FIRST ? 0 : Math.floor((t - TRAIL_Y_FIRST) / TRAIL_Y_EVERY) + 1); }
+function trailNextHit(t){ const nx = t < TRAIL_X_FIRST ? TRAIL_X_FIRST : TRAIL_X_FIRST + (Math.floor((t - TRAIL_X_FIRST) / TRAIL_X_EVERY) + 1) * TRAIL_X_EVERY, ny = t < TRAIL_Y_FIRST ? TRAIL_Y_FIRST : TRAIL_Y_FIRST + (Math.floor((t - TRAIL_Y_FIRST) / TRAIL_Y_EVERY) + 1) * TRAIL_Y_EVERY; return Math.min(nx, ny); }
+function trailShown(n){ const m = n % 18; return m <= 6 ? m : m <= 9 ? 6 : m <= 15 ? 15 - m : 0; }
+function trailBounceTick(){
+  clearTimeout(trailTimer);
+  let wait = 1000;
+  for (const wrap of [document.querySelector('.artwork-wrap'), flowArtWrap]){
+    if (!wrap) continue;
+    const x = wrap.querySelector('.art-dvd:not(.trail) .art-dvd-x');
+    const anim = x && x.getAnimations()[0];
+    if (!anim || anim.currentTime == null){ wrap.querySelectorAll('.art-dvd.trail').forEach(g => g.classList.remove('on')); continue; }
+    const t = anim.currentTime / 1000, shown = trailShown(trailHitsBy(t));
+    wrap.querySelectorAll('.art-dvd.trail').forEach(g => g.classList.toggle('on', +(g.className.match(/\bt(\d)\b/) || [])[1] <= shown));
+    if (anim.playState === 'running') wait = Math.min(wait, Math.max(50, (trailNextHit(t) - t) * 1000 + 30));
+  }
+  trailTimer = setTimeout(trailBounceTick, wait);
+}
+trailBounceTick();
 const flowSeekTrack = $('flowSeekTrack'), flowSeekFill = $('flowSeekFill'), flowSeekKnob = $('flowSeekKnob'), flowTimeCur = $('flowTimeCur'), flowTimeDur = $('flowTimeDur');
 const flowPlayBtn = $('flowPlayBtn'), flowPlayIco = $('flowPlayIco'), flowPrevBtn = $('flowPrevBtn'), flowNextBtn = $('flowNextBtn'), flowExitBtn = $('flowExitBtn');
 const flowShuffleBtn = $('flowShuffleBtn'), flowRepeatBtn = $('flowRepeatBtn'), flowRepeatOneBadge = $('flowRepeatOneBadge');
