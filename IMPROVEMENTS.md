@@ -135,12 +135,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #711.
 
 ### dock-logo-bigger-710: Dock e logo as big as fits without clipping (Geethub #710)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #710. The e logo on the dock icon should be as large as it can be without being clipped.
 - **Touches:** dock icon art. Related to dock-icon-shadow-697.
-- **Branch:**
-- **Notes:** Synced from Geethub #710.
+- **Branch:** agent/dock-logo-710
+- **Notes:** Synced from Geethub #710. New brand/assets/icons/dock-512.png: e cropped to its bounds and scaled to fill 512 with an 18px margin (was 266x257 of 512). Used by the runtime dock icon (index.html dockIconDraw) and the Mac bundle + Windows icon in desktop/package.json. icon-512.png unchanged (favicon/PWA). Rendered and checked: no clipping. Takes effect in the runtime icon on next page load; the bundle icon needs a new DMG build.
 
 ### mobile-volume-double-tap-709: Mobile: double-tap volume buttons to pause, play, skip (Geethub #709)
 - **Status:** ready
