@@ -215,12 +215,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #701.
 
 ### header-support-icon-700: Header heart becomes an icon that means supporting financially (Geethub #700)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #700. The header heart should be a different icon that reads as financial support.
 - **Touches:** header donate button (see #640).
-- **Branch:**
-- **Notes:** Synced from Geethub #700.
+- **Branch:** claude/unruffled-engelbart-b8ede2
+- **Notes:** Synced from Geethub #700. Heart swapped for a dollar-in-circle coin icon; label, title and tap behavior unchanged.
 
 ### toasts-center-swipe-699: Resume and update toasts: center of top header, swipe to dismiss (Geethub #699)
 - **Status:** ready
