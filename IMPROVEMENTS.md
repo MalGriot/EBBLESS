@@ -135,12 +135,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #712. Cause: mini player seek fill hover used --accent, which in the mini window only gets set by the visualizer loop and otherwise stays the default yellow #e0b26a. Fix: hover now uses --mp-play-bg (the app's live UI accent, set every tick), falling back to --accent. sw cache v466.
 
 ### notifications-in-header-713: All notifications show in the header bar, marquee-scrolling (Geethub #713)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #713. Every notification appears in the header bar and can marquee scroll.
 - **Touches:** (to be determined)
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub #713. Title only.
+- **Branch:** agent/header-notifs-713
+- **Notes:** Synced from Geethub #713. Built: every showToast now uses the #699 header position (top-centered, swipe away); long messages marquee (transform only, paused when closed, off under reduced motion). sw cache v466. Not yet verified on device.
 
 ### countdown-numbers-714: Show a counting-down number for skips, ad waits, and any countdown (Geethub #714)
 - **Status:** review
