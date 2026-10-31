@@ -151,12 +151,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #709.
 
 ### nothing-playing-trailing-es-708: Nothing playing animation: trailing E's build up on each bounce (Geethub #708)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #708. The animation starts with one e. Each bounce adds another e trailing behind it, up to 6.
 - **Touches:** nothing-playing bouncing logo (see #647). GPU budget: transform/opacity only.
-- **Branch:**
-- **Notes:** Synced from Geethub #708.
+- **Branch:** claude/jovial-cerf-05d283
+- **Notes:** Synced from Geethub #708. The six trail ghosts already existed (#647); they now follow the lead E's wall hits in an 18-hit round: one E fades in per hit (1 to 6), three hits with all six, then one leaves per hit (the last one first), three hits with none, then it starts over. Hits are x every 9s from 3s and y every 13.8s from 7.8s after the empty art shows. `trailBounceTick()` (next to the `#flowArtWrap` clone) reads the lead's own animation clock and toggles `.on` on the ghosts; one timer at the next hit, polls at 1s when paused or hidden. Fade is an opacity transition only. Reduced motion still hides the trail. Verified on localhost by stepping the lead's clock through 20 hits: counts 0,1,2,3,4,5,6,6,6,6,5,4,3,2,1,0,0,0,0,1,2. No console errors. sw cache v462. Tap on the main E (#694 handler): no hop any more; the trail flashes in the UI accent (`--accent`) one E after the next, 70ms apart, 0.32s each (an accent copy of the E as `::after`, opacity only, class removed on animationend; off under reduced motion). The tap ripples are unchanged. Verified: tap sets staggered delays 0 to 350ms on t1..t6, no animation on the lead E, class cleared afterwards, no console errors. The tap ripple is a small burst: three soft accent rings (2px, light glow, staggered 160ms, 1.2s, scale to 2x) from the tap point; transform and opacity only, removed on animationend, capped at about two bursts alive.
 
 ### ui-more-album-colors-707: UI sometimes does not match the album art color; more colors available (Geethub #707)
 - **Status:** ready
