@@ -126,6 +126,118 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### desktop-queue-hover-fill-711: Desktop: queue songs show a filled background when not hovered (Geethub #711)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #711. On desktop, queue rows keep the hover fill when the mouse is off them.
+- **Touches:** queue row hover styles. Possible regression of queue-song-hover-fill (#394).
+- **Branch:**
+- **Notes:** Synced from Geethub #711.
+
+### dock-logo-bigger-710: Dock e logo as big as fits without clipping (Geethub #710)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #710. The e logo on the dock icon should be as large as it can be without being clipped.
+- **Touches:** dock icon art. Related to dock-icon-shadow-697.
+- **Branch:**
+- **Notes:** Synced from Geethub #710.
+
+### mobile-volume-double-tap-709: Mobile: double-tap volume buttons to pause, play, skip (Geethub #709)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #709. Double-tap volume down pauses. When paused, double-tap volume up plays. When playing, double-tap volume up skips.
+- **Touches:** Android native app (hardware keys); likely not possible in a browser.
+- **Branch:**
+- **Notes:** Synced from Geethub #709.
+
+### nothing-playing-trailing-es-708: Nothing playing animation: trailing E's build up on each bounce (Geethub #708)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #708. The animation starts with one e. Each bounce adds another e trailing behind it, up to 6.
+- **Touches:** nothing-playing bouncing logo (see #647). GPU budget: transform/opacity only.
+- **Branch:**
+- **Notes:** Synced from Geethub #708.
+
+### ui-more-album-colors-707: UI sometimes does not match the album art color; more colors available (Geethub #707)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #707. Sometimes the UI accent does not look like a color from the album art. Offer more color choices drawn from the art.
+- **Touches:** accent extraction from album art.
+- **Branch:**
+- **Notes:** Synced from Geethub #707.
+
+### mobile-pause-fade-706: Pausing on mobile stops suddenly; fade out slightly (Geethub #706)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #706. Pausing a song on mobile still cuts off abruptly. It should fade out briefly.
+- **Touches:** pause path, mobile volume ramp (see earlier fade work).
+- **Branch:**
+- **Notes:** Synced from Geethub #706.
+
+### desktop-library-fullscreen-slide-705: Desktop: library fullscreen tab makes the window slide out (Geethub #705)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #705. On desktop, hitting the library fullscreen tab should make the window slide out.
+- **Touches:** library window fullscreen transition.
+- **Branch:**
+- **Notes:** Synced from Geethub #705.
+
+### artist-links-logos-704: Artist page: links and socials buttons become just logos (Geethub #704)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #704. On the artist page, link and social buttons should show only the logo.
+- **Touches:** artist window links row.
+- **Branch:**
+- **Notes:** Synced from Geethub #704.
+
+### mobile-search-hold-mic-703: Mobile: holding the footer search button activates the mic (Geethub #703)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #703. Long-press on the footer menu search button starts voice search.
+- **Touches:** mobile footer menu, search button.
+- **Branch:**
+- **Notes:** Synced from Geethub #703.
+
+### mobile-footer-prev-next-702: Mobile footer player: previous and next buttons beside play (Geethub #702)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #702. Add previous and next track buttons on either side of the play button in the mobile footer player.
+- **Touches:** mobile footer player.
+- **Branch:**
+- **Notes:** Synced from Geethub #702.
+
+### single-update-cta-701: One update CTA: check on load, show at top of settings, drop Reload now (Geethub #701)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #701. Update app and Reload now are redundant. Check for updates on load; if newer, show an update CTA at the top of the settings list. Remove Reload now.
+- **Touches:** settings, updater. Overlaps update-app-button and adblock-live-rules (both in review).
+- **Branch:**
+- **Notes:** Synced from Geethub #701.
+
+### header-support-icon-700: Header heart becomes an icon that means supporting financially (Geethub #700)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #700. The header heart should be a different icon that reads as financial support.
+- **Touches:** header donate button (see #640).
+- **Branch:**
+- **Notes:** Synced from Geethub #700.
+
+### toasts-center-swipe-699: Resume and update toasts: center of top header, swipe to dismiss (Geethub #699)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #699. Resume and update toasts appear in the center of the top header and can be swiped away.
+- **Touches:** toast layer, header.
+- **Branch:**
+- **Notes:** Synced from Geethub #699.
+
+### desktop-liquid-waves-698: Desktop: mouse drag makes liquid waves on the background only (Geethub #698)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #698. Dragging the mouse creates liquid-like waves on the background only, not on windows or song art, and must not affect buttons.
+- **Touches:** background layer, pointer. Check GPU budget rules (rAF must idle, pause when covered).
+- **Branch:**
+- **Notes:** Synced from Geethub #698.
+
 ### artist-window-song-add-button: Songs in the artist window get an add-to-playlist/library icon button (Geethub #485)
 - **Status:** merged
 - **Priority:** medium
