@@ -1446,6 +1446,10 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .art-dvd.t4{--i:4;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--c:#ba687b;--o:.35}
 /* #708: the trail builds up and drains with the lead E's wall hits (JS sets .on on the first N ghosts, see trailBounceTick). Opacity transition only. */
 .art-dvd.trail .art-dvd-e{opacity:0;transition:opacity .6s ease-out}
+/* tap the main E -> the trail flashes in the UI color, one E after the next (opacity of an accent copy of the E; removed on animationend) */
+.art-dvd.trail .art-dvd-e::after{content:'';position:absolute;inset:0;background:var(--accent);opacity:0;-webkit-mask:inherit;mask:inherit}
+.art-dvd.trail .art-dvd-e.flash::after{animation:e-flash .32s ease-out calc(var(--i,0) * 70ms - 70ms) both}
+@keyframes e-flash{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
 .art-dvd.trail.on .art-dvd-e{opacity:var(--o)}
 .art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
@@ -1454,7 +1458,7 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 /* #694: tap the bouncing E -> it hops and rings ripple out. Ripples are short-lived (max 3, removed on animationend), transform + opacity only. */
 .logo-ripple{position:absolute;width:60%;aspect-ratio:1;border:2px solid rgba(255,255,255,.7);border-radius:50%;pointer-events:none;z-index:0;opacity:0;transform:translate(-50%,-50%) scale(.1);animation:logo-ripple 1.1s ease-out forwards}
 @keyframes logo-ripple{from{opacity:.7;transform:translate(-50%,-50%) scale(.1)}to{opacity:0;transform:translate(-50%,-50%) scale(1.6)}}
-@media (prefers-reduced-motion:reduce){.logo-ripple{display:none}}
+@media (prefers-reduced-motion:reduce){.logo-ripple{display:none}.art-dvd.trail .art-dvd-e::after{display:none}}
 /* #647: x and y both move at a steady speed (linear, alternate), so the E travels in straight lines and bounces off the art's edges at a constant pace.
    Travel = 100% of the art minus the box. */
 @keyframes dvd-y{from{transform:translateY(0)}to{transform:translateY(588%)}}
@@ -34957,8 +34961,8 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
   artworkWrap.addEventListener('touchcancel', () => { clearTimeout(timer); timer = null; });
 })();
 
-/* #694: tap the bouncing E (the empty player's main logo, not its colored trail) -> an instant hop, plus up to 3
-   ripples from the tap point. The tap is swallowed so it does not also run the art's double-tap/open-album actions.
+/* #694: tap the bouncing E (the empty player's main logo, not its colored trail) -> the trail flashes in the UI color one
+   after the next (no hop), plus up to 3 ripples from the tap point. The tap is swallowed so it does not also run the art's double-tap/open-album actions.
    The ripples remove themselves on animationend; nothing runs while no ripple is alive. */
 (function(){
   function bind(wrap){
@@ -34971,10 +34975,10 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
       if (ev.clientX < r.left - pad || ev.clientX > r.right + pad || ev.clientY < r.top - pad || ev.clientY > r.bottom + pad) return;
       ev.stopPropagation();
       if (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-      const img = box.querySelector('img');
-      if (img && img.animate) img.animate(
-        [{ transform: 'translateY(0) scale(1)' }, { transform: 'translateY(-90%) scale(1.15)', offset: .4 }, { transform: 'translateY(0) scale(1)' }],
-        { duration: 450, easing: 'ease-out' });
+      wrap.querySelectorAll('.art-dvd.trail .art-dvd-e').forEach(e => {
+        e.classList.remove('flash'); void e.offsetWidth; e.classList.add('flash');
+        e.addEventListener('animationend', () => e.classList.remove('flash'), { once: true });
+      });
       const w = wrap.getBoundingClientRect();
       const live = wrap.querySelectorAll('.logo-ripple');
       if (live.length >= 3) live[0].remove();
