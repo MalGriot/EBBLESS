@@ -11200,6 +11200,7 @@ function renderLibrary(){
   { const vis = [...libFilter.querySelectorAll('.lib-filter-btn:not(.hidden)')].map(b => b.dataset.filter), open = vis.filter(k => !libFolded[k]);
     if (vis.length && open.length !== 1) setOnlyLibPill(open[0] || vis[0]); }
   libFilter.querySelectorAll('.lib-filter-btn').forEach(btn => btn.classList.toggle('is-active', !libFolded[btn.dataset.filter]));
+  try{ renderHomeShelf(); } catch(e){}   // Recents follow the active pill
   updateLibFilterMore();
   const showPlaylists = (filter === 'all' || filter === 'playlists') && !advHide.includes('playlist');
   const showArtists = (filter === 'all' || filter === 'artists') && !advHide.includes('artist');
@@ -34135,13 +34136,20 @@ function renderShelfInto(box, show){
     .filter(id => ![SWELL_ID, BLEND_ID, NP_ID, LIKED_ID].includes(id) && !String(id).startsWith('discover-ext:') && !isPodcastPlaylistId(id) && getLastPlayed(id))
     .sort((a, b) => getLastPlayed(b) - getLastPlayed(a))
     .map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl && !isArtistEntry(x.pl));
+  // Library landing: only recents from the active filter pill's category
+  const pillKind = box.id === 'libShelf' ? { playlists: 'playlist', albums: 'album', podcasts: 'podcast', sets: 'set', artists: 'artist' }[(Object.keys(libFolded).find(k => !libFolded[k]))] : null;
   const firstOf = (kind) => recent.find(x => libSectionOf(x.pl) === kind);
   const lp = firstOf('playlist'), la = firstOf('album');
-  if (lp) add(lp.id, lp.pl);
-  if (la) add(la.id, la.pl);
   const liked = getCachedPlaylist(LIKED_ID);
-  if (liked && liked.tracks && liked.tracks.length) add(LIKED_ID, { tracks: liked.tracks, name: 'Liked Songs', image: liked.image });
-  recent.forEach(x => add(x.id, x.pl));
+  if (pillKind){
+    if (pillKind === 'playlist' && liked && liked.tracks && liked.tracks.length) add(LIKED_ID, { tracks: liked.tracks, name: 'Liked Songs', image: liked.image });
+    recent.filter(x => libSectionOf(x.pl) === pillKind).forEach(x => add(x.id, x.pl));
+  } else {
+    if (lp) add(lp.id, lp.pl);
+    if (la) add(la.id, la.pl);
+    if (liked && liked.tracks && liked.tracks.length) add(LIKED_ID, { tracks: liked.tracks, name: 'Liked Songs', image: liked.image });
+    recent.forEach(x => add(x.id, x.pl));
+  }
   box.textContent = '';
   box.hidden = !items.length;
   if (box.id === 'libShelf'){ const lb = $('libShelfLabel'); if (lb) lb.hidden = box.hidden; }
