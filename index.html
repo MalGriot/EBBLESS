@@ -37937,7 +37937,7 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
   document.addEventListener('pointerover', function(e){
     if (e.pointerType !== 'mouse' || rm.matches) return;
     var b = e.target.closest && e.target.closest('button');
-    if (!b || b.id === 'splashLogoBtn' || b.disabled || (e.relatedTarget && b.contains(e.relatedTarget))) return;
+    if (!b || b.id === 'splashLogoBtn' || b.disabled || b.classList.contains('set-hub-row') || (e.relatedTarget && b.contains(e.relatedTarget))) return;
     grow(b, '1.07');
   });
   document.addEventListener('pointerout', function(e){
