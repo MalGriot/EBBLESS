@@ -2629,8 +2629,12 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .toast.has-action.is-open{pointer-events:auto}
 /* #671: the welcome-back prompt sits under the top bar, clear of the mini
    player / play button and the bottom nav */
-.toast.is-top{bottom:auto;top:calc(var(--topbar-h) + var(--safe-t,0px) + 8px);transform:translate(-50%,-10px);max-width:calc(100vw - 24px)}
-.toast.is-top.is-open{transform:translate(-50%,0)}
+.toast.is-top{bottom:auto;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 38px) / 2);z-index:90;transform:translate(calc(-50% + var(--sx,0px)),calc(-10px + var(--sy,0px)));max-width:calc(100vw - 24px)}
+.toast.is-top.is-open{transform:translate(calc(-50% + var(--sx,0px)),var(--sy,0px))}
+/* #699: swipe away (any direction; up or sideways is natural). Only transform + opacity move. */
+.swipe-toast{touch-action:none;cursor:grab}
+.swipe-toast.is-drag{transition:none;cursor:grabbing}
+.sw-update-toast.is-swiped{visibility:hidden;pointer-events:none}
 .toast-action{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
 /* tap-to-skip prompt (#575): sits above the toast; hidden = out of rendering */
@@ -2655,12 +2659,12 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 @keyframes loadOkTick{to{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.load-ok{animation:loadOkFade 1s linear forwards}.load-ok::before{display:none}.load-ok path{animation:none;stroke-dashoffset:0}
   @keyframes loadOkFade{0%,80%{opacity:1}100%{opacity:0}}}
-.sw-update-toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translate(-50%,10px);z-index:81;
+.sw-update-toast{position:fixed;left:50%;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 38px) / 2);transform:translate(calc(-50% + var(--sx,0px)),calc(-10px + var(--sy,0px)));z-index:90;max-width:calc(100vw - 24px);
   display:flex;align-items:center;gap:12px;background:var(--panel-3);color:var(--text);font-size:12.5px;
   padding:10px 10px 10px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .sw-update-toast[hidden]{display:none}
-.sw-update-toast.is-open{opacity:1;transform:translate(-50%,0)}
+.sw-update-toast.is-open{opacity:1;transform:translate(calc(-50% + var(--sx,0px)),var(--sy,0px))}
 .sw-update-toast button{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
 /* encourage-liking-songs (#40): post-listen "Like this?" chip. Same shape
@@ -5678,9 +5682,9 @@ body.week-up-on{overflow:hidden}
     <div class="lyrics-fs-body" id="lyricsFsBody"></div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <button type="button" class="skip-prompt" id="skipPrompt" aria-live="polite" tabindex="-1"><span class="skip-prompt-what">Ad</span><span class="skip-prompt-left" id="skipPromptLeft"></span><span class="skip-prompt-go">Skip</span></button>
-  <div class="sw-update-toast" id="swUpdateToast" hidden>
+  <div class="sw-update-toast" id="swUpdateToast" role="status" aria-live="polite" hidden>
     <span>Update available</span>
     <button type="button" id="swUpdateBtn">Refresh</button>
   </div>
@@ -9808,7 +9812,45 @@ document.addEventListener('click', (e) => {
     btn.addEventListener('animationend', () => btn.classList.remove('is-thanks'), { once: true });
   }
 });
+// #699: drag a top toast away (touch or mouse). Up or sideways past a short
+// distance dismisses; otherwise it springs back. transform/opacity only.
+function makeSwipeAway(el, isShown, dismiss){
+  el.classList.add('swipe-toast');
+  let id = null, x0 = 0, y0 = 0, dragging = false;
+  const setPos = (x, y) => { el.style.setProperty('--sx', x + 'px'); el.style.setProperty('--sy', y + 'px'); };
+  el.addEventListener('pointerdown', (e) => {
+    if (!isShown() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    id = e.pointerId; x0 = e.clientX; y0 = e.clientY; dragging = false;
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== id) return;
+    const dx = e.clientX - x0, dy = Math.min(0, e.clientY - y0);
+    if (!dragging){
+      if (Math.abs(dx) < 6 && dy > -6) return;
+      dragging = true; el.classList.add('is-drag');
+      try { el.setPointerCapture(id); } catch(_){}
+    }
+    setPos(dx, dy);
+  });
+  const end = (e) => {
+    if (e.pointerId !== id) return;
+    id = null;
+    if (!dragging) return;
+    dragging = false; el.classList.remove('is-drag');
+    const dx = e.clientX - x0, dy = Math.min(0, e.clientY - y0);
+    if (e.type === 'pointerup' && (Math.abs(dx) > 60 || dy < -30)){
+      setPos(Math.abs(dx) > -dy ? Math.sign(dx) * 160 : dx, Math.abs(dx) > -dy ? 0 : -60);
+      dismiss();
+    } else setPos(0, 0);
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+makeSwipeAway(toastEl, () => toastEl.classList.contains('is-open') && toastEl.classList.contains('is-top'), () => {
+  clearTimeout(toastTimer); toastEl.classList.remove('is-open');
+});
 function showToast(msg, action){
+  toastEl.style.removeProperty('--sx'); toastEl.style.removeProperty('--sy');
   toastEl.textContent = msg;
   toastEl.classList.toggle('has-action', !!action);
   toastEl.classList.toggle('is-top', !!(action && action.top));
@@ -19545,6 +19587,9 @@ feedbackBtn.addEventListener('click', openFeedbackModal);
       requestAnimationFrame(() => swToast.classList.add('is-open'));
     };
     swBtn.addEventListener('click', () => { swBtn.disabled = true; EbbNative.reloadFresh(); });
+    makeSwipeAway(swToast, () => swToast.classList.contains('is-open'), () => {
+      swToast.classList.remove('is-open'); setTimeout(() => swToast.classList.add('is-swiped'), 400);
+    });
     [6000, 20000].forEach(ms => setTimeout(ask, ms));
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ask(); });
   }
