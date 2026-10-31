@@ -2621,19 +2621,19 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-credits-names{flex:1;min-width:0;color:var(--text)}
 .song-credits-source{margin-top:6px;font-size:11.5px;color:var(--faint)}
 @media (prefers-reduced-motion:reduce){.share-burst img{transition:opacity .2s ease;transform:none}}
-.toast{position:fixed;left:50%;bottom:auto;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 38px) / 2);transform:translate(calc(-50% + var(--sx,0px)),calc(-10px + var(--sy,0px)));z-index:90;max-width:calc(100vw - 24px);
-  background:var(--panel-3);color:var(--text);font-size:12.5px;padding:10px 16px;border-radius:20px;
+.toast{position:fixed;left:12px;right:12px;bottom:auto;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 44px) / 2);height:44px;box-sizing:border-box;
+  transform:translate(var(--sx,0px),calc(-10px + var(--sy,0px)));z-index:90;display:flex;align-items:center;gap:10px;
+  background:var(--panel-3);color:var(--text);font-size:12.5px;padding:0 6px 0 20px;border-radius:999px;
   box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-.toast.is-open{opacity:1;transform:translate(calc(-50% + var(--sx,0px)),var(--sy,0px))}
-.toast.has-action{display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px}
-.toast.has-action.is-open{pointer-events:auto}
+.toast.is-open{opacity:1;pointer-events:auto;transform:translate(var(--sx,0px),var(--sy,0px))}
+.toast-x{flex:0 0 auto;width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:var(--text);font-size:18px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+.toast-x:hover{background:rgba(255,255,255,.2)}
 /* #671: the welcome-back prompt sits under the top bar, clear of the mini
    player / play button and the bottom nav */
 /* #713: every toast shows in the header bar; long ones marquee (transform only,
    paused whenever the toast is not open) */
-.toast-msg{display:block;min-width:0;max-width:calc(100vw - 56px);overflow:hidden;white-space:nowrap}
+.toast-msg{display:block;flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap}
 .toast-txt{display:inline-block}
-.toast.has-action .toast-msg{max-width:calc(100vw - 150px)}
 .toast-txt.is-marquee{animation:toast-mq 9s linear infinite alternate}
 .toast:not(.is-open) .toast-txt{animation-play-state:paused}
 @keyframes toast-mq{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--mq,0px))}}
@@ -2666,13 +2666,14 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 @keyframes loadOkTick{to{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.load-ok{animation:loadOkFade 1s linear forwards}.load-ok::before{display:none}.load-ok path{animation:none;stroke-dashoffset:0}
   @keyframes loadOkFade{0%,80%{opacity:1}100%{opacity:0}}}
-.sw-update-toast{position:fixed;left:50%;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 38px) / 2);transform:translate(calc(-50% + var(--sx,0px)),calc(-10px + var(--sy,0px)));z-index:90;max-width:calc(100vw - 24px);
+.sw-update-toast{position:fixed;left:12px;right:12px;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 44px) / 2);height:44px;box-sizing:border-box;transform:translate(var(--sx,0px),calc(-10px + var(--sy,0px)));z-index:90;
   display:flex;align-items:center;gap:12px;background:var(--panel-3);color:var(--text);font-size:12.5px;
-  padding:10px 10px 10px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
+  padding:0 6px 0 20px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;
   transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
 .sw-update-toast[hidden]{display:none}
-.sw-update-toast.is-open{opacity:1;transform:translate(calc(-50% + var(--sx,0px)),var(--sy,0px))}
-.sw-update-toast button{background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
+.swu-msg{flex:1 1 auto;min-width:0}
+.sw-update-toast.is-open{opacity:1;transform:translate(var(--sx,0px),var(--sy,0px))}
+.sw-update-toast button:not(.toast-x){background:var(--accent);color:var(--on-accent,#151107);border:0;border-radius:14px;padding:6px 14px;
   font-size:12px;font-weight:600;cursor:pointer}
 /* encourage-liking-songs (#40): post-listen "Like this?" chip. Same shape
    as the SW update toast, sitting one row above the regular toast so the
@@ -5692,8 +5693,9 @@ body.week-up-on{overflow:hidden}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <button type="button" class="skip-prompt" id="skipPrompt" aria-live="polite" tabindex="-1"><span class="skip-prompt-what">Ad</span><span class="skip-prompt-left" id="skipPromptLeft"></span><span class="skip-prompt-go">Skip</span></button>
   <div class="sw-update-toast" id="swUpdateToast" role="status" aria-live="polite" hidden>
-    <span>Update available</span>
+    <span class="swu-msg">Update available</span>
     <button type="button" id="swUpdateBtn">Refresh</button>
+    <button type="button" class="toast-x" id="swUpdateX" aria-label="Dismiss">×</button>
   </div>
   <div class="like-nudge" id="likeNudge" role="status" hidden>
     <span class="ln-text" id="likeNudgeText"></span>
@@ -9858,11 +9860,21 @@ makeSwipeAway(toastEl, () => toastEl.classList.contains('is-open'), () => {
 });
 // #713: toast text goes in a clipped span; if it overflows the header width it
 // marquee-scrolls. Returns extra ms to keep a long toast up.
-function setToastMsg(msg){
+function setToastMsg(msg, action){
   toastEl.textContent = '';
   const box = document.createElement('span'), txt = document.createElement('span');
   box.className = 'toast-msg'; txt.className = 'toast-txt'; txt.textContent = msg;
   box.appendChild(txt); toastEl.appendChild(box);
+  if (action){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
+    b.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(toastTimer); toastEl.classList.remove('is-open'); action.run(); });
+    toastEl.appendChild(b);
+  }
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'toast-x'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '\u00d7';
+  x.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(toastTimer); adWaitShown = false; toastEl.classList.remove('is-open'); });
+  toastEl.appendChild(x);
   const over = txt.scrollWidth - box.clientWidth;
   if (over > 2){ txt.style.setProperty('--mq', -over + 'px'); txt.classList.add('is-marquee'); return Math.min(9000, 2000 + over * 25); }
   return 0;
@@ -9870,13 +9882,7 @@ function setToastMsg(msg){
 function showToast(msg, action){
   toastEl.style.removeProperty('--sx'); toastEl.style.removeProperty('--sy');
   toastEl.classList.toggle('has-action', !!action);
-  const extra = setToastMsg(msg);
-  if (action){
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
-    b.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(toastTimer); toastEl.classList.remove('is-open'); action.run(); });
-    toastEl.appendChild(b);
-  }
+  const extra = setToastMsg(msg, action);
   toastEl.classList.add('is-open');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), (action ? 6000 : 2200) + extra);
@@ -19614,6 +19620,7 @@ feedbackBtn.addEventListener('click', openFeedbackModal);
       requestAnimationFrame(() => swToast.classList.add('is-open'));
     };
     swBtn.addEventListener('click', () => { swBtn.disabled = true; EbbNative.reloadFresh(); });
+    $('swUpdateX').addEventListener('click', () => { swToast.classList.remove('is-open'); setTimeout(() => swToast.classList.add('is-swiped'), 400); });
     makeSwipeAway(swToast, () => swToast.classList.contains('is-open'), () => {
       swToast.classList.remove('is-open'); setTimeout(() => swToast.classList.add('is-swiped'), 400);
     });
