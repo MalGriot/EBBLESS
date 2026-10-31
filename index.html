@@ -1442,8 +1442,12 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
   -webkit-mask:url(brand/assets/mark-white.png) 60.04% 54.5%/104.83% 105.85% no-repeat;mask:url(brand/assets/mark-white.png) 60.04% 54.5%/104.83% 105.85% no-repeat}
 /* the trail: six ghosts of the E, each following the same path 1s behind the one before, in the colors of the color logo, fading out */
 .art-dvd.trail{z-index:0}
-.art-dvd.t1{--i:1;--c:#5aa6f0;--o:.85}.art-dvd.t2{--i:2;--c:#7ee3ee;--o:.75}.art-dvd.t3{--i:3;--c:#b5ebc0;--o:.65}
-.art-dvd.t4{--i:4;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--c:#ba687b;--o:.35}
+.art-dvd.t1{--i:1;--h:3s;--c:#5aa6f0;--o:.85}.art-dvd.t2{--i:2;--h:7.8s;--c:#7ee3ee;--o:.75}.art-dvd.t3{--i:3;--h:12s;--c:#b5ebc0;--o:.65}
+.art-dvd.t4{--i:4;--h:21s;--c:#f5c776;--o:.55}.art-dvd.t5{--i:5;--h:21.6s;--c:#e8986b;--o:.45}.art-dvd.t6{--i:6;--h:30s;--c:#ba687b;--o:.35}
+/* #708: the trail builds up. Only the lead E at first; ghost k fades in at the lead's k-th wall hit (--h; x hits at 3, 12, 21, 30s, y hits at 7.8, 21.6s, from the moment the empty art shows). Opacity only; paused with the lead. */
+.art-dvd.trail .art-dvd-e{animation:dvd-in .6s ease-out var(--h,0s) both}
+@keyframes dvd-in{from{opacity:0}}
+body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-e,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-e,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-e,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-e,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-e{animation-play-state:paused}
 .art-dvd img{position:absolute;display:block;width:104.83%;height:auto;left:-2.9%;top:-3.19%;opacity:.85}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd{display:block;animation:dvd-y 13.8s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}

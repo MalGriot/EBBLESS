@@ -151,12 +151,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #709.
 
 ### nothing-playing-trailing-es-708: Nothing playing animation: trailing E's build up on each bounce (Geethub #708)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #708. The animation starts with one e. Each bounce adds another e trailing behind it, up to 6.
 - **Touches:** nothing-playing bouncing logo (see #647). GPU budget: transform/opacity only.
-- **Branch:**
-- **Notes:** Synced from Geethub #708.
+- **Branch:** claude/jovial-cerf-05d283
+- **Notes:** Synced from Geethub #708. The six trail ghosts already existed (#647); they now fade in one at a time instead of all showing at once. Only the lead E at first; ghost k fades in (0.6s, opacity only) at the lead's k-th wall hit, at 3, 7.8, 12, 21, 21.6 and 30s after the empty art shows (x hits every 9s, y every 13.8s, lead phase -6s; per-ghost `--h` delay on `.art-dvd-e`). Pure CSS, no JS; paused together with the lead E (fullscreen layer, Find music, Music map), hidden under reduced motion (trail already hidden there). Restarts from one E whenever the empty art re-appears. Verified on localhost: opacity per ghost sampled at each hit time; no new `[gpu-watchdog]` warnings (one pre-existing hidden-video warning). sw cache v462.
 
 ### ui-more-album-colors-707: UI sometimes does not match the album art color; more colors available (Geethub #707)
 - **Status:** ready
