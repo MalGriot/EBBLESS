@@ -9855,8 +9855,65 @@ function makeSwipeAway(el, isShown, dismiss){
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
 }
+// One header notification at a time (#713). Anything that arrives while one is
+// up waits its turn. Time-sensitive keyed ones preempt a plain toast (the plain
+// one goes back to the front of the line): 'stall' (skip prompt) over 'ad'
+// (ad status) over everything else. Nothing here animates beyond opacity/transform.
+let toastLive = null;            // {key, prio, close()} of what is showing now
+const toastQ = [];               // waiting entries {key, prio, msg, action, ms, show}
+const TOAST_PRIO = { stall: 2, ad: 1 };
+function toastEnd(){
+  clearTimeout(toastTimer);
+  const cur = toastLive; toastLive = null;
+  if (cur) cur.close();
+  setTimeout(toastPump, 220);    // let the fade finish before the next one
+}
+function toastPump(){
+  if (toastLive) return;
+  const n = toastQ.shift();
+  if (n) toastShowNow(n);
+}
+function toastShowNow(n){
+  toastLive = n;
+  clearTimeout(toastTimer);
+  if (n.show){ n.show(n); toastTimer = setTimeout(toastEnd, n.ms || 12000); }
+  else {
+    toastEl.style.removeProperty('--sx'); toastEl.style.removeProperty('--sy');
+    toastEl.classList.toggle('has-action', !!n.action);
+    toastEl.dataset.k = n.key || '';
+    const extra = setToastMsg(n.msg, n.action);
+    n.close = () => { toastEl.classList.remove('is-open'); toastEl.dataset.k = ''; };
+    toastEl.classList.add('is-open');
+    toastTimer = setTimeout(() => { if (n.key === 'ad') adWaitShown = false; toastEnd(); }, n.ms || ((n.action ? 6000 : 2200) + extra));
+  }
+}
+// entry: {key, msg, action, ms} or {key, show(n), close()} for a custom element
+function toastPush(n){
+  n.prio = TOAST_PRIO[n.key] || 0;
+  if (n.key){   // a keyed entry replaces its own earlier copy, waiting or live
+    const i = toastQ.findIndex(q => q.key === n.key);
+    if (i >= 0) toastQ.splice(i, 1);
+    if (toastLive && toastLive.key === n.key && !toastLive.show){ toastEl.querySelector('.toast-txt') && setToastMsg(n.msg, n.action); return; }
+  } else if (toastLive && !toastLive.key && !toastLive.show && toastLive.msg === n.msg) return;
+  else if (toastQ.some(q => !q.key && q.msg === n.msg)) return;
+  if (toastLive && n.prio > toastLive.prio){
+    const cur = toastLive; clearTimeout(toastTimer); toastLive = null; cur.close();
+    if (cur.key !== 'stall' && !(cur.key === 'ad' && !adWaitShown && !adStatusToastOn)) toastQ.unshift(cur);
+    toastShowNow(n); return;
+  }
+  toastQ.push(n);
+  if (toastQ.length > 6) toastQ.splice(0, toastQ.length - 6);
+  toastPump();
+}
+// drop a keyed notification: closes it if showing, forgets it if waiting
+function toastClose(key){
+  const i = toastQ.findIndex(q => q.key === key);
+  if (i >= 0) toastQ.splice(i, 1);
+  if (toastLive && toastLive.key === key) toastEnd();
+}
 makeSwipeAway(toastEl, () => toastEl.classList.contains('is-open'), () => {
-  clearTimeout(toastTimer); toastEl.classList.remove('is-open');
+  if (toastLive && toastLive.key === 'ad') adWaitShown = false, adToastDismissed = true;
+  toastEnd();
 });
 // #713: toast text goes in a clipped span; if it overflows the header width it
 // marquee-scrolls. Returns extra ms to keep a long toast up.
@@ -9868,37 +9925,43 @@ function setToastMsg(msg, action){
   if (action){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
-    b.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(toastTimer); toastEl.classList.remove('is-open'); action.run(); });
+    b.addEventListener('click', (e) => { e.stopPropagation(); toastEnd(); action.run(); });
     toastEl.appendChild(b);
   }
   const x = document.createElement('button');
-  x.type = 'button'; x.className = 'toast-x'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '\u00d7';
-  x.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(toastTimer); adWaitShown = false; toastEl.classList.remove('is-open'); });
+  x.type = 'button'; x.className = 'toast-x'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×';
+  x.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (toastLive && toastLive.key === 'ad'){ adWaitShown = false; adToastDismissed = true; }
+    toastEnd();
+  });
   toastEl.appendChild(x);
   const over = txt.scrollWidth - box.clientWidth;
   if (over > 2){ txt.style.setProperty('--mq', -over + 'px'); txt.classList.add('is-marquee'); return Math.min(9000, 2000 + over * 25); }
   return 0;
 }
-function showToast(msg, action){
-  toastEl.style.removeProperty('--sx'); toastEl.style.removeProperty('--sy');
-  toastEl.classList.toggle('has-action', !!action);
-  const extra = setToastMsg(msg, action);
-  toastEl.classList.add('is-open');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), (action ? 6000 : 2200) + extra);
+function showToast(msg, action, key){
+  toastPush({ key: key || '', msg, action });
+}
+// change the words of the toast that is showing now, in place (countdowns)
+function toastUpdate(key, msg){
+  if (!toastLive || toastLive.key !== key) return;
+  const tx = toastEl.querySelector('.toast-txt');
+  if (tx && tx.textContent !== msg) tx.textContent = msg;
+  toastLive.msg = msg;
 }
 
 // Shown while the song the listener picked is sitting out a YouTube ad (it
 // plays on its own the moment the ad is cleared). Stays up until then, with a
 // cap so it can never get stuck.
-let adWaitShown = false;
+let adWaitShown = false, adStatusToastOn = false, adToastDismissed = false;
+function adToast(msg){
+  if (toastLive && toastLive.key === 'ad') return toastUpdate('ad', msg);
+  toastPush({ key: 'ad', msg, ms: 30000 });
+}
 function showAdWait(){
   adWaitShown = true;
-  toastEl.classList.remove('has-action');
-  setToastMsg(ADWAIT_MSG + '.');
-  toastEl.classList.add('is-open');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(clearAdWait, 30000);
+  adToast(ADWAIT_MSG + '.');
 }
 // #714: the ad-wait toast counts down the seconds left before the wait gives
 // up (UNMUTE_MAX_WAIT_MS), ticked from updateSeekUI's existing timer.
@@ -9906,15 +9969,19 @@ const ADWAIT_MSG = 'One sec, clearing a YouTube ad so your song starts clean. It
 function adWaitTick(ad){
   if (!adWaitShown || !ad.muteStartTs) return;
   const left = Math.ceil((ad.muteStartTs + UNMUTE_MAX_WAIT_MS - Date.now()) / 1000);
-  const t = ADWAIT_MSG + (left > 0 ? ' (' + left + 's).' : '.');
-  const tx = toastEl.querySelector('.toast-txt');
-  if (tx && tx.textContent !== t) tx.textContent = t;
+  adToast(ADWAIT_MSG + (left > 0 ? ' (' + left + 's).' : '.'));
 }
 function clearAdWait(){
   if (!adWaitShown) return;
   adWaitShown = false;
-  clearTimeout(toastTimer);
-  toastEl.classList.remove('is-open');
+  toastClose('ad');
+}
+// the ad status line ("Ad playing. ...") lives in the header notifications only
+function syncAdToast(txt){
+  if (!txt){ adToastDismissed = false; if (adStatusToastOn){ adStatusToastOn = false; if (!adWaitShown) toastClose('ad'); } return; }
+  if (adWaitShown || adToastDismissed) return;
+  adStatusToastOn = true;
+  adToast(txt);
 }
 
 // Geethub #398: brief accent check-mark pulse when a playlist/link loads.
@@ -19614,16 +19681,16 @@ feedbackBtn.addEventListener('click', openFeedbackModal);
 {
   const swToast = $('swUpdateToast'), swBtn = $('swUpdateBtn');
   if (window.EbbNative && EbbNative.pageUpdated && swToast && swBtn){
+    let swDismissed = false;   // X or swipe: stay away; a timeout just lets it come back later
+    const swClose = () => { swToast.classList.remove('is-open'); setTimeout(() => { if (!swToast.classList.contains('is-open')) swToast.hidden = true; }, 400); };
+    const swDismiss = () => { swDismissed = true; toastClose('update'); };
     const ask = () => {
-      try { if (!EbbNative.pageUpdated() || !swToast.hidden) return; } catch(e){ return; }
-      swToast.hidden = false;
-      requestAnimationFrame(() => swToast.classList.add('is-open'));
+      try { if (swDismissed || !EbbNative.pageUpdated() || !swToast.hidden) return; } catch(e){ return; }
+      toastPush({ key: 'update', show(){ swToast.hidden = false; swToast.classList.remove('is-swiped'); requestAnimationFrame(() => swToast.classList.add('is-open')); }, close: swClose });
     };
     swBtn.addEventListener('click', () => { swBtn.disabled = true; EbbNative.reloadFresh(); });
-    $('swUpdateX').addEventListener('click', () => { swToast.classList.remove('is-open'); setTimeout(() => swToast.classList.add('is-swiped'), 400); });
-    makeSwipeAway(swToast, () => swToast.classList.contains('is-open'), () => {
-      swToast.classList.remove('is-open'); setTimeout(() => swToast.classList.add('is-swiped'), 400);
-    });
+    $('swUpdateX').addEventListener('click', swDismiss);
+    makeSwipeAway(swToast, () => swToast.classList.contains('is-open'), swDismiss);
     [6000, 20000].forEach(ms => setTimeout(ask, ms));
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ask(); });
   }
@@ -32916,10 +32983,11 @@ function adWaitText(){
 let adStatusShown = '';
 function paintAdStatus(){
   const txt = adWaitText();
+  syncAdToast(txt);
   if (txt === adStatusShown) return;
   if (txt && !adStatusShown) adLog(activeDeck(), 'status', '');
   adStatusShown = txt;
-  adsReportBtn.textContent = txt || 'Ads playing?';
+  adsReportBtn.textContent = 'Ads playing?';
   adsReportBtn.classList.toggle('is-ad', !!txt);
 }
 function returnFromAdDodge(deck){
@@ -33639,25 +33707,24 @@ function stallWatch(ad){
   const now = Date.now();
   if (key !== stallKey || Math.abs(cur - stallPos) > 0.05){
     stallKey = key; stallPos = cur; stallSince = now;
-    if (stallTimer){ stallClear(); toastEl.classList.remove('is-open'); }
+    if (stallTimer){ stallClear(); toastClose('stall'); }
     return;
   }
   // only while the listener expects sound: playing state, visible page, no
   // scrub in progress or hand-off under way
   if (stallTimer){   // #714: count the seconds down in the prompt
     const left = Math.max(1, Math.ceil((stallDue - now) / 1000));
-    const n = toastEl.querySelector('.toast-txt');
-    if (n) n.textContent = stallMsg(left);
+    toastUpdate('stall', stallMsg(left));
     return;
   }
   if (stallCancelled === key || now - stallSince < STALL_SKIP_MS) return;
   if (!artworkWrap.classList.contains('is-playing') || document.hidden || seekDrag || swapInProgress) { stallSince = now; return; }
   stallDue = now + STALL_SKIP_GRACE_MS;
-  showToast(stallMsg(Math.round(STALL_SKIP_GRACE_MS / 1000)), { label: 'Cancel', run: () => { stallCancelled = key; stallClear(); } });
+  showToast(stallMsg(Math.round(STALL_SKIP_GRACE_MS / 1000)), { label: 'Cancel', run: () => { stallCancelled = key; stallClear(); } }, 'stall');
   stallTimer = setTimeout(() => {
     stallTimer = null;
     if (stallKey !== key || stallCancelled === key) return;
-    toastEl.classList.remove('is-open');
+    toastClose('stall');
     adLog(ad, 'stall-skip', '');
     playNext(true);
   }, STALL_SKIP_GRACE_MS);
