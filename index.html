@@ -887,6 +887,11 @@ body:not(.split-desktop) .lib-grid.is-compact{grid-template-columns:repeat(auto-
 .lib-album-chip:hover{color:var(--text)}
 .lib-album-chip.is-on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
 .lib-album-chip.is-fold{border-style:dashed}
+.lib-album-artist-link{cursor:pointer}
+.lib-album-artist-link:hover{text-decoration:underline;color:var(--text)}
+.lib-az{position:sticky;top:76px;float:right;z-index:3;display:flex;flex-direction:column;justify-content:space-between;width:18px;height:min(60vh,420px);margin-left:6px;touch-action:none;user-select:none}
+.lib-az button{flex:1 1 0;min-height:0;padding:0;border:0;background:none;color:var(--faint);font:inherit;font-size:10px;font-weight:600;line-height:1;cursor:pointer}
+.lib-az button:hover{color:var(--text)}
 .lib-artist-divider .chev{flex:none;width:14px;height:14px;transition:transform .15s}
 .lib-artist-divider[aria-expanded="false"] .chev{transform:rotate(-90deg)}
 .lib-artist-divider .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -11011,11 +11016,11 @@ function applyLibSortUI(){
   const mode = getLibrarySort();
   libSortMenu.querySelectorAll('.art-style-opt[data-sort]').forEach(b => b.classList.toggle('is-active', b.dataset.sort === mode));
   libSortBtn.classList.toggle('is-active', mode !== 'recent');
-  $('libAlbSecBtn').classList.toggle('is-active', advPrefs().albsec !== 'flat');
+  $('libAlbSecBtn').classList.toggle('is-active', !albumsFlat());
 }
 $('libAlbSecBtn').addEventListener('click', (e) => {
   e.stopPropagation();
-  advSet('albsec', advPrefs().albsec === 'flat' ? null : 'flat');
+  advSet('albsec', albumsFlat() ? 'sections' : null);
   applyLibSortUI();
   renderLibrary();
 });
@@ -11114,6 +11119,7 @@ function albumArtistName(pl){
 }
 let libArtistNames = new Map(); // artistNameKey -> name of each artist entry in the library (set by renderLibrary)
 let libAlbumGroupKeys = [];     // artist-group keys in the Albums section (set by renderLibrary)
+function albumsFlat(){ return advPrefs().albsec !== 'sections'; }   // one album grid is the default; 'sections' = grouped by artist
 let libAlbumArtistPick = '';    // artist-group key picked in the Albums strip ('' = all)
 // Album versions: a remaster, re-release, deluxe/expanded edition or b-side
 // set of an album the same artist already has in the library folds under that
@@ -11171,6 +11177,7 @@ function renderLibrary(){
   libraryGrid.innerHTML = '';
   libraryArtistsGrid.innerHTML = '';
   libraryAlbumsGrid.innerHTML = '';
+  { const old = libraryAlbumsGrid.parentNode.querySelector('.lib-az'); if (old) old.remove(); libraryAlbumsGrid.parentNode.classList.remove('has-az'); }
   libraryPodcastsGrid.innerHTML = '';
   librarySetsGrid.innerHTML = '';
   const advHide = advPrefs().hide || [];
@@ -11208,6 +11215,7 @@ function renderLibrary(){
   let searchTrackCount = 0;
   let artistCount = 0, albumCount = 0, podcastCount = 0, setCount = 0;
   const albumGroups = new Map(); // artistKey -> { name, cards }
+  const albumCardsInOrder = []; // every album card in the chosen sort order (flat grid)
   // SoundCloud (sc:) songs saved without art (older or cached items) have no
   // img.youtube.com fallback, so their tiles and collage cells were blank.
   // Borrow the cover from the same song in any other library playlist (render
@@ -11489,7 +11497,14 @@ function renderLibrary(){
     const albumArtist = isAlbum ? albumArtistName(pl) : '';
     const albumYear = isAlbum ? ((/^(\d{4})/.exec(String(pl.releaseDate || '')) || [])[1] || '') : '';
     if (albumArtist || albumYear){
-      const by = document.createElement('div'); by.className = 'count lib-album-artist'; by.textContent = albumArtist + (albumArtist && albumYear ? ' \u00b7 ' : '') + albumYear;
+      const by = document.createElement('div'); by.className = 'count lib-album-artist';
+      if (albumArtist){
+        // tap the artist name to open their page (like Spotify / Apple Music)
+        const al = document.createElement('span'); al.className = 'lib-album-artist-link'; al.textContent = albumArtist;
+        al.addEventListener('click', (e) => { e.stopPropagation(); openArtistPage(albumArtist); });
+        by.appendChild(al);
+      }
+      if (albumYear) by.appendChild(document.createTextNode((albumArtist ? ' \u00b7 ' : '') + albumYear));
       info.appendChild(by);
     }
     info.appendChild(count);
@@ -11537,6 +11552,8 @@ function renderLibrary(){
     }
     if (isAlbum){
       const gk = artistNameKey(albumArtist) || '_';
+      card._gk = gk; card._artist = albumArtist; card._title = pl.name || '';
+      albumCardsInOrder.push(card);
       if (!albumGroups.has(gk)) albumGroups.set(gk, { name: albumArtist || 'Other', cards: [] });
       card._albumVer = albumVersionInfo(pl.name);
       card._sortPlays = totalPlaylistPlays(pl); card._sortTracks = pl.tracks.length;
@@ -11569,9 +11586,9 @@ function renderLibrary(){
     const scoreSort = albumSortMode === 'plays_desc' || albumSortMode === 'tracks_desc';
     const keepOrder = albumSortMode === 'recent' || albumSortMode === 'custom';
     const groupList = [...albumGroups.entries()].sort((a, b) => ((a[0] === '_single') - (b[0] === '_single')) || (scoreSort ? grpScore(b[1]) - grpScore(a[1]) : 0) || (keepOrder ? 0 : a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' })));
-    const flatAlbums = advPrefs().albsec === 'flat';
+    const flatAlbums = albumsFlat();
     // Artist strip: fold/unfold all, then one chip per artist to show only theirs
-    if (!searchQ && groupList.length >= 3){
+    if (!searchQ && !flatAlbums && groupList.length >= 3){
       const strip = document.createElement('div');
       strip.className = 'lib-album-strip';
       const mk = (label, on, fn, cls) => {
@@ -11579,7 +11596,7 @@ function renderLibrary(){
         b.type = 'button'; b.className = 'lib-album-chip' + (on ? ' is-on' : '') + (cls ? ' ' + cls : '');
         b.textContent = label; b.addEventListener('click', fn); strip.appendChild(b);
       };
-      if (!flatAlbums && !pick){
+      if (!pick){
         const allFolded = groupList.every(([k]) => folded[k]);
         mk(allFolded ? 'Unfold all' : 'Fold all', false, () => {
           const f = {};
@@ -11594,8 +11611,30 @@ function renderLibrary(){
     }
     const shownGroups = pick ? groupList.filter(([k]) => k === pick) : groupList;
     if (flatAlbums){
-      // #494: no artist sections, one album grid in the chosen order
-      shownGroups.forEach(([k, g]) => g.cards.forEach(c => libraryAlbumsGrid.appendChild(c)));
+      // no artist sections: one album grid. Alphabetical = by artist, then album title; every other sort keeps its own order
+      const flatCards = albumCardsInOrder.slice();
+      if (albumSortMode === 'alpha'){
+        const cmp = (x, y) => x.localeCompare(y, undefined, { sensitivity: 'base' });
+        flatCards.sort((a, b) => ((a._artist ? 0 : 1) - (b._artist ? 0 : 1)) || cmp(a._artist, b._artist) || cmp(a._title, b._title));
+      }
+      flatCards.forEach(c => libraryAlbumsGrid.appendChild(c));
+      // A-Z rail: jump through a long artist-sorted library
+      if (albumSortMode === 'alpha' && !searchQ && flatCards.length >= 20 && !libFolded.albums){
+        const first = new Map();
+        flatCards.forEach(c => { const ch = (c._artist || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').charAt(0).toUpperCase(); const l = /[A-Z]/.test(ch) ? ch : '#'; if (!first.has(l)) first.set(l, c); });
+        const rail = document.createElement('div');
+        rail.className = 'lib-az'; rail.setAttribute('aria-label', 'Jump to letter');
+        let lastL = '';
+        const go = (l) => { const c = first.get(l); if (!c || l === lastL) return; lastL = l; c.style.scrollMarginTop = '88px'; c.scrollIntoView({ block: 'start' }); };
+        [...first.keys()].sort((a, b) => a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)).forEach(l => {
+          const b = document.createElement('button'); b.type = 'button'; b.textContent = l; b.dataset.l = l; rail.appendChild(b);
+        });
+        const hit = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); if (el && el.dataset && el.dataset.l) go(el.dataset.l); };
+        rail.addEventListener('pointerdown', (e) => { lastL = ''; hit(e); });
+        rail.addEventListener('pointermove', (e) => { if (e.buttons) hit(e); });
+        libraryAlbumsGrid.parentNode.insertBefore(rail, libraryAlbumsGrid);
+        libraryAlbumsGrid.parentNode.classList.add('has-az');
+      }
     } else shownGroups.forEach(([gk, g]) => {
       // while searching, matching albums always show; a picked artist is always open
       const open = !!searchQ || !!pick || !folded[gk];
@@ -26692,7 +26731,7 @@ function advRender(){
     grid: getLibraryView(), sort: getLibrarySort(), blend: String(crossfadePrefs.ms),
     start: p.start === 'loud' ? 'loud' : 'quiet', autoresume: p.autoresume === 'off' ? 'off' : 'on',
     gdt: advGestureOf('gdt'), glp: advGestureOf('glp'), gtt: advGestureOf('gtt'), glib: ['top','search'].includes(p.glib) ? p.glib : 'none', lhold: p.lhold === 'splash' ? 'splash' : 'mini',
-    albsec: p.albsec === 'flat' ? 'flat' : 'sections', shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
+    albsec: p.albsec === 'sections' ? 'sections' : 'flat', shape: p.shape || 'rounded', thumbs: p.thumbs === 'hide' ? 'hide' : 'show', dense: p.dense === 'tight' ? 'tight' : 'regular'
   };
   const hide = p.hide || [];
   advBlock.querySelectorAll('[data-adv]').forEach(b => {
@@ -27229,7 +27268,7 @@ function advChoose(k, v){
   else if (k === 'secname' && ADV_SECS[v]){ advRenameSection(v); return; }
   else if (k === 'shape'){ advSet('shape', v === 'rounded' ? null : v); advApplyLook(); }
   else if (k === 'thumbs'){ advSet('thumbs', v === 'hide' ? 'hide' : null); advApplyLook(); }
-  else if (k === 'albsec'){ advSet('albsec', v === 'flat' ? 'flat' : null); renderLibrary(); }
+  else if (k === 'albsec'){ advSet('albsec', v === 'sections' ? 'sections' : null); renderLibrary(); }
   else if (k === 'dense'){ advSet('dense', v === 'tight' ? 'tight' : null); advApplyLook(); }
   else if (k === 'pshow' && ADV_PSHOW.includes(v)){
     const s2 = (advPrefs().pshow || []).slice(), i = s2.indexOf(v);
