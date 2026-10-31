@@ -2599,6 +2599,8 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
   .settings-row .label{font-size:15px}
   .settings-row .desc{font-size:13px}
   .set-title{font-size:24px}
+  #accountBlock .settings-row{flex-direction:column;align-items:stretch}
+  #accountBlock #accountActions{justify-content:flex-start!important}
 }
 /* Advanced settings: collapsed block, one-tap chip rows */
 .adv-block>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 12px}
@@ -5007,12 +5009,12 @@ body.week-up-on{overflow:hidden}
       <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
       <h1 class="set-title" id="setTitle">Settings</h1>
       <nav class="set-hub" id="settingsHub" aria-label="Settings sections">
-        <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping, voice</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, what's new, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, voice, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What's new, what EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </nav>
       <!-- Settings layout (issue #212): most-used first. Feedback & support
            leads so Send feedback is the top row (#239) and groups every way
@@ -5103,14 +5105,6 @@ body.week-up-on{overflow:hidden}
           </div>
           <button type="button" class="switch" id="sbSongsBtn" role="switch" aria-checked="false" aria-label="Skip talking in songs"><span class="switch-knob"></span></button>
         </div>
-        <div class="settings-row" id="voiceRow">
-          <div>
-            <div class="label">Voice</div>
-            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
-            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
-          </div>
-          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
-        </div>
         <div class="settings-row" id="adblockRow" hidden>
           <div>
             <div class="label">Ad blocking</div>
@@ -5167,12 +5161,13 @@ body.week-up-on{overflow:hidden}
         </div>
         <div class="settings-row"><div><div class="label">Milestone sound</div><div class="desc">A soft chime, sparkle and buzz when you hit a milestone or a new best.</div></div><button type="button" class="switch is-active" id="msSoundBtn" role="switch" aria-checked="true" aria-label="Milestone sound"><span class="switch-knob"></span></button></div>
         <div class="settings-row"><div><div class="label">Soft sounds and vibration</div><div class="desc">A very quiet tap sound (and a light buzz on phones) when you press buttons.</div></div><button type="button" class="switch is-active" id="softTapBtn" role="switch" aria-checked="true" aria-label="Soft sounds and vibration"><span class="switch-knob"></span></button></div>
-        <div class="settings-row">
+        <div class="settings-row" id="voiceRow">
           <div>
-            <div class="label">What's new<span class="whatsnew-dot" id="whatsNewDot" hidden aria-hidden="true"></span></div>
-            <div class="desc">New features and fixes in each version of EBBLESS.</div>
+            <div class="label">Voice</div>
+            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
+            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
           </div>
-          <button class="btn-ghost" id="whatsNewBtn">View</button>
+          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
         </div>
       </div>
       <!-- Keyboard shortcuts (Geethub #246): mirrors the document keydown
@@ -5218,6 +5213,13 @@ body.week-up-on{overflow:hidden}
         <p class="about-copy"><strong>EBBLESS exists to make listening feel like listening again.</strong> We bring your music together, keep it moving, and make discovery feel effortless. No ads. No sign-up. Simple but layered. Music, visuals, nostalgia, curiosity, and the freedom to wander. We believe music should be something you flow through, not something trying to own you.</p>
         <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or song link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each song, or paste a YouTube playlist or video link directly. Podcasts work too: paste a Spotify or Apple Podcasts show or episode link, or a podcast's RSS feed. Either way, playback threads through so the listening doesn't stop.</p>
         <p class="about-copy">EBBLESS works to skip ads before your song starts.</p>
+        <div class="settings-row">
+          <div>
+            <div class="label">What's new<span class="whatsnew-dot" id="whatsNewDot" hidden aria-hidden="true"></span></div>
+            <div class="desc">New features and fixes in each version of EBBLESS.</div>
+          </div>
+          <button class="btn-ghost" id="whatsNewBtn">View</button>
+        </div>
         <div class="settings-row">
           <div>
             <div class="label">Credits</div>
@@ -20146,6 +20148,52 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 477, date: '2026-11-01', items: [
+    'Settings is now a hub of six sections, each opening its own page. Long descriptions fold behind an (i), and feedback is one row. What\'s new lives under About, and Voice sits with the sound switches.'
+  ]},
+  { version: 474, date: '2026-10-31', items: [
+    'One Update button at the top of Settings.',
+    'Notices now show one at a time in the header bar, and long ones scroll. Ad status moved up there too.',
+    'Albums: one flat grid by default. Alphabetical sorts by artist, tapping an artist name opens their page, and there is an A-Z jump rail. Group by artist is in the View menu.',
+    'Library: the titles above each list are gone, since the pill already names it.',
+    'Artist links and socials are now logo buttons with bigger tap targets.',
+    'Songs fade out when you pause.'
+  ]},
+  { version: 460, date: '2026-10-29', items: [
+    'Voice DJ: tell EBBLESS a mood out loud and it builds the set. Save sets to the Library under the Sets pill.',
+    'Song pages show a short bio and background from MusicBrainz and Wikipedia.',
+    'Your computer or phone stays awake while music plays.',
+    'Milestones and like streaks now celebrate with a badge, confetti and a chime.',
+    'The full-screen player buttons follow your accent color.'
+  ]},
+  { version: 433, date: '2026-10-28', items: [
+    'Video now plays inside the player, with a larger frame. Press F for the EBBLESS fullscreen with the video in it.',
+    'Lyrics on the song page.'
+  ]},
+  { version: 422, date: '2026-10-27', items: [
+    'Back closes the topmost menu or window instead of skipping past it, and never leaves the app.'
+  ]},
+  { version: 420, date: '2026-10-26', items: [
+    'The cassette is interactive: scrub by the reels, tap a reel to jump 15 seconds, tap the window to play, hold to stop, and peel a corner.'
+  ]},
+  { version: 409, date: '2026-10-25', items: [
+    'Ads in podcasts and long YouTube audio are skipped automatically, with an Undo.',
+    'A heart in the top bar to support EBBLESS.',
+    'Cymatics patterns now come in random order.',
+    'Settings has an Update app button in the Android and Mac apps.'
+  ]},
+  { version: 403, date: '2026-10-24', items: [
+    'Press H to go to the main view (player, library, queue).'
+  ]},
+  { version: 402, date: '2026-10-23', items: [
+    'The LP game shows its rules and counts down 3-2-1 before each run.',
+    'Google Drive backup runs on its own once you allow it.'
+  ]},
+  { version: 399, date: '2026-10-22', items: [
+    'Phones stay in portrait.',
+    'Uploaded songs with no cover show the EBBLESS mark.',
+    'Opening a playlist, album or artist collapses the expanded Library.'
+  ]},
   { version: 393, date: '2026-10-22', items: [
     'Add your own songs: tap the upload button in the Library, or drag song files or a folder onto the window. They go in an Uploads playlist, play with no ads and no matching, and stay on your device. Uploads never syncs with your account; back them up to your own Google Drive to keep a copy or add them to another device.'
   ]},
@@ -37935,7 +37983,7 @@ button.se-alt{display:block;width:100%;background:none;border:0;font:inherit;fon
   document.addEventListener('pointerover', function(e){
     if (e.pointerType !== 'mouse' || rm.matches) return;
     var b = e.target.closest && e.target.closest('button');
-    if (!b || b.id === 'splashLogoBtn' || b.disabled || (e.relatedTarget && b.contains(e.relatedTarget))) return;
+    if (!b || b.id === 'splashLogoBtn' || b.disabled || b.classList.contains('set-hub-row') || (e.relatedTarget && b.contains(e.relatedTarget))) return;
     grow(b, '1.07');
   });
   document.addEventListener('pointerout', function(e){

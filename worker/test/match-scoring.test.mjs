@@ -229,3 +229,40 @@ test('genreConflict: other-genre candidate flagged, own-genre and unrelated not'
   assert.ok(!genreConflict('Hello country', [], 'Hello', 'Adele'));
   assert.ok(!genreConflict('Hello hip-hop rap', ['trap'], 'Hello', 'Adele'));
 });
+
+// ---- spotDL-style name/artist/time scoring ----
+import { nameSimilarity, versionPenalty, artistCoverage, timeMatchPct, songMatchScore } from '../src/match-text.js';
+
+test('nameSimilarity: extra words cost points, artist and filler do not', () => {
+  const k = artistKeys('Childish Gambino');
+  assert.equal(nameSimilarity('Redbone', 'Childish Gambino - Redbone (Official Audio)', k), 1);
+  assert.equal(nameSimilarity('Levitating (feat. DaBaby)', 'Levitating', artistKeys('Dua Lipa')), 1);
+  assert.ok(nameSimilarity('Song', 'Song Pt. 2 Extended Jam', []) < 0.5);
+  assert.ok(nameSimilarity('Redbone', 'Lithonia', k) === 0);
+});
+
+test('versionPenalty: only version words the source does not ask for', () => {
+  assert.equal(versionPenalty('Redbone (Lofi Version)', 'Redbone'), 0);
+  assert.ok(versionPenalty('Redbone Karaoke Instrumental', 'Redbone') >= 5);
+  assert.equal(versionPenalty('Song (Radio Remix)', 'Song (Radio Remix)'), 0);
+});
+
+test('artistCoverage: main artist must be named', () => {
+  assert.equal(artistCoverage('Daft Punk, Pharrell Williams', 'Daft Punk'), 0.5);
+  assert.equal(artistCoverage('Daft Punk', 'Random Covers'), 0);
+  assert.equal(artistCoverage('Tyler, The Creator', 'Tyler, The Creator'), 1);
+});
+
+test('timeMatchPct follows spotDL exp(-0.1 * diff)', () => {
+  assert.equal(timeMatchPct(200, 200), 100);
+  assert.ok(Math.abs(timeMatchPct(210, 200) - 36.79) < 0.1);
+  assert.equal(timeMatchPct(0, 200), 100);
+});
+
+test('songMatchScore: right song passes, wrong artist / karaoke / wrong length are skipped', () => {
+  const src = { sourceTitle: 'Redbone', artist: 'Childish Gambino', duration: 327 };
+  assert.ok(songMatchScore(src, { title: 'Redbone', channel: 'Childish Gambino', durationSec: 327 }) >= 80);
+  assert.equal(songMatchScore(src, { title: 'Redbone', channel: 'Covers Unplugged', durationSec: 327 }), null);
+  assert.equal(songMatchScore(src, { title: 'Redbone (Karaoke Instrumental)', channel: 'Childish Gambino', durationSec: 327 }), null);
+  assert.equal(songMatchScore(src, { title: 'Redbone', channel: 'Childish Gambino', durationSec: 103 }), null);
+});

@@ -332,3 +332,89 @@ export function genreConflict(candidateText, tags, sourceTitle, artist) {
   const named = [...cand].filter(i => !own.has(i));
   return named.length > 0 && named.every(i => !source.has(i));
 }
+
+// ---- spotDL-style name matching ----
+// titleOverlapRatio only asks "are the source's words in the candidate?", so
+// "Song" and "Song Pt. 2 (Extended Jam)" tie. spotDL scores both directions:
+// extra words in the result cost points. nameSimilarity is a symmetric
+// Dice score over title tokens (0..1) with the artist's own name, upload
+// filler and "feat. X" clauses taken out of the candidate first, so the usual
+// "Artist - Song (Official Audio)" shape still scores 1 against "Song".
+const NAME_FILLER = new Set(['hd', 'hq', '4k', '1080p', 'topic', 'vevo', 'album', 'art', 'track', 'visualizer', 'single', 'remaster', 'remastered', 'explicit', 'clean', 'mv']);
+function stripFeatClause(t) {
+  return String(t || '')
+    .replace(/[(\[]\s*(?:feat|ft|featuring|with|prod)\b[^)\]]*[)\]]/gi, ' ')
+    .replace(/\s[-–—]?\s*(?:feat|ft|featuring)\.?\s.*$/i, ' ');
+}
+export function nameSimilarity(sourceTitle, candidateTitle, keys) {
+  const src = titleTokens(stripFeatClause(sourceTitle));
+  if (!src.length) return 1;
+  const srcSet = new Set(src);
+  const artistWords = new Set();
+  for (const k of keys || []) for (const w of k.split(' ')) if (w && !srcSet.has(w)) artistWords.add(w);
+  const cand = [...new Set(titleTokensRaw(stripFeatClause(candidateTitle)))]
+    .filter(w => !artistWords.has(w) && !NAME_FILLER.has(w) && (w.length > 1 || srcSet.has(w)));
+  if (!cand.length) return 0;
+  const near = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && withinOneEdit(a, b));
+  const unique = [...srcSet];
+  const hits = unique.filter(w => cand.some(c => near(w, c))).length;
+  return Math.min(1, (2 * hits) / (unique.length + cand.length));
+}
+
+// spotDL knocks points off a result that carries a version word the source
+// title does not ask for. Whole-word, graded (one hit = one point), so a
+// "remastered" album cut loses less than a "nightcore" or "karaoke" rip.
+const VERSION_WORDS = [
+  ['remix', 1.5], ['live', 1.5], ['acoustic', 1.5], ['instrumental', 2], ['cover', 1.5], ['karaoke', 3],
+  ['concert', 1.5], ['reverb', 2], ['slowed', 2], ['sped up', 2], ['nightcore', 3], ['8d', 2], ['bass boosted', 2],
+  ['bassboosted', 2], ['acapella', 2], ['remastered', 0.5], ['remaster', 0.5],
+];
+export function versionPenalty(candidateTitle, sourceTitle) {
+  const cand = ' ' + matchKey(candidateTitle) + ' ';
+  const src = ' ' + matchKey(sourceTitle) + ' ';
+  let total = 0;
+  for (const [w, pts] of VERSION_WORDS) {
+    const needle = ' ' + w + ' ';
+    if (cand.includes(needle) && !src.includes(needle)) total += pts;
+  }
+  return total;
+}
+
+// How many of the source's credited artists a candidate names (0..1), looked
+// for in its artist/channel text and title. 0 means the main artist is absent.
+export function artistCoverage(artist, haystack) {
+  const parts = String(artist || '').split(/\s*(?:,|&|\band\b|\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b|\bx\b|;|\/)\s*/i).map(matchKey).filter(Boolean);
+  if (!parts.length) return 1;
+  const hay = ' ' + matchKey(haystack) + ' ';
+  const has = k => hay.includes(' ' + k + ' ') || (k.startsWith('the ') && hay.includes(' ' + k.slice(4) + ' '));
+  if (!has(parts[0])) {
+    // "Tyler, The Creator" style: the whole credit as one name.
+    const whole = matchKey(artist);
+    return whole && hay.includes(' ' + whole + ' ') ? 1 : 0;
+  }
+  return parts.filter(has).length / parts.length;
+}
+
+// spotDL's time score: exp(-0.1 * seconds off), as 0..100. No known duration
+// on either side is neutral.
+export function timeMatchPct(candidateSeconds, sourceSeconds) {
+  if (!candidateSeconds || !sourceSeconds) return 100;
+  return Math.exp(-0.1 * Math.abs(candidateSeconds - sourceSeconds)) * 100;
+}
+
+// spotDL's order_results gate and blend, for one candidate whose artist text,
+// title and duration are structured (a YouTube Music "Songs" row). Returns
+// null when spotDL would skip it (name <= 60, artists < 70, time < 25, or
+// time < 50 with a weak average), else the 0..100 match score.
+export function songMatchScore({ sourceTitle, artist, duration }, { title, channel, durationSec }) {
+  const keys = artistKeys(artist);
+  const cov = artistCoverage(artist, channel + ' ' + title);
+  const artistsPct = cov > 0 ? 50 + 50 * cov : 0;
+  let namePct = nameSimilarity(sourceTitle, title, keys) * 100 - versionPenalty(title, sourceTitle) * 10;
+  const timePct = timeMatchPct(durationSec, duration);
+  if (namePct <= 60 || (artist && artistsPct < 70) || timePct < 25) return null;
+  let avg = ((artist ? artistsPct : 100) + namePct) / 2;
+  if (timePct < 50 && avg < 75) return null;
+  if (avg <= 85) avg = (avg + timePct) / 2;
+  return Math.min(avg, 100);
+}
