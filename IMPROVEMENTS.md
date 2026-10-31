@@ -143,12 +143,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #710. New brand/assets/icons/dock-512.png: e cropped to its bounds and scaled to fill 512 with an 18px margin (was 266x257 of 512). Used by the runtime dock icon (index.html dockIconDraw) and the Mac bundle + Windows icon in desktop/package.json. icon-512.png unchanged (favicon/PWA). Rendered and checked: no clipping. Takes effect in the runtime icon on next page load; the bundle icon needs a new DMG build.
 
 ### mobile-volume-double-tap-709: Mobile: double-tap volume buttons to pause, play, skip (Geethub #709)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #709. Double-tap volume down pauses. When paused, double-tap volume up plays. When playing, double-tap volume up skips.
 - **Touches:** Android native app (hardware keys); likely not possible in a browser.
-- **Branch:**
-- **Notes:** Synced from Geethub #709.
+- **Branch:** agent/volume-tap-709
+- **Notes:** Synced from Geethub #709. Native only: MainActivity.dispatchKeyEvent watches volume keys; two presses of the same key within 350 ms is a double-tap. Second press is consumed and the first press volume step is reversed, then it calls the existing __ebbMediaAction: down while playing = pause; up while paused = play; up while playing = next. Double down while paused is just two normal volume steps. Play state comes from the existing EbbNative.playing(). Single presses unchanged. Not built (no Android SDK on this Mac) and untested on device; needs a build + TECNO POP 9 test. No versionCode bump.
 
 ### nothing-playing-trailing-es-708: Nothing playing animation: trailing E's build up on each bounce (Geethub #708)
 - **Status:** review

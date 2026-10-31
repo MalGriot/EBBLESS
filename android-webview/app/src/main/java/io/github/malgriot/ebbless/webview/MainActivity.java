@@ -186,6 +186,31 @@ public class MainActivity extends Activity {
         if (web != null) web.evaluateJavascript("window.__ebbPip&&__ebbPip(" + in + ")", null);
     }
 
+    // Volume key double-tap (#709): down pauses; up plays when paused, skips when playing. A single press still changes the volume.
+    private volatile boolean pagePlaying;
+    private int lastVolKey;
+    private long lastVolAt;
+    @Override public boolean dispatchKeyEvent(android.view.KeyEvent e) {
+        int k = e.getKeyCode();
+        if ((k == android.view.KeyEvent.KEYCODE_VOLUME_UP || k == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && e.getAction() == android.view.KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0 && web != null) {
+            long now = e.getEventTime();
+            boolean up = k == android.view.KeyEvent.KEYCODE_VOLUME_UP;
+            boolean dbl = lastVolKey == k && now - lastVolAt < 350;
+            lastVolKey = dbl ? 0 : k; lastVolAt = now;   // a third press starts a fresh pair
+            // down only acts while playing (pause); when paused a double down is just two volume steps
+            if (dbl && (up || pagePlaying)) {
+                try {   // the first press already moved the volume; take that step back so the gesture leaves it unchanged
+                    android.media.AudioManager am = (android.media.AudioManager) getSystemService(android.content.Context.AUDIO_SERVICE);
+                    if (am != null) am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, up ? android.media.AudioManager.ADJUST_LOWER : android.media.AudioManager.ADJUST_RAISE, 0);
+                } catch (Throwable t) {}
+                String action = up ? (pagePlaying ? "next" : "play") : "pause";
+                web.evaluateJavascript("window.__ebbMediaAction&&__ebbMediaAction(" + JSONObject.quote(action) + ")", null);
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(e);
+    }
+
     @Override protected void onStop() {
         voiceTeardown(true);
         super.onStop();
@@ -467,6 +492,7 @@ public class MainActivity extends Activity {
             /** The page's play state, so a restarted service knows whether the music was playing when the process was killed. */
             @android.webkit.JavascriptInterface public void playing(boolean on) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
+                pagePlaying = on;
                 tellWatchdog(on);
                 if (on) runOnUiThread(() -> askBatteryExemption());
             }
