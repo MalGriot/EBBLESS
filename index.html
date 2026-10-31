@@ -29376,7 +29376,9 @@ function loadIndex(pos, autoplay, opts){
    under it or a track-to-track crossfade takes over the deck's volume. */
 // Fixed, short fade-out on pause, independent of the crossfade-length slider
 // (a long crossfade setting used to stretch pause into a multi-second fade).
-const PAUSE_FADE_OUT_MS = 600;
+// (#706: 900ms, and the out-curve is squared - player volume is linear amplitude,
+// so a linear ramp sounds like it holds loud then drops off a cliff on phones)
+const PAUSE_FADE_OUT_MS = 900;
 // No fade while casting - the receiver has its own volume, so a fade would
 // only delay the pause.
 // iPhone (#313): iOS ignores setVolume, so the fade is inaudible there - and
@@ -29443,7 +29445,7 @@ function runPlayFade(deck, dir){
     // fade-out: sine ease-in-out (a gentle shoulder, then a soft landing);
     // fade-in: sine ease-out (comes up quickly, settles into full volume)
     const e = dir === 'out' ? 0.5 - 0.5 * Math.cos(Math.PI * p) : Math.sin(Math.PI / 2 * p);
-    f.gain = from + (to - from) * e;
+    f.gain = dir === 'out' ? from * (1 - e) * (1 - e) : from + (to - from) * e;
     setVol(f.gain);
     if (p < 1){ f.timer = setTimeout(tick, PAUSE_FADE_TICK_MS); return; }
     playFade = null;
