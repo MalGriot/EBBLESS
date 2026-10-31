@@ -830,8 +830,8 @@ body.onb-active .paste-guide{display:none}
   #libraryListWrap .lib-top{display:flex;flex-direction:column}
   #libraryListWrap .lib-top .lib-pillrow{order:-1;margin-top:0}
   .lib-grid.is-list .lib-card .row-actions .row-play,.lib-grid.is-list .lib-card .row-actions .row-pin{display:none}
-  /* footer player: play/pause only */
-  #mini-bar .mini-ctl>button:not(#miniPlayBtn){display:none!important}
+  /* footer player: previous, play/pause, next (#702) */
+  #mini-bar .mini-ctl>button:not(#miniPlayBtn):not(#miniPrevBtn):not(#miniNextBtn){display:none!important}
 }
 @media (min-width:860px){#ctxSheetScrim{display:none}}
 .empty-lib{padding:60px 10px;text-align:center;color:var(--faint);font-size:13.5px;line-height:1.7}

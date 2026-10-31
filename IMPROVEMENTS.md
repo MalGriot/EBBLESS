@@ -199,11 +199,11 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #703.
 
 ### mobile-footer-prev-next-702: Mobile footer player: previous and next buttons beside play (Geethub #702)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #702. Add previous and next track buttons on either side of the play button in the mobile footer player.
 - **Touches:** mobile footer player.
-- **Branch:**
+- **Branch:** agent/footer-prevnext-702
 - **Notes:** Synced from Geethub #702.
 
 ### single-update-cta-701: One update CTA: check on load, show at top of settings, drop Reload now (Geethub #701)
