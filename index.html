@@ -10053,6 +10053,18 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
     setView(btn.dataset.view);
   });
 });
+// #703: holding the footer Search button opens search and starts the mic (the same micBtn the search bar uses; a tap is unchanged)
+(function(){
+  const searchNavBtn = bottomNav.querySelector('button[data-view="search"]');
+  if (!searchNavBtn) return;
+  attachLongPress(searchNavBtn, () => {
+    leaveFullscreen(true);
+    setView('search');
+    const mic = $('micBtn');
+    if (!mic || mic.hidden){ showToast('Voice search is not available here'); return; }
+    if (!mic.classList.contains('is-listening')) mic.click();
+  });
+})();
 document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.addEventListener('click', () => {
   // mobile/tablet: the queue slides up over fullscreen instead of leaving it
   if (!document.body.classList.contains('split-desktop') &&

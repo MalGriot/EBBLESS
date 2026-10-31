@@ -191,12 +191,13 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #704.
 
 ### mobile-search-hold-mic-703: Mobile: holding the footer search button activates the mic (Geethub #703)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #703. Long-press on the footer menu search button starts voice search.
 - **Touches:** mobile footer menu, search button.
-- **Branch:**
+- **Branch:** claude/youthful-easley-f43c1a
 - **Notes:** Synced from Geethub #703.
+- **Review:** Long-press (500 ms, existing attachLongPress) on the footer Search button opens search and clicks the existing micBtn (Web Speech, or native EbbNative on Android); toast if no voice support. Tap unchanged. Not verified: real speech (browser pane blocks the mic), real touch device.
 
 ### mobile-footer-prev-next-702: Mobile footer player: previous and next buttons beside play (Geethub #702)
 - **Status:** review
