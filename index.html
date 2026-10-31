@@ -1456,10 +1456,8 @@ body:has(#import-overlay.is-open) #fsBtn{display:none}
 .player-stage:has(.track-meta.is-empty) .artwork-wrap[data-mode="art"][data-art-style="default"] .art-dvd-x, body:has(.track-meta.is-empty) #flow-layer.is-open #flowArtWrap:is(:not([data-art-style]),[data-art-style="default"]) .art-dvd-x{animation:dvd-x 9s linear calc((6 - var(--i,0)) * -1s) infinite alternate;will-change:transform}
 body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd-x,body:has(#flow-layer.is-open) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#findMusic:not([hidden])) .artwork-wrap .art-dvd img,body:has(#findMusic:not([hidden])) #flowArtWrap .art-dvd img,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd-x,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd-x,body:has(#musicMap:not([hidden])) .artwork-wrap .art-dvd img,body:has(#musicMap:not([hidden])) #flowArtWrap .art-dvd img{animation-play-state:paused}
 /* #694: tap the bouncing E -> it hops and rings ripple out. Ripples are short-lived (max 3, removed on animationend), transform + opacity only. */
-.logo-ripple{position:absolute;width:60%;aspect-ratio:1;border:3px solid var(--accent);border-radius:50%;pointer-events:none;z-index:0;opacity:0;transform:translate(-50%,-50%) scale(.1);box-shadow:0 0 18px var(--accent),inset 0 0 18px var(--accent);animation:logo-ripple 1.5s cubic-bezier(.15,.7,.3,1) calc(var(--rd,0) * 130ms) forwards}
-.logo-ripple.core{border:0;background:radial-gradient(circle,#fff 0,var(--accent) 35%,transparent 70%);box-shadow:none;animation-name:logo-core;animation-duration:.7s;animation-delay:0s;animation-timing-function:ease-out}
-@keyframes logo-ripple{0%{opacity:0;transform:translate(-50%,-50%) scale(.1)}8%{opacity:.95}to{opacity:0;transform:translate(-50%,-50%) scale(3.4)}}
-@keyframes logo-core{from{opacity:.95;transform:translate(-50%,-50%) scale(.2)}to{opacity:0;transform:translate(-50%,-50%) scale(1.8)}}
+.logo-ripple{position:absolute;width:60%;aspect-ratio:1;border:2px solid var(--accent);border-radius:50%;pointer-events:none;z-index:0;opacity:0;transform:translate(-50%,-50%) scale(.1);box-shadow:0 0 6px var(--accent);animation:logo-ripple 1.2s ease-out calc(var(--rd,0) * 160ms) forwards}
+@keyframes logo-ripple{0%{opacity:0;transform:translate(-50%,-50%) scale(.1)}8%{opacity:.6}to{opacity:0;transform:translate(-50%,-50%) scale(2)}}
 @media (prefers-reduced-motion:reduce){.logo-ripple{display:none}.art-dvd.trail .art-dvd-e::after{display:none}}
 /* #647: x and y both move at a steady speed (linear, alternate), so the E travels in straight lines and bounces off the art's edges at a constant pace.
    Travel = 100% of the art minus the box. */
@@ -34964,7 +34962,7 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
 })();
 
 /* #694: tap the bouncing E (the empty player's main logo, not its colored trail) -> the trail flashes in the UI color one
-   after the next (no hop), plus a burst of 4 glowing accent rings and a flash core from the tap point. The tap is swallowed so it does not also run the art's double-tap/open-album actions.
+   after the next (no hop), plus a burst of 3 soft accent rings from the tap point. The tap is swallowed so it does not also run the art's double-tap/open-album actions.
    The ripples remove themselves on animationend; nothing runs while no ripple is alive. */
 (function(){
   function bind(wrap){
@@ -34983,10 +34981,10 @@ flowExitBtn.addEventListener('click', exitFlowToMain);
       });
       const w = wrap.getBoundingClientRect();
       const live = wrap.querySelectorAll('.logo-ripple');
-      for (let i = 0; i <= live.length - 5; i++) live[i].remove();   // a burst is 5 pieces; keep at most ~2 bursts alive
-      for (let i = 0; i < 5; i++){
+      for (let i = 0; i <= live.length - 3; i++) live[i].remove();   // a burst is 3 rings; keep at most ~2 bursts alive
+      for (let i = 0; i < 3; i++){
         const rip = document.createElement('i');
-        rip.className = i === 4 ? 'logo-ripple core' : 'logo-ripple';
+        rip.className = 'logo-ripple';
         rip.style.cssText = 'left:' + (ev.clientX - w.left) + 'px;top:' + (ev.clientY - w.top) + 'px;--rd:' + i;
         rip.addEventListener('animationend', () => rip.remove());
         wrap.appendChild(rip);
