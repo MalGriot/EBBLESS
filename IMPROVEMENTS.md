@@ -224,7 +224,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #700. Heart swapped for a dollar-in-circle coin icon; label, title and tap behavior unchanged.
 
 ### toasts-center-swipe-699: Resume and update toasts: center of top header, swipe to dismiss (Geethub #699)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #699. Resume and update toasts appear in the center of the top header and can be swiped away.
 - **Touches:** toast layer, header.
