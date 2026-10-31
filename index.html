@@ -2537,7 +2537,7 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .settings-row[hidden]:first-of-type+.settings-row{border-top:none}
 .settings-row .label{font-size:14px}
 .settings-row .desc{font-size:12px;color:var(--faint);margin-top:2px;max-width:420px;line-height:1.5}
-.settings-row[hidden],#updateAppCancel[hidden]{display:none}.settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
+.settings-row[hidden],#updateCtaCancel[hidden],#updateCtaBlock[hidden]{display:none}.settings-row a.btn-ghost,.settings-row button.btn-ghost{flex:none}
 .about-copy{font-size:13px;color:var(--faint);line-height:1.7;max-width:520px}
 .about-copy strong{color:var(--text);font-weight:600}
 .kbd-list{list-style:none;margin:0;padding:0;max-width:520px}
@@ -4968,6 +4968,19 @@ body.week-up-on{overflow:hidden}
            - JS (crossfade/level/install/wrong-track log) and the onboarding
            tour look these up directly. #installBlock is now a single row in
            the App block (same show/hide JS), not its own block. -->
+      <!-- #701: the one update button. Hidden until an update is found (checked on load). -->
+      <div class="settings-block" id="updateCtaBlock" hidden>
+        <div class="settings-row" id="updateCtaRow">
+          <div>
+            <div class="label">Update available</div>
+            <div class="desc" id="updateCtaDesc" role="status" aria-live="polite">A newer version is ready. Music stops while it reloads.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn-ghost" id="updateCtaCancel" type="button" hidden aria-label="Cancel the update">Not now</button>
+            <button class="btn-ghost" id="updateCtaBtn" type="button">Update</button>
+          </div>
+        </div>
+      </div>
       <div class="settings-block" id="settingsSupportBlock">
         <h2>Feedback &amp; support</h2>
         <div class="settings-row">
@@ -4976,13 +4989,6 @@ body.week-up-on{overflow:hidden}
             <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
           </div>
           <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="label">Reload app</div>
-            <div class="desc">Fetch the latest version now instead of on your next launch. Music stops while it reloads.</div>
-          </div>
-          <button class="btn-ghost" id="reloadAppBtn">Reload now</button>
         </div>
         <div class="settings-row" id="voiceRow">
           <div>
@@ -4996,16 +5002,6 @@ body.week-up-on{overflow:hidden}
           <div>
             <div class="label">Ad blocking</div>
             <div class="desc" id="adblockDesc" role="status" aria-live="polite"></div>
-          </div>
-        </div>
-        <div class="settings-row" id="updateAppRow" hidden>
-          <div>
-            <div class="label">Update app</div>
-            <div class="desc" id="updateAppDesc" role="status" aria-live="polite">Install the newest build of the app. It restarts and music stops.</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-            <button class="btn-ghost" id="updateAppCancel" type="button" hidden aria-label="Cancel the update">Not now</button>
-            <button class="btn-ghost" id="updateAppBtn" type="button" aria-label="Update app: check for the newest build">Update app</button>
           </div>
         </div>
         <div class="settings-row beta-hidden">
@@ -10273,7 +10269,7 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
       // the release that ends this hold may land on the splash instead, in
       // which case no click reaches the button - don't let the flag linger
       setTimeout(() => { swallowClick = false; }, 1500);
-      $('reloadAppBtn').click();   // same path as Settings > Reload now
+      window.ebbReloadApp();   // same path as the update button
     }, HOLD_MS);
   });
   btn.addEventListener('pointermove', (e) => {
@@ -19685,7 +19681,10 @@ feedbackBtn.addEventListener('click', openFeedbackModal);
     const swClose = () => { swToast.classList.remove('is-open'); setTimeout(() => { if (!swToast.classList.contains('is-open')) swToast.hidden = true; }, 400); };
     const swDismiss = () => { swDismissed = true; toastClose('update'); };
     const ask = () => {
-      try { if (swDismissed || !EbbNative.pageUpdated() || !swToast.hidden) return; } catch(e){ return; }
+      try { if (!EbbNative.pageUpdated()) return; } catch(e){ return; }
+      // #701: the same update button sits at the top of Settings
+      window.ebbUpdateCta.show('A newer version is ready. Music stops while it reloads.', 'Update', () => { window.ebbReloadApp(); });
+      try { if (swDismissed || !swToast.hidden) return; } catch(e){ return; }
       toastPush({ key: 'update', show(){ swToast.hidden = false; swToast.classList.remove('is-swiped'); requestAnimationFrame(() => swToast.classList.add('is-open')); }, close: swClose });
     };
     swBtn.addEventListener('click', () => { swBtn.disabled = true; EbbNative.reloadFresh(); });
@@ -19729,60 +19728,56 @@ const adblockNative = (() => {
     showInfo
   };
 })();
-$('reloadAppBtn').addEventListener('click', async () => {
-  if (adblockNative){ $('reloadAppBtn').disabled = true; await adblockNative.refresh(); await new Promise(r => setTimeout(r, 1500)); }   // let the one-line result be read before the page reloads
+// #701: the one reload path (update button, logo hold): refresh ad rules, then load the newest page
+async function reloadApp(){
+  if (adblockNative){ const b = $('updateCtaBtn'); if (b) b.disabled = true; await adblockNative.refresh(); await new Promise(r => setTimeout(r, 1500)); }   // let the one-line result be read before the page reloads
   if (window.EbbNative && EbbNative.reloadFresh){ EbbNative.reloadFresh(); return; }   // Android app: refreshes its saved page copy first
   try { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for (const k of await caches.keys()) await caches.delete(k); } catch(e){}
   location.reload();
-});
-// Settings > Update app: only inside the native apps (Android EbbNative.updateNow,
-// Mac ebblessDesktop.updateCheck); the plain web build keeps the row hidden.
-// Nothing restarts or stops music without the person's tap.
-(() => {
-  const row = $('updateAppRow'), desc = $('updateAppDesc'), btn = $('updateAppBtn'), cancel = $('updateAppCancel');
-  const droid = window.EbbNative && typeof EbbNative.updateNow === 'function';
-  const mac = !droid && window.ebblessDesktop && typeof ebblessDesktop.updateCheck === 'function';
-  if (!row || !(droid || mac)) return;
-  row.hidden = false;
-  const say = (t) => { desc.textContent = t; };
-  const label = (t, aria) => { btn.textContent = t; btn.setAttribute('aria-label', aria || t); };
-  if (droid){
-    let timer = null;
-    const poll = () => {
-      let st = 'idle|'; try { st = String(EbbNative.updateStatus()); } catch(e){}
-      const i = st.indexOf('|'), state = st.slice(0, i), text = st.slice(i + 1);
-      if (text) say(text);
-      if (state === 'checking' || state === 'installing' || state === 'confirm') return;
-      clearInterval(timer); timer = null; btn.disabled = false;
-      if (state === 'error') label('Try again');
-    };
-    btn.addEventListener('click', () => {
-      if (timer) return;
-      btn.disabled = true; say('Checking...');
-      try { EbbNative.updateNow(); } catch(e){ say('Could not start the update'); btn.disabled = false; return; }
-      timer = setInterval(poll, 700);
-    });
-    return;
-  }
-  // Mac
-  let found = null, mode = 'check', ver = '';
-  const idle = () => { mode = 'check'; cancel.hidden = true; btn.disabled = false; };
-  const check = async (quiet) => {
-    btn.disabled = true; if (!quiet) say('Checking...');
-    let r; try { r = await ebblessDesktop.updateCheck(); } catch(e){ r = { error: 'Could not check' }; }
-    idle();
-    if (r.error){ if (!quiet) say(r.error); label('Check again'); return; }
-    ver = r.current; found = r;
-    if (r.available){ mode = 'download'; say(r.latest + ' available'); label('Update now', 'Update now: download ' + r.latest); }
-    else { say('EBBLESS ' + r.current + ', latest'); label('Check again'); }
+}
+window.ebbReloadApp = reloadApp;
+// The one update button, top of Settings, hidden until an update is found.
+const updateCta = (() => {
+  const block = $('updateCtaBlock'), desc = $('updateCtaDesc'), btn = $('updateCtaBtn'), cancel = $('updateCtaCancel');
+  return {
+    btn, desc, cancel,
+    // show it; onClick replaces any earlier handler
+    show(text, label, onClick){
+      if (text) desc.textContent = text;
+      if (label) btn.textContent = label;
+      if (onClick) btn.onclick = onClick;
+      block.hidden = false;
+    },
+    shown: () => !block.hidden
   };
-  btn.addEventListener('click', async () => {
-    if (mode === 'check') return check(false);
+})();
+window.ebbUpdateCta = updateCta;
+// Mac: check for a newer build on load (and when the window comes back); when there is one, the
+// update button at the top of Settings walks download, then restart. Nothing restarts or stops
+// music without the person's tap. (Android installs new builds itself; see its page-update check below.)
+(() => {
+  const mac = window.ebblessDesktop && typeof ebblessDesktop.updateCheck === 'function';
+  if (!mac) return;
+  const { btn, cancel } = updateCta;
+  const say = (t) => { updateCta.desc.textContent = t; };
+  const label = (t, aria) => { btn.textContent = t; btn.setAttribute('aria-label', aria || t); };
+  let found = null, mode = 'download', busy = false;
+  const check = async () => {
+    if (busy || updateCta.shown()) return;
+    busy = true;
+    let r; try { r = await ebblessDesktop.updateCheck(); } catch(e){ r = { error: 'Could not check' }; }
+    busy = false;
+    if (r.error || !r.available) return;
+    found = r; mode = 'download';
+    updateCta.show(r.latest + ' is ready to download. EBBLESS restarts and music stops once it is installed.', 'Update now', onClick);
+    label('Update now', 'Update now: download ' + r.latest);
+  };
+  const onClick = async () => {
     if (mode === 'download'){
       btn.disabled = true; say('Downloading ' + found.latest + ' 0%');
       ebblessDesktop.onUpdateProgress(p => { if (mode === 'download') say('Downloading ' + found.latest + ' ' + p + '%'); });
       const r = await ebblessDesktop.updateDownload();
-      if (r.error){ idle(); mode = 'download'; say(r.error); label('Try again'); return; }
+      if (r.error){ btn.disabled = false; say(r.error); label('Try again'); return; }
       mode = 'confirm'; btn.disabled = false; cancel.hidden = false;
       say(found.latest + ' is ready. EBBLESS will restart and the music will stop.');
       label('Restart and update', 'Restart EBBLESS now and install ' + found.latest);
@@ -19792,13 +19787,12 @@ $('reloadAppBtn').addEventListener('click', async () => {
     if (mode === 'confirm'){
       btn.disabled = true; cancel.hidden = true; say('Restarting...');
       const r = await ebblessDesktop.updateInstall();
-      if (r.error){ idle(); mode = 'download'; say(r.error); label('Try again'); }
+      if (r.error){ btn.disabled = false; mode = 'download'; say(r.error); label('Try again'); }
     }
-  });
-  cancel.addEventListener('click', () => { mode = 'download'; cancel.hidden = true; say(found.latest + ' available'); label('Update now', 'Update now: download ' + found.latest); });
-  say('EBBLESS ...');
-  ebblessDesktop.version().then(v => { ver = v; say('EBBLESS ' + v); });
-  setTimeout(() => check(true), 4000);
+  };
+  cancel.addEventListener('click', () => { mode = 'download'; cancel.hidden = true; say(found.latest + ' is ready to download.'); label('Update now', 'Update now: download ' + found.latest); });
+  setTimeout(check, 4000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
 })();
 ['reportBugBtn', 'suggestIdeaBtn', 'testerFeedbackBtn'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', openFeedbackModal); });
 fbCancelBtn.addEventListener('click', closeFeedbackModal);
@@ -32387,7 +32381,8 @@ if ('serviceWorker' in navigator){
           try { const ad = activeDeck(); return !!(ad && ad.player && ad.player.getPlayerState && ad.player.getPlayerState() === 1); } catch(err){ return false; }
         };
         const tryReload = () => {
-          if (isPlayingNow()) return;
+          // #701: while a song plays the reload waits; the update button in Settings can do it now
+          if (isPlayingNow()){ try { window.ebbUpdateCta.show('A newer version is ready. It loads on its own when the music pauses, or now (music stops).', 'Update', () => { location.reload(); }); } catch(e){} return; }
           swRefreshing = true;
           clearInterval(swWait);
           location.reload();

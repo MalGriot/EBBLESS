@@ -232,12 +232,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #702.
 
 ### single-update-cta-701: One update CTA: check on load, show at top of settings, drop Reload now (Geethub #701)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #701. Update app and Reload now are redundant. Check for updates on load; if newer, show an update CTA at the top of the settings list. Remove Reload now.
 - **Touches:** settings, updater. Overlaps update-app-button and adblock-live-rules (both in review).
-- **Branch:**
-- **Notes:** Synced from Geethub #701.
+- **Branch:** agent/single-update-701
+- **Notes:** Synced from Geethub #701. Reload now and Update app rows are gone. One "Update" button sits at the top of Settings, hidden until an update is found: Android (page copy newer, checked on load and on return), Mac (newer build, checked on load, then download and restart), web (new version waiting while music plays). The logo hold still reloads. Android installs new builds by itself already.
 
 ### header-support-icon-700: Header heart becomes an icon that means supporting financially (Geethub #700)
 - **Status:** review
