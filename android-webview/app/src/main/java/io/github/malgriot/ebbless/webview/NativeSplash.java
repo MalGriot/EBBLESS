@@ -59,6 +59,7 @@ class NativeSplash extends FrameLayout {
     private final LinearLayout buttons;
     private final TextView loading;
     private final Button tutorialBtn;
+    private Button updateBtn;
     private final Paint tintPaint = new Paint();
     private final int[] accent;
     private final int[] finalTint;
@@ -235,6 +236,37 @@ class NativeSplash extends FrameLayout {
         buttons.animate().cancel();
         buttons.animate().alpha(0f).setStartDelay(0).setDuration(200).withEndAction(() -> buttons.setVisibility(View.INVISIBLE)).start();
         if (pageReady) finish(false); else showLoading();
+    }
+
+    /** A newer app exists: offer it under Enter. Tapping installs it now (Android's own confirm screen, if it wants one, opens at once). */
+    void showUpdate(String version) {
+        if (chosen || finished || updateBtn != null) return;
+        updateBtn = pill("Update to " + version, 0x00000000, Color.WHITE, 0x88FFFFFF);
+        android.view.ViewGroup col = (android.view.ViewGroup) buttons.getParent();
+        LinearLayout.LayoutParams up = new LinearLayout.LayoutParams(-2, (int) (44 * dp));
+        up.topMargin = (int) (16 * dp);
+        col.addView(updateBtn, col.indexOfChild(buttons) + 1, up);
+        updateBtn.setAlpha(0f);
+        updateBtn.animate().alpha(1f).setStartDelay(1000).setDuration(500).start();
+        updateBtn.setOnClickListener(v -> {
+            updateBtn.setEnabled(false);
+            updateBtn.setText("Updating...");
+            Updater.holdForEnter = false;
+            Updater.checkNow(act);
+            watchUpdate();
+        });
+    }
+
+    private void watchUpdate() {
+        postDelayed(() -> {
+            if (finished || updateBtn == null) return;
+            String st = Updater.status;
+            if (st.startsWith("error|") || st.startsWith("uptodate|")) {
+                Updater.holdForEnter = true;
+                updateBtn.setText("Update failed, tap to retry");
+                updateBtn.setEnabled(true);
+            } else watchUpdate();
+        }, 500);
     }
 
     /** Page has its Enter/Tutorial wired up. */

@@ -64,6 +64,20 @@ final class Updater {
         }, "ebb-updater").start();
     }
 
+    /** The splash is up: look for a newer app (no install, no hourly throttle) and call onFound on the main thread with its version. Never throws. */
+    static void probe(final Context ctx, final java.util.function.Consumer<String> onFound) {
+        final Context app = ctx.getApplicationContext();
+        if (app.getPackageName().endsWith(".debug") || running) return;
+        new Thread(() -> {
+            try {
+                String latest = latestVersion();
+                String mine = app.getPackageManager().getPackageInfo(app.getPackageName(), 0).versionName;
+                if (latest != null && newer(latest, mine))
+                    new Handler(Looper.getMainLooper()).post(() -> onFound.accept(latest));
+            } catch (Throwable ignored) {}
+        }, "ebb-updater-probe").start();
+    }
+
     /** Settings > Update app: what the page shows. "state|text", states: idle, checking, uptodate, installing, confirm, error. */
     static volatile String status = "idle|";
 

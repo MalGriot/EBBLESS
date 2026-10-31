@@ -86,6 +86,7 @@ public class MainActivity extends Activity {
             }, override);
             splashHolding = true;
             Updater.holdForEnter = true;
+            Updater.probe(this, ver -> { if (splash != null) splash.showUpdate(ver); });   // a newer app: the splash offers an Update button
             root.addView(splash, new FrameLayout.LayoutParams(-1, -1));
             root.postDelayed(() -> {   // never trap the user behind a splash whose page never came up (a ready page waits for the visitor as long as it takes)
                 if (splash != null && splash.dropIfStuck() && web != null)
