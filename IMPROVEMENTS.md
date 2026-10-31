@@ -135,12 +135,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #712. Title only.
 
 ### notifications-in-header-713: All notifications show in the header bar, marquee-scrolling (Geethub #713)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #713. Every notification appears in the header bar and can marquee scroll.
 - **Touches:** (to be determined)
-- **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub #713. Title only.
+- **Branch:** agent/header-notifs-713
+- **Notes:** Synced from Geethub #713. Built: every showToast now uses the #699 header position (top-centered, swipe away); long messages marquee (transform only, paused when closed, off under reduced motion). sw cache v466. Not yet verified on device.
 
 ### countdown-numbers-714: Show a counting-down number for skips, ad waits, and any countdown (Geethub #714)
 - **Status:** ready

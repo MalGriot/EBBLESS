@@ -2621,16 +2621,23 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .song-credits-names{flex:1;min-width:0;color:var(--text)}
 .song-credits-source{margin-top:6px;font-size:11.5px;color:var(--faint)}
 @media (prefers-reduced-motion:reduce){.share-burst img{transition:opacity .2s ease;transform:none}}
-.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 24px);transform:translate(-50%,10px);z-index:80;
+.toast{position:fixed;left:50%;bottom:auto;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 38px) / 2);transform:translate(calc(-50% + var(--sx,0px)),calc(-10px + var(--sy,0px)));z-index:90;max-width:calc(100vw - 24px);
   background:var(--panel-3);color:var(--text);font-size:12.5px;padding:10px 16px;border-radius:20px;
   box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
-.toast.is-open{opacity:1;transform:translate(-50%,0)}
+.toast.is-open{opacity:1;transform:translate(calc(-50% + var(--sx,0px)),var(--sy,0px))}
 .toast.has-action{display:flex;align-items:center;gap:12px;padding:6px 6px 6px 16px}
 .toast.has-action.is-open{pointer-events:auto}
 /* #671: the welcome-back prompt sits under the top bar, clear of the mini
    player / play button and the bottom nav */
-.toast.is-top{bottom:auto;top:calc(var(--safe-t,0px) + (var(--topbar-h) - 38px) / 2);z-index:90;transform:translate(calc(-50% + var(--sx,0px)),calc(-10px + var(--sy,0px)));max-width:calc(100vw - 24px)}
-.toast.is-top.is-open{transform:translate(calc(-50% + var(--sx,0px)),var(--sy,0px))}
+/* #713: every toast shows in the header bar; long ones marquee (transform only,
+   paused whenever the toast is not open) */
+.toast-msg{display:block;min-width:0;max-width:calc(100vw - 56px);overflow:hidden;white-space:nowrap}
+.toast-txt{display:inline-block}
+.toast.has-action .toast-msg{max-width:calc(100vw - 150px)}
+.toast-txt.is-marquee{animation:toast-mq 9s linear infinite alternate}
+.toast:not(.is-open) .toast-txt{animation-play-state:paused}
+@keyframes toast-mq{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--mq,0px))}}
+@media (prefers-reduced-motion:reduce){.toast-txt.is-marquee{animation:none}.toast-msg{white-space:normal}}
 /* #699: swipe away (any direction; up or sideways is natural). Only transform + opacity move. */
 .swipe-toast{touch-action:none;cursor:grab}
 .swipe-toast.is-drag{transition:none;cursor:grabbing}
@@ -9846,14 +9853,24 @@ function makeSwipeAway(el, isShown, dismiss){
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
 }
-makeSwipeAway(toastEl, () => toastEl.classList.contains('is-open') && toastEl.classList.contains('is-top'), () => {
+makeSwipeAway(toastEl, () => toastEl.classList.contains('is-open'), () => {
   clearTimeout(toastTimer); toastEl.classList.remove('is-open');
 });
+// #713: toast text goes in a clipped span; if it overflows the header width it
+// marquee-scrolls. Returns extra ms to keep a long toast up.
+function setToastMsg(msg){
+  toastEl.textContent = '';
+  const box = document.createElement('span'), txt = document.createElement('span');
+  box.className = 'toast-msg'; txt.className = 'toast-txt'; txt.textContent = msg;
+  box.appendChild(txt); toastEl.appendChild(box);
+  const over = txt.scrollWidth - box.clientWidth;
+  if (over > 2){ txt.style.setProperty('--mq', -over + 'px'); txt.classList.add('is-marquee'); return Math.min(9000, 2000 + over * 25); }
+  return 0;
+}
 function showToast(msg, action){
   toastEl.style.removeProperty('--sx'); toastEl.style.removeProperty('--sy');
-  toastEl.textContent = msg;
   toastEl.classList.toggle('has-action', !!action);
-  toastEl.classList.toggle('is-top', !!(action && action.top));
+  const extra = setToastMsg(msg);
   if (action){
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
@@ -9862,7 +9879,7 @@ function showToast(msg, action){
   }
   toastEl.classList.add('is-open');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), action ? 6000 : 2200);
+  toastTimer = setTimeout(() => toastEl.classList.remove('is-open'), (action ? 6000 : 2200) + extra);
 }
 
 // Shown while the song the listener picked is sitting out a YouTube ad (it
@@ -9871,8 +9888,8 @@ function showToast(msg, action){
 let adWaitShown = false;
 function showAdWait(){
   adWaitShown = true;
-  toastEl.classList.remove('has-action', 'is-top');
-  toastEl.textContent = 'One sec, clearing a YouTube ad so your song starts clean. It will play on its own.';
+  toastEl.classList.remove('has-action');
+  setToastMsg('One sec, clearing a YouTube ad so your song starts clean. It will play on its own.');
   toastEl.classList.add('is-open');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(clearAdWait, 30000);
@@ -33911,7 +33928,7 @@ function welcomeBackLine(){
   const named = pl && pl.name && ![SWELL_ID, BLEND_ID, NP_ID].includes(pl.id);
   const what = named ? pl.name : t.title;
   if (!what) return;
-  const show = () => showToast('Welcome back. You were in the middle of ' + what + '.', { label: 'Resume', top: true, run: () => { try{ resumePlayback(); } catch(err){} } });
+  const show = () => showToast('Welcome back. You were in the middle of ' + what + '.', { label: 'Resume', run: () => { try{ resumePlayback(); } catch(err){} } });
   const sp = $('splash');
   if (!sp || sp.classList.contains('is-hidden')){ show(); return; }
   const mo = new MutationObserver(() => { if (sp.classList.contains('is-hidden')){ mo.disconnect(); setTimeout(show, 400); } });
