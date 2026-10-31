@@ -11,7 +11,7 @@
 //      site's own discover-weekly refresh script does.
 
 import {
-  titleOverlapRatio, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
+  titleOverlapRatio, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
 import { handleBeta, betaInAppReport } from './beta.js';
@@ -74,7 +74,7 @@ function extractBalancedJson(str, startIndex) {
 // keep returning their old wrong match after the fix had already shipped.
 const ART_CACHE_VERSION = 'v4';
 const LYRICS_CACHE_VERSION = 'v3';
-const SEARCH_CACHE_VERSION = 'v21';
+const SEARCH_CACHE_VERSION = 'v22';
 // YouTube's minimum length for mid-roll ad breaks (see the zero-ads rule in
 // handleSearch)
 const MIDROLL_MIN_SECONDS = 480;
@@ -341,6 +341,14 @@ const CLEAN_TITLE_WEIGHT = 3;
 // it outweighs every other bonus combined, so a title mismatch can't be
 // papered over by channel authority or popularity.
 const TITLE_MATCH_WEIGHT = 8;
+// spotDL-derived signals (see songMatchScore in match-text.js): nameSimilarity
+// costs a result its extra words ("Song" vs "Song Pt. 2 Extended Jam" used to
+// tie on titleOverlap), versionPenalty is spotDL's forbidden-word deduction,
+// and a YouTube Music "Songs" row is a verified studio cut, so it gets a lift.
+const NAME_SIM_WEIGHT = 4;
+const YTM_SONG_WEIGHT = 3;
+// spotDL returns a YouTube Music song outright at 80+ without scraping videos.
+const YTM_ACCEPT_SCORE = 80;
 
 // When the source track's own duration is known, a candidate whose length
 // closely matches it is almost certainly the right version - a full-length
@@ -480,6 +488,9 @@ function scoreCandidate(c, firstArtist, maxViews, sourceDurationSeconds) {
   const channel = (c.channel || '').toLowerCase();
   let score = 0;
   score += c.titleOverlap * TITLE_MATCH_WEIGHT;
+  if (typeof c.nameSim === 'number') score += c.nameSim * NAME_SIM_WEIGHT;
+  score -= c.versionPenalty || 0;
+  if (c.ytm) score += YTM_SONG_WEIGHT;
   if (channel.endsWith('- topic')) score += 5;
   if (AUDIO_HINTS.some(h => title.includes(h))) score += 4;
   if (title.includes('official audio')) score += OFFICIAL_AUDIO_BONUS;
@@ -563,7 +574,7 @@ function snippetNamesAlbum(snippet, album) {
 // Returns the same { videoId, title, channel, duration } shape as the
 // YouTube scrape, or [] when YouTube Music can't be reached so the caller
 // falls back to the plain YouTube results.
-async function fetchYouTubeMusicSongs(query) {
+async function fetchYtmSongItems(query) {
   try {
     const res = await fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', {
       method: 'POST',
@@ -593,8 +604,20 @@ async function fetchYouTubeMusicSongs(query) {
       const duration = dm ? (+(dm[1] || 0)) * 3600 + (+dm[2]) * 60 + (+dm[3]) : 0;
       const plays = /^([\d.]+)([KMB]?) plays?$/.exec(cols[2] || '');
       const playCount = plays ? parseFloat(plays[1]) * ({ K: 1e3, M: 1e6, B: 1e9 }[plays[2]] || 1) : 0;
-      if (title && videoId) out.push({ videoId, title, channel: (parts[0] || '').trim(), duration, playCount, hay: (title + ' ' + (cols[1] || '')).toLowerCase() });
+      // "Artist • Album • 3:39": the middle part is the album (absent for a single-artist-only row).
+      const album = parts.length >= 3 ? parts.slice(1, -1).join(' \u2022 ').trim() : '';
+      if (title && videoId) out.push({ videoId, title, channel: (parts[0] || '').trim(), album, duration, playCount, hay: (title + ' ' + (cols[1] || '')).toLowerCase() });
     }
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function fetchYouTubeMusicSongs(query) {
+  try {
+    const out = await fetchYtmSongItems(query);
+    if (!out) return null;
     // Audiobook chapters and uploads nobody plays sit in the Songs shelf for
     // odd queries; drop them when real songs remain.
     // Talks and sermons also land here: nothing over 10 minutes is a song.
@@ -710,6 +733,33 @@ async function handleSearch(url, ctx, env) {
     queries.push(relaxedTitle + ' ' + firstArtist);
   }
 
+  // YouTube Music "Songs" first (spotDL's order): structured artist, album and
+  // length per row, and studio cuts only. A row that clears spotDL's gates at
+  // 80+ is the answer outright. Otherwise the rows join the video pool below,
+  // so the scrape can still out-rank them. Skipped in album mode (that path
+  // wants the Topic upload) and unreachable -> null -> straight to the scrape.
+  let ytmSongs = [];
+  if (!album) {
+    const items = await fetchYtmSongItems(searchTitle + ' ' + artist.split(',').join(' '));
+    ytmSongs = (items || []).filter(c => c.duration <= 600 || (sourceDurationSeconds && c.duration <= sourceDurationSeconds + 90));
+    ytmSongs.forEach(c => {
+      c.ytm = true;
+      c.ytmScore = songMatchScore({ sourceTitle: searchTitle, artist, duration: sourceDurationSeconds }, { title: c.title, channel: c.channel, durationSec: c.duration });
+    });
+    const ranked = ytmSongs.filter(c => c.ytmScore != null).sort((a, b) => b.ytmScore - a.ytmScore);
+    const top = ranked[0];
+    const midroll = top && top.duration >= MIDROLL_MIN_SECONDS && (!sourceDurationSeconds || sourceDurationSeconds < MIDROLL_MIN_SECONDS);
+    if (top && top.ytmScore >= YTM_ACCEPT_SCORE && !midroll && altCount === SEARCH_DEFAULT_ALTS) {
+      const alts = ranked.slice(0, altCount).map(c => ({ videoId: c.videoId, title: c.title, channel: c.channel, duration: c.duration || 0, score: Math.round(c.ytmScore * 100) / 100, titleOverlap: null }));
+      const response = json({ videoId: top.videoId, title: top.title, channel: top.channel, duration: top.duration || 0, candidates: alts, source: 'ytm' });
+      const toCache = response.clone();
+      ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=2592000' },
+      })));
+      return response;
+    }
+  }
+
   let candidates = [];
   let lastError = null;
   for (const query of queries) {
@@ -720,6 +770,14 @@ async function handleSearch(url, ctx, env) {
       candidates = [];
     }
     if (candidates.length) break;
+  }
+  if (ytmSongs.length) {
+    const byId = new Map(candidates.map(c => [c.videoId, c]));
+    for (const y of ytmSongs) {
+      const hit = byId.get(y.videoId);
+      if (hit) { hit.ytm = true; continue; }
+      candidates.push({ videoId: y.videoId, title: y.title, channel: y.channel, channelId: '', views: y.playCount || 0, duration: y.duration, snippet: y.album, ytm: true });
+    }
   }
   // Album mode: no upload from the artist's own Topic channel among these
   // results - try once more with the album name in the query, which is how
@@ -765,7 +823,12 @@ async function handleSearch(url, ctx, env) {
   // outright rather than let scoreCandidate's other signals outvote a
   // mismatch. Fall back to the unfiltered pool only if every candidate
   // fails (e.g. a title made entirely of stopwords/numbers).
-  pool.forEach(c => { c.titleOverlap = titleOverlapRatio(searchTitle, c.title); });
+  const nameKeys = artistKeys(artist);
+  pool.forEach(c => {
+    c.titleOverlap = titleOverlapRatio(searchTitle, c.title);
+    c.nameSim = nameSimilarity(searchTitle, c.title, nameKeys);
+    c.versionPenalty = versionPenalty(c.title, title);
+  });
   const titleMatched = pool.filter(c => c.titleOverlap > 0);
   pool = titleMatched.length ? titleMatched : pool;
 
