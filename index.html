@@ -2176,6 +2176,9 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 /* Hover fills the row with the current UI color (#394); text flips to --on-accent so light colors stay legible */
 .q-row{transition:background-color var(--dur-ui) var(--ease-out)}
 @media (hover:hover) and (pointer:fine){
+  /* #711: at rest the row is clear so the glass queue pane shows through; only hover (and a dragged row, which must hide what it passes over) fills */
+  .q-row{background:transparent}
+  .q-row.is-dragging{background:var(--panel)}
   .q-row:not(.is-dragging):hover{background:var(--accent)}
   .q-row:not(.is-dragging):hover .title,.q-row:not(.is-dragging):hover .artist,.q-row:not(.is-dragging):hover .handle,
   .q-row:not(.is-dragging):hover .remove:not(:hover),.q-row:not(.is-dragging):hover .q-menu:not(:hover):not(.is-active){color:var(--on-accent,#151107)}
