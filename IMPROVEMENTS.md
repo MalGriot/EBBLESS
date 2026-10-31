@@ -143,12 +143,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #713. Title only.
 
 ### countdown-numbers-714: Show a counting-down number for skips, ad waits, and any countdown (Geethub #714)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #714. Whenever a song is being skipped, an ad is being waited out, or anything has a countdown, show the number counting down.
-- **Touches:** (to be determined)
+- **Touches:** index.html (stallWatch, showAdWait/adWaitTick, updateSeekUI), sw.js cache v466
 - **Branch:** (filled in by the manager once a lane is claimed)
-- **Notes:** Synced from Geethub #714. Title only.
+- **Notes:** Synced from Geethub #714. Stalled-song skip toast now counts 5s down; ad-wait toast shows seconds left before the wait gives up (20s cap); the Ads button already counted "Skipping in Ns". Both tick off the existing updateSeekUI timer, no new loops. Not tested on device.
 
 ### desktop-queue-hover-fill-711: Desktop: queue songs show a filled background when not hovered (Geethub #711)
 - **Status:** review

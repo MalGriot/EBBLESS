@@ -9872,10 +9872,19 @@ let adWaitShown = false;
 function showAdWait(){
   adWaitShown = true;
   toastEl.classList.remove('has-action', 'is-top');
-  toastEl.textContent = 'One sec, clearing a YouTube ad so your song starts clean. It will play on its own.';
+  toastEl.textContent = ADWAIT_MSG + '.';
   toastEl.classList.add('is-open');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(clearAdWait, 30000);
+}
+// #714: the ad-wait toast counts down the seconds left before the wait gives
+// up (UNMUTE_MAX_WAIT_MS), ticked from updateSeekUI's existing timer.
+const ADWAIT_MSG = 'One sec, clearing a YouTube ad so your song starts clean. It will play on its own';
+function adWaitTick(ad){
+  if (!adWaitShown || !ad.muteStartTs) return;
+  const left = Math.ceil((ad.muteStartTs + UNMUTE_MAX_WAIT_MS - Date.now()) / 1000);
+  const t = ADWAIT_MSG + (left > 0 ? ' (' + left + 's).' : '.');
+  if (toastEl.textContent !== t) toastEl.textContent = t;
 }
 function clearAdWait(){
   if (!adWaitShown) return;
@@ -33596,7 +33605,8 @@ function resetSeekUI(t){
 // to the next song after STALL_SKIP_GRACE_MS. Cancel, or the clock moving
 // again, stops it. Cancel is remembered for that song only.
 const STALL_SKIP_MS = 10000, STALL_SKIP_GRACE_MS = 5000;
-let stallKey = '', stallPos = -1, stallSince = 0, stallTimer = null, stallCancelled = '';
+let stallKey = '', stallPos = -1, stallSince = 0, stallTimer = null, stallCancelled = '', stallDue = 0;
+const stallMsg = (n) => 'Song not playing. Skipping to the next in ' + n + 's';
 function stallClear(){ clearTimeout(stallTimer); stallTimer = null; }
 function stallWatch(ad){
   const key = state.queuePos + ':' + (ad.videoId || '');
@@ -33609,9 +33619,16 @@ function stallWatch(ad){
   }
   // only while the listener expects sound: playing state, visible page, no
   // scrub in progress or hand-off under way
-  if (stallTimer || stallCancelled === key || now - stallSince < STALL_SKIP_MS) return;
+  if (stallTimer){   // #714: count the seconds down in the prompt
+    const left = Math.max(1, Math.ceil((stallDue - now) / 1000));
+    const n = toastEl.firstChild;
+    if (n && n.nodeType === 3) n.nodeValue = stallMsg(left);
+    return;
+  }
+  if (stallCancelled === key || now - stallSince < STALL_SKIP_MS) return;
   if (!artworkWrap.classList.contains('is-playing') || document.hidden || seekDrag || swapInProgress) { stallSince = now; return; }
-  showToast('Song not playing. Skipping to the next in ' + Math.round(STALL_SKIP_GRACE_MS / 1000) + 's', { label: 'Cancel', run: () => { stallCancelled = key; stallClear(); } });
+  stallDue = now + STALL_SKIP_GRACE_MS;
+  showToast(stallMsg(Math.round(STALL_SKIP_GRACE_MS / 1000)), { label: 'Cancel', run: () => { stallCancelled = key; stallClear(); } });
   stallTimer = setTimeout(() => {
     stallTimer = null;
     if (stallKey !== key || stallCancelled === key) return;
@@ -33628,6 +33645,7 @@ function updateSeekUI(){
   const ad = activeDeck();
   if (!ad.player || !ad.player.getCurrentTime) return;
   stallWatch(ad);
+  adWaitTick(ad);
   const held = guardActiveDeckAd();
   unstickActiveDeck(held);
   if (held) return;
