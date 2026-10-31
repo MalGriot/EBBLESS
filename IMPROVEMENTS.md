@@ -127,12 +127,12 @@ Add entries in this shape:
 -->
 
 ### desktop-queue-hover-fill-711: Desktop: queue songs show a filled background when not hovered (Geethub #711)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #711. On desktop, queue rows keep the hover fill when the mouse is off them.
 - **Touches:** queue row hover styles. Possible regression of queue-song-hover-fill (#394).
-- **Branch:**
-- **Notes:** Synced from Geethub #711.
+- **Branch:** agent/queue-hover-711
+- **Notes:** Synced from Geethub #711. Cause: #672 made the desktop queue pane glass, but rows kept an opaque var(--panel) fill at rest. Rows are now transparent at rest on mouse desktops (dragged row stays opaque); hover fill unchanged.
 
 ### dock-logo-bigger-710: Dock e logo as big as fits without clipping (Geethub #710)
 - **Status:** ready
