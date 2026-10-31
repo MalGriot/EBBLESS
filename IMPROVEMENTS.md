@@ -196,7 +196,7 @@ Add entries in this shape:
 - **Description:** Bug, Geethub issue #706. Pausing a song on mobile still cuts off abruptly. It should fade out briefly.
 - **Touches:** pause path, mobile volume ramp (see earlier fade work).
 - **Branch:** agent/pause-fade-706
-- **Notes:** Synced from Geethub #706. Pause fade already existed (600ms linear); made it 900ms with a squared out-curve so it no longer sounds cut off on phones. Resume path unchanged (restores effectiveVolume). Not verified on device. Hidden-tab throttled timers could still shorten the fade from the lock screen. Cache v461. No Android bump needed (web only).
+- **Notes:** Synced from Geethub #706. Pause fade already existed (600ms linear); made it 900ms with a squared out-curve so it no longer sounds cut off on phones. Resume path unchanged (restores effectiveVolume). Not verified on device. Hidden-tab throttled timers could still shorten the fade from the lock screen. Follow-up: while the page is hidden (lock screen) each fade step is also scheduled from a worker timer so the fade is not throttled to a cut (not verified on device). Cache v478. No Android bump needed (web only).
 
 ### desktop-library-fullscreen-slide-705: Desktop: library fullscreen tab makes the window slide out (Geethub #705)
 - **Status:** review
