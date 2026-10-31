@@ -143,7 +143,7 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #710. New brand/assets/icons/dock-512.png: e cropped to its bounds and scaled to fill 512 with an 18px margin (was 266x257 of 512). Used by the runtime dock icon (index.html dockIconDraw) and the Mac bundle + Windows icon in desktop/package.json. icon-512.png unchanged (favicon/PWA). Rendered and checked: no clipping. Takes effect in the runtime icon on next page load; the bundle icon needs a new DMG build.
 
 ### mobile-volume-double-tap-709: Mobile: double-tap volume buttons to pause, play, skip (Geethub #709)
-- **Status:** review
+- **Status:** merged
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #709. Double-tap volume down pauses. When paused, double-tap volume up plays. When playing, double-tap volume up skips.
 - **Touches:** Android native app (hardware keys); likely not possible in a browser.
