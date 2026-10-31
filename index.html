@@ -9090,7 +9090,22 @@ function applyLibWide(on){
   const t = on ? 'Shrink the library' : 'Expand the library';
   b.title = t; b.setAttribute('aria-label', t);
 }
-$('libWideBtn').addEventListener('click', () => { const on = !document.body.classList.contains('lib-wide'); lsSet(LS_LIB_WIDE, on); applyLibWide(on); });
+// #705: the grid columns snap (no grid animation, GPU budget), so slide the panes with transform/opacity only (FLIP):
+// the player pane glides from where it was to where it lands while the library eases out over its old edge
+function slideLibWide(on){
+  const pl = $('view-player'), lib = $('view-library');
+  const split = document.body.classList.contains('split-desktop') && !document.body.classList.contains('desktop-fs');
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if (!split || reduce || !pl.animate){ applyLibWide(on); return; }
+  const a = pl.getBoundingClientRect();
+  applyLibWide(on);
+  const b = pl.getBoundingClientRect();
+  const dx = a.left - b.left, opt = { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)' };
+  if (Math.abs(dx) > 1) pl.animate([{ transform: 'translateX(' + dx + 'px)' }, { transform: 'none' }], opt);
+  lib.animate(on ? [{ transform: 'translateX(-28px)', opacity: .5 }, { transform: 'none', opacity: 1 }]
+                 : [{ transform: 'translateX(28px)', opacity: .5 }, { transform: 'none', opacity: 1 }], opt);
+}
+$('libWideBtn').addEventListener('click', () => { const on = !document.body.classList.contains('lib-wide'); lsSet(LS_LIB_WIDE, on); slideLibWide(on); });
 applyLibWide(!!lsGet(LS_LIB_WIDE, false));
 // opening a playlist, artist or album returns an expanded library to the basic window size
 function collapseLibWide(){ if (document.body.classList.contains('lib-wide')){ lsSet(LS_LIB_WIDE, false); applyLibWide(false); } }

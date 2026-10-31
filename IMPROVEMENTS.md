@@ -175,12 +175,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #706. Pause fade already existed (600ms linear); made it 900ms with a squared out-curve so it no longer sounds cut off on phones. Resume path unchanged (restores effectiveVolume). Not verified on device. Hidden-tab throttled timers could still shorten the fade from the lock screen. Cache v461. No Android bump needed (web only).
 
 ### desktop-library-fullscreen-slide-705: Desktop: library fullscreen tab makes the window slide out (Geethub #705)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #705. On desktop, hitting the library fullscreen tab should make the window slide out.
 - **Touches:** library window fullscreen transition.
-- **Branch:**
-- **Notes:** Synced from Geethub #705.
+- **Branch:** agent/lib-slide-705
+- **Notes:** Synced from Geethub #705. Read "fullscreen tab" as the desktop library expand tab (libWideBtn), which used to snap the grid. Now the player pane glides to its new spot and the library eases out (translateX + opacity via WAAPI, 320ms; no grid/filter animation). Skipped under reduced motion and in desktop-fs. Verified on localhost at 1500px (animations fire both directions, no [gpu-watchdog] warnings); not eyeballed frame by frame. Cache v464.
 
 ### artist-links-logos-704: Artist page: links and socials buttons become just logos (Geethub #704)
 - **Status:** review
