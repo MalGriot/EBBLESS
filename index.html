@@ -2552,7 +2552,7 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .kbd-list li:first-child{border-top:0}
 .kbd-list li>span{flex:none;width:118px;color:var(--faint-2);font-size:11px}
 .kbd-list kbd{font-family:inherit;font-size:11px;font-weight:600;line-height:1;color:var(--text);padding:3px 6px;border:1px solid var(--border-2);border-radius:5px}
-@media (hover: none) and (pointer: coarse){ #settingsKeysBlock{display:none} }
+@media (hover: none) and (pointer: coarse){ #view-settings #settingsKeysBlock{display:none!important} }
 .kbd-toggle{display:inline-flex;align-items:center;gap:6px}
 .kbd-toggle svg{transition:transform var(--dur-ui) var(--ease-out)}
 .kbd-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
@@ -2566,6 +2566,35 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 
 .settings-row-slider{flex-direction:column;align-items:stretch;gap:10px}
 .slider-val{color:var(--faint);font-weight:400;margin-left:6px}
+/* Settings v2: a hub of section rows, each opening its own short page. Every block keeps its id; data-spage ties it to a page and #view-settings[data-page] picks which one shows. Nothing animates. */
+.set-title{font-size:26px;font-weight:700;letter-spacing:-.3px;margin:14px 0 4px}
+.set-hub{display:flex;flex-direction:column;margin:12px 0 28px;border:1px solid var(--border);border-radius:var(--r-lg,16px);overflow:hidden;background:var(--panel)}
+.set-hub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;padding:12px 16px;background:none;border:0;border-top:1px solid var(--border);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.set-hub-row:first-child{border-top:0}
+.set-hub-row:hover,.set-hub-row:active{background:var(--panel-2,var(--panel-3))}
+.set-hub-row svg{flex:none;color:var(--faint)}
+.hub-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hub-t{font-size:16px;font-weight:600}
+.hub-s{font-size:13px;color:var(--faint);line-height:1.35}
+#view-settings [data-spage]{display:none}
+#view-settings[data-page="playback"] [data-spage="playback"],#view-settings[data-page="privacy"] [data-spage="privacy"],#view-settings[data-page="app"] [data-spage="app"],#view-settings[data-page="help"] [data-spage="help"],#view-settings[data-page="about"] [data-spage="about"],#view-settings[data-page="customize"] [data-spage="customize"]{display:block}
+#view-settings:not([data-page=""]) :is(#settingsHub,#accountBlock,#updateCtaBlock){display:none}
+#view-settings:not([data-page=""]) .set-title{margin-bottom:0}
+#settingsPlaybackBlock>h2,#settingsSupportBlock>h2,#settingsAppBlock>h2,#settingsAboutBlock>h2,#settingsPrivacyBlock>h2{display:none}
+#settingsAdvancedBlock>summary{display:none}
+#view-settings .settings-block[data-spage]{margin-top:8px}
+.set-btns{display:flex;flex:none;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.settings-row .desc.desc-fold{display:none}
+.settings-row.desc-open .desc.desc-fold{display:block}
+.desc-i{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;margin-left:8px;padding:0;border:1px solid var(--border-2);border-radius:50%;background:none;color:var(--faint);font:italic 600 12px/1 Georgia,serif;cursor:pointer;vertical-align:middle}
+.desc-i::after{content:"";position:absolute;inset:-12px}
+.desc-i[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+@media (max-width:600px){
+  .settings-row{padding:14px 0;gap:12px;min-height:56px}
+  .settings-row .label{font-size:15px}
+  .settings-row .desc{font-size:13px}
+  .set-title{font-size:24px}
+}
 /* Advanced settings: collapsed block, one-tap chip rows */
 .adv-block>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--faint-2);margin:0 0 12px}
 .adv-block>summary::-webkit-details-marker{display:none}
@@ -4971,6 +5000,15 @@ body.week-up-on{overflow:hidden}
   <main class="view" id="view-settings" hidden>
     <div class="view-scroll">
       <button type="button" class="settings-back" id="settingsBackBtn" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+      <h1 class="set-title" id="setTitle">Settings</h1>
+      <nav class="set-hub" id="settingsHub" aria-label="Settings sections">
+        <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping, voice</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, what's new, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      </nav>
       <!-- Settings layout (issue #212): most-used first. Feedback & support
            leads so Send feedback is the top row (#239) and groups every way
            to report something; Playback controls next; App actions
@@ -4992,28 +5030,14 @@ body.week-up-on{overflow:hidden}
           </div>
         </div>
       </div>
-      <div class="settings-block" id="settingsSupportBlock">
+      <div class="settings-block" id="settingsSupportBlock" data-spage="help">
         <h2>Feedback &amp; support</h2>
         <div class="settings-row">
           <div>
             <div class="label">Send feedback</div>
-            <div class="desc">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
+            <div class="desc no-fold">Found a bug or have an idea? Tell us right here. No account, no GitHub, nothing to sign up for.</div>
           </div>
-          <button class="btn-ghost" id="feedbackBtn">Send feedback</button>
-        </div>
-        <div class="settings-row" id="voiceRow">
-          <div>
-            <div class="label">Voice</div>
-            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
-            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
-          </div>
-          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
-        </div>
-        <div class="settings-row" id="adblockRow" hidden>
-          <div>
-            <div class="label">Ad blocking</div>
-            <div class="desc" id="adblockDesc" role="status" aria-live="polite"></div>
-          </div>
+          <span class="set-btns"><button class="btn-ghost" id="feedbackBtn">Feedback</button><button class="btn-ghost" id="testerFeedbackBtn" type="button">Beta report</button></span>
         </div>
         <div class="settings-row beta-hidden">
           <div>
@@ -5037,7 +5061,7 @@ body.week-up-on{overflow:hidden}
           <button class="btn-ghost" id="copyWrongTrackLogBtn">Copy log</button>
         </div>
       </div>
-      <div class="settings-block" id="settingsPlaybackBlock">
+      <div class="settings-block" id="settingsPlaybackBlock" data-spage="playback">
         <h2>Playback</h2>
         <div class="settings-row">
           <div>
@@ -5074,8 +5098,22 @@ body.week-up-on{overflow:hidden}
           </div>
           <button type="button" class="switch" id="sbSongsBtn" role="switch" aria-checked="false" aria-label="Skip talking in songs"><span class="switch-knob"></span></button>
         </div>
+        <div class="settings-row" id="voiceRow">
+          <div>
+            <div class="label">Voice</div>
+            <div class="desc" id="voiceDesc" role="status" aria-live="polite"></div>
+            <div class="desc">Ask for a set, like "ecstatic dance for 90 minutes, start gentle, build to a peak, end calm", by voice or by typing "set: ..." in the search box. Sets are part of FLOW and HORIZON, and they are saved in your Library under Sets.</div>
+          </div>
+          <button class="btn-ghost" id="voiceBtn" type="button">Review</button>
+        </div>
+        <div class="settings-row" id="adblockRow" hidden>
+          <div>
+            <div class="label">Ad blocking</div>
+            <div class="desc" id="adblockDesc" role="status" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
-      <div class="settings-block" id="settingsPrivacyBlock">
+      <div class="settings-block" id="settingsPrivacyBlock" data-spage="privacy">
         <h2>Privacy &amp; data</h2>
         <div class="settings-row">
           <div>
@@ -5099,7 +5137,7 @@ body.week-up-on{overflow:hidden}
           <span style="display:flex;gap:8px;flex:none;flex-wrap:wrap;justify-content:flex-end"><a class="btn-ghost" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none">Privacy</a><a class="btn-ghost" href="terms.html" target="_blank" rel="noopener" style="text-decoration:none">Terms</a></span>
         </div>
       </div>
-      <div class="settings-block" id="settingsAppBlock">
+      <div class="settings-block" id="settingsAppBlock" data-spage="app">
         <h2>App</h2>
         <div class="settings-row" id="installBlock">
           <div>
@@ -5131,18 +5169,11 @@ body.week-up-on{overflow:hidden}
           </div>
           <button class="btn-ghost" id="whatsNewBtn">View</button>
         </div>
-        <div class="settings-row">
-          <div>
-            <div class="label">Report as a beta tester</div>
-            <div class="desc">Testing EBBLESS? Log how a specific thing went. Tell us right here. No account, no GitHub, nothing to sign up for.</div>
-          </div>
-          <button class="btn-ghost" id="testerFeedbackBtn" type="button">Report</button>
-        </div>
       </div>
       <!-- Keyboard shortcuts (Geethub #246): mirrors the document keydown
            handler ("desktop keyboard shortcuts"); keep the two in sync.
            Hidden on touch-only devices, where there's no keyboard to use. -->
-      <div class="settings-block" id="settingsKeysBlock">
+      <div class="settings-block" id="settingsKeysBlock" data-spage="app">
         <h2>Keyboard shortcuts</h2>
         <!-- Collapsed by default (Geethub #253); open state lasts the session only -->
         <div class="settings-row">
@@ -5177,7 +5208,7 @@ body.week-up-on{overflow:hidden}
         </ul>
         </div></div>
       </div>
-      <div class="settings-block" id="settingsAboutBlock">
+      <div class="settings-block" id="settingsAboutBlock" data-spage="about">
         <h2>About</h2>
         <p class="about-copy"><strong>EBBLESS exists to make listening feel like listening again.</strong> We bring your music together, keep it moving, and make discovery feel effortless. No ads. No sign-up. Simple but layered. Music, visuals, nostalgia, curiosity, and the freedom to wander. We believe music should be something you flow through, not something trying to own you.</p>
         <p class="about-copy"><strong>EBBLESS</strong> plays your playlist or album straight through, without the gaps. Paste a public playlist, album, or song link from Spotify, SoundCloud, or Apple Music and EBBLESS finds and plays each song, or paste a YouTube playlist or video link directly. Podcasts work too: paste a Spotify or Apple Podcasts show or episode link, or a podcast's RSS feed. Either way, playback threads through so the listening doesn't stop.</p>
@@ -5190,7 +5221,7 @@ body.week-up-on{overflow:hidden}
           <button class="btn-ghost" id="creditsBtn">View</button>
         </div>
       </div>
-      <div class="settings-block" id="settingsDataBlock">
+      <div class="settings-block" id="settingsDataBlock" data-spage="privacy">
         <h2>Library &amp; data</h2>
         <div class="settings-row">
           <div>
@@ -5200,7 +5231,7 @@ body.week-up-on{overflow:hidden}
           <button class="btn-danger btn-hold" id="clearLibraryBtn" aria-label="Clear all saved playlists. Press and hold to confirm."><span class="btn-hold-fill" aria-hidden="true"></span><span class="btn-hold-label">Hold to clear playlists</span></button>
         </div>
       </div>
-      <details class="settings-block adv-block" id="settingsAdvancedBlock">
+      <details class="settings-block adv-block" id="settingsAdvancedBlock" data-spage="customize">
         <summary>Advanced<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
         <div class="adv-group"><svg class="adv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Look</div>
         <div class="settings-row settings-row-slider">
@@ -10009,7 +10040,51 @@ function showLoadSuccess(){
 /* =========================================================================
    VIEW ROUTING
    ========================================================================= */
-document.getElementById('settingsBackBtn')?.addEventListener('click', () => setView(state.preSettingsView || 'library'));
+document.getElementById('settingsBackBtn')?.addEventListener('click', () => { const v = document.getElementById('view-settings'); if (v && v.dataset.page) settingsShowPage(''); else setView(state.preSettingsView || 'library'); });
+/* Settings v2 hub: which page of #view-settings shows ('' = the hub). Blocks keep their ids; data-spage on each block names its page. */
+const SET_PAGE_TITLES = { playback: 'Playback', customize: 'Customize', privacy: 'Privacy & data', app: 'App', help: 'Help & feedback', about: 'About' };
+function settingsShowPage(p){
+  const v = document.getElementById('view-settings');
+  if (!v) return;
+  p = SET_PAGE_TITLES[p] ? p : '';
+  v.dataset.page = p;
+  const t = document.getElementById('setTitle');
+  if (t) t.textContent = p ? SET_PAGE_TITLES[p] : 'Settings';
+  if (p === 'customize'){ const d = document.getElementById('settingsAdvancedBlock'); if (d && !d.open) d.open = true; }
+  const sc = v.querySelector('.view-scroll');
+  if (sc) sc.scrollTop = 0;
+}
+function settingsRevealEl(el){
+  const v = document.getElementById('view-settings');
+  if (!v || !el || !v.contains(el)) return;
+  const sp = el.closest('[data-spage]');
+  const want = sp ? sp.dataset.spage : '';
+  if (v.dataset.page !== want) settingsShowPage(want);
+}
+(function settingsHubInit(){
+  const v = document.getElementById('view-settings');
+  if (!v) return;
+  v.dataset.page = '';
+  // long descriptions fold behind a small (i) so each row stays one line
+  v.querySelectorAll('.settings-row').forEach(row => {
+    if (row.querySelector('.btn-danger, #resetProfileBtn')) return;
+    const label = row.querySelector('.label');
+    const ds = [...row.querySelectorAll('.desc')].filter(d => !d.id && d.getAttribute('role') !== 'status' && !d.classList.contains('no-fold'));
+    if (!label || !ds.length || ds.reduce((n, d) => n + d.textContent.trim().length, 0) < 60) return;
+    ds.forEach(d => d.classList.add('desc-fold'));
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'desc-i'; b.textContent = 'i';
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-label', 'More about ' + label.textContent.trim());
+    label.appendChild(b);
+  });
+  v.addEventListener('click', (e) => {
+    const go = e.target.closest('[data-spage-go]');
+    if (go){ settingsShowPage(go.dataset.spageGo); return; }
+    const i = e.target.closest('.desc-i');
+    if (i){ const row = i.closest('.settings-row'); i.setAttribute('aria-expanded', String(row.classList.toggle('desc-open'))); }
+  });
+})();
 function setView(name){
   const prevView = state.currentView;
   if (name === 'player' || name === 'library') try{ renderHomeShelf(); } catch(e){} // recent-things shelf (#583d)
@@ -10036,6 +10111,7 @@ function setView(name){
     document.body.classList.add('settings-solo');
   }
   const restoreDeskFs = name !== 'settings' && state.settingsFromDeskFs;
+  if (name !== 'settings') settingsShowPage('');
   if (name !== 'settings'){
     state.settingsFromDeskFs = false;
     document.body.classList.remove('settings-solo');
@@ -26971,7 +27047,7 @@ let msCelebrateTimer = 0;
 let msGlowEl = null, msGlowTimer = 0;
 function msClearGlow(){ clearTimeout(msGlowTimer); if (msGlowEl){ msGlowEl.classList.remove('ms-glow'); msGlowEl = null; } }
 function msTarget(id){
-  const q = (sel) => document.querySelector(sel);
+  const q = (sel) => { const e = document.querySelector(sel); settingsRevealEl(e); return e; };
   const nav = (v) => q(v === 'queue' ? '#bottom-nav button[data-action="toggle-queue"]' : '#bottom-nav button[data-view="' + v + '"]');
   const first = (sel) => [...document.querySelectorAll(sel)].find(e => e.offsetParent !== null);
   const adv = (sel) => { const d = q('#settingsAdvancedBlock'); if (d && !d.open) d.open = true; return q(sel); };
@@ -26989,7 +27065,7 @@ function msTarget(id){
     case 'qreorder': return first('#queueBody .q-row .handle');
     case 'qremove': return first('#queueBody .q-row .remove');
     case 'openset': return nav('settings');
-    case 'explore': return q('#settingsAdvancedBlock > summary');
+    case 'explore': return q('#settingsHub [data-spage-go=customize]');
     case 'setting': return q('#crossfadeBtn');
     case 'customize': return adv('#settingsAdvancedBlock [data-adv=accent]') && q('#settingsAdvancedBlock .adv-chips');
     case 'restore': return adv('#advResetBtn');
@@ -36612,6 +36688,7 @@ function runIntro(preview){
     setView('settings');
     setStage('settings');
     const settingsScroll = document.querySelector('#view-settings .view-scroll');
+    settingsRevealEl(crossfadeBtn);
     if (settingsScroll) settingsScroll.scrollTop = 0;
     // spotlight the toggle AND the length slider below it as one region (the
     // same unionRect/placeCaptionNear pattern the style-record/viz beats use
@@ -36643,6 +36720,7 @@ function runIntro(preview){
     await wait(400);
     if (done) return;
     const bugRow = document.getElementById('feedbackBtn');
+    settingsRevealEl(bugRow);
     if (bugRow && bugRow.scrollIntoView) bugRow.scrollIntoView({ block: 'center' });
     setCaption('Tell us if you find a bug', bugRow);
     await wait(500);
@@ -37694,6 +37772,7 @@ if (introBeatCapture){
     case 'mentions':
       setView('settings');
       capStage('settings');
+      settingsRevealEl(crossfadeBtn);
       crossfadeBtn.setAttribute('aria-checked', 'true');
       crossfadeBtn.classList.add('is-active');
       crossfadeDurRow.style.opacity = '1';
@@ -37703,6 +37782,7 @@ if (introBeatCapture){
       setView('settings');
       capStage('settings');
       const capBugRow = document.getElementById('feedbackBtn');
+      settingsRevealEl(capBugRow);
       if (capBugRow && capBugRow.scrollIntoView) capBugRow.scrollIntoView({ block: 'center' });
       capCaptionText('Tell us if you find a bug', capBugRow);
       break;
