@@ -25,6 +25,7 @@ import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { ARTISTMAP_LIMIT, classifyLastfmSimilar, shapeArtistMap, artistMapCacheControl } from './artistmap.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
 import { handlePodAds } from './pod-ads.js';
+import { isPublicUrl, fetchPublic } from './public-url.js';
 export { PodCaptioner, PodCaptionBudget };
 import { VoiceQuota } from './voice-quota.js';
 import { handleVoicePlan } from './voice.js';
@@ -1493,7 +1494,7 @@ async function handlePodText(url, ctx) {
   const kind = url.searchParams.get('kind');
   const src = url.searchParams.get('url') || '';
   const type = url.searchParams.get('type') || '';
-  if (!/^(chapters|transcript)$/.test(kind || '') || !/^https:\/\//i.test(src) || src.length > 2000) return json({ error: 'missing or invalid podtext request' }, 400);
+  if (!/^(chapters|transcript)$/.test(kind || '') || !isPublicUrl(src, { httpsOnly: true }) || src.length > 2000) return json({ error: 'missing or invalid podtext request' }, 400);
   if (kind === 'transcript' && !/^(vtt|srt|json)$/.test(type)) return json({ error: 'invalid transcript type' }, 400);
   const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podtext/' + kind + '/' + type + '/' + encodeURIComponent(src));
@@ -1501,7 +1502,7 @@ async function handlePodText(url, ctx) {
   if (cached) return applyCors(cached);
   let text;
   try {
-    const res = await fetch(src, { headers: { 'User-Agent': APP_UA } });
+    const res = await fetchPublic(src, { headers: { 'User-Agent': APP_UA } }, { httpsOnly: true });
     if (!res.ok) return json({ error: kind + ' file returned ' + res.status }, 502);
     if (Number(res.headers.get('content-length')) > PODTEXT_MAX_BYTES) return json({ error: kind + ' file too large' }, 502);
     text = await res.text();
@@ -1529,7 +1530,7 @@ async function handlePodEpisode(url, ctx) {
   const show = (url.searchParams.get('show') || '').trim();
   const title = (url.searchParams.get('title') || '').trim();
   const audio = url.searchParams.get('audio') || '';
-  if ((!/^https?:\/\//i.test(feedParam) && !show) || !title || title.length > 500 || show.length > 300) return json({ error: 'missing or invalid podepisode request' }, 400);
+  if ((feedParam ? !isPublicUrl(feedParam) : !show) || !title || title.length > 500 || show.length > 300) return json({ error: 'missing or invalid podepisode request' }, 400);
   const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podepisode/' + encodeURIComponent(feedParam || show) + '/' + encodeURIComponent(title));
   const cached = await cache.match(cacheKey);
@@ -1539,7 +1540,7 @@ async function handlePodEpisode(url, ctx) {
   if (!feedUrl) return json({ error: 'no public feed found', debug: dbg }, 404);
   let feed;
   try {
-    const res = await fetch(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
+    const res = await fetchPublic(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
     if (!res.ok) return json({ error: 'podcast feed returned ' + res.status }, 502);
     feed = parsePodcastFeed(await res.text());
   } catch (e) {
@@ -1569,12 +1570,12 @@ const PODAUDIO_MAX_BYTES = 4 * 1024 * 1024;
 async function handlePodAudio(url) {
   const src = url.searchParams.get('url') || '';
   const start = Number(url.searchParams.get('start')), end = Number(url.searchParams.get('end'));
-  if (!/^https:\/\//i.test(src) || src.length > 2000 || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end - start + 1 > PODAUDIO_MAX_BYTES) {
+  if (!isPublicUrl(src, { httpsOnly: true }) || src.length > 2000 || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end - start + 1 > PODAUDIO_MAX_BYTES) {
     return json({ error: 'missing or invalid podaudio request' }, 400);
   }
   let res;
   try {
-    res = await fetch(src, { headers: { 'User-Agent': APP_UA, 'Range': 'bytes=' + start + '-' + end } });
+    res = await fetchPublic(src, { headers: { 'User-Agent': APP_UA, 'Range': 'bytes=' + start + '-' + end } }, { httpsOnly: true });
   } catch (e) {
     return json({ error: "couldn't reach the audio host" }, 502);
   }
@@ -1749,7 +1750,7 @@ async function handlePodcast(url, ctx) {
 
   let feed;
   try {
-    const res = await fetch(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
+    const res = await fetchPublic(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
     if (!res.ok) return json({ error: 'podcast feed returned ' + res.status }, 502);
     feed = parsePodcastFeed(await res.text());
   } catch (e) {

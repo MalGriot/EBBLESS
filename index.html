@@ -9278,11 +9278,11 @@ function fmRender(){
     return;
   }
   if (fmArtists){
-    if (fmArtists.loading){ sc.innerHTML = '<div class="fm-note">' + (fmArtists.note || 'Finding artists') + '&hellip;</div>'; return; }
+    if (fmArtists.loading){ sc.innerHTML = '<div class="fm-note">' + escapeHtml(fmArtists.note || 'Finding artists') + '&hellip;</div>'; return; }
     if (!fmArtists.list.length){ sc.innerHTML = '<div class="fm-note">No artists found. Try another pick.</div>'; return; }
     sc.innerHTML = '<div class="fm-artist-grid">' + fmArtists.list.map(a =>
       '<div class="fm-artist"><button type="button" class="fm-artist-open" data-fm="artist" data-v="' + escapeHtml(a.name) + '">' +
-      '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + (a.bpm ? ' <small>' + a.bpm + '</small>' : '') + '</span></button>' +
+      '<img src="' + escapeHtml(a.image || '') + '" alt="" loading="lazy"><span class="fm-artist-name">' + escapeHtml(a.name) + (a.bpm ? ' <small>' + escapeHtml(a.bpm) + '</small>' : '') + '</span></button>' +
       '<button type="button" class="fm-add" data-fm="add" data-v="' + escapeHtml(a.id) + '" aria-label="Add ' + escapeHtml(a.name) + ' to your library">+</button></div>').join('') + '</div>';
     return;
   }
