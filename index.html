@@ -9559,7 +9559,7 @@ function spotifyUserImportSelected(){
 
 // Spotify's own data file (the .zip from their privacy page, or the .json files in it):
 // YourLibrary.json holds Liked Songs, Playlist*.json the playlists. Saved albums and
-// artists are not brought in yet.
+// artists: albums import via their Spotify link (first 40); artists are not brought in yet.
 async function spotifyFileTexts(file){
   const buf = new Uint8Array(await file.arrayBuffer());
   if (!(buf[0] === 0x50 && buf[1] === 0x4b)) return [{ name: file.name, text: new TextDecoder().decode(buf) }];
@@ -9595,9 +9595,11 @@ function spotifyFileRow(t){
 async function spotifyFileImport(file){
   showToast('Reading your Spotify file');
   let lists = [];
+  const albumIds = [];
   try {
     for (const f of await spotifyFileTexts(file)){
       let j; try { j = JSON.parse(f.text); } catch(e){ continue; }
+      (Array.isArray(j.albums) ? j.albums : []).forEach(a => { const m = a && /^spotify:album:([A-Za-z0-9]{22})$/.exec(a.uri || ''); if (m && !albumIds.includes(m[1])) albumIds.push(m[1]); });
       if (/YourLibrary/i.test(f.name) || Array.isArray(j.tracks)) lists.push({ name: 'Spotify Liked Songs', rows: (j.tracks || []).map(spotifyFileRow) });
       (j.playlists || []).forEach(pl => lists.push({ name: pl.name || 'Spotify playlist', rows: (pl.items || []).map(spotifyFileRow) }));
     }
@@ -9613,9 +9615,12 @@ async function spotifyFileImport(file){
   }
   closeBring();
   renderLibrary();
-  if (!ids.length){ showToast('No songs found in that file'); return; }
+  if (!ids.length && !albumIds.length){ showToast('No songs found in that file'); return; }
   bringStoreSet('ebbless:spFileDone', '1');
-  showToast('Added ' + ids.length + (ids.length === 1 ? ' playlist' : ' playlists') + ' from your Spotify file. Matching songs in the background.');
+  const albums = albumIds.slice(0, 40);
+  showToast('Added ' + ids.length + (ids.length === 1 ? ' playlist' : ' playlists') + (albums.length ? ' and ' + albums.length + (albums.length === 1 ? ' album' : ' albums') : '') + ' from your Spotify file. Matching songs in the background.');
+  // Saved albums only carry a Spotify link, so each goes through the normal album import, one at a time.
+  albums.forEach((aid, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: 'album', id: aid }); } catch(e){} }, 2500 + i * 4000));
   (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
 }
 
@@ -20462,6 +20467,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 484, date: '2026-11-01', items: [
+    'Spotify data file: your saved albums now come over too (up to 40 at a time), alongside Liked Songs and playlists.'
+  ]},
   { version: 483, date: '2026-11-01', items: [
     'Spotify: paste your profile link and your public playlists come over in seconds, no sign-in needed. For Liked Songs and the rest, request your Spotify data file from the same page, and EBBLESS reminds you to add it when it arrives.'
   ]},
