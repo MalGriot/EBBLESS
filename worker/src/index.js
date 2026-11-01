@@ -14,6 +14,7 @@ import {
   titleOverlapRatio, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
+import { parseSpotifyUserPage, spotifyUserIdFrom } from './spotifyuser.js';
 import { handleBeta, betaInAppReport } from './beta.js';
 import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
@@ -675,6 +676,27 @@ async function handleRawSearch(query, count, ctx) {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
   })));
   return response;
+}
+
+// A Spotify profile's public playlists (see spotifyuser.js). Cached 10 min.
+async function handleSpotifyUser(url, ctx) {
+  const id = spotifyUserIdFrom(url.searchParams.get('user'));
+  if (!id) return json({ error: 'bad user' }, 400);
+  const cacheKey = new Request('https://cache.internal/spuser1/' + encodeURIComponent(id.toLowerCase()));
+  const cached = await envCache.match(cacheKey);
+  if (cached) return applyCors(cached);
+  let res;
+  try {
+    res = await fetch('https://open.spotify.com/user/' + encodeURIComponent(id), { headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9' } });
+  } catch (e) { return json({ error: 'unavailable' }, 502); }
+  if (res.status === 404) return json({ error: 'nouser' }, 404);
+  if (!res.ok) return json({ error: 'unavailable' }, 502);
+  const data = parseSpotifyUserPage(await res.text(), id);
+  if (!data) return json({ error: 'nouser' }, 404);
+  const out = json(data);
+  out.headers.set('Cache-Control', 'public, max-age=600');
+  ctx.waitUntil(envCache.put(cacheKey, out.clone()));
+  return out;
 }
 
 async function handleSearch(url, ctx, env) {
@@ -5069,6 +5091,7 @@ export default {
       if (url.pathname === '/playlist') return await handleEmbed('playlist', url, ctx);
       if (url.pathname === '/album') return await handleEmbed('album', url, ctx);
       if (url.pathname === '/search') return await handleSearch(url, ctx, env);
+      if (url.pathname === '/spotifyuser') return await handleSpotifyUser(url, ctx);
       if (url.pathname === '/track') return await handleTrack(url, ctx);
       if (url.pathname === '/ytplaylist') return await handleYtPlaylist(url, ctx);
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);

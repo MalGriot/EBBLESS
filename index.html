@@ -9285,8 +9285,8 @@ function fmBuild(){
     else if (k === 'tempo'){ fmTempo = v; fmRender(); }
     else if (k === 'bring'){ closeFindMusic(); openBring(); }
     else if (k === 'ck'){ const it = fmPicker && fmPicker.items.find(x => x.key === v); if (it){ it.on = !it.on; fmRender(); } }
-    else if (k === 'import') (fmPicker && fmPicker.svc === 'youtube' ? youtubeImportSelected() : fmPicker && fmPicker.svc === 'lastfm' ? lastfmImportSelected() : spotifyImportSelected());
-    else if (k === 'spdisc'){ const yt = fmPicker && fmPicker.svc === 'youtube', lf = fmPicker && fmPicker.svc === 'lastfm'; if (lf){ lastfmStart(true); return; } if (yt) ytDisconnect(); else spotifyDisconnect(); fmPicker = null; fmRender(); showToast('Disconnected from ' + (yt ? 'YouTube' : 'Spotify')); }
+    else if (k === 'import') (fmPicker && fmPicker.svc === 'spuser' ? spotifyUserImportSelected() : fmPicker && fmPicker.svc === 'youtube' ? youtubeImportSelected() : fmPicker && fmPicker.svc === 'lastfm' ? lastfmImportSelected() : spotifyImportSelected());
+    else if (k === 'spdisc'){ if (fmPicker && fmPicker.svc === 'spuser'){ fmPicker = null; closeFindMusic(); openBring('spotify'); return; } const yt = fmPicker && fmPicker.svc === 'youtube', lf = fmPicker && fmPicker.svc === 'lastfm'; if (lf){ lastfmStart(true); return; } if (yt) ytDisconnect(); else spotifyDisconnect(); fmPicker = null; fmRender(); showToast('Disconnected from ' + (yt ? 'YouTube' : 'Spotify')); }
     else if (k === 'lfgo'){ const u = ($('lfUser') || {}).value; lastfmLoad(u); }
     else if (k === 'service'){
       closeFindMusic();
@@ -9307,7 +9307,7 @@ function fmTile(kind, label, v, extra){
 }
 function fmRender(){
   const sc = $('fmScroll');
-  $('fmTitle').textContent = fmPicker ? 'Your ' + (fmPicker.svc === 'youtube' ? 'YouTube' : fmPicker.svc === 'lastfm' ? 'Last.fm' : 'Spotify') + ' music' : fmArtists ? fmArtists.title : 'Find music';
+  $('fmTitle').textContent = fmPicker && fmPicker.svc === 'spuser' ? (fmPicker.userName || 'Your Spotify') + ' playlists' : fmPicker ? 'Your ' + (fmPicker.svc === 'youtube' ? 'YouTube' : fmPicker.svc === 'lastfm' ? 'Last.fm' : 'Spotify') + ' music' : fmArtists ? fmArtists.title : 'Find music';
   if (fmPicker && fmPicker.ask){
     sc.innerHTML = '<div class="fm-note" style="padding:24px 0 12px">Your Last.fm username (your profile must be public)</div>' +
       '<input id="lfUser" class="fm-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="username" value="' + escapeHtml(fmPicker.user || '') + '">' +
@@ -9320,8 +9320,9 @@ function fmRender(){
     const n = fmPicker.items.filter(x => x.on).length;
     sc.innerHTML = '<div class="fm-picks">' + fmPicker.items.map(x =>
       '<button type="button" class="fm-pick' + (x.on ? ' is-on' : '') + '" role="checkbox" aria-checked="' + !!x.on + '" data-fm="ck" data-v="' + escapeHtml(x.key) + '"' + (fmPicker.busy ? ' disabled' : '') + '><span class="fm-box">' + (x.on ? '\u2713' : '') + '</span><span class="fm-pick-name">' + escapeHtml(x.label) + '</span><span class="fm-pick-sub">' + escapeHtml(x.sub) + '</span></button>').join('') + '</div>' +
+      (fmPicker.more ? '<div class="fm-note" style="padding:6px 4px 12px">' + escapeHtml(fmPicker.more) + '</div>' : '') +
       '<button type="button" class="fm-load fm-go" data-fm="import"' + (n && !fmPicker.busy ? '' : ' disabled') + '>' + (fmPicker.busy ? escapeHtml(fmPicker.note || 'Importing') + '&hellip;' : 'Import ' + n + (n === 1 ? ' item' : ' items')) + '</button>' +
-      '<button type="button" class="fm-disc" data-fm="spdisc">' + (fmPicker.svc === 'lastfm' ? 'Use a different username' : 'Disconnect ' + (fmPicker.svc === 'youtube' ? 'YouTube' : 'Spotify')) + '</button>';
+      '<button type="button" class="fm-disc" data-fm="spdisc">' + (fmPicker.svc === 'spuser' ? 'Use a different profile' : fmPicker.svc === 'lastfm' ? 'Use a different username' : 'Disconnect ' + (fmPicker.svc === 'youtube' ? 'YouTube' : 'Spotify')) + '</button>';
     return;
   }
   if (fmArtists){
@@ -9416,9 +9417,8 @@ function closeFindMusic(){ if (fmEl) fmEl.hidden = true; fmFromBring = false; }
    ========================================================================= */
 const BRING_ICONS = {"YouTube Music": "M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm0 19.104c-3.924 0-7.104-3.18-7.104-7.104S8.076 4.896 12 4.896s7.104 3.18 7.104 7.104-3.18 7.104-7.104 7.104zm0-13.332c-3.432 0-6.228 2.796-6.228 6.228S8.568 18.228 12 18.228s6.228-2.796 6.228-6.228S15.432 5.772 12 5.772zM9.684 15.54V8.46L15.816 12l-6.132 3.54z", "Last.fm": "M10.584 17.21l-.88-2.392s-1.43 1.594-3.573 1.594c-1.897 0-3.244-1.649-3.244-4.288 0-3.382 1.704-4.591 3.381-4.591 2.42 0 3.189 1.567 3.849 3.574l.88 2.749c.88 2.666 2.529 4.81 7.285 4.81 3.409 0 5.718-1.044 5.718-3.793 0-2.227-1.265-3.381-3.63-3.931l-1.758-.385c-1.21-.275-1.567-.77-1.567-1.595 0-.934.742-1.484 1.952-1.484 1.32 0 2.034.495 2.144 1.677l2.749-.33c-.22-2.474-1.924-3.492-4.729-3.492-2.474 0-4.893.935-4.893 3.932 0 1.87.907 3.051 3.189 3.601l1.87.44c1.402.33 1.869.907 1.869 1.704 0 1.017-.99 1.43-2.86 1.43-2.776 0-3.93-1.457-4.59-3.464l-.907-2.75c-1.155-3.573-2.997-4.893-6.653-4.893C2.144 5.333 0 7.89 0 12.233c0 4.18 2.144 6.434 5.993 6.434 3.106 0 4.591-1.457 4.591-1.457z", "Tidal": "M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zM16.042 7.996l3.979-3.979L24 7.996l-3.979 3.979z", "Amazon Music": "M14.8454 9.4083c-1.3907 1.0194-3.405 1.563-5.1424 1.563a9.333 9.333 0 0 1-6.2768-2.3835c-.1313-.117-.0143-.277.1415-.1846a12.693 12.693 0 0 0 6.285 1.6574c1.5384 0 3.2348-.318 4.7917-.9764.2359-.0985.4328.1538.203.324h-.002zm.5784-.6564c-.1784-.2257-1.1753-.1087-1.6225-.0554-.1374.0164-.158-.1026-.0349-.1867.796-.5558 2.0984-.3958 2.2502-.2092.1539.1867-.041 1.4872-.7856 2.1087-.1149.0964-.2236.0451-.1723-.082.1682-.4165.5436-1.3498.3651-1.5754zm-1.5917-4.1702v-.5394c0-.082.0615-.1375.1374-.1375h2.4348c.078 0 .1395.0554.1395.1354v.4636c0 .078-.0656.1805-.1846.3405L15.0997 6.635c.4677-.0102.9641.0595 1.3887.2974.0964.0534.123.1334.1292.2113v.5744c0 .082-.0882.1723-.1784.123a2.8163 2.8163 0 0 0-2.5723.0062c-.0861.0451-.1743-.0451-.1743-.1251v-.5477c0-.0882.002-.238.0902-.3713l1.4626-2.0881h-1.2718c-.078 0-.1415-.0534-.1436-.1354l.002.002zm4.808-.7466c1.0995 0 1.6944.9395 1.6944 2.1333 0 1.1528-.6564 2.0676-1.6943 2.0676-1.079 0-1.6656-.9395-1.6656-2.1087 0-1.1774.5948-2.0922 1.6656-2.0922zm.0062.7713c-.5456 0-.5805.7384-.5805 1.202 0 .4615-.0061 1.4481.5744 1.4481.5743 0 .601-.7958.601-1.282 0-.318-.0144-.6994-.1108-1.001-.082-.2625-.2482-.3671-.4841-.3671zm-6.008 3.3414c-.0493.041-.1395.0451-.1744.0164-.2543-.1949-.4246-.4923-.4246-.4923-.4061.4123-.6954.5374-1.2225.5374-.6215 0-1.1077-.3835-1.1077-1.1486a1.2512 1.2512 0 0 1 .7897-1.2041c.402-.1764.9641-.2072 1.3928-.2564 0 0 .0349-.4615-.0902-.6297a.521.521 0 0 0-.4164-.1908c-.2728 0-.5395.1477-.5928.4328-.0144.082-.0739.1518-.1395.1436L9.945 5.08a.1292.1292 0 0 1-.1108-.1537c.1641-.8657.9498-1.1282 1.6554-1.1282.361 0 .8307.0964 1.1158.3671.359.3344.3262.7795.3262 1.2677v1.1487c0 .3446.1436.4964.279.681.0471.0677.0574.1477-.002.197-.1519.125-.5703.4881-.5703.4881zm-.7467-1.7969v-.16c-.5353 0-1.1015.115-1.1015.7426 0 .318.1662.5333.4513.5333.2051 0 .3938-.1272.5128-.3344.1436-.2564.1374-.4943.1374-.7815zM2.9278 7.948c-.0472.041-.1375.045-.1723.0163-.2544-.1949-.4246-.4923-.4246-.4923-.4082.4123-.6954.5374-1.2226.5374-.6235 0-1.1076-.3835-1.1076-1.1486a1.2512 1.2512 0 0 1 .7897-1.2041c.402-.1764.964-.2072 1.3928-.2564 0 0 .0348-.4615-.0903-.6297a.521.521 0 0 0-.4164-.1908c-.2748 0-.5395.1477-.5928.4328-.0143.082-.0759.1518-.1395.1436L.2345 5.08a.1292.1292 0 0 1-.1087-.1537c.162-.8657.9497-1.1282 1.6553-1.1282.361 0 .8308.0964 1.1159.3671.359.3344.324.7795.324 1.2677v1.1487c0 .3446.1437.4964.279.681.0472.0677.0575.1477-.002.197-.1518.125-.5702.4881-.5702.4881zm-.7446-1.797v-.16c-.5354 0-1.1015.115-1.1015.7426 0 .318.164.5333.4512.5333.2052 0 .3939-.1272.5128-.3344.1436-.2564.1375-.4943.1375-.7815zm2.9127-.3343v2.002a.1379.1379 0 0 1-.1395.1374H4.218a.1374.1374 0 0 1-.1395-.1374v-3.766a.1379.1379 0 0 1 .1395-.1375h.6913a.1374.1374 0 0 1 .1374.1374v.482h.0143c.1805-.4758.519-.6994.9744-.6994.4636 0 .7528.2236.962.6995a1.0523 1.0523 0 0 1 1.0215-.6995c.3118 0 .6502.1272.8574.4143.236.318.1867.7795.1867 1.1857v2.3855c0 .076-.0636.1354-.1436.1354H8.181a.1374.1374 0 0 1-.1334-.1354v-2.004c0-.16.0144-.558-.0205-.7077-.0554-.2564-.2215-.3282-.4369-.3282a.4923.4923 0 0 0-.441.3118c-.076.1908-.0698.5087-.0698.724v2.0041c0 .076-.0635.1354-.1435.1354h-.7385a.1374.1374 0 0 1-.1333-.1354v-2.004c0-.4226.0677-1.042-.4574-1.042-.5334 0-.5128.603-.5128 1.042h.002zm16.8077 2.002a.1374.1374 0 0 1-.1374.1374h-.7405a.1374.1374 0 0 1-.1374-.1374v-3.766a.1374.1374 0 0 1 .1374-.1375h.683c.0821 0 .1396.0636.1396.1067v.5764h.0143c.2051-.517.4964-.7631 1.0092-.7631.3323 0 .6564.119.8636.4451.1928.3036.1928.8123.1928 1.1774V7.837a.1395.1395 0 0 1-.1415.119h-.7426a.1395.1395 0 0 1-.1313-.119V5.552c0-.763-.2933-.7856-.4635-.7856-.197 0-.357.1538-.4246.2953a1.7025 1.7025 0 0 0-.1231.722l.002 2.0349zM.1914 20.0582c-.1271 0-.1907-.0615-.1907-.1907v-4.4491c0-.1272.0636-.1908.1907-.1908H.616c.0616 0 .1129.0144.1477.039.0349.0246.0595.0738.0718.1436l.0575.3035c.6133-.4184 1.2102-.6276 1.7907-.6276.5948 0 .9969.2256 1.2081.6769.6318-.4513 1.2636-.677 1.8954-.677.441 0 .7794.1231 1.0153.3693.236.2502.3549.603.3549 1.0584v3.3538c0 .1271-.0656.1907-.1928.1907h-.5641c-.1272 0-.1928-.0615-.1928-.1907v-3.085c0-.318-.0616-.5539-.1805-.7057-.1231-.1538-.3139-.2297-.5744-.2297-.4677 0-.9353.1436-1.4092.4307a.997.997 0 0 1 .0103.1416v3.448c0 .1272-.0636.1908-.1908.1908H3.297c-.1272 0-.1908-.0615-.1908-.1907v-3.085c0-.318-.0615-.5539-.1825-.7057-.1231-.1538-.3139-.2297-.5744-.2297-.4861 0-.9517.1395-1.399.4205v3.5999c0 .1271-.0615.1907-.1907.1907H.1914zm9.731.1436c-.4533 0-.8-.1272-1.044-.3815-.242-.2544-.3631-.6133-.3631-1.0769v-3.321c0-.1292.0615-.1927.1908-.1927h.564c.1293 0 .1929.0635.1929.1907v3.0215c0 .3425.0656.5948.201.7569.1333.162.3487.242.642.242.4595 0 .923-.1518 1.3887-.4574v-3.565c0-.1272.0615-.1908.1908-.1908h.564c.1293 0 .1929.0636.1929.1908v4.4511c0 .1252-.0636.1887-.1928.1887h-.4103c-.0636 0-.1149-.0123-.1497-.0369-.0349-.0266-.0575-.0738-.0718-.1436l-.0657-.3323c-.5948.437-1.204.6564-1.8297.6564zm5.4399 0c-.5374 0-1.0195-.0882-1.4461-.2666a.3754.3754 0 0 1-.158-.1047c-.0287-.039-.043-.0984-.043-.1805v-.2687c0-.1148.0369-.1723.1148-.1723.0452 0 .1231.0205.238.0575.4225.1333.8615.199 1.3128.199.3138 0 .5517-.0616.7138-.1806.164-.121.244-.2954.244-.523a.4923.4923 0 0 0-.1476-.3734 1.606 1.606 0 0 0-.5415-.285l-.8144-.3037c-.7097-.2605-1.0625-.7056-1.0625-1.3333 0-.4143.16-.7487.484-1.001.3221-.2543.7447-.3815 1.2677-.3815a3.487 3.487 0 0 1 1.2164.2195c.076.0246.1313.0574.1641.0985.0308.041.0472.1025.0472.1846v.2584c0 .1149-.041.1723-.123.1723a.8615.8615 0 0 1-.2216-.0472 3.5495 3.5495 0 0 0-1.0359-.1538c-.6112 0-.919.2072-.919.6195 0 .164.0514.2953.154.3897.1025.0964.3035.201.603.3159l.7466.2872c.3774.1436.6482.318.8144.519.1661.1989.2482.4574.2482.7753 0 .4513-.1682.8102-.5067 1.0769-.3385.2666-.7877.4-1.3497.4v.002zm3.0645-.1436c-.1272 0-.1928-.0615-.1928-.1907v-4.4491c0-.1272.0656-.1908.1928-.1908h.5641c.1272 0 .1928.0636.1928.1908v4.4511c0 .1251-.0656.1887-.1928.1887h-.564zm.2872-5.688c-.1846 0-.3303-.0513-.437-.1559a.558.558 0 0 1-.1579-.4143c0-.1724.0534-.3098.158-.4144a.5907.5907 0 0 1 .4369-.158c.1846 0 .3282.0534.4349.158.1066.1026.1579.242.1579.4144 0 .1702-.0513.3076-.158.4143-.1046.1026-.2502.1559-.4348.1559zm4.002 5.7926c-.7529 0-1.3293-.2133-1.7272-.642-.4-.4307-.599-1.0502-.599-1.8625 0-.8061.2052-1.4318.6175-1.8728.4102-.441.9948-.6625 1.7476-.6625.3446 0 .683.0615 1.0154.1825.0697.0247.119.0554.1477.0944s.043.1026.043.1908v.2564c0 .1271-.041.1907-.123.1907-.0329 0-.082-.0082-.1539-.0287a2.8307 2.8307 0 0 0-.7959-.1128c-.5353 0-.923.1333-1.1589.404s-.3528.6996-.3528 1.2924v.123c0 .5764.119 1.001.359 1.2718.24.2687.6174.404 1.1343.404.2666 0 .5538-.043.8615-.1332.0718-.0206.119-.0288.1436-.0288.082 0 .1251.0636.1251.1908v.2585c0 .082-.0123.1435-.039.1805-.0246.0369-.0759.0718-.1518.1025-.3138.1354-.6769.201-1.0933.201z", "Pandora": "M1.882 0v24H8.32a1.085 1.085 0 001.085-1.085v-4.61h1.612c7.88 0 11.103-4.442 11.103-9.636C22.119 2.257 17.247 0 12.662 0H1.882Z", "Audiomack": "M.331 11.378s.5418-.089.765.1439c.2234.2332.077.7156-.2195.7237-.2965.01-.5705.063-.765-.1439-.1946-.2066-.1424-.6218.2195-.7237m5.881 3.2925c-.0522.01-.1075-.018-.164-.059-.3884-.5413-.5287-2.3923-.707-2.5025-.185-.1144-.8545 1.0255-2.1862.903-.5569-.051-1.1236-.4121-1.4573-.662.031-.4206.0364-1.4027.8659-1.0833.5038.1939 1.3667.7266 2.1245-.23.8378-1.0579 1.2999-.7506 1.577-.5206.2771.23.0925 1.4259.5058 1.0916.4133-.3343 2.082-2.4103 2.082-2.4103s1.292-1.303 1.4898.067c.1979 1.3698 1.0403 2.8877 1.2635 2.8445.2234-.043 2.8223-5.3253 3.1945-5.666.3722-.3409 1.6252-.2961 1.5657.5781-.0596.8742-.1871 6.308-.1871 6.308s-.147 1.5311.0924.7128c.0992-.3392.206-.6453.3392-1.0024.6414-2.0534 1.734-5.5613 2.2784-7.3688.1252-.4325.233-.8037.3166-1.0891l.0001-.0008a3.5925 3.5925 0 0 1 .0973-.3305c.0455-.1532.0763-.2546.0858-.2813.0243-.068.0925-.1192.1884-.157.0962-.061.1995-.064.3165-.067.3021-.027.6907.012 1.0401.1119.1018 0 .2125.037.3172.1118v.0001s.0063 0 .0151.01c.0023 0 .0048 0 .0073.01.0219.015.0573.045.0983.095.0012 0 .0025 0 .004.01.017.021.0341.045.0515.073.1952.2863.315.814.1948 1.7498-.2996 2.3354-.5316 7.1397-.5316 7.1397s-.0461.2298.4353-.782c.0167-.035.0383-.066.058-.098.026-.017.0552-.042.0913-.085.2974-.3546 1.0968-.5629 1.6512-.5586.2336.028.4293.087.5462.1609.2188.333.0897 1.562.0897 1.562-.4612.043-1.3403.2908-1.6519.3366-.3118.046-.7852 2.0699-1.4433 1.8629-.6581-.2069-2.1246-1.1268-2.1246-1.2533 0-.1102.1152-1.4546.1453-1.8016.0022-.024.004-.046.0058-.068a.152.152 0 0 1 .0014-.014l-.0002.0003c.0213-.2733.0023-.3927-.1239-.1199-.1086.2346-.581 1.7359-1.1078 3.3709-.0556.1429-1.0511 3.1558-1.1818 3.5231-.156.4261-.287.7523-.3776.921-.1378.1867-.3234.3036-.5826.2252-.6465-.1954-1.4654-1.0889-1.473-1.3106-.0155-1.2503.0608-7.973-.2423-7.4127-.311.5744-2.73 4.5608-2.73 4.5608-.0405.01-.0705.01-.1062.01-.1712-.019-.4366-.074-.51-.2384-.004-.01-.0094-.018-.0129-.028-.0035-.01-.0075-.022-.0135-.04-.0329-.1097-.0463-.2289-.0753-.3265-.1082-.3652-.2813-.8886-.463-1.421-.2784-.9079-.5654-1.8366-.6127-1.9391-.0923-.2007-.2268-.116-.3475-.0002-.54.458-1.6868 2.4793-2.7225 2.5898"};
 const BRING_COLORS = { 'Spotify': '#1DB954', 'YouTube Music': '#FF0000', 'YouTube': '#FF0000', 'Apple Music': '#FA243C', 'SoundCloud': '#FF5500', 'Last.fm': '#D51007', 'Amazon Music': '#25D1DA', 'Tidal': '#FFFFFF', 'Pandora': '#5B7BFF', 'Audiomack': '#FFA200', 'Bandcamp': '#1DA0C3', 'Deezer': '#A238FF' };
-// Spotify sign-in only exists once SPOTIFY_CLIENT_ID is set; until then Spotify is a pasted link (that path works today)
-const bringSignin = () => SPOTIFY_CLIENT_ID ? ['Spotify', 'YouTube Music', 'YouTube'] : ['YouTube Music', 'YouTube'];
-const bringLink = () => SPOTIFY_CLIENT_ID ? ['Apple Music', 'SoundCloud'] : ['Spotify', 'Apple Music', 'SoundCloud'];
+const bringSignin = () => ['Spotify', 'YouTube Music', 'YouTube'];
+const bringLink = () => ['Apple Music', 'SoundCloud'];
 const BRING_VIA_LASTFM = ['Last.fm', 'Amazon Music', 'Tidal', 'Pandora', 'Deezer', 'Audiomack', 'Bandcamp', 'Other app'];
 let bringEl = null, bringView = 'home', bringApp = '';
 function bringStoreGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
@@ -9446,14 +9446,20 @@ function bringBuild(){
     const k = t.dataset.bm, v = t.dataset.v;
     if (k === 'svc') bringPick(v);
     else if (k === 'lfgo') bringLastfmGo(($('bmUser') || {}).value);
+    else if (k === 'spgo') spotifyUserLoad(($('bmSpUser') || {}).value);
+    else if (k === 'spreq'){ bringStoreSet('ebbless:spFileAsk', String(Date.now())); bringStoreSet('ebbless:spFileRemind', String(Date.now())); try { localStorage.removeItem('ebbless:spFileStop'); } catch(e){} window.open('https://www.spotify.com/account/privacy/', '_blank', 'noopener'); showToast('Request it on that page. We will remind you when it should be here.'); }
+    else if (k === 'spfile'){ const f = $('bmFile'); if (f) f.click(); }
+    else if (k === 'sptester'){ closeBring(); fmOpenForPicker(); Promise.resolve(spotifyLoadMusic()).then(() => { if (!fmPicker && fmFromBring && fmEl && !fmEl.hidden){ closeFindMusic(); openBring('spotify'); } }); }
     else if (k === 'remind'){ try { localStorage.removeItem('ebbless:bringMute'); } catch(e){} showToast('We will remind you now and then'); bringRender(); }
   });
-  bringEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'bmUser'){ e.preventDefault(); bringLastfmGo(e.target.value); } });
+  bringEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'bmUser'){ e.preventDefault(); bringLastfmGo(e.target.value); } else if (e.key === 'Enter' && e.target.id === 'bmSpUser'){ e.preventDefault(); spotifyUserLoad(e.target.value); } });
+  bringEl.addEventListener('change', (e) => { if (e.target.id === 'bmFile' && e.target.files && e.target.files[0]){ const f = e.target.files[0]; e.target.value = ''; spotifyFileImport(f); } });
 }
 function bringPick(name){
-  if (bringSignin().includes(name)){
+  if (name === 'Spotify'){ bringView = 'spotify'; bringRender(); }
+  else if (bringSignin().includes(name)){
     closeBring(); fmOpenForPicker();
-    const run = name === 'Spotify' ? spotifyLoadMusic : youtubeLoadMusic;
+    const run = youtubeLoadMusic;
     Promise.resolve(run()).then(() => { if (!fmPicker && fmFromBring && fmEl && !fmEl.hidden){ closeFindMusic(); openBring(); } });
   } else if (bringLink().includes(name)){
     closeBring();
@@ -9474,6 +9480,16 @@ function bringLastfmGo(name){
 function bringRender(){
   const sc = $('bmScroll');
   if (!sc) return;
+  if (bringView === 'spotify'){
+    $('bmTitle').textContent = 'Bring your Spotify';
+    sc.innerHTML = '<div class="bm-lead">Your public playlists come over in seconds. Everything else comes from a file Spotify sends you.</div>' +
+      '<div class="bm-steps">' +
+      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">1</span><div><div class="bm-st">Paste your Spotify profile link</div><div class="bm-sd">In Spotify: your profile picture, Profile, the three dots, Share, Copy link. Playlists have to be public.</div></div></div><div class="bm-user"><input id="bmSpUser" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="open.spotify.com/user/..."><button type="button" class="bm-btn bm-btn-go" data-bm="spgo">Get my playlists</button></div></div>' +
+      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">2</span><div><div class="bm-st">Get the rest in a few days</div><div class="bm-sd">Liked Songs and private playlists are only in Spotify\'s own data file. Ask for it now, add it here when it arrives, and EBBLESS reminds you.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spreq">Request my file</button><button type="button" class="bm-btn" data-bm="spfile">I have my file</button><input type="file" id="bmFile" accept=".zip,.json,application/zip,application/json" hidden></div></div>' +
+      '</div><div class="bm-note">Want your Liked Songs right now? On a computer, open Liked Songs in Spotify, press Ctrl or Cmd + A, add them to a new playlist and make it public. It then shows up in step 1. Spotify only shares a profile\'s first 10 playlists with us, so use the file for the rest.</div>' +
+      (SPOTIFY_CLIENT_ID ? '<div class="bm-foot"><button type="button" class="bm-link" data-bm="sptester">I am an EBBLESS tester: sign in with Spotify</button></div>' : '');
+    return;
+  }
   if (bringView === 'lastfm'){
     const app = bringApp === 'Last.fm' || bringApp === 'Other app' ? 'your app' : bringApp;
     $('bmTitle').textContent = bringApp === 'Last.fm' ? 'Use Last.fm' : 'Connect ' + (app === 'your app' ? 'your app' : app);
@@ -9488,14 +9504,14 @@ function bringRender(){
   $('bmTitle').textContent = 'Bring your music';
   const muted = !!bringStoreGet('ebbless:bringMute');
   sc.innerHTML = '<div class="bm-lead">Pick where your music lives now. EBBLESS brings your playlists and loved songs over, then finds every song to play.</div>' +
-    '<div class="bm-h">Sign in</div><div class="bm-grid">' + bringSignin().map(n => bringTile(n, 'Sign in')).join('') + '</div>' +
+    '<div class="bm-h">Bring it over now</div><div class="bm-grid">' + bringSignin().map(n => bringTile(n, n === 'Spotify' ? 'Paste your profile link' : 'Sign in')).join('') + '</div>' +
     '<div class="bm-h">Paste a link</div><div class="bm-grid">' + bringLink().map(n => bringTile(n, 'Paste a playlist link')).join('') + '</div>' +
     '<div class="bm-h">Any other app, through Last.fm</div><div class="bm-grid">' + BRING_VIA_LASTFM.map(n => bringTile(n, n === 'Last.fm' ? 'Use your username' : 'We will walk you through it')).join('') + '</div>' +
     (muted ? '<div class="bm-foot"><button type="button" class="bm-link" data-bm="remind">Remind me about this now and then</button></div>' : '');
 }
-function openBring(){
+function openBring(view){
   if (!bringEl) bringBuild();
-  bringView = 'home';
+  bringView = view || 'home';
   bringEl.hidden = false;
   bringRender();
   bringStoreSet('ebbless:bringNudgeAt', String(Date.now()));
@@ -9505,39 +9521,158 @@ function openBring(){
 function closeBring(){ if (bringEl) bringEl.hidden = true; }
 function fmOpenForPicker(){ if (!fmEl) fmBuild(); fmFromBring = true; fmEl.hidden = false; }
 
+
+// Spotify profile: its public playlists, read by the worker from the profile
+// page (no sign-in, no allowlist). Songs come through the normal playlist
+// import, one queued import per chosen playlist.
+async function spotifyUserLoad(input){
+  const v = String(input || '').trim();
+  if (!v){ showToast('Paste your Spotify profile link'); return; }
+  closeBring(); fmOpenForPicker();
+  fmPicker = { svc: 'spuser', loading: true, note: 'Reading your Spotify profile', items: [] };
+  fmRender();
+  let msg = '';
+  try {
+    const { res, data } = await backendJson('/spotifyuser?user=' + encodeURIComponent(v), 'spotifyuser');
+    if (res.status === 404) msg = 'No Spotify profile found. Check the link.';
+    else if (!res.ok) msg = 'Could not read that profile. Try again.';
+    else if (!data.playlists || !data.playlists.length) msg = 'That profile has no public playlists. Make them public in Spotify, or use your data file.';
+    else {
+      const items = data.playlists.map(p => ({ key: 'pl:' + p.id, label: p.name, sub: 'Playlist', on: true, id: p.id, image: p.image }));
+      const more = data.total > items.length ? 'Spotify shows us ' + items.length + ' of your ' + data.total + ' public playlists. Add the rest with your data file or by pasting their links.' : '';
+      fmPicker = { svc: 'spuser', loading: false, items, userName: data.user && data.user.name, more };
+    }
+  } catch(e){ msg = 'Could not reach EBBLESS. Try again.'; }
+  if (msg){ fmPicker = null; closeFindMusic(); showToast(msg); openBring('spotify'); return; }
+  fmRender();
+}
+function spotifyUserImportSelected(){
+  if (!fmPicker || fmPicker.busy) return;
+  const chosen = fmPicker.items.filter(x => x.on);
+  if (!chosen.length) return;
+  fmPicker = null;
+  closeFindMusic();
+  bringStoreSet('ebbless:bringDone', '1');
+  showToast('Bringing in ' + chosen.length + (chosen.length === 1 ? ' playlist' : ' playlists') + ' from Spotify');
+  chosen.forEach(it => beginImportFromParsedLink({ source: 'spotify', type: 'playlist', id: it.id }));
+}
+
+// Spotify's own data file (the .zip from their privacy page, or the .json files in it):
+// YourLibrary.json holds Liked Songs, Playlist*.json the playlists. Saved albums and
+// artists are not brought in yet.
+async function spotifyFileTexts(file){
+  const buf = new Uint8Array(await file.arrayBuffer());
+  if (!(buf[0] === 0x50 && buf[1] === 0x4b)) return [{ name: file.name, text: new TextDecoder().decode(buf) }];
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let e = buf.length - 22;
+  while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not a zip');
+  const n = dv.getUint16(e + 10, true);
+  let p = dv.getUint32(e + 16, true);
+  const out = [];
+  for (let i = 0; i < n; i++){
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + nlen));
+    p += 46 + nlen + xlen + clen;
+    if (!/(^|\/)(YourLibrary|Playlist\d*)\.json$/i.test(name) || csize === 0xFFFFFFFF) continue;
+    const start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+    const data = buf.subarray(start, start + csize);
+    let bytes = data;
+    if (method === 8) bytes = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+    else if (method !== 0) continue;
+    out.push({ name, text: new TextDecoder().decode(bytes) });
+  }
+  return out;
+}
+function spotifyFileRow(t){
+  const x = (t && t.track && typeof t.track === 'object') ? t.track : t;
+  if (!x) return null;
+  const title = x.trackName || x.name || (typeof x.track === 'string' ? x.track : '');
+  const artist = x.artistName || (typeof x.artist === 'string' ? x.artist : (x.artist && x.artist.name)) || '';
+  return title && artist ? { title, artist, art: null, srcDuration: 0, videoId: null, plays: 0 } : null;
+}
+async function spotifyFileImport(file){
+  showToast('Reading your Spotify file');
+  let lists = [];
+  try {
+    for (const f of await spotifyFileTexts(file)){
+      let j; try { j = JSON.parse(f.text); } catch(e){ continue; }
+      if (/YourLibrary/i.test(f.name) || Array.isArray(j.tracks)) lists.push({ name: 'Spotify Liked Songs', rows: (j.tracks || []).map(spotifyFileRow) });
+      (j.playlists || []).forEach(pl => lists.push({ name: pl.name || 'Spotify playlist', rows: (pl.items || []).map(spotifyFileRow) }));
+    }
+  } catch(e){ showToast('Could not read that file. Use the .zip from Spotify.'); return; }
+  const ids = [];
+  for (const l of lists){
+    const seen = new Set(), tracks = [];
+    l.rows.forEach(r => { if (!r) return; const k = (r.artist + '|' + r.title).toLowerCase(); if (seen.has(k) || tracks.length >= IMPORT_MAX_SONGS) return; seen.add(k); tracks.push(r); });
+    if (!tracks.length) continue;
+    const id = 'custom-sp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    if (!importSave({ id, type: 'custom', name: l.name, image: null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'spotify' })) continue;
+    saveToLibrary(id); ids.push(id);
+  }
+  closeBring();
+  renderLibrary();
+  if (!ids.length){ showToast('No songs found in that file'); return; }
+  bringStoreSet('ebbless:spFileDone', '1');
+  showToast('Added ' + ids.length + (ids.length === 1 ? ' playlist' : ' playlists') + ' from your Spotify file. Matching songs in the background.');
+  (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
+}
+
 // Periodic nudge: only while nothing has been brought over, at most every 3 days,
 // never in a visitor's first day (the splash already offers it), and "Don't ask
 // again" silences it for good (Bring your music page offers to turn it back on).
 let bringNudgeEl = null;
 function hideBringNudge(){ if (bringNudgeEl){ bringNudgeEl.classList.remove('is-open'); const el = bringNudgeEl; setTimeout(() => { el.hidden = true; }, 350); } }
+function bringNudgeBuild(kind){
+  if (!bringNudgeEl){
+    bringNudgeEl = document.createElement('div');
+    bringNudgeEl.id = 'bringNudge';
+    bringNudgeEl.setAttribute('role', 'dialog');
+    document.body.appendChild(bringNudgeEl);
+    bringNudgeEl.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-bn]');
+      if (!t) return;
+      const file = bringNudgeEl.dataset.kind === 'file';
+      if (t.dataset.bn === 'go') openBring(file ? 'spotify' : 'home');
+      else if (t.dataset.bn === 'never'){ bringStoreSet(file ? 'ebbless:spFileStop' : 'ebbless:bringMute', '1'); hideBringNudge(); }
+      else hideBringNudge();
+    });
+  }
+  bringNudgeEl.dataset.kind = kind;
+  bringNudgeEl.setAttribute('aria-label', kind === 'file' ? 'Your Spotify file' : 'Bring your music');
+  bringNudgeEl.innerHTML = kind === 'file'
+    ? '<div class="bn-t">Your Spotify file should be here</div><div class="bn-s">Spotify takes a few days to send your data. When it arrives, add it and your Liked Songs and playlists come over.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Add my file</button><button type="button" class="bm-btn" data-bn="later">Not yet</button></div><button type="button" class="bm-link bn-never" data-bn="never">Stop reminding me</button>'
+    : '<div class="bn-t">Bring your music to EBBLESS</div><div class="bn-s">Already have playlists on Spotify, YouTube Music or another app? Bring them over in a minute.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Bring my music</button><button type="button" class="bm-btn" data-bn="later">Not now</button></div><button type="button" class="bm-link bn-never" data-bn="never">Don\'t ask me again</button>';
+  bringNudgeEl.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => bringNudgeEl.classList.add('is-open')));
+}
+function bringNudgeBusy(){
+  const sp = $('splash');
+  return document.body.classList.contains('onb-active') || (sp && !sp.classList.contains('is-hidden')) || (fmEl && !fmEl.hidden) || (bringEl && !bringEl.hidden);
+}
+// Asked for the Spotify file: remind every 2 days from day 3 until it is added or they stop it.
+function bringFileRemindMaybe(tries){
+  const ask = parseInt(bringStoreGet('ebbless:spFileAsk'), 10);
+  if (!ask || bringStoreGet('ebbless:spFileDone') || bringStoreGet('ebbless:spFileStop')) return false;
+  const now = Date.now();
+  if (now - ask < 3 * 864e5 || now - (parseInt(bringStoreGet('ebbless:spFileRemind'), 10) || 0) < 2 * 864e5) return false;
+  if (bringNudgeBusy()){ if ((tries || 0) < 20) setTimeout(() => bringFileRemindMaybe((tries || 0) + 1), 30000); return true; }
+  bringStoreSet('ebbless:spFileRemind', String(now));
+  bringNudgeBuild('file');
+  return true;
+}
 function bringNudgeMaybe(tries){
+  if (bringFileRemindMaybe(0)) return;
   if (bringStoreGet('ebbless:bringDone') || bringStoreGet('ebbless:bringMute')) return;
   const now = Date.now();
   let first = parseInt(bringStoreGet('ebbless:bringFirstSeen'), 10);
   if (!first){ first = now; bringStoreSet('ebbless:bringFirstSeen', String(now)); }
   if (now - first < 864e5) return;
   if (now - (parseInt(bringStoreGet('ebbless:bringNudgeAt'), 10) || 0) < 3 * 864e5) return;
-  const sp = $('splash');
-  const busy = document.body.classList.contains('onb-active') || (sp && !sp.classList.contains('is-hidden')) || (fmEl && !fmEl.hidden) || (bringEl && !bringEl.hidden);
-  if (busy){ if ((tries || 0) < 20) setTimeout(() => bringNudgeMaybe((tries || 0) + 1), 30000); return; }
+  if (bringNudgeBusy()){ if ((tries || 0) < 20) setTimeout(() => bringNudgeMaybe((tries || 0) + 1), 30000); return; }
   bringStoreSet('ebbless:bringNudgeAt', String(now));
-  if (!bringNudgeEl){
-    bringNudgeEl = document.createElement('div');
-    bringNudgeEl.id = 'bringNudge';
-    bringNudgeEl.setAttribute('role', 'dialog');
-    bringNudgeEl.setAttribute('aria-label', 'Bring your music');
-    bringNudgeEl.innerHTML = '<div class="bn-t">Bring your music to EBBLESS</div><div class="bn-s">Already have playlists on Spotify, YouTube Music or another app? Bring them over in a minute.</div><div class="bn-row"><button type="button" class="bm-btn bm-btn-go" data-bn="go">Bring my music</button><button type="button" class="bm-btn" data-bn="later">Not now</button></div><button type="button" class="bm-link bn-never" data-bn="never">Don\'t ask me again</button>';
-    document.body.appendChild(bringNudgeEl);
-    bringNudgeEl.addEventListener('click', (e) => {
-      const t = e.target.closest('[data-bn]');
-      if (!t) return;
-      if (t.dataset.bn === 'go') openBring();
-      else if (t.dataset.bn === 'never'){ bringStoreSet('ebbless:bringMute', '1'); hideBringNudge(); }
-      else hideBringNudge();
-    });
-  }
-  bringNudgeEl.hidden = false;
-  requestAnimationFrame(() => requestAnimationFrame(() => bringNudgeEl.classList.add('is-open')));
+  bringNudgeBuild('bring');
 }
 setTimeout(() => bringNudgeMaybe(0), 25000);
 
@@ -20327,6 +20462,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 483, date: '2026-11-01', items: [
+    'Spotify: paste your profile link and your public playlists come over in seconds, no sign-in needed. For Liked Songs and the rest, request your Spotify data file from the same page, and EBBLESS reminds you to add it when it arrives.'
+  ]},
   { version: 482, date: '2026-11-01', items: [
     'Spotify sign-in is on: connect your account and bring in your Liked Songs and playlists.'
   ]},
