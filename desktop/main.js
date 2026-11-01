@@ -125,6 +125,16 @@ function createMainWindow(){
   mainWin.on('restore', () => mainWin.webContents.send('ebbless:back'));
 
   adblock.install(mainWin); // #524
+  // Light show: the page asks for its own sound through getDisplayMedia so
+  // MilkDrop reacts to the real music. Only the app page's own frame is ever
+  // handed back (its tab audio, YouTube iframe included), never the screen or
+  // other apps; enableLocalEcho keeps the speakers playing. Works on macOS and
+  // Windows; system-wide 'loopback' would be Windows-only in Electron 33.
+  mainWin.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+    const f = request.frame;
+    if (!mainWin || !f || f !== mainWin.webContents.mainFrame || !isAppUrl(f.url) || !request.audioRequested) return callback({});
+    callback({ video: f, audio: f, enableLocalEcho: true });
+  });
   mainWin.loadURL(APP_URL);
 }
 

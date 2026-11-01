@@ -27257,6 +27257,22 @@ function milkCreateViz(){
   milkApplySize();
 }
 
+// Desktop app 1.0.13+: its own sound (YouTube iframe included) through
+// getDisplayMedia, which the app answers with this page's frame only. Asked
+// at open, inside the click, because getDisplayMedia needs the gesture.
+function milkDesktopTap(){
+  if (!isDesktopApp || !window.ebblessDesktop.tapAudio || milkSig.ext || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return;
+  navigator.mediaDevices.getDisplayMedia({ audio: true, video: true }).then(st => {
+    st.getVideoTracks().forEach(t => t.stop());   // only the sound is used: no video capture running
+    if (!milk.open || !st.getAudioTracks().length){ st.getTracks().forEach(t => t.stop()); return; }
+    window.ebblessAudioStream(st);
+  }).catch(() => {});
+}
+function milkDesktopUntap(){
+  if (!milkSig.ext) return;
+  milkSig.ext.getTracks().forEach(t => t.stop());
+  window.ebblessAudioStream(null);
+}
 /* ---------- open / close ---------- */
 async function openMilk(){
   if (milk.open) return;
@@ -27269,6 +27285,7 @@ async function openMilk(){
   $('milkLoading').hidden = false;
   milkLoadMetrics();
   milkSongChanged();
+  milkDesktopTap();
   milkTap(true);
   milkRenderSignalNote();
   milkPoke();
@@ -27298,6 +27315,7 @@ function closeMilk(){
   document.body.classList.remove('milk-open');
   $('milkPanel').hidden = true;
   milkUntap();
+  milkDesktopUntap();
   if (milkSig.ctx) milkSig.ctx.suspend().catch(() => {});
   // Give the GPU memory back; the presets stay loaded so reopening is quick.
   if (milk.viz){
