@@ -22,6 +22,16 @@ const bp = path.join(__dirname, "check-security.baseline.json");
 const baseline = fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, "utf8")) : [];
 const found = new Set();
 const errors = [];
+// Unpinned dependencies: ^ and ~ ranges pull in upstream breaking changes on install.
+for (const pj of ["worker/package.json", "desktop/package.json"]) {
+  const fp = path.join(root, pj);
+  if (!fs.existsSync(fp)) continue;
+  const j = JSON.parse(fs.readFileSync(fp, "utf8"));
+  for (const sec of ["dependencies", "devDependencies"])
+    for (const [name, ver] of Object.entries(j[sec] || {}))
+      if (/^[\^~]|[*x]|latest/.test(ver)) errors.push(`${pj}: ${name}@${ver} is not pinned; use an exact version`);
+}
+
 for (const rel of files) {
   const fp = path.join(root, rel);
   if (!fs.existsSync(fp)) continue;

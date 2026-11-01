@@ -124,6 +124,9 @@ The pre-commit hook runs `scripts/check.sh`. Run it yourself any time.
 - **Security review:** for changes touching the worker, sessions/tokens, user
   data, or `innerHTML` with external text, walk `docs/SECURITY-REVIEW.md`.
   New hits in `scripts/check-security.baseline.json` are never the fix.
+- **Maintenance:** `docs/MAINTENANCE.md` has the habits (public routes never
+  renamed, pinned dependencies, deletion test, cost notes). Dependencies in
+  `worker/` and `desktop/` must be exact versions; the security grep enforces it.
 - **Fresh clone:** the hook is not in git. Install it with
   `printf '#!/usr/bin/env bash\nexec "$(git rev-parse --show-toplevel)/scripts/check.sh"\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`
 - **Cleanup rules:** no mass refactors of `index.html` while other lanes are
