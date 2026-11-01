@@ -9549,7 +9549,7 @@ setTimeout(() => bringNudgeMaybe(0), 25000);
    Brings in Liked Songs and the user's playlists as editable playlists whose
    songs are matched in the background like any saved list.
    ========================================================================= */
-const SPOTIFY_CLIENT_ID = '';
+const SPOTIFY_CLIENT_ID = '4f7cdbfe038c4ae3abce201cbbf184d3';
 const SPOTIFY_SCOPES = 'user-library-read playlist-read-private playlist-read-collaborative';
 // one imported list holds at most this many songs; the browser's storage (a few MB) and the
 // cloud profile (5 MB for everything) are the real limits, so saves are checked (importSave)
@@ -20327,6 +20327,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 482, date: '2026-11-01', items: [
+    'Spotify sign-in is on: connect your account and bring in your Liked Songs and playlists.'
+  ]},
   { version: 481, date: '2026-11-01', items: [
     'Spotify now shows as a paste-a-link option until Spotify sign-in is switched on, instead of an error.'
   ]},
