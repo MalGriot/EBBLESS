@@ -679,12 +679,46 @@ async function handleRawSearch(query, count, ctx) {
 }
 
 // A Spotify profile's public playlists (see spotifyuser.js). Cached 10 min.
-async function handleSpotifyUser(url, ctx) {
+// Spotify's web page for a profile no longer carries the playlist data (it is built in the
+// browser), so the profile lookup uses the public Web API with this app's own token when the
+// SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET secrets are set. No user sign-in, no allowlist.
+async function spotifyUserViaApi(id, env) {
+  const token = await getSpotifyAppToken(env);
+  if (!token) return null;
+  const h = { Authorization: 'Bearer ' + token };
+  try {
+    const u = await fetch('https://api.spotify.com/v1/users/' + encodeURIComponent(id), { headers: h });
+    if (u.status === 404) return { missing: true };
+    if (!u.ok) return null;
+    const user = await u.json();
+    const playlists = [];
+    let total = 0, next = 'https://api.spotify.com/v1/users/' + encodeURIComponent(id) + '/playlists?limit=50';
+    for (let i = 0; next && i < 6; i++) {
+      const r = await fetch(next, { headers: h });
+      if (!r.ok) return playlists.length ? { user, playlists, total } : null;
+      const d = await r.json();
+      total = d.total || total;
+      (d.items || []).forEach((p) => { if (p && p.id && p.public !== false) playlists.push({ id: p.id, name: p.name || 'Playlist', image: (p.images && p.images[0] && p.images[0].url) || null, followers: 0 }); });
+      next = d.next;
+    }
+    return { user, playlists, total };
+  } catch (e) { return null; }
+}
+
+async function handleSpotifyUser(url, ctx, env) {
   const id = spotifyUserIdFrom(url.searchParams.get('user'));
   if (!id) return json({ error: 'bad user' }, 400);
   const cacheKey = new Request('https://cache.internal/spuser1/' + encodeURIComponent(id.toLowerCase()));
   const cached = await envCache.match(cacheKey);
   if (cached) return applyCors(cached);
+  const api = env ? await spotifyUserViaApi(id, env) : null;
+  if (api && api.missing) return json({ error: 'nouser' }, 404);
+  if (api) {
+    const out = json({ user: { id: api.user.id || id, name: api.user.display_name || id, image: (api.user.images && api.user.images[0] && api.user.images[0].url) || null }, total: api.total || api.playlists.length, playlists: api.playlists });
+    out.headers.set('Cache-Control', 'public, max-age=600');
+    ctx.waitUntil(envCache.put(cacheKey, out.clone()));
+    return out;
+  }
   let res;
   try {
     res = await fetch('https://open.spotify.com/user/' + encodeURIComponent(id), { headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9' } });
@@ -5091,7 +5125,7 @@ export default {
       if (url.pathname === '/playlist') return await handleEmbed('playlist', url, ctx);
       if (url.pathname === '/album') return await handleEmbed('album', url, ctx);
       if (url.pathname === '/search') return await handleSearch(url, ctx, env);
-      if (url.pathname === '/spotifyuser') return await handleSpotifyUser(url, ctx);
+      if (url.pathname === '/spotifyuser') return await handleSpotifyUser(url, ctx, env);
       if (url.pathname === '/track') return await handleTrack(url, ctx);
       if (url.pathname === '/ytplaylist') return await handleYtPlaylist(url, ctx);
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);
