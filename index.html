@@ -2017,6 +2017,13 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .queue-head h2{font-size:15px;font-weight:700;margin:0;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .queue-arc{padding:0 20px 8px;font-size:11.5px;font-weight:600;color:var(--faint-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
 .queue-arc[hidden]{display:none}
+.radio-steer{display:flex;gap:6px;padding:0 20px 10px;overflow-x:auto;scrollbar-width:none;flex:none;-webkit-overflow-scrolling:touch}
+.radio-steer::-webkit-scrollbar{display:none}
+.radio-steer[hidden]{display:none}
+.radio-steer button{flex:none;font-size:12.5px;font-weight:500;line-height:1.2;padding:7px 12px;border-radius:7px;background:var(--panel-2);color:var(--faint);white-space:nowrap;transition:color var(--dur-ui) var(--ease-out)}
+.radio-steer button:hover{color:var(--text)}
+.radio-steer button.is-active{background:var(--accent);color:var(--bg)}
+.radio-steer button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .queue-head .clear{font-size:12px;color:var(--faint-2);flex:none}
 .queue-head .clear:hover{color:var(--bad)}
 .queue-head .discover-toggle{flex:none;display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
@@ -5608,6 +5615,7 @@ body.week-up-on{overflow:hidden}
       <button class="clear qh-icon" id="queueClearBtn" title="Clear" aria-label="Clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 3h4M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13M10 11v6M14 11v6"/></svg></button>
     </div>
     <div class="queue-arc" id="queueArcRow" hidden></div>
+    <div class="radio-steer" id="radioSteerRow" aria-label="Steer the radio" hidden></div>
     <div class="queue-scroll">
       <div class="queue-body" id="queueBody">
       <div class="q-arrows" id="queueArrowsRow">
@@ -16309,7 +16317,7 @@ async function startRadio(name, own, keepPlaying){
   try {
     const exclude = new Set(own.map(t => t.videoId));
     const seeds = keepPlaying ? own.slice(0, 1) : shuffleTail(own.slice(), 0).slice(0, 3);
-    const batches = await Promise.all(seeds.map(s => fetchDiscoverCandidates([s], exclude, keepPlaying ? 15 : 8, false).catch(() => [])));
+    const batches = await Promise.all(seeds.map(s => fetchDiscoverCandidates([s], exclude, keepPlaying ? 15 : 8, false, { steer: currentRadioSteer() }).catch(() => [])));
     // round-robin across seeds so one seed's neighbors don't bunch up
     const found = [], seen = new Set(exclude);
     for (let i = 0; batches.some(b => b[i]); i++) batches.forEach(b => { const t = b[i]; if (t && t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); found.push(t); } });
@@ -20148,6 +20156,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 481, date: '2026-11-02', items: [
+    'Steer the radio: when your queue keeps going with similar songs, chips above the queue pick where it goes next. Discover, Popular, Deep cuts, Chill, Energy, Focus, or a decade. Your own queued songs stay put.'
+  ]},
   { version: 477, date: '2026-11-01', items: [
     'Settings is now a hub of six sections, each opening its own page. Long descriptions fold behind an (i), and feedback is one row. What\'s new lives under About, and Voice sits with the sound switches.'
   ]},
@@ -22392,9 +22403,12 @@ function libraryVideoIdSet(){
    opts.timeBias (optional): 0..1 strength of the time-of-day lean (see
    applyTimePreference); defaults to TIME_QUEUE_SCALE. */
 async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allowLong, opts){
-  const skipArtists = opts && opts.skipArtists;
+  const steer = opts && opts.steer;
+  let skipArtists = opts && opts.skipArtists;
   const seed = seedTracks[0];
   if (!seed) return [];
+  // Discover steer: nobody you just heard, only artists around them
+  if (steer === 'discover') skipArtists = new Set(Array.from(skipArtists || []).concat(seedTracks.slice(0, 5).map(t => primaryArtistKey(t.artist || ''))));
   const recentArtists = new Set(seedTracks.slice(0, 5).map(t => (t.artist || '').toLowerCase()));
 
   const [similar, thisIs] = await Promise.all([
@@ -22416,13 +22430,16 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   // the queue - most will be the seed artist, which recentArtists is
   // already there to gently deprioritize without shutting out a genuinely
   // strong pick.
+  const thisIsKeys = new Set();
   if (thisIs.length){
     const seenKey = new Set(pool.map(c => (c.title + '|' + c.artist).toLowerCase()));
     thisIs.forEach(c => {
       const key = (c.title + '|' + c.artist).toLowerCase();
+      thisIsKeys.add(key);
       if (!seenKey.has(key)){ seenKey.add(key); pool.push(c); }
     });
   }
+  const steerKeys = steer ? await addRadioSteerPool(pool, steer, seedTagVec) : new Set();
   if (!pool.length) return [];
 
   // Tempo/key/energy lookup (see applyMetricPreference) runs alongside the
@@ -22446,6 +22463,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   if (opts && opts.preferYear) ranked = await applyYearPreference(ranked, seed);
   // Thumbs-downs and what the listener returns to (applyTastePreference).
   ranked = applyTastePreference(ranked);
+  if (steer) ranked = await applyRadioSteer(ranked, steer, thisIsKeys, mood, steerKeys);
   const declinedV = tasteProfile().declined.v;
   // Random, score-weighted walk order (see discoverSampleOrder). `rank`
   // stays the true score rank, so the long-track strong-match rule is
@@ -22458,6 +22476,7 @@ async function fetchDiscoverCandidates(seedTracks, excludeVideoIds, count, allow
   const seenTitles = new Set();
   for (const { c, rank } of order){
     if (resolved.length >= count) break;
+    if (opts && opts.alive && !opts.alive()) break;   // e.g. a steering chip changed mid-batch
     const dupeKey = (c.title + '|' + c.artist).toLowerCase();
     if (seenTitles.has(dupeKey)) continue;
     seenTitles.add(dupeKey);
@@ -22855,7 +22874,7 @@ const DISCOVER_RETRY_MS = 20000;
 // a time, keyed by origin + track: a track change replaces it (the stale result
 // is simply never used), and the same track never fetches twice.
 let discoverPrefetch = null;
-function discoverPrefetchKey(originPlId, t){ return originPlId + '|' + (t && t.videoId || ''); }
+function discoverPrefetchKey(originPlId, t){ return originPlId + '|' + (t && t.videoId || '') + '|' + currentRadioSteer(); }
 function prefetchDiscover(originPlId){
   const t = trackAt(state.queuePos);
   if (!t || !t.videoId || discoverExtendPromise) return;
@@ -22867,13 +22886,15 @@ function prefetchDiscover(originPlId){
     if (x) seedTracks.push(x);
   }
   const allowLong = discoverQueuedThisSession >= DISCOVER_LONG_AFTER;
-  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong).catch(() => []);
+  const steer = currentRadioSteer();
+  const promise = fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, alive: () => steer === currentRadioSteer() }).catch(() => []);
   discoverPrefetch = { key, promise };
 }
 function extendQueueWithDiscover(originPlId){
   if (discoverExtendPromise) return discoverExtendPromise;
   discoverExtendPromise = (async () => {
     try{
+      const steer = currentRadioSteer();
       const seedTracks = [];
       for (let p = state.queuePos; p >= 0 && seedTracks.length < 5; p--){
         const t = trackAt(p);
@@ -22886,7 +22907,9 @@ function extendQueueWithDiscover(originPlId){
       const pf = discoverPrefetch;
       discoverPrefetch = null;
       const found = (pf && pf.key === discoverPrefetchKey(originPlId, seedTracks[0])) ? await pf.promise
-        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong);
+        : await fetchDiscoverCandidates(seedTracks, libraryVideoIdSet(), DISCOVER_BATCH, allowLong, { steer, alive: () => steer === currentRadioSteer() });
+      // A steering chip was tapped mid-fetch: drop this batch, the chip refetches.
+      if (steer !== currentRadioSteer()) return;
       // Discover may have been switched off (or the queue replaced) while
       // the fetch was in flight - don't append a batch nobody asked for.
       if (!found.length || !(isDiscoverOn(originPlId) || state.shuffleDiscover) || discoverOriginId() !== originPlId){
@@ -22960,7 +22983,171 @@ function renderDiscoverToggle(){
   const on = originPlId ? isDiscoverOn(originPlId) : true;
   discoverToggleBtn.classList.toggle('is-active', on);
   discoverToggleBtn.setAttribute('aria-pressed', String(on));
+  renderRadioSteer();
 }
+
+/* ---------- radio steering chips ---------- */
+// Pinned above the queue while it continues as radio: one tap steers where
+// the Discover songs go next. One chip at a time, or none (the usual mix).
+// Only the songs Discover added after the listener's own are replaced; the
+// song playing and everything they queued stay. Steering is a re-rank inside
+// fetchDiscoverCandidates (applyRadioSteer). Cost per Discover batch:
+// Discover / Popular / Deep cuts add no requests; moods and decades add one
+// /vibe-interpret (edge-cached per phrase, see addRadioSteerPool); decades
+// also look up release years for the top 16 candidates (/spotifyart, cached
+// on device and in the worker). Function declarations
+// (not consts) so renderQueuePanel can run before this point at startup.
+const LS_RADIO_STEER = 'ebbless:radioSteer';
+function radioSteerDefs(){
+  return [
+    { id: 'discover', label: 'Discover' },
+    { id: 'popular', label: 'Popular' },
+    { id: 'deep', label: 'Deep cuts' },
+    { id: 'chill', label: 'Chill', tags: ['chill', 'chillout', 'mellow', 'relaxing', 'downtempo', 'ambient', 'lounge', 'calm', 'smooth', 'soft'], energy: [0, 0.5] },
+    { id: 'energy', label: 'Energy', tags: ['dance', 'energetic', 'upbeat', 'party', 'house', 'edm', 'workout', 'funk', 'club', 'hype'], energy: [0.65, 1] },
+    { id: 'focus', label: 'Focus', tags: ['instrumental', 'ambient', 'lo-fi', 'lofi', 'study', 'piano', 'classical', 'jazz', 'post-rock', 'minimal'], energy: [0.15, 0.6] },
+    { id: '70s', label: '70s', years: [1970, 1979] },
+    { id: '80s', label: '80s', years: [1980, 1989] },
+    { id: '90s', label: '90s', years: [1990, 1999] },
+    { id: '00s', label: '2000s', years: [2000, 2009] },
+    { id: '10s', label: '2010s', years: [2010, 2019] },
+  ];
+}
+function currentRadioSteer(){
+  const v = lsGet(LS_RADIO_STEER, '');
+  return radioSteerDefs().some(d => d.id === v) ? v : '';
+}
+const RADIO_STEER_WEIGHT = 0.3;   // DISCOVER_SAMPLE_TEMP is 0.1, so +0.3 makes a match ~20x likelier to be drawn
+const RADIO_STEER_YEAR_K = 16;
+// Mood and decade steers also pull in songs that fit the steer itself, from
+// the same /vibe-interpret answer typing "80s funk" gets (Last.fm tag top
+// songs; the worker caches it per phrase, a week for an AI answer). Phrases
+// are steer + the seed's top tag, so they repeat and mostly hit that cache.
+// Returns the keys added, which applyRadioSteer counts as on-steer.
+const RADIO_STEER_POOL_MAX = 30, RADIO_STEER_POOL_MS = 8000;
+async function addRadioSteerPool(pool, steer, seedTagVec){
+  const d = radioSteerDefs().find(x => x.id === steer), keys = new Set();
+  if (!d || !(d.tags || d.years)) return keys;
+  const genre = Array.from(seedTagVec.keys())[0] || '';
+  const interp = await Promise.race([
+    fetchVibeInterpretation((d.label + ' ' + genre).trim()).catch(() => null),
+    sleep(RADIO_STEER_POOL_MS).then(() => null),
+  ]);
+  const seen = new Set(pool.map(c => (c.title + '|' + c.artist).toLowerCase()));
+  ((interp && interp.tracks) || []).slice(0, RADIO_STEER_POOL_MAX).forEach(t => {
+    if (!t || !t.title || !t.artist) return;
+    const key = (t.title + '|' + t.artist).toLowerCase();
+    keys.add(key);
+    if (!seen.has(key)){ seen.add(key); pool.push({ title: t.title, artist: t.artist, matchScore: 0.5, tags: [] }); }
+  });
+  return keys;
+}
+async function applyRadioSteer(ranked, steer, thisIsKeys, mood, steerKeys){
+  const d = radioSteerDefs().find(x => x.id === steer);
+  if (!d || !ranked.length) return ranked;
+  const W = RADIO_STEER_WEIGHT;
+  const keyOf = c => (c.title + '|' + c.artist).toLowerCase();
+  if (steerKeys && steerKeys.size) ranked.forEach(x => { if (steerKeys.has(keyOf(x.c))) x.score += W; });
+  if (steer === 'popular' || steer === 'deep'){
+    // Last.fm playcount where /similar sent it, as a 0..1 rank in this pool;
+    // the artists' own "This Is" songs count as their popular ones too
+    const plays = ranked.map(x => x.c.plays || 0).filter(n => n > 0).sort((a, b) => a - b);
+    const pop = c => (c.plays > 0 && plays.length > 1) ? plays.indexOf(c.plays) / (plays.length - 1) : null;
+    ranked.forEach(x => {
+      const p = pop(x.c), hit = thisIsKeys.has(keyOf(x.c));
+      const lean = (p === null ? 0.5 : p) * 0.7 + (hit ? 0.3 : 0);
+      x.score += W * (steer === 'popular' ? lean - 0.5 : 0.5 - lean) * 2;
+    });
+  } else if (steer === 'discover'){
+    ranked.forEach(x => { if (thisIsKeys.has(keyOf(x.c))) x.score -= W; });
+  } else if (d.tags){
+    const want = new Set(d.tags);
+    ranked.forEach(x => {
+      const names = (x.c.tags || []).map(t => String(t && t.name || t).toLowerCase());
+      if (names.some(n => want.has(n))) x.score += W;
+      const m = mood && mood.candMetrics && mood.candMetrics.get(tagCacheKey(x.c));
+      if (m && typeof m.energy === 'number') x.score += (m.energy >= d.energy[0] && m.energy <= d.energy[1] ? 0.5 : -0.5) * W;
+    });
+  } else if (d.years){
+    // Last.fm decade/year tags ("80s", "1980s", "1984") count where present
+    const [y0, y1] = d.years, dec = String(y0).slice(2);
+    ranked.forEach(x => {
+      const hit = (x.c.tags || []).some(t => {
+        const n = String(t && t.name || t).toLowerCase();
+        if (n === dec + 's' || n === y0 + 's') return true;
+        return /^\d{4}$/.test(n) && +n >= y0 && +n <= y1;
+      });
+      if (hit) x.score += W;
+    });
+    const top = ranked.slice().sort((a, b) => b.score - a.score).slice(0, RADIO_STEER_YEAR_K);
+    const years = await Promise.all(top.map(x => x.c.year ? Promise.resolve(x.c.year) : fetchTrackYear(x.c.title, x.c.artist).catch(() => null)));
+    top.forEach((x, i) => {
+      const y = years[i];
+      if (!y) return;
+      x.c.year = y;
+      x.score += (y >= d.years[0] && y <= d.years[1]) ? W * 1.5 : -W * 0.5;
+    });
+  }
+  return ranked.slice().sort((a, b) => b.score - a.score).map((x, rank) => Object.assign(x, { rank }));
+}
+function radioSteerActive(){
+  const originPlId = discoverOriginId();
+  if (state.queuePos < 0 || !originPlId || !(isDiscoverOn(originPlId) || state.shuffleDiscover)) return false;
+  // stays up for this queue once shown, so a steer that empties the radio part doesn't hide it
+  const el = $('radioSteerRow');
+  return /^radio:/.test(originPlId) || state.queue.some(e => e.discover) || (el && el.dataset.origin === originPlId);
+}
+function renderRadioSteer(){
+  const el = $('radioSteerRow');
+  if (!el) return;
+  const active = radioSteerActive();
+  el.hidden = !active;
+  if (!active){ delete el.dataset.origin; return; }
+  el.dataset.origin = discoverOriginId();
+  if (!el.childElementCount){
+    radioSteerDefs().forEach(d => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.steer = d.id;
+      b.textContent = d.label;
+      el.appendChild(b);
+    });
+  }
+  const cur = currentRadioSteer();
+  el.querySelectorAll('button').forEach(b => {
+    const on = b.dataset.steer === cur;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', String(on));
+    b.title = on ? 'Back to the usual mix' : 'Steer the radio: ' + b.textContent;
+  });
+}
+// Takes out what Discover/radio added after the playing song (never the
+// listener's own entries), then refills with the new steer.
+function setRadioSteer(id){
+  const next = currentRadioSteer() === id ? '' : id;
+  lsSet(LS_RADIO_STEER, next);
+  renderRadioSteer();
+  const originPlId = discoverOriginId();
+  if (!originPlId || state.queuePos < 0) return;
+  const cur = state.queue[state.queuePos];
+  state.queue = state.queue.filter((e, i) => i <= state.queuePos || !(e.discover || /^radio:/.test(String(e.plId))));
+  state.queuePos = state.queue.indexOf(cur);
+  discoverPrefetch = null;
+  discoverEmptyTs = 0;
+  renderQueuePanel();
+  schedulePreload(state.queuePos);
+  persistResume();
+  const d = radioSteerDefs().find(x => x.id === next);
+  showToast(d ? 'Finding ' + d.label + ' songs...' : 'Back to the usual mix');
+  // an extension already in flight drops its batch (steer changed), then this refills
+  (discoverExtendPromise || Promise.resolve()).then(() => {
+    if (discoverOriginId() === originPlId) maybeExtendDiscoverQueue();
+  });
+}
+$('radioSteerRow').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-steer]');
+  if (b) setRadioSteer(b.dataset.steer);
+});
 // Switching Discover off takes every track it added back out of the queue -
 // except the one playing right now, which keeps playing untouched. The
 // listener's own entries (untagged) are never removed. Played history goes
