@@ -4459,6 +4459,7 @@ async function bumpPoolPair(env, tagA, tagB, weight) {
 async function handlePoolSignal(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.TASTE_POOL) return json({ error: 'pooling not configured' }, 500);
+  if (await overIpLimit(request, ctx, 'poolsignal', 300, 600)) return json({ ok: true, skipped: true });
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
   const tags = Array.isArray(body && body.tags)
@@ -4523,9 +4524,22 @@ async function handlePoolAffinity(url, env, ctx) {
 // key list comes back in chronological order with no separate index -
 // inspected later via `wrangler kv key list/get --binding=MATCH_REPORTS`
 // to fix scoreCandidate's scoring for whatever pattern keeps showing up.
+// Per-IP throttle for anonymous routes that write to KV (same Cache API
+// pattern as /linkfix). True when this caller is over `limit` in `windowS`.
+async function overIpLimit(request, ctx, name, limit, windowS) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const rlKey = new Request('https://ratelimit.internal/' + name + '/' + encodeURIComponent(ip));
+  const hit = await envCache.match(rlKey);
+  const count = hit ? (parseInt(await hit.text(), 10) || 0) : 0;
+  if (count >= limit) return true;
+  ctx.waitUntil(envCache.put(rlKey, new Response(String(count + 1), { headers: { 'Cache-Control': 'max-age=' + windowS } })));
+  return false;
+}
+
 async function handleReport(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
+  if (await overIpLimit(request, ctx, 'report', 30, 600)) return json({ error: 'too many, try later' }, 429);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
   const { videoId, title, artist, matchedTitle, channel, note } = body || {};
@@ -5111,7 +5125,8 @@ export default {
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
       return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/voice/plan (POST)', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
     } catch (e) {
-      return json({ error: 'internal error: ' + e.message }, 500);
+      console.error('route ' + url.pathname + ' failed:', e && e.message);
+      return json({ error: 'internal error' }, 500);
     }
   },
 };

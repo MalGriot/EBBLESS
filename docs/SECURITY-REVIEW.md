@@ -82,3 +82,15 @@ automates the greppable parts.
   before?
 - Findings go to GitHub issues with the `security` label; fix before ship
   when it is exploitable.
+
+## Audit log
+
+- 2026-11-02: first pass. Fixed: unescaped `innerHTML` spots; pod routes could
+  fetch internal hosts (now `public-url.js`); catch-all 500 echoed error text;
+  `sw.js` cached sign-in URLs with the tester token and error pages;
+  `/report` and `/pool/signal` wrote to KV with no per-IP throttle.
+  Checked and fine: profile routes derive the KV key from the verified Google
+  `sub`; admin token check is constant-time and throttled; no secrets in logs;
+  tokens are never read from query strings.
+  Known and left: several routes return `e.message` from upstream fetch
+  failures (`/search`, youtube search) and JWT verify errors; low risk.

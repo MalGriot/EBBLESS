@@ -27,7 +27,7 @@
 //
 // IMPORTANT: bump CACHE_VERSION on every deploy you want existing
 // installs/tabs to pick up promptly.
-const CACHE_VERSION = 'ebbless-shell-v479';
+const CACHE_VERSION = 'ebbless-shell-v480';
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './sfx/needle-drop.mp3', './sfx/needle-lift.mp3', './sfx/cassette-rewind.mp3'];
 
 self.addEventListener('install', (e) => {
@@ -58,13 +58,20 @@ self.addEventListener('fetch', (e) => {
   // Everything else - Worker/Spotify/YouTube requests, audio, images - is
   // left completely alone, same as before.
   if (e.request.mode !== 'navigate') return;
+  // Cache under the bare path: a sign-in return URL carries a tester token
+  // (?t=) that must not be written into Cache Storage, and only good pages
+  // are kept so an error page is never served offline.
+  const u = new URL(e.request.url);
+  const key = new Request(u.origin + u.pathname);
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_VERSION).then((cache) => cache.put(e.request, copy)).catch(() => {});
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(key, copy)).catch(() => {});
+        }
         return res;
       })
-      .catch(() => caches.match(e.request).then((cached) => cached || caches.match('./index.html')))
+      .catch(() => caches.match(key).then((cached) => cached || caches.match('./index.html')))
   );
 });
