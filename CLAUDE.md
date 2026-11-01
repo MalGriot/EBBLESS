@@ -108,3 +108,21 @@ On localhost the app runs a dev-only GPU watchdog that logs
 playing videos, too many large blurred layers at once, and `backdrop-filter`
 over moving content. When verifying a
 visual change, check the console for these and fix any you introduced.
+
+## Commit protocol (so it doesn't break later)
+
+The pre-commit hook runs `scripts/check.sh`. Run it yourself any time.
+
+- **What it checks:** WHATS_NEW entry with every `sw.js` cache bump,
+  every inline `<script>` in `index.html` parses (one syntax error blanks the
+  whole app), no NEW `@keyframes` animating anything but transform/opacity,
+  and `worker` tests when `worker/` is staged.
+- **Grandfathered keyframes** live in `scripts/check-html.baseline.json`.
+  Fix one and run `node scripts/check-html.js --write-baseline` to shrink the
+  list. Never add to it to get a commit through; fix the animation instead.
+- **Fresh clone:** the hook is not in git. Install it with
+  `printf '#!/usr/bin/env bash\nexec "$(git rev-parse --show-toplevel)/scripts/check.sh"\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`
+- **Cleanup rules:** no mass refactors of `index.html` while other lanes are
+  active (see `AGENTS.md`). Cleanup is small, per-area, behavior-preserving,
+  and merged right away. Commented-out code and dead helpers get removed in
+  the lane that touches that area.
