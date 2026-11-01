@@ -3407,6 +3407,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
 .splash-choice-btn:hover,.splash-choice-btn:focus-visible{background:rgba(32,32,32,.92);border-color:rgba(255,255,255,.5)}
 .splash-choice-btn:active{transform:scale(.96)}
 .splash-choice-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107);font-weight:600}
+.splash-choice{flex-wrap:wrap;justify-content:center;max-width:320px}.splash-bring{flex:1 0 100%;height:48px;font-size:15px}
 .splash-choice-btn-primary:hover,.splash-choice-btn-primary:focus-visible{background:var(--accent);filter:brightness(1.08)}
 /* mobile install gate (#262): phones/tablets in a browser tab get only an
    Install button here (no Tutorial/Enter) plus platform directions beneath
@@ -4310,7 +4311,8 @@ body.week-up-on{overflow:hidden}
     <span class="splash-install-label">Add to Home Screen</span>
   </button>
   <div id="splashChoice" class="splash-choice">
-    <button id="splashPlayTutorial" type="button" class="splash-choice-btn splash-choice-btn-primary">Tutorial</button>
+    <button id="splashBringMusic" type="button" class="splash-choice-btn splash-choice-btn-primary splash-bring">Bring your music</button>
+    <button id="splashPlayTutorial" type="button" class="splash-choice-btn">Tutorial</button>
     <button id="splashSkipTutorial" type="button" class="splash-choice-btn">Enter</button>
   </div>
   <div id="splashGate" class="splash-gate">
@@ -9144,6 +9146,15 @@ const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 $('emptyFindBtn').addEventListener('click', () => openFindMusic());
 $('browseBtn').addEventListener('click', () => openFindMusic());
 $('hubBringMusic').addEventListener('click', () => openFindMusic());
+// Splash "Bring your music": enter exactly like Enter (every splash path
+// already handles that button), then open the service list on top.
+document.addEventListener('click', (e) => {
+  if (!e.target.closest || !e.target.closest('#splashBringMusic')) return;
+  e.stopPropagation(); e.preventDefault();
+  const enter = $('splashSkipTutorial');
+  if (enter) enter.click();
+  setTimeout(openFindMusic, 900);
+}, true);
 // #619: desktop library width toggle, remembered across visits (CSS only acts on the 3-pane desktop layout)
 const LS_LIB_WIDE = 'ebbless:libraryWide';
 function applyLibWide(on){
@@ -20152,6 +20163,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
   { version: 479, date: '2026-11-01', items: [
+    'The first screen now leads with Bring your music: one tap from the splash opens your Spotify, YouTube Music, Last.fm and other services.',
     'Bring your music: every service you can load from now sits in plain view in Find music, with how it connects (sign in, username or paste a link), and Settings has a Bring your music row at the top.'
   ]},
   { version: 477, date: '2026-11-01', items: [
