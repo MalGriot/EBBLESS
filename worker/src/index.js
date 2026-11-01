@@ -3583,7 +3583,9 @@ async function getLastfmSimilar(title, artist, env, limit) {
   if (!Array.isArray(list)) return [];
   return list
     .filter(t => t.name && t.artist && t.artist.name)
-    .map(t => ({ title: t.name, artist: t.artist.name, matchScore: Number(t.match) || 0 }));
+    // plays (Last.fm playcount, added for the queue's Popular / Deep cuts
+    // radio steering) is an extra field; older cached answers just lack it.
+    .map(t => ({ title: t.name, artist: t.artist.name, matchScore: Number(t.match) || 0, plays: Number(t.playcount) || 0 }));
 }
 
 // MusicBrainz's own search API - free, keyless, but wants a real UA and
