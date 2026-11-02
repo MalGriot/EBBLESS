@@ -577,8 +577,7 @@ video.lib-bg-video.is-playing{opacity:1}
    bottom nav that opens #view-search. The field stays in the DOM (every search
    path still reads #urlInput) and is only shown during onboarding. */
 @media (max-width:859.98px){body:not(.onb-active) #importForm.import-row{display:none}}
-@media (min-width:860px){body:not(.split-desktop) #view-search{display:none!important}}
-body:not(.split-desktop) #view-home,body:not(.split-desktop) #topnav #navHomeBtn{display:none!important}   /* Home is a 3-pane desktop page */   /* #722: the 3-pane desktop shows it in the middle pane when the top search bar is clicked */
+@media (min-width:860px){body:not(.split-desktop) #view-search{display:none!important}}   /* #722: the 3-pane desktop shows it in the middle pane when the top search bar is clicked */
 #view-search .st-form{position:relative;margin:8px 0 18px}
 #view-search .st-field{display:flex;position:relative}
 #view-search .st-field input{flex:1;min-width:0;width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -631,6 +630,18 @@ body:not(.split-desktop) #view-home,body:not(.split-desktop) #topnav #navHomeBtn
 #view-home .hm-map svg{flex:none;width:34px;height:34px}
 #view-home .hm-map b{display:block;font-size:17px}
 #view-home .hm-map span{font-size:12.5px;opacity:.85}
+#view-home .hm-genres{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+#view-home .hm-genre{position:relative;overflow:hidden;min-height:84px;padding:14px 62px 14px 14px;border-radius:16px;text-align:left;color:#fff;font-size:16px;font-weight:800;line-height:1.15;text-shadow:0 1px 6px rgba(0,0,0,.35);cursor:pointer;
+  background:linear-gradient(135deg,var(--c1,#6b4fbb),var(--c2,#2a1d5c));display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+#view-home .hm-genre small{font-size:11.5px;font-weight:600;opacity:.85}
+#view-home .hm-genre:nth-child(6n+1){--c1:#d9622b;--c2:#7a1f3d}
+#view-home .hm-genre:nth-child(6n+2){--c1:#2e8f8a;--c2:#12365a}
+#view-home .hm-genre:nth-child(6n+3){--c1:#7b4fd1;--c2:#2a1d5c}
+#view-home .hm-genre:nth-child(6n+4){--c1:#c9a227;--c2:#7a4a12}
+#view-home .hm-genre:nth-child(6n+5){--c1:#c2417a;--c2:#4e1536}
+#view-home .hm-genre:nth-child(6n){--c1:#3a8f4f;--c2:#15432c}
+#view-home .hm-genre img{position:absolute;right:-8px;bottom:-10px;width:58px;height:58px;border-radius:10px;object-fit:cover;transform:rotate(18deg);box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none}
+#view-home .hm-genre:active{transform:scale(.97)}
 #view-home .hm-empty{font-size:13.5px;color:var(--faint);line-height:1.6;margin:0 0 20px}
 #view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0;color:var(--text)}
 #view-search .st-close{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;color:var(--faint);background:var(--panel-2)}
@@ -5916,6 +5927,10 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 
   <!-- ===== BOTTOM NAV ===== -->
   <nav id="bottom-nav">
+    <button data-view="home">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-2.5v9h-5v-6h-3v6h-5v-9H3l9-8z"/></svg>
+      Home
+    </button>
     <button data-view="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
       Search
@@ -18370,6 +18385,9 @@ function renderHome(){
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
+  // recently played: playlists and albums you played last, newest first (one tap plays)
+  const recent = lib.filter(x => getLastPlayed(x.id) && x.pl.tracks.length && !isArtistEntry(x.pl) && !isPodcastPlaylistId(x.id)).sort((a, b) => getLastPlayed(b.id) - getLastPlayed(a.id)).slice(0, 10);
+  if (recent.length){ const sec = section('Recently played'); row(sec, recent.map(x => card(x.pl.name, formatLastPlayed(getLastPlayed(x.id)), coverOf(x.pl), () => playPlaylistNow(x.id)))); }
   // top artists
   let artists = [];
   try { artists = searchTabArtistTiles().filter(t => t.sub === 'You play this'); } catch(e){}
@@ -18397,6 +18415,22 @@ function renderHome(){
     });
     sec.appendChild(list);
   }
+  // top genres: the tags Last.fm gave the songs you played, counted over your recent plays (read from this device)
+  try {
+    const hist = listenSeedHistory().filter(h => h && h.t && h.a).slice(0, 300), tagCache = lsGet(LS_TAG_CACHE, {}) || {}, tagN = new Map();
+    hist.forEach(h => ((tagCache[tagCacheKey({ title: h.t, artist: h.a })] || []).slice(0, 3)).forEach(t => { t = String(t).toLowerCase().trim(); if (t && !PASTE_HINT_SKIP_TAGS.test(t)) tagN.set(t, (tagN.get(t) || 0) + 1); }));
+    const tags = Array.from(tagN.entries()).filter(e => e[1] >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    if (tags.length){
+      const sec = section('Top genres'), g = mk('div', 'hm-genres');
+      tags.forEach(([tag, n]) => {
+        const b = mk('button', 'hm-genre', tag); b.type = 'button'; b.appendChild(mk('small', '', n + (n === 1 ? ' play' : ' plays')));
+        stGenreArt(tag).then(u => { if (u && b.isConnected){ const im = document.createElement('img'); im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } });
+        b.addEventListener('click', () => searchTabSubmit(tag));
+        g.appendChild(b);
+      });
+      sec.appendChild(g);
+    }
+  } catch(e){}
   // music map, started from your top artist
   const mapFrom = artists[0] && artists[0].name;
   if (mapFrom){
