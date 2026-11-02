@@ -35169,10 +35169,10 @@ function waveSvg(peaks){
 async function wavePeaksOf(buf){
   const ab = await new OfflineAudioContext(1, 1, 8000).decodeAudioData(buf);   // 8 kHz mono: the least CPU that still shows the shape
   const d = ab.getChannelData(0), n = WAVE_N, step = Math.max(1, Math.floor(d.length / n)), peaks = [];
-  for (let i = 0; i < n; i++){ let m = 0; for (let j = i * step, e = Math.min(d.length, j + step); j < e; j += 4){ const a = Math.abs(d[j]); if (a > m) m = a; } peaks.push(m); }
+  for (let i = 0; i < n; i++){ let sum = 0, c = 0; for (let j = i * step, e = Math.min(d.length, j + step); j < e; j += 4){ sum += d[j] * d[j]; c++; } peaks.push(c ? Math.sqrt(sum / c) : 0); }   // average loudness per slice (a loud master's single peaks all read the same)
   return peaks;
 }
-function waveNorm(peaks){ const top = Math.max.apply(null, peaks) || 1; return peaks.map(v => Math.pow(v / top, 0.7)); }
+function waveNorm(peaks){ const top = Math.max.apply(null, peaks) || 1; return peaks.map(v => Math.pow(v / top, 1.5)); }
 async function waveCompute(id){
   const src = isLocalVideoId(id) ? await localFileUrl(id) : isAudioVideoId(id) ? audioUrlOf(id) : null;
   if (!src) return null;
@@ -35219,7 +35219,7 @@ function wavePaint(id){
   const row = waveStore()[id];
   if (!row || id !== waveId) return;
   const top = Math.max.apply(null, row) || 1;
-  seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 0.7))));
+  seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 1.5))));
   waveLoading(false);
 }
 const waveAsked = new Set(), waveFull = new Set();
