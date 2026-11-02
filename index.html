@@ -26910,6 +26910,16 @@ setInterval(updateTimeOfDayTint, 300000);
    variants within one. */
 const VIZ_PATTERNS = [
   {
+    // #726: nested rings with twelve-fold petals, after a real cymatics photograph (two interleaved circular-plate modes, so the settled sand
+    // draws the looped filaments and the bright ring in the middle)
+    id: 'rosette', name: 'Rosette',
+    field: (x, y, [m, a, b]) => {
+      const r = Math.sqrt(x*x + y*y), th = Math.atan2(y, x);
+      return Math.cos(m * th) * Math.cos(a * Math.PI * r) + 0.6 * Math.cos(2 * m * th + 1.0) * Math.cos(b * Math.PI * r + 0.6);
+    },
+    modes: [[6,3,5],[6,4,6],[5,3,4],[8,3,5],[6,5,7],[7,4,6]],
+  },
+  {
     id: 'lattice', name: 'Lattice',
     field: (x, y, [n, m]) =>
       Math.cos(n * Math.PI * x) * Math.cos(m * Math.PI * y) -
@@ -27214,6 +27224,19 @@ let vizParamsB = vizRandomParams();
 
 const vizGx = new Float32Array(VIZ_GRAINS_MAX);
 const vizGy = new Float32Array(VIZ_GRAINS_MAX);
+const vizPX = new Float32Array(VIZ_GRAINS_MAX), vizPY = new Float32Array(VIZ_GRAINS_MAX), vizSET = new Float32Array(VIZ_GRAINS_MAX);   // where each grain was drawn and how settled it is, for the glow pass
+// #726: how loud the song is right now, from the desktop app's audio tap when there is one (0 without it)
+let vizAudioLv = 0, vizAudioBuf = null;
+function vizAudioLevel(){
+  try {
+    if (!waveAn || !vizPlaying) return 0;
+    if (!vizAudioBuf || vizAudioBuf.length !== waveAn.frequencyBinCount) vizAudioBuf = new Uint8Array(waveAn.frequencyBinCount);
+    waveAn.getByteFrequencyData(vizAudioBuf);
+    let sum = 0; for (let i = 1; i <= 64; i++) sum += vizAudioBuf[i];
+    vizAudioLv += (sum / (64 * 255) - vizAudioLv) * .35;
+    return vizAudioLv;
+  } catch(e){ return 0; }
+}
 for (let i = 0; i < VIZ_GRAINS_MAX; i++){
   vizGx[i] = Math.random() * 2 - 1;
   vizGy[i] = Math.random() * 2 - 1;
@@ -27387,7 +27410,8 @@ function vizDraw(t){
     fingerX = u * rotCos + v * rotSin; fingerY = -u * rotSin + v * rotCos; hasFinger = true;
   }
   vizBusy = vizPtrs.size > 0 || rips.length > 0;
-  const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul;
+  const aLv = vizAudioLevel(), glow = aLv > 0 ? .55 + 1.7 * aLv : 1;   // louder passages shake the sand harder and light it up more
+  const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul * (1 + 1.2 * aLv);
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
   const color = vizRosicrucianColor();
 
@@ -27433,7 +27457,24 @@ function vizDraw(t){
     vizCtx2d.beginPath();
     vizCtx2d.arc(px, py, r * (0.65 + 0.85 * settle), 0, Math.PI * 2);
     vizCtx2d.fill();
+    vizPX[i] = px; vizPY[i] = py; vizSET[i] = settle;
   }
+  // #726 glow: sand that has settled on a nodal line gets a soft halo in the colour and a small white core, added on top (lighter), so the lines read as light
+  vizCtx2d.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < grainCount; i++){
+    const st = vizSET[i];
+    if (st < 0.6) continue;
+    vizCtx2d.globalAlpha = Math.min(.5, (.04 + .16 * (st - .6) / .4) * glow);
+    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], r * 3.4, 0, Math.PI * 2); vizCtx2d.fill();
+  }
+  vizCtx2d.fillStyle = '#fff';
+  for (let i = 0; i < grainCount; i++){
+    const st = vizSET[i];
+    if (st < 0.82) continue;
+    vizCtx2d.globalAlpha = Math.min(.8, .3 * (st - .82) / .18 * glow);
+    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], r * .55, 0, Math.PI * 2); vizCtx2d.fill();
+  }
+  vizCtx2d.globalCompositeOperation = 'source-over';
   vizCtx2d.globalAlpha = 1;
 
   vizRAF = requestAnimationFrame(vizDraw);
