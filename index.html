@@ -2152,6 +2152,10 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 /* #721 album page: full-width cover with a curved bottom, meta + big title over it, a round Play button hanging off the curve,
    numbered rows. Only album pages (is-album); playlists, artist pages and song pages keep the old layout. */
 .libpl-hero{display:none}
+.libpl-quick{display:flex;gap:2px;padding:0 10px 4px}
+.libpl-quick button{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--faint);transition:color var(--dur-ui) var(--ease-out),background var(--dur-ui) var(--ease-out)}
+.libpl-quick button:hover,.libpl-quick button:focus-visible{color:var(--text);background:var(--fill-ghost-hover,rgba(255,255,255,.08))}
+.libpl-quick svg{width:22px;height:22px}
 .libpl-art-shuffle{display:none}
 #libpl-panel.is-hero:not(.is-artist-info) .libpl-art-shuffle{display:flex;position:absolute;z-index:3;right:98px;bottom:-20px;width:44px;height:44px;border-radius:50%;align-items:center;justify-content:center;
   background:var(--panel-2);color:var(--text);box-shadow:0 0 0 5px var(--bg),0 4px 14px rgba(0,0,0,.4);transition:transform var(--dur-ui) var(--ease-out)}
@@ -4162,7 +4166,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 </style>
 </head>
 <body>
-<script>try{var _l=new URLSearchParams(location.search).get('look');if(_l)document.body.dataset.look=_l}catch(e){}</script>
+<script>try{var _l=new URLSearchParams(location.search).get('look');if(_l!=='off')document.body.dataset.look=_l||'a'}catch(e){}</script>
 
 <!-- ---- beta lock ----
      The app is private to Active beta testers (see beta/ and README "Beta
@@ -12363,7 +12367,16 @@ function toggleLibraryPlaylistPanel(id){
     if (bits.length){ const info = document.createElement('div'); info.className = 'currents-hint album-info'; info.textContent = bits.join(' · '); libplBody.appendChild(info); }
   }
   { const ai = libplBody.querySelector('.album-info');
-    libplHeroSync(isAlb && ai ? ai.textContent : (isArtistEntry(pl) ? 'Artist' : '') + (isArtistEntry(pl) || !pl.tracks.length ? '' : pl.tracks.length + (pl.tracks.length === 1 ? ' song' : ' songs'))); }
+    const nSongs = pl.tracks.length, runtime = formatTotalDuration(totalPlaylistDuration(pl.tracks));
+    libplHeroSync(isAlb && ai ? ai.textContent : isArtistEntry(pl) ? 'Artist' : nSongs ? nSongs + (nSongs === 1 ? ' song' : ' songs') + (runtime ? ' \u00b7 ' + runtime : '') : '');
+    // #721: quick actions as a bare icon row under the cover (no pills or tiles)
+    if (libplPanel.classList.contains('is-hero')){
+      const q = document.createElement('div'); q.className = 'libpl-quick';
+      const add = (label, icon, fn) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label; b.innerHTML = icon; b.addEventListener('click', (e) => { e.stopPropagation(); fn(); }); q.appendChild(b); };
+      add('Add to queue', CTX_ICON_ADD_QUEUE, () => handleLibCtxAction('addqueue', id));
+      if (canonicalLinkForPlaylist(pl)){ add('Share', CTX_ICON_SHARE, () => handleLibCtxAction('share', id)); add('Copy link', CTX_ICON_LINK, () => handleLibCtxAction('copylink', id)); }
+      libplBody.insertBefore(q, libplBody.firstChild);
+    } }
   // encourage-liking-songs (#40): say plainly what tunes these picks, and
   // show a live like streak on Liked Songs (never mentions a broken one).
   if (id === SWELL_ID){
@@ -26311,6 +26324,7 @@ function schedulePreload(afterPos){
 // instead of creating a fresh YouTube player from cold.
 function prewarmResumeDeck(){
   if (state.queuePos < 0 || castActive()) return;
+  waveWant(state.queuePos);
   if (typeof YT === 'undefined' || !YT.Player){ setTimeout(prewarmResumeDeck, 300); return; }
   const t = trackAt(state.queuePos);
   if (!t || !t.videoId) return;
@@ -30920,6 +30934,7 @@ function startSkipCrossfade(pos, t){
 
 function loadIndex(pos, autoplay, opts){
   if (pos < 0 || pos >= state.queue.length) return;
+  waveWant(pos);
   if (typeof YT === 'undefined' || !YT.Player){ setTimeout(() => loadIndex(pos, autoplay, opts), 300); return; }
   const t = trackAt(pos);
   if (!t || !t.videoId) return;
@@ -35165,17 +35180,23 @@ function wavePaint(id){
 const waveAsked = new Set(), waveFull = new Set();
 /* Desktop app: the main process pulls the song's smallest audio stream once; peaks are kept, the audio is dropped.
    Also warms the next song in the queue so its bars are ready when it starts. */
-function waveFetch(id){
+function waveFetch(id, urgent){
   if (!id || waveStore()[id] || waveAsked.has(id) || isNativeVideoId(id) || !window.ebblessDesktop || !window.ebblessDesktop.waveAudio || lsGet(LS_WAVE_OFF, false)) return;
   waveAsked.add(id);
-  window.ebblessDesktop.waveAudio(id).then(bytes => bytes && bytes.byteLength ? wavePeaksOf(bytes.buffer ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes) : null).then(peaks => {
+  window.ebblessDesktop.waveAudio(id, !!urgent).then(bytes => bytes && bytes.byteLength ? wavePeaksOf(bytes.buffer ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes) : null).then(peaks => {
     if (!peaks) return;
     const top = Math.max.apply(null, peaks) || 1;
     waveStore()[id] = peaks.map(v => Math.round(v / top * 255)); waveFull.add(id); waveDirty = true; waveSave();
     if (id === waveId) wavePaint(id);
   }).catch(() => {});
 }
-function waveWarmNext(){ const n = trackAt(state.queuePos + 1); if (n && n.videoId) waveFetch(n.videoId); }
+function waveWarmNext(){ for (let k = 1; k <= 2; k++){ const n = trackAt(state.queuePos + k); if (n && n.videoId) waveFetch(n.videoId); } }
+// The moment a song is chosen (or resumed at launch) - before its player even loads - start its waveform and the next two.
+function waveWant(pos){
+  const t = trackAt(pos);
+  if (t && t.videoId) waveFetch(t.videoId, true);
+  for (let k = 1; k <= 2; k++){ const n = trackAt(pos + k); if (n && n.videoId) waveFetch(n.videoId); }
+}
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
@@ -35184,7 +35205,7 @@ function waveSync(){
   setTimeout(waveWarmNext, 4000);
   seekTrack.style.removeProperty('--wave');
   if (!id) return;
-  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); waveFetch(id); return; }
+  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); waveFetch(id, true); return; }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
   waveCache.get(id).then(v => { if (v && waveId === id) seekTrack.style.setProperty('--wave', v); });
 }
