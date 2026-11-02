@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
     private static final long SIGNIN_TTL_MS = 10 * 60 * 1000;
 
     private WebView web;
+    private volatile WavePeaks wavePeaks;
     /** Handle of the registered ad-skip document-start script, so a kill-switch flip can remove or re-add it. */
     private androidx.webkit.ScriptHandler adScript;
     /** version:hash of the rules the registered script was built from; a new live pair rebuilds the handler. */
@@ -513,6 +514,19 @@ public class MainActivity extends Activity {
                     if (web != null) web.evaluateJavascript("(function(){var s=document.getElementById('splash');if(s)s.classList.add('is-hidden');})()", null);
                     splash.dropForLock();
                 });
+            }
+            /** #727: the page wants a streamed song's waveform; peaks come back through window.__ebbWavePeaks. */
+            @android.webkit.JavascriptInterface public void waveRequest(String videoId) {
+                if (wavePeaks == null) {
+                    WavePeaks.setCacheDir(getCacheDir());
+                    wavePeaks = new WavePeaks((id, peaks) -> runOnUiThread(() -> {
+                        if (web == null) return;
+                        StringBuilder sb = new StringBuilder("window.__ebbWavePeaks&&__ebbWavePeaks(").append(JSONObject.quote(id)).append(",[");
+                        for (int i = 0; i < peaks.length; i++) sb.append(i == 0 ? "" : ",").append(peaks[i]);
+                        web.evaluateJavascript(sb.append("])").toString(), null);
+                    }));
+                }
+                wavePeaks.request(videoId);
             }
             /** The page's play state, so a restarted service knows whether the music was playing when the process was killed. */
             @android.webkit.JavascriptInterface public void playing(boolean on) {
