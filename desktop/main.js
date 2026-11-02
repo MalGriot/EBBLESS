@@ -11,6 +11,7 @@ const upd = require('./updater');
 const path = require('path');
 const crypto = require('crypto');
 const adblock = require('./adblock');
+const wave = require('./wave');
 
 const APP_URL = process.env.EBBLESS_URL || 'https://malgriot.github.io/EBBLESS/';
 const APP_ORIGIN = new URL(APP_URL).origin;
@@ -218,6 +219,8 @@ const appBundle = () => process.env.EBBLESS_APP_PATH || path.resolve(app.getPath
 const fromMain = (e) => mainWin && e.sender === mainWin.webContents;
 
 ipcMain.handle('ebbless:version', () => myVersion());
+// #727: the page asks for a song's audio bytes once, to build its waveform; only the app's own window may ask.
+ipcMain.handle('ebbless:wave-audio', async (e, videoId) => fromMain(e) ? wave.fetchAudio(videoId) : null);
 // Settings > Reload now / debug line: live ad-blocking rules
 ipcMain.handle('ebbless:adblock-info', (e) => fromMain(e) ? adblock.info() : null);
 ipcMain.handle('ebbless:adblock-refresh', async (e) => {
