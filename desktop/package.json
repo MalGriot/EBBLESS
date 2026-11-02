@@ -24,6 +24,7 @@
       "adblock-rules.js",
       "adblock-live.js",
       "updater.js",
+      "wave.js",
       "preload.js",
       "package.json"
     ],
