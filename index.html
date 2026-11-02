@@ -4150,6 +4150,15 @@ body[data-look] .seek-track{height:38px}
 body[data-look] .seek-track .rail{height:36px;border-radius:0;background:rgba(255,255,255,.28);
   -webkit-mask:var(--wave,var(--wave-d)) center/100% 100% no-repeat;mask:var(--wave,var(--wave-d)) center/100% 100% no-repeat}
 body[data-look] .seek-track .fill{background:#fff;border-radius:0}
+/* cold song: a light sweeps across the flat bars while the real shape is fetched, then the bars rise into it.
+   Transform/opacity only; stops the moment the shape lands (or after 25 s), and pauses under a full-screen view. */
+body[data-look] .seek-track .rail{transition:transform .7s var(--ease-out)}
+body[data-look] .seek-track.wave-loading .rail{transform:scaleY(.6)}
+body[data-look] .seek-track.wave-loading .rail::after{content:'';position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);transform:translateX(-100%);animation:waveScan 1.5s ease-in-out infinite}
+@keyframes waveScan{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+body:has(#flow-layer.is-open) .seek-track.wave-loading .rail::after,body:has(#milkLayer.is-open) .seek-track.wave-loading .rail::after{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){body[data-look] .seek-track .rail{transition:none}body[data-look] .seek-track.wave-loading .rail::after{animation:none}}
+
 body[data-look] .seek-track .knob{display:none}
 body[data-look] .seek-row .t{color:rgba(255,255,255,.7)}
 body[data-look] .artwork-wrap{border-radius:20px;box-shadow:0 18px 40px rgba(0,0,0,.45)}
@@ -35185,15 +35194,18 @@ function wavePaint(id){
   if (!row || id !== waveId) return;
   const top = Math.max.apply(null, row) || 1;
   seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 0.7))));
+  waveLoading(false);
 }
 const waveAsked = new Set(), waveFull = new Set();
+let waveLoadTimer = 0;
+function waveLoading(on){ clearTimeout(waveLoadTimer); seekTrack.classList.toggle('wave-loading', on); if (on) waveLoadTimer = setTimeout(() => seekTrack.classList.remove('wave-loading'), 25000); }
 /* Desktop app: the main process pulls the song's smallest audio stream once; peaks are kept, the audio is dropped.
    Also warms the next song in the queue so its bars are ready when it starts. */
 function waveFetch(id, urgent){
   if (!id || waveStore()[id] || waveAsked.has(id) || isNativeVideoId(id) || !window.ebblessDesktop || !window.ebblessDesktop.waveAudio || lsGet(LS_WAVE_OFF, false)) return;
   waveAsked.add(id);
   window.ebblessDesktop.waveAudio(id, !!urgent).then(bytes => bytes && bytes.byteLength ? wavePeaksOf(bytes.buffer ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes) : null).then(peaks => {
-    if (!peaks) return;
+    if (!peaks){ if (id === waveId) waveLoading(false); return; }
     const top = Math.max.apply(null, peaks) || 1;
     waveStore()[id] = peaks.map(v => Math.round(v / top * 255)); waveFull.add(id); waveDirty = true; waveSave();
     if (id === waveId) wavePaint(id);
@@ -35220,8 +35232,13 @@ function waveSync(){
   waveSave();
   waveId = id; waveLastCur = -1;
   seekTrack.style.removeProperty('--wave');
+  waveLoading(false);
   if (!id) return;
-  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); return; }
+  if (!(isLocalVideoId(id) || isAudioVideoId(id))){
+    wavePaint(id);
+    if (!waveStore()[id] && !isNativeVideoId(id) && window.ebblessDesktop && window.ebblessDesktop.waveAudio && !lsGet(LS_WAVE_OFF, false)) waveLoading(true);
+    return;
+  }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
   waveCache.get(id).then(v => { if (v && waveId === id) seekTrack.style.setProperty('--wave', v); });
 }
