@@ -1573,6 +1573,19 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
   mix-blend-mode:screen;opacity:.55}
 .record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
+/* #723 fullscreen sizes (disc width as a share of the screen's short side): LP .84, CD .66, cassette .62 wide. The LP and CD get a ring of
+   the song's real waveform just outside the disc; the ring is static (drawn from the stored peaks), so there is nothing to animate. */
+#artRecord{--disc-fs:.84}
+body[data-disc="cd"] #artRecord{--disc-fs:.66}
+.rec-ring{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+body.split-desktop.desktop-fs:not(.view-settings-active) #artRecord :is(.record-disc,.record-shadow),
+#flow-layer #artRecord :is(.record-disc,.record-shadow){width:calc(var(--disc-fs) * 100%)}
+body.split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rec-ring,#flow-layer #artRecord .rec-ring{display:block}
+body.split-desktop.desktop-fs:not(.view-settings-active) #artworkWrap .art-cassette,#flow-layer .flow-art .art-cassette{inset:19% 19%}
+/* regular view: the vinyl is drawn big enough that its center label is as large as the default cover (label = 38% of the disc, disc = 96% of the
+   wrapper), so the wrapper is 100% / .3648 wide, centered with margins (the tap game scales this wrapper with transform), and clipped by the pane. */
+body:not(.desktop-fs):not([data-disc="cd"]) .artwork-wrap[data-mode="art"][data-art-style="record"] > #artRecord{inset:auto;left:50%;top:50%;width:274.1%;height:274.1%;margin:-137.05% 0 0 -137.05%}
+body:not(.desktop-fs):not([data-disc="cd"]) .player-stage:has(> .artwork-wrap[data-mode="art"][data-art-style="record"]) :is(.visual-tabs,.track-meta,.transport-full){position:relative;z-index:3}
 /* #719 CD, to Red Book proportions (120 mm disc = 100%): 15 mm hole = 12.5%, clear hub out to 33 mm = 27.5%, printed/data area
    up to 117 mm = 97.5%, clear 1.5 mm rim after that. Hole, hub and rim are clear glass; the art only covers the band between.
    Same element and spin/needle JS as the record; translucent fills only (no blur, GPU budget). */
@@ -4871,6 +4884,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <div class="art-dvd trail t1" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
           <div class="art-dvd" aria-hidden="true"><span class="art-dvd-x"><img src="brand/assets/mark-white.png" alt="" draggable="false"></span></div>
           <div class="art-record" id="artRecord">
+            <svg class="rec-ring" viewBox="0 0 100 100" aria-hidden="true"></svg>
             <div class="record-shadow"></div>
             <div class="record-disc">
               <img class="record-label" id="recordLabelImg" alt="">
@@ -27975,6 +27989,7 @@ let discSkin = lsGet('ebbless:discskin', 'vinyl') === 'cd' ? 'cd' : 'vinyl';
 function artStyleKey(){ return artStyle === 'record' && discSkin === 'cd' ? 'cd' : artStyle; }   // menu / cycle value: 'cd' is the record with the CD skin
 function applyArtStyle(){
   document.body.dataset.disc = discSkin;
+  if (typeof recRingSync === 'function') try { recRingSync(); } catch(e){}
   artworkWrap.dataset.artStyle = artStyle;
   if (artTabBtn) artTabBtn.dataset.artStyle = artStyle;
   artStyleMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.style === artStyleKey()));
@@ -35302,6 +35317,7 @@ function wavePaint(id){
   if (!row || id !== waveId) return;
   const top = Math.max.apply(null, row) || 1;
   seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 1.5))));
+  recRingSync();
   waveLoading(false);
 }
 const waveAsked = new Set(), waveFull = new Set();
@@ -35368,11 +35384,31 @@ function waveRelease(){
   if (!ids) return;
   waveShared(ids).then(() => { if (waveId && !waveStore()[waveId]) waveLoading(waveCanFetch()); ids.forEach((id, i) => waveFetch(id, i === 0)); });
 }
+// #723: the ring of waveform around the fullscreen LP / CD, drawn from the song's stored peaks (a faint even ring while they are still loading)
+function recRingSync(){
+  const svg = document.querySelector('#artRecord .rec-ring');
+  if (!svg) return;
+  const id = waveId, row = id && waveStore()[id];
+  const disc = parseFloat(getComputedStyle(document.getElementById('artRecord')).getPropertyValue('--disc-fs')) || .84;
+  const key = (row ? id : 'flat') + '|' + disc;
+  if (svg._key === key) return;
+  svg._key = key;
+  const n = 120, r0 = disc * 50 + 2.4, maxLen = Math.max(2, 49 - r0), top = row ? (Math.max.apply(null, row) || 1) : 1;
+  let out = '';
+  for (let i = 0; i < n; i++){
+    let v = .08;
+    if (row){ const f = i / n * WAVE_N, k = Math.floor(f), t = f - k; v = Math.pow((row[k % WAVE_N] * (1 - t) + row[(k + 1) % WAVE_N] * t) / top, 1.4); }
+    const a = i / n * Math.PI * 2 - Math.PI / 2, len = 1 + v * maxLen, c = Math.cos(a), sn = Math.sin(a);
+    out += '<line x1="' + (50 + c * r0).toFixed(2) + '" y1="' + (50 + sn * r0).toFixed(2) + '" x2="' + (50 + c * (r0 + len)).toFixed(2) + '" y2="' + (50 + sn * (r0 + len)).toFixed(2) + '"/>';
+  }
+  svg.innerHTML = '<g stroke="rgba(255,255,255,.85)" stroke-width=".7" stroke-linecap="round">' + out + '</g>';
+}
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
   waveSave();
   waveId = id; waveLastCur = -1;
+  recRingSync();
   seekTrack.style.removeProperty('--wave');
   waveLoading(false);
   if (!id) return;
