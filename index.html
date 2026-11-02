@@ -577,7 +577,7 @@ video.lib-bg-video.is-playing{opacity:1}
    bottom nav that opens #view-search. The field stays in the DOM (every search
    path still reads #urlInput) and is only shown during onboarding. */
 @media (max-width:859.98px){body:not(.onb-active) #importForm.import-row{display:none}}
-@media (min-width:860px){body:not(.split-desktop) #view-search{display:none!important}}   /* #722: the 3-pane desktop shows it in the middle pane when the top search bar is clicked */
+/* #722: the 3-pane desktop shows the search page in the middle pane when the top search bar is clicked; tablet widths get a Search button in the top nav (and the same click on the bar) */
 #view-search .st-form{position:relative;margin:8px 0 18px}
 #view-search .st-field{display:flex;position:relative}
 #view-search .st-field input{flex:1;min-width:0;width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -644,10 +644,13 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-genre:active{transform:scale(.97)}
 #view-home .hm-empty{font-size:13.5px;color:var(--faint);line-height:1.6;margin:0 0 20px}
 #view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0;color:var(--text)}
+#navSearchBtn{display:none}
+@media (min-width:860px){body:not(.split-desktop) #navSearchBtn{display:flex}}
 #view-search .st-close{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;color:var(--faint);background:var(--panel-2)}
 #view-search .st-close:hover{color:var(--text)}
 #view-search .st-close svg{width:18px;height:18px}
 body.split-desktop #view-search .st-close{display:flex}
+@media (min-width:860px){#view-search .st-close{display:flex}}
 body.split-desktop #view-search .view-scroll{max-width:760px;margin:0 auto}
 body.split-desktop #view-search .st-chips{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
 #view-search .st-chip .st-chip-art{position:absolute;right:-8px;bottom:-10px;width:62px;height:62px;border-radius:10px;object-fit:cover;transform:rotate(18deg);box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none}
@@ -4704,6 +4707,10 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <div class="support-opts" id="supportOpts"></div>
     </div>
     <nav id="topnav">
+      <button class="nav-btn" data-view="search" id="navSearchBtn" aria-label="Search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <span>Search</span>
+      </button>
       <button class="nav-btn" data-view="home" id="navHomeBtn">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-2.5v9h-5v-6h-3v6h-5v-9H3l9-8z"/></svg>
         <span>Home</span>
@@ -10706,6 +10713,7 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
     // (setView only closes the panel when leaving library, not re-entering it).
     if (btn.dataset.view === 'library') closeLibraryPlaylistPanel();
     if (btn.dataset.view === 'home' && state.currentView === 'home'){ setView('player'); return; }   // Home toggles back to the player
+    if (btn.dataset.view === 'search' && window.innerWidth >= 860){ if (state.currentView === 'search') closeDesktopSearch(); else openDesktopSearch(); return; }   // tablet Search button: opens the page, again to go back
     setView(btn.dataset.view);
   });
 });
@@ -18501,9 +18509,9 @@ function closeDesktopSearch(){
   if (state.currentView !== 'search') return;
   setView(state.preSearchView && state.preSearchView !== 'search' ? state.preSearchView : 'player');
 }
-urlInput.addEventListener('click', () => { if (document.body.classList.contains('split-desktop')) openDesktopSearch(); });
+urlInput.addEventListener('click', () => { if (window.innerWidth >= 860) openDesktopSearch(); });   // 3-pane desktop and tablet widths
 $('stCloseBtn').addEventListener('click', closeDesktopSearch);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('view-search-active') && !importOverlay.classList.contains('is-open')){ e.preventDefault(); closeDesktopSearch(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.currentView === 'search' && window.innerWidth >= 860 && !importOverlay.classList.contains('is-open')){ e.preventDefault(); closeDesktopSearch(); } });
 searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
 
 /* ---------- Paste a list of songs ----------
