@@ -27721,9 +27721,9 @@ function dockIconMode(){
   try { w = miniPlayerWin; } catch(e){}
   if (w && !w.closed && w.document && w.document.body){
     const sh = w.document.body.dataset.mpShape;
-    return sh === 'disc' ? 'record' : sh === 'tape' ? 'cassette' : sh === 'cymatics' ? 'cymatics' : 'default';
+    return sh === 'disc' ? (discSkin === 'cd' ? 'cd' : 'record') : sh === 'tape' ? 'cassette' : sh === 'cymatics' ? 'cymatics' : 'default';
   }
-  return visualMode === 'viz' ? 'cymatics' : visualMode === 'art' && artStyle !== 'default' ? artStyle : 'default';
+  return visualMode === 'viz' ? 'cymatics' : visualMode === 'art' && artStyle !== 'default' ? artStyleKey() : 'default';
 }
 // the LP or cassette art, drawn on a 512 grid (used scaled down as the corner badge)
 function dockSkin(x, mode, accent){
@@ -27738,6 +27738,19 @@ function dockSkin(x, mode, accent){
       x.beginPath(); x.arc(256, 256, 236, 0, 7); x.fillStyle = g; x.fill();
     }
     x.beginPath(); x.arc(256, 256, 118, 0, 7); x.fillStyle = accent; x.fill(); // the label is the UI color
+  } else if (mode === 'cd'){
+    // #719: Red Book proportions of a 236 radius disc: hole 12.5%, glass hub to 27.5%, art (the UI color here) to 97.5%, glass rim. Rings are even-odd paths so the hole is really empty.
+    const ring = (r0, r1, fill) => { x.beginPath(); x.arc(256, 256, r1, 0, Math.PI * 2); x.moveTo(256 + r0, 256); x.arc(256, 256, r0, 0, Math.PI * 2, true); x.fillStyle = fill; x.fill('evenodd'); };
+    ring(66.5, 230, accent);
+    if (x.createConicGradient){
+      const g = x.createConicGradient(0.6, 256, 256);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.08, 'rgba(255,255,255,.22)'); g.addColorStop(.16, 'rgba(255,255,255,0)');
+      g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(.58, 'rgba(255,255,255,.22)'); g.addColorStop(.66, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ring(66.5, 230, g);
+    }
+    ring(29.5, 65, 'rgba(255,255,255,.3)');
+    ring(64, 66.5, 'rgba(255,255,255,.55)');
+    ring(230, 236, 'rgba(255,255,255,.45)');
   } else if (mode === 'cassette'){
     x.beginPath(); x.roundRect(30, 104, 452, 304, 34); x.fillStyle = '#18181b'; x.fill();
     x.strokeStyle = 'rgba(255,255,255,.14)'; x.lineWidth = 3; x.stroke();
@@ -27770,7 +27783,7 @@ function dockIconDraw(mark, mode, accent){
     x.drawImage(mark, 0, 0, S, S);
   } else {
     x.drawImage(mark, 0, 0, S, S);
-    if (mode === 'record' || mode === 'cassette'){
+    if (mode === 'record' || mode === 'cd' || mode === 'cassette'){
       // the regular icon with the LP / cassette small in the bottom right corner, in front of it
       const k = 0.4, o = S - S * k - 14;
       x.save(); x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 22; x.shadowOffsetY = 6;
