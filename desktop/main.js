@@ -135,6 +135,12 @@ function createMainWindow(){
     if (!mainWin || !f || f !== mainWin.webContents.mainFrame || !isAppUrl(f.url) || !request.audioRequested) return callback({});
     callback({ video: f, audio: f, enableLocalEcho: true });
   });
+  // Waveform recording (#727): once the app page has loaded, ask it to open its own sound tap. userGesture=true lets
+  // getDisplayMedia run without a click; the handler above still only ever hands back this app page's own audio.
+  mainWin.webContents.on('did-finish-load', () => {
+    if (!mainWin || !isAppUrl(mainWin.webContents.getURL())) return;
+    mainWin.webContents.executeJavaScript('window.__ebbWaveTap&&window.__ebbWaveTap()', true).catch(() => {});
+  });
   mainWin.loadURL(APP_URL);
 }
 
