@@ -1542,7 +1542,8 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 body[data-disc="cd"] .record-disc{background:#cfd3d8;box-shadow:0 0 0 1px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.55)}
 body[data-disc="cd"] .record-disc::after{opacity:.8}
 body[data-disc="cd"] .record-label{width:100%;box-shadow:none}
-body[data-disc="cd"] .record-spindle{width:19%;height:auto;aspect-ratio:1;background:radial-gradient(circle,#0a0a0a 0 27%,#f4f4f4 29% 100%);box-shadow:0 0 0 .7vmin rgba(255,255,255,.22),0 2px 8px rgba(0,0,0,.45)}
+body[data-disc="cd"] .record-disc{-webkit-mask:radial-gradient(circle closest-side,transparent 0 5.7%,#000 6%);mask:radial-gradient(circle closest-side,transparent 0 5.7%,#000 6%)}   /* real see-through center hole */
+body[data-disc="cd"] .record-spindle{width:19%;height:auto;aspect-ratio:1;background:radial-gradient(circle closest-side,transparent 0 29%,rgba(255,255,255,.5) 30%,rgba(255,255,255,.2) 55%,rgba(255,255,255,.1) 100%);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55),inset 0 3px 5px rgba(255,255,255,.35)}   /* glass ring: translucent, no blur (GPU budget) */
 .swatch-cd .swatch-disc{background:conic-gradient(#d8dce2,#8a909a,#d8dce2,#8a909a,#d8dce2)}
 .swatch-cd .swatch-label{background:#0a0a0a;box-shadow:0 0 0 1.5px #f4f4f4}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;

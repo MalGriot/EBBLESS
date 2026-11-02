@@ -163,7 +163,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub issue #719. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch). Built: new 'CD' option in the art style menu (after Spinning Record). It is the record element with a CD skin (body[data-disc=cd]): album art covers the whole disc, white hub ring, black center hole, silver rim. Same spin, needle, game and fullscreen code as the record; the choice is saved in ebbless:discskin and the Z key / menu cycle include it. Checked at 375px in the preview; Spinning Record unchanged. Not checked: fullscreen flow view, the Mac mini player and dock icon (they still show the vinyl for CD), real art, live spin. No sw cache bump yet.
+- **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch). Built: new 'CD' option in the art style menu (after Spinning Record). It is the record element with a CD skin (body[data-disc=cd]): album art covers the whole disc, glass hub ring, see-through center hole, silver rim. Same spin, needle, game and fullscreen code as the record; the choice is saved in ebbless:discskin and the Z key / menu cycle include it. Checked at 375px in the preview; Spinning Record unchanged. Not checked: fullscreen flow view, the Mac mini player and dock icon (they still show the vinyl for CD), real art, live spin. No sw cache bump yet.
 
 ### lyrics-page-720: Lyrics page upgrade (Geethub #720)
 - **Status:** in-progress
