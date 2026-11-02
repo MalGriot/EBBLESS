@@ -35231,10 +35231,26 @@ function waveCanFetch(){
   if (lsGet(LS_WAVE_OFF, false)) return false;
   return !!((window.ebblessDesktop && window.ebblessDesktop.waveAudio) || (window.EbbNative && typeof window.EbbNative.waveRequest === 'function'));
 }
-function waveKeep(id, peaks){   // peaks: 64 numbers of any scale
+function waveKeep(id, peaks, shared){   // peaks: 64 numbers of any scale; shared = it came from the worker
   const top = Math.max.apply(null, peaks) || 1;
-  waveStore()[id] = peaks.map(v => Math.round(v / top * 255)); waveFull.add(id); waveDirty = true; waveSave();
+  const row = peaks.map(v => Math.round(v / top * 255));
+  waveStore()[id] = row; waveFull.add(id); waveDirty = true; waveSave();
   if (id === waveId) wavePaint(id);
+  if (!shared) waveShare(id, row);
+}
+/* The apps work a song's shape out once and share it, so the web build (which cannot read streamed audio) and every
+   other device get it on load. Reading is public; writing needs sign-in, and the first recording per song wins. */
+function waveShare(id, row){
+  const tok = typeof profileIdToken === 'string' ? profileIdToken : '';
+  if (!tok) return;
+  fetch(BACKEND + '/waves', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ v: id, p: row }) }).catch(() => {});
+}
+function waveShared(ids){
+  const want = ids.filter(id => id && !waveStore()[id] && !isNativeVideoId(id) && /^[A-Za-z0-9_-]{11}$/.test(id));
+  if (!want.length || lsGet(LS_WAVE_OFF, false)) return Promise.resolve();
+  return fetch(BACKEND + '/waves?ids=' + want.join(',')).then(r => r.ok ? r.json() : {}).then(o => {
+    Object.keys(o || {}).forEach(id => { const p = o[id]; if (Array.isArray(p) && p.length === WAVE_N && p.every(v => typeof v === 'number' && v >= 0 && v <= 255)) waveKeep(id, p, true); });
+  }).catch(() => {});
 }
 // Android app: native finds the stream, decodes it and calls this with the 64 peaks.
 window.__ebbWavePeaks = function(id, peaks){
@@ -35267,7 +35283,8 @@ function waveWant(pos){
 function waveRelease(){
   clearTimeout(waveTimer);
   const ids = waveWait; waveWait = null;
-  if (ids) ids.forEach((id, i) => waveFetch(id, i === 0));
+  if (!ids) return;
+  waveShared(ids).then(() => { if (waveId && !waveStore()[waveId]) waveLoading(waveCanFetch()); ids.forEach((id, i) => waveFetch(id, i === 0)); });
 }
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
@@ -35279,7 +35296,7 @@ function waveSync(){
   if (!id) return;
   if (!(isLocalVideoId(id) || isAudioVideoId(id))){
     wavePaint(id);
-    if (!waveStore()[id] && !isNativeVideoId(id) && waveCanFetch()) waveLoading(true);
+    if (!waveStore()[id] && !isNativeVideoId(id) && !lsGet(LS_WAVE_OFF, false)) waveLoading(true);
     return;
   }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
