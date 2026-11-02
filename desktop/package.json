@@ -9,7 +9,10 @@
     "start": "electron .",
     "start:local": "EBBLESS_URL=http://localhost:8934/?mal electron .",
     "dist": "electron-builder --mac",
-    "dist:win": "electron-builder --win --x64"
+    "dist:win": "electron-builder --win --x64",
+    "ytdlp": "node fetch-ytdlp.js",
+    "predist": "node fetch-ytdlp.js darwin",
+    "predist:win": "node fetch-ytdlp.js win32"
   },
   "devDependencies": {
     "electron": "33.2.1",
@@ -26,7 +29,8 @@
       "updater.js",
       "wave.js",
       "preload.js",
-      "package.json"
+      "package.json",
+      "ytdlp-update.js"
     ],
     "extraResources": [
       {
@@ -46,7 +50,13 @@
           ]
         }
       ],
-      "identity": null
+      "identity": null,
+      "extraResources": [
+        {
+          "from": "bin/yt-dlp",
+          "to": "bin/yt-dlp"
+        }
+      ]
     },
     "win": {
       "icon": "../brand/assets/icons/dock-512.png",
@@ -58,7 +68,13 @@
           ]
         }
       ],
-      "artifactName": "EBBLESS-Setup-${version}.${ext}"
+      "artifactName": "EBBLESS-Setup-${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "bin/yt-dlp.exe",
+          "to": "bin/yt-dlp.exe"
+        }
+      ]
     },
     "nsis": {
       "oneClick": true,

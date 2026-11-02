@@ -6,3 +6,4 @@ AGENTS.md
 worker/.dev.vars
 worker/node_modules/
 desktop/dist*/
+desktop/bin/
