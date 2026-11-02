@@ -1707,7 +1707,19 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
    --glow (0..1, set in updateLyricsHighlight) so it fades back to line one */
 .lyric-line.is-past{color:color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 60%),var(--faint-2));
   text-shadow:0 0 12px color-mix(in srgb,var(--player-accent) calc(var(--glow,0) * 35%),transparent)}
-@media (prefers-reduced-motion: reduce){.lyric-line{transition:none}}
+/* #720 lyrics page: big left-aligned lines like the Apple Music style reference. Every synced line fades with its distance from the
+   line being sung (--d, set in updateLyricsHighlight); the sung line is full white at full size, others sit a touch smaller.
+   Only opacity and transform change, so nothing re-lays out. Chapter rows (podcasts) keep their own look. */
+.lyrics-scroller{text-align:left;padding:44% 26px}
+.artwork-wrap.mode-lyrics .lyrics-scroller{padding:40px 26px}
+.lyrics-scroller .lyric-line:not(.is-chapter){font-size:24px;font-weight:700;line-height:1.22;padding:11px 0;color:var(--text);
+  transform-origin:left center;transform:scale(.88);opacity:calc(.9 - var(--d,2) * .2);text-shadow:none;
+  transition:opacity var(--dur-ui) var(--ease-out),transform var(--dur-ui) var(--ease-out)}
+.lyrics-scroller .lyric-line:not(.is-chapter)[data-time]:hover{opacity:.9}
+.lyrics-scroller .lyric-line:not(.is-chapter).is-current{font-size:24px;color:var(--text);text-shadow:none;transform:scale(1);opacity:1}
+.lyrics-scroller .lyric-line:not(.is-chapter).is-past{color:var(--text);text-shadow:none}
+.lyrics-scroller .lyric-line:not(.is-chapter):not([data-time]){opacity:.9;transform:none}   /* unsynced lyrics scroll on their own: all lines equal */
+@media (prefers-reduced-motion: reduce){.lyric-line{transition:none!important}}
 .lyrics-empty{padding:0 24px;color:var(--faint);font-size:13.5px;text-align:center;line-height:1.6}
 /* caption status stays in view over a chapters-only list (#603) */
 .lyrics-empty.cap-status{position:sticky;bottom:0;padding:8px 24px;background:rgba(20,20,20,.88);border-radius:10px}
@@ -2555,8 +2567,6 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 #flow-layer .flow-lyrics{position:absolute;left:0;right:0;top:76px;bottom:calc(236px + var(--safe-b));z-index:1}
 #flow-layer .flow-lyrics[hidden]{display:none}
 #flow-layer .flow-lyrics .lyrics-scroller{padding:24vh 28px}
-#flow-layer .flow-lyrics .lyric-line{font-size:19px}
-#flow-layer .flow-lyrics .lyric-line.is-current{font-size:21px}
 .flow-bottom{display:flex;flex-direction:column;align-items:center;gap:18px}
 .flow-seek{width:min(420px,80vw)}
 
@@ -2567,8 +2577,6 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .lyrics-fs-body{position:absolute;inset:0}
 .lyrics-fs-body .lyrics-wrap{position:absolute;inset:0}
 .lyrics-fs-body .lyrics-scroller{padding:46vh 28px 40vh}
-.lyrics-fs-body .lyric-line{font-size:19px}
-.lyrics-fs-body .lyric-line.is-current{font-size:21px}
 .lyrics-fs-exit{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:2;
   width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .lyrics-fs-exit:hover{background:var(--panel-2);color:var(--text)}
@@ -30044,6 +30052,7 @@ function updateLyricsHighlight(cur){
   for (let i = 0; i < lines.length; i++){
     const lineEl = lyricsScroller.children[i];
     if (!lineEl) break;
+    lineEl.style.setProperty('--d', Math.min(4, Math.abs(i - idx)));
     if (i < idx){
       lineEl.classList.add('is-past');
       lineEl.style.setProperty('--glow', ((i + 1) / (idx + 1)).toFixed(3));

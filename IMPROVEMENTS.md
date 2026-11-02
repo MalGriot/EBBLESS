@@ -167,12 +167,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch). Built: new 'CD' option in the art style menu (after Spinning Record). It is the record element with a CD skin (body[data-disc=cd]): album art covers the whole disc, Red Book proportions (120 mm disc: 15 mm hole, clear hub to 33 mm, art to 117 mm, clear 1.5 mm rim): hole, hub and rim are glass. Same spin, needle, game and fullscreen code as the record; the choice is saved in ebbless:discskin and the Z key / menu cycle include it. Checked at 375px in the preview; Spinning Record unchanged. Fullscreen flow view: the CD rules are global and the real record element is what moves in, so it renders there too (checked by placing it in the fullscreen art box; not opened with a real track). Mac mini player: CD styling added to the mini window (its own CSS, a CD button in its art picker, disc skin passed to the mini body, and switching the mini to its disc shape no longer resets CD to vinyl); checked by rendering the mini CSS and markup in the preview, not in a real mini window or on the Mac app. Dock icon: CD badge in the UI color with the same proportions and a real hole (checked by faking the desktop bridge in the preview and viewing the PNG it sent; not seen in a real Mac dock), real art, live spin. No sw cache bump yet.
 
 ### lyrics-page-720: Lyrics page upgrade (Geethub #720)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #720. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #720; all ten UI issues share one lane (ui-batch).
+- **Notes:** Synced from Geethub #720; all ten UI issues share one lane (ui-batch). Built (reference: Apple Music style lyrics shot): lyric lines are now large (24px), left-aligned, bold; the sung line is full white at full size and every other synced line is slightly smaller and fades with its distance from it (--d set in updateLyricsHighlight; opacity + transform only). The accent glow trail is gone; unsynced lyrics show all lines equal; podcast chapter rows keep their look. Applies to the inline lyrics, flow mode and the lyrics fullscreen. Checked at 375px with fake lines only. Not done: the small cover + title/artist header from the reference, real lyrics, auto-scroll to the sung line, flow/fullscreen layers. No sw cache bump yet.
 
 ### album-page-721: Album page layout (Geethub #721)
 - **Status:** in-progress
