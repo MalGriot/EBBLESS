@@ -1538,12 +1538,16 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
   mix-blend-mode:screen;opacity:.55}
 .record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
-/* #719 CD: the record's disc with the album art covering all of it, a clear-plastic hub ring and a black center hole (same element, same spin and needle JS) */
-body[data-disc="cd"] .record-disc{background:#cfd3d8;box-shadow:0 0 0 1px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.55)}
-body[data-disc="cd"] .record-disc::after{opacity:.8}
-body[data-disc="cd"] .record-label{width:100%;box-shadow:none}
-body[data-disc="cd"] .record-disc{-webkit-mask:radial-gradient(circle closest-side,transparent 0 5.7%,#000 6%);mask:radial-gradient(circle closest-side,transparent 0 5.7%,#000 6%)}   /* real see-through center hole */
-body[data-disc="cd"] .record-spindle{width:19%;height:auto;aspect-ratio:1;background:radial-gradient(circle closest-side,transparent 0 29%,rgba(255,255,255,.5) 30%,rgba(255,255,255,.2) 55%,rgba(255,255,255,.1) 100%);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55),inset 0 3px 5px rgba(255,255,255,.35)}   /* glass ring: translucent, no blur (GPU budget) */
+/* #719 CD, to Red Book proportions (120 mm disc = 100%): 15 mm hole = 12.5%, clear hub out to 33 mm = 27.5%, printed/data area
+   up to 117 mm = 97.5%, clear 1.5 mm rim after that. Hole, hub and rim are clear glass; the art only covers the band between.
+   Same element and spin/needle JS as the record; translucent fills only (no blur, GPU budget). */
+body[data-disc="cd"] .record-disc{background:radial-gradient(circle closest-side,transparent 0 12.5%,rgba(255,255,255,.2) 12.7% 26.5%,rgba(255,255,255,.42) 27% 28.2%,transparent 28.4% 97.4%,rgba(255,255,255,.22) 97.5% 98.4%,rgba(255,255,255,.4) 98.6% 100%);
+  -webkit-mask:radial-gradient(circle closest-side,transparent 0 12.3%,#000 12.5%);mask:radial-gradient(circle closest-side,transparent 0 12.3%,#000 12.5%);
+  box-shadow:none}
+body[data-disc="cd"] .record-disc::after{opacity:.7}
+body[data-disc="cd"] .record-label{width:100%;box-shadow:none;
+  -webkit-mask:radial-gradient(circle closest-side,transparent 0 28.2%,#000 28.4% 97.4%,transparent 97.5%);mask:radial-gradient(circle closest-side,transparent 0 28.2%,#000 28.4% 97.4%,transparent 97.5%)}
+body[data-disc="cd"] .record-spindle{display:none}
 .swatch-cd .swatch-disc{background:conic-gradient(#d8dce2,#8a909a,#d8dce2,#8a909a,#d8dce2)}
 .swatch-cd .swatch-label{background:#0a0a0a;box-shadow:0 0 0 1.5px #f4f4f4}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
