@@ -221,12 +221,12 @@ Add entries in this shape:
   Logo gestures (owner request): one tap on the E logo goes Home everywhere (the old single-tap splash on desktop, double-tap mini player and phone tap-to-player are gone); hold (~1s, with the existing ring) opens the mini player on desktop where it exists (the splash if nothing is playing), and keeps hold-to-reload on phones; dragging the logo to the right on a phone brings the splash back (the follow-up click is swallowed). Checked: phone tap, phone drag (synthetic pointer events), desktop tap, desktop hold requests the mini window (stubbed). Not checked with a real finger or the real mini window.
 
 ### swipe-nav-725: Mobile swipe navigation between screens (Geethub #725)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #725. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #725; all ten UI issues share one lane (ui-batch).
+- **Notes:** Synced from Geethub #725; all ten UI issues share one lane (ui-batch). Found a left/right swipe already in place (#574: Library, Player, Queue, Settings) with a list of things that keep their own gestures (art, sliders, queue and track rows, filter pills, inputs, sheets and windows). Extended it, nothing else changed: (1) the horizontal row is now Home - Search - Library - Player - Queue - Settings (Home leftmost; nothing further left; Settings last); (2) swipes that start on the Home or Search horizontal rows are ignored so those rows still scroll sideways; (3) new vertical swipes on the Player only (its screen does not scroll): swipe up = open the queue, swipe down = Home; they only count when they start on empty space, the title area, not on the art, seek bar, controls or tabs. Slide-in is translate and opacity only. Phones only (under 860px, not during onboarding). Checked with synthetic touch events at 375px: up goes to the queue, down to Home, Home to Search and back, nothing left of Home, a swipe starting on a Home row does nothing. Not checked with a real finger (angles and thresholds: 70px across at no more than 0.6 slope, 90px vertical at no more than 0.5 slope). Not done: an edge indicator or dots showing where you are in the row; swipes on tablets; swipe up from Home.
 
 ### cymatics-726: Cymatics visual upgrade (Geethub #726)
 - **Status:** in-progress

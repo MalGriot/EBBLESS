@@ -10111,8 +10111,8 @@ async function lastfmImportSelected(){
    Ignores swipes that start on something with its own horizontal gesture (album art, sliders,
    queue rows, tracks, filter pills, inputs) and anything while a sheet, window or menu is open. */
 (function(){
-  const order = ['library', 'player', 'queue', 'settings'];
-  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,#musicMap,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row';
+  const order = ['home', 'search', 'library', 'player', 'queue', 'settings'];   // #725: Home and Search join the row; from the Player, swipe up for the queue and down for Home
+  const SKIP = 'input,textarea,select,button,a,canvas,.slider,.artwork-wrap,.visual-tabs,.q-row,.q-now,.track-row,.lib-filter,#libpl-panel,#import-overlay,#flow-layer,#findMusic,#musicMap,.lib-ctx-menu,.paste-guide,#splash,#mini-bar,.lyrics-wrap,.controls-row,.seek-row,.hm-row,.st-grid';
   let x0 = 0, y0 = 0, ok = false;
   const phone = () => window.matchMedia('(max-width:859.98px)').matches && !document.body.classList.contains('onb-active');
   document.addEventListener('touchstart', (e) => {
@@ -10122,23 +10122,34 @@ async function lastfmImportSelected(){
     if (document.querySelector('.lib-ctx-menu.is-open,#libpl-panel.is-open,#import-overlay.is-open,#flow-layer.is-open')) return;
     x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; ok = true;
   }, { passive: true });
+  const go = (next, dirX, dirY) => {
+    const btn = next === 'queue' ? document.querySelector('#bottom-nav [data-action="toggle-queue"]') : next === 'home' ? null : document.querySelector('#bottom-nav [data-view="' + next + '"]');
+    if (next === 'home'){ leaveFullscreen(true); setView('home'); }
+    else if (btn) btn.click(); else return false;
+    // the new screen slides in from the side you swiped toward (translate + opacity only)
+    const el = next === 'queue' ? $('queue-panel') : views[next];
+    if (el && el.animate && !window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+      el.animate([{ translate: (dirX * 56) + 'px ' + (dirY * 56) + 'px', opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
+    return true;
+  };
   document.addEventListener('touchend', (e) => {
     if (!ok) return;
     ok = false;
     const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-    if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+    const horiz = Math.abs(dx) >= 70 && Math.abs(dy) <= Math.abs(dx) * 0.6, vert = Math.abs(dy) >= 90 && Math.abs(dx) <= Math.abs(dy) * 0.5;
+    if (!horiz && !vert) return;
     const cur = document.body.classList.contains('queue-open') ? 'queue' : state.currentView;
+    if (vert){   // only on the Player, whose screen does not scroll: up opens the queue, down goes Home
+      if (cur !== 'player') return;
+      go(dy < 0 ? 'queue' : 'home', 0, dy < 0 ? 1 : -1);
+      return;
+    }
     const i = order.indexOf(cur);
     if (i < 0) return;
     const next = order[i + (dx < 0 ? 1 : -1)];
     if (!next) return;
-    const btn = document.querySelector(next === 'queue' ? '#bottom-nav [data-action="toggle-queue"]' : '#bottom-nav [data-view="' + next + '"]');
-    if (btn) btn.click();
-    // the new screen slides in from the side you swiped toward (translate + opacity only)
-    const el = next === 'queue' ? $('queue-panel') : views[next];
-    if (btn && el && el.animate && !window.matchMedia('(prefers-reduced-motion:reduce)').matches){
-      el.animate([{ translate: (dx < 0 ? '56px' : '-56px') + ' 0', opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
-    }
+    go(next, dx < 0 ? 1 : -1, 0);
   });
 })();
 $('playerMoreBtn').addEventListener('click', (e) => {
