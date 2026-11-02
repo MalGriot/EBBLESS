@@ -220,7 +220,7 @@ const fromMain = (e) => mainWin && e.sender === mainWin.webContents;
 
 ipcMain.handle('ebbless:version', () => myVersion());
 // #727: the page asks for a song's audio bytes once, to build its waveform; only the app's own window may ask.
-ipcMain.handle('ebbless:wave-audio', async (e, videoId) => fromMain(e) ? wave.fetchAudio(videoId) : null);
+ipcMain.handle('ebbless:wave-audio', async (e, videoId, urgent) => fromMain(e) ? wave.fetchAudio(videoId, !!urgent) : null);
 // Settings > Reload now / debug line: live ad-blocking rules
 ipcMain.handle('ebbless:adblock-info', (e) => fromMain(e) ? adblock.info() : null);
 ipcMain.handle('ebbless:adblock-refresh', async (e) => {

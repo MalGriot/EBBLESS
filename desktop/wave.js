@@ -37,13 +37,16 @@ function refresh(force){
   return upd.ensure(dataDir, process.platform, { force: !!force }).then(r => { if (r && r.updated) prime(); return r; }).catch(() => null);
 }
 
-let busy = Promise.resolve();   // one fetch at a time, so a skipped playlist cannot start a pile of downloads
+// Two fetches at a time; the song you just picked (urgent) jumps ahead of background prefetches.
+const MAX_PARALLEL = 2;
+const jobs = new Map();   // videoId -> promise, so one song is never fetched twice at once
+const waiting = [];
+let running = 0;
 
-function fetchAudio(videoId){
-  if (typeof videoId !== 'string' || !ID_RE.test(videoId)) return Promise.resolve(null);
+function runOne(videoId){
   const bin = ytDlpPath();
   if (!bin) return Promise.resolve(null);
-  const run = () => new Promise(resolve => {
+  return new Promise(resolve => {
     const chunks = []; let size = 0, done = false;
     const p = spawn(bin, ['--no-playlist', '--no-warnings', '--quiet', '--no-cache-dir', '--no-update', '-N', '1',
       '-f', 'worstaudio[acodec=opus]/worstaudio', '-o', '-', 'https://www.youtube.com/watch?v=' + videoId],
@@ -55,9 +58,25 @@ function fetchAudio(videoId){
     p.on('error', () => end(false));
     p.on('close', code => { if (code !== 0) refresh(true); end(code === 0 && size > 0); });
   });
-  const next = busy.then(run, run);
-  busy = next.catch(() => null);
-  return next;
+}
+function start(j){
+  running++;
+  runOne(j.id).then(j.resolve, () => j.resolve(null)).then(() => { running--; jobs.delete(j.id); pump(); });
+}
+function pump(){ while (running < MAX_PARALLEL && waiting.length) start(waiting.shift()); }
+function fetchAudio(videoId, urgent){
+  if (typeof videoId !== 'string' || !ID_RE.test(videoId)) return Promise.resolve(null);
+  const have = jobs.get(videoId);
+  if (have){
+    const i = urgent ? waiting.indexOf(have) : -1;
+    if (i >= 0){ waiting.splice(i, 1); start(have); }   // a song you just picked never waits behind prefetches
+    return have.promise;
+  }
+  const j = { id: videoId };
+  j.promise = new Promise(r => { j.resolve = r; });
+  jobs.set(videoId, j);
+  if (urgent) start(j); else { waiting.push(j); pump(); }
+  return j.promise;
 }
 
 module.exports = { fetchAudio, ytDlpPath, init, refresh, prime, ID_RE };
