@@ -31871,6 +31871,12 @@ const MINI_PLAYER_STYLE = `
     background:var(--ghost-art,none) center/cover #282828;box-shadow:0 0 0 2px #0c0c0c;opacity:0;pointer-events:none}
   .mp-cs-ghost{transform-box:fill-box;transform-origin:center;pointer-events:none}
   #mpRecord::after{content:"";position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#121212}
+  /* #719 CD in the mini: same Red Book proportions as the main player (hole 12.5%, glass hub to 27.5%, art to 97.5%, glass rim) */
+  body[data-disc="cd"] #mpRecord{box-shadow:none;background:radial-gradient(circle closest-side,transparent 0 12.5%,rgba(255,255,255,.2) 12.7% 26.5%,rgba(255,255,255,.42) 27% 28.2%,transparent 28.4% 97.4%,rgba(255,255,255,.22) 97.5% 98.4%,rgba(255,255,255,.4) 98.6% 100%);
+    -webkit-mask:radial-gradient(circle closest-side,transparent 0 12.3%,#000 12.5%);mask:radial-gradient(circle closest-side,transparent 0 12.3%,#000 12.5%)}
+  body[data-disc="cd"] #mpRecord::before,body[data-disc="cd"] #mpRecord .mp-lbl-ghost{width:100%;box-shadow:none;
+    -webkit-mask:radial-gradient(circle closest-side,transparent 0 28.2%,#000 28.4% 97.4%,transparent 97.5%);mask:radial-gradient(circle closest-side,transparent 0 28.2%,#000 28.4% 97.4%,transparent 97.5%)}
+  body[data-disc="cd"] #mpRecord::after{display:none}
   #mpTape{width:min(100cqw,156cqh);aspect-ratio:1.5625}
   #mpTape .cassette-svg{width:100%;height:100%;display:block;overflow:visible;fill:#000}
   #mpTape .cs-hub{animation:mpSpin 2.4s linear infinite paused}
@@ -32637,7 +32643,7 @@ function mpSyncMainFromMini(){
   const sh = w.document.body.dataset.mpShape;
   if (sh === 'cymatics') kbSetVisual('viz');
   else if (sh === 'card') kbSetVisual('art'); // the card keeps whatever art style its thumb shows
-  else if (sh === 'disc' || sh === 'tape'){ kbSetVisual('art'); setArtStyle(sh === 'disc' ? 'record' : 'cassette'); }
+  else if (sh === 'disc' || sh === 'tape'){ kbSetVisual('art'); setArtStyle(sh === 'disc' ? (discSkin === 'cd' ? 'cd' : 'record') : 'cassette'); }
 }
 function mpCycleShape(){
   const i = MP_CLICK_ORDER.indexOf(mpDesktopShape());
@@ -32670,7 +32676,7 @@ function buildMiniPlayerDOM(win){
       '<div id="mpArtWrap" data-art-style="default"><img id="mpArt" alt="">' +
         '<div id="mpRecord"></div><div id="mpTape" class="art-cassette" data-state="idle"></div>' +
         '<div id="mpArtPick" role="group" aria-label="Art style">' +
-          btn('mpArtDefault', '', 'Default', MP_ICO.artDefault) + btn('mpArtRecord', '', 'Spinning Record', MP_ICO.artRecord) + btn('mpArtCassette', '', 'Cassette Tape', MP_ICO.artCassette) +
+          btn('mpArtDefault', '', 'Default', MP_ICO.artDefault) + btn('mpArtRecord', '', 'Spinning Record', MP_ICO.artRecord) + btn('mpArtCd', '', 'CD', MP_ICO.artRecord) + btn('mpArtCassette', '', 'Cassette Tape', MP_ICO.artCassette) +
         '</div></div>' +
       '<div id="mpHead">' +
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
@@ -32735,7 +32741,7 @@ function buildMiniPlayerDOM(win){
   });
   doc.getElementById('mpReset').addEventListener('click', resetMiniPlayerShape);
   // One tap sets the style for both players (shared setting), like the main picker
-  [['mpArtDefault', 'default'], ['mpArtRecord', 'record'], ['mpArtCassette', 'cassette']].forEach(([id, st]) =>
+  [['mpArtDefault', 'default'], ['mpArtRecord', 'record'], ['mpArtCd', 'cd'], ['mpArtCassette', 'cassette']].forEach(([id, st]) =>
     doc.getElementById(id).addEventListener('click', () => {
       if (isDesktopApp && mpSavedShape()) mpPickShape(null); // #612: a hand-picked shape would otherwise ignore the skin
       if (visualMode !== 'art') kbSetVisual('art'); // the card was reached from Cymatics by Z/click with the main player still in Visualizer: without this the mini falls straight back to Cymatics
@@ -33031,7 +33037,8 @@ function updateMiniPlayerUI(){
     });
     const tp = doc.getElementById('csTape'); if (tp) tp.setAttribute('d', csTape.getAttribute('d'));
   }
-  ['Default', 'Record', 'Cassette'].forEach(n => doc.getElementById('mpArt' + n).classList.toggle('is-active', n.toLowerCase() === artStyle));
+  ['Default', 'Record', 'Cd', 'Cassette'].forEach(n => doc.getElementById('mpArt' + n).classList.toggle('is-active', n.toLowerCase() === artStyleKey()));
+  doc.body.dataset.disc = discSkin;
   playIcoEl.innerHTML = isPlaying ? ICO_PAUSE : ICO_PLAY;
   // Toggle states mirror the main player's own buttons rather than
   // re-deriving them, so they can't disagree.
