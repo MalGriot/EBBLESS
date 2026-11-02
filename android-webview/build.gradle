@@ -2,4 +2,8 @@ buildscript {
     repositories { google(); mavenCentral() }
     dependencies { classpath 'com.android.tools.build:gradle:8.9.1' }
 }
-allprojects { repositories { google(); mavenCentral() } }
+allprojects { repositories {
+    google(); mavenCentral()
+    // NewPipe Extractor (waveforms for streamed songs) is only published on JitPack
+    maven { url 'https://jitpack.io'; content { includeGroup 'com.github.TeamNewPipe'; includeGroup 'com.github.TeamNewPipe.NewPipeExtractor' } }
+} }
