@@ -158,12 +158,12 @@ Add entries in this shape:
 - **Built (desktop app only):** the main process calls the page's __ebbWaveTap right after load with userGesture=true, so no click is needed; the existing display-media handler still only returns this app page's own sound, speakers untouched. The page keeps one analyser open, records one peak per second per streamed song (64 buckets, kept on the device, capped at 300 songs) and redraws the bars every 4 s. Android and web do not record yet. NOT run in the Electron app (not built here): the no-gesture call and the recording are untested end to end; the Electron app needs a rebuild and a version bump.
 
 ### cd-mode-719: CD mode redesign (Geethub #719)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #719. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch).
+- **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch). Built: new 'CD' option in the art style menu (after Spinning Record). It is the record element with a CD skin (body[data-disc=cd]): album art covers the whole disc, white hub ring, black center hole, silver rim. Same spin, needle, game and fullscreen code as the record; the choice is saved in ebbless:discskin and the Z key / menu cycle include it. Checked at 375px in the preview; Spinning Record unchanged. Not checked: fullscreen flow view, the Mac mini player and dock icon (they still show the vinyl for CD), real art, live spin. No sw cache bump yet.
 
 ### lyrics-page-720: Lyrics page upgrade (Geethub #720)
 - **Status:** in-progress

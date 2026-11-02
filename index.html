@@ -1538,6 +1538,13 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
   mix-blend-mode:screen;opacity:.55}
 .record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
+/* #719 CD: the record's disc with the album art covering all of it, a clear-plastic hub ring and a black center hole (same element, same spin and needle JS) */
+body[data-disc="cd"] .record-disc{background:#cfd3d8;box-shadow:0 0 0 1px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.55)}
+body[data-disc="cd"] .record-disc::after{opacity:.8}
+body[data-disc="cd"] .record-label{width:100%;box-shadow:none}
+body[data-disc="cd"] .record-spindle{width:19%;height:auto;aspect-ratio:1;background:radial-gradient(circle,#0a0a0a 0 27%,#f4f4f4 29% 100%);box-shadow:0 0 0 .7vmin rgba(255,255,255,.22),0 2px 8px rgba(0,0,0,.45)}
+.swatch-cd .swatch-disc{background:conic-gradient(#d8dce2,#8a909a,#d8dce2,#8a909a,#d8dce2)}
+.swatch-cd .swatch-label{background:#0a0a0a;box-shadow:0 0 0 1.5px #f4f4f4}
 .record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
 /* record tap minigame (issue #116, see RECORD TAP GAME in the script): a
@@ -4690,6 +4697,11 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <button class="art-style-opt" data-style="record">
               <span class="art-style-swatch swatch-record"><span class="swatch-disc"><span class="swatch-label"></span></span></span>
               <span class="art-style-label">Spinning Record</span>
+              <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+            </button>
+            <button class="art-style-opt" data-style="cd">
+              <span class="art-style-swatch swatch-record swatch-cd"><span class="swatch-disc"><span class="swatch-label"></span></span></span>
+              <span class="art-style-label">CD</span>
               <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
             </button>
             <button class="art-style-opt" data-style="cassette">
@@ -27672,12 +27684,16 @@ const LS_ART_STYLE = 'ebbless:artstyle';
 let artStyle = lsGet(LS_ART_STYLE, 'default');
 if (artStyle !== 'default' && artStyle !== 'record' && artStyle !== 'cassette') artStyle = 'default';
 
+let discSkin = lsGet('ebbless:discskin', 'vinyl') === 'cd' ? 'cd' : 'vinyl';
+function artStyleKey(){ return artStyle === 'record' && discSkin === 'cd' ? 'cd' : artStyle; }   // menu / cycle value: 'cd' is the record with the CD skin
 function applyArtStyle(){
+  document.body.dataset.disc = discSkin;
   artworkWrap.dataset.artStyle = artStyle;
   if (artTabBtn) artTabBtn.dataset.artStyle = artStyle;
-  artStyleMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.style === artStyle));
+  artStyleMenu.querySelectorAll('.art-style-opt').forEach(b => b.classList.toggle('is-active', b.dataset.style === artStyleKey()));
 }
 function setArtStyle(style){
+  if (style === 'cd' || style === 'record'){ discSkin = style === 'cd' ? 'cd' : 'vinyl'; lsSet('ebbless:discskin', discSkin); style = 'record'; }
   artStyle = style;
   lsSet(LS_ART_STYLE, style);
   applyArtStyle();
@@ -28462,7 +28478,7 @@ function closeArtStyleMenu(){ artStyleMenu.classList.remove('is-open'); }
 function toggleArtStyleMenu(){ artStyleMenu.classList.toggle('is-open'); }
 function cycleArtStyle(){
   const styles = Array.from(artStyleMenu.querySelectorAll('.art-style-opt'), b => b.dataset.style);
-  const currentIndex = styles.indexOf(artStyle);
+  const currentIndex = styles.indexOf(artStyleKey());
   const nextIndex = (currentIndex + 1) % styles.length;
   setArtStyle(styles[nextIndex]);
 }
@@ -31540,7 +31556,7 @@ document.addEventListener('keydown', (e) => {
       if (e.repeat) break;
       if (visualMode !== 'art' || ytPanelOpen()){ kbSetVisual('art'); break; }
       const styles = Array.from(artStyleMenu.querySelectorAll('.art-style-opt'), b => b.dataset.style);
-      setArtStyle(styles[(styles.indexOf(artStyle) + 1) % styles.length]);
+      setArtStyle(styles[(styles.indexOf(artStyleKey()) + 1) % styles.length]);
       break;
     }
     case 'x': case 'X':
@@ -34921,19 +34937,21 @@ function waveSvg(peaks){
   peaks.forEach((v, i) => { const h = Math.max(6, Math.round(v * 96)); r += '%3Crect x=%27' + (i * 10 + 1) + '%27 y=%27' + (50 - h / 2) + '%27 width=%276%27 height=%27' + h + '%27 rx=%273%27/%3E'; });
   return 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 640 100%27 preserveAspectRatio=%27none%27%3E' + r + '%3C/svg%3E")';
 }
+async function wavePeaksOf(buf){
+  const ab = await new OfflineAudioContext(1, 1, 8000).decodeAudioData(buf);   // 8 kHz mono: the least CPU that still shows the shape
+  const d = ab.getChannelData(0), n = WAVE_N, step = Math.max(1, Math.floor(d.length / n)), peaks = [];
+  for (let i = 0; i < n; i++){ let m = 0; for (let j = i * step, e = Math.min(d.length, j + step); j < e; j += 4){ const a = Math.abs(d[j]); if (a > m) m = a; } peaks.push(m); }
+  return peaks;
+}
+function waveNorm(peaks){ const top = Math.max.apply(null, peaks) || 1; return peaks.map(v => Math.pow(v / top, 0.7)); }
 async function waveCompute(id){
   const src = isLocalVideoId(id) ? await localFileUrl(id) : isAudioVideoId(id) ? audioUrlOf(id) : null;
   if (!src) return null;
-  const buf = await (await fetch(src)).arrayBuffer();
-  const ab = await new OfflineAudioContext(1, 1, 8000).decodeAudioData(buf);
-  const d = ab.getChannelData(0), n = 64, step = Math.max(1, Math.floor(d.length / n)), peaks = [];
-  for (let i = 0; i < n; i++){ let m = 0; for (let j = i * step, e = Math.min(d.length, j + step); j < e; j += 4){ const a = Math.abs(d[j]); if (a > m) m = a; } peaks.push(m); }
-  const top = Math.max.apply(null, peaks) || 1;
-  return waveSvg(peaks.map(v => Math.pow(v / top, 0.7)));
+  return waveSvg(waveNorm(await wavePeaksOf(await (await fetch(src)).arrayBuffer())));
 }
 /* #727: streamed songs. The desktop app's own sound is tapped once per launch (main.js opens it, no click) and one peak per
    second is recorded per song; the bars fill in as it plays and the finished shape is kept for next time. */
-const LS_WAVE = 'ebbless:wave:v1', WAVE_N = 64, WAVE_MAX = 300;
+const LS_WAVE = 'ebbless:wave:v1', LS_WAVE_OFF = 'ebbless:wave:off', WAVE_N = 64, WAVE_MAX = 300;
 let waveRec = null, waveDirty = false, waveAn = null, waveBuf = null, waveLastCur = -1, wavePaintAt = 0;
 function waveStore(){ if (!waveRec){ const m = lsGet(LS_WAVE, {}); waveRec = (m && typeof m === 'object') ? m : {}; } return waveRec; }
 function waveSave(){
@@ -34956,7 +34974,7 @@ window.__ebbWaveTap = function(){
   }).catch(() => {});
 };
 function waveRecord(id, cur, dur){
-  if (!waveAn || !dur || cur === waveLastCur) { waveLastCur = cur; return; }
+  if (!waveAn || !dur || cur === waveLastCur || waveFull.has(id)) { waveLastCur = cur; return; }
   waveLastCur = cur;
   if (seekTrack.classList.contains('ad-fill')) return;
   waveAn.getFloatTimeDomainData(waveBuf);
@@ -34974,14 +34992,29 @@ function wavePaint(id){
   const top = Math.max.apply(null, row) || 1;
   seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 0.7))));
 }
+const waveAsked = new Set(), waveFull = new Set();
+/* Desktop app: the main process pulls the song's smallest audio stream once; peaks are kept, the audio is dropped.
+   Also warms the next song in the queue so its bars are ready when it starts. */
+function waveFetch(id){
+  if (!id || waveStore()[id] || waveAsked.has(id) || isNativeVideoId(id) || !window.ebblessDesktop || !window.ebblessDesktop.waveAudio || lsGet(LS_WAVE_OFF, false)) return;
+  waveAsked.add(id);
+  window.ebblessDesktop.waveAudio(id).then(bytes => bytes && bytes.byteLength ? wavePeaksOf(bytes.buffer ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes) : null).then(peaks => {
+    if (!peaks) return;
+    const top = Math.max.apply(null, peaks) || 1;
+    waveStore()[id] = peaks.map(v => Math.round(v / top * 255)); waveFull.add(id); waveDirty = true; waveSave();
+    if (id === waveId) wavePaint(id);
+  }).catch(() => {});
+}
+function waveWarmNext(){ const n = trackAt(state.queuePos + 1); if (n && n.videoId) waveFetch(n.videoId); }
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
   waveSave();
   waveId = id; waveLastCur = -1;
+  setTimeout(waveWarmNext, 4000);
   seekTrack.style.removeProperty('--wave');
   if (!id) return;
-  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); return; }
+  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); waveFetch(id); return; }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
   waveCache.get(id).then(v => { if (v && waveId === id) seekTrack.style.setProperty('--wave', v); });
 }
