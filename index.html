@@ -59,6 +59,9 @@ var __ebbReclaimTimer = 0;
 /* Garbage piles up in the page (the renderer reached ~350 MB while ~190 MB is live data) and the browser frees it lazily. Allocating and
    dropping a big ArrayBuffer makes the JS engine run a full collection and hand the memory back (measured: 410 -> 193 MB in 15 s). */
 window.__ebbReclaim = function () { try { var a = new ArrayBuffer(96 * 1024 * 1024); a = null; } catch (e) {} };
+window.__ebbInsets = function (t, b) {   // #717: Android app is edge-to-edge; native passes the bar heights (dp)
+  var r = document.documentElement.style; r.setProperty('--native-t', t + 'px'); r.setProperty('--native-b', b + 'px');
+};
 window.__ebbScreen = function (on) {
   document.documentElement.classList.toggle('ebb-screenoff', !on);
   clearTimeout(__ebbReclaimTimer); clearInterval(__ebbReclaimTimer);
@@ -347,7 +350,8 @@ html.ebb-android.ebb-covered body > *:not(#splash):not(#beta-lock):not(script):n
   --ease-out:cubic-bezier(.16,1,.3,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
   --dur-ui:180ms; --dur-surface:500ms;
   --nav-h:64px; --topbar-h:60px;
-  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  --native-t:0px; --native-b:0px;
+  --safe-b:max(env(safe-area-inset-bottom,0px),var(--native-b)); --safe-t:max(env(safe-area-inset-top,0px),var(--native-t));
 }
 *{box-sizing:border-box}
 html{-webkit-tap-highlight-color:transparent}
