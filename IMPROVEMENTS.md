@@ -140,7 +140,7 @@ Add entries in this shape:
 - **Description:** Idea, Geethub issue #718. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. No sw cache bump yet.
+- **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. Follow-up: background tint removed (plain app background). Waveform now follows the real audio for device uploads (lf:) and podcast files (au:, if the host allows the fetch); YouTube/SoundCloud songs play in cross-origin players the page cannot read, so they show flat even bars instead of a made-up shape. Peak math checked on a synthetic 20s clip; not yet checked with a real upload. No sw cache bump yet.
 
 ### cd-mode-719: CD mode redesign (Geethub #719)
 - **Status:** in-progress
