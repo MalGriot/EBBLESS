@@ -401,8 +401,21 @@ body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambi
   80%{transform:translate(-7%,-6%) scale(1.46)}
   100%{transform:translate(0,0) scale(1.2)}
 }
+/* brightness breathing (the old filter keyframes, #487-safe): the art is painted at peak brightness and a
+   black veil fades over it, opacity only, in step with the 16s drift */
+.ambient-veil{position:absolute;inset:0;background:#000;opacity:.25;pointer-events:none}
+#ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe 16s ease-in-out infinite}
+body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open) #ambient .ambient-veil,body:has(#findMusic:not([hidden])) #ambient .ambient-veil,body:has(#musicMap:not([hidden])) #ambient .ambient-veil{animation-play-state:paused}
+@keyframes ambient-breathe{
+  0%{opacity:.48}
+  20%{opacity:.1}
+  40%{opacity:0}
+  60%{opacity:.39}
+  80%{opacity:.06}
+  100%{opacity:.48}
+}
 @media (prefers-reduced-motion:reduce){
-  #ambient .layer.is-active{animation:none}
+  #ambient .layer.is-active,#ambient .ambient-veil{animation:none}
 }
 /* #698: desktop drag ripples on the bare background. Low-res canvas inside #ambient (behind every window),
    pointer-events none, display:none and no rAF while no ripple is alive (GPU budget) */
@@ -2387,9 +2400,11 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 #flow-layer .flow-ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite;will-change:transform}
 #flow-layer:not(.is-open) .flow-ambient .layer{animation-play-state:paused}
 #flow-layer .flow-ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+#flow-layer .flow-ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe 16s ease-in-out infinite}
+#flow-layer:not(.is-open) .flow-ambient:has(.layer.is-active) .ambient-veil{animation-play-state:paused}
 #flow-layer .flow-ambient::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%);}
 @media (prefers-reduced-motion:reduce){
-  #flow-layer .flow-ambient .layer.is-active{animation:none}
+  #flow-layer .flow-ambient .layer.is-active,#flow-layer .flow-ambient .ambient-veil{animation:none}
 }
 /* full-bleed: min(100vh,100vw) makes this a square that always touches
    the constrained pair of edges - 100vw (touching the two side edges) on
@@ -4388,7 +4403,7 @@ body.milk-open > :not(#milkLayer),body.milk-open > :not(#milkLayer) *,body.milk-
 </div>
 
 <div id="app">
-  <div id="ambient"><canvas class="layer" id="ambient-a"></canvas><canvas class="layer" id="ambient-b"></canvas><canvas id="ambient-waves" aria-hidden="true"></canvas></div>
+  <div id="ambient"><canvas class="layer" id="ambient-a"></canvas><canvas class="layer" id="ambient-b"></canvas><div class="ambient-veil"></div><canvas id="ambient-waves" aria-hidden="true"></canvas></div>
 
   <header id="topbar">
     <button class="wordmark" id="wordmarkBtn" aria-label="EBBLESS home">
@@ -5770,7 +5785,7 @@ body.milk-open > :not(#milkLayer),body.milk-open > :not(#milkLayer) *,body.milk-
     </div>
   </div>
   <div id="flow-layer">
-    <div class="flow-ambient"><canvas class="layer" id="flowAmbientA"></canvas><canvas class="layer" id="flowAmbientB"></canvas></div>
+    <div class="flow-ambient"><canvas class="layer" id="flowAmbientA"></canvas><canvas class="layer" id="flowAmbientB"></canvas><div class="ambient-veil"></div></div>
     <div class="flow-chrome">
       <div class="flow-top">
         <!-- Library/Queue/Settings: leave fullscreen, then open that menu -->
@@ -10663,7 +10678,7 @@ function paintAmbient(cv, img){
   const sc = Math.max((W + 16) / iw, (H + 16) / ih);
   const dw = iw * sc, dh = ih * sc, dx = (W - dw) / 2, dy = (H - dh) / 2;
   if ('filter' in ctx){
-    ctx.filter = 'blur(2.6px) saturate(1.3) brightness(.45)';
+    ctx.filter = 'blur(2.6px) saturate(1.5) brightness(.62)'; // peak; .ambient-veil breathes it down
     ctx.drawImage(img, dx, dy, dw, dh);
   } else {
     // no canvas filters (older Safari): downsample hard, let the stretch blur it, darken
@@ -10671,7 +10686,7 @@ function paintAmbient(cv, img){
     t.width = 12; t.height = Math.max(1, Math.round(H * k));
     t.getContext('2d').drawImage(img, dx * k, dy * k, dw * k, dh * k);
     ctx.drawImage(t, 0, 0, W, H);
-    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.fillStyle = 'rgba(0,0,0,.38)';
     ctx.fillRect(0, 0, W, H);
   }
 }
@@ -20248,6 +20263,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 483, date: '2026-11-02', items: [
+    'The background glows again: the blurred album art brightens and dims as it drifts, like it used to, without the flicker.'
+  ]},
   { version: 482, date: '2026-11-02', items: [
     'Light show: a new tab next to Visualizer with nearly 400 MilkDrop looks. Swipe or use the arrow keys to change look, heart the ones you like, hide the ones you don\'t.',
     'Mood picks looks by energy, brightness and color, with a count on every choice. Match the song sets them from its tempo and cover. Looks change on the beat every 16 bars by default.',
