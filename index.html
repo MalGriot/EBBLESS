@@ -11081,6 +11081,36 @@ function sampleDominantColor(img){
   if (!best) return null;
   return 'rgb(' + Math.round(best[0]) + ',' + Math.round(best[1]) + ',' + Math.round(best[2]) + ')';
 }
+// #723: a few distinct colors from the cover (not just the one accent) for the CD ring; null when the art cannot be read
+let artPalette = null;
+function samplePalette(img, k){
+  const w = 24, h = 24, canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data, bins = new Map();
+  for (let i = 0; i < data.length; i += 4){
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    if (data[i + 3] < 128) continue;
+    const lum = (r * .299 + g * .587 + b * .114) / 255;
+    if (lum > .94 || lum < .1) continue;
+    const key = (r >> 5) << 6 | (g >> 5) << 3 | (b >> 5), e = bins.get(key) || (bins.set(key, { r: 0, g: 0, b: 0, n: 0 }), bins.get(key));
+    e.r += r; e.g += g; e.b += b; e.n++;
+  }
+  const cand = [];
+  bins.forEach(e => {
+    const r = e.r / e.n, g = e.g / e.n, b = e.b / e.n, mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0;
+    cand.push({ c: [r, g, b], score: e.n * Math.pow(.15 + sat, 1.6) });
+  });
+  cand.sort((a, b) => b.score - a.score);
+  const out = [];
+  for (const q of cand){
+    if (out.every(o => Math.abs(o[0] - q.c[0]) + Math.abs(o[1] - q.c[1]) + Math.abs(o[2] - q.c[2]) > 110)) out.push(q.c);
+    if (out.length >= k) break;
+  }
+  // lift each toward a bright, readable version of itself so the bars show on the dark background
+  return out.map(c => { const [hh, ss, ll] = rgbToHsl(c[0], c[1], c[2]); return hslToRgb(hh, Math.max(.5, ss), Math.min(.72, Math.max(.52, ll))); });
+}
 function rgbToHsl(r, g, b){
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -11198,12 +11228,14 @@ function updatePlayerAccentColor(track){
     if (reqId !== playerAccentReqId) return;
     let color = null;
     try { color = sampleDominantColor(probe); } catch (e) { color = null; }
+    try { const pal = samplePalette(probe, 5); artPalette = pal.length ? pal : null; } catch (e) { artPalette = null; }
     if (color) { try { color = ensureLegibleAccent(color); } catch (e) {} }
     setPlayerAccent(color);
     setSongAccent(color);
   };
   probe.onerror = () => {
     if (reqId !== playerAccentReqId) return;
+    artPalette = null;
     setPlayerAccent(null);
     setSongAccent(null);
   };
@@ -35438,26 +35470,27 @@ function recRingFrame(now){
   if (cv.width !== W){ cv.width = W; cv.height = W; }
   const n = REC_RING.n, playing = artworkWrap.classList.contains('is-playing'), half = n / 2;
   const hasRow = recRingRest();
-  const tgt = new Float32Array(n);
+  const tgt = new Float32Array(n), tt = now * .001;
+  // uneven swells: three slow waves of different sizes run around the ring and push the bars up or down, so the ring is lumpy, never even
+  const swell = (i) => { const a = i / n * Math.PI * 2; return .3 + .85 * Math.max(0, Math.min(1, .5 + .5 * (.6 * Math.sin(a * 2 + tt * .7 + 1) + .5 * Math.sin(a * 3 - tt * .9) + .35 * Math.sin(a * 5 + tt * 1.4)))); };
   if (playing && waveAn){
-    // the real spectrum, each bar auto-gained against its own recent peak so quiet and loud passages both move a lot
+    // the real spectrum across the whole ring (bass at the top, treble round the bottom), each bar auto-gained against its own recent peak
     if (!REC_RING.freq || REC_RING.freq.length !== waveAn.frequencyBinCount) REC_RING.freq = new Uint8Array(waveAn.frequencyBinCount);
     waveAn.getByteFrequencyData(REC_RING.freq);
     const f = REC_RING.freq, lo = 2, hi = Math.min(f.length - 1, 380);
     for (let i = 0; i < n; i++){
-      const j = i < half ? i : n - 1 - i, b = lo * Math.pow(hi / lo, j / (half - 1)), b0 = Math.floor(b), b1 = Math.min(hi, b0 + 1);
+      const b = lo * Math.pow(hi / lo, i / (n - 1)), b0 = Math.floor(b), b1 = Math.min(hi, b0 + 1);
       const v = (f[b0] * (1 - (b - b0)) + f[b1] * (b - b0)) / 255;
       REC_RING.peak[i] = Math.max(v, REC_RING.peak[i] * .993, .12);
-      tgt[i] = Math.pow(v / REC_RING.peak[i], 1.6);
+      tgt[i] = Math.min(1, Math.pow(v / REC_RING.peak[i], 1.6) * swell(i));
     }
   } else if (playing){
-    // no audio tap on this device: move the bars with the song's own loudness at this moment (stored waveform) and keep them lively
+    // no audio tap on this device: lively motion scaled by the song's own loudness at this moment (stored waveform)
     const row = hasRow ? waveStore()[waveId] : null, top = row ? (Math.max.apply(null, row) || 1) : 1;
-    const e = row ? Math.pow(row[Math.min(WAVE_N - 1, Math.floor(lastSeekPct * WAVE_N))] / top, 1.3) : .55, t = now * .001;
+    const e = row ? Math.pow(row[Math.min(WAVE_N - 1, Math.floor(lastSeekPct * WAVE_N))] / top, 1.3) : .55;
     for (let i = 0; i < n; i++){
-      const j = i < half ? i : n - 1 - i;
-      const wob = .5 + .5 * Math.sin(t * (3.1 + (j % 7) * .55) + j * 1.9) * Math.sin(t * (1.3 + (j % 5) * .4) + j * .7);
-      tgt[i] = Math.min(1, (.12 + .88 * wob) * (.25 + .95 * e) * (1.25 - j / half * .5));
+      const wob = .5 + .5 * Math.sin(tt * (3.1 + (i % 7) * .55) + i * 1.9) * Math.sin(tt * (1.3 + (i % 5) * .4) + i * .7);
+      tgt[i] = Math.min(1, (.12 + .88 * wob) * (.25 + .95 * e) * swell(i) * 1.3);
     }
   } else for (let i = 0; i < n; i++) tgt[i] = REC_RING.rest[i];
   let settled = true;
@@ -35471,20 +35504,16 @@ function recRingFrame(now){
   const ctx = cv.getContext('2d'), c = W / 2, r0 = disc * c + W * .022, maxLen = Math.max(W * .02, c - r0 - W * .01);
   ctx.clearRect(0, 0, W, W);
   ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, W * .0068);
-  // colour in patches: the ring is split into six arcs that each drift to their own hue around the UI colour and glow brighter when their bars are loud
-  const P = 6, per = n / P, [h0, sa, li] = REC_RING.hsl, t = now * .001;
-  for (let p = 0; p < P; p++){
-    let sum = 0; for (let i = p * per; i < (p + 1) * per; i++) sum += REC_RING.lv[i]; REC_RING.patchE[p] = sum / per;
-  }
-  for (let p = 0; p < P; p++){
-    const e = REC_RING.patchE[p], hue = h0 + 75 * Math.sin(t * .45 + p * 2.3) + 45 * Math.sin(t * .17 + p * 4.1) + e * 30;
-    ctx.strokeStyle = 'hsl(' + ((hue % 360 + 360) % 360).toFixed(0) + ' ' + Math.min(100, sa + 10).toFixed(0) + '% ' + Math.min(78, li + e * 16).toFixed(0) + '%)';
-    ctx.beginPath();
-    for (let i = p * per; i < (p + 1) * per; i++){
-      const a = i / n * Math.PI * 2 - Math.PI / 2, len = W * .008 + Math.min(1, REC_RING.lv[i]) * maxLen, cs = Math.cos(a), sn = Math.sin(a);
-      ctx.moveTo(c + cs * r0, c + sn * r0); ctx.lineTo(c + cs * (r0 + len), c + sn * (r0 + len));
-    }
-    ctx.stroke();
+  // colour: the cover's own colours, in soft patches that flow slowly round the ring; a bar brightens a little with its own level
+  const pal = (artPalette && artPalette.length) ? artPalette : [hslToRgb(REC_RING.hsl[0] / 360, REC_RING.hsl[1] / 100, REC_RING.hsl[2] / 100)];
+  const K = pal.length, drift = (now * .00004) % 1;
+  for (let i = 0; i < n; i++){
+    const u = (((i / n + drift) % 1) + 1) % 1 * K, k0 = Math.floor(u) % K, k1 = (k0 + 1) % K, f = u - Math.floor(u), m = f < .3 ? 0 : f > .7 ? 1 : (f - .3) / .4, sm = m * m * (3 - 2 * m);
+    const lift = REC_RING.lv[i] * 40;
+    const r = Math.min(255, pal[k0][0] + (pal[k1][0] - pal[k0][0]) * sm + lift), g = Math.min(255, pal[k0][1] + (pal[k1][1] - pal[k0][1]) * sm + lift), bl = Math.min(255, pal[k0][2] + (pal[k1][2] - pal[k0][2]) * sm + lift);
+    ctx.strokeStyle = 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (bl | 0) + ')';
+    const a = i / n * Math.PI * 2 - Math.PI / 2, len = W * .008 + Math.min(1, REC_RING.lv[i]) * maxLen, cs = Math.cos(a), sn = Math.sin(a);
+    ctx.beginPath(); ctx.moveTo(c + cs * r0, c + sn * r0); ctx.lineTo(c + cs * (r0 + len), c + sn * (r0 + len)); ctx.stroke();
   }
   if (playing || !settled) REC_RING.raf = requestAnimationFrame(recRingFrame);
 }
