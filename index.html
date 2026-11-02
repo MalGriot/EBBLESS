@@ -577,7 +577,8 @@ video.lib-bg-video.is-playing{opacity:1}
    bottom nav that opens #view-search. The field stays in the DOM (every search
    path still reads #urlInput) and is only shown during onboarding. */
 @media (max-width:859.98px){body:not(.onb-active) #importForm.import-row{display:none}}
-@media (min-width:860px){body:not(.split-desktop) #view-search{display:none!important}}   /* #722: the 3-pane desktop shows it in the middle pane when the top search bar is clicked */
+@media (min-width:860px){body:not(.split-desktop) #view-search{display:none!important}}
+body:not(.split-desktop) #view-home,body:not(.split-desktop) #topnav #navHomeBtn{display:none!important}   /* Home is a 3-pane desktop page */   /* #722: the 3-pane desktop shows it in the middle pane when the top search bar is clicked */
 #view-search .st-form{position:relative;margin:8px 0 18px}
 #view-search .st-field{display:flex;position:relative}
 #view-search .st-field input{flex:1;min-width:0;width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -605,6 +606,32 @@ video.lib-bg-video.is-playing{opacity:1}
 /* #722 search page (refs: Resonance search, AI assistant search): big title, roomy field, a swipeable row of cover cards,
    and the "right now" prompts and genres as large gradient cards in two columns instead of pills. Static fills only (GPU budget). */
 #view-search .st-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 14px}
+#view-home .view-scroll{max-width:900px;margin:0 auto}
+#view-home .hm-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:6px 0 18px;color:var(--text)}
+#view-home .hm-sec{margin:0 0 26px}
+#view-home .hm-sec h2{font-size:18px;font-weight:700;margin:0 0 12px;color:var(--text)}
+#view-home .hm-row{display:flex;gap:14px;overflow-x:auto;margin:0 calc(-1 * var(--vs-pad,24px));padding:0 var(--vs-pad,24px) 6px;scrollbar-width:none}
+#view-home .hm-row::-webkit-scrollbar{display:none}
+#view-home .hm-card{flex:none;width:128px;display:flex;flex-direction:column;gap:7px;text-align:left;color:var(--text);cursor:pointer}
+#view-home .hm-card img,#view-home .hm-card .hm-ph{width:128px;height:128px;border-radius:14px;object-fit:cover;background:var(--panel-3);box-shadow:0 8px 18px -8px rgba(0,0,0,.6);transition:transform var(--dur-ui) var(--ease-out)}
+#view-home .hm-card:hover img,#view-home .hm-card:hover .hm-ph{transform:scale(1.03)}
+#view-home .hm-card.is-artist img,#view-home .hm-card.is-artist .hm-ph{border-radius:50%}
+#view-home .hm-ph{display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:var(--faint)}
+#view-home .hm-n{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view-home .hm-s{font-size:11.5px;color:var(--faint-2);margin-top:-4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view-home .hm-songs{display:flex;flex-direction:column}
+#view-home .hm-song{display:flex;align-items:center;gap:12px;padding:7px 8px;border-radius:12px;text-align:left;color:var(--text);cursor:pointer}
+#view-home .hm-song:hover{background:var(--fill-ghost-hover,rgba(255,255,255,.07))}
+#view-home .hm-rank{flex:none;width:26px;font-size:13px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
+#view-home .hm-song img{flex:none;width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--panel-3)}
+#view-home .hm-song .hm-t{min-width:0;flex:1}
+#view-home .hm-song .hm-n{font-size:14px}
+#view-home .hm-plays{flex:none;font-size:12px;color:var(--faint-2)}
+#view-home .hm-map{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;border-radius:16px;color:#fff;text-align:left;cursor:pointer;background:linear-gradient(120deg,#2e8f8a,#12365a)}
+#view-home .hm-map svg{flex:none;width:34px;height:34px}
+#view-home .hm-map b{display:block;font-size:17px}
+#view-home .hm-map span{font-size:12.5px;opacity:.85}
+#view-home .hm-empty{font-size:13.5px;color:var(--faint);line-height:1.6;margin:0 0 20px}
 #view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0;color:var(--text)}
 #view-search .st-close{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;color:var(--faint);background:var(--panel-2)}
 #view-search .st-close:hover{color:var(--text)}
@@ -3234,6 +3261,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop #view-library,
   body.split-desktop #view-player,
   body.split-desktop #view-search,
+  body.split-desktop #view-home,
   body.split-desktop #view-settings{
     position:static;grid-row:2;top:auto;bottom:auto;min-height:0;
   }
@@ -3249,9 +3277,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop #view-library .lib-bg{position:sticky;top:0;bottom:auto;height:100cqh;margin-bottom:-100cqh}
   body.split-desktop #view-player,
   body.split-desktop #view-search,
+  body.split-desktop #view-home,
   body.split-desktop #view-settings{grid-column:2}
-  body.split-desktop:not(.view-settings-active):not(.view-search-active) #view-player{display:block!important}
-  body.split-desktop.view-search-active #view-search{display:block!important;overflow-y:auto}
+  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(.view-home-active) #view-player{display:block!important}
+  body.split-desktop.view-search-active #view-search,body.split-desktop.view-home-active #view-home{display:block!important;overflow-y:auto}
   body.split-desktop.view-settings-active #view-settings{display:block!important}
   /* issue #141: Settings opened from desktop fullscreen shows on its own -
      no library/queue/playlist panes beside it (see setView()). */
@@ -3326,8 +3355,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      bottom padding (38px art + 8px*2 padding + 1px border) only while it's
      actually shown, so the 1fr pane row shrinks to sit above it instead of
      being overlapped - and normal (non-Settings) desktop view is untouched. */
-  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(:has(#import-overlay.is-open)) #mini-bar{display:none!important}
-  body.split-desktop:is(.view-settings-active,.view-search-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
+  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(.view-home-active):not(:has(#import-overlay.is-open)) #mini-bar{display:none!important}
+  body.split-desktop:is(.view-settings-active,.view-search-active,.view-home-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
   body.split-desktop:has(#import-overlay.is-open) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
@@ -4664,6 +4693,10 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <div class="support-opts" id="supportOpts"></div>
     </div>
     <nav id="topnav">
+      <button class="nav-btn" data-view="home" id="navHomeBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-2.5v9h-5v-6h-3v6h-5v-9H3l9-8z"/></svg>
+        <span>Home</span>
+      </button>
       <button class="nav-btn" data-view="library">
         <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.5 2h11A1.5 1.5 0 0 1 22 3.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 8 14.5v-11A1.5 1.5 0 0 1 9.5 2zM15 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/><path d="M5 5h1.5v11.5A1.5 1.5 0 0 0 8 18h11.5v1.5H7.5A2.5 2.5 0 0 1 5 17V5zM2 8h1.5v11a1.5 1.5 0 0 0 1.5 1.5h11.5V22H4.5A2.5 2.5 0 0 1 2 19.5V8z"/></svg>
         <span>Library</span>
@@ -5305,6 +5338,14 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <div class="st-chips" id="stChips"></div>
       </section>
       <p class="st-help">Paste a link to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud. Or search a song, an artist or a genre, or describe a mood.</p>
+    </div>
+  </main>
+
+  <!-- #724 desktop Home: your own tops (artists, albums, playlists, songs) and the music map; the player keeps its empty screen with the bouncing E -->
+  <main class="view" id="view-home" hidden>
+    <div class="view-scroll">
+      <div class="hm-head"><h1 class="hm-title">Home</h1></div>
+      <div id="hmBody"></div>
     </div>
   </main>
 
@@ -9426,7 +9467,7 @@ function formatTotalDuration(totalSec){
    DOM REFS
    ========================================================================= */
 const $ = (id) => document.getElementById(id);
-const views = { library: $('view-library'), player: $('view-player'), search: $('view-search'), settings: $('view-settings') };
+const views = { library: $('view-library'), player: $('view-player'), search: $('view-search'), home: $('view-home'), settings: $('view-settings') };
 const urlInput = $('urlInput'), importForm = $('importForm'), importErr = $('importErr'), loadBtn = $('loadBtn');
 // whichever label is showing: "Find music", or "Go" on narrow phones
 function loadBtnLabel(){ return 'the magnifier'; }
@@ -10468,6 +10509,8 @@ function setView(name){
   if (name === 'player' && state.queuePos >= 0) awardMilestone('progress');
   document.body.classList.toggle('view-settings-active', name === 'settings');
   document.body.classList.toggle('view-search-active', name === 'search' && document.body.classList.contains('split-desktop'));
+  document.body.classList.toggle('view-home-active', name === 'home' && document.body.classList.contains('split-desktop'));
+  if (name === 'home' && typeof renderHome === 'function') renderHome();
   if (state.deskFsOpen) csStackSync();
   if (restoreDeskFs && document.body.classList.contains('split-desktop')) toggleDesktopFs();
   if (state.queueOpen) closeQueuePanel(false);
@@ -10640,6 +10683,7 @@ document.querySelectorAll('#topnav .nav-btn[data-view], #bottom-nav button[data-
     // Tapping Library with a playlist panel open returns to the library list
     // (setView only closes the panel when leaving library, not re-entering it).
     if (btn.dataset.view === 'library') closeLibraryPlaylistPanel();
+    if (btn.dataset.view === 'home' && state.currentView === 'home'){ setView('player'); return; }   // Home toggles back to the player
     setView(btn.dataset.view);
   });
 });
@@ -18304,6 +18348,65 @@ function stGenreArt(term){
       if (d){ const cur = lsGet(LS_ST_ART, null) || {}; cur[term] = u; lsSet(LS_ST_ART, cur); }
       return u;
     }).catch(() => '');
+}
+// #724 Home: what you play most. Songs and playlists/albums are ranked by the play counts already stored on the saved tracks, artists by the recent play
+// history; everything is read from this device (nothing is fetched). Empty rows are left out.
+function renderHome(){
+  const body = $('hmBody');
+  if (!body) return;
+  body.textContent = '';
+  const special = [SWELL_ID, BLEND_ID, NP_ID];
+  const lib = getLibrary().filter(id => !special.includes(id) && !String(id).startsWith('discover-ext:')).map(id => ({ id, pl: getCachedPlaylist(id) })).filter(x => x.pl && Array.isArray(x.pl.tracks));
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const section = (title) => { const sec = mk('section', 'hm-sec'); sec.appendChild(mk('h2', '', title)); body.appendChild(sec); return sec; };
+  const card = (name, sub, src, onClick, round) => {
+    const b = mk('button', 'hm-card' + (round ? ' is-artist' : '')); b.type = 'button'; b.title = name;
+    let cover;
+    if (src){ cover = document.createElement('img'); cover.loading = 'lazy'; cover.alt = ''; attachCardArt(cover, src); }
+    else { cover = mk('div', 'hm-ph', (name || '?').charAt(0).toUpperCase()); }
+    b.appendChild(cover); b.appendChild(mk('span', 'hm-n', name)); if (sub) b.appendChild(mk('span', 'hm-s', sub));
+    b.addEventListener('click', onClick); return b;
+  };
+  const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
+  const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
+  const plays = (pl) => totalPlaylistPlays(pl);
+  // top artists
+  let artists = [];
+  try { artists = searchTabArtistTiles().filter(t => t.sub === 'You play this'); } catch(e){}
+  if (artists.length){ const sec = section('Top artists'); row(sec, artists.map(t => card(t.name, '', t.art ? { art: t.art } : null, () => openArtistPage(t.name), true))); }
+  // top albums and playlists
+  const top = (kind, limit) => lib.filter(x => libSectionOf(x.pl) === kind && x.pl.tracks.length && plays(x.pl) > 0).sort((a, b) => plays(b.pl) - plays(a.pl)).slice(0, limit);
+  const albums = top('album', 10);
+  if (albums.length){ const sec = section('Top albums'); row(sec, albums.map(x => card(x.pl.name, plays(x.pl) + (plays(x.pl) === 1 ? ' play' : ' plays'), coverOf(x.pl), () => toggleLibraryPlaylistPanel(x.id)))); }
+  const lists = top('playlist', 10);
+  if (lists.length){ const sec = section('Top playlists'); row(sec, lists.map(x => card(x.pl.name, plays(x.pl) + (plays(x.pl) === 1 ? ' play' : ' plays'), coverOf(x.pl), () => toggleLibraryPlaylistPanel(x.id)))); }
+  // top songs
+  const seen = new Set(), songs = [];
+  lib.forEach(x => x.pl.tracks.forEach((t, idx) => { if (t && t.plays > 0 && t.videoId && !seen.has(t.videoId)){ seen.add(t.videoId); songs.push({ t, id: x.id, idx }); } }));
+  songs.sort((a, b) => b.t.plays - a.t.plays);
+  if (songs.length){
+    const sec = section('Top songs'), list = mk('div', 'hm-songs');
+    songs.slice(0, 10).forEach((s, i) => {
+      const b = mk('button', 'hm-song'); b.type = 'button';
+      b.appendChild(mk('span', 'hm-rank', String(i + 1)));
+      const im = document.createElement('img'); im.alt = ''; im.loading = 'lazy'; if (s.t.videoId || s.t.art) attachArtworkFallback(im, s.t); b.appendChild(im);
+      const tx = mk('div', 'hm-t'); tx.appendChild(mk('div', 'hm-n', s.t.title)); tx.appendChild(mk('div', 'hm-s', s.t.artist || '')); b.appendChild(tx);
+      b.appendChild(mk('span', 'hm-plays', s.t.plays + (s.t.plays === 1 ? ' play' : ' plays')));
+      b.addEventListener('click', () => { playLibraryTrackInline(s.id, s.idx); setView('player'); });
+      list.appendChild(b);
+    });
+    sec.appendChild(list);
+  }
+  // music map, started from your top artist
+  const mapFrom = artists[0] && artists[0].name;
+  if (mapFrom){
+    const sec = section('Music map'), b = mk('button', 'hm-map'); b.type = 'button';
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="6" r="2"/><circle cx="19.5" cy="6" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="18" r="2"/><path d="M10 10.5L6 7.5M14 10.5l4-3M10.2 13.8L6.4 17.6M14 13.5l3.6 3.2"/></svg>';
+    const tx = mk('div'); tx.appendChild(mk('b', '', 'Explore your music map')); tx.appendChild(mk('span', '', 'Start from ' + mapFrom + ' and follow who sounds like who.')); b.appendChild(tx);
+    b.addEventListener('click', () => openMusicMap(mapFrom));
+    sec.appendChild(b);
+  }
+  if (!body.children.length) body.appendChild(mk('p', 'hm-empty', 'Play a few songs and your top artists, albums, playlists and songs will show up here.'));
 }
 function renderSearchTab(){
   const grid = $('stGrid'), picks = $('stPicks'), chips = $('stChips');
