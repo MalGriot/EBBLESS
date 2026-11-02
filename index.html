@@ -2149,6 +2149,28 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 .as-add.is-again{width:auto;padding:0 12px;border-radius:20px;font-size:12px}
 .as-back{width:100%;margin-bottom:8px}
 .libpl-art-wrap{padding:4px 20px 14px}
+/* #721 album page: full-width cover with a curved bottom, meta + big title over it, a round Play button hanging off the curve,
+   numbered rows. Only album pages (is-album); playlists, artist pages and song pages keep the old layout. */
+.libpl-hero{display:none}
+#libpl-panel.is-album:not(.is-artist-info) .queue-head{position:absolute;top:18px;left:0;right:0;z-index:4;background:transparent;border:0;pointer-events:none;justify-content:flex-end}
+#libpl-panel.is-album:not(.is-artist-info) .queue-head h2,#libpl-panel.is-album:not(.is-artist-info) .queue-head .libpl-play{display:none}
+#libpl-panel.is-album:not(.is-artist-info) .queue-head .close-btn{pointer-events:auto;background:rgba(0,0,0,.45);color:#fff;border-radius:50%;margin-right:12px}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art-wrap{position:relative;padding:0 0 34px}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art-box{max-width:none;margin:0;border-radius:0;overflow:visible}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art{max-width:none;width:100%;aspect-ratio:1/.92;border-radius:0 0 50% 50% / 0 0 38px 38px}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art-box::after{content:'';position:absolute;inset:0 0 0 0;border-radius:0 0 50% 50% / 0 0 38px 38px;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(0,0,0,.28),rgba(0,0,0,0) 28%,rgba(0,0,0,0) 48%,rgba(0,0,0,.72))}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-hero{display:block;position:absolute;z-index:2;left:20px;right:104px;bottom:50px;color:#fff;pointer-events:none;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.lh-meta{font-size:12px;opacity:.85}
+.lh-title{font-size:28px;font-weight:800;line-height:1.1;margin-top:4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art-play{inset:auto 22px -30px auto;width:64px;height:64px;z-index:3;background:none;opacity:1;padding:0;align-items:center;justify-content:center}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art-play span{width:64px;height:64px;box-shadow:0 0 0 5px var(--bg),0 6px 18px rgba(0,0,0,.45)}
+#libpl-panel.is-album:not(.is-artist-info) .libpl-art-play svg{width:26px;height:26px;margin-left:3px}
+#libpl-panel.is-album:not(.is-artist-info) .album-info{display:none}
+#libpl-panel.is-album:not(.is-artist-info) #libplBody{counter-reset:trk}
+#libpl-panel.is-album:not(.is-artist-info) #libplBody .track-row{counter-increment:trk}
+#libpl-panel.is-album:not(.is-artist-info) #libplBody .track-row .handle,#libpl-panel.is-album:not(.is-artist-info) #libplBody .track-row>img{display:none}
+#libpl-panel.is-album:not(.is-artist-info) #libplBody .track-row::before{content:counter(trk,decimal-leading-zero);flex:none;width:30px;font-size:13px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
 .libpl-art{display:block;width:100%;aspect-ratio:1;max-width:220px;margin:0 auto;border-radius:var(--r-md);
   object-fit:cover;background:var(--panel-3)}
 /* playlist-thumb-hover-open (#275): play overlay on the panel's cover art.
@@ -12277,6 +12299,8 @@ function toggleLibraryPlaylistPanel(id){
   libplAddBar.hidden = !addablePlaylists().some(p => p.id === id);
   resetArtistPhoto();
   libplPanel.classList.remove('is-artist-info');
+  const isAlb = isAlbumEntry(pl) && !isArtistEntry(pl);
+  libplPanel.classList.toggle('is-album', isAlb);   // #721: album pages get the hero layout
   libplTitle.textContent = pl.name;
   libplTitle.classList.toggle('np-live', id === NP_ID && npFeed.onAir);
   // cover art at the top of the panel: prefer the playlist's own source
@@ -12301,6 +12325,12 @@ function toggleLibraryPlaylistPanel(id){
     const bits = [albumArtistName(pl), albumYearOf(pl.releaseDate), pl.tracks.length ? pl.tracks.length + (pl.tracks.length === 1 ? ' song' : ' songs') : '', mins >= 1 ? (mins >= 60 ? Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min' : mins + ' min') : ''].filter(Boolean);
     if (bits.length){ const info = document.createElement('div'); info.className = 'currents-hint album-info'; info.textContent = bits.join(' · '); libplBody.appendChild(info); }
   }
+  // #721: the hero over the cover: small meta line and the big album title
+  { let hero = libplArtWrap.querySelector('.libpl-hero');
+    if (!hero){ hero = document.createElement('div'); hero.className = 'libpl-hero'; hero.innerHTML = '<div class="lh-meta"></div><div class="lh-title"></div>'; libplArtWrap.appendChild(hero); }
+    const ai = libplBody.querySelector('.album-info');
+    hero.querySelector('.lh-meta').textContent = isAlb && ai ? ai.textContent : '';
+    hero.querySelector('.lh-title').textContent = isAlb ? pl.name : ''; }
   // encourage-liking-songs (#40): say plainly what tunes these picks, and
   // show a live like streak on Liked Songs (never mentions a broken one).
   if (id === SWELL_ID){
