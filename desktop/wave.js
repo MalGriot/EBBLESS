@@ -17,17 +17,24 @@ function init(dir){ dataDir = dir; }
 function ytDlpPath(){
   const exe = upd.binName(process.platform);
   const spots = [
-    dataDir && path.join(dataDir, exe),
-    process.resourcesPath && path.join(process.resourcesPath, 'bin', exe),
-    path.join(__dirname, 'bin', exe),
+    dataDir && upd.binPath(dataDir, process.platform),
+    process.resourcesPath && path.join(process.resourcesPath, 'bin', 'ytdlp', exe),
+    path.join(__dirname, 'bin', 'ytdlp', exe),
     '/opt/homebrew/bin/yt-dlp', '/usr/local/bin/yt-dlp',
   ].filter(Boolean);
   return spots.find(p => { try { return fs.statSync(p).isFile(); } catch(e){ return false; } }) || null;
 }
+// A new program file is checked by the OS the first time it runs (about 20 s on macOS): do that now, in the background, so
+// the first song never waits for it.
+function prime(){
+  const bin = ytDlpPath();
+  if (!bin) return;
+  try { const p = spawn(bin, ['--version'], { stdio: 'ignore' }); p.on('error', () => {}); os.setPriority(p.pid, 19); } catch(e){}
+}
 // once a day in the background, and straight away (rate-limited) after a fetch that failed
 function refresh(force){
   if (!dataDir || !upd.assetName(process.platform)) return Promise.resolve(null);
-  return upd.ensure(dataDir, process.platform, { force: !!force }).catch(() => null);
+  return upd.ensure(dataDir, process.platform, { force: !!force }).then(r => { if (r && r.updated) prime(); return r; }).catch(() => null);
 }
 
 let busy = Promise.resolve();   // one fetch at a time, so a skipped playlist cannot start a pile of downloads
@@ -53,4 +60,4 @@ function fetchAudio(videoId){
   return next;
 }
 
-module.exports = { fetchAudio, ytDlpPath, init, refresh, ID_RE };
+module.exports = { fetchAudio, ytDlpPath, init, refresh, prime, ID_RE };
