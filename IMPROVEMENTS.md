@@ -142,6 +142,20 @@ Add entries in this shape:
 - **Branch:** agent/ui-batch
 - **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. Follow-up: background tint removed (plain app background). Waveform now follows the real audio for device uploads (lf:) and podcast files (au:, if the host allows the fetch); YouTube/SoundCloud songs play in cross-origin players the page cannot read, so they show flat even bars instead of a made-up shape. Peak math checked on a synthetic 20s clip; not yet checked with a real upload. No sw cache bump yet.
 
+### waveform-real-peaks-727: Real waveform for streamed (YouTube / SoundCloud) songs
+- **Status:** draft
+- **Priority:** low
+- **Description:** Follow-up to #718. Uploads and podcast files already draw a real waveform. Streamed songs show flat bars because their audio sits in cross-origin players the page cannot read. This scopes how to get real peaks for them.
+- **Touches:** index.html (waveSync/waveCompute, seek rail), android-webview (native visualizer feed), desktop/ (audio tap), possibly worker/ (KV)
+- **Branch:** (none yet)
+- **Notes:** Options, best first.
+  1. **Record while playing (recommended).** Android already has a native Visualizer.getWaveForm feed, and the desktop app has a page-audio tap. Each second, store one peak per second of the song under its videoId in localStorage (64 buckets, ~100 bytes a song, capped like the loudness cache). The bars fill in as the song plays and are complete from the second play. Real data, no server, no per-song cost, no ToS issue. Gaps: the web build has no audio feed, so it stays flat; the desktop tap is only asked for when the light show opens (needs a user click and a permission prompt), so a silent always-on tap is a product decision; skipping around leaves holes until a full listen.
+  2. **Share the recorded peaks (add on to 1).** The worker keeps one 64-number row per videoId in KV so the first listener's recording serves everyone. Costs one KV write per newly recorded song (free tier is about 1,000 writes a day, so cap writes per IP and per day) and one read per play; needs a size cap and a per-IP throttle because it is anonymous. Peaks from a hostile client could be junk, so clamp to 0-1 and only accept from a signed-in session.
+  3. **Fetch the audio server-side: rejected.** The worker header already records that YouTube blocks datacenter IPs, and pulling the audio streams breaks YouTube's terms and the app's own approach (official players only).
+  4. **30-second previews (iTunes / Deezer): not recommended.** Only 30 s of the song, so stretching it across the whole bar is a wrong shape; CORS on the preview hosts is unverified.
+  5. **YouTube "most replayed" heat map: not a waveform.** It shows where people rewatch, not loudness, so it would look real and be wrong.
+- **Open question for the owner:** is a silent always-on desktop audio tap acceptable, or should recording only happen on Android (native feed) plus while the light show is open?
+
 ### cd-mode-719: CD mode redesign (Geethub #719)
 - **Status:** in-progress
 - **Priority:** medium
