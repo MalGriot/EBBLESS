@@ -2712,6 +2712,13 @@ html.reduce-motion *,html.reduce-motion *::before,html.reduce-motion *::after{an
 .share-burst.is-on img{transform:scale(1);opacity:1}
 .song-page-acts{display:flex;gap:8px;margin:0 0 12px}
 .song-page-acts .btn-ghost{flex:1 1 0;min-width:0;padding:10px 6px;font-size:13px}
+.song-page-tabs{display:flex;gap:4px;margin:4px 0 12px;border-bottom:1px solid var(--border)}
+.song-page-tabs .btn-ghost{flex:1 1 0;min-width:0;padding:10px 6px;font-size:14px;font-weight:600;background:transparent;border:0;border-radius:0;box-shadow:none;color:var(--faint);
+  border-bottom:2px solid transparent;margin-bottom:-1px}
+.song-page-tabs .btn-ghost.is-active{background:transparent;color:var(--text);border-bottom-color:var(--accent)}
+.song-page-lyrics{padding:4px 2px 24px}
+.song-page-lyric{font-size:17px;font-weight:600;line-height:1.4;padding:4px 0;color:var(--text);overflow-wrap:anywhere}
+.song-page-lyric.is-gap{min-height:14px}
 .song-page-link{cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .song-credits{padding:2px 14px 12px}
 .song-credits .section-label{margin:6px 0 6px}
@@ -13143,12 +13150,40 @@ function openSongPage(t, plId, trackIdx){
   fetchTrackYear(t.title, t.artist).then(y => {
     if (y && openLibraryPanelId === id){ yearSpan.textContent = (info.textContent ? ' · ' : '') + y; }
   }).catch(() => {});
+  // #720: Info / Lyrics tabs. Info is what the page always showed; Lyrics loads the first time its tab is opened
+  const tabs = document.createElement('div'); tabs.className = 'song-page-tabs'; tabs.setAttribute('role', 'tablist');
+  const infoPane = document.createElement('div'), lyrPane = document.createElement('div'); lyrPane.className = 'song-page-lyrics'; lyrPane.hidden = true;
+  let lyrStarted = false;
+  const showTab = (which) => {
+    infoPane.hidden = which !== 'info'; lyrPane.hidden = which !== 'lyrics';
+    tabBtns.forEach(([k, b]) => { b.classList.toggle('is-active', k === which); b.setAttribute('aria-selected', k === which ? 'true' : 'false'); });
+    if (which === 'lyrics' && !lyrStarted){ lyrStarted = true; loadSongPageLyrics(t, lyrPane, () => openLibraryPanelId === id); }
+  };
+  const tabBtns = [['info', 'Info'], ['lyrics', 'Lyrics']].map(([k, label]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost'; b.setAttribute('role', 'tab'); b.textContent = label;
+    b.addEventListener('click', () => showTab(k)); tabs.appendChild(b); return [k, b];
+  });
+  libplBody.appendChild(tabs); libplBody.appendChild(infoPane); libplBody.appendChild(lyrPane);
+  showTab('info');
   const infoStatus = document.createElement('div'); infoStatus.className = 'currents-status'; infoStatus.textContent = 'Loading info...';
-  libplBody.appendChild(infoStatus);
+  infoPane.appendChild(infoStatus);
   fetchSongInfo(t.title, t.artist).then(c => {
     if (openLibraryPanelId !== id) return;
     if (c) infoStatus.replaceWith(buildSongInfoEl(c)); else infoStatus.textContent = 'No extra info found.', infoStatus.style.animation = 'none';
   }).catch(() => { if (openLibraryPanelId === id){ infoStatus.textContent = 'No extra info found.'; infoStatus.style.animation = 'none'; } });
+}
+// Lyrics for a song page: plain lines, no timing (the player's own Lyrics view is the synced one). Same lookup as the player.
+function loadSongPageLyrics(t, pane, stillOpen){
+  pane.innerHTML = '<div class="currents-status">Loading lyrics...</div>';
+  const dur = t.srcDuration || t.duration || 0;
+  const got = t.videoId ? fetchLyrics(t) : lrclibDirect(t.title, t.artist, dur);
+  Promise.resolve(got).then(data => {
+    if (!stillOpen()) return;
+    const lines = (data && data.lines) || [];
+    pane.innerHTML = '';
+    if (!lines.length){ const e = document.createElement('div'); e.className = 'lyrics-empty'; e.textContent = (data && data.emptyText) || 'No lyrics found for this song.'; pane.appendChild(e); return; }
+    lines.forEach(ln => { const d = document.createElement('div'); d.className = 'song-page-lyric' + (ln.text ? '' : ' is-gap'); d.textContent = ln.text || ''; pane.appendChild(d); });
+  }).catch(() => { if (stillOpen()) pane.innerHTML = '<div class="lyrics-empty">Couldn\'t load lyrics for this song.</div>'; });
 }
 async function loadArtistAlbumsInto(panelId, name, standalone){
   const lib = getCachedPlaylist(panelId);
