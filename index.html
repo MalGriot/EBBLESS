@@ -20791,6 +20791,9 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 486, date: '2026-11-02', items: [
+    'The waveform on the progress bar builds up as the song plays when its full shape is not known yet; songs with a known shape still show it up front.',
+  ] },
   { version: 485, date: '2026-11-02', items: [
     'On a tablet, the top bar now has a Search button, and tapping the search bar opens the Search page.',
   ] },
@@ -35533,6 +35536,19 @@ function podProgressLabel(p){
 /* Real waveform for songs whose audio file the page can read (device uploads 'lf:' and podcast files 'au:').
    YouTube / SoundCloud play inside cross-origin players, so their samples are not readable: those keep the flat bars. */
 const waveCache = new Map(); let waveId = null;
+/* The seek-bar waveform: a song whose whole shape is known (fetched, shared, decoded from a file) shows it up front. A song still being
+   recorded as it plays builds up: bars behind the furthest point reached show what was heard, bars ahead stay flat until the song gets
+   there. waveShape = normalised peaks; waveFullShape = they are complete; waveReach = furthest 0-1 position. */
+let waveShape = null, waveFullShape = false, waveReach = 0, waveDrawKey = -1;
+function waveDraw(){
+  if (!waveShape) return;
+  const r = waveFullShape ? WAVE_N : waveReach * WAVE_N, key = Math.floor(r * 2);
+  if (key === waveDrawKey) return;
+  waveDrawKey = key;
+  const k = Math.floor(r), f = r - k;
+  seekTrack.style.setProperty('--wave', waveSvg(waveShape.map((v, i) => i < k ? v : i === k ? .31 + (v - .31) * f : .31)));
+}
+function waveShow(shape, full){ waveShape = shape; waveFullShape = !!full; waveDrawKey = -1; waveDraw(); }
 function waveSvg(peaks){
   let r = '';
   peaks.forEach((v, i) => { const h = Math.max(6, Math.round(v * 96)); r += '%3Crect x=%27' + (i * 10 + 1) + '%27 y=%27' + (50 - h / 2) + '%27 width=%276%27 height=%27' + h + '%27 rx=%273%27/%3E'; });
@@ -35548,12 +35564,12 @@ function waveNorm(peaks){ const top = Math.max.apply(null, peaks) || 1; return p
 async function waveCompute(id){
   const src = isLocalVideoId(id) ? await localFileUrl(id) : isAudioVideoId(id) ? audioUrlOf(id) : null;
   if (!src) return null;
-  return waveSvg(waveNorm(await wavePeaksOf(await (await fetch(src)).arrayBuffer())));
+  return waveNorm(await wavePeaksOf(await (await fetch(src)).arrayBuffer()));
 }
 /* #727: streamed songs. The desktop app's own sound is tapped once per launch (main.js opens it, no click) and one peak per
    second is recorded per song; the bars fill in as it plays and the finished shape is kept for next time. */
 const LS_WAVE = 'ebbless:wave:v1', LS_WAVE_OFF = 'ebbless:wave:off', WAVE_N = 64, WAVE_MAX = 300;
-let waveRec = null, waveDirty = false, waveAn = null, waveBuf = null, waveLastCur = -1, wavePaintAt = 0;
+let waveRec = null, waveDirty = false, waveAn = null, waveBuf = null, waveLastCur = -1, wavePaintAt = 0, wavePaintK = -1;
 function waveStore(){ if (!waveRec){ const m = lsGet(LS_WAVE, {}); waveRec = (m && typeof m === 'object') ? m : {}; } return waveRec; }
 function waveSave(){
   if (!waveDirty) return;
@@ -35585,13 +35601,14 @@ function waveRecord(id, cur, dur){
   const v = Math.round(m * 255);
   if (v > row[k]){ row[k] = v; waveDirty = true; }
   const now = performance.now();
-  if (now - wavePaintAt > 4000){ wavePaintAt = now; wavePaint(id); waveSave(); }
+  if (k !== wavePaintK){ wavePaintK = k; wavePaint(id); }
+  if (now - wavePaintAt > 4000){ wavePaintAt = now; waveSave(); }
 }
 function wavePaint(id){
   const row = waveStore()[id];
   if (!row || id !== waveId) return;
   const top = Math.max.apply(null, row) || 1;
-  seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 1.5))));
+  waveShow(row.map(v => Math.pow(v / top, 1.5)), waveFull.has(id) || row.every(v => v > 0));
   recRingSync();
   waveLoading(false);
 }
@@ -35749,7 +35766,7 @@ function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
   waveSave();
-  waveId = id; waveLastCur = -1;
+  waveId = id; waveLastCur = -1; waveShape = null; waveFullShape = false; waveReach = 0; waveDrawKey = -1; wavePaintK = -1;
   recRingSync();
   seekTrack.style.removeProperty('--wave');
   waveLoading(false);
@@ -35760,7 +35777,7 @@ function waveSync(){
     return;
   }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
-  waveCache.get(id).then(v => { if (v && waveId === id) seekTrack.style.setProperty('--wave', v); });
+  waveCache.get(id).then(v => { if (v && waveId === id) waveShow(v, true); });
 }
 function paintSeekUI(cur, dur){
   waveSync();
@@ -35781,6 +35798,7 @@ function paintSeekUI(cur, dur){
   // (time text changes once a second, the bar a few px), not every tick.
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   const pctStr = (+pct.toFixed(2)) + '%';
+  if (pct / 100 > waveReach && !seekTrack.classList.contains('ad-fill')){ waveReach = pct / 100; waveDraw(); }
   if (!seekTrack.classList.contains('ad-fill') && seekFill.style.width !== pctStr){ seekFill.style.width = pctStr; flowSeekFill.style.width = pctStr; miniLineFill.style.width = pctStr; }
   if (seekKnob.style.left !== pctStr){ seekKnob.style.left = pctStr; flowSeekKnob.style.left = pctStr; lastSeekPct = pct / 100; if (nowRowProg) nowRowProg.style.transform = 'scaleX(' + lastSeekPct + ')'; }
   if (!seekDrag) notePodProgress(cur, dur);
