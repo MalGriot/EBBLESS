@@ -2,6 +2,7 @@
 // them, keeps 64 peaks and throws the audio away. Desktop only; the file is never saved.
 const { spawn } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const ID_RE = /^[A-Za-z0-9_-]{11}$/;
@@ -26,8 +27,10 @@ function fetchAudio(videoId){
   if (!bin) return Promise.resolve(null);
   const run = () => new Promise(resolve => {
     const chunks = []; let size = 0, done = false;
-    const p = spawn(bin, ['--no-playlist', '--no-warnings', '--quiet', '-f', 'worstaudio/bestaudio', '-o', '-', 'https://www.youtube.com/watch?v=' + videoId],
+    const p = spawn(bin, ['--no-playlist', '--no-warnings', '--quiet', '--no-cache-dir', '--no-update', '-N', '1',
+      '-f', 'worstaudio[acodec=opus]/worstaudio', '-o', '-', 'https://www.youtube.com/watch?v=' + videoId],
       { stdio: ['ignore', 'pipe', 'ignore'] });
+    try { os.setPriority(p.pid, 19); } catch(e){}   // lowest CPU priority: playback always wins
     const end = (ok) => { if (done) return; done = true; clearTimeout(t); try { p.kill(); } catch(e){} resolve(ok ? Buffer.concat(chunks) : null); };
     const t = setTimeout(() => end(false), TIMEOUT_MS);
     p.stdout.on('data', c => { size += c.length; if (size > MAX_BYTES) return end(false); chunks.push(c); });
