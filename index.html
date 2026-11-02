@@ -5927,10 +5927,6 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 
   <!-- ===== BOTTOM NAV ===== -->
   <nav id="bottom-nav">
-    <button data-view="home">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-2.5v9h-5v-6h-3v6h-5v-9H3l9-8z"/></svg>
-      Home
-    </button>
     <button data-view="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
       Search
@@ -10761,12 +10757,23 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
       // the release that ends this hold may land on the splash instead, in
       // which case no click reaches the button - don't let the flag linger
       setTimeout(() => { swallowClick = false; }, 1500);
-      window.ebbReloadApp();   // same path as the update button
+      // #724: hold opens the mini player on desktop (the splash when nothing is playing); phones keep hold-to-reload
+      if (miniPlayerSupported()){ if (currentTrack()) openMiniPlayer(); else returnToSplash(); }
+      else window.ebbReloadApp();   // same path as the update button
     }, HOLD_MS);
   });
+  btn.style.touchAction = 'pan-y';   // so a sideways drag on the logo reaches us on touch screens
+  const phoneNav = () => window.matchMedia('(max-width:859.98px)').matches;
+  let dragged = false;
   btn.addEventListener('pointermove', (e) => {
+    // phones: drag the logo to the right and the splash screen comes back (the click that follows the release is swallowed)
+    if (!dragged && phoneNav() && e.clientX - startX > 36 && Math.abs(e.clientY - startY) < 40 && e.buttons){
+      dragged = true; cancel(); swallowClick = true; setTimeout(() => { swallowClick = false; }, 800);
+      returnToSplash(); return;
+    }
     if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > MOVE_TOLERANCE_PX) cancel();
   });
+  btn.addEventListener('pointerdown', () => { dragged = false; });
   ['pointerup', 'pointercancel', 'pointerleave', 'dragstart'].forEach(t => btn.addEventListener(t, cancel));
   btn.addEventListener('click', (e) => {
     if (!swallowClick) return;
@@ -10775,16 +10782,8 @@ document.querySelectorAll('[data-action="toggle-queue"]').forEach(btn => btn.add
     e.stopImmediatePropagation();
   });
 })();
-// desktop only (where the mini player exists); on phones the logo still goes to the player
-// double-tap opens the mini player (when a song is playing), so the single tap waits a beat to see if a second one follows
-{
-  let tapTimer = null;
-  $('wordmarkBtn').addEventListener('click', () => {
-    if (!miniPlayerSupported()){ setView('player'); return; }
-    if (tapTimer){ clearTimeout(tapTimer); tapTimer = null; if (currentTrack()) openMiniPlayer(); else returnToSplash(); return; }
-    tapTimer = setTimeout(() => { tapTimer = null; returnToSplash(); }, 333);
-  });
-}
+// #724: one tap on the logo goes Home (desktop, tablet and phone). Hold: mini player on desktop (hold-to-reload on phones). Drag right on a phone: the splash.
+$('wordmarkBtn').addEventListener('click', () => { leaveFullscreen(true); setView('home'); });
 
 // Bring the splash back over the already-running app (wordmark hold above).
 // Reuses the first-visit Tutorial/Enter choice: Enter just hides the splash
