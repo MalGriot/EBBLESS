@@ -27226,6 +27226,12 @@ const vizGx = new Float32Array(VIZ_GRAINS_MAX);
 const vizGy = new Float32Array(VIZ_GRAINS_MAX);
 const vizPX = new Float32Array(VIZ_GRAINS_MAX), vizPY = new Float32Array(VIZ_GRAINS_MAX), vizSET = new Float32Array(VIZ_GRAINS_MAX);   // where each grain was drawn and how settled it is, for the glow pass
 // #726: how loud the song is right now, from the desktop app's audio tap when there is one (0 without it)
+// each grain's own glint rhythm (random, fixed): settled sand twinkles like sunlight on moving water
+const vizPH = new Float32Array(VIZ_GRAINS_MAX), vizSP = new Float32Array(VIZ_GRAINS_MAX);
+for (let i = 0; i < VIZ_GRAINS_MAX; i++){ vizPH[i] = Math.random() * 6.283; vizSP[i] = .6 + Math.random() * 1.8; }
+// settings picked in the demo: how often grains glint (0-1), how big the glints are (0-1), and how much the song's loudness changes the sand and the glow (0 = not at all)
+const VIZ_SPARKLE = .33, VIZ_GLINT = 0, VIZ_LOUD = 0;
+const vizReducedMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 let vizAudioLv = 0, vizAudioBuf = null;
 function vizAudioLevel(){
   try {
@@ -27410,7 +27416,7 @@ function vizDraw(t){
     fingerX = u * rotCos + v * rotSin; fingerY = -u * rotSin + v * rotCos; hasFinger = true;
   }
   vizBusy = vizPtrs.size > 0 || rips.length > 0;
-  const aLv = vizAudioLevel(), glow = aLv > 0 ? .55 + 1.7 * aLv : 1;   // louder passages shake the sand harder and light it up more
+  const aLv = vizAudioLevel() * VIZ_LOUD;   // 0 with the current setting: the song's loudness does not change the sand or the glow
   const jitter = (vizPlaying ? 0.020 : 0.004) * jitterMul * (1 + 1.2 * aLv);
   const step = (vizPlaying ? 0.016 : 0.006) * stepMul;
   const color = vizRosicrucianColor();
@@ -27459,20 +27465,31 @@ function vizDraw(t){
     vizCtx2d.fill();
     vizPX[i] = px; vizPY[i] = py; vizSET[i] = settle;
   }
-  // #726 glow: sand that has settled on a nodal line gets a soft halo in the colour and a small white core, added on top (lighter), so the lines read as light
+  // #726 glow and sparkle: sand that has settled on a nodal line gets a soft halo, and each settled grain glints on its own rhythm, now and then,
+  // like sunlight on moving water (a bright core and a bigger halo; a small cross on the strongest glints when glint size is above 0). Drawn additively.
+  // Reduced motion keeps the halo and drops the glinting.
   vizCtx2d.globalCompositeOperation = 'lighter';
+  const wall = performance.now() / 1000, k = Math.max(.6, w / 380), gsz = .6 + VIZ_GLINT * 2.2, loud = aLv;
   for (let i = 0; i < grainCount; i++){
     const st = vizSET[i];
-    if (st < 0.6) continue;
-    vizCtx2d.globalAlpha = Math.min(.5, (.04 + .16 * (st - .6) / .4) * glow);
-    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], r * 3.4, 0, Math.PI * 2); vizCtx2d.fill();
-  }
-  vizCtx2d.fillStyle = '#fff';
-  for (let i = 0; i < grainCount; i++){
-    const st = vizSET[i];
-    if (st < 0.82) continue;
-    vizCtx2d.globalAlpha = Math.min(.8, .3 * (st - .82) / .18 * glow);
-    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], r * .55, 0, Math.PI * 2); vizCtx2d.fill();
+    if (st < 0.62) continue;
+    const settleF = (st - .62) / .38;
+    vizCtx2d.fillStyle = color;
+    vizCtx2d.globalAlpha = Math.min(.55, (.05 + .14 * settleF) * (.6 + loud));
+    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], 1.7 * k, 0, Math.PI * 2); vizCtx2d.fill();
+    if (vizReducedMotion) continue;
+    const tw = Math.pow(Math.max(0, Math.sin(wall * vizSP[i] * 2.2 + vizPH[i]) * Math.sin(wall * vizSP[i] * .7 + vizPH[i] * 1.7)), 2.2);
+    if (tw < .04) continue;
+    const a = Math.min(1, tw * VIZ_SPARKLE * 1.5 * settleF * (.6 + loud));
+    vizCtx2d.globalAlpha = a * .45;
+    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], (3 + 7 * gsz * tw) * k * .5, 0, Math.PI * 2); vizCtx2d.fill();
+    vizCtx2d.fillStyle = '#fff'; vizCtx2d.globalAlpha = a;
+    vizCtx2d.beginPath(); vizCtx2d.arc(vizPX[i], vizPY[i], (.9 + 1.4 * gsz * tw) * k * .5, 0, Math.PI * 2); vizCtx2d.fill();
+    if (tw > .5 && VIZ_GLINT > 0){
+      const L = (3 + 7 * gsz) * tw * k * .5;
+      vizCtx2d.globalAlpha = a * .7; vizCtx2d.strokeStyle = '#fff'; vizCtx2d.lineWidth = .8;
+      vizCtx2d.beginPath(); vizCtx2d.moveTo(vizPX[i] - L, vizPY[i]); vizCtx2d.lineTo(vizPX[i] + L, vizPY[i]); vizCtx2d.moveTo(vizPX[i], vizPY[i] - L); vizCtx2d.lineTo(vizPX[i], vizPY[i] + L); vizCtx2d.stroke();
+    }
   }
   vizCtx2d.globalCompositeOperation = 'source-over';
   vizCtx2d.globalAlpha = 1;
