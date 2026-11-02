@@ -1573,19 +1573,41 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
   mix-blend-mode:screen;opacity:.55}
 .record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
-/* #723 fullscreen sizes (disc width as a share of the screen's short side): LP .84, CD .66, cassette .62 wide. The LP and CD get a ring of
-   the song's real waveform just outside the disc; the ring is static (drawn from the stored peaks), so there is nothing to animate. */
-#artRecord{--disc-fs:.84}
+/* #723 fullscreen sizes (disc width as a share of the screen's short side): LP .96 (as before), CD .66, cassette .62 wide. Only the CD wears the
+   ring of the song's real waveform, in the UI color. Three static layers: the true shape, and two slightly different shapes that fade in and out
+   against each other while turning slowly (transform and opacity only), so the ring seems to wave; on pause the live layers fade away to the true shape. */
+#artRecord{--disc-fs:.96}
 body[data-disc="cd"] #artRecord{--disc-fs:.66}
 .rec-ring{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.rr-live{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .9s var(--ease-out)}
+.rec-ring line{stroke:var(--accent);stroke-width:.7;stroke-linecap:round}
+.rr-base line{opacity:.9}
+.rr-a,.rr-b{will-change:transform,opacity;animation:rr-fade 2.8s ease-in-out infinite,rr-turn 36s linear infinite;animation-play-state:paused}
+.rr-b{animation-delay:-1.4s,-9s;animation-direction:normal,reverse}
+@keyframes rr-fade{0%,100%{opacity:0}50%{opacity:.95}}
+@keyframes rr-turn{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+body:has(#artworkWrap.is-playing) .rr-live{opacity:1}
+body:has(#artworkWrap.is-playing) .rr-a,body:has(#artworkWrap.is-playing) .rr-b{animation-play-state:running}
+body:not(.desktop-fs):not(:has(#flow-layer.is-open)) .rr-a,body:not(.desktop-fs):not(:has(#flow-layer.is-open)) .rr-b{animation-play-state:paused!important}
+@media (prefers-reduced-motion:reduce){.rr-a,.rr-b{animation:none}.rr-live{display:none}}
 body.split-desktop.desktop-fs:not(.view-settings-active) #artRecord :is(.record-disc,.record-shadow),
 #flow-layer #artRecord :is(.record-disc,.record-shadow){width:calc(var(--disc-fs) * 100%)}
-body.split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rec-ring,#flow-layer #artRecord .rec-ring{display:block}
+body[data-disc="cd"].split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rec-ring,body[data-disc="cd"] #flow-layer #artRecord .rec-ring{display:block}
+body[data-disc="cd"].split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rr-live,body[data-disc="cd"] #flow-layer #artRecord .rr-live{display:block}
 body.split-desktop.desktop-fs:not(.view-settings-active) #artworkWrap .art-cassette,#flow-layer .flow-art .art-cassette{inset:19% 19%}
 /* regular view: the vinyl is drawn big enough that its center label is as large as the default cover (label = 38% of the disc, disc = 96% of the
    wrapper), so the wrapper is 100% / .3648 wide, centered with margins (the tap game scales this wrapper with transform), and clipped by the pane. */
 body:not(.desktop-fs):not([data-disc="cd"]) .artwork-wrap[data-mode="art"][data-art-style="record"] > #artRecord{inset:auto;left:50%;top:50%;width:274.1%;height:274.1%;margin:-137.05% 0 0 -137.05%}
 body:not(.desktop-fs):not([data-disc="cd"]) .player-stage:has(> .artwork-wrap[data-mode="art"][data-art-style="record"]) :is(.visual-tabs,.track-meta,.transport-full){position:relative;z-index:3}
+/* 3-pane desktop: the big vinyl is not clipped by the middle pane; it sits over the library and queue panels' translucent backgrounds, while everything inside
+   those panels (and the top bar) stays in front of it and clickable. The panels stop being their own stacking layer for this (isolation, size containment),
+   their content is lifted above the disc, and the disc ignores the pointer except over its center label. */
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-player{overflow:visible}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #artworkWrap > #artRecord{z-index:1;pointer-events:none}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #artworkWrap > #artRecord .record-label{pointer-events:auto}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-library{isolation:auto;container-type:normal}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #queue-panel{isolation:auto}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) :is(#view-library > .view-scroll,#queue-panel > :not(.queue-drag-handle)){position:relative;z-index:2}
 /* #719 CD, to Red Book proportions (120 mm disc = 100%): 15 mm hole = 12.5%, clear hub out to 33 mm = 27.5%, printed/data area
    up to 117 mm = 97.5%, clear 1.5 mm rim after that. Hole, hub and rim are clear glass; the art only covers the band between.
    Same element and spin/needle JS as the record; translucent fills only (no blur, GPU budget). */
@@ -1598,7 +1620,7 @@ body[data-disc="cd"] .record-label{width:100%;box-shadow:none;
 body[data-disc="cd"] .record-spindle{display:none}
 .swatch-cd .swatch-disc{background:conic-gradient(#d8dce2,#8a909a,#d8dce2,#8a909a,#d8dce2)}
 .swatch-cd .swatch-label{background:#0a0a0a;box-shadow:0 0 0 1.5px #f4f4f4}
-.record-spindle{position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;
+.record-spindle{position:absolute;top:50%;left:50%;width:1.3%;min-width:5px;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);background:var(--panel-2);box-shadow:0 0 0 1.5px rgba(0,0,0,.6)}
 /* record tap minigame (issue #116, see RECORD TAP GAME in the script): a
    fixed cue tick above the rim and a dot on the disc at 0deg - both only
@@ -4884,7 +4906,8 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <div class="art-dvd trail t1" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
           <div class="art-dvd" aria-hidden="true"><span class="art-dvd-x"><img src="brand/assets/mark-white.png" alt="" draggable="false"></span></div>
           <div class="art-record" id="artRecord">
-            <svg class="rec-ring" viewBox="0 0 100 100" aria-hidden="true"></svg>
+            <svg class="rec-ring rr-base" viewBox="0 0 100 100" aria-hidden="true"></svg>
+            <div class="rr-live" aria-hidden="true"><svg class="rec-ring rr-a" viewBox="0 0 100 100"></svg><svg class="rec-ring rr-b" viewBox="0 0 100 100"></svg></div>
             <div class="record-shadow"></div>
             <div class="record-disc">
               <img class="record-label" id="recordLabelImg" alt="">
@@ -35386,22 +35409,26 @@ function waveRelease(){
 }
 // #723: the ring of waveform around the fullscreen LP / CD, drawn from the song's stored peaks (a faint even ring while they are still loading)
 function recRingSync(){
-  const svg = document.querySelector('#artRecord .rec-ring');
-  if (!svg) return;
+  const rings = document.querySelectorAll('#artRecord .rec-ring');
+  if (!rings.length || discSkin !== 'cd') return;   // only the CD wears the ring
   const id = waveId, row = id && waveStore()[id];
-  const disc = parseFloat(getComputedStyle(document.getElementById('artRecord')).getPropertyValue('--disc-fs')) || .84;
+  const disc = parseFloat(getComputedStyle(document.getElementById('artRecord')).getPropertyValue('--disc-fs')) || .66;
   const key = (row ? id : 'flat') + '|' + disc;
-  if (svg._key === key) return;
-  svg._key = key;
+  if (rings[0]._key === key) return;
+  rings.forEach(r => { r._key = key; });
   const n = 120, r0 = disc * 50 + 2.4, maxLen = Math.max(2, 49 - r0), top = row ? (Math.max.apply(null, row) || 1) : 1;
-  let out = '';
-  for (let i = 0; i < n; i++){
-    let v = .08;
-    if (row){ const f = i / n * WAVE_N, k = Math.floor(f), t = f - k; v = Math.pow((row[k % WAVE_N] * (1 - t) + row[(k + 1) % WAVE_N] * t) / top, 1.4); }
-    const a = i / n * Math.PI * 2 - Math.PI / 2, len = 1 + v * maxLen, c = Math.cos(a), sn = Math.sin(a);
-    out += '<line x1="' + (50 + c * r0).toFixed(2) + '" y1="' + (50 + sn * r0).toFixed(2) + '" x2="' + (50 + c * (r0 + len)).toFixed(2) + '" y2="' + (50 + sn * (r0 + len)).toFixed(2) + '"/>';
-  }
-  svg.innerHTML = '<g stroke="rgba(255,255,255,.85)" stroke-width=".7" stroke-linecap="round">' + out + '</g>';
+  const build = (ph) => {   // ph: 0 = the true shape; 1 and 2 = the same shape pushed up and down by smooth, different waves
+    let out = '';
+    for (let i = 0; i < n; i++){
+      let v = .08;
+      if (row){ const f = i / n * WAVE_N, k = Math.floor(f), t = f - k; v = Math.pow((row[k % WAVE_N] * (1 - t) + row[(k + 1) % WAVE_N] * t) / top, 1.4); }
+      if (ph) v = Math.min(1, Math.max(.04, v * (1 + .55 * Math.sin(i * (ph === 1 ? .31 : .23) + ph * 2.1)) + .1 * Math.sin(i * .09 + ph)));
+      const a = i / n * Math.PI * 2 - Math.PI / 2, len = 1 + v * maxLen, c = Math.cos(a), sn = Math.sin(a);
+      out += '<line x1="' + (50 + c * r0).toFixed(2) + '" y1="' + (50 + sn * r0).toFixed(2) + '" x2="' + (50 + c * (r0 + len)).toFixed(2) + '" y2="' + (50 + sn * (r0 + len)).toFixed(2) + '"/>';
+    }
+    return out;
+  };
+  rings[0].innerHTML = build(0); rings[1].innerHTML = build(1); rings[2].innerHTML = build(2);
 }
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
