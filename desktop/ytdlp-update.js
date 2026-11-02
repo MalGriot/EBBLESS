@@ -4,16 +4,20 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 const { fetchJson, download } = require('./updater');
 
 const RELEASE_API = 'https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest';
 const DL_PREFIX = 'https://github.com/yt-dlp/yt-dlp/releases/download/';
 const DAY = 24 * 3600 * 1000;
-const MAX_BYTES = 80 * 1024 * 1024;
+const MAX_BYTES = 120 * 1024 * 1024;
 
-// the one-file build for this OS (the macOS one is universal)
-function assetName(platform){ return platform === 'win32' ? 'yt-dlp.exe' : platform === 'darwin' ? 'yt-dlp_macos' : null; }
-function binName(platform){ return platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'; }
+// The unpacked (zip) build for this OS: the one-file build unpacks itself on every run (about 10 s each), the unpacked one
+// starts in a fraction of a second. The macOS one is universal.
+function assetName(platform){ return platform === 'win32' ? 'yt-dlp_win.zip' : platform === 'darwin' ? 'yt-dlp_macos.zip' : null; }
+function binName(platform){ return platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp_macos'; }
+// where the program sits inside the working folder
+function binPath(dir, platform){ return path.join(dir, 'ytdlp', binName(platform)); }
 
 // "<sha256>  <name>" lines -> { name: sha256 }
 function parseSums(text){
@@ -40,7 +44,7 @@ function ensure(dir, platform, opts){
   const force = !!(opts && opts.force);
   inFlight = (async () => {
     fs.mkdirSync(dir, { recursive: true });
-    const exe = path.join(dir, binName(platform)), st = readState(dir);
+    const exe = binPath(dir, platform), st = readState(dir);
     const haveBin = fs.existsSync(exe);
     if (!force && haveBin && st.checkedAt && Date.now() - st.checkedAt < DAY) return { skipped: true };
     if (force && st.forcedAt && Date.now() - st.forcedAt < 6 * 3600 * 1000) return { skipped: true };   // a failing fetch cannot hammer GitHub
@@ -49,23 +53,26 @@ function ensure(dir, platform, opts){
     const files = pickFiles(await fetchJson(RELEASE_API), platform);
     if (!files) throw new Error('No yt-dlp build for ' + platform);
     if (haveBin && st.tag === files.tag) return { skipped: true, tag: files.tag };
-    const tmp = exe + '.tmp';
+    const zip = path.join(dir, 'ytdlp.zip.tmp'), sums = path.join(dir, 'sums.tmp'), next = path.join(dir, 'ytdlp.new'), live = path.join(dir, 'ytdlp');
     try {
-      const sumsFile = path.join(dir, 'sums.tmp');
-      await download(files.sumsUrl, sumsFile);
-      const want = parseSums(fs.readFileSync(sumsFile, 'utf8'))[files.name];
-      fs.rmSync(sumsFile, { force: true });
+      await download(files.sumsUrl, sums);
+      const want = parseSums(fs.readFileSync(sums, 'utf8'))[files.name];
       if (!want) throw new Error('No checksum for ' + files.name);
-      const size = await download(files.binUrl, tmp);
+      const size = await download(files.binUrl, zip);
       if (size > MAX_BYTES) throw new Error('Download too large');
-      if (sha256File(tmp) !== want) throw new Error('Checksum did not match');
-      fs.chmodSync(tmp, 0o755);
-      fs.renameSync(tmp, exe);
-    } finally { fs.rmSync(tmp, { force: true }); }
+      if (sha256File(zip) !== want) throw new Error('Checksum did not match');
+      fs.rmSync(next, { recursive: true, force: true }); fs.mkdirSync(next);
+      execFileSync('tar', ['-xf', zip, '-C', next], { stdio: 'ignore', timeout: 120000 });   // bsdtar reads zip on macOS and Windows 10+
+      const newExe = path.join(next, binName(platform));
+      if (!fs.existsSync(newExe)) throw new Error('Unexpected archive contents');
+      if (platform !== 'win32') fs.chmodSync(newExe, 0o755);
+      fs.rmSync(live, { recursive: true, force: true });
+      fs.renameSync(next, live);
+    } finally { [zip, sums, next].forEach(f => fs.rmSync(f, { recursive: true, force: true })); }
     writeState(dir, { checkedAt: Date.now(), forcedAt: st.forcedAt, tag: files.tag });
     return { updated: true, tag: files.tag };
   })().finally(() => { inFlight = null; });
   return inFlight;
 }
 
-module.exports = { assetName, binName, parseSums, pickFiles, sha256File, ensure };
+module.exports = { assetName, binName, binPath, parseSums, pickFiles, sha256File, ensure };

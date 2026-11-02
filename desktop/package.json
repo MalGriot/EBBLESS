@@ -53,8 +53,8 @@
       "identity": null,
       "extraResources": [
         {
-          "from": "bin/yt-dlp",
-          "to": "bin/yt-dlp"
+          "from": "bin/ytdlp",
+          "to": "bin/ytdlp"
         }
       ]
     },
@@ -71,8 +71,8 @@
       "artifactName": "EBBLESS-Setup-${version}.${ext}",
       "extraResources": [
         {
-          "from": "bin/yt-dlp.exe",
-          "to": "bin/yt-dlp.exe"
+          "from": "bin/ytdlp",
+          "to": "bin/ytdlp"
         }
       ]
     },

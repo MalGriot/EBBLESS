@@ -275,6 +275,7 @@ app.whenReady().then(() => {
   createMainWindow();
   // #727: keep the waveform tool current: shortly after launch, then daily while the app stays open
   wave.init(path.join(app.getPath('userData'), 'bin'));
+  wave.prime();   // pay the OS's first-run check now, not on the first song
   setTimeout(() => wave.refresh(false), 30000);
   setInterval(() => wave.refresh(false), 24 * 3600 * 1000).unref();
 });
