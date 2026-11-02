@@ -1574,26 +1574,14 @@ body:has(#flow-layer.is-open) .artwork-wrap .art-dvd,body:has(#flow-layer.is-ope
 .record-label{position:absolute;top:50%;left:50%;width:38%;aspect-ratio:1;border-radius:50%;
   transform:translate(-50%,-50%);object-fit:cover;box-shadow:0 0 0 3px #0c0c0c,0 6px 18px rgba(0,0,0,.5)}
 /* #723 fullscreen sizes (disc width as a share of the screen's short side): LP .96 (as before), CD .66, cassette .62 wide. Only the CD wears the
-   ring of the song's real waveform, in the UI color. Three static layers: the true shape, and two slightly different shapes that fade in and out
-   against each other while turning slowly (transform and opacity only), so the ring seems to wave; on pause the live layers fade away to the true shape. */
+   ring: a canvas that listens to the song (the app's own audio tap) and moves its bars with it, in the UI color; on pause it settles on the song's
+   stored waveform. See recRingFrame. */
 #artRecord{--disc-fs:.96}
 body[data-disc="cd"] #artRecord{--disc-fs:.66}
-.rec-ring{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-.rr-live{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .9s var(--ease-out)}
-.rec-ring line{stroke:var(--accent);stroke-width:.7;stroke-linecap:round}
-.rr-base line{opacity:.9}
-.rr-a,.rr-b{will-change:transform,opacity;animation:rr-fade 2.8s ease-in-out infinite,rr-turn 36s linear infinite;animation-play-state:paused}
-.rr-b{animation-delay:-1.4s,-9s;animation-direction:normal,reverse}
-@keyframes rr-fade{0%,100%{opacity:0}50%{opacity:.95}}
-@keyframes rr-turn{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-body:has(#artworkWrap.is-playing) .rr-live{opacity:1}
-body:has(#artworkWrap.is-playing) .rr-a,body:has(#artworkWrap.is-playing) .rr-b{animation-play-state:running}
-body:not(.desktop-fs):not(:has(#flow-layer.is-open)) .rr-a,body:not(.desktop-fs):not(:has(#flow-layer.is-open)) .rr-b{animation-play-state:paused!important}
-@media (prefers-reduced-motion:reduce){.rr-a,.rr-b{animation:none}.rr-live{display:none}}
+.rec-ring{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 body.split-desktop.desktop-fs:not(.view-settings-active) #artRecord :is(.record-disc,.record-shadow),
 #flow-layer #artRecord :is(.record-disc,.record-shadow){width:calc(var(--disc-fs) * 100%)}
 body[data-disc="cd"].split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rec-ring,body[data-disc="cd"] #flow-layer #artRecord .rec-ring{display:block}
-body[data-disc="cd"].split-desktop.desktop-fs:not(.view-settings-active) #artRecord .rr-live,body[data-disc="cd"] #flow-layer #artRecord .rr-live{display:block}
 body.split-desktop.desktop-fs:not(.view-settings-active) #artworkWrap .art-cassette,#flow-layer .flow-art .art-cassette{inset:19% 19%}
 /* regular view: the vinyl is drawn big enough that its center label is as large as the default cover (label = 38% of the disc, disc = 96% of the
    wrapper), so the wrapper is 100% / .3648 wide, centered with margins (the tap game scales this wrapper with transform), and clipped by the pane. */
@@ -1608,6 +1596,12 @@ body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-
 body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #view-library{isolation:auto;container-type:normal}
 body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #queue-panel{isolation:auto}
 body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) :is(#view-library > .view-scroll,#queue-panel > :not(.queue-drag-handle)){position:relative;z-index:2}
+/* the header bar (the install banner strip under the top bar has its own solid fill) goes behind the disc too: the top bar stops being its own layer here,
+   and its buttons, links and the banner's text are lifted above the disc */
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar{z-index:auto}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar > :not(#installBanner):not(#importForm):not(#supportPop):not(#testerBanner){position:relative;z-index:2}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #topbar #importForm{z-index:2}
+body.split-desktop:not(.desktop-fs):not(.view-settings-active):not(.view-search-active):not([data-disc="cd"]):has(#artworkWrap[data-mode="art"][data-art-style="record"]) #installBanner > *{position:relative;z-index:2}
 /* #719 CD, to Red Book proportions (120 mm disc = 100%): 15 mm hole = 12.5%, clear hub out to 33 mm = 27.5%, printed/data area
    up to 117 mm = 97.5%, clear 1.5 mm rim after that. Hole, hub and rim are clear glass; the art only covers the band between.
    Same element and spin/needle JS as the record; translucent fills only (no blur, GPU budget). */
@@ -4906,8 +4900,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           <div class="art-dvd trail t1" aria-hidden="true"><span class="art-dvd-x"><i class="art-dvd-e"></i></span></div>
           <div class="art-dvd" aria-hidden="true"><span class="art-dvd-x"><img src="brand/assets/mark-white.png" alt="" draggable="false"></span></div>
           <div class="art-record" id="artRecord">
-            <svg class="rec-ring rr-base" viewBox="0 0 100 100" aria-hidden="true"></svg>
-            <div class="rr-live" aria-hidden="true"><svg class="rec-ring rr-a" viewBox="0 0 100 100"></svg><svg class="rec-ring rr-b" viewBox="0 0 100 100"></svg></div>
+            <canvas class="rec-ring" id="recRingCv" aria-hidden="true"></canvas>
             <div class="record-shadow"></div>
             <div class="record-disc">
               <img class="record-label" id="recordLabelImg" alt="">
@@ -35408,28 +35401,66 @@ function waveRelease(){
   waveShared(ids).then(() => { if (waveId && !waveStore()[waveId]) waveLoading(waveCanFetch()); ids.forEach((id, i) => waveFetch(id, i === 0)); });
 }
 // #723: the ring of waveform around the fullscreen LP / CD, drawn from the song's stored peaks (a faint even ring while they are still loading)
-function recRingSync(){
-  const rings = document.querySelectorAll('#artRecord .rec-ring');
-  if (!rings.length || discSkin !== 'cd') return;   // only the CD wears the ring
-  const id = waveId, row = id && waveStore()[id];
-  const disc = parseFloat(getComputedStyle(document.getElementById('artRecord')).getPropertyValue('--disc-fs')) || .66;
-  const key = (row ? id : 'flat') + '|' + disc;
-  if (rings[0]._key === key) return;
-  rings.forEach(r => { r._key = key; });
-  const n = 120, r0 = disc * 50 + 2.4, maxLen = Math.max(2, 49 - r0), top = row ? (Math.max.apply(null, row) || 1) : 1;
-  const build = (ph) => {   // ph: 0 = the true shape; 1 and 2 = the same shape pushed up and down by smooth, different waves
-    let out = '';
-    for (let i = 0; i < n; i++){
-      let v = .08;
-      if (row){ const f = i / n * WAVE_N, k = Math.floor(f), t = f - k; v = Math.pow((row[k % WAVE_N] * (1 - t) + row[(k + 1) % WAVE_N] * t) / top, 1.4); }
-      if (ph) v = Math.min(1, Math.max(.04, v * (1 + .55 * Math.sin(i * (ph === 1 ? .31 : .23) + ph * 2.1)) + .1 * Math.sin(i * .09 + ph)));
-      const a = i / n * Math.PI * 2 - Math.PI / 2, len = 1 + v * maxLen, c = Math.cos(a), sn = Math.sin(a);
-      out += '<line x1="' + (50 + c * r0).toFixed(2) + '" y1="' + (50 + sn * r0).toFixed(2) + '" x2="' + (50 + c * (r0 + len)).toFixed(2) + '" y2="' + (50 + sn * (r0 + len)).toFixed(2) + '"/>';
-    }
-    return out;
-  };
-  rings[0].innerHTML = build(0); rings[1].innerHTML = build(1); rings[2].innerHTML = build(2);
+// #723: the ring around the fullscreen CD listens to the song. With the desktop audio tap (waveAn) each bar follows the real spectrum (bass at the top,
+// mirrored left and right); without it the stored waveform shape pulses with how loud that part of the song is. On pause the bars settle on the stored
+// waveform and the frame loop stops. One canvas, redrawn only while it is on screen and moving.
+const REC_RING = { raf: 0, n: 120, lv: new Float32Array(120), rest: new Float32Array(120), freq: null, color: '#e0b26a', colorAt: 0, restKey: '' };
+function recRingVisible(){ return discSkin === 'cd' && !document.hidden && (document.body.classList.contains('desktop-fs') || state.flowOpen); }
+function recRingRest(){
+  const id = waveId, row = id && waveStore()[id], key = row ? id : '';
+  if (REC_RING.restKey === key + '|' + (row ? row.length : 0)) return !!row;
+  REC_RING.restKey = key + '|' + (row ? row.length : 0);
+  const top = row ? (Math.max.apply(null, row) || 1) : 1;
+  for (let i = 0; i < REC_RING.n; i++){
+    if (!row){ REC_RING.rest[i] = .07; continue; }
+    const f = i / REC_RING.n * WAVE_N, k = Math.floor(f), t = f - k;
+    REC_RING.rest[i] = .07 + .5 * Math.pow((row[k % WAVE_N] * (1 - t) + row[(k + 1) % WAVE_N] * t) / top, 1.4);
+  }
+  return !!row;
 }
+function recRingFrame(now){
+  REC_RING.raf = 0;
+  if (!recRingVisible()) return;
+  const cv = document.getElementById('recRingCv');
+  if (!cv) return;
+  const box = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2), W = Math.round(box.width * dpr);
+  if (W < 20){ REC_RING.raf = requestAnimationFrame(recRingFrame); return; }
+  if (cv.width !== W){ cv.width = W; cv.height = W; }
+  const n = REC_RING.n, playing = artworkWrap.classList.contains('is-playing');
+  const hasRow = recRingRest();
+  const tgt = new Float32Array(n);
+  if (playing && waveAn){
+    if (!REC_RING.freq || REC_RING.freq.length !== waveAn.frequencyBinCount) REC_RING.freq = new Uint8Array(waveAn.frequencyBinCount);
+    waveAn.getByteFrequencyData(REC_RING.freq);
+    const f = REC_RING.freq, lo = 2, hi = Math.min(f.length - 1, 380), half = n / 2;
+    for (let i = 0; i < n; i++){
+      const j = i < half ? i : n - 1 - i, b = lo * Math.pow(hi / lo, j / (half - 1)), b0 = Math.floor(b), b1 = Math.min(hi, b0 + 1);
+      tgt[i] = Math.pow(((f[b0] * (1 - (b - b0)) + f[b1] * (b - b0)) / 255), 1.25) * (1 + j / half * .6);   // lift the quiet highs a little
+    }
+  } else if (playing && hasRow){
+    const row = waveStore()[waveId], top = Math.max.apply(null, row) || 1, e = row[Math.min(WAVE_N - 1, Math.floor(lastSeekPct * WAVE_N))] / top;
+    for (let i = 0; i < n; i++) tgt[i] = REC_RING.rest[i] * (.45 + .9 * e);
+  } else for (let i = 0; i < n; i++) tgt[i] = REC_RING.rest[i];
+  let settled = true;
+  for (let i = 0; i < n; i++){
+    const d = tgt[i] - REC_RING.lv[i];
+    REC_RING.lv[i] += d * (d > 0 ? .55 : .14);
+    if (Math.abs(d) > .004) settled = false;
+  }
+  if (now - REC_RING.colorAt > 1500){ REC_RING.colorAt = now; REC_RING.color = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#e0b26a'; }
+  const disc = parseFloat(getComputedStyle(document.getElementById('artRecord')).getPropertyValue('--disc-fs')) || .66;
+  const ctx = cv.getContext('2d'), c = W / 2, r0 = disc * c + W * .022, maxLen = Math.max(W * .02, c - r0 - W * .012);
+  ctx.clearRect(0, 0, W, W);
+  ctx.strokeStyle = REC_RING.color; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(2, W * .0065);
+  ctx.beginPath();
+  for (let i = 0; i < n; i++){
+    const a = i / n * Math.PI * 2 - Math.PI / 2, len = W * .008 + Math.min(1, REC_RING.lv[i]) * maxLen, cs = Math.cos(a), sn = Math.sin(a);
+    ctx.moveTo(c + cs * r0, c + sn * r0); ctx.lineTo(c + cs * (r0 + len), c + sn * (r0 + len));
+  }
+  ctx.stroke();
+  if (playing || !settled) REC_RING.raf = requestAnimationFrame(recRingFrame);
+}
+function recRingSync(){ if (!REC_RING.raf && recRingVisible()) REC_RING.raf = requestAnimationFrame(recRingFrame); }
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
@@ -35449,6 +35480,7 @@ function waveSync(){
 }
 function paintSeekUI(cur, dur){
   waveSync();
+  recRingSync();
   if (waveWait && cur > 0.3) waveRelease();   // the song is playing: now the waveform may start
   if (waveId && !isNativeVideoId(waveId)) waveRecord(waveId, cur, dur);
   if (seekDrag) cur = seekDrag.pct * dur;
