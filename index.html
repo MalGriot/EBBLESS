@@ -35199,27 +35199,35 @@ function waveFetch(id, urgent){
     if (id === waveId) wavePaint(id);
   }).catch(() => {});
 }
-function waveWarmNext(){ for (let k = 1; k <= 2; k++){ const n = trackAt(state.queuePos + k); if (n && n.videoId) waveFetch(n.videoId); } }
-// The moment a song is chosen (or resumed at launch) - before its player even loads - start its waveform and the next two.
+// Sound first: a song's waveform fetch (and the next two) waits until that song is actually playing, or 4 s at most
+// (a paused resume at launch), so it never competes with the audio starting.
+let waveWait = null, waveTimer = 0;
 function waveWant(pos){
-  const t = trackAt(pos);
-  if (t && t.videoId) waveFetch(t.videoId, true);
-  for (let k = 1; k <= 2; k++){ const n = trackAt(pos + k); if (n && n.videoId) waveFetch(n.videoId); }
+  const ids = [];
+  for (let k = 0; k <= 2; k++){ const t = trackAt(pos + k); if (t && t.videoId) ids.push(t.videoId); }
+  clearTimeout(waveTimer);
+  waveWait = ids.length ? ids : null;
+  if (waveWait) waveTimer = setTimeout(waveRelease, 4000);
+}
+function waveRelease(){
+  clearTimeout(waveTimer);
+  const ids = waveWait; waveWait = null;
+  if (ids) ids.forEach((id, i) => waveFetch(id, i === 0));
 }
 function waveSync(){
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
   waveSave();
   waveId = id; waveLastCur = -1;
-  setTimeout(waveWarmNext, 4000);
   seekTrack.style.removeProperty('--wave');
   if (!id) return;
-  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); waveFetch(id, true); return; }
+  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); return; }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
   waveCache.get(id).then(v => { if (v && waveId === id) seekTrack.style.setProperty('--wave', v); });
 }
 function paintSeekUI(cur, dur){
   waveSync();
+  if (waveWait && cur > 0.3) waveRelease();   // the song is playing: now the waveform may start
   if (waveId && !isNativeVideoId(waveId)) waveRecord(waveId, cur, dur);
   if (seekDrag) cur = seekDrag.pct * dur;
   else if (seekHold){
