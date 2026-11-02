@@ -34931,18 +34931,63 @@ async function waveCompute(id){
   const top = Math.max.apply(null, peaks) || 1;
   return waveSvg(peaks.map(v => Math.pow(v / top, 0.7)));
 }
+/* #727: streamed songs. The desktop app's own sound is tapped once per launch (main.js opens it, no click) and one peak per
+   second is recorded per song; the bars fill in as it plays and the finished shape is kept for next time. */
+const LS_WAVE = 'ebbless:wave:v1', WAVE_N = 64, WAVE_MAX = 300;
+let waveRec = null, waveDirty = false, waveAn = null, waveBuf = null, waveLastCur = -1, wavePaintAt = 0;
+function waveStore(){ if (!waveRec){ const m = lsGet(LS_WAVE, {}); waveRec = (m && typeof m === 'object') ? m : {}; } return waveRec; }
+function waveSave(){
+  if (!waveDirty) return;
+  waveDirty = false;
+  const m = waveStore(), ids = Object.keys(m);
+  if (ids.length > WAVE_MAX) ids.slice(0, ids.length - WAVE_MAX).forEach(k => delete m[k]);
+  lsSet(LS_WAVE, m);
+}
+window.__ebbWaveTap = function(){
+  if (waveAn || !window.ebblessDesktop || !window.ebblessDesktop.tapAudio || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return;
+  navigator.mediaDevices.getDisplayMedia({ audio: true, video: true }).then(st => {
+    st.getVideoTracks().forEach(t => t.stop());
+    if (!st.getAudioTracks().length){ st.getTracks().forEach(t => t.stop()); return; }
+    const AC = window.AudioContext || window.webkitAudioContext, ctx = new AC();
+    waveAn = ctx.createAnalyser(); waveAn.fftSize = 2048;
+    waveBuf = new Float32Array(waveAn.fftSize);
+    ctx.createMediaStreamSource(st).connect(waveAn);   // analysis only: not connected to the speakers
+    st.getAudioTracks()[0].onended = () => { waveAn = null; try { ctx.close(); } catch(e){} };
+  }).catch(() => {});
+};
+function waveRecord(id, cur, dur){
+  if (!waveAn || !dur || cur === waveLastCur) { waveLastCur = cur; return; }
+  waveLastCur = cur;
+  if (seekTrack.classList.contains('ad-fill')) return;
+  waveAn.getFloatTimeDomainData(waveBuf);
+  let m = 0; for (let i = 0; i < waveBuf.length; i++){ const a = Math.abs(waveBuf[i]); if (a > m) m = a; }
+  const rec = waveStore(), row = rec[id] || (rec[id] = new Array(WAVE_N).fill(0));
+  const k = Math.min(WAVE_N - 1, Math.floor(cur / dur * WAVE_N));
+  const v = Math.round(m * 255);
+  if (v > row[k]){ row[k] = v; waveDirty = true; }
+  const now = performance.now();
+  if (now - wavePaintAt > 4000){ wavePaintAt = now; wavePaint(id); waveSave(); }
+}
+function wavePaint(id){
+  const row = waveStore()[id];
+  if (!row || id !== waveId) return;
+  const top = Math.max.apply(null, row) || 1;
+  seekTrack.style.setProperty('--wave', waveSvg(row.map(v => Math.pow(v / top, 0.7))));
+}
 function waveSync(){
-  if (!document.body.dataset.look) return;
   const t = trackAt(state.queuePos), id = t && t.videoId;
   if (id === waveId) return;
-  waveId = id;
+  waveSave();
+  waveId = id; waveLastCur = -1;
   seekTrack.style.removeProperty('--wave');
-  if (!id || !(isLocalVideoId(id) || isAudioVideoId(id))) return;
+  if (!id) return;
+  if (!(isLocalVideoId(id) || isAudioVideoId(id))){ wavePaint(id); return; }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
   waveCache.get(id).then(v => { if (v && waveId === id) seekTrack.style.setProperty('--wave', v); });
 }
 function paintSeekUI(cur, dur){
   waveSync();
+  if (waveId && !isNativeVideoId(waveId)) waveRecord(waveId, cur, dur);
   if (seekDrag) cur = seekDrag.pct * dur;
   else if (seekHold){
     if (Math.abs(cur - seekHold.t) < 1.5 || performance.now() > seekHold.until) seekHold = null;

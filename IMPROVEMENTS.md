@@ -143,8 +143,8 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. Follow-up: background tint removed (plain app background). Waveform now follows the real audio for device uploads (lf:) and podcast files (au:, if the host allows the fetch); YouTube/SoundCloud songs play in cross-origin players the page cannot read, so they show flat even bars instead of a made-up shape. Peak math checked on a synthetic 20s clip; not yet checked with a real upload. No sw cache bump yet.
 
 ### waveform-real-peaks-727: Real waveform for streamed (YouTube / SoundCloud) songs
-- **Status:** draft
-- **Priority:** low
+- **Status:** review
+- **Priority:** medium
 - **Description:** Follow-up to #718. Uploads and podcast files already draw a real waveform. Streamed songs show flat bars because their audio sits in cross-origin players the page cannot read. This scopes how to get real peaks for them.
 - **Touches:** index.html (waveSync/waveCompute, seek rail), android-webview (native visualizer feed), desktop/ (audio tap), possibly worker/ (KV)
 - **Branch:** (none yet)
@@ -155,6 +155,7 @@ Add entries in this shape:
   4. **30-second previews (iTunes / Deezer): not recommended.** Only 30 s of the song, so stretching it across the whole bar is a wrong shape; CORS on the preview hosts is unverified.
   5. **YouTube "most replayed" heat map: not a waveform.** It shows where people rewatch, not loudness, so it would look real and be wrong.
 - **Open question for the owner:** is a silent always-on desktop audio tap acceptable, or should recording only happen on Android (native feed) plus while the light show is open?
+- **Built (desktop app only):** the main process calls the page's __ebbWaveTap right after load with userGesture=true, so no click is needed; the existing display-media handler still only returns this app page's own sound, speakers untouched. The page keeps one analyser open, records one peak per second per streamed song (64 buckets, kept on the device, capped at 300 songs) and redraws the bars every 4 s. Android and web do not record yet. NOT run in the Electron app (not built here): the no-gesture call and the recording are untested end to end; the Electron app needs a rebuild and a version bump.
 
 ### cd-mode-719: CD mode redesign (Geethub #719)
 - **Status:** in-progress
