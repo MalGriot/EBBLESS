@@ -1833,7 +1833,7 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .report-match-btn:hover{background:var(--panel-3);color:var(--text)}
 .report-match-btn:active{transform:scale(.88)}
 /* #385: the flag icons are gone everywhere (fullscreen included); "This isn't the right song" lives only in the song options menu. The buttons stay in the DOM as inert targets for that menu item. */
-.report-match-btn[hidden],.track-meta .title-row .report-match-btn,#flow-layer .flow-meta .report-match-btn{display:none!important}
+.report-match-btn[hidden],.track-meta .title-row .report-match-btn,:is(#flow-layer,#lyricsFsLayer) .flow-meta .report-match-btn{display:none!important}
 .report-match-btn.is-sent{color:var(--player-accent, var(--accent))}
 .ads-report-btn{display:block;margin:10px auto 0;padding:5px 12px;border-radius:999px;border:1px solid var(--panel-3);
   background:transparent;color:var(--faint);font:inherit;font-size:12px;cursor:pointer;
@@ -2515,19 +2515,19 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 #flow-layer.chrome-hidden .flow-viz #vizAutoBtn,
 #flow-layer.chrome-hidden .flow-viz #vizRotateBtn,
 #flow-layer.chrome-hidden .flow-viz #vizSpeedBtn{opacity:0;pointer-events:none}
-#flow-layer .flow-meta{text-align:center;position:relative;z-index:5;pointer-events:none;width:min(420px,80vw);margin-left:auto;margin-right:auto}
-#flow-layer .flow-meta .title-row{display:flex;flex-direction:column-reverse;align-items:center;justify-content:center;gap:6px}
-#flow-layer .flow-meta .title-row .title{flex:none;width:100%}
-#flow-layer .flow-meta .title{font-size:20px;font-weight:700}
-#flow-layer .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta{text-align:center;position:relative;z-index:5;pointer-events:none;width:min(420px,80vw);margin-left:auto;margin-right:auto}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta .title-row{display:flex;flex-direction:column-reverse;align-items:center;justify-content:center;gap:6px}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta .title-row .title{flex:none;width:100%}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta .title{font-size:20px;font-weight:700}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta .artist{font-size:13.5px;color:var(--faint);margin-top:4px}
 /* issue #153: white title/artist vanished over white-heavy album art in
    fullscreen - soft dark halo, near-invisible on dark art */
-#flow-layer .flow-meta .title,#flow-layer .flow-meta .artist{text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.3)}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta .title,:is(#flow-layer,#lyricsFsLayer) .flow-meta .artist{text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 10px rgba(0,0,0,.3)}
 /* only while fullscreen is open: the closed layer is still laid out (opacity 0),
    and these buttons were catching taps and hovers meant for the player's artist name (#478) */
-#flow-layer.is-open .flow-meta .player-like-btn{pointer-events:auto}
-#flow-layer .flow-meta .flow-meta-actions{display:flex;align-items:center;justify-content:center;gap:10px}
-#flow-layer.is-open .flow-meta .report-match-btn{pointer-events:auto}
+:is(#flow-layer,#lyricsFsLayer).is-open .flow-meta .player-like-btn{pointer-events:auto}
+:is(#flow-layer,#lyricsFsLayer) .flow-meta .flow-meta-actions{display:flex;align-items:center;justify-content:center;gap:10px}
+:is(#flow-layer,#lyricsFsLayer).is-open .flow-meta .report-match-btn{pointer-events:auto}
 #flow-layer .flow-chrome{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:space-between;
   padding:26px 26px calc(30px + var(--safe-b));opacity:1;pointer-events:none;
   transition:opacity 600ms var(--ease-in-out)}
@@ -2574,9 +2574,11 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 #lyricsFsLayer{position:fixed;inset:0;z-index:55;background:var(--bg);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #lyricsFsLayer.is-open{opacity:1;pointer-events:auto}
-.lyrics-fs-body{position:absolute;inset:0}
+.lyrics-fs-body{position:absolute;inset:0 0 calc(236px + var(--safe-b)) 0}   /* leaves room for the player controls under the lyrics */
 .lyrics-fs-body .lyrics-wrap{position:absolute;inset:0}
-.lyrics-fs-body .lyrics-scroller{padding:46vh 28px 40vh}
+.lyrics-fs-body .lyrics-scroller{padding:30vh 28px}
+/* the real title / seek / transport block (#flow-layer's .flow-bottom) is moved in while the lyrics are fullscreen, so every handler and live update keeps working */
+#lyricsFsLayer .flow-bottom{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 0 calc(14px + var(--safe-b));gap:14px;background:linear-gradient(to top,var(--bg) 70%,transparent)}
 .lyrics-fs-exit{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:2;
   width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .lyrics-fs-exit:hover{background:var(--panel-2);color:var(--text)}
@@ -31254,6 +31256,7 @@ function miniShowsSkin(skin){
   return (shape === 'disc' ? 'record' : shape === 'tape' ? 'cassette' : artStyle) === skin;
 }
 function lpRecordOnScreen(){
+  if (discSkin === 'cd') return false;   // #719: a CD has no needle, so no drop / lift sounds
   if (miniShowsSkin('record')) return true;
   if (artStyle !== 'record' || document.visibilityState !== 'visible') return false;
   if (state.flowOpen) return flowArtWrap.dataset.artStyle === 'record';
@@ -36068,14 +36071,17 @@ fsBtn.addEventListener('click', (e) => {
    and back out, so rendering/highlighting/click-to-seek all just work) ---------- */
 const lyricsFsLayer = $('lyricsFsLayer'), lyricsFsBody = $('lyricsFsBody'), lyricsFsExitBtn = $('lyricsFsExitBtn');
 const lyricsWrapHome = lyricsWrap.parentElement, lyricsWrapAnchor = lyricsWrap.nextElementSibling;
+const flowBottomHome = flowBottomEl.parentElement, flowBottomAnchor = flowBottomEl.nextElementSibling;
 function openLyricsFs(){
   lyricsFsBody.appendChild(lyricsWrap);
+  lyricsFsLayer.appendChild(flowBottomEl);
   lyricsFsLayer.classList.add('is-open');
   syncHistoryBuffer();
 }
 function closeLyricsFs(){
   lyricsFsLayer.classList.remove('is-open');
   lyricsWrapHome.insertBefore(lyricsWrap, lyricsWrapAnchor);
+  flowBottomHome.insertBefore(flowBottomEl, flowBottomAnchor);
   syncHistoryBuffer();
 }
 lyricsFsExitBtn.addEventListener('click', closeLyricsFs);
