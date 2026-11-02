@@ -602,6 +602,31 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-search .st-chip{padding:8px 14px;border-radius:999px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer}
 #view-search .st-chip.is-prompt{border-color:var(--accent)}
 #view-search .st-help{font-size:12.5px;color:var(--faint-2);line-height:1.5;margin:0}
+/* #722 search page (refs: Resonance search, AI assistant search): big title, roomy field, a swipeable row of cover cards,
+   and the "right now" prompts and genres as large gradient cards in two columns instead of pills. Static fills only (GPU budget). */
+#view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:6px 0 14px;color:var(--text)}
+#view-search .st-form{margin:0 0 24px}
+#view-search .st-field input{padding:16px 16px 16px 50px;border-radius:16px;font-size:16px;background:color-mix(in srgb,var(--panel-2) 80%,transparent);border-color:color-mix(in srgb,var(--text) 10%,transparent)}
+#view-search .st-go{left:6px;width:44px;height:44px;color:var(--accent)}
+#view-search .st-sec h2{font-size:18px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--text);margin:0 0 12px}
+#view-search .st-grid{display:flex;gap:12px;overflow-x:auto;margin:0 calc(-1 * var(--vs-pad,24px));padding:0 var(--vs-pad,24px) 4px;scroll-padding-left:var(--vs-pad,24px);scroll-snap-type:x proximity;scrollbar-width:none}
+#view-search .st-grid::-webkit-scrollbar{display:none}
+#view-search .st-tile{flex:none;width:136px;flex-direction:column;align-items:stretch;gap:8px;padding:0;background:none;border:0;scroll-snap-align:start}
+#view-search .st-tile .st-art,#view-search .st-tile .st-ph{width:136px;height:136px;border-radius:16px;box-shadow:0 8px 18px -8px rgba(0,0,0,.6)}
+#view-search .st-tile .st-ph{font-size:36px}
+#view-search .st-tile .st-n{font-size:14px}
+#view-search .st-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#view-search .st-chip{position:relative;overflow:hidden;min-height:92px;padding:14px;border-radius:16px;border:0;text-align:left;color:#fff;font-size:17px;font-weight:800;line-height:1.15;letter-spacing:-.2px;
+  text-shadow:0 1px 6px rgba(0,0,0,.35);background:linear-gradient(135deg,var(--c1,#6b4fbb),var(--c2,#2a1d5c));display:flex;align-items:flex-start}
+#view-search .st-chip.is-prompt{grid-column:1 / -1;min-height:84px;font-size:18px;border:0;background:linear-gradient(120deg,var(--c1,#d9622b),var(--c2,#7a1f3d))}
+#view-search .st-chip::after{content:'';position:absolute;right:-18px;bottom:-22px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.14);pointer-events:none}
+#view-search .st-chip:nth-child(6n+1){--c1:#d9622b;--c2:#7a1f3d}
+#view-search .st-chip:nth-child(6n+2){--c1:#2e8f8a;--c2:#12365a}
+#view-search .st-chip:nth-child(6n+3){--c1:#7b4fd1;--c2:#2a1d5c}
+#view-search .st-chip:nth-child(6n+4){--c1:#c9a227;--c2:#7a4a12}
+#view-search .st-chip:nth-child(6n+5){--c1:#c2417a;--c2:#4e1536}
+#view-search .st-chip:nth-child(6n){--c1:#3a8f4f;--c2:#15432c}
+#view-search .st-chip:active{transform:scale(.97)}
 @media (min-width:860px){#topbar{--tb-l:68px;--tb-r:460px;--tb-min:260px}}
 /* 860-1149px, no split layout: the nav goes icons-only (labels stay for screen
    readers) so the search field has room to sit on the page center */
@@ -5206,6 +5231,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <!-- ===== SEARCH (phones: the bottom-nav Search tab, #608) ===== -->
   <main class="view" id="view-search" hidden>
     <div class="view-scroll">
+      <h1 class="st-title">Search</h1>
       <form class="st-form" id="searchTabForm" autocomplete="off">
         <span class="st-field">
           <button type="submit" class="st-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
