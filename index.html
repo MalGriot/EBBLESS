@@ -577,7 +577,7 @@ video.lib-bg-video.is-playing{opacity:1}
    bottom nav that opens #view-search. The field stays in the DOM (every search
    path still reads #urlInput) and is only shown during onboarding. */
 @media (max-width:859.98px){body:not(.onb-active) #importForm.import-row{display:none}}
-@media (min-width:860px){#view-search{display:none!important}}
+@media (min-width:860px){body:not(.split-desktop) #view-search{display:none!important}}   /* #722: the 3-pane desktop shows it in the middle pane when the top search bar is clicked */
 #view-search .st-form{position:relative;margin:8px 0 18px}
 #view-search .st-field{display:flex;position:relative}
 #view-search .st-field input{flex:1;min-width:0;width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
@@ -604,7 +604,17 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-search .st-help{font-size:12.5px;color:var(--faint-2);line-height:1.5;margin:0}
 /* #722 search page (refs: Resonance search, AI assistant search): big title, roomy field, a swipeable row of cover cards,
    and the "right now" prompts and genres as large gradient cards in two columns instead of pills. Static fills only (GPU budget). */
-#view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:6px 0 14px;color:var(--text)}
+#view-search .st-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 14px}
+#view-search .st-title{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0;color:var(--text)}
+#view-search .st-close{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;color:var(--faint);background:var(--panel-2)}
+#view-search .st-close:hover{color:var(--text)}
+#view-search .st-close svg{width:18px;height:18px}
+body.split-desktop #view-search .st-close{display:flex}
+body.split-desktop #view-search .view-scroll{max-width:760px;margin:0 auto}
+body.split-desktop #view-search .st-chips{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+#view-search .st-chip .st-chip-art{position:absolute;right:-8px;bottom:-10px;width:62px;height:62px;border-radius:10px;object-fit:cover;transform:rotate(18deg);box-shadow:0 6px 14px rgba(0,0,0,.45);pointer-events:none}
+#view-search .st-chip.is-prompt .st-chip-art{width:72px;height:72px;right:10px;bottom:-14px}
+#view-search .st-chip{padding-right:60px}
 #view-search .st-form{margin:0 0 24px}
 #view-search .st-field input{padding:16px 16px 16px 50px;border-radius:16px;font-size:16px;background:color-mix(in srgb,var(--panel-2) 80%,transparent);border-color:color-mix(in srgb,var(--text) 10%,transparent)}
 #view-search .st-go{left:6px;width:44px;height:44px;color:var(--accent)}
@@ -3181,6 +3191,7 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop #topbar{padding:0 12px 0 24px}
   body.split-desktop #view-library,
   body.split-desktop #view-player,
+  body.split-desktop #view-search,
   body.split-desktop #view-settings{
     position:static;grid-row:2;top:auto;bottom:auto;min-height:0;
   }
@@ -3195,8 +3206,10 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop #view-library{container-type:size}
   body.split-desktop #view-library .lib-bg{position:sticky;top:0;bottom:auto;height:100cqh;margin-bottom:-100cqh}
   body.split-desktop #view-player,
+  body.split-desktop #view-search,
   body.split-desktop #view-settings{grid-column:2}
-  body.split-desktop:not(.view-settings-active) #view-player{display:block!important}
+  body.split-desktop:not(.view-settings-active):not(.view-search-active) #view-player{display:block!important}
+  body.split-desktop.view-search-active #view-search{display:block!important;overflow-y:auto}
   body.split-desktop.view-settings-active #view-settings{display:block!important}
   /* issue #141: Settings opened from desktop fullscreen shows on its own -
      no library/queue/playlist panes beside it (see setView()). */
@@ -3271,8 +3284,8 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
      bottom padding (38px art + 8px*2 padding + 1px border) only while it's
      actually shown, so the 1fr pane row shrinks to sit above it instead of
      being overlapped - and normal (non-Settings) desktop view is untouched. */
-  body.split-desktop:not(.view-settings-active):not(:has(#import-overlay.is-open)) #mini-bar{display:none!important}
-  body.split-desktop:is(.view-settings-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
+  body.split-desktop:not(.view-settings-active):not(.view-search-active):not(:has(#import-overlay.is-open)) #mini-bar{display:none!important}
+  body.split-desktop:is(.view-settings-active,.view-search-active,:has(#import-overlay.is-open)):has(#mini-bar:not([hidden])) #app{padding-bottom:55px}
   body.split-desktop:has(#import-overlay.is-open) #mini-bar:not([hidden]){display:flex}   /* #665: the search window keeps the footer player, like Settings */
   /* :not(.desktop-fs) on .view-scroll only: without it, this override
      survives into the desktop-fs full-width #view-player and cancels the
@@ -5231,7 +5244,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
   <!-- ===== SEARCH (phones: the bottom-nav Search tab, #608) ===== -->
   <main class="view" id="view-search" hidden>
     <div class="view-scroll">
-      <h1 class="st-title">Search</h1>
+      <div class="st-head"><h1 class="st-title">Search</h1><button type="button" class="st-close" id="stCloseBtn" aria-label="Close search"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button></div>
       <form class="st-form" id="searchTabForm" autocomplete="off">
         <span class="st-field">
           <button type="submit" class="st-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
@@ -10410,6 +10423,7 @@ function setView(name){
   if (name === 'search') renderSearchTab();
   if (name === 'player' && state.queuePos >= 0) awardMilestone('progress');
   document.body.classList.toggle('view-settings-active', name === 'settings');
+  document.body.classList.toggle('view-search-active', name === 'search' && document.body.classList.contains('split-desktop'));
   if (state.deskFsOpen) csStackSync();
   if (restoreDeskFs && document.body.classList.contains('split-desktop')) toggleDesktopFs();
   if (state.queueOpen) closeQueuePanel(false);
@@ -18201,6 +18215,20 @@ function searchTabArtistTiles(){
   }
   return tiles.filter(t => t.name).slice(0, 6);
 }
+const LS_ST_ART = 'ebbless:stGenreArt:v1';
+// iTunes' top album for a genre word: just the word is sent, the cover link comes back and is kept ('' = looked up, none found)
+function stGenreArt(term){
+  const m = lsGet(LS_ST_ART, null) || {};
+  if (term in m) return Promise.resolve(m[term]);
+  return fetch('https://itunes.apple.com/search?' + new URLSearchParams({ term: term, media: 'music', entity: 'album', limit: '6' }))
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      const hit = d && (d.results || []).find(x => x && x.artworkUrl100);
+      const u = hit ? hit.artworkUrl100.replace('100x100bb', '300x300bb') : '';
+      if (d){ const cur = lsGet(LS_ST_ART, null) || {}; cur[term] = u; lsSet(LS_ST_ART, cur); }
+      return u;
+    }).catch(() => '');
+}
 function renderSearchTab(){
   const grid = $('stGrid'), picks = $('stPicks'), chips = $('stChips');
   searchTabInput.placeholder = 'Search or paste a link';
@@ -18225,12 +18253,34 @@ function renderSearchTab(){
   $('stMoodTitle').textContent = 'Right now: ' + when;
   chips.innerHTML = prompts.map((t, i) => '<button type="button" class="st-chip is-prompt" data-q="p' + i + '">' + escapeHtml(t) + '</button>').join('') +
     tags.map((t, i) => '<button type="button" class="st-chip" data-q="t' + i + '">' + escapeHtml(t) + '</button>').join('');
+  // #722: a relevant album cover on every card (the top album for that genre word), looked up once and remembered on this device
+  chips.querySelectorAll('.st-chip').forEach((b, i) => {
+    const term = i < prompts.length ? tags[i] : tags[i - prompts.length];
+    if (!term) return;
+    stGenreArt(term).then(u => { if (u && b.isConnected && !b.querySelector('.st-chip-art')){ const im = document.createElement('img'); im.className = 'st-chip-art'; im.alt = ''; im.src = u; im.onerror = () => im.remove(); b.appendChild(im); } });
+  });
   chips.querySelectorAll('.st-chip').forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.q;
     searchTabSubmit(k.charAt(0) === 'p' ? prompts[+k.slice(1)] : tags[+k.slice(1)]);
   }));
 }
 $('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
+// #722 desktop: clicking the top search bar puts the search page in the middle pane (the footer player comes back, like Settings); Esc or the X goes back
+function openDesktopSearch(){
+  if (state.currentView === 'search') return;
+  if (state.deskFsOpen && typeof closeDesktopFs === 'function') closeDesktopFs();
+  state.preSearchView = state.currentView;
+  setView('search');
+  searchTabInput.value = urlInput.value; urlInput.value = '';
+  searchTabInput.focus();
+}
+function closeDesktopSearch(){
+  if (state.currentView !== 'search') return;
+  setView(state.preSearchView && state.preSearchView !== 'search' ? state.preSearchView : 'player');
+}
+urlInput.addEventListener('click', () => { if (document.body.classList.contains('split-desktop')) openDesktopSearch(); });
+$('stCloseBtn').addEventListener('click', closeDesktopSearch);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('view-search-active') && !importOverlay.classList.contains('is-open')){ e.preventDefault(); closeDesktopSearch(); } });
 searchTabInput.addEventListener('input', () => { searchTabErr.textContent = ''; });
 
 /* ---------- Paste a list of songs ----------
