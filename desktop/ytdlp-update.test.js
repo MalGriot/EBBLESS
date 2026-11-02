@@ -1,0 +1,13 @@
+const assert = require('assert');
+const { assetName, binName, parseSums, pickFiles } = require('./ytdlp-update');
+const h = 'a'.repeat(64), g = 'b'.repeat(64);
+const sums = parseSums(h + '  yt-dlp_macos\n' + g.toUpperCase() + ' *yt-dlp.exe\nnot a line\n');
+assert.strictEqual(sums['yt-dlp_macos'], h); assert.strictEqual(sums['yt-dlp.exe'], g);
+assert.strictEqual(assetName('darwin'), 'yt-dlp_macos'); assert.strictEqual(assetName('win32'), 'yt-dlp.exe'); assert.strictEqual(assetName('linux'), null);
+assert.strictEqual(binName('win32'), 'yt-dlp.exe'); assert.strictEqual(binName('darwin'), 'yt-dlp');
+const P = 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/';
+const rel = { tag_name: '2026.10.26', assets: [{ name: 'yt-dlp_macos', browser_download_url: P + 'yt-dlp_macos' }, { name: 'SHA2-256SUMS', browser_download_url: P + 'SHA2-256SUMS' }] };
+assert.strictEqual(pickFiles(rel, 'darwin').binUrl, P + 'yt-dlp_macos');
+assert.strictEqual(pickFiles(rel, 'win32'), null);
+assert.strictEqual(pickFiles({ tag_name: 'x', assets: [{ name: 'yt-dlp_macos', browser_download_url: 'https://evil.example/yt-dlp_macos' }, { name: 'SHA2-256SUMS', browser_download_url: P + 'SHA2-256SUMS' }] }, 'darwin'), null);
+console.log('ytdlp-update tests ok');

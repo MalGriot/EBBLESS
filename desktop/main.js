@@ -271,5 +271,11 @@ ipcMain.handle('ebbless:update-install', (e) => {
 
 app.on('before-quit', () => { quitting = true; });
 app.on('activate', () => { if (mainWin){ mainWin.show(); mainWin.focus(); } });
-app.whenReady().then(createMainWindow);
+app.whenReady().then(() => {
+  createMainWindow();
+  // #727: keep the waveform tool current: shortly after launch, then daily while the app stays open
+  wave.init(path.join(app.getPath('userData'), 'bin'));
+  setTimeout(() => wave.refresh(false), 30000);
+  setInterval(() => wave.refresh(false), 24 * 3600 * 1000).unref();
+});
 app.on('window-all-closed', () => app.quit());
