@@ -2152,6 +2152,25 @@ body.queue-open #bottom-nav button[data-view].is-active{color:var(--faint-2)}
 /* #721 album page: full-width cover with a curved bottom, meta + big title over it, a round Play button hanging off the curve,
    numbered rows. Only album pages (is-album); playlists, artist pages and song pages keep the old layout. */
 .libpl-hero{display:none}
+.libpl-art-shuffle{display:none}
+#libpl-panel.is-hero:not(.is-artist-info) .libpl-art-shuffle{display:flex;position:absolute;z-index:3;right:98px;bottom:-20px;width:44px;height:44px;border-radius:50%;align-items:center;justify-content:center;
+  background:var(--panel-2);color:var(--text);box-shadow:0 0 0 5px var(--bg),0 4px 14px rgba(0,0,0,.4);transition:transform var(--dur-ui) var(--ease-out)}
+#libpl-panel.is-hero .libpl-art-shuffle svg{width:20px;height:20px}
+#libpl-panel.is-hero .libpl-art-shuffle:active{transform:scale(.94)}
+/* #721 now-playing row: animated bars (scaleY only) + a thin progress line along the bottom; the old blinking speaker steps aside */
+#libplBody .track-row{position:relative}
+#libplBody .track-row.is-now-playing .row-actions::before,#libplBody .track-row.is-now-playing:not(:has(.row-actions)) .title::before{display:none}
+.np-bars{flex:none;display:inline-flex;align-items:flex-end;gap:2px;width:14px;height:14px;margin-right:10px}
+.np-bars i{width:3px;height:100%;border-radius:1px;background:var(--accent);transform-origin:bottom;transform:scaleY(.5);animation:np-eq .9s ease-in-out infinite;animation-play-state:paused}
+.np-bars i:nth-child(2){animation-duration:.7s;animation-delay:-.3s}
+.np-bars i:nth-child(3){animation-duration:1.1s;animation-delay:-.6s}
+body:has(#artworkWrap.is-playing) #libpl-panel.is-open .np-bars i{animation-play-state:running}
+@keyframes np-eq{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.np-bars i{animation:none}}
+.np-prog{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(255,255,255,.1);pointer-events:none}
+.np-prog i{display:block;width:100%;height:100%;background:var(--accent);transform-origin:left;transform:scaleX(0)}
+#libpl-panel.is-album:not(.is-artist-info) #libplBody .track-row.is-now-playing::before{display:none}
+#libpl-panel.is-album:not(.is-artist-info) .np-bars{margin-right:16px}
 #libpl-panel.is-hero .queue-head{position:absolute;top:18px;left:0;right:0;z-index:4;background:transparent;border:0;pointer-events:none;justify-content:flex-end}
 #libpl-panel.is-hero .queue-head h2,#libpl-panel.is-hero .queue-head .libpl-play{display:none}
 #libpl-panel.is-hero .queue-head .close-btn{pointer-events:auto;background:rgba(0,0,0,.45);color:#fff;border-radius:50%;margin-right:12px}
@@ -11305,10 +11324,22 @@ function setLibSearchOpen(open){
 libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
 
 const libFolded = {};
+let nowRowProg = null, lastSeekPct = 0;   // #721: progress line of the playing library row
 function markNowPlaying(){
   const e = state.queuePos >= 0 ? state.queue[state.queuePos] : null;
   document.querySelectorAll('.lib-card').forEach(c => c.classList.toggle('is-now-playing', !!e && c.dataset.plId === e.plId));
   document.querySelectorAll('.track-row[data-pl-id]').forEach(r => r.classList.toggle('is-now-playing', !!e && r.dataset.plId === e.plId && +r.dataset.idx === e.idx));
+  // #721: the playing row on a library page gets animated bars and a thin progress line (transform-only; see .np-bars / .np-prog)
+  nowRowProg = null;
+  document.querySelectorAll('#libplBody .track-row').forEach(r => {
+    const on = r.classList.contains('is-now-playing');
+    let bars = r.querySelector(':scope > .np-bars'), prog = r.querySelector(':scope > .np-prog');
+    if (!on){ if (bars) bars.remove(); if (prog) prog.remove(); return; }
+    if (!bars){ bars = document.createElement('span'); bars.className = 'np-bars'; bars.setAttribute('aria-hidden', 'true'); bars.innerHTML = '<i></i><i></i><i></i>'; const img = r.querySelector(':scope > img'); r.insertBefore(bars, img || r.querySelector('.meta')); }
+    if (!prog){ prog = document.createElement('div'); prog.className = 'np-prog'; prog.setAttribute('aria-hidden', 'true'); prog.innerHTML = '<i></i>'; r.appendChild(prog); }
+    nowRowProg = prog.firstChild;
+  });
+  if (nowRowProg && typeof lastSeekPct === 'number') nowRowProg.style.transform = 'scaleX(' + lastSeekPct + ')';
 }
 // #311: albums are grouped in the library by the artist they were imported
 // under. Albums an artist's page filled in carry importedUnder; an artist's
@@ -12438,7 +12469,7 @@ function toggleLibraryPlaylistPanel(id){
         const date = podDateLabel(t);
         const left = podProgressLabel((lsGet(LS_POD_PROGRESS, {}) || {})[t.videoId]);
         artist.textContent = [date, t.duration ? formatTime(t.duration) : '', left].filter(Boolean).join(' · ');
-      } else artist.textContent = t.artist;
+      } else { const rd = t.srcDuration || t.duration; artist.textContent = t.artist + (rd ? ' \u00b7 ' + formatTime(rd) : ''); }   // #721: length on every row
       meta.appendChild(title); meta.appendChild(artist);
       row.appendChild(img); row.appendChild(meta);
       if (canReorder){
@@ -12582,6 +12613,11 @@ function toggleLibraryPlaylistPanel(id){
 
 libplPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
 libplArtPlayBtn.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) playPlaylistNow(openLibraryPanelId); });
+// #721: Shuffle on the cover: turns shuffle on (plain, not Discover), then plays from the top of this page's list in a shuffled order
+function shufflePlaylistNow(id){
+  if (!state.shuffle || state.shuffleDiscover){ state.shuffle = true; state.shuffleDiscover = false; renderShuffleButtons(); }
+  playPlaylistNow(id);
+}
 // closing an album that was opened from inside an artist's page goes back to that artist (#369)
 function dismissLibraryPlaylistPanel(){
   if (libplBackFn){ const f = libplBackFn; libplBackFn = null; f(); syncLibplCloseBtn(); return; }
@@ -13303,6 +13339,13 @@ async function loadArtistAlbumsInto(panelId, name, standalone){
 // #721: pages in the library panel that have a cover get the hero layout: a meta line and the big title over the cover
 function libplHeroSync(meta){
   libplPanel.classList.toggle('is-hero', !libplArtWrap.hidden);
+  const box = libplArtWrap.querySelector('.libpl-art-box');
+  if (box && !box.querySelector('.libpl-art-shuffle')){
+    const sb = document.createElement('button'); sb.type = 'button'; sb.className = 'libpl-art-shuffle'; sb.setAttribute('aria-label', 'Shuffle play'); sb.title = 'Shuffle play';
+    sb.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>';
+    sb.addEventListener('click', (e) => { e.stopPropagation(); if (openLibraryPanelId) shufflePlaylistNow(openLibraryPanelId); });
+    box.appendChild(sb);
+  }
   let hero = libplArtWrap.querySelector('.libpl-hero');
   if (!hero){ hero = document.createElement('div'); hero.className = 'libpl-hero'; hero.innerHTML = '<div class="lh-meta"></div><div class="lh-title"></div>'; libplArtWrap.appendChild(hero); }
   hero.querySelector('.lh-meta').textContent = meta || '';
@@ -35163,7 +35206,7 @@ function paintSeekUI(cur, dur){
   const pct = dur ? Math.min(100, Math.max(0, (cur / dur) * 100)) : 0;
   const pctStr = (+pct.toFixed(2)) + '%';
   if (!seekTrack.classList.contains('ad-fill') && seekFill.style.width !== pctStr){ seekFill.style.width = pctStr; flowSeekFill.style.width = pctStr; miniLineFill.style.width = pctStr; }
-  if (seekKnob.style.left !== pctStr){ seekKnob.style.left = pctStr; flowSeekKnob.style.left = pctStr; }
+  if (seekKnob.style.left !== pctStr){ seekKnob.style.left = pctStr; flowSeekKnob.style.left = pctStr; lastSeekPct = pct / 100; if (nowRowProg) nowRowProg.style.transform = 'scaleX(' + lastSeekPct + ')'; }
   if (!seekDrag) notePodProgress(cur, dur);
   const tc = formatTime(cur), td = formatTime(dur);
   if (timeCur.textContent !== tc){ timeCur.textContent = tc; flowTimeCur.textContent = tc; }
