@@ -2574,9 +2574,18 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 #lyricsFsLayer{position:fixed;inset:0;z-index:55;background:var(--bg);opacity:0;pointer-events:none;
   transition:opacity var(--dur-surface) var(--ease-in-out)}
 #lyricsFsLayer.is-open{opacity:1;pointer-events:auto}
-.lyrics-fs-body{position:absolute;inset:0 0 calc(236px + var(--safe-b)) 0}   /* leaves room for the player controls under the lyrics */
+/* #720: cover + title + artist pinned top-left like the reference; the same text is hidden in the moved controls block */
+.lyrics-fs-head{position:absolute;top:calc(68px + var(--safe-t));left:24px;right:24px;z-index:2;display:flex;align-items:center;gap:12px;pointer-events:none}
+.lyrics-fs-head img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none;background:var(--panel-2);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.lyrics-fs-head img:not([src]){visibility:hidden}
+.lfh-text{min-width:0}
+.lfh-title,.lfh-artist{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lfh-title{font-size:16px;font-weight:700;color:var(--text)}
+.lfh-artist{font-size:13px;color:var(--faint);margin-top:2px}
+#lyricsFsLayer .flow-meta .title,#lyricsFsLayer .flow-meta .artist{display:none}
+.lyrics-fs-body{position:absolute;inset:calc(136px + var(--safe-t)) 0 calc(236px + var(--safe-b)) 0}   /* leaves room for the player controls under the lyrics */
 .lyrics-fs-body .lyrics-wrap{position:absolute;inset:0}
-.lyrics-fs-body .lyrics-scroller{padding:30vh 28px}
+.lyrics-fs-body .lyrics-scroller{padding:24vh 28px}
 /* the real title / seek / transport block (#flow-layer's .flow-bottom) is moved in while the lyrics are fullscreen, so every handler and live update keeps working */
 #lyricsFsLayer .flow-bottom{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:0 0 calc(14px + var(--safe-b));gap:14px;background:linear-gradient(to top,var(--bg) 70%,transparent)}
 .lyrics-fs-exit{position:absolute;top:calc(16px + var(--safe-t));right:16px;z-index:2;
@@ -5905,6 +5914,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
     <button class="lyrics-fs-exit" id="lyricsFsExitBtn" aria-label="Exit fullscreen lyrics">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>
     </button>
+    <div class="lyrics-fs-head" id="lyricsFsHead"><img id="lyricsFsCover" alt=""><div class="lfh-text"><div class="lfh-title" id="lyricsFsTitle"></div><div class="lfh-artist" id="lyricsFsArtist"></div></div></div>
     <div class="lyrics-fs-body" id="lyricsFsBody"></div>
   </div>
 
@@ -30356,6 +30366,7 @@ function updateTrackMetaUI(t){
   updateMediaSessionMeta(t);
   updateMiniPlayerUI();
   castRenderUI();
+  lyricsFsHeadSync();
 }
 
 function updatePlayerLikeBtn(t){
@@ -36072,10 +36083,22 @@ fsBtn.addEventListener('click', (e) => {
 const lyricsFsLayer = $('lyricsFsLayer'), lyricsFsBody = $('lyricsFsBody'), lyricsFsExitBtn = $('lyricsFsExitBtn');
 const lyricsWrapHome = lyricsWrap.parentElement, lyricsWrapAnchor = lyricsWrap.nextElementSibling;
 const flowBottomHome = flowBottomEl.parentElement, flowBottomAnchor = flowBottomEl.nextElementSibling;
+function lyricsFsHeadSync(){
+  try {   // can run before this block's consts exist (track meta on load); nothing to do then
+    if (!lyricsFsLayer.classList.contains('is-open')) return;
+    const t = currentTrack();
+    $('lyricsFsTitle').textContent = t ? t.title : '';
+    $('lyricsFsArtist').textContent = t ? t.artist : '';
+    const a = document.querySelector('#artworkWrap .art.is-active'), c = $('lyricsFsCover'), src = a && a.getAttribute('src');
+    if (src) c.src = src; else c.removeAttribute('src');
+  } catch(e){}
+}
+[artA, artB].forEach(a => a.addEventListener('load', lyricsFsHeadSync));
 function openLyricsFs(){
   lyricsFsBody.appendChild(lyricsWrap);
   lyricsFsLayer.appendChild(flowBottomEl);
   lyricsFsLayer.classList.add('is-open');
+  lyricsFsHeadSync();
   syncHistoryBuffer();
 }
 function closeLyricsFs(){
