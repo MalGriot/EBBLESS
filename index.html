@@ -35201,14 +35201,31 @@ let waveLoadTimer = 0;
 function waveLoading(on){ clearTimeout(waveLoadTimer); seekTrack.classList.toggle('wave-loading', on); if (on) waveLoadTimer = setTimeout(() => seekTrack.classList.remove('wave-loading'), 25000); }
 /* Desktop app: the main process pulls the song's smallest audio stream once; peaks are kept, the audio is dropped.
    Also warms the next song in the queue so its bars are ready when it starts. */
+function waveCanFetch(){
+  if (lsGet(LS_WAVE_OFF, false)) return false;
+  return !!((window.ebblessDesktop && window.ebblessDesktop.waveAudio) || (window.EbbNative && typeof window.EbbNative.waveRequest === 'function'));
+}
+function waveKeep(id, peaks){   // peaks: 64 numbers of any scale
+  const top = Math.max.apply(null, peaks) || 1;
+  waveStore()[id] = peaks.map(v => Math.round(v / top * 255)); waveFull.add(id); waveDirty = true; waveSave();
+  if (id === waveId) wavePaint(id);
+}
+// Android app: native finds the stream, decodes it and calls this with the 64 peaks.
+window.__ebbWavePeaks = function(id, peaks){
+  if (typeof id !== 'string' || !Array.isArray(peaks) || peaks.length !== WAVE_N || !peaks.every(v => typeof v === 'number' && v >= 0 && v <= 255)) return;
+  waveKeep(id, peaks);
+};
 function waveFetch(id, urgent){
-  if (!id || waveStore()[id] || waveAsked.has(id) || isNativeVideoId(id) || !window.ebblessDesktop || !window.ebblessDesktop.waveAudio || lsGet(LS_WAVE_OFF, false)) return;
+  if (!id || waveStore()[id] || waveAsked.has(id) || isNativeVideoId(id) || !waveCanFetch()) return;
   waveAsked.add(id);
+  if (!(window.ebblessDesktop && window.ebblessDesktop.waveAudio)){
+    try { window.EbbNative.waveRequest(id); } catch(e){}
+    setTimeout(() => { if (id === waveId && !waveFull.has(id)) waveLoading(false); }, 20000);
+    return;
+  }
   window.ebblessDesktop.waveAudio(id, !!urgent).then(bytes => bytes && bytes.byteLength ? wavePeaksOf(bytes.buffer ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) : bytes) : null).then(peaks => {
     if (!peaks){ if (id === waveId) waveLoading(false); return; }
-    const top = Math.max.apply(null, peaks) || 1;
-    waveStore()[id] = peaks.map(v => Math.round(v / top * 255)); waveFull.add(id); waveDirty = true; waveSave();
-    if (id === waveId) wavePaint(id);
+    waveKeep(id, peaks);
   }).catch(() => {});
 }
 // Sound first: a song's waveform fetch (and the next two) waits until that song is actually playing, or 4 s at most
@@ -35236,7 +35253,7 @@ function waveSync(){
   if (!id) return;
   if (!(isLocalVideoId(id) || isAudioVideoId(id))){
     wavePaint(id);
-    if (!waveStore()[id] && !isNativeVideoId(id) && window.ebblessDesktop && window.ebblessDesktop.waveAudio && !lsGet(LS_WAVE_OFF, false)) waveLoading(true);
+    if (!waveStore()[id] && !isNativeVideoId(id) && waveCanFetch()) waveLoading(true);
     return;
   }
   if (!waveCache.has(id)) waveCache.set(id, waveCompute(id).catch(() => null));
