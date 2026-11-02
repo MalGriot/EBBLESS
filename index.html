@@ -2636,6 +2636,19 @@ body:has(#flow-layer.is-open:not(.is-leaving)) :is(#ambient,#topbar,#view-librar
 .fs-nav button:hover{background:var(--panel-2);color:var(--text)}
 .fs-nav svg{width:18px;height:18px}
 .flow-nav{margin-right:auto}
+.fs-timeline{display:none}
+/* #723 desktop fullscreen: an up-next timeline down the right edge (ref: the Dribbble player with the vertical track dots).
+   The playing song is labeled and ringed, the next ones are dots that name themselves on hover; a click jumps to it. */
+body.split-desktop.desktop-fs:not(.view-settings-active) .fs-timeline{display:flex;flex-direction:column;gap:22px;position:absolute;right:44px;top:50%;transform:translateY(-50%);z-index:3;align-items:flex-end}
+.fs-timeline::before{content:'';position:absolute;right:7px;top:8px;bottom:8px;width:1px;background:rgba(255,255,255,.35)}
+.fst-item{position:relative;display:flex;align-items:center;gap:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6);cursor:pointer;background:none;border:0;padding:2px 0}
+.fst-label{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;opacity:0;transition:opacity var(--dur-ui) var(--ease-out)}
+.fst-item:hover .fst-label,.fst-item:focus-visible .fst-label,.fst-item.is-now .fst-label{opacity:1}
+.fst-item.is-now .fst-label{font-size:16px;font-weight:600}
+.fst-dot{flex:none;width:14px;height:14px;display:flex;align-items:center;justify-content:center}
+.fst-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+.fst-item.is-now .fst-dot::before{width:12px;height:12px;background:transparent;box-shadow:0 0 0 2px #fff,inset 0 0 0 3px var(--accent);border-radius:50%}
+.fst-item:not(.is-now):hover .fst-dot::before{background:var(--accent)}
 .lyrics-fs-nav{position:absolute;top:calc(16px + var(--safe-t));left:16px;z-index:2}
 .flow-exit{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--faint)}
 .flow-exit:hover{background:var(--panel-2);color:var(--text)}
@@ -3428,11 +3441,11 @@ body.split-desktop .install-banner{padding-left:24px;padding-right:12px}
   body.split-desktop.desktop-fs:not(.view-settings-active) :is(#fsBtn,#desktopFsExitBtn,#castBtn){top:calc(var(--topbar-h) + 10px)}
   /* idle auto-hide (issue #147): same 600ms fade and hidden cursor as
      #flow-layer.chrome-hidden, toggled by the shared armFsIdleTimer() */
-  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
+  body.split-desktop.desktop-fs:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
     /* background/color kept for #fsBtn's own .art-fs-btn hover transition */
     transition:opacity 600ms var(--ease-in-out),background var(--dur-ui) var(--ease-out),color var(--dur-ui) var(--ease-out);
   }
-  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
+  body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active) :is(#topbar,.visual-tabs,.track-meta,.transport-full,#fsTimeline,#fsBtn,#desktopFsExitBtn,#castBtn,#playerLikeBtn){
     opacity:0;pointer-events:none;
   }
   body.split-desktop.desktop-fs.fs-chrome-hidden:not(.view-settings-active),
@@ -4792,6 +4805,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 
   <!-- ===== PLAYER ===== -->
   <main class="view" id="view-player" hidden>
+    <div class="fs-timeline" id="fsTimeline" role="list" aria-label="Up next"></div>
     <div class="view-scroll">
       <div class="player-stage">
         <div class="visual-tabs" id="visualTabs">
@@ -24265,7 +24279,25 @@ window.ebblessTimeContext.rank = function(ranked, candMetrics, d, scale){ return
 // that is playing, a fresh load starts a new list.
 let lastQueueHead = '';
 let lastQueueNowHead = '', lastQueueNowPos = -1;
+function fsTimelineSync(){
+  const box = document.getElementById('fsTimeline');
+  if (!box) return;
+  box.textContent = '';
+  if (state.queuePos < 0) return;
+  for (let pos = state.queuePos; pos < Math.min(state.queue.length, state.queuePos + 6); pos++){
+    const t = trackAt(pos);
+    if (!t) continue;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'fst-item' + (pos === state.queuePos ? ' is-now' : ''); b.setAttribute('role', 'listitem');
+    b.setAttribute('aria-label', (pos === state.queuePos ? 'Now playing: ' : 'Play ') + t.title);
+    const l = document.createElement('span'); l.className = 'fst-label'; l.textContent = t.title;
+    const d = document.createElement('span'); d.className = 'fst-dot'; d.setAttribute('aria-hidden', 'true');
+    b.appendChild(l); b.appendChild(d);
+    if (pos !== state.queuePos) b.addEventListener('click', () => queueJumpTo(pos));
+    box.appendChild(b);
+  }
+}
 function renderQueuePanel(){
+  fsTimelineSync();
   renderDiscoverToggle();
   renderSetArcRow();
   markNowPlaying();

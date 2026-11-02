@@ -199,12 +199,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #722; all ten UI issues share one lane (ui-batch). Built (refs: Resonance search and the AI assistant search page): mobile search page gets a big 'Search' title, a roomier field with an accent search icon, 'Picked for you' as a swipeable row of 136px cover cards, and the 'Right now' prompts and genres as large gradient cards (prompts full width, genres two columns) instead of pills. CSS plus one heading; the tap handlers are unchanged. Static gradients only. Checked at 375px. Follow-up: on the 3-pane desktop, clicking the top search bar now swaps the middle pane to this page (body.view-search-active, set in setView) and brings back the footer player like Settings does; Esc or an X in the page header goes back to the view you came from; typed text in the top bar is handed to the page's own field. The mood and genre cards each carry a tilted album cover: the top iTunes album for that genre word, fetched once per word and kept in localStorage (ebbless:stGenreArt:v1), only the genre word is sent. Checked at 1400x850: open, footer player, cover art on all cards, Esc and X both return. Not done: the 'profile personalization' idea (greeting or avatar) from the Eventify shot, a recent-searches list, the VibeMusic reference (not looked at), desktop (the search tab is mobile only). No sw cache bump yet.
 
 ### desktop-fullscreen-723: Desktop fullscreen player layout (Geethub #723)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #723. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #723; all ten UI issues share one lane (ui-batch).
+- **Notes:** Synced from Geethub #723; all ten UI issues share one lane (ui-batch). Built (ref: the Dribbble player with the vertical track dots): in the desktop panel-slide fullscreen, an up-next timeline runs down the right edge: the playing song labeled with a ringed dot, the next five as dots on a line that name themselves on hover, a click jumps to that queue position (fsTimelineSync, called from renderQueuePanel, so it follows every track and queue change). It fades with the rest of the chrome when idle. Checked at 1400x850. Not done and deliberately left: the reference's small centered disc, ring of waveform and blurred backdrop. #124 and #137 record that the art was made to fill the screen edge to edge on purpose, so the art size is untouched; a real waveform ring is not possible for streamed songs (see waveform-real-peaks-727). Also not done: 'Discover More' button, real-use check of timeline click, the immersive (phase 3) flow overlay. No sw cache bump yet.
 
 ### desktop-layout-724: Evaluate and adopt Dribbble desktop layout (Geethub #724)
 - **Status:** in-progress
