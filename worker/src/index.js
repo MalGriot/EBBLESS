@@ -18,6 +18,7 @@ import { handleBeta, betaInAppReport } from './beta.js';
 import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
+import { handleWaves } from './waves.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { handleProfileDelete } from './profile-delete.js';
@@ -5073,6 +5074,8 @@ export default {
     if (url.pathname.startsWith('/admin/')) return await handleAdmin(request, url, env, ctx, { envCache });
     // Owner's now-playing feed: public GET, owner-token POST, own CORS.
     if (url.pathname === '/nowplaying') return await handleNowPlaying(request, url, env, ctx, { envCache, verifyGoogleIdToken });
+    // Shared waveform peaks (#727): public GET, signed-in POST, own CORS.
+    if (url.pathname === '/waves') return await handleWaves(request, url, env, ctx, { envCache, verifyGoogleIdToken });
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
     // Remote kill switch for the Mac app's adblock (#524). ADBLOCK_FLAG = "false"/"0"/"off" turns it off; default on.
     if (url.pathname === '/flags' && request.method === 'GET') {
