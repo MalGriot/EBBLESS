@@ -126,6 +126,86 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### edge-to-edge-717: Mobile: edge-to-edge full-screen UI (Geethub #717)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #717. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #717; all ten UI issues share one lane (ui-batch).
+
+### player-look-718: Player restyle: art-tinted wash, card/full-bleed art, waveform seek (Geethub #718)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #718. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch).
+
+### cd-mode-719: CD mode redesign (Geethub #719)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #719. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch).
+
+### lyrics-page-720: Lyrics page upgrade (Geethub #720)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #720. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #720; all ten UI issues share one lane (ui-batch).
+
+### album-page-721: Album page layout (Geethub #721)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #721. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #721; all ten UI issues share one lane (ui-batch).
+
+### search-page-722: Search page redesign (Geethub #722)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #722. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #722; all ten UI issues share one lane (ui-batch).
+
+### desktop-fullscreen-723: Desktop fullscreen player layout (Geethub #723)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #723. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #723; all ten UI issues share one lane (ui-batch).
+
+### desktop-layout-724: Evaluate and adopt Dribbble desktop layout (Geethub #724)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #724. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #724; all ten UI issues share one lane (ui-batch).
+
+### swipe-nav-725: Mobile swipe navigation between screens (Geethub #725)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #725. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #725; all ten UI issues share one lane (ui-batch).
+
+### cymatics-726: Cymatics visual upgrade (Geethub #726)
+- **Status:** in-progress
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #726. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #726; all ten UI issues share one lane (ui-batch).
+
 ### progress-bar-hover-color-712: Player progress bar hover color matches the UI instead of yellow (Geethub #712)
 - **Status:** merged
 - **Priority:** medium
