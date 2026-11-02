@@ -135,12 +135,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #717; all ten UI issues share one lane (ui-batch). Built: Android window draws behind status bar, cutout and nav bar (transparent bars, shortEdges cutout); app sends bar heights to the page (__ebbInsets) which raises --safe-t/--safe-b via max() with env(). NOT compiled (no Java here) and NOT tried on a device. No sw cache bump yet; bump with a WHATS_NEW entry when shipping.
 
 ### player-look-718: Player restyle: art-tinted wash, card/full-bleed art, waveform seek (Geethub #718)
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #718. See the issue for references.
 - **Touches:** index.html (UI), sw.js cache bump
 - **Branch:** agent/ui-batch
-- **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch).
+- **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. No sw cache bump yet.
 
 ### cd-mode-719: CD mode redesign (Geethub #719)
 - **Status:** in-progress
