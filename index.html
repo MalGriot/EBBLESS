@@ -1905,9 +1905,12 @@ text.cs-pen{font:600 17px 'Bradley Hand','Segoe Print','Marker Felt','Comic Sans
 .track-meta .title-row{display:flex;align-items:center;justify-content:center;gap:6px}
 .track-meta .title-row .title{flex:1;min-width:0}
 /* balances the like + options buttons on the right so the title stays centered */
-.track-meta .title-row::before{content:'';flex:none;width:28px}
-/* the CuRRentSSsss thumbs-down adds a third right-side button (22px + 6px gap): widen the spacer to match (Geethub #358) */
-.track-meta .title-row:has(.player-decline-btn:not([hidden]))::before{width:56px}
+.track-meta .title-row::before{content:'';flex:none;width:calc(50px + var(--tr-decline,0px) + var(--tr-addpl,0px) + var(--tr-speed,0px))}
+/* #728: the spacer is as wide as the buttons on the right - like + options (22px + 6px gap each, less the gap the spacer shares with the title),
+   plus each extra that is showing: the CuRRentSSsss thumbs-down (Geethub #358), add to playlist and speed (Advanced settings) */
+.track-meta .title-row:has(.player-decline-btn:not([hidden])){--tr-decline:28px}
+html.adv-show-addpl .track-meta .title-row{--tr-addpl:28px}
+html:is(.adv-show-speed,.now-podcast) .track-meta .title-row{--tr-speed:28px}
 
 .marquee{overflow:hidden;white-space:nowrap;position:relative}
 .marquee>span{display:inline-block;white-space:nowrap}
@@ -4922,11 +4925,6 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
               <span class="art-style-label">Default</span>
               <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
             </button>
-            <button class="art-style-opt" data-style="record">
-              <span class="art-style-swatch swatch-record"><span class="swatch-disc"><span class="swatch-label"></span></span></span>
-              <span class="art-style-label">Spinning Record</span>
-              <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
-            </button>
             <button class="art-style-opt" data-style="cd">
               <span class="art-style-swatch swatch-record swatch-cd"><span class="swatch-disc"><span class="swatch-label"></span></span></span>
               <span class="art-style-label">CD</span>
@@ -4935,6 +4933,11 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
             <button class="art-style-opt" data-style="cassette">
               <span class="art-style-swatch swatch-cassette"><span class="swatch-hub"></span><span class="swatch-hub"></span></span>
               <span class="art-style-label">Cassette Tape</span>
+              <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
+            </button>
+            <button class="art-style-opt" data-style="record">
+              <span class="art-style-swatch swatch-record"><span class="swatch-disc"><span class="swatch-label"></span></span></span>
+              <span class="art-style-label">Spinning Record</span>
               <svg class="art-style-check" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z"/></svg>
             </button>
           </div>
@@ -29095,7 +29098,9 @@ applyArtStyle();
    how the cassette reels below keep turning off-screen too.
    ========================================================================= */
 const recordDisc = recordLabelImg.parentElement;
-const REC_DEG_PER_S = 120; /* 3s per rotation - the old CSS animation's pace */
+const REC_DEG_PER_S = 80; /* #738: calmer spin, 4.5s per rotation (was 120) */
+const REC_GAME_DEG_PER_S = 120; /* the LP game keeps its old pace, eased to while a run is on */
+let recBase = REC_DEG_PER_S;
 let recAngle = 0, recSpeedMul = 0, recTargetMul = 0, recRafId = null, recLastTs = 0;
 const recReducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
@@ -29113,7 +29118,9 @@ function recordTick(ts){
   // as "a real object", not a wobble.
   const wow = 1 + 0.004 * Math.sin(recAngle * Math.PI / 180);
   if (!recGame.on && recGameMul > 1) recGameMul = Math.max(1, recGameMul - dt / 1500); /* run over: ease back to normal pace */
-  recAngle += (dt / 1000) * REC_DEG_PER_S * recSpeedMul * recGameMul * wow;
+  const recBaseTo = (recGame.on || recGameMul > 1) ? REC_GAME_DEG_PER_S : REC_DEG_PER_S;
+  recBase += Math.sign(recBaseTo - recBase) * Math.min(Math.abs(recBaseTo - recBase), dt * 0.05);
+  recAngle += (dt / 1000) * recBase * recSpeedMul * recGameMul * wow;
   recordApplyRotation();
   if (recGame.on){
     recGame.line -= (dt / 1000) * REC_GAME_LINE_DEG_S;
@@ -29180,7 +29187,7 @@ function recordGameCancel(){
 }
 let recGameMul = 1;
 function recordGameAngleNow(){
-  const rate = REC_DEG_PER_S * recSpeedMul * recGameMul / 1000;
+  const rate = recBase * recSpeedMul * recGameMul / 1000;
   const dtMs = recLastTs ? Math.max(0, Math.min(64, performance.now() - recLastTs)) : 0;
   /* relative to the cue line, which turns the other way */
   return recAngle - recGame.line + dtMs * (rate + (recGame.on ? REC_GAME_LINE_DEG_S / 1000 : 0));
@@ -33197,9 +33204,9 @@ function miniCassetteCss(){
   try { Array.from(document.styleSheets).forEach(ss => { try { css += pick(ss.cssRules); } catch (e) {} }); } catch (e) {}
   return css;
 }
-// Mac: a click on the cover (or the LP, the cassette, the plate - not a button) steps the whole mini player through its four
-// modes: card, full LP, full cassette, Cymatics, then the card again. The mode is held until the main player's mode changes.
-const MP_CLICK_ORDER = ['card', 'disc', 'tape', 'cymatics'];
+// Mac: a click on the cover (or the LP, the cassette, the plate - not a button) steps the whole mini player through its modes (#737):
+// card with the default art, full CD, full cassette, full LP, Cymatics, then the card again. The mode is held until the main player's mode changes.
+const MP_CLICK_ORDER = [['card', 'default'], ['disc', 'cd'], ['tape', 'cassette'], ['disc', 'record'], ['cymatics', null]];
 // The mini's LP turns like the main player's: its own rAF eases the platter up to speed (0.9s) on play and coasts it down (0.7s) on
 // pause, same 120deg/s pace and tiny wobble. It only runs while the speed is changing or the record is turning.
 const mpRec = { angle: 0, speed: 0, target: 0, raf: 0, last: 0, win: null };
@@ -33218,9 +33225,9 @@ function mpRecTick(ts){
 }
 function mpRecordSync(win, playing){
   if (recReducedMotion) return;
-  if (mpRec.win !== win){ mpRec.win = win; mpRec.raf = 0; mpRec.last = 0; }
+  if (mpRec.win !== win){ mpRec.win = win; mpRec.raf = 0; mpRec.last = 0; mpRec.speed = 0; }
   mpRec.target = playing ? 1 : 0;
-  if (!mpRec.raf && mpRec.speed !== mpRec.target){ mpRec.last = 0; mpRec.raf = win.requestAnimationFrame(mpRecTick); }
+  if (!mpRec.raf && (mpRec.speed !== mpRec.target || mpRec.target > 0)){ mpRec.last = 0; mpRec.raf = win.requestAnimationFrame(mpRecTick); }
 }
 // Mac: the full player and the mini follow each other's LP / cassette / Cymatics mode. Opening the mini starts it in the main
 // player's mode (a hand-picked shape that still matches is kept); going back to the full player puts it in the mini's mode.
@@ -33238,14 +33245,19 @@ function mpSyncMainFromMini(){
   else if (sh === 'disc' || sh === 'tape'){ kbSetVisual('art'); setArtStyle(sh === 'disc' ? (discSkin === 'cd' ? 'cd' : 'record') : 'cassette'); }
 }
 function mpCycleShape(){
-  const i = MP_CLICK_ORDER.indexOf(mpDesktopShape());
-  mpPickShape(MP_CLICK_ORDER[(i + 1) % MP_CLICK_ORDER.length]);
+  const sh = mpDesktopShape();
+  const i = MP_CLICK_ORDER.findIndex(([s, st]) => s === sh && (s !== 'disc' || (st === 'cd') === (discSkin === 'cd')));
+  const [next, style] = MP_CLICK_ORDER[(i + 1) % MP_CLICK_ORDER.length];
+  if (style) setArtStyle(style); // before the pick: the pick is only held for the art style it was made under (mpModeSig)
+  mpPickShape(next);
 }
 function mpCycleArtMode(){
   if (visualMode === 'viz'){ kbSetVisual('art'); setArtStyle('default'); return; }
   if (visualMode !== 'art'){ kbSetVisual('art'); return; }
-  if (artStyle === 'default') setArtStyle('record');
-  else if (artStyle === 'record') setArtStyle('cassette');
+  const k = artStyleKey();
+  if (k === 'default') setArtStyle('cd');
+  else if (k === 'cd') setArtStyle('cassette');
+  else if (k === 'cassette') setArtStyle('record');
   else kbSetVisual('viz');
 }
 function buildMiniPlayerDOM(win){
@@ -33268,7 +33280,7 @@ function buildMiniPlayerDOM(win){
       '<div id="mpArtWrap" data-art-style="default"><img id="mpArt" alt="">' +
         '<div id="mpRecord"></div><div id="mpTape" class="art-cassette" data-state="idle"></div>' +
         '<div id="mpArtPick" role="group" aria-label="Art style">' +
-          btn('mpArtDefault', '', 'Default', MP_ICO.artDefault) + btn('mpArtRecord', '', 'Spinning Record', MP_ICO.artRecord) + btn('mpArtCd', '', 'CD', MP_ICO.artRecord) + btn('mpArtCassette', '', 'Cassette Tape', MP_ICO.artCassette) +
+          btn('mpArtDefault', '', 'Default', MP_ICO.artDefault) + btn('mpArtCd', '', 'CD', MP_ICO.artRecord) + btn('mpArtCassette', '', 'Cassette Tape', MP_ICO.artCassette) + btn('mpArtRecord', '', 'Spinning Record', MP_ICO.artRecord) +
         '</div></div>' +
       '<div id="mpHead">' +
         '<img id="mpLogo" alt="EBBLESS" title="EBBLESS" src="' + brandUrl('brand/assets/mark.png') + '">' +
@@ -36471,7 +36483,9 @@ function csStackBuild(){
   const flow = host === flowArtWrap;
   const k = flow ? 1 : r.width / hw; // screen px per local px
   // .art-cassette has padding 2% 1% (of width); SVG viewBox 400x256 meet
-  const sc = Math.min(hw * .98 / 400, (hh - hw * .04) / 256);
+  // #734: size from the cassette itself, not the host - fullscreen insets it to 62% of the host, and the copies must shrink with it
+  const ce = host.querySelector('.art-cassette'), cw = (ce && ce.offsetWidth) || hw, ch = (ce && ce.offsetHeight) || hh;
+  const sc = Math.min(cw * .98 / 400, (ch - cw * .04) / 256);
   const W = 384 * sc, H = 240 * sc, svgW = 400 * sc, svgH = 256 * sc;
   const cx = flow ? host.offsetLeft + hw / 2 : r.left + r.width / 2;
   const cy = flow ? host.offsetTop + hh / 2 : r.top + r.height / 2;
