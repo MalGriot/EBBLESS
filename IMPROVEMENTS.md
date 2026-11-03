@@ -12210,3 +12210,107 @@ Add entries in this shape:
 - **Touches:** android-webview (IpodPlayer, ClickWheelView, IpodBody, IpodColor, IpodFxHost, games), index.html (library push, media actions).
 - **Branch:** agent/ipod-shell-2, agent/ipod-games-2
 - **Notes:** Android 2.16.0 (versionCode 34). Not on-device verified. Cut: brushed-metal look; podcasts start from the top of the show, no resume-latest.
+
+### cd-lp-spin-slower-738: CD and LP spin slower, LP game speed unchanged (Geethub #738)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #738. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #738.
+
+### player-mode-order-737: Switch the order of player modes and miniplayer modes (Geethub #737)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #737. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #737.
+
+### miniplayer-bugs-736: Miniplayer bugs: CD/LP not spinning, big LP mode replaced by big CD (Geethub #736)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #736. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #736.
+
+### video-closes-on-player-change-735: Video window closes when the player changes (fix song, search, etc.) (Geethub #735)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #735. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #735.
+
+### cassette-anim-shrink-734: Cassette shrank but its animation did not (Geethub #734)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #734. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #734.
+
+### library-title-search-dropdown-733: Library title becomes a button with a dropdown search bar, magnifier gets mistaken for main search (Geethub #733)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #733. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #733.
+
+### low-graphics-library-titles-732: Low graphics mode: library thumb titles go beneath the thumbnail, fully shown, no marquee (Geethub #732)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #732. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #732.
+
+### featuring-artist-link-731: Tap the featured artist in a title to open their artist page (Geethub #731)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #731. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #731.
+
+### queue-previous-songs-selectable-730: Previously played songs in the queue are selectable with full functionality (Geethub #730)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #730. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #730.
+
+### queue-now-playing-top-729: Queue: now playing section always at the top (Geethub #729)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #729. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #729.
+
+### player-title-off-center-728: Player title is off-center (Geethub #728)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #728. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #728.
+
+### artist-rec-plus-too-big-716: Desktop: recommended artists plus signs cover the whole circle (Geethub #716)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #716. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #716.
+
+### thumbs-down-reasons-715: Thumbs down asks why with a list of reasons to improve matching (Geethub #715)
+- **Status:** ready
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #715. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:**
+- **Notes:** Synced from Geethub #715.
