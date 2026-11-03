@@ -12236,12 +12236,12 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #736.
 
 ### video-closes-on-player-change-735: Video window closes when the player changes (fix song, search, etc.) (Geethub #735)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #735. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #735.
+- **Branch:** agent/queue-video (cache v487)
+- **Notes:** ytPanelSync hides the video while any element outside the player view covers the art area (fix this song, search, menus); it returns when the cover goes. Not verified on a device. Synced from Geethub #735.
 
 ### cassette-anim-shrink-734: Cassette shrank but its animation did not (Geethub #734)
 - **Status:** ready
@@ -12276,20 +12276,20 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #731.
 
 ### queue-previous-songs-selectable-730: Previously played songs in the queue are selectable with full functionality (Geethub #730)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #730. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #730.
+- **Branch:** agent/queue-video (cache v487)
+- **Notes:** Played songs now sit below the upcoming ones (fade kept) with tap-to-play, song menu, remove and swipe. queueRemoveAt handles played rows. Synced from Geethub #730.
 
 ### queue-now-playing-top-729: Queue: now playing section always at the top (Geethub #729)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #729. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #729.
+- **Branch:** agent/queue-video (cache v487)
+- **Notes:** Now playing renders first in the queue list; played songs moved to a Played section at the bottom. Removed the scroll-anchor code that existed only to keep Now in view. Synced from Geethub #729.
 
 ### player-title-off-center-728: Player title is off-center (Geethub #728)
 - **Status:** ready
