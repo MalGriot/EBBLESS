@@ -12212,28 +12212,28 @@ Add entries in this shape:
 - **Notes:** Android 2.16.0 (versionCode 34). Not on-device verified. Cut: brushed-metal look; podcasts start from the top of the show, no resume-latest.
 
 ### cd-lp-spin-slower-738: CD and LP spin slower, LP game speed unchanged (Geethub #738)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #738. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #738.
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** CD and LP spin at 80 deg/s (was 120); the LP game eases back to the old 120 pace during a run, so its speed is unchanged.
 
 ### player-mode-order-737: Switch the order of player modes and miniplayer modes (Geethub #737)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #737. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #737.
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** Main art menu and cycle: default, CD, cassette, LP. Mini card thumbnail picker same order. Mac mini click cycle: card (default art), CD, cassette, LP, Cymatics. Web mini cycle gains CD and the same order.
 
 ### miniplayer-bugs-736: Miniplayer bugs: CD/LP not spinning, big LP mode replaced by big CD (Geethub #736)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #736. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #736.
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** Mini LP/CD did not restart spinning after the mini reopened while playing (stale speed skipped the rAF start); fixed in mpRecordSync. Big LP is back: the Mac mini cycle has separate big CD and big LP steps (disc shape + art style). Not run on a real Mac mini/PiP: verified by reading the code and scripts/check.sh only.
 
 ### video-closes-on-player-change-735: Video window closes when the player changes (fix song, search, etc.) (Geethub #735)
 - **Status:** review
@@ -12244,12 +12244,12 @@ Add entries in this shape:
 - **Notes:** ytPanelSync hides the video while any element outside the player view covers the art area (fix this song, search, menus); it returns when the cover goes. Not verified on a device. Synced from Geethub #735.
 
 ### cassette-anim-shrink-734: Cassette shrank but its animation did not (Geethub #734)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #734. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #734.
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** The cassette stack/orbit copies were sized from the host, not the cassette (fullscreen insets it to 62%); now sized from the .art-cassette element in csStackBuild.
 
 ### library-title-search-dropdown-733: Library title becomes a button with a dropdown search bar, magnifier gets mistaken for main search (Geethub #733)
 - **Status:** review
@@ -12292,12 +12292,12 @@ Add entries in this shape:
 - **Notes:** Now playing renders first in the queue list; played songs moved to a Played section at the bottom. Removed the scroll-anchor code that existed only to keep Now in view. Synced from Geethub #729.
 
 ### player-title-off-center-728: Player title is off-center (Geethub #728)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #728. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #728.
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** Title spacer was 28px but the like + options buttons on the right are 50px wide; spacer is now 50px plus 28px per extra button showing (thumbs-down, add to playlist, speed). Phone layout unchanged.
 
 ### artist-rec-plus-too-big-716: Desktop: recommended artists plus signs cover the whole circle (Geethub #716)
 - **Status:** review
