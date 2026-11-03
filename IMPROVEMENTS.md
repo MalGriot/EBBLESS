@@ -12252,28 +12252,28 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #734.
 
 ### library-title-search-dropdown-733: Library title becomes a button with a dropdown search bar, magnifier gets mistaken for main search (Geethub #733)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #733. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #733.
+- **Branch:** agent/library-artist
+- **Notes:** Library h2 is now a button (#libTitleBtn, chevron) that toggles the search box; old magnifier kept hidden as the hook.
 
 ### low-graphics-library-titles-732: Low graphics mode: library thumb titles go beneath the thumbnail, fully shown, no marquee (Geethub #732)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #732. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #732.
+- **Branch:** agent/library-artist
+- **Notes:** No separate low graphics setting exists; keyed on the Motion: Reduced setting (html.reduce-motion): overlay marquee hidden, full title wraps under the thumb.
 
 ### featuring-artist-link-731: Tap the featured artist in a title to open their artist page (Geethub #731)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #731. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #731.
+- **Branch:** agent/library-artist
+- **Notes:** trackArtistNames() adds "feat." names from the title; used in the song page links and the artist-button picker.
 
 ### queue-previous-songs-selectable-730: Previously played songs in the queue are selectable with full functionality (Geethub #730)
 - **Status:** review
@@ -12300,17 +12300,17 @@ Add entries in this shape:
 - **Notes:** Synced from Geethub #728.
 
 ### artist-rec-plus-too-big-716: Desktop: recommended artists plus signs cover the whole circle (Geethub #716)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Bug, Geethub issue #716. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #716.
+- **Branch:** agent/library-artist
+- **Notes:** Plus button on recommended artists shrunk to 22px (.rec-artists .fm-add).
 
 ### thumbs-down-reasons-715: Thumbs down asks why with a list of reasons to improve matching (Geethub #715)
-- **Status:** ready
+- **Status:** review
 - **Priority:** medium
 - **Description:** Idea, Geethub issue #715. See the issue for details.
 - **Touches:** index.html (UI)
-- **Branch:**
-- **Notes:** Synced from Geethub #715.
+- **Branch:** agent/library-artist
+- **Notes:** One-tap reason chips after thumbs down (9s, skippable); reason code stored in LS_DECLINED entry (.r, allowlisted); artist/genre reasons weigh double; undo reverses.
