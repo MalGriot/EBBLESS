@@ -941,6 +941,12 @@ body.onb-active .paste-guide{display:none}
    and their tracks (see renderLibrary()). Styled like .import-row's input.
    Hidden until the magnifying-glass button in .lib-head-actions opens it (#218). */
 .lib-search{position:relative;margin-top:14px}
+/* #733: the Library title is the search button (the magnifier read as the main search); its old icon button stays as a hidden hook */
+#libSearchToggle[hidden]{display:none}
+.lib-title-btn{display:inline-flex;align-items:center;gap:8px;font:inherit;color:inherit;letter-spacing:inherit}
+.lib-title-btn svg{width:.7em;height:.7em;opacity:.7;transition:transform var(--dur-ui,.2s) var(--ease-out,ease)}
+.lib-title-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.lib-title-btn:hover svg,.lib-title-btn:focus-visible svg{opacity:1}
 .lib-search-icon{position:absolute;left:12px;top:50%;width:15px;height:15px;transform:translateY(-50%);color:var(--faint-2);pointer-events:none}
 .lib-search input{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-md);
   padding:10px 38px 10px 36px;color:var(--text);font-size:13.5px;transition:border-color var(--dur-ui) var(--ease-out)}
@@ -1165,6 +1171,9 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .lib-card .art .title-overlay .marquee{flex:1;min-width:0;width:100%;
   font-size:33.34cqh;font-weight:800;line-height:1;color:#fff}
 .lib-card .art .title-overlay .new-dot{position:absolute;top:6%;right:6%;width:14%;height:14%;max-width:10px;max-height:10px}
+/* #732: reduced motion = low graphics: no scrolling title over the thumb, the full title sits beneath it */
+html.reduce-motion .lib-grid:not(.is-list) .lib-card .art .title-overlay{display:none}
+html.reduce-motion .lib-grid:not(.is-list) .lib-card .info .name{display:block;white-space:normal;overflow:visible;overflow-wrap:anywhere}
 .lib-card .count{font-size:11.5px;color:var(--faint);margin-top:1px}
 .lib-card .lib-desc{color:var(--text);opacity:.8}
 .lib-card.is-refreshing .count,.currents-status{animation:onb-load-pulse 1.4s ease-in-out infinite}
@@ -1306,6 +1315,7 @@ body.relink-dragging #import-overlay{opacity:0;pointer-events:none}
 .fm-artist-open img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:50%;background:var(--panel-2)}
 .fm-artist-name{display:block;margin-top:6px;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fm-add{position:absolute;right:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent,#151107);font-size:20px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center}
+.rec-artists .fm-add{width:22px;height:22px;font-size:15px}
 @media (min-width:860px){.fm-scroll{max-width:760px;width:100%;margin:0 auto}.fm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.fm-artist-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 /* Music map (Geethub #597): same layer as Find music. Static by default; a recenter is one
    finite transform/opacity glide, nothing runs while it sits still or is hidden (#487). */
@@ -1965,6 +1975,13 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .art-fs-btn.art-like-btn.is-liked,.art-fs-btn.art-like-btn.is-liked:hover{color:var(--player-accent)}
 /* the visualizer's controls own the bottom-right: the heart steps over to the bottom-left while they show */
 .artwork-wrap.mode-viz .art-fs-btn.art-like-btn{right:auto;left:10px}
+/* #715: one-tap "why" chips after a thumbs-down; opacity-free, static, goes away by itself */
+.decline-why{position:fixed;left:12px;right:12px;bottom:calc(var(--safe-b,0px) + 92px);z-index:89;display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  background:var(--panel-3);color:var(--text);font-size:12.5px;padding:8px 10px;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.decline-why-q{color:var(--faint);padding:0 4px}
+.decline-why button{padding:6px 12px;border-radius:999px;background:var(--panel-2);color:var(--text);font-size:12.5px}
+.decline-why button:hover,.decline-why button:focus-visible{background:var(--accent);color:var(--on-accent,#151107)}
+.decline-why .decline-why-x{margin-left:auto;padding:4px 10px;font-size:16px;line-height:1;color:var(--faint)}
 /* #692 (desktop): dislike in the art's bottom-right, heart steps left of it while it shows; "more" in the top-left (cast shifts right of it) */
 .art-fs-btn.art-decline-btn{top:auto;bottom:10px;color:var(--faint)}
 .art-fs-btn.art-decline-btn[hidden]{display:none}
@@ -4760,14 +4777,14 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
 
       <div id="libraryListWrap" class="hidden">
         <div class="lib-top" id="libTop">
-        <div class="queue-head"><h2>Library</h2></div>
+        <div class="queue-head"><h2><button type="button" class="lib-title-btn" id="libTitleBtn" aria-controls="libSearchBox" aria-expanded="false" title="Search your library">Library<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></button></h2></div>
         <div class="section-label-row">
           <div class="lib-head-actions">
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="newPlaylistBtn" aria-label="New playlist" title="New playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="uploadSongsBtn" aria-label="Add your songs" title="Add your songs from this device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
             <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="driveSongsBtn" aria-label="Add your songs from Google Drive" title="Add your songs from Google Drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5 4.5 4.5 0 0 1 17.5 18H7zM12 11v6m-3-3 3 3 3-3"/></svg></button>
             <input type="file" id="uploadFileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus" multiple hidden>
-            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
+            <button type="button" class="view-toggle-btn lib-sort-btn lib-tb-btn" id="libSearchToggle" hidden title="Search your library" aria-label="Search your library" aria-controls="libSearchBox" aria-expanded="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             </button>
             <!-- one "View" menu holds sort order and layout (was a sort icon
@@ -11533,11 +11550,13 @@ function setLibSearchOpen(open){
   try{ renderHomeShelf(); } catch(e){}
   libSearchToggle.classList.toggle('is-active', open);
   libSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  $('libTitleBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open){ libSearch.focus(); return; }
   libSearch.blur();
   if (libSearch.value){ libSearch.value = ''; libSearchClear.classList.add('hidden'); renderLibrary(); }
 }
 libSearchToggle.addEventListener('click', () => setLibSearchOpen(libSearchBox.classList.contains('hidden')));
+$('libTitleBtn').addEventListener('click', () => libSearchToggle.click());
 
 const libFolded = {};
 let nowRowProg = null, lastSeekPct = 0;   // #721: progress line of the playing library row
@@ -13428,7 +13447,13 @@ function openSongPage(t, plId, trackIdx){
     a.addEventListener('click', fn); return a;
   };
   const parts = [];
-  if (t.artist) parts.push(addLink(t.artist, () => openArtistPage(t.artist, t.title)));
+  const credited = trackArtistNames(t);
+  if (credited.length > 1){
+    const cr = document.createElement('span');
+    credited.forEach((n, i) => { if (i) cr.append(i === 1 ? ' feat. ' : ', '); cr.appendChild(addLink(n, () => openArtistPage(n, t.title))); });
+    parts.push(cr);
+  }
+  else if (t.artist) parts.push(addLink(t.artist, () => openArtistPage(t.artist, t.title)));
   if (album) parts.push(addLink(album.name, () => { if (openLibraryPanelId !== album.id) toggleLibraryPlaylistPanel(album.id); }));
   const yearSpan = document.createElement('span');
   if (dur) parts.push(document.createTextNode(formatTime(dur)));
@@ -13726,6 +13751,18 @@ function splitArtistNames(artist){
   return stripTopicSuffix(artist).split(/\s*(?:,|&|\s(?:feat\.?|ft\.?|x|with)\s)\s*/i).map(s => s.trim())
     .filter(n => { const k = artistNameKey(n); if (!k || seen.has(k)) return false; seen.add(k); return true; });
 }
+// #731: "Song (feat. Y)" / "Song feat. Y" credits Y in the title; treat Y as an artist of the track too
+function trackArtistNames(t){
+  const names = splitArtistNames(t.artist || '');
+  const m = String(t.title || '').match(/[(\[]\s*(?:feat\.?|ft\.?|featuring)\s+([^)\]]+)[)\]]|\s(?:feat\.?|ft\.?|featuring)\s+(.+)$/i);
+  if (m){
+    const seen = new Set(names.map(artistNameKey));
+    (m[1] || m[2]).split(/\s*(?:,|&|\band\b|\bx\b)\s*/i).map(x => x.trim()).forEach(n => {
+      const k = artistNameKey(n); if (k && !seen.has(k)){ seen.add(k); names.push(n); }
+    });
+  }
+  return names;
+}
 let artistPickMenu = null;
 function closeArtistPick(){ if (artistPickMenu){ artistPickMenu.remove(); artistPickMenu = null; } }
 function openArtistPick(names, title, anchor){
@@ -13759,7 +13796,7 @@ trackArtist.addEventListener('click', (e) => {
   if (!t || !t.artist) return;
   e.stopPropagation();
   lastArtistClickAt = Date.now();
-  const names = splitArtistNames(t.artist);
+  const names = trackArtistNames(t);
   if (names.length > 1) openArtistPick(names, t.title, trackArtist);
   else openArtistPage(t.artist, t.title);
 });
@@ -20801,9 +20838,15 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
-  { version: 488, date: '2026-11-03', items: [
+  { version: 489, date: '2026-11-03', items: [
     'Player looks now go in the order default art, CD, cassette, LP (and Cymatics last in the mini player). The mini player brings back the big LP next to the big CD, and its CD and LP turn again.',
     'The CD and the LP spin slower (the LP game keeps its speed), the cassette\'s moving copies shrink with it in fullscreen, and the song title sits in the middle again.',
+  ] },
+  { version: 488, date: '2026-11-03', items: [
+    'Thumbs down now asks why with one tap (not this artist, not my genre, heard it too much, wrong mood, sounds bad), so your picks match you better.',
+    'A song credited "feat." someone lets you open that artist too, from the song page and the artist button.',
+    'The Library title is now a button that drops down the library search, and recommended artists have smaller plus buttons.',
+    'With reduced motion on, library covers show the full title underneath instead of a scrolling one.',
   ] },
   { version: 487, date: '2026-11-03', items: [
     'In the queue, Now playing is always at the top, and songs you already played sit at the bottom: tap one to play it, or use its menu or remove button like any other song.',
@@ -23245,7 +23288,7 @@ function recordListenSignal(track, weight){
 // every listen, not worth a sync push); the thumbs-down set LS_DECLINED is
 // profile-synced (see PROFILE_SETTING_KEYS).
 const LS_TASTE = 'ebbless:taste';        // { videoId: { t, a, d: days played, day: last day played, f: finishes, k: early skips, ts } }
-const LS_DECLINED = 'ebbless:declined';  // thumbs-down: { v: { videoId: { t, a, k: title|artist, g: [tags], ts } }, a: { artistKey: n }, g: { tag: n } }
+const LS_DECLINED = 'ebbless:declined';  // thumbs-down: { v: { videoId: { t, a, k: title|artist, g: [tags], r: reason code, ts } }, a: { artistKey: n }, g: { tag: n } }
 const TASTE_MAX = 1500;
 const TASTE_DECAY_DAYS = 30;            // a one-off play's weight halves every 30 days
 const DECLINED_MAX = 600;
@@ -23395,6 +23438,46 @@ function addDeclineTags(videoId, tags){
   lsSet(LS_DECLINED, d);
   tasteMemo = null;
 }
+// #715: why a song was thumbed down, from a fixed list (stored as a short code
+// only, local + profile-synced with the rest of LS_DECLINED). The reason
+// sharpens matching: "artist" counts the artist twice, "genre" counts the
+// song's tags twice; the others are kept as context.
+const DECLINE_REASONS = [['artist', "Not this artist"], ['genre', 'Not my genre'], ['heard', 'Heard it too much'], ['mood', 'Wrong mood'], ['quality', 'Sounds bad']];
+function setDeclineReason(videoId, code){
+  if (!DECLINE_REASONS.some(r => r[0] === code)) return;
+  const d = declinedStore();
+  const e = d.v[videoId];
+  if (!e || e.r) return;
+  e.r = code;
+  const a = primaryArtistKey(e.a);
+  if (code === 'artist' && a) d.a[a] = (d.a[a] || 0) + 1;
+  if (code === 'genre') (e.g || []).forEach(x => { d.g[x] = (d.g[x] || 0) + 1; });
+  lsSet(LS_DECLINED, d);
+  tasteMemo = null;
+}
+let declineWhyEl = null, declineWhyTimer = 0;
+function closeDeclineWhy(){
+  clearTimeout(declineWhyTimer);
+  if (declineWhyEl){ declineWhyEl.remove(); declineWhyEl = null; }
+}
+function askDeclineWhy(videoId){
+  closeDeclineWhy();
+  const box = document.createElement('div');
+  box.className = 'decline-why'; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Why not this song?');
+  const q = document.createElement('span'); q.className = 'decline-why-q'; q.textContent = 'Why?';
+  box.appendChild(q);
+  DECLINE_REASONS.forEach(([code, label]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+    b.addEventListener('click', () => { setDeclineReason(videoId, code); closeDeclineWhy(); showToast('Thanks, noted'); });
+    box.appendChild(b);
+  });
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'decline-why-x'; x.textContent = '\u00d7'; x.setAttribute('aria-label', 'Skip');
+  x.addEventListener('click', closeDeclineWhy);
+  box.appendChild(x);
+  document.body.appendChild(box);
+  declineWhyEl = box;
+  declineWhyTimer = setTimeout(closeDeclineWhy, 9000);
+}
 function removeDecline(videoId){
   const d = declinedStore();
   const e = d.v[videoId];
@@ -23403,6 +23486,8 @@ function removeDecline(videoId){
   const a = primaryArtistKey(e.a);
   if (a) dec(d.a, a);
   (e.g || []).forEach(x => dec(d.g, x));
+  if (e.r === 'artist' && a) dec(d.a, a);
+  if (e.r === 'genre') (e.g || []).forEach(x => dec(d.g, x));
   delete d.v[videoId];
   lsSet(LS_DECLINED, d);
   tasteMemo = null;
@@ -23488,7 +23573,8 @@ function declineCurrentsTrack(idx, faded){
   if (stopped && state.queuePos >= 0) loadIndex(state.queuePos, false);
   rerenderLibraryKeepPanel();
   syncDeclineBtn();
-  showToast('Got it, less like this', { label: 'Undo', run: () => undoDeclineCurrents(t, idx) });
+  showToast('Got it, less like this', { label: 'Undo', run: () => { closeDeclineWhy(); undoDeclineCurrents(t, idx); } });
+  askDeclineWhy(t.videoId);
 }
 function undoDeclineCurrents(t, idx){
   removeDecline(t.videoId);
@@ -28494,7 +28580,7 @@ function advRunGesture(k){
   else if (a === 'like') toggleLikeTrack(t);
   else if (a === 'playlist') openAddToPlaylistPicker(t);
   else if (a === 'artist' && t.artist){
-    const names = splitArtistNames(t.artist);
+    const names = trackArtistNames(t);
     if (names.length > 1) openArtistPick(names, t.title, trackArtist); else openArtistPage(t.artist, t.title);
   }
 }
