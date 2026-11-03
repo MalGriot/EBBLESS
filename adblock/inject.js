@@ -34,8 +34,14 @@
           if (!sped) sped = { muted: video.muted, rate: video.playbackRate };
           video.muted = true;
           video.playbackRate = 16;
-          const d = video.duration;
-          if (isFinite(d) && d > 0 && d < 180 && video.currentTime < d - 0.3) { try { video.currentTime = d; } catch (e) {} }
+          // Jump ahead only inside what the ad has already loaded. Seeking to the
+          // very end of an ad that has no data yet leaves YouTube's player stuck
+          // buffering at the end, so the ad never finishes.
+          try {
+            const b = video.buffered;
+            const end = b.length ? b.end(b.length - 1) : 0;
+            if (video.readyState >= 3 && end - video.currentTime > 1) video.currentTime = end - 0.3;
+          } catch (e) {}
           stats.sped++;
         } else if (sped) {
           // ad over: hand the player back the way the page had it
