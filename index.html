@@ -393,7 +393,7 @@ svg{display:block}
    stretched by the compositor - no CSS filter, so the GPU texture stays small */
 #ambient .layer{position:absolute;left:-40%;top:-40%;width:180%;height:180%;transform:scale(1.15);opacity:0;
   transition:opacity calc(var(--dur-surface) * 1.6) var(--ease-in-out);}
-#ambient .layer.is-active{opacity:.9;animation:ambient-drift 16s ease-in-out infinite;will-change:transform}
+#ambient .layer.is-active{opacity:.9;animation:ambient-drift var(--vibe-breathe,16s) ease-in-out infinite;will-change:transform}
 /* #487: fullscreen covers this completely, so stop animating it underneath */
 body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambient .layer,body:has(#findMusic:not([hidden])) #ambient .layer,body:has(#musicMap:not([hidden])) #ambient .layer{animation-play-state:paused}
 #ambient .layer.is-active:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
@@ -408,7 +408,7 @@ body:has(#milkLayer.is-open) #ambient .layer,body:has(#flow-layer.is-open) #ambi
 /* brightness breathing (the old filter keyframes, #487-safe): the art is painted at peak brightness and a
    black veil fades over it, opacity only, in step with the 16s drift */
 .ambient-veil{position:absolute;inset:0;background:#000;opacity:.25;pointer-events:none}
-#ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe 16s ease-in-out infinite}
+#ambient:has(.layer.is-active) .ambient-veil{animation:ambient-breathe var(--vibe-breathe,16s) ease-in-out infinite}
 body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open) #ambient .ambient-veil,body:has(#findMusic:not([hidden])) #ambient .ambient-veil,body:has(#musicMap:not([hidden])) #ambient .ambient-veil{animation-play-state:paused}
 @keyframes ambient-breathe{
   0%{opacity:.48}
@@ -429,6 +429,7 @@ body:has(#milkLayer.is-open) #ambient .ambient-veil,body:has(#flow-layer.is-open
   background:
     radial-gradient(ellipse at 50% 30%, transparent 0%, var(--bg) 82%),
     var(--clock-tint-ambient, transparent),
+    linear-gradient(var(--vibe-tint, transparent),var(--vibe-tint, transparent)),
     linear-gradient(var(--tod-tint, transparent),var(--tod-tint, transparent));
 }
 
@@ -6038,6 +6039,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       </button>
     </div>
     <div class="libpl-addbar" id="libplAddBar" hidden><button type="button" class="btn-ghost" id="libplAddBtn">+ Add songs</button></div>
+    <div class="libpl-addbar" id="libplVibeBar" hidden><button type="button" class="btn-ghost" id="libplVibeBtn">New songs, same vibe</button></div>
     <div class="queue-scroll">
       <div class="libpl-art-wrap" id="libplArtWrap" hidden><div class="libpl-art-box"><img class="libpl-art" id="libplArt" alt=""><button class="libpl-art-play" id="libplArtPlayBtn" aria-label="Play playlist"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span></button></div></div>
       <div class="queue-body" id="libplBody"></div>
@@ -10231,7 +10233,7 @@ const miniBar = $('mini-bar'), miniArt = $('miniArt'), miniTitle = $('miniTitle'
 const bottomNav = $('bottom-nav');
 const queueScrim = $('queue-scrim'), queuePanel = $('queue-panel'), queueBody = $('queueBody'), queueArrowsRow = $('queueArrowsRow'), queueHistBackBtn = $('queueHistBack'), queueHistFwdBtn = $('queueHistFwd'), queueHistFirstBtn = $('queueHistFirst'), queueHistLastBtn = $('queueHistLast'), queueClearBtn = $('queueClearBtn');
 const discoverToggleBtn = $('discoverToggleBtn');
-const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt'), libplArtPlayBtn = $('libplArtPlayBtn'), libplAddBar = $('libplAddBar'), libplAddBtn = $('libplAddBtn');
+const libplScrim = $('libpl-scrim'), libplPanel = $('libpl-panel'), libplTitle = $('libplTitle'), libplBody = $('libplBody'), libplPlayBtn = $('libplPlayBtn'), libplCloseBtn = $('libplCloseBtn'), libplArtWrap = $('libplArtWrap'), libplArt = $('libplArt'), libplArtPlayBtn = $('libplArtPlayBtn'), libplAddBar = $('libplAddBar'), libplAddBtn = $('libplAddBtn'), libplVibeBar = $('libplVibeBar');
 const libCtxMenu = $('libCtxMenu');
 const trackCtxMenu = $('trackCtxMenu');
 const flowLayer = $('flow-layer'), flowArtWrap = $('flowArtWrap'), flowArtA = $('flowArtA'), flowArtB = $('flowArtB'), flowTitle = $('flowTitle'), flowArtist = $('flowArtist'), flowLikeBtn = $('flowLikeBtn');
@@ -12512,7 +12514,7 @@ function closeLibraryPlaylistPanel(){
   libplReturnTo = null; libplResume = null; libplBackFn = null; syncLibplCloseBtn();
   if (!openLibraryPanelId) return;
   openLibraryPanelId = null;
-  libplAddBar.hidden = true;
+  libplAddBar.hidden = true; libplVibeBar.hidden = true;
   libplPanel.classList.remove('is-open'); libplScrim.classList.remove('is-open');
   syncHistoryBuffer();
   try{ refreshPlayNudge(); } catch(e){}
@@ -12571,6 +12573,7 @@ function toggleLibraryPlaylistPanel(id){
 
   openLibraryPanelId = id;
   libplAddBar.hidden = !addablePlaylists().some(p => p.id === id);
+  libplVibeBar.hidden = !(pl.vibeQuery && !pl.isSet);   // a saved vibe rebuilds with fresh songs (vibe-no-repeat)
   resetArtistPhoto();
   libplPanel.classList.remove('is-artist-info');
   const isAlb = isAlbumEntry(pl) && !isArtistEntry(pl);
@@ -13213,7 +13216,7 @@ async function openAlbumPreview(a, name, backFn){
   if (state.queueOpen) closeQueuePanel();
   collapseLibWide();
   openLibraryPanelId = id;
-  libplAddBar.hidden = true;
+  libplAddBar.hidden = true; libplVibeBar.hidden = true;
   resetArtistPhoto();
   libplPanel.classList.add('is-artist-info');
   libplTitle.textContent = a.name;
@@ -13429,7 +13432,7 @@ function openSongPage(t, plId, trackIdx){
   if (state.queueOpen) closeQueuePanel();
   collapseLibWide();
   openLibraryPanelId = id;
-  libplAddBar.hidden = true;
+  libplAddBar.hidden = true; libplVibeBar.hidden = true;
   resetArtistPhoto();
   libplPanel.classList.add('is-artist-info');
   libplTitle.textContent = t.title;
@@ -13731,7 +13734,7 @@ function openArtistPage(rawName, title){
   collapseLibWide();
   openLibraryPanelId = id;
   libplBackFn = null; syncLibplCloseBtn();
-  libplAddBar.hidden = true;
+  libplAddBar.hidden = true; libplVibeBar.hidden = true;
   resetArtistPhoto();
   libplPanel.classList.add('is-artist-info');
   // a multi-artist credit opens on the first-named artist
@@ -17269,6 +17272,12 @@ function openAddSongsView(plId){
   input.focus();
 }
 libplAddBtn.addEventListener('click', () => { if (openLibraryPanelId) openAddSongsView(openLibraryPanelId); });
+$('libplVibeBtn').addEventListener('click', () => {
+  const pl = openLibraryPanelId ? getCachedPlaylist(openLibraryPanelId) : null;
+  if (!pl || !pl.vibeQuery) return;
+  closeLibraryPlaylistPanel();
+  beginConversationalVibe(String(pl.vibeQuery));
+});
 
 function openAddLinksFlow(playlistId){
   const pl = getCachedPlaylist(playlistId);
@@ -18688,9 +18697,21 @@ const VIBE_SESSION_ID = 'custom-vibe-session';   // an unsaved vibe playlist - r
 // four count when they read like talking (a comma, "I'm", "want",
 // "something", "while"...).
 const VIBE_TALK_RE = /[,.!?;]|\b(i'?m|i am|i want|want|wanna|need|feel|feeling|something|some songs|while|when i|for a|for my|mood|vibe|vibes|like|kinda|help me|play me|give me)\b/i;
+// House vibes (house-vibes.json, the same file the worker builds from): typing
+// exactly one of MAL GRIOT's phrases ("just chilling", "afterglow") is a vibe,
+// however short. Loaded once in the background; until it lands, short input
+// keeps going to song search as before.
+let houseVibePhrases = new Set();
+function houseVibeNorm(s){ return String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+fetch('house-vibes.json').then(r => r.ok ? r.json() : null).then(d => {
+  const set = new Set();
+  ((d && Array.isArray(d.vibes)) ? d.vibes : []).forEach(v => (Array.isArray(v.match) ? v.match : []).forEach(p => { const n = houseVibeNorm(p); if (n) set.add(n); }));
+  houseVibePhrases = set;
+}).catch(() => {});
 function looksConversational(input){
   const s = String(input || '').trim();
   if (!s || looksLikeUrl(s) || /\s[-–—]\s/.test(s)) return false;
+  if (houseVibePhrases.has(houseVibeNorm(s))) return true;
   const words = s.split(/\s+/).filter(Boolean);
   if (words.length >= 5) return true;
   return words.length >= 3 && VIBE_TALK_RE.test(s);
@@ -18800,12 +18821,22 @@ function vibeRightNow(now){
 // at most two songs per artist, and no artist twice in a row.
 async function rankVibeTracks(interp, onStep){
   let pool = (interp.tracks || []).filter(t => t && t.title && t.artist);
-  if (pool.length < 12 && pool.length){
+  // Asked again (vibe-no-repeat): songs this vibe already played go to the back
+  // of the pool, and when too few new ones are left to fill a list, /similar
+  // walks from two of the new ones to top it up.
+  const avoid = interp.avoid && interp.avoid.size ? interp.avoid : null;
+  if (avoid) pool = pool.filter(t => !avoid.has(tagCacheKey(t))).concat(pool.filter(t => avoid.has(tagCacheKey(t))));
+  const freshN = avoid ? pool.filter(t => !avoid.has(tagCacheKey(t))).length : pool.length;
+  if (pool.length && (pool.length < 12 || (avoid && freshN < VIBE_PLAYLIST_SIZE))){
     onStep && onStep('Finding more like it');
-    const seed = pool.find(t => t.from === 'seed') || pool[0];
-    const sim = await fetchSimilar(seed.title, seed.artist, 20);
+    const fresh = avoid ? pool.filter(t => !avoid.has(tagCacheKey(t))) : pool;
+    const seeds = (fresh.length ? fresh : pool).filter((t, i, a) => i === 0 || t.from === 'seed').slice(0, avoid ? 2 : 1);
+    const sims = await Promise.all(seeds.map(s => fetchSimilar(s.title, s.artist, 20).catch(() => ({ candidates: [] }))));
     const have = new Set(pool.map(tagCacheKey));
-    (sim.candidates || []).forEach(c => { if (c.title && c.artist && !have.has(tagCacheKey(c))){ have.add(tagCacheKey(c)); pool.push({ title: c.title, artist: c.artist, image: null, from: 'similar' }); } });
+    const extra = [];
+    sims.forEach(sim => (sim.candidates || []).forEach(c => { if (c.title && c.artist && !have.has(tagCacheKey(c)) && !(avoid && avoid.has(tagCacheKey(c)))){ have.add(tagCacheKey(c)); extra.push({ title: c.title, artist: c.artist, image: null, from: 'similar' }); } }));
+    // new songs ahead of the ones already played, so the metrics lookup covers them
+    pool = avoid ? pool.slice(0, freshN).concat(extra, pool.slice(freshN)) : pool.concat(extra);
   }
   onStep && onStep('Matching tempo and energy');
   const head = pool.slice(0, 24);
@@ -18946,8 +18977,8 @@ const VIBE_HEARD_LOOKUPS = 12;      // untagged known tracks to look tags up for
 const VIBE_HEARD_LOOKUP_MS = 4000;
 // Every track the listener has: title|artist -> { track, weight }. Liked and
 // recently played count for more than a song that just sits in a playlist.
-function vibeKnownTracks(){
-  const known = new Map();
+function vibeKnownTracks(text){
+  const known = new Map(), vibeKey = text ? vibeMemoryKey(text) : '';
   const add = (t, w) => {
     if (!t || !t.title || !t.artist) return;
     const k = tagCacheKey(t), cur = known.get(k);
@@ -18959,6 +18990,7 @@ function vibeKnownTracks(){
   listenSeedHistory().slice(0, 150).forEach((h, i) => { if (h && h.v) add({ title: h.t, artist: h.a, videoId: h.v }, i < 50 ? 0.6 : 0.3); });
   getLibrary().forEach(id => {
     if (id === LIKED_ID || id === VIBE_SESSION_ID || isPodcastPlaylistId(id)) return;
+    if (vibeKey && (getCachedPlaylist(id) || {}).vibeQuery && vibeMemoryKey(getCachedPlaylist(id).vibeQuery) === vibeKey) return;   // this vibe's own saved list isn't "songs you know" for it
     const pl = getCachedPlaylist(id);
     (pl && Array.isArray(pl.tracks) ? pl.tracks : []).forEach(t => add(t, 0.2));
   });
@@ -19107,7 +19139,7 @@ async function beginConversationalVibe(text, preInterp){
   stageInterpreting(text, 'Finding real songs');
   let tracks = [];
   interp = Object.assign({}, interp, { avoid: vibeRecentlyPlayed(text) });
-  const known = vibeKnownTracks();
+  const known = vibeKnownTracks(text);
   const poolArtists = new Set((interp.tracks || []).map(t => primaryArtistKey(t && t.artist)));
   let heard = [];
   try {
@@ -19190,6 +19222,7 @@ async function playVibePlaylist(interp, list, startIdx, save, text, opts){
   const gen = save ? null : ++vibeSessionGen;
   const order = list.slice(startIdx).concat(list.slice(0, startIdx));
   vibeRememberPlayed(text, list);
+  vibeShuffleOff();   // the arc only works in order
   const id = save ? 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) : VIBE_SESSION_ID;
   const pl = { id, type: 'custom', name: interp.title || 'Your vibe', image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: String(text || '').slice(0, 300) };
   persistPlaylistObj(pl);
@@ -19871,7 +19904,7 @@ async function startVoiceSet(plan, interp, said){
       saveToLibrary(id); renderLibrary();   // the set lives in the library from its first song
       closeImportOverlay();
       loadPlaylistIntoPlayer(pl);
-      if (state.shuffle) toggleShuffle();   // an arc only works in order
+      vibeShuffleOff();   // an arc only works in order
       buildQueueFrom(0, id);
       loadIndex(state.queuePos, true);
       setView('player');
@@ -21032,6 +21065,13 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 491, date: '2026-11-04', items: [
+    'Vibes keep their order: shuffle turns off, and while a vibe plays the shuffle button becomes the sleep timer.',
+    'A saved vibe has a "New songs, same vibe" button that builds it again with songs it hasn\'t played you yet.',
+    'Short vibes work too: type "just chilling", "afterglow" or "on demon time" and you get a vibe, not a song search.',
+    'While a vibe plays, the background takes on its color and breathes slower for calm songs, faster for strong ones.',
+    'Sets are open to everyone during the beta.',
+  ] },
   { version: 490, date: '2026-11-04', items: [
     'Describe a vibe and its songs now play as a set: they ease in, build, and come back down. Sleep vibes wind down, focus vibes stay steady, workouts build and hold.',
     'Songs next to each other in a vibe are lined up so their keys and tempos flow into each other.',
@@ -22500,14 +22540,36 @@ function queueReorder(fromPos, toPos){
   schedulePreload(state.queuePos);
 }
 
+/* vibe-sleep-button: a queue a vibe or a set built plays in order (its arc
+   is the point), so while one plays the shuffle buttons turn into the sleep
+   timer, same chooser as the More menu's. Shuffle comes back with any other
+   queue. The original icon is kept on the button to swap back. */
+var SHUFFLE_SLEEP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.3 3a9 9 0 1 0 8.7 11.3A7 7 0 0 1 12.3 3z"/></svg>';
+function isVibeQueue(){
+  const o = discoverOriginId(), pl = o ? getCachedPlaylist(o) : null;
+  return !!(pl && pl.vibeQuery);
+}
+function vibeShuffleOff(){   // straight to off: toggleShuffle cycles through shuffle + Discover
+  if (!state.shuffle && !state.shuffleDiscover) return;
+  state.shuffle = false; state.shuffleDiscover = false;
+  renderShuffleButtons();
+}
+function shuffleButtonPressed(){
+  if (isVibeQueue()) openSleepTimerChooser(); else toggleShuffle();
+}
 function renderShuffleButtons(){
-  const label = state.shuffleDiscover ? 'Shuffle with Discover (on)' : state.shuffle ? 'Shuffle (on)' : 'Shuffle';
+  const sleep = isVibeQueue();
+  const label = sleep ? (sleepTimer ? 'Sleep timer: ' + sleepTimerLabel() : 'Sleep timer')
+    : state.shuffleDiscover ? 'Shuffle with Discover (on)' : state.shuffle ? 'Shuffle (on)' : 'Shuffle';
   [shuffleBtn, miniShuffleBtn, flowShuffleBtn].forEach(b => {
-    b.classList.toggle('is-active', state.shuffle);
-    b.classList.toggle('is-discover', !!state.shuffleDiscover);
+    if (!b.dataset.shuffleIcon) b.dataset.shuffleIcon = b.innerHTML;
+    const mode = sleep ? 'sleep' : 'shuffle';
+    if (b.dataset.mode !== mode){ b.innerHTML = sleep ? SHUFFLE_SLEEP_ICON : b.dataset.shuffleIcon; b.dataset.mode = mode; }
+    b.classList.toggle('is-active', sleep ? !!sleepTimer : state.shuffle);
+    b.classList.toggle('is-discover', !sleep && !!state.shuffleDiscover);
     b.title = label; b.setAttribute('aria-label', label);
   });
-  shuffleBtn.setAttribute('aria-pressed', state.shuffleDiscover ? 'mixed' : state.shuffle ? 'true' : 'false');
+  shuffleBtn.setAttribute('aria-pressed', sleep ? (sleepTimer ? 'true' : 'false') : state.shuffleDiscover ? 'mixed' : state.shuffle ? 'true' : 'false');
 }
 // Cycle (#674): off -> shuffle -> shuffle + Discover -> off. The Discover step
 // keeps the shuffled order and mixes similar songs into what is coming up.
@@ -24047,7 +24109,31 @@ async function vibeCheckUpcomingLyrics(){
     if (at === state.queuePos + 1) schedulePreload(state.queuePos);
   }
 }
+// vibe-visuals: while a vibe plays, the background takes the vibe's color (a
+// tint layer on #ambient::after, which already fades its background over 4s)
+// and breathes with the song: the drift and the veil slow to 22s for the
+// calmest songs and quicken to 10s for the strongest. Both are the existing
+// transform/opacity animations with a new duration, set once per song.
+const VIBE_TINTS = [
+  { re: /\b(sleep|asleep|bed|peace|calm|meditat\w*|monk|ambient|minute)\b/i, rgb: [70, 110, 170] },
+  { re: /\b(sad|ex|heartbreak|lonely|nobody understands|cry|miss)\b/i, rgb: [80, 90, 160] },
+  { re: /\b(demon|liars|angry|rage|done playing|bring it on|fuck)\b/i, rgb: [170, 40, 60] },
+  { re: /\b(sexy|horny|laid|cuddle|romantic|love|date|afterglow)\b/i, rgb: [190, 70, 120] },
+  { re: /\b(sunny|brunch|summer|happy|dance|party|joy|celebrat\w*|food)\b/i, rgb: [225, 165, 60] },
+  { re: /\b(high|kite|stoned|psychedelic|trip)\b/i, rgb: [120, 80, 190] },
+  { re: /\b(focus|study|work|coding|reading|growth|truth|therapist)\b/i, rgb: [60, 150, 140] },
+];
+function applyVibeVisuals(){
+  const rs = document.documentElement.style, text = currentVibeText();
+  if (!text){ rs.removeProperty('--vibe-tint'); rs.removeProperty('--vibe-breathe'); return; }
+  const hit = VIBE_TINTS.find(x => x.re.test(text));
+  const e = queueEnergy(state.queuePos);
+  const rgb = hit ? hit.rgb : (e == null ? [200, 150, 90] : e < 0.4 ? [70, 110, 170] : e > 0.65 ? [200, 70, 80] : [200, 150, 90]);
+  rs.setProperty('--vibe-tint', 'rgba(' + rgb.join(',') + ',0.16)');
+  rs.setProperty('--vibe-breathe', (e == null ? 16 : Math.round(22 - Math.min(1, Math.max(0, e)) * 12)) + 's');
+}
 function vibeOnTrackLoad(){
+  try { applyVibeVisuals(); } catch(e){}
   if (!currentVibeText()) return;
   setTimeout(() => vibeCheckUpcomingLyrics().catch(() => {}), 4000);   // off the load burst
 }
@@ -24976,6 +25062,7 @@ function fsTimelineSync(){
   }
 }
 function renderQueuePanel(){
+  try { renderShuffleButtons(); } catch(e){}   // a restored or changed queue may be a vibe (sleep timer) or not (shuffle)
   fsTimelineSync();
   renderDiscoverToggle();
   renderSetArcRow();
@@ -32116,8 +32203,8 @@ function pausePlayback(){
    Player More menu -> Sleep timer -> 15 / 30 / 60 min or "end of this song".
    One 1s interval that only exists while a timer is set. When it fires the
    music fades out and pauses (pausePlayback), nothing else changes. */
-let sleepTimer = null;   // { kind: 'min', endAt } | { kind: 'song', pos }
-let sleepTimerIv = 0;
+var sleepTimer = null;   // { kind: 'min', endAt } | { kind: 'song', pos }. var: renderShuffleButtons reads it before this line runs on a cold start
+var sleepTimerIv = 0;
 function sleepTimerLabel(){
   if (!sleepTimer) return '';
   if (sleepTimer.kind === 'song') return 'end of this song';
@@ -32127,6 +32214,7 @@ function sleepTimerLabel(){
 function clearSleepTimer(){
   sleepTimer = null;
   if (sleepTimerIv){ clearInterval(sleepTimerIv); sleepTimerIv = 0; }
+  renderShuffleButtons();
 }
 function fireSleepTimer(){
   clearSleepTimer();
@@ -32146,6 +32234,7 @@ function setSleepTimer(kind, minutes){
   clearSleepTimer();
   sleepTimer = kind === 'song' ? { kind: 'song', pos: state.queuePos } : { kind: 'min', endAt: Date.now() + minutes * 60000 };
   sleepTimerIv = setInterval(sleepTimerTick, 1000);
+  renderShuffleButtons();
   showToast(kind === 'song' ? 'Sleep timer: stops after this song' : 'Sleep timer: ' + minutes + ' min');
 }
 function openSleepTimerChooser(){
@@ -32597,7 +32686,7 @@ document.addEventListener('keydown', (e) => {
       } else kbToggleLibrary();
       break;
     case 'k': case 'K':
-      if (!e.repeat) toggleShuffle();
+      if (!e.repeat) shuffleButtonPressed();
       break;
     case 'o': case 'O':
       if (!e.repeat) cycleRepeat();
@@ -32713,11 +32802,11 @@ miniPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); playPrev(); 
   $(id).addEventListener('click', (e) => { e.stopPropagation(); kbSkipBy(dir * POD_SKIP_S); });
 });
 miniNextBtn.addEventListener('click', (e) => { e.stopPropagation(); playNext(false); });
-miniShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
+miniShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); shuffleButtonPressed(); });
 miniRepeatBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleRepeat(); });
-flowShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
+flowShuffleBtn.addEventListener('click', (e) => { e.stopPropagation(); shuffleButtonPressed(); });
 flowRepeatBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleRepeat(); });
-shuffleBtn.addEventListener('click', toggleShuffle);
+shuffleBtn.addEventListener('click', shuffleButtonPressed);
 repeatBtn.addEventListener('click', cycleRepeat);
 
 if ('mediaSession' in navigator){

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { parseVibeExclusions, filterExcluded, matchHouseVibe } from '../src/vibe-intent.js';
 
 test('negations become exclusions and leave the rest of the sentence', () => {
@@ -54,4 +55,17 @@ test('house vibes match whole words, longest phrase wins', () => {
   assert.equal(matchHouseVibe('cookout tonight', list).id, 1);
   assert.equal(matchHouseVibe('cookouts', list), null);
   assert.equal(matchHouseVibe('anything', []), null);
+});
+
+test('house-vibes.json: valid entries, and each phrase finds its own entry', () => {
+  const data = JSON.parse(readFileSync(new URL('../../house-vibes.json', import.meta.url), 'utf8'));
+  assert.ok(Number.isInteger(data.version) && data.version >= 1);
+  assert.ok(Array.isArray(data.vibes) && data.vibes.length);
+  data.vibes.forEach((v, i) => {
+    assert.ok(Array.isArray(v.match) && v.match.length, 'entry ' + i + ' has phrases');
+    assert.ok(Array.isArray(v.tags) && v.tags.length >= 1 && v.tags.length <= 4, 'entry ' + i + ' has 1-4 tags');
+    assert.ok(Array.isArray(v.energy) && v.energy.length === 2 && v.energy[0] >= 0 && v.energy[1] <= 1 && v.energy[0] < v.energy[1], 'entry ' + i + ' energy');
+    assert.ok(Array.isArray(v.seeds) && v.seeds.every(s => s && s.artist && s.title), 'entry ' + i + ' seeds');
+    v.match.forEach(p => assert.equal(matchHouseVibe(p, data.vibes), v, '"' + p + '" lands on its own entry'));
+  });
 });

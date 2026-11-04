@@ -59,7 +59,7 @@ function fakeQuota(opts = {}) {
 }
 const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
 const verifyIdentity = async (t) => { if (t !== 'ebs1.good') throw new Error('bad'); return { sub: 'u1' }; };
-const call = (env, body, extra = {}) => handleVoicePlan(new Request('https://w.test/voice/plan', { method: 'POST', body: JSON.stringify(body) }), env, {}, { json, verifyIdentity, ...extra }).then(async (r) => ({ status: r.status, body: await r.json() }));
+const call = (env, body, extra = {}) => handleVoicePlan(new Request('https://w.test/voice/plan', { method: 'POST', body: JSON.stringify(body) }), env, {}, { json, verifyIdentity, openSets: false, ...extra }).then(async (r) => ({ status: r.status, body: await r.json() }));
 const mkEnv = (ai, profiles = {}, quota = fakeQuota()) => ({ PROFILES: fakeKV(profiles), GOOGLE_CLIENT_ID: 'cid', VOICE_QUOTA: quota, AI: ai });
 const goodAi = { run: async () => ({ response: '{"kind":"command","ops":[{"op":"volume","dir":-1}],"seeds":[],"tags":[],"energy":3,"text":"","say":"Quieter"}' }) };
 
@@ -246,4 +246,10 @@ test('set downgrade refund: free user daily count is given back but global neuro
   assert.equal(paid.body.used, 1); assert.equal(q.spent.get('g:' + day), 11 * VOICE_NEURONS_PER_CALL);
   const mood = await call(mkEnv(goodAi, {}, fakeQuota()), { idToken: 'ebs1.good', text: 'a bit quieter in here' });
   assert.equal(mood.body.used, 1);
+});
+
+test('beta: with sets open, a free listener gets the set itself, no upsell', async () => {
+  const r = await call(mkEnv(setAi(goodSet)), { idToken: 'ebs1.good', text: 'ecstatic dance for 90 minutes, build to a peak' }, { openSets: true });
+  assert.equal(r.body.tier, 'free');
+  assert.equal(r.body.plan.kind, 'set'); assert.equal(r.body.upsell, undefined);
 });

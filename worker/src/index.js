@@ -4302,8 +4302,14 @@ async function vibeVerifySeed(seed, env) {
   return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed' };
 }
 
+// Deep cuts: each tag's list goes 60 deep in the same single Last.fm call, and
+// the per-sentence shuffle below samples across all of it, so most picks come
+// from past the handful of hits every "chill" list starts with. (SoundCloud
+// songs stay out of vibes: its widget can sit paused on auto-advance and
+// freezes in a hidden tab, which would stall a vibe mid-flow.)
+const VIBE_TAG_DEPTH = 60;
 async function vibeTagTracks(tag, env) {
-  const data = await lastfmCall('tag.getTopTracks', { tag, limit: String(VIBE_TRACKS_PER_TAG * 2) }, env);
+  const data = await lastfmCall('tag.getTopTracks', { tag, limit: String(VIBE_TAG_DEPTH) }, env);
   const list = data && data.tracks && data.tracks.track;
   if (!Array.isArray(list)) return [];
   return list

@@ -1,21 +1,11 @@
 // House vibes: MAL GRIOT's own read on a vibe, ahead of the model's.
 //
-// When a sentence contains one of an entry's `match` phrases, /vibe-interpret
-// builds from this entry first: its seed songs lead the list (still checked
-// against the Apple Music catalog, so a typo just drops that song), its tags
-// come before the model's, and `energy` (0..1, optional) replaces the model's
-// range. Everything else about the vibe still comes from the model.
-//
-// Add entries in your own words and your own picks. Example shape:
-//
-//   {
-//     match: ['sunday cookout', 'backyard cookout'],
-//     tags: ['soul', 'funk', 'rnb'],
-//     energy: [0.5, 0.8],
-//     seeds: [{ artist: 'Artist Name', title: 'Song Title' }],
-//   },
-//
-// Bump HOUSE_VIBES_VERSION after editing so answers cached for a week pick up
-// the change (only sentences that match an entry are affected).
-export const HOUSE_VIBES_VERSION = 1;
-export const HOUSE_VIBES = [];
+// The list lives in /house-vibes.json at the repo root (its "_how" field says
+// how to edit it), so the app can read the same phrases: typing exactly one of
+// them goes to vibe search even when it's short. Wrangler bundles the JSON into
+// the worker at deploy, so an edit goes live with the next worker deploy (and
+// the next site push for the app side).
+import data from '../../house-vibes.json';
+
+export const HOUSE_VIBES_VERSION = Number(data && data.version) || 1;
+export const HOUSE_VIBES = Array.isArray(data && data.vibes) ? data.vibes : [];
