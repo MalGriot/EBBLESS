@@ -1,6 +1,6 @@
 {
   "_how": "MAL GRIOT's house vibes. When a vibe sentence contains one of an entry's match phrases (whole words, any case, punctuation ignored), /vibe-interpret builds from that entry first: seeds lead the list (checked against the Apple Music catalog, so a typo just drops that song), tags come before the model's, and energy (0 to 1) replaces the model's range. In the app, typing exactly one of these phrases (even a short one like 'just chilling') goes to vibe search instead of song search. Seeds look like {\"artist\": \"Name\", \"title\": \"Song\"}. Bump version after every edit so cached answers refresh.",
-  "version": 3,
+  "version": 4,
   "vibes": [
     {
       "match": [
@@ -586,8 +586,8 @@
           "title": "Basket Case"
         },
         {
-          "artist": "Mingo Fishtrap",
-          "title": "Fuck This Shit I'm Out"
+          "artist": "Black Flag",
+          "title": "Rise Above"
         }
       ]
     },
