@@ -9888,6 +9888,7 @@ function bringBuild(){
     else if (k === 'lfgo') bringLastfmGo(($('bmUser') || {}).value);
     else if (k === 'spgo') spotifyLinksImport(($('bmSpLinks') || {}).value);
     else if (k === 'spreq'){ bringStoreSet('ebbless:spFileAsk', String(Date.now())); bringStoreSet('ebbless:spFileRemind', String(Date.now())); try { localStorage.removeItem('ebbless:spFileStop'); } catch(e){} window.open('https://www.spotify.com/account/privacy/', '_blank', 'noopener'); showToast('Request it on that page. We will remind you when it should be here.'); }
+    else if (k === 'spsnip'){ const txt = '(' + spotifyExportRun.toString() + ')()'; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => showToast('Copied. Now paste it in the console on open.spotify.com'), () => showToast('Could not copy. Allow clipboard access and try again.')); }
     else if (k === 'spfile'){ const f = $('bmFile'); if (f) f.click(); }
     else if (k === 'sptester'){ closeBring(); fmOpenForPicker(); Promise.resolve(spotifyLoadMusic()).then(() => { if (!fmPicker && fmFromBring && fmEl && !fmEl.hidden){ closeFindMusic(); openBring('spotify'); } }); }
     else if (k === 'remind'){ try { localStorage.removeItem('ebbless:bringMute'); } catch(e){} showToast('We will remind you now and then'); bringRender(); }
@@ -9924,8 +9925,9 @@ function bringRender(){
     $('bmTitle').textContent = 'Bring your Spotify';
     sc.innerHTML = '<div class="bm-lead">Paste your playlist links and they come over in seconds. Liked Songs and everything else come from a file Spotify sends you.</div>' +
       '<div class="bm-steps">' +
-      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">1</span><div><div class="bm-st">Paste your playlist links</div><div class="bm-sd">On a computer, select your playlists in Spotify (Ctrl or Cmd + click), copy them, and paste here. On a phone, Share, Copy link, one at a time.</div></div></div><textarea id="bmSpLinks" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="open.spotify.com/playlist/..." style="width:100%;margin-top:10px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;padding:10px 12px;resize:vertical"></textarea><div class="bm-user"><button type="button" class="bm-btn bm-btn-go" data-bm="spgo">Bring them in</button></div></div>' +
-      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">2</span><div><div class="bm-st">Get the rest in a few days</div><div class="bm-sd">Liked Songs, saved albums and private playlists are only in Spotify\'s own data file. Ask for it now, add it here when it arrives, and EBBLESS reminds you.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spreq">Request my file</button><button type="button" class="bm-btn" data-bm="spfile">I have my file</button><input type="file" id="bmFile" accept=".zip,.json,application/zip,application/json" hidden></div></div>' +
+      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">1</span><div><div class="bm-st">Paste your playlist links or library</div><div class="bm-sd">On a computer, select your playlists in Spotify (Ctrl or Cmd + click), copy them, and paste here. On a phone, Share, Copy link, one at a time.</div></div></div><textarea id="bmSpLinks" rows="4" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="open.spotify.com/playlist/... or your copied library" style="width:100%;margin-top:10px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;font:inherit;padding:10px 12px;resize:vertical"></textarea><div class="bm-user"><button type="button" class="bm-btn bm-btn-go" data-bm="spgo">Bring them in</button></div></div>' +
+      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">+</span><div><div class="bm-st">On a computer: everything, right now</div><div class="bm-sd">Liked Songs, albums and all playlists, from your own signed-in Spotify tab. Copy the snippet, open open.spotify.com, open the browser console (F12, or Cmd + Option + J), paste it and press Enter, click Liked Songs, press Copy my library, then paste into the box above. If the console says to type allow pasting, do that first.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spsnip">Copy the snippet</button></div></div>' +
+      '<div class="bm-step" style="display:block"><div style="display:flex;gap:12px;align-items:center"><span class="bm-num">2</span><div><div class="bm-st">Or get the rest in a few days</div><div class="bm-sd">Liked Songs, saved albums and private playlists are only in Spotify\'s own data file. Ask for it now, add it here when it arrives, and EBBLESS reminds you.</div></div></div><div class="bm-user"><button type="button" class="bm-btn" data-bm="spreq">Request my file</button><button type="button" class="bm-btn" data-bm="spfile">I have my file</button><input type="file" id="bmFile" accept=".zip,.json,application/zip,application/json" hidden></div></div>' +
       '</div><div class="bm-note">Want your Liked Songs right now? On a computer, open Liked Songs in Spotify, press Ctrl or Cmd + A, add them to a new playlist, then paste that playlist\'s link in step 1.</div>' +
       (SPOTIFY_CLIENT_ID ? '<div class="bm-foot"><button type="button" class="bm-link" data-bm="sptester">I am an EBBLESS tester: sign in with Spotify</button></div>' : '');
     return;
@@ -9968,6 +9970,14 @@ function fmOpenForPicker(){ if (!fmEl) fmBuild(); fmFromBring = true; fmEl.hidde
 // Pasted Spotify playlist/album/song links (one or many, e.g. several playlists selected in
 // the Spotify app and copied together): each goes through the normal link import, queued.
 function spotifyLinksImport(text){
+  const t0 = String(text || '').trim();
+  if (t0[0] === '{'){
+    let j; try { j = JSON.parse(t0); } catch(e){ showToast('That did not copy completely. Run the export again.'); return; }
+    closeBring();
+    showToast('Reading your Spotify library');
+    spotifyLibraryImport([{ name: 'YourLibrary.json', j }]);
+    return;
+  }
   const seen = new Set(), found = [];
   (String(text || '').match(/(?:https?:\/\/)?open\.spotify\.com\/[^\s<>"']+|spotify:(?:playlist|album|track):[A-Za-z0-9]+/gi) || []).forEach(u => {
     const sp = parseSpotifyLink(u);
@@ -9980,6 +9990,66 @@ function spotifyLinksImport(text){
   bringStoreSet('ebbless:bringDone', '1');
   showToast('Bringing in ' + list.length + (list.length === 1 ? ' link' : ' links') + ' from Spotify');
   list.forEach((sp, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: sp.type, id: sp.id }); } catch(e){} }, i * 1500));
+}
+
+// Runs on open.spotify.com in the person's own signed-in tab (pasted into the browser console):
+// borrows the token the web player already uses, reads their own library through Spotify's API,
+// and offers it back as one block of text in the data-file shape. Self-contained: it is copied as text.
+function spotifyExportRun(){
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms)), of = window.fetch;
+  let tok = null;
+  window.fetch = function(i, o){
+    try {
+      let a = o && o.headers;
+      a = a && (typeof a.get === 'function' ? a.get('authorization') : (a.authorization || a.Authorization));
+      if (!a && i && i.headers && typeof i.headers.get === 'function') a = i.headers.get('authorization');
+      if (a && /^Bearer /.test(a)) tok = a;
+    } catch(e){}
+    return of.apply(this, arguments);
+  };
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;z-index:2147483647;top:16px;right:16px;width:320px;padding:16px;border-radius:14px;background:#111;color:#fff;font:600 14px/1.4 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.6)';
+  document.body.appendChild(box);
+  const say = (m) => { box.textContent = m; };
+  (async () => {
+    say('EBBLESS export: click "Liked Songs" in the left list now.');
+    for (let k = 0; !tok && k < 400; k++) await sleep(300);
+    if (!tok){ say('No Spotify activity seen. Run it again and click Liked Songs.'); return; }
+    const get = async (u) => {
+      for (let k = 0; k < 5; k++){
+        const r = await of(u, { headers: { Authorization: tok } });
+        if (r.status === 429){ await sleep(((+r.headers.get('retry-after')) || 2) * 1000); continue; }
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }
+      throw new Error(429);
+    };
+    const all = async (u, tag) => { const out = []; while (u){ const d = await get(u); out.push(...(d.items || [])); say('Reading ' + tag + ' (' + out.length + ')'); u = d.next; } return out; };
+    try {
+      const A = 'https://api.spotify.com/v1/';
+      const tr = (t) => ({ artist: (t.artists && t.artists[0] && t.artists[0].name) || '', album: (t.album && t.album.name) || '', track: t.name, uri: t.uri });
+      const tracks = (await all(A + 'me/tracks?limit=50', 'Liked Songs')).map(x => x.track).filter(t => t && t.name).map(tr);
+      const albums = (await all(A + 'me/albums?limit=50', 'albums')).map(x => x.album).filter(Boolean).map(a => ({ artist: (a.artists && a.artists[0] && a.artists[0].name) || '', album: a.name, uri: a.uri }));
+      const pls = await all(A + 'me/playlists?limit=50', 'playlists'), playlists = [];
+      for (let n = 0; n < pls.length; n++){
+        const p = pls[n];
+        if (!p || !p.id) continue;
+        say('Playlist ' + (n + 1) + ' of ' + pls.length + ': ' + p.name);
+        let rows;
+        try { rows = await all(A + 'playlists/' + p.id + '/items?limit=100', p.name); }
+        catch(e){ try { rows = await all(A + 'playlists/' + p.id + '/tracks?limit=100', p.name); } catch(e2){ continue; } }
+        const items = rows.map(x => x && (x.track || x.item)).filter(t => t && t.name && t.type !== 'episode').map(t => { const o = tr(t); return { track: { trackName: o.track, artistName: o.artist, albumName: o.album, trackUri: o.uri } }; });
+        if (items.length) playlists.push({ name: p.name || 'Spotify playlist', items });
+      }
+      const text = JSON.stringify({ tracks, albums, playlists });
+      box.textContent = '';
+      const h = document.createElement('div'); h.textContent = tracks.length + ' liked songs, ' + albums.length + ' albums, ' + playlists.length + ' playlists ready.'; h.style.marginBottom = '10px';
+      const b = document.createElement('button'); b.textContent = 'Copy my library'; b.style.cssText = 'font:inherit;padding:10px 16px;border:0;border-radius:999px;background:#1ed760;color:#000;cursor:pointer';
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'display:none;width:100%;height:80px;margin-top:10px';
+      b.onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { h.textContent = 'Copied. Go back to EBBLESS and paste it.'; b.remove(); }, () => { ta.style.display = 'block'; ta.select(); h.textContent = 'Copy the text below (Ctrl or Cmd + C), then paste it in EBBLESS.'; }); };
+      box.append(h, b, ta);
+    } catch(e){ say('Spotify stopped us (' + (e && e.message) + '). Wait a minute and run it again.'); }
+  })();
 }
 
 // Spotify's own data file (the .zip from their privacy page, or the .json files in it):
@@ -10019,16 +10089,27 @@ function spotifyFileRow(t){
 }
 async function spotifyFileImport(file){
   showToast('Reading your Spotify file');
-  let lists = [];
-  const albumIds = [];
+  const entries = [];
   try {
     for (const f of await spotifyFileTexts(file)){
       let j; try { j = JSON.parse(f.text); } catch(e){ continue; }
-      (Array.isArray(j.albums) ? j.albums : []).forEach(a => { const m = a && /^spotify:album:([A-Za-z0-9]{22})$/.exec(a.uri || ''); if (m && !albumIds.includes(m[1])) albumIds.push(m[1]); });
-      if (/YourLibrary/i.test(f.name) || Array.isArray(j.tracks)) lists.push({ name: 'Spotify Liked Songs', rows: (j.tracks || []).map(spotifyFileRow) });
-      (j.playlists || []).forEach(pl => lists.push({ name: pl.name || 'Spotify playlist', rows: (pl.items || []).map(spotifyFileRow) }));
+      entries.push({ name: f.name, j });
     }
   } catch(e){ showToast('Could not read that file. Use the .zip from Spotify.'); return; }
+  spotifyLibraryImport(entries);
+}
+// entries: [{ name, j }] in the shape of Spotify's data file (YourLibrary.json / Playlist*.json);
+// the on-computer export snippet produces the same shape.
+function spotifyLibraryImport(entries){
+  const lists = [];
+  const albumIds = [];
+  try {
+    for (const { name: fname, j } of entries){
+      (Array.isArray(j.albums) ? j.albums : []).forEach(a => { const m = a && /^spotify:album:([A-Za-z0-9]{22})$/.exec(a.uri || ''); if (m && !albumIds.includes(m[1])) albumIds.push(m[1]); });
+      if (/YourLibrary/i.test(fname) || Array.isArray(j.tracks)) lists.push({ name: 'Spotify Liked Songs', rows: (j.tracks || []).map(spotifyFileRow) });
+      (j.playlists || []).forEach(pl => lists.push({ name: pl.name || 'Spotify playlist', rows: (pl.items || []).map(spotifyFileRow) }));
+    }
+  } catch(e){ showToast('Could not read that. Use the .zip from Spotify.'); return; }
   const ids = [];
   for (const l of lists){
     const seen = new Set(), tracks = [];
@@ -21531,7 +21612,7 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 const WHATS_NEW = [
   { version: 495, date: '2026-11-05', items: [
     'Bring your music: its own page with each app\'s logo, more apps, and an easier Last.fm guide. It is the first choice on the splash, in Settings and in the Library, and EBBLESS suggests it now and then until you have brought something over (you can turn that off).',
-    'Spotify: paste several playlist or album links at once and they all come over. Request your Spotify data file from the same page and add it when it arrives for Liked Songs, playlists and saved albums, with reminders.'
+    'Spotify: on a computer, copy a one-tap snippet, run it on open.spotify.com and paste the result to bring over all your Liked Songs, albums and playlists at once. You can also paste several playlist or album links together. Request your Spotify data file from the same page and add it when it arrives for Liked Songs, playlists and saved albums, with reminders.'
   ]},
   { version: 494, date: '2026-11-04', items: [
     'Vibes learn what you mean by them. Skip a song early in a vibe and it stays out of that vibe; play one through or like it and it comes back next time. Artists you skip or keep lean down or up.',
