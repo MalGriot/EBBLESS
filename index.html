@@ -631,6 +631,19 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-map svg{flex:none;width:34px;height:34px}
 #view-home .hm-map b{display:block;font-size:17px}
 #view-home .hm-map span{font-size:12.5px;opacity:.85}
+/* home-vibe: the vibe box at the top of Home (static, no animation) */
+#view-home .hm-vibe{padding:20px 20px 18px;border-radius:20px;background:linear-gradient(135deg,rgba(190,70,120,.30),rgba(60,90,170,.26));border:1px solid rgba(255,255,255,.08)}
+#view-home .hm-vibe h2{font-size:22px;font-weight:800;margin:0 0 4px}
+#view-home .hm-vibe-sub{margin:0 0 14px;font-size:13.5px;color:var(--faint)}
+#view-home .hm-vibe-form{display:flex;gap:8px}
+#view-home .hm-vibe-form input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.32);color:var(--text);outline:none}
+#view-home .hm-vibe-form input:focus{border-color:var(--accent)}
+#view-home .hm-vibe-go{flex:none;font:inherit;font-size:15px;font-weight:700;padding:0 22px;border-radius:999px;background:var(--accent);color:var(--on-accent,#151107);cursor:pointer}
+#view-home .hm-vibe-go:hover{filter:brightness(1.1)}
+#view-home .hm-vibe-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+#view-home .hm-vibe-chip{display:inline-flex;align-items:baseline;gap:6px;font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.10);color:var(--text);cursor:pointer;text-align:left}
+#view-home .hm-vibe-chip:hover{background:rgba(255,255,255,.18)}
+#view-home .hm-vibe-chip small{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
 #view-home .hm-genres{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 #view-home .hm-genre{position:relative;overflow:hidden;min-height:84px;padding:14px 62px 14px 14px;border-radius:16px;text-align:left;color:#fff;font-size:16px;font-weight:800;line-height:1.15;text-shadow:0 1px 6px rgba(0,0,0,.35);cursor:pointer;
   background:linear-gradient(135deg,var(--c1,#6b4fbb),var(--c2,#2a1d5c));display:flex;flex-direction:column;justify-content:space-between;gap:4px}
@@ -2006,6 +2019,9 @@ body.split-desktop .ads-report-btn{margin-bottom:20px}
 .empty-find-btn:hover{filter:brightness(1.1)}
 .empty-find-btn:active{transform:scale(.96)}
 .track-meta.is-empty .empty-find-btn{display:inline-block}
+.empty-vibe-btn{display:none;margin:10px auto 0;font:inherit;font-size:13.5px;font-weight:600;padding:6px 14px;border-radius:999px;color:var(--text);opacity:.78;text-decoration:underline;text-underline-offset:3px}
+.empty-vibe-btn:hover{opacity:1}
+.track-meta.is-empty .empty-vibe-btn{display:block}
 /* your recent things (#583d): small static tiles under Find music, only while the player is empty */
 .home-shelf{display:none;justify-content:center;gap:10px;margin:12px auto 0;max-width:100%}
 .track-meta.is-empty .home-shelf:not([hidden]){display:flex}
@@ -5317,6 +5333,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
           </div>
           <div class="artist marquee" id="trackArtist"><span></span></div>
           <button type="button" class="empty-find-btn" id="emptyFindBtn">Find music</button>
+          <button type="button" class="empty-vibe-btn" id="emptyVibeBtn">or set a vibe</button>
           <div class="home-shelf" id="homeShelf" hidden></div>
           <div class="cast-bar" id="castBar" hidden>
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11z"/></svg>
@@ -5368,7 +5385,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
       <form class="st-form" id="searchTabForm" autocomplete="off">
         <span class="st-field">
           <button type="submit" class="st-go" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
-          <input id="searchTabInput" type="text" maxlength="250" placeholder="Search or paste a link" aria-label="Search, paste a link, or describe your vibe" autocomplete="off" spellcheck="false" enterkeyhint="search">
+          <input id="searchTabInput" type="text" maxlength="250" placeholder="Search, paste a link, or say a vibe" aria-label="Search, paste a link, or describe your vibe" autocomplete="off" spellcheck="false" enterkeyhint="search">
         </span>
         <div class="st-err" id="searchTabErr" role="alert"></div>
       </form>
@@ -9564,6 +9581,7 @@ const libSearchTracks = $('libSearchTracks'), libSearchTracksList = $('libSearch
 const importOverlay = $('import-overlay'), importStage = $('importStage');
 const trackTitle = $('trackTitle'), trackArtist = $('trackArtist');
 $('emptyFindBtn').addEventListener('click', () => openFindMusic());
+$('emptyVibeBtn').addEventListener('click', () => openHomeVibe());
 $('browseBtn').addEventListener('click', () => openFindMusic());
 // #619: desktop library width toggle, remembered across visits (CSS only acts on the 3-pane desktop layout)
 const LS_LIB_WIDE = 'ebbless:libraryWide';
@@ -12573,7 +12591,7 @@ function toggleLibraryPlaylistPanel(id){
 
   openLibraryPanelId = id;
   libplAddBar.hidden = !addablePlaylists().some(p => p.id === id);
-  libplVibeBar.hidden = !(pl.vibeQuery && !pl.isSet);   // a saved vibe rebuilds with fresh songs (vibe-no-repeat)
+  libplVibeBar.hidden = !isTypedVibe(pl);   // a saved vibe rebuilds with fresh songs (vibe-no-repeat)
   resetArtistPhoto();
   libplPanel.classList.remove('is-artist-info');
   const isAlb = isAlbumEntry(pl) && !isArtistEntry(pl);
@@ -17274,7 +17292,7 @@ function openAddSongsView(plId){
 libplAddBtn.addEventListener('click', () => { if (openLibraryPanelId) openAddSongsView(openLibraryPanelId); });
 $('libplVibeBtn').addEventListener('click', () => {
   const pl = openLibraryPanelId ? getCachedPlaylist(openLibraryPanelId) : null;
-  if (!pl || !pl.vibeQuery) return;
+  if (!isTypedVibe(pl)) return;
   closeLibraryPlaylistPanel();
   beginConversationalVibe(String(pl.vibeQuery));
 });
@@ -18314,7 +18332,7 @@ async function buildRadioPlaylist(item, name){
   const list = await rankVibeTracks(interp);
   if (!list.length) return;
   const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const pl = { id, type: 'custom', name: title, image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: item };
+  const pl = { id, type: 'custom', name: title, image: null, tracks: [], ts: Date.now(), rematchUnmatched: true, vibeQuery: item, isRadio: true };
   persistPlaylistObj(pl);
   saveToLibrary(id); renderLibrary();
   for (let i = 0; i < list.length; i++){
@@ -18469,6 +18487,7 @@ function renderHome(){
     b.addEventListener('click', onClick); return b;
   };
   const row = (sec, cards) => { const r = mk('div', 'hm-row'); cards.forEach(c => r.appendChild(c)); sec.appendChild(r); };
+  renderHomeVibe(body, mk);
   const coverOf = (pl) => pl.image ? { art: pl.image } : (pl.tracks.find(t => t && (t.videoId || t.art)) || null);
   const plays = (pl) => totalPlaylistPlays(pl);
   // recently played: playlists and albums you played last, newest first (one tap plays)
@@ -18526,11 +18545,54 @@ function renderHome(){
     b.addEventListener('click', () => openMusicMap(mapFrom));
     sec.appendChild(b);
   }
-  if (!body.children.length) body.appendChild(mk('p', 'hm-empty', 'Play a few songs and your top artists, albums, playlists and songs will show up here.'));
+  if (body.children.length < 2) body.appendChild(mk('p', 'hm-empty', 'Play a few songs and your top artists, albums, playlists and songs will show up here.'));
+}
+/* home-vibe: the vibe box leads Home, so building a playlist from a feeling
+   isn't something you only find by typing a sentence into Search. Anything
+   typed here is a vibe (no song-search guessing). The chips: the vibe you
+   usually play around now, one for the time of day, then five of the house
+   vibes, the same five all day. Static: no animation, no network until a tap. */
+function renderHomeVibe(body, mk){
+  const sec = mk('section', 'hm-sec hm-vibe');
+  sec.appendChild(mk('h2', '', 'What\'s the vibe?'));
+  sec.appendChild(mk('p', 'hm-vibe-sub', 'Say it how you\'d say it to a friend. We build the songs, in an order that flows.'));
+  const form = mk('form', 'hm-vibe-form'); form.autocomplete = 'off';
+  const input = mk('input'); input.id = 'hmVibeInput'; input.type = 'text'; input.maxLength = 250;
+  input.placeholder = 'rainy drive home'; input.setAttribute('aria-label', 'Describe your vibe'); input.spellcheck = false; input.setAttribute('enterkeyhint', 'go');
+  const go = mk('button', 'hm-vibe-go', 'Play'); go.type = 'submit';
+  form.appendChild(input); form.appendChild(go); sec.appendChild(form);
+  const start = (t) => { t = String(t || '').trim(); if (!t){ input.focus(); return; } beginConversationalVibe(t); };   // counted as vibe_search there
+  form.addEventListener('submit', (e) => { e.preventDefault(); start(input.value); });
+  const picks = [];
+  try { const u = vibeRightNow(); if (u) picks.push({ q: u.q, usual: true }); } catch(e){}
+  try {
+    const block = getTimeContext().block;
+    const mood = PASTE_HINT_MOOD[block];
+    if (mood) picks.push({ q: (PASTE_HINT_WHEN[block] || 'tonight').replace(/^./, c => c.toUpperCase()) + ', ' + mood });
+  } catch(e){}
+  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000), n = houseVibeShow.length;
+  for (let i = 0; i < Math.min(5, n); i++) picks.push({ q: houseVibeShow[(day * 7 + i * 11) % n] });
+  const seen = new Set(), chips = mk('div', 'hm-vibe-chips');
+  picks.forEach(p => {
+    const k = p.q.toLowerCase();
+    if (seen.has(k)) return; seen.add(k);
+    const b = mk('button', 'hm-vibe-chip' + (p.usual ? ' is-usual' : ''), p.q); b.type = 'button';
+    if (p.usual){ b.prepend(mk('small', '', 'Your usual')); b.title = 'What you tend to play around now'; }
+    b.addEventListener('click', () => start(p.q));
+    chips.appendChild(b);
+  });
+  if (chips.children.length) sec.appendChild(chips);
+  body.appendChild(sec);
+}
+function openHomeVibe(){
+  leaveFullscreen(true);
+  setView('home');
+  const i = $('hmVibeInput');
+  if (i) i.focus();
 }
 function renderSearchTab(){
   const grid = $('stGrid'), picks = $('stPicks'), chips = $('stChips');
-  searchTabInput.placeholder = 'Search or paste a link';
+  searchTabInput.placeholder = 'Search, paste a link, or say a vibe';
   searchTabErr.textContent = '';
   let tiles = [];
   try{ tiles = searchTabArtistTiles(); } catch(e){}
@@ -18701,12 +18763,20 @@ const VIBE_TALK_RE = /[,.!?;]|\b(i'?m|i am|i want|want|wanna|need|feel|feeling|s
 // exactly one of MAL GRIOT's phrases ("just chilling", "afterglow") is a vibe,
 // however short. Loaded once in the background; until it lands, short input
 // keeps going to song search as before.
-let houseVibePhrases = new Set();
+let houseVibePhrases = new Set(), houseVibeShow = [];
 function houseVibeNorm(s){ return String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+// Home's vibe chips show each entry's first phrase; the explicit ones still
+// work when typed, they just aren't suggested on screen.
+const HOUSE_VIBE_NO_SHOW = /\b(fuck|shit|hoes|horny|laid)\b/i;
 fetch('house-vibes.json').then(r => r.ok ? r.json() : null).then(d => {
-  const set = new Set();
-  ((d && Array.isArray(d.vibes)) ? d.vibes : []).forEach(v => (Array.isArray(v.match) ? v.match : []).forEach(p => { const n = houseVibeNorm(p); if (n) set.add(n); }));
-  houseVibePhrases = set;
+  const set = new Set(), show = [];
+  ((d && Array.isArray(d.vibes)) ? d.vibes : []).forEach(v => {
+    const m = Array.isArray(v.match) ? v.match : [];
+    m.forEach(p => { const n = houseVibeNorm(p); if (n) set.add(n); });
+    if (m[0] && !HOUSE_VIBE_NO_SHOW.test(m[0])) show.push(String(m[0]).replace(/\bi\b/g, 'I').replace(/^./, c => c.toUpperCase()));
+  });
+  houseVibePhrases = set; houseVibeShow = show;
+  if (state.currentView === 'home') renderHome();
 }).catch(() => {});
 function looksConversational(input){
   const s = String(input || '').trim();
@@ -21065,6 +21135,10 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 492, date: '2026-11-04', items: [
+    'Home opens with "What\'s the vibe?": type a mood or tap one, and it builds the songs. Nothing playing yet? "or set a vibe" takes you there.',
+    'The sleep timer button and the vibe colors are for vibes only. Sets and your signup radios keep their shuffle button.',
+  ] },
   { version: 491, date: '2026-11-04', items: [
     'Vibes keep their order: shuffle turns off, and while a vibe plays the shuffle button becomes the sleep timer.',
     'A saved vibe has a "New songs, same vibe" button that builds it again with songs it hasn\'t played you yet.',
@@ -22540,15 +22614,13 @@ function queueReorder(fromPos, toPos){
   schedulePreload(state.queuePos);
 }
 
-/* vibe-sleep-button: a queue a vibe or a set built plays in order (its arc
-   is the point), so while one plays the shuffle buttons turn into the sleep
-   timer, same chooser as the More menu's. Shuffle comes back with any other
+/* vibe-sleep-button: a queue a typed vibe built plays in order (its arc is
+   the point), so while one plays the shuffle buttons turn into the sleep
+   timer, same chooser as the More menu's. Vibes only: a Set also starts with
+   shuffle off but keeps its shuffle button. Shuffle comes back with any other
    queue. The original icon is kept on the button to swap back. */
 var SHUFFLE_SLEEP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.3 3a9 9 0 1 0 8.7 11.3A7 7 0 0 1 12.3 3z"/></svg>';
-function isVibeQueue(){
-  const o = discoverOriginId(), pl = o ? getCachedPlaylist(o) : null;
-  return !!(pl && pl.vibeQuery);
-}
+function isVibeQueue(){ return !!discoverVibeFor(discoverOriginId()); }
 function vibeShuffleOff(){   // straight to off: toggleShuffle cycles through shuffle + Discover
   if (!state.shuffle && !state.shuffleDiscover) return;
   state.shuffle = false; state.shuffleDiscover = false;
@@ -23986,13 +24058,22 @@ function extendQueueWithDiscover(originPlId){
    cached /vibe-interpret answer, metrics included) join the pool with a lift
    bigger than a steering chip's, songs it already played are left out, and
    any candidate whose energy sits outside the vibe's range is pulled down by
-   how far outside it is. Sets build their own arc and are left alone. */
+   how far outside it is. Sets build their own arc and are left alone, and so
+   are the signup radios (isTypedVibe). */
 const VIBE_ANCHOR_WEIGHT = 0.45;
 const VIBE_ANCHOR_MS = 8000;
 const vibeAnchorMemo = new Map();   // sentence -> interp, this session only
+// A playlist someone built by typing a vibe. Sets and the beta signup radios
+// also carry vibeQuery, but the vibe-only touches (sleep button, tint,
+// anchoring, New songs, same vibe) skip them; older radios have no isRadio
+// flag, so their "<item> radio" name gives them away.
+function isTypedVibe(pl){
+  if (!pl || !pl.vibeQuery || pl.isSet || pl.isRadio) return false;
+  return String(pl.name || '').toLowerCase().indexOf(String(pl.vibeQuery).toLowerCase() + ' radio') !== 0;
+}
 function discoverVibeFor(originPlId){
   const pl = originPlId ? getCachedPlaylist(originPlId) : null;
-  return pl && pl.vibeQuery && !pl.isSet ? String(pl.vibeQuery) : '';
+  return isTypedVibe(pl) ? String(pl.vibeQuery) : '';
 }
 async function addVibeAnchorPool(pool, text){
   let interp = vibeAnchorMemo.get(text);
