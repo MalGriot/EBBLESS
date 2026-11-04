@@ -633,7 +633,9 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-map span{font-size:12.5px;opacity:.85}
 /* home-vibe: the vibe box at the top of Home (static, no animation) */
 #view-home .hm-vibe{padding:20px 20px 18px;border-radius:20px;background:linear-gradient(135deg,rgba(190,70,120,.30),rgba(60,90,170,.26));border:1px solid rgba(255,255,255,.08)}
-#view-home .hm-vibe h2{font-size:22px;font-weight:800;margin:0 0 4px}
+#view-home .hm-vibe{position:relative}
+#view-home .hm-vibe h2{font-size:22px;font-weight:800;margin:0 0 4px;padding-right:110px}
+#view-home .hm-uilang{position:absolute;top:16px;right:16px;font:inherit;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.25);color:var(--text);cursor:pointer}
 #view-home .hm-vibe-sub{margin:0 0 14px;font-size:13.5px;color:var(--faint)}
 #view-home .hm-vibe-form{display:flex;gap:8px}
 #view-home .hm-vibe-form input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.32);color:var(--text);outline:none}
@@ -643,6 +645,11 @@ video.lib-bg-video.is-playing{opacity:1}
 #view-home .hm-vibe-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 #view-home .hm-vibe-chip{display:inline-flex;align-items:baseline;gap:6px;font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.10);color:var(--text);cursor:pointer;text-align:left}
 #view-home .hm-vibe-chip:hover{background:rgba(255,255,255,.18)}
+#view-home .hm-langs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+#view-home .hm-langs-label{font-size:12px;font-weight:700;color:var(--faint);margin-right:2px}
+#view-home .hm-lang,#view-home .hm-lang-more{font:inherit;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.16);color:var(--faint);background:none;cursor:pointer}
+#view-home .hm-lang.is-on{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#151107)}
+#view-home .hm-lang-more{border-style:dashed}
 #view-home .hm-vibe-chip small{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
 #view-home .hm-genres{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 #view-home .hm-genre{position:relative;overflow:hidden;min-height:84px;padding:14px 62px 14px 14px;border-radius:16px;text-align:left;color:#fff;font-size:16px;font-weight:800;line-height:1.15;text-shadow:0 1px 6px rgba(0,0,0,.35);cursor:pointer;
@@ -5417,6 +5424,7 @@ body[data-look=c] .track-meta .title,body[data-look=c] .track-meta .artist{text-
         <button type="button" class="set-hub-row" data-spage-go="playback"><span class="hub-text"><span class="hub-t">Playback</span><span class="hub-s">Blending, volume, ad skipping</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="customize"><span class="hub-text"><span class="hub-t">Customize</span><span class="hub-s">Look, library, player, gestures, backup</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="privacy"><span class="hub-text"><span class="hub-t">Privacy &amp; data</span><span class="hub-s">Listening profile, terms, clear playlists</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-hub-row" id="uiLangRow"><span class="hub-text"><span class="hub-t">Language · भाषा</span><span class="hub-s">English · हिन्दी में देखें</span></span></button>
         <button type="button" class="set-hub-row" data-spage-go="app"><span class="hub-text"><span class="hub-t">App</span><span class="hub-s">Install, sounds, voice, shortcuts</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="help"><span class="hub-text"><span class="hub-t">Help &amp; feedback</span><span class="hub-s">Tell us about a bug or an idea</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-hub-row" data-spage-go="about"><span class="hub-text"><span class="hub-t">About</span><span class="hub-s">What's new, what EBBLESS is, credits</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -10508,7 +10516,7 @@ function settingsShowPage(p){
   p = SET_PAGE_TITLES[p] ? p : '';
   v.dataset.page = p;
   const t = document.getElementById('setTitle');
-  if (t) t.textContent = p ? SET_PAGE_TITLES[p] : 'Settings';
+  if (t) t.textContent = uiT(p ? SET_PAGE_TITLES[p] : 'Settings');
   if (p === 'customize'){ const d = document.getElementById('settingsAdvancedBlock'); if (d && !d.open) d.open = true; }
   const sc = v.querySelector('.view-scroll');
   if (sc) sc.scrollTop = 0;
@@ -18559,6 +18567,7 @@ function renderHome(){
     sec.appendChild(b);
   }
   if (body.children.length < 2) body.appendChild(mk('p', 'hm-empty', 'Play a few songs and your top artists, albums, playlists and songs will show up here.'));
+  applyUiLang($('view-home'));
 }
 /* home-vibe: the vibe box leads Home, so building a playlist from a feeling
    isn't something you only find by typing a sentence into Search. Anything
@@ -18567,6 +18576,11 @@ function renderHome(){
    vibes, the same five all day. Static: no animation, no network until a tap. */
 function renderHomeVibe(body, mk){
   const sec = mk('section', 'hm-sec hm-vibe');
+  if (regionLooksIndian() || uiLang() === 'hi'){
+    const lb = mk('button', 'hm-uilang', uiLang() === 'hi' ? 'View in English' : 'हिन्दी में देखें'); lb.type = 'button';
+    lb.addEventListener('click', () => setUiLang(uiLang() === 'hi' ? 'en' : 'hi'));
+    sec.appendChild(lb);
+  }
   sec.appendChild(mk('h2', '', 'What\'s the vibe?'));
   sec.appendChild(mk('p', 'hm-vibe-sub', 'Say it how you\'d say it to a friend. We build the songs, in an order that flows.'));
   const form = mk('form', 'hm-vibe-form'); form.autocomplete = 'off';
@@ -18583,8 +18597,14 @@ function renderHomeVibe(body, mk){
     const mood = PASTE_HINT_MOOD[block];
     if (mood) picks.push({ q: (PASTE_HINT_WHEN[block] || 'tonight').replace(/^./, c => c.toUpperCase()) + ', ' + mood });
   } catch(e){}
-  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000), n = houseVibeShow.length;
-  for (let i = 0; i < Math.min(5, n); i++) picks.push({ q: houseVibeShow[(day * 7 + i * 11) % n] });
+  // house vibes: ones in a language you listen to lead; ones in a language you don't stay off screen
+  const langs = musicLangs();
+  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+  const local = houseVibeShow.filter(h => h.langs.length && h.langs.some(l => langs.includes(l)));
+  const general = houseVibeShow.filter(h => !h.langs.length);
+  const take = (arr, k, off) => { for (let i = 0; i < Math.min(k, arr.length); i++) picks.push({ q: arr[(day * 7 + off + i * 11) % arr.length].q }); };
+  take(local, 3, 0);
+  take(general, 5 - Math.min(3, local.length), 3);
   const seen = new Set(), chips = mk('div', 'hm-vibe-chips');
   picks.forEach(p => {
     const k = p.q.toLowerCase();
@@ -18595,7 +18615,131 @@ function renderHomeVibe(body, mk){
     chips.appendChild(b);
   });
   if (chips.children.length) sec.appendChild(chips);
+  sec.appendChild(renderMusicLangRow(mk, () => { const y = window.scrollY; renderHome(); window.scrollTo(0, y); }));
   body.appendChild(sec);
+}
+/* ui-lang: the app's own words in Hindi, one tap away. The table is keyed by
+   the English text and lives in the page (works offline, switches at once, no
+   AI). It covers the main screens first: navigation, Home and its vibe box,
+   Search, the empty player, the vibe results card, Library's filters and the
+   Settings list; anything not in it stays English. Text a screen builds
+   later goes through uiT(), and screens that rebuild call applyUiLang().
+   Song, artist and playlist names are never translated. Hindi wording to be
+   checked by a native speaker; "songs" is always गाने. */
+var LS_UI_LANG = 'ebbless:uilang';
+var UI_STRINGS_HI = {
+  'Search': 'खोजें', 'Home': 'होम', 'Library': 'लाइब्रेरी', 'Player': 'प्लेयर', 'Queue': 'कतार', 'Settings': 'सेटिंग्स',
+  "What's the vibe?": 'आज का मूड क्या है?',
+  "Say it how you'd say it to a friend. We build the songs, in an order that flows.": 'जैसे किसी दोस्त से कहते, वैसे लिखिए। गाने हम चुनेंगे, ऐसे क्रम में जो बहता रहे।',
+  'Play': 'चलाएँ', 'rainy drive home': 'बारिश में घर की ड्राइव', 'Describe your vibe': 'अपना मूड बताइए',
+  'Your usual': 'आपका रोज़ का', 'What you tend to play around now': 'इस समय आप अक्सर यही सुनते हैं',
+  'Music in': 'संगीत की भाषा', '+ Music languages': '+ संगीत की भाषाएँ', 'More': 'और',
+  'English': 'अंग्रेज़ी', 'Hindi': 'हिन्दी', 'Punjabi': 'पंजाबी', 'Tamil': 'तमिल', 'Telugu': 'तेलुगु', 'Bengali': 'बांग्ला', 'Marathi': 'मराठी', 'Malayalam': 'मलयालम',
+  'Recently played': 'हाल ही में सुने', 'Top artists': 'टॉप कलाकार', 'Top albums': 'टॉप एल्बम', 'Top playlists': 'टॉप प्लेलिस्ट',
+  'Top songs': 'टॉप गाने', 'Top genres': 'टॉप शैलियाँ', 'Music map': 'संगीत का नक्शा', 'Explore your music map': 'अपने संगीत का नक्शा देखें',
+  'Play a few songs and your top artists, albums, playlists and songs will show up here.': 'कुछ गाने सुनिए, फिर आपके टॉप कलाकार, एल्बम, प्लेलिस्ट और गाने यहाँ दिखेंगे।',
+  'Nothing playing yet': 'अभी कुछ नहीं चल रहा', 'Find music': 'संगीत खोजें', 'or set a vibe': 'या अपना मूड चुनें',
+  'Picked for you': 'आपके लिए चुने गए', 'Search, paste a link, or say a vibe': 'खोजें, लिंक डालें, या अपना मूड लिखें',
+  'Search, paste a link, or describe your vibe': 'खोजें, लिंक डालें, या अपना मूड बताइए', 'Close search': 'खोज बंद करें',
+  'Paste a link to a playlist, album, song or artist from Spotify, Apple Music, YouTube or SoundCloud. Or search a song, an artist or a genre, or describe a mood.':
+    'Spotify, Apple Music, YouTube या SoundCloud से किसी प्लेलिस्ट, एल्बम, गाने या कलाकार का लिंक डालें। या कोई गाना, कलाकार या शैली खोजें, या अपना मूड बताइए।',
+  'Playlists': 'प्लेलिस्ट', 'Artists': 'कलाकार', 'Albums': 'एल्बम', 'Podcasts': 'पॉडकास्ट', 'Sets': 'सेट',
+  'Search your library': 'अपनी लाइब्रेरी में खोजें', 'New playlist': 'नई प्लेलिस्ट',
+  'Interpreting your vibe…': 'आपका मूड समझ रहे हैं…', 'Reading the mood': 'मूड पढ़ रहे हैं', 'Finding real songs': 'असली गाने ढूँढ रहे हैं',
+  'Finding more like it': 'ऐसे और गाने ढूँढ रहे हैं', 'Matching tempo and energy': 'रफ़्तार और जोश मिला रहे हैं', 'Shaping the flow': 'गानों का क्रम बना रहे हैं',
+  'Save & play': 'सेव करें और चलाएँ', 'Cancel': 'रद्द करें', 'you know this': 'यह आप जानते हैं', 'Share this vibe': 'यह मूड शेयर करें',
+  'Browse playlists for this vibe instead': 'इसके बजाय इस मूड की प्लेलिस्ट देखें',
+  'builds, then eases out': 'धीरे शुरू, फिर ऊपर, फिर शांत', 'winds down': 'धीरे धीरे शांत', 'stays steady': 'एक जैसा बना रहे', 'builds and holds': 'ऊपर जाए और टिका रहे',
+  'Playback': 'प्लेबैक', 'Blending, volume, ad skipping': 'गानों का मिलना, आवाज़, विज्ञापन',
+  'Customize': 'अपने हिसाब से', 'Look, library, player, gestures, backup': 'रूप, लाइब्रेरी, प्लेयर, इशारे, बैकअप',
+  'Privacy & data': 'प्राइवेसी और डेटा', 'Listening profile, terms, clear playlists': 'सुनने की प्रोफ़ाइल, शर्तें, प्लेलिस्ट साफ़ करें',
+  'App': 'ऐप', 'Install, sounds, voice, shortcuts': 'इंस्टॉल, आवाज़ें, वॉइस, शॉर्टकट',
+  'Language': 'भाषा', 'App language': 'ऐप की भाषा', 'Back': 'वापस',
+  'Help & feedback': 'मदद और सुझाव', 'Tell us about a bug or an idea': 'कोई गड़बड़ी या आइडिया बताइए',
+  'About': 'जानकारी', "What's new, what EBBLESS is, credits": 'नया क्या है, EBBLESS क्या है, क्रेडिट',
+};
+var UI_LANG_ROOTS = ['#bottom-nav', '#topnav', '#view-home', '#view-search', '#trackMeta', '#libFilter', '#libTop', '#import-overlay', '#settingsHub', '#setTitle', '#settingsBackBtn'];
+var UI_ATTRS = ['placeholder', 'aria-label', 'title'];
+var uiAttrOrig = new WeakMap();
+function uiLang(){ return LS_UI_LANG && lsGet(LS_UI_LANG, null) === 'hi' ? 'hi' : 'en'; }
+function uiT(en){ return uiLang() === 'hi' && UI_STRINGS_HI && UI_STRINGS_HI[en] ? UI_STRINGS_HI[en] : en; }   // safe before the table's line runs
+// Swaps text and attributes under the given roots (all of UI_LANG_ROOTS by
+// default), keeping each original so English comes back without a reload.
+function applyUiLang(root){
+  const hi = uiLang() === 'hi';
+  if (!hi && !document.documentElement.hasAttribute('data-ui-lang')) return;
+  document.documentElement.lang = hi ? 'hi' : 'en';
+  document.documentElement.setAttribute('data-ui-lang', hi ? 'hi' : 'en');
+  const roots = root ? [root] : UI_LANG_ROOTS.map(q => document.querySelector(q)).filter(Boolean);
+  roots.forEach(r => {
+    const w = document.createTreeWalker(r, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = w.nextNode())){
+      if (n.__uiEn != null && !hi){ n.nodeValue = n.__uiEn; n.__uiEn = null; continue; }
+      const k = n.nodeValue.trim(), v = hi && k && UI_STRINGS_HI[k];
+      if (v){ n.__uiEn = n.nodeValue; n.nodeValue = n.nodeValue.replace(k, v); }
+    }
+    r.querySelectorAll('[placeholder],[aria-label],[title]').forEach(el => {
+      const orig = uiAttrOrig.get(el) || {};
+      UI_ATTRS.forEach(a => {
+        const cur = el.getAttribute(a);
+        if (cur == null) return;
+        if (!hi){ if (orig[a] != null && cur === UI_STRINGS_HI[orig[a]]) el.setAttribute(a, orig[a]); return; }
+        const v = UI_STRINGS_HI[cur.trim()];
+        if (v){ orig[a] = cur.trim(); el.setAttribute(a, v); }
+      });
+      uiAttrOrig.set(el, orig);
+    });
+  });
+}
+function setUiLang(code){
+  lsSet(LS_UI_LANG, code === 'hi' ? 'hi' : 'en');
+  applyUiLang();
+  // text set straight through uiT() isn't tracked by applyUiLang: set it again
+  const st = $('setTitle'), sv = $('view-settings');
+  if (st && sv){ const pg = sv.dataset.page; st.textContent = uiT(pg && SET_PAGE_TITLES[pg] ? SET_PAGE_TITLES[pg] : 'Settings'); }
+  if ($('trackMeta') && $('trackMeta').classList.contains('is-empty')) setMarqueeText(trackTitle, uiT('Nothing playing yet'));
+  renderUiLangRow();
+  if (state.currentView === 'home') renderHome();
+  if (state.currentView === 'search') renderSearchTab();
+}
+// Settings list row: one tap flips the language.
+function renderUiLangRow(){
+  const b = $('uiLangRow');
+  if (!b) return;
+  b.querySelector('.hub-s').textContent = uiLang() === 'hi' ? 'हिन्दी · Switch to English' : 'English · हिन्दी में देखें';
+}
+try {
+  $('uiLangRow').addEventListener('click', () => setUiLang(uiLang() === 'hi' ? 'en' : 'hi'));
+  renderUiLangRow();
+  applyUiLang();
+} catch(e){}
+// "Music in": one tap adds or drops a language. Shown open where the region
+// or a picked language says it matters, folded behind one chip elsewhere.
+let musicLangRowOpen = false;
+function renderMusicLangRow(mk, onChange){
+  const langs = musicLangs(), row = mk('div', 'hm-langs');
+  const open = musicLangRowOpen || regionLooksIndian() || langs.some(l => l !== 'en');
+  if (!open){
+    const more = mk('button', 'hm-lang-more', '+ Music languages'); more.type = 'button';
+    more.addEventListener('click', () => { musicLangRowOpen = true; onChange(); });
+    row.appendChild(more);
+    return row;
+  }
+  row.appendChild(mk('span', 'hm-langs-label', 'Music in'));
+  const codes = musicLangRowOpen ? Object.keys(MUSIC_LANG_NAMES) : Array.from(new Set(MUSIC_LANG_FIRST.concat(langs)));
+  codes.forEach(c => {
+    const on = langs.includes(c), b = mk('button', 'hm-lang' + (on ? ' is-on' : ''), MUSIC_LANG_NAMES[c]); b.type = 'button';
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.addEventListener('click', () => { toggleMusicLang(c); onChange(); });
+    row.appendChild(b);
+  });
+  if (!musicLangRowOpen && codes.length < Object.keys(MUSIC_LANG_NAMES).length){
+    const more = mk('button', 'hm-lang-more', 'More'); more.type = 'button';
+    more.addEventListener('click', () => { musicLangRowOpen = true; onChange(); });
+    row.appendChild(more);
+  }
+  return row;
 }
 function openHomeVibe(){
   leaveFullscreen(true);
@@ -18640,6 +18784,7 @@ function renderSearchTab(){
     const k = b.dataset.q;
     searchTabSubmit(k.charAt(0) === 'p' ? prompts[+k.slice(1)] : tags[+k.slice(1)]);
   }));
+  applyUiLang($('view-search'));
 }
 $('searchTabForm').addEventListener('submit', (e) => { e.preventDefault(); searchTabSubmit(); });
 // #722 desktop: clicking the top search bar puts the search page in the middle pane (the footer player comes back, like Settings); Esc or the X goes back
@@ -18786,7 +18931,7 @@ fetch('house-vibes.json').then(r => r.ok ? r.json() : null).then(d => {
   ((d && Array.isArray(d.vibes)) ? d.vibes : []).forEach(v => {
     const m = Array.isArray(v.match) ? v.match : [];
     m.forEach(p => { const n = houseVibeNorm(p); if (n) set.add(n); });
-    if (m[0] && !HOUSE_VIBE_NO_SHOW.test(m[0])) show.push(String(m[0]).replace(/\bi\b/g, 'I').replace(/^./, c => c.toUpperCase()));
+    if (m[0] && !HOUSE_VIBE_NO_SHOW.test(m[0])) show.push({ q: String(m[0]).replace(/\bi\b/g, 'I').replace(/^./, c => c.toUpperCase()), langs: Array.isArray(v.langs) ? v.langs : [] });
   });
   houseVibePhrases = set; houseVibeShow = show;
   if (state.currentView === 'home') renderHome();
@@ -18800,11 +18945,43 @@ function looksConversational(input){
   return words.length >= 3 && VIBE_TALK_RE.test(s);
 }
 
+/* music-langs: which languages' music a vibe leans toward. Preset from this
+   device (its languages, an Indian time zone), changed with one tap under
+   Home's vibe box, sent to /vibe-interpret as ?langs= (the worker's
+   vibe-locale.js). The sentence still wins: "dil toota hai yaar" gets Hindi
+   songs with English alone picked. English alone changes nothing. */
+const LS_MUSIC_LANGS = 'ebbless:musiclangs';
+const MUSIC_LANG_NAMES = { en: 'English', hi: 'Hindi', pa: 'Punjabi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali', mr: 'Marathi', ml: 'Malayalam' };
+const MUSIC_LANG_FIRST = ['en', 'hi', 'pa', 'ta', 'te'];   // shown up front; the rest behind More
+function regionLooksIndian(){
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (/^Asia\/(Kolkata|Calcutta)$/.test(tz)) return true;
+    return (navigator.languages || [navigator.language || '']).some(l => /-IN$/i.test(l));
+  } catch(e){ return false; }
+}
+function detectedMusicLangs(){
+  const out = ['en'];
+  try { (navigator.languages || []).forEach(l => { const c = String(l).slice(0, 2).toLowerCase(); if (MUSIC_LANG_NAMES[c] && !out.includes(c)) out.push(c); }); } catch(e){}
+  if (out.length === 1 && regionLooksIndian()) out.push('hi');
+  return out.slice(0, 4);
+}
+function musicLangs(){
+  const v = lsGet(LS_MUSIC_LANGS, null);
+  const list = Array.isArray(v) ? v.filter(l => MUSIC_LANG_NAMES[l]).slice(0, 4) : [];
+  return list.length ? list : detectedMusicLangs();
+}
+function toggleMusicLang(code){
+  let list = musicLangs();
+  list = list.includes(code) ? list.filter(l => l !== code) : list.concat(code).slice(-4);
+  lsSet(LS_MUSIC_LANGS, list.length ? list : ['en']);
+}
+
 async function fetchVibeInterpretation(text){
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), VIBE_INTERPRET_TIMEOUT_MS);
   try{
-    const res = await fetch(BACKEND + '/vibe-interpret?' + new URLSearchParams({ q: text.slice(0, 300) }), { signal: ctrl.signal });
+    const res = await fetch(BACKEND + '/vibe-interpret?' + new URLSearchParams({ q: text.slice(0, 300), langs: musicLangs().join(',') }), { signal: ctrl.signal });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || ('backend returned ' + res.status));
     // The worker sends each track's metrics along (aligned with tracks), so
@@ -18825,7 +19002,8 @@ function stageInterpreting(text, line){
       '<div class="flow-line indeterminate"><div class="fill"></div></div>' +
       '<div class="counter" id="vibeCounter"></div>';
   }
-  $('vibeCounter').textContent = line || 'Reading the mood';
+  $('vibeCounter').textContent = uiT(line || 'Reading the mood');
+  applyUiLang(importStage);
 }
 
 // 0..1 - how well a track's /metrics sit inside the asked-for energy and
@@ -19328,7 +19506,7 @@ function stageVibeResults(text, interp, tracks){
   const heardN = tracks.filter(t => t.heard).length;
   const mood = vibeMoodWords(interp);
   if (interp.arc && VIBE_ARC_SHAPES[interp.arc]) mood.push(VIBE_ARC_SHAPES[interp.arc].label);
-  if (heardN) mood.push(heardN + ' you know · ' + (tracks.length - heardN) + ' new');
+  if (heardN) mood.push(uiLang() === 'hi' ? heardN + ' जाने-पहचाने · ' + (tracks.length - heardN) + ' नए' : heardN + ' you know · ' + (tracks.length - heardN) + ' new');
   const chips = mood.map(w => '<span class="vibe-chip">' + escapeHtml(w) + '</span>').join('');
   importStage.innerHTML =
     '<button type="button" class="pick-x" aria-label="Close"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg></button>' +
@@ -19338,7 +19516,7 @@ function stageVibeResults(text, interp, tracks){
     '<div class="vibe-chips">' + chips + '</div>' +
     '<div class="vibe-actions">' +
       '<button class="btn-ghost is-active" id="vibeSaveBtn">Save &amp; play</button>' +
-      '<button class="btn-ghost" id="vibePlayBtn">Just play ' + tracks.length + ' songs</button>' +
+      '<button class="btn-ghost" id="vibePlayBtn">' + (uiLang() === 'hi' ? tracks.length + ' गाने चलाएँ' : 'Just play ' + tracks.length + ' songs') + '</button>' +
     '</div>' +
     '<div class="search-results">' + rows + '</div>' +
     '<button class="btn-ghost" id="vibePlaylistsBtn" style="width:100%;margin-bottom:8px">Browse playlists for this vibe instead</button>' +
@@ -19367,6 +19545,7 @@ function stageVibeResults(text, interp, tracks){
   $('vibeShareBtn').addEventListener('click', () => shareEbblessLink({ title: 'EBBLESS', text: 'A vibe on EBBLESS: "' + text + '"', url: buildVibeShareUrl(text) }));
   $('vibePlaylistsBtn').addEventListener('click', () => beginVibeSearch((interp.keywords && interp.keywords[0]) || text));
   $('searchBackBtn').addEventListener('click', closeImportOverlay);
+  applyUiLang(importStage);
 }
 
 // Matches the list to playable videos (same /search pipeline and pacing as
@@ -21226,6 +21405,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 495, date: '2026-11-05', items: [
+    'Pick the languages you listen in, right under "What\'s the vibe?" on Home: Hindi, Punjabi, Tamil, Telugu and more. Vibes lean toward them, and in India Hindi is already on.',
+    'Write a vibe in Hinglish or Hindi, like "dil toota hai yaar" or "baarish wali shaam", and you get Hindi songs. New house vibes too: baarish, chai, sukoon, sangeet, dosti, padhai, purane gaane.',
+    'EBBLESS in Hindi: tap हिन्दी में देखें on Home, or Language in Settings. The main screens switch at once, and one tap brings English back.',
+  ] },
   { version: 494, date: '2026-11-04', items: [
     'Vibes learn what you mean by them. Skip a song early in a vibe and it stays out of that vibe; play one through or like it and it comes back next time. Artists you skip or keep lean down or up.',
     'Every vibe now listens to your overall taste too: songs and artists you come back to rise, and your thumbs-downs stay out.',
@@ -32651,7 +32835,7 @@ function resetToNothingPlaying(){
   state.queue = []; state.queuePos = -1;
   lsDel(LS_RESUME);
   $('trackMeta').classList.add('is-empty');
-  setMarqueeText(trackTitle, 'Nothing playing yet');
+  setMarqueeText(trackTitle, uiT('Nothing playing yet'));
   setMarqueeText(trackArtist, '');
   setMarqueeText(flowTitle, '');
   setMarqueeText(flowArtist, '');
@@ -38716,7 +38900,7 @@ function runIntro(preview){
     libplBody.innerHTML = '';
     libraryGrid.innerHTML = '';
     const tSpan = trackTitle.querySelector('span'), aSpan = trackArtist.querySelector('span');
-    if (tSpan) tSpan.textContent = 'Nothing playing yet';
+    if (tSpan) tSpan.textContent = uiT('Nothing playing yet');
     if (aSpan) aSpan.textContent = '';
     $('trackMeta').classList.add('is-empty');
     artA.classList.remove('is-active');
