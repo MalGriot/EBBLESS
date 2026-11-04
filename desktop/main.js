@@ -11,6 +11,7 @@ const upd = require('./updater');
 const path = require('path');
 const crypto = require('crypto');
 const adblock = require('./adblock');
+const wave = require('./wave');
 
 const APP_URL = process.env.EBBLESS_URL || 'https://malgriot.github.io/EBBLESS/';
 const APP_ORIGIN = new URL(APP_URL).origin;
@@ -125,6 +126,22 @@ function createMainWindow(){
   mainWin.on('restore', () => mainWin.webContents.send('ebbless:back'));
 
   adblock.install(mainWin); // #524
+  // Light show: the page asks for its own sound through getDisplayMedia so
+  // MilkDrop reacts to the real music. Only the app page's own frame is ever
+  // handed back (its tab audio, YouTube iframe included), never the screen or
+  // other apps; enableLocalEcho keeps the speakers playing. Works on macOS and
+  // Windows; system-wide 'loopback' would be Windows-only in Electron 33.
+  mainWin.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+    const f = request.frame;
+    if (!mainWin || !f || f !== mainWin.webContents.mainFrame || !isAppUrl(f.url) || !request.audioRequested) return callback({});
+    callback({ video: f, audio: f, enableLocalEcho: true });
+  });
+  // Waveform recording (#727): once the app page has loaded, ask it to open its own sound tap. userGesture=true lets
+  // getDisplayMedia run without a click; the handler above still only ever hands back this app page's own audio.
+  mainWin.webContents.on('did-finish-load', () => {
+    if (!mainWin || !isAppUrl(mainWin.webContents.getURL())) return;
+    mainWin.webContents.executeJavaScript('window.__ebbWaveTap&&window.__ebbWaveTap()', true).catch(() => {});
+  });
   mainWin.loadURL(APP_URL);
 }
 
@@ -202,6 +219,8 @@ const appBundle = () => process.env.EBBLESS_APP_PATH || path.resolve(app.getPath
 const fromMain = (e) => mainWin && e.sender === mainWin.webContents;
 
 ipcMain.handle('ebbless:version', () => myVersion());
+// #727: the page asks for a song's audio bytes once, to build its waveform; only the app's own window may ask.
+ipcMain.handle('ebbless:wave-audio', async (e, videoId, urgent) => fromMain(e) ? wave.fetchAudio(videoId, !!urgent) : null);
 // Settings > Reload now / debug line: live ad-blocking rules
 ipcMain.handle('ebbless:adblock-info', (e) => fromMain(e) ? adblock.info() : null);
 ipcMain.handle('ebbless:adblock-refresh', async (e) => {
@@ -252,5 +271,12 @@ ipcMain.handle('ebbless:update-install', (e) => {
 
 app.on('before-quit', () => { quitting = true; });
 app.on('activate', () => { if (mainWin){ mainWin.show(); mainWin.focus(); } });
-app.whenReady().then(createMainWindow);
+app.whenReady().then(() => {
+  createMainWindow();
+  // #727: keep the waveform tool current: shortly after launch, then daily while the app stays open
+  wave.init(path.join(app.getPath('userData'), 'bin'));
+  wave.prime();   // pay the OS's first-run check now, not on the first song
+  setTimeout(() => wave.refresh(false), 30000);
+  setInterval(() => wave.refresh(false), 24 * 3600 * 1000).unref();
+});
 app.on('window-all-closed', () => app.quit());

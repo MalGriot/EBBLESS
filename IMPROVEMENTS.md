@@ -126,6 +126,118 @@ Add entries in this shape:
 - **Notes:** anything else — constraints, things to avoid, prior attempts.
 -->
 
+### edge-to-edge-717: Mobile: edge-to-edge full-screen UI (Geethub #717)
+- **Status:** review
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #717. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #717; all ten UI issues share one lane (ui-batch). Built: Android window draws behind status bar, cutout and nav bar (transparent bars, shortEdges cutout); app sends bar heights to the page (__ebbInsets) which raises --safe-t/--safe-b via max() with env(). NOT compiled (no Java here) and NOT tried on a device. No sw cache bump yet; bump with a WHATS_NEW entry when shipping. Web part (the __ebbInsets handler) is live in cache v484; the Android part (MainActivity.java) is on branch agent/ui-batch-platform and needs a new Android build before this works. Stays in review.
+
+### player-look-718: Player restyle: art-tinted wash, card/full-bleed art, waveform seek (Geethub #718)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #718. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #718; all ten UI issues share one lane (ui-batch). Built: three looks behind ?look=a|b|c (A tinted card, B full-bleed poster, C left-aligned hybrid), static gradients, waveform is the masked seek rail. Checked in a 375px preview with a fake title/artist: all three render, no GPU-watchdog warnings. Not checked with real album art or live playback; still opt-in via URL only, not a setting. Follow-up: background tint removed (plain app background). Waveform now follows the real audio for device uploads (lf:) and podcast files (au:, if the host allows the fetch); YouTube/SoundCloud songs play in cross-origin players the page cannot read, so they show flat even bars instead of a made-up shape. Peak math checked on a synthetic 20s clip; not yet checked with a real upload. No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
+
+### waveform-real-peaks-727: Real waveform for streamed (YouTube / SoundCloud) songs
+- **Status:** review
+- **Priority:** medium
+- **Description:** Follow-up to #718. Uploads and podcast files already draw a real waveform. Streamed songs show flat bars because their audio sits in cross-origin players the page cannot read. This scopes how to get real peaks for them.
+- **Touches:** index.html (waveSync/waveCompute, seek rail), android-webview (native visualizer feed), desktop/ (audio tap), possibly worker/ (KV)
+- **Branch:** (none yet)
+- **Notes:** Options, best first.
+  1. **Record while playing (recommended).** Android already has a native Visualizer.getWaveForm feed, and the desktop app has a page-audio tap. Each second, store one peak per second of the song under its videoId in localStorage (64 buckets, ~100 bytes a song, capped like the loudness cache). The bars fill in as the song plays and are complete from the second play. Real data, no server, no per-song cost, no ToS issue. Gaps: the web build has no audio feed, so it stays flat; the desktop tap is only asked for when the light show opens (needs a user click and a permission prompt), so a silent always-on tap is a product decision; skipping around leaves holes until a full listen.
+  2. **Share the recorded peaks (add on to 1).** The worker keeps one 64-number row per videoId in KV so the first listener's recording serves everyone. Costs one KV write per newly recorded song (free tier is about 1,000 writes a day, so cap writes per IP and per day) and one read per play; needs a size cap and a per-IP throttle because it is anonymous. Peaks from a hostile client could be junk, so clamp to 0-1 and only accept from a signed-in session.
+  3. **Fetch the audio server-side: rejected.** The worker header already records that YouTube blocks datacenter IPs, and pulling the audio streams breaks YouTube's terms and the app's own approach (official players only).
+  4. **30-second previews (iTunes / Deezer): not recommended.** Only 30 s of the song, so stretching it across the whole bar is a wrong shape; CORS on the preview hosts is unverified.
+  5. **YouTube "most replayed" heat map: not a waveform.** It shows where people rewatch, not loudness, so it would look real and be wrong.
+- **Open question for the owner:** is a silent always-on desktop audio tap acceptable, or should recording only happen on Android (native feed) plus while the light show is open?
+- **Built (desktop app only):** the main process calls the page's __ebbWaveTap right after load with userGesture=true, so no click is needed; the existing display-media handler still only returns this app page's own sound, speakers untouched. The page keeps one analyser open, records one peak per second per streamed song (64 buckets, kept on the device, capped at 300 songs) and redraws the bars every 4 s. Android and web do not record yet. NOT run in the Electron app (not built here): the no-gesture call and the recording are untested end to end; the Electron app needs a rebuild and a version bump.
+- **Update (desktop fetch):** the main process now pulls the smallest audio-only stream with yt-dlp (opus, lowest bitrate, one at a time, lowest CPU priority, 12 MB and 30 s caps, never saved) and the page decodes it at 8 kHz mono into 64 peaks, kept on the device. It starts when a song becomes current and warms the next queue song 4 s later; once a song has its fetched peaks the live recording stops for it. Verified outside Electron with yt-dlp 2026.10.26: 1.58 MB in about 3 s for a 249 s song, decoded in 0.64 s in the page, bars draw. NOT verified inside the built desktop app (the IPC path). yt-dlp 2026.07.04 (3+ months old) got HTTP 403, so a bundled binary has to be refreshed often: needs a bundled yt-dlp in desktop/bin or resources/bin plus an update routine before shipping. Android still open (NewPipe Extractor route). A Settings switch is not built; a kill flag exists as localStorage ebbless:wave:off.
+- **Update (bundling and auto-update):** desktop/ytdlp-update.js keeps an unpacked yt-dlp (yt-dlp_macos.zip / yt-dlp_win.zip) in the app's data folder: newest official release, SHA-256 checked against the release's own SHA2-256SUMS, only from github.com/yt-dlp/yt-dlp release URLs, extracted with tar and swapped in atomically. Checks 30 s after launch then daily, and straight away (max every 6 h) after a failed fetch. After a new copy lands it is run once in the background so macOS's first-run check (about 20 s) never hits a song. The unpacked build starts in 0.27 s; the one-file build waited about 10 s every run, so it is not used. `npm run dist` / `dist:win` first run fetch-ytdlp.js to ship a copy in desktop/bin/ytdlp (gitignored). Verified in Node on this Mac: download plus checksum plus extract, then a real song fetched (1.58 MB in 8 s with the background load on this machine, at lowest priority). NOT verified: inside the built Electron app, the Windows zip layout (tar extraction and yt-dlp.exe location are assumed from the macOS layout), or a packaged build (electron-builder not run).
+- **Update (default on, faster first song):** the waveform look (A: card plus waveform seek bar, no tint) is now on for everyone; ?look=b|c still picks another, ?look=off restores the plain bar. The fetch starts the moment a song is chosen or resumed at launch (hooked in loadIndex and prewarmResumeDeck, before the player loads) and prefetches the next two queue songs; up to two fetches at once, and a song you just picked starts at once even if prefetches are running. Measured: YouTube takes about 3 s to hand over the stream address and about 5 s to deliver 1.5 MB (no yt-dlp setting I tried changed that), so a song picked cold still shows flat bars for about 8 s before the real shape fills in; songs already prefetched or played before show it instantly. No Settings toggle yet. Not run inside the built desktop app.
+- **Update (sound first):** a song's waveform fetch, and the next two, now wait until that song is actually playing (position past 0.3 s), or 4 s at most for a paused resume at launch. Audio never waits on the waveform and the fetch never competes with playback starting; the bars fill in a few seconds after sound.
+- **Update (cold song):** while a streamed song's shape is being fetched the flat bars sit low and a light sweeps across them; when the real peaks land the bars rise into the shape (transform and opacity only, paused under a full-screen view or the light show, off under reduced motion, auto-stops after 25 s). Seen in the preview with the class forced on; not seen with a real fetch.
+- **Update (Android):** android-webview/WavePeaks.java: NewPipe Extractor v0.26.5 (JitPack, pinned) finds the song's smallest audio-only stream, it is downloaded to a temp file (12 MB cap, deleted at once), decoded with MediaExtractor and MediaCodec on a background-priority thread (two at a time) and 64 peaks go back through window.__ebbWavePeaks. The page asks via EbbNative.waveRequest on the same schedule as desktop (after sound starts), so the loading sweep and the rise into shape work the same. build.gradle adds the JitPack repo (NewPipe groups only), core library desugaring and the dependency. NOT compiled (no JDK on this Mac) and NOT run on a phone: NewPipe API names (Downloader, Request, Response, StreamExtractor, AudioStream) are from memory of v0.26.x; the first Gradle build may need small fixes. Same terms-of-service exposure as the desktop fetch, and YouTube changes mean the extractor needs a version bump now and then (no in-app auto-update on Android: it is a library, so it ships with each build).
+- **Update (web browser):** a browser cannot read streamed audio, so the web build now gets shapes from a shared table. worker/src/waves.js adds `/waves`: public GET of up to 20 ids (edge-cached per id, one KV read on a miss), signed-in POST of 64 peaks (first recording per song wins, no overwrite, no write on a repeat; shape and range checked; 800-byte cap; 30 posts per IP per hour; 400 new songs per day per edge location). Stored in the PROFILES KV as `wave:v1:<id>`. The apps post what they compute (desktop and Android) when the listener is signed in; every client asks the worker first when a song starts playing and only then fetches locally. So the web shows the real shape for any song an app user has already played, and flat bars (with the loading sweep, which stops when the worker has nothing) for a song nobody has played. 7 new worker tests; all 171 pass; /waves added to the route contract. NOT deployed (needs `wrangler deploy`) and not tried against the live worker. Cost: one KV write per newly shared song (free tier about 1,000 a day) and up to 20 reads per play-start batch before caching.
+- **Update (first play everywhere):** a song nobody has played in an app cannot be read from a browser, so the shared table can be filled ahead of time from a computer YouTube does not block: `WAVE_TOKEN=<signed-in token> node tools/seed-waves.js <playlist url | video url | id>... [--max 300] [--dry-run]` (tools/seed-waves.js). It expands playlists with yt-dlp, skips songs the table already has, fetches each song's smallest audio stream (two at a time, lowest priority), decodes with ffmpeg and posts the 64 peaks; stops on a 429 or a refused token; the token is read from the environment only. Verified in --dry-run on two real songs (peaks computed, nothing posted); NOT run against a live worker (/waves is not deployed). Also changed: slices now hold average loudness (RMS) instead of the single loudest sample, and the display uses a stronger curve (1.5), because loud masters read as a flat wall of 255 before. Coverage is whatever has been seeded or played; a song outside that still starts flat on the web. The worker caps new songs at 400 a day per edge location, so seed a few hundred a day.
+- **Update (simple and free):** the seeder (tools/seed-waves.js) was removed again: no token, no playlist, no manual runs. The shared table fills by itself as signed-in app users play songs; the web build reads it. Free: reads are edge-cached and writes are one per new song, inside the free tier. The only manual step is one `wrangler deploy` of the worker (/waves). Until it is deployed the page just falls back to its local fetch. Web side is live in cache v484 and degrades safely (guards on the desktop and Android hooks, /waves fetch errors caught). Still needed: worker deploy for /waves, Android build (NewPipe), desktop release (bundled yt-dlp); all on branch agent/ui-batch-platform. Stays in review.
+
+### cd-mode-719: CD mode redesign (Geethub #719)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #719. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #719; all ten UI issues share one lane (ui-batch). Built: new 'CD' option in the art style menu (after Spinning Record). It is the record element with a CD skin (body[data-disc=cd]): album art covers the whole disc, Red Book proportions (120 mm disc: 15 mm hole, clear hub to 33 mm, art to 117 mm, clear 1.5 mm rim): hole, hub and rim are glass. Same spin, needle, game and fullscreen code as the record; the choice is saved in ebbless:discskin and the Z key / menu cycle include it. Checked at 375px in the preview; Spinning Record unchanged. Fullscreen flow view: the CD rules are global and the real record element is what moves in, so it renders there too (checked by placing it in the fullscreen art box; not opened with a real track). Mac mini player: CD styling added to the mini window (its own CSS, a CD button in its art picker, disc skin passed to the mini body, and switching the mini to its disc shape no longer resets CD to vinyl); checked by rendering the mini CSS and markup in the preview, not in a real mini window or on the Mac app. Dock icon: CD badge in the UI color with the same proportions and a real hole (checked by faking the desktop bridge in the preview and viewing the PNG it sent; not seen in a real Mac dock), real art, live spin. CD plays no needle drop / lift sounds (lpRecordOnScreen is false for the CD skin; vinyl unchanged; checked in code, not by ear). No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
+
+### lyrics-page-720: Lyrics page upgrade (Geethub #720)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #720. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #720; all ten UI issues share one lane (ui-batch). Built (reference: Apple Music style lyrics shot): lyric lines are now large (24px), left-aligned, bold; the sung line is full white at full size and every other synced line is slightly smaller and fades with its distance from it (--d set in updateLyricsHighlight; opacity + transform only). The accent glow trail is gone; unsynced lyrics show all lines equal; podcast chapter rows keep their look. Applies to the inline lyrics, flow mode and the lyrics fullscreen. Checked at 375px with fake lines only. Fullscreen lyrics now carry the player controls (title, artist, like, seek bar, shuffle/prev/play/next/repeat): the real .flow-bottom block is moved into #lyricsFsLayer on open and back on close, so every handler and live update keeps working; checked at 375px by moving the block by hand (not by opening fullscreen lyrics on a real track). Header added to the fullscreen lyrics: small cover + title + artist top-left (like the reference), filled on open and on every track change; the title/artist text inside the moved controls block is hidden so it is not shown twice. Checked at 375px with fake text and cover only. Song page (openSongPage) now has Info / Lyrics tabs: Info is the old content, Lyrics loads on first open with the player's own lookup (worker, then lrclib direct) and shows plain lines without timing. Checked at 375px: lookup runs end to end, 'No lyrics found' for an indie track, and a stubbed response renders 5 lines with the verse gap kept; not checked with a real lrclib hit. Not done: real lyrics, auto-scroll to the sung line, flow/fullscreen layers. No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
+
+### album-page-721: Album page layout (Geethub #721)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #721. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #721; all ten UI issues share one lane (ui-batch). Built (refs: Music Player UI album screen + the middle Travel app screen): album pages only (panel class is-album, set in the playlist open path) get a full-width cover hero with a curved bottom, small meta line + big album title laid over it, a round Play button hanging off the curve (the existing cover play button, restyled), a round close button, and numbered rows (CSS counter; drag handle and row thumbnails hidden). Playlists, artist pages and song pages keep the old layout (checked a playlist at 375px). Follow-up: the hero (cover with curved bottom, meta + title over it, round close and Play buttons) now also covers playlists, artist pages (library artist entries, and the photo stage on artist info pages, where the Play pill stays up top since there is no cover play button), song pages and albums not yet in the library; helper libplHeroSync sets is-hero only when the page has a cover. Numbered rows stay album-only: playlists keep drag handles and thumbnails so reordering and mixed covers still work. Checked at 375px: playlist, library artist, song page; not checked: the artist info page photo stage, the not-in-library album preview, desktop. Follow-up: Shuffle button (round, beside the round Play on the cover; turns plain shuffle on, then plays the page shuffled; Play keeps following the current shuffle setting), length on every library-page row (artist · m:ss), and the now-playing row on library pages gets animated bars (scaleY only, running only while a song plays and the panel is open) in place of its number plus a 2px progress line along the row (scaleX, driven from the seek bar). Numbers stay album-only. Checked at 375px on an album with a song started in the preview (no audio in headless). Owner asked for the info and the quick actions but not the chip or tile look: the facts stay a text line over the cover (now with runtime for playlists, e.g. '30 songs · 1h 28m') and the actions are a row of round buttons under the cover, ringed and washed in the UI color with a soft static glow (Add to queue, Share and Copy link when the page has a link, and a '...' button that opens the page's full menu). Checked at 375px on a playlist (no share link there, so only Add to queue and More showed). Not done: the chips row (songs / length / year) from the travel reference, desktop side-pane layout (not looked at), real album covers other than the one checked. No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
+
+### search-page-722: Search page redesign (Geethub #722)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #722. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #722; all ten UI issues share one lane (ui-batch). Built (refs: Resonance search and the AI assistant search page): mobile search page gets a big 'Search' title, a roomier field with an accent search icon, 'Picked for you' as a swipeable row of 136px cover cards, and the 'Right now' prompts and genres as large gradient cards (prompts full width, genres two columns) instead of pills. CSS plus one heading; the tap handlers are unchanged. Static gradients only. Checked at 375px. Follow-up: on the 3-pane desktop, clicking the top search bar now swaps the middle pane to this page (body.view-search-active, set in setView) and brings back the footer player like Settings does; Esc or an X in the page header goes back to the view you came from; typed text in the top bar is handed to the page's own field. The mood and genre cards each carry a tilted album cover: the top iTunes album for that genre word, fetched once per word and kept in localStorage (ebbless:stGenreArt:v1), only the genre word is sent. Checked at 1400x850: open, footer player, cover art on all cards, Esc and X both return. Not done: the 'profile personalization' idea (greeting or avatar) from the Eventify shot, a recent-searches list, the VibeMusic reference (not looked at), desktop (the search tab is mobile only). No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
+  Tablet follow-up (lane tablet-search-queue-fix, not yet live): at 860-1149px (no 3-pane layout) the search page was unreachable (hidden by CSS, nothing opened it). Now there is a Search button in the top nav at those widths (opens the page with the field focused; pressing it again goes back), the top-bar click opens it there too, and the X and Esc close it. The 3-pane desktop (Search opens from the top-bar click) and phones (bottom nav) are unchanged. Phone Queue sheet report: could not be reproduced (queue closes with a scripted click, a real click, and after opening it with the swipe-up gesture; panel and scrim end off screen and state is cleared); likely a mid-slide-out frame in the preview.
+
+### desktop-fullscreen-723: Desktop fullscreen player layout (Geethub #723)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #723. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #723; all ten UI issues share one lane (ui-batch). Built (ref: the Dribbble player with the vertical track dots): in the desktop panel-slide fullscreen, an up-next timeline runs down the right edge: the playing song labeled with a ringed dot, the next five as dots on a line that name themselves on hover, a click jumps to that queue position (hover-to-name is in the CSS but I could not capture it: the browser pane was hidden) (fsTimelineSync, called from renderQueuePanel, so it follows every track and queue change). It fades with the rest of the chrome when idle. Checked at 1400x850. Owner then asked for the waveform ring and sizes, then refined it (ring on the CD only, in the UI color; LP back to .96 in fullscreen; ring waves while playing and settles on pause; LP spills behind the side panels with all UI in front; bigger spindle hole in proportion to the disc):  fullscreen LP and CD (desktop fullscreen and the phone flow overlay) get a ring of 120 bars just outside the disc, drawn from the song's stored 64 peaks (waveStore, #727; interpolated; a faint even ring while they load; rebuilt by recRingSync on track change, when peaks arrive and when the disc skin changes; static, nothing animates). Fullscreen sizes are now LP 84% of the short screen side, CD 66%, cassette 62% wide (was all about 96%; this deliberately overrides the edge-to-edge sizing of #124 and #137). Regular view: the vinyl is drawn so its center label is exactly the default cover size (wrapper 274.1% wide, clipped by the pane; title, tabs and controls lifted above it); CD unchanged. Checked at 1400x850 with a seeded test waveform: LP disc 714, CD 561, cassette 510, regular label 409 = cover 409. The ring bars were checked by running the same drawing code in the page, because the headless preview has no player so the app never learns the playing song; real peaks not seen in the app. Also not done: 'Discover More' button, real-use check of timeline click, the immersive (phase 3) flow overlay. No sw cache bump yet. Landed on main in cache v484 (web part live; issue closed).
+
+### desktop-layout-724: Evaluate and adopt Dribbble desktop layout (Geethub #724)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #724. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #724; all ten UI issues share one lane (ui-batch). Evaluation delivered; owner chose pieces 1 and 2. BUILT: a Home page for the 3-pane desktop (new Home button first in the top nav, toggles back to the player; page in the middle pane with the footer player, like Search and Settings). The player keeps its empty screen and the bouncing E, so Home is a separate page, not a replacement. Home shows what you play most, read from this device only: Top artists (recent play history), Top albums and Top playlists (ranked by the plays stored on their saved songs), Top songs (numbered, with play counts, one tap plays and goes to the player), and a Music map card that opens the map from your top artist; empty rows are left out and a hint shows until there is history. Checked at 1400x850 with real plays made in the preview. Follow-up built on request: Home now works on every width (phones: no footer tab, Home is reached through the logo; tablets and non-3-pane widths: the Home icon in the top nav as well; same page, normal full-page layout), plus a Recently played row at the top (playlists and albums by last played, one tap plays) and a Top genres row (the Last.fm tags of the songs you played, counted over recent plays from the on-device tag cache, shown as gradient cards with a tilted cover; a tap searches that genre; needs at least 2 plays of a tag). Checked at 375px (all six sections, cards, genres, footer player) and at 1000px by DOM only (the preview screenshot was a stale frame). Not built: piece 3 (cover-tinted now playing card in the queue pane; owner asked whether it beats the footer player: it does not replace it, see the owner thread), a Recently played songs row (the row shows playlists and albums).
+  **Reference (Dribbble 16274109, InfyMusic):** light dashboard. Left: a labelled menu (Home, Search, Discover, Albums, Artists / Recent, Favourites, Local / playlists / Settings). Centre: top tabs (Music, Podcast, Live, Radio) over three shelves (Global Top 50, Songs You Might Like, Recently Played as numbered rows with a play button). Right: notifications, a Top Artists grid, and a coloured Now Playing card.
+  **EBBLESS desktop today:** top bar (search or paste, nav), left Library pane (playlists / artists / albums / podcasts chips), centre player stage (art, tabs, transport), right Queue pane with the now playing row, steering chips and Discover.
+  **Pros of moving toward it:** a home page of shelves gives the app somewhere to land when nothing is playing (today the centre is an empty stage with the bouncing E); a labelled sidebar is easier to learn than chips; 'Recently played' and 'Top artists' put what you already like one click away; a coloured Now Playing card is a good glanceable anchor.
+  **Cons:** the reference is a browse-first catalogue app, EBBLESS is play-first and its centre is the player, so a shelf home would compete with the stage; the sidebar would duplicate the Library pane (a fourth column does not fit under about 1400px); notifications and Local/Log out do not exist here; it is light-themed while EBBLESS uses the cover colour on dark; and it adds a lot of surface for one person to maintain.
+  **Recommendation:** do not restructure. EBBLESS already has the same three zones (Library left, stage centre, queue and now playing right). Adopt small pieces only: (1) a Home view in the centre when nothing is playing, built from what already exists (Picked for you tiles from the search page, recent songs, your playlists), replacing the bare stage; (2) a Top artists strip in that Home; (3) in the Queue pane, give the now playing row the cover-tinted card look from the reference. Not recommended: the sidebar, the notifications block, a light theme.
+  Logo gestures (owner request): one tap on the E logo goes Home everywhere (the old single-tap splash on desktop, double-tap mini player and phone tap-to-player are gone); hold (~1s, with the existing ring) opens the mini player on desktop where it exists (the splash if nothing is playing), and keeps hold-to-reload on phones; dragging the logo to the right on a phone brings the splash back (the follow-up click is swallowed). Checked: phone tap, phone drag (synthetic pointer events), desktop tap, desktop hold requests the mini window (stubbed). Not checked with a real finger or the real mini window. Landed on main in cache v484 (web part live; issue closed).
+
+### swipe-nav-725: Mobile swipe navigation between screens (Geethub #725)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #725. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #725; all ten UI issues share one lane (ui-batch). Found a left/right swipe already in place (#574: Library, Player, Queue, Settings) with a list of things that keep their own gestures (art, sliders, queue and track rows, filter pills, inputs, sheets and windows). Extended it, nothing else changed: (1) the horizontal row is now Home - Search - Library - Player - Queue - Settings (Home leftmost; nothing further left; Settings last); (2) swipes that start on the Home or Search horizontal rows are ignored so those rows still scroll sideways; (3) new vertical swipes on the Player only (its screen does not scroll): swipe up = open the queue, swipe down = Home; they only count when they start on empty space, the title area, not on the art, seek bar, controls or tabs. Slide-in is translate and opacity only. Phones only (under 860px, not during onboarding). Checked with synthetic touch events at 375px: up goes to the queue, down to Home, Home to Search and back, nothing left of Home, a swipe starting on a Home row does nothing. Not checked with a real finger (angles and thresholds: 70px across at no more than 0.6 slope, 90px vertical at no more than 0.5 slope). Not done: an edge indicator or dots showing where you are in the row; swipes on tablets; swipe up from Home. Landed on main in cache v484 (web part live; issue closed).
+
+### cymatics-726: Cymatics visual upgrade (Geethub #726)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #726. See the issue for references.
+- **Touches:** index.html (UI), sw.js cache bump
+- **Branch:** agent/ui-batch
+- **Notes:** Synced from Geethub #726; all ten UI issues share one lane (ui-batch). Reference: a real cymatics photograph (nested rosettes with about twelve-fold petals, glowing fine filaments, a bright ring at the centre, on dark). Built on the existing simulated sand-on-a-plate visualizer (grains walk toward the nodal lines of a standing-wave field; the app cannot read streamed audio so this stays a simulation): (1) a new first pattern family 'Rosette' (two interleaved circular-plate modes, six mode settings, so settled sand draws the looped petals and rings); (2) a glow pass for every pattern: grains that have settled on a line get a soft halo in the colour and a small white core, drawn additively (lighter), so lines read as light instead of dust; (3) it listens where it can: with the desktop app's audio tap the loudness of the low bins shakes the sand harder and brightens the glow, without it the look is unchanged (glow factor 1). Cost: one stored position per grain and two extra short passes over the settled grains; no filters, no blur, still one canvas. Checked: the page parses and runs; the look of the settled Rosette with glow was checked in an offline copy of the same field and drawing (blue here), not watched forming inside the app, where the sand takes about 20 s while playing and longer idle; the audio-tap response is not seen. Not done: the cool-blue colour of the photo (the app keeps its daily colour clock), thin continuous lines instead of dots, a 'photo' pattern choice in the picker.
+  Sparkle pass (owner picked the values in an interactive demo: sparkle 33, glint size 0, loudness 0): settled sand now twinkles. Each grain has its own fixed glint rhythm and brightens now and then (a bigger halo and a small white core, additive), like sunlight on moving water, replacing the always-on white cores; VIZ_SPARKLE = .33, VIZ_GLINT = 0 (no cross-shaped flares), VIZ_LOUD = 0 (the song's loudness no longer changes the sand or the glow; raise it to bring the audio-tap response back). Reduced motion keeps the halo and drops the glinting. Checked: the visualizer runs and draws with no script errors; the sparkle was judged in the demo, not watched inside the app. Landed on main in cache v484 (web part live; issue closed).
+
 ### progress-bar-hover-color-712: Player progress bar hover color matches the UI instead of yellow (Geethub #712)
 - **Status:** merged
 - **Priority:** medium
@@ -12098,3 +12210,107 @@ Add entries in this shape:
 - **Touches:** android-webview (IpodPlayer, ClickWheelView, IpodBody, IpodColor, IpodFxHost, games), index.html (library push, media actions).
 - **Branch:** agent/ipod-shell-2, agent/ipod-games-2
 - **Notes:** Android 2.16.0 (versionCode 34). Not on-device verified. Cut: brushed-metal look; podcasts start from the top of the show, no resume-latest.
+
+### cd-lp-spin-slower-738: CD and LP spin slower, LP game speed unchanged (Geethub #738)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #738. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** CD and LP spin at 80 deg/s (was 120); the LP game eases back to the old 120 pace during a run, so its speed is unchanged.
+
+### player-mode-order-737: Switch the order of player modes and miniplayer modes (Geethub #737)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #737. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** Main art menu and cycle: default, CD, cassette, LP. Mini card thumbnail picker same order. Mac mini click cycle: card (default art), CD, cassette, LP, Cymatics. Web mini cycle gains CD and the same order.
+
+### miniplayer-bugs-736: Miniplayer bugs: CD/LP not spinning, big LP mode replaced by big CD (Geethub #736)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #736. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** Mini LP/CD did not restart spinning after the mini reopened while playing (stale speed skipped the rAF start); fixed in mpRecordSync. Big LP is back: the Mac mini cycle has separate big CD and big LP steps (disc shape + art style). Not run on a real Mac mini/PiP: verified by reading the code and scripts/check.sh only.
+
+### video-closes-on-player-change-735: Video window closes when the player changes (fix song, search, etc.) (Geethub #735)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #735. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-video (cache v487)
+- **Notes:** ytPanelSync hides the video while any element outside the player view covers the art area (fix this song, search, menus); it returns when the cover goes. Not verified on a device. Synced from Geethub #735.
+
+### cassette-anim-shrink-734: Cassette shrank but its animation did not (Geethub #734)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #734. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** The cassette stack/orbit copies were sized from the host, not the cassette (fullscreen insets it to 62%); now sized from the .art-cassette element in csStackBuild.
+
+### library-title-search-dropdown-733: Library title becomes a button with a dropdown search bar, magnifier gets mistaken for main search (Geethub #733)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #733. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/library-artist
+- **Notes:** Library h2 is now a button (#libTitleBtn, chevron) that toggles the search box; old magnifier kept hidden as the hook.
+
+### low-graphics-library-titles-732: Low graphics mode: library thumb titles go beneath the thumbnail, fully shown, no marquee (Geethub #732)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #732. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/library-artist
+- **Notes:** No separate low graphics setting exists; keyed on the Motion: Reduced setting (html.reduce-motion): overlay marquee hidden, full title wraps under the thumb.
+
+### featuring-artist-link-731: Tap the featured artist in a title to open their artist page (Geethub #731)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #731. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/library-artist
+- **Notes:** trackArtistNames() adds "feat." names from the title; used in the song page links and the artist-button picker.
+
+### queue-previous-songs-selectable-730: Previously played songs in the queue are selectable with full functionality (Geethub #730)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #730. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-video (cache v487)
+- **Notes:** Played songs now sit below the upcoming ones (fade kept) with tap-to-play, song menu, remove and swipe. queueRemoveAt handles played rows. Synced from Geethub #730.
+
+### queue-now-playing-top-729: Queue: now playing section always at the top (Geethub #729)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #729. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/queue-video (cache v487)
+- **Notes:** Now playing renders first in the queue list; played songs moved to a Played section at the bottom. Removed the scroll-anchor code that existed only to keep Now in view. Synced from Geethub #729.
+
+### player-title-off-center-728: Player title is off-center (Geethub #728)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #728. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/player-visuals (cache v489)
+- **Notes:** Title spacer was 28px but the like + options buttons on the right are 50px wide; spacer is now 50px plus 28px per extra button showing (thumbs-down, add to playlist, speed). Phone layout unchanged.
+
+### artist-rec-plus-too-big-716: Desktop: recommended artists plus signs cover the whole circle (Geethub #716)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Bug, Geethub issue #716. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/library-artist
+- **Notes:** Plus button on recommended artists shrunk to 22px (.rec-artists .fm-add).
+
+### thumbs-down-reasons-715: Thumbs down asks why with a list of reasons to improve matching (Geethub #715)
+- **Status:** merged
+- **Priority:** medium
+- **Description:** Idea, Geethub issue #715. See the issue for details.
+- **Touches:** index.html (UI)
+- **Branch:** agent/library-artist
+- **Notes:** One-tap reason chips after thumbs down (9s, skippable); reason code stored in LS_DECLINED entry (.r, allowlisted); artist/genre reasons weigh double; undo reverses.

@@ -1,0 +1,16 @@
+const assert = require('assert');
+const path = require('path');
+const { assetName, binName, binPath, parseSums, pickFiles } = require('./ytdlp-update');
+const h = 'a'.repeat(64), g = 'b'.repeat(64);
+const sums = parseSums(h + '  yt-dlp_macos.zip\n' + g.toUpperCase() + ' *yt-dlp_win.zip\nnot a line\n');
+assert.strictEqual(sums['yt-dlp_macos.zip'], h); assert.strictEqual(sums['yt-dlp_win.zip'], g);
+assert.strictEqual(assetName('darwin'), 'yt-dlp_macos.zip'); assert.strictEqual(assetName('win32'), 'yt-dlp_win.zip'); assert.strictEqual(assetName('linux'), null);
+assert.strictEqual(binName('win32'), 'yt-dlp.exe'); assert.strictEqual(binName('darwin'), 'yt-dlp_macos');
+assert.strictEqual(binPath('/d', 'darwin'), path.join('/d', 'ytdlp', 'yt-dlp_macos'));
+const P = 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/';
+const sumsAsset = { name: 'SHA2-256SUMS', browser_download_url: P + 'SHA2-256SUMS' };
+const rel = { tag_name: '2026.10.26', assets: [{ name: 'yt-dlp_macos.zip', browser_download_url: P + 'yt-dlp_macos.zip' }, sumsAsset] };
+assert.strictEqual(pickFiles(rel, 'darwin').binUrl, P + 'yt-dlp_macos.zip');
+assert.strictEqual(pickFiles(rel, 'win32'), null);
+assert.strictEqual(pickFiles({ tag_name: 'x', assets: [{ name: 'yt-dlp_macos.zip', browser_download_url: 'https://evil.example/yt-dlp_macos.zip' }, sumsAsset] }, 'darwin'), null);
+console.log('ytdlp-update tests ok');

@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
     private static final long SIGNIN_TTL_MS = 10 * 60 * 1000;
 
     private WebView web;
+    private volatile WavePeaks wavePeaks;
     /** Handle of the registered ad-skip document-start script, so a kill-switch flip can remove or re-add it. */
     private androidx.webkit.ScriptHandler adScript;
     /** version:hash of the rules the registered script was built from; a new live pair rebuilds the handler. */
@@ -57,6 +58,29 @@ public class MainActivity extends Activity {
         }
     }
 
+    private int insetTopDp, insetBottomDp;
+
+    /** #717: draw behind the status bar, camera cutout and nav bar; the page gets the bar heights as --native-t/--native-b and pads its own controls. */
+    private void goEdgeToEdge() {
+        android.view.Window w = getWindow();
+        if (Build.VERSION.SDK_INT >= 30) w.setDecorFitsSystemWindows(false);
+        else root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        w.setStatusBarColor(0);
+        w.setNavigationBarColor(0);
+        if (Build.VERSION.SDK_INT >= 28) w.getAttributes().layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        root.setOnApplyWindowInsetsListener((v, ins) -> {
+            float d = getResources().getDisplayMetrics().density;
+            insetTopDp = Math.round(ins.getSystemWindowInsetTop() / d);
+            insetBottomDp = Math.round(ins.getSystemWindowInsetBottom() / d);
+            pushInsets();
+            return ins;
+        });
+    }
+
+    void pushInsets() {
+        if (web != null) web.evaluateJavascript("window.__ebbInsets&&__ebbInsets(" + insetTopDp + "," + insetBottomDp + ")", null);
+    }
+
     private FrameLayout root;
     private boolean recoveredLaunch;
     private NativeSplash splash;
@@ -68,6 +92,7 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         root.setBackgroundColor(0xFF000000);
         setContentView(root);
+        goEdgeToEdge();
         connectWatchdog();
         recoveredLaunch = getIntent() != null && getIntent().getBooleanExtra("recovered", false);
         registerScreenReceiver();
@@ -490,6 +515,19 @@ public class MainActivity extends Activity {
                     splash.dropForLock();
                 });
             }
+            /** #727: the page wants a streamed song's waveform; peaks come back through window.__ebbWavePeaks. */
+            @android.webkit.JavascriptInterface public void waveRequest(String videoId) {
+                if (wavePeaks == null) {
+                    WavePeaks.setCacheDir(getCacheDir());
+                    wavePeaks = new WavePeaks((id, peaks) -> runOnUiThread(() -> {
+                        if (web == null) return;
+                        StringBuilder sb = new StringBuilder("window.__ebbWavePeaks&&__ebbWavePeaks(").append(JSONObject.quote(id)).append(",[");
+                        for (int i = 0; i < peaks.length; i++) sb.append(i == 0 ? "" : ",").append(peaks[i]);
+                        web.evaluateJavascript(sb.append("])").toString(), null);
+                    }));
+                }
+                wavePeaks.request(videoId);
+            }
             /** The page's play state, so a restarted service knows whether the music was playing when the process was killed. */
             @android.webkit.JavascriptInterface public void playing(boolean on) {
                 getSharedPreferences("ebb", MODE_PRIVATE).edit().putBoolean("playing", on).apply();
@@ -569,6 +607,7 @@ public class MainActivity extends Activity {
                 if (bundled == null) bundled = cachedPage(r);
                 return bundled != null ? bundled : super.shouldInterceptRequest(v, r);
             }
+            @Override public void onPageFinished(WebView v, String url) { pushInsets(); }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 if (!r.isForMainFrame()) return false;
                 return route(r.getUrl());

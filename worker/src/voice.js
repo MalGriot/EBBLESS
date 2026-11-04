@@ -16,6 +16,10 @@
 export const VOICE_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'; // Workers AI, free tier; same model as /vibe-interpret (shares its daily neuron budget)
 export const VOICE_AI_TIMEOUT_MS = 6000;
 export const VOICE_CAPS = { free: 7, paid: 100 };    // LLM requests per signed-in user per UTC day (owner decision 4)
+// Beta: every feature is open to every signed-in listener while the paywall
+// is decided, so free listeners get sets too. The per-user daily caps above
+// and the global neuron ceiling still apply. Set false to bring the gate back.
+export const BETA_OPEN_SETS = true;
 export const VOICE_MAX_TEXT = 300;
 
 // ---- global spend ceiling (account-wide, keeps the AI use inside the FREE allocation) ----
@@ -298,8 +302,9 @@ export async function handleVoicePlan(request, env, ctx, deps) {
 
   const tier = await voiceTierFor(env, who.sub);
   const limit = VOICE_CAPS[tier];
-  // Sets are a paid feature: free listeners get the same intention as one flat mood plus {upsell:'sets'}.
-  const gate = (p) => (p && p.kind === 'set' && tier !== 'paid' ? { plan: setToMood(p), upsell: 'sets' } : { plan: p });
+  // Sets are a paid feature after beta: free listeners then get the same intention as one flat mood plus {upsell:'sets'}.
+  const openSets = deps.openSets !== undefined ? !!deps.openSets : BETA_OPEN_SETS;
+  const gate = (p) => (p && p.kind === 'set' && tier !== 'paid' && !openSets ? { plan: setToMood(p), upsell: 'sets' } : { plan: p });
   const heuristic = () => heuristicPlan(said, want);
   const hOut = () => { const g = gate(heuristic()); return g; };
   if (!env.VOICE_QUOTA) return json({ ...hOut(), source: 'heuristic', tier, limit, why: 'no-quota-binding' });

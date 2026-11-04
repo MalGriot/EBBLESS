@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('ebblessDesktop', {
   platform: process.platform,
+  // app 1.0.13+: getDisplayMedia hands the page its own audio, for the light show
+  tapAudio: true,
+  // #727: a song's audio bytes (small audio-only stream) for the waveform, or null
+  waveAudio: (videoId, urgent) => ipcRenderer.invoke('ebbless:wave-audio', videoId, !!urgent),
   // bring the main window back (mini player art / logo click)
   focusMain: () => ipcRenderer.send('ebbless:focus-main'),
   // the mini player opened: tuck the main window away (it comes back via focusMain / Dock)

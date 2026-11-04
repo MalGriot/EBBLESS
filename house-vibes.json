@@ -1,0 +1,1260 @@
+{
+  "_how": "MAL GRIOT's house vibes. When a vibe sentence contains one of an entry's match phrases (whole words, any case, punctuation ignored), /vibe-interpret builds from that entry first: seeds lead the list (checked against the Apple Music catalog, so a typo just drops that song), tags come before the model's, and energy (0 to 1) replaces the model's range. In the app, typing exactly one of these phrases (even a short one like 'just chilling') goes to vibe search instead of song search. Seeds look like {\"artist\": \"Name\", \"title\": \"Song\"}. Bump version after every edit so cached answers refresh.",
+  "version": 4,
+  "vibes": [
+    {
+      "match": [
+        "just chilling",
+        "just chillin",
+        "chilling",
+        "chillin"
+      ],
+      "tags": [
+        "chill",
+        "chillout",
+        "neo-soul",
+        "lo-fi"
+      ],
+      "energy": [
+        0.2,
+        0.5
+      ],
+      "seeds": [
+        {
+          "artist": "Erykah Badu",
+          "title": "On & On"
+        },
+        {
+          "artist": "Nujabes",
+          "title": "Feather"
+        },
+        {
+          "artist": "Tom Misch",
+          "title": "Movie"
+        },
+        {
+          "artist": "Mac Miller",
+          "title": "Good News"
+        }
+      ]
+    },
+    {
+      "match": [
+        "on demon time",
+        "demon time"
+      ],
+      "tags": [
+        "trap",
+        "dark",
+        "hip-hop",
+        "phonk"
+      ],
+      "energy": [
+        0.6,
+        0.9
+      ],
+      "seeds": [
+        {
+          "artist": "Three 6 Mafia",
+          "title": "Stay Fly"
+        },
+        {
+          "artist": "Travis Scott",
+          "title": "SICKO MODE"
+        },
+        {
+          "artist": "Future",
+          "title": "Mask Off"
+        },
+        {
+          "artist": "Kordhell",
+          "title": "Murder In My Mind"
+        }
+      ]
+    },
+    {
+      "match": [
+        "trying something new",
+        "try something new",
+        "something new"
+      ],
+      "tags": [
+        "experimental",
+        "eclectic",
+        "alternative",
+        "world"
+      ],
+      "energy": [
+        0.3,
+        0.7
+      ],
+      "seeds": [
+        {
+          "artist": "Khruangbin",
+          "title": "Maria También"
+        },
+        {
+          "artist": "Bonobo",
+          "title": "Kerala"
+        },
+        {
+          "artist": "Tame Impala",
+          "title": "Let It Happen"
+        },
+        {
+          "artist": "Fela Kuti",
+          "title": "Water No Get Enemy"
+        }
+      ]
+    },
+    {
+      "match": [
+        "spread love"
+      ],
+      "tags": [
+        "soul",
+        "gospel",
+        "feel good",
+        "rnb"
+      ],
+      "energy": [
+        0.45,
+        0.75
+      ],
+      "seeds": [
+        {
+          "artist": "Take 6",
+          "title": "Spread Love"
+        },
+        {
+          "artist": "Bill Withers",
+          "title": "Lovely Day"
+        },
+        {
+          "artist": "Marvin Gaye",
+          "title": "What's Going On"
+        },
+        {
+          "artist": "Stevie Wonder",
+          "title": "As"
+        }
+      ]
+    },
+    {
+      "match": [
+        "wasting time",
+        "killing time"
+      ],
+      "tags": [
+        "lo-fi",
+        "indie",
+        "slacker rock",
+        "chill"
+      ],
+      "energy": [
+        0.25,
+        0.55
+      ],
+      "seeds": [
+        {
+          "artist": "Mac DeMarco",
+          "title": "Salad Days"
+        },
+        {
+          "artist": "Kurt Vile",
+          "title": "Pretty Pimpin"
+        },
+        {
+          "artist": "Rex Orange County",
+          "title": "Loving Is Easy"
+        },
+        {
+          "artist": "Men I Trust",
+          "title": "Show Me How"
+        }
+      ]
+    },
+    {
+      "match": [
+        "my face when",
+        "mfw"
+      ],
+      "tags": [
+        "funk",
+        "quirky",
+        "soundtrack",
+        "feel good"
+      ],
+      "energy": [
+        0.45,
+        0.8
+      ],
+      "seeds": [
+        {
+          "artist": "Vulfpeck",
+          "title": "Dean Town"
+        },
+        {
+          "artist": "Parliament",
+          "title": "Give Up the Funk (Tear the Roof off the Sucker)"
+        },
+        {
+          "artist": "Mark Ronson",
+          "title": "Uptown Funk"
+        },
+        {
+          "artist": "Ohio Players",
+          "title": "Love Rollercoaster"
+        }
+      ]
+    },
+    {
+      "match": [
+        "getting dressed",
+        "getting ready",
+        "get ready with me",
+        "grwm"
+      ],
+      "tags": [
+        "rnb",
+        "pop",
+        "dance",
+        "feel good"
+      ],
+      "energy": [
+        0.55,
+        0.85
+      ],
+      "seeds": [
+        {
+          "artist": "Beyoncé",
+          "title": "Crazy in Love"
+        },
+        {
+          "artist": "Lizzo",
+          "title": "Good as Hell"
+        },
+        {
+          "artist": "Bruno Mars",
+          "title": "24K Magic"
+        },
+        {
+          "artist": "Doja Cat",
+          "title": "Say So"
+        }
+      ]
+    },
+    {
+      "match": [
+        "omw home",
+        "on my way home",
+        "heading home",
+        "driving home"
+      ],
+      "tags": [
+        "chill",
+        "soul",
+        "indie",
+        "night drive"
+      ],
+      "energy": [
+        0.3,
+        0.6
+      ],
+      "seeds": [
+        {
+          "artist": "Frank Ocean",
+          "title": "Pink + White"
+        },
+        {
+          "artist": "Daniel Caesar",
+          "title": "Get You"
+        },
+        {
+          "artist": "Kali Uchis",
+          "title": "After the Storm"
+        },
+        {
+          "artist": "SZA",
+          "title": "Good Days"
+        }
+      ]
+    },
+    {
+      "match": [
+        "stuck in traffic",
+        "in traffic"
+      ],
+      "tags": [
+        "funk",
+        "classic soul",
+        "road trip",
+        "feel good"
+      ],
+      "energy": [
+        0.4,
+        0.7
+      ],
+      "seeds": [
+        {
+          "artist": "The Isley Brothers",
+          "title": "That Lady"
+        },
+        {
+          "artist": "Earth, Wind & Fire",
+          "title": "Can't Hide Love"
+        },
+        {
+          "artist": "Curtis Mayfield",
+          "title": "Move On Up"
+        },
+        {
+          "artist": "Al Green",
+          "title": "Let's Stay Together"
+        }
+      ]
+    },
+    {
+      "match": [
+        "remembering my ex",
+        "thinking about my ex",
+        "miss my ex",
+        "my ex"
+      ],
+      "tags": [
+        "breakup",
+        "heartbreak",
+        "rnb",
+        "sad"
+      ],
+      "energy": [
+        0.15,
+        0.45
+      ],
+      "seeds": [
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You"
+        },
+        {
+          "artist": "Drake",
+          "title": "Marvins Room"
+        },
+        {
+          "artist": "Toni Braxton",
+          "title": "Un-Break My Heart"
+        },
+        {
+          "artist": "Adele",
+          "title": "Someone Like You"
+        }
+      ]
+    },
+    {
+      "match": [
+        "where am i going in life",
+        "where am i going",
+        "lost in life"
+      ],
+      "tags": [
+        "introspective",
+        "indie folk",
+        "singer-songwriter",
+        "ambient"
+      ],
+      "energy": [
+        0.15,
+        0.45
+      ],
+      "seeds": [
+        {
+          "artist": "Bon Iver",
+          "title": "Holocene"
+        },
+        {
+          "artist": "Fleet Foxes",
+          "title": "Helplessness Blues"
+        },
+        {
+          "artist": "Sufjan Stevens",
+          "title": "Death with Dignity"
+        },
+        {
+          "artist": "Nick Drake",
+          "title": "Pink Moon"
+        }
+      ]
+    },
+    {
+      "match": [
+        "why am i even here",
+        "why am i here"
+      ],
+      "tags": [
+        "ambient",
+        "introspective",
+        "post-rock",
+        "melancholy"
+      ],
+      "energy": [
+        0.1,
+        0.4
+      ],
+      "seeds": [
+        {
+          "artist": "Sigur Rós",
+          "title": "Hoppípolla"
+        },
+        {
+          "artist": "Explosions in the Sky",
+          "title": "Your Hand in Mine"
+        },
+        {
+          "artist": "Max Richter",
+          "title": "On the Nature of Daylight"
+        },
+        {
+          "artist": "Brian Eno",
+          "title": "An Ending (Ascent)"
+        }
+      ]
+    },
+    {
+      "match": [
+        "should i throw it all away and become a monk in the woods",
+        "become a monk in the woods",
+        "monk in the woods",
+        "throw it all away"
+      ],
+      "tags": [
+        "ambient",
+        "meditation",
+        "drone",
+        "folk"
+      ],
+      "energy": [
+        0.05,
+        0.35
+      ],
+      "seeds": [
+        {
+          "artist": "Brian Eno",
+          "title": "1/1"
+        },
+        {
+          "artist": "Alice Coltrane",
+          "title": "Journey in Satchidananda"
+        },
+        {
+          "artist": "José González",
+          "title": "Heartbeats"
+        }
+      ]
+    },
+    {
+      "match": [
+        "building treehouses",
+        "building a treehouse",
+        "treehouse"
+      ],
+      "tags": [
+        "indie folk",
+        "folk",
+        "acoustic",
+        "happy"
+      ],
+      "energy": [
+        0.4,
+        0.7
+      ],
+      "seeds": [
+        {
+          "artist": "Edward Sharpe & The Magnetic Zeros",
+          "title": "Home"
+        },
+        {
+          "artist": "The Lumineers",
+          "title": "Ho Hey"
+        },
+        {
+          "artist": "Of Monsters and Men",
+          "title": "Little Talks"
+        },
+        {
+          "artist": "Vance Joy",
+          "title": "Riptide"
+        }
+      ]
+    },
+    {
+      "match": [
+        "i hate liars",
+        "hate liars"
+      ],
+      "tags": [
+        "angry",
+        "rap",
+        "rock",
+        "aggressive"
+      ],
+      "energy": [
+        0.6,
+        0.9
+      ],
+      "seeds": [
+        {
+          "artist": "Rage Against the Machine",
+          "title": "Killing in the Name"
+        },
+        {
+          "artist": "Kendrick Lamar",
+          "title": "DNA."
+        },
+        {
+          "artist": "DMX",
+          "title": "Party Up (Up in Here)"
+        },
+        {
+          "artist": "Linkin Park",
+          "title": "Faint"
+        }
+      ]
+    },
+    {
+      "match": [
+        "my truth is my truth",
+        "speaking my truth",
+        "my truth"
+      ],
+      "tags": [
+        "conscious hip-hop",
+        "neo-soul",
+        "soul",
+        "empowerment"
+      ],
+      "energy": [
+        0.45,
+        0.75
+      ],
+      "seeds": [
+        {
+          "artist": "Lauryn Hill",
+          "title": "Doo Wop (That Thing)"
+        },
+        {
+          "artist": "Kendrick Lamar",
+          "title": "Alright"
+        },
+        {
+          "artist": "Common",
+          "title": "The Light"
+        },
+        {
+          "artist": "India.Arie",
+          "title": "Video"
+        }
+      ]
+    },
+    {
+      "match": [
+        "fuck this shit i'm out",
+        "fuck this shit im out",
+        "fuck it i'm out",
+        "fuck this shit"
+      ],
+      "tags": [
+        "punk",
+        "hard rock",
+        "angry",
+        "rap"
+      ],
+      "energy": [
+        0.7,
+        1
+      ],
+      "seeds": [
+        {
+          "artist": "Beastie Boys",
+          "title": "Sabotage"
+        },
+        {
+          "artist": "System of a Down",
+          "title": "Chop Suey!"
+        },
+        {
+          "artist": "Green Day",
+          "title": "Basket Case"
+        },
+        {
+          "artist": "Black Flag",
+          "title": "Rise Above"
+        }
+      ]
+    },
+    {
+      "match": [
+        "i got hoes"
+      ],
+      "tags": [
+        "hip-hop",
+        "trap",
+        "west coast",
+        "party"
+      ],
+      "energy": [
+        0.6,
+        0.9
+      ],
+      "seeds": [
+        {
+          "artist": "Snoop Dogg",
+          "title": "Gin and Juice"
+        },
+        {
+          "artist": "Dr. Dre",
+          "title": "Still D.R.E."
+        },
+        {
+          "artist": "Too $hort",
+          "title": "Blow the Whistle"
+        },
+        {
+          "artist": "YG",
+          "title": "Toot It and Boot It"
+        }
+      ]
+    },
+    {
+      "match": [
+        "getting laid tonight",
+        "getting laid",
+        "get laid"
+      ],
+      "tags": [
+        "rnb",
+        "slow jams",
+        "sensual",
+        "sexy"
+      ],
+      "energy": [
+        0.35,
+        0.65
+      ],
+      "seeds": [
+        {
+          "artist": "Marvin Gaye",
+          "title": "Let's Get It On"
+        },
+        {
+          "artist": "D'Angelo",
+          "title": "Untitled (How Does It Feel)"
+        },
+        {
+          "artist": "Jodeci",
+          "title": "Freek'n You"
+        },
+        {
+          "artist": "Ginuwine",
+          "title": "Pony"
+        }
+      ]
+    },
+    {
+      "match": [
+        "afterglow"
+      ],
+      "tags": [
+        "dream pop",
+        "chillout",
+        "rnb",
+        "ambient"
+      ],
+      "energy": [
+        0.15,
+        0.45
+      ],
+      "seeds": [
+        {
+          "artist": "Beach House",
+          "title": "Space Song"
+        },
+        {
+          "artist": "Cocteau Twins",
+          "title": "Heaven or Las Vegas"
+        },
+        {
+          "artist": "Sade",
+          "title": "Cherish the Day"
+        },
+        {
+          "artist": "Frank Ocean",
+          "title": "Self Control"
+        }
+      ]
+    },
+    {
+      "match": [
+        "horny af",
+        "horny"
+      ],
+      "tags": [
+        "sexy",
+        "rnb",
+        "sensual",
+        "funk"
+      ],
+      "energy": [
+        0.4,
+        0.7
+      ],
+      "seeds": [
+        {
+          "artist": "Prince",
+          "title": "Do Me, Baby"
+        },
+        {
+          "artist": "Usher",
+          "title": "Nice & Slow"
+        },
+        {
+          "artist": "Rick James",
+          "title": "Fire and Desire"
+        },
+        {
+          "artist": "Aaliyah",
+          "title": "Rock the Boat"
+        }
+      ]
+    },
+    {
+      "match": [
+        "i need a hug",
+        "need a hug",
+        "hug me"
+      ],
+      "tags": [
+        "comforting",
+        "acoustic",
+        "soul",
+        "mellow"
+      ],
+      "energy": [
+        0.15,
+        0.45
+      ],
+      "seeds": [
+        {
+          "artist": "Bill Withers",
+          "title": "Lean On Me"
+        },
+        {
+          "artist": "Jack Johnson",
+          "title": "Better Together"
+        },
+        {
+          "artist": "Carole King",
+          "title": "You've Got a Friend"
+        },
+        {
+          "artist": "Norah Jones",
+          "title": "Don't Know Why"
+        }
+      ]
+    },
+    {
+      "match": [
+        "cuddle me please",
+        "cuddle me",
+        "cuddling",
+        "cuddle"
+      ],
+      "tags": [
+        "romantic",
+        "rnb",
+        "acoustic",
+        "love"
+      ],
+      "energy": [
+        0.15,
+        0.45
+      ],
+      "seeds": [
+        {
+          "artist": "Daniel Caesar",
+          "title": "Best Part"
+        },
+        {
+          "artist": "John Legend",
+          "title": "All of Me"
+        },
+        {
+          "artist": "Etta James",
+          "title": "At Last"
+        },
+        {
+          "artist": "Ed Sheeran",
+          "title": "Thinking Out Loud"
+        }
+      ]
+    },
+    {
+      "match": [
+        "my therapist would say",
+        "my therapist",
+        "therapy"
+      ],
+      "tags": [
+        "introspective",
+        "singer-songwriter",
+        "indie",
+        "neo-soul"
+      ],
+      "energy": [
+        0.25,
+        0.55
+      ],
+      "seeds": [
+        {
+          "artist": "Frank Ocean",
+          "title": "Seigfried"
+        },
+        {
+          "artist": "SZA",
+          "title": "20 Something"
+        },
+        {
+          "artist": "Mac Miller",
+          "title": "Self Care"
+        },
+        {
+          "artist": "Phoebe Bridgers",
+          "title": "Funeral"
+        }
+      ]
+    },
+    {
+      "match": [
+        "i'm done playing",
+        "im done playing",
+        "done playing",
+        "no more games"
+      ],
+      "tags": [
+        "hip-hop",
+        "trap",
+        "motivational",
+        "aggressive"
+      ],
+      "energy": [
+        0.6,
+        0.9
+      ],
+      "seeds": [
+        {
+          "artist": "Eminem",
+          "title": "Lose Yourself"
+        },
+        {
+          "artist": "Kanye West",
+          "title": "POWER"
+        },
+        {
+          "artist": "JAY-Z",
+          "title": "Dirt Off Your Shoulder"
+        },
+        {
+          "artist": "Meek Mill",
+          "title": "Dreams and Nightmares"
+        }
+      ]
+    },
+    {
+      "match": [
+        "i just want peace",
+        "just want peace",
+        "peace and quiet",
+        "peace of mind"
+      ],
+      "tags": [
+        "ambient",
+        "meditation",
+        "new age",
+        "calm"
+      ],
+      "energy": [
+        0.05,
+        0.35
+      ],
+      "seeds": [
+        {
+          "artist": "Marconi Union",
+          "title": "Weightless"
+        },
+        {
+          "artist": "Ólafur Arnalds",
+          "title": "Saman"
+        },
+        {
+          "artist": "Brian Eno",
+          "title": "An Ending (Ascent)"
+        },
+        {
+          "artist": "Hiroshi Yoshimura",
+          "title": "Creek"
+        }
+      ]
+    },
+    {
+      "match": [
+        "bring it on"
+      ],
+      "tags": [
+        "workout",
+        "motivational",
+        "rock",
+        "hip-hop"
+      ],
+      "energy": [
+        0.75,
+        1
+      ],
+      "seeds": [
+        {
+          "artist": "Survivor",
+          "title": "Eye of the Tiger"
+        },
+        {
+          "artist": "Kanye West",
+          "title": "Stronger"
+        },
+        {
+          "artist": "Eminem",
+          "title": "'Till I Collapse"
+        },
+        {
+          "artist": "Queen",
+          "title": "Don't Stop Me Now"
+        }
+      ]
+    },
+    {
+      "match": [
+        "food dance",
+        "happy dance",
+        "snack dance"
+      ],
+      "tags": [
+        "funk",
+        "disco",
+        "happy",
+        "feel good"
+      ],
+      "energy": [
+        0.6,
+        0.9
+      ],
+      "seeds": [
+        {
+          "artist": "Chic",
+          "title": "Le Freak"
+        },
+        {
+          "artist": "Kool & The Gang",
+          "title": "Celebration"
+        },
+        {
+          "artist": "Daft Punk",
+          "title": "Get Lucky"
+        },
+        {
+          "artist": "Earth, Wind & Fire",
+          "title": "September"
+        }
+      ]
+    },
+    {
+      "match": [
+        "nobody understands",
+        "nobody understands me",
+        "no one understands"
+      ],
+      "tags": [
+        "emo",
+        "alternative",
+        "sad",
+        "melancholy"
+      ],
+      "energy": [
+        0.25,
+        0.6
+      ],
+      "seeds": [
+        {
+          "artist": "Linkin Park",
+          "title": "Numb"
+        },
+        {
+          "artist": "Radiohead",
+          "title": "Creep"
+        },
+        {
+          "artist": "Jimmy Eat World",
+          "title": "Hear You Me"
+        },
+        {
+          "artist": "Juice WRLD",
+          "title": "Lucid Dreams"
+        }
+      ]
+    },
+    {
+      "match": [
+        "inner growth",
+        "personal growth",
+        "self love",
+        "self-love",
+        "healing"
+      ],
+      "tags": [
+        "neo-soul",
+        "uplifting",
+        "spiritual",
+        "ambient"
+      ],
+      "energy": [
+        0.3,
+        0.6
+      ],
+      "seeds": [
+        {
+          "artist": "India.Arie",
+          "title": "I Am Light"
+        },
+        {
+          "artist": "Lauryn Hill",
+          "title": "Everything Is Everything"
+        },
+        {
+          "artist": "Jill Scott",
+          "title": "A Long Walk"
+        },
+        {
+          "artist": "Bob Marley & The Wailers",
+          "title": "Three Little Birds"
+        }
+      ]
+    },
+    {
+      "match": [
+        "damn i'm getting old",
+        "i'm getting old",
+        "im getting old",
+        "getting old"
+      ],
+      "tags": [
+        "nostalgia",
+        "oldies",
+        "90s",
+        "classic rock"
+      ],
+      "energy": [
+        0.35,
+        0.65
+      ],
+      "seeds": [
+        {
+          "artist": "TLC",
+          "title": "Waterfalls"
+        },
+        {
+          "artist": "Fleetwood Mac",
+          "title": "Dreams"
+        },
+        {
+          "artist": "A Tribe Called Quest",
+          "title": "Electric Relaxation"
+        },
+        {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World"
+        }
+      ]
+    },
+    {
+      "match": [
+        "going with the flow",
+        "go with the flow",
+        "with the flow"
+      ],
+      "tags": [
+        "chill",
+        "downtempo",
+        "jazz",
+        "bossa nova"
+      ],
+      "energy": [
+        0.25,
+        0.55
+      ],
+      "seeds": [
+        {
+          "artist": "Stan Getz",
+          "title": "The Girl from Ipanema"
+        },
+        {
+          "artist": "Bonobo",
+          "title": "Cirrus"
+        },
+        {
+          "artist": "Khruangbin",
+          "title": "People Everywhere (Still Alive)"
+        },
+        {
+          "artist": "Roy Ayers Ubiquity",
+          "title": "Everybody Loves the Sunshine"
+        }
+      ]
+    },
+    {
+      "match": [
+        "i just woke up",
+        "just woke up",
+        "waking up"
+      ],
+      "tags": [
+        "acoustic",
+        "morning",
+        "chill",
+        "soft"
+      ],
+      "energy": [
+        0.1,
+        0.4
+      ],
+      "seeds": [
+        {
+          "artist": "Jack Johnson",
+          "title": "Banana Pancakes"
+        },
+        {
+          "artist": "The Beatles",
+          "title": "Here Comes the Sun"
+        },
+        {
+          "artist": "Norah Jones",
+          "title": "Come Away with Me"
+        },
+        {
+          "artist": "Iron & Wine",
+          "title": "Such Great Heights"
+        }
+      ]
+    },
+    {
+      "match": [
+        "it's too early for this shit",
+        "too early for this shit",
+        "too early for this",
+        "too early"
+      ],
+      "tags": [
+        "lo-fi",
+        "chill",
+        "jazz",
+        "ambient"
+      ],
+      "energy": [
+        0.05,
+        0.35
+      ],
+      "seeds": [
+        {
+          "artist": "Nujabes",
+          "title": "Aruarian Dance"
+        },
+        {
+          "artist": "Bill Evans",
+          "title": "Peace Piece"
+        },
+        {
+          "artist": "J Dilla",
+          "title": "Time: The Donut of the Heart"
+        },
+        {
+          "artist": "Miles Davis",
+          "title": "Blue in Green"
+        }
+      ]
+    },
+    {
+      "match": [
+        "just give me a minute",
+        "give me a minute",
+        "need a minute"
+      ],
+      "tags": [
+        "ambient",
+        "chillout",
+        "piano",
+        "calm"
+      ],
+      "energy": [
+        0.1,
+        0.35
+      ],
+      "seeds": [
+        {
+          "artist": "Ludovico Einaudi",
+          "title": "Nuvole Bianche"
+        },
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1"
+        },
+        {
+          "artist": "Nils Frahm",
+          "title": "Says"
+        },
+        {
+          "artist": "Ólafur Arnalds",
+          "title": "Near Light"
+        }
+      ]
+    },
+    {
+      "match": [
+        "high as a kite",
+        "high af",
+        "stoned"
+      ],
+      "tags": [
+        "psychedelic",
+        "stoner rock",
+        "trip-hop",
+        "psychedelic soul"
+      ],
+      "energy": [
+        0.25,
+        0.6
+      ],
+      "seeds": [
+        {
+          "artist": "Tame Impala",
+          "title": "The Less I Know the Better"
+        },
+        {
+          "artist": "Massive Attack",
+          "title": "Teardrop"
+        },
+        {
+          "artist": "Funkadelic",
+          "title": "Maggot Brain"
+        },
+        {
+          "artist": "Portishead",
+          "title": "Glory Box"
+        }
+      ]
+    }
+  ]
+}

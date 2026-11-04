@@ -14,11 +14,13 @@ import {
   titleOverlapRatio, nameSimilarity, versionPenalty, songMatchScore, foldMatchText, matchKey, popularityBonus, artistKeys, candidateNamesArtist, channelNamesArtist, isCleanArtistTitle, genreConflict,
   crossScriptIncomparable, nonAsciiCacheTag, hasTranslitScript, looseTranslitKey,
 } from './match-text.js';
-import { parseSpotifyUserPage, spotifyUserIdFrom } from './spotifyuser.js';
 import { handleBeta, betaInAppReport } from './beta.js';
 import { handleAdmin } from './admin.js';
 import { sanitizeLinkFix } from './linkfix.js';
 import { handleNowPlaying } from './nowplaying.js';
+import { handleWaves } from './waves.js';
+import { parseVibeExclusions, filterExcluded, matchHouseVibe } from './vibe-intent.js';
+import { HOUSE_VIBES, HOUSE_VIBES_VERSION } from './house-vibes.js';
 import { deepFindKey, ytPlaylistFromData, ytLockupVideos, ytRowsContinuation } from './yt-page.js';
 import { handleSession, isSessionToken, verifySession } from './session.js';
 import { handleProfileDelete } from './profile-delete.js';
@@ -26,6 +28,7 @@ import { itemPodText, parseChaptersJson, parseTranscript } from './pod-text.js';
 import { ARTISTMAP_LIMIT, classifyLastfmSimilar, shapeArtistMap, artistMapCacheControl } from './artistmap.js';
 import { PodCaptioner, PodCaptionBudget, POD_CAPTION_CHUNK_BYTES } from './pod-captioner.js';
 import { handlePodAds } from './pod-ads.js';
+import { isPublicUrl, fetchPublic } from './public-url.js';
 export { PodCaptioner, PodCaptionBudget };
 import { VoiceQuota } from './voice-quota.js';
 import { handleVoicePlan } from './voice.js';
@@ -676,61 +679,6 @@ async function handleRawSearch(query, count, ctx) {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=21600' },
   })));
   return response;
-}
-
-// A Spotify profile's public playlists (see spotifyuser.js). Cached 10 min.
-// Spotify's web page for a profile no longer carries the playlist data (it is built in the
-// browser), so the profile lookup uses the public Web API with this app's own token when the
-// SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET secrets are set. No user sign-in, no allowlist.
-async function spotifyUserViaApi(id, env) {
-  const token = await getSpotifyAppToken(env);
-  if (!token) return null;
-  const h = { Authorization: 'Bearer ' + token };
-  try {
-    const u = await fetch('https://api.spotify.com/v1/users/' + encodeURIComponent(id), { headers: h });
-    if (u.status === 404) return { missing: true };
-    if (!u.ok) return null;
-    const user = await u.json();
-    const playlists = [];
-    let total = 0, next = 'https://api.spotify.com/v1/users/' + encodeURIComponent(id) + '/playlists?limit=50';
-    for (let i = 0; next && i < 6; i++) {
-      const r = await fetch(next, { headers: h });
-      if (!r.ok) return playlists.length ? { user, playlists, total } : null;
-      const d = await r.json();
-      total = d.total || total;
-      (d.items || []).forEach((p) => { if (p && p.id && p.public !== false) playlists.push({ id: p.id, name: p.name || 'Playlist', image: (p.images && p.images[0] && p.images[0].url) || null, followers: 0 }); });
-      next = d.next;
-    }
-    return { user, playlists, total };
-  } catch (e) { return null; }
-}
-
-async function handleSpotifyUser(url, ctx, env) {
-  const id = spotifyUserIdFrom(url.searchParams.get('user'));
-  if (!id) return json({ error: 'bad user' }, 400);
-  const cacheKey = new Request('https://cache.internal/spuser1/' + encodeURIComponent(id.toLowerCase()));
-  const cached = await envCache.match(cacheKey);
-  if (cached) return applyCors(cached);
-  const api = env ? await spotifyUserViaApi(id, env) : null;
-  if (api && api.missing) return json({ error: 'nouser' }, 404);
-  if (api) {
-    const out = json({ user: { id: api.user.id || id, name: api.user.display_name || id, image: (api.user.images && api.user.images[0] && api.user.images[0].url) || null }, total: api.total || api.playlists.length, playlists: api.playlists });
-    out.headers.set('Cache-Control', 'public, max-age=600');
-    ctx.waitUntil(envCache.put(cacheKey, out.clone()));
-    return out;
-  }
-  let res;
-  try {
-    res = await fetch('https://open.spotify.com/user/' + encodeURIComponent(id), { headers: { 'User-Agent': DESKTOP_UA, 'Accept-Language': 'en-US,en;q=0.9' } });
-  } catch (e) { return json({ error: 'unavailable' }, 502); }
-  if (res.status === 404) return json({ error: 'nouser' }, 404);
-  if (!res.ok) return json({ error: 'unavailable' }, 502);
-  const data = parseSpotifyUserPage(await res.text(), id);
-  if (!data) return json({ error: 'nouser' }, 404);
-  const out = json(data);
-  out.headers.set('Cache-Control', 'public, max-age=600');
-  ctx.waitUntil(envCache.put(cacheKey, out.clone()));
-  return out;
 }
 
 async function handleSearch(url, ctx, env) {
@@ -1549,7 +1497,7 @@ async function handlePodText(url, ctx) {
   const kind = url.searchParams.get('kind');
   const src = url.searchParams.get('url') || '';
   const type = url.searchParams.get('type') || '';
-  if (!/^(chapters|transcript)$/.test(kind || '') || !/^https:\/\//i.test(src) || src.length > 2000) return json({ error: 'missing or invalid podtext request' }, 400);
+  if (!/^(chapters|transcript)$/.test(kind || '') || !isPublicUrl(src, { httpsOnly: true }) || src.length > 2000) return json({ error: 'missing or invalid podtext request' }, 400);
   if (kind === 'transcript' && !/^(vtt|srt|json)$/.test(type)) return json({ error: 'invalid transcript type' }, 400);
   const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podtext/' + kind + '/' + type + '/' + encodeURIComponent(src));
@@ -1557,7 +1505,7 @@ async function handlePodText(url, ctx) {
   if (cached) return applyCors(cached);
   let text;
   try {
-    const res = await fetch(src, { headers: { 'User-Agent': APP_UA } });
+    const res = await fetchPublic(src, { headers: { 'User-Agent': APP_UA } }, { httpsOnly: true });
     if (!res.ok) return json({ error: kind + ' file returned ' + res.status }, 502);
     if (Number(res.headers.get('content-length')) > PODTEXT_MAX_BYTES) return json({ error: kind + ' file too large' }, 502);
     text = await res.text();
@@ -1585,7 +1533,7 @@ async function handlePodEpisode(url, ctx) {
   const show = (url.searchParams.get('show') || '').trim();
   const title = (url.searchParams.get('title') || '').trim();
   const audio = url.searchParams.get('audio') || '';
-  if ((!/^https?:\/\//i.test(feedParam) && !show) || !title || title.length > 500 || show.length > 300) return json({ error: 'missing or invalid podepisode request' }, 400);
+  if ((feedParam ? !isPublicUrl(feedParam) : !show) || !title || title.length > 500 || show.length > 300) return json({ error: 'missing or invalid podepisode request' }, 400);
   const cache = envCache;
   const cacheKey = new Request('https://cache.internal/' + PODCAST_CACHE_VERSION + '/podepisode/' + encodeURIComponent(feedParam || show) + '/' + encodeURIComponent(title));
   const cached = await cache.match(cacheKey);
@@ -1595,7 +1543,7 @@ async function handlePodEpisode(url, ctx) {
   if (!feedUrl) return json({ error: 'no public feed found', debug: dbg }, 404);
   let feed;
   try {
-    const res = await fetch(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
+    const res = await fetchPublic(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
     if (!res.ok) return json({ error: 'podcast feed returned ' + res.status }, 502);
     feed = parsePodcastFeed(await res.text());
   } catch (e) {
@@ -1625,12 +1573,12 @@ const PODAUDIO_MAX_BYTES = 4 * 1024 * 1024;
 async function handlePodAudio(url) {
   const src = url.searchParams.get('url') || '';
   const start = Number(url.searchParams.get('start')), end = Number(url.searchParams.get('end'));
-  if (!/^https:\/\//i.test(src) || src.length > 2000 || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end - start + 1 > PODAUDIO_MAX_BYTES) {
+  if (!isPublicUrl(src, { httpsOnly: true }) || src.length > 2000 || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end - start + 1 > PODAUDIO_MAX_BYTES) {
     return json({ error: 'missing or invalid podaudio request' }, 400);
   }
   let res;
   try {
-    res = await fetch(src, { headers: { 'User-Agent': APP_UA, 'Range': 'bytes=' + start + '-' + end } });
+    res = await fetchPublic(src, { headers: { 'User-Agent': APP_UA, 'Range': 'bytes=' + start + '-' + end } }, { httpsOnly: true });
   } catch (e) {
     return json({ error: "couldn't reach the audio host" }, 502);
   }
@@ -1805,7 +1753,7 @@ async function handlePodcast(url, ctx) {
 
   let feed;
   try {
-    const res = await fetch(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
+    const res = await fetchPublic(feedUrl, { headers: { 'User-Agent': APP_UA, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } });
     if (!res.ok) return json({ error: 'podcast feed returned ' + res.status }, 502);
     feed = parsePodcastFeed(await res.text());
   } catch (e) {
@@ -3638,7 +3586,9 @@ async function getLastfmSimilar(title, artist, env, limit) {
   if (!Array.isArray(list)) return [];
   return list
     .filter(t => t.name && t.artist && t.artist.name)
-    .map(t => ({ title: t.name, artist: t.artist.name, matchScore: Number(t.match) || 0 }));
+    // plays (Last.fm playcount, added for the queue's Popular / Deep cuts
+    // radio steering) is an extra field; older cached answers just lack it.
+    .map(t => ({ title: t.name, artist: t.artist.name, matchScore: Number(t.match) || 0, plays: Number(t.playcount) || 0 }));
 }
 
 // MusicBrainz's own search API - free, keyless, but wants a real UA and
@@ -4352,8 +4302,14 @@ async function vibeVerifySeed(seed, env) {
   return { title: t.name, artist: t.artist.name, image: img || null, from: 'seed' };
 }
 
+// Deep cuts: each tag's list goes 60 deep in the same single Last.fm call, and
+// the per-sentence shuffle below samples across all of it, so most picks come
+// from past the handful of hits every "chill" list starts with. (SoundCloud
+// songs stay out of vibes: its widget can sit paused on auto-advance and
+// freezes in a hidden tab, which would stall a vibe mid-flow.)
+const VIBE_TAG_DEPTH = 60;
 async function vibeTagTracks(tag, env) {
-  const data = await lastfmCall('tag.getTopTracks', { tag, limit: String(VIBE_TRACKS_PER_TAG * 2) }, env);
+  const data = await lastfmCall('tag.getTopTracks', { tag, limit: String(VIBE_TAG_DEPTH) }, env);
   const list = data && data.tracks && data.tracks.track;
   if (!Array.isArray(list)) return [];
   return list
@@ -4407,21 +4363,38 @@ async function handleVibeInterpret(url, env, ctx) {
   const cacheText = vibeCacheText(text);
   if (!cacheText) return json({ error: 'missing q' }, 400);
 
+  // What the sentence rules out ("no vocals", "nothing sad") and any house
+  // vibe it matches (house-vibes.js). Sentences with either get cache entries
+  // of their own, so answers cached before those existed aren't reused.
+  const intent = parseVibeExclusions(text);
+  const house = matchHouseVibe(text, HOUSE_VIBES);
+  const hasIntent = intent.exclude.length || intent.instrumental || intent.energyCap != null || intent.energyFloor != null;
+  const keyVersion = VIBE_CACHE_VERSION + (hasIntent ? 'x' : '') + (house ? 'h' + HOUSE_VIBES_VERSION : '');
+
   const cache = caches.default;
-  const cacheKey = new Request('https://cache.internal/' + VIBE_CACHE_VERSION + '/vibe-interpret/' + encodeURIComponent(cacheText));
+  const cacheKey = new Request('https://cache.internal/' + keyVersion + '/vibe-interpret/' + encodeURIComponent(cacheText));
   // ?ai=0 forces the no-AI path (testing the fallback) - uncached both ways.
   const forceHeuristic = url.searchParams.get('ai') === '0';
   const cached = forceHeuristic ? null : await cache.match(cacheKey);
-  if (cached) return applyCors(cached);
+  if (cached) {
+    let hit = null;
+    try { hit = await cached.json(); } catch (e) { /* rebuild below */ }
+    if (hit && Array.isArray(hit.tracks)) return json(await vibeFinish(hit, intent, env, ctx));
+  }
 
-  const heuristic = vibeHeuristic(text);
+  // The model and the heuristic read the sentence without its negations, so
+  // "nothing sad" never becomes a "sad" tag the list is built from.
+  const readText = intent.clean.length >= 3 ? intent.clean : text;
+  const heuristic = vibeHeuristic(readText);
   let interp = null, source = 'heuristic', why = null;
-  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(text, env);
+  const ai = forceHeuristic ? { result: null, why: 'forced' } : await vibeAskAi(readText, env);
   if (ai.result != null) {
     interp = vibeSanitizeAi(ai.result, heuristic);
     if (interp) source = 'ai'; else why = 'unparseable';
   } else why = ai.why;
   if (!interp) interp = heuristic;
+  if (house) interp = vibeApplyHouse(interp, house);
+  if (intent.instrumental && !interp.tags.includes('instrumental')) interp = Object.assign({}, interp, { tags: ['instrumental'].concat(interp.tags).slice(0, VIBE_MAX_TAGS) });
 
   const grounded = await vibeGroundTracks(interp, env, cacheText);
   // An AI answer whose tags all came back empty on Last.fm (too exotic) -
@@ -4445,19 +4418,91 @@ async function handleVibeInterpret(url, env, ctx) {
     energy: interp.energy,
     bpm: interp.bpm,
     seeds: { suggested: grounded.seedsSuggested, verified: grounded.seedsVerified },
+    house: !!house,
     tracks: grounded.tracks,
   };
-  const response = json(payload);
   // A real AI answer is stable for a given sentence - keep it a week. A
   // heuristic answer only an hour, so a transient AI outage doesn't pin the
   // dumber answer to that sentence. An empty list isn't cached at all.
+  // Metrics stay out of the cached entry: they're attached fresh on every
+  // answer, so a track that was still cold the first time fills in later.
   if (grounded.tracks.length && !forceHeuristic) {
-    const toCache = response.clone();
-    ctx.waitUntil(cache.put(cacheKey, new Response(toCache.body, {
+    ctx.waitUntil(cache.put(cacheKey, new Response(JSON.stringify(payload), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': source === 'ai' ? 'max-age=604800' : 'max-age=3600' },
     })));
   }
-  return response;
+  return json(await vibeFinish(payload, intent, env, ctx));
+}
+
+// A house vibe's seeds lead (still verified against the catalog like any
+// model seed), its tags come first, and its energy range replaces the model's.
+function vibeApplyHouse(interp, house) {
+  const seeds = (Array.isArray(house.seeds) ? house.seeds : [])
+    .filter(x => x && x.title && x.artist)
+    .map(x => ({ title: String(x.title).slice(0, 120), artist: String(x.artist).slice(0, 120) }));
+  const tags = [];
+  (Array.isArray(house.tags) ? house.tags : []).concat(interp.tags || []).forEach(t => { t = String(t || '').toLowerCase().slice(0, 30); if (t && !tags.includes(t)) tags.push(t); });
+  const e = Array.isArray(house.energy) && house.energy.length === 2 && house.energy.every(n => typeof n === 'number' && n >= 0 && n <= 1) ? house.energy.slice() : interp.energy;
+  return Object.assign({}, interp, { seeds: seeds.concat(interp.seeds || []).slice(0, VIBE_MAX_SEEDS + 4), tags: tags.slice(0, VIBE_MAX_TAGS), energy: e });
+}
+
+// Per-request finishing on a cached or fresh answer: drop excluded songs (one
+// Last.fm tag lookup per excluded term, max 3), narrow the energy range for
+// "nothing too fast" / "nothing slow", then attach metrics to what's left so
+// the two arrays stay aligned.
+async function vibeFinish(payload, intent, env, ctx) {
+  const out = Object.assign({}, payload);
+  if (intent.exclude.length) {
+    const lists = await Promise.all(intent.exclude.map(t => vibeExcludeList(t, env).catch(() => [])));
+    out.tracks = filterExcluded(out.tracks, intent.exclude, lists).tracks;
+  }
+  if (Array.isArray(out.energy) && out.energy.length === 2) {
+    let lo = out.energy[0], hi = out.energy[1];
+    if (intent.energyCap != null) { hi = Math.min(hi, intent.energyCap); lo = Math.min(lo, hi - 0.15); }
+    if (intent.energyFloor != null) { lo = Math.max(lo, intent.energyFloor); hi = Math.max(hi, lo + 0.15); }
+    out.energy = [Math.max(0, +lo.toFixed(2)), Math.min(1, +hi.toFixed(2))];
+  }
+  out.exclude = intent.exclude.concat(intent.instrumental ? ['vocals'] : []);
+  out.metrics = await vibeAttachMetrics(out.tracks, env, ctx);
+  return out;
+}
+// Cached a week per term: tag top lists barely move, and a popular exclusion
+// ("no sad", "no country") then costs a cache read instead of a Last.fm call.
+async function vibeExcludeList(term, env) {
+  const key = new Request('https://cache.internal/' + VIBE_CACHE_VERSION + '/vibe-exclude/' + encodeURIComponent(term));
+  const hit = await caches.default.match(key);
+  if (hit) { try { return await hit.json(); } catch (e) { /* refetch */ } }
+  const data = await lastfmCall('tag.getTopTracks', { tag: term, limit: '100' }, env);
+  const list = data && data.tracks && data.tracks.track;
+  if (!Array.isArray(list)) return [];
+  const out = list.filter(t => t && t.name && t.artist && t.artist.name).map(t => ({ title: t.name, artist: t.artist.name }));
+  await caches.default.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=604800' } })).catch(() => {});
+  return out;
+}
+
+// BPM/energy/key for the grounded tracks, aligned with `tracks` (null where
+// not known yet), so the client can rank and shape the list without its own
+// /metrics round trips - on a slow connection those took longer than the
+// client's 1.8s timeout and the ranking quietly fell back to no metrics.
+// Same per-track cache and budget rules as /metrics, with a smaller budget:
+// this request already spent subrequests on the model and the grounding.
+// Lookups past the deadline keep running under waitUntil and warm the cache.
+const VIBE_METRICS_MAX = 25;
+const VIBE_METRICS_BUDGET = 15;
+const VIBE_METRICS_DEADLINE_MS = 2000;
+async function vibeAttachMetrics(tracks, env, ctx) {
+  const list = (tracks || []).slice(0, VIBE_METRICS_MAX);
+  const results = new Array(list.length).fill(null);
+  const req = { left: VIBE_METRICS_BUDGET, artists: new Map() };
+  const all = mapWithConcurrency(list, 4, async (t, i) => {
+    if (!t || !t.title || !t.artist) return;
+    try { results[i] = await metricsForTrack(String(t.title).slice(0, 200), String(t.artist).slice(0, 200), env, req, ctx); } catch (e) { /* stays null */ }
+  });
+  ctx.waitUntil(all);
+  let timer;
+  await Promise.race([all, new Promise(r => { timer = setTimeout(r, VIBE_METRICS_DEADLINE_MS); })]);
+  clearTimeout(timer);
+  return results.slice();
 }
 
 // Voice DJ (#553): maps a validated /voice/plan mood plan onto the interpretation
@@ -4514,6 +4559,7 @@ async function bumpPoolPair(env, tagA, tagB, weight) {
 async function handlePoolSignal(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.TASTE_POOL) return json({ error: 'pooling not configured' }, 500);
+  if (await overIpLimit(request, ctx, 'poolsignal', 300, 600)) return json({ ok: true, skipped: true });
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
   const tags = Array.isArray(body && body.tags)
@@ -4578,9 +4624,22 @@ async function handlePoolAffinity(url, env, ctx) {
 // key list comes back in chronological order with no separate index -
 // inspected later via `wrangler kv key list/get --binding=MATCH_REPORTS`
 // to fix scoreCandidate's scoring for whatever pattern keeps showing up.
+// Per-IP throttle for anonymous routes that write to KV (same Cache API
+// pattern as /linkfix). True when this caller is over `limit` in `windowS`.
+async function overIpLimit(request, ctx, name, limit, windowS) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const rlKey = new Request('https://ratelimit.internal/' + name + '/' + encodeURIComponent(ip));
+  const hit = await envCache.match(rlKey);
+  const count = hit ? (parseInt(await hit.text(), 10) || 0) : 0;
+  if (count >= limit) return true;
+  ctx.waitUntil(envCache.put(rlKey, new Response(String(count + 1), { headers: { 'Cache-Control': 'max-age=' + windowS } })));
+  return false;
+}
+
 async function handleReport(request, env, ctx) {
   if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (!env.MATCH_REPORTS) return json({ error: 'reporting not configured' }, 500);
+  if (await overIpLimit(request, ctx, 'report', 30, 600)) return json({ error: 'too many, try later' }, 429);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: 'invalid json body' }, 400); }
   const { videoId, title, artist, matchedTitle, channel, note } = body || {};
@@ -5112,6 +5171,8 @@ export default {
     if (url.pathname.startsWith('/admin/')) return await handleAdmin(request, url, env, ctx, { envCache });
     // Owner's now-playing feed: public GET, owner-token POST, own CORS.
     if (url.pathname === '/nowplaying') return await handleNowPlaying(request, url, env, ctx, { envCache, verifyGoogleIdToken });
+    // Shared waveform peaks (#727): public GET, signed-in POST, own CORS.
+    if (url.pathname === '/waves') return await handleWaves(request, url, env, ctx, { envCache, verifyGoogleIdToken });
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
     // Remote kill switch for the Mac app's adblock (#524). ADBLOCK_FLAG = "false"/"0"/"off" turns it off; default on.
     if (url.pathname === '/flags' && request.method === 'GET') {
@@ -5125,7 +5186,6 @@ export default {
       if (url.pathname === '/playlist') return await handleEmbed('playlist', url, ctx);
       if (url.pathname === '/album') return await handleEmbed('album', url, ctx);
       if (url.pathname === '/search') return await handleSearch(url, ctx, env);
-      if (url.pathname === '/spotifyuser') return await handleSpotifyUser(url, ctx, env);
       if (url.pathname === '/track') return await handleTrack(url, ctx);
       if (url.pathname === '/ytplaylist') return await handleYtPlaylist(url, ctx);
       if (url.pathname === '/ytvideo') return await handleYtVideo(url, ctx);
@@ -5167,7 +5227,8 @@ export default {
       if (url.pathname.startsWith('/beta/')) return await handleBeta(request, url, env, ctx, { json, envCache, verifyGoogleIdToken });
       return json({ error: 'not found', routes: ['/playlist?id=', '/album?id=', '/track?id=', '/search?title=&artist=', '/ytplaylist?id=', '/ytvideo?id=', '/podcast?src=&id=', '/podcastmatch?show=&title=&duration=', '/podtext?kind=&url=&type=', '/podaudio?url=&start=&end=', '/podepisode?feed=|show=&title=&audio=', '/podcaption/start (POST)', '/podcaption/collect (POST)', '/lyrics?videoId=&title=&artist=', '/amlist?kind=&storefront=&id=', '/amtrack?storefront=&id=', '/soundcloud?url=', '/playlistsearch?q=&storefront=&limit=', '/similar?title=&artist=&limit=', '/tags?title=&artist=', '/vibe-interpret?q=', '/voice/plan (POST)', '/metrics (POST)', '/ytmix?videoId=', '/artistsearch?artist=&limit=', '/art?title=&artist=', '/spotifyart?title=&artist=', '/thisis?artist=', '/pool/signal (POST)', '/pool/affinity?tags=', '/report (POST)', '/linkfix (POST)', '/tester-report (POST)', '/profile/sync (POST)', '/profile/fetch (POST)', '/nowplaying (GET; POST owner only, Google ID token)', '/beta/status', '/beta/testimonials', '/beta/signup (POST)', '/beta/me (POST)', '/beta/report (POST)', '/beta/activity (POST)', '/beta/link (POST)', '/beta/claim (POST)', '/beta/google/exchange (POST)', '/beta/rejoin (POST)'] }, 404);
     } catch (e) {
-      return json({ error: 'internal error: ' + e.message }, 500);
+      console.error('route ' + url.pathname + ' failed:', e && e.message);
+      return json({ error: 'internal error' }, 500);
     }
   },
 };
