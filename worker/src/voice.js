@@ -15,11 +15,11 @@
 
 export const VOICE_MODEL = '@cf/meta/llama-3.1-8b-instruct-fast'; // Workers AI, free tier; same model as /vibe-interpret (shares its daily neuron budget)
 export const VOICE_AI_TIMEOUT_MS = 6000;
-export const VOICE_CAPS = { free: 7, paid: 100 };
+export const VOICE_CAPS = { free: 7, paid: 100 };    // LLM requests per signed-in user per UTC day (owner decision 4)
 // Beta: every feature is open to every signed-in listener while the paywall
 // is decided, so free listeners get sets too. The per-user daily caps above
 // and the global neuron ceiling still apply. Set false to bring the gate back.
-export const BETA_OPEN_SETS = true;    // LLM requests per signed-in user per UTC day (owner decision 4)
+export const BETA_OPEN_SETS = true;
 export const VOICE_MAX_TEXT = 300;
 
 // ---- global spend ceiling (account-wide, keeps the AI use inside the FREE allocation) ----
