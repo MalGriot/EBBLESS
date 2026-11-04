@@ -16234,10 +16234,12 @@ function toggleLikeTrack(track){
   if (isTrackLiked(track.videoId)){
     removeTrackFromPlaylistByVideoId(LIKED_ID, track.videoId);
     recordListenSignal(track, -1);
+    try { const vt = currentVibeText(); if (vt) vibeTasteNote(vt, track, 'unlike'); } catch(e){}
     showToast('Removed from Liked Songs');
   } else {
     addTracksToPlaylist(LIKED_ID, [track]);
     recordListenSignal(track, 2);
+    try { const vt = currentVibeText(); if (vt) vibeTasteNote(vt, track, 'like'); } catch(e){}
     const streak = noteLikeStreak();
     if (streak.grew && streak.count >= 2) celebrate(1, { label: 'Added to Liked Songs \u00B7 ' + streak.count + '-day streak' });
     else showToast('Added to Liked Songs');
@@ -18876,6 +18878,76 @@ function vibeRememberPlayed(text, list, opts){
   lsSet(LS_VIBE_PLAYED, all);
 }
 
+/* vibe-taste: each listener teaches a vibe what they mean by it. While a
+   typed vibe plays, a song played to the end counts for that song (and half
+   for its artist) in that vibe, a like counts double, an early skip counts
+   against both. The next time the same vibe is built, a song skipped in it
+   stays out, songs kept in it come back among the songs you know, and
+   artists lean up or down. The app-wide taste (finishes, returns, likes,
+   thumbs-down: tasteProfile) nudges every vibe on top. On this device only,
+   faded with a 60-day half-life; Personalized listening off ignores it and
+   Reset clears it. */
+/* VIBE-TASTE:BEGIN (tools/vibe-taste.test.js loads this block) */
+const LS_VIBE_TASTE = 'ebbless:vibetaste';   // { vibeKey: { s: { songKey: [score, ts, title, artist] }, a: { artistKey: [score, ts] } } }
+const VIBE_TASTE_MAX = 30;           // vibes remembered; the oldest drops off
+const VIBE_TASTE_ITEMS = 120;        // songs, and artists, kept per vibe
+const VIBE_TASTE_HALF_DAYS = 60;
+const VIBE_TASTE_W = { finish: 1, like: 2, unlike: -2, skip: -2 };
+const VIBE_TASTE_OUT = -1.5;         // a song at or below this (one skip) stays out of that vibe
+const VIBE_TASTE_FAV = 1;            // at or above this (one finish) it comes back as a song you know
+function vibeTasteVal(x, now){
+  return Array.isArray(x) ? (+x[0] || 0) * Math.pow(0.5, (now - (+x[1] || now)) / 864e5 / VIBE_TASTE_HALF_DAYS) : 0;
+}
+function vibeTasteNote(text, t, kind){
+  const k = vibeMemoryKey(text), w = VIBE_TASTE_W[kind];
+  if (!k || !w || !t || !t.title || !t.artist || !personalizeOn()) return;
+  const all = lsGet(LS_VIBE_TASTE, {}) || {}, now = Date.now();
+  const e = all[k] && typeof all[k] === 'object' ? all[k] : {};
+  const bump = (map, key, d, extra) => {
+    if (!key) return;
+    const v = vibeTasteVal(map[key], now) + d;
+    delete map[key];   // re-insert so key order tracks recency for trimming
+    map[key] = [Math.round(v * 100) / 100, now].concat(extra || []);
+    const ks = Object.keys(map);
+    if (ks.length > VIBE_TASTE_ITEMS) ks.slice(0, ks.length - VIBE_TASTE_ITEMS).forEach(x => delete map[x]);
+  };
+  e.s = e.s || {}; e.a = e.a || {};
+  bump(e.s, tagCacheKey(t), w, [String(t.title).slice(0, 120), String(t.artist).slice(0, 120)]);
+  bump(e.a, primaryArtistKey(t.artist), w / 2);
+  delete all[k]; all[k] = e;
+  const ks = Object.keys(all);
+  if (ks.length > VIBE_TASTE_MAX) ks.slice(0, ks.length - VIBE_TASTE_MAX).forEach(x => delete all[x]);
+  lsSet(LS_VIBE_TASTE, all);
+}
+// One vibe's memory as Maps: songs key -> { score, title, artist }, artists key -> score.
+function vibeTasteFor(text){
+  const out = { songs: new Map(), artists: new Map() };
+  const k = vibeMemoryKey(text);
+  if (!k || !personalizeOn()) return out;
+  const e = (lsGet(LS_VIBE_TASTE, {}) || {})[k], now = Date.now();
+  if (!e || typeof e !== 'object') return out;
+  Object.keys(e.s || {}).forEach(x => { const r = e.s[x]; out.songs.set(x, { score: vibeTasteVal(r, now), title: r[2] || '', artist: r[3] || '' }); });
+  Object.keys(e.a || {}).forEach(x => out.artists.set(x, vibeTasteVal(e.a[x], now)));
+  return out;
+}
+// Ranking nudge for one candidate: this vibe's memory, then the app-wide
+// taste (same limits as applyTastePreference). -Infinity: leave it out.
+function vibeTasteAdjust(t, vt, prof){
+  const key = tagCacheKey(t), a = primaryArtistKey(t.artist);
+  const song = vt && vt.songs.get(key);
+  if (song && song.score <= VIBE_TASTE_OUT) return -Infinity;
+  let adj = vt ? Math.max(-0.35, Math.min(0.2, (vt.artists.get(a) || 0) * 0.1)) : 0;
+  if (prof){
+    const dv = prof.declined, aDecl = dv.a[a] || 0;
+    if (aDecl >= 2 || dv.keys.has(key)) return -Infinity;
+    adj -= 0.25 * aDecl;
+    const aff = prof.artists.get(a) || 0;
+    adj += aff < 0 ? Math.max(-0.3, aff / 10) : Math.min(0.1, aff / 40);
+  }
+  return adj;
+}
+/* VIBE-TASTE:END */
+
 /* vibe-right-now: the Search page's "Right now" section leads with the vibe
    this listener tends to play at this hour (and weekday vs weekend), read
    from the same on-device vibe memory. Each past play counts by how close
@@ -18920,14 +18992,15 @@ async function rankVibeTracks(interp, onStep){
     pool = avoid ? pool.slice(0, freshN).concat(extra, pool.slice(freshN)) : pool.concat(extra);
   }
   onStep && onStep('Matching tempo and energy');
+  const prof = interp.taste ? tasteProfile() : null;
   const head = pool.slice(0, 24);
   const metrics = (await Promise.all([fetchTrackMetrics(head.slice(0, 12)), fetchTrackMetrics(head.slice(12, 24))])).flat();
   const scored = pool.map((t, i) => {
     const fit = i < metrics.length ? vibeMetricFit(metrics[i], interp) : null;
     const base = t.from === 'seed' ? 0.75 : 0.5;
     const played = interp.avoid && interp.avoid.has(tagCacheKey(t)) ? 0.4 : 0;
-    return { t, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 - played };
-  }).sort((a, b) => b.s - a.s);
+    return { t, s: base + (fit == null ? 0 : (fit - 0.5) * 0.5) - i * 0.004 - played + (interp.taste ? vibeTasteAdjust(t, interp.taste, prof) : 0) };
+  }).filter(x => x.s !== -Infinity).sort((a, b) => b.s - a.s);
   const perArtist = new Map();
   const picked = [];
   scored.forEach(x => {
@@ -19058,7 +19131,7 @@ const VIBE_HEARD_LOOKUPS = 12;      // untagged known tracks to look tags up for
 const VIBE_HEARD_LOOKUP_MS = 4000;
 // Every track the listener has: title|artist -> { track, weight }. Liked and
 // recently played count for more than a song that just sits in a playlist.
-function vibeKnownTracks(text){
+function vibeKnownTracks(text, taste){
   const known = new Map(), vibeKey = text ? vibeMemoryKey(text) : '';
   const add = (t, w) => {
     if (!t || !t.title || !t.artist) return;
@@ -19074,6 +19147,13 @@ function vibeKnownTracks(text){
     if (vibeKey && (getCachedPlaylist(id) || {}).vibeQuery && vibeMemoryKey(getCachedPlaylist(id).vibeQuery) === vibeKey) return;   // this vibe's own saved list isn't "songs you know" for it
     const pl = getCachedPlaylist(id);
     (pl && Array.isArray(pl.tracks) ? pl.tracks : []).forEach(t => add(t, 0.2));
+  });
+  // vibe-taste: songs kept in this vibe before come back whatever their tags; songs skipped in it don't
+  if (taste) taste.songs.forEach((x, k) => {
+    if (x.score <= VIBE_TASTE_OUT){ known.delete(k); return; }
+    if (x.score < VIBE_TASTE_FAV || !x.title || !x.artist) return;
+    add({ title: x.title, artist: x.artist }, 0);
+    known.get(k).fav = x.score;
   });
   return known;
 }
@@ -19107,8 +19187,8 @@ async function vibeHeardTracks(interp, known, poolArtists){
     const tags = ((t.tags && t.tags.length) ? t.tags : (fresh[tagCacheKey(t)] || [])).map(x => String(x).toLowerCase());
     const overlap = vibeTagOverlap(tags, want);
     const artistHit = poolArtists.has(primaryArtistKey(t.artist));
-    if (!overlap && !artistHit) return;
-    scored.push({ t, s: overlap + (artistHit ? 0.8 : 0) + Math.min(1, e.weight) * 0.5 + Math.random() * 0.3 });
+    if (!overlap && !artistHit && !e.fav) return;
+    scored.push({ t, s: overlap + (artistHit ? 0.8 : 0) + Math.min(1, e.weight) * 0.5 + (e.fav ? 1.5 + Math.min(1, e.fav / 4) : 0) + Math.random() * 0.3 });
   });
   scored.sort((a, b) => b.s - a.s);
   const out = [], artists = new Set();
@@ -19219,8 +19299,8 @@ async function beginConversationalVibe(text, preInterp){
   if (token !== vibeResultsToken || !importOverlay.classList.contains('is-open')) return;
   stageInterpreting(text, 'Finding real songs');
   let tracks = [];
-  interp = Object.assign({}, interp, { avoid: vibeRecentlyPlayed(text) });
-  const known = vibeKnownTracks(text);
+  interp = Object.assign({}, interp, { avoid: vibeRecentlyPlayed(text), taste: vibeTasteFor(text) });
+  const known = vibeKnownTracks(text, interp.taste);
   const poolArtists = new Set((interp.tracks || []).map(t => primaryArtistKey(t && t.artist)));
   let heard = [];
   try {
@@ -21146,6 +21226,11 @@ feedbackModal.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ e.pr
 // at render time (highest version as the heading, duplicate lines dropped),
 // so keep adding one entry per deploy as before.
 const WHATS_NEW = [
+  { version: 494, date: '2026-11-04', items: [
+    'Vibes learn what you mean by them. Skip a song early in a vibe and it stays out of that vibe; play one through or like it and it comes back next time. Artists you skip or keep lean down or up.',
+    'Every vibe now listens to your overall taste too: songs and artists you come back to rise, and your thumbs-downs stay out.',
+    'Each house vibe now starts from a few hand-picked songs.',
+  ] },
   { version: 493, date: '2026-11-04', items: [
     'On phones, tapping the e logo goes Home every time, even when your finger moves a little.',
   ] },
@@ -22415,7 +22500,7 @@ personalizeBtn.addEventListener('click', () => {
 renderPersonalizeUI();
 let resetProfileArm = null;
 function resetListeningProfile(){
-  [LS_GRAPH, LS_TASTE, LS_DECLINED, LS_TAG_CACHE, LS_DISCOVER_RECENT, LS_PLAY_HISTORY].forEach(lsDel);
+  [LS_GRAPH, LS_TASTE, LS_DECLINED, LS_TAG_CACHE, LS_DISCOVER_RECENT, LS_PLAY_HISTORY, LS_VIBE_TASTE, LS_VIBE_PLAYED].forEach(lsDel);
   tasteMemo = null;
 }
 resetProfileBtn.addEventListener('click', () => {
@@ -24106,12 +24191,13 @@ async function addVibeAnchorPool(pool, text){
     keys.add(key);
     if (!seen.has(key)){ seen.add(key); pool.push({ title: t.title, artist: t.artist, matchScore: 0.5, tags: [] }); }
   });
-  return { keys, energy: Array.isArray(interp.energy) ? interp.energy : null };
+  return { keys, energy: Array.isArray(interp.energy) ? interp.energy : null, taste: vibeTasteFor(text) };
 }
 function applyVibeAnchor(ranked, anchor, mood){
   ranked.forEach(x => {
     const key = tagCacheKey(x.c);
     if (anchor.keys.has(key)) x.score += VIBE_ANCHOR_WEIGHT;
+    if (anchor.taste){ const adj = vibeTasteAdjust(x.c, anchor.taste, null); x.score += adj === -Infinity ? -1 : adj; }   // Discover's own ranking already applied the app-wide taste
     const m = (mood && mood.candMetrics && mood.candMetrics.get(key)) || metricMemo.get(key);
     const e = vibeArcEnergy(m);
     if (e != null && anchor.energy){
@@ -24143,6 +24229,7 @@ let vibeSkipLog = [];
 function vibeOnEarlySkip(t){
   const text = currentVibeText();
   if (!text || !t) return;
+  try { vibeTasteNote(text, t, 'skip'); } catch(e){}
   const start = state.queuePos + 2;   // the next song may already be buffering
   const artist = primaryArtistKey(t.artist || '');
   let changed = false;
@@ -37576,6 +37663,7 @@ function notePlayedThrough(pos){
     const entry = state.queue[pos];
     if (!t || !t.videoId || (entry && isPodcastPlaylistId(entry.plId))) return;
     noteTaste(t, 'finish');
+    try { const vt = currentVibeText(); if (vt) vibeTasteNote(vt, t, 'finish'); } catch(e){}
     const s = likeNudgeState();
     s.since++;
     const now = Date.now();
