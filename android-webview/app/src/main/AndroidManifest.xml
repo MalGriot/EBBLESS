@@ -64,6 +64,12 @@
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
 
+        <!-- Bring your music: Spotify sign-in in a desktop-layout window that reads the library -->
+        <activity
+            android:name=".SpotifyImportActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
+
         <receiver android:name=".UpdateReceiver" android:exported="false" />
 
         <!-- #688: home screen widget (now playing controls, or Last played + Resume) -->

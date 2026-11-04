@@ -498,6 +498,11 @@ public class MainActivity extends Activity {
         } catch (Throwable t) { /* never break playback over ad blocking */ }
     }
 
+    /** Runs a line of script in the page once this screen is back in front (the sign-in window was on top). */
+    private void toPage(String js) {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> { if (web != null) web.evaluateJavascript(js, null); }, 500);
+    }
+
     private void initWeb(Bundle b) {
         AdBlock.init(this);   // request rules must be loaded before the first request
         web = new KeepAliveWebView(this);
@@ -505,6 +510,16 @@ public class MainActivity extends Activity {
         root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
         web.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface public void ready() {}
+            /** Bring your music, Spotify: opens the sign-in window; the page's export script runs there and the library comes back through window.__ebbSpotifyLibrary. */
+            @android.webkit.JavascriptInterface public void spotifyImport(String script) {
+                runOnUiThread(() -> {
+                    SpotifyImportActivity.sink = new SpotifyImportActivity.Sink() {
+                        @Override public void result(String json) { toPage("window.__ebbSpotifyLibrary&&__ebbSpotifyLibrary(" + JSONObject.quote(json) + ")"); }
+                        @Override public void failed(String message) { toPage("window.__ebbSpotifyFail&&__ebbSpotifyFail(" + JSONObject.quote(message) + ")"); }
+                    };
+                    startActivity(new Intent(MainActivity.this, SpotifyImportActivity.class).putExtra("script", script));
+                });
+            }
             /** The page has wired up its own Enter / Tutorial. */
             @android.webkit.JavascriptInterface public void choiceReady() { runOnUiThread(() -> { if (splash != null) splash.pageReady(); }); }
             /** The beta lock is showing: the splash must not cover it. */
