@@ -9987,7 +9987,7 @@ function spotifyLinksImport(text){
     seen.add(sp.id); found.push(sp);
   });
   if (!found.length){ showToast('No Spotify links found. Paste links to playlists or albums.'); return; }
-  const list = found.slice(0, 60);
+  const list = found;
   closeBring();
   bringStoreSet('ebbless:bringDone', '1');
   showToast('Bringing in ' + list.length + (list.length === 1 ? ' link' : ' links') + ' from Spotify');
@@ -10132,7 +10132,7 @@ function spotifyLibraryImport(entries){
   const ids = [];
   for (const l of lists){
     const seen = new Set(), tracks = [];
-    l.rows.forEach(r => { if (!r) return; const k = (r.artist + '|' + r.title).toLowerCase(); if (seen.has(k) || tracks.length >= IMPORT_MAX_SONGS) return; seen.add(k); tracks.push(r); });
+    l.rows.forEach(r => { if (!r) return; const k = (r.artist + '|' + r.title).toLowerCase(); if (seen.has(k)) return; seen.add(k); tracks.push(r); });
     if (!tracks.length) continue;
     const id = 'custom-sp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     if (!importSave({ id, type: 'custom', name: l.name, image: null, tracks, ts: Date.now(), rematchUnmatched: true, importedFrom: 'spotify' })) continue;
@@ -10142,10 +10142,10 @@ function spotifyLibraryImport(entries){
   renderLibrary();
   if (!ids.length && !albumIds.length){ showToast('No songs found in that file'); return; }
   bringStoreSet('ebbless:spFileDone', '1');
-  const albums = albumIds.slice(0, 40);
+  const albums = albumIds;
   showToast('Added ' + ids.length + (ids.length === 1 ? ' playlist' : ' playlists') + (albums.length ? ' and ' + albums.length + (albums.length === 1 ? ' album' : ' albums') : '') + ' from your Spotify file. Matching songs in the background.');
   // Saved albums only carry a Spotify link, so each goes through the normal album import, one at a time.
-  albums.forEach((aid, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: 'album', id: aid }); } catch(e){} }, 2500 + i * 4000));
+  albums.forEach((aid, i) => setTimeout(() => { try { beginImportFromParsedLink({ source: 'spotify', type: 'album', id: aid }); } catch(e){} }, 2500 + i * 1500));
   (async () => { for (const id of ids){ try { await rematchUnmatchedInBackground(id); } catch(e){} } })();
 }
 
