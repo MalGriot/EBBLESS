@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "scriptSha256": "7fff37dd52cd3419171c659395109f1d01d7cdbcfea4381e3b573352443ad67b",
+  "version": 3,
+  "scriptSha256": "681e7e342c2072cd2ae745f2a8ed477e9a9f937f82eda71951f1c4db3a424ae6",
   "adHosts": [
     "doubleclick.net", "googlesyndication.com", "googleadservices.com",
     "googleads.com", "adservice.google.com", "imasdk.googleapis.com",

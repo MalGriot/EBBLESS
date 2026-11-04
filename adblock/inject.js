@@ -9,6 +9,23 @@
   try {
     const cfg = window.__ebblessAdblockCfg;
     if (!cfg || !cfg.sel || location.pathname.indexOf('/embed/') !== 0) return;
+    // Take the ads out of YouTube's player data before the player reads it, so
+    // there is no ad to clear. Installed once per frame; follows the kill switch.
+    if (!window.__ebblessAdStrip) {
+      window.__ebblessAdStrip = true;
+      const KEYS = ['adPlacements', 'playerAds', 'adSlots', 'adBreakHeartbeatParams'];
+      const strip = (o) => {
+        try {
+          if (window.__ebblessAdblockOn === false || !o || typeof o !== 'object') return o;
+          for (const k of KEYS) { if (k in o) delete o[k]; if (o.playerResponse && typeof o.playerResponse === 'object' && k in o.playerResponse) delete o.playerResponse[k]; }
+        } catch (e) {}
+        return o;
+      };
+      const parse = JSON.parse;
+      JSON.parse = function () { return strip(parse.apply(this, arguments)); };
+      const json = Response.prototype.json;
+      Response.prototype.json = function () { return json.call(this).then(strip); };
+    }
     if (typeof window.__ebblessAdblockStop === 'function') { try { window.__ebblessAdblockStop(); } catch (e) {} }
     const stats = window.__ebblessAdblockStats = window.__ebblessAdblockStats || { skipped: 0, sped: 0 };
     const css = document.createElement('style');
